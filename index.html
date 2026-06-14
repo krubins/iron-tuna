@@ -1713,7 +1713,7 @@ function LogoMark({ height = 34, className = '', tagline = false }) {
       </g>
       {tagline && (
         <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.34}
-              letterSpacing="0.24em" textAnchor="middle" fill="#9fe1cb">DOMINATE THE GRIDIRON · RULE THE DEEP</text>
+              letterSpacing="0.24em" textAnchor="middle" fill="#9fe1cb">DOMINATE YOUR DRAFT · RULE THE DEEP</text>
       )}
     </svg>
   );
@@ -1767,12 +1767,12 @@ function LandingSplash({ onDismiss }) {
       <div className="lp-inner">
         <LogoMark tagline height={130} className="landing-logo" />
         <h1 className="lp-head">Free, customizable auction values — that tell you what to do.</h1>
-        <p className="lp-sub">Set your league\'s teams, budget, and scoring, and Iron Tuna builds auction values calibrated to <b>your</b> league — then an AI co-pilot tells you exactly who to draft, for how much, and why.</p>
+        <p className="lp-sub">Set your league's teams, budget, and scoring, and Iron Tuna builds auction values calibrated to <b>your</b> league — then an AI co-pilot tells you exactly who to draft, for how much, and why.</p>
         <div className="lp-cards">
           {cards.map(([h, b], i) => (<div className="lp-card" key={i}><div className="lp-card-h">{h}</div><div className="lp-card-b">{b}</div></div>))}
         </div>
-        <div className="lp-why"><b>Why it\'s better:</b> most tools hand you one generic "auction value." Iron Tuna personalizes to your roster, your budget, and the live market — and shows its work, so the recommendations are ones you can actually trust.</div>
-        <button className="lp-cta" onClick={enter}>Get my auction values — it\'s free</button>
+        <div className="lp-why"><b>Why it's better:</b> most tools hand you one generic "auction value." Iron Tuna personalizes to your roster, your budget, and the live market — and shows its work, so the recommendations are ones you can actually trust.</div>
+        <button className="lp-cta" onClick={enter}>Get my auction values — it's free</button>
         <div className="lp-note">No signup needed. Works on draft night, even if the Wi-Fi drops.</div>
       </div>
       <div className="landing-skip" onClick={enter}>Skip intro →</div>
