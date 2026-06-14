@@ -436,10 +436,15 @@ input:focus, select:focus { border-color: var(--accent); }
 .rr-c.you { color: var(--gold-text); font-weight: 600; }
 .rail-tier-sep { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); padding: 7px 8px 3px; display: flex; align-items: center; gap: 8px; }
 .rail-tier-sep::after { content: ''; flex: 1; height: 1px; background: var(--border-strong); }
-.coach-fab { position: fixed; right: 18px; bottom: 18px; z-index: 80; background: var(--gold-text); color: #1a1205; border: none; border-radius: 22px; padding: 10px 16px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.45); }
+.coach-fab { position: fixed; right: 18px; bottom: 18px; z-index: 80; background: var(--positive); color: #06281f; border: none; border-radius: 22px; padding: 10px 16px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 0 18px rgba(45,212,163,0.5), 0 6px 20px rgba(0,0,0,0.45); animation: coachGlow 3.2s ease-in-out infinite; }
 .coach-fab:hover { filter: brightness(1.08); }
-.coach { position: fixed; right: 18px; bottom: 18px; z-index: 80; width: 344px; max-height: 72vh; display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 14px 40px rgba(0,0,0,0.6); overflow: hidden; }
-.coach-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border-subtle); font-family: var(--font-display); letter-spacing: 0.04em; font-size: 13px; color: var(--gold-text); }
+.coach { position: fixed; right: 18px; bottom: 18px; z-index: 80; width: 344px; max-height: 72vh; display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--positive); border-radius: var(--radius-lg); box-shadow: 0 0 0 1px rgba(45,212,163,0.28), 0 0 22px rgba(45,212,163,0.34), 0 14px 40px rgba(0,0,0,0.6); overflow: hidden; animation: coachGlow 3.2s ease-in-out infinite; }
+@keyframes coachGlow { 0%, 100% { box-shadow: 0 0 0 1px rgba(45,212,163,0.25), 0 0 16px rgba(45,212,163,0.26), 0 14px 40px rgba(0,0,0,0.6); } 50% { box-shadow: 0 0 0 1px rgba(45,212,163,0.5), 0 0 30px rgba(45,212,163,0.5), 0 14px 40px rgba(0,0,0,0.6); } }
+.coach-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-elev); border-bottom: 1px solid rgba(45,212,163,0.35); font-family: var(--font-display); letter-spacing: 0.04em; font-size: 13px; color: var(--positive); }
+.coach-title { display: inline-flex; align-items: center; gap: 8px; }
+.coach-live { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--positive); border: 1px solid var(--positive); border-radius: 8px; padding: 1px 6px; display: inline-flex; align-items: center; gap: 4px; }
+.coach-live::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--positive); box-shadow: 0 0 6px var(--positive); animation: coachPulse 1.6s ease-in-out infinite; }
+@keyframes coachPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 .coach-head button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; margin-left: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
 .coach-head button:hover { color: var(--text-primary); }
 .coach-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); }
@@ -579,10 +584,15 @@ input:focus, select:focus { border-color: var(--accent); }
 .model-summary { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 8px; }
 .model-summary b { color: var(--gold-text); font-size: 14px; }
 .model-lineup { display: flex; flex-direction: column; }
-.model-slot { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; gap: 6px; align-items: center; padding: 3px 4px; font-size: 11px; border-bottom: 1px solid var(--border-subtle); }
+.model-slot { display: grid; grid-template-columns: 32px minmax(0,1fr) auto auto; gap: 6px; align-items: center; padding: 3px 4px; font-size: 11px; border-bottom: 1px solid var(--border-subtle); }
 .ms-label { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
 .ms-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-price { font-family: var(--font-mono); color: var(--gold-text); font-size: 10px; }
+.ms-rank { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 0 4px; white-space: nowrap; }
+.model-slot.ms-focus { background: rgba(45,212,163,0.09); border-left: 2px solid var(--positive); padding-left: 6px; }
+.model-slot.ms-focus .ms-label { color: var(--positive); font-weight: 700; }
+.model-slot.ms-focus .ms-rank { color: var(--positive); border-color: var(--positive); }
+.model-focus-note { font-size: 10.5px; line-height: 1.5; color: var(--text-secondary); background: rgba(45,212,163,0.07); border: 1px solid var(--border-subtle); border-left: 2px solid var(--positive); border-radius: var(--radius-sm); padding: 8px 10px; margin: 10px 4px 0; }
 .models-foot { font-size: 10px; color: var(--text-muted); margin-top: 12px; line-height: 1.45; }
 .coach.big { width: 430px; max-height: 82vh; }
 .coach.big .coach-msg { font-size: 13.5px; }
@@ -612,7 +622,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
 .assumptions-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .assumptions-label { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-text); }
-.assumptions-val { font-size: 13px; color: var(--text-secondary); font-family: var(--font-mono); }
+.assumptions-val { font-size: 13px; color: var(--text-secondary); font-family: var(--font-mono); display: inline-flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.assume-chip { background: none; border: none; padding: 0; margin: 0; font: inherit; color: var(--text-secondary); cursor: pointer; border-bottom: 1px dashed var(--border-strong); transition: color 0.12s, border-color 0.12s; }
+.assume-chip:hover { color: var(--gold-text); border-bottom-color: var(--gold-text); }
+.assume-sep { color: var(--text-muted); }
 .assumptions-edit { background: none; border: 1px solid var(--border-strong); color: var(--text-secondary); border-radius: var(--radius-sm); padding: 5px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .assumptions-edit:hover { border-color: var(--gold-text); color: var(--gold-text); }
 .assumptions-panel { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--bg-base); border: 1px solid var(--border-subtle); border-top: none; border-radius: 0 0 var(--radius-md) var(--radius-md); padding: 10px 14px; margin: -16px 0 16px; }
@@ -3002,7 +3015,17 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
       <div className="assumptions no-print">
         <div className="assumptions-main">
           <span className="assumptions-label">Assumptions</span>
-          <span className="assumptions-val">{config.teams} teams · ${config.budget} budget · {pprLabel} · starters {startersSummary} · {rosterSpots} roster spots ({benchSpots} bench)</span>
+          <span className="assumptions-val">
+            <button className="assume-chip" onClick={() => setEditAssume(true)} title="Click to change number of teams">{config.teams} teams</button>
+            <span className="assume-sep">·</span>
+            <button className="assume-chip" onClick={() => setEditAssume(true)} title="Click to change your auction budget">${config.budget} budget</button>
+            <span className="assume-sep">·</span>
+            <button className="assume-chip" onClick={() => setEditAssume(true)} title="Click to change scoring (PPR)">{pprLabel}</button>
+            <span className="assume-sep">·</span>
+            <button className="assume-chip" onClick={onOpenSettings} title="Click to edit your starting lineup">starters {startersSummary}</button>
+            <span className="assume-sep">·</span>
+            <button className="assume-chip" onClick={onOpenSettings} title="Click to edit roster size & bench">{rosterSpots} roster spots ({benchSpots} bench)</button>
+          </span>
         </div>
         <button className="assumptions-edit" onClick={() => setEditAssume(v => !v)}>{editAssume ? 'Done' : 'Customize'}</button>
       </div>
@@ -4425,7 +4448,7 @@ function CoachAiSettings({ ai, onSave, onClose }) {
   );
 }
 function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [msgs, setMsgs] = useState([{ role: 'bot', text: 'I\'m your draft co-pilot. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.' }]);
   const [text, setText] = useState('');
   const [pending, setPending] = useState(null);
@@ -4539,7 +4562,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name} — ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
     <div className={`coach ${big ? 'big' : ''}`}>
-      <div className="coach-head"><span>{name}</span><div><button className={`coach-ai-pill ${ai && ai.enabled ? 'on' : ''}`} onClick={() => setShowAi(v => !v)} title="AI analysis settings (bring your own key)">AI{ai && ai.enabled ? ' \u2713' : ''}</button>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Close">close</button></div></div>
+      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div><button className={`coach-ai-pill ${ai && ai.enabled ? 'on' : ''}`} onClick={() => setShowAi(v => !v)} title="AI analysis settings (bring your own key)">AI{ai && ai.enabled ? ' \u2713' : ''}</button>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       {showAi
         ? <CoachAiSettings ai={ai} onSave={onSaveAi} onClose={() => setShowAi(false)} />
@@ -4755,6 +4778,14 @@ function OnboardingChecklist({ steps, onDismiss }) {
     </div>
   );
 }
+const MODEL_FOCUS = {
+  ideal: { focus: [], note: 'Balanced build — takes the best value at every position; no single spot is forced.' },
+  heroRB: { focus: ['RB'], note: 'Focus: RB — one elite anchor back. QB, WR, TE, K and DEF are taken at the best value available.' },
+  robustRB: { focus: ['RB'], note: 'Focus: RB — three strong backs up front. QB, WR, TE, K and DEF are taken at the best value available.' },
+  zeroRB: { focus: ['WR'], note: 'Focus: WR — two studs up top. RB is intentionally left cheap / best-available late.' },
+  heroWR: { focus: ['WR'], note: 'Focus: WR — one elite anchor receiver. QB, RB, TE, K and DEF are taken at the best value available.' },
+  eliteTE: { focus: ['TE'], note: 'Focus: TE — pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
+};
 function buildModel(key, myTeam, players, config, draftedIds, roleOverrides) {
   const di = draftedIds || new Set();
   const byPos = {};
@@ -4779,6 +4810,13 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
   if (!myTeam) return (<aside className="sidebar models-panel"><div className="models-head">Draft Models</div><p style={{ fontSize: 12, color: 'var(--text-muted)', padding: 8 }}>Mark a team as yours on the Draft Board to see ideal builds.</p></aside>);
   const slots = plan ? plan.slots || [] : [];
   const cost = slots.reduce((s, sl) => s + (sl.status === 'filled' ? (sl.price || 0) : (sl.targetPrice || 0)), 0);
+  const posRank = useMemo(() => {
+    const by = {}, m = {};
+    (players || []).forEach(p => (by[p.position] = by[p.position] || []).push(p));
+    Object.values(by).forEach(a => { a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)); a.forEach((p, i) => { m[p.id] = i + 1; }); });
+    return m;
+  }, [players]);
+  const focusInfo = MODEL_FOCUS[model] || { focus: [], note: '' };
   return (
     <aside className="sidebar models-panel">
       <div className="models-head">Draft Models</div>
@@ -4787,15 +4825,22 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
       </div>
       {plan && <div className="model-summary"><b>{(plan.starterPoints / games).toFixed(1)}</b> pts/gm · ~${cost}/{config.budget}{plan.feasible ? '' : ' · over'}</div>}
       <div className="model-lineup">
-        {slots.map((sl, i) => (
-          <div key={i} className="model-slot">
-            <span className="ms-label">{sl.label}</span>
-            <span className="ms-name">{sl.player ? sl.player.name : '—'}</span>
-            <span className="ms-price">{sl.player ? `$${sl.status === 'filled' ? sl.price : sl.targetPrice}` : ''}</span>
-          </div>
-        ))}
+        {slots.map((sl, i) => {
+          const pos = sl.player ? sl.player.position : null;
+          const isFocus = !!(pos && focusInfo.focus.indexOf(pos) !== -1);
+          const rank = sl.player ? posRank[sl.player.id] : null;
+          return (
+            <div key={i} className={`model-slot ${isFocus ? 'ms-focus' : ''}`}>
+              <span className="ms-label">{sl.label}</span>
+              <span className="ms-name">{sl.player ? sl.player.name : '—'}</span>
+              <span className="ms-rank">{sl.player && rank ? `${pos}${rank}` : ''}</span>
+              <span className="ms-price">{sl.player ? `$${sl.status === 'filled' ? sl.price : sl.targetPrice}` : ''}</span>
+            </div>
+          );
+        })}
       </div>
-      <div className="models-foot">Each model anchors a different strategy, then re-solves your ideal starting lineup within budget.</div>
+      {focusInfo.note && <div className="model-focus-note">{focusInfo.note}</div>}
+      <div className="models-foot">Teal marks the positions this model targets; every other spot takes the best value available. Ranks (e.g. QB5) show where each player falls at his position.</div>
     </aside>
   );
 }
@@ -5175,7 +5220,6 @@ function App() {
   }
   const onbSteps = [
     { label: 'Set your league & scoring', done: !!(account.flags && account.flags.scoring), cta: 'Settings', action: () => setView('settings') },
-    { label: 'Load current player data', done: !!dataInfo, cta: 'Load', action: handleLoadLiveData },
     { label: 'Name your team', done: !!(myTeam && myTeam.name && !/^team\s*\d+$/i.test(myTeam.name) && myTeam.name.toLowerCase() !== 'my team'), cta: 'Board', action: () => setView('board') },
     { label: 'Make your first pick', done: draftHistory.length > 0, cta: 'Board', action: () => setView('board') },
   ];
