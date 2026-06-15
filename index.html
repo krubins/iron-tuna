@@ -4762,6 +4762,55 @@ function coachWhySlot(q, ctx) {
   L.push(`So ${pos}${pi + 1} isn't "settling" — it's the slot where an extra dollar returns the fewest points, so the plan banks the savings elsewhere. Want a different ${pos}? Target him and I'll re-solve around it.`);
   return L.join(' ');
 }
+// "Should I punt / go cheap / stream this position?" — answers with the position's
+// value curve: what you give up going to a $1 streamer vs paying up, and whether the
+// saved dollars do more good elsewhere. Handles "all the QBs are in red" framing.
+function coachPunt(q, ctx) {
+  const t = q.toLowerCase();
+  const puntSignal = /(\$\s*1\b|\b1\s*(dollar|player|guy)|\bpunt\b|\bstream|\bcheap|cheapest|\bbetter off\b|\bin (the )?red\b|overpriced|over ?pay|overpaying|not worth|\bskip\b|save money|go cheap|\bminimum\b|\bdollar\b|\bwait on\b|priced out|spend up)/.test(t);
+  if (!puntSignal) return null;
+  const pm = { qb:'QB', rb:'RB', wr:'WR', te:'TE', k:'K', kicker:'K', def:'DEF', defense:'DEF', dst:'DEF' };
+  let pos = null; Object.keys(pm).forEach(k => { if (new RegExp('\\b'+k+'s?\\b').test(t)) pos = pm[k]; });
+  if (!pos) return null;
+  const { evalPlayers, myTeam, config, draftedIds, plan, games } = ctx;
+  if (!myTeam) return null;
+  const di = draftedIds || new Set();
+  const g = games || 17;
+  const teamsN = config.teams || 12;
+  const minBid = config.valuation.minBid;
+  const maxBid = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
+  const price = p => p.marketValue != null ? p.marketValue : p.auctionValue;
+  const ppg = p => (p.projectedPoints || 0) / g;
+  const youOf = p => p.personalValue != null ? p.personalValue : p.auctionValue;
+  const fn = n => (n || '').split(' ')[0] || n;
+  const list = (evalPlayers || []).filter(p => p.position === pos && !di.has(p.id)).sort((a,b)=>(b.projectedPoints||0)-(a.projectedPoints||0));
+  if (list.length < 3) return null;
+  const startersPer = (config.roster[pos] && (config.roster[pos].starters || 0)) || (pos==='QB'||pos==='TE'||pos==='K'||pos==='DEF' ? 1 : 0);
+  const leagueStart = Math.max(1, startersPer * teamsN);
+  const cheapList = list.filter(p => price(p) <= Math.max(2, minBid + 1));
+  const streamer = cheapList.length ? cheapList[0] : list[list.length - 1];
+  const slot = plan ? (plan.remainingStarterSlots || []).find(sl => (sl.eligible || []).includes(pos) && sl.player) : null;
+  const payUp = (slot && slot.player) || list.find(p => price(p) <= maxBid && price(p) >= 6) || list[0];
+  const payUpPrice = slot ? slot.targetPrice : price(payUp);
+  const dropGm = Math.max(0, ppg(payUp) - ppg(streamer));
+  const saved = Math.max(0, payUpPrice - Math.max(minBid, price(streamer)));
+  const repl = list[Math.min(list.length - 1, leagueStart - 1)] || list[list.length - 1];
+  const scarcityGm = Math.max(0, ppg(list[0]) - ppg(repl));
+  const shallow = (pos === 'QB' || pos === 'TE' || pos === 'K' || pos === 'DEF');
+  const realloc = (evalPlayers || []).filter(p => !di.has(p.id) && (p.position === 'RB' || p.position === 'WR') && price(p) <= maxBid)
+    .map(p => ({ p, edge: Math.max(youOf(p), p.auctionValue || 0) - (p.marketValue || 0) }))
+    .sort((a,b) => b.edge - a.edge)[0];
+  const L = [];
+  L.push(`${shallow ? 'Often yes' : 'Usually no'} — here's the ${pos} math, not a guess.`);
+  L.push(`Cheapest startable ${pos}: ${streamer.name} (~$${Math.max(minBid, price(streamer))}, ${ppg(streamer).toFixed(1)} pts/gm). The ${pos} you'd pay up for: ${payUp.name} (~$${payUpPrice}, ${ppg(payUp).toFixed(1)} pts/gm) — a gap of ${dropGm.toFixed(1)} pts/gm for about $${saved} more.`);
+  if (shallow) {
+    L.push(`${pos} is shallow — only ${scarcityGm.toFixed(1)} pts/gm separate the #1 ${pos} from a replacement starter — so that $${saved} usually buys more points at RB/WR.${realloc && realloc.edge > 0 ? ` Best place for it: ${realloc.p.name} (You $${youOf(realloc.p)} vs Proj $${realloc.p.marketValue}).` : ''}`);
+    L.push(`When every ${pos} is priced above your value (all "red"), that's the room overpaying the position — exactly when a $1 ${pos} plus reallocating the savings wins. Grab a $1-2 ${pos} late and spend up at RB/WR.`);
+  } else {
+    L.push(`But ${pos} is where points are scarcest (${scarcityGm.toFixed(1)} pts/gm from #1 to replacement), so a $1 ${pos} costs ${dropGm.toFixed(1)} pts/gm you can't easily recover. Punt ${pos} only if you're truly priced out — otherwise pay your number for one starter and go cheap at QB/TE/K/DEF instead.`);
+  }
+  return L.join(' ');
+}
 function coachMostImportant(q, ctx) {
   const t = q.toLowerCase();
   if (!/\b(most important|most valuable|biggest impact|matters most|single most|priorit|key (player|get|piece)|maximize my (points|score|scoring)|build around|cornerstone|linchpin|focus on|should i focus|what player should i|who (should i|to) focus|where (do i|to|should i) start|who.{0,18}(maximize|most points|biggest))\b/.test(t)) return null;
@@ -5147,6 +5196,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     const ctx = { evalPlayers: evalPlayers || [], myTeam, teams: teams || [], config, draftedIds: draftedIds || new Set(), plan, marketState, games: seasonGames };
     const ws = coachWhySlot(q, ctx); if (ws) { ITAnalytics.track('coach_whyslot', {}); push('bot', ws); return; }
     const rp = coachRecommendPos(q, ctx); if (rp) { ITAnalytics.track('coach_recommend', {}); push('bot', rp); return; }
+    const pnt = coachPunt(q, ctx); if (pnt) { ITAnalytics.track('coach_punt', {}); push('bot', pnt); return; }
     const mi = coachMostImportant(q, ctx); if (mi) { ITAnalytics.track('coach_mvp', {}); push('bot', mi); return; }
     const wp = coachWhyPlan(q, ctx); if (wp) { ITAnalytics.track('coach_whyplan', {}); push('bot', wp); return; }
     const evalAndNominate = pl => { ITAnalytics.track('coach_player_eval', { player: pl.name }); push('bot', coachEvalReply(pl, ctx.evalPlayers, myTeam, ctx.teams, config, ctx.draftedIds, seasonGames)); if (onNominate && !ctx.draftedIds.has(pl.id)) onNominate(pl); };
