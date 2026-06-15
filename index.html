@@ -4507,6 +4507,44 @@ function coachEvalReply(p, players, myTeam, teams, config, draftedIds, games) {
   else L.push(`Bottom line: fair value to you is ~$${you}; let someone else overpay above that.`);
   return L.join(' ');
 }
+function coachCompare(q, ctx) {
+  const segs = q.split(/\bor\b|\bvs\.?\b|versus/i);
+  if (segs.length < 2) return null;
+  const players = ctx.evalPlayers || [];
+  const di = ctx.draftedIds || new Set();
+  const g = ctx.games || 17;
+  const found = [];
+  segs.forEach(seg => {
+    const f = findPlayer(stripEval(seg), players);
+    if (f.player && !di.has(f.player.id) && !found.some(x => x.p.id === f.player.id)) {
+      const m = seg.match(/\$?\s*(\d{1,3})\b/);
+      found.push({ p: f.player, price: m ? parseInt(m[1], 10) : null });
+    }
+  });
+  if (found.length < 2) return null;
+  const rows = found.map(x => {
+    const value = x.p.auctionValue || 0;
+    const proj = x.p.marketValue != null ? x.p.marketValue : value;
+    const ppg = (x.p.projectedPoints || 0) / g;
+    const askedPrice = x.price != null ? x.price : proj;
+    return { ...x, value, proj, ppg, askedPrice, surplus: value - askedPrice };
+  });
+  rows.sort((a, b) => b.surplus - a.surplus || b.ppg - a.ppg);
+  const win = rows[0], lose = rows[1];
+  const ppgGap = win.ppg - lose.ppg;
+  const detail = rows.map(r => `\u2022 ${r.p.name} (${r.p.position}): ${r.ppg.toFixed(1)} pts/gm, true value $${r.value}${r.price != null ? ` \u2014 at $${r.price} that's ${r.surplus >= 0 ? '$' + r.surplus + ' UNDER value' : '$' + (-r.surplus) + ' OVER value'}` : ` (~$${r.proj} market)`}`).join('\n');
+  let verdict = `Take ${win.p.name}${win.price != null ? ` at $${win.price}` : ''}. `;
+  if (win.price != null && lose.price != null) {
+    verdict += `${lose.p.name} at $${lose.price} costs $${Math.abs(lose.price - win.price)} ${lose.price > win.price ? 'more' : 'less'} for ${Math.abs(ppgGap).toFixed(1)} pts/gm ${ppgGap >= 0 ? 'fewer' : 'more'} \u2014 `;
+  }
+  verdict += win.surplus >= 0
+    ? `${win.p.name} is the value play (about $${win.surplus} under his true worth)${lose.surplus < 0 ? `, while ${lose.p.name} would be roughly a $${-lose.surplus} overpay` : ''}.`
+    : `neither is a bargain, but ${win.p.name} is the better value of the two.`;
+  if (win.price != null && lose.price != null && win.price < lose.price && ['QB', 'TE', 'K', 'DEF'].indexOf(win.p.position) !== -1) {
+    verdict += ` And the ~$${lose.price - win.price} you save is better spent at RB/WR, where points are scarcer.`;
+  }
+  return verdict + '\n\n' + detail;
+}
 function coachConcept(q) {
   const t = q.toLowerCase();
   if (!/\b(what|whats|what's|explain|define|definition|meaning|mean|means|how do|how does|stand for|tell me about the)\b/.test(t)) return null;
@@ -4938,14 +4976,13 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     } catch (e) {
       setMsgs(m => m.filter(x => x._id !== tid));
       runEngine(q);
-      setMsgs(m => [...m, { role: 'bot', text: '(AI unavailable — used the built-in engine. Check your key/endpoint under AI.)' }]);
     }
   }
   function send() {
     const q = text.trim(); if (!q) return; setText('');
     push('user', q);
     const lc0 = q.toLowerCase();
-    const aiOn = ai && ai.enabled && ai.key && ai.endpoint;
+    const aiOn = ai && ai.enabled && ai.endpoint && (ai.format === 'proxy' || ai.key);
     const isTune = /\b(make|set|boost|raise|lower|cheaper|pricier|reset|inflate|deflate)\b/.test(lc0) || /more expensive|less expensive/.test(lc0) || /[+\-]\s*\d+\s*%/.test(lc0);
     if (aiOn && !pending && !isTune) { handleAI(q); return; }
     runEngine(q);
@@ -4980,6 +5017,11 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     const mi = coachMostImportant(q, ctx); if (mi) { ITAnalytics.track('coach_mvp', {}); push('bot', mi); return; }
     const wp = coachWhyPlan(q, ctx); if (wp) { ITAnalytics.track('coach_whyplan', {}); push('bot', wp); return; }
     const evalAndNominate = pl => { ITAnalytics.track('coach_player_eval', { player: pl.name }); push('bot', coachEvalReply(pl, ctx.evalPlayers, myTeam, ctx.teams, config, ctx.draftedIds, seasonGames)); if (onNominate && !ctx.draftedIds.has(pl.id)) onNominate(pl); };
+    const cmp = coachCompare(q, ctx); if (cmp) { ITAnalytics.track('coach_compare', {}); push('bot', cmp); return; }
+    if (/\b(bid|bidding|take|get|grab|draft|worth|thoughts on|how much|should i|target|go after|pay for|nominate|about)\b/.test(lc)) {
+      const pf = findPlayer(stripEval(q), ctx.evalPlayers);
+      if (pf.player) { evalAndNominate(pf.player); if (pf.alternatives && pf.alternatives.length) push('bot', 'Also close: ' + pf.alternatives.map(a => a.name).join(', ') + '.'); return; }
+    }
     // 1) "why" about a specific player
     if (/why/.test(lc)) { const wf = findPlayer(stripEval(q), ctx.evalPlayers); if (wf.player) { ITAnalytics.track('coach_why', { player: wf.player.name }); push('bot', coachWhyPlayer(wf.player, ctx)); if (onNominate && !ctx.draftedIds.has(wf.player.id)) onNominate(wf.player); return; } }
     // 2) player + a value/eval keyword -> evaluate
@@ -5004,14 +5046,10 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name} — ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
     <div className={`coach ${big ? 'big' : ''}`}>
-      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div><button className={`coach-ai-pill ${ai && ai.enabled ? 'on' : ''}`} onClick={() => setShowAi(v => !v)} title="AI analysis settings (bring your own key)">AI{ai && ai.enabled ? ' \u2713' : ''}</button>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
+      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
-      {showAi
-        ? <CoachAiSettings ai={ai} onSave={onSaveAi} onClose={() => setShowAi(false)} />
-        : (<>
-          <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
-          <div className="coach-input"><input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }} placeholder={ai && ai.enabled ? 'Ask anything about your draft' : (pending ? 'e.g. spread it across the others' : 'Ask about a player, or tune values')} /><button onClick={send}>Send</button></div>
-        </>)}
+      <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
+      <div className="coach-input"><input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything — players, prices, strategy'} /><button onClick={send}>Send</button></div>
     </div>
   );
 }
@@ -5073,8 +5111,8 @@ const TIERS = [
   ] },
 ];
 function loadAccount() {
-  const def = { user: null, entitlements: {}, testMode: true, onboardingDismissed: false, flags: {}, ai: { enabled: false, format: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini', key: '' } };
-  try { const a = JSON.parse(localStorage.getItem(ACCOUNT_KEY)); if (a && typeof a === 'object') return { ...def, ...a, ai: { ...def.ai, ...(a.ai || {}) } }; } catch (e) {}
+  const def = { user: null, entitlements: {}, testMode: true, onboardingDismissed: false, flags: {}, ai: { enabled: true, format: 'proxy', endpoint: '/api/coach', model: 'claude-sonnet-4-6', key: '', v: 3 } };
+  try { const a = JSON.parse(localStorage.getItem(ACCOUNT_KEY)); if (a && typeof a === 'object') { const merged = { ...def, ...a, ai: { ...def.ai, ...(a.ai || {}) } }; if (!a.ai || a.ai.v !== 3) merged.ai = { ...def.ai }; return merged; } } catch (e) {}
   return def;
 }
 function entitled(account, id) { if (!account) return false; if (account.testMode) return true; const e = account.entitlements || {}; if (e.bundle) return true; if (e.base && id !== 'coach') return true; return !!e[id]; }
