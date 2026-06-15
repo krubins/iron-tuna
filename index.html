@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a0a0a" />
   <title>Iron Tuna — Fantasy Football Auction Draft Assistant</title>
   <meta name="description" content="Iron Tuna tells you what every player is worth to YOUR roster — three honest numbers, a budget-aware optimal-lineup planner, live opponent reads, and a natural-language Value Coach. Built for fantasy football auction drafts." />
-  <meta name="keywords" content="fantasy football, auction draft, draft assistant, VBD, auction values, Sleeper, draft tool" />
+  <meta name="keywords" content="fantasy football, auction draft, draft assistant, VBD, auction values, draft tool" />
   <meta name="author" content="Iron Tuna" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Iron Tuna" />
@@ -270,6 +270,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .player-table tbody tr:hover .col-personal { background: rgba(245, 184, 0, 0.12); }
 .player-table tbody tr.drafted .col-personal { background: transparent; }
 .header-logo { height: 40px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.header-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; border-radius: 6px; transition: filter 0.12s; }
+.header-logo-btn:hover { filter: brightness(1.12); }
 .landing-splash { position: fixed; inset: 0; z-index: 1000; background: radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; opacity: 1; transition: opacity 0.6s ease-out; }
 .landing-splash.fading-out { opacity: 0; pointer-events: none; }
 .landing-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; z-index: 2; }
@@ -514,15 +516,24 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-col { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
 .cheat-col-head { display: flex; justify-content: space-between; align-items: baseline; background: var(--bg-elev); padding: 5px 8px; font-family: var(--font-display); letter-spacing: 0.04em; color: var(--gold-text); border-bottom: 1px solid var(--border-strong); }
 .cheat-col-sub { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); letter-spacing: 0; }
-.cheat-row { display: grid; grid-template-columns: 18px minmax(0,1fr) auto auto auto; gap: 5px; align-items: center; padding: 2px 8px; font-size: 11px; cursor: grab; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.cheat-row { display: grid; grid-template-columns: 16px minmax(0,1fr) auto auto auto auto; gap: 4px; align-items: center; padding: 2px 7px; font-size: 11px; cursor: grab; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .cheat-row:hover { background: var(--bg-elev); }
 .cheat-row.cheat-drop { box-shadow: inset 0 2px 0 var(--gold-text); }
 .cheat-rank { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; text-align: right; }
 .cheat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cheat-team { font-size: 9px; color: var(--text-muted); font-family: var(--font-mono); }
-.cheat-val { font-family: var(--font-mono); color: var(--gold-text); font-size: 10px; text-align: right; min-width: 24px; }
-.cheat-cost { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; text-align: right; min-width: 24px; }
+.cheat-val { font-family: var(--font-mono); color: var(--gold-text); font-size: 10px; text-align: right; min-width: 20px; }
+.cheat-cost { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; text-align: right; min-width: 20px; }
+.cheat-you { font-family: var(--font-mono); font-size: 10px; text-align: right; min-width: 20px; font-weight: 700; color: var(--gold-text); }
+.cheat-you.cy-up { color: var(--positive); }
+.cheat-you.cy-down { color: var(--text-muted); font-weight: 400; }
+.cheat-tilt { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-secondary); }
+.cheat-tilt input[type=range] { width: 88px; accent-color: var(--positive); cursor: pointer; }
+.cheat-tilt input[type=range]:disabled { opacity: 0.4; cursor: default; }
+.cheat-tilt-val { font-family: var(--font-mono); font-size: 10px; color: var(--positive); min-width: 70px; }
 .only-print { display: none; }
+.cheat-col-labels { display: none; }
+.cheat-print-foot { display: none; }
 .cheat-print-head { font-family: var(--font-display); font-size: 16px; color: #000; margin-bottom: 6px; }
 @media print {
   @page { size: 11in 8.5in; margin: 0.3in; }
@@ -531,30 +542,34 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheatsheet { position: absolute; left: 0; top: 0; width: 100%; color: #111; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .no-print { display: none !important; }
   .only-print { display: block; }
-  .cheat-print-head { margin-bottom: 9px; border-bottom: 2px solid #1a2430; padding-bottom: 6px; }
-  .cph-title { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 24px; letter-spacing: 0.05em; color: #1a2430; line-height: 1; }
-  .cph-title span { color: #b8860b; margin-left: 8px; font-size: 15px; letter-spacing: 0.12em; }
-  .cph-sub { font-size: 9px; color: #555; margin-top: 4px; }
-  .cph-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 5px; font-size: 8px; color: #333; }
+  .cheat-print-head { margin-bottom: 11px; padding: 9px 11px; background: #1a2430; border-radius: 4px; border-bottom: 3px solid #b8860b; }
+  .cph-title { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 27px; letter-spacing: 0.06em; color: #fff; line-height: 1; }
+  .cph-title span { color: #f0c75e; margin-left: 9px; font-size: 15px; letter-spacing: 0.14em; }
+  .cph-sub { font-size: 9px; color: #cdd5dd; margin-top: 5px; letter-spacing: 0.02em; }
+  .cph-legend { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 6px; font-size: 8px; color: #e2e6ea; }
   .cph-key { display: inline-flex; align-items: center; gap: 4px; }
   .cph-key i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
-  .cph-key .k-cost { background: #888; } .cph-key .k-val { background: #b8860b; }
+  .cph-key .k-cost { background: #888; } .cph-key .k-val { background: #b8860b; } .cph-key .k-you { background: #0a7a3f; }
   .cph-key .k-grn { background: #0a7a3f; } .cph-key .k-red { background: #b3261e; }
   .cph-key .k-hl { background: #fbf2d6; border: 1px solid #b8860b; }
   .cheat-grid { display: grid !important; grid-template-columns: repeat(6, 1fr); gap: 5px; }
   .cheat-col { border: 1px solid #c4c4c4; border-radius: 3px; overflow: hidden; break-inside: avoid; }
-  .cheat-col-head { color: #fff !important; border: none; padding: 2px 5px; font-size: 10px; font-family: 'Bebas Neue', Arial, sans-serif; letter-spacing: 0.06em; display: flex; justify-content: space-between; align-items: baseline; }
+  .cheat-col-head { color: #fff !important; border: none; padding: 3px 6px; font-size: 11px; font-family: 'Bebas Neue', Arial, sans-serif; letter-spacing: 0.08em; display: flex; justify-content: space-between; align-items: baseline; }
   .cheat-col-sub { color: rgba(255,255,255,0.82) !important; font-size: 6.5px; font-family: Arial, sans-serif; }
   .cc-QB .cheat-col-head { background: #c0392b !important; } .cc-RB .cheat-col-head { background: #1f9d57 !important; }
   .cc-WR .cheat-col-head { background: #2563eb !important; } .cc-TE .cheat-col-head { background: #d18a1f !important; }
   .cc-K .cheat-col-head { background: #7c3aed !important; } .cc-DEF .cheat-col-head { background: #4b5563 !important; }
-  .cheat-row { font-size: 7px; padding: 0.5px 4px; border-bottom: 1px solid #eef0f2; color: #111; grid-template-columns: 13px minmax(0,1fr) auto auto; gap: 3px; }
+  .cheat-col-labels { display: grid; grid-template-columns: 13px minmax(0,1fr) auto auto auto; gap: 3px; padding: 1.5px 4px; font-size: 5.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5a6675; background: #eef1f4; border-bottom: 1px solid #d4dade; font-family: Arial, sans-serif; }
+  .cheat-col-labels span:nth-child(n+3) { text-align: right; }
+  .cheat-row { font-size: 7.5px; padding: 1px 4px; border-bottom: 1px solid #eef0f2; color: #1a1a1a; grid-template-columns: 13px minmax(0,1fr) auto auto auto; gap: 3px; }
   .cheat-row:nth-of-type(2n) { background: #f4f6f8 !important; }
   .cheat-row:hover { background: none; }
   .cheat-rank { color: #999 !important; font-size: 6.5px; }
   .cheat-team { display: none; }
   .cheat-cost { color: #6a6a6a !important; font-size: 7px; }
   .cheat-val { color: #111 !important; font-size: 7.5px; font-weight: 700; }
+  .cheat-you { color: #111 !important; font-size: 7.5px; font-weight: 700; }
+  .cheat-you.cy-up { color: #0a7a3f !important; } .cheat-you.cy-down { color: #6a6a6a !important; font-weight: 400; }
   .cheat-name { color: #111 !important; }
   .cheat-name.cn-under { color: #0a7a3f !important; }
   .cheat-name.cn-over { color: #b3261e !important; }
@@ -564,6 +579,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-hl .cheat-rank::before { content: '\2605'; color: #b8860b; margin-right: 1px; }
   .cheat-row.cheat-target { background: #eafaf3 !important; }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 7px; }
+  .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 6.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
 }.hl-btn { font-size: 11px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
 .cheat-sep { width: 1px; align-self: stretch; background: var(--border-strong); margin: 0 4px; }
@@ -1735,11 +1751,11 @@ function LogoMark({ height = 34, className = '', tagline = false }) {
 const APP_VERSION = '0.5.0';
 const BUILD_DATE = '2026-06-12';
 // ─── components/Header.jsx ──────────────────────────
-function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPointsMode, dataInfo, account, onUpgrade, onAccount, onToggleTest }) {
+function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPointsMode, dataInfo, account, onUpgrade, onAccount, onToggleTest, onHome }) {
   return (
     <header className="header">
       <div className="header-brand">
-        <LogoMark height={40} className="header-logo" />
+        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna — back to start"><LogoMark height={40} className="header-logo" /></button>
         <div className="header-brand-text">
           <span className="subtitle">Auction Draft Command</span>
           <span className="version-stamp">v{APP_VERSION} · {BUILD_DATE}</span>
@@ -1769,7 +1785,7 @@ function LandingSplash({ onDismiss }) {
   const [fadingOut, setFadingOut] = useState(false);
   function enter() { setFadingOut(true); setTimeout(() => onDismiss && onDismiss(), 350); }
   const cards = [
-    ['Your values, your league', "Free and fully customizable — set your teams, budget, and a complete custom scoring system. Import scoring from Sleeper, a screenshot, or a paste in seconds."],
+    ['Your values, your league', "Free and fully customizable — set your teams, budget, and a complete custom scoring system. Import your scoring from a screenshot or a quick paste in seconds."],
     ['Three honest numbers', 'Proj (likely market price), Value (true worth), and You (your personal max). Stop guessing what to bid — know it.'],
     ['An AI that explains itself', 'Ask "who should I draft at QB and why?" or "where\'s the value?" — and get a clear, reasoned answer you can trust, not just a number.'],
     ['Actionable, not just data', 'A budget-aware optimal-lineup planner, live opponent reads, switch prices, and a printable cheat sheet. Built for the auction, in real time.'],
@@ -2438,7 +2454,7 @@ function mapSleeperLeague(lg) {
   return out;
 }
 function ScoringImport({ onApply }) {
-  const [tab, setTab] = useState('connect');
+  const [tab, setTab] = useState('paste');
   const [paste, setPaste] = useState('');
   const [leagueInput, setLeagueInput] = useState('');
   const [leagues, setLeagues] = useState(null);
@@ -2480,16 +2496,10 @@ function ScoringImport({ onApply }) {
     show(map[kind], 'preset');
   }
   function apply() { if (!preview) return; onApply(preview.partial); const n = preview.items.length; setStatus(`Applied ${n} setting${n !== 1 ? 's' : ''} from ${preview.source}. Review the fields below, then Save.`); setPreview(null); }
-  const tabs = [['connect', 'Connect league'], ['paste', 'Paste'], ['screenshot', 'Screenshot'], ['manual', 'Quick presets']];
+  const tabs = [['paste', 'Paste'], ['screenshot', 'Screenshot'], ['manual', 'Quick presets']];
   return (
     <div className="imp">
       <div className="imp-tabs">{tabs.map(([k, lbl]) => <button key={k} className={`imp-tab ${tab === k ? 'active' : ''}`} onClick={() => { setTab(k); setPreview(null); setStatus(''); setLeagues(null); }}>{lbl}</button>)}</div>
-      {tab === 'connect' && (<div>
-        <div className="imp-hint">Sleeper imports your scoring + roster automatically — no password needed. Enter your <b>League ID</b> (the number in your Sleeper URL) or your <b>username</b>. ESPN & Yahoo need account sign-in and are coming soon.</div>
-        <input type="text" value={leagueInput} onChange={e => setLeagueInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') doConnect(); }} placeholder="Sleeper league ID or username" />
-        <div style={{ marginTop: 8 }}><button className="btn-draft" disabled={busy} onClick={doConnect}>{busy ? 'Working…' : 'Fetch from Sleeper'}</button></div>
-        {leagues && <div>{leagues.map(l => <div key={l.league_id} className="imp-league"><span style={{ fontSize: 12 }}>{l.name} <span style={{ color: 'var(--text-muted)' }}>· {l.season} · {l.total_rosters} teams</span></span><button className="btn-secondary" onClick={() => pickLeague(l.league_id, l.name)}>Use this</button></div>)}</div>}
-      </div>)}
       {tab === 'paste' && (<div>
         <div className="imp-hint">Paste your league’s scoring rules (copy from your platform’s settings page). Plain lines like “Passing TD 4”, “Reception 0.5”, “Rushing yards 1 pt / 10 yds”.</div>
         <textarea value={paste} onChange={e => setPaste(e.target.value)} placeholder={'Passing TD: 4\nInterception: -2\nRushing TD: 6\nReception: 0.5\nReceiving TD: 6'} />
@@ -2557,19 +2567,19 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
         <div className="section-title">League Settings</div>
         <div className="settings-section-title">Live Data</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Pull the current NFL player pool and season projections from Sleeper (free, no account).
+          Pull the current NFL player pool and season projections (free, no account).
           Your scoring rules are then applied on top. Cached for the day; works offline on the baseline pool if the load fails.
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
           <button className="btn-draft" disabled={loading} onClick={onLoadLive}>
-            {loading ? 'Loading…' : 'Load live data (Sleeper)'}
+            {loading ? 'Loading…' : 'Load latest NFL projections'}
           </button>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             {dataInfo ? `Loaded ${dataInfo.source} ${dataInfo.season} · ${dataInfo.count} players` : 'Using baseline projections'}
           </span>
         </div>
         <div className="settings-section-title">Import Your League Scoring</div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Skip the manual entry: connect your Sleeper league, paste your rules, or upload a screenshot. Detected values fill the fields below for you to confirm.</p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Skip the manual entry: paste your league's scoring rules or upload a screenshot. Detected values fill the fields below for you to confirm.</p>
         <ScoringImport onApply={applyImport} />
         <div className="settings-section-title">League Basics</div>
         <div className="settings-grid">
@@ -2911,6 +2921,13 @@ function printPdf(size) {
   } catch (e) {}
   window.print();
 }
+const STRAT_TILT = {
+  heroRB:   { RB: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], WR: [{ w: -0.06 }] },
+  robustRB: { RB: [{ maxRank: 5, w: 0.22 }], WR: [{ w: -0.08 }] },
+  zeroRB:   { RB: [{ w: -0.25 }], WR: [{ maxRank: 4, w: 0.25 }, { w: 0.05 }] },
+  heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
+  eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
+};
 function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget }) {
   const cols = [['QB', 30], ['RB', 60], ['WR', 60], ['TE', 30], ['K', 25], ['DEF', 25]];
   const byPos = {};
@@ -2918,7 +2935,10 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
   const rowRefs = useRef({});
   const [highlight, setHighlight] = useState(null);
+  const [tilt, setTilt] = useState(50);
   const hlSet = cheatHighlights(byPos, highlight);
+  const stratKey = (highlight && highlight !== 'targets') ? highlight : null;
+  const minBid = (config && config.valuation && config.valuation.minBid) || 1;
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
   const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -2963,36 +2983,50 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         {['heroRB', 'zeroRB', 'heroWR', 'robustRB', 'eliteTE'].map(k => (
           <button key={k} className={`hl-btn ${highlight === k ? 'active' : ''}`} onClick={() => setHighlight(h => h === k ? null : k)}>{STRAT[k].label}</button>
         ))}
+        <span className="cheat-sep" />
+        <label className="cheat-tilt" title="Shifts your max bids toward the selected strategy. Affects only the You price — not cost or value.">Strategy tilt
+          <input type="range" min="0" max="100" value={tilt} onChange={e => setTilt(parseInt(e.target.value || 0))} disabled={!stratKey} />
+          <span className="cheat-tilt-val">{stratKey ? `${tilt}% tilt` : 'pick a strategy'}</span>
+        </label>
       </div>
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
-      <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Two figures: <b style={{ color: 'var(--text-muted)' }}>cost</b> · <b style={{ color: 'var(--gold-text)' }}>value</b>. Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b></div>
+      <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Three figures: <b style={{ color: 'var(--text-muted)' }}>cost</b> · <b style={{ color: 'var(--gold-text)' }}>value</b> · <b style={{ color: 'var(--positive)' }}>You</b> (your max bid). Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b></div>
       <div className="cheat-print-head only-print">
         <div className="cph-title">IRON TUNA <span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
-        <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-grn" />undervalued</span><span className="cph-key"><i className="k-red" />overvalued</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
+        <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-you" />your max bid</span><span className="cph-key"><i className="k-grn" />undervalued</span><span className="cph-key"><i className="k-red" />overvalued</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
       </div>
       <div className={`cheat-grid ${highlight ? 'has-hl' : ''}`}>
         {cols.map(([pos, n]) => (
           <div className={`cheat-col cc-${pos}`} key={pos}>
             <div className="cheat-col-head"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>
+            <div className="cheat-col-labels"><span>#</span><span>Player</span><span>Cost</span><span>Val</span><span>You</span></div>
             {(byPos[pos] || []).slice(0, n).map((p, i) => {
               const cost = p.marketValue != null ? p.marketValue : p.auctionValue;
               const value = p.auctionValue;
               const gap = cost - value;
               const sign = Math.abs(gap) <= 1 ? 'neutral' : gap < 0 ? 'under' : 'over';
+              const youBase = p.personalValue != null ? p.personalValue : value;
+              let you = youBase, youDir = 'flat';
+              if (stratKey && STRAT_TILT[stratKey] && STRAT_TILT[stratKey][pos]) {
+                const rule = STRAT_TILT[stratKey][pos].find(r => r.maxRank == null || (i + 1) <= r.maxRank);
+                if (rule) { you = Math.max(minBid, Math.round(youBase * (1 + rule.w * (tilt / 100)))); youDir = you > youBase ? 'up' : you < youBase ? 'down' : 'flat'; }
+              }
               return (
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none' }}>
                 <span className="cheat-rank">{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: costColor(cost, value) }} title={sign === 'under' ? `Undervalued by $${value - cost}` : sign === 'over' ? `Overvalued by $${cost - value}` : 'Fairly priced'}>{p.name}</span>
                 <span className="cheat-team">{p.team || ''}</span>
                 <span className="cheat-cost" title="Predicted cost">${cost}</span>
-                <span className="cheat-val" title="Value">${value}</span>
+                <span className="cheat-val" title="Value (VBD)">${value}</span>
+                <span className={`cheat-you cy-${youDir}`} title="Your max bid — personalized, strategy-adjusted">${you}</span>
               </div>
               );
             })}
           </div>
         ))}
       </div>
+      <div className="cheat-print-foot">IRON TUNA · Auction Cheat Sheet · {config.teams}-team · ${config.budget} budget · {pprLabel} · {dateStr}</div>
     </div>
   );
 }
@@ -4726,7 +4760,7 @@ function LegalModal({ onClose }) {
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, maxHeight: '52vh', overflowY: 'auto' }}>
           {tab === 'privacy' ? (
             <div>
-              <p><b>Privacy Policy (template).</b> Iron Tuna stores your draft state, league settings, and unlocks locally in your browser. We import public league data (e.g., Sleeper) without a password. Screenshots you upload for scoring are read on your device (OCR) and are not transmitted to a server.</p>
+              <p><b>Privacy Policy (template).</b> Iron Tuna stores your draft state, league settings, and unlocks locally in your browser. We import public league data without a password. Screenshots you upload for scoring are read on your device (OCR) and are not transmitted to a server.</p>
               <p style={{ marginTop: 8 }}>When accounts and analytics are connected in production, we will collect the email you provide and anonymous product-usage events to improve the app. We will not sell your data. This is placeholder text to be reviewed by counsel before launch.</p>
             </div>
           ) : (
@@ -4948,9 +4982,9 @@ function App() {
       let season = year;
       let data = await loadSleeperData(season);
       if (data.length < 50) { season = year - 1; data = await loadSleeperData(season); }
-      if (!data || data.length === 0) { alert('No projections returned from Sleeper. Keeping the current pool.'); return; }
+      if (!data || data.length === 0) { alert('No live projections returned. Keeping the current pool.'); return; }
       setPlayers(data);
-      setDataInfo({ source: 'Sleeper', season, count: data.length, when: Date.now() });
+      setDataInfo({ source: 'Live NFL', season, count: data.length, when: Date.now() });
     } catch (e) {
       alert('Live load failed: ' + e.message + '\nKeeping the current pool (the baseline projections still work offline).');
     } finally {
@@ -5226,7 +5260,7 @@ function App() {
   return (
     <div className="app">
       {showSplash && <LandingSplash onDismiss={dismissSplash} />}
-      <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} />
+      <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
         {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'sonar'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
