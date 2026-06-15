@@ -744,6 +744,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-why b { color: var(--gold-text); }
 .lp-cta { background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 14px 30px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 8px 26px rgba(212,160,23,0.35); transition: transform 0.12s, filter 0.12s; }
 .lp-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.lp-cta-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; }
+.lp-cta-alt { background: transparent; color: var(--positive); border: 1px solid var(--positive); box-shadow: none; }
+.lp-cta-alt:hover { background: rgba(45,212,163,0.12); filter: none; }
 .lp-subline { font-size: clamp(15px, 2vw, 19px); color: var(--text-muted); }
 .lp-phases-wrap { min-height: 100vh; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 56px 0; }
 .lp-phases-title { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 44px); color: var(--text-primary); text-align: center; letter-spacing: 0.02em; margin: 0; }
@@ -2088,7 +2091,10 @@ function LandingSplash({ onDismiss, onNav }) {
           ))}
         </div>
         <div className="lp-why"><b>Why it's better:</b> most tools hand you one generic number. Iron Tuna personalizes to your roster, your budget, and the live market — and shows its work, so every call is one you can trust.</div>
-        <button className="lp-cta" onClick={enter}>Get my auction values — it's free</button>
+        <div className="lp-cta-row">
+          <button className="lp-cta" onClick={enter}>Get my auction values — it's free</button>
+          <button className="lp-cta lp-cta-alt" onClick={() => go('board')}>Run your auction &amp; get advanced prep tools</button>
+        </div>
         <div className="lp-note">No signup needed. Works on draft night, even if the Wi-Fi drops.</div>
       </div>
     </div>
