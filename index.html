@@ -715,7 +715,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-shot-bubble b { color: var(--gold-text); }
 .lp-shot-cap { font-size: 12px; color: var(--text-muted); margin-top: 10px; text-align: left; }
 @media (max-width: 620px) { .lp-shot-coach { flex-direction: column; gap: 6px; } .lp-shot-row { grid-template-columns: 1fr 48px 48px 48px; padding: 8px 12px; } }
-.lp-quotes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; width: 100%; max-width: 860px; margin: 12px auto 28px; }
+.lp-quotes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px; width: 100%; max-width: 680px; margin: 12px auto 28px; }
 .lp-quote { margin: 0; text-align: left; position: relative; padding-top: 22px; }
 .lp-quote::before { content: '\201C'; position: absolute; top: -2px; left: -4px; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; line-height: 1; color: var(--gold-text); opacity: 0.42; }
 .lp-quote blockquote { margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); font-style: italic; }
@@ -1894,11 +1894,10 @@ function LandingSplash({ onDismiss, onNav }) {
     ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring (free)', 'Tiered cheat sheets and six strategy models (free)', 'A budget-aware optimal-lineup planner (free)', 'Unlimited mock auctions against CPU managers']],
     ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room', 'Switch-points and live opponent reads', 'An always-on AI navigator: who to bid on, how high, and why', 'Bid guidance that updates as the board moves']],
   ];
-  // PLACEHOLDER testimonials — replace with real user quotes before launch (FTC: no invented endorsements).
+  // First quote: founder (KR). Second: intentional humor. Add genuine user testimonials here as they arrive.
   const quotes = [
-    ['Finally a tool that actually gets auctions. The live max-bid number stopped me from blowing the budget on one stud — I walked out with the deepest roster in the league.', '— Beta tester · 12-team, $200 auction'],
-    ['I ran the mock auctions all week to practice when to nominate and when to sit back. On draft night, nothing rattled me.', '— Beta tester · 10-team, half-PPR'],
-    ['The custom values were dead-on for our oddball scoring. Every other site just hands you generic numbers that do not fit your league.', '— Beta tester · 14-team dynasty'],
+    ['Finally a tool that actually gets auctions. The live max-bid number stopped me from blowing my budget on one stud — I walked out with the deepest roster in the league.', '— KR · Fantasy player for 27 years'],
+    ['Helped me optimize my kicker.', '— No one, ever'],
   ];
   const shot = [
     ['RB', 'Bijan Robinson', '54', '58', '61'],
