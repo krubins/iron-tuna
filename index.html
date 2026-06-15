@@ -1920,8 +1920,6 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <path d="M70 13 l4 -4 l1.5 4 Z M77 15 l4 -3.5 l1.3 3.8 Z M70 41 l4 4 l1.5 -4 Z M77 39 l4 3.5 l1.3 -3.8 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="0.8" strokeLinejoin="round" />
         {/* body */}
         <path d="M8 30 C 16 18, 28 12, 42 11 C 56 10, 70 13, 86 23 L 92 27 C 92 29, 92 29, 92 31 L 86 33 C 70 41, 56 46, 42 45 C 28 44, 16 40, 8 30 Z" fill="url(#ironBody)" stroke="#171f29" strokeWidth="1.4" strokeLinejoin="round" />
-        {/* pectoral fin (slight turn shows it) */}
-        <path d="M34 31 C 41 40, 49 44, 53 44 C 47 41, 41 36, 38 31 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1" strokeLinejoin="round" opacity="0.95" />
         {/* top sheen */}
         <path d="M14 26 C 24 17, 40 13, 60 14 C 72 15, 82 18, 88 23 C 78 19, 60 17, 42 18 C 30 19, 20 22, 14 26 Z" fill="#ffffff" opacity="0.20" />
         {/* riveted plate seams */}
@@ -1930,6 +1928,8 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <path d="M29 16 C 26 23, 26 35, 30 43" fill="none" stroke="#1b232d" strokeWidth="1.1" opacity="0.6" />
         {/* rivets */}
         {rivets.map((r, i) => (<circle key={i} cx={r[0]} cy={r[1]} r="1.15" fill="#d4dde6" stroke="#222b36" strokeWidth="0.4" />))}
+        {/* pectoral fin — drawn last so the plate seams don't cut in front of it */}
+        <path d="M34 31 C 41 40, 49 44, 53 44 C 47 41, 41 36, 38 31 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1" strokeLinejoin="round" opacity="0.97" />
         {/* iron bolt eye */}
         <circle cx="20" cy="25.5" r="4.2" fill="#222b36" stroke="#11181f" strokeWidth="0.6" />
         <circle cx="20" cy="25.5" r="2.5" fill="#e7edf2" />
