@@ -588,6 +588,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .mock-standings tr.you { background: rgba(45,212,163,0.12); }
 .mock-standings td.num, .mock-standings th.num { text-align: right; font-family: var(--font-mono); }
 .cheatsheet { }
+.board-subtabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.board-subtabs .subtab { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; }
+.board-subtabs .subtab:hover { color: var(--text-primary); }
+.board-subtabs .subtab.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); }
+.cheat-row.cheat-drafted { opacity: 0.45; }
+.cheat-row.cheat-drafted .cheat-name { text-decoration: line-through; }
+.cheat-row.cheat-drafted:hover { opacity: 0.6; }
+.cheat-sold { font-size: 10px; color: var(--positive); font-weight: 700; font-variant-numeric: tabular-nums; }
 .cheat-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .cheat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: start; }
 .cheat-col { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
@@ -1930,7 +1938,7 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
       </div>
       <nav className="header-nav">
         <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Prep</button>
-        <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Draft Board</button>
+        <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Auction Day</button>
         <button className={view === 'plan' ? 'active' : ''} onClick={() => setView('plan')}>Plan</button>
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
         <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
@@ -3210,11 +3218,12 @@ const STRAT_TILT = {
   heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices }) {
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, teams, draftHistory }) {
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 30], ['DEF', 30]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
+  const draftInfoMap = useMemo(() => { const m = {}; const tn = new Map((teams || []).map(t => [t.id, t.name])); (draftHistory || []).forEach(d => { m[d.playerId] = { team: tn.get(d.teamId) || 'a team', price: d.price }; }); return m; }, [draftHistory, teams]);
   const rowRefs = useRef({});
   const [highlight, setHighlight] = useState(null);
   const [tilt, setTilt] = useState(50);
@@ -3257,7 +3266,11 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         const tid = lastTarget && lastTarget.dataset.pid; clear();
         if (tid && tid !== id) onRankReorder(id, tid);
       } else {
-        onToggleTarget && onToggleTarget(id);
+        if (mode === 'live') {
+          if (!(draftedIds && draftedIds.has(id)) && onAssignPlayer) { const pl = (players || []).find(x => x.id === id); if (pl) onAssignPlayer(pl); }
+        } else {
+          onToggleTarget && onToggleTarget(id);
+        }
       }
     };
     document.addEventListener('pointermove', onMove); document.addEventListener('pointerup', onUp);
@@ -3276,7 +3289,9 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
       </div>
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
-      <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Use <b style={{ color: 'var(--positive)' }}>Show</b> to pick which numbers appear — hover each toggle for what it means. Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b> <b style={{ color: 'var(--positive)' }}>Click a Proj price to set your own — the rest re-prices.</b></div>
+      {mode === 'live'
+        ? <div className="section-meta no-print" style={{ marginBottom: 12 }}>Live draft — <b style={{ color: 'var(--gold-text)' }}>click any player to mark him drafted</b> (opens the assign popup); drafted players show struck through. Drag to re-rank · click a Proj price to set your own.</div>
+        : <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Use <b style={{ color: 'var(--positive)' }}>Show</b> to pick which numbers appear — hover each toggle for what it means. Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b> <b style={{ color: 'var(--positive)' }}>Click a Proj price to set your own — the rest re-prices.</b></div>}
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
@@ -3288,6 +3303,8 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
             <div className="cheat-col-head"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>
             <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl]) => <span key={k}>{lbl}</span>)}</div>
             {(byPos[pos] || []).slice(0, n).map((p, i) => {
+              const drafted = !!(draftedIds && draftedIds.has(p.id));
+              const dinfo = draftInfoMap[p.id];
               const cost = p.marketValue != null ? p.marketValue : p.auctionValue;
               const value = p.auctionValue;
               const gap = cost - value;
@@ -3299,10 +3316,10 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 if (rule) { you = Math.max(minBid, Math.round(youBase * (1 + rule.w * (tilt / 100)))); youDir = you > youBase ? 'up' : you < youBase ? 'down' : 'flat'; }
               }
               return (
-              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
+              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted && dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price}` : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank">{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: costColor(cost, value) }} title={sign === 'under' ? `Undervalued by $${value - cost}` : sign === 'over' ? `Overvalued by $${cost - value}` : 'Fairly priced'}>{p.name}</span>
-                <span className="cheat-team">{p.team || ''}</span>
+                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (p.team || '')}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price — click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
@@ -5592,6 +5609,8 @@ function App() {
   const [draftHistory, setDraftHistory] = useState(initialState?.draftHistory || []);
   const [currentNomination, setCurrentNomination] = useState(null);
   const [view, setView] = useState(initialState?.draftHistory?.length > 0 ? 'board' : 'prep');
+  const [boardTab, setBoardTab] = useState('cheatsheet');
+  const [assignPlayer, setAssignPlayer] = useState(null);
   const [pointsMode, setPointsMode] = useState('perWeek'); // per-game is the only unit
   const [loading, setLoading] = useState(false);
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
@@ -5936,6 +5955,17 @@ function App() {
     }
     return (
       <>
+      <div className="board-subtabs no-print">
+        <button className={`subtab ${boardTab === 'cheatsheet' ? 'active' : ''}`} onClick={() => setBoardTab('cheatsheet')}>Cheat Sheet</button>
+        <button className={`subtab ${boardTab === 'draftboard' ? 'active' : ''}`} onClick={() => setBoardTab('draftboard')}>Draft Board</button>
+      </div>
+      {boardTab === 'cheatsheet' ? (
+        <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
+          onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
+          onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
+          mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} teams={teams} draftHistory={draftHistory} />
+      ) : (
+      <>
       {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-icon">⚠</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
       <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
       <div className="board-layout">
@@ -5944,6 +5974,8 @@ function App() {
           onNominate={setCurrentNomination} onDraft={handleDraft} onRankMove={handleRankMove} onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} focusPlayer={focusPlayer} />
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} />
       </div>
+      </>
+      )}
       </>
     );
   }
@@ -5967,6 +5999,7 @@ function App() {
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
       {!showSplash && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={view === 'prep'} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
+      {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} />}
       {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
       {overlay === 'legal' && <LegalModal onClose={() => setOverlay(null)} />}
