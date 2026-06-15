@@ -440,6 +440,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .draft-alert-icon { color: #ffb13d; font-size: 16px; }
 .draft-alert-x { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
 .draft-alert-x:hover { color: var(--text-primary); }
+.purchase-toast { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 200; max-width: 660px; padding: 12px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 12px 34px rgba(0,0,0,0.55); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-primary); animation: purchaseIn 0.28s ease-out; text-align: center; }
+.purchase-toast.tone-good { background: linear-gradient(90deg, rgba(45,212,163,0.22), rgba(45,212,163,0.09)); border-color: var(--positive); }
+.purchase-toast.tone-bad { background: linear-gradient(90deg, rgba(239,68,68,0.22), rgba(239,68,68,0.09)); border-color: var(--danger); }
+@keyframes purchaseIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 .bid-ladder-wrap { margin-top: 10px; }
 .bid-headline { font-size: 12px; line-height: 1.5; color: var(--text-secondary); background: rgba(45,212,163,0.10); border: 1px solid rgba(45,212,163,0.40); border-left: 3px solid var(--positive); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 8px; }
 .bid-ladder { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
@@ -5761,6 +5765,8 @@ function App() {
   const [assignPlayer, setAssignPlayer] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [purchaseToast, setPurchaseToast] = useState(null);
+  useEffect(() => { if (!purchaseToast) return; const t = setTimeout(() => setPurchaseToast(null), 5500); return () => clearTimeout(t); }, [purchaseToast]);
   const [pointsMode, setPointsMode] = useState('perWeek'); // per-game is the only unit
   const [loading, setLoading] = useState(false);
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
@@ -5888,6 +5894,24 @@ function App() {
       ? { ...t, budgetRemaining: t.budgetRemaining - price, spotsRemaining: t.spotsRemaining - 1, roster: [...t.roster, { playerId, price, position: player.position }] }
       : t));
     setDraftHistory(prev => [...prev, { playerId, teamId, price, position: player.position, timestamp: Date.now() }]);
+    (() => {
+      const benchOf = pl => (pl.marketValue != null ? pl.marketValue : (pl.auctionValue || 0));
+      const proj = benchOf(player);
+      const deal = proj - price; // + = bargain, - = overpay
+      const priorDeals = draftHistory.map(d => { const pp = personalizedPlayers.find(x => x.id === d.playerId); return pp ? (benchOf(pp) - d.price) : null; }).filter(x => x != null);
+      const maxPrior = priorDeals.length ? Math.max(...priorDeals) : -Infinity;
+      const minPrior = priorDeals.length ? Math.min(...priorDeals) : Infinity;
+      const who = `${player.name} → ${team.name} · $${price}`;
+      let text, tone;
+      if (deal >= 2 && deal >= maxPrior) { text = `🏆 Best bargain so far! ${who} — proj $${proj}, saved $${deal}`; tone = 'good'; }
+      else if (deal <= -2 && deal <= minPrior) { text = `🔥 Worst overpayment so far — ${who}, proj $${proj} (+$${-deal})`; tone = 'bad'; }
+      else if (deal >= 7) { text = `💰 Steal — ${who}, proj $${proj} (saved $${deal})`; tone = 'good'; }
+      else if (deal >= 2) { text = `👍 Nice value — ${who} (saved $${deal})`; tone = 'good'; }
+      else if (deal <= -7) { text = `😬 Big overpay — ${who}, proj $${proj} (+$${-deal})`; tone = 'bad'; }
+      else if (deal <= -2) { text = `Slight overpay — ${who} (+$${-deal})`; tone = 'bad'; }
+      else { text = `Right at value — ${who}`; tone = 'neutral'; }
+      setPurchaseToast({ text, tone, id: Date.now() });
+    })();
     setCurrentNomination(null);
   }
   function handleUndo() {
@@ -6180,6 +6204,7 @@ function App() {
       {!showSplash && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={view === 'prep'} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal onAdd={(name, pos, team) => { const np = handleAddPlayer(name, pos, team); setShowAddPlayer(false); setAssignPlayer(np); }} onClose={() => setShowAddPlayer(false)} />}
+      {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} />}
       {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
       {overlay === 'legal' && <LegalModal onClose={() => setOverlay(null)} />}
