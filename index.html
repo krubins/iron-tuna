@@ -679,7 +679,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-why b { color: var(--gold-text); }
 .lp-cta { background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 14px 30px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 8px 26px rgba(212,160,23,0.35); transition: transform 0.12s, filter 0.12s; }
 .lp-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
-.lp-pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; margin: 10px 0 26px; }
+.lp-pillars { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; width: 100%; max-width: 680px; margin: 10px auto 26px; }
 .lp-pillar { position: relative; background: linear-gradient(160deg, rgba(38,48,60,0.55), rgba(20,26,34,0.6)); border: 1px solid var(--border-strong); border-top: 2px solid var(--positive); border-radius: var(--radius-md); padding: 20px 18px 18px; text-align: left; overflow: hidden; box-shadow: 0 8px 26px rgba(0,0,0,0.35); transition: transform 0.14s, box-shadow 0.14s; }
 .lp-pillar:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(0,0,0,0.45), 0 0 18px rgba(45,212,163,0.18); }
 .lp-pillar::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 82% 0%, rgba(45,212,163,0.12), transparent 58%); pointer-events: none; }
@@ -1843,7 +1843,6 @@ function LandingSplash({ onDismiss }) {
   const pillars = [
     ['Before the draft', 'Prep, Strategy & Planning', 'Custom auction values for your exact league, tiered cheat sheets, six strategy models, an optimal-lineup planner, and a mock auction against CPU managers. Walk in with a number for every player.'],
     ['Draft day', 'Live Execution & Advice', 'Real-time prices that adjust to the room, switch-points, opponent reads, and an always-on AI navigator telling you who to bid on, how high to go, and why — as the board moves.'],
-    ['All season', 'Trades & Start / Sit', 'Carry the edge past draft night with trade-value reads and matchup-aware start/sit calls that keep your lineup optimized from Week 1 to the playoffs.'],
   ];
   return (
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
@@ -1851,7 +1850,7 @@ function LandingSplash({ onDismiss }) {
       <div className="lp-inner">
         <LogoMark tagline height={130} className="landing-logo" />
         <h1 className="lp-head">Custom auction values — and a plan for every pick.</h1>
-        <p className="lp-sub">Iron Tuna calibrates to <b>your</b> exact league, then stays in your corner from prep to draft night to the playoffs — telling you who to draft, for how much, and why.</p>
+        <p className="lp-sub">Iron Tuna calibrates to <b>your</b> exact league, then walks you from prep through draft night — telling you who to draft, for how much, and why.</p>
         <div className="lp-pillars">
           {pillars.map(([k, h, b], i) => (
             <div className="lp-pillar" key={i}>
