@@ -706,6 +706,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-phase-list { list-style: none; margin: 0; padding: 0; max-width: 600px; }
 .lp-phase-list li { position: relative; padding-left: 24px; font-size: 17px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 11px; }
 .lp-phase-list li::before { content: ''; position: absolute; left: 2px; top: 10px; width: 7px; height: 7px; background: var(--positive); border-radius: 1px; transform: rotate(45deg); }
+.lp-tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; white-space: nowrap; }
+.lp-tag.free { color: var(--positive); font-weight: 700; }
+.lp-tag.paid { color: var(--gold-text); }
 .lp-preview { width: 100%; max-width: 760px; margin: 12px auto 28px; }
 .lp-preview-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 9px; }
 .lp-preview-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
@@ -1925,8 +1928,8 @@ function LandingSplash({ onDismiss, onNav }) {
   function enter() { setFadingOut(true); setTimeout(() => onDismiss && onDismiss(), 350); }
   function go(target) { if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } setFadingOut(true); setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350); }
   const pillars = [
-    ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring (free)', 'Tiered cheat sheets and six strategy models (free)', 'A budget-aware optimal-lineup planner (free)', 'Unlimited mock auctions against CPU managers']],
-    ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room', 'Switch-points and live opponent reads', 'An always-on AI navigator: who to bid on, how high, and why', 'Bid guidance that updates as the board moves']],
+    ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring (free)', 'Tiered cheat sheets and six strategy models (free)', 'A budget-aware optimal-lineup planner (free)', 'Unlimited mock auctions against CPU managers (with purchase)', 'AI Value Coach to devise strategy and values for your specific league and personal style (with purchase)']],
+    ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room (with purchase)', 'Switch-points and live opponent reads (with purchase)', 'An always-on AI navigator: who to bid on, how high, and why (with purchase)', 'Bid guidance that updates as the board moves (with purchase)']],
   ];
   // First quote: founder (KR). Second: intentional humor. Add genuine user testimonials here as they arrive.
   const quotes = [
@@ -1970,7 +1973,7 @@ function LandingSplash({ onDismiss, onNav }) {
             <div className="lp-phase" key={i}>
               <div className="lp-phase-eyebrow">{k}</div>
               <h3 className="lp-phase-h">{h}</h3>
-              <ul className="lp-phase-list">{b.map((item, j) => <li key={j}>{item}</li>)}</ul>
+              <ul className="lp-phase-list">{b.map((item, j) => { const m = item.match(/^(.*?)\s*\((free|with purchase)\)$/i); return <li key={j}>{m ? <React.Fragment>{m[1]} <span className={`lp-tag ${m[2].toLowerCase() === 'free' ? 'free' : 'paid'}`}>({m[2]})</span></React.Fragment> : item}</li>; })}</ul>
             </div>
           ))}
         </div>
