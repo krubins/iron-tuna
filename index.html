@@ -686,7 +686,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-phase-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 11px; }
 .lp-phase-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
 .lp-phase-h { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 9px; line-height: 1.08; }
-.lp-phase-b { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; max-width: 600px; }
+.lp-phase-list { list-style: none; margin: 0; padding: 0; max-width: 600px; }
+.lp-phase-list li { position: relative; padding-left: 20px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
+.lp-phase-list li::before { content: ''; position: absolute; left: 2px; top: 7px; width: 6px; height: 6px; background: var(--positive); border-radius: 1px; transform: rotate(45deg); }
 .lp-preview { width: 100%; max-width: 760px; margin: 12px auto 28px; }
 .lp-preview-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 9px; }
 .lp-preview-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
@@ -1789,7 +1791,7 @@ function LogoMark({ height = 34, className = '', tagline = false }) {
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
         </linearGradient>
       </defs>
-      <g transform={`translate(2,${cy - 27}) scale(0.74) rotate(-6 58 30)`}>
+      <g transform={`translate(2,${cy - 27}) scale(0.8) rotate(-6 58 30)`}>
         {/* lunate tail */}
         <path d="M90 27 C 98 24, 106 14, 114 7 C 108 18, 103 26, 101 29 C 103 32, 108 40, 114 51 C 106 44, 98 34, 90 31 C 89 30, 89 28, 90 27 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1.1" strokeLinejoin="round" />
         {/* dorsal + anal sickle fins */}
@@ -1809,11 +1811,15 @@ function LogoMark({ height = 34, className = '', tagline = false }) {
         <path d="M29 16 C 26 23, 26 35, 30 43" fill="none" stroke="#1b232d" strokeWidth="1.1" opacity="0.6" />
         {/* rivets */}
         {rivets.map((r, i) => (<circle key={i} cx={r[0]} cy={r[1]} r="1.15" fill="#d4dde6" stroke="#222b36" strokeWidth="0.4" />))}
-        {/* iron bolt eye */}
-        <circle cx="20" cy="25.5" r="4.2" fill="#222b36" stroke="#11181f" strokeWidth="0.6" />
-        <circle cx="20" cy="25.5" r="2.5" fill="#e7edf2" />
-        <circle cx="20" cy="25.5" r="1.1" fill="#11181f" />
-        <circle cx="18.9" cy="24.4" r="0.5" fill="#ffffff" />
+        {/* alien, confused, slightly hostile eye */}
+        <circle cx="20" cy="25.7" r="5.3" fill="#222b36" stroke="#11181f" strokeWidth="0.7" />
+        <circle cx="20.2" cy="26.0" r="3.5" fill="#e2eaf1" />
+        <circle cx="21.4" cy="27.2" r="1.55" fill="#0b1118" />
+        <circle cx="19.3" cy="24.4" r="0.6" fill="#ffffff" />
+        {/* furrowed, hostile brow */}
+        <path d="M13.4 21.6 L25.2 19.0" stroke="#11181f" strokeWidth="2.5" strokeLinecap="round" />
+        {/* small grumpy frown at the snout */}
+        <path d="M8.4 32.4 Q 12.2 35.4, 16.4 32.7" fill="none" stroke="#11181f" strokeWidth="1.3" strokeLinecap="round" />
       </g>
       <g transform={`translate(${tunaW},0)`}>
         {placed.map((g, i) => (
@@ -1836,7 +1842,7 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
   return (
     <header className="header">
       <div className="header-brand">
-        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna — back to start"><LogoMark height={40} className="header-logo" /></button>
+        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna — back to start"><LogoMark height={44} className="header-logo" /></button>
         <div className="header-brand-text">
           <span className="subtitle">Auction Draft Command</span>
           <span className="version-stamp">v{APP_VERSION} · {BUILD_DATE}</span>
@@ -1866,8 +1872,8 @@ function LandingSplash({ onDismiss }) {
   const [fadingOut, setFadingOut] = useState(false);
   function enter() { setFadingOut(true); setTimeout(() => onDismiss && onDismiss(), 350); }
   const pillars = [
-    ['Before the draft', 'Prep, Strategy & Planning', 'Custom auction values for your exact league, tiered cheat sheets, six strategy models, an optimal-lineup planner, and a mock auction against CPU managers. Walk in with a number for every player.'],
-    ['Draft day', 'Live Execution & Advice', 'Real-time prices that adjust to the room, switch-points, opponent reads, and an always-on AI navigator telling you who to bid on, how high to go, and why — as the board moves.'],
+    ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring', 'Tiered cheat sheets and six strategy models', 'A budget-aware optimal-lineup planner', 'Unlimited mock auctions against CPU managers']],
+    ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room', 'Switch-points and live opponent reads', 'An always-on AI navigator: who to bid on, how high, and why', 'Bid guidance that updates as the board moves']],
   ];
   // PLACEHOLDER testimonials — replace with real user quotes before launch (FTC: no invented endorsements).
   const quotes = [
@@ -1887,7 +1893,7 @@ function LandingSplash({ onDismiss }) {
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
       <div className="landing-vignette" />
       <div className="lp-inner">
-        <LogoMark tagline height={130} className="landing-logo" />
+        <LogoMark tagline height={152} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
         <p className="lp-sub" style={{ marginBottom: 6 }}>Free custom auction values for <b>your</b> exact league and <b>your</b> exact strategy.</p>
         <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
@@ -1896,7 +1902,7 @@ function LandingSplash({ onDismiss }) {
             <div className="lp-phase" key={i}>
               <div className="lp-phase-eyebrow">{k}</div>
               <h3 className="lp-phase-h">{h}</h3>
-              <p className="lp-phase-b">{b}</p>
+              <ul className="lp-phase-list">{b.map((item, j) => <li key={j}>{item}</li>)}</ul>
             </div>
           ))}
         </div>
