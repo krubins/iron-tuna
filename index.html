@@ -745,14 +745,18 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-cta { background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 14px 30px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 8px 26px rgba(212,160,23,0.35); transition: transform 0.12s, filter 0.12s; }
 .lp-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
 .lp-subline { font-size: clamp(15px, 2vw, 19px); color: var(--text-muted); }
-.lp-phases { display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 620px; margin: 26px auto 30px; text-align: left; }
-.lp-phase { padding: 0; }
-.lp-phase:not(:first-child) { border-top: 1px solid var(--border-subtle); padding-top: 22px; }
-.lp-phase-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 11px; }
+.lp-phases-wrap { min-height: 100vh; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 56px 0; }
+.lp-phases-title { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 44px); color: var(--text-primary); text-align: center; letter-spacing: 0.02em; margin: 0; }
+.lp-phases { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; width: 100%; margin: 0; text-align: left; }
+.lp-phase { padding: 32px 30px; background: linear-gradient(180deg, rgba(22,30,40,0.7), rgba(12,18,24,0.5)); border: 1px solid var(--border-subtle); border-radius: 16px; box-shadow: 0 16px 44px rgba(0,0,0,0.42); }
+.lp-phase:not(:first-child) { border-top: 1px solid var(--border-subtle); padding-top: 32px; }
+.lp-phase-icon { width: 56px; height: 56px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; background: rgba(45,212,163,0.10); border: 1px solid rgba(45,212,163,0.32); margin-bottom: 20px; }
+.lp-phase-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 10px; }
 .lp-phase-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
-.lp-phase-h { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 9px; line-height: 1.08; }
-.lp-phase-list { list-style: none; margin: 0; padding: 0; max-width: 600px; }
-.lp-phase-list li { position: relative; padding-left: 24px; font-size: 17px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 11px; }
+.lp-phase-h { font-family: var(--font-display); font-size: clamp(22px, 2.6vw, 28px); letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 18px; line-height: 1.06; }
+.lp-phase-list { list-style: none; margin: 0; padding: 0; }
+.lp-phase-list li { position: relative; padding-left: 26px; font-size: 17px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 15px; }
+@media (max-width: 820px) { .lp-phases { grid-template-columns: 1fr; } .lp-phases-wrap { min-height: auto; } }
 .lp-phase-list li::before { content: ''; position: absolute; left: 2px; top: 10px; width: 7px; height: 7px; background: var(--positive); border-radius: 1px; transform: rotate(45deg); }
 .lp-tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; white-space: nowrap; }
 .lp-tag.free { color: var(--positive); font-weight: 700; }
@@ -1971,13 +1975,18 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
   );
 }
 // ─── components/LandingSplash.jsx ──────────────────────────
+function phaseIcon(i) {
+  const c = 'var(--positive)';
+  if (i === 0) return (<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="11" y="9" width="26" height="33" rx="3" /><path d="M18 9V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M17 21h14M17 28h14M17 35h9" /></svg>);
+  return (<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M26 5 13 27h9l-1 16 14-23h-9l2-15z" /></svg>);
+}
 function LandingSplash({ onDismiss, onNav }) {
   const [fadingOut, setFadingOut] = useState(false);
   const faqRef = useRef(null);
   function enter() { setFadingOut(true); setTimeout(() => onDismiss && onDismiss(), 350); }
   function go(target) { if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } setFadingOut(true); setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350); }
   const pillars = [
-    ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring (free)', 'Tiered cheat sheets and six strategy models (free)', 'A budget-aware optimal-lineup planner (free)', 'Unlimited mock auctions against CPU managers (with purchase)', 'AI Value Coach to devise strategy and values for your specific league and personal style (with purchase)']],
+    ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring (free)', 'Tiered cheat sheets and six strategy models (free)', 'A budget-aware optimal-lineup planner (free)', 'Pinpoints the strategy and dollar allocation that produces your highest-scoring team (free)', 'Unlimited mock auctions against CPU managers (with purchase)', 'AI Value Coach to devise strategy and values for your specific league and personal style (with purchase)']],
     ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room (with purchase)', 'Amends recommended roster construction in real time, based on actual pricing and availability (with purchase)', 'An always-on AI navigator: who to bid on, how high, and why (with purchase)', 'Bid guidance that updates as the board moves (with purchase)']],
   ];
   // First quote: founder (KR). Second: intentional humor. Add genuine user testimonials here as they arrive.
@@ -2019,14 +2028,18 @@ function LandingSplash({ onDismiss, onNav }) {
         <p className="lp-sub" style={{ marginBottom: 6 }}>Free custom auction values for<br /><b>your</b> exact league and <b>your</b> exact strategy.</p>
         <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
         </div>
-        <div className="lp-phases">
+        <div className="lp-phases-wrap">
+          <h2 className="lp-phases-title">Two phases. One edge.</h2>
+          <div className="lp-phases">
           {pillars.map(([k, h, b], i) => (
             <div className="lp-phase" key={i}>
+              <div className="lp-phase-icon">{phaseIcon(i)}</div>
               <div className="lp-phase-eyebrow">{k}</div>
               <h3 className="lp-phase-h">{h}</h3>
               <ul className="lp-phase-list">{b.map((item, j) => { const m = item.match(/^(.*?)\s*\((free|with purchase)\)$/i); return <li key={j}>{m ? <React.Fragment>{m[1]} <span className={`lp-tag ${m[2].toLowerCase() === 'free' ? 'free' : 'paid'}`}>({m[2]})</span></React.Fragment> : item}</li>; })}</ul>
             </div>
           ))}
+          </div>
         </div>
         <div className="lp-preview">
           <div className="lp-preview-eyebrow">A look inside</div>
