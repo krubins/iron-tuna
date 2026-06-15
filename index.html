@@ -424,7 +424,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .strategy-bar { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 6px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; }
 .taunt-btn { margin-left: auto; background: linear-gradient(135deg, #ff7a3d, #ff4d4d); color: #fff; border: none; border-radius: 20px; padding: 7px 15px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.03em; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(255,77,77,0.35); transition: transform 0.1s, filter 0.1s; }
 .taunt-btn:hover { transform: translateY(-1px); filter: brightness(1.07); }
-.draft-alert { display: flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(255,170,60,0.16), rgba(255,120,60,0.08)); border: 1px solid rgba(255,160,60,0.5); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-size: 13.5px; color: var(--text-primary); animation: alertIn 0.3s ease-out; }
+.draft-alert { display: flex; align-items: center; gap: 11px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-left: 3px solid var(--gold-text); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); animation: alertIn 0.3s ease-out; }
+.draft-alert-label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.07em; font-size: 13px; color: var(--gold-text); font-weight: 400; white-space: nowrap; }
+.taunt-pick { display: flex; align-items: center; gap: 8px; margin: 6px 0 12px; }
+.taunt-pick label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.taunt-pick select { flex: 1; }
 .draft-alert-icon { color: #ffb13d; font-size: 16px; }
 .draft-alert-x { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
 .draft-alert-x:hover { color: var(--text-primary); }
@@ -3277,8 +3281,8 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   return (
     <div className="cheatsheet">
       <div className="cheat-controls no-print">
-        <button className="btn-draft" onClick={() => printPdf('letter')}>PDF · Letter</button>
-        <button className="btn-draft" onClick={() => printPdf('legal')}>PDF · Legal</button>
+        {mode !== 'live' && <button className="btn-draft" onClick={() => printPdf('letter')}>PDF · Letter</button>}
+        {mode !== 'live' && <button className="btn-draft" onClick={() => printPdf('legal')}>PDF · Legal</button>}
         <button className="btn-secondary" onClick={onResetRanks}>Reset ranks</button>
         <span className="cheat-sep" />
         <span className="cheat-cols-label">Show:</span>
@@ -3289,7 +3293,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
       </div>
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       {mode === 'live'
-        ? <div className="section-meta no-print" style={{ marginBottom: 12 }}>Live draft — <b style={{ color: 'var(--gold-text)' }}>click any player to mark him drafted</b> (opens the assign popup); drafted players show struck through. Drag to re-rank · click a Proj price to set your own.</div>
+        ? <div className="section-meta no-print" style={{ marginBottom: 12 }}>Live draft — <b style={{ color: 'var(--gold-text)' }}>click any player to mark him drafted</b> (opens the assign popup); drafted players show struck through. Drag to re-rank · click a Proj price to set your own.<br /><b style={{ color: 'var(--accent-text)' }}>Proj</b> = likely auction price · <b>Value</b> = true VBD worth · <b style={{ color: 'var(--gold-text)' }}>You</b> = your max bid · <b>PPG</b> = points per game.</div>
         : <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Use <b style={{ color: 'var(--positive)' }}>Show</b> to pick which numbers appear — hover each toggle for what it means. Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b> <b style={{ color: 'var(--positive)' }}>Click a Proj price to set your own — the rest re-prices.</b></div>}
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
@@ -4968,8 +4972,8 @@ function draftAlerts(players, myTeam, plan, config, draftedIds, games) {
     if (cliff.drop >= 1.5 && remaining <= 3) {
       alerts.push({ pos, urgency: cliff.drop * (4 - remaining),
         text: remaining <= 2
-          ? `Last ${remaining === 1 ? 'good' : remaining} ${pos}${remaining === 1 ? '' : 's'} before a ${cliff.drop} pt/gm cliff — grab one now or your ${pos} slot drops a full tier.`
-          : `${remaining} ${pos}s left before a ${cliff.drop} pt/gm drop-off. Miss this tier and your weekly PPG takes the hit.` });
+          ? `Last ${remaining === 1 ? 'startable' : remaining} ${pos}${remaining === 1 ? '' : 's'} at this tier — grab one now. Waiting drops your starting lineup about ${cliff.drop} pts/gm.`
+          : `${remaining} ${pos}s left before the tier breaks. Waiting drops your starting lineup about ${cliff.drop} pts/gm.` });
     }
   });
   if (!alerts.length) return null;
@@ -5584,6 +5588,7 @@ function App() {
     setTaunt({ name: t.name, text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES) });
     ITAnalytics.track('taunt', {});
   }
+  function tauntTeam(t) { if (!t) return; setTaunt({ name: t.name, text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES) }); ITAnalytics.track('taunt', {}); }
   const [account, setAccount] = useState(loadAccount);
   const [overlay, setOverlay] = useState(null);
   const [shareText, setShareText] = useState('');
@@ -5961,7 +5966,7 @@ function App() {
           mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} teams={teams} draftHistory={draftHistory} />
       ) : (
       <>
-      {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-icon">⚠</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
+      {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-label">Heads up</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
       <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
       <div className="board-layout">
         <PlayersRail players={personalizedPlayers} draftedIds={draftedIds} teams={teams} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
@@ -6005,6 +6010,9 @@ function App() {
             <button className="modal-close" onClick={() => setTaunt(null)}>×</button>
             <div className="taunt-head">🔥 Live Mock</div>
             {taunt.name ? <div className="taunt-target">Now roasting: <b style={{ color: 'var(--text-secondary)' }}>{taunt.name}</b></div> : <div className="taunt-target" />}
+            {teams.filter(t => !t.isMine).length > 0 && (
+              <div className="taunt-pick"><label>Pick a team</label><select value={(teams.find(t => t.name === taunt.name) || {}).id || ''} onChange={e => { const t = teams.find(x => x.id === e.target.value); if (t) tauntTeam(t); }}>{!taunt.name && <option value="">—</option>}{teams.filter(t => !t.isMine).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+            )}
             <div className="taunt-text">“{taunt.text}”</div>
             <div className="taunt-actions"><button className="btn-draft" onClick={makeTaunt}>Roast another rival</button><button className="btn-secondary" onClick={() => { try { navigator.clipboard && navigator.clipboard.writeText(taunt.text); } catch (e) {} }}>Copy</button></div>
           </div>
