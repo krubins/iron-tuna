@@ -749,8 +749,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-cta { background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 14px 30px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 8px 26px rgba(212,160,23,0.35); transition: transform 0.12s, filter 0.12s; }
 .lp-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
 .lp-cta-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; }
-.lp-cta-alt { background: transparent; color: var(--positive); border: 1px solid var(--positive); box-shadow: none; }
-.lp-cta-alt:hover { background: rgba(45,212,163,0.12); filter: none; }
+.lp-cta-alt { background: var(--positive); color: #06281f; border: 1px solid var(--positive); box-shadow: 0 8px 26px rgba(45,212,163,0.34); }
+.lp-cta-alt:hover { background: var(--positive); filter: brightness(1.07); }
 .lp-subline { font-size: clamp(15px, 2vw, 19px); color: var(--text-muted); }
 .lp-phases-wrap { min-height: 100vh; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 56px 0; }
 .lp-phases-title { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 44px); color: var(--text-primary); text-align: center; letter-spacing: 0.02em; margin: 0; }
@@ -760,7 +760,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-phase-icon { width: 56px; height: 56px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; background: rgba(45,212,163,0.10); border: 1px solid rgba(45,212,163,0.32); margin-bottom: 20px; }
 .lp-phase-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 10px; }
 .lp-phase-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
-.lp-phase-h { font-family: var(--font-body); font-weight: 800; text-transform: uppercase; font-size: clamp(18px, 2.1vw, 23px); letter-spacing: 0.015em; color: var(--text-primary); margin: 0 0 18px; line-height: 1.15; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.lp-phase-h { font-family: var(--font-body); font-weight: 800; text-transform: uppercase; font-size: clamp(23px, 3vw, 32px); letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 20px; line-height: 1.12; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 .lp-phase-list { list-style: none; margin: 0; padding: 0; }
 .lp-phase-list li { position: relative; padding-left: 26px; font-size: 17px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 15px; }
 @media (max-width: 820px) { .lp-phases { grid-template-columns: 1fr; } .lp-phases-wrap { min-height: auto; } }
@@ -2040,7 +2040,6 @@ function LandingSplash({ onDismiss, onNav }) {
           <div className="lp-phases">
           {pillars.map(([k, h, b], i) => (
             <div className="lp-phase" key={i}>
-              <div className="lp-phase-icon">{phaseIcon(i)}</div>
               <div className="lp-phase-eyebrow">{k}</div>
               <h3 className="lp-phase-h">{h}</h3>
               <ul className="lp-phase-list">{b.map((item, j) => { const m = item.match(/^(.*?)\s*\((free|with purchase)\)$/i); return <li key={j}>{m ? <React.Fragment>{m[1]} <span className={`lp-tag ${m[2].toLowerCase() === 'free' ? 'free' : 'paid'}`}>({m[2]})</span></React.Fragment> : item}</li>; })}</ul>
