@@ -668,7 +668,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cc-DEF .cheat-col-head { border-top-color: #9aa6b2; } .cc-DEF .cheat-col-head > span:first-child { color: #c2cdd7; }
 .landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 36px 20px 60px; }
 .lp-inner { position: relative; z-index: 2; max-width: 880px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; }
-.lp-head { font-family: var(--font-display); font-size: clamp(26px, 4.5vw, 44px); letter-spacing: 0.02em; color: var(--text-primary); line-height: 1.08; margin: 18px 0 12px; }
+.lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.01em; color: var(--text-primary); line-height: 1.05; margin: 20px 0 14px; max-width: 760px; }
 .lp-sub { font-size: clamp(14px, 1.8vw, 17px); color: var(--text-secondary); max-width: 660px; line-height: 1.55; margin: 0 0 26px; }
 .lp-sub b { color: var(--gold-text); }
 .lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; width: 100%; margin-bottom: 22px; }
@@ -679,23 +679,20 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-why b { color: var(--gold-text); }
 .lp-cta { background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 14px 30px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 8px 26px rgba(212,160,23,0.35); transition: transform 0.12s, filter 0.12s; }
 .lp-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
-.lp-pillars { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; width: 100%; max-width: 680px; margin: 10px auto 26px; }
-.lp-pillar { position: relative; background: linear-gradient(160deg, rgba(38,48,60,0.55), rgba(20,26,34,0.6)); border: 1px solid var(--border-strong); border-top: 2px solid var(--positive); border-radius: var(--radius-md); padding: 20px 18px 18px; text-align: left; overflow: hidden; box-shadow: 0 8px 26px rgba(0,0,0,0.35); transition: transform 0.14s, box-shadow 0.14s; }
-.lp-pillar:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(0,0,0,0.45), 0 0 18px rgba(45,212,163,0.18); }
-.lp-pillar::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 82% 0%, rgba(45,212,163,0.12), transparent 58%); pointer-events: none; }
-.lp-pillar-rivets { position: absolute; top: 10px; right: 12px; display: flex; gap: 5px; }
-.lp-pillar-rivets span { width: 5px; height: 5px; border-radius: 50%; background: #c2cdd7; box-shadow: inset 0 0 0 1px #222b36; opacity: 0.7; }
-.lp-pillar-num { font-family: var(--font-display); font-size: 30px; color: var(--gold-text); line-height: 1; opacity: 0.9; }
-.lp-pillar-kicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--positive); margin: 11px 0 4px; }
-.lp-pillar-h { font-family: var(--font-display); font-size: 19px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; line-height: 1.12; position: relative; }
-.lp-pillar-b { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; position: relative; }
-@media (max-width: 760px) { .lp-pillars { grid-template-columns: 1fr; } }
-.lp-kicker { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--positive); border: 1px solid rgba(45,212,163,0.4); border-radius: 14px; padding: 5px 14px; margin: 6px 0 4px; }
-.lp-quotes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 100%; margin: 4px 0 22px; }
-.lp-quote { margin: 0; background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-left: 3px solid var(--gold-text); border-radius: var(--radius-md); padding: 16px 16px 14px; text-align: left; }
-.lp-quote blockquote { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); font-style: italic; }
+.lp-phases { display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 100%; max-width: 760px; margin: 28px auto 34px; text-align: left; }
+.lp-phase { padding: 2px 36px; }
+.lp-phase:first-child { border-right: 1px solid var(--border-subtle); }
+.lp-phase-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 13px; }
+.lp-phase-eyebrow::before { content: ''; width: 24px; height: 2px; background: var(--positive); display: inline-block; }
+.lp-phase-h { font-family: var(--font-display); font-size: 24px; letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 11px; line-height: 1.08; }
+.lp-phase-b { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+@media (max-width: 760px) { .lp-phases { grid-template-columns: 1fr; } .lp-phase { padding: 0 0 24px; } .lp-phase:first-child { border-right: none; border-bottom: 1px solid var(--border-subtle); margin-bottom: 24px; } }
+.lp-quotes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; width: 100%; max-width: 860px; margin: 12px auto 28px; }
+.lp-quote { margin: 0; text-align: left; position: relative; padding-top: 22px; }
+.lp-quote::before { content: '\201C'; position: absolute; top: -2px; left: -4px; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; line-height: 1; color: var(--gold-text); opacity: 0.42; }
+.lp-quote blockquote { margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); font-style: italic; }
 .lp-quote figcaption { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: 0.02em; }
-@media (max-width: 760px) { .lp-quotes { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .lp-quotes { grid-template-columns: 1fr; gap: 24px; } }
 .lp-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; }
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
 .assumptions-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -1861,17 +1858,14 @@ function LandingSplash({ onDismiss }) {
       <div className="landing-vignette" />
       <div className="lp-inner">
         <LogoMark tagline height={130} className="landing-logo" />
-        <div className="lp-kicker">The most comprehensive tool for fantasy auction drafts</div>
-        <h1 className="lp-head">Custom auction values — and a plan for every pick.</h1>
-        <p className="lp-sub">Iron Tuna calibrates to <b>your</b> exact league, then walks you from prep through draft night — telling you who to draft, for how much, and why.</p>
-        <div className="lp-pillars">
+        <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
+        <p className="lp-sub">Free, custom auction values calibrated to <b>your</b> exact league — then a live, AI-guided war room for draft day: who to bid on, how high to go, and why.</p>
+        <div className="lp-phases">
           {pillars.map(([k, h, b], i) => (
-            <div className="lp-pillar" key={i}>
-              <div className="lp-pillar-rivets"><span /><span /><span /></div>
-              <div className="lp-pillar-num">{i + 1}</div>
-              <div className="lp-pillar-kicker">{k}</div>
-              <div className="lp-pillar-h">{h}</div>
-              <div className="lp-pillar-b">{b}</div>
+            <div className="lp-phase" key={i}>
+              <div className="lp-phase-eyebrow">{k}</div>
+              <h3 className="lp-phase-h">{h}</h3>
+              <p className="lp-phase-b">{b}</p>
             </div>
           ))}
         </div>
