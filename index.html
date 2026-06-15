@@ -1929,7 +1929,7 @@ function LandingSplash({ onDismiss, onNav }) {
   function go(target) { if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } setFadingOut(true); setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350); }
   const pillars = [
     ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring (free)', 'Tiered cheat sheets and six strategy models (free)', 'A budget-aware optimal-lineup planner (free)', 'Unlimited mock auctions against CPU managers (with purchase)', 'AI Value Coach to devise strategy and values for your specific league and personal style (with purchase)']],
-    ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room (with purchase)', 'Switch-points and live opponent reads (with purchase)', 'An always-on AI navigator: who to bid on, how high, and why (with purchase)', 'Bid guidance that updates as the board moves (with purchase)']],
+    ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room (with purchase)', 'Amends recommended roster construction in real time, based on actual pricing and availability (with purchase)', 'An always-on AI navigator: who to bid on, how high, and why (with purchase)', 'Bid guidance that updates as the board moves (with purchase)']],
   ];
   // First quote: founder (KR). Second: intentional humor. Add genuine user testimonials here as they arrive.
   const quotes = [
