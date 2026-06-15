@@ -729,7 +729,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .cc-K .cheat-col-head { border-top-color: #8b5cf6; } .cc-K .cheat-col-head > span:first-child { color: #b18cff; }
 .cc-DEF .cheat-col-head { border-top-color: #9aa6b2; } .cc-DEF .cheat-col-head > span:first-child { color: #c2cdd7; }
 .landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 0 20px 60px; }
-.lp-inner { position: relative; z-index: 2; max-width: 880px; margin: 26px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.lp-inner { position: relative; z-index: 2; max-width: 960px; margin: 20px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.lp-hero { min-height: calc(100vh - 60px); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.lp-hero .landing-logo { margin-bottom: 76px; }
+.lp-hero .lp-head { margin-top: 4px; }
 .lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.01em; color: var(--text-primary); line-height: 1.05; margin: 20px 0 14px; max-width: 760px; }
 .lp-sub { font-size: clamp(17px, 2.3vw, 22px); color: var(--text-secondary); max-width: 720px; line-height: 1.5; margin: 0 0 26px; }
 .lp-sub b { color: var(--gold-text); }
@@ -1928,7 +1931,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       {tagline && (
         <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.34}
-              letterSpacing="0.24em" textAnchor="middle" fill="#9fe1cb">RULE THE DRAFT · OWN YOUR LEAGUE</text>
+              letterSpacing="0.24em" textAnchor="middle" fill="#9fe1cb">RULE THE DRAFT. OWN THE LEAGUE.</text>
       )}
     </svg>
   );
@@ -2008,10 +2011,12 @@ function LandingSplash({ onDismiss, onNav }) {
         </div>
       </nav>
       <div className="lp-inner">
-        <LogoMark tagline wavy height={205} className="landing-logo" />
+        <div className="lp-hero">
+        <LogoMark tagline wavy height={260} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
         <p className="lp-sub" style={{ marginBottom: 6 }}>Free custom auction values for<br /><b>your</b> exact league and <b>your</b> exact strategy.</p>
         <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
+        </div>
         <div className="lp-phases">
           {pillars.map(([k, h, b], i) => (
             <div className="lp-phase" key={i}>
