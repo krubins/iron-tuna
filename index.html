@@ -3439,12 +3439,12 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
       </div>
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       {mode === 'live'
-        ? <div className="section-meta no-print" style={{ marginBottom: 12 }}>Live draft — <b style={{ color: 'var(--gold-text)' }}>click any player to mark him drafted</b> (opens the assign popup); drafted players show struck through. Drag to re-rank · click a Proj price to set your own.<br /><b style={{ color: 'var(--accent-text)' }}>Proj</b> = likely auction price · <b>Value</b> = true VBD worth · <b style={{ color: 'var(--gold-text)' }}>You</b> = your max bid · <b>PPG</b> = points per game.</div>
-        : <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Use <b style={{ color: 'var(--positive)' }}>Show</b> to pick which numbers appear — hover each toggle for what it means. Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b> <b style={{ color: 'var(--positive)' }}>Click a Proj price to set your own — the rest re-prices.</b></div>}
+        ? <div className="section-meta no-print" style={{ marginBottom: 12 }}>Live draft — <b style={{ color: 'var(--gold-text)' }}>click any player to mark him drafted</b> (opens the assign popup); drafted players show struck through. Drag to re-rank · click a Proj price to set your own.<br /><b style={{ color: 'var(--accent-text)' }}>Proj</b> = likely auction price · <b>Value</b> = true VBD worth · <b style={{ color: 'var(--gold-text)' }}>You</b> = your max bid · <b>PPG</b> = points per game. Name color shows how hard to target him: <b style={{ color: '#2dd4a3' }}>green = worth it</b> (price at/below your You), <b style={{ color: '#ef4444' }}>red = the price is above his value to your team</b>.</div>
+        : <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Use <b style={{ color: 'var(--positive)' }}>Show</b> to pick which numbers appear — hover each toggle for what it means. Name color = how hard to target him: <b style={{ color: '#2dd4a3' }}>green = worth it</b> (price at/below your You), <b style={{ color: '#ef4444' }}>red = price above his value to your team</b> — a stud whose positional edge justifies paying over true value still reads green. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b> <b style={{ color: 'var(--positive)' }}>Click a Proj price to set your own — the rest re-prices.</b></div>}
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
-        <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-you" />your max bid</span><span className="cph-key"><i className="k-grn" />undervalued</span><span className="cph-key"><i className="k-red" />overvalued</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
+        <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-you" />your max bid</span><span className="cph-key"><i className="k-grn" />worth targeting (≤ your max)</span><span className="cph-key"><i className="k-red" />price over your max</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
       </div>
       <div className={`cheat-grid ${highlight ? 'has-hl' : ''}`}>
         {cols.map(([pos, n]) => (
@@ -3456,18 +3456,18 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               const dinfo = draftInfoMap[p.id];
               const cost = p.marketValue != null ? p.marketValue : p.auctionValue;
               const value = p.auctionValue;
-              const gap = cost - value;
-              const sign = Math.abs(gap) <= 1 ? 'neutral' : gap < 0 ? 'under' : 'over';
               const youBase = p.personalValue != null ? p.personalValue : value;
               let you = youBase, youDir = 'flat';
               if (stratKey && STRAT_TILT[stratKey] && STRAT_TILT[stratKey][pos]) {
                 const rule = STRAT_TILT[stratKey][pos].find(r => r.maxRank == null || (i + 1) <= r.maxRank);
                 if (rule) { you = Math.max(minBid, Math.round(youBase * (1 + rule.w * (tilt / 100)))); youDir = you > youBase ? 'up' : you < youBase ? 'down' : 'flat'; }
               }
+              const tgap = you - cost; // > 0 => worth targeting at market; < 0 => market exceeds his value to your team
+              const sign = Math.abs(tgap) <= 1 ? 'neutral' : tgap > 0 ? 'under' : 'over';
               return (
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted && dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price}` : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank">{i + 1}</span>
-                <span className={`cheat-name cn-${sign}`} style={{ color: costColor(cost, value) }} title={sign === 'under' ? `Undervalued by $${value - cost}` : sign === 'over' ? `Overvalued by $${cost - value}` : 'Fairly priced'}>{p.name}</span>
+                <span className={`cheat-name cn-${sign}`} style={{ color: costColor(cost, you) }} title={sign === 'under' ? `Target — worth up to your $${you}; ~$${you - cost} of edge at the $${cost} price` : sign === 'over' ? `Fade — the $${cost} price is $${cost - you} above his value to your team ($${you})` : `Priced about right for your team ($${you})`}>{p.name}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (p.team || '')}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price — click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
