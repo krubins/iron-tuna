@@ -1,0 +1,24 @@
+# Iron Tuna
+
+> Iron Tuna is a free fantasy football auction draft assistant. It gives three personalized values for every player — the likely market price, the player's true VBD value, and your personal maximum bid — plus a budget-aware optimal-lineup planner and a live AI Value Coach. Built specifically for auction (not snake) drafts.
+
+## What it does
+- Free custom auction values calibrated to your exact league size, budget, roster, and full custom scoring.
+- Three numbers per player: Proj (likely auction price), Value (true VBD worth), and You (your personal max bid given roster, budget, and the live market).
+- A budget-aware optimal-lineup planner that finds the strategy and dollar allocation producing your highest-scoring starting lineup.
+- Tiered cheat sheets, six strategy models, and unlimited mock auctions.
+- Live "Advanced Auction Day Assistance" (paid): real-time prices that adjust to the room, an always-on AI navigator that says who to bid on and how high, and proactive insight on emerging bidding trends.
+
+## Key facts
+- Price: Free to start; optional paid Advanced Auction Day Assistance upgrade.
+- No account or password sharing required; enter or paste your league settings.
+- Runs entirely in the browser and works on draft night even if Wi-Fi drops.
+- Best for: fantasy football auction drafts (any league settings).
+
+## FAQ
+- Is it free? Yes — custom auction values are free, no signup. Advanced Auction Day Assistance is the paid upgrade.
+- Does it work for any auction league? Yes — every value recalibrates to your exact settings.
+- How is it different? Most tools give one generic value; Iron Tuna gives three numbers per player plus a real-time AI navigator.
+
+## Links
+- Home: https://iron-tuna.kennethrubinstein.workers.dev/
