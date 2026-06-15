@@ -269,18 +269,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .col-personal { color: var(--gold-text); font-weight: 700; background: var(--gold-soft); }
 .player-table tbody tr:hover .col-personal { background: rgba(245, 184, 0, 0.12); }
 .player-table tbody tr.drafted .col-personal { background: transparent; }
-.header-logo { height: 40px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
-.header-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; border-radius: 6px; transition: filter 0.12s; position: relative; overflow: hidden; }
-.header-logo-btn::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 38%, rgba(190,235,255,0.22) 48%, rgba(255,255,255,0.32) 50%, rgba(190,235,255,0.22) 52%, transparent 62%); background-size: 240% 240%; mix-blend-mode: screen; animation: waterShimmer 5.5s ease-in-out infinite; }
+.header-logo { height: 40px; width: auto; display: block; filter: url(#waterDistort) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.header-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; border-radius: 6px; transition: filter 0.12s; }
 .header-logo-btn:hover { filter: brightness(1.12); }
 .landing-splash { position: fixed; inset: 0; z-index: 1000; background: radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; opacity: 1; transition: opacity 0.6s ease-out; }
 .landing-splash.fading-out { opacity: 0; pointer-events: none; }
 .landing-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; z-index: 2; }
 .landing-logo-container { width: 100vw; max-height: 82vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; z-index: 1; }
-.landing-logo { width: 100%; height: auto; display: block; animation: kenBurnsZoom 8s ease-out forwards, landingFadeIn 1.2s ease-out backwards; filter: drop-shadow(0 0 24px rgba(45, 212, 163, 0.35)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6)); transform-origin: center center; }
-.landing-logo-wrap { position: relative; display: inline-block; line-height: 0; }
-.landing-logo-shimmer { position: absolute; inset: -3%; pointer-events: none; background: linear-gradient(115deg, transparent 36%, rgba(190,235,255,0.16) 47%, rgba(255,255,255,0.30) 50%, rgba(190,235,255,0.16) 53%, transparent 64%); background-size: 240% 240%; mix-blend-mode: screen; animation: waterShimmer 5.5s ease-in-out infinite; }
-@keyframes waterShimmer { 0% { background-position: 135% 135%; } 100% { background-position: -135% -135%; } }
+.landing-logo { width: 100%; height: auto; display: block; animation: kenBurnsZoom 8s ease-out forwards, landingFadeIn 1.2s ease-out backwards; filter: url(#waterDistort) drop-shadow(0 0 24px rgba(45, 212, 163, 0.35)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6)); transform-origin: center center; }
 @keyframes kenBurnsZoom { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.12) translate(-2%, 1%); } }
 @keyframes landingFadeIn { 0% { opacity: 0; transform: scale(0.96); } 100% { opacity: 1; transform: scale(1); } }
 .landing-tagline { margin-top: 24px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.32em; color: rgba(159, 225, 203, 0.85); text-align: center; animation: taglineReveal 1.4s ease-out 0.6s backwards; z-index: 1; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); }
@@ -460,7 +456,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach-msg.bot { background: var(--bg-elev); color: var(--text-secondary); align-self: flex-start; border-bottom-left-radius: 3px; }
 .coach-msg.user { background: var(--border-accent); color: var(--text-primary); align-self: flex-end; border-bottom-right-radius: 3px; }
 .coach-input { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--border-subtle); }
-.coach-input input { flex: 1; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--text-primary); font-size: 12.5px; }
+.coach-input input { flex: 1; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 12px 12px; color: var(--text-primary); font-size: 14px; }
 .coach-input button { background: var(--gold-text); color: #1a1205; border: none; border-radius: var(--radius-sm); padding: 0 14px; font-weight: 600; cursor: pointer; }
 .imp { border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; background: var(--bg-base); }
 .imp-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -662,7 +658,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.big { width: 208px; max-width: 208px; max-height: 82vh; }
 .coach.big .coach-msg { font-size: 13.5px; }
 .coach.big .coach-body { padding: 14px; }
-.coach.big .coach-input input { font-size: 13.5px; padding: 10px 12px; }
+.coach.big .coach-input input { font-size: 15px; padding: 14px 14px; }
 .cheat-col-head { border-top: 2px solid var(--gold-text); }
 .cc-QB .cheat-col-head { border-top-color: #e8554e; } .cc-QB .cheat-col-head > span:first-child { color: #ff8d85; }
 .cc-RB .cheat-col-head { border-top-color: #2dba6e; } .cc-RB .cheat-col-head > span:first-child { color: #4fd693; }
@@ -733,11 +729,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-faq-item { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
 .lp-faq-q { font-family: var(--font-display); font-size: 15px; color: var(--text-primary); letter-spacing: 0.02em; margin-bottom: 6px; }
 .lp-faq-a { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; }
-.lp-ai { width: 100%; max-width: 680px; margin: 8px auto 6px; background: rgba(45,212,163,0.07); border: 1px solid var(--border-subtle); border-left: 3px solid var(--positive); border-radius: var(--radius-md); padding: 14px 18px; text-align: left; display: flex; gap: 14px; align-items: flex-start; }
-.lp-ai-tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--positive); border: 1px solid var(--positive); border-radius: 10px; padding: 3px 9px; white-space: nowrap; margin-top: 2px; }
-.lp-ai p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); }
-.lp-ai p b { color: var(--gold-text); }
-@media (max-width: 600px) { .lp-ai { flex-direction: column; gap: 9px; } }
+.lp-ai-section { width: 100%; max-width: 720px; margin: 14px auto 26px; text-align: left; }
+.lp-ai-body { font-size: 14.5px; line-height: 1.65; color: var(--text-secondary); margin: 0; }
+.lp-ai-body b { color: var(--gold-text); }
 @media (max-width: 680px) { .lp-ribbon { flex-direction: column; gap: 8px; } .lp-ribbon-links { justify-content: center; } }
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
 .assumptions-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -1927,11 +1921,10 @@ function LandingSplash({ onDismiss, onNav }) {
         </div>
       </nav>
       <div className="lp-inner">
-        <div className="landing-logo-wrap"><LogoMark tagline height={175} className="landing-logo" /><span className="landing-logo-shimmer" /></div>
+        <LogoMark tagline height={175} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
         <p className="lp-sub" style={{ marginBottom: 6 }}>Free custom auction values for <b>your</b> exact league and <b>your</b> exact strategy.</p>
         <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
-        <div className="lp-ai"><span className="lp-ai-tag">Purpose-built AI</span><p>Not a generic question to ChatGPT or Claude. Iron Tuna\u2019s navigator reasons over <b>your</b> exact league and scoring \u2014 plus years of real auction results, <b>tens of thousands of auction dollars analyzed</b> for the price trends that will actually move your draft.</p></div>
         <div className="lp-phases">
           {pillars.map(([k, h, b], i) => (
             <div className="lp-phase" key={i}>
@@ -1963,6 +1956,11 @@ function LandingSplash({ onDismiss, onNav }) {
             </div>
           </div>
           <div className="lp-shot-cap">Three numbers on every player — <b style={{color:'var(--text-secondary)'}}>Proj</b> (market price), <b style={{color:'var(--text-secondary)'}}>Value</b> (true worth), and <b style={{color:'var(--gold-text)'}}>You</b> (your personal max) — with the Gameday Navigator talking you through each bid in real time.</div>
+        </div>
+        <div className="lp-ai-section">
+          <div className="lp-preview-eyebrow">Purpose-built AI</div>
+          <h2 className="lp-preview-h">Not just another ChatGPT wrapper</h2>
+          <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s navigator reasons over <b>your</b> exact league and scoring — and over years of real auction results, with <b>tens of thousands of auction dollars analyzed</b> for the price trends that will actually move your draft.</p>
         </div>
         <div className="lp-quotes">
           {quotes.map(([q, who], i) => (
@@ -4577,7 +4575,7 @@ function coachWhySlot(q, ctx) {
 }
 function coachMostImportant(q, ctx) {
   const t = q.toLowerCase();
-  if (!/\b(most important|most valuable|biggest impact|matters most|single most|priorit|key (player|get|piece)|maximize my (points|score|scoring)|build around|cornerstone|linchpin|who.{0,18}(maximize|most points|biggest))\b/.test(t)) return null;
+  if (!/\b(most important|most valuable|biggest impact|matters most|single most|priorit|key (player|get|piece)|maximize my (points|score|scoring)|build around|cornerstone|linchpin|focus on|should i focus|what player should i|who (should i|to) focus|where (do i|to|should i) start|who.{0,18}(maximize|most points|biggest))\b/.test(t)) return null;
   const { evalPlayers, myTeam, config, draftedIds, games } = ctx;
   const di = draftedIds || new Set();
   const g = games || 17;
@@ -4846,7 +4844,7 @@ function CoachAiSettings({ ai, onSave, onClose }) {
 }
 function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi }) {
   const [open, setOpen] = useState(true);
-  const [msgs, setMsgs] = useState([{ role: 'bot', text: 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.' }]);
+  const [msgs, setMsgs] = useState([{ role: 'bot', text: 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.', intro: true }]);
   const [text, setText] = useState('');
   const [pending, setPending] = useState(null);
   const [showAi, setShowAi] = useState(false);
@@ -4952,6 +4950,8 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     const found = findPlayer(stripEval(q), ctx.evalPlayers);
     if (found && found.player) { evalAndNominate(found.player); if (found.alternatives && found.alternatives.length) push('bot', 'Also close: ' + found.alternatives.map(a => a.name).join(', ') + '.'); return; }
     if (res.sawPos && tuneImperative) { push('bot', res.reply); return; }
+    const fb = coachMostImportant(q + ' most important player to get', ctx);
+    if (fb) { push('bot', "Let me focus on what matters most for your build right now:\n\n" + fb + "\n\nYou can also ask me about a specific player, a position tier, bargains, or your budget."); return; }
     push('bot', "I can size up a player (“how much for Drake Maye?”), talk through a position (“how’s the TE tier?”), explain a call (“why is Bijan only $33?”), find value, check your budget, or tune values (“elite RBs pricier”, “reset”). Tell me a player, a position, or what you’re trying to do.");
   }
   const active = [];
@@ -4964,7 +4964,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
       {showAi
         ? <CoachAiSettings ai={ai} onSave={onSaveAi} onClose={() => setShowAi(false)} />
         : (<>
-          <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
+          <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
           <div className="coach-input"><input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }} placeholder={ai && ai.enabled ? 'Ask anything about your draft' : (pending ? 'e.g. spread it across the others' : 'Ask about a player, or tune values')} /><button onClick={send}>Send</button></div>
         </>)}
     </div>
@@ -5627,6 +5627,7 @@ function App() {
   ];
   return (
     <div className="app">
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.009 0.016" numOctaves="2" seed="4" result="noise"><animate attributeName="baseFrequency" dur="17s" values="0.009 0.016;0.013 0.021;0.009 0.016" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''}`}>
