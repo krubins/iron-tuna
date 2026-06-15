@@ -428,6 +428,22 @@ input:focus, select:focus { border-color: var(--accent); }
 .draft-alert-icon { color: #ffb13d; font-size: 16px; }
 .draft-alert-x { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
 .draft-alert-x:hover { color: var(--text-primary); }
+.bid-ladder-wrap { margin-top: 10px; }
+.bid-headline { font-size: 12px; line-height: 1.5; color: var(--text-secondary); background: rgba(45,212,163,0.10); border: 1px solid rgba(45,212,163,0.40); border-left: 3px solid var(--positive); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 8px; }
+.bid-ladder { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
+.bl-head { display: flex; justify-content: space-between; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); padding: 5px 10px; background: var(--bg-panel); border-bottom: 1px solid var(--border-subtle); }
+.bl-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.bl-row:last-child { border-bottom: none; }
+.bl-price { font-variant-numeric: tabular-nums; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.bl-impact { font-variant-numeric: tabular-nums; font-weight: 600; display: flex; align-items: baseline; gap: 4px; }
+.bl-unit { font-size: 9px; font-weight: 400; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.bl-help .bl-impact { color: var(--positive); }
+.bl-hurt .bl-impact { color: var(--danger); }
+.bl-flat .bl-impact { color: var(--text-muted); }
+.bl-na .bl-impact { color: var(--text-muted); font-weight: 400; font-style: italic; }
+.bl-switch { background: rgba(212,160,23,0.12); }
+.bl-tag { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--gold-text); color: #0a0a0a; border-radius: 3px; padding: 1px 4px; font-weight: 700; }
+.bl-foot { font-size: 10px; color: var(--text-muted); line-height: 1.45; margin-top: 6px; }
 @keyframes alertIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 .taunt-modal { max-width: 470px; }
 .taunt-head { font-family: var(--font-display); font-size: 20px; color: #ff6a3d; letter-spacing: 0.03em; }
@@ -2072,7 +2088,8 @@ function strategyLabel(s) {
   return 'Stars & Scrubs';
 }
 // ─── components/BidPanel.jsx ──────────────────────────
-function BidPanel({ player, myTeam, teams, config, bidRec, marketState, pointsMode, seasonGames, plan, onDraft, onClose }) {
+function BidPanel({ player, myTeam, teams, config, bidRec, marketState, pointsMode, seasonGames, plan, players, draftedIds, roleOverrides, targets, onDraft, onClose }) {
+  const ladderData = React.useMemo(() => (plan ? bidLadder(player, plan.starterPoints, myTeam, players, config, draftedIds, roleOverrides, targets, seasonGames) : null), [player.id, plan, myTeam, players, config, draftedIds, roleOverrides, targets, seasonGames]);
   const [bidPrice, setBidPrice] = useState(bidRec.suggested);
   const [winningTeamId, setWinningTeamId] = useState(myTeam.id);
   useEffect(() => { setBidPrice(bidRec.suggested); setWinningTeamId(myTeam.id); }, [player.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2115,6 +2132,42 @@ function BidPanel({ player, myTeam, teams, config, bidRec, marketState, pointsMo
           Worth taking up to <b style={{ color: 'var(--gold-text)' }}>${player.worthPrice}</b> — at that price your starters are as strong as your current plan. Pay more only if you mean to punt a cheaper slot.
         </div>
       )}
+      {ladderData && ladderData.rungs.length > 0 && (() => {
+        const G = seasonGames || 17;
+        const fn = n => (n || '').split(' ')[0] || n;
+        const sp = ladderData.switchP;
+        let alt = null;
+        if (plan && plan.remainingStarterSlots) {
+          alt = plan.remainingStarterSlots.filter(s => s.player && s.basePos !== player.position).sort((a, b) => b.targetPrice - a.targetPrice)[0] || null;
+        }
+        let headline;
+        if (sp != null) {
+          headline = `Go up to $${sp} on ${fn(player.name)} — that's your switch price. At or below it your starters get stronger; past it the same dollars buy more starting points${alt ? ` at ${alt.basePos} — ${fn(alt.player.name)} is the better value if he's bid up` : ' elsewhere'}.`;
+        } else {
+          const fit = plan ? planMaxFor(player, plan, config) : null;
+          if (fit && fit.fitsStarter === false) headline = `${fn(player.name)} doesn't open your starting lineup right now — he'd be a bench/upside add, not a points upgrade. Keep him cheap.`;
+          else headline = `Your plan already has equal-or-better value at ${player.position}. Cap him near his Value ($${player.auctionValue}) — the points are hiding elsewhere.`;
+        }
+        return (
+          <div className="bid-ladder-wrap">
+            <div className="bid-headline">{headline}</div>
+            <div className="bid-ladder">
+              <div className="bl-head"><span>If you win at…</span><span>Your starters vs plan</span></div>
+              {ladderData.rungs.map((r, i) => {
+                const cls = !r.feasible ? 'bl-na' : r.helps ? 'bl-help' : r.hurts ? 'bl-hurt' : 'bl-flat';
+                const isSwitch = sp != null && r.price === sp;
+                return (
+                  <div key={i} className={`bl-row ${cls} ${isSwitch ? 'bl-switch' : ''}`}>
+                    <span className="bl-price">${r.price}{isSwitch ? <span className="bl-tag">switch</span> : null}</span>
+                    <span className="bl-impact">{!r.feasible ? "can't afford" : (r.deltaPerGm > 0.05 ? `+${r.deltaPerGm.toFixed(1)}` : r.deltaPerGm < -0.05 ? `${r.deltaPerGm.toFixed(1)}` : '±0.0')}{r.feasible ? <span className="bl-unit">pts/gm</span> : null}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="bl-foot">Impact to your whole roster if you win him at each price, vs your current optimal plan ({(plan ? plan.starterPoints / G : 0).toFixed(1)} pts/gm). Above the switch price, building around him costs more points than spending those dollars elsewhere.</div>
+          </div>
+        );
+      })()}
       {(() => {
         const comp = opponentCompetition(player, teams, myTeam, config);
         const col = comp.level === 'High' ? 'var(--accent-text)' : comp.level === 'Medium' ? 'var(--gold-text)' : 'var(--positive)';
@@ -2189,7 +2242,7 @@ function InsightsPanel({ insights, marketState, sonar, onUnlock }) {
   );
 }
 // ─── components/Sidebar.jsx ──────────────────────────
-function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketState, pointsMode, seasonGames, plan, targets, currentNomination, onDraft, onClearNomination, onUpdateStrategy, sonar, onUnlockSonar, onShare }) {
+function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketState, pointsMode, seasonGames, plan, targets, draftedIds, roleOverrides, currentNomination, onDraft, onClearNomination, onUpdateStrategy, sonar, onUnlockSonar, onShare }) {
   const [tab, setTab] = useState('team');
   const bidRec = useMemo(() => {
     if (!currentNomination || !myTeam) return null;
@@ -2228,7 +2281,7 @@ function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketSta
       {currentNomination && bidRec && (
         <div className="sidebar-section">
           <h2>Bid Assistant</h2>
-          <BidPanel player={currentNomination} myTeam={myTeam} teams={teams} config={config} bidRec={bidRec} marketState={marketState} pointsMode={pointsMode} seasonGames={seasonGames} plan={plan} onDraft={onDraft} onClose={onClearNomination} />
+          <BidPanel player={currentNomination} myTeam={myTeam} teams={teams} config={config} bidRec={bidRec} marketState={marketState} pointsMode={pointsMode} seasonGames={seasonGames} plan={plan} players={valuedPlayers} draftedIds={draftedIds || new Set((draftHistory || []).map(d => d.playerId))} roleOverrides={roleOverrides} targets={targets} onDraft={onDraft} onClose={onClearNomination} />
         </div>
       )}
       {tab === 'team' && (
@@ -4013,6 +4066,54 @@ function planMaxFor(player, plan, config) {
   const planMax = Math.max(config.valuation.minBid, Math.round(plan.budgetRemaining - plan.reserveBench - otherTargets));
   return { fitsStarter: true, planMax, slotLabel: slot.label, targetPrice: slot.targetPrice };
 }
+// Bid ladder: at a range of prices, how acquiring `player` (forced into a starting
+// slot, then re-solving the rest of the roster on the reduced budget) changes your
+// projected starter points-per-game vs your current optimal plan. Positive = your
+// overall team gets stronger at that price; negative = the same dollars buy more
+// points elsewhere. Also returns the switch price (breakeven) via bisection.
+function bidLadder(player, baselinePoints, myTeam, players, config, draftedIds, roleOverrides, targets, games) {
+  if (!player || !myTeam || !players) return null;
+  const minBid = config.valuation.minBid;
+  const hardMax = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
+  if (hardMax < minBid) return null;
+  const forcedBase = targets ? Array.from(targets) : [];
+  const memo = {};
+  const ptsAt = P => {
+    if (memo[P] !== undefined) return memo[P];
+    const modified = players.map(x => x.id === player.id ? { ...x, inflatedValue: P, auctionValue: P } : x);
+    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides);
+    const v = (pl && pl.feasible) ? pl.starterPoints : null;
+    memo[P] = v; return v;
+  };
+  // Switch price: highest P where forcing him in still keeps starters >= baseline.
+  let switchP = null;
+  const atMin = ptsAt(minBid);
+  if (atMin != null && atMin > baselinePoints + 1e-6) {
+    let lo = minBid, hi = hardMax, best = null;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; const v = ptsAt(mid); if (v != null && v >= baselinePoints - 1e-6) { best = mid; lo = mid + 1; } else hi = mid - 1; }
+    switchP = best;
+  }
+  const market = player.marketValue ?? player.auctionValue ?? minBid;
+  const set = new Set();
+  const add = v => { v = Math.round(v); if (v >= minBid && v <= hardMax) set.add(v); };
+  add(minBid);
+  if (switchP != null) {
+    const step = Math.max(2, Math.round(switchP * 0.18));
+    add(switchP - step); add(switchP); add(switchP + step);
+  }
+  add(market);
+  add(Math.round(hardMax * 0.5));
+  add(hardMax);
+  const prices = Array.from(set).sort((a, b) => a - b);
+  const G = games || 17;
+  const rungs = prices.map(P => {
+    const pts = ptsAt(P);
+    if (pts == null) return { price: P, feasible: false, deltaPerGm: null, ptsPerGm: null, helps: false, hurts: false };
+    const delta = (pts - baselinePoints) / G;
+    return { price: P, feasible: true, ptsPerGm: pts / G, deltaPerGm: delta, helps: delta > 0.05, hurts: delta < -0.05 };
+  });
+  return { rungs, switchP, hardMax, minBid, market };
+}
 // ─── components/PlanView.jsx ──────────────────────────
 function PlanView({ myTeam, players, draftedIds, config, pointsMode, seasonGames, targets, roleOverrides }) {
   const [whatIfOn, setWhatIfOn] = useState(false);
@@ -4293,7 +4394,7 @@ function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGam
             <div className="rr-l2">
               <span className="rr-meta"><span className={`position-tag ${p.position}`} style={{ minWidth: 0, padding: '1px 5px' }}>{p.position}</span> {p.team} · {(p.projectedPoints / games).toFixed(1)}/gm · <span title={`Risk: ${riskLabel(rsk)}`} style={{ color: riskColor(rsk) }}>●</span></span>
               <button className="btn-secondary" onClick={() => onNominate(p)}>Info</button>
-              <button className="btn-draft" onClick={() => setQuick(p)}>Assign</button>
+              <button className="btn-draft" onClick={() => onNominate(p)} title="Feature this player on the right with a price-by-price impact analysis">Up for bid</button>
             </div>
           </div>
         );
@@ -5806,7 +5907,7 @@ function App() {
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
+        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
           currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} />}
       </div>
       {view === 'settings' && (
