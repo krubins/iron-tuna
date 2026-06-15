@@ -1944,7 +1944,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       {tagline && (
         <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.34}
-              letterSpacing="0.24em" textAnchor="middle" fill="#9fe1cb">RULE THE DRAFT. OWN THE LEAGUE.</text>
+              letterSpacing="0.24em" textAnchor="middle" fill="#9fe1cb"><tspan>RULE THE DRAFT.</tspan><tspan dx={base * 0.55}>OWN THE LEAGUE.</tspan></text>
       )}
     </svg>
   );

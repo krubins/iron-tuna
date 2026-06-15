@@ -26,7 +26,16 @@ export default {
       if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
       return handleCoach(request, env, c);
     }
-    return env.ASSETS.fetch(request);
+    // Serve static assets, but tell browsers to revalidate HTML every load so
+    // updates show up without a hard refresh (the app is a single index.html).
+    const resp = await env.ASSETS.fetch(request);
+    const ct = resp.headers.get('content-type') || '';
+    if (ct.includes('text/html')) {
+      const r = new Response(resp.body, resp);
+      r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return r;
+    }
+    return resp;
   },
 };
 
