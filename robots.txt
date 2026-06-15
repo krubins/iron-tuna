@@ -13,4 +13,4 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-Sitemap: https://iron-tuna.kennethrubinstein.workers.dev/sitemap.xml
+Sitemap: https://irontuna.com/sitemap.xml

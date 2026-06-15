@@ -21,4 +21,4 @@
 - How is it different? Most tools give one generic value; Iron Tuna gives three numbers per player plus a real-time AI navigator.
 
 ## Links
-- Home: https://iron-tuna.kennethrubinstein.workers.dev/
+- Home: https://irontuna.com/
