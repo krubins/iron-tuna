@@ -616,7 +616,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cheat-team { font-size: 9px; color: var(--text-muted); font-family: var(--font-mono); }
 .cheat-val { font-family: var(--font-mono); color: var(--gold-text); font-size: 10px; text-align: right; min-width: 20px; }
-.cheat-cost { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; text-align: right; min-width: 20px; }
+.cheat-cost { font-family: var(--font-mono); color: var(--text-secondary); font-size: 10px; text-align: right; min-width: 20px; }
 .cheat-you { font-family: var(--font-mono); font-size: 10px; text-align: right; min-width: 20px; font-weight: 700; color: var(--gold-text); }
 .cheat-you.cy-up { color: var(--positive); }
 .cheat-you.cy-down { color: var(--text-muted); font-weight: 400; }
@@ -5820,11 +5820,14 @@ function App() {
     setDraftHistory(prev => prev.slice(0, -1));
   }
   function handleReset() {
-    if (!window.confirm('Reset all draft picks? Team names and your "My Team" pick are kept; rosters and budgets are cleared. This cannot be undone.')) return;
+    if (!window.confirm('Reset everything? Clears all draft picks AND your cheat-sheet changes (custom ranks and price overrides). Team names and your "My Team" pick are kept. This cannot be undone.')) return;
     const total = totalRosterSpots(config);
     setTeams(prev => prev.map(t => ({ ...t, budgetRemaining: config.budget, spotsRemaining: total, roster: [] })));
     setDraftHistory([]);
     setCurrentNomination(null);
+    setRankOrder({});
+    setPriceOverrides({});
+    setCustomOrder([]);
   }
   function handleConfigChange(newConfig) {
     setConfig(newConfig);
