@@ -475,14 +475,17 @@ input:focus, select:focus { border-color: var(--accent); }
 .errbound-title { font-family: var(--font-display); font-size: 22px; color: var(--gold-text); letter-spacing: 0.04em; margin-bottom: 8px; }
 .errbound p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 .errbound-detail { margin-top: 10px; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 8px; white-space: pre-wrap; max-height: 120px; overflow: auto; }
-.tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .tier-card { position: relative; border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 14px; background: var(--bg-base); display: flex; flex-direction: column; }
 .tier-card.feature { border-color: var(--gold-text); box-shadow: 0 0 0 1px var(--gold-text) inset; }
 .tier-tag { position: absolute; top: -9px; right: 10px; background: var(--gold-text); color: #1a1205; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 8px; }
 .tier-name { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.03em; }
 .tier-price { font-family: var(--font-mono); font-size: 20px; color: var(--gold-text); margin: 4px 0; }
 .tier-price span { font-size: 10px; color: var(--text-muted); }
-.tier-blurb { font-size: 11px; color: var(--text-secondary); line-height: 1.45; flex: 1; margin-bottom: 10px; }
+.tier-blurb { font-size: 11.5px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 12px; }
+.tier-feats { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.tier-feats li { position: relative; padding-left: 18px; font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+.tier-feats li::before { content: '✓'; position: absolute; left: 0; top: 0; color: var(--positive); font-weight: 700; }
 .checkout-card { border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 12px; background: var(--bg-base); }
 .checkout-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); padding: 4px 0; }
 .checkout-fake { font-family: var(--font-mono); color: var(--text-muted); }
@@ -610,10 +613,11 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row:nth-of-type(2n) { background: #f4f6f8 !important; }
   .cheat-row:hover { background: none; }
   .cheat-rank { color: #999 !important; font-size: 6.5px; }
-  .cheat-team { display: none; }
+  .cheat-team { color: #8a8a8a !important; font-size: 6.5px; }
   .cheat-cost { color: #6a6a6a !important; font-size: 7px; }
   .cheat-val { color: #111 !important; font-size: 7.5px; font-weight: 700; }
   .cheat-you { color: #111 !important; font-size: 7.5px; font-weight: 700; }
+  .cheat-ppg { color: #1a4a7a !important; font-size: 7.5px; font-weight: 700; }
   .cheat-you.cy-up { color: #0a7a3f !important; } .cheat-you.cy-down { color: #6a6a6a !important; font-weight: 400; }
   .cheat-name { color: #111 !important; }
   .cheat-name.cn-under { color: #0a7a3f !important; }
@@ -627,6 +631,12 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 6.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
 }.hl-btn { font-size: 11px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
+.cheat-cols-label { font-size: 11px; color: var(--text-muted); align-self: center; }
+.col-toggle { font-size: 11px; padding: 5px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-muted); cursor: pointer; font-family: var(--font-mono); letter-spacing: 0.04em; }
+.col-toggle.on { background: rgba(45,212,163,0.14); border-color: var(--positive); color: var(--positive); }
+.cheat-ppg { font-family: var(--font-mono); font-size: 10px; text-align: right; color: #7fa6c9; min-width: 20px; }
+.cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
+.col-toggle.price-clear { color: var(--gold-text); border-color: var(--gold-text); }
 .cheat-sep { width: 1px; align-self: stretch; background: var(--border-strong); margin: 0 4px; }
 .cheat-strat-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; background: rgba(212,160,23,0.08); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 6px 10px; }
 .hl-clear { background: none; border: none; color: var(--gold-text); cursor: pointer; font-size: 11px; text-decoration: underline; margin-left: 8px; }
@@ -1033,6 +1043,29 @@ function applyInflation(players, draftedPlayerIds, teamBudgets, config) {
     const adjusted = config.valuation.minBid + (p.auctionValue - config.valuation.minBid) * inflation;
     const adjMarket = config.valuation.minBid + ((p.marketValue ?? p.auctionValue) - config.valuation.minBid) * inflation;
     return { ...p, inflatedValue: Math.max(config.valuation.minBid, Math.round(adjusted)), marketValue: Math.max(config.valuation.minBid, Math.round(adjMarket)) };
+  });
+}
+function applyPriceOverrides(players, overrides, draftedIds, config) {
+  if (!overrides || Object.keys(overrides).length === 0) return players;
+  const minBid = config.valuation.minBid;
+  const di = draftedIds || new Set();
+  let delta = 0; const overIds = new Set();
+  players.forEach(p => {
+    if (!di.has(p.id) && overrides[p.id] != null) {
+      const cur = p.marketValue != null ? p.marketValue : (p.auctionValue || minBid);
+      delta += (Math.max(minBid, overrides[p.id]) - cur);
+      overIds.add(p.id);
+    }
+  });
+  const pool = players.filter(p => !di.has(p.id) && !overIds.has(p.id));
+  const totalHead = pool.reduce((sum, p) => sum + Math.max(0, (p.marketValue != null ? p.marketValue : minBid) - minBid), 0);
+  return players.map(p => {
+    if (di.has(p.id)) return p;
+    if (overrides[p.id] != null) return { ...p, marketValue: Math.max(minBid, Math.round(overrides[p.id])), priceOverridden: true };
+    if (delta === 0 || totalHead <= 0) return p;
+    const head = Math.max(0, (p.marketValue != null ? p.marketValue : minBid) - minBid);
+    const adj = (p.marketValue != null ? p.marketValue : minBid) - delta * (head / totalHead);
+    return { ...p, marketValue: Math.max(minBid, Math.round(adj)) };
   });
 }
 // League-calibrated market prices: the dollar each rank (within a position) has
@@ -3107,7 +3140,7 @@ const STRAT_TILT = {
   heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget }) {
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices }) {
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 30], ['DEF', 30]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -3118,6 +3151,15 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const hlSet = cheatHighlights(byPos, highlight);
   const stratKey = (highlight && highlight !== 'targets') ? highlight : null;
   const minBid = (config && config.valuation && config.valuation.minBid) || 1;
+  const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: false });
+  const COLSPEC = [
+    ['proj', 'Proj', 'Projected market price — what this player will likely cost in your auction.'],
+    ['value', 'Value', 'True value (VBD) — what the player is actually worth at your league settings.'],
+    ['you', 'You', 'Your personal max bid — the most you should pay given your roster, budget, and needs.'],
+    ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.'],
+  ];
+  const activeCols = COLSPEC.filter(c => showCols[c[0]]);
+  const gridT = `16px minmax(0,1fr) auto ${activeCols.map(() => 'auto').join(' ')}`;
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
   const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -3157,19 +3199,14 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         <button className="btn-draft" onClick={() => printPdf('legal')}>PDF · Legal</button>
         <button className="btn-secondary" onClick={onResetRanks}>Reset ranks</button>
         <span className="cheat-sep" />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center' }}>Highlight:</span>
-        <button className={`hl-btn ${highlight === 'targets' ? 'active' : ''}`} onClick={() => setHighlight(h => h === 'targets' ? null : 'targets')}>Targets</button>
-        {['heroRB', 'zeroRB', 'heroWR', 'robustRB', 'eliteTE'].map(k => (
-          <button key={k} className={`hl-btn ${highlight === k ? 'active' : ''}`} onClick={() => setHighlight(h => h === k ? null : k)}>{STRAT[k].label}</button>
+        <span className="cheat-cols-label">Show:</span>
+        {COLSPEC.map(([k, lbl, tip]) => (
+          <button key={k} className={`col-toggle ${showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>
         ))}
-        <span className="cheat-sep" />
-        <label className="cheat-tilt" title="Shifts your max bids toward the selected strategy. Affects only the You price — not cost or value.">Strategy tilt
-          <input type="range" min="0" max="100" value={tilt} onChange={e => setTilt(parseInt(e.target.value || 0))} disabled={!stratKey} />
-          <span className="cheat-tilt-val">{stratKey ? `${tilt}% tilt` : 'pick a strategy'}</span>
-        </label>
+        {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
       </div>
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
-      <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Three figures: <b style={{ color: 'var(--text-muted)' }}>cost</b> · <b style={{ color: 'var(--gold-text)' }}>value</b> · <b style={{ color: 'var(--positive)' }}>You</b> (your max bid). Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b></div>
+      <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Use <b style={{ color: 'var(--positive)' }}>Show</b> to pick which numbers appear — hover each toggle for what it means. Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b> <b style={{ color: 'var(--positive)' }}>Click a Proj price to set your own — the rest re-prices.</b></div>
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
@@ -3179,7 +3216,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         {cols.map(([pos, n]) => (
           <div className={`cheat-col cc-${pos}`} key={pos}>
             <div className="cheat-col-head"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>
-            <div className="cheat-col-labels"><span>#</span><span>Player</span><span>Cost</span><span>Val</span><span>You</span></div>
+            <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl]) => <span key={k}>{lbl}</span>)}</div>
             {(byPos[pos] || []).slice(0, n).map((p, i) => {
               const cost = p.marketValue != null ? p.marketValue : p.auctionValue;
               const value = p.auctionValue;
@@ -3192,13 +3229,11 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 if (rule) { you = Math.max(minBid, Math.round(youBase * (1 + rule.w * (tilt / 100)))); youDir = you > youBase ? 'up' : you < youBase ? 'down' : 'flat'; }
               }
               return (
-              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none' }}>
+              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank">{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: costColor(cost, value) }} title={sign === 'under' ? `Undervalued by $${value - cost}` : sign === 'over' ? `Overvalued by $${cost - value}` : 'Fairly priced'}>{p.name}</span>
                 <span className="cheat-team">{p.team || ''}</span>
-                <span className="cheat-cost" title="Predicted cost">${cost}</span>
-                <span className="cheat-val" title="Value (VBD)">${value}</span>
-                <span className={`cheat-you cy-${youDir}`} title="Your max bid — personalized, strategy-adjusted">${you}</span>
+                {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price — click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
             })}
@@ -3387,7 +3422,7 @@ function PrepInsights({ players, config, seasonGames }) {
     </div>
   );
 }
-function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seasonGames, onNominate, onUpdateStrategy, onLoadLive, loading, dataInfo, onRankReorder, onResetRanks, targets, onToggleTarget, onOpenSettings, onUpdateConfig }) {
+function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seasonGames, onNominate, onUpdateStrategy, onLoadLive, loading, dataInfo, onRankReorder, onResetRanks, targets, onToggleTarget, onOpenSettings, onUpdateConfig, onSetPrice, priceOverrides, onClearPrices }) {
   const [activeSubview, setActiveSubview] = useState('cheatsheet');
   const [editAssume, setEditAssume] = useState(false);
   const ppr = config.scoring ? config.scoring.receptionPoints : 0;
@@ -3438,7 +3473,7 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{dataInfo ? `${dataInfo.source} ${dataInfo.season} · ${dataInfo.count}` : 'baseline'}</span>
       </div>
       {activeSubview === 'tiers' && <TierView players={valuedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={seasonGames} onNominate={onNominate} onUpdateStrategy={onUpdateStrategy} />}
-      {activeSubview === 'cheatsheet' && <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} />}
+      {activeSubview === 'cheatsheet' && <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} onSetPrice={onSetPrice} priceOverrides={priceOverrides} onClearPrices={onClearPrices} />}
       {activeSubview === 'insights' && <PrepInsights players={valuedPlayers} config={config} seasonGames={seasonGames} />}
       {activeSubview === 'mock' && <MockAuction players={valuedPlayers} config={config} seasonGames={seasonGames} />}
     </div>
@@ -5012,18 +5047,27 @@ class ErrorBoundary extends React.Component {
 // ─── Accounts & entitlements (PLACEHOLDER billing) ─────────────────────────
 const ACCOUNT_KEY = 'iron_tuna_account_v1';
 const TIERS = [
-  { id: 'base', name: 'Iron Tuna Base', price: 9.99, blurb: 'Full live draft assistant — values, planner, standings.' },
-  { id: 'coach', name: 'Value Coach', price: 4.99, blurb: 'Retune projected values in plain English.' },
-  { id: 'fishtank', name: 'Fish Tank (Prep)', price: 3.99, blurb: 'Mock drafts, scenario lab, cheat-sheet export.' },
-  { id: 'sonar', name: 'Sonar (Insights)', price: 4.99, blurb: 'Tier cliffs, rival reads, risk & bargains.' },
-  { id: 'bundle', name: "Captain's Bundle", price: 16.99, blurb: 'Everything — base plus all three add-ons.' },
+  { id: 'base', name: 'Iron Tuna Base', price: 9.99, blurb: 'The full auction-day command center.', features: [
+    'Unlimited mock auctions against strategy-driven CPU managers',
+    'Live auction selection & roster management',
+    'Dynamic valuations that re-price as the board moves',
+    'Projected team potential throughout the auction',
+    'Instant team grading',
+    'Live Mock — on-demand, team-specific taunts',
+  ] },
+  { id: 'coach', name: 'Value Coach', price: 4.99, blurb: 'Your AI auction advisor — ask anything, get reasoned answers.', features: [
+    'Ask in plain English: “who should I focus on?”, “how high on Bijan?”, “where’s the value?”',
+    'Re-tune projected values by tier or position on command',
+    'Bargain finder, live budget checks, and position-tier reads',
+    'League-specific, reasoned advice — not a generic chatbot',
+  ] },
 ];
 function loadAccount() {
   const def = { user: null, entitlements: {}, testMode: true, onboardingDismissed: false, flags: {}, ai: { enabled: false, format: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini', key: '' } };
   try { const a = JSON.parse(localStorage.getItem(ACCOUNT_KEY)); if (a && typeof a === 'object') return { ...def, ...a, ai: { ...def.ai, ...(a.ai || {}) } }; } catch (e) {}
   return def;
 }
-function entitled(account, id) { if (!account) return false; if (account.testMode) return true; const e = account.entitlements || {}; return !!(e.bundle || e[id]); }
+function entitled(account, id) { if (!account) return false; if (account.testMode) return true; const e = account.entitlements || {}; if (e.bundle) return true; if (e.base && id !== 'coach') return true; return !!e[id]; }
 function buildGradeText(myTeam, plan, config, games) {
   const ppg = plan && plan.starterPoints ? (plan.starterPoints / (games || 17)).toFixed(1) : '—';
   const spent = config.budget - myTeam.budgetRemaining;
@@ -5032,18 +5076,19 @@ function buildGradeText(myTeam, plan, config, games) {
 function PricingModal({ account, onBuy, onClose, onLegal }) {
   return (
     <div className="modal-bg" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 740 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">Unlock Iron Tuna</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>One-time per season — not a subscription. Drafted, not impressed? Full refund.</p>
         <div className="tier-grid">
-          {TIERS.map(t => { const owned = entitled(account, t.id); const isBundle = t.id === 'bundle';
+          {TIERS.map(t => { const owned = entitled(account, t.id); const feat = t.id === 'base';
             return (
-              <div key={t.id} className={`tier-card ${isBundle ? 'feature' : ''}`}>
-                {isBundle && <div className="tier-tag">Best value</div>}
+              <div key={t.id} className={`tier-card ${feat ? 'feature' : ''}`}>
+                {feat && <div className="tier-tag">Most popular</div>}
                 <div className="tier-name">{t.name}</div>
                 <div className="tier-price">${t.price.toFixed(2)}<span>/season</span></div>
                 <div className="tier-blurb">{t.blurb}</div>
+                <ul className="tier-feats">{(t.features || []).map((f, i) => <li key={i}>{f}</li>)}</ul>
                 {owned
                   ? <button className="btn-secondary" disabled style={{ opacity: 0.7 }}>{account.testMode ? 'Unlocked (test mode)' : 'Unlocked'}</button>
                   : <button className="btn-draft" onClick={() => onBuy(t)}>Unlock</button>}
@@ -5249,6 +5294,17 @@ function App() {
   const [config, setConfig] = useState(initialState?.config || DEFAULT_LEAGUE_CONFIG);
   const [players, setPlayers] = useState(initialState?.players || buildInitialPlayers(BASELINE_PROJECTIONS));
   const [valueAdjust, setValueAdjust] = useState(initialState?.valueAdjust || {});
+  const [priceOverrides, setPriceOverrides] = useState(initialState?.priceOverrides || {});
+  function handleSetPrice(id, raw) {
+    setPriceOverrides(o => {
+      const next = { ...o };
+      const t = (raw == null ? '' : String(raw)).trim();
+      const n = parseInt(t, 10);
+      if (t === '' || isNaN(n)) delete next[id]; else next[id] = Math.max(1, n);
+      return next;
+    });
+  }
+  function clearPriceOverrides() { setPriceOverrides({}); }
   const [account, setAccount] = useState(loadAccount);
   const [overlay, setOverlay] = useState(null);
   const [shareText, setShareText] = useState('');
@@ -5300,8 +5356,9 @@ function App() {
   const valuedPlayers = useMemo(() => {
     const adjusted = applyValueAdjust(baseValued, valueAdjust, config);
     const draftedIds = new Set(draftHistory.map(d => d.playerId));
-    return applyInflation(adjusted, draftedIds, teams, config);
-  }, [baseValued, valueAdjust, config, draftHistory, teams]);
+    const inflated = applyInflation(adjusted, draftedIds, teams, config);
+    return applyPriceOverrides(inflated, priceOverrides, draftedIds, config);
+  }, [baseValued, valueAdjust, config, draftHistory, teams, priceOverrides]);
   const marketState = useMemo(() => computeMarketState(draftHistory, valuedPlayers, config), [draftHistory, valuedPlayers, config]);
   const personalizedPlayers = useMemo(() => {
     const myTeam = teams.find(t => t.isMine);
@@ -5336,9 +5393,9 @@ function App() {
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, players, teams, draftHistory, pointsMode, dataInfo, starred: Array.from(starred), customOrder, targets: Array.from(targets), rankOrder, roleOverrides, valueAdjust }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, players, teams, draftHistory, pointsMode, dataInfo, starred: Array.from(starred), customOrder, targets: Array.from(targets), rankOrder, roleOverrides, valueAdjust, priceOverrides }));
     } catch (e) {}
-  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides]);
+  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides]);
   const liveNomination = useMemo(() => {
     if (!currentNomination) return null;
     return personalizedPlayers.find(p => p.id === currentNomination.id) || null;
@@ -5600,7 +5657,7 @@ function App() {
     if (view === 'prep') {
       return (<PrepMode config={config} players={players} valuedPlayers={personalizedPlayers} draftedIds={draftedIds} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
         onNominate={setCurrentNomination} onUpdateStrategy={handleUpdateStrategy} onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo}
-        onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget} onOpenSettings={() => setView('settings')} onUpdateConfig={updateConfigField} />);
+        onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget} onOpenSettings={() => setView('settings')} onUpdateConfig={updateConfigField} onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides} />);
     }
     if (view === 'plan') {
       return (<PlanView myTeam={myTeam} players={personalizedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES} targets={targets} roleOverrides={roleOverrides} />);
@@ -5632,7 +5689,7 @@ function App() {
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'sonar'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
+        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
           currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} />}
       </div>
       {view === 'settings' && (
