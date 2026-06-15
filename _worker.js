@@ -60,14 +60,14 @@ async function handleCoach(request, env, c) {
     await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 600 });
   }
 
-  const provider = (env.LLM_PROVIDER || 'openai').toLowerCase();
+  const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
   try {
     let upstream;
     if (provider === 'anthropic') {
       upstream = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: env.LLM_MODEL || 'claude-3-5-haiku-latest', max_tokens: 700, system, messages, stream: wantStream }),
+        body: JSON.stringify({ model: env.LLM_MODEL || 'claude-sonnet-4-6', max_tokens: 700, system, messages, stream: wantStream }),
       });
     } else {
       upstream = await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
