@@ -679,14 +679,36 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-why b { color: var(--gold-text); }
 .lp-cta { background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 14px 30px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 8px 26px rgba(212,160,23,0.35); transition: transform 0.12s, filter 0.12s; }
 .lp-cta:hover { transform: translateY(-1px); filter: brightness(1.06); }
-.lp-phases { display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 100%; max-width: 760px; margin: 28px auto 34px; text-align: left; }
-.lp-phase { padding: 2px 36px; }
-.lp-phase:first-child { border-right: 1px solid var(--border-subtle); }
-.lp-phase-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 13px; }
-.lp-phase-eyebrow::before { content: ''; width: 24px; height: 2px; background: var(--positive); display: inline-block; }
-.lp-phase-h { font-family: var(--font-display); font-size: 24px; letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 11px; line-height: 1.08; }
-.lp-phase-b { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
-@media (max-width: 760px) { .lp-phases { grid-template-columns: 1fr; } .lp-phase { padding: 0 0 24px; } .lp-phase:first-child { border-right: none; border-bottom: 1px solid var(--border-subtle); margin-bottom: 24px; } }
+.lp-subline { font-size: clamp(13px,1.6vw,15px); color: var(--text-muted); }
+.lp-phases { display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 620px; margin: 26px auto 30px; text-align: left; }
+.lp-phase { padding: 0; }
+.lp-phase:not(:first-child) { border-top: 1px solid var(--border-subtle); padding-top: 22px; }
+.lp-phase-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 11px; }
+.lp-phase-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
+.lp-phase-h { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 9px; line-height: 1.08; }
+.lp-phase-b { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; max-width: 600px; }
+.lp-preview { width: 100%; max-width: 760px; margin: 12px auto 28px; }
+.lp-preview-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 9px; }
+.lp-preview-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
+.lp-preview-h { font-family: var(--font-display); font-size: clamp(20px, 3vw, 28px); color: var(--text-primary); margin: 0 0 18px; letter-spacing: 0.01em; text-align: left; }
+.lp-shot { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.55); text-align: left; }
+.lp-shot-chrome { display: flex; align-items: center; gap: 7px; padding: 9px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border-subtle); }
+.lp-shot-chrome .d { width: 10px; height: 10px; border-radius: 50%; }
+.lp-shot-chrome .d.r { background: #ff5f57; } .lp-shot-chrome .d.y { background: #febc2e; } .lp-shot-chrome .d.g { background: #28c840; }
+.lp-shot-url { margin-left: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.lp-shot-board { padding: 4px 0; }
+.lp-shot-row { display: grid; grid-template-columns: 1fr 60px 60px 60px; gap: 8px; align-items: center; padding: 9px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13.5px; color: var(--text-primary); }
+.lp-shot-row span:not(:first-child) { text-align: right; font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); }
+.lp-shot-head { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); border-bottom: 1px solid var(--border-strong); }
+.lp-shot-head span { color: var(--text-muted) !important; font-size: 10px !important; }
+.lp-shot-row .you { color: var(--gold-text) !important; font-weight: 700; }
+.lp-shot-row .pcell { display: inline-flex; align-items: center; gap: 8px; }
+.lp-shot-coach { display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; border-top: 1px solid var(--positive); background: rgba(45,212,163,0.06); }
+.lp-shot-coach-h { font-family: var(--font-display); color: var(--positive); font-size: 13px; letter-spacing: 0.04em; white-space: nowrap; }
+.lp-shot-bubble { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.lp-shot-bubble b { color: var(--gold-text); }
+.lp-shot-cap { font-size: 12px; color: var(--text-muted); margin-top: 10px; text-align: left; }
+@media (max-width: 620px) { .lp-shot-coach { flex-direction: column; gap: 6px; } .lp-shot-row { grid-template-columns: 1fr 48px 48px 48px; padding: 8px 12px; } }
 .lp-quotes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; width: 100%; max-width: 860px; margin: 12px auto 28px; }
 .lp-quote { margin: 0; text-align: left; position: relative; padding-top: 22px; }
 .lp-quote::before { content: '\201C'; position: absolute; top: -2px; left: -4px; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; line-height: 1; color: var(--gold-text); opacity: 0.42; }
@@ -1853,13 +1875,22 @@ function LandingSplash({ onDismiss }) {
     ['I ran the mock auctions all week to practice when to nominate and when to sit back. On draft night, nothing rattled me.', '— Beta tester · 10-team, half-PPR'],
     ['The custom values were dead-on for our oddball scoring. Every other site just hands you generic numbers that do not fit your league.', '— Beta tester · 14-team dynasty'],
   ];
+  const shot = [
+    ['RB', 'Bijan Robinson', '54', '58', '61'],
+    ['WR', 'Justin Jefferson', '49', '52', '55'],
+    ['RB', 'Jahmyr Gibbs', '46', '49', '47'],
+    ['WR', 'CeeDee Lamb', '44', '47', '50'],
+    ['TE', 'Brock Bowers', '18', '20', '22'],
+    ['QB', 'Josh Allen', '9', '6', '7'],
+  ];
   return (
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
       <div className="landing-vignette" />
       <div className="lp-inner">
         <LogoMark tagline height={130} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
-        <p className="lp-sub">Free custom auction values for <b>your</b> exact league — plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
+        <p className="lp-sub" style={{ marginBottom: 6 }}>Free custom auction values for <b>your</b> exact league and <b>your</b> exact strategy.</p>
+        <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
         <div className="lp-phases">
           {pillars.map(([k, h, b], i) => (
             <div className="lp-phase" key={i}>
@@ -1868,6 +1899,29 @@ function LandingSplash({ onDismiss }) {
               <p className="lp-phase-b">{b}</p>
             </div>
           ))}
+        </div>
+        <div className="lp-preview">
+          <div className="lp-preview-eyebrow">A look inside</div>
+          <h2 className="lp-preview-h">What you see when you're on the clock</h2>
+          <div className="lp-shot">
+            <div className="lp-shot-chrome"><span className="d r" /><span className="d y" /><span className="d g" /><span className="lp-shot-url">iron-tuna — draft board</span></div>
+            <div className="lp-shot-board">
+              <div className="lp-shot-row lp-shot-head"><span>Player</span><span>Proj</span><span>Value</span><span className="you">You</span></div>
+              {shot.map(([pos, name, proj, val, you], i) => (
+                <div className="lp-shot-row" key={i}>
+                  <span className="pcell"><span className={`position-tag ${pos}`}>{pos}</span> {name}</span>
+                  <span>${proj}</span>
+                  <span>${val}</span>
+                  <span className="you">${you}</span>
+                </div>
+              ))}
+            </div>
+            <div className="lp-shot-coach">
+              <div className="lp-shot-coach-h">● Gameday Navigator</div>
+              <div className="lp-shot-bubble">Go to <b>$61</b> on Bijan — that's your switch price. Past it, the same dollars buy more starting points at WR. CeeDee is the better value if RB1 gets bid up.</div>
+            </div>
+          </div>
+          <div className="lp-shot-cap">Three numbers on every player — <b style={{color:'var(--text-secondary)'}}>Proj</b> (market price), <b style={{color:'var(--text-secondary)'}}>Value</b> (true worth), and <b style={{color:'var(--gold-text)'}}>You</b> (your personal max) — with the Gameday Navigator talking you through each bid in real time.</div>
         </div>
         <div className="lp-quotes">
           {quotes.map(([q, who], i) => (
