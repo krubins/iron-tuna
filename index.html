@@ -510,6 +510,50 @@ input:focus, select:focus { border-color: var(--accent); }
 .onb-label { flex: 1; }
 .onb-cta { background: var(--gold-text); color: #1a1205; border: none; border-radius: var(--radius-sm); padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .prep-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.insights { display: flex; flex-direction: column; gap: 22px; max-width: 940px; }
+.ins-section { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px 18px; }
+.ins-h { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.04em; color: var(--gold-text); margin: 0 0 4px; }
+.ins-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 14px; line-height: 1.5; }
+.ins-bar-row { display: grid; grid-template-columns: 46px 1fr 86px; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ins-bar-track { height: 14px; background: var(--bg-base); border-radius: 7px; overflow: hidden; }
+.ins-bar-fill { height: 100%; background: linear-gradient(90deg, var(--positive), var(--gold-text)); border-radius: 7px; }
+.ins-bar-val { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); text-align: right; }
+.ins-callout { margin-top: 14px; font-size: 12.5px; line-height: 1.55; color: var(--text-secondary); background: rgba(45,212,163,0.07); border-left: 3px solid var(--positive); border-radius: var(--radius-sm); padding: 10px 13px; }
+.ins-table { display: flex; flex-direction: column; }
+.ins-tr { display: grid; grid-template-columns: 52px 96px 96px 1fr; gap: 10px; align-items: start; padding: 8px 4px; border-bottom: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-secondary); }
+.ins-thead { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); border-bottom: 1px solid var(--border-strong); }
+.ins-note { color: var(--text-muted); line-height: 1.45; font-size: 11.5px; }
+.ins-twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.ins-coltitle { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+.ins-coltitle.good { color: var(--positive); }
+.ins-coltitle.bad { color: #ef4444; }
+.ins-pl-row { display: grid; grid-template-columns: 42px 1fr auto; gap: 8px; align-items: center; padding: 3px 0; font-size: 12px; }
+.ins-pl-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ins-pl-gap { font-family: var(--font-mono); font-size: 10px; white-space: nowrap; }
+.ins-pl-gap.good { color: var(--positive); }
+.ins-pl-gap.bad { color: #ef4444; }
+.ins-empty { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
+.mock { display: flex; flex-direction: column; gap: 14px; max-width: 720px; }
+.mock-intro { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.mock-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+.mock-card { background: var(--bg-panel); border: 1px solid var(--positive); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 0 16px rgba(45,212,163,0.16); }
+.mock-player { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.mock-team { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.mock-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin: 7px 0; }
+.mock-field { font-size: 12px; color: var(--gold-text); margin-bottom: 11px; }
+.mock-bidrow { display: flex; gap: 8px; align-items: center; }
+.mock-bidrow input { width: 120px; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); padding: 8px 10px; font-size: 14px; }
+.mock-log { display: flex; flex-direction: column; gap: 2px; max-height: 160px; overflow-y: auto; font-size: 12px; }
+.mock-logrow { color: var(--text-muted); padding: 3px 0; border-bottom: 1px solid var(--border-subtle); }
+.mock-logrow.win { color: var(--positive); font-weight: 600; }
+.mock-roster { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; }
+.mock-roster-h { font-family: var(--font-display); font-size: 13px; color: var(--gold-text); margin-bottom: 9px; letter-spacing: 0.04em; }
+.mock-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 3px 9px 3px 4px; margin: 0 5px 6px 0; font-size: 11px; }
+.mock-standings { width: 100%; border-collapse: collapse; font-size: 12px; }
+.mock-standings th, .mock-standings td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); }
+.mock-standings th { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.mock-standings tr.you { background: rgba(45,212,163,0.12); }
+.mock-standings td.num, .mock-standings th.num { text-align: right; font-family: var(--font-mono); }
 .cheatsheet { }
 .cheat-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .cheat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: start; }
@@ -543,8 +587,9 @@ input:focus, select:focus { border-color: var(--accent); }
   .no-print { display: none !important; }
   .only-print { display: block; }
   .cheat-print-head { margin-bottom: 11px; padding: 9px 11px; background: #1a2430; border-radius: 4px; border-bottom: 3px solid #b8860b; }
-  .cph-title { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 27px; letter-spacing: 0.06em; color: #fff; line-height: 1; }
-  .cph-title span { color: #f0c75e; margin-left: 9px; font-size: 15px; letter-spacing: 0.14em; }
+  .cph-title { display: flex; align-items: center; gap: 12px; font-family: 'Bebas Neue', Arial, sans-serif; font-size: 18px; letter-spacing: 0.10em; color: #fff; line-height: 1; }
+  .cph-logo { height: 30px !important; width: auto; }
+  .cph-title span { color: #f0c75e; font-size: 15px; letter-spacing: 0.14em; }
   .cph-sub { font-size: 9px; color: #cdd5dd; margin-top: 5px; letter-spacing: 0.02em; }
   .cph-legend { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 6px; font-size: 8px; color: #e2e6ea; }
   .cph-key { display: inline-flex; align-items: center; gap: 4px; }
@@ -2929,7 +2974,7 @@ const STRAT_TILT = {
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
 function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget }) {
-  const cols = [['QB', 30], ['RB', 60], ['WR', 60], ['TE', 30], ['K', 25], ['DEF', 25]];
+  const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 30], ['DEF', 30]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
@@ -2992,7 +3037,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Three figures: <b style={{ color: 'var(--text-muted)' }}>cost</b> · <b style={{ color: 'var(--gold-text)' }}>value</b> · <b style={{ color: 'var(--positive)' }}>You</b> (your max bid). Names: <b style={{ color: '#2dd4a3' }}>green = undervalued</b>, <b style={{ color: '#ef4444' }}>red = overvalued</b>. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b></div>
       <div className="cheat-print-head only-print">
-        <div className="cph-title">IRON TUNA <span>Auction Cheat Sheet</span></div>
+        <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
         <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-you" />your max bid</span><span className="cph-key"><i className="k-grn" />undervalued</span><span className="cph-key"><i className="k-red" />overvalued</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
       </div>
@@ -3027,6 +3072,184 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         ))}
       </div>
       <div className="cheat-print-foot">IRON TUNA · Auction Cheat Sheet · {config.teams}-team · ${config.budget} budget · {pprLabel} · {dateStr}</div>
+    </div>
+  );
+}
+function mockStarterPts(roster, config, games) {
+  const by = {}; (roster || []).forEach(p => (by[p.position] = by[p.position] || []).push(p));
+  Object.values(by).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
+  let pts = 0; const used = new Set(); const r = config.roster || {};
+  ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].forEach(pos => { const st = (r[pos] && r[pos].starters) || 0; (by[pos] || []).slice(0, st).forEach(p => { pts += (p.projectedPoints || 0); used.add(p.id); }); });
+  const flexN = (config.flex && config.flex.count) || 0;
+  if (flexN) { const fp = ['RB', 'WR', 'TE'].reduce((acc, pos) => acc.concat(by[pos] || []), []).filter(p => !used.has(p.id)).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)); fp.slice(0, flexN).forEach(p => pts += (p.projectedPoints || 0)); }
+  return pts / games;
+}
+function MockAuction({ players, config, seasonGames }) {
+  const games = seasonGames || 17;
+  const teamsN = config.teams || 12;
+  const totalSlots = (Object.values(config.roster || {}).reduce((s, r) => s + (r.total || 0), 0)) + ((config.flex && config.flex.count) || 0);
+  const oppStrats = ['heroRB', 'zeroRB', 'heroWR', 'robustRB', 'eliteTE'];
+  const STRAT_LABELS = { balanced: 'Balanced', heroRB: 'Hero RB', zeroRB: 'Zero RB', heroWR: 'Hero WR', robustRB: 'Robust RB', eliteTE: 'Elite TE' };
+  const posRank = useMemo(() => { const by = {}, m = {}; (players || []).forEach(p => (by[p.position] = by[p.position] || []).push(p)); Object.values(by).forEach(a => { a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)); a.forEach((p, i) => m[p.id] = i + 1); }); return m; }, [players]);
+  const fullPool = useMemo(() => (players || []).filter(p => p.auctionValue != null).slice().sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0)), [players]);
+  const makeTeams = () => { const arr = []; for (let i = 0; i < teamsN; i++) { const you = i === 0; arr.push({ id: i, name: you ? 'You' : 'CPU ' + i, you, strat: you ? 'balanced' : oppStrats[(i - 1) % oppStrats.length], budget: config.budget, roster: [] }); } return arr; };
+  const [teams, setTeams] = useState(makeTeams);
+  const [drafted, setDrafted] = useState(() => new Set());
+  const [phase, setPhase] = useState('run');
+  const [bid, setBid] = useState('');
+  const [log, setLog] = useState([]);
+  const [result, setResult] = useState(null);
+  const you = teams.find(t => t.you) || teams[0];
+  const avail = fullPool.filter(p => !drafted.has(p.id));
+  const current = avail[0] || null;
+  const slotsLeft = t => totalSlots - t.roster.length;
+  const posCount = (t, pos) => t.roster.filter(r => r.position === pos).length;
+  const posTotal = pos => (config.roster[pos] && config.roster[pos].total) || 0;
+  const maxAllowed = t => Math.max(1, t.budget - (slotsLeft(t) - 1));
+  const sFactor = (strat, pos, rank) => { const tl = STRAT_TILT[strat]; if (!tl || !tl[pos]) return 1; const ru = tl[pos].find(r => r.maxRank == null || rank <= r.maxRank); return ru ? 1 + ru.w : 1; };
+  const jitter = (a, b) => { const x = Math.sin((a + 1) * 97.13 + (b + 1) * 39.7) * 10000; return 0.85 + 0.3 * (x - Math.floor(x)); };
+  const aiMax = (t, p) => { if (slotsLeft(t) <= 0 || !p) return 0; const need = posTotal(p.position) - posCount(t, p.position); let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99); if (need <= 0) v *= 0.3; v *= jitter(t.id, p.id); return Math.max(0, Math.min(maxAllowed(t), Math.round(v))); };
+  function finish(nt0, dr0) {
+    let nt = nt0.map(t => ({ ...t, roster: [...t.roster] })); let dr = new Set(dr0); let guard = 0;
+    const slot = t => totalSlots - t.roster.length; const pc = (t, pos) => t.roster.filter(r => r.position === pos).length; const ma = t => Math.max(1, t.budget - (slot(t) - 1));
+    const aiM = (t, p) => { if (slot(t) <= 0 || !p) return 0; const need = posTotal(p.position) - pc(t, p.position); let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99); if (need <= 0) v *= 0.3; v *= jitter(t.id, p.id); return Math.max(0, Math.min(ma(t), Math.round(v))); };
+    while (guard++ < teamsN * totalSlots + 80) {
+      const cur = fullPool.find(p => !dr.has(p.id)); if (!cur) break;
+      const needy = nt.filter(t => !t.you && slot(t) > 0); if (!needy.length) break;
+      const bids = needy.map(t => ({ t, max: aiM(t, cur) })).sort((a, b) => b.max - a.max);
+      const win = bids[0].max > 0 ? bids[0].t : needy.slice().sort((a, b) => slot(b) - slot(a))[0];
+      const price = bids[0].max > 0 ? Math.max(1, Math.min(bids[0].max, (bids[1] ? bids[1].max : 0) + 1)) : 1;
+      const wt = nt.find(t => t.id === win.id); wt.roster.push(cur); wt.budget -= price; dr.add(cur.id);
+    }
+    setTeams(nt); setDrafted(dr); setPhase('done');
+    setResult(nt.map(t => ({ id: t.id, name: t.name, you: t.you, strat: t.strat, pts: mockStarterPts(t.roster, config, games), spent: config.budget - t.budget })).sort((a, b) => b.pts - a.pts));
+  }
+  function act(youBidRaw) {
+    if (!current) return;
+    const yourMax = Math.max(0, Math.min(maxAllowed(you), Math.floor(youBidRaw) || 0));
+    const aiBids = teams.filter(t => !t.you).map(t => ({ t, max: aiMax(t, current) }));
+    const topAi = aiBids.slice().sort((a, b) => b.max - a.max)[0] || { t: null, max: 0 };
+    let winner, price;
+    if (yourMax >= 1 && yourMax >= topAi.max) { winner = you; price = Math.max(1, Math.min(yourMax, topAi.max + 1)); }
+    else if (topAi.max > 0) { winner = topAi.t; const others = aiBids.filter(x => x.t.id !== topAi.t.id).map(x => x.max); const second = Math.max(yourMax, others.length ? Math.max(...others) : 0); price = Math.max(1, Math.min(topAi.max, second + 1)); }
+    else { winner = aiBids.map(x => x.t).sort((a, b) => slotsLeft(b) - slotsLeft(a))[0]; price = 1; }
+    const nt = teams.map(t => ({ ...t, roster: [...t.roster] }));
+    const wt = nt.find(t => t.id === winner.id); wt.roster.push(current); wt.budget -= price;
+    const nd = new Set(drafted); nd.add(current.id);
+    const txt = winner.id === you.id ? `\u2713 You won ${current.name} for $${price} (top rival maxed $${topAi.max})` : `${winner.name} won ${current.name} for $${price}${yourMax > 0 ? ` \u2014 you maxed $${yourMax}` : ''}`;
+    setLog(l => [{ txt, win: winner.id === you.id }, ...l].slice(0, 10));
+    setBid('');
+    setTeams(nt); setDrafted(nd);
+    if (winner.id === you.id && wt.roster.length >= totalSlots) finish(nt, nd);
+  }
+  function reset() { setTeams(makeTeams()); setDrafted(new Set()); setPhase('run'); setBid(''); setLog([]); setResult(null); }
+  const fieldNeed = current ? teams.filter(t => !t.you && (posTotal(current.position) - posCount(t, current.position)) > 0 && slotsLeft(t) > 0).length : 0;
+  if (phase === 'done' && result) {
+    return (
+      <div className="mock">
+        <div className="mock-top"><div><b>Mock complete.</b> Final standings by starting-lineup points per game.</div><button className="btn-draft" onClick={reset}>Run again</button></div>
+        <table className="mock-standings"><thead><tr><th>#</th><th>Team</th><th>Strategy</th><th className="num">Starter pts/gm</th><th className="num">Spent</th></tr></thead><tbody>
+          {result.map((t, i) => (<tr key={t.id} className={t.you ? 'you' : ''}><td>{i + 1}</td><td>{t.name}</td><td>{STRAT_LABELS[t.strat] || t.strat}</td><td className="num">{t.pts.toFixed(1)}</td><td className="num">${t.spent}</td></tr>))}
+        </tbody></table>
+      </div>
+    );
+  }
+  return (
+    <div className="mock">
+      <div className="mock-intro">Practice the bidding against {teamsN - 1} CPU managers, each running a different strategy. The top remaining player is auto-nominated — decide how high to go. Once your roster fills, the room finishes and you see where you placed.</div>
+      <div className="mock-top"><div>Budget <b>${you.budget}</b> · roster <b>{you.roster.length}/{totalSlots}</b> · max bid <b>${maxAllowed(you)}</b></div><button className="btn-secondary" onClick={reset}>Restart</button></div>
+      {current ? (
+        <div className="mock-card">
+          <div className="mock-player"><span className={`position-tag ${current.position}`}>{current.position}{posRank[current.id] || ''}</span> <b>{current.name}</b> <span className="mock-team">{current.team || ''}</span></div>
+          <div className="mock-meta">Market ${current.marketValue != null ? current.marketValue : current.auctionValue} · Value ${current.auctionValue} · Your suggested max ${current.personalValue != null ? current.personalValue : current.auctionValue}</div>
+          <div className="mock-field">{fieldNeed} rival{fieldNeed === 1 ? '' : 's'} still need {current.position}</div>
+          <div className="mock-bidrow">
+            <input type="number" min="0" max={maxAllowed(you)} value={bid} onChange={e => setBid(e.target.value)} placeholder={`up to $${maxAllowed(you)}`} onKeyDown={e => { if (e.key === 'Enter') act(parseInt(bid || 0)); }} />
+            <button className="btn-draft" onClick={() => act(parseInt(bid || 0))}>Bid</button>
+            <button className="btn-secondary" onClick={() => act(0)}>Pass</button>
+          </div>
+        </div>
+      ) : <div className="mock-card">Player pool exhausted.</div>}
+      {log.length > 0 && <div className="mock-log">{log.map((l, i) => <div key={i} className={`mock-logrow ${l.win ? 'win' : ''}`}>{l.txt}</div>)}</div>}
+      <div className="mock-roster">
+        <div className="mock-roster-h">Your roster — {you.roster.length}/{totalSlots}</div>
+        {you.roster.length ? you.roster.map((p, i) => <span key={i} className="mock-chip"><span className={`position-tag ${p.position}`}>{p.position}</span>{p.name}</span>) : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No players yet — start bidding.</span>}
+      </div>
+    </div>
+  );
+}
+function PrepInsights({ players, config, seasonGames }) {
+  const games = seasonGames || 17;
+  const teams = (config && config.teams) || 12;
+  const byPos = {};
+  (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
+  const eff = ['QB', 'RB', 'WR', 'TE'].map(pos => {
+    const starters = (config.roster[pos] && config.roster[pos].starters) || 1;
+    const n = Math.max(1, Math.round(teams * starters));
+    const top = (byPos[pos] || []).slice(0, n);
+    const dollars = top.reduce((s, p) => s + (p.auctionValue || 0), 0);
+    const pts = top.reduce((s, p) => s + Math.max(0, (p.vorp || 0) / games), 0);
+    return { pos, perPoint: pts > 0.5 ? dollars / pts : 0 };
+  }).filter(e => e.perPoint > 0);
+  const maxPer = Math.max(1, ...eff.map(e => e.perPoint));
+  const sorted = eff.slice().sort((a, b) => b.perPoint - a.perPoint);
+  const priced = (players || []).filter(p => p.marketValue != null && p.auctionValue != null && (p.auctionValue >= 2 || p.marketValue >= 2)).map(p => ({ p, cost: p.marketValue, val: p.auctionValue, gap: p.marketValue - p.auctionValue }));
+  const bargains = priced.filter(g => g.gap <= -3).sort((a, b) => a.gap - b.gap).slice(0, 5);
+  const traps = priced.filter(g => g.gap >= 3).sort((a, b) => b.gap - a.gap).slice(0, 5);
+  const TRAITS = {
+    QB:  { inj: 'Low–moderate', cons: 'High',    note: 'Pocket passers are durable; rushing QBs carry more risk. Only one starts, so an injury is roster-defining. Established starters are among the most predictable year to year.' },
+    RB:  { inj: 'Highest',      cons: 'Lowest',  note: 'Heavy workload plus contact — the most injury-prone starter with the shortest shelf life, and the most volatile production season to season.' },
+    WR:  { inj: 'Moderate',     cons: 'High',    note: 'Soft-tissue (hamstring) injuries happen, but careers run longer and roles are stickier. Target share carries over — the most stable skill position year to year.' },
+    TE:  { inj: 'Moderate',     cons: 'Streaky', note: 'A physical role with fewer touches than RB. Only the elite tier is reliable; there is a steep cliff after the top few.' },
+    K:   { inj: 'Negligible',   cons: 'Random',  note: 'Rarely an injury factor, and essentially noise year to year. Never pay up — always stream.' },
+    DEF: { inj: 'Negligible',   cons: 'Random',  note: 'Rarely an injury factor, and nearly impossible to predict. Stream on weekly matchups rather than paying up.' },
+  };
+  return (
+    <div className="insights">
+      <div className="ins-section">
+        <h3 className="ins-h">Cost per point above replacement</h3>
+        <p className="ins-sub">Auction dollars each starting tier costs per projected point over a replacement-level starter (per game). Higher means you are paying more for the same edge.</p>
+        {sorted.map(e => (
+          <div key={e.pos} className="ins-bar-row">
+            <span className={`position-tag ${e.pos}`}>{e.pos}</span>
+            <div className="ins-bar-track"><div className="ins-bar-fill" style={{ width: `${Math.max(5, (e.perPoint / maxPer) * 100)}%` }} /></div>
+            <span className="ins-bar-val">${e.perPoint.toFixed(1)}/pt</span>
+          </div>
+        ))}
+        <div className="ins-callout">The deepest positions — QB and elite TE — cost the most per point above replacement, because the gap from the top option to a streamer is small, so dollars spent there buy little real edge. Don't punt QB entirely (you still need a steady starter): pay the minimum for a reliable top-10 arm, then pour the savings into RB and WR, where each dollar buys a bigger edge.</div>
+      </div>
+      <div className="ins-section">
+        <h3 className="ins-h">Injury risk &amp; year-to-year consistency</h3>
+        <p className="ins-sub">How durable and how predictable each position tends to be — which is where your dollars are safest versus where you are buying upside and risk.</p>
+        <div className="ins-table">
+          <div className="ins-tr ins-thead"><span>Pos</span><span>Injury risk</span><span>Consistency</span><span>What it means</span></div>
+          {['RB', 'WR', 'QB', 'TE', 'DEF', 'K'].map(pos => (
+            <div key={pos} className="ins-tr">
+              <span className={`position-tag ${pos}`}>{pos}</span>
+              <span>{TRAITS[pos].inj}</span>
+              <span>{TRAITS[pos].cons}</span>
+              <span className="ins-note">{TRAITS[pos].note}</span>
+            </div>
+          ))}
+        </div>
+        <div className="ins-callout">Spend like it: anchor on durable, predictable production (top WRs and an elite QB/TE), and treat RB as high-upside but fragile — build depth there rather than betting everything on one back. Never pay up for K or DEF; they are effectively random and free to stream.</div>
+      </div>
+      <div className="ins-section">
+        <h3 className="ins-h">Anticipated price vs. true value</h3>
+        <p className="ins-sub">Where the room is likely to overpay (predicted cost above value) and where bargains hide (value above predicted cost). Plan to pounce on the bargains and let rivals overpay for the traps.</p>
+        <div className="ins-twocol">
+          <div>
+            <div className="ins-coltitle good">Bargains — target these</div>
+            {bargains.length ? bargains.map(g => (<div key={g.p.id} className="ins-pl-row"><span className={`position-tag ${g.p.position}`}>{g.p.position}</span><span className="ins-pl-name">{g.p.name}</span><span className="ins-pl-gap good">${g.cost} cost · ${g.val} value</span></div>)) : <div className="ins-empty">No clear bargains in the current pool.</div>}
+          </div>
+          <div>
+            <div className="ins-coltitle bad">Traps — let rivals pay</div>
+            {traps.length ? traps.map(g => (<div key={g.p.id} className="ins-pl-row"><span className={`position-tag ${g.p.position}`}>{g.p.position}</span><span className="ins-pl-name">{g.p.name}</span><span className="ins-pl-gap bad">${g.cost} cost · ${g.val} value</span></div>)) : <div className="ins-empty">No clear traps in the current pool.</div>}
+          </div>
+        </div>
+        <div className="ins-callout">How to handle it: nominate the traps early, while wallets are full — let a rival burn budget on the name. Keep your powder dry for the bargains in the middle rounds, when the room is tapped out and value goes cheap. Your live max for each is the You column on the cheatsheet (with the strategy slider).</div>
+      </div>
     </div>
   );
 }
@@ -3074,12 +3297,16 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
       <div className="prep-toolbar no-print">
         <button className={`filter-pill ${activeSubview === 'tiers' ? 'active' : ''}`} onClick={() => setActiveSubview('tiers')}>Tiers</button>
         <button className={`filter-pill ${activeSubview === 'cheatsheet' ? 'active' : ''}`} onClick={() => setActiveSubview('cheatsheet')}>Cheatsheet</button>
+        <button className={`filter-pill ${activeSubview === 'insights' ? 'active' : ''}`} onClick={() => setActiveSubview('insights')}>Insights</button>
+        <button className={`filter-pill ${activeSubview === 'mock' ? 'active' : ''}`} onClick={() => setActiveSubview('mock')}>Mock Auction</button>
         <span style={{ flex: 1 }} />
         <button className="btn-secondary" disabled={loading} onClick={onLoadLive}>{loading ? 'Loading…' : 'Load live data'}</button>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{dataInfo ? `${dataInfo.source} ${dataInfo.season} · ${dataInfo.count}` : 'baseline'}</span>
       </div>
       {activeSubview === 'tiers' && <TierView players={valuedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={seasonGames} onNominate={onNominate} onUpdateStrategy={onUpdateStrategy} />}
       {activeSubview === 'cheatsheet' && <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} />}
+      {activeSubview === 'insights' && <PrepInsights players={valuedPlayers} config={config} seasonGames={seasonGames} />}
+      {activeSubview === 'mock' && <MockAuction players={valuedPlayers} config={config} seasonGames={seasonGames} />}
     </div>
   );
 }
