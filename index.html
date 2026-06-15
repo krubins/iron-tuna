@@ -788,6 +788,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; }
 .lp-ribbon { position: sticky; top: 0; z-index: 20; width: 100%; max-width: 1080px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 4px; background: rgba(11,17,23,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border-subtle); }
 .lp-ribbon-brand { display: inline-flex; align-items: center; }
+.lp-ribbon-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; transition: filter 0.12s; }
+.lp-ribbon-logo-btn:hover { filter: brightness(1.15); }
 .lp-ribbon-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .lp-ribbon-links button { background: none; border: none; color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: color 0.12s, background 0.12s; }
 .lp-ribbon-links button:hover { color: var(--text-primary); background: var(--bg-elev); }
@@ -2002,7 +2004,7 @@ function LandingSplash({ onDismiss, onNav }) {
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
       <div className="landing-vignette" />
       <nav className="lp-ribbon">
-        <div className="lp-ribbon-brand"><LogoMark height={22} /></div>
+        <div className="lp-ribbon-brand"><button className="lp-ribbon-logo-btn" onClick={e => { const sc = e.currentTarget.closest('.landing-page'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); }} title="Back to top" aria-label="Iron Tuna — back to top"><LogoMark height={22} /></button></div>
         <div className="lp-ribbon-links">
           <button onClick={() => go('prep')}>Auction Prep</button>
           <button onClick={() => go('board')}>Auction Day Management</button>
