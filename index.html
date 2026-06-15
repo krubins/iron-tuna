@@ -484,7 +484,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach-msg.bot { background: var(--bg-elev); color: var(--text-secondary); align-self: flex-start; border-bottom-left-radius: 3px; }
 .coach-msg.user { background: var(--border-accent); color: var(--text-primary); align-self: flex-end; border-bottom-right-radius: 3px; }
 .coach-input { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--border-subtle); }
-.coach-input input { flex: 1; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 12px 12px; color: var(--text-primary); font-size: 14px; }
+.coach-input { align-items: stretch; }
+.coach-input input, .coach-input textarea { flex: 1; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 12px; color: var(--text-primary); font-size: 14px; font-family: inherit; line-height: 1.45; resize: vertical; min-height: 84px; box-sizing: border-box; }
+.coach-input button { align-self: stretch; }
 .coach-input button { background: var(--gold-text); color: #1a1205; border: none; border-radius: var(--radius-sm); padding: 0 14px; font-weight: 600; cursor: pointer; }
 .imp { border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px; background: var(--bg-base); }
 .imp-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -696,7 +698,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.big { width: 208px; max-width: 208px; max-height: 82vh; }
 .coach.big .coach-msg { font-size: 13.5px; }
 .coach.big .coach-body { padding: 14px; }
-.coach.big .coach-input input { font-size: 15px; padding: 14px 14px; }
+.coach.big .coach-input input, .coach.big .coach-input textarea { font-size: 15px; padding: 14px; min-height: 110px; }
 .cheat-col-head { border-top: 2px solid var(--gold-text); }
 .cc-QB .cheat-col-head { border-top-color: #e8554e; } .cc-QB .cheat-col-head > span:first-child { color: #ff8d85; }
 .cc-RB .cheat-col-head { border-top-color: #2dba6e; } .cc-RB .cheat-col-head > span:first-child { color: #4fd693; }
@@ -5232,7 +5234,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
       <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
-      <div className="coach-input"><input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything — players, prices, strategy'} /><button onClick={send}>Send</button></div>
+      <div className="coach-input"><textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything — players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
     </div>
   );
 }
