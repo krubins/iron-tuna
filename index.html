@@ -1939,7 +1939,6 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
       <nav className="header-nav">
         <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Prep</button>
         <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Auction Day</button>
-        <button className={view === 'plan' ? 'active' : ''} onClick={() => setView('plan')}>Plan</button>
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
         <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
         <button onClick={onReset}>Reset</button>
@@ -3552,17 +3551,13 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
       )}
       <div className="prep-toolbar no-print">
         <button className={`filter-pill ${activeSubview === 'tiers' ? 'active' : ''}`} onClick={() => setActiveSubview('tiers')}>Tiers</button>
-        <button className={`filter-pill ${activeSubview === 'cheatsheet' ? 'active' : ''}`} onClick={() => setActiveSubview('cheatsheet')}>Cheatsheet</button>
-        <button className={`filter-pill ${activeSubview === 'insights' ? 'active' : ''}`} onClick={() => setActiveSubview('insights')}>Insights</button>
-        <button className={`filter-pill ${activeSubview === 'mock' ? 'active' : ''}`} onClick={() => setActiveSubview('mock')}>Mock Auction</button>
+        <button className={`filter-pill ${activeSubview === 'cheatsheet' ? 'active' : ''}`} onClick={() => setActiveSubview('cheatsheet')}>Cheat Sheet</button>
         <span style={{ flex: 1 }} />
         <button className="btn-secondary" disabled={loading} onClick={onLoadLive}>{loading ? 'Loading…' : 'Load live data'}</button>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{dataInfo ? `${dataInfo.source} ${dataInfo.season} · ${dataInfo.count}` : 'baseline'}</span>
       </div>
       {activeSubview === 'tiers' && <TierView players={valuedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={seasonGames} onNominate={onNominate} onUpdateStrategy={onUpdateStrategy} />}
       {activeSubview === 'cheatsheet' && <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} onSetPrice={onSetPrice} priceOverrides={priceOverrides} onClearPrices={onClearPrices} />}
-      {activeSubview === 'insights' && <PrepInsights players={valuedPlayers} config={config} seasonGames={seasonGames} />}
-      {activeSubview === 'mock' && <MockAuction players={valuedPlayers} config={config} seasonGames={seasonGames} />}
     </div>
   );
 }
