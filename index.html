@@ -711,6 +711,16 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.big .coach-msg { font-size: 13.5px; }
 .coach.big .coach-body { padding: 14px; }
 .coach.big .coach-input input, .coach.big .coach-input textarea { font-size: 15px; padding: 14px; min-height: 110px; }
+.coach.dock { left: 0; right: 0; bottom: 0; width: 100%; max-width: none; max-height: 240px; flex-direction: row; flex-wrap: wrap; align-items: stretch; border: none; border-top: 1px solid var(--positive); border-radius: 0; box-shadow: 0 -6px 24px rgba(0,0,0,0.5); }
+.coach.dock .coach-head { flex-basis: 100%; }
+.coach.dock .coach-chips { flex-basis: 100%; }
+.coach.dock .coach-body { flex: 1 1 60%; max-height: 156px; }
+.coach.dock .coach-msg { max-width: 780px; }
+.coach.dock .coach-input { flex: 0 0 380px; border-top: none; border-left: 1px solid var(--border-subtle); align-items: stretch; }
+.coach.dock .coach-input textarea { min-height: 56px; }
+.main.board-main { padding-bottom: 256px; }
+.board-subtabs .subtab-2nd { color: var(--positive); border-color: rgba(45,212,163,0.4); }
+@media print { .coach.dock { display: none !important; } }
 .cheat-col-head { border-top: 2px solid var(--gold-text); }
 .cc-QB .cheat-col-head { border-top-color: #e8554e; } .cc-QB .cheat-col-head > span:first-child { color: #ff8d85; }
 .cc-RB .cheat-col-head { border-top-color: #2dba6e; } .cc-RB .cheat-col-head > span:first-child { color: #4fd693; }
@@ -2617,6 +2627,32 @@ function QuickDraftModal({ player, teams, config, onConfirm, onClose }) {
     </div>
   );
 }
+function AddPlayerModal({ onAdd, onClose }) {
+  const [name, setName] = useState('');
+  const [position, setPosition] = useState('RB');
+  const [team, setTeam] = useState('');
+  const can = name.trim().length > 0;
+  function submit() { if (!can) return; onAdd(name.trim(), position, team.trim().toUpperCase()); }
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>×</button>
+        <div className="section-title">Add a player</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 14px' }}>Someone nominated a player who isn't on the board? Add him here, then record who won him.</div>
+        <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Name</label>
+        <input value={name} onChange={e => setName(e.target.value)} autoFocus placeholder="e.g. John Smith" onKeyDown={e => { if (e.key === 'Enter') submit(); }} style={{ width: '100%', marginBottom: 12 }} />
+        <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Position</label>
+        <select value={position} onChange={e => setPosition(e.target.value)} style={{ width: '100%', marginBottom: 12 }}>{['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(x => <option key={x} value={x}>{x}</option>)}</select>
+        <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Team (optional)</label>
+        <input value={team} onChange={e => setTeam(e.target.value)} placeholder="e.g. KC" onKeyDown={e => { if (e.key === 'Enter') submit(); }} style={{ width: '100%', marginBottom: 14 }} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+          <button className="btn-draft" style={{ flex: 1 }} disabled={!can} onClick={submit}>Add & assign</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 // ─── components/SettingsModal.jsx ──────────────────────────
 function loadTesseract() {
   return new Promise((resolve, reject) => {
@@ -3221,8 +3257,8 @@ const STRAT_TILT = {
   heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, teams, draftHistory }) {
-  const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 30], ['DEF', 30]];
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onAddPlayer, teams, draftHistory }) {
+  const cols = [['QB', 30], ['RB', 60], ['WR', 60], ['TE', 30], ['K', 32], ['DEF', 32]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
@@ -3281,6 +3317,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   return (
     <div className="cheatsheet">
       <div className="cheat-controls no-print">
+        {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
         {mode !== 'live' && <button className="btn-draft" onClick={() => printPdf('letter')}>PDF · Letter</button>}
         {mode !== 'live' && <button className="btn-draft" onClick={() => printPdf('legal')}>PDF · Legal</button>}
         <button className="btn-secondary" onClick={onResetRanks}>Reset ranks</button>
@@ -5246,7 +5283,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   Object.entries(valueAdjust || {}).forEach(([pos, obj]) => Object.entries(obj || {}).forEach(([tier, m]) => { if (Math.abs(m - 1) > 0.01) active.push(`${tier === 'all' ? '' : tier + ' '}${pos} ${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`); }));
   if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name} — ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
-    <div className={`coach ${big ? 'big' : ''}`}>
+    <div className={`coach ${big ? 'big' : 'dock'}`}>
       <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
@@ -5564,6 +5601,8 @@ function App() {
     try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
     return null;
   })();
+  const screenParam = (() => { try { return new URLSearchParams(window.location.search).get('screen'); } catch (e) { return null; } })();
+  const remoteApplyRef = useRef(false);
   const [config, setConfig] = useState(initialState?.config || DEFAULT_LEAGUE_CONFIG);
   const [players, setPlayers] = useState(initialState?.players || buildInitialPlayers(BASELINE_PROJECTIONS));
   const [valueAdjust, setValueAdjust] = useState(initialState?.valueAdjust || {});
@@ -5608,9 +5647,10 @@ function App() {
   });
   const [draftHistory, setDraftHistory] = useState(initialState?.draftHistory || []);
   const [currentNomination, setCurrentNomination] = useState(null);
-  const [view, setView] = useState(initialState?.draftHistory?.length > 0 ? 'board' : 'prep');
-  const [boardTab, setBoardTab] = useState('cheatsheet');
+  const [view, setView] = useState((screenParam === 'board' || screenParam === 'cheat') ? 'board' : (initialState?.draftHistory?.length > 0 ? 'board' : 'prep'));
+  const [boardTab, setBoardTab] = useState(screenParam === 'board' ? 'draftboard' : 'cheatsheet');
   const [assignPlayer, setAssignPlayer] = useState(null);
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [pointsMode, setPointsMode] = useState('perWeek'); // per-game is the only unit
   const [loading, setLoading] = useState(false);
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
@@ -5622,6 +5662,7 @@ function App() {
   const [focusPlayer, setFocusPlayer] = useState(null);
   const focusNonce = useRef(0);
   const [showSplash, setShowSplash] = useState(() => {
+    if (screenParam) return false;
     try { return sessionStorage.getItem('iron_tuna_splash_seen') !== '1'; } catch (e) { return true; }
   });
   function dismissSplash() {
@@ -5678,10 +5719,32 @@ function App() {
     });
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
   useEffect(() => {
+    if (remoteApplyRef.current) { remoteApplyRef.current = false; return; }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, players, teams, draftHistory, pointsMode, dataInfo, starred: Array.from(starred), customOrder, targets: Array.from(targets), rankOrder, roleOverrides, valueAdjust, priceOverrides }));
     } catch (e) {}
   }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides]);
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.key !== STORAGE_KEY || !e.newValue) return;
+      let d; try { d = JSON.parse(e.newValue); } catch (err) { return; }
+      remoteApplyRef.current = true;
+      if (d.config) setConfig(d.config);
+      if (d.players) setPlayers(d.players);
+      if (d.teams) setTeams(d.teams);
+      if (d.draftHistory) setDraftHistory(d.draftHistory);
+      if (d.pointsMode) setPointsMode(d.pointsMode);
+      if (d.starred) setStarred(new Set(d.starred));
+      if (d.customOrder) setCustomOrder(d.customOrder);
+      if (d.targets) setTargets(new Set(d.targets));
+      if (d.rankOrder) setRankOrder(d.rankOrder);
+      if (d.roleOverrides) setRoleOverrides(d.roleOverrides);
+      if (d.valueAdjust) setValueAdjust(d.valueAdjust);
+      if (d.priceOverrides) setPriceOverrides(d.priceOverrides);
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   const liveNomination = useMemo(() => {
     if (!currentNomination) return null;
     return personalizedPlayers.find(p => p.id === currentNomination.id) || null;
@@ -5701,6 +5764,11 @@ function App() {
     } finally {
       setLoading(false);
     }
+  }
+  function handleAddPlayer(name, position, team) {
+    const id = `${name}-${position}-${team || 'FA'}`.replace(/\s+/g, '_') + '-custom';
+    setPlayers(prev => prev.some(p => p.id === id) ? prev : [...prev, { id, name, position, team: team || 'FA', projectedStats: {}, projectedPoints: 0, auctionValue: 1, inflatedValue: 1, vorp: 0, replacement: 0, custom: true }]);
+    return { id, name, position, team: team || 'FA', auctionValue: 1 };
   }
   function handleDraft(playerId, teamId, price) {
     const player = personalizedPlayers.find(p => p.id === playerId);
@@ -5958,16 +6026,17 @@ function App() {
       <div className="board-subtabs no-print">
         <button className={`subtab ${boardTab === 'cheatsheet' ? 'active' : ''}`} onClick={() => setBoardTab('cheatsheet')}>Cheat Sheet</button>
         <button className={`subtab ${boardTab === 'draftboard' ? 'active' : ''}`} onClick={() => setBoardTab('draftboard')}>Draft Board</button>
+        <button className="subtab subtab-2nd" style={{ marginLeft: 'auto' }} title="Open the other view in a new window for a second monitor — both stay in sync live" onClick={() => { const other = boardTab === 'cheatsheet' ? 'board' : 'cheat'; try { window.open(window.location.pathname + '?screen=' + other, 'iron_tuna_screen_' + other, 'width=1500,height=950'); } catch (e) {} }}>⧉ Second screen</button>
       </div>
       {boardTab === 'cheatsheet' ? (
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
-          mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} teams={teams} draftHistory={draftHistory} />
+          mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory} />
       ) : (
       <>
       {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-label">Heads up</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
-      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
+      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="btn-secondary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddPlayer(true)}>+ Add player</button><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
       <div className="board-layout">
         <PlayersRail players={personalizedPlayers} draftedIds={draftedIds} teams={teams} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
           green={planHighlights.green} yellow={planHighlights.yellow} targets={targets} onToggleTarget={handleToggleTarget} starred={starred} onToggleStar={handleToggleStar} customOrder={customOrder} onReorder={handleReorder}
@@ -5989,7 +6058,7 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
-      <div className={`main ${view === 'prep' ? 'prep-main' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
         {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
           currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} />}
@@ -6000,6 +6069,7 @@ function App() {
       )}
       {!showSplash && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={view === 'prep'} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
+      {showAddPlayer && <AddPlayerModal onAdd={(name, pos, team) => { const np = handleAddPlayer(name, pos, team); setShowAddPlayer(false); setAssignPlayer(np); }} onClose={() => setShowAddPlayer(false)} />}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} />}
       {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
       {overlay === 'legal' && <LegalModal onClose={() => setOverlay(null)} />}
