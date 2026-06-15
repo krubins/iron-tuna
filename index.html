@@ -421,7 +421,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .alloc-ideal { position: absolute; top: 0; width: 2px; height: 16px; background: var(--positive); transform: translateX(-1px); z-index: 2; pointer-events: none; }
 .alloc input[type=range] { width: 100%; margin: 0; position: relative; z-index: 1; }
 .alloc-ends { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
-.strategy-bar { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 6px 14px; margin-bottom: 14px; }
+.strategy-bar { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 6px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; }
+.taunt-btn { margin-left: auto; background: linear-gradient(135deg, #ff7a3d, #ff4d4d); color: #fff; border: none; border-radius: 20px; padding: 7px 15px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.03em; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(255,77,77,0.35); transition: transform 0.1s, filter 0.1s; }
+.taunt-btn:hover { transform: translateY(-1px); filter: brightness(1.07); }
+.taunt-modal { max-width: 470px; }
+.taunt-head { font-family: var(--font-display); font-size: 20px; color: #ff6a3d; letter-spacing: 0.03em; }
+.taunt-target { font-size: 12px; color: var(--text-muted); margin: 4px 0 14px; min-height: 14px; }
+.taunt-text { font-size: 16px; line-height: 1.5; color: var(--text-primary); font-style: italic; background: var(--bg-base); border-left: 3px solid #ff6a3d; border-radius: var(--radius-sm); padding: 14px 16px; }
+.taunt-actions { display: flex; gap: 10px; margin-top: 16px; }
 .alloc-inline { display: flex; align-items: center; gap: 14px; }
 .alloc-inline .alloc-cap { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .alloc-inline .alloc-cap b { color: var(--gold-text); }
@@ -5286,6 +5293,30 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
     </aside>
   );
 }
+function teamTaunt(team, players, config, games) {
+  const g = games || 17;
+  const byId = new Map((players || []).map(p => [p.id, p]));
+  const roster = (team.roster || []).map(r => { const pl = byId.get(r.playerId) || {}; return { name: pl.name || 'a mystery man', position: r.position, price: r.price || 0, value: pl.auctionValue || 0, pts: pl.projectedPoints || 0 }; });
+  const filled = roster.length;
+  const totalSpots = totalRosterSpots(config);
+  const left = team.spotsRemaining != null ? team.spotsRemaining : (totalSpots - filled);
+  const perSlot = left > 0 ? team.budgetRemaining / left : 0;
+  const byPos = {}; roster.forEach(r => byPos[r.position] = (byPos[r.position] || 0) + 1);
+  const starterPts = mockStarterPts(roster.map(r => ({ position: r.position, projectedPoints: r.pts })), config, g);
+  let worst = null; roster.forEach(r => { const over = r.price - r.value; if (r.value >= 3 && over >= 5 && (!worst || over > worst.over)) worst = { name: r.name, price: r.price, over }; });
+  const jabs = [];
+  if (filled === 0) jabs.push(`${team.name} hasn't won a single player and is clutching $${team.budgetRemaining} like the last lifeboat. Waiting for prices to drop? They won't.`);
+  if (worst) jabs.push(`${team.name} paid $${worst.price} for ${worst.name} — about $${worst.over} over the going rate. Big tipper, small returns.`);
+  if (filled >= 3 && !byPos['RB']) jabs.push(`${filled} players deep and ${team.name} still has zero running backs. Daring plan to win a league without the position that wins leagues.`);
+  if (filled >= 3 && !byPos['WR']) jabs.push(`${team.name} forgot wide receivers exist. Those flex spots are going to feel awfully empty.`);
+  if (left > 0 && perSlot < 2 && filled < totalSpots - 1) jabs.push(`${team.name} has $${team.budgetRemaining} for ${left} spots. Enjoy a bench built entirely from the $1 bin.`);
+  if (left > 0 && perSlot > 14 && filled >= 3) jabs.push(`${team.name} is hoarding $${team.budgetRemaining} like a retirement account. It's an auction, not a savings plan — spend it.`);
+  if ((byPos['QB'] || 0) >= 2) jabs.push(`${team.name} rostered ${byPos['QB']} quarterbacks. You start one. Unless they're playing a format nobody told the rest of us about.`);
+  if (byPos['K'] || byPos['DEF']) jabs.push(`${team.name} spent real auction dollars on a ${byPos['K'] ? 'kicker' : 'defense'} early. Iron Tuna is physically cringing.`);
+  if (starterPts > 0 && filled >= Math.ceil(totalSpots * 0.5)) jabs.push(`${team.name}'s starters project for ${starterPts.toFixed(1)} pts/game. Adorable. Save them a seat in the consolation bracket.`);
+  if (!jabs.length) jabs.push(`${team.name} is being suspiciously competent — no glaring holes yet. Give them a few nominations; they'll find a way to mess it up.`);
+  return jabs[Math.floor(Math.random() * jabs.length)];
+}
 function App() {
   const initialState = (() => {
     try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
@@ -5305,6 +5336,16 @@ function App() {
     });
   }
   function clearPriceOverrides() { setPriceOverrides({}); }
+  const [taunt, setTaunt] = useState(null);
+  function makeTaunt() {
+    const opps = teams.filter(t => !t.isMine);
+    if (!opps.length) { setTaunt({ name: '', text: 'No rivals to roast yet — mark your team, then let the others start drafting.' }); return; }
+    const prevName = taunt && taunt.name;
+    let pool = opps.filter(t => t.name !== prevName); if (!pool.length) pool = opps;
+    const t = pool[Math.floor(Math.random() * pool.length)];
+    setTaunt({ name: t.name, text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES) });
+    ITAnalytics.track('taunt', {});
+  }
   const [account, setAccount] = useState(loadAccount);
   const [overlay, setOverlay] = useState(null);
   const [shareText, setShareText] = useState('');
@@ -5667,7 +5708,7 @@ function App() {
     }
     return (
       <>
-      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /></div>
+      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
       <div className="board-layout">
         <PlayersRail players={personalizedPlayers} draftedIds={draftedIds} teams={teams} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
           green={planHighlights.green} yellow={planHighlights.yellow} targets={targets} onToggleTarget={handleToggleTarget} starred={starred} onToggleStar={handleToggleStar} customOrder={customOrder} onReorder={handleReorder}
@@ -5684,7 +5725,7 @@ function App() {
   ];
   return (
     <div className="app">
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.009 0.016" numOctaves="2" seed="4" result="noise"><animate attributeName="baseFrequency" dur="17s" values="0.009 0.016;0.013 0.021;0.009 0.016" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.024 0.036" numOctaves="3" seed="7" result="noise"><animate attributeName="baseFrequency" dur="11s" values="0.022 0.032;0.032 0.046;0.022 0.032" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="5.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''}`}>
@@ -5701,6 +5742,17 @@ function App() {
       {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
       {overlay === 'legal' && <LegalModal onClose={() => setOverlay(null)} />}
       {overlay === 'share' && <ShareModal text={shareText} onClose={() => setOverlay(null)} />}
+      {taunt && (
+        <div className="modal-bg" onClick={() => setTaunt(null)}>
+          <div className="modal taunt-modal" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setTaunt(null)}>×</button>
+            <div className="taunt-head">🔥 Live Mock</div>
+            {taunt.name ? <div className="taunt-target">Now roasting: <b style={{ color: 'var(--text-secondary)' }}>{taunt.name}</b></div> : <div className="taunt-target" />}
+            <div className="taunt-text">“{taunt.text}”</div>
+            <div className="taunt-actions"><button className="btn-draft" onClick={makeTaunt}>Roast another rival</button><button className="btn-secondary" onClick={() => { try { navigator.clipboard && navigator.clipboard.writeText(taunt.text); } catch (e) {} }}>Copy</button></div>
+          </div>
+        </div>
+      )}
       {overlay && overlay.checkout && <CheckoutModal tier={overlay.checkout} testMode={account.testMode} onComplete={() => { grantEntitlement(overlay.checkout.id); setOverlay('pricing'); }} onClose={() => setOverlay(null)} />}
       {!showSplash && !account.onboardingDismissed && draftHistory.length === 0 && <OnboardingChecklist steps={onbSteps} onDismiss={() => setAccount(a => ({ ...a, onboardingDismissed: true }))} />}
     </div>
