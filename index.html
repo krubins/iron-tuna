@@ -625,6 +625,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-team { font-size: 9px; color: var(--text-muted); font-family: var(--font-mono); }
 .cheat-val { font-family: var(--font-mono); color: var(--gold-text); font-size: 10px; text-align: right; min-width: 20px; }
 .cheat-cost { font-family: var(--font-mono); color: var(--text-secondary); font-size: 10px; text-align: right; min-width: 20px; }
+.cheat-col-lbl { cursor: help; text-decoration: underline dotted; text-decoration-color: var(--text-faint); text-underline-offset: 2px; }
+.cheat-col-lbl:hover { color: var(--text-secondary); text-decoration-color: var(--positive); }
 .cheat-you { font-family: var(--font-mono); font-size: 10px; text-align: right; min-width: 20px; font-weight: 700; color: var(--gold-text); }
 .cheat-you.cy-up { color: var(--positive); }
 .cheat-you.cy-down { color: var(--text-muted); font-weight: 400; }
@@ -3448,7 +3450,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         {cols.map(([pos, n]) => (
           <div className={`cheat-col cc-${pos}`} key={pos}>
             <div className="cheat-col-head"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>
-            <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl]) => <span key={k}>{lbl}</span>)}</div>
+            <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl, tip]) => <span key={k} className="cheat-col-lbl" title={tip}>{lbl}</span>)}</div>
             {(byPos[pos] || []).slice(0, n).map((p, i) => {
               const drafted = !!(draftedIds && draftedIds.has(p.id));
               const dinfo = draftInfoMap[p.id];
