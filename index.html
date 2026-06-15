@@ -535,6 +535,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .insights-locked .il-sub { font-size: 11px; color: var(--text-secondary); margin: 6px 0 12px; line-height: 1.5; }
 .share-grade-btn { width: 100%; margin-bottom: 10px; background: var(--bg-elev); border: 1px solid var(--border-strong); color: var(--text-primary); padding: 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
 .share-grade-btn:hover { border-color: var(--gold-text); color: var(--gold-text); }
+.sidebar-collapse { width: 100%; margin-bottom: 8px; background: var(--bg-elev); border: 1px solid var(--border-subtle); color: var(--text-muted); padding: 6px; border-radius: var(--radius-sm); cursor: pointer; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-mono); }
+.sidebar-collapse:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.sidebar-expand { align-self: flex-start; position: sticky; top: 16px; height: fit-content; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-right: none; color: var(--positive); writing-mode: vertical-rl; padding: 16px 6px; border-radius: var(--radius-md) 0 0 var(--radius-md); cursor: pointer; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mono); }
+.sidebar-expand:hover { background: var(--bg-elev); }
 .onb { position: fixed; left: 18px; bottom: 18px; z-index: 70; width: 300px; background: var(--bg-panel); border: 1px solid var(--gold-text); border-radius: var(--radius-lg); box-shadow: 0 12px 36px rgba(0,0,0,0.55); padding: 14px; }
 .onb-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-display); color: var(--gold-text); font-size: 14px; letter-spacing: 0.03em; }
 .onb-head button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; }
@@ -2029,7 +2033,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <LogoMark tagline wavy height={260} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
         <p className="lp-sub" style={{ marginBottom: 6 }}>Free custom auction values for<br /><b>your</b> exact league and <b>your</b> exact strategy.</p>
-        <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
+        <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>:<br />who to bid on, how high to go, and why.</p>
         </div>
         <div className="lp-phases-wrap">
           <h2 className="lp-phases-title">Two phases. One edge.</h2>
@@ -2291,7 +2295,7 @@ function InsightsPanel({ insights, marketState, sonar, onUnlock }) {
   );
 }
 // ─── components/Sidebar.jsx ──────────────────────────
-function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketState, pointsMode, seasonGames, plan, targets, draftedIds, roleOverrides, currentNomination, onDraft, onClearNomination, onUpdateStrategy, sonar, onUnlockSonar, onShare }) {
+function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketState, pointsMode, seasonGames, plan, targets, draftedIds, roleOverrides, currentNomination, onDraft, onClearNomination, onUpdateStrategy, sonar, onUnlockSonar, onShare, onCollapse }) {
   const [tab, setTab] = useState('team');
   const bidRec = useMemo(() => {
     if (!currentNomination || !myTeam) return null;
@@ -2320,6 +2324,7 @@ function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketSta
   const maxBidValue = myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * config.valuation.minBid;
   return (
     <aside className="sidebar">
+      {onCollapse && <button className="sidebar-collapse no-print" onClick={onCollapse} title="Hide this panel for more board width">⟩ Hide panel</button>}
       {onShare && <button className="share-grade-btn" onClick={() => onShare(buildGradeText(myTeam, plan, config, seasonGames))}>Share draft grade →</button>}
       <div className="sidebar-tabs">
         <button className={`sidebar-tab ${tab === 'team' ? 'active' : ''}`} onClick={() => setTab('team')}>My Team</button>
@@ -5677,6 +5682,7 @@ function App() {
   const [boardTab, setBoardTab] = useState(screenParam === 'board' ? 'draftboard' : 'cheatsheet');
   const [assignPlayer, setAssignPlayer] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pointsMode, setPointsMode] = useState('perWeek'); // per-game is the only unit
   const [loading, setLoading] = useState(false);
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
@@ -5687,10 +5693,7 @@ function App() {
   const [roleOverrides, setRoleOverrides] = useState(initialState?.roleOverrides || {});
   const [focusPlayer, setFocusPlayer] = useState(null);
   const focusNonce = useRef(0);
-  const [showSplash, setShowSplash] = useState(() => {
-    if (screenParam) return false;
-    try { return sessionStorage.getItem('iron_tuna_splash_seen') !== '1'; } catch (e) { return true; }
-  });
+  const [showSplash, setShowSplash] = useState(!screenParam);
   function dismissSplash() {
     setShowSplash(false);
     try { sessionStorage.setItem('iron_tuna_splash_seen', '1'); } catch (e) {}
@@ -6086,8 +6089,8 @@ function App() {
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
-          currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} />}
+        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : !sidebarOpen ? <button className="sidebar-expand no-print" onClick={() => setSidebarOpen(true)} title="Show side panel">‹ Panel</button> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
+          currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} onCollapse={() => setSidebarOpen(false)} />}
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
