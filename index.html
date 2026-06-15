@@ -829,6 +829,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ai-body b { color: var(--gold-text); }
 @media (max-width: 680px) { .lp-ribbon { flex-direction: column; gap: 8px; } .lp-ribbon-links { justify-content: center; } }
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
+.league-toggle { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-md); padding: 6px 14px; margin-bottom: 16px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.league-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); }
+.lt-plus { color: var(--gold-text); font-size: 16px; font-weight: 700; line-height: 1; }
 .assumptions-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .assumptions-label { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-text); }
 .assumptions-val { font-size: 13px; color: var(--text-secondary); font-family: var(--font-mono); display: inline-flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
@@ -3431,8 +3434,8 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
     <div className="cheatsheet">
       <div className="cheat-controls no-print">
         {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
-        {mode !== 'live' && <button className="btn-draft" onClick={() => printPdf('letter')}>PDF · Letter</button>}
-        {mode !== 'live' && <button className="btn-draft" onClick={() => printPdf('legal')}>PDF · Legal</button>}
+        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>}
+        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>}
         <button className="btn-secondary" onClick={onResetRanks}>Reset ranks</button>
         <span className="cheat-sep" />
         <span className="cheat-cols-label">Show:</span>
@@ -3443,8 +3446,8 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
       </div>
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       {mode === 'live'
-        ? <div className="section-meta no-print" style={{ marginBottom: 12 }}>Live draft — <b style={{ color: 'var(--gold-text)' }}>click any player to mark him drafted</b> (opens the assign popup); drafted players show struck through. Drag to re-rank · click a Proj price to set your own.<br /><b style={{ color: 'var(--accent-text)' }}>Proj</b> = likely auction price · <b>Value</b> = true VBD worth · <b style={{ color: 'var(--gold-text)' }}>You</b> = your max bid · <b>PPG</b> = points per game. Name color shows how hard to target him: <b style={{ color: '#2dd4a3' }}>green = worth it</b> (price at/below your You), <b style={{ color: '#ef4444' }}>red = the price is above his value to your team</b>.</div>
-        : <div className="section-meta no-print" style={{ marginBottom: 12 }}>Drag to re-rank. Use <b style={{ color: 'var(--positive)' }}>Show</b> to pick which numbers appear — hover each toggle for what it means. Name color = how hard to target him: <b style={{ color: '#2dd4a3' }}>green = worth it</b> (price at/below your You), <b style={{ color: '#ef4444' }}>red = price above his value to your team</b> — a stud whose positional edge justifies paying over true value still reads green. <b style={{ color: 'var(--gold-text)' }}>Click a player to target him.</b> <b style={{ color: 'var(--positive)' }}>Click a Proj price to set your own — the rest re-prices.</b></div>}
+        ? <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none' }}>Click a player to mark him drafted · drag to re-rank · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● target</span> <span style={{ color: '#ef4444' }}>● overpay</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>
+        : <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none' }}>Drag to re-rank · click a player to target him · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● target</span> <span style={{ color: '#ef4444' }}>● overpay</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>}
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
@@ -3678,30 +3681,34 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
   return (
     <div>
       <div className="section-title no-print">Draft Prep</div>
-      <div className="assumptions no-print">
-        <div className="assumptions-main">
-          <span className="assumptions-label">Assumptions</span>
-          <span className="assumptions-val">
-            <button className="assume-chip" onClick={() => setEditAssume(true)} title="Click to change number of teams">{config.teams} teams</button>
-            <span className="assume-sep">·</span>
-            <button className="assume-chip" onClick={() => setEditAssume(true)} title="Click to change your auction budget">${config.budget} budget</button>
-            <span className="assume-sep">·</span>
-            <button className="assume-chip" onClick={() => setEditAssume(true)} title="Click to change scoring (PPR)">{pprLabel}</button>
-            <span className="assume-sep">·</span>
-            <button className="assume-chip" onClick={onOpenSettings} title="Click to edit your starting lineup">starters {startersSummary}</button>
-            <span className="assume-sep">·</span>
-            <button className="assume-chip" onClick={onOpenSettings} title="Click to edit roster size & bench">{rosterSpots} roster spots ({benchSpots} bench)</button>
-          </span>
+      {!editAssume ? (
+        <button className="league-toggle no-print" onClick={() => setEditAssume(true)} title="View & change your league — teams, budget, scoring, roster">League Settings <span className="lt-plus">+</span></button>
+      ) : (
+        <>
+        <div className="assumptions no-print">
+          <div className="assumptions-main">
+            <span className="assumptions-label">League Settings</span>
+            <span className="assumptions-val">
+              <button className="assume-chip" onClick={onOpenSettings} title="Edit teams">{config.teams} teams</button>
+              <span className="assume-sep">·</span>
+              <button className="assume-chip" onClick={onOpenSettings} title="Edit budget">${config.budget} budget</button>
+              <span className="assume-sep">·</span>
+              <button className="assume-chip" onClick={onOpenSettings} title="Edit scoring">{pprLabel}</button>
+              <span className="assume-sep">·</span>
+              <button className="assume-chip" onClick={onOpenSettings} title="Edit starting lineup">starters {startersSummary}</button>
+              <span className="assume-sep">·</span>
+              <button className="assume-chip" onClick={onOpenSettings} title="Edit roster size & bench">{rosterSpots} roster spots ({benchSpots} bench)</button>
+            </span>
+          </div>
+          <button className="assumptions-edit" onClick={() => setEditAssume(false)}>Collapse −</button>
         </div>
-        <button className="assumptions-edit" onClick={() => setEditAssume(v => !v)}>{editAssume ? 'Done' : 'Customize'}</button>
-      </div>
-      {editAssume && (
         <div className="assumptions-panel no-print">
           <label>Teams<input type="number" min="2" max="20" value={config.teams} onChange={e => onUpdateConfig('teams', parseInt(e.target.value || 12))} /></label>
           <label>Budget $<input type="number" min="20" max="1000" value={config.budget} onChange={e => onUpdateConfig('budget', parseInt(e.target.value || 120))} /></label>
           <label>Reception<select value={String(ppr)} onChange={e => onUpdateConfig('scoring.receptionPoints', parseFloat(e.target.value))}><option value="0">Standard (0)</option><option value="0.5">Half-PPR (0.5)</option><option value="1">Full PPR (1)</option></select></label>
           <button className="assumptions-edit" onClick={onOpenSettings}>Full scoring &amp; roster →</button>
         </div>
+        </>
       )}
       <div className="prep-toolbar no-print">
         <button className={`filter-pill ${activeSubview === 'tiers' ? 'active' : ''}`} onClick={() => setActiveSubview('tiers')}>Tiers</button>
