@@ -277,14 +277,16 @@ input:focus, select:focus { border-color: var(--accent); }
 .col-personal { color: var(--gold-text); font-weight: 700; background: var(--gold-soft); }
 .player-table tbody tr:hover .col-personal { background: rgba(245, 184, 0, 0.12); }
 .player-table tbody tr.drafted .col-personal { background: transparent; }
-.header-logo { height: 40px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.header-logo { height: 40px; width: auto; display: block; filter: drop-shadow(0 0 6px rgba(45,212,163,0.25)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); animation: eerieGlowSm 6.5s ease-in-out infinite; }
+@keyframes eerieGlowSm { 0%, 100% { filter: drop-shadow(0 0 4px rgba(45,212,163,0.16)) drop-shadow(0 1px 2px rgba(0,0,0,0.5)); } 50% { filter: drop-shadow(0 0 10px rgba(45,212,163,0.40)) drop-shadow(0 1px 2px rgba(0,0,0,0.5)); } }
 .header-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; border-radius: 6px; transition: filter 0.12s; }
 .header-logo-btn:hover { filter: brightness(1.12); }
 .landing-splash { position: fixed; inset: 0; z-index: 1000; background: radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; opacity: 1; transition: opacity 0.6s ease-out; }
 .landing-splash.fading-out { opacity: 0; pointer-events: none; }
 .landing-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; z-index: 2; }
 .landing-logo-container { width: 100vw; max-height: 82vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; z-index: 1; }
-.landing-logo { width: 100%; height: auto; display: block; animation: kenBurnsZoom 8s ease-out forwards, landingFadeIn 1.2s ease-out backwards; filter: drop-shadow(0 0 24px rgba(45, 212, 163, 0.35)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6)); transform-origin: center center; }
+.landing-logo { width: 100%; height: auto; display: block; animation: kenBurnsZoom 8s ease-out forwards, landingFadeIn 1.2s ease-out backwards, eerieGlow 6.5s ease-in-out 1.2s infinite; filter: drop-shadow(0 0 22px rgba(45, 212, 163, 0.28)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6)); transform-origin: center center; }
+@keyframes eerieGlow { 0%, 100% { filter: drop-shadow(0 0 15px rgba(45,212,163,0.18)) drop-shadow(0 4px 16px rgba(0,0,0,0.6)); } 50% { filter: drop-shadow(0 0 32px rgba(45,212,163,0.45)) drop-shadow(0 4px 16px rgba(0,0,0,0.6)); } }
 @keyframes kenBurnsZoom { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.12) translate(-2%, 1%); } }
 @keyframes landingFadeIn { 0% { opacity: 0; transform: scale(0.96); } 100% { opacity: 1; transform: scale(1); } }
 .landing-tagline { margin-top: 24px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.32em; color: rgba(159, 225, 203, 0.85); text-align: center; animation: taglineReveal 1.4s ease-out 0.6s backwards; z-index: 1; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); }
@@ -2016,11 +2018,12 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         {rivets.map((r, i) => (<circle key={i} cx={r[0]} cy={r[1]} r="1.15" fill="#d4dde6" stroke="#222b36" strokeWidth="0.4" />))}
         {/* pectoral fin — drawn last so the plate seams don't cut in front of it */}
         <path d="M34 31 C 41 40, 49 44, 53 44 C 47 41, 41 36, 38 31 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1" strokeLinejoin="round" opacity="0.97" />
-        {/* iron bolt eye */}
-        <circle cx="20" cy="25.5" r="4.2" fill="#222b36" stroke="#11181f" strokeWidth="0.6" />
-        <circle cx="20" cy="25.5" r="2.5" fill="#e7edf2" />
-        <circle cx="20" cy="25.5" r="1.1" fill="#11181f" />
-        <circle cx="18.9" cy="24.4" r="0.5" fill="#ffffff" />
+        {/* head turned slightly toward the viewer: snout highlight + center ridge + forward-set eye */}
+        <path d="M9 30 C 12 24, 16 20, 23 17.5" fill="none" stroke="#1b232d" strokeWidth="0.7" opacity="0.45" />
+        <circle cx="16.5" cy="27" r="4.2" fill="#222b36" stroke="#11181f" strokeWidth="0.6" />
+        <circle cx="16.5" cy="27" r="2.5" fill="#e7edf2" />
+        <circle cx="16.5" cy="27" r="1.1" fill="#11181f" />
+        <circle cx="15.4" cy="25.9" r="0.5" fill="#ffffff" />
       </g>
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${tunaW},0)`}>
         {placed.map((g, i) => (
