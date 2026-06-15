@@ -690,6 +690,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-pillar-h { font-family: var(--font-display); font-size: 19px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; line-height: 1.12; position: relative; }
 .lp-pillar-b { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; position: relative; }
 @media (max-width: 760px) { .lp-pillars { grid-template-columns: 1fr; } }
+.lp-kicker { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--positive); border: 1px solid rgba(45,212,163,0.4); border-radius: 14px; padding: 5px 14px; margin: 6px 0 4px; }
+.lp-quotes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 100%; margin: 4px 0 22px; }
+.lp-quote { margin: 0; background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-left: 3px solid var(--gold-text); border-radius: var(--radius-md); padding: 16px 16px 14px; text-align: left; }
+.lp-quote blockquote { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); font-style: italic; }
+.lp-quote figcaption { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: 0.02em; }
+@media (max-width: 760px) { .lp-quotes { grid-template-columns: 1fr; } }
 .lp-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; }
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
 .assumptions-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -1844,11 +1850,18 @@ function LandingSplash({ onDismiss }) {
     ['Before the draft', 'Prep, Strategy & Planning', 'Custom auction values for your exact league, tiered cheat sheets, six strategy models, an optimal-lineup planner, and a mock auction against CPU managers. Walk in with a number for every player.'],
     ['Draft day', 'Live Execution & Advice', 'Real-time prices that adjust to the room, switch-points, opponent reads, and an always-on AI navigator telling you who to bid on, how high to go, and why — as the board moves.'],
   ];
+  // PLACEHOLDER testimonials — replace with real user quotes before launch (FTC: no invented endorsements).
+  const quotes = [
+    ['Finally a tool that actually gets auctions. The live max-bid number stopped me from blowing the budget on one stud — I walked out with the deepest roster in the league.', '— Beta tester · 12-team, $200 auction'],
+    ['I ran the mock auctions all week to practice when to nominate and when to sit back. On draft night, nothing rattled me.', '— Beta tester · 10-team, half-PPR'],
+    ['The custom values were dead-on for our oddball scoring. Every other site just hands you generic numbers that do not fit your league.', '— Beta tester · 14-team dynasty'],
+  ];
   return (
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
       <div className="landing-vignette" />
       <div className="lp-inner">
         <LogoMark tagline height={130} className="landing-logo" />
+        <div className="lp-kicker">The most comprehensive tool for fantasy auction drafts</div>
         <h1 className="lp-head">Custom auction values — and a plan for every pick.</h1>
         <p className="lp-sub">Iron Tuna calibrates to <b>your</b> exact league, then walks you from prep through draft night — telling you who to draft, for how much, and why.</p>
         <div className="lp-pillars">
@@ -1860,6 +1873,14 @@ function LandingSplash({ onDismiss }) {
               <div className="lp-pillar-h">{h}</div>
               <div className="lp-pillar-b">{b}</div>
             </div>
+          ))}
+        </div>
+        <div className="lp-quotes">
+          {quotes.map(([q, who], i) => (
+            <figure className="lp-quote" key={i}>
+              <blockquote>{q}</blockquote>
+              <figcaption>{who}</figcaption>
+            </figure>
           ))}
         </div>
         <div className="lp-why"><b>Why it's better:</b> most tools hand you one generic number. Iron Tuna personalizes to your roster, your budget, and the live market — and shows its work, so every call is one you can trust.</div>
