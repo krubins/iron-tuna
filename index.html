@@ -270,13 +270,17 @@ input:focus, select:focus { border-color: var(--accent); }
 .player-table tbody tr:hover .col-personal { background: rgba(245, 184, 0, 0.12); }
 .player-table tbody tr.drafted .col-personal { background: transparent; }
 .header-logo { height: 40px; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
-.header-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; border-radius: 6px; transition: filter 0.12s; }
+.header-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; border-radius: 6px; transition: filter 0.12s; position: relative; overflow: hidden; }
+.header-logo-btn::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 38%, rgba(190,235,255,0.22) 48%, rgba(255,255,255,0.32) 50%, rgba(190,235,255,0.22) 52%, transparent 62%); background-size: 240% 240%; mix-blend-mode: screen; animation: waterShimmer 5.5s ease-in-out infinite; }
 .header-logo-btn:hover { filter: brightness(1.12); }
 .landing-splash { position: fixed; inset: 0; z-index: 1000; background: radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; opacity: 1; transition: opacity 0.6s ease-out; }
 .landing-splash.fading-out { opacity: 0; pointer-events: none; }
 .landing-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; z-index: 2; }
 .landing-logo-container { width: 100vw; max-height: 82vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; z-index: 1; }
 .landing-logo { width: 100%; height: auto; display: block; animation: kenBurnsZoom 8s ease-out forwards, landingFadeIn 1.2s ease-out backwards; filter: drop-shadow(0 0 24px rgba(45, 212, 163, 0.35)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6)); transform-origin: center center; }
+.landing-logo-wrap { position: relative; display: inline-block; line-height: 0; }
+.landing-logo-shimmer { position: absolute; inset: -3%; pointer-events: none; background: linear-gradient(115deg, transparent 36%, rgba(190,235,255,0.16) 47%, rgba(255,255,255,0.30) 50%, rgba(190,235,255,0.16) 53%, transparent 64%); background-size: 240% 240%; mix-blend-mode: screen; animation: waterShimmer 5.5s ease-in-out infinite; }
+@keyframes waterShimmer { 0% { background-position: 135% 135%; } 100% { background-position: -135% -135%; } }
 @keyframes kenBurnsZoom { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.12) translate(-2%, 1%); } }
 @keyframes landingFadeIn { 0% { opacity: 0; transform: scale(0.96); } 100% { opacity: 1; transform: scale(1); } }
 .landing-tagline { margin-top: 24px; font-family: var(--font-display); font-size: 18px; letter-spacing: 0.32em; color: rgba(159, 225, 203, 0.85); text-align: center; animation: taglineReveal 1.4s ease-out 0.6s backwards; z-index: 1; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); }
@@ -666,8 +670,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cc-TE .cheat-col-head { border-top-color: #e0992a; } .cc-TE .cheat-col-head > span:first-child { color: #f2b85a; }
 .cc-K .cheat-col-head { border-top-color: #8b5cf6; } .cc-K .cheat-col-head > span:first-child { color: #b18cff; }
 .cc-DEF .cheat-col-head { border-top-color: #9aa6b2; } .cc-DEF .cheat-col-head > span:first-child { color: #c2cdd7; }
-.landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 36px 20px 60px; }
-.lp-inner { position: relative; z-index: 2; max-width: 880px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 0 20px 60px; }
+.lp-inner { position: relative; z-index: 2; max-width: 880px; margin: 26px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
 .lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.01em; color: var(--text-primary); line-height: 1.05; margin: 20px 0 14px; max-width: 760px; }
 .lp-sub { font-size: clamp(14px, 1.8vw, 17px); color: var(--text-secondary); max-width: 660px; line-height: 1.55; margin: 0 0 26px; }
 .lp-sub b { color: var(--gold-text); }
@@ -687,8 +691,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-phase-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
 .lp-phase-h { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.01em; color: var(--text-primary); margin: 0 0 9px; line-height: 1.08; }
 .lp-phase-list { list-style: none; margin: 0; padding: 0; max-width: 600px; }
-.lp-phase-list li { position: relative; padding-left: 20px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
-.lp-phase-list li::before { content: ''; position: absolute; left: 2px; top: 7px; width: 6px; height: 6px; background: var(--positive); border-radius: 1px; transform: rotate(45deg); }
+.lp-phase-list li { position: relative; padding-left: 24px; font-size: 17px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 11px; }
+.lp-phase-list li::before { content: ''; position: absolute; left: 2px; top: 10px; width: 7px; height: 7px; background: var(--positive); border-radius: 1px; transform: rotate(45deg); }
 .lp-preview { width: 100%; max-width: 760px; margin: 12px auto 28px; }
 .lp-preview-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 9px; }
 .lp-preview-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
@@ -718,6 +722,23 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-quote figcaption { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: 0.02em; }
 @media (max-width: 760px) { .lp-quotes { grid-template-columns: 1fr; gap: 24px; } }
 .lp-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; }
+.lp-ribbon { position: sticky; top: 0; z-index: 20; width: 100%; max-width: 1080px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 4px; background: rgba(11,17,23,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border-subtle); }
+.lp-ribbon-brand { display: inline-flex; align-items: center; }
+.lp-ribbon-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.lp-ribbon-links button { background: none; border: none; color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: color 0.12s, background 0.12s; }
+.lp-ribbon-links button:hover { color: var(--text-primary); background: var(--bg-elev); }
+.lp-ribbon-cta { color: #06281f !important; background: var(--positive); font-weight: 700; }
+.lp-ribbon-cta:hover { filter: brightness(1.08); background: var(--positive); color: #06281f; }
+.lp-faq { width: 100%; max-width: 720px; margin: 18px auto 26px; text-align: left; }
+.lp-faq-item { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
+.lp-faq-q { font-family: var(--font-display); font-size: 15px; color: var(--text-primary); letter-spacing: 0.02em; margin-bottom: 6px; }
+.lp-faq-a { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; }
+.lp-ai { width: 100%; max-width: 680px; margin: 8px auto 6px; background: rgba(45,212,163,0.07); border: 1px solid var(--border-subtle); border-left: 3px solid var(--positive); border-radius: var(--radius-md); padding: 14px 18px; text-align: left; display: flex; gap: 14px; align-items: flex-start; }
+.lp-ai-tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--positive); border: 1px solid var(--positive); border-radius: 10px; padding: 3px 9px; white-space: nowrap; margin-top: 2px; }
+.lp-ai p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); }
+.lp-ai p b { color: var(--gold-text); }
+@media (max-width: 600px) { .lp-ai { flex-direction: column; gap: 9px; } }
+@media (max-width: 680px) { .lp-ribbon { flex-direction: column; gap: 8px; } .lp-ribbon-links { justify-content: center; } }
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
 .assumptions-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .assumptions-label { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-text); }
@@ -1791,7 +1812,7 @@ function LogoMark({ height = 34, className = '', tagline = false }) {
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
         </linearGradient>
       </defs>
-      <g transform={`translate(2,${cy - 27}) scale(0.8) rotate(-6 58 30)`}>
+      <g transform={`translate(2,${cy - 27}) scale(0.74) rotate(-6 58 30)`}>
         {/* lunate tail */}
         <path d="M90 27 C 98 24, 106 14, 114 7 C 108 18, 103 26, 101 29 C 103 32, 108 40, 114 51 C 106 44, 98 34, 90 31 C 89 30, 89 28, 90 27 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1.1" strokeLinejoin="round" />
         {/* dorsal + anal sickle fins */}
@@ -1811,15 +1832,11 @@ function LogoMark({ height = 34, className = '', tagline = false }) {
         <path d="M29 16 C 26 23, 26 35, 30 43" fill="none" stroke="#1b232d" strokeWidth="1.1" opacity="0.6" />
         {/* rivets */}
         {rivets.map((r, i) => (<circle key={i} cx={r[0]} cy={r[1]} r="1.15" fill="#d4dde6" stroke="#222b36" strokeWidth="0.4" />))}
-        {/* alien, confused, slightly hostile eye */}
-        <circle cx="20" cy="25.7" r="5.3" fill="#222b36" stroke="#11181f" strokeWidth="0.7" />
-        <circle cx="20.2" cy="26.0" r="3.5" fill="#e2eaf1" />
-        <circle cx="21.4" cy="27.2" r="1.55" fill="#0b1118" />
-        <circle cx="19.3" cy="24.4" r="0.6" fill="#ffffff" />
-        {/* furrowed, hostile brow */}
-        <path d="M13.4 21.6 L25.2 19.0" stroke="#11181f" strokeWidth="2.5" strokeLinecap="round" />
-        {/* small grumpy frown at the snout */}
-        <path d="M8.4 32.4 Q 12.2 35.4, 16.4 32.7" fill="none" stroke="#11181f" strokeWidth="1.3" strokeLinecap="round" />
+        {/* iron bolt eye */}
+        <circle cx="20" cy="25.5" r="4.2" fill="#222b36" stroke="#11181f" strokeWidth="0.6" />
+        <circle cx="20" cy="25.5" r="2.5" fill="#e7edf2" />
+        <circle cx="20" cy="25.5" r="1.1" fill="#11181f" />
+        <circle cx="18.9" cy="24.4" r="0.5" fill="#ffffff" />
       </g>
       <g transform={`translate(${tunaW},0)`}>
         {placed.map((g, i) => (
@@ -1842,7 +1859,7 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
   return (
     <header className="header">
       <div className="header-brand">
-        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna — back to start"><LogoMark height={44} className="header-logo" /></button>
+        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna — back to start"><LogoMark height={51} className="header-logo" /></button>
         <div className="header-brand-text">
           <span className="subtitle">Auction Draft Command</span>
           <span className="version-stamp">v{APP_VERSION} · {BUILD_DATE}</span>
@@ -1868,11 +1885,13 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
   );
 }
 // ─── components/LandingSplash.jsx ──────────────────────────
-function LandingSplash({ onDismiss }) {
+function LandingSplash({ onDismiss, onNav }) {
   const [fadingOut, setFadingOut] = useState(false);
+  const faqRef = useRef(null);
   function enter() { setFadingOut(true); setTimeout(() => onDismiss && onDismiss(), 350); }
+  function go(target) { if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } setFadingOut(true); setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350); }
   const pillars = [
-    ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring', 'Tiered cheat sheets and six strategy models', 'A budget-aware optimal-lineup planner', 'Unlimited mock auctions against CPU managers']],
+    ['Before the Auction', 'Prep, Strategy & Planning', ['Custom auction values for your exact league and scoring (free)', 'Tiered cheat sheets and six strategy models (free)', 'A budget-aware optimal-lineup planner (free)', 'Unlimited mock auctions against CPU managers']],
     ['Auction Day', 'Live Execution & Advice', ['Real-time prices that adjust to the room', 'Switch-points and live opponent reads', 'An always-on AI navigator: who to bid on, how high, and why', 'Bid guidance that updates as the board moves']],
   ];
   // PLACEHOLDER testimonials — replace with real user quotes before launch (FTC: no invented endorsements).
@@ -1889,14 +1908,31 @@ function LandingSplash({ onDismiss }) {
     ['TE', 'Brock Bowers', '18', '20', '22'],
     ['QB', 'Josh Allen', '9', '6', '7'],
   ];
+  const faqs = [
+    ['Is it really free?', 'Yes — custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Assistance package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade.'],
+    ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
+    ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing — enter your settings (or paste / screenshot your scoring) and you are ready.'],
+    ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player — market price, true value, and your personal max — plus an AI navigator that tells you exactly how high to go in real time.'],
+    ['Will it work on draft night?', 'Yes. It runs entirely in your browser and keeps working even if the Wi-Fi drops.'],
+  ];
   return (
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
       <div className="landing-vignette" />
+      <nav className="lp-ribbon">
+        <div className="lp-ribbon-brand"><LogoMark height={22} /></div>
+        <div className="lp-ribbon-links">
+          <button onClick={() => go('prep')}>Auction Prep</button>
+          <button onClick={() => go('board')}>Auction Day Management</button>
+          <button onClick={() => go('faq')}>FAQs</button>
+          <button className="lp-ribbon-cta" onClick={() => go('signin')}>Sign in</button>
+        </div>
+      </nav>
       <div className="lp-inner">
-        <LogoMark tagline height={152} className="landing-logo" />
+        <div className="landing-logo-wrap"><LogoMark tagline height={175} className="landing-logo" /><span className="landing-logo-shimmer" /></div>
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
         <p className="lp-sub" style={{ marginBottom: 6 }}>Free custom auction values for <b>your</b> exact league and <b>your</b> exact strategy.</p>
         <p className="lp-sub lp-subline">Plus <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
+        <div className="lp-ai"><span className="lp-ai-tag">Purpose-built AI</span><p>Not a generic question to ChatGPT or Claude. Iron Tuna\u2019s navigator reasons over <b>your</b> exact league and scoring \u2014 plus years of real auction results, <b>tens of thousands of auction dollars analyzed</b> for the price trends that will actually move your draft.</p></div>
         <div className="lp-phases">
           {pillars.map(([k, h, b], i) => (
             <div className="lp-phase" key={i}>
@@ -1937,11 +1973,20 @@ function LandingSplash({ onDismiss }) {
             </figure>
           ))}
         </div>
+        <div className="lp-faq" ref={faqRef}>
+          <div className="lp-preview-eyebrow">FAQ</div>
+          <h2 className="lp-preview-h">Questions, answered</h2>
+          {faqs.map(([q, a], i) => (
+            <div className="lp-faq-item" key={i}>
+              <div className="lp-faq-q">{q}</div>
+              <div className="lp-faq-a">{a}</div>
+            </div>
+          ))}
+        </div>
         <div className="lp-why"><b>Why it's better:</b> most tools hand you one generic number. Iron Tuna personalizes to your roster, your budget, and the live market — and shows its work, so every call is one you can trust.</div>
         <button className="lp-cta" onClick={enter}>Get my auction values — it's free</button>
         <div className="lp-note">No signup needed. Works on draft night, even if the Wi-Fi drops.</div>
       </div>
-      <div className="landing-skip" onClick={enter}>Skip intro →</div>
     </div>
   );
 }
@@ -5242,6 +5287,11 @@ function App() {
     setShowSplash(false);
     try { sessionStorage.setItem('iron_tuna_splash_seen', '1'); } catch (e) {}
   }
+  function handleLandingNav(target) {
+    setView(target === 'board' ? 'board' : 'prep');
+    if (target === 'signin') setOverlay('auth');
+    dismissSplash();
+  }
   const SEASON_GAMES = 17;
   const baseValued = useMemo(() => {
     const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
@@ -5578,7 +5628,7 @@ function App() {
   ];
   return (
     <div className="app">
-      {showSplash && <LandingSplash onDismiss={dismissSplash} />}
+      {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
