@@ -1918,6 +1918,9 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
         </linearGradient>
       </defs>
+      {tagline ? (
+        <image href="/tuna.png" x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
+      ) : (
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
         {/* lunate tail */}
         <path d="M90 27 C 98 24, 106 14, 114 7 C 108 18, 103 26, 101 29 C 103 32, 108 40, 114 51 C 106 44, 98 34, 90 31 C 89 30, 89 28, 90 27 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1.1" strokeLinejoin="round" />
@@ -1945,6 +1948,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <circle cx="16.5" cy="27" r="1.1" fill="#11181f" />
         <circle cx="15.4" cy="25.9" r="0.5" fill="#ffffff" />
       </g>
+      )}
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${tunaW + ox},0)`}>
         {placed.map((g, i) => (
           <text key={i} x={g.cx} y={cy} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
