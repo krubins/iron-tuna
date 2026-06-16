@@ -2012,16 +2012,23 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const center = (n - 1) / 2;
   const base = 50;
   const shrink = 0.52;
-  const sizes = word.map((_, i) => { const d = 1 - Math.abs(i - center) / center; return base * (1 - shrink * d) * 0.84; });
+  const cmp = tagline ? 0.80 : 1;      // landing-only: compress IRON TUNA toward the fish + tagline width
+  const advF = tagline ? 0.44 : 0.64;  // landing-only: condense letters horizontally
+  const sizes = word.map((_, i) => { const d = 1 - Math.abs(i - center) / center; return base * (1 - shrink * d) * cmp; });
   if (sizes.length >= 6) { sizes[3] = sizes[2]; sizes[4] = sizes[5]; }
-  const tracking = 1.5;
-  const wordGap = base * 0.30;
+  const tracking = tagline ? 1.3 : 1.5;
+  const wordGap = base * (tagline ? 0.18 : 0.30);
   let x = 0; const placed = [];
-  sizes.forEach((sz, i) => { if (i === 4) x += wordGap; const adv = sz * 0.64; placed.push({ ...word[i], size: sz, cx: x + adv / 2 }); x += adv + tracking; });
+  sizes.forEach((sz, i) => { if (i === 4) x += wordGap; const adv = sz * advF; placed.push({ ...word[i], size: sz, cx: x + adv / 2 }); x += adv + tracking; });
   const wordWidth = x;
   const tunaW = 122;
   const cy = base * 0.55;
-  const vbW = tunaW + wordWidth + 12;
+  const tagFs = base * 0.26, tagDx = base * 0.40;
+  const glyphW = (str, fs, ls) => str.length * (0.46 * fs) + (str.length - 1) * (ls * fs);
+  const taglineW = tagline ? (glyphW('RULE THE DRAFT.', tagFs, 0.18) + tagDx + glyphW('OWN THE LEAGUE.', tagFs, 0.18)) : 0;
+  const logoW = tunaW + wordWidth - 2;
+  const vbW = tagline ? (Math.max(logoW, taglineW) + 28) : (tunaW + wordWidth + 12);
+  const ox = tagline ? ((vbW - logoW) / 2 - 2) : 0;
   const vbH = tagline ? base * 1.7 : base * 1.12;
   const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
@@ -2036,7 +2043,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
         </linearGradient>
       </defs>
-      <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(2,${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
+      <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
         {/* lunate tail */}
         <path d="M90 27 C 98 24, 106 14, 114 7 C 108 18, 103 26, 101 29 C 103 32, 108 40, 114 51 C 106 44, 98 34, 90 31 C 89 30, 89 28, 90 27 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1.1" strokeLinejoin="round" />
         {/* dorsal + anal sickle fins */}
@@ -2063,15 +2070,15 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <circle cx="16.5" cy="27" r="1.1" fill="#11181f" />
         <circle cx="15.4" cy="25.9" r="0.5" fill="#ffffff" />
       </g>
-      <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${tunaW},0)`}>
+      <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${tunaW + ox},0)`}>
         {placed.map((g, i) => (
           <text key={i} x={g.cx} y={cy} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
                 textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
         ))}
       </g>
       {tagline && (
-        <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.28}
-              letterSpacing="0.20em" textAnchor="middle" fill="#9fe1cb"><tspan>RULE THE DRAFT.</tspan><tspan dx={base * 0.5}>OWN THE LEAGUE.</tspan></text>
+        <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
+              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb"><tspan>RULE THE DRAFT.</tspan><tspan dx={tagDx}>OWN THE LEAGUE.</tspan></text>
       )}
     </svg>
   );
