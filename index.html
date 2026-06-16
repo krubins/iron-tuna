@@ -1130,6 +1130,7 @@ function scoreDefense(stats = {}, config, games = 17) {
   return pts;
 }
 function scorePlayer(player, config) {
+  if (player.projectedPointsOverride != null) return player.projectedPointsOverride;
   const { position, projectedStats } = player;
   if (!projectedStats) return 0;
   switch (position) {
@@ -1739,35 +1740,47 @@ function parseProjectionsCSV(csvText) {
       const val = parseFloat(row[csvCol]);
       if (!isNaN(val)) projectedStats[ourKey] = val;
     }
+    let position = (row[findKey(headers, /^pos|position$/i)] || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (position === 'DST' || position === 'DEFENSE') position = 'DEF';
+    const ptsCol = findKey(headers, /^(points|fpts|fpt|fantasypoints|proj(ected)?points|totalpoints)$/i);
+    const points = ptsCol ? parseFloat(row[ptsCol]) : NaN;
     rows.push({
       name: row[findKey(headers, /^name|player|playername$/i)] || '',
-      position: (row[findKey(headers, /^pos|position$/i)] || '').toUpperCase(),
+      position,
       team: (row[findKey(headers, /^team|tm$/i)] || '').toUpperCase(),
       projectedStats,
+      points: isNaN(points) ? null : points,
     });
   }
   return rows;
 }
 function findKey(headers, regex) { return headers.find(h => regex.test(h)); }
+// Header aliases map CSV columns -> engine stat keys. Tested against the header with
+// spaces/underscores/hyphens stripped, so they also cover ffanalytics snake_case
+// (pass_yds, rush_tds, rec, dst_sacks, dst_int, dst_pts_allowed, ...).
 const HEADER_ALIASES = {
-  passYd:   /^(pass.*y|py|passingyards?)$/i,
-  passTD:   /^(pass.*td|passingtd)s?$/i,
-  passInt:  /^(int|interception|pass.*int)s?$/i,
-  rushYd:   /^(rush.*y|ry|rushingyards?)$/i,
-  rushTD:   /^(rush.*td|rushingtd)s?$/i,
-  recYd:    /^(rec.*y|receivingyards?)$/i,
-  recTD:    /^(rec.*td|receivingtd)s?$/i,
-  rec:      /^(rec|receptions?|catches)$/i,
+  passYd:   /^(pass(ing)?y(ar)?ds?|py)$/i,
+  passTD:   /^(pass(ing)?tds?)$/i,
+  passInt:  /^(pass(ing)?int(erception)?s?|ints?|interceptions?)$/i,
+  pass2pt:  /^(pass(ing)?2p(t|ts|oint|oints)?)$/i,
+  rushYd:   /^(rush(ing)?y(ar)?ds?|ry)$/i,
+  rushTD:   /^(rush(ing)?tds?)$/i,
+  rush2pt:  /^(rush(ing)?2p(t|ts|oint|oints)?)$/i,
+  recYd:    /^(rec(eiving)?y(ar)?ds?)$/i,
+  recTD:    /^(rec(eiving)?tds?)$/i,
+  rec2pt:   /^(rec(eiving)?2p(t|ts|oint|oints)?)$/i,
+  rec:      /^(rec|reception|receptions|catches)$/i,
   fgMade:   /^(fg|fgm|fieldgoals?made?)$/i,
   fgMissed: /^(fgmissed|fgmiss)$/i,
   xpMade:   /^(xp|xpm|extrapoints?made?)$/i,
   xpMissed: /^(xpmissed|xpmiss|mxp)$/i,
-  sacks:      /^(sack|sk)s?$/i,
-  ints:       /^(defint|dint)s?$/i,
-  fumRec:     /^(fumrec|frec|fumblerecovery)/i,
-  defTD:      /^(deftd|defensivetd)s?$/i,
-  ptsAllowed: /^(pa|pointsallowed|paag)$/i,
-  safety:     /^(safety|sfty)s?$/i,
+  sacks:      /^((dst|def)?sacks?|sk)$/i,
+  ints:       /^((dst|def)int(erception)?s?|dints?)$/i,
+  fumRec:     /^((dst|def)?fum(ble)?s?rec(overy)?|frec)$/i,
+  defTD:      /^((dst|def)tds?|defensivetds?)$/i,
+  stTD:       /^((dst|def)?ret(urn)?tds?|sttds?|specialteamstds?)$/i,
+  ptsAllowed: /^((dst)?(pa|pointsallowed|ptsallowed|paag))$/i,
+  safety:     /^((dst|def)?(safety|safeties|sfty)s?)$/i,
 };
 function buildHeaderMap(headers) {
   const map = {};
@@ -3097,9 +3110,9 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
         </div>
         <div className="settings-section-title">Projections Import (CSV)</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Replace projections with a CSV (FantasyPros, ESPN, Yahoo, etc.). Columns: name, position, team, plus stats like passYd, passTD, passInt, rushYd, rushTD, recYd, recTD, rec, fgMade, sacks, ints, ptsAllowed.
+          Replace projections with a CSV — works directly with <b>ffanalytics</b> exports (its multi-source aggregate of FantasyPros, ESPN, CBS, NFL and more), plus FantasyPros / ESPN / Yahoo files. Columns are auto-detected: player, pos (DST is read as DEF), team, and stats like pass_yds, pass_tds, pass_int, rush_yds, rush_tds, rec, rec_yds, rec_tds, fg, dst_sacks, dst_int, dst_pts_allowed. If the file only has a points/fpts column, that is used directly.
         </p>
-        <button className="btn-secondary" onClick={() => fileRef.current.click()}>Import Projections CSV</button>
+        <button className="btn-secondary" onClick={() => fileRef.current.click()}>Import projections CSV (ffanalytics-ready)</button>
         <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFile} />
         <div style={{ marginTop: 24, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -6072,10 +6085,12 @@ function App() {
     try {
       const rows = parseProjectionsCSV(csvText);
       if (rows.length === 0) { alert('No rows found in CSV.'); return; }
-      const newPlayers = rows.filter(r => r.name && r.position).map(r => ({
+      const VALID = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+      const newPlayers = rows.filter(r => r.name && VALID.has(r.position)).map(r => ({
         id: `${r.name}-${r.position}-${r.team}`.replace(/\s+/g, '_'),
         name: r.name, position: r.position, team: r.team || 'FA',
         projectedStats: r.projectedStats,
+        projectedPointsOverride: (r.points != null && (!r.projectedStats || Object.keys(r.projectedStats).length === 0)) ? r.points : undefined,
         projectedPoints: 0, auctionValue: 0, inflatedValue: 0, vorp: 0, replacement: 0,
       }));
       setPlayers(newPlayers);
