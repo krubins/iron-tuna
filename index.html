@@ -3270,6 +3270,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                   <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 6, lineHeight: 1.5 }}>Starter forces them into your lineup; Reserve keeps them on the bench; Auto lets the model decide.</div>
                 </>
               )}
+              <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={() => { if (window.confirm(`Put ${pl.name} back into the available pool?`)) { onRemovePick && onRemovePick(detail.team.id, detail.pick.playerId); setDetail(null); } }}>↩ Unassign — return to pool</button>
             </div>
           </div>
         );
@@ -3402,7 +3403,7 @@ const STRAT_TILT = {
   heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onAddPlayer, teams, draftHistory }) {
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory }) {
   const cols = [['QB', 30], ['RB', 60], ['WR', 60], ['TE', 30], ['K', 32], ['DEF', 32]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -3451,7 +3452,8 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         if (tid && tid !== id) onRankReorder(id, tid);
       } else {
         if (mode === 'live') {
-          if (!(draftedIds && draftedIds.has(id)) && onAssignPlayer) { const pl = (players || []).find(x => x.id === id); if (pl) onAssignPlayer(pl); }
+          if (draftedIds && draftedIds.has(id)) { const pl = (players || []).find(x => x.id === id); if (pl && onUnassignPlayer && window.confirm(`Put ${pl.name} back into the available player pool?`)) onUnassignPlayer(id); }
+          else if (onAssignPlayer) { const pl = (players || []).find(x => x.id === id); if (pl) onAssignPlayer(pl); }
         } else {
           onToggleTarget && onToggleTarget(id);
         }
@@ -3512,7 +3514,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 nameTitle = sign === 'under' ? `Target — worth up to your $${you}; ~$${you - cost} of edge at the $${cost} price` : sign === 'over' ? `Fade — the $${cost} price is $${cost - you} above his value to your team ($${you})` : `Priced about right for your team ($${you})`;
               }
               return (
-              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted && dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price}` : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
+              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank">{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (p.team || '')}</span>
@@ -6199,6 +6201,11 @@ function App() {
       : t));
     setDraftHistory(prev => prev.filter(d => !(d.teamId === teamId && d.playerId === playerId)));
   }
+  function handleUnassignPlayer(playerId) {
+    const pick = draftHistory.find(d => d.playerId === playerId);
+    if (!pick) return;
+    handleRemovePick(pick.teamId, playerId);
+  }
   function handleExportRosters() {
     const pmap = new Map();
     personalizedPlayers.forEach(p => pmap.set(p.id, p));
@@ -6266,7 +6273,7 @@ function App() {
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
-          mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory} />
+          mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory} />
       ) : (
       <>
       {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-label">Heads up</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
