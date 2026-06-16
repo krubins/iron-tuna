@@ -779,6 +779,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.dock .coach-input textarea { min-height: 56px; }
 .main.board-main, .main.prep-main { padding-bottom: 150px; }
 .main.board-collapsed { grid-template-columns: 1fr auto; }
+.main.board-full { grid-template-columns: 1fr; }
+.board-layout.board-norail { grid-template-columns: 1fr; }
 .board-subtabs .subtab-2nd { color: var(--positive); border-color: rgba(45,212,163,0.4); }
 .board-split { display: flex; align-items: stretch; width: 100%; }
 .board-split-pane { min-width: 0; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 196px); padding-bottom: 8px; }
@@ -6397,15 +6399,8 @@ function App() {
     );
     const draftBoardEl = (
       <>
-      {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-label">Heads up</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
-      {nomInsight && <div className={`nomination-alert no-print tone-${nomInsight.tone}`}><span className="na-label">Up for bid</span><span>{nomInsight.text}</span></div>}
       <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="btn-secondary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddPlayer(true)}>+ Add player</button><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
-      <div className={`board-layout ${!railOpen ? 'rail-collapsed' : ''}`}>
-        {railOpen
-          ? <PlayersRail players={personalizedPlayers} draftedIds={draftedIds} teams={teams} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
-          green={planHighlights.green} yellow={planHighlights.yellow} targets={targets} onToggleTarget={handleToggleTarget} starred={starred} onToggleStar={handleToggleStar} customOrder={customOrder} onReorder={handleReorder}
-          onNominate={setCurrentNomination} onDraft={handleDraft} onRankMove={handleRankMove} onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} focusPlayer={focusPlayer} onCollapse={() => setRailOpen(false)} />
-          : <button className="rail-expand no-print" onClick={() => setRailOpen(true)} title="Show the players list">Players ›</button>}
+      <div className="board-layout board-norail">
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} />
       </div>
       </>
@@ -6437,9 +6432,9 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
-      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''} ${view === 'board' && boardTab === 'draftboard' && !splitMode ? 'board-full' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} mode={view === 'board' ? 'board' : 'prep'} teams={teams} marketState={marketState} />
+        {!(view === 'board' && boardTab === 'draftboard' && !splitMode) && <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} mode={view === 'board' ? 'board' : 'prep'} teams={teams} marketState={marketState} />}
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
