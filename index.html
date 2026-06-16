@@ -5925,7 +5925,14 @@ function App() {
       let worthPrice = null;
       if (!draftedIds.has(p.id) && relevant.has(p.id)) {
         worthPrice = switchPrice(p, baselinePoints, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
-        if (worthPrice != null) personalValue = Math.max(minBid, Math.min(maxBid, worthPrice));
+        if (worthPrice != null) {
+          // 'worthPrice' is the absolute breakeven (you gain nothing there); a realistic max
+          // sits partway between the player's normal price and that breakeven, so elite edges
+          // read as a premium, not half your budget.
+          const anchor = Math.max(base, p.marketValue ?? base);
+          const moderated = worthPrice > anchor ? anchor + (worthPrice - anchor) * 0.5 : worthPrice;
+          personalValue = Math.max(minBid, Math.min(maxBid, Math.round(moderated)));
+        }
       }
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : (isTgt ? 'target' : (needEligPos.has(p.position) ? 'open' : 'fade'));
