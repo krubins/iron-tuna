@@ -361,10 +361,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .tp-team .tp-sub { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); margin: 2px 0 4px; }
 .tp-row { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary); padding: 1px 0; }
 .tp-row .tp-pos { color: var(--text-muted); font-family: var(--font-mono); }
-@media (max-width: 1360px) { .board-layout { grid-template-columns: 1fr; } .teams-panel { position: static; max-height: none; } }
+@media (max-width: 1360px) { .board-layout, .board-layout.rail-collapsed { grid-template-columns: 1fr; } .teams-panel { position: static; max-height: none; } }
 
 .players-rail { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; position: sticky; top: 0; max-height: calc(100vh - 130px); overflow-y: auto; }
-.rail-head { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.05em; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px; }
+.rail-head { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.05em; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rail-collapse { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0; background: var(--bg-elev); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 17px; line-height: 1; flex: 0 0 auto; }
+.board-layout.rail-collapsed { grid-template-columns: auto minmax(0, 1fr); }
+.rail-expand { align-self: flex-start; position: sticky; top: 0; background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--positive); writing-mode: vertical-rl; padding: 16px 6px; border-radius: var(--radius-md); cursor: pointer; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mono); }
+.rail-expand:hover { background: var(--bg-elev); }
 .rail-legend { display: flex; gap: 12px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px; }
 .rail-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
 .rail-legend .g { background: #2ec85f; } .rail-legend .y { background: var(--gold); }
@@ -4468,7 +4472,7 @@ function TeamsPanel({ teams, players, config, seasonGames }) {
 // ─── components/PlayersRail.jsx ──────────────────────────
 // Narrow available-players rail for the auction screen. Highlights the plan's
 // ideal starters (green) and reserve targets (yellow). Star + manual reorder.
-function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGames, green, yellow, targets, onToggleTarget, starred, onToggleStar, customOrder, onReorder, onNominate, onDraft, onRankMove, onRankReorder, onResetRanks, focusPlayer }) {
+function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGames, green, yellow, targets, onToggleTarget, starred, onToggleStar, customOrder, onReorder, onNominate, onDraft, onRankMove, onRankReorder, onResetRanks, focusPlayer, onCollapse }) {
   const [search, setSearch] = useState('');
   const [posFilter, setPosFilter] = useState('ALL');
   const [filterMode, setFilterMode] = useState('all'); // all | targets | star
@@ -4577,7 +4581,7 @@ function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGam
   const myBoard = sortMode === 'myboard';
   return (
     <aside className="players-rail">
-      <div className="rail-head">Available · {list.length}</div>
+      <div className="rail-head"><span>Available · {list.length}</span>{onCollapse && <button className="rail-collapse no-print" onClick={onCollapse} title="Minimize panel" aria-label="Minimize panel">−</button>}</div>
       <div className="rail-legend"><span><span className="dot g"></span>Ideal starter</span><span><span className="dot y"></span>Reserve target</span></div>
       <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: '0.04em', lineHeight: 1.5 }}>● = force into lineup · <b>Proj</b> = likely market price · <b>Val</b> = VBD value · <b style={{color:'var(--gold-text)'}}>You</b> = your max bid</div>
       <div className="rail-controls">
@@ -5878,6 +5882,7 @@ function App() {
   const [assignPlayer, setAssignPlayer] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [railOpen, setRailOpen] = useState(true);
   const [purchaseToast, setPurchaseToast] = useState(null);
   useEffect(() => { if (!purchaseToast) return; const t = setTimeout(() => setPurchaseToast(null), 5500); return () => clearTimeout(t); }, [purchaseToast]);
   const [pointsMode, setPointsMode] = useState('perWeek'); // per-game is the only unit
@@ -6304,10 +6309,12 @@ function App() {
       {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-label">Heads up</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
       {nomInsight && <div className={`nomination-alert no-print tone-${nomInsight.tone}`}><span className="na-label">Up for bid</span><span>{nomInsight.text}</span></div>}
       <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="btn-secondary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddPlayer(true)}>+ Add player</button><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
-      <div className="board-layout">
-        <PlayersRail players={personalizedPlayers} draftedIds={draftedIds} teams={teams} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
+      <div className={`board-layout ${!railOpen ? 'rail-collapsed' : ''}`}>
+        {railOpen
+          ? <PlayersRail players={personalizedPlayers} draftedIds={draftedIds} teams={teams} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
           green={planHighlights.green} yellow={planHighlights.yellow} targets={targets} onToggleTarget={handleToggleTarget} starred={starred} onToggleStar={handleToggleStar} customOrder={customOrder} onReorder={handleReorder}
-          onNominate={setCurrentNomination} onDraft={handleDraft} onRankMove={handleRankMove} onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} focusPlayer={focusPlayer} />
+          onNominate={setCurrentNomination} onDraft={handleDraft} onRankMove={handleRankMove} onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} focusPlayer={focusPlayer} onCollapse={() => setRailOpen(false)} />
+          : <button className="rail-expand no-print" onClick={() => setRailOpen(true)} title="Show the players list">Players ›</button>}
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} />
       </div>
       </>
