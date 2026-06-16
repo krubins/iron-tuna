@@ -1252,7 +1252,8 @@ function calculateAuctionValues(players, config) {
   });
   const rankMap = {};
   Object.keys(byPos).forEach(pos => byPos[pos].forEach((p, i) => { rankMap[p.id] = i; }));
-  const effVorp = p => (p.vorp || 0) * reliabilityFactor(p.position, rankMap[p.id] || 0);
+  const VORP_CONCAVITY = 0.75; // flatten the top: studs cost less, budget spreads to the mid tier
+  const effVorp = p => Math.pow(Math.max(0, p.vorp || 0), VORP_CONCAVITY) * reliabilityFactor(p.position, rankMap[p.id] || 0);
   const totalVORP = players.filter(p => rostered.has(p.id)).reduce((sum, p) => sum + effVorp(p), 0);
   const budgetAboveMins = totalBudget - (teams * totalSpots * minBid);
   return players.map(p => {
