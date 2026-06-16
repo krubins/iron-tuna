@@ -442,6 +442,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .draft-alert-icon { color: #ffb13d; font-size: 16px; }
 .draft-alert-x { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
 .draft-alert-x:hover { color: var(--text-primary); }
+.nomination-alert { display: flex; align-items: center; gap: 11px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-left: 3px solid var(--positive); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); animation: alertIn 0.3s ease-out; }
+.nomination-alert.tone-good { border-left-color: var(--positive); }
+.nomination-alert.tone-info { border-left-color: var(--gold-text); }
+.na-label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.07em; font-size: 13px; color: var(--positive); white-space: nowrap; }
+.nomination-alert.tone-info .na-label { color: var(--gold-text); }
 .purchase-toast { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 200; max-width: 660px; padding: 12px 20px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 12px 34px rgba(0,0,0,0.55); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-primary); animation: purchaseIn 0.28s ease-out; text-align: center; }
 .purchase-toast.tone-good { background: linear-gradient(90deg, rgba(45,212,163,0.22), rgba(45,212,163,0.09)); border-color: var(--positive); }
 .purchase-toast.tone-bad { background: linear-gradient(90deg, rgba(239,68,68,0.22), rgba(239,68,68,0.09)); border-color: var(--danger); }
@@ -5115,6 +5120,8 @@ function coachWhyPlan(q, ctx) {
 }
 function draftAlerts(players, myTeam, plan, config, draftedIds, games) {
   if (!myTeam || !plan) return null;
+  const pivot = strategyPivot(players, myTeam, plan, config, draftedIds, games);
+  if (pivot) return { pos: 'PIVOT', urgency: 100, text: pivot.text, tone: pivot.tone };
   const di = draftedIds || new Set();
   const g = games || 17;
   const byPos = {};
@@ -5148,6 +5155,52 @@ function findTierCliff(list, g) {
   const above = top.slice(0, best.idx);
   best.aboveAvg = (above.reduce((s, p) => s + p.projectedPoints, 0) / above.length / g).toFixed(1);
   return best;
+}
+function strategyPivot(players, myTeam, plan, config, draftedIds, games) {
+  if (!myTeam || !plan) return null;
+  const di = draftedIds || new Set();
+  const g = games || 17;
+  const teamsN = config.teams || 12;
+  const need = new Set((plan.remainingStarterSlots || []).map(s => s.basePos).filter(Boolean));
+  const myCount = pos => (myTeam.roster || []).filter(r => r.position === pos).length;
+  const allByPos = {};
+  (players || []).forEach(p => (allByPos[p.position] = allByPos[p.position] || []).push(p));
+  Object.values(allByPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
+  function elite(pos, frac) {
+    const arr = allByPos[pos] || []; if (arr.length < 4) return null;
+    const eliteN = Math.max(3, Math.round(teamsN * frac));
+    const top = arr.slice(0, eliteN);
+    const goneN = top.filter(pp => di.has(pp.id)).length;
+    return { eliteN, goneN, leftN: eliteN - goneN, pctGone: goneN / eliteN };
+  }
+  const rbNeed = need.has('RB') || need.has('FLEX') || (config.roster.RB && myCount('RB') < (config.roster.RB.starters || 0));
+  const wrNeed = need.has('WR') || need.has('FLEX') || (config.roster.WR && myCount('WR') < (config.roster.WR.starters || 0));
+  const rb = elite('RB', 1.0), wr = elite('WR', 1.0), te = elite('TE', 0.6);
+  if (rbNeed && rb && rb.pctGone >= 0.7 && myCount('RB') <= 1)
+    return { text: `Elite RBs are nearly gone (${rb.leftN} left of the top ${rb.eliteN}). Pivot toward Zero RB — load WR/TE value now and chase RB upside late.`, tone: 'bad' };
+  if (wrNeed && wr && wr.pctGone >= 0.7 && myCount('WR') <= 1)
+    return { text: `Top WRs are thinning (${wr.leftN} left of the top ${wr.eliteN}) — prioritize a WR before the tier flattens.`, tone: 'bad' };
+  if ((need.has('TE')) && te && te.pctGone >= 0.7 && myCount('TE') === 0)
+    return { text: `The clear-tier TEs are almost gone — grab one now or punt TE and stream it cheap.`, tone: 'bad' };
+  return null;
+}
+function nominationInsight(player, players, myTeam, teams, plan, config, draftedIds, marketState, games) {
+  if (!player) return null;
+  const di = draftedIds || new Set();
+  const g = games || 17;
+  const pos = player.position;
+  const list = (players || []).filter(p => p.position === pos && !di.has(p.id)).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+  const rank = Math.max(1, list.findIndex(p => p.id === player.id) + 1);
+  const ppg = (player.projectedPoints || 0) / g;
+  const you = player.personalValue != null ? player.personalValue : (player.auctionValue || 0);
+  const proj = player.marketValue != null ? player.marketValue : (player.auctionValue || 0);
+  const parts = [`${player.name} — ${pos}${rank}, ${ppg.toFixed(1)} pts/gm.`];
+  const cliff = findTierCliff(list, g);
+  if (cliff && rank <= cliff.idx && cliff.drop >= 1.2) parts.push(`Top-tier ${pos} — a ${cliff.drop} pt/gm cliff hits after ${pos}${cliff.idx}.`);
+  if (player.worthPrice != null) parts.push(`Worth up to $${player.worthPrice} to your team${proj ? ` (proj $${proj})` : ''}.`);
+  else parts.push(`Your max $${you}${proj ? ` · proj $${proj}` : ''}.`);
+  if (teams && myTeam) { const comp = opponentCompetition(player, teams, myTeam, config); parts.push(`${comp.canAfford} rival${comp.canAfford !== 1 ? 's' : ''} can afford him${comp.maxRival > 0 ? ` (top max $${comp.maxRival})` : ''}.`); }
+  return { text: parts.join(' '), tone: (you >= proj) ? 'good' : 'info' };
 }
 function coachStrategy(q, ctx) {
   const t = q.toLowerCase();
@@ -6139,6 +6192,7 @@ function App() {
   }, [teams, personalizedPlayers, config, draftedIds, targets, roleOverrides]);
   const [dismissedAlert, setDismissedAlert] = useState(null);
   const draftAlert = useMemo(() => draftAlerts(personalizedPlayers, myTeam, plan, config, draftedIds, SEASON_GAMES), [personalizedPlayers, myTeam, plan, config, draftedIds]);
+  const nomInsight = useMemo(() => liveNomination ? nominationInsight(liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState, SEASON_GAMES) : null, [liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState]);
   const planHighlights = useMemo(() => {
     const greenS = new Set(), yellowS = new Set();
     const mt = teams.find(t => t.isMine);
@@ -6180,6 +6234,7 @@ function App() {
       ) : (
       <>
       {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-label">Heads up</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
+      {nomInsight && <div className={`nomination-alert no-print tone-${nomInsight.tone}`}><span className="na-label">Up for bid</span><span>{nomInsight.text}</span></div>}
       <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="btn-secondary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddPlayer(true)}>+ Add player</button><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
       <div className="board-layout">
         <PlayersRail players={personalizedPlayers} draftedIds={draftedIds} teams={teams} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
