@@ -554,7 +554,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .insights-locked .il-sub { font-size: 11px; color: var(--text-secondary); margin: 6px 0 12px; line-height: 1.5; }
 .share-grade-btn { width: 100%; margin-bottom: 10px; background: var(--bg-elev); border: 1px solid var(--border-strong); color: var(--text-primary); padding: 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
 .share-grade-btn:hover { border-color: var(--gold-text); color: var(--gold-text); }
-.sidebar-collapse { width: 100%; margin-bottom: 8px; background: var(--bg-elev); border: 1px solid var(--border-subtle); color: var(--text-muted); padding: 6px; border-radius: var(--radius-sm); cursor: pointer; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-mono); }
+.sidebar-collapse { align-self: flex-end; width: 26px; height: 26px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; padding: 0; background: var(--bg-elev); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 18px; line-height: 1; }
 .sidebar-collapse:hover { color: var(--text-primary); border-color: var(--border-strong); }
 .sidebar-expand { align-self: flex-start; position: sticky; top: 16px; height: fit-content; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-right: none; color: var(--positive); writing-mode: vertical-rl; padding: 16px 6px; border-radius: var(--radius-md) 0 0 var(--radius-md); cursor: pointer; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-mono); }
 .sidebar-expand:hover { background: var(--bg-elev); }
@@ -713,6 +713,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-grid.has-hl .cheat-row:not(.cheat-hl) { opacity: 0.4; }
 .cheat-row.cheat-target { background: rgba(45,212,163,0.12); }
 .cheat-row.cheat-target .cheat-name::before { content: '●'; color: var(--positive); margin-right: 4px; font-size: 9px; }
+.cheat-row.cheat-target .cheat-rank { color: var(--positive); font-weight: 700; }
+.cheat-rank:hover { color: var(--positive); }
 .cheat-grid.has-hl .cheat-row.cheat-target { opacity: 1; }
 .prep-main { grid-template-columns: 1fr 208px; }
 .models-panel { padding: 12px 10px; }
@@ -745,6 +747,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.dock .coach-input { flex: 0 0 380px; order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; }
 .coach.dock .coach-input textarea { min-height: 56px; }
 .main.board-main { padding-bottom: 256px; }
+.main.board-collapsed { grid-template-columns: 1fr auto; }
 .board-subtabs .subtab-2nd { color: var(--positive); border-color: rgba(45,212,163,0.4); }
 @media print { .coach.dock { display: none !important; } }
 .cheat-col-head { border-top: 2px solid var(--gold-text); }
@@ -2451,7 +2454,7 @@ function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketSta
   const maxBidValue = myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * config.valuation.minBid;
   return (
     <aside className="sidebar">
-      {onCollapse && <button className="sidebar-collapse no-print" onClick={onCollapse} title="Hide this panel for more board width">⟩ Hide panel</button>}
+      {onCollapse && <button className="sidebar-collapse no-print" onClick={onCollapse} title="Minimize panel" aria-label="Minimize panel">−</button>}
       {onShare && <button className="share-grade-btn" onClick={() => onShare(buildGradeText(myTeam, plan, config, seasonGames))}>Share draft grade →</button>}
       <div className="sidebar-tabs">
         <button className={`sidebar-tab ${tab === 'team' ? 'active' : ''}`} onClick={() => setTab('team')}>My Team</button>
@@ -3528,7 +3531,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               }
               return (
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
-                <span className="cheat-rank">{i + 1}</span>
+                <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (p.team || '')}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price — click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
@@ -6322,7 +6325,7 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
-      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
         {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : !sidebarOpen ? <button className="sidebar-expand no-print" onClick={() => setSidebarOpen(true)} title="Show side panel">‹ Panel</button> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
           currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} onCollapse={() => setSidebarOpen(false)} />}
