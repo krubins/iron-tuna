@@ -2012,7 +2012,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const center = (n - 1) / 2;
   const base = 50;
   const shrink = 0.52;
-  const sizes = word.map((_, i) => { const d = 1 - Math.abs(i - center) / center; return base * (1 - shrink * d); });
+  const sizes = word.map((_, i) => { const d = 1 - Math.abs(i - center) / center; return base * (1 - shrink * d) * 0.84; });
   if (sizes.length >= 6) { sizes[3] = sizes[2]; sizes[4] = sizes[5]; }
   const tracking = 1.5;
   const wordGap = base * 0.30;
@@ -2026,7 +2026,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return (
-    <svg className={className} viewBox={`0 0 ${vbW} ${vbH}`} style={{ height, width: 'auto', display: 'block', overflow: 'visible' }} xmlns="http://www.w3.org/2000/svg">
+    <svg className={className} viewBox={`0 0 ${vbW} ${vbH}`} style={{ height, width: 'auto', display: 'block' }} xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="ironBody" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#eef3f7" /><stop offset="16%" stopColor="#c2cdd7" /><stop offset="48%" stopColor="#6c7a88" />
@@ -2069,12 +2069,10 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
                 textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
         ))}
       </g>
-      {tagline && (<>
-        <text x={tunaW * 0.46} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.30}
-              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb">RULE THE DRAFT.</text>
-        <text x={tunaW + wordWidth / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.30}
-              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb">OWN THE LEAGUE.</text>
-      </>)}
+      {tagline && (
+        <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.28}
+              letterSpacing="0.20em" textAnchor="middle" fill="#9fe1cb"><tspan>RULE THE DRAFT.</tspan><tspan dx={base * 0.5}>OWN THE LEAGUE.</tspan></text>
+      )}
     </svg>
   );
 }
