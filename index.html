@@ -4526,6 +4526,7 @@ function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGam
 // ─── App.jsx ──────────────────────────
 const STORAGE_KEY = 'iron_tuna_draft_state_v2';
 const PROJ_KEY = 'tn$9xQ27z';
+const PROJ_VERSION = '2026.1-cbs';
 function _xb64decode(s, key) {
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
@@ -5898,13 +5899,17 @@ function App() {
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
   // ── pull baseline projections from the server (kept out of the client) ──
   useEffect(() => {
-    if (initialState?.players && initialState.players.length) return;
+    const savedFresh = initialState?.players && initialState.players.length && initialState.projVersion === PROJ_VERSION;
+    if (savedFresh) return;
     let cancelled = false;
     (async () => {
       try {
         const data = await fetchBaselineProjections();
-        if (!cancelled && data && data.length) setPlayers(buildInitialPlayers(data));
-      } catch (e) { /* offline: user can Load live data */ }
+        if (!cancelled && data && data.length) {
+          setPlayers(buildInitialPlayers(data));
+          setDataInfo({ source: 'CBS 2026', season: 2026, count: data.length, when: Date.now() });
+        }
+      } catch (e) { /* offline: keep current pool */ }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -5997,7 +6002,7 @@ function App() {
   useEffect(() => {
     if (remoteApplyRef.current) { remoteApplyRef.current = false; return; }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, players, teams, draftHistory, pointsMode, dataInfo, starred: Array.from(starred), customOrder, targets: Array.from(targets), rankOrder, roleOverrides, valueAdjust, priceOverrides }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, players, teams, draftHistory, pointsMode, dataInfo, projVersion: PROJ_VERSION, starred: Array.from(starred), customOrder, targets: Array.from(targets), rankOrder, roleOverrides, valueAdjust, priceOverrides }));
     } catch (e) {}
   }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides]);
   useEffect(() => {
