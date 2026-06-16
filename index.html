@@ -766,8 +766,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-hero { min-height: calc(100vh - 60px); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .lp-hero .landing-logo { margin-bottom: 76px; }
 .lp-hero .lp-head { margin-top: 4px; }
-.lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.01em; color: var(--text-primary); line-height: 1.05; margin: 20px 0 14px; max-width: 760px; }
-.lp-sub { font-size: clamp(17px, 2.3vw, 22px); color: var(--text-secondary); max-width: 720px; line-height: 1.5; margin: 0 0 26px; }
+.lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.02em; color: var(--text-primary); line-height: 1.06; margin: 10px 0 22px; max-width: 760px; }
+.lp-sub { font-size: clamp(17px, 2.2vw, 21px); color: var(--text-secondary); max-width: 560px; line-height: 1.6; margin: 0 0 34px; }
 .lp-sub b { color: var(--gold-text); }
 .lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; width: 100%; margin-bottom: 22px; }
 .lp-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; text-align: left; }
@@ -780,6 +780,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-cta-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; }
 .lp-cta-alt { background: var(--positive); color: #06281f; border: 1px solid var(--positive); box-shadow: 0 8px 26px rgba(45,212,163,0.34); }
 .lp-cta-alt:hover { background: var(--positive); filter: brightness(1.07); }
+.lp-cta-quiet { background: none; border: none; color: var(--text-secondary); font-family: var(--font-display); font-size: 16px; letter-spacing: 0.06em; cursor: pointer; padding: 14px 10px; transition: color 0.14s; }
+.lp-cta-quiet:hover { color: var(--text-primary); }
 .lp-subline { color: var(--text-muted); margin-top: 16px; }
 .lp-sub-link { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.22); text-underline-offset: 4px; transition: color 0.12s, text-decoration-color 0.12s; }
 .lp-sub-link:hover { color: var(--text-primary); text-decoration-color: var(--gold-text); }
@@ -2170,9 +2172,12 @@ function LandingSplash({ onDismiss, onNav }) {
       <div className="lp-inner">
         <div className="lp-hero">
         <LogoMark tagline wavy height={340} className="landing-logo" />
-        <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
-        <p className="lp-sub lp-sub-link" style={{ marginBottom: 6 }} onClick={() => go('prep')}>Click here for <b>free auction values</b> you can customize to your league’s scoring system and your exact strategy.</p>
-        <p className="lp-sub lp-subline lp-sub-link" onClick={() => go('board')}>Click here for <b>Advanced Auction Day Management</b>: who to bid on, how high to go, and why.</p>
+        <h1 className="lp-head">Know what every player is worth.</h1>
+        <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a live navigator: who to bid on, how high, and why.</p>
+        <div className="lp-cta-row" style={{ marginTop: 4 }}>
+          <button className="lp-cta" onClick={() => go('prep')}>Get my auction values</button>
+          <button className="lp-cta-quiet" onClick={() => go('board')}>Auction-day management →</button>
+        </div>
         </div>
         <div className="lp-phases-wrap">
           <h2 className="lp-phases-title">Two phases. One edge.</h2>
