@@ -646,7 +646,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-tilt input[type=range]:disabled { opacity: 0.4; cursor: default; }
 .cheat-tilt-val { font-family: var(--font-mono); font-size: 10px; color: var(--positive); min-width: 70px; }
 .only-print { display: none; }
-.cheat-col-labels { display: none; }
+.cheat-col-labels { display: grid; gap: 4px; align-items: center; padding: 3px 7px; font-size: 8px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); background: rgba(255,255,255,0.025); border-bottom: 1px solid var(--border-subtle); }
+.cheat-col-labels span:nth-child(n+4) { text-align: right; }
 .cheat-print-foot { display: none; }
 .cheat-print-head { font-family: var(--font-display); font-size: 16px; color: #000; margin-bottom: 6px; }
 @media print {
@@ -911,7 +912,7 @@ input:focus, select:focus { border-color: var(--accent); }
       <h1>IRON TUNA</h1>
       <p>Rule the Draft. Own the League.</p>
       <p style="max-width:640px;margin:10px auto 0;color:#a4adba;font-size:14px;line-height:1.55">The most comprehensive AI tool for fantasy football auction drafts — free custom auction values for your exact league and scoring, a budget-aware optimal-lineup planner, and a live AI auction navigator.</p>
-      <p class="splash-version">v0.5.0 · 2026-06-12</p>
+      <p class="splash-version">v0.6.0 · 2026-06-15</p>
     </div>
   </div>
   <noscript>
