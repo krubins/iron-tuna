@@ -1217,6 +1217,15 @@ function calculateVORP(players, replacement) {
     vorp: Math.max(0, p.projectedPoints - (replacement[p.position] || 0)),
   }));
 }
+// Position/tier reliability: consistent positions hold value; injury-prone and
+// volatile ones (esp. kickers, defenses) are discounted, freeing budget for the
+// dependable studs. Deeper tiers are noisier, so they take a mild extra haircut.
+const POS_RELIABILITY = { QB: 1.0, RB: 0.90, WR: 0.97, TE: 0.93, K: 0.35, DEF: 0.55 };
+function reliabilityFactor(pos, rank) {
+  const base = POS_RELIABILITY[pos] != null ? POS_RELIABILITY[pos] : 1;
+  const tier = Math.max(0.82, 1 - 0.006 * Math.max(0, rank));
+  return base * tier;
+}
 function calculateAuctionValues(players, config) {
   const { teams, valuation } = config;
   const minBid = valuation.minBid;
@@ -1230,13 +1239,16 @@ function calculateAuctionValues(players, config) {
     const n = cfg.total * teams;
     (byPos[pos] || []).slice(0, n).forEach(p => rostered.add(p.id));
   });
-  const totalVORP = players.filter(p => rostered.has(p.id)).reduce((sum, p) => sum + p.vorp, 0);
+  const rankMap = {};
+  Object.keys(byPos).forEach(pos => byPos[pos].forEach((p, i) => { rankMap[p.id] = i; }));
+  const effVorp = p => (p.vorp || 0) * reliabilityFactor(p.position, rankMap[p.id] || 0);
+  const totalVORP = players.filter(p => rostered.has(p.id)).reduce((sum, p) => sum + effVorp(p), 0);
   const budgetAboveMins = totalBudget - (teams * totalSpots * minBid);
   return players.map(p => {
     if (!rostered.has(p.id) || p.vorp <= 0 || totalVORP <= 0) {
       return { ...p, auctionValue: minBid };
     }
-    const value = minBid + (p.vorp / totalVORP) * budgetAboveMins;
+    const value = minBid + (effVorp(p) / totalVORP) * budgetAboveMins;
     return { ...p, auctionValue: Math.max(minBid, Math.round(value)) };
   });
 }
