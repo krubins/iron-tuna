@@ -4,23 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
-  <title>Iron Tuna — Custom Fantasy Football Auction Values &amp; AI Auction Draft Assistant</title>
-  <meta name="description" content="Iron Tuna gives you custom fantasy football auction values for your exact league — three numbers per player, a budget-aware optimal-lineup planner, and an AI auction navigator that says who to bid on and how high. The most comprehensive AI fantasy football auction draft tool." />
+  <title>Iron Tuna: Custom Fantasy Football Auction Values &amp; AI Auction Draft Assistant</title>
+  <meta name="description" content="Iron Tuna gives you custom fantasy football auction values for your exact league, three numbers per player, a budget-aware optimal-lineup planner, and an AI auction navigator that says who to bid on and how high. The most comprehensive AI fantasy football auction draft tool." />
   <meta name="keywords" content="fantasy football auction, auction values, custom auction values, AI fantasy football auction, fantasy auction, fantasy football auction values, auction draft, AI auction assistant, VBD auction values, auction draft assistant" />
   <meta name="author" content="Iron Tuna" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Iron Tuna" />
-  <meta property="og:title" content="Iron Tuna — know what every player is worth to YOUR team" />
+  <meta property="og:title" content="Iron Tuna: know what every player is worth to YOUR team" />
   <meta property="og:description" content="The auction-draft command center: personalized values, a budget-aware planner, and a live read on every rival. Free to try." />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Iron Tuna — Fantasy Auction Draft Assistant" />
+  <meta name="twitter:title" content="Iron Tuna: Fantasy Auction Draft Assistant" />
   <meta name="twitter:description" content="Three honest numbers per player, a budget-aware planner, and a live Value Coach. Draft like you have an unfair advantage." />
   <link rel="canonical" href="https://irontuna.com/" />
   <meta property="og:url" content="https://irontuna.com/" />
   <meta property="og:image" content="https://irontuna.com/og.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Iron Tuna — custom fantasy football auction values and AI auction draft assistant" />
+  <meta property="og:image:alt" content="Iron Tuna: custom fantasy football auction values and AI auction draft assistant" />
   <meta name="twitter:image" content="https://irontuna.com/og.png" />
   <meta name="robots" content="index, follow, max-image-preview:large" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -930,14 +930,14 @@ input:focus, select:focus { border-color: var(--accent); }
     <div class="splash">
       <h1>IRON TUNA</h1>
       <p>Rule the Draft. Own the League.</p>
-      <p style="max-width:640px;margin:10px auto 0;color:#a4adba;font-size:14px;line-height:1.55">The most comprehensive AI tool for fantasy football auction drafts — free custom auction values for your exact league and scoring, a budget-aware optimal-lineup planner, and a live AI auction navigator.</p>
+      <p style="max-width:640px;margin:10px auto 0;color:#a4adba;font-size:14px;line-height:1.55">The most comprehensive AI tool for fantasy football auction drafts, free custom auction values for your exact league and scoring, a budget-aware optimal-lineup planner, and a live AI auction navigator.</p>
       <p class="splash-version">v0.6.0 · 2026-06-15</p>
     </div>
   </div>
   <noscript>
     <main style="max-width:820px;margin:0 auto;padding:28px;color:#f5f7fa;font-family:Inter,system-ui,sans-serif;line-height:1.6">
-      <h1>Iron Tuna — Custom Fantasy Football Auction Values &amp; AI Auction Draft Assistant</h1>
-      <p>Iron Tuna is the most comprehensive AI tool for fantasy football auction drafts. It generates custom auction values for your exact league — three honest numbers for every player (likely market price, true VBD value, and your personal maximum bid) — plus a budget-aware lineup planner and an AI fantasy auction navigator. Whether you call it a fantasy auction, a fantasy football auction draft, or simply custom auction values, Iron Tuna is built for it.</p>
+      <h1>Iron Tuna: Custom Fantasy Football Auction Values &amp; AI Auction Draft Assistant</h1>
+      <p>Iron Tuna is the most comprehensive AI tool for fantasy football auction drafts. It generates custom auction values for your exact league, three honest numbers for every player (likely market price, true VBD value, and your personal maximum bid), plus a budget-aware lineup planner and an AI fantasy auction navigator. Whether you call it a fantasy auction, a fantasy football auction draft, or simply custom auction values, Iron Tuna is built for it.</p>
       <h2>Free</h2>
       <ul>
         <li>Custom auction values for your exact league and scoring</li>
@@ -957,7 +957,7 @@ input:focus, select:focus { border-color: var(--accent); }
       <h3>Does it work for any auction league?</h3>
       <p>Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.</p>
       <h3>How is it different from other tools?</h3>
-      <p>Most tools hand you one generic auction value. Iron Tuna gives three numbers per player — market price, true value, and your personal max — plus an AI navigator that tells you exactly how high to go in real time.</p>
+      <p>Most tools hand you one generic auction value. Iron Tuna gives three numbers per player, market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time.</p>
       <h3>Will it work on draft night?</h3>
       <p>Yes. It runs entirely in your browser and keeps working even if the Wi-Fi drops.</p>
     </main>
@@ -1382,7 +1382,7 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
     id: 'team-rank', severity: myRank <= Math.ceil(teams.length / 3) ? 'opportunity' : 'info',
     headline: `Your build projects #${myRank} of ${teams.length}`,
     detail: `If your plan and targets land, your starters project ${(plan.starterPoints / games).toFixed(1)} pts/gm.`,
-    action: myRank <= 4 ? "Strong roster — protect the edge, don't overspend chasing extras." : 'Climb by upgrading your weakest starter when value appears.',
+    action: myRank <= 4 ? "Strong roster, protect the edge, don't overspend chasing extras." : 'Climb by upgrading your weakest starter when value appears.',
   });
   const starterFilled = plan.slots.filter(s => s.isStarter && s.player);
   if (starterFilled.length >= 5) {
@@ -1390,7 +1390,7 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
     out.push({
       id: 'weak-slot', severity: 'info',
       headline: `Weakest starter: ${posLabel(weakest.basePos === 'FLEX' ? 'FLEX' : weakest.basePos)}`,
-      detail: `${weakest.label} projects ${(weakest.player.projectedPoints / games).toFixed(1)} pts/gm${weakest.status === 'target' ? ` (target: ${weakest.player.name})` : ''} — your lowest starter.`,
+      detail: `${weakest.label} projects ${(weakest.player.projectedPoints / games).toFixed(1)} pts/gm${weakest.status === 'target' ? ` (target: ${weakest.player.name})` : ''}, your lowest starter.`,
       action: "That's your best upgrade spot if value opens up.",
     });
   }
@@ -1400,11 +1400,11 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
   if (openStarters > 0 && perSlot < 3 && myTeam.spotsRemaining > 2) {
     out.push({ id: 'guard-thin', severity: 'warning', headline: 'Budget getting thin',
       detail: `$${myTeam.budgetRemaining} for ${myTeam.spotsRemaining} spots (~$${perSlot.toFixed(1)}/slot) with ${openStarters} starter${openStarters > 1 ? 's' : ''} still open.`,
-      action: 'You risk being forced into $1 starters — fill your open starting slots now, before the value dries up.' });
+      action: 'You risk being forced into $1 starters, fill your open starting slots now, before the value dries up.' });
   } else if (myTeam.spotsRemaining > 0 && perSlot > 12 && openStarters <= 2) {
     out.push({ id: 'guard-surplus', severity: 'opportunity', headline: 'You have spending power',
       detail: `~$${Math.round(perSlot)}/slot with only ${openStarters} starter${openStarters !== 1 ? 's' : ''} left to fill.`,
-      action: 'Push on the next player you actually want — your max bid towers over the field.' });
+      action: 'Push on the next player you actually want, your max bid towers over the field.' });
   }
   // Nomination strategy
   const minBidN = config.valuation.minBid;
@@ -1420,7 +1420,7 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
   const steal = availN.filter(p => iNeed(p.position) && (p.marketValue || 0) >= 8).map(p => { const needy = oppNeeding(p.position); const canOutbid = needy.filter(t => tmaxN(t) >= (p.marketValue || 1)).length; return { p, canOutbid }; }).filter(x => x.canOutbid <= 1).sort((a, b) => a.canOutbid - b.canOutbid)[0];
   if (steal) out.push({ id: 'nom-steal', severity: 'opportunity', headline: `Nominate ${steal.p.name} to steal him`,
     detail: `You need a ${steal.p.position} and only ${steal.canOutbid} rival can outbid you.`,
-    action: 'Float him now while the room cannot compete — likely a discount.' });
+    action: 'Float him now while the room cannot compete, likely a discount.' });
   const live = [...(targets || [])].filter(id => !draftedIds.has(id));
   if (live.length) {
     const cost = live.reduce((sum, id) => { const p = players.find(x => x.id === id); return sum + (p ? (p.inflatedValue ?? p.auctionValue ?? 1) : 1); }, 0);
@@ -1428,7 +1428,7 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
       id: 'targets-sum', severity: 'info',
       headline: `${live.length} active target${live.length > 1 ? 's' : ''}`,
       detail: `Landing them at est ~$${cost}, leaving ~$${Math.max(0, myTeam.budgetRemaining - cost)} for your other spots.`,
-      action: "They're locked into your plan — the rest builds around them.",
+      action: "They're locked into your plan, the rest builds around them.",
     });
   }
   return out;
@@ -1446,11 +1446,11 @@ function generateInsights(marketState, draftHistory, players, teams, config) {
     if (ratio <= 0.9) {
       insights.push({ id: 'trend-low', severity: 'opportunity', headline: 'Early bids below estimates',
         detail: `Players are going for ~${Math.round((1 - ratio) * 100)}% under estimate across ${n} picks.`,
-        action: 'Bargains are being bought early — expect fewer discounts later. Don\'t wait too long on value you like.' });
+        action: 'Bargains are being bought early, expect fewer discounts later. Don\'t wait too long on value you like.' });
     } else if (ratio >= 1.1) {
       insights.push({ id: 'trend-high', severity: 'opportunity', headline: 'Bids running above estimates',
         detail: `Players are going for ~${Math.round((ratio - 1) * 100)}% over estimate across ${n} picks.`,
-        action: 'Money is leaving the room fast — value should open up later. Stay patient for the lulls.' });
+        action: 'Money is leaving the room fast, value should open up later. Stay patient for the lulls.' });
     }
   }
 
@@ -1470,12 +1470,12 @@ function generateInsights(marketState, draftHistory, players, teams, config) {
       const pct = Math.round((st.ratio - 1) * 100);
       insights.push({ id: `hot-${pos}`, severity: 'warning', headline: `${label} going above fair value (+${pct}%)`,
         detail: `${st.sampleSize} ${pos}s have sold ${pct}% over estimate.`,
-        action: `Let the room overpay for ${pos}s — better relative value sits elsewhere right now.` });
+        action: `Let the room overpay for ${pos}s, better relative value sits elsewhere right now.` });
     } else if (st.heat === 'cold') {
       const pct = Math.round((1 - st.ratio) * 100);
       insights.push({ id: `cold-${pos}`, severity: 'opportunity', headline: `${label} going below fair value (-${pct}%)`,
         detail: `${st.sampleSize} ${pos}s have sold ${pct}% under estimate.`,
-        action: `Nominate the ${pos}s you want — the room is undervaluing them.` });
+        action: `Nominate the ${pos}s you want, the room is undervaluing them.` });
     }
   });
 
@@ -1489,7 +1489,7 @@ function generateInsights(marketState, draftHistory, players, teams, config) {
     if (lo.perPt > 0 && hi.perPt >= lo.perPt * 1.6) {
       insights.push({ id: 'eff', severity: 'info', headline: `${posLabel(hi.pos)} cost is disproportionate to points`,
         detail: `${posLabel(hi.pos)}s are costing ~$${hi.perPt.toFixed(1)} per projected point vs ~$${lo.perPt.toFixed(1)} for ${posLabel(lo.pos)}s.`,
-        action: `You're paying a premium per point at ${posLabel(hi.pos)} — get your points cheaper elsewhere.` });
+        action: `You're paying a premium per point at ${posLabel(hi.pos)}, get your points cheaper elsewhere.` });
     }
   }
 
@@ -1503,7 +1503,7 @@ function generateInsights(marketState, draftHistory, players, teams, config) {
     if (teamsNeedingStarter > 0 && startableRemaining <= teamsNeedingStarter + supplyBuffer && draftHistory.length >= Math.max(3, teams.length)) {
       insights.push({ id: `scarcity-${pos}`, severity: 'warning', headline: `${posLabel(pos)} starters thinning out`,
         detail: `Only ${startableRemaining} startable ${pos}s left for ${teamsNeedingStarter} teams that still need one.`,
-        action: `Demand is outrunning supply — lock in a ${pos} soon or punt to cheap depth.` });
+        action: `Demand is outrunning supply, lock in a ${pos} soon or punt to cheap depth.` });
     }
   });
 
@@ -1518,7 +1518,7 @@ function generateInsights(marketState, draftHistory, players, teams, config) {
       if (teamsNeeding >= best.idx) {
         insights.push({ id: `cliff-${pos}`, severity: 'warning', headline: `${posLabel(pos)} tier cliff coming`,
           detail: `Only ${best.idx} top ${pos}${best.idx > 1 ? 's' : ''} left before a ~$${best.drop} drop in price and quality.`,
-          action: `If you want a top-tier ${pos}, act before the cliff — after it you pay similar money for much less.` });
+          action: `If you want a top-tier ${pos}, act before the cliff, after it you pay similar money for much less.` });
       }
     }
   });
@@ -1591,11 +1591,11 @@ function buildReasoning(ctx) {
   const lines = [];
   const s = marketState[player.position];
   if (s && s.sampleSize >= 3) {
-    if (s.heat === 'hot') lines.push(`${player.position} market running hot — ${Math.round((s.ratio - 1) * 100)}% over fair across ${s.sampleSize} picks.`);
-    else if (s.heat === 'cold') lines.push(`${player.position} market running cold — ${Math.round((1 - s.ratio) * 100)}% under fair across ${s.sampleSize} picks.`);
+    if (s.heat === 'hot') lines.push(`${player.position} market running hot, ${Math.round((s.ratio - 1) * 100)}% over fair across ${s.sampleSize} picks.`);
+    else if (s.heat === 'cold') lines.push(`${player.position} market running cold, ${Math.round((1 - s.ratio) * 100)}% under fair across ${s.sampleSize} picks.`);
   }
   if (marketPrice < fairValue) lines.push(`Market $${marketPrice} is $${fairValue - marketPrice} below fair value.`);
-  else if (marketPrice > fairValue) lines.push(`Market $${marketPrice} is $${marketPrice - fairValue} above fair value — opportunity.`);
+  else if (marketPrice > fairValue) lines.push(`Market $${marketPrice} is $${marketPrice - fairValue} above fair value, opportunity.`);
   const rostered = team.roster.filter(r => r.position === player.position).length;
   const rosterCfg = config.roster[player.position] || { starters: 1, total: 1 };
   const slotIdx = rostered;
@@ -1603,10 +1603,10 @@ function buildReasoning(ctx) {
     lines.push(`Fills starting ${player.position}${rosterCfg.starters > 1 ? ` #${slotIdx + 1}` : ''} slot for you.`);
   } else if (slotIdx < rosterCfg.total) {
     const discountPct = Math.round((1 - personalValue / Math.max(1, marketPrice)) * 100);
-    if (discountPct >= 5) lines.push(`You already have ${rostered} ${player.position}${rostered > 1 ? 's' : ''} — bench slot, valued at ${100 - discountPct}% of market for you.`);
+    if (discountPct >= 5) lines.push(`You already have ${rostered} ${player.position}${rostered > 1 ? 's' : ''}, bench slot, valued at ${100 - discountPct}% of market for you.`);
     else lines.push(`Would be a bench ${player.position} (you have ${rostered} starters).`);
   } else {
-    lines.push(`No roster room — you cannot add another ${player.position}.`);
+    lines.push(`No roster room, you cannot add another ${player.position}.`);
   }
   return lines;
 }
@@ -2054,7 +2054,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <path d="M29 16 C 26 23, 26 35, 30 43" fill="none" stroke="#1b232d" strokeWidth="1.1" opacity="0.6" />
         {/* rivets */}
         {rivets.map((r, i) => (<circle key={i} cx={r[0]} cy={r[1]} r="1.15" fill="#d4dde6" stroke="#222b36" strokeWidth="0.4" />))}
-        {/* pectoral fin — drawn last so the plate seams don't cut in front of it */}
+        {/* pectoral fin, drawn last so the plate seams don't cut in front of it */}
         <path d="M34 31 C 41 40, 49 44, 53 44 C 47 41, 41 36, 38 31 Z" fill="url(#ironFin)" stroke="#171f29" strokeWidth="1" strokeLinejoin="round" opacity="0.97" />
         {/* head turned slightly toward the viewer: snout highlight + center ridge + forward-set eye */}
         <path d="M9 30 C 12 24, 16 20, 23 17.5" fill="none" stroke="#1b232d" strokeWidth="0.7" opacity="0.45" />
@@ -2084,7 +2084,7 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
   return (
     <header className="header">
       <div className="header-brand">
-        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna — back to start"><LogoMark wavy height={51} className="header-logo" /></button>
+        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna: back to start"><LogoMark wavy height={51} className="header-logo" /></button>
         <div className="header-brand-text">
           <span className="subtitle">Auction Draft Command</span>
           <span className="version-stamp">v{APP_VERSION} · {BUILD_DATE}</span>
@@ -2128,10 +2128,10 @@ function LandingSplash({ onDismiss, onNav }) {
       ['paid', 'With purchase', ['Real-time prices that adjust to the room', 'Roster targets that re-optimize as prices and availability shift', 'An always-on AI navigator: who to bid on, how high, and why', 'Proactive reads on emerging bidding trends', 'Bid guidance that updates as the board moves']],
     ]],
   ];
-  // First quote: founder (KR). Second: intentional humor. Add genuine user testimonials here as they arrive.
+  // First quote: founder. Second: intentional humor. Add genuine user testimonials here as they arrive.
   const quotes = [
-    ['Most of your league is bidding on names. Iron Tuna shows you where the points are hiding — so your bids set you up to win.', '— KR · Fantasy player for 27 years'],
-    ['Helped me optimize my kicker.', '— No one, ever'],
+    ['Most of your league is bidding on names. Iron Tuna shows you where the points are hiding, so your bids set you up to win.', 'Fantasy player for 27 years'],
+    ['Helped me optimize my kicker.', 'No one, ever'],
   ];
   const shot = [
     ['RB', 'Bijan Robinson', '54', '58', '61'],
@@ -2142,17 +2142,17 @@ function LandingSplash({ onDismiss, onNav }) {
     ['QB', 'Josh Allen', '9', '6', '7'],
   ];
   const faqs = [
-    ['Is it really free?', 'Yes — custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Assistance package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade.'],
+    ['Is it really free?', 'Yes, custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Assistance package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade.'],
     ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
-    ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing — enter your settings (or paste / screenshot your scoring) and you are ready.'],
-    ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player — market price, true value, and your personal max — plus an AI navigator that tells you exactly how high to go in real time.'],
+    ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing, enter your settings (or paste / screenshot your scoring) and you are ready.'],
+    ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player, market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time.'],
     ['Will it work on draft night?', 'Yes. It runs entirely in your browser and keeps working even if the Wi-Fi drops.'],
   ];
   return (
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
       <div className="landing-vignette" />
       <nav className="lp-ribbon">
-        <div className="lp-ribbon-brand"><button className="lp-ribbon-logo-btn" onClick={e => { const sc = e.currentTarget.closest('.landing-page'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); }} title="Back to top" aria-label="Iron Tuna — back to top"><LogoMark height={22} /></button></div>
+        <div className="lp-ribbon-brand"><button className="lp-ribbon-logo-btn" onClick={e => { const sc = e.currentTarget.closest('.landing-page'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); }} title="Back to top" aria-label="Iron Tuna: back to top"><LogoMark height={22} /></button></div>
         <div className="lp-ribbon-links">
           <button onClick={() => go('prep')}>Auction Prep</button>
           <button onClick={() => go('board')}>Auction Day Management</button>
@@ -2164,7 +2164,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-hero">
         <LogoMark tagline wavy height={260} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
-        <p className="lp-sub lp-sub-link" style={{ marginBottom: 6 }} onClick={() => go('prep')}>Click here for free custom auction values you can customize to your league’s scoring system and your exact strategy.</p>
+        <p className="lp-sub lp-sub-link" style={{ marginBottom: 6 }} onClick={() => go('prep')}>Click here for <b>free auction values</b> you can customize to your league’s scoring system and your exact strategy.</p>
         <p className="lp-sub lp-subline lp-sub-link" onClick={() => go('board')}>Click here for <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
         </div>
         <div className="lp-phases-wrap">
@@ -2188,7 +2188,7 @@ function LandingSplash({ onDismiss, onNav }) {
           <div className="lp-preview-eyebrow">A look inside</div>
           <h2 className="lp-preview-h">What you see when you're on the clock</h2>
           <div className="lp-shot">
-            <div className="lp-shot-chrome"><span className="d r" /><span className="d y" /><span className="d g" /><span className="lp-shot-url">iron-tuna — draft board</span></div>
+            <div className="lp-shot-chrome"><span className="d r" /><span className="d y" /><span className="d g" /><span className="lp-shot-url">iron-tuna, draft board</span></div>
             <div className="lp-shot-board">
               <div className="lp-shot-row lp-shot-head"><span>Player</span><span>Proj</span><span>Value</span><span className="you">You</span></div>
               {shot.map(([pos, name, proj, val, you], i) => (
@@ -2202,15 +2202,15 @@ function LandingSplash({ onDismiss, onNav }) {
             </div>
             <div className="lp-shot-coach">
               <div className="lp-shot-coach-h">● Gameday Navigator</div>
-              <div className="lp-shot-bubble">Go to <b>$61</b> on Bijan — that's your switch price. Past it, the same dollars buy more starting points at WR. CeeDee is the better value if RB1 gets bid up.</div>
+              <div className="lp-shot-bubble">Go to <b>$61</b> on Bijan, that's your switch price. Past it, the same dollars buy more starting points at WR. CeeDee is the better value if RB1 gets bid up.</div>
             </div>
           </div>
-          <div className="lp-shot-cap">Three numbers on every player — <b style={{color:'var(--text-secondary)'}}>Proj</b> (market price), <b style={{color:'var(--text-secondary)'}}>Value</b> (true worth), and <b style={{color:'var(--gold-text)'}}>You</b> (your personal max) — with the Gameday Navigator talking you through each bid in real time.</div>
+          <div className="lp-shot-cap">Three numbers on every player, <b style={{color:'var(--text-secondary)'}}>Proj</b> (market price), <b style={{color:'var(--text-secondary)'}}>Value</b> (true worth), and <b style={{color:'var(--gold-text)'}}>You</b> (your personal max), with the Gameday Navigator talking you through each bid in real time.</div>
         </div>
         <div className="lp-ai-section">
           <div className="lp-preview-eyebrow">Purpose-built AI</div>
           <h2 className="lp-preview-h">Not just another ChatGPT wrapper</h2>
-          <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s navigator is <b>embedded with years of fantasy football auction experience</b>, with dozens of player drafts. It reasons over <b>your</b> exact league and scoring, and factors your strategy to identify the price trends that will actually move your draft.</p>
+          <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s navigator is <b>embedded with years of fantasy football auction experience</b>, with dozens of player drafts. It reasons over <b>your exact league and scoring</b>, and factors your strategy to identify the price trends that will actually move your draft.</p>
         </div>
         <div className="lp-quotes">
           {quotes.map(([q, who], i) => (
@@ -2230,12 +2230,12 @@ function LandingSplash({ onDismiss, onNav }) {
             </div>
           ))}
         </div>
-        <div className="lp-why"><b>Why it's better:</b> most tools hand you one generic number. Iron Tuna personalizes to your roster, your budget, and the live market — and shows its work, so every call is one you can trust.</div>
+        <div className="lp-why"><b>Why it's better:</b> most tools hand you one generic number. Iron Tuna personalizes to your roster, your budget, and the live market, and shows its work, so every call is one you can trust.</div>
         <div className="lp-cta-row">
-          <button className="lp-cta" onClick={enter}>Get my auction values — it's free</button>
+          <button className="lp-cta" onClick={enter}>Get my auction values, it's free</button>
           <button className="lp-cta lp-cta-alt" onClick={() => go('board')}>Run your auction &amp; get advanced prep tools</button>
         </div>
-        <div className="lp-note">No signup needed. Works on draft night, even if the Wi-Fi drops.</div>
+        <div className="lp-note">Works on draft night, even if the Wi-Fi drops.</div>
       </div>
     </div>
   );
@@ -2300,25 +2300,25 @@ function BidPanel({ player, myTeam, teams, config, bidRec, marketState, pointsMo
           <span className={`heat-tag heat-${positionHeat.heat}`} style={{ marginLeft: 8 }}>
             {positionHeat.heat === 'hot' && '🔥 hot'}
             {positionHeat.heat === 'cold' && '❄ cold'}
-            {positionHeat.heat === 'neutral' && '— neutral'}
+            {positionHeat.heat === 'neutral' && 'neutral'}
           </span>
         )}
       </div>
       <div className="bid-numbers" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        <div className="bid-number-cell" title="Proj — likely market/auction price"><div className="lbl">Proj</div><div className="val" style={{ color: 'var(--accent-text)' }}>${player.marketValue ?? player.auctionValue}</div></div>
-        <div className="bid-number-cell" title="Value — VBD fair value"><div className="lbl">Val</div><div className="val">${player.auctionValue}</div></div>
-        <div className="bid-number-cell suggested" title="You — what you should pay: your Value, or up to market for players your optimal plan actually targets"><div className="lbl">You</div><div className="val">${player.personalValue ?? bidRec.personalValue}</div></div>
-        <div className="bid-number-cell max" title="Max — most you can pay and still fill your roster"><div className="lbl">Max</div><div className="val">${bidRec.hardMax}</div></div>
+        <div className="bid-number-cell" title="Proj, likely market/auction price"><div className="lbl">Proj</div><div className="val" style={{ color: 'var(--accent-text)' }}>${player.marketValue ?? player.auctionValue}</div></div>
+        <div className="bid-number-cell" title="Value, VBD fair value"><div className="lbl">Val</div><div className="val">${player.auctionValue}</div></div>
+        <div className="bid-number-cell suggested" title="You, what you should pay: your Value, or up to market for players your optimal plan actually targets"><div className="lbl">You</div><div className="val">${player.personalValue ?? bidRec.personalValue}</div></div>
+        <div className="bid-number-cell max" title="Max, most you can pay and still fill your roster"><div className="lbl">Max</div><div className="val">${bidRec.hardMax}</div></div>
       </div>
       {plan && (() => {
         const fit = planMaxFor(player, plan, config);
         if (!fit) return null;
-        if (!fit.fitsStarter) return (<div className="plan-fit nofit">Not an open starting slot — this would be a bench add. Keep it cheap unless it's a clear value.</div>);
+        if (!fit.fitsStarter) return (<div className="plan-fit nofit">Not an open starting slot, this would be a bench add. Keep it cheap unless it's a clear value.</div>);
         return (<div className="plan-fit">Fills your <b>{fit.slotLabel}</b> slot · plan target <b>${fit.targetPrice}</b>.</div>);
       })()}
       {player.worthPrice != null && (
         <div className="plan-fit" style={{ background: 'rgba(212,160,23,0.10)', borderColor: 'var(--gold-text)', color: 'var(--text-secondary)' }}>
-          Worth taking up to <b style={{ color: 'var(--gold-text)' }}>${player.worthPrice}</b> — at that price your starters are as strong as your current plan. Pay more only if you mean to punt a cheaper slot.
+          Worth taking up to <b style={{ color: 'var(--gold-text)' }}>${player.worthPrice}</b>, at that price your starters are as strong as your current plan. Pay more only if you mean to punt a cheaper slot.
         </div>
       )}
       {ladderData && ladderData.rungs.length > 0 && (() => {
@@ -2331,11 +2331,11 @@ function BidPanel({ player, myTeam, teams, config, bidRec, marketState, pointsMo
         }
         let headline;
         if (sp != null) {
-          headline = `Go up to $${sp} on ${fn(player.name)} — that's your switch price. At or below it your starters get stronger; past it the same dollars buy more starting points${alt ? ` at ${alt.basePos} — ${fn(alt.player.name)} is the better value if he's bid up` : ' elsewhere'}.`;
+          headline = `Go up to $${sp} on ${fn(player.name)}, that's your switch price. At or below it your starters get stronger; past it the same dollars buy more starting points${alt ? ` at ${alt.basePos}, ${fn(alt.player.name)} is the better value if he's bid up` : ' elsewhere'}.`;
         } else {
           const fit = plan ? planMaxFor(player, plan, config) : null;
-          if (fit && fit.fitsStarter === false) headline = `${fn(player.name)} doesn't open your starting lineup right now — he'd be a bench/upside add, not a points upgrade. Keep him cheap.`;
-          else headline = `Your plan already has equal-or-better value at ${player.position}. Cap him near his Value ($${player.auctionValue}) — the points are hiding elsewhere.`;
+          if (fit && fit.fitsStarter === false) headline = `${fn(player.name)} doesn't open your starting lineup right now, he'd be a bench/upside add, not a points upgrade. Keep him cheap.`;
+          else headline = `Your plan already has equal-or-better value at ${player.position}. Cap him near his Value ($${player.auctionValue}), the points are hiding elsewhere.`;
         }
         return (
           <div className="bid-ladder-wrap">
@@ -2360,7 +2360,7 @@ function BidPanel({ player, myTeam, teams, config, bidRec, marketState, pointsMo
       {(() => {
         const comp = opponentCompetition(player, teams, myTeam, config);
         const col = comp.level === 'High' ? 'var(--accent-text)' : comp.level === 'Medium' ? 'var(--gold-text)' : 'var(--positive)';
-        return (<div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-secondary)' }}>Competition: <b style={{ color: col }}>{comp.level}</b> — {comp.canAfford} rival{comp.canAfford !== 1 ? 's' : ''} can afford him{comp.maxRival > 0 ? ` (top rival max $${comp.maxRival})` : ''}.</div>);
+        return (<div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-secondary)' }}>Competition: <b style={{ color: col }}>{comp.level}</b>, {comp.canAfford} rival{comp.canAfford !== 1 ? 's' : ''} can afford him{comp.maxRival > 0 ? ` (top rival max $${comp.maxRival})` : ''}.</div>);
       })()}
       <div className="bid-input">
         <input type="number" value={bidPrice} onChange={e => setBidPrice(e.target.value)} min="1" />
@@ -2390,8 +2390,8 @@ function InsightsPanel({ insights, marketState, sonar, onUnlock }) {
   if (sonar === false) {
     return (
       <div className="insights-locked">
-        <div className="il-title">Sonar — {insights.length} signal{insights.length !== 1 ? 's' : ''} ready</div>
-        <div className="il-sub">Tier-cliff alerts, rival competition, nomination strategy, risk &amp; bargains — unlock to see them live during your draft.</div>
+        <div className="il-title">Sonar, {insights.length} signal{insights.length !== 1 ? 's' : ''} ready</div>
+        <div className="il-sub">Tier-cliff alerts, rival competition, nomination strategy, risk &amp; bargains, unlock to see them live during your draft.</div>
         <button className="btn-draft" onClick={onUnlock}>Unlock Sonar</button>
       </div>
     );
@@ -2411,7 +2411,7 @@ function InsightsPanel({ insights, marketState, sonar, onUnlock }) {
         {Object.entries(marketState).map(([pos, s]) => (
           <div key={pos} className={`heat-cell heat-${s.heat}`} title={s.sampleSize > 0 ? `${s.sampleSize} drafted · ${Math.round(s.ratio * 100)}% of fair` : 'No picks yet'}>
             <div className="heat-pos">{pos}</div>
-            <div className="heat-ratio">{s.sampleSize >= 2 ? `${Math.round(s.ratio * 100)}%` : '—'}</div>
+            <div className="heat-ratio">{s.sampleSize >= 2 ? `${Math.round(s.ratio * 100)}%` : '–'}</div>
           </div>
         ))}
       </div>
@@ -2488,7 +2488,7 @@ function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketSta
           </div>
           {plan && plan.remainingStarterSlots.length > 0 && (
             <div className="sidebar-section">
-              <h2>Plan — What You Need</h2>
+              <h2>Plan, What You Need</h2>
               <div className="plan-chips">
                 {plan.remainingStarterSlots.map((s, i) => (<span className="plan-chip" key={i}>{s.basePos} <b>~${s.targetPrice}</b></span>))}
                 <span className="plan-chip">bench <b>${plan.reserveBench + plan.benchDiscretionary}</b></span>
@@ -2502,7 +2502,7 @@ function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketSta
               {slotsByPosition.map((slot, idx) => (
                 <div key={idx} className={`roster-slot ${slot.filled ? 'filled' : 'empty'}`}>
                   <div className="roster-slot-label">{slot.label}</div>
-                  <div className="roster-slot-name">{slot.filled ? slot.playerName : '—'}</div>
+                  <div className="roster-slot-name">{slot.filled ? slot.playerName : '–'}</div>
                   {slot.filled && (<div className="roster-slot-cost">${slot.price}</div>)}
                 </div>
               ))}
@@ -2958,7 +2958,7 @@ function ScoringImport({ onApply }) {
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const fileRef = useRef();
-  const show = (partial, source) => { setPreview({ items: partial.items || [], partial, source }); if (!(partial.items || []).length) setStatus('Nothing detected — try another method or edit the fields below.'); else setStatus(''); };
+  const show = (partial, source) => { setPreview({ items: partial.items || [], partial, source }); if (!(partial.items || []).length) setStatus('Nothing detected, try another method or edit the fields below.'); else setStatus(''); };
   function doPaste() { show(parseScoringText(paste), 'pasted text'); }
   async function doImage(file) {
     if (!file) return; setBusy(true); setStatus('Loading OCR…'); setPreview(null);
@@ -2967,7 +2967,7 @@ function ScoringImport({ onApply }) {
       const { data } = await T.recognize(file, 'eng', { logger: m => { if (m.status === 'recognizing text') setStatus(`Reading image… ${Math.round((m.progress || 0) * 100)}%`); } });
       const res = parseScoringText(data.text || '');
       show(res, 'screenshot');
-      if (!res.items.length) setStatus('Could not read scoring from that image — try a tighter crop, or paste the text.');
+      if (!res.items.length) setStatus('Could not read scoring from that image, try a tighter crop, or paste the text.');
     } catch (e) { setStatus('OCR could not load. Paste the text instead.'); }
     setBusy(false);
   }
@@ -2977,7 +2977,7 @@ function ScoringImport({ onApply }) {
     try {
       if (/^\d{6,}$/.test(val)) { const lg = await fetchSleeperLeague(val); show(mapSleeperLeague(lg), `Sleeper · ${lg.name || 'league'}`); }
       else { const list = await fetchSleeperUserLeagues(val); if (!list.length) setStatus('No leagues found for that username.'); else { setLeagues(list); setStatus('Pick your league:'); } }
-    } catch (e) { setStatus('Could not reach Sleeper — check the league ID or username.'); }
+    } catch (e) { setStatus('Could not reach Sleeper, check the league ID or username.'); }
     setBusy(false);
   }
   async function pickLeague(id, name) { setBusy(true); setStatus('Loading league…'); try { const lg = await fetchSleeperLeague(id); show(mapSleeperLeague(lg), `Sleeper · ${name}`); setLeagues(null); } catch (e) { setStatus('Failed to load that league.'); } setBusy(false); }
@@ -3002,7 +3002,7 @@ function ScoringImport({ onApply }) {
         <div style={{ marginTop: 8 }}><button className="btn-draft" onClick={doPaste}>Detect scoring</button></div>
       </div>)}
       {tab === 'screenshot' && (<div>
-        <div className="imp-hint">Upload a screenshot of your scoring settings. It’s read in your browser (OCR) — nothing is uploaded to a server. A tight, high-contrast crop reads best.</div>
+        <div className="imp-hint">Upload a screenshot of your scoring settings. It’s read in your browser (OCR), nothing is uploaded to a server. A tight, high-contrast crop reads best.</div>
         <button className="btn-secondary" disabled={busy} onClick={() => fileRef.current.click()}>{busy ? 'Reading…' : 'Choose screenshot'}</button>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => doImage(e.target.files && e.target.files[0])} />
       </div>)}
@@ -3088,8 +3088,8 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
         <div className="settings-grid">
           {Object.entries(draft.roster).map(([pos, cfg]) => (
             <React.Fragment key={pos}>
-              <div className="settings-row"><label>{pos} — Total rostered</label><input type="number" min="0" max="10" value={cfg.total} onChange={e => update(`roster.${pos}.total`, parseInt(e.target.value || 0))} /></div>
-              <div className="settings-row"><label>{pos} — Starters</label><input type="number" min="0" max={cfg.total} value={cfg.starters} onChange={e => update(`roster.${pos}.starters`, parseInt(e.target.value || 0))} /></div>
+              <div className="settings-row"><label>{pos}, Total rostered</label><input type="number" min="0" max="10" value={cfg.total} onChange={e => update(`roster.${pos}.total`, parseInt(e.target.value || 0))} /></div>
+              <div className="settings-row"><label>{pos}, Starters</label><input type="number" min="0" max={cfg.total} value={cfg.starters} onChange={e => update(`roster.${pos}.starters`, parseInt(e.target.value || 0))} /></div>
             </React.Fragment>
           ))}
           <div className="settings-row"><label>Flex slots</label><input type="number" min="0" max="5" value={draft.flex.count} onChange={e => update('flex.count', parseInt(e.target.value || 0))} /></div>
@@ -3119,7 +3119,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
         </div>
         <div className="settings-section-title">Projections Import (CSV)</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Replace projections with a CSV — works directly with <b>ffanalytics</b> exports (its multi-source aggregate of FantasyPros, ESPN, CBS, NFL and more), plus FantasyPros / ESPN / Yahoo files. Columns are auto-detected: player, pos (DST is read as DEF), team, and stats like pass_yds, pass_tds, pass_int, rush_yds, rush_tds, rec, rec_yds, rec_tds, fg, dst_sacks, dst_int, dst_pts_allowed. If the file only has a points/fpts column, that is used directly.
+          Replace projections with a CSV, works directly with <b>ffanalytics</b> exports (its multi-source aggregate of FantasyPros, ESPN, CBS, NFL and more), plus FantasyPros / ESPN / Yahoo files. Columns are auto-detected: player, pos (DST is read as DEF), team, and stats like pass_yds, pass_tds, pass_int, rush_yds, rush_tds, rec, rec_yds, rec_tds, fg, dst_sacks, dst_int, dst_pts_allowed. If the file only has a points/fpts column, that is used directly.
         </p>
         <button className="btn-secondary" onClick={() => fileRef.current.click()}>Import projections CSV (ffanalytics-ready)</button>
         <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFile} />
@@ -3268,7 +3268,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
         const thresh = Math.max(2, Math.round(base * 0.15));
         let verdict, vcolor;
         if (diff > thresh) { verdict = `Overpaid by $${diff}`; vcolor = 'var(--accent-text)'; }
-        else if (diff < -thresh) { verdict = `Bargain — saved $${-diff}`; vcolor = 'var(--positive)'; }
+        else if (diff < -thresh) { verdict = `Bargain, saved $${-diff}`; vcolor = 'var(--positive)'; }
         else { verdict = 'Fair value'; vcolor = 'var(--gold-text)'; }
         return (
           <div className="modal-bg" onClick={() => setDetail(null)}>
@@ -3292,7 +3292,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                   <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 6, lineHeight: 1.5 }}>Starter forces them into your lineup; Reserve keeps them on the bench; Auto lets the model decide.</div>
                 </>
               )}
-              <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={() => { if (window.confirm(`Put ${pl.name} back into the available pool?`)) { onRemovePick && onRemovePick(detail.team.id, detail.pick.playerId); setDetail(null); } }}>↩ Unassign — return to pool</button>
+              <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={() => { if (window.confirm(`Put ${pl.name} back into the available pool?`)) { onRemovePick && onRemovePick(detail.team.id, detail.pick.playerId); setDetail(null); } }}>↩ Unassign, return to pool</button>
             </div>
           </div>
         );
@@ -3318,7 +3318,7 @@ function TierView({ players, draftedIds, config, pointsMode, seasonGames, onNomi
   return (
     <div>
       <div className="section-title">Tier View</div>
-      <div className="section-meta">Players grouped by VORP tiers — drops between tiers signal scarcity inflection points.</div>
+      <div className="section-meta">Players grouped by VORP tiers, drops between tiers signal scarcity inflection points.</div>
       <div className="filter-pills" style={{ marginBottom: 12 }}>
         {positions.map(p => (<button key={p} className={`filter-pill ${position === p ? 'active' : ''}`} onClick={() => setPosition(p)}>{p}</button>))}
       </div>
@@ -3382,9 +3382,9 @@ function buildTiers(players, position) {
 }
 // ─── components/PrepMode.jsx ──────────────────────────
 const STRAT = {
-  targets: { label: 'Targets', desc: 'Best value — players worth more than their predicted cost.' },
+  targets: { label: 'Targets', desc: 'Best value, players worth more than their predicted cost.' },
   heroRB: { label: 'Hero RB', desc: 'One elite RB, then hammer WR; grab late-value RBs for depth.' },
-  zeroRB: { label: 'Zero RB', desc: 'Skip early RBs — load WR/TE, then mine RB value from the mid-rounds.' },
+  zeroRB: { label: 'Zero RB', desc: 'Skip early RBs, load WR/TE, then mine RB value from the mid-rounds.' },
   heroWR: { label: 'Hero WR', desc: 'One elite WR anchor, then balance with RBs.' },
   robustRB: { label: 'Robust RB', desc: 'Pound RB early and often; value WRs after.' },
   eliteTE: { label: 'Elite TE', desc: 'Pay up for a top-2 TE edge; balance RB/WR.' },
@@ -3439,9 +3439,9 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const minBid = (config && config.valuation && config.valuation.minBid) || 1;
   const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: false });
   const COLSPEC = [
-    ['proj', 'Proj', 'Projected market price — what this player will likely cost in your auction.'],
-    ['value', 'Value', 'True value (VBD) — what the player is actually worth at your league settings.'],
-    ['you', 'You', 'Your personal max bid — the most you should pay given your roster, budget, and needs.'],
+    ['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'],
+    ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'],
+    ['you', 'You', 'Your personal max bid, the most you should pay given your roster, budget, and needs.'],
     ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.'],
   ];
   const activeCols = COLSPEC.filter(c => showCols[c[0]]);
@@ -3526,21 +3526,21 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               let sign, nameColor, nameTitle;
               if (p.fit === 'target') {
                 sign = 'under'; nameColor = 'rgb(45, 212, 163)';
-                nameTitle = `Target — fits your optimal lineup right now. Worth paying up toward $${you} even above raw value, because his points maximize your starting team.`;
+                nameTitle = `Target, fits your optimal lineup right now. Worth paying up toward $${you} even above raw value, because his points maximize your starting team.`;
               } else if (p.fit === 'fade') {
                 sign = 'over'; nameColor = 'rgb(239, 68, 68)';
-                nameTitle = `Off-target — you have already filled this spot in your optimal lineup, so his points land on your bench, not your score.`;
+                nameTitle = `Off-target, you have already filled this spot in your optimal lineup, so his points land on your bench, not your score.`;
               } else {
                 sign = Math.abs(tgap) <= 1 ? 'neutral' : tgap > 0 ? 'under' : 'over';
                 nameColor = costColor(cost, you);
-                nameTitle = sign === 'under' ? `Target — worth up to your $${you}; ~$${you - cost} of edge at the $${cost} price` : sign === 'over' ? `Fade — the $${cost} price is $${cost - you} above his value to your team ($${you})` : `Priced about right for your team ($${you})`;
+                nameTitle = sign === 'under' ? `Target, worth up to your $${you}; ~$${you - cost} of edge at the $${cost} price` : sign === 'over' ? `Fade, the $${cost} price is $${cost - you} above his value to your team ($${you})` : `Priced about right for your team ($${you})`;
               }
               return (
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (p.team || '')}</span>
-                {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price — click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
+                {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
             })}
@@ -3632,7 +3632,7 @@ function MockAuction({ players, config, seasonGames }) {
   }
   return (
     <div className="mock">
-      <div className="mock-intro">Practice the bidding against {teamsN - 1} CPU managers, each running a different strategy. The top remaining player is auto-nominated — decide how high to go. Once your roster fills, the room finishes and you see where you placed.</div>
+      <div className="mock-intro">Practice the bidding against {teamsN - 1} CPU managers, each running a different strategy. The top remaining player is auto-nominated, decide how high to go. Once your roster fills, the room finishes and you see where you placed.</div>
       <div className="mock-top"><div>Budget <b>${you.budget}</b> · roster <b>{you.roster.length}/{totalSlots}</b> · max bid <b>${maxAllowed(you)}</b></div><button className="btn-secondary" onClick={reset}>Restart</button></div>
       {current ? (
         <div className="mock-card">
@@ -3648,8 +3648,8 @@ function MockAuction({ players, config, seasonGames }) {
       ) : <div className="mock-card">Player pool exhausted.</div>}
       {log.length > 0 && <div className="mock-log">{log.map((l, i) => <div key={i} className={`mock-logrow ${l.win ? 'win' : ''}`}>{l.txt}</div>)}</div>}
       <div className="mock-roster">
-        <div className="mock-roster-h">Your roster — {you.roster.length}/{totalSlots}</div>
-        {you.roster.length ? you.roster.map((p, i) => <span key={i} className="mock-chip"><span className={`position-tag ${p.position}`}>{p.position}</span>{p.name}</span>) : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No players yet — start bidding.</span>}
+        <div className="mock-roster-h">Your roster, {you.roster.length}/{totalSlots}</div>
+        {you.roster.length ? you.roster.map((p, i) => <span key={i} className="mock-chip"><span className={`position-tag ${p.position}`}>{p.position}</span>{p.name}</span>) : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No players yet, start bidding.</span>}
       </div>
     </div>
   );
@@ -3675,10 +3675,10 @@ function PrepInsights({ players, config, seasonGames }) {
   const traps = priced.filter(g => g.gap >= 3).sort((a, b) => b.gap - a.gap).slice(0, 5);
   const TRAITS = {
     QB:  { inj: 'Low–moderate', cons: 'High',    note: 'Pocket passers are durable; rushing QBs carry more risk. Only one starts, so an injury is roster-defining. Established starters are among the most predictable year to year.' },
-    RB:  { inj: 'Highest',      cons: 'Lowest',  note: 'Heavy workload plus contact — the most injury-prone starter with the shortest shelf life, and the most volatile production season to season.' },
-    WR:  { inj: 'Moderate',     cons: 'High',    note: 'Soft-tissue (hamstring) injuries happen, but careers run longer and roles are stickier. Target share carries over — the most stable skill position year to year.' },
+    RB:  { inj: 'Highest',      cons: 'Lowest',  note: 'Heavy workload plus contact, the most injury-prone starter with the shortest shelf life, and the most volatile production season to season.' },
+    WR:  { inj: 'Moderate',     cons: 'High',    note: 'Soft-tissue (hamstring) injuries happen, but careers run longer and roles are stickier. Target share carries over, the most stable skill position year to year.' },
     TE:  { inj: 'Moderate',     cons: 'Streaky', note: 'A physical role with fewer touches than RB. Only the elite tier is reliable; there is a steep cliff after the top few.' },
-    K:   { inj: 'Negligible',   cons: 'Random',  note: 'Rarely an injury factor, and essentially noise year to year. Never pay up — always stream.' },
+    K:   { inj: 'Negligible',   cons: 'Random',  note: 'Rarely an injury factor, and essentially noise year to year. Never pay up, always stream.' },
     DEF: { inj: 'Negligible',   cons: 'Random',  note: 'Rarely an injury factor, and nearly impossible to predict. Stream on weekly matchups rather than paying up.' },
   };
   return (
@@ -3693,11 +3693,11 @@ function PrepInsights({ players, config, seasonGames }) {
             <span className="ins-bar-val">${e.perPoint.toFixed(1)}/pt</span>
           </div>
         ))}
-        <div className="ins-callout">The deepest positions — QB and elite TE — cost the most per point above replacement, because the gap from the top option to a streamer is small, so dollars spent there buy little real edge. Don't punt QB entirely (you still need a steady starter): pay the minimum for a reliable top-10 arm, then pour the savings into RB and WR, where each dollar buys a bigger edge.</div>
+        <div className="ins-callout">The deepest positions, QB and elite TE, cost the most per point above replacement, because the gap from the top option to a streamer is small, so dollars spent there buy little real edge. Don't punt QB entirely (you still need a steady starter): pay the minimum for a reliable top-10 arm, then pour the savings into RB and WR, where each dollar buys a bigger edge.</div>
       </div>
       <div className="ins-section">
         <h3 className="ins-h">Injury risk &amp; year-to-year consistency</h3>
-        <p className="ins-sub">How durable and how predictable each position tends to be — which is where your dollars are safest versus where you are buying upside and risk.</p>
+        <p className="ins-sub">How durable and how predictable each position tends to be, which is where your dollars are safest versus where you are buying upside and risk.</p>
         <div className="ins-table">
           <div className="ins-tr ins-thead"><span>Pos</span><span>Injury risk</span><span>Consistency</span><span>What it means</span></div>
           {['RB', 'WR', 'QB', 'TE', 'DEF', 'K'].map(pos => (
@@ -3709,22 +3709,22 @@ function PrepInsights({ players, config, seasonGames }) {
             </div>
           ))}
         </div>
-        <div className="ins-callout">Spend like it: anchor on durable, predictable production (top WRs and an elite QB/TE), and treat RB as high-upside but fragile — build depth there rather than betting everything on one back. Never pay up for K or DEF; they are effectively random and free to stream.</div>
+        <div className="ins-callout">Spend like it: anchor on durable, predictable production (top WRs and an elite QB/TE), and treat RB as high-upside but fragile, build depth there rather than betting everything on one back. Never pay up for K or DEF; they are effectively random and free to stream.</div>
       </div>
       <div className="ins-section">
         <h3 className="ins-h">Anticipated price vs. true value</h3>
         <p className="ins-sub">Where the room is likely to overpay (predicted cost above value) and where bargains hide (value above predicted cost). Plan to pounce on the bargains and let rivals overpay for the traps.</p>
         <div className="ins-twocol">
           <div>
-            <div className="ins-coltitle good">Bargains — target these</div>
+            <div className="ins-coltitle good">Bargains, target these</div>
             {bargains.length ? bargains.map(g => (<div key={g.p.id} className="ins-pl-row"><span className={`position-tag ${g.p.position}`}>{g.p.position}</span><span className="ins-pl-name">{g.p.name}</span><span className="ins-pl-gap good">${g.cost} cost · ${g.val} value</span></div>)) : <div className="ins-empty">No clear bargains in the current pool.</div>}
           </div>
           <div>
-            <div className="ins-coltitle bad">Traps — let rivals pay</div>
+            <div className="ins-coltitle bad">Traps, let rivals pay</div>
             {traps.length ? traps.map(g => (<div key={g.p.id} className="ins-pl-row"><span className={`position-tag ${g.p.position}`}>{g.p.position}</span><span className="ins-pl-name">{g.p.name}</span><span className="ins-pl-gap bad">${g.cost} cost · ${g.val} value</span></div>)) : <div className="ins-empty">No clear traps in the current pool.</div>}
           </div>
         </div>
-        <div className="ins-callout">How to handle it: nominate the traps early, while wallets are full — let a rival burn budget on the name. Keep your powder dry for the bargains in the middle rounds, when the room is tapped out and value goes cheap. Your live max for each is the You column on the cheatsheet (with the strategy slider).</div>
+        <div className="ins-callout">How to handle it: nominate the traps early, while wallets are full, let a rival burn budget on the name. Keep your powder dry for the bargains in the middle rounds, when the room is tapped out and value goes cheap. Your live max for each is the You column on the cheatsheet (with the strategy slider).</div>
       </div>
     </div>
   );
@@ -3746,7 +3746,7 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
     <div>
       <div className="section-title no-print">Draft Prep</div>
       {!editAssume ? (
-        <button className="league-toggle no-print" onClick={() => setEditAssume(true)} title="View & change your league — teams, budget, scoring, roster">League Settings <span className="lt-plus">+</span></button>
+        <button className="league-toggle no-print" onClick={() => setEditAssume(true)} title="View & change your league, teams, budget, scoring, roster">League Settings <span className="lt-plus">+</span></button>
       ) : (
         <>
         <div className="assumptions no-print">
@@ -3831,7 +3831,7 @@ function PrepOverview({ config, teams, valuedPlayers, pointsMode, seasonGames, o
 function PrepTeams({ teams, onRenameTeam, onSetMyTeam }) {
   return (
     <div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Name your league mates so the draft board shows real names. Mark one team as "My Team" — it gets highlighted with full personal-value treatment.</p>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Name your league mates so the draft board shows real names. Mark one team as "My Team", it gets highlighted with full personal-value treatment.</p>
       <div className="teams-overview">
         {teams.map(team => (
           <div key={team.id} className={`team-card ${team.isMine ? 'mine' : ''}`}>
@@ -3929,7 +3929,7 @@ function getRelevantFields(position) {
   }
 }
 function formatStats(stats) {
-  if (!stats) return '—';
+  if (!stats) return '–';
   const parts = [];
   if (stats.passYd) parts.push(`${stats.passYd} pY`);
   if (stats.passTD) parts.push(`${stats.passTD} pTD`);
@@ -3961,7 +3961,7 @@ function PrepStrategy({ valuedPlayers, config, onUpdateStrategy }) {
   return (
     <div>
       <div style={{ marginBottom: 20 }}></div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>This affects personalized bid recommendations and the "You $" column during the draft — the actual market value of every player stays constant.</p>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>This affects personalized bid recommendations and the "You $" column during the draft, the actual market value of every player stays constant.</p>
       <div className="prep-section">
         <h3 className="prep-section-title">Expected Spending by Position</h3>
         <table className="player-table">
@@ -4287,7 +4287,7 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   // If even at the minimum bid forcing him in doesn't improve on your baseline, he isn't
-  // worth a starting slot right now (no open slot he upgrades) — caller falls back to Value.
+  // worth a starting slot right now (no open slot he upgrades), caller falls back to Value.
   if (ptsAt(minBid) <= baselinePoints + 1e-6) return null;
   let lo = minBid, hi = maxBid, best = minBid;
   while (lo <= hi) { const mid = (lo + hi) >> 1; if (ptsAt(mid) >= baselinePoints - 1e-6) { best = mid; lo = mid + 1; } else hi = mid - 1; }
@@ -4370,7 +4370,7 @@ function PlanView({ myTeam, players, draftedIds, config, pointsMode, seasonGames
   function clearOv(label) { setWhatIf(prev => { const n = { ...prev }; delete n[label]; return n; }); }
   return (
     <div>
-      <div className="section-title">Your Plan — Max Starters</div>
+      <div className="section-title">Your Plan, Max Starters</div>
       <div className="section-meta">A spend model that turns your ${plan.budgetRemaining} into the strongest legal starting lineup. Targets recompute after every pick.</div>
       <div className="prep-card-grid">
         <div className="prep-card"><div className="prep-card-label">Budget Left</div><div className="prep-card-value">${plan.budgetRemaining}</div><div className="prep-card-detail">{plan.remainingStarterSlots.length} starter slots + {plan.remainingBench} bench to fill</div></div>
@@ -4404,7 +4404,7 @@ function PlanView({ myTeam, players, draftedIds, config, pointsMode, seasonGames
               </div>
             );
           })}
-          {!plan.feasible && <div style={{ color: 'var(--danger)', fontSize: 11, marginTop: 6 }}>Over budget — lower a slider.</div>}
+          {!plan.feasible && <div style={{ color: 'var(--danger)', fontSize: 11, marginTop: 6 }}>Over budget, lower a slider.</div>}
         </div>
       )}
       <div className="plan-lineup">
@@ -4415,14 +4415,14 @@ function PlanView({ myTeam, players, draftedIds, config, pointsMode, seasonGames
               <div className="ps-player">{s.player.name}</div>
               <div className="ps-price">paid ${s.price} · {fmtPts(s.player.projectedPoints)} pts</div>
             </>) : (<>
-              <div className="ps-player">{s.player ? s.player.name : '—'}</div>
+              <div className="ps-player">{s.player ? s.player.name : '–'}</div>
               <div className="ps-price">target ~${s.targetPrice}{s.player ? ` · ${fmtPts(s.player.projectedPoints)} pts` : ''}</div>
             </>)}
           </div>
         ))}
       </div>
       <div style={{ marginTop: 16, fontSize: 12, color: 'var(--text-muted)' }}>
-        Example players show who the model would target at each price right now — buy anyone at or below that slot's target and your plan stays optimal. Pay above a target and the model instantly re-prices the rest.
+        Example players show who the model would target at each price right now, buy anyone at or below that slot's target and your plan stays optimal. Pay above a target and the model instantly re-prices the rest.
       </div>
     </div>
   );
@@ -4626,9 +4626,9 @@ function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGam
                 <button className={`btn-star ${isStar ? 'on' : ''}`} onClick={() => onToggleStar(p.id)} title={isStar ? 'Unstar' : 'Star'}>★</button>
               </span>
               <span className="rr-name">{p.name}</span>
-              <span className="rr-c" title="Proj — likely market/auction price">${projVal}</span>
-              <span className="rr-c" title="Value — VBD fair value">${valVal}</span>
-              <span className="rr-c you" title="You — what you should be willing to pay">${youVal}</span>
+              <span className="rr-c" title="Proj, likely market/auction price">${projVal}</span>
+              <span className="rr-c" title="Value, VBD fair value">${valVal}</span>
+              <span className="rr-c you" title="You, what you should be willing to pay">${youVal}</span>
             </div>
             <div className="rr-l2">
               <span className="rr-meta"><span className={`position-tag ${p.position}`} style={{ minWidth: 0, padding: '1px 5px' }}>{p.position}</span> {p.team} · {(p.projectedPoints / games).toFixed(1)}/gm · <span title={`Risk: ${riskLabel(rsk)}`} style={{ color: riskColor(rsk) }}>●</span></span>
@@ -4738,7 +4738,7 @@ function parseValueCommand(text, valueAdjust, config) {
   if (!raw) return { reply: "Tell me how to adjust values, e.g. \"make elite RBs 20% more expensive\" or \"WRs cheaper\"." };
   const mentionsPos = /\b(qb|quarter|rb|running|wr|wide|receiver|te|tight|k\b|kicker|def|dst|defen)/.test(raw);
   if (/\b(reset|clear|default|start over|revert)\b/.test(raw) && !mentionsPos) {
-    return { adjust: {}, reply: "Done — all positions reset to their default projected values.", changed: true, isReset: true };
+    return { adjust: {}, reply: "Done, all positions reset to their default projected values.", changed: true, isReset: true };
   }
   const posName = { QB: 'QBs', RB: 'RBs', WR: 'WRs', TE: 'TEs', K: 'kickers', DEF: 'defenses' };
   const tierLabel = { elite: 'elite ', mid: 'mid-tier ', repl: 'replacement-level ', all: '' };
@@ -4759,7 +4759,7 @@ function parseValueCommand(text, valueAdjust, config) {
     else if (/\bhal(f|ve|ved|ving)\b/.test(c)) { mag = 0.5; dir = -1; }
     else if (/\b(slightly|a little|a bit|a touch|marginally|somewhat|tad)\b/.test(c)) mag = 0.10;
     else if (/\b(a lot|much|way|significantly|drastically|heavily|aggressively|ton|tons|big)\b/.test(c)) mag = 0.30;
-    if (dir === 0) { notes.push(`For "${c.trim()}" — should that be more or less expensive?`); return; }
+    if (dir === 0) { notes.push(`For "${c.trim()}", should that be more or less expensive?`); return; }
     let tier = 'all';
     if (/\b(elite|top|stud|studs|premium|stars?|best|high ?end)\b/.test(c)) tier = 'elite';
     else if (/\b(mid|middle|mid-?tier|average|middling)\b/.test(c)) tier = 'mid';
@@ -4841,14 +4841,14 @@ function coachEvalReply(p, players, myTeam, teams, config, draftedIds, games) {
   const minBid = config.valuation.minBid;
   const maxBid = myTeam ? Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid) : you;
   const L = [];
-  L.push(`${p.name} — ${pos}${rank > 0 ? ` (${pos}${rank})` : ''}${p.team ? ', ' + p.team : ''} · ${ppg} pts/gm.`);
+  L.push(`${p.name}, ${pos}${rank > 0 ? ` (${pos}${rank})` : ''}${p.team ? ', ' + p.team : ''} · ${ppg} pts/gm.`);
   L.push(`Proj $${proj} · Value $${val} · You $${you}.`);
   if (p.worthPrice != null) L.push(`Worth up to $${p.worthPrice} before your money does more elsewhere.`);
-  else if (p.planTarget) L.push(`Your optimal plan already wants him — meeting market here fits your build.`);
-  if (comp) L.push(`Competition: ${comp.level} — ${comp.canAfford} rival${comp.canAfford !== 1 ? 's' : ''} can afford him${comp.maxRival > 0 ? ` (top max $${comp.maxRival})` : ''}.`);
+  else if (p.planTarget) L.push(`Your optimal plan already wants him, meeting market here fits your build.`);
+  if (comp) L.push(`Competition: ${comp.level}, ${comp.canAfford} rival${comp.canAfford !== 1 ? 's' : ''} can afford him${comp.maxRival > 0 ? ` (top max $${comp.maxRival})` : ''}.`);
   L.push(`Risk: ${rsk}.`);
   const cap = Math.min(you, maxBid);
-  if (you >= proj) L.push(`Bottom line: a strong fit — bid with confidence up to ~$${cap}.`);
+  if (you >= proj) L.push(`Bottom line: a strong fit, bid with confidence up to ~$${cap}.`);
   else L.push(`Bottom line: fair value to you is ~$${you}; let someone else overpay above that.`);
   return L.join(' ');
 }
@@ -4894,12 +4894,12 @@ function coachConcept(q) {
   const t = q.toLowerCase();
   if (!/\b(what|whats|what's|explain|define|definition|meaning|mean|means|how do|how does|stand for|tell me about the)\b/.test(t)) return null;
   if (/\bswitch\b|worth up to/.test(t)) return 'The “switch price” (your You for a stud the plan skips) is the highest bid at which taking him still leaves a lineup at least as good as your current optimal plan. At or below it he upgrades you; above it the same dollars buy more points elsewhere.';
-  if (/\binflation\b/.test(t)) return 'Inflation adjusts values live: when the room overpays, the leftover money chases fewer players, so the remaining players’ prices rise — and the reverse when bargains go early.';
-  if (/\brisk|variance|injur/.test(t)) return 'Risk blends a position’s week-to-week volatility with age, rookie status, and injury flags into safe / moderate / risky — a nudge toward reliability, not a hard rule.';
-  if (/\bvbd|replacement\b/.test(t) || /\bvalue\b/.test(t)) return 'Value uses VBD — a player’s projected points above the last startable player at his position — converted to dollars. It’s his worth in a vacuum, before your roster or the live market.';
-  if (/\bproj\b|market price|projected price/.test(t)) return 'Proj is the likely market price — what the room will probably pay — calibrated to how your league has bid in past auctions.';
-  if (/\btier|cliff\b/.test(t)) return 'Tiers group players with similar projections. A “tier cliff” is the drop to the next, cheaper group — a signal to act before it hits.';
-  if (/\byou\b/.test(t) && /(number|price|column|metric|mean|stand for)/.test(t)) return 'You is your personal max — the most you should pay given your roster, budget, and the live market. For a player your plan wants it meets market; for a stud it skips, it’s his switch price.';
+  if (/\binflation\b/.test(t)) return 'Inflation adjusts values live: when the room overpays, the leftover money chases fewer players, so the remaining players’ prices rise, and the reverse when bargains go early.';
+  if (/\brisk|variance|injur/.test(t)) return 'Risk blends a position’s week-to-week volatility with age, rookie status, and injury flags into safe / moderate / risky, a nudge toward reliability, not a hard rule.';
+  if (/\bvbd|replacement\b/.test(t) || /\bvalue\b/.test(t)) return 'Value uses VBD, a player’s projected points above the last startable player at his position, converted to dollars. It’s his worth in a vacuum, before your roster or the live market.';
+  if (/\bproj\b|market price|projected price/.test(t)) return 'Proj is the likely market price, what the room will probably pay, calibrated to how your league has bid in past auctions.';
+  if (/\btier|cliff\b/.test(t)) return 'Tiers group players with similar projections. A “tier cliff” is the drop to the next, cheaper group, a signal to act before it hits.';
+  if (/\byou\b/.test(t) && /(number|price|column|metric|mean|stand for)/.test(t)) return 'You is your personal max, the most you should pay given your roster, budget, and the live market. For a player your plan wants it meets market; for a stud it skips, it’s his switch price.';
   if (/\b(three )?numbers?\b/.test(t)) return 'Three numbers per player: Proj = likely market price, Value = his VBD worth in a vacuum, You = the most you personally should pay given your team and the live board.';
   return null;
 }
@@ -4909,16 +4909,16 @@ function coachWhyPlayer(p, ctx) {
   const proj = p.marketValue != null ? p.marketValue : p.auctionValue, val = p.auctionValue, you = p.personalValue != null ? p.personalValue : val;
   const pos = p.position;
   const shallow = (pos === 'QB' || pos === 'TE' || pos === 'K' || pos === 'DEF');
-  const L = [`${p.name} (${pos}) — Proj $${proj} · Value $${val} · You $${you}.`];
-  L.push(`Value is his worth in a vacuum — points above a replacement ${pos}, in dollars. You is what he's worth to YOUR team, given your roster, budget, and the live board.`);
+  const L = [`${p.name} (${pos}), Proj $${proj} · Value $${val} · You $${you}.`];
+  L.push(`Value is his worth in a vacuum, points above a replacement ${pos}, in dollars. You is what he's worth to YOUR team, given your roster, budget, and the live board.`);
   if (you >= val - 1) {
-    if (p.planTarget) L.push(`They line up because he's in your optimal plan — your best lineup actually wants him here, so You meets the market.`);
+    if (p.planTarget) L.push(`They line up because he's in your optimal plan, your best lineup actually wants him here, so You meets the market.`);
     else L.push(`They're close because nothing about your roster changes what he's worth to you right now.`);
   } else {
     const reasons = [];
     if (!p.planTarget) reasons.push('your plan can fill his slot more cheaply with a player who scores nearly as much');
-    if (shallow) reasons.push(`${pos} is shallow — the next ${pos} or two project almost the same, so his "points above replacement" don't turn into a real weekly edge`);
-    L.push(`You ($${you}) sits well below Value ($${val}) because ${reasons.length ? reasons.join(', and ') : 'paying his full value would pull money from slots that score more'}. Paying his vacuum value would cost you points elsewhere — that's the whole point of You vs Value.`);
+    if (shallow) reasons.push(`${pos} is shallow, the next ${pos} or two project almost the same, so his "points above replacement" don't turn into a real weekly edge`);
+    L.push(`You ($${you}) sits well below Value ($${val}) because ${reasons.length ? reasons.join(', and ') : 'paying his full value would pull money from slots that score more'}. Paying his vacuum value would cost you points elsewhere, that's the whole point of You vs Value.`);
     if (p.worthPrice != null) L.push(`His switch price is about $${p.worthPrice}: the most he's worth to your build before the money does more good elsewhere.`);
   }
   if (val > proj + 1) L.push(`Note the market may actually let him fall below value.`);
@@ -4936,32 +4936,32 @@ function coachAdvise(q, ctx) {
   if (/\b(budget|left to spend|how much.*(left|spend)|max bid|on track|on budget|can i afford|spending)\b/.test(t)) {
     const per = (myTeam.budgetRemaining / Math.max(1, myTeam.spotsRemaining)).toFixed(1);
     const pr = myTeam.budgetRemaining / Math.max(1, myTeam.spotsRemaining);
-    let g = ''; if (pr < 3) g = ' You’re getting thin — keep $1 for every open slot.'; else if (pr > 12) g = ' You have real spending power — don’t leave money on the table.';
+    let g = ''; if (pr < 3) g = ' You’re getting thin, keep $1 for every open slot.'; else if (pr > 12) g = ' You have real spending power, don’t leave money on the table.';
     return `You have $${myTeam.budgetRemaining} for ${myTeam.spotsRemaining} slots (~$${per}/slot). Max bid right now: $${maxBid}.${g}`;
   }
   if (/\b(need|needs|open slot|open slots|positions|what positions|holes|fill)\b/.test(t) && plan) {
     const open = (plan.remainingStarterSlots || []).map(s => s.label);
-    return open.length ? `Open starting slots: ${open.join(', ')}. Bench depth comes after those.` : `Your starting lineup is full — now it’s about value and depth.`;
+    return open.length ? `Open starting slots: ${open.join(', ')}. Bench depth comes after those.` : `Your starting lineup is full, now it’s about value and depth.`;
   }
   if (/\b(plan|lineup|optimal|my build|build look)\b/.test(t) && plan) {
     const tg = (plan.remainingStarterSlots || []).filter(s => s.player).slice(0, 6).map(s => `${s.label}: ${s.player.name} (~$${s.targetPrice})`);
-    const ppg = plan.starterPoints ? (plan.starterPoints / (games || 17)).toFixed(1) : '—';
-    return `Your plan projects ${ppg} pts/gm. Targets — ${tg.length ? tg.join('; ') : 'lineup set'}.${plan.feasible ? '' : ' (Over budget right now — trim a target.)'}`;
+    const ppg = plan.starterPoints ? (plan.starterPoints / (games || 17)).toFixed(1) : '–';
+    return `Your plan projects ${ppg} pts/gm. Targets, ${tg.length ? tg.join('; ') : 'lineup set'}.${plan.feasible ? '' : ' (Over budget right now, trim a target.)'}`;
   }
   if (/\b(bargain|bargains|steal|steals|cheap|sleeper|undervalued|good deal|best value|values on)\b/.test(t)) {
     const bar = undr.map(p => ({ p, gap: Math.max(youOf(p), p.auctionValue || 0) - (p.marketValue || 0) })).filter(x => x.gap > 0 && (x.p.marketValue || 0) <= maxBid).sort((a, b) => b.gap - a.gap).slice(0, 3);
-    return bar.length ? `Best values you can afford: ${bar.map(x => `${x.p.name} (You $${youOf(x.p)} vs Proj $${x.p.marketValue})`).join('; ')}.` : `No clear bargains fit your budget right now — hold for the mid-rounds.`;
+    return bar.length ? `Best values you can afford: ${bar.map(x => `${x.p.name} (You $${youOf(x.p)} vs Proj $${x.p.marketValue})`).join('; ')}.` : `No clear bargains fit your budget right now, hold for the mid-rounds.`;
   }
   if (/\b(who should i|target|recommend|what (should i do|now|next)|who.*bid|best.*available|pick now|go after|nominate)\b/.test(t) && plan) {
     const ts = (plan.remainingStarterSlots || []).filter(s => s.player && (s.player.marketValue || 0) <= maxBid).sort((a, b) => (b.player.projectedPoints || 0) - (a.player.projectedPoints || 0));
-    if (ts.length) { const s = ts[0]; return `Go after ${s.player.name} for your ${s.label} — plan price ~$${s.targetPrice}. He’s the highest-impact slot you can still afford.`; }
+    if (ts.length) { const s = ts[0]; return `Go after ${s.player.name} for your ${s.label}, plan price ~$${s.targetPrice}. He’s the highest-impact slot you can still afford.`; }
     const best = undr.filter(p => (p.marketValue || 0) <= maxBid).sort((a, b) => youOf(b) - youOf(a))[0];
-    return best ? `Best value you can afford: ${best.name} (${best.position}, You $${youOf(best)}).` : `Tight budget — chase $1 upside picks now.`;
+    return best ? `Best value you can afford: ${best.name} (${best.position}, You $${youOf(best)}).` : `Tight budget, chase $1 upside picks now.`;
   }
   if (/\b(expensive|cheap|hot|cold|going for|market|run on)\b/.test(t) && marketState) {
     const pm = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', k: 'K', kicker: 'K', def: 'DEF', defense: 'DEF' };
     let pos = null; Object.keys(pm).forEach(k => { if (new RegExp('\\b' + k + 's?\\b').test(t)) pos = pm[k]; });
-    if (pos && marketState[pos]) { const m = marketState[pos]; const r = m.sampleSize >= 2 ? Math.round(m.ratio * 100) + '% of fair' : 'no read yet'; return `${pos} market: ${m.heat === 'hot' ? 'running hot' : m.heat === 'cold' ? 'cooling off' : 'about fair'} (${r}, ${m.sampleSize} drafted). ${m.heat === 'hot' ? 'Let the run pass unless he’s a target.' : m.heat === 'cold' ? 'Bargains may be appearing — pounce.' : 'Bid to your numbers.'}`; }
+    if (pos && marketState[pos]) { const m = marketState[pos]; const r = m.sampleSize >= 2 ? Math.round(m.ratio * 100) + '% of fair' : 'no read yet'; return `${pos} market: ${m.heat === 'hot' ? 'running hot' : m.heat === 'cold' ? 'cooling off' : 'about fair'} (${r}, ${m.sampleSize} drafted). ${m.heat === 'hot' ? 'Let the run pass unless he’s a target.' : m.heat === 'cold' ? 'Bargains may be appearing, pounce.' : 'Bid to your numbers.'}`; }
   }
   return null;
 }
@@ -4987,21 +4987,21 @@ function coachWhySlot(q, ctx) {
   const tprice = slot ? slot.targetPrice : price(planned);
   const top = list[0];
   const L = [];
-  L.push(`Your plan pencils in ${planned.name} as ${pos}${pi + 1} (~$${tprice}, ${ppg(planned)} pts/gm) — here's the math:`);
+  L.push(`Your plan pencils in ${planned.name} as ${pos}${pi + 1} (~$${tprice}, ${ppg(planned)} pts/gm), here's the math:`);
   if (top && top.id !== planned.id) {
     const dPts = ((top.projectedPoints - planned.projectedPoints) / g);
     const dCost = Math.max(1, price(top) - tprice);
-    L.push(`The top option, ${top.name} (${ppg(top)} pts/gm, ~$${price(top)}), is only ${dPts.toFixed(1)} pts/gm better for $${dCost} more — and that $${dCost} buys more total points spread across RB/WR than it does chasing a marginal ${pos} upgrade.`);
+    L.push(`The top option, ${top.name} (${ppg(top)} pts/gm, ~$${price(top)}), is only ${dPts.toFixed(1)} pts/gm better for $${dCost} more, and that $${dCost} buys more total points spread across RB/WR than it does chasing a marginal ${pos} upgrade.`);
   }
   const cheaper = list[Math.min(pi + 3, list.length - 1)];
   if (cheaper && cheaper.id !== planned.id) {
     const dPts = ((planned.projectedPoints - cheaper.projectedPoints) / g);
-    L.push(`Drop to ${cheaper.name} (~$${price(cheaper)}) and you'd save a couple bucks but give up ${dPts.toFixed(1)} pts/gm — ${planned.name} is where points-per-dollar peaks for your budget.`);
+    L.push(`Drop to ${cheaper.name} (~$${price(cheaper)}) and you'd save a couple bucks but give up ${dPts.toFixed(1)} pts/gm, ${planned.name} is where points-per-dollar peaks for your budget.`);
   }
-  L.push(`So ${pos}${pi + 1} isn't "settling" — it's the slot where an extra dollar returns the fewest points, so the plan banks the savings elsewhere. Want a different ${pos}? Target him and I'll re-solve around it.`);
+  L.push(`So ${pos}${pi + 1} isn't "settling", it's the slot where an extra dollar returns the fewest points, so the plan banks the savings elsewhere. Want a different ${pos}? Target him and I'll re-solve around it.`);
   return L.join(' ');
 }
-// "Should I punt / go cheap / stream this position?" — answers with the position's
+// "Should I punt / go cheap / stream this position?", answers with the position's
 // value curve: what you give up going to a $1 streamer vs paying up, and whether the
 // saved dollars do more good elsewhere. Handles "all the QBs are in red" framing.
 function coachPunt(q, ctx) {
@@ -5040,13 +5040,13 @@ function coachPunt(q, ctx) {
     .map(p => ({ p, edge: Math.max(youOf(p), p.auctionValue || 0) - (p.marketValue || 0) }))
     .sort((a,b) => b.edge - a.edge)[0];
   const L = [];
-  L.push(`${shallow ? 'Often yes' : 'Usually no'} — here's the ${pos} math, not a guess.`);
-  L.push(`Cheapest startable ${pos}: ${streamer.name} (~$${Math.max(minBid, price(streamer))}, ${ppg(streamer).toFixed(1)} pts/gm). The ${pos} you'd pay up for: ${payUp.name} (~$${payUpPrice}, ${ppg(payUp).toFixed(1)} pts/gm) — a gap of ${dropGm.toFixed(1)} pts/gm for about $${saved} more.`);
+  L.push(`${shallow ? 'Often yes' : 'Usually no'}, here's the ${pos} math, not a guess.`);
+  L.push(`Cheapest startable ${pos}: ${streamer.name} (~$${Math.max(minBid, price(streamer))}, ${ppg(streamer).toFixed(1)} pts/gm). The ${pos} you'd pay up for: ${payUp.name} (~$${payUpPrice}, ${ppg(payUp).toFixed(1)} pts/gm), a gap of ${dropGm.toFixed(1)} pts/gm for about $${saved} more.`);
   if (shallow) {
-    L.push(`${pos} is shallow — only ${scarcityGm.toFixed(1)} pts/gm separate the #1 ${pos} from a replacement starter — so that $${saved} usually buys more points at RB/WR.${realloc && realloc.edge > 0 ? ` Best place for it: ${realloc.p.name} (You $${youOf(realloc.p)} vs Proj $${realloc.p.marketValue}).` : ''}`);
-    L.push(`When every ${pos} is priced above your value (all "red"), that's the room overpaying the position — exactly when a $1 ${pos} plus reallocating the savings wins. Grab a $1-2 ${pos} late and spend up at RB/WR.`);
+    L.push(`${pos} is shallow, only ${scarcityGm.toFixed(1)} pts/gm separate the #1 ${pos} from a replacement starter, so that $${saved} usually buys more points at RB/WR.${realloc && realloc.edge > 0 ? ` Best place for it: ${realloc.p.name} (You $${youOf(realloc.p)} vs Proj $${realloc.p.marketValue}).` : ''}`);
+    L.push(`When every ${pos} is priced above your value (all "red"), that's the room overpaying the position, exactly when a $1 ${pos} plus reallocating the savings wins. Grab a $1-2 ${pos} late and spend up at RB/WR.`);
   } else {
-    L.push(`But ${pos} is where points are scarcest (${scarcityGm.toFixed(1)} pts/gm from #1 to replacement), so a $1 ${pos} costs ${dropGm.toFixed(1)} pts/gm you can't easily recover. Punt ${pos} only if you're truly priced out — otherwise pay your number for one starter and go cheap at QB/TE/K/DEF instead.`);
+    L.push(`But ${pos} is where points are scarcest (${scarcityGm.toFixed(1)} pts/gm from #1 to replacement), so a $1 ${pos} costs ${dropGm.toFixed(1)} pts/gm you can't easily recover. Punt ${pos} only if you're truly priced out, otherwise pay your number for one starter and go cheap at QB/TE/K/DEF instead.`);
   }
   return L.join(' ');
 }
@@ -5071,7 +5071,7 @@ function coachMostImportant(q, ctx) {
   const ppg = x => (x.projectedPoints / g).toFixed(1);
   const L = [];
   L.push(`${top.name} (${top.position}, ~$${price(top)}, ${ppg(top)} pts/gm) is your highest-impact get.`);
-  L.push(`He projects ~${(pool[0].marg / g).toFixed(1)} pts/gm above a replacement-level ${top.position} — the biggest point edge on the board — so landing him raises your ceiling more than any other single move.`);
+  L.push(`He projects ~${(pool[0].marg / g).toFixed(1)} pts/gm above a replacement-level ${top.position}, the biggest point edge on the board, so landing him raises your ceiling more than any other single move.`);
   if (pool[1] && pool[1].p.id !== top.id) L.push(`Next most important: ${pool[1].p.name} (${pool[1].p.position}, +${(pool[1].marg / g).toFixed(1)} pts/gm over replacement).`);
   L.push(`Click the dot by his name to lock him as a target.`);
   return L.join(' ');
@@ -5100,12 +5100,12 @@ function coachRecommendPos(q, ctx) {
   const recPrice = (slot && rec === planPick) ? slot.targetPrice : price(rec);
   const top = list[0];
   const L = [];
-  L.push(`For ${pos} I'd target ${rec.name} — ${pos}${rankOf(rec)}, ~$${recPrice}, ${ppg(rec)} pts/gm.`);
-  L.push(rec === planPick ? `He's where your plan lands — the points-per-dollar sweet spot for ${pos}.` : `He's the best value you can afford at ${pos}.`);
+  L.push(`For ${pos} I'd target ${rec.name}, ${pos}${rankOf(rec)}, ~$${recPrice}, ${ppg(rec)} pts/gm.`);
+  L.push(rec === planPick ? `He's where your plan lands, the points-per-dollar sweet spot for ${pos}.` : `He's the best value you can afford at ${pos}.`);
   if (top && top.id !== rec.id) {
     const dPts = ((top.projectedPoints - rec.projectedPoints) / g).toFixed(1);
     const dCost = Math.max(1, price(top) - recPrice);
-    L.push(`Paying up for ${top.name} (${ppg(top)} pts/gm) runs $${dCost} more for ~${dPts} extra pts/gm — usually money better spent elsewhere unless you want the ceiling.`);
+    L.push(`Paying up for ${top.name} (${ppg(top)} pts/gm) runs $${dCost} more for ~${dPts} extra pts/gm, usually money better spent elsewhere unless you want the ceiling.`);
   }
   if (valueCand && valueCand.p.id !== rec.id && valueCand.gap >= 2) L.push(`Value alternative: ${valueCand.p.name} (You $${youOf(valueCand.p)} vs cost $${price(valueCand.p)}).`);
   L.push(`Want to lock him? Click the dot by his name to target him.`);
@@ -5137,8 +5137,8 @@ function coachWhyInBuild(p, ctx) {
   const ppg = x => (x.projectedPoints / g).toFixed(1);
   const price = x => x.marketValue != null ? x.marketValue : x.auctionValue;
   const L = [];
-  L.push(`${p.name} (${pos}${rank > 0 ? rank : ''}, ${ppg(p)} pts/gm) keeps landing in the builds because the models maximize total points per dollar — they don't avoid a player just because he prints "overpay."`);
-  if (over > 1) L.push(`The pink only flags that his likely price ($${cost}) runs ~$${over} above his standalone value ($${val}) — a small premium, not a red flag.`);
+  L.push(`${p.name} (${pos}${rank > 0 ? rank : ''}, ${ppg(p)} pts/gm) keeps landing in the builds because the models maximize total points per dollar, they don't avoid a player just because he prints "overpay."`);
+  if (over > 1) L.push(`The pink only flags that his likely price ($${cost}) runs ~$${over} above his standalone value ($${val}), a small premium, not a red flag.`);
   else L.push(`And he's actually fair-to-good value, so he's an easy include.`);
   const above = list[rank - 2], below = list[rank];
   if (above && below) {
@@ -5158,13 +5158,13 @@ function coachWhyPlan(q, ctx) {
   if (!changeish) return null;
   const { plan, games } = ctx;
   const L = [];
-  L.push("The plan spends to maximize your whole starting lineup's points — not to upgrade any one position.");
+  L.push("The plan spends to maximize your whole starting lineup's points, not to upgrade any one position.");
   L.push("Money you save at one spot doesn't go back into the same position; it flows to wherever it buys the most points per dollar.");
   if (pos && plan) {
     const slot = (plan.remainingStarterSlots || []).find(s => (s.eligible || []).includes(pos) && s.player);
     if (slot) L.push(`Right now it pencils in ${slot.player.name} (~$${slot.targetPrice}) at ${pos}.`);
     if (pos === 'QB' || pos === 'TE' || pos === 'K' || pos === 'DEF') {
-      L.push(`${pos} is shallow value — the gap from the 7th to the 9th option is small — so banking your bargain into RB/WR/FLEX (where points-per-dollar is higher) and taking a cheaper ${pos} actually projects MORE total points, even though the ${pos} label looks worse.`);
+      L.push(`${pos} is shallow value, the gap from the 7th to the 9th option is small, so banking your bargain into RB/WR/FLEX (where points-per-dollar is higher) and taking a cheaper ${pos} actually projects MORE total points, even though the ${pos} label looks worse.`);
     } else {
       L.push(`After a bargain it reallocates toward the best remaining value on the board, which may not be ${pos}.`);
     }
@@ -5188,14 +5188,14 @@ function draftAlerts(players, myTeam, plan, config, draftedIds, games) {
   needPos.forEach(pos => {
     const list = byPos[pos] || [];
     if (list.length === 0) return;
-    if (list.length <= 2) { alerts.push({ pos, urgency: 50, text: `Only ${list.length} startable ${pos}${list.length > 1 ? 's' : ''} left on the board — this is basically your last shot at one.` }); return; }
+    if (list.length <= 2) { alerts.push({ pos, urgency: 50, text: `Only ${list.length} startable ${pos}${list.length > 1 ? 's' : ''} left on the board, this is basically your last shot at one.` }); return; }
     const cliff = findTierCliff(list, g);
     if (!cliff) return;
     const remaining = cliff.idx;
     if (cliff.drop >= 1.5 && remaining <= 3) {
       alerts.push({ pos, urgency: cliff.drop * (4 - remaining),
         text: remaining <= 2
-          ? `Last ${remaining === 1 ? 'startable' : remaining} ${pos}${remaining === 1 ? '' : 's'} at this tier — grab one now. Waiting drops your starting lineup about ${cliff.drop} pts/gm.`
+          ? `Last ${remaining === 1 ? 'startable' : remaining} ${pos}${remaining === 1 ? '' : 's'} at this tier, grab one now. Waiting drops your starting lineup about ${cliff.drop} pts/gm.`
           : `${remaining} ${pos}s left before the tier breaks. Waiting drops your starting lineup about ${cliff.drop} pts/gm.` });
     }
   });
@@ -5233,11 +5233,11 @@ function strategyPivot(players, myTeam, plan, config, draftedIds, games) {
   const wrNeed = need.has('WR') || need.has('FLEX') || (config.roster.WR && myCount('WR') < (config.roster.WR.starters || 0));
   const rb = elite('RB', 1.0), wr = elite('WR', 1.0), te = elite('TE', 0.6);
   if (rbNeed && rb && rb.pctGone >= 0.7 && myCount('RB') <= 1)
-    return { text: `Elite RBs are nearly gone (${rb.leftN} left of the top ${rb.eliteN}). Pivot toward Zero RB — load WR/TE value now and chase RB upside late.`, tone: 'bad' };
+    return { text: `Elite RBs are nearly gone (${rb.leftN} left of the top ${rb.eliteN}). Pivot toward Zero RB, load WR/TE value now and chase RB upside late.`, tone: 'bad' };
   if (wrNeed && wr && wr.pctGone >= 0.7 && myCount('WR') <= 1)
-    return { text: `Top WRs are thinning (${wr.leftN} left of the top ${wr.eliteN}) — prioritize a WR before the tier flattens.`, tone: 'bad' };
+    return { text: `Top WRs are thinning (${wr.leftN} left of the top ${wr.eliteN}), prioritize a WR before the tier flattens.`, tone: 'bad' };
   if ((need.has('TE')) && te && te.pctGone >= 0.7 && myCount('TE') === 0)
-    return { text: `The clear-tier TEs are almost gone — grab one now or punt TE and stream it cheap.`, tone: 'bad' };
+    return { text: `The clear-tier TEs are almost gone, grab one now or punt TE and stream it cheap.`, tone: 'bad' };
   return null;
 }
 function nominationInsight(player, players, myTeam, teams, plan, config, draftedIds, marketState, games) {
@@ -5250,9 +5250,9 @@ function nominationInsight(player, players, myTeam, teams, plan, config, drafted
   const ppg = (player.projectedPoints || 0) / g;
   const you = player.personalValue != null ? player.personalValue : (player.auctionValue || 0);
   const proj = player.marketValue != null ? player.marketValue : (player.auctionValue || 0);
-  const parts = [`${player.name} — ${pos}${rank}, ${ppg.toFixed(1)} pts/gm.`];
+  const parts = [`${player.name}, ${pos}${rank}, ${ppg.toFixed(1)} pts/gm.`];
   const cliff = findTierCliff(list, g);
-  if (cliff && rank <= cliff.idx && cliff.drop >= 1.2) parts.push(`Top-tier ${pos} — a ${cliff.drop} pt/gm cliff hits after ${pos}${cliff.idx}.`);
+  if (cliff && rank <= cliff.idx && cliff.drop >= 1.2) parts.push(`Top-tier ${pos}, a ${cliff.drop} pt/gm cliff hits after ${pos}${cliff.idx}.`);
   if (player.worthPrice != null) parts.push(`Worth up to $${player.worthPrice} to your team${proj ? ` (proj $${proj})` : ''}.`);
   else parts.push(`Your max $${you}${proj ? ` · proj $${proj}` : ''}.`);
   if (teams && myTeam) { const comp = opponentCompetition(player, teams, myTeam, config); parts.push(`${comp.canAfford} rival${comp.canAfford !== 1 ? 's' : ''} can afford him${comp.maxRival > 0 ? ` (top max $${comp.maxRival})` : ''}.`); }
@@ -5278,8 +5278,8 @@ function coachStrategy(q, ctx) {
   [...reads].sort((a, b) => b.rel - a.rel).forEach((r, i) => { if (r.early && i < 2) scarce.push(r); else deep.push(r.pos); });
   const bargains = (evalPlayers || []).filter(p => !di.has(p.id)).map(p => { const cost = p.marketValue != null ? p.marketValue : p.auctionValue; const you = p.personalValue != null ? p.personalValue : p.auctionValue; return { p, gap: Math.max(you, p.auctionValue) - cost }; }).filter(x => x.gap >= 2).sort((a, b) => b.gap - a.gap).slice(0, 3);
   const L = ["Here's the read on the board:"];
-  if (scarce.length) L.push(`Top-heavy — pay up before the cliff: ${scarce.map(x => `${x.pos} (cliff after ${x.pos}${x.idx})`).join(', ')}.`);
-  if (deep.length) L.push(`Deeper — let value come to you: ${deep.join(', ')}.`);
+  if (scarce.length) L.push(`Top-heavy, pay up before the cliff: ${scarce.map(x => `${x.pos} (cliff after ${x.pos}${x.idx})`).join(', ')}.`);
+  if (deep.length) L.push(`Deeper, let value come to you: ${deep.join(', ')}.`);
   if (bargains.length) L.push(`Best values right now: ${bargains.map(x => `${x.p.name} (${x.p.position}, +$${x.gap})`).join('; ')}.`);
   const ap = [];
   scarce.forEach(x => { if (x.pos === 'RB') ap.push('lock an elite RB early'); else if (x.pos === 'TE') ap.push('grab a top-tier TE'); else if (x.pos === 'QB') ap.push('pay up for an upper-tier QB'); else if (x.pos === 'WR') ap.push('anchor a stud WR'); });
@@ -5307,10 +5307,10 @@ function coachPositionTake(q, ctx) {
   if (ms && ms.sampleSize >= 2) L.push(`${pos} is going ${ms.heat === 'hot' ? 'above' : ms.heat === 'cold' ? 'below' : 'about'} fair so far (${Math.round(ms.ratio * 100)}% of value, ${ms.sampleSize} drafted).`);
   const cliff = findTierCliff(list, g);
   if (cliff && cliff.idx <= 6 && cliff.drop >= 1) {
-    if (cliff.idx === 1) L.push(`You're right the top one matters: ${list[0].name} (${ppg(list[0])} pts/gm) sits ~${cliff.drop} pts/gm clear of the next ${pos} — a real edge worth paying up for. After him the tier flattens, so it's him or take value later.`);
-    else L.push(`You're right that the top ones matter: there's a cliff after ${pos}${cliff.idx}. The top ${cliff.idx} average ${cliff.aboveAvg} pts/gm, then it falls ~${cliff.drop} pts/gm — so landing a top-${cliff.idx} ${pos} is worth paying up for; miss the group and the tier flattens out.`);
+    if (cliff.idx === 1) L.push(`You're right the top one matters: ${list[0].name} (${ppg(list[0])} pts/gm) sits ~${cliff.drop} pts/gm clear of the next ${pos}, a real edge worth paying up for. After him the tier flattens, so it's him or take value later.`);
+    else L.push(`You're right that the top ones matter: there's a cliff after ${pos}${cliff.idx}. The top ${cliff.idx} average ${cliff.aboveAvg} pts/gm, then it falls ~${cliff.drop} pts/gm, so landing a top-${cliff.idx} ${pos} is worth paying up for; miss the group and the tier flattens out.`);
   } else {
-    L.push(`${pos} is fairly flat — small gaps between options, so don't pay a premium; let value come to you.`);
+    L.push(`${pos} is fairly flat, small gaps between options, so don't pay a premium; let value come to you.`);
   }
   const slot = plan ? (plan.remainingStarterSlots || []).find(s => (s.eligible || []).includes(pos) && s.player) : null;
   if (slot) L.push(`Your plan currently targets ${slot.player.name} (~$${slot.targetPrice}, ${ppg(slot.player)} pts/gm) at ${pos}.`);
@@ -5323,7 +5323,7 @@ function buildCoachContext(q, ctx) {
   const byPos = {};
   (evalPlayers || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
-  const slim = p => ({ name: p.name, pos: p.position, team: p.team, ppg: +((p.projectedPoints || 0) / g).toFixed(1), proj: p.marketValue, value: p.auctionValue, you: p.personalValue, risk: riskLabel(riskScore(p)), flag: (p.marketValue != null && p.auctionValue != null) ? ((p.marketValue - p.auctionValue) > 1 ? 'RED — overvalued, Proj above Value' : (p.auctionValue - p.marketValue) > 1 ? 'GREEN — value, Proj below Value' : 'fair') : 'fair' });
+  const slim = p => ({ name: p.name, pos: p.position, team: p.team, ppg: +((p.projectedPoints || 0) / g).toFixed(1), proj: p.marketValue, value: p.auctionValue, you: p.personalValue, risk: riskLabel(riskScore(p)), flag: (p.marketValue != null && p.auctionValue != null) ? ((p.marketValue - p.auctionValue) > 1 ? 'RED, overvalued, Proj above Value' : (p.auctionValue - p.marketValue) > 1 ? 'GREEN, value, Proj below Value' : 'fair') : 'fair' });
   const top = {};
   ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].forEach(pos => { top[pos] = (byPos[pos] || []).slice(0, (pos === 'RB' || pos === 'WR') ? 14 : 8).map(slim); });
   const named = [];
@@ -5336,11 +5336,11 @@ function buildCoachContext(q, ctx) {
     plan: plan ? { projectedStarterPtsPerGame: +(((plan.starterPoints) || 0) / g).toFixed(1), feasible: plan.feasible, targets: (plan.remainingStarterSlots || []).filter(s => s.player).map(s => ({ slot: s.label, player: s.player.name, est: s.targetPrice })) } : null,
     topAvailableByPosition: top,
     playersInQuestion: named,
-    legend: 'Proj = likely market/auction price. Value = VBD worth in a vacuum. You = the most THIS manager should personally pay given roster, budget, and live market. On the draft board and cheat sheet a player name is colored RED when Proj is above Value (the room will likely overpay — overvalued) and GREEN when Proj is below Value (a bargain). The per-player flag field encodes this color. If asked why a player is red or green, explain it from his Proj-vs-Value gap; never claim it is another tool doing the coloring — you ARE the tool. A red (overvalued) player can still be worth bidding above Value when his positional points-per-game edge over replacement exceeds what the same dollars buy elsewhere; that is why You can sit above Value for those players.',
+    legend: 'Proj = likely market/auction price. Value = VBD worth in a vacuum. You = the most THIS manager should personally pay given roster, budget, and live market. On the draft board and cheat sheet a player name is colored RED when Proj is above Value (the room will likely overpay, overvalued) and GREEN when Proj is below Value (a bargain). The per-player flag field encodes this color. If asked why a player is red or green, explain it from his Proj-vs-Value gap; never claim it is another tool doing the coloring, you ARE the tool. A red (overvalued) player can still be worth bidding above Value when his positional points-per-game edge over replacement exceeds what the same dollars buy elsewhere; that is why You can sit above Value for those players.',
   };
 }
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
-  const sys = "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator. Answer like a sharp friend who knows ball: decisive and grounded ONLY in the live draft data provided.\n\nFORMAT — this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued — the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring — never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere — that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Never invent players or stats not in the data.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  const sys = "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator. Answer like a sharp friend who knows ball: decisive and grounded ONLY in the live draft data provided.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Never invent players or stats not in the data.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text }));
   hist.push({ role: 'user', content: userMsg });
   if (ai.format === 'proxy') {
@@ -5381,7 +5381,7 @@ function CoachAiSettings({ ai, onSave, onClose }) {
   function preset(p) { if (p === 'openai') { setFormat('openai'); setEndpoint('https://api.openai.com/v1/chat/completions'); setModel('gpt-4o-mini'); } else if (p === 'anthropic') { setFormat('anthropic'); setEndpoint('https://api.anthropic.com/v1/messages'); setModel('claude-3-5-haiku-latest'); } else { setFormat('proxy'); setEndpoint('/api/coach'); setKey(''); } }
   return (
     <div className="coach-ai">
-      <div className="coach-ai-h">AI Analysis — bring your own key</div>
+      <div className="coach-ai-h">AI Analysis, bring your own key</div>
       <p className="coach-ai-note">Connect a model for free-form, ChatGPT/Claude-style reasoning grounded in your live draft. <b>Server</b> (recommended once deployed) keeps the key safe on Cloudflare; <b>OpenAI/Anthropic</b> call directly with a key stored in this browser. Off = the fast built-in engine (free, offline).</p>
       <label className="coach-ai-row"><input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} /> Use AI analysis for questions</label>
       <div className="coach-ai-presets"><button className={format === 'proxy' ? 'on' : ''} onClick={() => preset('proxy')}>Server (Cloudflare)</button><button className={format === 'openai' ? 'on' : ''} onClick={() => preset('openai')}>OpenAI</button><button className={format === 'anthropic' ? 'on' : ''} onClick={() => preset('anthropic')}>Anthropic</button></div>
@@ -5389,7 +5389,7 @@ function CoachAiSettings({ ai, onSave, onClose }) {
       <label className="coach-ai-field">Model<input value={model} onChange={e => setModel(e.target.value)} /></label>
       {format !== 'proxy'
         ? <label className="coach-ai-field">API key<input type="password" value={key} onChange={e => setKey(e.target.value)} placeholder="stays in your browser" /></label>
-        : <div className="coach-ai-field" style={{ color: 'var(--positive)' }}>Key is held securely on your Cloudflare server — nothing sensitive in the browser.</div>}
+        : <div className="coach-ai-field" style={{ color: 'var(--positive)' }}>Key is held securely on your Cloudflare server, nothing sensitive in the browser.</div>}
       <div className="coach-ai-actions"><button className="btn-secondary" onClick={onClose}>Cancel</button><button className="btn-draft" onClick={() => { onSave({ enabled, format, endpoint, model, key }); onClose(); }}>Save</button></div>
     </div>
   );
@@ -5432,7 +5432,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     applyFn(factor);
     onApply(adjust);
     const dirWord = factor < 1 ? 'down' : 'up';
-    return `Done — ${p.descShort} I ${p.delta > 0 ? 'pulled it from' : 'sent it to'} ${srcLabel} (each ${dirWord} ~${Math.round(Math.abs(1 - factor) * 100)}%) so the board\'s total stays balanced.`;
+    return `Done, ${p.descShort} I ${p.delta > 0 ? 'pulled it from' : 'sent it to'} ${srcLabel} (each ${dirWord} ~${Math.round(Math.abs(1 - factor) * 100)}%) so the board\'s total stays balanced.`;
   }
   async function handleAI(q) {
     const tid = msgIdRef.current++;
@@ -5459,8 +5459,8 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   function runEngine(q) {
     if (pending) {
       const t = q.toLowerCase();
-      if (/\b(cancel|nevermind|never mind|forget it|stop|no thanks)\b/.test(t)) { setPending(null); push('bot', 'Cancelled — nothing changed.'); return; }
-      if (/\b(just|simply)?\s*(apply|do it|as[- ]?is|leave it|don.?t rebalance|no rebalance|keep the rest|without rebalanc)\b/.test(t)) { onApply(pending.adjust); push('bot', `Applied as-is — the board\'s total spend shifts by about $${Math.round(Math.abs(pending.delta))}.`); setPending(null); return; }
+      if (/\b(cancel|nevermind|never mind|forget it|stop|no thanks)\b/.test(t)) { setPending(null); push('bot', 'Cancelled, nothing changed.'); return; }
+      if (/\b(just|simply)?\s*(apply|do it|as[- ]?is|leave it|don.?t rebalance|no rebalance|keep the rest|without rebalanc)\b/.test(t)) { onApply(pending.adjust); push('bot', `Applied as-is, the board\'s total spend shifts by about $${Math.round(Math.abs(pending.delta))}.`); setPending(null); return; }
       if (/\b(spread|even|evenly|across|everyone|the rest|all others?|proportional|balance)\b/.test(t)) { push('bot', applyFunding(pending, 'spread')); setPending(null); return; }
       if (/\b(replacement|depth|scrubs?|streamers?|bench|low[- ]?end)\b/.test(t)) { push('bot', applyFunding(pending, 'replacement')); setPending(null); return; }
       const fp = detectPositions(t);
@@ -5474,7 +5474,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     if (res.changed && (!looksQuestion || tuneImperative)) {
       if (res.isReset) { onApply({}); push('bot', res.reply); return; }
       const D = spendTotal(res.adjust) - spendTotal(valueAdjust);
-      if (Math.abs(D) < 2) { onApply(res.adjust); push('bot', res.reply + ' (Negligible budget impact — applied directly.)'); return; }
+      if (Math.abs(D) < 2) { onApply(res.adjust); push('bot', res.reply + ' (Negligible budget impact, applied directly.)'); return; }
       setPending({ adjust: res.adjust, delta: D, changed: res.changedPositions || [], descShort: res.reply });
       const verb = D > 0 ? `adds about $${Math.round(D)} of value to the board` : `frees up about $${Math.round(-D)} of value`;
       push('bot', `${res.reply} That ${verb}. Where should it ${D > 0 ? 'come from' : 'go'}? You can say: “spread it across the other positions”, “take it from QBs and TEs”, “pull it from replacement-level players”, or “just apply it” to leave the rest unchanged.`);
@@ -5503,7 +5503,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     // 4) concept explanation
     const con = coachConcept(q); if (con) { ITAnalytics.track('coach_concept', {}); push('bot', con); return; }
     // 5) bare player name
-    if (/\b(highlight|highlighted|cheat ?sheet)\b/.test(lc)) { push('bot', 'Those highlights mark the target players for the strategy you picked on the cheatsheet (Hero RB, Zero RB, Hero WR…) or your best values. Tell me a position or player and I\'ll dig in — e.g. “how’s the TE tier?” or “how much for the top TE?”'); return; }
+    if (/\b(highlight|highlighted|cheat ?sheet)\b/.test(lc)) { push('bot', 'Those highlights mark the target players for the strategy you picked on the cheatsheet (Hero RB, Zero RB, Hero WR…) or your best values. Tell me a position or player and I\'ll dig in, e.g. “how’s the TE tier?” or “how much for the top TE?”'); return; }
     const found = findPlayer(stripEval(q), ctx.evalPlayers);
     if (found && found.player) { evalAndNominate(found.player); if (found.alternatives && found.alternatives.length) push('bot', 'Also close: ' + found.alternatives.map(a => a.name).join(', ') + '.'); return; }
     if (res.sawPos && tuneImperative) { push('bot', res.reply); return; }
@@ -5513,13 +5513,13 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   }
   const active = [];
   Object.entries(valueAdjust || {}).forEach(([pos, obj]) => Object.entries(obj || {}).forEach(([tier, m]) => { if (Math.abs(m - 1) > 0.01) active.push(`${tier === 'all' ? '' : tier + ' '}${pos} ${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`); }));
-  if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name} — ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
+  if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
     <div className={`coach ${big ? 'big' : 'dock'}`}>
       <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
-      <div className="coach-input"><textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything — players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
+      <div className="coach-input"><textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
     </div>
   );
 }
@@ -5549,7 +5549,7 @@ class ErrorBoundary extends React.Component {
         <div className="errbound">
           <div className="errbound-card">
             <div className="errbound-title">Something hiccuped</div>
-            <p>Iron Tuna hit an unexpected error. Your draft is saved locally — reloading usually fixes it.</p>
+            <p>Iron Tuna hit an unexpected error. Your draft is saved locally, reloading usually fixes it.</p>
             <pre className="errbound-detail">{String((this.state.err && this.state.err.message) || this.state.err)}</pre>
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button className="btn-draft" onClick={() => location.reload()}>Reload</button>
@@ -5571,13 +5571,13 @@ const TIERS = [
     'Dynamic valuations that re-price as the board moves',
     'Projected team potential throughout the auction',
     'Instant team grading',
-    'Live Mock — on-demand, team-specific taunts',
+    'Live Mock, on-demand, team-specific taunts',
   ] },
-  { id: 'coach', name: 'Value Coach', price: 4.99, blurb: 'Your AI auction advisor — ask anything, get reasoned answers.', features: [
+  { id: 'coach', name: 'Value Coach', price: 4.99, blurb: 'Your AI auction advisor, ask anything, get reasoned answers.', features: [
     'Ask in plain English: “who should I focus on?”, “how high on Bijan?”, “where’s the value?”',
     'Re-tune projected values by tier or position on command',
     'Bargain finder, live budget checks, and position-tier reads',
-    'League-specific, reasoned advice — not a generic chatbot',
+    'League-specific, reasoned advice, not a generic chatbot',
   ] },
 ];
 function loadAccount() {
@@ -5587,9 +5587,9 @@ function loadAccount() {
 }
 function entitled(account, id) { if (!account) return false; if (account.testMode) return true; const e = account.entitlements || {}; if (e.bundle) return true; if (e.base && id !== 'coach') return true; return !!e[id]; }
 function buildGradeText(myTeam, plan, config, games) {
-  const ppg = plan && plan.starterPoints ? (plan.starterPoints / (games || 17)).toFixed(1) : '—';
+  const ppg = plan && plan.starterPoints ? (plan.starterPoints / (games || 17)).toFixed(1) : '–';
   const spent = config.budget - myTeam.budgetRemaining;
-  return `My "${myTeam.name}" auction squad — drafted with Iron Tuna.\nProjected starters: ${ppg} pts/game\nSpent $${spent} of $${config.budget}\nIron Tuna tells you what every player is worth to YOUR roster. Try it free.`;
+  return `My "${myTeam.name}" auction squad, drafted with Iron Tuna.\nProjected starters: ${ppg} pts/game\nSpent $${spent} of $${config.budget}\nIron Tuna tells you what every player is worth to YOUR roster. Try it free.`;
 }
 function PricingModal({ account, onBuy, onClose, onLegal }) {
   return (
@@ -5597,7 +5597,7 @@ function PricingModal({ account, onBuy, onClose, onLegal }) {
       <div className="modal" style={{ maxWidth: 740 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">Unlock Iron Tuna</div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>One-time per season — not a subscription. Drafted, not impressed? Full refund.</p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>One-time per season, not a subscription. Drafted, not impressed? Full refund.</p>
         <div className="tier-grid">
           {TIERS.map(t => { const owned = entitled(account, t.id); const feat = t.id === 'base';
             return (
@@ -5614,7 +5614,7 @@ function PricingModal({ account, onBuy, onClose, onLegal }) {
           })}
         </div>
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 14 }}>
-          Payments are a placeholder in this build — checkout simulates a purchase so everything is testable.
+          Payments are a placeholder in this build, checkout simulates a purchase so everything is testable.
           By unlocking you agree to our <a href="#" onClick={e => { e.preventDefault(); onLegal(); }} style={{ color: 'var(--gold-text)' }}>Privacy Policy & Terms</a>.
         </p>
       </div>
@@ -5640,7 +5640,7 @@ function CheckoutModal({ tier, testMode, onComplete, onClose }) {
           <div className="checkout-stripe-note">Stripe Checkout goes here in production. Disabled in this build.</div>
         </div>
         <button className="btn-draft" style={{ width: '100%', marginTop: 12 }} disabled={busy} onClick={() => complete(testMode ? 'test' : 'live')}>
-          {busy ? 'Processing…' : `Complete purchase — TEST (no charge)`}
+          {busy ? 'Processing…' : `Complete purchase, TEST (no charge)`}
         </button>
         <button className="btn-secondary" style={{ width: '100%', marginTop: 8 }} disabled onClick={() => {}}>Pay with card (coming soon)</button>
         <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 10, textAlign: 'center' }}>No real payment is taken. This unlocks the feature for testing.</p>
@@ -5665,7 +5665,7 @@ function AuthModal({ account, onSignIn, onSignOut, onClose }) {
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '10px 0' }}>Sign in to save your leagues and unlocks across devices.</p>
             <input type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-panel)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: 9, fontSize: 13 }} onKeyDown={e => { if (e.key === 'Enter') onSignIn(email.trim()); }} />
             <button className="btn-draft" style={{ width: '100%', marginTop: 10 }} onClick={() => onSignIn(email.trim())}>Continue</button>
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 10 }}>Placeholder sign-in — wire to magic-link or Google later. No password; nothing leaves your device in this build.</p>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 10 }}>Placeholder sign-in, wire to magic-link or Google later. No password; nothing leaves your device in this build.</p>
           </div>
         )}
       </div>
@@ -5708,7 +5708,7 @@ function ShareModal({ text, onClose }) {
       <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">Share your draft</div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '8px 0' }}>Drop this in your league chat — the fastest way to recruit the room.</p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '8px 0' }}>Drop this in your league chat, the fastest way to recruit the room.</p>
         <textarea readOnly value={text} style={{ width: '100%', boxSizing: 'border-box', minHeight: 120, background: 'var(--bg-panel)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: 10, fontSize: 12, lineHeight: 1.5 }} />
         <button className="btn-draft" style={{ width: '100%', marginTop: 10 }} onClick={copy}>{copied ? 'Copied!' : 'Copy to clipboard'}</button>
       </div>
@@ -5739,12 +5739,12 @@ function OnboardingChecklist({ steps, onDismiss }) {
   );
 }
 const MODEL_FOCUS = {
-  ideal: { focus: [], note: 'Balanced build — takes the best value at every position; no single spot is forced.' },
-  heroRB: { focus: ['RB'], note: 'Focus: RB — one elite anchor back. QB, WR, TE, K and DEF are taken at the best value available.' },
-  robustRB: { focus: ['RB'], note: 'Focus: RB — three strong backs up front. QB, WR, TE, K and DEF are taken at the best value available.' },
-  zeroRB: { focus: ['WR'], note: 'Focus: WR — two studs up top. RB is intentionally left cheap / best-available late.' },
-  heroWR: { focus: ['WR'], note: 'Focus: WR — one elite anchor receiver. QB, RB, TE, K and DEF are taken at the best value available.' },
-  eliteTE: { focus: ['TE'], note: 'Focus: TE — pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
+  ideal: { focus: [], note: 'Balanced build, takes the best value at every position; no single spot is forced.' },
+  heroRB: { focus: ['RB'], note: 'Focus: RB, one elite anchor back. QB, WR, TE, K and DEF are taken at the best value available.' },
+  robustRB: { focus: ['RB'], note: 'Focus: RB, three strong backs up front. QB, WR, TE, K and DEF are taken at the best value available.' },
+  zeroRB: { focus: ['WR'], note: 'Focus: WR, two studs up top. RB is intentionally left cheap / best-available late.' },
+  heroWR: { focus: ['WR'], note: 'Focus: WR, one elite anchor receiver. QB, RB, TE, K and DEF are taken at the best value available.' },
+  eliteTE: { focus: ['TE'], note: 'Focus: TE, pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
 };
 function buildModel(key, myTeam, players, config, draftedIds, roleOverrides) {
   const di = draftedIds || new Set();
@@ -5792,7 +5792,7 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
           return (
             <div key={i} className={`model-slot ${isFocus ? 'ms-focus' : ''}`}>
               <span className="ms-label">{sl.label}</span>
-              <span className="ms-name">{sl.player ? sl.player.name : '—'}</span>
+              <span className="ms-name">{sl.player ? sl.player.name : '–'}</span>
               <span className="ms-rank">{sl.player && rank ? `${pos}${rank}` : ''}</span>
               <span className="ms-price">{sl.player ? `$${sl.status === 'filled' ? sl.price : sl.targetPrice}` : ''}</span>
             </div>
@@ -5817,15 +5817,15 @@ function teamTaunt(team, players, config, games) {
   let worst = null; roster.forEach(r => { const over = r.price - r.value; if (r.value >= 3 && over >= 5 && (!worst || over > worst.over)) worst = { name: r.name, price: r.price, over }; });
   const jabs = [];
   if (filled === 0) jabs.push(`${team.name} hasn't won a single player and is clutching $${team.budgetRemaining} like the last lifeboat. Waiting for prices to drop? They won't.`);
-  if (worst) jabs.push(`${team.name} paid $${worst.price} for ${worst.name} — about $${worst.over} over the going rate. Big tipper, small returns.`);
+  if (worst) jabs.push(`${team.name} paid $${worst.price} for ${worst.name}, about $${worst.over} over the going rate. Big tipper, small returns.`);
   if (filled >= 3 && !byPos['RB']) jabs.push(`${filled} players deep and ${team.name} still has zero running backs. Daring plan to win a league without the position that wins leagues.`);
   if (filled >= 3 && !byPos['WR']) jabs.push(`${team.name} forgot wide receivers exist. Those flex spots are going to feel awfully empty.`);
   if (left > 0 && perSlot < 2 && filled < totalSpots - 1) jabs.push(`${team.name} has $${team.budgetRemaining} for ${left} spots. Enjoy a bench built entirely from the $1 bin.`);
-  if (left > 0 && perSlot > 14 && filled >= 3) jabs.push(`${team.name} is hoarding $${team.budgetRemaining} like a retirement account. It's an auction, not a savings plan — spend it.`);
+  if (left > 0 && perSlot > 14 && filled >= 3) jabs.push(`${team.name} is hoarding $${team.budgetRemaining} like a retirement account. It's an auction, not a savings plan, spend it.`);
   if ((byPos['QB'] || 0) >= 2) jabs.push(`${team.name} rostered ${byPos['QB']} quarterbacks. You start one. Unless they're playing a format nobody told the rest of us about.`);
   if (byPos['K'] || byPos['DEF']) jabs.push(`${team.name} spent real auction dollars on a ${byPos['K'] ? 'kicker' : 'defense'} early. Iron Tuna is physically cringing.`);
   if (starterPts > 0 && filled >= Math.ceil(totalSpots * 0.5)) jabs.push(`${team.name}'s starters project for ${starterPts.toFixed(1)} pts/game. Adorable. Save them a seat in the consolation bracket.`);
-  if (!jabs.length) jabs.push(`${team.name} is being suspiciously competent — no glaring holes yet. Give them a few nominations; they'll find a way to mess it up.`);
+  if (!jabs.length) jabs.push(`${team.name} is being suspiciously competent, no glaring holes yet. Give them a few nominations; they'll find a way to mess it up.`);
   return jabs[Math.floor(Math.random() * jabs.length)];
 }
 function App() {
@@ -5852,7 +5852,7 @@ function App() {
   const [taunt, setTaunt] = useState(null);
   function makeTaunt() {
     const opps = teams.filter(t => !t.isMine);
-    if (!opps.length) { setTaunt({ name: '', text: 'No rivals to roast yet — mark your team, then let the others start drafting.' }); return; }
+    if (!opps.length) { setTaunt({ name: '', text: 'No rivals to roast yet, mark your team, then let the others start drafting.' }); return; }
     const prevName = taunt && taunt.name;
     let pool = opps.filter(t => t.name !== prevName); if (!pool.length) pool = opps;
     const t = pool[Math.floor(Math.random() * pool.length)];
@@ -6034,13 +6034,13 @@ function App() {
       const minPrior = priorDeals.length ? Math.min(...priorDeals) : Infinity;
       const who = `${player.name} → ${team.name} · $${price}`;
       let text, tone;
-      if (deal >= 2 && deal >= maxPrior) { text = `🏆 Best bargain so far! ${who} — proj $${proj}, saved $${deal}`; tone = 'good'; }
-      else if (deal <= -2 && deal <= minPrior) { text = `🔥 Worst overpayment so far — ${who}, proj $${proj} (+$${-deal})`; tone = 'bad'; }
-      else if (deal >= 7) { text = `💰 Steal — ${who}, proj $${proj} (saved $${deal})`; tone = 'good'; }
-      else if (deal >= 2) { text = `👍 Nice value — ${who} (saved $${deal})`; tone = 'good'; }
-      else if (deal <= -7) { text = `😬 Big overpay — ${who}, proj $${proj} (+$${-deal})`; tone = 'bad'; }
-      else if (deal <= -2) { text = `Slight overpay — ${who} (+$${-deal})`; tone = 'bad'; }
-      else { text = `Right at value — ${who}`; tone = 'neutral'; }
+      if (deal >= 2 && deal >= maxPrior) { text = `🏆 Best bargain so far! ${who}, proj $${proj}, saved $${deal}`; tone = 'good'; }
+      else if (deal <= -2 && deal <= minPrior) { text = `🔥 Worst overpayment so far, ${who}, proj $${proj} (+$${-deal})`; tone = 'bad'; }
+      else if (deal >= 7) { text = `💰 Steal, ${who}, proj $${proj} (saved $${deal})`; tone = 'good'; }
+      else if (deal >= 2) { text = `👍 Nice value, ${who} (saved $${deal})`; tone = 'good'; }
+      else if (deal <= -7) { text = `😬 Big overpay, ${who}, proj $${proj} (+$${-deal})`; tone = 'bad'; }
+      else if (deal <= -2) { text = `Slight overpay, ${who} (+$${-deal})`; tone = 'bad'; }
+      else { text = `Right at value, ${who}`; tone = 'neutral'; }
       setPurchaseToast({ text, tone, id: Date.now() });
     })();
     setCurrentNomination(null);
@@ -6179,7 +6179,7 @@ function App() {
           if (removeIdx < 0) break;
           order.splice(removeIdx, 1);
         }
-        if (draftedAtPos + atPosCount() > cap) return prev; // position already full — reject
+        if (draftedAtPos + atPosCount() > cap) return prev; // position already full, reject
       }
       // Affordability: cost of targets + $1 per other remaining slot must fit remaining budget.
       const affordable = ids => {
@@ -6299,7 +6299,7 @@ function App() {
       <div className="board-subtabs no-print">
         <button className={`subtab ${boardTab === 'cheatsheet' ? 'active' : ''}`} onClick={() => setBoardTab('cheatsheet')}>Cheat Sheet</button>
         <button className={`subtab ${boardTab === 'draftboard' ? 'active' : ''}`} onClick={() => setBoardTab('draftboard')}>Draft Board</button>
-        <button className="subtab subtab-2nd" style={{ marginLeft: 'auto' }} title="Open the other view in a new window for a second monitor — both stay in sync live" onClick={() => { const other = boardTab === 'cheatsheet' ? 'board' : 'cheat'; try { window.open(window.location.pathname + '?screen=' + other, 'iron_tuna_screen_' + other, 'width=1500,height=950'); } catch (e) {} }}>⧉ Second screen</button>
+        <button className="subtab subtab-2nd" style={{ marginLeft: 'auto' }} title="Open the other view in a new window for a second monitor, both stay in sync live" onClick={() => { const other = boardTab === 'cheatsheet' ? 'board' : 'cheat'; try { window.open(window.location.pathname + '?screen=' + other, 'iron_tuna_screen_' + other, 'width=1500,height=950'); } catch (e) {} }}>⧉ Second screen</button>
       </div>
       {boardTab === 'cheatsheet' ? (
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
@@ -6358,7 +6358,7 @@ function App() {
             <div className="taunt-head">🔥 Live Mock</div>
             {taunt.name ? <div className="taunt-target">Now roasting: <b style={{ color: 'var(--text-secondary)' }}>{taunt.name}</b></div> : <div className="taunt-target" />}
             {teams.filter(t => !t.isMine).length > 0 && (
-              <div className="taunt-pick"><label>Pick a team</label><select value={(teams.find(t => t.name === taunt.name) || {}).id || ''} onChange={e => { const t = teams.find(x => x.id === e.target.value); if (t) tauntTeam(t); }}>{!taunt.name && <option value="">—</option>}{teams.filter(t => !t.isMine).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+              <div className="taunt-pick"><label>Pick a team</label><select value={(teams.find(t => t.name === taunt.name) || {}).id || ''} onChange={e => { const t = teams.find(x => x.id === e.target.value); if (t) tauntTeam(t); }}>{!taunt.name && <option value="">–</option>}{teams.filter(t => !t.isMine).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
             )}
             <div className="taunt-text">“{taunt.text}”</div>
             <div className="taunt-actions"><button className="btn-draft" onClick={makeTaunt}>Roast another rival</button><button className="btn-secondary" onClick={() => { try { navigator.clipboard && navigator.clipboard.writeText(taunt.text); } catch (e) {} }}>Copy</button></div>
