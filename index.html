@@ -723,13 +723,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-modelfit { box-shadow: inset 0 0 0 2px #eab308, 0 0 10px rgba(234,179,8,0.25); border-radius: 5px; }
 .cheat-row.cheat-tier-top { border-top: 2px solid rgba(234,179,8,0.6); margin-top: 3px; padding-top: 3px; }
 .cheat-team-inline { color: var(--text-muted); font-size: 10px; font-weight: 600; letter-spacing: 0.03em; margin-left: 6px; }
-.model-tab-pts { display: block; font-size: 9px; font-weight: 700; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.02em; }
+.model-tab-pts { font-size: 9.5px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.02em; white-space: nowrap; }
+.model-tab.active .model-tab-pts { color: #5a4406; }
 .cheat-grid.has-hl .cheat-row.cheat-modelfit { opacity: 1; }
 .prep-main { grid-template-columns: 1fr 208px; }
 .models-panel { padding: 12px 10px; }
 .models-head { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.04em; color: var(--gold-text); margin-bottom: 10px; }
 .models-tabs { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-.model-tab { text-align: left; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; font-size: 12px; }
+.model-tab { text-align: left; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; font-size: 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .model-tab.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
 .model-summary { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 8px; }
 .model-summary b { color: var(--gold-text); font-size: 14px; }
@@ -744,17 +745,27 @@ input:focus, select:focus { border-color: var(--accent); }
 .model-slot.ms-focus .ms-rank { color: var(--positive); border-color: var(--positive); }
 .model-focus-note { font-size: 10.5px; line-height: 1.5; color: var(--text-secondary); background: rgba(45,212,163,0.07); border: 1px solid var(--border-subtle); border-left: 2px solid var(--positive); border-radius: var(--radius-sm); padding: 8px 10px; margin: 10px 4px 0; }
 .models-foot { font-size: 10px; color: var(--text-muted); margin-top: 12px; line-height: 1.45; }
+.models-extra { margin-top: 10px; border-top: 1px solid var(--border-subtle); padding-top: 10px; }
+.models-extra .mx-head { display: flex; align-items: center; justify-content: space-between; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 6px; }
+.models-extra .mx-nav button { background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-secondary); width: 22px; height: 18px; border-radius: 4px; cursor: pointer; font-size: 9px; margin-left: 4px; padding: 0; line-height: 1; }
+.models-extra .mx-nav button:hover { border-color: var(--border-accent); color: var(--text-primary); }
+.models-extra .mx-label, .models-extra .mx-taunt-team { font-size: 11px; font-weight: 700; color: var(--positive); margin-bottom: 3px; }
+.models-extra .mx-taunt-team { color: #ff8d4a; }
+.models-extra .mx-text { font-size: 11.5px; line-height: 1.5; color: var(--text-secondary); }
+.models-extra .mx-empty { font-size: 11px; color: var(--text-muted); }
 .coach.big { width: 208px; max-width: 208px; max-height: 82vh; }
 .coach.big .coach-msg { font-size: 13.5px; }
 .coach.big .coach-body { padding: 14px; }
 .coach.big .coach-input input, .coach.big .coach-input textarea { font-size: 15px; padding: 14px; min-height: 110px; }
-.coach.dock { left: 0; right: 0; bottom: 0; width: 100%; max-width: none; max-height: 132px; flex-direction: row; flex-wrap: wrap; align-items: stretch; border: none; border-top: 1px solid var(--positive); border-radius: 0; box-shadow: 0 -6px 24px rgba(0,0,0,0.5); }
+.coach.dock { left: 0; right: 0; bottom: 0; width: 100%; max-width: none; max-height: 80vh; flex-direction: row; flex-wrap: wrap; align-items: stretch; border: none; border-top: 1px solid var(--positive); border-radius: 0; box-shadow: 0 -6px 24px rgba(0,0,0,0.5); position: fixed; }
+.coach-resize { position: absolute; top: 0; left: 0; right: 0; height: 7px; cursor: ns-resize; z-index: 5; }
+.coach-resize:hover { background: rgba(45,212,163,0.35); }
 .coach.dock .coach-head { flex-basis: 100%; order: 1; }
 .coach.dock .coach-chips { flex-basis: 100%; order: 2; }
-.coach.dock .coach-body { flex: 1 1 34%; max-height: 92px; order: 4; }
+.coach.dock .coach-body { flex: 1 1 34%; max-height: calc(var(--dock-h, 122px) - 30px); order: 4; min-height: 0; }
 .coach.dock .coach-msg { max-width: 780px; }
 .coach.dock .coach-input { flex: 0 0 300px; order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; }
-.coach.dock .coach-insights { flex: 0 0 320px; order: 5; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 8px 12px; max-height: 110px; box-sizing: border-box; }
+.coach.dock .coach-insights { flex: 0 0 320px; order: 5; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 8px 12px; max-height: calc(var(--dock-h, 122px) - 12px); box-sizing: border-box; }
 .coach-insights { display: none; }
 .coach.dock .coach-insights { display: flex; }
 .coach-insights .ci-head { display: flex; align-items: center; justify-content: space-between; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 6px; flex: 0 0 auto; }
@@ -3428,7 +3439,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               return (
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
-                <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{p.team}</span> : null}</span>
+                <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : ''}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
@@ -4538,7 +4549,7 @@ function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGam
 // ─── App.jsx ──────────────────────────
 const STORAGE_KEY = 'iron_tuna_draft_state_v2';
 const PROJ_KEY = 'tn$9xQ27z';
-const PROJ_VERSION = '2026.1-cbs';
+const PROJ_VERSION = '2026.2-cbs';
 function _xb64decode(s, key) {
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
@@ -5393,6 +5404,13 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   const curInsight = insights.length ? insights[((insightIdx % insights.length) + insights.length) % insights.length] : null;
   const prevInsight = () => { if (insights.length) setInsightIdx(i => (i - 1 + insights.length) % insights.length); };
   const nextInsight = () => { if (insights.length) setInsightIdx(i => (i + 1) % insights.length); };
+  const [dockH, setDockH] = useState(null);
+  function startDockResize(e) {
+    e.preventDefault();
+    const move = ev => { const y = ev.touches ? ev.touches[0].clientY : ev.clientY; setDockH(Math.max(120, Math.min(window.innerHeight * 0.72, window.innerHeight - y))); };
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  }
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const tc = teamsCount || 12;
   const spendTotal = adj => rosterableDetail(players, adj, config, tc).reduce((s, d) => s + d.mv, 0);
@@ -5505,7 +5523,8 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   Object.entries(valueAdjust || {}).forEach(([pos, obj]) => Object.entries(obj || {}).forEach(([tier, m]) => { if (Math.abs(m - 1) > 0.01) active.push(`${tier === 'all' ? '' : tier + ' '}${pos} ${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`); }));
   if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
-    <div className={`coach ${big ? 'big' : 'dock'}`}>
+    <div className={`coach ${big ? 'big' : 'dock'}`} style={!big && dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : undefined}>
+      {!big && <div className="coach-resize" onPointerDown={startDockResize} title="Drag to resize" />}
       <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
@@ -5758,7 +5777,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   else if (key === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // build around your flagged targets
   return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides);
 }
-function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets }) {
+function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
   const shownKey = model || 'ideal';
   const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
   const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
@@ -5768,6 +5787,14 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
     models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } });
     return m;
   }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
+  const isBoard = mode === 'board';
+  const mxGames = seasonGames || 17;
+  const insights = useMemo(() => isBoard ? [] : buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games: mxGames, mode: 'prep' }), [isBoard, players, myTeam, teams, config, draftedIds, marketState, mxGames]);
+  const rivals = useMemo(() => (teams || []).filter(t => !t.isMine), [teams]);
+  const [extraIdx, setExtraIdx] = useState(0);
+  const extraLen = isBoard ? rivals.length : insights.length;
+  useEffect(() => { if (extraLen <= 1) return; const t = setInterval(() => setExtraIdx(i => (i + 1) % extraLen), 10000); return () => clearInterval(t); }, [extraLen]);
+  const taunt = useMemo(() => (isBoard && rivals.length) ? teamTaunt(rivals[extraIdx % rivals.length], players, config, mxGames) : null, [isBoard, rivals, extraIdx, players, config, mxGames]);
   const games = seasonGames || 17;
   if (!myTeam) return (<aside className="sidebar models-panel"><div className="models-head">Draft Models</div><p style={{ fontSize: 12, color: 'var(--text-muted)', padding: 8 }}>Mark a team as yours on the Draft Board to see ideal builds.</p></aside>);
   const slots = plan ? plan.slots || [] : [];
@@ -5786,20 +5813,11 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
         {models.map(([k, lbl]) => <button key={k} className={`model-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="model-tab-pts">{(modelPts[k] / games).toFixed(1)} pts/gm</span> : null}</button>)}
       </div>
       {plan && <div className="model-summary"><b>{(plan.starterPoints / games).toFixed(1)}</b> pts/gm · ~${cost}/{config.budget}{plan.feasible ? '' : ' · over'}</div>}
-      <div className="model-lineup">
-        {slots.map((sl, i) => {
-          const pos = sl.player ? sl.player.position : null;
-          const isFocus = !!(pos && focusInfo.focus.indexOf(pos) !== -1);
-          const rank = sl.player ? posRank[sl.player.id] : null;
-          return (
-            <div key={i} className={`model-slot ${isFocus ? 'ms-focus' : ''}`}>
-              <span className="ms-label">{sl.label}</span>
-              <span className="ms-name">{sl.player ? sl.player.name : '–'}</span>
-              <span className="ms-rank">{sl.player && rank ? `${pos}${rank}` : ''}</span>
-              <span className="ms-price">{sl.player ? `$${sl.status === 'filled' ? sl.price : sl.targetPrice}` : ''}</span>
-            </div>
-          );
-        })}
+      <div className="models-extra">
+        <div className="mx-head"><span>{isBoard ? 'Trash talk' : 'Insights'}</span>{extraLen > 1 && <div className="mx-nav"><button onClick={() => setExtraIdx(i => (i - 1 + extraLen) % extraLen)} title="Previous">▲</button><button onClick={() => setExtraIdx(i => (i + 1) % extraLen)} title="Next">▼</button></div>}</div>
+        {isBoard
+          ? (taunt ? <div className="mx-body"><div className="mx-taunt-team">{rivals[extraIdx % rivals.length].name}</div><div className="mx-text">{taunt}</div></div> : <div className="mx-body mx-empty">Once rivals start drafting, the roasts begin.</div>)
+          : (insights.length ? <div className="mx-body"><div className="mx-label">{insights[extraIdx % insights.length].label}</div><div className="mx-text">{insights[extraIdx % insights.length].text}</div></div> : <div className="mx-body mx-empty">Insights appear as the board fills in.</div>)}
       </div>
       {focusInfo.note && <div className="model-focus-note">{focusInfo.note}</div>}
       <div className="models-foot">Click a model to box its target players on the cheat sheet; click it again to clear. Teal marks the positions this model targets; every other spot takes the best value available.</div>
@@ -6395,8 +6413,7 @@ function App() {
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} /> : !sidebarOpen ? <button className="sidebar-expand no-print" onClick={() => setSidebarOpen(true)} title="Show side panel">‹ Panel</button> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
-          currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} onCollapse={() => setSidebarOpen(false)} />}
+        <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} mode={view === 'board' ? 'board' : 'prep'} teams={teams} marketState={marketState} />
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
