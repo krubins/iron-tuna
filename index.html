@@ -5722,13 +5722,14 @@ function OnboardingChecklist({ steps, onDismiss }) {
 }
 const MODEL_FOCUS = {
   ideal: { focus: [], note: 'Balanced build, takes the best value at every position; no single spot is forced.' },
+  targets: { focus: [], note: 'Builds the optimal team around the players you have flagged as targets (click a player\'s rank on the cheat sheet to flag). Your targets and the ideal picks that complete the roster are boxed in yellow.' },
   heroRB: { focus: ['RB'], note: 'Focus: RB, one elite anchor back. QB, WR, TE, K and DEF are taken at the best value available.' },
   robustRB: { focus: ['RB'], note: 'Focus: RB, three strong backs up front. QB, WR, TE, K and DEF are taken at the best value available.' },
   zeroRB: { focus: ['WR'], note: 'Focus: WR, two studs up top. RB is intentionally left cheap / best-available late.' },
   heroWR: { focus: ['WR'], note: 'Focus: WR, one elite anchor receiver. QB, RB, TE, K and DEF are taken at the best value available.' },
   eliteTE: { focus: ['TE'], note: 'Focus: TE, pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
 };
-function buildModel(key, myTeam, players, config, draftedIds, roleOverrides) {
+function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets) {
   const di = draftedIds || new Set();
   const byPos = {};
   (players || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -5742,18 +5743,19 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides) {
   else if (key === 'zeroRB') { addF(pick('RB', 17)); addF(pick('RB', 21)); addF(pick('WR', 0)); addF(pick('WR', 1)); } // cheap RBs, stud WRs
   else if (key === 'heroWR') { addF(pick('WR', 0)); addF(pick('WR', 23)); }       // one elite WR, value WR2
   else if (key === 'eliteTE') { addF(pick('TE', 0)); addF(pick('TE', 1)); }       // pay up for the TE edge
+  else if (key === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // build around your flagged targets
   return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides);
 }
-function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel }) {
+function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets }) {
   const shownKey = model || 'ideal';
-  const models = [['ideal', 'Ideal Team'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
-  const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides]);
+  const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
   const modelPts = useMemo(() => {
     if (!myTeam) return {};
     const m = {};
-    models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } });
+    models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } });
     return m;
-  }, [myTeam, players, config, draftedIds, roleOverrides]);
+  }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   const games = seasonGames || 17;
   if (!myTeam) return (<aside className="sidebar models-panel"><div className="models-head">Draft Models</div><p style={{ fontSize: 12, color: 'var(--text-muted)', padding: 8 }}>Mark a team as yours on the Draft Board to see ideal builds.</p></aside>);
   const slots = plan ? plan.slots || [] : [];
@@ -5993,12 +5995,12 @@ function App() {
     const myTeam = teams.find(t => t.isMine);
     if (!myTeam) return null;
     const dIds = new Set(draftHistory.map(d => d.playerId));
-    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides);
-    if (!plan || !plan.slots) return null;
+    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets);
     const ids = new Set();
-    plan.slots.forEach(s => { if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id); });
+    if (plan && plan.slots) plan.slots.forEach(s => { if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id); });
+    if (draftModel === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
     return ids;
-  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides]);
+  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets]);
   useEffect(() => {
     if (remoteApplyRef.current) { remoteApplyRef.current = false; return; }
     try {
@@ -6381,7 +6383,7 @@ function App() {
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} /> : !sidebarOpen ? <button className="sidebar-expand no-print" onClick={() => setSidebarOpen(true)} title="Show side panel">‹ Panel</button> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
+        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} /> : !sidebarOpen ? <button className="sidebar-expand no-print" onClick={() => setSidebarOpen(true)} title="Show side panel">‹ Panel</button> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
           currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} onCollapse={() => setSidebarOpen(false)} />}
       </div>
       {view === 'settings' && (
