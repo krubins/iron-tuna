@@ -285,7 +285,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .landing-splash.fading-out { opacity: 0; pointer-events: none; }
 .landing-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; z-index: 2; }
 .landing-logo-container { width: 100vw; max-height: 82vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; z-index: 1; }
-.landing-logo { width: 100%; height: auto; display: block; animation: kenBurnsZoom 8s ease-out forwards, landingFadeIn 1.2s ease-out backwards, eerieGlow 6.5s ease-in-out 1.2s infinite; filter: drop-shadow(0 0 22px rgba(45, 212, 163, 0.28)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6)); transform-origin: center center; }
+.landing-logo { width: 100%; height: auto; display: block; animation: landingFadeIn 0.7s ease-out backwards; filter: drop-shadow(0 0 13px rgba(45, 212, 163, 0.15)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.55)); transform-origin: center center; }
 @keyframes eerieGlow { 0%, 100% { filter: drop-shadow(0 0 15px rgba(45,212,163,0.18)) drop-shadow(0 4px 16px rgba(0,0,0,0.6)); } 50% { filter: drop-shadow(0 0 32px rgba(45,212,163,0.45)) drop-shadow(0 4px 16px rgba(0,0,0,0.6)); } }
 @keyframes kenBurnsZoom { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.12) translate(-2%, 1%); } }
 @keyframes landingFadeIn { 0% { opacity: 0; transform: scale(0.96); } 100% { opacity: 1; transform: scale(1); } }
@@ -2177,7 +2177,7 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero">
-        <LogoMark tagline wavy height={340} className="landing-logo" />
+        <LogoMark tagline height={340} className="landing-logo" />
         <h1 className="lp-head">Know what every player is worth.</h1>
         <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a live navigator: who to bid on, how high, and why.</p>
         <div className="lp-cta-row" style={{ marginTop: 4 }}>
