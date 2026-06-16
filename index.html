@@ -750,7 +750,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.dock .coach-msg { max-width: 780px; }
 .coach.dock .coach-input { flex: 0 0 380px; order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; }
 .coach.dock .coach-input textarea { min-height: 56px; }
-.main.board-main { padding-bottom: 256px; }
+.main.board-main, .main.prep-main { padding-bottom: 210px; }
 .main.board-collapsed { grid-template-columns: 1fr auto; }
 .board-subtabs .subtab-2nd { color: var(--positive); border-color: rgba(45,212,163,0.4); }
 @media print { .coach.dock { display: none !important; } }
@@ -3438,7 +3438,7 @@ const STRAT_TILT = {
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
 function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory }) {
-  const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 30], ['DEF', 32]];
+  const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
@@ -6357,7 +6357,7 @@ function App() {
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
-      {!showSplash && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={view === 'prep'} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
+      {!showSplash && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal onAdd={(name, pos, team) => { const np = handleAddPlayer(name, pos, team); setShowAddPlayer(false); setAssignPlayer(np); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
