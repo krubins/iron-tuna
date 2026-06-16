@@ -753,6 +753,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .main.board-main, .main.prep-main { padding-bottom: 210px; }
 .main.board-collapsed { grid-template-columns: 1fr auto; }
 .board-subtabs .subtab-2nd { color: var(--positive); border-color: rgba(45,212,163,0.4); }
+.board-split { display: flex; align-items: stretch; width: 100%; }
+.board-split-pane { min-width: 0; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 196px); padding-bottom: 8px; }
+.board-split-divider { flex: 0 0 12px; cursor: col-resize; display: flex; align-items: center; justify-content: center; background: var(--bg-elev); border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); }
+.board-split-divider:hover { background: var(--border-accent); }
+.board-split-divider span { width: 3px; height: 44px; background: var(--positive); border-radius: 3px; box-shadow: 0 0 8px rgba(45,212,163,0.5); }
 @media print { .coach.dock { display: none !important; } }
 .cheat-col-head { border-top: 2px solid var(--gold-text); }
 .cc-QB .cheat-col-head { border-top-color: #e8554e; } .cc-QB .cheat-col-head > span:first-child { color: #ff8d85; }
@@ -5893,6 +5898,25 @@ function App() {
   const [currentNomination, setCurrentNomination] = useState(null);
   const [view, setView] = useState((screenParam === 'board' || screenParam === 'cheat') ? 'board' : (initialState?.draftHistory?.length > 0 ? 'board' : 'prep'));
   const [boardTab, setBoardTab] = useState(screenParam === 'board' ? 'draftboard' : 'cheatsheet');
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitRatio, setSplitRatio] = useState(0.5);
+  const splitRef = useRef(null);
+  function startSplitDrag(e) {
+    e.preventDefault();
+    const move = (ev) => { const el = splitRef.current; if (!el) return; const rect = el.getBoundingClientRect(); setSplitRatio(Math.max(0.22, Math.min(0.78, (ev.clientX - rect.left) / rect.width))); };
+    const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
+    document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+  }
+  async function spanTwoScreens() {
+    try {
+      if (window.getScreenDetails) {
+        const sd = await window.getScreenDetails();
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxH = 0;
+        sd.screens.forEach(sc => { minX = Math.min(minX, sc.left); minY = Math.min(minY, sc.top); maxX = Math.max(maxX, sc.left + sc.width); maxH = Math.max(maxH, sc.height); });
+        window.moveTo(minX, minY); window.resizeTo(maxX - minX, maxH);
+      } else if (window.screen) { window.moveTo(0, 0); window.resizeTo((window.screen.availWidth || 1280) * 2, window.screen.availHeight || 800); }
+    } catch (e) {}
+  }
   const [assignPlayer, setAssignPlayer] = useState(null);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -6308,19 +6332,13 @@ function App() {
     if (view === 'tiers') {
       return (<TierView players={personalizedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} onUpdateStrategy={handleUpdateStrategy} />);
     }
-    return (
-      <>
-      <div className="board-subtabs no-print">
-        <button className={`subtab ${boardTab === 'cheatsheet' ? 'active' : ''}`} onClick={() => setBoardTab('cheatsheet')}>Cheat Sheet</button>
-        <button className={`subtab ${boardTab === 'draftboard' ? 'active' : ''}`} onClick={() => setBoardTab('draftboard')}>Draft Board</button>
-        <button className="subtab subtab-2nd" style={{ marginLeft: 'auto' }} title="Open the other view in a new window for a second monitor, both stay in sync live" onClick={() => { const other = boardTab === 'cheatsheet' ? 'board' : 'cheat'; try { window.open(window.location.pathname + '?screen=' + other, 'iron_tuna_screen_' + other, 'width=1500,height=950'); } catch (e) {} }}>⧉ Second screen</button>
-      </div>
-      {boardTab === 'cheatsheet' ? (
+    const cheatSheetEl = (
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
           mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory} />
-      ) : (
+    );
+    const draftBoardEl = (
       <>
       {draftAlert && draftAlert.text !== dismissedAlert && <div className="draft-alert no-print"><span className="draft-alert-label">Heads up</span><span>{draftAlert.text}</span><button className="draft-alert-x" onClick={() => setDismissedAlert(draftAlert.text)} title="Dismiss">×</button></div>}
       {nomInsight && <div className={`nomination-alert no-print tone-${nomInsight.tone}`}><span className="na-label">Up for bid</span><span>{nomInsight.text}</span></div>}
@@ -6334,7 +6352,21 @@ function App() {
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} />
       </div>
       </>
-      )}
+    );
+    return (
+      <>
+      <div className="board-subtabs no-print">
+        <button className={`subtab ${!splitMode && boardTab === 'cheatsheet' ? 'active' : ''}`} onClick={() => { setSplitMode(false); setBoardTab('cheatsheet'); }}>Cheat Sheet</button>
+        <button className={`subtab ${!splitMode && boardTab === 'draftboard' ? 'active' : ''}`} onClick={() => { setSplitMode(false); setBoardTab('draftboard'); }}>Draft Board</button>
+        <button className={`subtab subtab-2nd ${splitMode ? 'active' : ''}`} style={{ marginLeft: 'auto' }} title="Span two screens: cheat sheet on the left, draft board on the right, with a draggable divider. Stretch this window across both monitors." onClick={() => { const next = !splitMode; setSplitMode(next); if (next) spanTwoScreens(); }}>⧉ {splitMode ? 'Exit split' : 'Span two screens'}</button>
+      </div>
+      {splitMode ? (
+        <div className="board-split" ref={splitRef}>
+          <div className="board-split-pane" style={{ flex: splitRatio }}>{cheatSheetEl}</div>
+          <div className="board-split-divider no-print" onPointerDown={startSplitDrag} title="Drag to resize"><span /></div>
+          <div className="board-split-pane" style={{ flex: 1 - splitRatio }}>{draftBoardEl}</div>
+        </div>
+      ) : boardTab === 'cheatsheet' ? cheatSheetEl : draftBoardEl}
       </>
     );
   }
