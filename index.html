@@ -1992,7 +1992,7 @@ function LandingSplash({ onDismiss, onNav }) {
   function go(target) { if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } setFadingOut(true); setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350); }
   const pillars = [
     ['Before the Auction', 'Prep, Strategy & Planning', [
-      ['free', 'Free, no signup', ['Custom auction values for your exact league and scoring', 'Tiered cheat sheets and six strategy models', 'A budget-aware optimal-lineup planner', 'The dollar allocation that builds your highest-scoring team']],
+      ['free', 'Free, no signup', ['Custom auction values for your exact league and scoring', 'Reliability-adjusted pricing that weighs injury frequency and positional consistency', 'Tiered cheat sheets and six strategy models', 'A budget-aware optimal-lineup planner', 'The dollar allocation that builds your highest-scoring team']],
       ['paid', 'With purchase', ['Unlimited mock auctions against CPU managers', 'An AI Value Coach tuned to your league and your style']],
     ]],
     ['Auction Day', 'Live Execution & Advice', [
