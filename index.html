@@ -720,6 +720,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-target .cheat-rank { color: var(--positive); font-weight: 700; }
 .cheat-rank:hover { color: var(--positive); }
 .cheat-grid.has-hl .cheat-row.cheat-target { opacity: 1; }
+.cheat-row.cheat-modelfit { box-shadow: inset 0 0 0 2px #eab308, 0 0 10px rgba(234,179,8,0.25); border-radius: 5px; }
+.cheat-grid.has-hl .cheat-row.cheat-modelfit { opacity: 1; }
 .prep-main { grid-template-columns: 1fr 208px; }
 .models-panel { padding: 12px 10px; }
 .models-head { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.04em; color: var(--gold-text); margin-bottom: 10px; }
@@ -3271,7 +3273,7 @@ const STRAT_TILT = {
   heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory }) {
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds }) {
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -3382,7 +3384,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 nameTitle = sign === 'under' ? `Target, worth up to your $${you}; ~$${you - cost} of edge at the $${cost} price` : sign === 'over' ? `Fade, the $${cost} price is $${cost - you} above his value to your team ($${you})` : `Priced about right for your team ($${you})`;
               }
               return (
-              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
+              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (p.team || '')}</span>
@@ -3575,7 +3577,7 @@ function PrepInsights({ players, config, seasonGames }) {
     </div>
   );
 }
-function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seasonGames, onNominate, onUpdateStrategy, onLoadLive, loading, dataInfo, onRankReorder, onResetRanks, targets, onToggleTarget, onOpenSettings, onUpdateConfig, onSetPrice, priceOverrides, onClearPrices }) {
+function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seasonGames, onNominate, onUpdateStrategy, onLoadLive, loading, dataInfo, onRankReorder, onResetRanks, targets, onToggleTarget, onOpenSettings, onUpdateConfig, onSetPrice, priceOverrides, onClearPrices, modelFitIds }) {
   const [activeSubview, setActiveSubview] = useState('cheatsheet');
   const [editAssume, setEditAssume] = useState(false);
   const ppr = config.scoring ? config.scoring.receptionPoints : 0;
@@ -3627,7 +3629,7 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{dataInfo ? `${dataInfo.source} ${dataInfo.season} · ${dataInfo.count}` : 'baseline'}</span>
       </div>
       {activeSubview === 'tiers' && <TierView players={valuedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={seasonGames} onNominate={onNominate} onUpdateStrategy={onUpdateStrategy} />}
-      {activeSubview === 'cheatsheet' && <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} onSetPrice={onSetPrice} priceOverrides={priceOverrides} onClearPrices={onClearPrices} />}
+      {activeSubview === 'cheatsheet' && <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} onSetPrice={onSetPrice} priceOverrides={priceOverrides} onClearPrices={onClearPrices} modelFitIds={modelFitIds} />}
     </div>
   );
 }
@@ -5618,10 +5620,10 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides) {
   else if (key === 'eliteTE') { addF(pick('TE', 0)); addF(pick('TE', 1)); }       // pay up for the TE edge
   return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides);
 }
-function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames }) {
-  const [model, setModel] = useState('ideal');
+function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel }) {
+  const shownKey = model || 'ideal';
   const models = [['ideal', 'Ideal Team'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
-  const plan = useMemo(() => myTeam ? buildModel(model, myTeam, players, config, draftedIds, roleOverrides) : null, [model, myTeam, players, config, draftedIds, roleOverrides]);
+  const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides]);
   const games = seasonGames || 17;
   if (!myTeam) return (<aside className="sidebar models-panel"><div className="models-head">Draft Models</div><p style={{ fontSize: 12, color: 'var(--text-muted)', padding: 8 }}>Mark a team as yours on the Draft Board to see ideal builds.</p></aside>);
   const slots = plan ? plan.slots || [] : [];
@@ -5632,12 +5634,12 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
     Object.values(by).forEach(a => { a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)); a.forEach((p, i) => { m[p.id] = i + 1; }); });
     return m;
   }, [players]);
-  const focusInfo = MODEL_FOCUS[model] || { focus: [], note: '' };
+  const focusInfo = MODEL_FOCUS[shownKey] || { focus: [], note: '' };
   return (
     <aside className="sidebar models-panel">
       <div className="models-head">Draft Models</div>
       <div className="models-tabs">
-        {models.map(([k, lbl]) => <button key={k} className={`model-tab ${model === k ? 'active' : ''}`} onClick={() => setModel(k)}>{lbl}</button>)}
+        {models.map(([k, lbl]) => <button key={k} className={`model-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}</button>)}
       </div>
       {plan && <div className="model-summary"><b>{(plan.starterPoints / games).toFixed(1)}</b> pts/gm · ~${cost}/{config.budget}{plan.feasible ? '' : ' · over'}</div>}
       <div className="model-lineup">
@@ -5656,7 +5658,7 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
         })}
       </div>
       {focusInfo.note && <div className="model-focus-note">{focusInfo.note}</div>}
-      <div className="models-foot">Teal marks the positions this model targets; every other spot takes the best value available. Ranks (e.g. QB5) show where each player falls at his position.</div>
+      <div className="models-foot">Click a model to box its target players on the cheat sheet; click it again to clear. Teal marks the positions this model targets; every other spot takes the best value available.</div>
     </aside>
   );
 }
@@ -5807,6 +5809,7 @@ function App() {
     return applyPriceOverrides(inflated, priceOverrides, draftedIds, config);
   }, [baseValued, valueAdjust, config, draftHistory, teams, priceOverrides]);
   const marketState = useMemo(() => computeMarketState(draftHistory, valuedPlayers, config), [draftHistory, valuedPlayers, config]);
+  const [draftModel, setDraftModel] = useState(null);
   const personalizedPlayers = useMemo(() => {
     const myTeam = teams.find(t => t.isMine);
     if (!myTeam) return valuedPlayers.map(p => ({ ...p, personalValue: p.marketValue ?? p.auctionValue }));
@@ -5851,6 +5854,17 @@ function App() {
       return { ...p, marketPrice: adj.recommendedPrice, marketBasis: adj.basis, planTarget: isTgt, fit, worthPrice, personalValue: Math.max(minBid, Math.round(personalValue)) };
     });
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
+  const modelFitIds = useMemo(() => {
+    if (!draftModel) return null;
+    const myTeam = teams.find(t => t.isMine);
+    if (!myTeam) return null;
+    const dIds = new Set(draftHistory.map(d => d.playerId));
+    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides);
+    if (!plan || !plan.slots) return null;
+    const ids = new Set();
+    plan.slots.forEach(s => { if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id); });
+    return ids;
+  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides]);
   useEffect(() => {
     if (remoteApplyRef.current) { remoteApplyRef.current = false; return; }
     try {
@@ -6174,7 +6188,7 @@ function App() {
   function renderMainContent() {
     if (view === 'prep') {
       return (<PrepMode config={config} players={players} valuedPlayers={personalizedPlayers} draftedIds={draftedIds} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
-        onNominate={setCurrentNomination} onUpdateStrategy={handleUpdateStrategy} onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo}
+        modelFitIds={modelFitIds} onNominate={setCurrentNomination} onUpdateStrategy={handleUpdateStrategy} onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo}
         onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget} onOpenSettings={() => setView('settings')} onUpdateConfig={updateConfigField} onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides} />);
     }
     if (view === 'plan') {
@@ -6187,7 +6201,7 @@ function App() {
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
-          mode="live" draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory} />
+          mode="live" modelFitIds={modelFitIds} draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory} />
     );
     const draftBoardEl = (
       <>
@@ -6233,7 +6247,7 @@ function App() {
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
       <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} /> : !sidebarOpen ? <button className="sidebar-expand no-print" onClick={() => setSidebarOpen(true)} title="Show side panel">‹ Panel</button> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
+        {view === 'prep' ? <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} /> : !sidebarOpen ? <button className="sidebar-expand no-print" onClick={() => setSidebarOpen(true)} title="Show side panel">‹ Panel</button> : <Sidebar myTeam={myTeam} teams={teams} config={config} valuedPlayers={personalizedPlayers} draftHistory={draftHistory} marketState={marketState} pointsMode={pointsMode} seasonGames={SEASON_GAMES} plan={plan} targets={targets} draftedIds={draftedIds} roleOverrides={roleOverrides} sonar={has('sonar')} onUnlockSonar={() => openCheckout(TIERS.find(t => t.id === 'base'))} onShare={(txt) => { setShareText(txt); setOverlay('share'); ITAnalytics.track('share_open', {}); }}
           currentNomination={liveNomination} onDraft={handleDraft} onClearNomination={() => setCurrentNomination(null)} onUpdateStrategy={handleUpdateStrategy} onCollapse={() => setSidebarOpen(false)} />}
       </div>
       {view === 'settings' && (
