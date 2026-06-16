@@ -896,7 +896,7 @@ input:focus, select:focus { border-color: var(--accent); }
       "applicationCategory": "SportsApplication",
       "operatingSystem": "Any (web browser)",
       "description": "Iron Tuna is an AI fantasy football auction draft assistant that generates custom auction values for your exact league: likely market price, true VBD value, and your personal maximum bid for every player, plus a budget-aware optimal-lineup planner and an AI auction navigator.",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free custom auction values; optional paid Advanced Auction Day Assistance." },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free custom auction values; optional paid Advanced Auction Day Management." },
       "featureList": [
         "Custom auction values for your exact league and scoring",
         "Three values per player: market price, true value, and your personal max bid",
@@ -914,7 +914,7 @@ input:focus, select:focus { border-color: var(--accent); }
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Is Iron Tuna really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Assistance package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade." } },
+        { "@type": "Question", "name": "Is Iron Tuna really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Management package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade." } },
         { "@type": "Question", "name": "Does it work for any auction league?", "acceptedAnswer": { "@type": "Answer", "text": "Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings." } },
         { "@type": "Question", "name": "Do I have to connect my league account?", "acceptedAnswer": { "@type": "Answer", "text": "No. There is nothing to log into and no password sharing. Enter your settings (or paste or screenshot your scoring) and you are ready." } },
         { "@type": "Question", "name": "How is Iron Tuna different from other draft tools?", "acceptedAnswer": { "@type": "Answer", "text": "Most tools hand you one generic auction value. Iron Tuna gives three numbers per player: market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time." } },
@@ -944,16 +944,16 @@ input:focus, select:focus { border-color: var(--accent); }
         <li>Tiered cheat sheets and six strategy models</li>
         <li>A budget-aware optimal-lineup planner that finds the strategy and dollar allocation for your highest-scoring team</li>
       </ul>
-      <h2>Advanced Auction Day Assistance (paid)</h2>
+      <h2>Advanced Auction Day Management (paid)</h2>
       <ul>
-        <li>Real-time prices that adjust to the room</li>
+        <li>Track player selection, available funds, and maximum remaining bids</li>
         <li>An always-on AI navigator: who to bid on, how high, and why</li>
         <li>Proactive insight on emerging bidding trends in real time</li>
         <li>Unlimited mock auctions and an AI Value Coach</li>
       </ul>
       <h2>Frequently asked questions</h2>
       <h3>Is Iron Tuna really free?</h3>
-      <p>Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Assistance package is the paid upgrade.</p>
+      <p>Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Management package is the paid upgrade.</p>
       <h3>Does it work for any auction league?</h3>
       <p>Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.</p>
       <h3>How is it different from other tools?</h3>
@@ -2127,7 +2127,7 @@ function LandingSplash({ onDismiss, onNav }) {
       ['paid', 'With purchase', ['Unlimited mock auctions against CPU managers', 'An AI Value Coach tuned to your league and your style']],
     ]],
     ['Auction Day', 'Live Execution & Advice', [
-      ['paid', 'With purchase', ['Real-time prices that adjust to the room', 'Roster targets that re-optimize as prices and availability shift', 'An always-on AI navigator: who to bid on, how high, and why', 'Proactive reads on emerging bidding trends', 'Bid guidance that updates as the board moves']],
+      ['paid', 'With purchase', ['Track player selection, available funds, and maximum remaining bids', 'Roster targets that re-optimize as prices and availability shift', 'An always-on AI navigator: who to bid on, how high, and why', 'Proactive reads on emerging bidding trends', 'Bid guidance that updates as the board moves']],
     ]],
   ];
   // First quote: founder. Second: intentional humor. Add genuine user testimonials here as they arrive.
@@ -2144,7 +2144,7 @@ function LandingSplash({ onDismiss, onNav }) {
     ['QB', 'Josh Allen', '9', '6', '7'],
   ];
   const faqs = [
-    ['Is it really free?', 'Yes, custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Assistance package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade.'],
+    ['Is it really free?', 'Yes, custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Management package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade.'],
     ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
     ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing, enter your settings (or paste / screenshot your scoring) and you are ready.'],
     ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player, market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time.'],
@@ -2167,7 +2167,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <LogoMark tagline wavy height={260} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
         <p className="lp-sub lp-sub-link" style={{ marginBottom: 6 }} onClick={() => go('prep')}>Click here for <b>free auction values</b> you can customize to your league’s scoring system and your exact strategy.</p>
-        <p className="lp-sub lp-subline lp-sub-link" onClick={() => go('board')}>Click here for <b>Advanced Auction Day Assistance</b>: who to bid on, how high to go, and why.</p>
+        <p className="lp-sub lp-subline lp-sub-link" onClick={() => go('board')}>Click here for <b>Advanced Auction Day Management</b>: who to bid on, how high to go, and why.</p>
         </div>
         <div className="lp-phases-wrap">
           <h2 className="lp-phases-title">Two phases. One edge.</h2>
