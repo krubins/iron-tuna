@@ -817,7 +817,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-subline { color: var(--text-muted); margin-top: 16px; }
 .lp-sub-link { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.22); text-underline-offset: 4px; transition: color 0.12s, text-decoration-color 0.12s; }
 .lp-sub-link:hover { color: var(--text-primary); text-decoration-color: var(--gold-text); }
-.lp-phases-wrap { min-height: 100vh; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 56px 0; }
+.lp-phases-wrap { min-height: 100vh; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 64px 0; }
 .lp-phases-title { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 44px); color: var(--text-primary); text-align: center; letter-spacing: 0.02em; margin: 0; }
 .lp-phases { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; width: 100%; margin: 0; text-align: left; }
 .lp-phase { position: relative; overflow: hidden; padding: 38px 36px 36px; background: linear-gradient(180deg, rgba(22,30,40,0.7), rgba(12,18,24,0.5)); border: 1px solid var(--border-subtle); border-radius: 16px; box-shadow: 0 16px 44px rgba(0,0,0,0.42); }
@@ -857,7 +857,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-group-label.free { color: var(--positive); }
 .lp-group-label.paid { color: var(--gold-text); }
 .lp-group.paid .lp-phase-list li::before { color: var(--gold-text); content: '✦'; font-size: 11px; }
-.lp-preview { width: 100%; max-width: 760px; margin: 12px auto 28px; }
+.lp-preview { width: 100%; max-width: 760px; margin: 14px auto 32px; }
 .lp-preview-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--positive); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 9px; }
 .lp-preview-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--positive); display: inline-block; }
 .lp-preview-h { font-family: var(--font-display); font-size: clamp(20px, 3vw, 28px); color: var(--text-primary); margin: 0 0 18px; letter-spacing: 0.01em; text-align: left; }
@@ -881,7 +881,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-shot-bubble b { color: var(--gold-text); }
 .lp-shot-cap { font-size: 12px; color: var(--text-muted); margin-top: 10px; text-align: left; }
 @media (max-width: 620px) { .lp-shot-coach { flex-direction: column; gap: 6px; } .lp-shot-row { grid-template-columns: 1fr 48px 48px 48px; padding: 8px 12px; } }
-.lp-quotes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px; width: 100%; max-width: 680px; margin: 12px auto 28px; }
+.lp-quotes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px; width: 100%; max-width: 680px; margin: 16px auto 32px; }
 .lp-quote { margin: 0; text-align: left; position: relative; padding-top: 22px; }
 .lp-quote::before { content: '\201C'; position: absolute; top: -2px; left: -4px; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; line-height: 1; color: var(--gold-text); opacity: 0.42; }
 .lp-quote blockquote { margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); font-style: italic; }
@@ -897,11 +897,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ribbon-links button:hover { color: var(--text-primary); background: var(--bg-elev); }
 .lp-ribbon-cta { color: #06281f !important; background: var(--positive); font-weight: 700; }
 .lp-ribbon-cta:hover { filter: brightness(1.08); background: var(--positive); color: #06281f; }
-.lp-faq { width: 100%; max-width: 720px; margin: 18px auto 26px; text-align: left; }
+.lp-faq { width: 100%; max-width: 720px; margin: 21px auto 30px; text-align: left; }
 .lp-faq-item { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
 .lp-faq-q { font-family: var(--font-display); font-size: 15px; color: var(--text-primary); letter-spacing: 0.02em; margin-bottom: 6px; }
 .lp-faq-a { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; }
-.lp-ai-section { width: 100%; max-width: 720px; margin: 14px auto 26px; text-align: left; }
+.lp-ai-section { width: 100%; max-width: 720px; margin: 16px auto 30px; text-align: left; }
 .lp-ai-body { font-size: 14.5px; line-height: 1.65; color: var(--text-secondary); margin: 0; }
 .lp-ai-body b { color: var(--gold-text); }
 @media (max-width: 680px) { .lp-ribbon { flex-direction: column; gap: 8px; } .lp-ribbon-links { justify-content: center; } }
@@ -1919,7 +1919,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const logoW = tunaW + wordWidth - 2;
   const vbW = tagline ? (Math.max(logoW, taglineW) + 28) : (tunaW + wordWidth + 12);
   const ox = tagline ? ((vbW - logoW) / 2 - 2) : 0;
-  const vbH = tagline ? base * 1.46 : base * 1.12;
+  const vbH = tagline ? base * 1.62 : base * 1.12;
   const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return (
@@ -1932,8 +1932,9 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <linearGradient id="ironFin" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
         </linearGradient>
+        <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#2dd4a3" floodOpacity="0.5" /></filter>
       </defs>
-      <image href="/tuna.png" x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
+      <image href="/tuna2.png" filter="url(#itTealHalo)" x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
       {false && (
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
         {/* lunate tail */}
@@ -2073,7 +2074,7 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero">
-        <LogoMark tagline height={292} className="landing-logo" />
+        <LogoMark tagline height={324} className="landing-logo" />
         <h1 className="lp-head">Know what every player is worth.</h1>
         <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a live navigator: who to bid on, how high, and why.</p>
         <div className="lp-cta-row" style={{ marginTop: 4 }}>
