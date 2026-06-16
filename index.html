@@ -2026,7 +2026,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return (
-    <svg className={className} viewBox={`0 0 ${vbW} ${vbH}`} style={{ height, width: 'auto', display: 'block' }} xmlns="http://www.w3.org/2000/svg">
+    <svg className={className} viewBox={`0 0 ${vbW} ${vbH}`} style={{ height, width: 'auto', display: 'block', overflow: 'visible' }} xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="ironBody" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#eef3f7" /><stop offset="16%" stopColor="#c2cdd7" /><stop offset="48%" stopColor="#6c7a88" />
@@ -2069,10 +2069,12 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
                 textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
         ))}
       </g>
-      {tagline && (
-        <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.34}
-              letterSpacing="0.24em" textAnchor="middle" fill="#9fe1cb"><tspan>RULE THE DRAFT.</tspan><tspan dx={base * 0.55}>OWN THE LEAGUE.</tspan></text>
-      )}
+      {tagline && (<>
+        <text x={tunaW * 0.46} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.30}
+              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb">RULE THE DRAFT.</text>
+        <text x={tunaW + wordWidth / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={base * 0.30}
+              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb">OWN THE LEAGUE.</text>
+      </>)}
     </svg>
   );
 }
@@ -3426,7 +3428,7 @@ const STRAT_TILT = {
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
 function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory }) {
-  const cols = [['QB', 30], ['RB', 60], ['WR', 60], ['TE', 30], ['K', 32], ['DEF', 32]];
+  const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 30], ['DEF', 32]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
@@ -5949,11 +5951,13 @@ function App() {
       if (!draftedIds.has(p.id) && relevant.has(p.id)) {
         worthPrice = switchPrice(p, baselinePoints, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
         if (worthPrice != null) {
-          // 'worthPrice' is the absolute breakeven (you gain nothing there); a realistic max
-          // sits partway between the player's normal price and that breakeven, so elite edges
-          // read as a premium, not half your budget.
+          // 'worthPrice' (switch price) over-rewards the single elite per position the plan
+          // happens to roster, ballooning the top tier (TE1 >> TE2, RB1/2 >> RB3). Keep only a
+          // modest scarcity premium over the player's normal price, capped at ~5% of budget so
+          // near-equal studs stay close in You.
           const anchor = Math.max(base, p.marketValue ?? base);
-          const moderated = worthPrice > anchor ? anchor + (worthPrice - anchor) * 0.5 : worthPrice;
+          const premium = Math.max(0, worthPrice - anchor);
+          const moderated = anchor + Math.min(premium * 0.35, config.budget * 0.05);
           personalValue = Math.max(minBid, Math.min(maxBid, Math.round(moderated)));
         }
       }
