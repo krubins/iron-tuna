@@ -2023,7 +2023,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const wordWidth = x;
   const tunaW = 122;
   const cy = base * 0.55;
-  const tagFs = base * 0.26, tagDx = base * 0.40;
+  const tagFs = base * 0.20, tagDx = base * 0.31;
   const glyphW = (str, fs, ls) => str.length * (0.46 * fs) + (str.length - 1) * (ls * fs);
   const taglineW = tagline ? (glyphW('RULE THE DRAFT.', tagFs, 0.18) + tagDx + glyphW('OWN THE LEAGUE.', tagFs, 0.18)) : 0;
   const logoW = tunaW + wordWidth - 2;
@@ -2077,7 +2077,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         ))}
       </g>
       {tagline && (
-        <text x={vbW / 2} y={vbH - base * 0.28} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
+        <text x={vbW / 2} y={vbH - base * 0.37} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
               letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb"><tspan>RULE THE DRAFT.</tspan><tspan dx={tagDx}>OWN THE LEAGUE.</tspan></text>
       )}
     </svg>
@@ -2169,7 +2169,7 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero">
-        <LogoMark tagline wavy height={260} className="landing-logo" />
+        <LogoMark tagline wavy height={340} className="landing-logo" />
         <h1 className="lp-head">The most comprehensive tool for fantasy auction drafts.</h1>
         <p className="lp-sub lp-sub-link" style={{ marginBottom: 6 }} onClick={() => go('prep')}>Click here for <b>free auction values</b> you can customize to your league’s scoring system and your exact strategy.</p>
         <p className="lp-sub lp-subline lp-sub-link" onClick={() => go('board')}>Click here for <b>Advanced Auction Day Management</b>: who to bid on, how high to go, and why.</p>
