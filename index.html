@@ -853,10 +853,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
 .settings-league-summary { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); margin: 6px 0 16px; letter-spacing: 0.02em; }
-.cheat-header { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
+.cheat-header { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
 .ch-models { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; box-shadow: 0 0 10px rgba(245,184,0,0.06); }
 .ch-models-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-text); margin-bottom: 6px; }
 .ch-models-empty { font-size: 11px; color: var(--text-muted); }
+.ch-controls { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; }
+.ch-controls-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 6px; }
 .ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; height: 156px; overflow: hidden; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
 .chi-head { display: flex; align-items: center; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px; }
 .chi-nav button { background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-secondary); width: 24px; height: 20px; border-radius: 4px; cursor: pointer; font-size: 9px; margin-left: 4px; padding: 0; }
@@ -2214,7 +2216,7 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero">
-        <LogoMark tagline height={300} className="landing-logo" />
+        <LogoMark tagline height={420} className="landing-logo" />
         <div className="lp-cmd">Auction Draft Command</div>
         <h1 className="lp-head">Know what every player is worth.</h1>
         <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a <b>live navigator</b>: who to bid on, how high, and why.</p>
@@ -3529,10 +3531,10 @@ function computeTierBreaks(list) {
   }
   return breaks;
 }
-function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode }) {
+function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
-  const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => (i.text || '').length <= 240), [players, myTeam, teams, config, draftedIds, marketState, games]);
   const len = insights.length;
@@ -3543,6 +3545,16 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
       <div className="ch-models">
         <span className="ch-models-label">Draft Models</span>
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
+      </div>
+      <div className="ch-controls">
+        <span className="ch-controls-label">Sheet</span>
+        {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
+        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>}
+        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>}
+        <button className="btn-secondary" onClick={onResetRanks}>Reset ranks</button>
+        <span className="cheat-cols-label">Show:</span>
+        {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
+        {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
       </div>
       <div className="ch-insights">
         <div className="chi-head"><span>Insights{len > 1 ? ` · ${(idx % len) + 1}/${len}` : ''}</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
@@ -3614,19 +3626,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   }
   return (
     <div className="cheatsheet">
-      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} />
-      <div className="cheat-controls no-print">
-        {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
-        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>}
-        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>}
-        <button className="btn-secondary" onClick={onResetRanks}>Reset ranks</button>
-        <span className="cheat-sep" />
-        <span className="cheat-cols-label">Show:</span>
-        {COLSPEC.map(([k, lbl, tip]) => (
-          <button key={k} className={`col-toggle ${showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>
-        ))}
-        {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
-      </div>
+      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} />
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       {mode === 'live'
         ? <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Click a player to mark him drafted · drag to re-rank · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>
@@ -6136,12 +6136,14 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   else if (key === 'zeroRB') { addF(pick('RB', 17)); addF(pick('RB', 21)); addF(pick('WR', 0)); addF(pick('WR', 1)); } // cheap RBs, stud WRs
   else if (key === 'heroWR') { addF(pick('WR', 0)); addF(pick('WR', 23)); }       // one elite WR, value WR2
   else if (key === 'eliteTE') { addF(pick('TE', 0)); addF(pick('TE', 1)); }       // pay up for the TE edge
+  else if (key === 'heroQB') { addF(pick('QB', 0)); }                            // pay up for one elite QB
+  else if (key === 'balanced') { addF(pick('RB', 0)); addF(pick('WR', 0)); }     // even build, studs at RB+WR, no position punted
   else if (key === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // build around your flagged targets
   return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true);
 }
 function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
   const shownKey = model || 'ideal';
-  const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
   const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
   const modelPts = useMemo(() => {
     if (!myTeam) return {};
@@ -6211,7 +6213,7 @@ function teamTaunt(team, players, config, games) {
   return jabs[Math.floor(Math.random() * jabs.length)];
 }
 function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets }) {
-  const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
   const games = seasonGames || 17;
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   if (!myTeam) return null;
