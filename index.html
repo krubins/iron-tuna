@@ -94,7 +94,7 @@ input:focus, select:focus { border-color: var(--accent); }
   background: var(--bg-panel); position: relative;
 }
 .header::before { content: ""; position: absolute; bottom: -1px; left: 0; height: 2px; width: 80px; background: var(--accent); }
-.header-brand { display: flex; align-items: baseline; gap: 14px; }
+.header-brand { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .header-brand h1 { font-family: var(--font-display); font-size: 28px; letter-spacing: 0.04em; font-weight: 400; }
 .header-brand .subtitle { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.15em; }
 .header-nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
@@ -1934,9 +1934,9 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <linearGradient id="ironFin" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
         </linearGradient>
-        <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#2dd4a3" floodOpacity="0.5" /></filter>
+        <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#2dd4a3" floodOpacity="0.26" /></filter>
       </defs>
-      <image href="/tuna2.png" filter="url(#itTealHalo)" x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
+      <image href="/tuna2.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
       {false && (
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
         {/* lunate tail */}
@@ -1990,10 +1990,6 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
         <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna: back to start"><LogoMark wavy height={51} className="header-logo" /></button>
         <div className="header-brand-text">
           <span className="subtitle">Auction Draft Command</span>
-          <span className="version-stamp">v{APP_VERSION} · {BUILD_DATE}</span>
-          {dataInfo
-            ? <span className="data-badge">● {dataInfo.source} {dataInfo.season} · {dataInfo.count} players</span>
-            : <span className="data-badge baseline">● baseline projections</span>}
         </div>
       </div>
       <nav className="header-nav">
