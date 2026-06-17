@@ -646,6 +646,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .mb-price { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); }
 .mb-slot.just { animation: mbFlash 1s ease-out; }
 @keyframes mbFlash { 0% { background: rgba(45,212,163,0.55); } 100% { background: var(--bg-elev); } }
+.mock-modes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mock-mode { background: var(--bg-panel); border: 1px solid var(--border-strong); color: var(--text-secondary); border-radius: 14px; padding: 5px 14px; font-size: 12px; font-family: var(--font-display); letter-spacing: 0.03em; cursor: pointer; }
+.mock-mode:hover { color: var(--text-primary); border-color: var(--positive); }
+.mock-mode.on { background: rgba(45,212,163,0.14); border-color: var(--positive); color: var(--positive); }
+.mock-mode-hint { font-size: 11px; color: var(--text-muted); }
+.mock-highbid { font-size: 13px; color: var(--gold-text); margin-bottom: 10px; }
 .cheatsheet { }
 .board-subtabs { display: flex; gap: 6px; margin-bottom: 14px; }
 .board-subtabs .subtab { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; }
@@ -3681,6 +3687,8 @@ function MockAuction({ players, config, seasonGames }) {
   const [log, setLog] = useState([]);
   const [result, setResult] = useState(null);
   const [lastWon, setLastWon] = useState(null);
+  const [bidMode, setBidMode] = useState('blind');
+  const [nom, setNom] = useState(null);
   const you = teams.find(t => t.you) || teams[0];
   const avail = fullPool.filter(p => !drafted.has(p.id));
   const current = avail[0] || null;
@@ -3689,7 +3697,8 @@ function MockAuction({ players, config, seasonGames }) {
   const posTotal = pos => (config.roster[pos] && config.roster[pos].total) || 0;
   const maxAllowed = t => Math.max(1, t.budget - (slotsLeft(t) - 1));
   const sFactor = (strat, pos, rank) => { const tl = STRAT_TILT[strat]; if (!tl || !tl[pos]) return 1; const ru = tl[pos].find(r => r.maxRank == null || rank <= r.maxRank); return ru ? 1 + ru.w : 1; };
-  const jitter = (a, b) => { const x = Math.sin((a + 1) * 97.13 + (b + 1) * 39.7) * 10000; return 0.85 + 0.3 * (x - Math.floor(x)); };
+  const idNum = v => { const s = String(v); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % 100000; };
+  const jitter = (a, b) => { const x = Math.sin((idNum(a) + 1) * 97.13 + (idNum(b) + 1) * 39.7) * 10000; return 0.85 + 0.3 * (x - Math.floor(x)); };
   const aiMax = (t, p) => { if (slotsLeft(t) <= 0 || !p) return 0; const need = posTotal(p.position) - posCount(t, p.position); let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99); if (need <= 0) v *= 0.3; v *= jitter(t.id, p.id); return Math.max(0, Math.min(maxAllowed(t), Math.round(v))); };
   function finish(nt0, dr0) {
     let nt = nt0.map(t => ({ ...t, roster: [...t.roster] })); let dr = new Set(dr0); let guard = 0;
@@ -3724,7 +3733,37 @@ function MockAuction({ players, config, seasonGames }) {
     setTeams(nt); setDrafted(nd);
     if (winner.id === you.id && wt.roster.length >= totalSlots) finish(nt, nd);
   }
-  function reset() { setTeams(makeTeams()); setDrafted(new Set()); setPhase('run'); setBid(''); setLog([]); setResult(null); setLastWon(null); }
+  function award(winnerId, price) {
+    const nt = teams.map(t => ({ ...t, roster: [...t.roster] }));
+    const wt = nt.find(t => t.id === winnerId); wt.roster.push({ ...current, price }); wt.budget -= price;
+    const nd = new Set(drafted); nd.add(current.id);
+    const won = winnerId === you.id;
+    const wname = (teams.find(t => t.id === winnerId) || {}).name || 'A rival';
+    const txt = won ? '\u2713 You won ' + current.name + ' for $' + price : wname + ' won ' + current.name + ' for $' + price;
+    setLog(l => [{ txt, win: won }, ...l].slice(0, 10));
+    setBid(''); setNom(null); setLastWon({ tid: winnerId, pid: current.id });
+    setTeams(nt); setDrafted(nd);
+    if (won && wt.roster.length >= totalSlots) finish(nt, nd);
+  }
+  function activeRaise(raw) {
+    if (!current || !nom) return;
+    const amt = Math.max(0, Math.min(maxAllowed(you), Math.floor(raw) || 0));
+    if (amt <= nom.price) return;
+    const rivals = Object.keys(nom.maxes).map(id => ({ id: Number(id), max: nom.maxes[id] })).filter(r => r.max > amt);
+    if (!rivals.length) { award(you.id, amt); return; }
+    const top = rivals.sort((a, b) => b.max - a.max)[0];
+    setNom({ ...nom, price: Math.min(top.max, amt + 1), highId: top.id });
+    setBid('');
+  }
+  function activePass() { if (current && nom) award(nom.highId, nom.price); }
+  useEffect(() => {
+    if (bidMode !== 'active' || phase !== 'run' || !current) { setNom(null); return; }
+    const maxes = {}; teams.forEach(t => { if (!t.you) maxes[t.id] = aiMax(t, current); });
+    const ids = Object.keys(maxes); let highId = ids.length ? Number(ids[0]) : (teams[1] ? teams[1].id : 0); let best = -1;
+    ids.forEach(id => { if (maxes[id] > best) { best = maxes[id]; highId = Number(id); } });
+    setNom({ price: 1, highId, maxes });
+  }, [current ? current.id : null, bidMode, phase]);
+  function reset() { setTeams(makeTeams()); setDrafted(new Set()); setPhase('run'); setBid(''); setLog([]); setResult(null); setLastWon(null); setNom(null); }
   const fieldNeed = current ? teams.filter(t => !t.you && (posTotal(current.position) - posCount(t, current.position)) > 0 && slotsLeft(t) > 0).length : 0;
   const board = (
     <div className="mock-board">
@@ -3762,16 +3801,32 @@ function MockAuction({ players, config, seasonGames }) {
     <div className="mock">
       <div className="mock-intro">Practice the bidding against {teamsN - 1} CPU managers, each running a different strategy. The top remaining player is auto-nominated, decide how high to go. Watch the board fill as players are won; once your roster fills, the room finishes and you see where you placed.</div>
       <div className="mock-top"><div>Budget <b>${you.budget}</b> · roster <b>{you.roster.length}/{totalSlots}</b> · max bid <b>${maxAllowed(you)}</b></div><button className="btn-secondary" onClick={reset}>Restart</button></div>
+      <div className="mock-modes">
+        <button className={`mock-mode ${bidMode === 'blind' ? 'on' : ''}`} onClick={() => setBidMode('blind')}>Blind Auction</button>
+        <button className={`mock-mode ${bidMode === 'active' ? 'on' : ''}`} onClick={() => setBidMode('active')}>Active Bidding</button>
+        <span className="mock-mode-hint">{bidMode === 'blind' ? 'Submit one sealed max bid, we tell you if you got him.' : 'Bid live, raise when a rival tops you.'}</span>
+      </div>
       {current ? (
         <div className="mock-card">
           <div className="mock-player"><span className={`position-tag ${current.position}`}>{current.position}{posRank[current.id] || ''}</span> <b>{current.name}</b> <span className="mock-team">{current.team || ''}</span></div>
           <div className="mock-meta">Market ${current.marketValue != null ? current.marketValue : current.auctionValue} · Value ${current.auctionValue} · Your suggested max ${current.personalValue != null ? current.personalValue : current.auctionValue}</div>
           <div className="mock-field">{fieldNeed} rival{fieldNeed === 1 ? '' : 's'} still need {current.position}</div>
-          <div className="mock-bidrow">
-            <input type="number" min="0" max={maxAllowed(you)} value={bid} onChange={e => setBid(e.target.value)} placeholder={`up to $${maxAllowed(you)}`} onKeyDown={e => { if (e.key === 'Enter') act(parseInt(bid || 0)); }} />
-            <button className="btn-draft" onClick={() => act(parseInt(bid || 0))}>Bid</button>
-            <button className="btn-secondary" onClick={() => act(0)}>Pass</button>
-          </div>
+          {bidMode === 'active' ? (nom ? (
+            <>
+              <div className="mock-highbid">High bid <b>${nom.price}</b> · {(teams.find(t => t.id === nom.highId) || {}).name || 'the field'}</div>
+              <div className="mock-bidrow">
+                <input type="number" min={nom.price + 1} max={maxAllowed(you)} value={bid} onChange={e => setBid(e.target.value)} placeholder={`$${nom.price + 1}+ to stay in`} onKeyDown={e => { if (e.key === 'Enter') activeRaise(parseInt(bid || 0)); }} />
+                <button className="btn-draft" onClick={() => activeRaise(parseInt(bid || 0))}>Raise</button>
+                <button className="btn-secondary" onClick={activePass}>Let it go</button>
+              </div>
+            </>
+          ) : <div className="mock-field">Opening the bidding…</div>) : (
+            <div className="mock-bidrow">
+              <input type="number" min="0" max={maxAllowed(you)} value={bid} onChange={e => setBid(e.target.value)} placeholder={`up to $${maxAllowed(you)}`} onKeyDown={e => { if (e.key === 'Enter') act(parseInt(bid || 0)); }} />
+              <button className="btn-draft" onClick={() => act(parseInt(bid || 0))}>Bid</button>
+              <button className="btn-secondary" onClick={() => act(0)}>Pass</button>
+            </div>
+          )}
         </div>
       ) : <div className="mock-card">Player pool exhausted.</div>}
       {log.length > 0 && <div className="mock-log">{log.map((l, i) => <div key={i} className={`mock-logrow ${l.win ? 'win' : ''}`}>{l.txt}</div>)}</div>}
