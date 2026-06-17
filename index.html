@@ -6863,7 +6863,7 @@ function App() {
     }
     const cheatSheetEl = (
       <>
-        <Coachmark flag="seenSheetIntro" account={account} setAccount={setAccount}>Each player shows likely price, true value, and your max bid. Pick a model to see the roster that scores highest for your budget.</Coachmark>
+        <Coachmark flag="seenSheetIntro" account={account} setAccount={setAccount}>Each player shows likely price (PROJ), true value based on your scoring system (VALUE), and the max amount you should pay based on your needs (YOU). Pick a model to see the roster that scores highest for your budget.</Coachmark>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
