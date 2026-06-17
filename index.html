@@ -435,6 +435,39 @@ input:focus, select:focus { border-color: var(--accent); }
 .rg-filled .rg-price { color: var(--accent-text); }
 .team-card .rg-label, .team-card .team-roster-summary, .team-card .team-roster-summary span, .team-card .rg-target .rg-name, .team-card .rg-empty .rg-name, .team-card .rg-target .rg-price, .team-card .rg-price { color: #e8edf2 !important; }
 .rg-target .rg-price { color: var(--text-faint); }
+/* My Team projected fills: ghost vs real (#2) + locked targets (#6) */
+.team-card.mine .rg-slot.rg-target { opacity: 0.7; border-left: 2px dashed var(--border-accent); padding-left: 5px; }
+.team-card.mine .rg-slot.rg-filled { opacity: 1; }
+.team-card.mine .rg-slot.rg-locked { opacity: 1; border-left: 2px solid var(--positive); background: rgba(45,212,163,0.08); }
+.team-card.mine .rg-slot.rg-locked .rg-name { color: var(--positive) !important; font-style: normal; }
+/* My Team fill caption: model label, ghost header, column labels, QB14 note (#1,#3) */
+.mt-fillcap { margin-top: 8px; }
+.mt-fillcap-h { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold-text); margin-bottom: 4px; }
+.mt-fillcap-h .mt-ghost { color: var(--text-muted); }
+.mt-fillcap-cols { display: grid; grid-template-columns: 32px minmax(0,1fr) auto 46px; gap: 6px; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); padding-bottom: 3px; border-bottom: 1px solid var(--border-subtle); }
+.mt-fillcap-cols span:nth-child(3), .mt-fillcap-cols span:nth-child(4) { text-align: right; }
+.mt-fillcap-note { font-size: 9.5px; color: var(--text-muted); line-height: 1.4; margin: 4px 0 2px; }
+/* Board shared model chips (#1) */
+.board-models { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.board-models-label { font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-text); margin-right: 2px; }
+.board-models-hint { font-size: 11px; color: var(--text-muted); }
+/* One-time coachmarks (#8) */
+.coachmark { display: flex; align-items: center; gap: 12px; background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-left: 3px solid var(--positive); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.coachmark-text { flex: 1; }
+.coachmark-x { flex: 0 0 auto; background: var(--bg-elev); border: 1px solid var(--border-strong); color: var(--text-secondary); border-radius: var(--radius-sm); padding: 5px 12px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.coachmark-x:hover { color: var(--text-primary); border-color: var(--positive); }
+/* Budget Shape caption (#7) */
+.budgetshape { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.budgetshape-cap { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.budgetshape-cap b { color: var(--text-secondary); }
+/* Draft Day Mode teaser (#9) */
+.draftday-teaser { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: linear-gradient(90deg, rgba(245,184,0,0.08), rgba(45,212,163,0.06)); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 12px 16px; margin-top: 16px; }
+.ddt-body { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
+.ddt-lock { font-size: 18px; }
+.ddt-title { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.03em; color: var(--gold-text); margin-bottom: 2px; }
+.ddt-text { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+.ddt-cta { flex: 0 0 auto; background: var(--gold-text); color: #1a1205; border: none; border-radius: 20px; padding: 9px 18px; font-weight: 700; font-size: 12px; cursor: pointer; }
+.ddt-cta:hover { filter: brightness(1.08); }
 .alloc { margin: 0; }
 .alloc-head { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
 .alloc-head b { color: var(--gold-text); }
@@ -767,6 +800,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
 .col-toggle.price-clear { color: var(--gold-text); border-color: var(--gold-text); }
 .cheat-sep { width: 1px; align-self: stretch; background: var(--border-strong); margin: 0 4px; }
+.cheat-tag { font-family: var(--font-mono); font-size: 8px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
+.tg-target { color: var(--positive); border: 1px solid rgba(45,212,163,0.45); }
+.tg-pass { color: var(--text-faint); border: 1px solid var(--border-subtle); }
+.cheat-legend { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
+.cheat-legend b { color: var(--text-secondary); font-weight: 700; }
+.cheat-legend .cl-t { color: var(--positive); font-weight: 700; }
+.cheat-legend .cl-p { color: var(--text-faint); font-weight: 700; }
 .cheat-strat-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; background: rgba(212,160,23,0.08); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 6px 10px; }
 .hl-clear { background: none; border: none; color: var(--gold-text); cursor: pointer; font-size: 11px; text-decoration: underline; margin-left: 8px; }
 .cheat-row.cheat-hl { background: rgba(212,160,23,0.14); box-shadow: inset 2px 0 0 var(--gold-text); }
@@ -777,7 +817,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-target .cheat-rank { color: var(--positive); font-weight: 700; }
 .cheat-rank:hover { color: var(--positive); }
 .cheat-grid.has-hl .cheat-row.cheat-target { opacity: 1; }
-.cheat-row.cheat-modelfit { box-shadow: inset 0 0 0 2px #eab308, 0 0 10px rgba(234,179,8,0.25); border-radius: 5px; }
+.cheat-row.cheat-modelfit { box-shadow: inset 3px 0 0 var(--gold-text); }
+.cheat-row.cheat-modelfit .cheat-rank::before { content: '\2605'; color: var(--gold-text); margin-right: 2px; font-size: 9px; }
 .cheat-row.cheat-tier-top { border-top: 2px solid rgba(234,179,8,0.6); margin-top: 3px; padding-top: 3px; }
 .cheat-team-inline { color: var(--text-muted); font-size: 10px; font-weight: 600; letter-spacing: 0.03em; margin-left: 6px; }
 .model-tab-pts { font-size: 9.5px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.02em; white-space: nowrap; }
@@ -3206,7 +3247,10 @@ function costColor(price, value) {
   return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
 }
 // ─── components/TeamsModal.jsx ──────────────────────────
-function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy, onAddPlayer }) {
+function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy, onAddPlayer, model, onSelectModel, targets, onToggleTarget }) {
+  const MODEL_LABELS = { ideal: 'Ideal Team', balanced: 'Balanced', targets: 'My Targets', heroRB: 'Hero RB', heroWR: 'Hero WR', heroQB: 'Hero QB', zeroRB: 'Zero RB', robustRB: 'Robust RB', eliteTE: 'Elite TE' };
+  const modelLabel = MODEL_LABELS[model || 'ideal'] || 'Ideal Team';
+  const myTeam = teams.find(t => t.isMine);
   const playerMap = new Map();
   players.forEach(p => playerMap.set(p.id, p));
   const games = seasonGames || 17;
@@ -3217,13 +3261,13 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
       const tc = t.isMine ? config : { ...config, strategy: { ...(config.strategy || {}), allocation: 0.55 } };
       const ro = t.isMine ? roleOverrides : {};
       const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = buildOptimalPlan(t, players, tc, di, undefined, undefined, ro);
+      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro);
       const grid = buildTeamRosterGrid(t, plan, players, tc);
       const rosterPoints = t.roster.reduce((s, r) => { const p = playerMap.get(r.playerId); return s + (p ? (p.projectedPoints || 0) : 0); }, 0);
       m.set(t.id, { filledStarters: cur.filledStarters, totalStarters: cur.totalStarters, starterPoints: plan.starterPoints, draftedStarterPoints: cur.starterPoints, rosterPoints, grid });
     });
     return m;
-  }, [teams, players, config, draftedIds, roleOverrides]);
+  }, [teams, players, config, draftedIds, roleOverrides, model, targets]);
   const teamGrades = useMemo(() => {
     let maxS = 0, maxB = 0;
     const rows = teams.map(t => {
@@ -3295,6 +3339,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
         <span>Projected pts/game assumes each team optimally fills its remaining starters within budget (incl. flex).<br />Updates as picks come in.</span>
         <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}><label style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>Card size<input type="range" min="180" max="440" step="20" value={cardSize} onChange={e => setCardSize(parseInt(e.target.value))} style={{ width: 92 }} /></label><button className="btn-secondary" onClick={toggleAll}>{allCollapsed ? 'Expand all' : 'Collapse all'}</button><button className="btn-secondary" onClick={onExport}>Export rosters (CSV)</button></span>
       </div>
+      {myTeam && onSelectModel && (<div className="board-models"><span className="board-models-label">Draft model</span><HeaderModelTabs myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} /><span className="board-models-hint">Same model the Cheatsheet uses — changes the projected fills below.</span></div>)}
       <div className="teams-overview" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))` }}>
         {teams.map(team => {
           const totalSpent = team.roster.reduce((sum, r) => sum + r.price, 0);
@@ -3319,18 +3364,24 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
               </div>
               {!isCollapsed && (<>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Spent ${totalSpent} · {team.spotsRemaining} slots open</div>
+                {team.isMine && (<div className="mt-fillcap">
+                  <div className="mt-fillcap-h">Projected fills · {modelLabel} model <span className="mt-ghost">(not yet drafted)</span></div>
+                  <div className="mt-fillcap-cols"><span>Slot</span><span>Suggested tier</span><span>$ proj</span><span>pts/gm</span></div>
+                  <div className="mt-fillcap-note">"QB14" = the 14th-best QB by projection, a tier not a named player. Click a ghosted row to lock it as a target.</div>
+                </div>)}
                 <div style={{ marginTop: 10 }} onPointerDown={e => e.stopPropagation()}>
                   {Object.keys(config.roster).map(pos => (
                     <React.Fragment key={pos}>
                       {(proj.grid[pos] || []).map((slot, i) => {
                         const oppHide = !team.isMine;
                         const showAsOpen = !slot.drafted && (slot.empty || oppHide);
+                        const locked = team.isMine && targets && slot.id && targets.has(slot.id);
                         return (
-                        <div key={i} className={`rg-slot ${slot.drafted ? 'rg-filled' : showAsOpen ? 'rg-empty' : 'rg-target'}`}
-                             onClick={slot.drafted ? () => setDetail({ team, pick: team.roster.find(r => r.playerId === slot.id) }) : (showAsOpen ? undefined : () => onFocusPlayer && onFocusPlayer(slot.id))}
-                             title={slot.drafted ? 'Click for purchase details' : (showAsOpen ? 'Open slot' : `${slot.name} · click to find in the list`)}>
+                        <div key={i} className={`rg-slot ${slot.drafted ? 'rg-filled' : showAsOpen ? 'rg-empty' : 'rg-target'}${locked ? ' rg-locked' : ''}`}
+                             onClick={slot.drafted ? () => setDetail({ team, pick: team.roster.find(r => r.playerId === slot.id) }) : (showAsOpen ? undefined : (team.isMine ? () => onToggleTarget && onToggleTarget(slot.id) : () => onFocusPlayer && onFocusPlayer(slot.id)))}
+                             title={slot.drafted ? 'Click for purchase details' : (showAsOpen ? 'Open slot' : (team.isMine ? (locked ? 'Locked target \u2014 click to unlock' : 'Click to lock as a target; the planner keeps this slot and re-solves the rest') : `${slot.name} · click to find in the list`))}>
                           <span className="rg-label">{slot.label}</span>
-                          <span className="rg-name">{slot.drafted ? slot.name : (showAsOpen ? '(open)' : `${pos}${slot.posRank || ''}`)}</span>
+                          <span className="rg-name">{slot.drafted ? slot.name : (showAsOpen ? '(open)' : `${locked ? '\u2713 ' : ''}${pos}${slot.posRank || ''}`)}</span>
                           {slot.drafted
                             ? (<span className="rg-price" title={slot.value != null ? `Value $${slot.value} · ${slot.price > slot.value ? `$${slot.price - slot.value} over` : slot.price < slot.value ? `$${slot.value - slot.price} under` : 'on value'}` : undefined} style={{ color: costColor(slot.price, slot.value), fontWeight: slot.value != null && Math.abs(slot.price - slot.value) > 6 ? 700 : undefined }}>${slot.price}<button className="undo-pick" title="Undo" onClick={e => { e.stopPropagation(); onRemovePick && onRemovePick(team.id, slot.id); }}>×</button></span>)
                             : (<span className="rg-price">{showAsOpen ? '' : (slot.est ? `~$${slot.est}` : '')}</span>)}
@@ -3631,6 +3682,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
       {mode === 'live'
         ? <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Click a player to mark him drafted · drag to re-rank · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>
         : <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Drag to re-rank · click a player to target him · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>}
+      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth to a generic team · <b>YOU</b> your max bid (your budget &amp; roster) · <span className="cl-t">TARGET</span> worth a bid · <span className="cl-p">PASS</span> let it go</div>
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
@@ -3671,7 +3723,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
-                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : ''}</span>
+                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : <span className={`cheat-tag ${sign === 'under' ? 'tg-target' : 'tg-pass'}`} title={sign === 'under' ? 'Your max bid is above the likely price — worth a bid' : 'Likely price meets or beats your max — let it go'}>{sign === 'under' ? 'TARGET' : 'PASS'}</span>}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
@@ -4280,15 +4332,19 @@ function AllocationSlider({ value, onChange }) {
     if (x < 0.75) return 'Starters + Quality Reserves';
     return 'Thick & Deep';
   }
+  const topPct = Math.round(72 - 34 * v);
   return (
-    <div className="alloc alloc-inline" onPointerDown={e => e.stopPropagation()} title="How to split your budget between elite starters and bench depth. The green tick is the recommended balance.">
-      <span className="alloc-cap">Strategy · <b>{zoneLabel(v)}</b></span>
-      <span className="alloc-endcap">Stars &amp; Scrubs</span>
-      <div className="alloc-wrap">
-        <span className="alloc-ideal" style={{ left: `${ideal * 100}%` }} title="Recommended: put most of your budget into the strongest possible starters, holding a little back for quality reserves at thin positions. Starters drive weekly scoring, and a few solid backups cover byes/injuries without weakening your lineup." />
-        <input type="range" min="0" max="1" step="0.01" value={v} onChange={e => onChange(parseFloat(e.target.value))} />
+    <div className="budgetshape" onPointerDown={e => e.stopPropagation()}>
+      <div className="alloc alloc-inline" title="How to split your budget between elite starters and bench depth. The green tick is the recommended balance.">
+        <span className="alloc-cap">Budget Shape · <b>{zoneLabel(v)}</b></span>
+        <span className="alloc-endcap" title="Load up on a few elite starters">Stars &amp; Scrubs</span>
+        <div className="alloc-wrap">
+          <span className="alloc-ideal" style={{ left: `${ideal * 100}%` }} title="Recommended balance: mostly elite starters with a little held back for quality reserves." />
+          <input type="range" min="0" max="1" step="0.01" value={v} onChange={e => onChange(parseFloat(e.target.value))} />
+        </div>
+        <span className="alloc-endcap" title="Spread money across a deeper roster">Thick &amp; Deep</span>
       </div>
-      <span className="alloc-endcap">Thick &amp; Deep</span>
+      <div className="budgetshape-cap">Concentrating ~{topPct}% of budget on your top 3 starters · <b>Stars &amp; Scrubs</b> = a few elite starters, <b>Thick &amp; Deep</b> = a deeper roster.</div>
     </div>
   );
 }
@@ -6139,6 +6195,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   else if (key === 'heroQB') { addF(pick('QB', 0)); }                            // pay up for one elite QB
   else if (key === 'balanced') { addF(pick('RB', 0)); addF(pick('WR', 0)); }     // even build, studs at RB+WR, no position punted
   else if (key === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // build around your flagged targets
+  (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); // locked targets held constant across every model
   return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true);
 }
 function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
@@ -6220,6 +6277,16 @@ function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, s
   return (
     <div className="header-models" title="Draft models — click to box a model's target players on the cheat sheet; click again to clear">
       {models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>)}
+    </div>
+  );
+}
+function Coachmark({ flag, account, setAccount, children }) {
+  if (!account || !setAccount) return null;
+  if (account.flags && account.flags[flag]) return null;
+  return (
+    <div className="coachmark no-print">
+      <span className="coachmark-text">{children}</span>
+      <button className="coachmark-x" onClick={() => setAccount(a => ({ ...a, flags: { ...(a.flags || {}), [flag]: true } }))}>Got it</button>
     </div>
   );
 }
@@ -6746,18 +6813,23 @@ function App() {
       return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
     const cheatSheetEl = (
+      <>
+        <Coachmark flag="seenSheetIntro" account={account} setAccount={setAccount}>Each player shows likely price, true value, and your max bid. Pick a model to see the roster that scores highest for your budget.</Coachmark>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
           mode="live" modelFitIds={modelFitIds} draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory}
           model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} />
+      </>
     );
     const draftBoardEl = (
       <>
+      <Coachmark flag="seenBoardIntro" account={account} setAccount={setAccount}>Ghosted rows are the planner's projected best fills for your remaining slots and budget. Pick a model up top to change strategy, or click a slot to lock a target.</Coachmark>
       <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="taunt-btn" style={{ marginLeft: 'auto' }} onClick={makeTaunt} title="Roast a rival you pick from the dropdown">🔥 Roast a Rival</button></div>
       <div className="board-layout board-norail">
-        <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} />
+        <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} />
       </div>
+      {!has('coach') && (<div className="draftday-teaser no-print"><div className="ddt-body"><span className="ddt-lock">🔒</span><div><div className="ddt-title">Draft Day Mode — Advanced Auction Day Management</div><div className="ddt-text">This board is your pre-draft plan. On draft night, the live AI navigator tracks every team's budget and tells you who to bid on and exactly how high as picks come in.</div></div></div><button className="ddt-cta" onClick={() => setOverlay('pricing')}>See what's inside</button></div>)}
       </>
     );
     if (view === 'board') return draftBoardEl;
