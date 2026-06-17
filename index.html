@@ -190,7 +190,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .settings-row label { color: var(--text-secondary); }
 .settings-section-title { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.08em; color: var(--text-muted); text-transform: uppercase; margin: 16px 0 4px; grid-column: 1 / -1; padding-bottom: 4px; border-bottom: 1px solid var(--border-subtle); }
 .teams-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.team-card { background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; }
+.team-card { background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; position: relative; }
+.team-card .tc-header { padding-right: 40px; }
+.team-grade { position: absolute; top: 8px; right: 10px; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.team-grade.gr-a { background: rgba(45,212,163,0.16); color: #2dd4a3; border: 1px solid rgba(45,212,163,0.5); }
+.team-grade.gr-b { background: rgba(110,166,255,0.15); color: #6ea6ff; border: 1px solid rgba(110,166,255,0.45); }
+.team-grade.gr-c { background: rgba(212,160,23,0.15); color: var(--gold-text); border: 1px solid rgba(212,160,23,0.45); }
+.team-grade.gr-d { background: rgba(239,68,68,0.15); color: #ef6a6a; border: 1px solid rgba(239,68,68,0.45); }
 .team-card.mine { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--bg-elev) 80%); }
 .team-card .team-name { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; margin-bottom: 4px; }
 .team-card .team-budget { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--accent-text); margin-bottom: 8px; }
@@ -623,9 +629,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .board-subtabs .subtab { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; }
 .board-subtabs .subtab:hover { color: var(--text-primary); }
 .board-subtabs .subtab.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); }
-.cheat-row.cheat-drafted { opacity: 0.45; }
+.cheat-row.cheat-drafted { opacity: 1; }
 .cheat-row.cheat-drafted .cheat-name { text-decoration: line-through; }
-.cheat-row.cheat-drafted:hover { opacity: 0.6; }
+.cheat-row.cheat-drafted:hover { opacity: 1; }
+.cheat-row.cheat-drafted-mine { background: rgba(234,179,8,0.18); box-shadow: inset 0 0 0 1px rgba(234,179,8,0.55); border-radius: 4px; }
+.cheat-row.cheat-drafted-mine .cheat-name { color: #f0c244 !important; }
 .cheat-sold { font-size: 10px; color: var(--positive); font-weight: 700; font-variant-numeric: tabular-nums; }
 .cheat-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .cheat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: start; }
@@ -836,7 +844,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-phase-list li { position: relative; padding-left: 28px; font-size: 16.5px; color: var(--text-secondary); line-height: 1.62; margin-bottom: 13px; }
 .lp-phase-list li:last-child { margin-bottom: 0; }
 @media (max-width: 820px) { .lp-phases { grid-template-columns: 1fr; } .lp-phases-wrap { min-height: auto; } }
-.lp-tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; width: 100%; max-width: 1040px; margin: 0 auto; align-items: stretch; }
+.lp-tiers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; width: 100%; max-width: 820px; margin: 0 auto; align-items: stretch; }
 .lp-tier { position: relative; background: rgba(17,24,33,0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 22px 20px; display: flex; flex-direction: column; text-align: left; }
 .lp-tier-top { border-color: var(--gold-text); box-shadow: 0 0 0 1px var(--gold-text), 0 12px 34px rgba(212,160,23,0.14); }
 .lp-tier-badge { position: absolute; top: -11px; left: 20px; background: var(--gold-text); color: #1a1205; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
@@ -848,7 +856,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-tier-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .lp-tier-list li { position: relative; padding-left: 22px; font-size: 13.5px; line-height: 1.5; color: var(--text-secondary); }
 .lp-tier-list li::before { content: '\2713'; position: absolute; left: 0; top: 0; color: var(--positive); font-weight: 700; }
-.lp-tier-2 .lp-tier-list li::before { color: var(--gold-text); }
+.lp-tier-1 .lp-tier-list li::before { color: var(--gold-text); }
 @media (max-width: 820px) { .lp-tiers { grid-template-columns: 1fr; max-width: 460px; } }
 .lp-phase-list li::before { content: '✓'; position: absolute; left: 0; top: 0; font-size: 12px; line-height: 27px; font-weight: 800; color: var(--positive); }
 .lp-group { margin-top: 28px; }
@@ -1934,9 +1942,9 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <linearGradient id="ironFin" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
         </linearGradient>
-        <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#2dd4a3" floodOpacity="0.26" /></filter>
+        <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#2dd4a3" floodOpacity="0.16" /></filter>
       </defs>
-      <image href="/tuna2.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
+      <image href="/tuna.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
       {false && (
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
         {/* lunate tail */}
@@ -2026,16 +2034,12 @@ function LandingSplash({ onDismiss, onNav }) {
       'A budget-aware optimal-lineup planner',
       'The dollar allocation that builds your highest-scoring team',
     ]],
-    ['Tuna', '$9.99', 'Run and rehearse your draft', [
+    ['Premium', '$9.99 / $14.99', 'Live auction-day command', [
       'Unlimited mock auctions against CPU managers',
       'Track player selection, available funds, and maximum remaining bid',
       'Roster targets that re-optimize as prices and availability shift',
       'Bid guidance that updates as the board moves',
-    ]],
-    ['Predator', '$14.99', 'Everything, fully unlocked', [
-      'Everything in Free and Tuna',
       'The always-on AI Value Coach and Gameday Navigator',
-      'Proactive reads on emerging bidding trends',
     ]],
   ];
   // First quote: founder. Second: intentional humor. Add genuine user testimonials here as they arrive.
@@ -2081,11 +2085,11 @@ function LandingSplash({ onDismiss, onNav }) {
         </div>
         </div>
         <div className="lp-phases-wrap">
-          <h2 className="lp-phases-title">Three tiers. One edge.</h2>
+          <h2 className="lp-phases-title">Two tiers. One edge.</h2>
           <div className="lp-tiers">
           {tiers.map(([name, price, tag, items], i) => (
-            <div className={`lp-tier lp-tier-${i}${i === 2 ? ' lp-tier-top' : ''}`} key={i}>
-              {i === 2 && <div className="lp-tier-badge">Full access</div>}
+            <div className={`lp-tier lp-tier-${i}${i === 1 ? ' lp-tier-top' : ''}`} key={i}>
+              {i === 1 && <div className="lp-tier-badge">Premium</div>}
               <div className="lp-tier-head"><span className="lp-tier-name">{name}</span><span className="lp-tier-price">{price}</span></div>
               <div className="lp-tier-tag">{tag}</div>
               <ul className="lp-tier-list">{items.map((it, j) => <li key={j}>{it}</li>)}</ul>
@@ -3067,10 +3071,30 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
       const cur = computeTeamStarters(t, players, tc, ro);
       const plan = buildOptimalPlan(t, players, tc, di, undefined, undefined, ro);
       const grid = buildTeamRosterGrid(t, plan, players, tc);
-      m.set(t.id, { filledStarters: cur.filledStarters, totalStarters: cur.totalStarters, starterPoints: plan.starterPoints, grid });
+      const rosterPoints = t.roster.reduce((s, r) => { const p = playerMap.get(r.playerId); return s + (p ? (p.projectedPoints || 0) : 0); }, 0);
+      m.set(t.id, { filledStarters: cur.filledStarters, totalStarters: cur.totalStarters, starterPoints: plan.starterPoints, draftedStarterPoints: cur.starterPoints, rosterPoints, grid });
     });
     return m;
   }, [teams, players, config, draftedIds, roleOverrides]);
+  const teamGrades = useMemo(() => {
+    let maxS = 0, maxB = 0;
+    const rows = teams.map(t => {
+      const pr = projByTeam.get(t.id) || {};
+      const sPPG = (pr.starterPoints || 0) / games;
+      const bPPG = Math.max(0, (pr.rosterPoints || 0) - (pr.draftedStarterPoints || 0)) / games;
+      maxS = Math.max(maxS, sPPG); maxB = Math.max(maxB, bPPG);
+      return { id: t.id, sPPG, bPPG };
+    });
+    const m = new Map();
+    rows.forEach(r => {
+      const score = 0.85 * (maxS > 0 ? r.sPPG / maxS : 0) + 0.15 * (maxB > 0 ? r.bPPG / maxB : 0);
+      const tbl = [[0.95, 'A+'], [0.88, 'A'], [0.82, 'A-'], [0.75, 'B+'], [0.68, 'B'], [0.61, 'B-'], [0.54, 'C+'], [0.47, 'C'], [0.40, 'C-'], [0.30, 'D'], [-1, 'F']];
+      const g = (tbl.find(x => score >= x[0]) || [0, 'F'])[1];
+      const cls = g[0] === 'A' ? 'gr-a' : g[0] === 'B' ? 'gr-b' : g[0] === 'C' ? 'gr-c' : 'gr-d';
+      m.set(r.id, { g, cls });
+    });
+    return m;
+  }, [teams, projByTeam, games]);
   const standings = teams.slice().map(t => ({ team: t, proj: projByTeam.get(t.id) }))
     .sort((a, b) => b.proj.starterPoints - a.proj.starterPoints);
   const [collapsed, setCollapsed] = useState(new Set());
@@ -3129,6 +3153,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
             <div key={team.id} ref={el => { if (el) cardRefs.current[team.id] = el; else delete cardRefs.current[team.id]; }}
                  className={`team-card ${team.isMine ? 'mine' : ''}`}
                  onPointerDown={e => startCardDrag(e, team.id)}>
+              {(() => { const gg = teamGrades.get(team.id); return gg ? <div className={`team-grade ${gg.cls}`} title="Team grade — 85% starters (pts/gm), 15% reserves">{gg.g}</div> : null; })()}
               <div className="tc-header">
                 <span className="drag-handle" title="Drag the card to reorder">⠿</span>
                 <input type="text" value={team.name} onChange={e => onRenameTeam(team.id, e.target.value)}
@@ -3353,7 +3378,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
-  const draftInfoMap = useMemo(() => { const m = {}; const tn = new Map((teams || []).map(t => [t.id, t.name])); (draftHistory || []).forEach(d => { m[d.playerId] = { team: tn.get(d.teamId) || 'a team', price: d.price }; }); return m; }, [draftHistory, teams]);
+  const draftInfoMap = useMemo(() => { const m = {}; const tn = new Map((teams || []).map(t => [t.id, t])); (draftHistory || []).forEach(d => { const t = tn.get(d.teamId); m[d.playerId] = { team: (t && t.name) || 'a team', price: d.price, mine: !!(t && t.isMine) }; }); return m; }, [draftHistory, teams]);
   const rowRefs = useRef({});
   const [highlight, setHighlight] = useState(null);
   const [tilt, setTilt] = useState(50);
@@ -3461,7 +3486,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 nameTitle = sign === 'under' ? `Target, worth up to your $${you}; ~$${you - cost} of edge at the $${cost} price` : sign === 'over' ? `Fade, the $${cost} price is $${cost - you} above his value to your team ($${you})` : `Priced about right for your team ($${you})`;
               }
               return (
-              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
+              <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : ''}</span>
@@ -6436,7 +6461,7 @@ function App() {
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
-      {!showSplash && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
+      {!showSplash && !(view === 'board' && boardTab === 'draftboard' && !splitMode) && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal onAdd={(name, pos, team) => { const np = handleAddPlayer(name, pos, team); setShowAddPlayer(false); setAssignPlayer(np); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
