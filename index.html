@@ -774,7 +774,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.dock .coach-chips { flex-basis: 100%; order: 2; }
 .coach.dock .coach-body { flex: 1 1 34%; max-height: calc(var(--dock-h, 122px) - 30px); order: 4; min-height: 0; }
 .coach.dock .coach-msg { max-width: 780px; }
-.coach.dock .coach-input { flex: 0 0 var(--coach-input-w, 300px); order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; position: relative; }
+.coach.dock .coach-input { flex: 0 0 var(--coach-input-w, 440px); order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; position: relative; }
 .coach-col-resize { position: absolute; top: 0; right: -3px; width: 8px; height: 100%; cursor: ew-resize; z-index: 6; }
 .coach-col-resize:hover { background: rgba(45,212,163,0.35); }
 .coach.dock .coach-insights { flex: 0 0 320px; order: 5; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 8px 12px; max-height: calc(var(--dock-h, 122px) - 12px); box-sizing: border-box; }
@@ -802,6 +802,20 @@ input:focus, select:focus { border-color: var(--accent); }
 .hm-tab.active { border-color: var(--positive); color: var(--positive); background: rgba(45,212,163,0.12); }
 .hm-pts { font-size: 9px; color: var(--text-muted); }
 .hm-tab.active .hm-pts { color: var(--positive); }
+.header-league { background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 16px; padding: 5px 14px; font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary); cursor: pointer; white-space: nowrap; letter-spacing: 0.02em; }
+.header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
+.header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
+.cheat-header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.ch-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ch-models-label { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.05em; color: var(--gold-text); margin-right: 4px; }
+.ch-models-empty { font-size: 11px; color: var(--text-muted); }
+.ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
+.chi-head { display: flex; align-items: center; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px; }
+.chi-nav button { background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-secondary); width: 24px; height: 20px; border-radius: 4px; cursor: pointer; font-size: 9px; margin-left: 4px; padding: 0; }
+.chi-nav button:hover { border-color: var(--positive); color: var(--text-primary); }
+.chi-label { font-size: 13px; font-weight: 700; color: var(--positive); margin-bottom: 4px; }
+.chi-text { font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.chi-empty { font-size: 12px; color: var(--text-muted); }
 .board-split { display: flex; align-items: stretch; width: 100%; }
 .board-split-pane { min-width: 0; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 196px); padding-bottom: 8px; }
 .board-split-divider { flex: 0 0 12px; cursor: col-resize; display: flex; align-items: center; justify-content: center; background: var(--bg-elev); border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); }
@@ -2068,7 +2082,10 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
 const APP_VERSION = '0.5.0';
 const BUILD_DATE = '2026-06-12';
 // ─── components/Header.jsx ──────────────────────────
-function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPointsMode, dataInfo, account, onUpgrade, onAccount, onToggleTest, onHome }) {
+function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPointsMode, dataInfo, account, onUpgrade, onAccount, onToggleTest, onHome, config, onOpenSettings }) {
+  const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
+  const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
+  const startersSummary = config ? (() => { const parts = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => config.roster[p]).map(p => `${config.roster[p].starters}${p}`); if (config.flex && config.flex.count) parts.push(`${config.flex.count}FLEX`); return parts.join('/'); })() : '';
   return (
     <header className="header">
       <div className="header-brand">
@@ -2077,9 +2094,14 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
           <span className="subtitle">Auction Draft Command</span>
         </div>
       </div>
+      {(view === 'prep' || view === 'board') && config && (
+        <button className="header-league no-print" onClick={onOpenSettings} title="Edit league: teams, budget, scoring, roster">
+          <span className="hl-k">League</span> {config.teams} teams \u00b7 ${config.budget} \u00b7 {pprLabel} \u00b7 {startersSummary}
+        </button>
+      )}
       <nav className="header-nav">
-        <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Prep</button>
-        <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Auction Day</button>
+        <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Cheatsheet</button>
+        <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Draft Board</button>
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
         <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
         <button onClick={onReset}>Reset</button>
@@ -3462,7 +3484,29 @@ function computeTierBreaks(list) {
   }
   return breaks;
 }
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds }) {
+function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode }) {
+  const isBoard = mode === 'live';
+  const games = seasonGames || 17;
+  const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
+  const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }), [players, myTeam, teams, config, draftedIds, marketState, games]);
+  const len = insights.length;
+  const [idx, setIdx] = useState(0);
+  useEffect(() => { if (len <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % len), 11000); return () => clearInterval(t); }, [len]);
+  return (
+    <div className="cheat-header no-print">
+      <div className="ch-models">
+        <span className="ch-models-label">Draft Models</span>
+        {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
+      </div>
+      <div className="ch-insights">
+        <div className="chi-head"><span>Insights{len > 1 ? ` \u00b7 ${(idx % len) + 1}/${len}` : ''}</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">\u25b2</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">\u25bc</button></span>}</div>
+        {insights.length ? <div className="chi-body"><div className="chi-label">{insights[idx % insights.length].label}</div><div className="chi-text">{insights[idx % insights.length].text}</div></div> : <div className="chi-body chi-empty">Insights appear as your board and draft develop.</div>}
+      </div>
+    </div>
+  );
+}
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides }) {
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const byPos = {};
@@ -3525,6 +3569,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   }
   return (
     <div className="cheatsheet">
+      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} />
       <div className="cheat-controls no-print">
         {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
         {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>}
@@ -5671,10 +5716,6 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
       <div className="coach-input">{!big && <div className="coach-col-resize" onPointerDown={startColResize} title="Drag to resize question vs. answer" />}<textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
-      <div className="coach-insights">
-        <div className="ci-head"><span className="ci-title">Insights{insights.length ? ' · ' + ((insightIdx % insights.length) + 1) + '/' + insights.length : ''}</span><div className="ci-nav"><button onClick={prevInsight} title="Previous insight" disabled={insights.length < 2}>▲</button><button onClick={nextInsight} title="Next insight" disabled={insights.length < 2}>▼</button></div></div>
-        {curInsight ? <div className="ci-body"><div className="ci-label">{curInsight.label}</div><div className="ci-text">{curInsight.text}</div></div> : <div className="ci-body ci-empty">Insights appear as your board and draft develop.</div>}
-      </div>
     </div>
   );
 }
@@ -6514,11 +6555,6 @@ function App() {
     return { green: greenS, yellow: yellowS };
   }, [plan, teams, personalizedPlayers, draftedIds, config, targets]);
   function renderMainContent() {
-    if (view === 'prep') {
-      return (<PrepMode config={config} players={players} valuedPlayers={personalizedPlayers} draftedIds={draftedIds} pointsMode={pointsMode} seasonGames={SEASON_GAMES}
-        modelFitIds={modelFitIds} onNominate={setCurrentNomination} onUpdateStrategy={handleUpdateStrategy} onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo}
-        onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget} onOpenSettings={() => setView('settings')} onUpdateConfig={updateConfigField} onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides} />);
-    }
     if (view === 'plan') {
       return (<PlanView myTeam={myTeam} players={personalizedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES} targets={targets} roleOverrides={roleOverrides} />);
     }
@@ -6529,7 +6565,8 @@ function App() {
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
-          mode="live" modelFitIds={modelFitIds} draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory} />
+          mode="live" modelFitIds={modelFitIds} draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory}
+          model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} />
     );
     const draftBoardEl = (
       <>
@@ -6539,23 +6576,8 @@ function App() {
       </div>
       </>
     );
-    return (
-      <>
-      <div className="board-subtabs no-print">
-        <button className={`subtab ${!splitMode && boardTab === 'cheatsheet' ? 'active' : ''}`} onClick={() => { setSplitMode(false); setBoardTab('cheatsheet'); }}>Cheat Sheet</button>
-        <button className={`subtab ${!splitMode && boardTab === 'draftboard' ? 'active' : ''}`} onClick={() => { setSplitMode(false); setBoardTab('draftboard'); }}>Draft Board</button>
-        <button className={`subtab subtab-2nd ${splitMode ? 'active' : ''}`} title="Span two screens: cheat sheet on the left, draft board on the right, with a draggable divider. Stretch this window across both monitors." onClick={() => { const next = !splitMode; setSplitMode(next); if (next) spanTwoScreens(); }}>⧉ {splitMode ? 'Exit split' : 'Span two screens'}</button>
-        {!splitMode && boardTab === 'cheatsheet' && <HeaderModelTabs myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} />}
-      </div>
-      {splitMode ? (
-        <div className="board-split" ref={splitRef}>
-          <div className="board-split-pane" style={{ flex: splitRatio }}>{cheatSheetEl}</div>
-          <div className="board-split-divider no-print" onPointerDown={startSplitDrag} title="Drag to resize"><span /></div>
-          <div className="board-split-pane" style={{ flex: 1 - splitRatio }}>{draftBoardEl}</div>
-        </div>
-      ) : boardTab === 'cheatsheet' ? cheatSheetEl : draftBoardEl}
-      </>
-    );
+    if (view === 'board') return draftBoardEl;
+    return cheatSheetEl;
   }
   const onbSteps = [
     { label: 'Set your league & scoring', done: !!(account.flags && account.flags.scoring), cta: 'Settings', action: () => setView('settings') },
@@ -6566,16 +6588,15 @@ function App() {
     <div className="app">
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
-      <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
-      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''} ${view === 'board' && !splitMode && (boardTab === 'draftboard' || boardTab === 'cheatsheet') ? 'board-full' : ''} ${view === 'board' && boardTab === 'draftboard' && !splitMode ? 'is-draftboard' : ''}`}>
+      <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} config={config} onOpenSettings={() => setView('settings')} />
+      <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {!(view === 'board' && !splitMode && (boardTab === 'draftboard' || boardTab === 'cheatsheet')) && <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} mode={view === 'board' ? 'board' : 'prep'} teams={teams} marketState={marketState} />}
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
-      {!showSplash && !(view === 'board' && boardTab === 'draftboard' && !splitMode) && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
+      {!showSplash && view === 'prep' && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
