@@ -433,6 +433,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .rg-pts { font-family: var(--font-mono); color: var(--gold-text); text-align: right; font-size: 11px; }
 .rg-price { font-family: var(--font-mono); text-align: right; font-size: 11px; display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end; }
 .rg-filled .rg-price { color: var(--accent-text); }
+.team-card .rg-label, .team-card .team-roster-summary, .team-card .team-roster-summary span, .team-card .rg-target .rg-name, .team-card .rg-empty .rg-name, .team-card .rg-target .rg-price, .team-card .rg-price { color: #e8edf2 !important; }
 .rg-target .rg-price { color: var(--text-faint); }
 .alloc { margin: 0; }
 .alloc-head { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
@@ -3269,8 +3270,8 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                 <input type="text" value={team.name} onChange={e => onRenameTeam(team.id, e.target.value)}
                   style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: 0, fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.04em', color: 'var(--text-primary)' }} />
               </div>
-              <div className="team-budget" style={{ marginTop: 4 }}>${team.budgetRemaining} <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400, letterSpacing: '0.04em' }}>Remaining</span></div>
-              <div style={{ marginTop: 2, fontFamily: 'var(--font-mono)' }}><span style={{ fontSize: 16, color: 'var(--gold-text)', fontWeight: 600 }}>${maxBidC}</span> <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400, letterSpacing: '0.04em' }}>Max Bid</span></div>
+              <div className="team-budget" style={{ marginTop: 4 }}>${team.budgetRemaining} <span style={{ fontSize: 12, color: '#e8edf2', fontWeight: 400, letterSpacing: '0.04em' }}>Remaining</span></div>
+              <div style={{ marginTop: 2, fontFamily: 'var(--font-mono)' }}><span style={{ fontSize: 16, color: 'var(--gold-text)', fontWeight: 600 }}>${maxBidC}</span> <span style={{ fontSize: 12, color: '#e8edf2', fontWeight: 400, letterSpacing: '0.04em' }}>Max Bid</span></div>
               <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--gold-text)', marginTop: 4 }}>
                 Starters {proj.filledStarters}/{proj.totalStarters} · {(proj.starterPoints / games).toFixed(1)} pts/gm
               </div>
