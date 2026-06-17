@@ -1997,9 +1997,9 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const taglineW = tagline ? (glyphW('RULE THE DRAFT.', tagFs, 0.18) + tagDx + glyphW('OWN THE LEAGUE.', tagFs, 0.18)) : 0;
   const logoW = tunaW + wordWidth - 2;
   const FISH_AR = 1.7518;
-  const fishW = tagline ? wordWidth : 95;
+  const fishW = tagline ? (wordWidth * 1.15) : 95;
   const fishH = fishW / FISH_AR;
-  const vbW = tagline ? (Math.max(wordWidth, taglineW) + 26) : (tunaW + wordWidth + 12);
+  const vbW = tagline ? (Math.max(fishW, taglineW) + 26) : (tunaW + wordWidth + 12);
   const ox = 0;
   const fishX = tagline ? ((vbW - fishW) / 2) : 2;
   const fishY = tagline ? 2 : (cy - 27);
