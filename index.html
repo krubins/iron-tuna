@@ -790,6 +790,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach-insights .ci-empty { font-size: 11px; color: var(--text-muted); }
 .coach.dock .coach-input textarea { min-height: 56px; }
 .main.board-main, .main.prep-main { padding-bottom: 150px; }
+.main.is-draftboard { padding-bottom: 24px; }
 .main.board-collapsed { grid-template-columns: 1fr auto; }
 .main.board-full { grid-template-columns: 1fr; }
 .board-layout.board-norail { grid-template-columns: 1fr; }
@@ -2784,27 +2785,45 @@ function QuickDraftModal({ player, teams, config, onConfirm, onClose }) {
     </div>
   );
 }
-function AddPlayerModal({ onAdd, onClose }) {
+function AddPlayerModal({ onAdd, onClose, teams, config }) {
   const [name, setName] = useState('');
   const [position, setPosition] = useState('RB');
   const [team, setTeam] = useState('');
-  const can = name.trim().length > 0;
-  function submit() { if (!can) return; onAdd(name.trim(), position, team.trim().toUpperCase()); }
+  const [teamId, setTeamId] = useState(teams && teams.length ? teams[0].id : null);
+  const [price, setPrice] = useState('1');
+  const mgr = teams && teams.find(t => t.id === teamId);
+  const priceNum = parseInt(price, 10) || 0;
+  const teamMax = mgr ? Math.max(config.valuation.minBid, mgr.budgetRemaining - (mgr.spotsRemaining - 1) * config.valuation.minBid) : 999;
+  const noSpots = mgr && mgr.spotsRemaining <= 0;
+  const overMax = priceNum > teamMax;
+  const can = name.trim().length > 0 && teamId != null && priceNum >= 1 && !overMax && !noSpots;
+  function submit() { if (!can) return; onAdd(name.trim(), position, team.trim().toUpperCase(), teamId, priceNum); }
+  const lbl = { display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 };
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">Add a player</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 14px' }}>Someone nominated a player who isn't on the board? Add him here, then record who won him.</div>
-        <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Name</label>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 14px' }}>Add a player who isn't on the board, then record which team drafted him and for how much.</div>
+        <label style={lbl}>Name</label>
         <input value={name} onChange={e => setName(e.target.value)} autoFocus placeholder="e.g. John Smith" onKeyDown={e => { if (e.key === 'Enter') submit(); }} style={{ width: '100%', marginBottom: 12 }} />
-        <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Position</label>
+        <label style={lbl}>Position</label>
         <select value={position} onChange={e => setPosition(e.target.value)} style={{ width: '100%', marginBottom: 12 }}>{['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(x => <option key={x} value={x}>{x}</option>)}</select>
-        <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Team (optional)</label>
-        <input value={team} onChange={e => setTeam(e.target.value)} placeholder="e.g. KC" onKeyDown={e => { if (e.key === 'Enter') submit(); }} style={{ width: '100%', marginBottom: 14 }} />
+        <label style={lbl}>NFL team (optional)</label>
+        <input value={team} onChange={e => setTeam(e.target.value)} placeholder="e.g. KC" onKeyDown={e => { if (e.key === 'Enter') submit(); }} style={{ width: '100%', marginBottom: 12 }} />
+        <label style={lbl}>Drafted by</label>
+        <select value={teamId} onChange={e => setTeamId(e.target.value)} style={{ width: '100%', marginBottom: 12 }}>{(teams || []).map(t => (<option key={t.id} value={t.id}>{t.isMine ? '★ ' : ''}{t.name} (${t.budgetRemaining}, {t.spotsRemaining} slots)</option>))}</select>
+        <label style={lbl}>Winning bid $</label>
+        <input type="number" value={price} onChange={e => setPrice(e.target.value)} min="1" onKeyDown={e => { if (e.key === 'Enter') submit(); }} style={{ width: '100%', marginBottom: 12, fontFamily: 'var(--font-mono)' }} />
+        {(overMax || noSpots) && (
+          <div style={{ padding: 8, background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--radius-sm)', fontSize: 11, color: 'var(--danger)', marginBottom: 12 }}>
+            {noSpots && `${mgr.name} has no roster spots remaining.`}
+            {overMax && !noSpots && `Exceeds ${mgr.name}'s max bid of $${teamMax}.`}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-          <button className="btn-draft" style={{ flex: 1 }} disabled={!can} onClick={submit}>Add & assign</button>
+          <button className="btn-draft" style={{ flex: 1 }} disabled={!can} onClick={submit}>Add & draft</button>
         </div>
       </div>
     </div>
@@ -3166,6 +3185,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
   const standings = teams.slice().map(t => ({ team: t, proj: projByTeam.get(t.id) }))
     .sort((a, b) => b.proj.starterPoints - a.proj.starterPoints);
   const [collapsed, setCollapsed] = useState(new Set());
+  const [cardSize, setCardSize] = useState(220);
   const cardRefs = useRef({});
   const [detail, setDetail] = useState(null);
   function startCardDrag(e, id) {
@@ -3208,9 +3228,9 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
       <div className="section-title">Teams &amp; Live Standings</div>
       <div className="section-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Projected pts/game assuming each team optimally fills its remaining starters within budget (incl. flex). Updates as picks come in.</span>
-        <span style={{ display: 'inline-flex', gap: 8 }}><button className="btn-secondary" onClick={toggleAll}>{allCollapsed ? 'Expand all' : 'Collapse all'}</button><button className="btn-secondary" onClick={onExport}>Export rosters (CSV)</button></span>
+        <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}><label style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>Card size<input type="range" min="180" max="440" step="20" value={cardSize} onChange={e => setCardSize(parseInt(e.target.value))} style={{ width: 92 }} /></label><button className="btn-secondary" onClick={toggleAll}>{allCollapsed ? 'Expand all' : 'Collapse all'}</button><button className="btn-secondary" onClick={onExport}>Export rosters (CSV)</button></span>
       </div>
-      <div className="teams-overview">
+      <div className="teams-overview" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))` }}>
         {teams.map(team => {
           const totalSpent = team.roster.reduce((sum, r) => sum + r.price, 0);
           const minBidC = config.valuation.minBid;
@@ -6214,6 +6234,17 @@ function App() {
     setPlayers(prev => prev.some(p => p.id === id) ? prev : [...prev, { id, name, position, team: team || 'FA', projectedStats: {}, projectedPoints: 0, auctionValue: 1, inflatedValue: 1, vorp: 0, replacement: 0, custom: true }]);
     return { id, name, position, team: team || 'FA', auctionValue: 1 };
   }
+  function handleAddDrafted(name, position, nflTeam, teamId, price) {
+    const id = `${name}-${position}-${nflTeam || 'FA'}`.replace(/\s+/g, '_') + '-custom';
+    const np = { id, name, position, team: nflTeam || 'FA', projectedStats: {}, projectedPoints: 0, auctionValue: 1, inflatedValue: 1, vorp: 0, replacement: 0, custom: true };
+    setPlayers(prev => prev.some(p => p.id === id) ? prev : [...prev, np]);
+    const team = teams.find(t => t.id === teamId);
+    if (!team) return;
+    let p = parseInt(price, 10) || config.valuation.minBid;
+    if (p < config.valuation.minBid) p = config.valuation.minBid;
+    setTeams(prev => prev.map(t => t.id === teamId ? { ...t, budgetRemaining: t.budgetRemaining - p, spotsRemaining: t.spotsRemaining - 1, roster: [...t.roster, { playerId: id, price: p, position }] } : t));
+    setDraftHistory(prev => [...prev, { playerId: id, teamId, price: p, position, timestamp: Date.now() }]);
+  }
   function handleDraft(playerId, teamId, price) {
     const player = personalizedPlayers.find(p => p.id === playerId);
     if (!player) return;
@@ -6536,7 +6567,7 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
-      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''} ${view === 'board' && !splitMode && (boardTab === 'draftboard' || boardTab === 'cheatsheet') ? 'board-full' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''} ${view === 'board' && !splitMode && (boardTab === 'draftboard' || boardTab === 'cheatsheet') ? 'board-full' : ''} ${view === 'board' && boardTab === 'draftboard' && !splitMode ? 'is-draftboard' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
         {!(view === 'board' && !splitMode && (boardTab === 'draftboard' || boardTab === 'cheatsheet')) && <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} mode={view === 'board' ? 'board' : 'prep'} teams={teams} marketState={marketState} />}
       </div>
@@ -6546,7 +6577,7 @@ function App() {
       )}
       {!showSplash && !(view === 'board' && boardTab === 'draftboard' && !splitMode) && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name={view === 'board' ? 'Gameday Navigator' : 'Value Coach'} big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
-      {showAddPlayer && <AddPlayerModal onAdd={(name, pos, team) => { const np = handleAddPlayer(name, pos, team); setShowAddPlayer(false); setAssignPlayer(np); }} onClose={() => setShowAddPlayer(false)} />}
+      {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} />}
       {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
