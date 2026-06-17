@@ -844,10 +844,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .board-subtabs .subtab-2nd { color: var(--positive); border-color: rgba(45,212,163,0.4); }
 .board-subtabs { align-items: center; }
 .header-models { margin-left: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 5px; }
-.hm-tab { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 10px; font-family: var(--font-mono); background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: 5px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+.hm-tab { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; font-family: var(--font-body); background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: 5px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
 .hm-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
 .hm-tab.active { border-color: var(--positive); color: var(--positive); background: rgba(45,212,163,0.12); }
-.hm-pts { font-size: 9px; color: var(--text-muted); }
+.hm-pts { font-size: 11px; color: var(--text-muted); }
 .hm-tab.active .hm-pts { color: var(--positive); }
 .header-league { background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 16px; padding: 5px 14px; font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary); cursor: pointer; white-space: nowrap; letter-spacing: 0.02em; }
 .header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
@@ -855,14 +855,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .settings-league-summary { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); margin: 6px 0 16px; letter-spacing: 0.02em; }
 .cheat-header { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
 .ch-models { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; box-shadow: 0 0 10px rgba(245,184,0,0.06); }
-.ch-models-label { flex-basis: 100%; font-family: var(--font-display); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-text); margin-bottom: 6px; }
+.ch-models-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-text); margin-bottom: 6px; }
 .ch-models-empty { font-size: 11px; color: var(--text-muted); }
-.ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
+.ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; height: 156px; overflow: hidden; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
 .chi-head { display: flex; align-items: center; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px; }
 .chi-nav button { background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-secondary); width: 24px; height: 20px; border-radius: 4px; cursor: pointer; font-size: 9px; margin-left: 4px; padding: 0; }
 .chi-nav button:hover { border-color: var(--positive); color: var(--text-primary); }
 .chi-label { font-size: 13px; font-weight: 700; color: var(--positive); margin-bottom: 4px; }
-.chi-text { font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.chi-text { font-size: 13px; line-height: 1.5; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .chi-empty { font-size: 12px; color: var(--text-muted); }
 @media (max-width: 760px) { .cheat-header { grid-template-columns: 1fr; } }
 .board-split { display: flex; align-items: stretch; width: 100%; }
@@ -3178,7 +3178,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
         </div>
         <div className="settings-section-title">Projections Import (CSV)</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Replace projections with a CSV, works directly with <b>ffanalytics</b> exports (its multi-source aggregate of FantasyPros, ESPN, CBS, NFL and more), plus FantasyPros / ESPN / Yahoo files. Columns are auto-detected: player, pos (DST is read as DEF), team, and stats like pass_yds, pass_tds, pass_int, rush_yds, rush_tds, rec, rec_yds, rec_tds, fg, dst_sacks, dst_int, dst_pts_allowed. If the file only has a points/fpts column, that is used directly.
+          Replace projections with a CSV, works directly with <b>ffanalytics</b> exports (its multi-source aggregate of FantasyPros, ESPN, NFL and more), plus FantasyPros / ESPN / Yahoo files. Columns are auto-detected: player, pos (DST is read as DEF), team, and stats like pass_yds, pass_tds, pass_int, rush_yds, rush_tds, rec, rec_yds, rec_tds, fg, dst_sacks, dst_int, dst_pts_allowed. If the file only has a points/fpts column, that is used directly.
         </p>
         <button className="btn-secondary" onClick={() => fileRef.current.click()}>Import projections CSV (ffanalytics-ready)</button>
         <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFile} />
@@ -3530,7 +3530,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const games = seasonGames || 17;
   const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
-  const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }), [players, myTeam, teams, config, draftedIds, marketState, games]);
+  const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => (i.text || '').length <= 240), [players, myTeam, teams, config, draftedIds, marketState, games]);
   const len = insights.length;
   const [idx, setIdx] = useState(0);
   useEffect(() => { if (len <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % len), 20000); return () => clearInterval(t); }, [len]);
@@ -4883,7 +4883,7 @@ function PlayersRail({ players, draftedIds, teams, config, pointsMode, seasonGam
 // ─── App.jsx ──────────────────────────
 const STORAGE_KEY = 'iron_tuna_draft_state_v2';
 const PROJ_KEY = 'tn$9xQ27z';
-const PROJ_VERSION = '2026.2-cbs';
+const PROJ_VERSION = '2026.3';
 function _xb64decode(s, key) {
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
@@ -4951,6 +4951,27 @@ function applyCustomRanks(scored, rankOrder) {
     finalOrder.forEach((id, i) => { const p = result.get(id); if (p) result.set(id, { ...p, projectedPoints: sortedPts[i] }); });
   });
   return scored.map(p => result.get(p.id));
+}
+// Baked-in baseline name reorder for QB ranking: keep the per-slot projection
+// ladder, just reassign which name sits in each slot. Idempotent because it runs
+// on freshly re-scored players each render.
+function applyBaselineRankFixes(scored) {
+  const qbs = scored.filter(p => p.position === 'QB').slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+  if (qbs.length < 2) return scored;
+  const ladder = qbs.map(p => p.projectedPoints);
+  const order = qbs.slice();
+  const move = (matcher, delta) => {
+    const i = order.findIndex(p => matcher(p.name || ''));
+    if (i < 0) return;
+    const j = Math.max(0, Math.min(order.length - 1, i + delta));
+    const [pl] = order.splice(i, 1);
+    order.splice(j, 0, pl);
+  };
+  move(n => /prescott/i.test(n), 1);   // Dak Prescott down one slot
+  move(n => /stafford/i.test(n), -2);  // Matt Stafford up two slots
+  const pts = new Map();
+  order.forEach((p, i) => pts.set(p.id, ladder[i]));
+  return scored.map(p => pts.has(p.id) ? { ...p, projectedPoints: pts.get(p.id) } : p);
 }
 function detectPositions(c) {
   const map = [['QB', /\b(qb|qbs|quarter ?backs?)\b/], ['RB', /\b(rb|rbs|running ?backs?)\b/], ['WR', /\b(wr|wrs|wide ?receivers?|receivers?)\b/], ['TE', /\b(te|tes|tight ?ends?)\b/], ['K', /\b(k|ks|kickers?)\b/], ['DEF', /\b(def|dst|d\/st|defen[cs]es?|defenders?)\b/]];
@@ -6285,7 +6306,7 @@ function App() {
         const data = await fetchBaselineProjections();
         if (!cancelled && data && data.length) {
           setPlayers(buildInitialPlayers(data));
-          setDataInfo({ source: 'CBS 2026', season: 2026, count: data.length, when: Date.now() });
+          setDataInfo({ source: 'Projections 2026', season: 2026, count: data.length, when: Date.now() });
         }
       } catch (e) { /* offline: keep current pool */ }
     })();
@@ -6311,7 +6332,7 @@ function App() {
   const SEASON_GAMES = 17;
   const baseValued = useMemo(() => {
     const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
-    const ranked = applyCustomRanks(scored, rankOrder);
+    const ranked = applyCustomRanks(applyBaselineRankFixes(scored), rankOrder);
     return buildValuations(ranked, config).players;
   }, [players, config, rankOrder]);
   const valuedPlayers = useMemo(() => {
