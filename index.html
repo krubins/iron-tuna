@@ -604,7 +604,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .ins-pl-gap.good { color: var(--positive); }
 .ins-pl-gap.bad { color: #ef4444; }
 .ins-empty { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
-.mock { display: flex; flex-direction: column; gap: 14px; max-width: 1040px; }
+.mock { display: flex; flex-direction: column; gap: 14px; }
 .mock-intro { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
 .mock-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
 .mock-card { background: var(--bg-panel); border: 1px solid var(--positive); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 0 16px rgba(45,212,163,0.16); }
@@ -760,8 +760,8 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 6.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
 }.hl-btn { font-size: 11px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
-.cheat-cols-label { font-size: 11px; color: var(--text-muted); align-self: center; }
-.col-toggle { font-size: 11px; padding: 5px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-muted); cursor: pointer; font-family: var(--font-mono); letter-spacing: 0.04em; }
+.cheat-cols-label { font-size: 12px; color: var(--text-muted); align-self: center; font-family: var(--font-body); letter-spacing: normal; }
+.col-toggle { font-size: 12px; padding: 5px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-muted); cursor: pointer; font-family: var(--font-body); letter-spacing: normal; }
 .col-toggle.on { background: rgba(45,212,163,0.14); border-color: var(--positive); color: var(--positive); }
 .cheat-ppg { font-family: var(--font-mono); font-size: 10px; text-align: right; color: #7fa6c9; min-width: 20px; }
 .cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
@@ -819,9 +819,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach-resize:hover { background: rgba(45,212,163,0.35); }
 .coach.dock .coach-head { flex-basis: 100%; order: 1; }
 .coach.dock .coach-chips { flex-basis: 100%; order: 2; }
-.coach.dock .coach-body { flex: 1 1 34%; max-height: calc(var(--dock-h, 122px) - 30px); order: 4; min-height: 0; }
+.coach.dock .coach-body { flex: 2 1 0%; max-height: calc(var(--dock-h, 122px) - 30px); order: 4; min-height: 0; min-width: 0; }
 .coach.dock .coach-msg { max-width: 780px; }
-.coach.dock .coach-input { flex: 0 0 var(--coach-input-w, 440px); order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; position: relative; }
+.coach.dock .coach-input { flex: 1 1 var(--coach-input-w, 0px); min-width: 0; order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; position: relative; }
 .coach-col-resize { position: absolute; top: 0; right: -3px; width: 8px; height: 100%; cursor: ew-resize; z-index: 6; }
 .coach-col-resize:hover { background: rgba(45,212,163,0.35); }
 .coach.dock .coach-insights { flex: 0 0 320px; order: 5; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 8px 12px; max-height: calc(var(--dock-h, 122px) - 12px); box-sizing: border-box; }
@@ -3625,8 +3625,8 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
       </div>
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       {mode === 'live'
-        ? <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none' }}>Click a player to mark him drafted · drag to re-rank · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>
-        : <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none' }}>Drag to re-rank · click a player to target him · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>}
+        ? <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Click a player to mark him drafted · drag to re-rank · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>
+        : <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Drag to re-rank · click a player to target him · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>}
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
