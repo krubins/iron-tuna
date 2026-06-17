@@ -3631,7 +3631,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
         {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>}
         {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>}
-        <button className="btn-secondary" onClick={onResetRanks}>Reset ranks</button>
+        <span style={{ flexBasis: '100%', height: 0 }} />
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
         {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
