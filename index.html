@@ -656,6 +656,21 @@ input:focus, select:focus { border-color: var(--accent); }
 .mock-set { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
 .mock-set select { background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-primary); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; }
 .mock-set select:hover { border-color: var(--positive); }
+.mock-recap { display: grid; grid-template-columns: auto 1fr 1fr; gap: 16px; align-items: start; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; }
+.mock-grade { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 6px 14px; border-right: 1px solid var(--border-subtle); }
+.mg-letter { font-family: var(--font-display); font-size: 52px; line-height: 1; color: var(--positive); text-shadow: 0 0 18px rgba(45,212,163,0.35); }
+.mg-sub { font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.5; }
+.mg-sub b { color: var(--text-primary); font-size: 13px; }
+.mr-block .mr-h { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.05em; color: var(--gold-text); text-transform: uppercase; margin-bottom: 8px; }
+.mr-block .mr-sub { font-family: var(--font-body); font-size: 10px; color: var(--text-muted); text-transform: none; letter-spacing: 0; }
+.mr-row { display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 11px; }
+.mr-bartrack { height: 6px; background: var(--bg-base); border-radius: 3px; overflow: hidden; }
+.mr-barfill { display: block; height: 100%; background: var(--positive); border-radius: 3px; }
+.mr-you { font-family: var(--font-mono); color: var(--text-primary); font-size: 11px; min-width: 34px; text-align: right; }
+.mr-avg { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; min-width: 56px; text-align: right; }
+.mr-notes { margin: 0; padding-left: 16px; }
+.mr-notes li { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 5px; }
+@media (max-width: 760px) { .mock-recap { grid-template-columns: 1fr; } .mock-grade { border-right: none; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; } }
 .cheatsheet { }
 .board-subtabs { display: flex; gap: 6px; margin-bottom: 14px; }
 .board-subtabs .subtab { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; }
@@ -3797,9 +3812,44 @@ function MockAuction({ players, config, seasonGames }) {
     </div>
   );
   if (phase === 'done' && result) {
+    const me = teams.find(t => t.you) || teams[0];
+    const myRank = result.findIndex(r => r.you) + 1;
+    const ptsArr = result.map(r => r.pts); const maxP = Math.max(...ptsArr), minP = Math.min(...ptsArr);
+    const myPts = me ? mockStarterPts(me.roster, config, games) : 0;
+    const pct = maxP > minP ? (myPts - minP) / (maxP - minP) : 1;
+    const grade = pct >= 0.95 ? 'A' : pct >= 0.85 ? 'A-' : pct >= 0.72 ? 'B' : pct >= 0.55 ? 'B-' : pct >= 0.35 ? 'C' : 'D';
+    const POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+    const spendByPos = p => { const m = {}; POS.forEach(x => m[x] = 0); (p.roster || []).forEach(r => { m[r.position] = (m[r.position] || 0) + (r.price || 0); }); return m; };
+    const mySpend = spendByPos(me);
+    const fieldSpend = {}; POS.forEach(x => { fieldSpend[x] = Math.round(teams.reduce((sum, t) => sum + spendByPos(t)[x], 0) / teams.length); });
+    const valued = (me.roster || []).filter(r => r.auctionValue != null && r.price != null);
+    const bestBuy = valued.slice().sort((a, b) => (b.auctionValue - b.price) - (a.auctionValue - a.price))[0];
+    const worstPay = valued.slice().sort((a, b) => (b.price - b.auctionValue) - (a.price - a.auctionValue))[0];
+    const totalSpent = budget - me.budget;
+    const topPos = POS.map(x => ({ x, v: mySpend[x] })).sort((a, b) => b.v - a.v)[0];
+    const takeaways = [];
+    if (myRank === 1) takeaways.push('You built the highest-projected starting lineup in the room. Whatever you did, do it again.');
+    if (totalSpent > 0 && topPos.v / totalSpent > 0.5) takeaways.push('You put ' + Math.round(topPos.v / totalSpent * 100) + '% of your budget into ' + topPos.x + ' \u2014 a high-ceiling, high-risk concentration.');
+    if (me.budget >= Math.max(5, Math.round(budget * 0.08))) takeaways.push('You left $' + me.budget + ' unspent. That is bid power you could have turned into points.');
+    if (bestBuy && (bestBuy.auctionValue - bestBuy.price) >= 3) takeaways.push('Best buy: ' + bestBuy.name + ' at $' + bestBuy.price + ', worth $' + bestBuy.auctionValue + '.');
+    if (worstPay && (worstPay.price - worstPay.auctionValue) >= 4) takeaways.push('Biggest reach: ' + worstPay.name + ' at $' + worstPay.price + ' for $' + worstPay.auctionValue + ' of value.');
+    if (!takeaways.length) takeaways.push('Balanced build with no glaring mistakes \u2014 a solid foundation to sharpen from.');
     return (
       <div className="mock">
-        <div className="mock-top"><div><b>Mock complete.</b> Final standings by starting-lineup points per game.</div><button className="btn-draft" onClick={reset}>Run again</button></div>
+        <div className="mock-top"><div><b>Mock complete.</b> Here is how your room finished.</div><button className="btn-draft" onClick={reset}>Run again</button></div>
+        <div className="mock-recap">
+          <div className="mock-grade"><div className="mg-letter">{grade}</div><div className="mg-sub"><b>#{myRank}</b> of {teams.length}<br />{myPts.toFixed(1)} starter pts/gm</div></div>
+          <div className="mr-block">
+            <div className="mr-h">Your spend by position <span className="mr-sub">vs field average</span></div>
+            {POS.filter(x => mySpend[x] > 0 || fieldSpend[x] > 0).map(x => (
+              <div key={x} className="mr-row"><span className={`position-tag ${x}`}>{x}</span><span className="mr-bartrack"><span className="mr-barfill" style={{ width: Math.min(100, mySpend[x] / Math.max(1, budget) * 100 * 2.2) + '%' }} /></span><span className="mr-you">${mySpend[x]}</span><span className="mr-avg">avg ${fieldSpend[x]}</span></div>
+            ))}
+          </div>
+          <div className="mr-block">
+            <div className="mr-h">Takeaways</div>
+            <ul className="mr-notes">{takeaways.map((t, i) => <li key={i}>{t}</li>)}</ul>
+          </div>
+        </div>
         <table className="mock-standings"><thead><tr><th>#</th><th>Team</th><th>Strategy</th><th className="num">Starter pts/gm</th><th className="num">Spent</th></tr></thead><tbody>
           {result.map((t, i) => (<tr key={t.id} className={t.you ? 'you' : ''}><td>{i + 1}</td><td>{t.name}</td><td>{STRAT_LABELS[t.strat] || t.strat}</td><td className="num">{t.pts.toFixed(1)}</td><td className="num">${t.spent}</td></tr>))}
         </tbody></table>
