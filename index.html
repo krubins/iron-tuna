@@ -806,6 +806,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .header-league { background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 16px; padding: 5px 14px; font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary); cursor: pointer; white-space: nowrap; letter-spacing: 0.02em; }
 .header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
+.settings-league-summary { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); margin: 6px 0 16px; letter-spacing: 0.02em; }
 .cheat-header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
 .ch-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .ch-models-label { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.05em; color: var(--gold-text); margin-right: 4px; }
@@ -1058,7 +1059,7 @@ input:focus, select:focus { border-color: var(--accent); }
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Is Iron Tuna really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Management package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade." } },
+        { "@type": "Question", "name": "Is Iron Tuna really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Management package (the live management tool and the Value Coach) is the paid upgrade." } },
         { "@type": "Question", "name": "Does it work for any auction league?", "acceptedAnswer": { "@type": "Answer", "text": "Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings." } },
         { "@type": "Question", "name": "Do I have to connect my league account?", "acceptedAnswer": { "@type": "Answer", "text": "No. There is nothing to log into and no password sharing. Enter your settings (or paste or screenshot your scoring) and you are ready." } },
         { "@type": "Question", "name": "How is Iron Tuna different from other draft tools?", "acceptedAnswer": { "@type": "Answer", "text": "Most tools hand you one generic auction value. Iron Tuna gives three numbers per player: market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time." } },
@@ -1093,7 +1094,7 @@ input:focus, select:focus { border-color: var(--accent); }
         <li>Track player selection, available funds, and maximum remaining bids</li>
         <li>An always-on AI navigator: who to bid on, how high, and why</li>
         <li>Proactive insight on emerging bidding trends in real time</li>
-        <li>Unlimited mock auctions and an AI Value Coach</li>
+        <li>An always-on AI Value Coach and Gameday Navigator</li>
       </ul>
       <h2>Frequently asked questions</h2>
       <h3>Is Iron Tuna really free?</h3>
@@ -2012,7 +2013,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const taglineW = tagline ? (glyphW('RULE THE DRAFT.', tagFs, 0.18) + tagDx + glyphW('OWN THE LEAGUE.', tagFs, 0.18)) : 0;
   const logoW = tunaW + wordWidth - 2;
   const FISH_AR = 1.7518;
-  const fishW = tagline ? (wordWidth * 1.15) : 95;
+  const fishW = tagline ? (wordWidth * 1.3225) : 95;
   const fishH = fishW / FISH_AR;
   const vbW = tagline ? (Math.max(fishW, taglineW) + 26) : (tunaW + wordWidth + 12);
   const ox = 0;
@@ -2090,19 +2091,15 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
   return (
     <header className="header">
       <div className="header-brand">
-        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna: back to start"><LogoMark wavy height={51} className="header-logo" /></button>
+        <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna: back to start"><LogoMark height={51} className="header-logo" /></button>
         <div className="header-brand-text">
           <span className="subtitle">Auction Draft Command</span>
         </div>
       </div>
-      {(view === 'prep' || view === 'board') && config && (
-        <button className="header-league no-print" onClick={onOpenSettings} title="Edit league: teams, budget, scoring, roster">
-          <span className="hl-k">League</span> {config.teams} teams \u00b7 ${config.budget} \u00b7 {pprLabel} \u00b7 {startersSummary}
-        </button>
-      )}
       <nav className="header-nav">
         <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Cheat Sheet</button>
         <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Draft Board</button>
+        <button className={view === 'mock' ? 'active' : ''} onClick={() => setView('mock')}>Mock Auction</button>
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
         <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
         <button onClick={onReset}>Reset</button>
@@ -2133,9 +2130,9 @@ function LandingSplash({ onDismiss, onNav }) {
       'Tiered cheat sheets and six strategy models',
       'A budget-aware optimal-lineup planner',
       'The dollar allocation that builds your highest-scoring team',
+      'Unlimited mock auctions against strategy-driven CPU managers',
     ]],
     ['Premium', '$9.99', 'Live auction-day command', [
-      'Unlimited mock auctions against CPU managers',
       'Track player selection, available funds, and maximum remaining bid',
       'Roster targets that re-optimize as prices and availability shift',
       'Bid guidance that updates as the board moves',
@@ -2156,7 +2153,7 @@ function LandingSplash({ onDismiss, onNav }) {
     ['QB', 'Josh Allen', '9', '6', '7'],
   ];
   const faqs = [
-    ['Is it really free?', 'Yes, custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Management package (the live management tool, unlimited mock auctions, and the Value Coach) is the paid upgrade.'],
+    ['Is it really free?', 'Yes, custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Management package (the live management tool and the Value Coach) is the paid upgrade.'],
     ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
     ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing, enter your settings (or paste / screenshot your scoring) and you are ready.'],
     ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player, market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time.'],
@@ -2179,7 +2176,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <LogoMark tagline height={300} className="landing-logo" />
         <div className="lp-cmd">Auction Draft Command</div>
         <h1 className="lp-head">Know what every player is worth.</h1>
-        <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a live navigator: who to bid on, how high, and why.</p>
+        <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a <b>live navigator</b>: who to bid on, how high, and why.</p>
         <div className="lp-cta-row" style={{ marginTop: 4 }}>
           <button className="lp-cta" onClick={() => go('prep')}>Get my auction values</button>
           <button className="lp-cta-quiet" onClick={() => go('board')}>Auction-day management →</button>
@@ -3093,6 +3090,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">League Settings</div>
+        <div className="settings-league-summary">{draft.teams} teams · ${draft.budget} · {(() => { const p = draft.scoring ? draft.scoring.receptionPoints : 0; return p >= 1 ? 'Full PPR' : p >= 0.5 ? 'Half-PPR' : 'Standard'; })()} · {['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(x => draft.roster[x]).map(x => `${draft.roster[x].starters}${x}`).join('/')}{draft.flex && draft.flex.count ? `/${draft.flex.count}FLEX` : ''}</div>
         <div className="settings-section-title">Import Your League Scoring</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Skip the manual entry: paste your league's scoring rules or upload a screenshot. Detected values fill the fields below for you to confirm.</p>
         <ScoringImport onApply={applyImport} />
@@ -3501,7 +3499,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
       </div>
       <div className="ch-insights">
-        <div className="chi-head"><span>Insights{len > 1 ? ` \u00b7 ${(idx % len) + 1}/${len}` : ''}</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">\u25b2</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">\u25bc</button></span>}</div>
+        <div className="chi-head"><span>Insights{len > 1 ? ` · ${(idx % len) + 1}/${len}` : ''}</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
         {insights.length ? <div className="chi-body"><div className="chi-label">{insights[idx % insights.length].label}</div><div className="chi-text">{insights[idx % insights.length].text}</div></div> : <div className="chi-body chi-empty">Insights appear as your board and draft develop.</div>}
       </div>
     </div>
@@ -4175,7 +4173,7 @@ function buildTeamRosterGrid(team, plan, players, config) {
   });
   return grid;
 }
-function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides) {
+function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors) {
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
   const R = myTeam.budgetRemaining;
@@ -4334,7 +4332,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
       if (best.curId) used.delete(best.curId);
       used.add(best.cand.id); benchSpent += best.dCost; benchPlan[best.idx].player = best.cand;
     }
-    benchPlan.forEach(b => { if (b.player) benchTargets.push({ position: b.pos, playerId: b.player.id, price: priceOf(b.player) }); });
+    benchPlan.forEach(b => { if (b.player) { const floorP = applyFloors ? (b.pos === 'QB' ? 2 : b.pos === 'RB' ? 4 : minBid) : minBid; benchTargets.push({ position: b.pos, playerId: b.player.id, price: Math.max(floorP, priceOf(b.player)) }); } });
   }
   const slots = slotDefs.map(s => {
     if (filled[s.label]) return { label: s.label, basePos: s.basePos, eligible: s.eligible, status: 'filled', player: filled[s.label], price: filled[s.label].price, isStarter: true };
@@ -4362,7 +4360,7 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
   const forcedBase = targets ? Array.from(targets) : [];
   const ptsAt = P => {
     const modified = players.map(x => x.id === player.id ? { ...x, inflatedValue: P, auctionValue: P } : x);
-    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides);
+    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true);
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   // If even at the minimum bid forcing him in doesn't improve on your baseline, he isn't
@@ -4399,7 +4397,7 @@ function bidLadder(player, baselinePoints, myTeam, players, config, draftedIds, 
   const ptsAt = P => {
     if (memo[P] !== undefined) return memo[P];
     const modified = players.map(x => x.id === player.id ? { ...x, inflatedValue: P, auctionValue: P } : x);
-    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides);
+    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true);
     const v = (pl && pl.feasible) ? pl.starterPoints : null;
     memo[P] = v; return v;
   };
@@ -4436,9 +4434,9 @@ function bidLadder(player, baselinePoints, myTeam, players, config, draftedIds, 
 function PlanView({ myTeam, players, draftedIds, config, pointsMode, seasonGames, targets, roleOverrides }) {
   const [whatIfOn, setWhatIfOn] = useState(false);
   const [whatIf, setWhatIf] = useState({});
-  const basePlan = useMemo(() => myTeam ? buildOptimalPlan(myTeam, players, config, draftedIds, undefined, targets, roleOverrides) : null, [myTeam, players, config, draftedIds, targets, roleOverrides]);
+  const basePlan = useMemo(() => myTeam ? buildOptimalPlan(myTeam, players, config, draftedIds, undefined, targets, roleOverrides, true) : null, [myTeam, players, config, draftedIds, targets, roleOverrides]);
   const activeOverrides = whatIfOn ? whatIf : {};
-  const plan = useMemo(() => myTeam ? buildOptimalPlan(myTeam, players, config, draftedIds, activeOverrides, targets, roleOverrides) : null, [myTeam, players, config, draftedIds, activeOverrides, targets, roleOverrides]);
+  const plan = useMemo(() => myTeam ? buildOptimalPlan(myTeam, players, config, draftedIds, activeOverrides, targets, roleOverrides, true) : null, [myTeam, players, config, draftedIds, activeOverrides, targets, roleOverrides]);
   if (!plan) return (<div className="empty-state"><h2>NO TEAM</h2><p>Mark a team as "My Team" (Teams panel) to generate your plan.</p></div>);
   const R = Math.max(1, plan.budgetRemaining);
   const segW = v => `${Math.max(0, Math.min(100, (v / R) * 100))}%`;
@@ -5565,7 +5563,7 @@ function buildCoachInsights(ctx) {
   return prep;
 }
 function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!locked);
   const [msgs, setMsgs] = useState([{ role: 'bot', text: 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.', intro: true }]);
   const [text, setText] = useState('');
   const [pending, setPending] = useState(null);
@@ -5763,7 +5761,6 @@ class ErrorBoundary extends React.Component {
 const ACCOUNT_KEY = 'iron_tuna_account_v1';
 const TIERS = [
   { id: 'base', name: 'Iron Tuna Base', price: 9.99, blurb: 'The full auction-day command center.', features: [
-    'Unlimited mock auctions against strategy-driven CPU managers',
     'Live auction selection & roster management',
     'Dynamic valuations that re-price as the board moves',
     'Projected team potential throughout the auction',
@@ -5959,7 +5956,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   else if (key === 'heroWR') { addF(pick('WR', 0)); addF(pick('WR', 23)); }       // one elite WR, value WR2
   else if (key === 'eliteTE') { addF(pick('TE', 0)); addF(pick('TE', 1)); }       // pay up for the TE edge
   else if (key === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // build around your flagged targets
-  return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides);
+  return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true);
 }
 function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
   const shownKey = model || 'ideal';
@@ -6176,7 +6173,7 @@ function App() {
     const minBid = config.valuation.minBid;
     const maxBid = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
     // Baseline optimal lineup (from value/cost fields; the planner ignores personalValue).
-    const basePlan = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides);
+    const basePlan = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true);
     const baselinePoints = basePlan ? basePlan.starterPoints : 0;
     const planTargetIds = new Set();
     ((basePlan && basePlan.remainingStarterSlots) || []).forEach(s => { if (s.player) planTargetIds.add(s.player.id); });
@@ -6536,7 +6533,7 @@ function App() {
   const plan = useMemo(() => {
     const mt = teams.find(t => t.isMine);
     if (!mt) return null;
-    return buildOptimalPlan(mt, personalizedPlayers, config, draftedIds, undefined, targets, roleOverrides);
+    return buildOptimalPlan(mt, personalizedPlayers, config, draftedIds, undefined, targets, roleOverrides, true);
   }, [teams, personalizedPlayers, config, draftedIds, targets, roleOverrides]);
   const [dismissedAlert, setDismissedAlert] = useState(null);
   const draftAlert = useMemo(() => draftAlerts(personalizedPlayers, myTeam, plan, config, draftedIds, SEASON_GAMES), [personalizedPlayers, myTeam, plan, config, draftedIds]);
@@ -6561,6 +6558,9 @@ function App() {
     }
     if (view === 'tiers') {
       return (<TierView players={personalizedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} onUpdateStrategy={handleUpdateStrategy} />);
+    }
+    if (view === 'mock') {
+      return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
     const cheatSheetEl = (
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
