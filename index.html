@@ -2101,7 +2101,7 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
         </button>
       )}
       <nav className="header-nav">
-        <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Cheatsheet</button>
+        <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Cheat Sheet</button>
         <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Draft Board</button>
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
         <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
