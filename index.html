@@ -26,6 +26,61 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Iron Tuna" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Iron Tuna",
+      "applicationCategory": "SportsApplication",
+      "applicationSubCategory": "Fantasy Football Auction Draft Tool",
+      "operatingSystem": "Web",
+      "url": "https://irontuna.com/",
+      "description": "Iron Tuna builds custom fantasy football auction values for your exact league settings \u2014 three numbers per player, a budget-aware optimal-lineup planner, and an AI auction navigator that tells you who to bid on and how high.",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        {
+          "@type": "Offer",
+          "name": "Tuna",
+          "price": "9.99",
+          "priceCurrency": "USD"
+        },
+        {
+          "@type": "Offer",
+          "name": "Predator",
+          "price": "14.99",
+          "priceCurrency": "USD"
+        }
+      ],
+      "featureList": [
+        "Custom auction values for your league size, budget, and scoring",
+        "Reliability-based pricing that accounts for injury frequency and positional consistency",
+        "Budget-aware optimal-lineup planner",
+        "AI Value Coach and Gameday Navigator",
+        "Live draft board with team grades"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "name": "Iron Tuna",
+      "url": "https://irontuna.com/",
+      "description": "Custom fantasy football auction values and AI auction draft assistant."
+    },
+    {
+      "@type": "Organization",
+      "name": "Iron Tuna",
+      "url": "https://irontuna.com/",
+      "logo": "https://irontuna.com/og.png"
+    }
+  ]
+}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -96,7 +151,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .header::before { content: ""; position: absolute; bottom: -1px; left: 0; height: 2px; width: 80px; background: var(--accent); }
 .header-brand { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .header-brand h1 { font-family: var(--font-display); font-size: 28px; letter-spacing: 0.04em; font-weight: 400; }
-.header-brand .subtitle { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.15em; }
+.header-brand .subtitle { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.15em; transform: translateX(44px); }
 .header-nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .header-nav button {
   padding: 8px 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
@@ -194,8 +249,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .team-card .tc-header { padding-right: 40px; }
 .team-grade { position: absolute; top: 8px; right: 10px; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
 .team-grade.gr-a { background: rgba(45,212,163,0.16); color: #2dd4a3; border: 1px solid rgba(45,212,163,0.5); }
-.team-grade.gr-b { background: rgba(110,166,255,0.15); color: #6ea6ff; border: 1px solid rgba(110,166,255,0.45); }
-.team-grade.gr-c { background: rgba(212,160,23,0.15); color: var(--gold-text); border: 1px solid rgba(212,160,23,0.45); }
+.team-grade.gr-b { background: rgba(234,179,8,0.16); color: #f0c63a; border: 1px solid rgba(234,179,8,0.5); }
+.team-grade.gr-c { background: rgba(249,115,22,0.16); color: #f6924a; border: 1px solid rgba(249,115,22,0.5); }
 .team-grade.gr-d { background: rgba(239,68,68,0.15); color: #ef6a6a; border: 1px solid rgba(239,68,68,0.45); }
 .team-card.mine { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--bg-elev) 80%); }
 .team-card .team-name { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; margin-bottom: 4px; }
@@ -636,21 +691,22 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-drafted-mine .cheat-name { color: #f0c244 !important; }
 .cheat-sold { font-size: 10px; color: var(--positive); font-weight: 700; font-variant-numeric: tabular-nums; }
 .cheat-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-.cheat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: start; }
+.cheat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: start; }
+.cheat-col-group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .cheat-col { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
 .cheat-col-head { display: flex; justify-content: space-between; align-items: baseline; background: var(--bg-elev); padding: 5px 8px; font-family: var(--font-display); letter-spacing: 0.04em; color: var(--gold-text); border-bottom: 1px solid var(--border-strong); }
 .cheat-col-sub { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); letter-spacing: 0; }
-.cheat-row { display: grid; grid-template-columns: 16px minmax(0,1fr) auto auto auto auto; gap: 4px; align-items: center; padding: 2px 7px; font-size: 11px; cursor: grab; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.cheat-row { display: grid; grid-template-columns: 16px minmax(0,1fr) auto auto auto auto; gap: 4px; align-items: center; padding: 3px 7px; font-size: 12.5px; cursor: grab; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .cheat-row:hover { background: var(--bg-elev); }
 .cheat-row.cheat-drop { box-shadow: inset 0 2px 0 var(--gold-text); }
-.cheat-rank { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; text-align: right; }
+.cheat-rank { font-family: var(--font-mono); color: var(--text-muted); font-size: 11px; text-align: right; }
 .cheat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cheat-team { font-size: 9px; color: var(--text-muted); font-family: var(--font-mono); }
-.cheat-val { font-family: var(--font-mono); color: var(--text-secondary); font-size: 10px; text-align: right; min-width: 20px; }
-.cheat-cost { font-family: var(--font-mono); color: var(--text-secondary); font-size: 10px; text-align: right; min-width: 20px; }
+.cheat-team { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.cheat-val { font-family: var(--font-mono); color: var(--text-secondary); font-size: 11px; text-align: right; min-width: 20px; }
+.cheat-cost { font-family: var(--font-mono); color: var(--text-secondary); font-size: 11px; text-align: right; min-width: 20px; }
 .cheat-col-lbl { cursor: help; text-decoration: underline dotted; text-decoration-color: var(--text-faint); text-underline-offset: 2px; }
 .cheat-col-lbl:hover { color: var(--text-secondary); text-decoration-color: var(--positive); }
-.cheat-you { font-family: var(--font-mono); font-size: 10px; text-align: right; min-width: 20px; font-weight: 700; color: var(--text-secondary); }
+.cheat-you { font-family: var(--font-mono); font-size: 11px; text-align: right; min-width: 20px; font-weight: 700; color: var(--text-secondary); }
 .cheat-you.cy-up { color: var(--text-secondary); }
 .cheat-you.cy-down { color: var(--text-secondary); font-weight: 700; }
 .cheat-tilt { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-secondary); }
@@ -680,7 +736,8 @@ input:focus, select:focus { border-color: var(--accent); }
   .cph-key .k-cost { background: #888; } .cph-key .k-val { background: #b8860b; } .cph-key .k-you { background: #0a7a3f; }
   .cph-key .k-grn { background: #0a7a3f; } .cph-key .k-red { background: #b3261e; }
   .cph-key .k-hl { background: #fbf2d6; border: 1px solid #b8860b; }
-  .cheat-grid { display: grid !important; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+  .cheat-grid { display: grid !important; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .cheat-col-group { display: flex !important; flex-direction: column; gap: 5px; break-inside: avoid; }
   .cheat-col { border: 1px solid #c4c4c4; border-radius: 3px; overflow: hidden; break-inside: avoid; }
   .cheat-col-head { color: #fff !important; border: none; padding: 3px 6px; font-size: 11px; font-family: 'Bebas Neue', Arial, sans-serif; letter-spacing: 0.08em; display: flex; justify-content: space-between; align-items: baseline; }
   .cheat-col-sub { color: rgba(255,255,255,0.82) !important; font-size: 6.5px; font-family: Arial, sans-serif; }
@@ -772,7 +829,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.dock .coach-chips { flex-basis: 100%; order: 2; }
 .coach.dock .coach-body { flex: 1 1 34%; max-height: calc(var(--dock-h, 122px) - 30px); order: 4; min-height: 0; }
 .coach.dock .coach-msg { max-width: 780px; }
-.coach.dock .coach-input { flex: 0 0 300px; order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; }
+.coach.dock .coach-input { flex: 0 0 var(--coach-input-w, 300px); order: 3; border-top: none; border-right: 1px solid var(--border-subtle); align-items: stretch; position: relative; }
+.coach-col-resize { position: absolute; top: 0; right: -3px; width: 8px; height: 100%; cursor: ew-resize; z-index: 6; }
+.coach-col-resize:hover { background: rgba(45,212,163,0.35); }
 .coach.dock .coach-insights { flex: 0 0 320px; order: 5; border-left: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 8px 12px; max-height: calc(var(--dock-h, 122px) - 12px); box-sizing: border-box; }
 .coach-insights { display: none; }
 .coach.dock .coach-insights { display: flex; }
@@ -790,6 +849,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .main.board-full { grid-template-columns: 1fr; }
 .board-layout.board-norail { grid-template-columns: 1fr; }
 .board-subtabs .subtab-2nd { color: var(--positive); border-color: rgba(45,212,163,0.4); }
+.board-subtabs { align-items: center; }
+.header-models { margin-left: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 5px; }
+.hm-tab { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 10px; font-family: var(--font-mono); background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: 5px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+.hm-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.hm-tab.active { border-color: var(--positive); color: var(--positive); background: rgba(45,212,163,0.12); }
+.hm-pts { font-size: 9px; color: var(--text-muted); }
+.hm-tab.active .hm-pts { color: var(--positive); }
 .board-split { display: flex; align-items: stretch; width: 100%; }
 .board-split-pane { min-width: 0; overflow-y: auto; overflow-x: hidden; max-height: calc(100vh - 196px); padding-bottom: 8px; }
 .board-split-divider { flex: 0 0 12px; cursor: col-resize; display: flex; align-items: center; justify-content: center; background: var(--bg-elev); border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); }
@@ -811,6 +877,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.02em; color: var(--text-primary); line-height: 1.06; margin: 0 0 22px; max-width: 760px; }
 .lp-sub { font-size: clamp(17px, 2.2vw, 21px); color: var(--text-secondary); max-width: 560px; line-height: 1.6; margin: 0 0 34px; }
 .lp-sub b { color: var(--gold-text); }
+.lp-cmd { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); text-align: center; margin: 2px 0 16px; }
 .lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; width: 100%; margin-bottom: 22px; }
 .lp-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; text-align: left; }
 .lp-card-h { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.03em; color: var(--gold-text); margin-bottom: 6px; }
@@ -1927,9 +1994,17 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const glyphW = (str, fs, ls) => str.length * (0.46 * fs) + (str.length - 1) * (ls * fs);
   const taglineW = tagline ? (glyphW('RULE THE DRAFT.', tagFs, 0.18) + tagDx + glyphW('OWN THE LEAGUE.', tagFs, 0.18)) : 0;
   const logoW = tunaW + wordWidth - 2;
-  const vbW = tagline ? (Math.max(logoW, taglineW) + 28) : (tunaW + wordWidth + 12);
-  const ox = tagline ? ((vbW - logoW) / 2 - 2) : 0;
-  const vbH = tagline ? base * 1.62 : base * 1.12;
+  const FISH_AR = 1.7518;
+  const fishW = tagline ? wordWidth : 95;
+  const fishH = fishW / FISH_AR;
+  const vbW = tagline ? (Math.max(wordWidth, taglineW) + 26) : (tunaW + wordWidth + 12);
+  const ox = 0;
+  const fishX = tagline ? ((vbW - fishW) / 2) : 2;
+  const fishY = tagline ? 2 : (cy - 27);
+  const wordTx = tagline ? ((vbW - wordWidth) / 2) : tunaW;
+  const wordTy = tagline ? (fishH - 1.5) : 0;
+  const vbH = tagline ? (fishH + 70) : (base * 1.12);
+  const taglineY = tagline ? (fishH + 56) : (vbH - base * 0.14);
   const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return (
@@ -1944,7 +2019,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         </linearGradient>
         <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#2dd4a3" floodOpacity="0.16" /></filter>
       </defs>
-      <image href="/tuna.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={2 + ox} y={cy - 27} width={95} height={54.2} preserveAspectRatio="xMidYMid meet" />
+      <image href="/tuna.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={fishX} y={fishY} width={fishW} height={fishH} preserveAspectRatio="xMidYMid meet" />
       {false && (
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
         {/* lunate tail */}
@@ -1974,14 +2049,14 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <circle cx="15.4" cy="25.9" r="0.5" fill="#ffffff" />
       </g>
       )}
-      <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${tunaW + ox},0)`}>
+      <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${wordTx},${wordTy})`}>
         {placed.map((g, i) => (
           <text key={i} x={g.cx} y={cy} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
                 textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
         ))}
       </g>
       {tagline && (
-        <text x={vbW / 2} y={vbH - base * 0.14} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
+        <text x={vbW / 2} y={taglineY} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
               letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb">{'RULE THE DRAFT.\u2002\u2002\u2002OWN THE LEAGUE.'}</text>
       )}
     </svg>
@@ -2076,7 +2151,8 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero">
-        <LogoMark tagline height={324} className="landing-logo" />
+        <LogoMark tagline height={300} className="landing-logo" />
+        <div className="lp-cmd">Auction Draft Command</div>
         <h1 className="lp-head">Know what every player is worth.</h1>
         <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a live navigator: who to bid on, how high, and why.</p>
         <div className="lp-cta-row" style={{ marginTop: 4 }}>
@@ -3086,10 +3162,14 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
       return { id: t.id, sPPG, bPPG };
     });
     const m = new Map();
+    const scores = rows.map(r => 0.85 * r.sPPG + 0.15 * r.bPPG).sort((a, b) => a - b);
+    const n = scores.length;
+    const median = n ? (n % 2 ? scores[(n - 1) / 2] : (scores[n / 2 - 1] + scores[n / 2]) / 2) : 0;
     rows.forEach(r => {
-      const score = 0.85 * (maxS > 0 ? r.sPPG / maxS : 0) + 0.15 * (maxB > 0 ? r.bPPG / maxB : 0);
-      const tbl = [[0.95, 'A+'], [0.88, 'A'], [0.82, 'A-'], [0.75, 'B+'], [0.68, 'B'], [0.61, 'B-'], [0.54, 'C+'], [0.47, 'C'], [0.40, 'C-'], [0.30, 'D'], [-1, 'F']];
-      const g = (tbl.find(x => score >= x[0]) || [0, 'F'])[1];
+      const sc = 0.85 * r.sPPG + 0.15 * r.bPPG;
+      const ratio = median > 0 ? sc / median : 1;
+      const tbl = [[1.15, 'A+'], [1.10, 'A'], [1.05, 'A-'], [1.02, 'B+'], [0.975, 'B'], [0.95, 'B-'], [0.90, 'C+'], [0.85, 'C'], [0.80, 'C-'], [0.70, 'D'], [-1, 'F']];
+      const g = (tbl.find(x => ratio >= x[0]) || [0, 'F'])[1];
       const cls = g[0] === 'A' ? 'gr-a' : g[0] === 'B' ? 'gr-b' : g[0] === 'C' ? 'gr-c' : 'gr-d';
       m.set(r.id, { g, cls });
     });
@@ -3153,13 +3233,14 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
             <div key={team.id} ref={el => { if (el) cardRefs.current[team.id] = el; else delete cardRefs.current[team.id]; }}
                  className={`team-card ${team.isMine ? 'mine' : ''}`}
                  onPointerDown={e => startCardDrag(e, team.id)}>
-              {(() => { const gg = teamGrades.get(team.id); return gg ? <div className={`team-grade ${gg.cls}`} title="Team grade — 85% starters (pts/gm), 15% reserves">{gg.g}</div> : null; })()}
+              {(() => { const gg = teamGrades.get(team.id); return gg ? <div className={`team-grade ${gg.cls}`} title="Team grade — graded on a curve (league median = B); 85% starters (pts/gm), 15% reserves">{gg.g}</div> : null; })()}
               <div className="tc-header">
                 <span className="drag-handle" title="Drag the card to reorder">⠿</span>
                 <input type="text" value={team.name} onChange={e => onRenameTeam(team.id, e.target.value)}
                   style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: 0, fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.04em', color: 'var(--text-primary)' }} />
               </div>
-              <div className="team-budget" style={{ marginTop: 4 }}>${team.budgetRemaining} <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400, letterSpacing: '0.04em' }}>Remaining</span> <span style={{ fontSize: 12, color: 'var(--text-faint)', fontWeight: 400 }}>|</span> <span style={{ fontSize: 13, color: 'var(--gold-text)', fontFamily: 'var(--font-mono)' }}>Max Bid ${maxBidC}</span></div>
+              <div className="team-budget" style={{ marginTop: 4 }}>${team.budgetRemaining} <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400, letterSpacing: '0.04em' }}>Remaining</span></div>
+              <div style={{ marginTop: 2, fontFamily: 'var(--font-mono)' }}><span style={{ fontSize: 16, color: 'var(--gold-text)', fontWeight: 600 }}>${maxBidC}</span> <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400, letterSpacing: '0.04em' }}>Max Bid</span></div>
               <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--gold-text)', marginTop: 4 }}>
                 Starters {proj.filledStarters}/{proj.totalStarters} · {(proj.starterPoints / games).toFixed(1)} pts/gm
               </div>
@@ -3375,6 +3456,7 @@ function computeTierBreaks(list) {
 }
 function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds }) {
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
+  const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
@@ -3457,7 +3539,9 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-you" />your max bid</span><span className="cph-key"><i className="k-grn" />worth targeting (≤ your max)</span><span className="cph-key"><i className="k-red" />price over your max</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
       </div>
       <div className={`cheat-grid ${highlight ? 'has-hl' : ''}`}>
-        {cols.map(([pos, n]) => (
+        {colGroups.map((grp, gi) => (
+          <div className="cheat-col-group" key={gi}>
+          {grp.map(([pos, n]) => (
           <div className={`cheat-col cc-${pos}`} key={pos}>
             <div className="cheat-col-head"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>
             <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl, tip]) => <span key={k} className="cheat-col-lbl" title={tip}>{lbl}</span>)}</div>
@@ -3494,6 +3578,8 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               </div>
               );
             })}
+          </div>
+          ))}
           </div>
         ))}
       </div>
@@ -5454,6 +5540,14 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   const prevInsight = () => { if (insights.length) setInsightIdx(i => (i - 1 + insights.length) % insights.length); };
   const nextInsight = () => { if (insights.length) setInsightIdx(i => (i + 1) % insights.length); };
   const [dockH, setDockH] = useState(null);
+  const [inputW, setInputW] = useState(null);
+  function startColResize(e) {
+    e.preventDefault(); e.stopPropagation();
+    const coachEl = e.currentTarget.closest('.coach');
+    const move = ev => { const x = ev.touches ? ev.touches[0].clientX : ev.clientX; const rect = coachEl.getBoundingClientRect(); setInputW(Math.max(180, Math.min(rect.width - 360, x - rect.left))); };
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  }
   function startDockResize(e) {
     e.preventDefault();
     const move = ev => { const y = ev.touches ? ev.touches[0].clientY : ev.clientY; setDockH(Math.max(120, Math.min(window.innerHeight * 0.72, window.innerHeight - y))); };
@@ -5572,12 +5666,12 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   Object.entries(valueAdjust || {}).forEach(([pos, obj]) => Object.entries(obj || {}).forEach(([tier, m]) => { if (Math.abs(m - 1) > 0.01) active.push(`${tier === 'all' ? '' : tier + ' '}${pos} ${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`); }));
   if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
-    <div className={`coach ${big ? 'big' : 'dock'}`} style={!big && dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : undefined}>
+    <div className={`coach ${big ? 'big' : 'dock'}`} style={!big ? { ...(dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : {}), ...(inputW ? { ['--coach-input-w']: inputW + 'px' } : {}) } : undefined}>
       {!big && <div className="coach-resize" onPointerDown={startDockResize} title="Drag to resize" />}
       <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
-      <div className="coach-input"><textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
+      <div className="coach-input">{!big && <div className="coach-col-resize" onPointerDown={startColResize} title="Drag to resize question vs. answer" />}<textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
       <div className="coach-insights">
         <div className="ci-head"><span className="ci-title">Insights{insights.length ? ' · ' + ((insightIdx % insights.length) + 1) + '/' + insights.length : ''}</span><div className="ci-nav"><button onClick={prevInsight} title="Previous insight" disabled={insights.length < 2}>▲</button><button onClick={nextInsight} title="Next insight" disabled={insights.length < 2}>▼</button></div></div>
         {curInsight ? <div className="ci-body"><div className="ci-label">{curInsight.label}</div><div className="ci-text">{curInsight.text}</div></div> : <div className="ci-body ci-empty">Insights appear as your board and draft develop.</div>}
@@ -5897,6 +5991,17 @@ function teamTaunt(team, players, config, games) {
   if (!jabs.length) jabs.push(`${team.name} is being suspiciously competent, no glaring holes yet. Give them a few nominations; they'll find a way to mess it up.`);
   return jabs[Math.floor(Math.random() * jabs.length)];
 }
+function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets }) {
+  const models = [['ideal', 'Ideal Team'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['zeroRB', 'Zero RB'], ['heroWR', 'Hero WR'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const games = seasonGames || 17;
+  const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
+  if (!myTeam) return null;
+  return (
+    <div className="header-models" title="Draft models — click to box a model's target players on the cheat sheet; click again to clear">
+      {models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>)}
+    </div>
+  );
+}
 function App() {
   const initialState = (() => {
     try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
@@ -5922,9 +6027,7 @@ function App() {
   function makeTaunt() {
     const opps = teams.filter(t => !t.isMine);
     if (!opps.length) { setTaunt({ name: '', text: 'No rivals to roast yet, mark your team, then let the others start drafting.' }); return; }
-    const prevName = taunt && taunt.name;
-    let pool = opps.filter(t => t.name !== prevName); if (!pool.length) pool = opps;
-    const t = pool[Math.floor(Math.random() * pool.length)];
+    const t = (taunt && taunt.name && opps.find(x => x.name === taunt.name)) || opps[0];
     setTaunt({ name: t.name, text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES) });
     ITAnalytics.track('taunt', {});
   }
@@ -6420,7 +6523,7 @@ function App() {
     );
     const draftBoardEl = (
       <>
-      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="btn-secondary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddPlayer(true)}>+ Add player</button><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival based on their team status">🔥 Taunt a rival</button></div>
+      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="btn-secondary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddPlayer(true)}>+ Add player</button><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival you pick from the dropdown">🔥 Roast a Rival</button></div>
       <div className="board-layout board-norail">
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} />
       </div>
@@ -6431,7 +6534,8 @@ function App() {
       <div className="board-subtabs no-print">
         <button className={`subtab ${!splitMode && boardTab === 'cheatsheet' ? 'active' : ''}`} onClick={() => { setSplitMode(false); setBoardTab('cheatsheet'); }}>Cheat Sheet</button>
         <button className={`subtab ${!splitMode && boardTab === 'draftboard' ? 'active' : ''}`} onClick={() => { setSplitMode(false); setBoardTab('draftboard'); }}>Draft Board</button>
-        <button className={`subtab subtab-2nd ${splitMode ? 'active' : ''}`} style={{ marginLeft: 'auto' }} title="Span two screens: cheat sheet on the left, draft board on the right, with a draggable divider. Stretch this window across both monitors." onClick={() => { const next = !splitMode; setSplitMode(next); if (next) spanTwoScreens(); }}>⧉ {splitMode ? 'Exit split' : 'Span two screens'}</button>
+        <button className={`subtab subtab-2nd ${splitMode ? 'active' : ''}`} title="Span two screens: cheat sheet on the left, draft board on the right, with a draggable divider. Stretch this window across both monitors." onClick={() => { const next = !splitMode; setSplitMode(next); if (next) spanTwoScreens(); }}>⧉ {splitMode ? 'Exit split' : 'Span two screens'}</button>
+        {!splitMode && boardTab === 'cheatsheet' && <HeaderModelTabs myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} />}
       </div>
       {splitMode ? (
         <div className="board-split" ref={splitRef}>
@@ -6453,9 +6557,9 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} />
-      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''} ${view === 'board' && boardTab === 'draftboard' && !splitMode ? 'board-full' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main' : ''} ${view === 'board' ? 'board-main' : ''} ${view === 'board' && !sidebarOpen ? 'board-collapsed' : ''} ${view === 'board' && !splitMode && (boardTab === 'draftboard' || boardTab === 'cheatsheet') ? 'board-full' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
-        {!(view === 'board' && boardTab === 'draftboard' && !splitMode) && <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} mode={view === 'board' ? 'board' : 'prep'} teams={teams} marketState={marketState} />}
+        {!(view === 'board' && !splitMode && (boardTab === 'draftboard' || boardTab === 'cheatsheet')) && <ModelsPanel myTeam={myTeam} players={personalizedPlayers} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={SEASON_GAMES} model={draftModel} onSelectModel={setDraftModel} targets={targets} mode={view === 'board' ? 'board' : 'prep'} teams={teams} marketState={marketState} />}
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
@@ -6479,7 +6583,7 @@ function App() {
               <div className="taunt-pick"><label>Pick a team</label><select value={(teams.find(t => t.name === taunt.name) || {}).id || ''} onChange={e => { const t = teams.find(x => x.id === e.target.value); if (t) tauntTeam(t); }}>{!taunt.name && <option value="">–</option>}{teams.filter(t => !t.isMine).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
             )}
             <div className="taunt-text">“{taunt.text}”</div>
-            <div className="taunt-actions"><button className="btn-draft" onClick={makeTaunt}>Roast another rival</button><button className="btn-secondary" onClick={() => { try { navigator.clipboard && navigator.clipboard.writeText(taunt.text); } catch (e) {} }}>Copy</button></div>
+            <div className="taunt-actions"><button className="btn-draft" onClick={() => { const t = teams.find(x => x.name === taunt.name); if (t) tauntTeam(t); }}>Fresh roast</button><button className="btn-secondary" onClick={() => { try { navigator.clipboard && navigator.clipboard.writeText(taunt.text); } catch (e) {} }}>Copy</button></div>
           </div>
         </div>
       )}
