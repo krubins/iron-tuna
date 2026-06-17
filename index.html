@@ -604,7 +604,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .ins-pl-gap.good { color: var(--positive); }
 .ins-pl-gap.bad { color: #ef4444; }
 .ins-empty { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
-.mock { display: flex; flex-direction: column; gap: 14px; max-width: 720px; }
+.mock { display: flex; flex-direction: column; gap: 14px; max-width: 1040px; }
 .mock-intro { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
 .mock-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
 .mock-card { background: var(--bg-panel); border: 1px solid var(--positive); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 0 16px rgba(45,212,163,0.16); }
@@ -625,6 +625,27 @@ input:focus, select:focus { border-color: var(--accent); }
 .mock-standings th { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
 .mock-standings tr.you { background: rgba(45,212,163,0.12); }
 .mock-standings td.num, .mock-standings th.num { text-align: right; font-family: var(--font-mono); }
+.mock-card { max-width: 680px; }
+.mock-board { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; }
+.mock-board-h { font-family: var(--font-display); font-size: 13px; color: var(--gold-text); margin-bottom: 10px; letter-spacing: 0.04em; }
+.mock-board-sub { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); letter-spacing: 0; }
+.mock-board-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.mb-col { flex: 0 0 134px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 7px 7px 8px; }
+.mb-col.you { border-color: var(--positive); box-shadow: 0 0 8px rgba(45,212,163,0.18); }
+.mb-col-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+.mb-team { font-size: 11px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mb-col.you .mb-team { color: var(--positive); }
+.mb-budget { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); white-space: nowrap; }
+.mb-col-sub { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); margin: 1px 0 6px; }
+.mb-slots { display: flex; flex-direction: column; gap: 3px; }
+.mb-slot { display: flex; align-items: center; gap: 4px; min-height: 21px; border-radius: 3px; padding: 2px 3px; font-size: 10px; }
+.mb-slot.filled { background: var(--bg-elev); }
+.mb-slot.empty { border: 1px dashed var(--border-subtle); opacity: 0.45; }
+.mb-slot .position-tag { font-size: 8px; padding: 1px 4px; }
+.mb-pl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
+.mb-price { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); }
+.mb-slot.just { animation: mbFlash 1s ease-out; }
+@keyframes mbFlash { 0% { background: rgba(45,212,163,0.55); } 100% { background: var(--bg-elev); } }
 .cheatsheet { }
 .board-subtabs { display: flex; gap: 6px; margin-bottom: 14px; }
 .board-subtabs .subtab { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.02em; }
@@ -807,9 +828,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
 .settings-league-summary { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); margin: 6px 0 16px; letter-spacing: 0.02em; }
-.cheat-header { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; margin-bottom: 16px; }
-.ch-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.ch-models-label { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.05em; color: var(--gold-text); margin-right: 4px; }
+.cheat-header { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
+.ch-models { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; box-shadow: 0 0 10px rgba(245,184,0,0.06); }
+.ch-models-label { flex-basis: 100%; font-family: var(--font-display); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-text); margin-bottom: 6px; }
 .ch-models-empty { font-size: 11px; color: var(--text-muted); }
 .ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
 .chi-head { display: flex; align-items: center; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px; }
@@ -840,6 +861,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.02em; color: var(--text-primary); line-height: 1.06; margin: 0 0 22px; max-width: 760px; }
 .lp-sub { font-size: clamp(17px, 2.2vw, 21px); color: var(--text-secondary); max-width: 560px; line-height: 1.6; margin: 0 0 34px; }
 .lp-sub b { color: var(--gold-text); }
+.lp-desc { font-size: 14px; color: var(--text-muted); max-width: 600px; line-height: 1.6; margin: -16px 0 30px; }
 .lp-cmd { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); text-align: center; margin: 2px 0 16px; }
 .lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; width: 100%; margin-bottom: 22px; }
 .lp-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; text-align: left; }
@@ -2178,6 +2200,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-cmd">Auction Draft Command</div>
         <h1 className="lp-head">Know what every player is worth.</h1>
         <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a <b>live navigator</b>: who to bid on, how high, and why.</p>
+        <p className="lp-desc">Iron Tuna is a fantasy football auction draft tool built to help you dominate live salary-cap drafts. The fantasy football auction draft tool for smarter live bidding, real-time values, and better roster construction.</p>
         <div className="lp-cta-row" style={{ marginTop: 4 }}>
           <button className="lp-cta" onClick={() => go('prep')}>Get my auction values</button>
           <button className="lp-cta-quiet" onClick={() => go('board')}>Auction-day management →</button>
@@ -3664,6 +3687,7 @@ function MockAuction({ players, config, seasonGames }) {
   const [bid, setBid] = useState('');
   const [log, setLog] = useState([]);
   const [result, setResult] = useState(null);
+  const [lastWon, setLastWon] = useState(null);
   const you = teams.find(t => t.you) || teams[0];
   const avail = fullPool.filter(p => !drafted.has(p.id));
   const current = avail[0] || null;
@@ -3684,7 +3708,7 @@ function MockAuction({ players, config, seasonGames }) {
       const bids = needy.map(t => ({ t, max: aiM(t, cur) })).sort((a, b) => b.max - a.max);
       const win = bids[0].max > 0 ? bids[0].t : needy.slice().sort((a, b) => slot(b) - slot(a))[0];
       const price = bids[0].max > 0 ? Math.max(1, Math.min(bids[0].max, (bids[1] ? bids[1].max : 0) + 1)) : 1;
-      const wt = nt.find(t => t.id === win.id); wt.roster.push(cur); wt.budget -= price; dr.add(cur.id);
+      const wt = nt.find(t => t.id === win.id); wt.roster.push({ ...cur, price }); wt.budget -= price; dr.add(cur.id);
     }
     setTeams(nt); setDrafted(dr); setPhase('done');
     setResult(nt.map(t => ({ id: t.id, name: t.name, you: t.you, strat: t.strat, pts: mockStarterPts(t.roster, config, games), spent: config.budget - t.budget })).sort((a, b) => b.pts - a.pts));
@@ -3699,16 +3723,37 @@ function MockAuction({ players, config, seasonGames }) {
     else if (topAi.max > 0) { winner = topAi.t; const others = aiBids.filter(x => x.t.id !== topAi.t.id).map(x => x.max); const second = Math.max(yourMax, others.length ? Math.max(...others) : 0); price = Math.max(1, Math.min(topAi.max, second + 1)); }
     else { winner = aiBids.map(x => x.t).sort((a, b) => slotsLeft(b) - slotsLeft(a))[0]; price = 1; }
     const nt = teams.map(t => ({ ...t, roster: [...t.roster] }));
-    const wt = nt.find(t => t.id === winner.id); wt.roster.push(current); wt.budget -= price;
+    const wt = nt.find(t => t.id === winner.id); wt.roster.push({ ...current, price }); wt.budget -= price;
     const nd = new Set(drafted); nd.add(current.id);
     const txt = winner.id === you.id ? `\u2713 You won ${current.name} for $${price} (top rival maxed $${topAi.max})` : `${winner.name} won ${current.name} for $${price}${yourMax > 0 ? ` \u2014 you maxed $${yourMax}` : ''}`;
     setLog(l => [{ txt, win: winner.id === you.id }, ...l].slice(0, 10));
-    setBid('');
+    setBid(''); setLastWon({ tid: winner.id, pid: current.id });
     setTeams(nt); setDrafted(nd);
     if (winner.id === you.id && wt.roster.length >= totalSlots) finish(nt, nd);
   }
-  function reset() { setTeams(makeTeams()); setDrafted(new Set()); setPhase('run'); setBid(''); setLog([]); setResult(null); }
+  function reset() { setTeams(makeTeams()); setDrafted(new Set()); setPhase('run'); setBid(''); setLog([]); setResult(null); setLastWon(null); }
   const fieldNeed = current ? teams.filter(t => !t.you && (posTotal(current.position) - posCount(t, current.position)) > 0 && slotsLeft(t) > 0).length : 0;
+  const board = (
+    <div className="mock-board">
+      <div className="mock-board-h">Auction board <span className="mock-board-sub">· fills live as players are won</span></div>
+      <div className="mock-board-scroll">
+        {teams.map(t => (
+          <div key={t.id} className={`mb-col ${t.you ? 'you' : ''}`}>
+            <div className="mb-col-head"><span className="mb-team">{t.name}</span><span className="mb-budget">${t.budget}</span></div>
+            <div className="mb-col-sub">{t.roster.length}/{totalSlots} · {STRAT_LABELS[t.strat] || t.strat}</div>
+            <div className="mb-slots">
+              {t.roster.map((p, i) => (
+                <div key={i} className={`mb-slot filled${lastWon && lastWon.tid === t.id && lastWon.pid === p.id ? ' just' : ''}`}>
+                  <span className={`position-tag ${p.position}`}>{p.position}</span><span className="mb-pl">{p.name}</span><span className="mb-price">{p.price != null ? '$' + p.price : ''}</span>
+                </div>
+              ))}
+              {Array.from({ length: Math.max(0, totalSlots - t.roster.length) }).map((_, i) => (<div key={'e' + i} className="mb-slot empty" />))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
   if (phase === 'done' && result) {
     return (
       <div className="mock">
@@ -3716,12 +3761,13 @@ function MockAuction({ players, config, seasonGames }) {
         <table className="mock-standings"><thead><tr><th>#</th><th>Team</th><th>Strategy</th><th className="num">Starter pts/gm</th><th className="num">Spent</th></tr></thead><tbody>
           {result.map((t, i) => (<tr key={t.id} className={t.you ? 'you' : ''}><td>{i + 1}</td><td>{t.name}</td><td>{STRAT_LABELS[t.strat] || t.strat}</td><td className="num">{t.pts.toFixed(1)}</td><td className="num">${t.spent}</td></tr>))}
         </tbody></table>
+        {board}
       </div>
     );
   }
   return (
     <div className="mock">
-      <div className="mock-intro">Practice the bidding against {teamsN - 1} CPU managers, each running a different strategy. The top remaining player is auto-nominated, decide how high to go. Once your roster fills, the room finishes and you see where you placed.</div>
+      <div className="mock-intro">Practice the bidding against {teamsN - 1} CPU managers, each running a different strategy. The top remaining player is auto-nominated, decide how high to go. Watch the board fill as players are won; once your roster fills, the room finishes and you see where you placed.</div>
       <div className="mock-top"><div>Budget <b>${you.budget}</b> · roster <b>{you.roster.length}/{totalSlots}</b> · max bid <b>${maxAllowed(you)}</b></div><button className="btn-secondary" onClick={reset}>Restart</button></div>
       {current ? (
         <div className="mock-card">
@@ -3736,10 +3782,7 @@ function MockAuction({ players, config, seasonGames }) {
         </div>
       ) : <div className="mock-card">Player pool exhausted.</div>}
       {log.length > 0 && <div className="mock-log">{log.map((l, i) => <div key={i} className={`mock-logrow ${l.win ? 'win' : ''}`}>{l.txt}</div>)}</div>}
-      <div className="mock-roster">
-        <div className="mock-roster-h">Your roster, {you.roster.length}/{totalSlots}</div>
-        {you.roster.length ? you.roster.map((p, i) => <span key={i} className="mock-chip"><span className={`position-tag ${p.position}`}>{p.position}</span>{p.name}</span>) : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No players yet, start bidding.</span>}
-      </div>
+      {board}
     </div>
   );
 }
