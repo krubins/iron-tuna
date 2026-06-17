@@ -26,61 +26,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Iron Tuna" />
-  <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "SoftwareApplication",
-      "name": "Iron Tuna",
-      "applicationCategory": "SportsApplication",
-      "applicationSubCategory": "Fantasy Football Auction Draft Tool",
-      "operatingSystem": "Web",
-      "url": "https://irontuna.com/",
-      "description": "Iron Tuna builds custom fantasy football auction values for your exact league settings \u2014 three numbers per player, a budget-aware optimal-lineup planner, and an AI auction navigator that tells you who to bid on and how high.",
-      "offers": [
-        {
-          "@type": "Offer",
-          "name": "Free",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        {
-          "@type": "Offer",
-          "name": "Tuna",
-          "price": "9.99",
-          "priceCurrency": "USD"
-        },
-        {
-          "@type": "Offer",
-          "name": "Predator",
-          "price": "14.99",
-          "priceCurrency": "USD"
-        }
-      ],
-      "featureList": [
-        "Custom auction values for your league size, budget, and scoring",
-        "Reliability-based pricing that accounts for injury frequency and positional consistency",
-        "Budget-aware optimal-lineup planner",
-        "AI Value Coach and Gameday Navigator",
-        "Live draft board with team grades"
-      ]
-    },
-    {
-      "@type": "WebSite",
-      "name": "Iron Tuna",
-      "url": "https://irontuna.com/",
-      "description": "Custom fantasy football auction values and AI auction draft assistant."
-    },
-    {
-      "@type": "Organization",
-      "name": "Iron Tuna",
-      "url": "https://irontuna.com/",
-      "logo": "https://irontuna.com/og.png"
-    }
-  ]
-}
-  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -1010,6 +955,62 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach-ai-field { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--text-muted); margin-bottom: 9px; }
 .coach-ai-field input { background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); padding: 7px 9px; font-size: 12px; }
 .coach-ai-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+
+/* ============ Responsive: iPad / tablet ============ */
+@media (max-width: 1024px) {
+  .header { padding: 12px 16px; }
+  .header-brand h1 { font-size: 23px; }
+  .main-content { padding: 16px 16px 130px; }
+  .prep-main, .main, .main.board-collapsed { grid-template-columns: 1fr; }
+  .cheat-grid { grid-template-columns: repeat(2, 1fr); }
+  .board-layout { grid-template-columns: 1fr; }
+  .settings-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ============ Responsive: iPad portrait / large phones ============ */
+@media (max-width: 768px) {
+  .header { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+  .header-brand { align-items: flex-start; }
+  .header-brand .subtitle { transform: none; }
+  .header-nav { width: 100%; justify-content: flex-start; }
+  .header-nav button { padding: 8px 11px; font-size: 11px; }
+  .header-acct { margin-left: 0; padding-left: 0; border-left: none; }
+  .modal { width: 94%; padding: 18px; max-height: 88vh; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .settings-row { grid-template-columns: 1fr 84px; }
+  .strategy-bar { flex-wrap: wrap; gap: 8px; }
+  .board-subtabs { flex-wrap: wrap; row-gap: 8px; }
+  .header-models { margin-left: 0; width: 100%; }
+  .taunt-modal { max-width: 94%; }
+}
+
+/* ============ Responsive: phones ============ */
+@media (max-width: 600px) {
+  .header-brand h1 { font-size: 20px; }
+  .header-logo { height: 34px; }
+  .main-content { padding: 12px 10px 168px; }
+  .cheat-grid { grid-template-columns: 1fr; }
+  .cheat-row { font-size: 13px; padding: 5px 8px; }
+  .cheat-rank, .cheat-team, .cheat-val, .cheat-cost, .cheat-you { font-size: 11.5px; }
+  .filter-pill { font-size: 11px; padding: 6px 10px; }
+  .modal { width: 96%; padding: 14px; border-radius: var(--radius-md); }
+  .budget-stats, .bid-numbers { grid-template-columns: 1fr 1fr; }
+  .team-card { padding: 10px 12px; }
+  .assumptions-panel { flex-wrap: wrap; }
+  .header-nav button, .filter-pill, .subtab, .hm-tab { min-height: 38px; }
+  .hm-tab { min-height: 0; padding: 6px 8px; }
+  .lp-cmd { font-size: 11px; }
+  /* Coach / Gameday dock stacks vertically on phones */
+  .coach.dock { flex-direction: column; flex-wrap: nowrap; max-height: 74vh; }
+  .coach.dock .coach-head, .coach.dock .coach-chips, .coach.dock .coach-input, .coach.dock .coach-body, .coach.dock .coach-insights {
+    flex: 0 0 auto; width: 100%; max-width: none; box-sizing: border-box; border-left: none; border-right: none;
+  }
+  .coach.dock .coach-body { flex: 1 1 auto; max-height: 42vh; min-height: 90px; }
+  .coach.dock .coach-input { border-top: 1px solid var(--border-subtle); }
+  .coach.dock .coach-input textarea { min-height: 56px; }
+  .coach.dock .coach-insights { display: none; }
+  .coach-col-resize { display: none; }
+}
   </style>
   <script type="application/ld+json">
 {
@@ -2109,7 +2110,7 @@ function LandingSplash({ onDismiss, onNav }) {
       'A budget-aware optimal-lineup planner',
       'The dollar allocation that builds your highest-scoring team',
     ]],
-    ['Premium', '$9.99 / $14.99', 'Live auction-day command', [
+    ['Premium', '$9.99', 'Live auction-day command', [
       'Unlimited mock auctions against CPU managers',
       'Track player selection, available funds, and maximum remaining bid',
       'Roster targets that re-optimize as prices and availability shift',
@@ -3050,19 +3051,6 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">League Settings</div>
-        <div className="settings-section-title">Live Data</div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Pull the current NFL player pool and season projections (free, no account).
-          Your scoring rules are then applied on top. Cached for the day; works offline on the baseline pool if the load fails.
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <button className="btn-draft" disabled={loading} onClick={onLoadLive}>
-            {loading ? 'Loading…' : 'Load latest NFL projections'}
-          </button>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            {dataInfo ? `Loaded ${dataInfo.source} ${dataInfo.season} · ${dataInfo.count} players` : 'Using baseline projections'}
-          </span>
-        </div>
         <div className="settings-section-title">Import Your League Scoring</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Skip the manual entry: paste your league's scoring rules or upload a screenshot. Detected values fill the fields below for you to confirm.</p>
         <ScoringImport onApply={applyImport} />
@@ -3810,14 +3798,7 @@ function PrepMode({ config, players, valuedPlayers, draftedIds, pointsMode, seas
         </div>
         </>
       )}
-      <div className="prep-toolbar no-print">
-        <button className={`filter-pill ${activeSubview === 'tiers' ? 'active' : ''}`} onClick={() => setActiveSubview('tiers')}>Tiers</button>
-        <button className={`filter-pill ${activeSubview === 'cheatsheet' ? 'active' : ''}`} onClick={() => setActiveSubview('cheatsheet')}>Cheat Sheet</button>
-        <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{dataInfo ? `${dataInfo.source} ${dataInfo.season} · ${dataInfo.count}` : 'baseline'}</span>
-      </div>
-      {activeSubview === 'tiers' && <TierView players={valuedPlayers} draftedIds={draftedIds} config={config} pointsMode={pointsMode} seasonGames={seasonGames} onNominate={onNominate} onUpdateStrategy={onUpdateStrategy} />}
-      {activeSubview === 'cheatsheet' && <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} onSetPrice={onSetPrice} priceOverrides={priceOverrides} onClearPrices={onClearPrices} modelFitIds={modelFitIds} />}
+      <Cheatsheet players={valuedPlayers} config={config} seasonGames={seasonGames} pointsMode={pointsMode} onRankReorder={onRankReorder} onResetRanks={onResetRanks} targets={targets} onToggleTarget={onToggleTarget} onSetPrice={onSetPrice} priceOverrides={priceOverrides} onClearPrices={onClearPrices} modelFitIds={modelFitIds} />
     </div>
   );
 }
@@ -3900,9 +3881,7 @@ function PrepProjections({ players, valuedPlayers, pointsMode, seasonGames, onEd
           Edit player stat projections to override the source. Changes flow into auction values instantly.
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            {dataInfo ? `${dataInfo.source} ${dataInfo.season} · ${dataInfo.count}` : 'baseline pool'}
-          </span>
+
         </div>
       </div>
       <div className="toolbar" style={{ marginBottom: 16 }}>
