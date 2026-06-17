@@ -1212,24 +1212,24 @@ const DEFAULT_LEAGUE_CONFIG = {
   scoring: {
     passingYardsPerPoint: 25,
     passingYardsThreshold: 125,
-    passingYardBonuses: [ { at: 300, points: 1 }, { at: 400, points: 1 }, { at: 500, points: 1 } ],
+    passingYardBonuses: [],
     passingTD: 6,
     passingInt: -2,
     passing2pt: 2,
     rushingYardsPerPoint: 10,
     rushingYardsThreshold: 0,
-    rushingYardBonuses: [ { at: 100, points: 1 }, { at: 200, points: 1 } ],
+    rushingYardBonuses: [],
     rushingTD: 6,
     rushing2pt: 2,
     receivingYardsPerPoint: 10,
     receivingYardsThreshold: 0,
-    receivingYardBonuses: [ { at: 100, points: 1 }, { at: 200, points: 1 } ],
+    receivingYardBonuses: [],
     receivingTD: 6,
     receiving2pt: 2,
     receptionPoints: 1,
-    receptionBonuses: [ { at: 10, points: 1 } ],
+    receptionBonuses: [],
     rbReceptionPoints: 0.5,
-    rbReceptionBonuses: [ { at: 5,  points: 0.5 }, { at: 10, points: 0.5 } ],
+    rbReceptionBonuses: [],
     fumbleLost: -2,
     fumble2pt: 2,
     individualFumbleRecoveryTD: 6,
@@ -5671,14 +5671,19 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const sys = "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator. Answer like a sharp friend who knows ball: decisive and grounded ONLY in the live draft data provided.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Never invent players or stats not in the data.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text }));
   hist.push({ role: 'user', content: userMsg });
+  const ctrl = new AbortController();
+  let _to = setTimeout(() => ctrl.abort(), 20000);
+  const _bump = () => { clearTimeout(_to); _to = setTimeout(() => ctrl.abort(), 20000); };
+  try {
   if (ai.format === 'proxy') {
     const stream = !!onDelta;
-    const r = await fetch(ai.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: sys, messages: hist, stream }) });
+    const r = await fetch(ai.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: sys, messages: hist, stream }), signal: ctrl.signal });
     if (!r.ok) { let em; try { em = (await r.json()).error; } catch (e) {} throw new Error(em || ('AI ' + r.status)); }
     if (!stream) { const j = await r.json(); if (j.error) throw new Error(j.error); return j.text || ''; }
     const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = '', full = '';
     while (true) {
       const { done, value } = await reader.read(); if (done) break;
+      _bump();
       buf += dec.decode(value, { stream: true });
       let idx;
       while ((idx = buf.indexOf('\n\n')) >= 0) {
@@ -5691,13 +5696,14 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
     return full;
   }
   if (ai.format === 'anthropic') {
-    const r = await fetch(ai.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': ai.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: ai.model, max_tokens: 700, system: sys, messages: hist }) });
+    const r = await fetch(ai.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': ai.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: ai.model, max_tokens: 700, system: sys, messages: hist }), signal: ctrl.signal });
     if (!r.ok) throw new Error('AI ' + r.status); const j = await r.json();
     return (j.content && j.content[0] && j.content[0].text) || '';
   }
-  const r = await fetch(ai.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ai.key }, body: JSON.stringify({ model: ai.model, temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: sys }, ...hist] }) });
+  const r = await fetch(ai.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ai.key }, body: JSON.stringify({ model: ai.model, temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: sys }, ...hist] }), signal: ctrl.signal });
   if (!r.ok) throw new Error('AI ' + r.status); const j = await r.json();
   return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+  } finally { clearTimeout(_to); }
 }
 function CoachAiSettings({ ai, onSave, onClose }) {
   const cur = ai || {};
