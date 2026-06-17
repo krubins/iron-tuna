@@ -817,6 +817,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-target .cheat-name::before { content: '●'; color: var(--positive); margin-right: 4px; font-size: 9px; }
 .cheat-row.cheat-target .cheat-rank { color: var(--positive); font-weight: 700; }
 .cheat-rank:hover { color: var(--positive); }
+.cheat-star { cursor: pointer; color: var(--text-faint); font-size: 12px; line-height: 1; text-align: center; user-select: none; }
+.cheat-star:hover { color: var(--gold-text); }
+.cheat-row.cheat-target .cheat-star { color: var(--gold-text); }
 .cheat-grid.has-hl .cheat-row.cheat-target { opacity: 1; }
 .cheat-row.cheat-modelfit { box-shadow: inset 3px 0 0 var(--gold-text); }
 .cheat-row.cheat-modelfit .cheat-rank::before { content: '\2605'; color: var(--gold-text); margin-right: 2px; font-size: 9px; }
@@ -3636,7 +3639,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
     ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.'],
   ];
   const activeCols = COLSPEC.filter(c => showCols[c[0]]);
-  const gridT = `16px minmax(0,1fr) auto ${activeCols.map(() => 'auto').join(' ')}`;
+  const gridT = `15px 16px minmax(0,1fr) auto ${activeCols.map(() => 'auto').join(' ')}`;
   const tierBreaksByPos = {};
   cols.forEach(([pos, nn]) => { tierBreaksByPos[pos] = computeTierBreaks((byPos[pos] || []).slice(0, nn)); });
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
@@ -3695,7 +3698,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
           {grp.map(([pos, n]) => (
           <div className={`cheat-col cc-${pos}`} key={pos}>
             <div className="cheat-col-head"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>
-            <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl, tip]) => <span key={k} className="cheat-col-lbl" title={tip}>{lbl}</span>)}</div>
+            <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span /><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl, tip]) => <span key={k} className="cheat-col-lbl" title={tip}>{lbl}</span>)}</div>
             {(byPos[pos] || []).slice(0, n).map((p, i) => {
               const drafted = !!(draftedIds && draftedIds.has(p.id));
               const dinfo = draftInfoMap[p.id];
@@ -3722,6 +3725,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               }
               return (
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
+                <span className="cheat-star" title={targets && targets.has(p.id) ? 'Target \u2014 click to clear' : 'Click to set as a target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }}>{targets && targets.has(p.id) ? '\u2605' : '\u2606'}</span>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : <span className={`cheat-tag ${sign === 'under' ? 'tg-target' : 'tg-pass'}`} title={sign === 'under' ? 'Your max bid is above the likely price — worth a bid' : 'Likely price meets or beats your max — let it go'}>{sign === 'under' ? 'TARGET' : 'PASS'}</span>}</span>
