@@ -103,6 +103,10 @@ input:focus, select:focus { border-color: var(--accent); }
   color: var(--text-secondary); border-radius: var(--radius-sm); transition: background 0.15s ease, color 0.15s ease;
 }
 .header-nav button:hover { background: var(--bg-elev); color: var(--text-primary); }
+.reset-wrap { position: relative; display: inline-flex; }
+.reset-menu { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 60; display: flex; flex-direction: column; min-width: 200px; overflow: hidden; }
+.reset-menu button { text-align: left; white-space: nowrap; padding: 9px 14px; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 12px; border-radius: 0; }
+.reset-menu button:hover { background: var(--bg-elev); color: var(--text-primary); }
 .header-nav button.active { background: var(--accent-soft); color: var(--accent-text); }
 .main { display: grid; grid-template-columns: 1fr 248px; overflow: hidden; }
 .main-content { overflow-y: auto; padding: 20px 24px 40px; }
@@ -2184,6 +2188,7 @@ const APP_VERSION = '0.5.0';
 const BUILD_DATE = '2026-06-12';
 // ─── components/Header.jsx ──────────────────────────
 function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPointsMode, dataInfo, account, onUpgrade, onAccount, onToggleTest, onHome, config, onOpenSettings }) {
+  const [resetOpen, setResetOpen] = useState(false);
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
   const startersSummary = config ? (() => { const parts = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => config.roster[p]).map(p => `${config.roster[p].starters}${p}`); if (config.flex && config.flex.count) parts.push(`${config.flex.count}FLEX`); return parts.join('/'); })() : '';
@@ -2201,7 +2206,16 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
         <button className={view === 'mock' ? 'active' : ''} onClick={() => setView('mock')}>Mock Auction</button>
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
         <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
-        <button onClick={onReset}>Reset</button>
+        <span className="reset-wrap">
+          <button onClick={() => setResetOpen(o => !o)}>Reset ▾</button>
+          {resetOpen && (
+            <span className="reset-menu" onMouseLeave={() => setResetOpen(false)}>
+              <button onClick={() => { setResetOpen(false); onReset('board'); }}>Reset Auction Board</button>
+              <button onClick={() => { setResetOpen(false); onReset('sheet'); }}>Reset Cheat Sheet</button>
+              <button onClick={() => { setResetOpen(false); onReset('both'); }}>Reset Both</button>
+            </span>
+          )}
+        </span>
         <span className="header-acct">
           <button className={`tm-pill ${account && account.testMode ? 'on' : 'off'}`} onClick={onToggleTest} title="Test mode unlocks all paid features. Toggle off to preview the gated (paid) experience.">{account && account.testMode ? 'TEST MODE' : 'LIVE'}</button>
           <button className="upgrade-btn" onClick={onUpgrade}>Upgrade</button>
@@ -5819,6 +5833,30 @@ function buildCoachInsights(ctx) {
     const most = sep[0], least = sep[sep.length - 1];
     prep.push({ label: 'Separation vs parity', text: most.pos + ' has the most separation between the top options, so paying up for an elite one is justified. ' + least.pos + ' is bunched, the names sit close in projected value, that is where preseason calls vary most, so grab value rather than overpay for a name.' });
   }
+  // ---- additional prep-structure insights (more variety so >=20 cycle) ----
+  POS.forEach(pos => {
+    const a = byPos[pos] || []; if (a.length < 6) return;
+    const top = (a[0].projectedPoints || 0) / G;
+    const elite = a.filter(p => (p.projectedPoints || 0) / G >= top * 0.88).length;
+    prep.push({ label: pos + ' tier 1', text: 'About ' + elite + ' ' + pos + (elite === 1 ? '' : 's') + ' sit in the top tier, within ~12% of ' + a[0].name + '. After that the points step down, so land one or pivot positions.' });
+  });
+  POS.forEach(pos => {
+    const a = byPos[pos] || []; if (a.length < 10) return;
+    const tg = a.slice(0, 10); const dollars = tg.reduce((x, p) => x + priceOf(p), 0); const pts = tg.reduce((x, p) => x + Math.max(0, (p.projectedPoints || 0) / G), 0);
+    if (pts > 0) { const per = dollars / pts; prep.push({ label: pos + ' cost per point', text: 'The top 10 ' + pos + 's cost about $' + per.toFixed(1) + ' per projected point per game. ' + (per > 9 ? 'Pricey, make these dollars count.' : 'A relatively cheap place to buy points.') }); }
+  });
+  POS.forEach(pos => {
+    const a = byPos[pos] || []; if (a.length < 10) return;
+    const edge = ((a[0].projectedPoints || 0) - (a[9].projectedPoints || 0)) / G;
+    if (edge > 0.5) prep.push({ label: pos + ' top-end edge', text: a[0].name + ' projects ~' + edge.toFixed(1) + ' pts/gm more than the 10th ' + pos + '. ' + (edge > 4 ? 'A real edge worth paying up for.' : 'A modest gap, value the depth instead.') });
+  });
+  cliffs.slice(2).forEach(c => { prep.push({ label: c.pos + ' tier break', text: c.pos + ' flattens out after ' + c.pos + (c.bi + 1) + ' (' + c.name + '). Below that, let value, not name recognition, drive your bids.' }); });
+  { const traps = avail.map(p => ({ p, gap: priceOf(p) - valOf(p) })).filter(x => x.gap >= 3 && priceOf(x.p) >= 5).sort((a, b) => b.gap - a.gap).slice(0, 3);
+    if (traps.length) prep.push({ label: 'Likely overpays', text: 'The room will probably overpay for ' + traps.map(t => t.p.name + ' (~$' + priceOf(t.p) + ' vs $' + valOf(t.p) + ' value)').join('; ') + '. Let someone else.' }); }
+  { const fb = ['RB', 'WR', 'TE'].reduce((acc, pos) => acc.concat((byPos[pos] || []).slice(3, 16).map(p => ({ p, eff: ((p.projectedPoints || 0) / G) / Math.max(1, priceOf(p)) }))), []).sort((a, b) => b.eff - a.eff)[0];
+    if (fb) prep.push({ label: 'Best flex buy', text: 'Strong flex value: ' + fb.p.name + ' (' + fb.p.position + ', ~' + ((fb.p.projectedPoints || 0) / G).toFixed(1) + ' pts/gm at ~$' + priceOf(fb.p) + ').' }); }
+  if (myTeam) { const perSlot = (myTeam.budgetRemaining || 0) / Math.max(1, myTeam.spotsRemaining || 1);
+    prep.push({ label: 'Budget per slot', text: 'About $' + perSlot.toFixed(0) + ' per remaining roster spot on average, but most of it should land on a few starters with the rest at $1.' }); }
   // DRAFT-style: live trends
   const draft = [];
   let totFair = 0, totAct = 0, samples = 0;
@@ -5843,6 +5881,20 @@ function buildCoachInsights(ctx) {
     draft.push({ label: 'Your budget', text: 'You have $' + (myTeam.budgetRemaining || 0) + ' for ' + (myTeam.spotsRemaining || 0) + ' spots, so your max bid on any one player is $' + maxBid + '.' });
   }
 
+  // ---- additional live draft-progress and price-change insights ----
+  if (teams && teams.length && config.budget) {
+    const totalBudget = config.budget * teams.length;
+    const spent = teams.reduce((x, t) => x + (config.budget - (t.budgetRemaining || 0)), 0);
+    const pct = Math.round(spent / totalBudget * 100);
+    draft.push({ label: 'Draft progress', text: pct + '% of the money in the room is spent. ' + (pct < 40 ? 'Early, studs are still flying off the board.' : pct < 75 ? 'Mid-draft, value is starting to open up.' : 'Late, mostly $1 bargains left, fill your needs cheaply.') });
+    const flush = teams.filter(t => !t.isMine).slice().sort((a, b) => (b.budgetRemaining || 0) - (a.budgetRemaining || 0))[0];
+    if (flush) draft.push({ label: 'Watch the wallets', text: flush.name + ' holds the most cash at $' + (flush.budgetRemaining || 0) + '. Expect them to drive up the next stud, so set your max before the bidding starts.' });
+  }
+  if (myTeam && myTeam.spotsRemaining) draft.push({ label: 'Your needs', text: 'You have ' + myTeam.spotsRemaining + ' spots and $' + (myTeam.budgetRemaining || 0) + ' left. Lock in starters while the value is here, fill the bench for $1 late.' });
+  POS.forEach(pos => { const a = byPos[pos] || []; if (a.length < 3) return; const tier = (a[0].projectedPoints || 0) / G; const left = a.filter(p => (p.projectedPoints || 0) / G >= tier - 3).length;
+    draft.push({ label: pos + ' scarcity', text: 'About ' + left + ' ' + pos + (left === 1 ? '' : 's') + ' left within ~3 pts/gm of the best available (' + a[0].name + '). Once they go, the tier drops off.' }); });
+  if (samples >= 1) { POS.forEach(pos => { const st = marketState && marketState[pos]; if (st && st.sampleSize >= 2 && st.fairSpent > 0) { const pct = Math.round((st.ratio - 1) * 100);
+    draft.push({ label: pos + ' price trend', text: pos + 's are selling ' + (pct >= 0 ? '+' + pct + '% over' : pct + '% under') + ' value across ' + st.sampleSize + ' picks. ' + (pct >= 8 ? 'Wait for the run to cool.' : pct <= -8 ? 'Pounce, this is cheap.' : 'Tracking close to fair.') }); } }); }
   if (mode === 'draft' && samples >= 3) return draft.concat(prep);
   if (mode === 'draft') return [{ label: 'Draft underway', text: 'Trends appear once a few players are in. For now, stick to your values and watch the first RB/WR runs to read the room.' }].concat(prep);
   return prep;
@@ -6621,15 +6673,15 @@ function App() {
       : t));
     setDraftHistory(prev => prev.slice(0, -1));
   }
-  function handleReset() {
-    if (!window.confirm('Reset everything? Clears all draft picks AND your cheat-sheet changes (custom ranks and price overrides). Team names and your "My Team" pick are kept. This cannot be undone.')) return;
+  function handleReset(kind) {
+    const k = (kind === 'board' || kind === 'sheet' || kind === 'both') ? kind : 'both';
+    const msg = k === 'board' ? 'Reset the Auction Board? Clears all draft picks and budgets. Team names and your "My Team" pick are kept.'
+      : k === 'sheet' ? 'Reset the Cheat Sheet? Clears your custom ranks and price overrides.'
+      : 'Reset both? Clears all draft picks AND your cheat-sheet changes. Team names and your "My Team" pick are kept.';
+    if (!window.confirm(msg + ' This cannot be undone.')) return;
     const total = totalRosterSpots(config);
-    setTeams(prev => prev.map(t => ({ ...t, budgetRemaining: config.budget, spotsRemaining: total, roster: [] })));
-    setDraftHistory([]);
-    setCurrentNomination(null);
-    setRankOrder({});
-    setPriceOverrides({});
-    setCustomOrder([]);
+    if (k === 'board' || k === 'both') { setTeams(prev => prev.map(t => ({ ...t, budgetRemaining: config.budget, spotsRemaining: total, roster: [] }))); setDraftHistory([]); setCurrentNomination(null); }
+    if (k === 'sheet' || k === 'both') { setRankOrder({}); setPriceOverrides({}); setCustomOrder([]); }
   }
   function handleConfigChange(newConfig) {
     setConfig(newConfig);
