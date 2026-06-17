@@ -479,6 +479,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .strategy-bar { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 6px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; }
 .taunt-btn { margin-left: auto; background: linear-gradient(135deg, #ff7a3d, #ff4d4d); color: #fff; border: none; border-radius: 20px; padding: 7px 15px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.03em; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(255,77,77,0.35); transition: transform 0.1s, filter 0.1s; }
 .taunt-btn:hover { transform: translateY(-1px); filter: brightness(1.07); }
+.taunt-wrap { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; max-width: 440px; }
+.taunt-text { font-size: 12px; line-height: 1.45; color: var(--text-secondary); font-style: italic; text-align: right; cursor: pointer; animation: tauntIn 0.25s ease-out; }
+@keyframes tauntIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 .draft-alert { display: flex; align-items: center; gap: 11px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-left: 3px solid var(--gold-text); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); animation: alertIn 0.3s ease-out; }
 .draft-alert-label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.07em; font-size: 13px; color: var(--gold-text); font-weight: 400; white-space: nowrap; }
 .taunt-pick { display: flex; align-items: center; gap: 8px; margin: 6px 0 12px; }
@@ -2220,7 +2223,7 @@ function LandingSplash({ onDismiss, onNav }) {
       'The dollar allocation that builds your highest-scoring team',
       'Unlimited mock auctions against strategy-driven CPU managers',
     ]],
-    ['Auction Management', '$9.99', 'Live auction-day command', [
+    ['Auction Management', '$14.99', 'Live auction-day command', [
       'Track player selection, available funds, and maximum remaining bid',
       'Roster targets that re-optimize as prices and availability shift',
       'Bid guidance that updates as the board moves',
@@ -4337,11 +4340,12 @@ function AllocationSlider({ value, onChange }) {
     if (x < 0.75) return 'Starters + Quality Reserves';
     return 'Thick & Deep';
   }
-  const topPct = Math.round(72 - 34 * v);
+  const top3Pct = Math.round(85 - 45 * v); // 85% on top 3 at Stars & Scrubs
+  const benchPct = Math.round(5 + 30 * v);   // up to 35% on bench at Thick & Deep
   return (
     <div className="budgetshape" onPointerDown={e => e.stopPropagation()}>
       <div className="alloc alloc-inline" title="How to split your budget between elite starters and bench depth. The green tick is the recommended balance.">
-        <span className="alloc-cap">Budget Shape · <b>{zoneLabel(v)}</b></span>
+        <span className="alloc-cap">Budget Allocation · <b>{zoneLabel(v)}</b></span>
         <span className="alloc-endcap" title="Load up on a few elite starters">Stars &amp; Scrubs</span>
         <div className="alloc-wrap">
           <span className="alloc-ideal" style={{ left: `${ideal * 100}%` }} title="Recommended balance: mostly elite starters with a little held back for quality reserves." />
@@ -4349,7 +4353,7 @@ function AllocationSlider({ value, onChange }) {
         </div>
         <span className="alloc-endcap" title="Spread money across a deeper roster">Thick &amp; Deep</span>
       </div>
-      <div className="budgetshape-cap">Concentrating ~{topPct}% of budget on your top 3 starters · <b>Stars &amp; Scrubs</b> = a few elite starters, <b>Thick &amp; Deep</b> = a deeper roster.</div>
+      <div className="budgetshape-cap">~<b>{top3Pct}%</b> of your discretionary budget (after the $1-per-slot minimums) goes to your top 3 starters; ~<b>{benchPct}%</b> to bench depth, the rest spread across your other starters.</div>
     </div>
   );
 }
@@ -6008,7 +6012,7 @@ class ErrorBoundary extends React.Component {
 // ─── Accounts & entitlements (PLACEHOLDER billing) ─────────────────────────
 const ACCOUNT_KEY = 'iron_tuna_account_v1';
 const TIERS = [
-  { id: 'base', name: 'Iron Tuna Base', price: 9.99, blurb: 'The full auction-day command center.', features: [
+  { id: 'base', name: 'Iron Tuna Base', price: 14.99, blurb: 'The full auction-day command center.', features: [
     'Live auction selection & roster management',
     'Dynamic valuations that re-price as the board moves',
     'Projected team potential throughout the auction',
@@ -6325,9 +6329,9 @@ function App() {
   const [taunt, setTaunt] = useState(null);
   function makeTaunt() {
     const opps = teams.filter(t => !t.isMine);
-    if (!opps.length) { setTaunt({ name: '', text: 'No rivals to roast yet, mark your team, then let the others start drafting.' }); return; }
+    if (!opps.length) { setTaunt({ id: Date.now(), name: '', text: 'No rivals to roast yet, mark your team, then let the others start drafting.' }); return; }
     const t = (taunt && taunt.name && opps.find(x => x.name === taunt.name)) || opps[0];
-    setTaunt({ name: t.name, text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES) });
+    setTaunt({ id: Date.now(), name: t.name, text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES) });
     ITAnalytics.track('taunt', {});
   }
   function tauntTeam(t) { if (!t) return; setTaunt({ name: t.name, text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES) }); ITAnalytics.track('taunt', {}); }
@@ -6836,7 +6840,7 @@ function App() {
     const draftBoardEl = (
       <>
       <Coachmark flag="seenBoardIntro" account={account} setAccount={setAccount}>Ghosted rows are the planner's projected best fills for your remaining slots and budget. Pick a model up top to change strategy, or click a slot to lock a target.</Coachmark>
-      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="taunt-btn" style={{ marginLeft: 'auto' }} onClick={makeTaunt} title="Roast a rival you pick from the dropdown">🔥 Roast a Rival</button></div>
+      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><div className="taunt-wrap"><button className="taunt-btn" onClick={makeTaunt} title="Roast a random rival">🔥 Roast a Rival</button>{taunt && <div key={taunt.id} className="taunt-text" onClick={() => setTaunt(null)} title="Click to dismiss">{taunt.text}</div>}</div></div>
       <div className="board-layout board-norail">
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} />
       </div>
@@ -6871,20 +6875,6 @@ function App() {
       {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
       {overlay === 'legal' && <LegalModal onClose={() => setOverlay(null)} />}
       {overlay === 'share' && <ShareModal text={shareText} onClose={() => setOverlay(null)} />}
-      {taunt && (
-        <div className="modal-bg" onClick={() => setTaunt(null)}>
-          <div className="modal taunt-modal" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setTaunt(null)}>×</button>
-            <div className="taunt-head">🔥 Live Mock</div>
-            {taunt.name ? <div className="taunt-target">Now roasting: <b style={{ color: 'var(--text-secondary)' }}>{taunt.name}</b></div> : <div className="taunt-target" />}
-            {teams.filter(t => !t.isMine).length > 0 && (
-              <div className="taunt-pick"><label>Pick a team</label><select value={(teams.find(t => t.name === taunt.name) || {}).id || ''} onChange={e => { const t = teams.find(x => x.id === e.target.value); if (t) tauntTeam(t); }}>{!taunt.name && <option value="">–</option>}{teams.filter(t => !t.isMine).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-            )}
-            <div className="taunt-text">“{taunt.text}”</div>
-            <div className="taunt-actions"><button className="btn-draft" onClick={() => { const t = teams.find(x => x.name === taunt.name); if (t) tauntTeam(t); }}>Fresh roast</button><button className="btn-secondary" onClick={() => { try { navigator.clipboard && navigator.clipboard.writeText(taunt.text); } catch (e) {} }}>Copy</button></div>
-          </div>
-        </div>
-      )}
       {overlay && overlay.checkout && <CheckoutModal tier={overlay.checkout} testMode={account.testMode} onComplete={() => { grantEntitlement(overlay.checkout.id); setOverlay('pricing'); }} onClose={() => setOverlay(null)} />}
       {!showSplash && !account.onboardingDismissed && draftHistory.length === 0 && <OnboardingChecklist steps={onbSteps} onDismiss={() => setAccount(a => ({ ...a, onboardingDismissed: true }))} />}
     </div>
