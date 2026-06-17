@@ -3320,18 +3320,22 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                 <div style={{ marginTop: 10 }} onPointerDown={e => e.stopPropagation()}>
                   {Object.keys(config.roster).map(pos => (
                     <React.Fragment key={pos}>
-                      {(proj.grid[pos] || []).map((slot, i) => (
-                        <div key={i} className={`rg-slot ${slot.drafted ? 'rg-filled' : slot.empty ? 'rg-empty' : 'rg-target'}`}
-                             onClick={slot.drafted ? () => setDetail({ team, pick: team.roster.find(r => r.playerId === slot.id) }) : (!slot.empty ? () => onFocusPlayer && onFocusPlayer(slot.id) : undefined)}
-                             title={slot.drafted ? 'Click for purchase details' : (slot.empty ? 'Open slot' : `${slot.name} · click to find in the list`)}>
+                      {(proj.grid[pos] || []).map((slot, i) => {
+                        const oppHide = !team.isMine;
+                        const showAsOpen = !slot.drafted && (slot.empty || oppHide);
+                        return (
+                        <div key={i} className={`rg-slot ${slot.drafted ? 'rg-filled' : showAsOpen ? 'rg-empty' : 'rg-target'}`}
+                             onClick={slot.drafted ? () => setDetail({ team, pick: team.roster.find(r => r.playerId === slot.id) }) : (showAsOpen ? undefined : () => onFocusPlayer && onFocusPlayer(slot.id))}
+                             title={slot.drafted ? 'Click for purchase details' : (showAsOpen ? 'Open slot' : `${slot.name} · click to find in the list`)}>
                           <span className="rg-label">{slot.label}</span>
-                          <span className="rg-name">{slot.empty ? '(open)' : (slot.drafted ? slot.name : `${pos}${slot.posRank || ''}`)}</span>
+                          <span className="rg-name">{slot.drafted ? slot.name : (showAsOpen ? '(open)' : `${pos}${slot.posRank || ''}`)}</span>
                           {slot.drafted
                             ? (<span className="rg-price" title={slot.value != null ? `Value $${slot.value} · ${slot.price > slot.value ? `$${slot.price - slot.value} over` : slot.price < slot.value ? `$${slot.value - slot.price} under` : 'on value'}` : undefined} style={{ color: costColor(slot.price, slot.value), fontWeight: slot.value != null && Math.abs(slot.price - slot.value) > 6 ? 700 : undefined }}>${slot.price}<button className="undo-pick" title="Undo" onClick={e => { e.stopPropagation(); onRemovePick && onRemovePick(team.id, slot.id); }}>×</button></span>)
-                            : (<span className="rg-price">{slot.est ? `~$${slot.est}` : ''}</span>)}
-                          <span className="rg-pts">{slot.empty ? '' : (slot.pts / games).toFixed(1)}</span>
+                            : (<span className="rg-price">{showAsOpen ? '' : (slot.est ? `~$${slot.est}` : '')}</span>)}
+                          <span className="rg-pts">{(oppHide || slot.empty) ? '' : (slot.pts / games).toFixed(1)}</span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </React.Fragment>
                   ))}
                 </div>
