@@ -5071,6 +5071,53 @@ function applyCustomRanks(scored, rankOrder) {
 // Baked-in baseline name reorder for QB ranking: keep the per-slot projection
 // ladder, just reassign which name sits in each slot. Idempotent because it runs
 // on freshly re-scored players each render.
+// Last-year QB actual stat lines (by finish), applied to projected QBs by rank so
+// projections stay realistic. Fields match projectedStats keys used by scorePlayer.
+const LAST_YEAR_QB_STATS = [
+  { passYd: 4707, passTD: 46, passInt: 8,  rushYd: 1,   rushTD: 0,  fumLost: 3 },
+  { passYd: 3668, passTD: 25, passInt: 10, rushYd: 579, rushTD: 14, fumLost: 3 },
+  { passYd: 4394, passTD: 31, passInt: 8,  rushYd: 450, rushTD: 4,  fumLost: 3 },
+  { passYd: 4007, passTD: 29, passInt: 12, rushYd: 359, rushTD: 9,  fumLost: 3 },
+  { passYd: 4552, passTD: 30, passInt: 10, rushYd: 177, rushTD: 2,  fumLost: 2 },
+  { passYd: 4564, passTD: 34, passInt: 8,  rushYd: 45,  rushTD: 0,  fumLost: 5 },
+  { passYd: 3942, passTD: 27, passInt: 7,  rushYd: 383, rushTD: 3,  fumLost: 1 },
+  { passYd: 3224, passTD: 25, passInt: 6,  rushYd: 421, rushTD: 8,  fumLost: 4 },
+  { passYd: 3931, passTD: 25, passInt: 11, rushYd: 356, rushTD: 5,  fumLost: 2 },
+  { passYd: 3727, passTD: 26, passInt: 13, rushYd: 498, rushTD: 2,  fumLost: 2 },
+  { passYd: 3587, passTD: 22, passInt: 11, rushYd: 422, rushTD: 5,  fumLost: 0 },
+  { passYd: 3693, passTD: 26, passInt: 11, rushYd: 382, rushTD: 3,  fumLost: 3 },
+  { passYd: 3366, passTD: 23, passInt: 8,  rushYd: 168, rushTD: 2,  fumLost: 4 },
+  { passYd: 2272, passTD: 15, passInt: 5,  rushYd: 487, rushTD: 9,  fumLost: 2 },
+  { passYd: 3381, passTD: 23, passInt: 6,  rushYd: 199, rushTD: 0,  fumLost: 2 },
+  { passYd: 3101, passTD: 19, passInt: 8,  rushYd: 164, rushTD: 5,  fumLost: 3 },
+  { passYd: 4048, passTD: 25, passInt: 14, rushYd: 95,  rushTD: 0,  fumLost: 6 },
+  { passYd: 3322, passTD: 24, passInt: 7,  rushYd: 61,  rushTD: 1,  fumLost: 1 },
+  { passYd: 2549, passTD: 21, passInt: 7,  rushYd: 349, rushTD: 2,  fumLost: 3 },
+  { passYd: 3011, passTD: 23, passInt: 11, rushYd: 216, rushTD: 2,  fumLost: 4 },
+  { passYd: 3041, passTD: 19, passInt: 8,  rushYd: 209, rushTD: 1,  fumLost: 0 },
+  { passYd: 2167, passTD: 20, passInt: 10, rushYd: 147, rushTD: 3,  fumLost: 2 },
+  { passYd: 3025, passTD: 19, passInt: 17, rushYd: 109, rushTD: 0,  fumLost: 1 },
+  { passYd: 3169, passTD: 15, passInt: 7,  rushYd: 159, rushTD: 2,  fumLost: 7 },
+  { passYd: 2660, passTD: 20, passInt: 15, rushYd: 43,  rushTD: 0,  fumLost: 1 },
+  { passYd: 1809, passTD: 17, passInt: 5,  rushYd: 41,  rushTD: 0,  fumLost: 0 },
+  { passYd: 2384, passTD: 10, passInt: 6,  rushYd: 186, rushTD: 3,  fumLost: 2 },
+  { passYd: 2479, passTD: 15, passInt: 10, rushYd: 35,  rushTD: 1,  fumLost: 3 },
+  { passYd: 1259, passTD: 7,  passInt: 1,  rushYd: 383, rushTD: 4,  fumLost: 3 },
+  { passYd: 2151, passTD: 13, passInt: 3,  rushYd: 60,  rushTD: 1,  fumLost: 2 },
+  { passYd: 1695, passTD: 10, passInt: 7,  rushYd: 297, rushTD: 1,  fumLost: 3 },
+  { passYd: 1632, passTD: 11, passInt: 12, rushYd: 181, rushTD: 4,  fumLost: 2 },
+];
+function applyQbActuals(scored, config) {
+  const qbs = scored.filter(p => p.position === 'QB').slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+  if (!qbs.length) return scored;
+  const m = new Map();
+  qbs.forEach((p, i) => { m.set(p.id, LAST_YEAR_QB_STATS[Math.min(i, LAST_YEAR_QB_STATS.length - 1)]); });
+  return scored.map(p => {
+    if (!m.has(p.id)) return p;
+    const ps = { ...(p.projectedStats || {}), ...m.get(p.id) };
+    return { ...p, projectedStats: ps, projectedPoints: scorePlayer({ ...p, projectedStats: ps }, config) };
+  });
+}
 function applyBaselineRankFixes(scored) {
   const qbs = scored.filter(p => p.position === 'QB').slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
   if (qbs.length < 2) return scored;
@@ -6504,7 +6551,7 @@ function App() {
   }
   const SEASON_GAMES = 17;
   const baseValued = useMemo(() => {
-    const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
+    const scored = applyQbActuals(players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) })), config);
     const ranked = applyCustomRanks(applyBaselineRankFixes(scored), rankOrder);
     return buildValuations(ranked, config).players;
   }, [players, config, rankOrder]);
