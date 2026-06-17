@@ -3164,7 +3164,7 @@ function costColor(price, value) {
   return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
 }
 // ─── components/TeamsModal.jsx ──────────────────────────
-function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy }) {
+function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy, onAddPlayer }) {
   const playerMap = new Map();
   players.forEach(p => playerMap.set(p.id, p));
   const games = seasonGames || 17;
@@ -3248,9 +3248,9 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
   function toggleAll() { setCollapsed(allCollapsed ? new Set() : new Set(teams.map(t => t.id))); }
   return (
     <div>
-      <div className="section-title">Teams &amp; Live Standings</div>
+      <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span>Teams &amp; Live Standings</span>{onAddPlayer && <button className="btn-secondary" style={{ fontSize: 12, padding: '5px 12px' }} onClick={onAddPlayer}>+ Add player</button>}</div>
       <div className="section-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>Projected pts/game assuming each team optimally fills its remaining starters within budget (incl. flex). Updates as picks come in.</span>
+        <span>Projected pts/game assumes each team optimally fills its remaining starters within budget (incl. flex).<br />Updates as picks come in.</span>
         <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}><label style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>Card size<input type="range" min="180" max="440" step="20" value={cardSize} onChange={e => setCardSize(parseInt(e.target.value))} style={{ width: 92 }} /></label><button className="btn-secondary" onClick={toggleAll}>{allCollapsed ? 'Expand all' : 'Collapse all'}</button><button className="btn-secondary" onClick={onExport}>Export rosters (CSV)</button></span>
       </div>
       <div className="teams-overview" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))` }}>
@@ -6571,9 +6571,9 @@ function App() {
     );
     const draftBoardEl = (
       <>
-      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="btn-secondary" style={{ marginLeft: 'auto' }} onClick={() => setShowAddPlayer(true)}>+ Add player</button><button className="taunt-btn" onClick={makeTaunt} title="Roast a rival you pick from the dropdown">🔥 Roast a Rival</button></div>
+      <div className="strategy-bar"><AllocationSlider value={config.strategy && config.strategy.allocation} onChange={handleUpdateStrategy} /><button className="taunt-btn" style={{ marginLeft: 'auto' }} onClick={makeTaunt} title="Roast a rival you pick from the dropdown">🔥 Roast a Rival</button></div>
       <div className="board-layout board-norail">
-        <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} />
+        <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} />
       </div>
       </>
     );
