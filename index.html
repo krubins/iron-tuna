@@ -193,6 +193,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .settings-row { display: grid; grid-template-columns: 1fr 100px; align-items: center; gap: 12px; padding: 6px 0; font-size: 13px; }
 .settings-row label { color: var(--text-secondary); }
 .settings-section-title { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.08em; color: var(--text-muted); text-transform: uppercase; margin: 16px 0 4px; grid-column: 1 / -1; padding-bottom: 4px; border-bottom: 1px solid var(--border-subtle); }
+.settings-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; grid-column: 1 / -1; margin-bottom: 2px; }
+.settings-presets-div { width: 1px; align-self: stretch; background: var(--border-subtle); margin: 2px 4px; }
+.preset-btn { font-family: var(--font-body); font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; transition: border-color .12s, color .12s; }
+.preset-btn:hover { border-color: var(--positive); color: var(--text-primary); }
+.preset-btn.on { border-color: var(--positive); color: var(--positive); background: rgba(45,212,163,0.08); }
 .teams-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .team-card { background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; position: relative; }
 .team-card .tc-header { padding-right: 40px; }
@@ -3209,6 +3214,9 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
       return next;
     });
   }
+  const PRESET_ROSTER = { QB: { total: 2, starters: 1 }, RB: { total: 5, starters: 2 }, WR: { total: 5, starters: 2 }, TE: { total: 2, starters: 1 }, K: { total: 1, starters: 1 }, DEF: { total: 1, starters: 1 } };
+  function setScoringFormat(rec) { setDraft(prev => { const n = JSON.parse(JSON.stringify(prev)); n.scoring.receptionPoints = rec; n.scoring.rbReceptionPoints = rec; return n; }); }
+  function applyStandardRoster() { setDraft(prev => { const n = JSON.parse(JSON.stringify(prev)); Object.keys(n.roster).forEach(k => { if (PRESET_ROSTER[k]) n.roster[k] = { ...PRESET_ROSTER[k] }; }); n.flex = n.flex || { count: 0, eligible: ['RB', 'WR', 'TE'] }; n.flex.count = 1; n.flex.eligible = ['RB', 'WR', 'TE']; return n; }); }
   function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -3232,7 +3240,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
           <div className="settings-row"><label>Auction Budget per Team</label><input type="number" min="20" max="1000" value={draft.budget} onChange={e => update('budget', parseInt(e.target.value || 120))} /></div>
           <div className="settings-row"><label>Minimum Bid</label><input type="number" min="1" value={draft.valuation.minBid} onChange={e => update('valuation.minBid', parseInt(e.target.value || 1))} /></div>
         </div>
-        <div className="settings-section-title">Roster Slots</div>
+        <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>Roster Slots</span><button type="button" className="preset-btn" onClick={applyStandardRoster}>Use standard roster</button></div>
         <div className="settings-grid">
           {Object.entries(draft.roster).map(([pos, cfg]) => (
             <React.Fragment key={pos}>
@@ -3243,6 +3251,16 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
           <div className="settings-row"><label>Flex slots</label><input type="number" min="0" max="5" value={draft.flex.count} onChange={e => update('flex.count', parseInt(e.target.value || 0))} /></div>
           <div className="settings-row"><label>Flex eligible positions</label><input type="text" value={draft.flex.eligible.join(',')} onChange={e => update('flex.eligible', e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))} /></div>
         </div>
+        <div className="settings-section-title">Scoring Format</div>
+        <div className="settings-presets">
+          <button type="button" className={`preset-btn ${draft.scoring.receptionPoints >= 1 ? 'on' : ''}`} onClick={() => setScoringFormat(1)}>Full PPR</button>
+          <button type="button" className={`preset-btn ${draft.scoring.receptionPoints >= 0.5 && draft.scoring.receptionPoints < 1 ? 'on' : ''}`} onClick={() => setScoringFormat(0.5)}>Half-PPR</button>
+          <button type="button" className={`preset-btn ${draft.scoring.receptionPoints < 0.5 ? 'on' : ''}`} onClick={() => setScoringFormat(0)}>Standard (non-PPR)</button>
+          <span className="settings-presets-div" />
+          <button type="button" className={`preset-btn ${draft.scoring.passingTD === 4 ? 'on' : ''}`} onClick={() => update('scoring.passingTD', 4)}>Pass TD: 4</button>
+          <button type="button" className={`preset-btn ${draft.scoring.passingTD === 6 ? 'on' : ''}`} onClick={() => update('scoring.passingTD', 6)}>Pass TD: 6</button>
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0', gridColumn: '1 / -1' }}>One tap sets the common defaults — fine-tune any field below if your league differs.</p>
         <div className="settings-section-title">Passing</div>
         <div className="settings-grid">
           <div className="settings-row"><label>Yards per point</label><input type="number" min="1" value={draft.scoring.passingYardsPerPoint} onChange={e => update('scoring.passingYardsPerPoint', parseFloat(e.target.value))} /></div>
@@ -3265,12 +3283,6 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
         <div className="settings-grid">
           <div className="settings-row"><label>Points per reception (RB only)</label><input type="number" step="0.1" value={draft.scoring.rbReceptionPoints} onChange={e => update('scoring.rbReceptionPoints', parseFloat(e.target.value))} /></div>
         </div>
-        <div className="settings-section-title">Projections Import (CSV)</div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Replace projections with a CSV, works directly with <b>ffanalytics</b> exports (its multi-source aggregate of FantasyPros, ESPN, NFL and more), plus FantasyPros / ESPN / Yahoo files. Columns are auto-detected: player, pos (DST is read as DEF), team, and stats like pass_yds, pass_tds, pass_int, rush_yds, rush_tds, rec, rec_yds, rec_tds, fg, dst_sacks, dst_int, dst_pts_allowed. If the file only has a points/fpts column, that is used directly.
-        </p>
-        <button className="btn-secondary" onClick={() => fileRef.current.click()}>Import projections CSV (ffanalytics-ready)</button>
-        <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFile} />
         <div style={{ marginTop: 24, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-draft" onClick={() => { onSave(draft); onClose(); }}>Save Settings</button>
