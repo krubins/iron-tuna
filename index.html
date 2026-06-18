@@ -3941,6 +3941,18 @@ const PERF_NOTES = {
     { label: 'Role over name', text: 'A clear every-down role on a bad team often out-scores a famous name in a crowded one.' },
   ],
 };
+const MODEL_DESC = {
+  ideal: 'Ideal Team: the single highest-scoring starting lineup you can afford with your remaining budget.',
+  balanced: 'Balanced: an even build anchored by one stud RB and one stud WR, with no position neglected.',
+  targets: 'Favorites: builds your roster around the players you have starred, then fills the rest optimally.',
+  heroRB: 'Hero RB: pay up for one elite running back, take value at RB2, and load up at the other spots.',
+  heroWR: 'Hero WR: pay up for one elite receiver, take value at WR2, and spend your budget elsewhere.',
+  heroQB: 'Hero QB: pay up for one elite quarterback and find value at the other positions.',
+  zeroRB: 'Zero RB: wait on running back (cheap RBs late) and stack elite, high-volume receivers.',
+  robustRB: 'Robust RB: spend up for multiple workhorse running backs, the scarcest position in fantasy.',
+  robustWR: 'Robust WR: spend up for multiple high-volume receivers and build around a deep WR corps.',
+  eliteTE: 'Elite TE: pay up for a top-three tight end for a weekly edge few rivals can match.',
+};
 const FANTASY_FACTS = [
   { label: 'RB dead zone', text: 'The RB dead zone is real: backs drafted around RB15 to RB30 bust more than any other group, paying a starter\'s price for a backup\'s job security. Wait, then pay up or punt.' },
   { label: 'WR is deep', text: 'Wide receiver is the deepest position. The WR24 usually finishes within a couple points per game of the WR12, which is why you wait on WR and pay up at RB.' },
@@ -4034,7 +4046,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
       <div className="ch-models">
         <span className="ch-models-label">Draft Models <span style={{ textTransform: 'none', fontWeight: 400, fontSize: '0.92em', opacity: 0.85 }}>(projected ppg)</span></span>
         {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
-        {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
+        {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} title={MODEL_DESC[k] || lbl} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
         {myTeam && <button className={`hm-tab ${wiOpen ? 'active' : ''}`} onClick={() => setWiOpen(o => !o)} title="What if you win specific players at set prices? Pin up to 3, then click any model to see its lineup and projected points rebuilt around those picks.">What if?</button>}
         {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear every player you've marked as a favorite">Reset favorites</button>}
         {myTeam && wiOpen && (
@@ -7173,7 +7185,7 @@ function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, s
   if (!myTeam) return null;
   return (
     <div className="header-models" title="Draft models, click to box a model's target players on the cheat sheet; click again to clear">
-      {models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>)}
+      {models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} title={MODEL_DESC[k] || lbl} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>)}
     </div>
   );
 }
