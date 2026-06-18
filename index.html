@@ -917,8 +917,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach-insights .ci-text { font-size: 11.5px; line-height: 1.45; color: var(--text-secondary); }
 .coach-insights .ci-empty { font-size: 11px; color: var(--text-muted); }
 .coach.dock .coach-input textarea { min-height: 56px; }
-.main.board-main, .main.prep-main { padding-bottom: 150px; }
-.main.prep-main.coach-hidden { padding-bottom: 24px; }
+.main.board-main { padding-bottom: 150px; }
+.main.prep-main { padding-bottom: 24px; }
 .coach-hidebtn { color: var(--positive) !important; }
 .main.is-draftboard { padding-bottom: 24px; }
 .main.board-collapsed { grid-template-columns: 1fr auto; }
@@ -943,11 +943,19 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-controls { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; }
 .ch-controls-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 6px; }
 .ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; height: 156px; overflow: hidden; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
-.ch-insights-col { display: flex; flex-direction: column; gap: 12px; height: 100%; }
-.ch-insights-col .ch-insights { height: auto; flex: 1 1 0; min-height: 0; box-shadow: none; }
-.ch-insights-col .chi-text { -webkit-line-clamp: 2; }
-.ch-ins-perf { border-color: rgba(90,169,255,0.35); }
-.ch-ins-perf .chi-label { color: #5aa9ff; }
+.ch-insights-col { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 360px; }
+.ch-insights-col .ch-insights { box-shadow: none; }
+.ch-insights-col .ch-ins-facts { flex: 0 0 auto; height: 150px; }
+.ch-insights-col .ch-ins-facts .chi-text { -webkit-line-clamp: 4; }
+.ch-coachslot { flex: 1 1 auto; min-height: 175px; display: flex; min-width: 0; }
+.ch-coachslot > .coach.embed { flex: 1 1 auto; }
+.coach.embed { position: static; width: 100%; max-width: none; height: 100%; min-height: 0; flex-direction: column; border: 1px solid var(--positive); border-radius: var(--radius-md); box-shadow: none; animation: none; }
+.coach.embed .coach-body { max-height: none; }
+.coach.embed .coach-input { padding: 8px; }
+.coach.embed .coach-input textarea { min-height: 52px; font-size: 13px; padding: 9px; }
+.coach.embed.coach-lockedbox { justify-content: flex-start; }
+.coach-lockedmsg { padding: 14px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; display: flex; flex-direction: column; gap: 10px; }
+.coach-unlockbtn { align-self: flex-start; background: rgba(45,212,163,0.15); border: 1px solid var(--positive); color: var(--positive); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; font-size: 12px; }
 .chi-fresh { font-size: 9px; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
 .chi-head { display: flex; align-items: center; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px; }
 .chi-nav button { background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-secondary); width: 24px; height: 20px; border-radius: 4px; cursor: pointer; font-size: 9px; margin-left: 4px; padding: 0; }
@@ -3928,67 +3936,128 @@ const PERF_NOTES = {
     { label: 'Role over name', text: 'A clear every-down role on a bad team often out-scores a famous name in a crowded one.' },
   ],
 };
-function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfId, whatIfPrice, onSetWhatIf }) {
+const FANTASY_FACTS = [
+  { label: 'RB dead zone', text: 'The RB dead zone is real: backs drafted around RB15 to RB30 bust more than any other group, paying a starter\'s price for a backup\'s job security. Wait, then pay up or punt.' },
+  { label: 'WR is deep', text: 'Wide receiver is the deepest position. The WR24 usually finishes within a couple points per game of the WR12, which is why you wait on WR and pay up at RB.' },
+  { label: 'Bellcows are scarce', text: 'True three-down backs who run AND catch are the rarest asset in fantasy, usually fewer than ten. That scarcity is why elite RBs command the biggest auction premiums.' },
+  { label: 'Target share sticks', text: 'A receiver\'s share of team targets is one of the stickiest, most predictive stats in fantasy, far more reliable year to year than touchdowns or yards per catch.' },
+  { label: 'Fade TD outliers', text: 'Touchdowns are the most volatile fantasy stat. Players who scored on an unusually high share of touches almost always regress, so do not pay up for last year\'s TD spike.' },
+  { label: 'RB age cliff', text: 'Running back production tends to fall off a cliff around age 28 to 29. Paying full freight for a 29-plus back is buying last season, not next.' },
+  { label: 'WRs age well', text: 'Receivers age far more gracefully than backs, with many posting top-12 seasons into their early 30s. Trust an aging stud WR more than an aging stud RB.' },
+  { label: 'Rookie RBs hit', text: 'Running back is the one spot where rookies routinely produce right away. Multiple first-year backs finish as RB1s every year, so never auto-fade a rookie with a lead role.' },
+  { label: 'Year-two WR leap', text: 'Receivers break out in year two more often than as rookies. A second-year WR with a clear target path is one of the best values on the board.' },
+  { label: 'Heavy workload warning', text: 'Backs who logged 350-plus touches the prior year carry elevated injury and decline risk the next. A huge past workload is a yellow flag, not a badge.' },
+  { label: 'Handcuff lottery', text: 'The backup to a true workhorse can win your league. A stud\'s handcuff for a dollar or two late is the best lottery ticket at the table.' },
+  { label: 'Elite TE edge', text: 'A top-three tight end is a weekly positional advantage, often beating the TE12 by five-plus points a game. If you miss on one, punt and stream.' },
+  { label: 'TE muddy middle', text: 'The tight end muddy middle, roughly TE6 to TE12, is a trap. Either pay up for a difference-maker or spend a dollar and stream the position.' },
+  { label: 'QB value math', text: 'In one-QB leagues the gap from QB5 to QB12 is small. Paying up for an elite passer usually costs you points you could have banked at RB or WR.' },
+  { label: 'Rushing QB floor', text: 'Quarterbacks who add 400-plus rushing yards have a structurally higher floor, because rushing output is far steadier week to week than passing touchdowns.' },
+  { label: 'Auction\'s real edge', text: 'An auction\'s edge over a snake draft is that every player is available to you. You are never locked out by draft slot, only by budget and nerve.' },
+  { label: 'Stars and scrubs', text: 'Stars and scrubs (a few elite players plus many dollar fliers) wins when your studs stay healthy. The balanced build has a higher floor and fewer season-killers.' },
+  { label: 'Nominate to drain', text: 'Float players you do not want early while wallets are full. Every dollar a rival burns on a name you skipped is a dollar gone from a player you want.' },
+  { label: 'Inflation is live', text: 'Auction inflation is live math: every dollar overpaid raises the fair price of everyone left, because the same money now chases fewer players.' },
+  { label: 'Endgame value', text: 'The best auction buys often come at the very end, when rosters are nearly full and budgets are tapped. Keep a few dollars to pounce on a falling stud.' },
+  { label: 'The $1 endgame', text: 'Your last several roster spots should cost a dollar each. Reserve one dollar per open slot so you never get priced out of filling your bench.' },
+  { label: 'Value is relative', text: 'A player\'s worth is his points above the freely available replacement at his position, not his raw total. That is why a scarce RB can beat a higher-scoring deep-pool WR.' },
+  { label: 'Own the goal line', text: 'Red-zone and goal-line touches drive touchdowns, the most valuable scoring. A back who owns the goal line has a higher ceiling than his yardage suggests.' },
+  { label: 'Buy the air yards', text: 'A receiver\'s downfield target volume often signals a coming touchdown breakout before the scores arrive. Buy the volume, not last year\'s TD count.' },
+  { label: 'Watch snap share', text: 'Rising snap share is an early tell of a growing role, usually showing in the box score a few weeks later. Track snaps, not just stats.' },
+  { label: 'Chase vacated targets', text: 'When a team loses a high-volume pass catcher, those targets redistribute, they do not vanish. Finding the beneficiary is one of the surest paths to a breakout.' },
+  { label: 'Environment wins', text: 'Players in high-scoring, fast-paced offenses simply get more chances. A modest talent in a great offense often outscores a better talent in a bad one.' },
+  { label: 'Project the script', text: 'Trailing teams pass more (good for WRs), leading teams run more (good for RBs). Project a team\'s win total, not just the talent, when you value its players.' },
+  { label: 'Do not draft September', text: 'Early strength of schedule matters for streamers and Week 1, but over a season talent and role swamp matchups. Do not draft for one month.' },
+  { label: 'Mind the playoffs', text: 'For your title run, the Weeks 15 to 17 matchups matter most. A soft late-season schedule is a real tiebreaker between similar players.' },
+  { label: 'Stagger byes', text: 'Stagger your starters\' bye weeks. Two elite players who share a bye can quietly cost you a loss in a week you should have won.' },
+  { label: 'Avoid committees', text: 'Ambiguous backfields cap every back\'s ceiling. A clear lead role on a bad offense often out-scores a famous name stuck in a timeshare.' },
+  { label: 'Follow the money', text: 'Heavy investment, a high draft pick or a big contract, signals a protected role. Teams force-feed touches to the players they paid for.' },
+  { label: 'Third-down back', text: 'In PPR the passing-down back can quietly out-score the early-down grinder. Catches are points, and the third-down role holds up even in bad game scripts.' },
+  { label: 'Slot vs outside', text: 'Slot receivers earn steadier, higher-volume targets; outside receivers carry more boom-or-bust big plays. Match the type to whether you need floor or ceiling.' },
+  { label: 'Discount the return', text: 'Players returning from major injury often start slow rounding into form. Value the ramp-up, not the pre-injury ceiling, and let a rival pay last year\'s price.' },
+  { label: 'Scheme over history', text: 'A new offensive coordinator can completely reshape usage. Weight a player\'s fit in the new scheme over what he did under the old one.' },
+  { label: 'Floor wins weeks', text: 'In head-to-head leagues a high floor wins more weeks than a high ceiling. Boom-or-bust players belong as your third receiver, not your second.' },
+  { label: 'QB lifts the WR', text: 'A great pass-catcher tied to shaky quarterback play has a capped ceiling. QB quality is the biggest single swing factor for a receiver\'s floor.' },
+  { label: 'Runs peak mid', text: 'When a position run starts, prices peak in the middle of it. Let the run pass unless the player is a target, then buy the calm afterward.' },
+  { label: 'Do not start the run', text: 'Nominating the first elite back often triggers a run that inflates the very players you wanted. Let a rival start the RB run.' },
+  { label: 'Budget a whale', text: 'Protect enough budget to win exactly one bidding war on a player you refuse to leave without. Decide who that whale is before the auction starts.' },
+  { label: 'Draft tiers', text: 'Draft tiers, not rankings. Pay up to stay inside a tier, but the moment it empties, pivot rather than overpay a tiny upgrade into the next one.' },
+  { label: 'Last in the tier', text: 'The last player in a strong tier often spikes as the room senses the cliff. Either grab him early or be ready to let him walk.' },
+  { label: 'Dollar your K and DEF', text: 'Spend a dollar each on kicker and defense, every time. Their week-to-week scoring is nearly random and the preseason best rarely finishes there.' },
+  { label: 'Stream defenses', text: 'Defense scoring is matchup-driven. Instead of rostering one top unit all year, stream the defense facing the weakest offense or shakiest QB each week.' },
+  { label: 'Why Zero RB works', text: 'Zero RB (loading WR and TE, then hammering RB value late and on waivers) thrives precisely because running back injuries are so common.' },
+  { label: 'Why Robust RB works', text: 'Robust RB (spending up for multiple workhorses) wins because back is the scarcest position. When your backs stay healthy you hold what everyone else needs.' },
+  { label: 'Backups one snap away', text: 'One injury ahead on the depth chart turns a dollar bench stash into a weekly starter. Late, target backups a single snap from a featured role.' },
+  { label: 'Volume over highlights', text: 'One huge game on a few touches is far less predictive than steady, heavy usage. Chase volume and role; let your leaguemates chase the highlight plays.' },
+];
+function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfAnchors, onSetAnchors, coachEl }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
   const [customDesc, setCustomDesc] = useState('');
   const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const [wiOpen, setWiOpen] = useState(false);
-  const [wiName, setWiName] = useState('');
-  const [wiShow, setWiShow] = useState(false);
-  const wiId = whatIfId || '';
-  const wiPrice = whatIfPrice || 0;
-  const setWi = (id, price) => { if (onSetWhatIf) onSetWhatIf(id, price); };
+  const [wiNames, setWiNames] = useState(['', '', '']);
+  const [wiShowRow, setWiShowRow] = useState(-1);
+  const anchors = whatIfAnchors || [];
+  const activeAnchors = anchors.filter(a => a && a.id != null && a.id !== '');
+  const wiActive = activeAnchors.length > 0;
+  const anchorIds = new Set(activeAnchors.map(a => String(a.id)));
+  const anchorsKey = JSON.stringify(activeAnchors.map(a => [a.id, a.price]));
   const wiPool = useMemo(() => (players || []).filter(p => !(draftedIds && draftedIds.has(p.id))).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)), [players, draftedIds]);
-  const wiActive = !!wiId;
   const wiPriceOf = pl => pl.marketValue != null ? pl.marketValue : (pl.auctionValue != null ? pl.auctionValue : 1);
-  const wiMatches = useMemo(() => { const t = wiName.toLowerCase().trim(); const base = t ? wiPool.filter(p => p.name.toLowerCase().includes(t)) : wiPool; return base.slice(0, 10); }, [wiName, wiPool]);
-  function onWiInput(v) { setWiName(v); setWiShow(true); const t = v.toLowerCase().trim(); const pl = wiPool.find(p => `${p.name} (${p.position})`.toLowerCase() === t) || wiPool.find(p => p.name.toLowerCase() === t); if (pl) setWi(pl.id, wiPriceOf(pl)); else setWi('', 0); }
-  function chooseWi(pl) { setWiName(`${pl.name} (${pl.position})`); setWiShow(false); setWi(pl.id, wiPriceOf(pl)); }
-  function clearWi() { setWiName(''); setWiShow(false); setWi('', 0); }
-  const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? wiId : undefined, wiPrice); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, wiId, wiPrice]);
+  function setAnchorAt(i, id, price) { const next = [0, 1, 2].map(j => j === i ? (id ? { id, price } : null) : (anchors[j] || null)); if (onSetAnchors) onSetAnchors(next); }
+  function matchesFor(name) { const t = (name || '').toLowerCase().trim(); const taken = new Set(activeAnchors.map(a => String(a.id))); const base = (t ? wiPool.filter(p => p.name.toLowerCase().includes(t)) : wiPool).filter(p => !taken.has(String(p.id))); return base.slice(0, 10); }
+  function onRowInput(i, v) { setWiNames(ns => ns.map((x, j) => j === i ? v : x)); setWiShowRow(i); const t = v.toLowerCase().trim(); const pl = wiPool.find(p => `${p.name} (${p.position})`.toLowerCase() === t) || wiPool.find(p => p.name.toLowerCase() === t); if (pl) setAnchorAt(i, pl.id, wiPriceOf(pl)); else setAnchorAt(i, '', 0); }
+  function chooseRow(i, pl) { setWiNames(ns => ns.map((x, j) => j === i ? `${pl.name} (${pl.position})` : x)); setWiShowRow(-1); setAnchorAt(i, pl.id, wiPriceOf(pl)); }
+  function clearRow(i) { setWiNames(ns => ns.map((x, j) => j === i ? '' : x)); setWiShowRow(-1); setAnchorAt(i, '', 0); }
+  const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? activeAnchors : undefined); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
   const wiModelKey = model || 'ideal';
   const wiModelLabel = (models.find(mm => mm[0] === wiModelKey) || ['ideal', 'Ideal Team'])[1];
-  const wiPlan = useMemo(() => { if (!myTeam || !wiActive) return null; try { return buildModel(wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiId, wiPrice); } catch (e) { return null; } }, [wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, wiId, wiPrice, wiActive]);
-  const bn = BIDDING_NOTES; const blen = bn.length;
-  const pn = (PERF_NOTES.current || []).concat(PERF_NOTES.library || []); const plen = pn.length;
-  const cyc = Math.max(blen, plen, 1);
+  const wiPlan = useMemo(() => { if (!myTeam || !wiActive) return null; try { return buildModel(wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, activeAnchors); } catch (e) { return null; } }, [wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  const dyn = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => i && (i.text || '').length <= 300), [players, myTeam, teams, config, draftedIds, marketState, games]);
+  const facts = useMemo(() => [...dyn, ...(PERF_NOTES.current || []), ...FANTASY_FACTS, ...(PERF_NOTES.library || [])], [dyn]);
+  const flen = facts.length;
   const [idx, setIdx] = useState(0);
-  useEffect(() => { if (cyc <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % cyc), 12000); return () => clearInterval(t); }, [cyc]);
+  useEffect(() => { if (flen <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % flen), 11000); return () => clearInterval(t); }, [flen]);
   return (
     <div className="cheat-header no-print">
       <div className="ch-models">
         <span className="ch-models-label">Draft Models <span style={{ textTransform: 'none', fontWeight: 400, fontSize: '0.92em', opacity: 0.85 }}>(projected ppg)</span></span>
-        {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
         {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
-        {myTeam && <button className={`hm-tab ${wiOpen ? 'active' : ''}`} onClick={() => setWiOpen(o => !o)} title="See your best build if you commit to one player at a price you set">What if?</button>}
+        {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
+        {myTeam && <button className={`hm-tab ${wiOpen ? 'active' : ''}`} onClick={() => setWiOpen(o => !o)} title="What if you win specific players at set prices? Pin up to 3, then click any model to see its lineup and projected points rebuilt around those picks.">What if?</button>}
         {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear every player you've marked as a favorite">Reset favorites</button>}
         {myTeam && wiOpen && (
           <div className="ch-whatif" style={{ flexBasis: '100%', marginTop: 8, padding: '9px 11px', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' }}>
-            <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 }}>
-              <span style={{ color: 'var(--text-muted)' }}>What if I land</span>
-              <span style={{ position: 'relative', display: 'inline-block' }}>
-                <input value={wiName} onChange={e => onWiInput(e.target.value)} onFocus={() => setWiShow(true)} onBlur={() => setTimeout(() => setWiShow(false), 160)} placeholder="type a player name…" style={{ width: 210, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: `1px solid ${wiActive ? 'var(--positive)' : 'var(--border-strong)'}`, borderRadius: 4, padding: '4px 8px', fontSize: 12 }} />
-                {wiShow && wiMatches.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 60, minWidth: 230, maxHeight: 220, overflowY: 'auto', background: 'var(--bg-elev)', border: '1px solid var(--border-strong)', borderRadius: 4, marginTop: 2, boxShadow: '0 8px 22px rgba(0,0,0,0.55)' }}>
-                    {wiMatches.map(pl => (
-                      <div key={pl.id} onMouseDown={e => { e.preventDefault(); chooseWi(pl); }} style={{ padding: '5px 9px', fontSize: 12, cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', gap: 12 }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-base)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                        <span>{pl.name} <span style={{ color: 'var(--text-muted)' }}>({pl.position})</span></span>
-                        <span style={{ color: 'var(--gold-text)', fontFamily: 'var(--font-mono)' }}>${wiPriceOf(pl)}</span>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.45 }}>What if you win these players at these prices? Pin up to three below, then click any model above to see its lineup and projected points rebuilt around your picks.</div>
+            {[0, 1, 2].map(i => {
+              const a = anchors[i] || null;
+              const rowActive = !!(a && a.id);
+              const matches = wiShowRow === i ? matchesFor(wiNames[i]) : [];
+              return (
+                <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-muted)', width: 12 }}>{i + 1}.</span>
+                  <span style={{ position: 'relative', display: 'inline-block' }}>
+                    <input value={wiNames[i]} onChange={e => onRowInput(i, e.target.value)} onFocus={() => setWiShowRow(i)} onBlur={() => setTimeout(() => setWiShowRow(r => r === i ? -1 : r), 160)} placeholder="type a player name…" style={{ width: 200, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: `1px solid ${rowActive ? 'var(--positive)' : 'var(--border-strong)'}`, borderRadius: 4, padding: '4px 8px', fontSize: 12 }} />
+                    {wiShowRow === i && matches.length > 0 && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 60, minWidth: 230, maxHeight: 200, overflowY: 'auto', background: 'var(--bg-elev)', border: '1px solid var(--border-strong)', borderRadius: 4, marginTop: 2, boxShadow: '0 8px 22px rgba(0,0,0,0.55)' }}>
+                        {matches.map(pl => (
+                          <div key={pl.id} onMouseDown={e => { e.preventDefault(); chooseRow(i, pl); }} style={{ padding: '5px 9px', fontSize: 12, cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', gap: 12 }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-base)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                            <span>{pl.name} <span style={{ color: 'var(--text-muted)' }}>({pl.position})</span></span>
+                            <span style={{ color: 'var(--gold-text)', fontFamily: 'var(--font-mono)' }}>${wiPriceOf(pl)}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </span>
-              <span style={{ color: 'var(--text-muted)' }}>for $</span>
-              <input type="number" min="1" value={wiActive ? wiPrice : ''} onChange={e => setWi(wiId, parseInt(e.target.value) || 0)} style={{ width: 62, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12 }} />
-              {wiActive && <button className="hm-tab" onClick={clearWi} title="Clear the what-if">clear</button>}
-              <span style={{ color: 'var(--text-muted)' }}>? Then click any model above to build it around that pick.</span>
-            </div>
+                    )}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)' }}>for $</span>
+                  <input type="number" min="1" value={rowActive ? a.price : ''} onChange={e => setAnchorAt(i, a && a.id, parseInt(e.target.value) || 0)} style={{ width: 60, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12 }} />
+                  {rowActive && <button className="hm-tab" onClick={() => clearRow(i)} title="Clear this pick">clear</button>}
+                </div>
+              );
+            })}
             {wiActive && wiPlan && (
               <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                <div><b style={{ color: 'var(--gold-text)' }}>{wiModelLabel}</b> with this pick at ${wiPrice}: <b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> <span style={{ color: 'var(--text-muted)' }}>(starters spend ${wiPlan.plannedStarterCost} of ${wiPlan.budgetRemaining}; the rest of the lineup is rebuilt to fit)</span>{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · even the cheapest supporting cast cannot fit at this price, lower it</span> : null}.</div>
-                <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{wiPlan.slots.map((s, i) => <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, background: 'var(--bg-elev)', border: `1px solid ${String(s.player && s.player.id) === String(wiId) ? 'var(--positive)' : 'var(--border-subtle)'}`, borderRadius: 8, padding: '1px 6px' }}>{s.label}: {s.player ? s.player.name : '–'}{s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : ''}</span>)}</div>
+                <div><b style={{ color: 'var(--gold-text)' }}>{wiModelLabel}</b> with {activeAnchors.length === 1 ? 'this pick' : 'these picks'}: <b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> <span style={{ color: 'var(--text-muted)' }}>(starters spend ${wiPlan.plannedStarterCost} of ${wiPlan.budgetRemaining}; the rest of the lineup is rebuilt to fit)</span>{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · these prices bust your budget, lower them</span> : null}.</div>
+                <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{wiPlan.slots.map((s, i) => <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, background: 'var(--bg-elev)', border: `1px solid ${s.player && anchorIds.has(String(s.player.id)) ? 'var(--positive)' : 'var(--border-subtle)'}`, borderRadius: 8, padding: '1px 6px' }}>{s.label}: {s.player ? s.player.name : '–'}{s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : ''}</span>)}</div>
               </div>
             )}
           </div>
@@ -4011,19 +4080,16 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}><span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444', marginLeft: 10 }}>● potentially overpriced</span></div>
       </div>
       <div className="ch-insights-col">
-        <div className="ch-insights ch-ins-money">
-          <div className="chi-head"><span>Bidding &amp; Budget</span>{cyc > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + cyc) % cyc)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % cyc)} title="Next">▼</button></span>}</div>
-          {blen ? <div className="chi-body"><div className="chi-label">{bn[idx % blen].label}</div><div className="chi-text">{bn[idx % blen].text}</div></div> : <div className="chi-body chi-empty">Bidding and budget insights appear here.</div>}
+        <div className="ch-insights ch-ins-facts">
+          <div className="chi-head"><span>Draft Intel</span>{flen > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + flen) % flen)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % flen)} title="Next">▼</button></span>}</div>
+          {flen ? <div className="chi-body"><div className="chi-label">{facts[idx % flen].label}</div><div className="chi-text">{facts[idx % flen].text}</div></div> : <div className="chi-body chi-empty">Draft intel appears here.</div>}
         </div>
-        <div className="ch-insights ch-ins-perf">
-          <div className="chi-head"><span>Player Performance <span className="chi-fresh">· upd {PERF_NOTES.updated}</span></span></div>
-          {plen ? <div className="chi-body"><div className="chi-label">{pn[idx % plen].label}</div><div className="chi-text">{pn[idx % plen].text}</div></div> : <div className="chi-body chi-empty">Player-performance notes refresh about 3 times a week.</div>}
-        </div>
+        {coachEl ? <div className="ch-coachslot">{coachEl}</div> : null}
       </div>
     </div>
   );
 }
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfId, whatIfPrice, onSetWhatIf }) {
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfAnchors, onSetAnchors, coachEl }) {
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const byPos = {};
@@ -4089,7 +4155,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   }
   return (
     <div className="cheatsheet">
-      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} customForced={customForced} onBuildCustom={onBuildCustom} customBuilding={customBuilding} onClearTargets={onClearTargets} whatIfId={whatIfId} whatIfPrice={whatIfPrice} onSetWhatIf={onSetWhatIf} />
+      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} customForced={customForced} onBuildCustom={onBuildCustom} customBuilding={customBuilding} onClearTargets={onClearTargets} whatIfAnchors={whatIfAnchors} onSetAnchors={onSetAnchors} coachEl={coachEl} />
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth at your scoring · <b>YOU</b> the most you should pay, given your roster &amp; budget</div>
       <div className="cheat-print-head only-print">
@@ -6562,7 +6628,7 @@ function buildCoachInsights(ctx) {
   if (mode === 'draft') return [{ label: 'Draft underway', text: 'Trends appear once a few players are in. For now, stick to your values and watch the first RB/WR runs to read the room.' }].concat(prep);
   return prep;
 }
-function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi, onOpenChange }) {
+function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi, onOpenChange, embed }) {
   const [open, setOpen] = useState(!locked);
   useEffect(() => { onOpenChange && onOpenChange(open); }, [open]);
   const [msgs, setMsgs] = useState([{ role: 'bot', text: 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.', intro: true }]);
@@ -6708,11 +6774,12 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   }
   const active = [];
   Object.entries(valueAdjust || {}).forEach(([pos, obj]) => Object.entries(obj || {}).forEach(([tier, m]) => { if (Math.abs(m - 1) > 0.01) active.push(`${tier === 'all' ? '' : tier + ' '}${pos} ${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`); }));
-  if (!open) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
+  if (embed && locked) return (<div className="coach embed coach-lockedbox"><div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Locked</span></span></div><div className="coach-lockedmsg">The live AI Value Coach sizes up any player, price, or strategy question as your draft unfolds, grounded in your league and live board.<button className="coach-unlockbtn" onClick={onUnlock}>Unlock the Value Coach</button></div></div>);
+  if (!open && !embed) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
-    <div className={`coach ${big ? 'big' : 'dock'}`} style={!big ? { ...(dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : {}), ...(inputW ? { ['--coach-input-w']: inputW + 'px' } : {}) } : undefined}>
-      {!big && <div className="coach-resize" onPointerDown={startDockResize} title="Drag to resize" />}
-      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span><button className="coach-hidebtn" onClick={() => setOpen(false)} title="Minimize the coach, gives the space back to the player list">hide</button></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}</div></div>
+    <div className={`coach ${embed ? 'embed' : (big ? 'big' : 'dock')}`} style={(!big && !embed) ? { ...(dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : {}), ...(inputW ? { ['--coach-input-w']: inputW + 'px' } : {}) } : undefined}>
+      {!big && !embed && <div className="coach-resize" onPointerDown={startDockResize} title="Drag to resize" />}
+      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span>{!embed && <button className="coach-hidebtn" onClick={() => setOpen(false)} title="Minimize the coach">hide</button>}</span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}</div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
       <div className="coach-input">{!big && <div className="coach-col-resize" onPointerDown={startColResize} title="Drag to resize question vs. answer" />}<textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
@@ -6944,7 +7011,7 @@ const MODEL_FOCUS = {
   eliteTE: { focus: ['TE'], note: 'Focus: TE, pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
   custom: { focus: [], note: 'Your own model. Describe a strategy and the AI anchors the players that best fit it, then completes the roster within your budget.' },
 };
-function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfId, whatIfPrice) {
+function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfAnchors) {
   const di = draftedIds || new Set();
   const byPos = {};
   (players || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -6965,8 +7032,8 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     else if (k === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); }
     else if (k === 'custom') { (customForced || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // AI-built custom model
     (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); // locked targets held constant across every model
-    if (whatIfId != null && whatIfId !== '' && !di.has(whatIfId)) forced.add(whatIfId); // What-if anchor folded into every model
-    const fpAll = (whatIfId != null && whatIfId !== '') ? { [whatIfId]: Math.max(1, whatIfPrice || 1) } : undefined;
+    let fpAll;
+    (whatIfAnchors || []).forEach(a => { if (a && a.id != null && a.id !== '' && !di.has(a.id)) { forced.add(a.id); (fpAll = fpAll || {})[a.id] = Math.max(1, a.price || 1); } }); // What-if anchors folded into every model
     return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll);
   }
   // Ideal Team is, by definition, the single highest-scoring starting lineup you can assemble,
@@ -7147,8 +7214,7 @@ function App() {
   }
   const [assignPlayer, setAssignPlayer] = useState(null);
   const [customForcedIds, setCustomForcedIds] = useState(() => new Set());
-  const [whatIfId, setWhatIfId] = useState('');
-  const [whatIfPrice, setWhatIfPrice] = useState(0);
+  const [whatIfAnchors, setWhatIfAnchors] = useState([]);
   const [customBuilding, setCustomBuilding] = useState(false);
   const [coachOpen, setCoachOpen] = useState(true);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -7259,13 +7325,13 @@ function App() {
     const myTeam = teams.find(t => t.isMine);
     if (!myTeam) return null;
     const dIds = new Set(draftHistory.map(d => d.playerId));
-    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets, customForcedIds, whatIfId || undefined, whatIfPrice);
+    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets, customForcedIds, whatIfAnchors);
     const ids = new Set();
     if (plan && plan.slots) plan.slots.forEach(s => { if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id); });
     if (plan && plan.benchTargets) plan.benchTargets.forEach(bt => { if (!dIds.has(bt.playerId)) ids.add(bt.playerId); }); // include the model's backups
     if (draftModel === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
     return ids;
-  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfId, whatIfPrice]);
+  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
   useEffect(() => {
     if (remoteApplyRef.current) { remoteApplyRef.current = false; return; }
     try {
@@ -7638,13 +7704,14 @@ function App() {
     if (view === 'mock') {
       return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
+    const coachEl = !showSplash ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />) : null;
     const cheatSheetEl = (
       <>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
           mode="live" modelFitIds={modelFitIds} draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory}
-          model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} customForced={customForcedIds} onBuildCustom={handleBuildCustom} customBuilding={customBuilding} onClearTargets={handleClearTargets} whatIfId={whatIfId} whatIfPrice={whatIfPrice} onSetWhatIf={(id, price) => { setWhatIfId(id); setWhatIfPrice(price); }} />
+          model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} customForced={customForcedIds} onBuildCustom={handleBuildCustom} customBuilding={customBuilding} onClearTargets={handleClearTargets} whatIfAnchors={whatIfAnchors} onSetAnchors={setWhatIfAnchors} coachEl={coachEl} />
       </>
     );
     const draftBoardEl = (
@@ -7670,14 +7737,13 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} config={config} onOpenSettings={() => setView('settings')} />
-      <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'prep' && !coachOpen ? 'coach-hidden' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
-      {!showSplash && view === 'prep' && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onOpenChange={setCoachOpen} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} seasonGames={SEASON_GAMES} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
