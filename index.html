@@ -3855,6 +3855,8 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <span style={{ flexBasis: '100%', height: 0 }} />
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
+        <button className={`col-toggle ${showCols && showCols.soft13 ? 'on' : ''}`} title="Flag players with soft Weeks 1-3 matchups (hover the tag for opponents)" onClick={() => setShowCols(c => ({ ...c, soft13: !c.soft13 }))}>Soft 1-3</button>
+        <button className={`col-toggle ${showCols && showCols.soft1517 ? 'on' : ''}`} title="Flag players with soft Weeks 15-17 (fantasy playoffs) matchups" onClick={() => setShowCols(c => ({ ...c, soft1517: !c.soft1517 }))}>Soft 15-17</button>
         {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
         <span style={{ flexBasis: '100%', height: 0 }} />
         <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Draft any player straight from the sheet, no separate list: click to assign him to a team; drag to rerank.' : 'Build your board right here: click a player to target him; drag to rerank.'} Click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span></div>
@@ -3879,7 +3881,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const hlSet = cheatHighlights(byPos, highlight);
   const stratKey = (highlight && highlight !== 'targets') ? highlight : null;
   const minBid = (config && config.valuation && config.valuation.minBid) || 1;
-  const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: true });
+  const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: true, soft13: true, soft1517: true });
   const COLSPEC = [
     ['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'],
     ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'],
@@ -3977,7 +3979,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 <span className="cheat-star" title={targets && targets.has(p.id) ? 'Target \u2014 click to clear' : 'Click to set as a target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }}>{targets && targets.has(p.id) ? '\u2605' : '\u2606'}</span>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
-                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (softSched ? <>{softSched.early ? <span className="cheat-soft" title={`Favorable weeks 1-3 for ${p.position}: ${softSched.early.opps.join(', ')}`}>Soft 1-3</span> : null}{softSched.late ? <span className="cheat-soft cheat-soft-late" title={`Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`}>Soft 15-17</span> : null}</> : null)}</span>
+                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (softSched ? <>{softSched.early && showCols.soft13 ? <span className="cheat-soft" title={`Favorable weeks 1-3 for ${p.position}: ${softSched.early.opps.join(', ')}`}>Soft 1-3</span> : null}{softSched.late && showCols.soft1517 ? <span className="cheat-soft cheat-soft-late" title={`Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`}>Soft 15-17</span> : null}</> : null)}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
@@ -7089,6 +7091,7 @@ function App() {
     const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets);
     const ids = new Set();
     if (plan && plan.slots) plan.slots.forEach(s => { if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id); });
+    if (plan && plan.benchTargets) plan.benchTargets.forEach(bt => { if (!dIds.has(bt.playerId)) ids.add(bt.playerId); }); // include the model's backups
     if (draftModel === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
     return ids;
   }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets]);
