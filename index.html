@@ -1457,6 +1457,36 @@ const FORMATS = {
     planFills: (myTeam, players, config, draftedIds) => buildOptimalPlan(myTeam, players, config, draftedIds),
     recommend: (player, team, config, marketState, marketAdjusted) => recommendBid(player, team, config, marketState, marketAdjusted),
   },
+  snake: {
+    label: 'Snake',
+    columns: [
+      ['adp', 'ADP', 'Average draft position — the overall pick where this player typically goes.'],
+      ['bestavail', 'Best avail', 'VORP rank among players still on the board (your best available value).'],
+      ['survives', 'Survives%', 'Estimated chance this player is still available at your next pick.'],
+    ],
+    // Annotate available players with their VORP rank (best available = rank 1).
+    valuePlayers: (players, config, draftedIds) => {
+      const drafted = draftedIds || new Set();
+      const score = p => (p.vorp != null ? p.vorp : (p.auctionValue != null ? p.auctionValue : (p.projectedPoints || 0)));
+      const ranked = players.filter(p => !drafted.has(p.id)).sort((a, b) => score(b) - score(a));
+      const rankMap = new Map(); ranked.forEach((p, i) => rankMap.set(p.id, i + 1));
+      return players.map(p => ({ ...p, bestAvailRank: rankMap.get(p.id) || null }));
+    },
+    progress: (draftHistory, players, config) => computeMarketState(draftHistory, players, config),
+    // state: { survivalProb, currentOverallPick, picksUntilNext, recentPicks, bestAvailableId }
+    recommend: (player, myTeam, state) => {
+      state = state || {};
+      const sp = (state.survivalProb != null)
+        ? state.survivalProb
+        : survivalProb(player, state.currentOverallPick || 1, state.picksUntilNext || 0, state.recentPicks || []);
+      const isBest = state.bestAvailableId != null && player && String(state.bestAvailableId) === String(player.id);
+      if (sp < 0.5 && isBest) return { label: 'Take now', tone: 'take', survives: sp };
+      if (sp > 0.8) return { label: 'Safe to wait', tone: 'wait', survives: sp };
+      return { label: 'Lean take', tone: 'lean', survives: sp };
+    },
+    // TODO Phase 4: replace with buildSnakePlan (best-roster-by-survival planner).
+    planFills: (myTeam, players, config, draftedIds) => null,
+  },
 };
 const getFormat = (config) => FORMATS[(config && config.format) || 'auction'] || FORMATS.auction;
 // ─── lib/adp.js ──────────────────────────
@@ -1488,6 +1518,49 @@ const getAdp = (player, config) => {
   if (!player) return 999;
   return ((config && config.format) === 'bestball') ? player.adpBestball : player.adpRedraft;
 };
+// ─── lib/snake.js ──────────────────────────
+// Standard-normal CDF (Abramowitz & Stegun 26.2.17), accurate to ~7e-8.
+function normalCdf(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989422804014327 * Math.exp(-z * z / 2);
+  let p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  p = 1 - p;
+  return z >= 0 ? p : 1 - p;
+}
+// How many picks until your NEXT turn in a snake draft.
+// Slot s of T teams picks at overall: odd round r -> (r-1)*T+s ; even round r -> r*T-s+1.
+// Consecutive gaps therefore alternate 2*(T-s)+1 and 2*s-1.
+function picksUntilNextPick(draftSlot, teams, currentOverallPick) {
+  const T = teams, s = draftSlot;
+  const pickAt = (r) => (r % 2 === 1) ? (r - 1) * T + s : r * T - s + 1;
+  for (let r = 1; r <= 5000; r++) {
+    const o = pickAt(r);
+    if (o > currentOverallPick) return o - currentOverallPick;
+  }
+  return 0;
+}
+// Probability a player is still available at your next pick.
+// Models his going-pick as Normal(adp, sd), sd = max(3, 0.16*adp).
+// Run dampening: if >=3 of the last 8 picks were his position, multiply by 0.7.
+function survivalProb(player, currentOverallPick, picksUntilNext, recentPicks) {
+  const adp = (player && player.adp != null) ? player.adp : 999;
+  const sd = Math.max(3, 0.16 * adp);
+  const nextPick = currentOverallPick + picksUntilNext;
+  let survives = 1 - normalCdf((nextPick - adp) / sd);
+  survives = Math.max(0, Math.min(1, survives));
+  const recent = (recentPicks || []).slice(-8);
+  const samePos = recent.filter(rp => rp && player && rp.position === player.position).length;
+  if (samePos >= 3) survives *= 0.7;
+  return Math.max(0, Math.min(1, survives));
+}
+// Self-test (silent unless a case fails — console.assert only logs on failure).
+console.assert(picksUntilNextPick(1, 12, 1) === 23, 'snake gap: slot1 r1 -> 23');
+console.assert(picksUntilNextPick(1, 12, 24) === 1, 'snake gap: slot1 r2 -> 1');
+console.assert(picksUntilNextPick(12, 12, 12) === 1, 'snake gap: slot12 r1 -> 1');
+console.assert(picksUntilNextPick(6, 12, 6) === 13, 'snake gap: slot6 r1 -> 13');
+console.assert(Math.abs(survivalProb({ adp: 23, position: 'RB' }, 23, 0, []) - 0.5) < 0.02, 'survival ~0.5 at adp==nextPick');
+console.assert(survivalProb({ adp: 10, position: 'RB' }, 5, 18, []) < 0.05, 'survival low when adp << nextPick');
+console.assert(survivalProb({ adp: 40, position: 'WR' }, 5, 18, []) > 0.9, 'survival high when adp >> nextPick');
 function totalRosterSpots(config) {
   return Object.values(config.roster).reduce((sum, p) => sum + p.total, 0);
 }
