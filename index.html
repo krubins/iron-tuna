@@ -1231,6 +1231,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-mock-title { margin-left: 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--text-muted); }
 .lp-mocktable tbody td:first-child, .lp-mocktable thead th:first-child { text-align: left; color: var(--text-primary); font-weight: 600; max-width: none; }
 .lp-mock-rec { color: var(--positive); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.lp-mock-img { display: block; width: 100%; height: auto; }
 .lp-prob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
 .lp-prob { display: flex; gap: 12px; align-items: flex-start; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-left: 3px solid var(--danger); border-radius: 10px; padding: 14px 16px; font-size: 14px; color: var(--text-secondary); line-height: 1.55; }
 .lp-prob-x { color: var(--danger); font-weight: 700; flex: 0 0 auto; }
@@ -1243,6 +1244,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-three-value .lp-three-t { color: var(--positive); }
 .lp-three-max { border-color: rgba(245,184,0,0.4); box-shadow: 0 0 18px rgba(245,184,0,0.08); }
 .lp-three-max .lp-three-t { color: var(--gold-text); }
+.lp-ideal { margin: 22px auto 0; max-width: 760px; text-align: center; font-size: 15.5px; color: var(--text-secondary); line-height: 1.6; background: linear-gradient(180deg, rgba(245,184,0,0.07), rgba(245,184,0,0.02)); border: 1px solid rgba(245,184,0,0.32); border-radius: 12px; padding: 16px 20px; }
+.lp-ideal b { color: var(--gold-text); }
 .lp-proof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 22px; }
 .lp-proof { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px; }
 .lp-proof-t { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; }
@@ -2338,7 +2341,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       {tagline && (
         <text x={vbW / 2} y={taglineY} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
-              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb"><tspan dx={tagFs * 0.96}>RULE THE DRAFT.</tspan><tspan dx={tagFs * -0.96}>{'\u2002\u2002\u2002OWN THE LEAGUE.'}</tspan></text>
+              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb"><tspan dx={tagFs * -0.96}>RULE THE DRAFT.</tspan><tspan dx={tagFs * 0.96}>{'\u2002\u2002\u2002OWN THE LEAGUE.'}</tspan></text>
       )}
     </svg>
   );
@@ -2447,6 +2450,7 @@ function LandingSplash({ onDismiss, onNav }) {
       'Full league scoring inputs',
       'Player tiers and auction strategy models',
       'Sortable, printable cheat sheet',
+      'The ideal team your budget can afford, no points left on the table',
       'No signup required to start',
     ], 'Build My Free Auction Sheet', 'prep', 'hero_cta_click'],
     ['Draft Night Mode', '$14.99', 'Live auction-day command', true, [
@@ -2493,25 +2497,9 @@ function LandingSplash({ onDismiss, onNav }) {
           <p className="lp-urgency">Draft season is here. Walk into your auction knowing your exact max on every player.</p>
         </div>
         <div className="lp-mock">
-          <div className="lp-mock-bar"><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-title">Your auction sheet · 12-team · $200 · PPR</span></div>
-          <div className="lp-compare-scroll" style={{ border: 'none' }}>
-            <table className="lp-table lp-mocktable">
-              <thead><tr><th>Player</th><th>Pos</th><th>Market</th><th>True Value</th><th>Your Max</th><th>Recommendation</th></tr></thead>
-              <tbody>
-                {mock.map((r, i) => (
-                  <tr key={i}>
-                    <td>{r[0]}</td>
-                    <td><span className={`position-tag ${r[1]}`}>{r[1]}</span></td>
-                    <td>{r[2]}</td>
-                    <td>{r[3]}</td>
-                    <td className="lp-td-us">{r[4]}</td>
-                    <td className="lp-mock-rec">{r[5]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="lp-shot-cap">Example values for a 12-team PPR auction. Yours recalculate to your exact league, then update live during Draft Night Mode.</div>
+          <div className="lp-mock-bar"><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-title">Your auction sheet &middot; market price, true value, your max</span></div>
+          <img src="cheatsheet.png" alt="Iron Tuna auction cheat sheet: market price (Proj), true value (Value), and your personal max bid (You) for every player by position" className="lp-mock-img" loading="lazy" />
+          <div className="lp-shot-cap">The real cheat sheet. Every player gets a market price, a true value, and your personal max, recalculated to your exact league, then updated live during Draft Night Mode.</div>
         </div>
         <div className="lp-section">
           <div className="lp-preview-eyebrow">The problem</div>
@@ -2532,7 +2520,8 @@ function LandingSplash({ onDismiss, onNav }) {
               </div>
             ))}
           </div>
-          <div className="lp-cta-row" style={{ marginTop: 26 }}>
+          <div className="lp-ideal">Then it builds the <b>ideal team your budget can actually buy</b>: the highest-scoring legal roster your money can afford, so you spend every dollar and leave no points on the table.</div>
+          <div className="lp-cta-row" style={{ marginTop: 22 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
           </div>
         </div>
