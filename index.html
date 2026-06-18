@@ -2304,7 +2304,6 @@ function LandingSplash({ onDismiss, onNav }) {
       'Roster targets that re-optimize as prices and availability shift',
       'Bid guidance that updates as the board moves',
       'The always-on AI Value Coach and Gameday Navigator for in-auction custom advice',
-      'Full refund anytime before you’ve drafted 10 players',
     ]],
   ];
   // First quote: founder. Second: intentional humor. Add genuine user testimonials here as they arrive.
@@ -2322,7 +2321,6 @@ function LandingSplash({ onDismiss, onNav }) {
   ];
   const faqs = [
     ['Is it really free?', 'Yes. Custom auction values for your exact league and scoring are free, with no signup. Draft Day Mode (the live management tool, Value Coach, and Gameday Navigator) is the $14.99 upgrade.'],
-    ['What if Draft Day Mode isn’t for me?', 'You get a full refund anytime before you’ve drafted 10 players — so you can try it live in your real auction and still back out if it isn’t pulling its weight.'],
     ['Where do the projections come from?', 'A compilation of ESPN, CBS, decades of fantasy experience, and direct conversations with leading fantasy sources — then reliability-adjusted and recalculated to your exact scoring.'],
     ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
     ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing, enter your settings (or paste / screenshot your scoring) and you are ready.'],
@@ -2351,7 +2349,7 @@ function LandingSplash({ onDismiss, onNav }) {
           <button className="lp-cta it-btn" onClick={() => go('prep')}>Get my auction values — free</button>
           <button className="lp-cta-quiet" onClick={scrollToHow}>See how it works ↓</button>
         </div>
-        <p className="lp-reassure">Free to value your league — no signup. <b>Draft Day Mode</b> is $14.99, with a full refund anytime before you've drafted 10 players.</p>
+        <p className="lp-reassure">Free to value your league — no signup. Upgrade to <b>Draft Day Mode</b> ($14.99, one-time per season) only when you want live, on-the-clock help.</p>
         <div className="it-value-strip" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginTop: 26, width: '100%', maxWidth: 680 }}>
           <div className="it-card" style={{ flex: '1 1 180px', padding: '16px 18px', textAlign: 'left' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--it-text-dim)', marginBottom: 6 }}>Market price</div>
@@ -6493,7 +6491,7 @@ function PricingModal({ account, onBuy, onClose, onLegal }) {
       <div className="modal" style={{ maxWidth: 740 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">Unlock Iron Tuna</div>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>One-time per season, not a subscription. Drafted, not impressed? Full refund.</p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>One-time per season, not a subscription.</p>
         <div className="tier-grid">
           {TIERS.map(t => { const owned = entitled(account, t.id); const feat = t.id === 'base';
             return (
