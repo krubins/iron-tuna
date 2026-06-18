@@ -485,7 +485,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .bs-row input[type="range"] { flex: 1; min-width: 90px; max-width: 220px; margin: 0; }
 .bs-cap2 { font-size: 10.5px; color: var(--text-muted); line-height: 1.35; margin-bottom: 2px; }
 .bs-cap2 b { color: var(--text-secondary); }
-/* Draft Day Mode teaser (#9) */
+/* Draft Night Mode teaser (#9) */
 .draftday-teaser { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: linear-gradient(90deg, rgba(245,184,0,0.08), rgba(45,212,163,0.06)); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 12px 16px; margin-top: 16px; }
 .ddt-body { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
 .ddt-lock { font-size: 18px; }
@@ -1215,6 +1215,40 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-threeline b { color: var(--text-primary); font-weight: 700; }
 .lp-threeline b.gold { color: var(--gold-text); }
 .lp-creditline { font-size: 12.5px; color: var(--text-muted); max-width: 680px; line-height: 1.6; margin: 30px auto 4px; }
+.lp-section { width: 100%; max-width: 880px; margin: 46px auto 8px; text-align: left; }
+.lp-mock { width: 100%; max-width: 880px; margin: 26px auto 10px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
+.lp-mock-bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border-subtle); }
+.lp-mock-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.18); }
+.lp-mock-title { margin-left: 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--text-muted); }
+.lp-mocktable tbody td:first-child, .lp-mocktable thead th:first-child { text-align: left; color: var(--text-primary); font-weight: 600; max-width: none; }
+.lp-mock-rec { color: var(--positive); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.lp-prob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+.lp-prob { display: flex; gap: 12px; align-items: flex-start; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-left: 3px solid var(--danger); border-radius: 10px; padding: 14px 16px; font-size: 14px; color: var(--text-secondary); line-height: 1.55; }
+.lp-prob-x { color: var(--danger); font-weight: 700; flex: 0 0 auto; }
+.lp-three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 22px; }
+.lp-three-card { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 12px; padding: 20px 18px; }
+.lp-three-n { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+.lp-three-t { font-family: var(--font-display); font-size: 21px; letter-spacing: 0.02em; margin: 8px 0; }
+.lp-three-d { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; }
+.lp-three-price .lp-three-t { color: var(--text-primary); }
+.lp-three-value .lp-three-t { color: var(--positive); }
+.lp-three-max { border-color: rgba(245,184,0,0.4); box-shadow: 0 0 18px rgba(245,184,0,0.08); }
+.lp-three-max .lp-three-t { color: var(--gold-text); }
+.lp-proof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 22px; }
+.lp-proof { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px; }
+.lp-proof-t { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; }
+.lp-proof-d { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+.lp-tier-cta { width: 100%; margin-top: 16px; font-size: 15px; padding: 12px 18px; }
+.lp-cta-ghost { background: transparent; color: var(--text-primary); border: 1px solid var(--border-strong); box-shadow: none; }
+.lp-cta-ghost:hover { background: var(--bg-elev); filter: none; }
+.lp-email { width: 100%; max-width: 680px; margin: 48px auto 8px; text-align: center; background: linear-gradient(180deg, rgba(45,212,163,0.07), rgba(45,212,163,0.02)); border: 1px solid rgba(45,212,163,0.3); border-radius: 16px; padding: 30px 26px; }
+.lp-email-h { font-family: var(--font-display); font-size: 25px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; }
+.lp-email-b { font-size: 14.5px; color: var(--text-secondary); line-height: 1.55; max-width: 470px; margin: 0 auto 18px; }
+.lp-email-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.lp-email-input { flex: 1 1 240px; max-width: 300px; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: 24px; padding: 13px 18px; color: var(--text-primary); font-size: 15px; }
+.lp-email-note { font-size: 11.5px; color: var(--text-muted); margin-top: 12px; }
+.lp-email-done { font-size: 16px; color: var(--positive); font-family: var(--font-display); letter-spacing: 0.02em; }
+@media (max-width: 760px) { .lp-prob-grid, .lp-three, .lp-proof-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .lp-trust { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; } .lp-steps { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
   .landing-page { padding: 0 14px 60px; }
@@ -2339,47 +2373,79 @@ function phaseIcon(i) {
 }
 function LandingSplash({ onDismiss, onNav }) {
   const [fadingOut, setFadingOut] = useState(false);
+  const [emailVal, setEmailVal] = useState('');
+  const [emailDone, setEmailDone] = useState(false);
   const faqRef = useRef(null);
   const howRef = useRef(null);
-  function scrollToHow() { if (howRef.current) howRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  function enter() { setFadingOut(true); setTimeout(() => onDismiss && onDismiss(), 350); }
-  function go(target) { if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } setFadingOut(true); setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350); }
+  const pricingRef = useRef(null);
+  const trk = (e, p) => { try { ITAnalytics.track(e, p || {}); } catch (_) {} };
+  function go(target, ev) {
+    if (ev) trk(ev, {});
+    if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (target === 'pricing') { if (pricingRef.current) pricingRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (target === 'how') { if (howRef.current) howRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    setFadingOut(true);
+    setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350);
+  }
+  function submitEmail() {
+    const v = (emailVal || '').trim();
+    if (!/.+@.+\..+/.test(v)) return;
+    trk('email_submitted', {});
+    // TODO: POST email to list provider (e.g. /api/subscribe) and/or save to account so the league can be reopened on draft night.
+    setEmailDone(true);
+  }
+  const mock = [
+    ['Bijan Robinson', 'RB', '$54', '$58', '$61', 'Target · bid to $61'],
+    ['Justin Jefferson', 'WR', '$49', '$52', '$55', 'Bid to $55'],
+    ['Jahmyr Gibbs', 'RB', '$46', '$49', '$47', 'Stop at $47'],
+    ['CeeDee Lamb', 'WR', '$44', '$47', '$50', 'Value · push to $50'],
+    ['Brock Bowers', 'TE', '$18', '$20', '$22', 'Pay up to $22'],
+    ['Josh Allen', 'QB', '$9', '$6', '$7', 'Walk past $7'],
+  ];
+  const problems = [
+    'Static sheets tell you what a player is worth before the draft starts, not after the room has spent half its budget.',
+    'They ignore your remaining roster needs, so a player is worth a different amount to you than to the manager across the table.',
+    'They do not track who still has money, so you cannot see who is about to be forced into overpaying next.',
+    'Nothing stops you from chasing a player two or three bids too far, which is exactly how good drafts go bad.',
+  ];
+  const threeNum = [
+    ['Market Price', 'What the room is likely to pay for him right now.', 'price'],
+    ['True Value', 'What he is actually worth under your exact league settings.', 'value'],
+    ['Your Max', 'The highest you should personally bid, given your roster, budget, and remaining needs.', 'max'],
+  ];
+  const proof = [
+    ['Tracks every team\'s budget', 'See who is flush and who is broke, so you know who can still bid you up and who is stuck bargain hunting.'],
+    ['Recalculates your max after every nomination', 'Your personal max bid updates the instant the board moves, so the number on screen is always current.'],
+    ['Shows where the room is overpaying', 'Spot the runs and panic bids in real time, and let rivals torch their budgets on names.'],
+    ['Finds value pockets by position', 'Know which positions still have cheap points left, and pounce before anyone else notices.'],
+    ['Keeps your roster legal and balanced', 'Guidance that respects your open slots and budget, so you never get stuck unable to fill a starter.'],
+    ['Helps you avoid panic bids', 'A clear walk-away number on every player, so you stop chasing and start winning the auction.'],
+  ];
   const tiers = [
-    ['Prep', 'Free', 'Value your league, no signup', [
-      'Custom auction values for your exact league and scoring',
-      'Reliability-adjusted pricing that weighs injury frequency and positional consistency',
-      'Tiered cheat sheet and six strategy models',
-      'A budget-aware optimal-lineup planner',
-      'The dollar allocation that builds your highest-scoring team',
-      'Unlimited mock auctions against strategy-driven CPU managers',
-    ]],
-    ['Draft Day Mode', '$14.99', 'Live auction-day command', [
-      'Track player selection, available funds, and maximum remaining bid',
-      'Roster targets that re-optimize as prices and availability shift',
-      'Bid guidance that updates as the board moves',
-      'The always-on AI Value Coach and Gameday Navigator for in-auction custom advice',
-    ]],
-  ];
-  // First quote: founder. Second: intentional humor. Add genuine user testimonials here as they arrive.
-  const quotes = [
-    ['Most of your league is bidding on names. Iron Tuna shows you where the points are hiding, so your bids set you up to win.', 'Fantasy player for 27 years'],
-    ['Helped me optimize my kicker.', 'No one, ever'],
-  ];
-  const shot = [
-    ['RB', 'Bijan Robinson', '54', '58', '61'],
-    ['WR', 'Justin Jefferson', '49', '52', '55'],
-    ['RB', 'Jahmyr Gibbs', '46', '49', '47'],
-    ['WR', 'CeeDee Lamb', '44', '47', '50'],
-    ['TE', 'Brock Bowers', '18', '20', '22'],
-    ['QB', 'Josh Allen', '9', '6', '7'],
+    ['Free Cheat Sheet', '$0', 'Value your league, no signup', false, [
+      'Custom auction values for your exact league',
+      'Full league scoring inputs',
+      'Player tiers and strategy models',
+      'Sortable, printable cheat sheet',
+      'No signup required to start',
+    ], 'Build My Free Auction Sheet', 'prep', 'hero_cta_click'],
+    ['Draft Night Mode', '$14.99', 'Live auction-day command', true, [
+      'Live auction tracking, every bid logged',
+      'Opponent budgets and money off the board',
+      'Dynamic max bids that update as the room moves',
+      'Roster construction guidance and position scarcity',
+      'The live AI Value Coach, calibrated to your draft',
+      'Save and reopen your draft, works even if Wi-Fi drops',
+    ], 'Unlock Draft Night Mode', 'board', 'draft_mode_clicked'],
   ];
   const faqs = [
-    ['Is it really free?', 'Yes. Custom auction values for your exact league and scoring are free, with no signup. Draft Day Mode (the live management tool, Value Coach, and Gameday Navigator) is the $14.99 upgrade.'],
-    ['Where do the projections come from?', 'A compilation of ESPN, CBS, decades of fantasy experience, and direct conversations with leading fantasy sources, then reliability-adjusted and recalculated to your exact scoring.'],
-    ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
-    ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing, enter your settings (or paste / screenshot your scoring) and you are ready.'],
-    ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player, market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time.'],
-    ['Will it work on draft night?', 'Yes. It runs entirely in your browser and keeps working even if the Wi-Fi drops.'],
+    ['Is this for auction drafts or snake drafts?', 'Auction, first and foremost. Iron Tuna is built around bidding, budgets, and max-bid math, not snake-draft pick order. If your league spends a budget to buy players, this is for you.'],
+    ['Do I need to create an account?', 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft night.'],
+    ['Can I use custom scoring?', 'Yes. Set your teams, budget, roster slots, and full custom scoring, and every value recalculates to your exact settings, including weird home-league rules.'],
+    ['Can I use it during a live draft?', 'Yes. Draft Night Mode is built to run live: log each bid, track every budget, and read your updated max bid as the auction unfolds.'],
+    ['What happens if my Wi-Fi drops?', 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.'],
+    ['Is this legal and fair to use in my league?', 'Yes. It is a smarter cheat sheet, the same as any rankings or values tool. Values are projections, not guarantees, and your edge comes from reacting faster and more rationally than the rest of the room.'],
+    ['How is this different from a normal cheat sheet?', 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.'],
   ];
   return (
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
@@ -2387,97 +2453,115 @@ function LandingSplash({ onDismiss, onNav }) {
       <nav className="lp-ribbon">
         <div className="lp-ribbon-brand"><button className="lp-ribbon-logo-btn" onClick={e => { const sc = e.currentTarget.closest('.landing-page'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); }} title="Back to top" aria-label="Iron Tuna: back to top"><LogoMark height={22} /></button></div>
         <div className="lp-ribbon-links">
-          <button onClick={() => go('prep')}>Auction Prep</button>
-          <button onClick={() => go('board')}>Auction Day Management</button>
-          <button onClick={() => go('faq')}>FAQs</button>
+          <button onClick={() => go('how')}>How it works</button>
+          <button onClick={() => go('pricing')}>Draft Night Mode</button>
+          <button onClick={() => go('faq')}>FAQ</button>
           <button className="lp-ribbon-cta" onClick={() => go('signin')}>Sign in</button>
         </div>
       </nav>
       <div className="lp-inner">
         <div className="lp-hero it-hero">
-        <LogoMark tagline height={300} className="landing-logo" />
-        <div className="lp-cmd">Live AI Auction Draft Assistant</div>
-        <h1 className="lp-head">Know exactly how high to bid when you're on the clock.</h1>
-        <p className="lp-sub">On draft night, <b>track all bids</b> while a <b>live AI Navigator</b> tells you who to target, your exact max, and when to walk. It starts with <b>free custom values</b> calibrated to your league.</p>
-        <div className="lp-cta-row" style={{ marginTop: 6 }}>
-          <button className="lp-cta" onClick={() => go('prep')}>Get your auction values - FREE</button>
-          <button className="lp-cta lp-cta-alt" onClick={() => go('board')}>DOMINATE YOUR AUCTION - $14.99</button>
+          <LogoMark tagline height={300} className="landing-logo" />
+          <div className="lp-cmd">The auction draft weapon</div>
+          <h1 className="lp-head">Stop guessing what to bid.</h1>
+          <p className="lp-sub">Iron Tuna gives you <b>custom auction values</b>, <b>true player value</b>, and <b>your personal max bid</b> for every player in your exact league.</p>
+          <div className="lp-cta-row" style={{ marginTop: 6 }}>
+            <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
+            <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See Draft Night Mode</button>
+          </div>
+          <p className="lp-reassure">Free custom auction values, no signup. <b>Draft Night Mode</b> is a one-time $14.99, the live edge your league cannot get for free.</p>
         </div>
-        <p className="lp-reassure">Free custom auction values, no signup. The <b>Draft Tracker with live AI Navigator</b> (Draft Day Mode) is a one-time $14.99, the edge your league can't get for free.</p>
+        <div className="lp-mock">
+          <div className="lp-mock-bar"><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-title">Your auction sheet · 12-team · $200 · PPR</span></div>
+          <div className="lp-compare-scroll" style={{ border: 'none' }}>
+            <table className="lp-table lp-mocktable">
+              <thead><tr><th>Player</th><th>Pos</th><th>Market</th><th>True Value</th><th>Your Max</th><th>Recommendation</th></tr></thead>
+              <tbody>
+                {mock.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r[0]}</td>
+                    <td><span className={`position-tag ${r[1]}`}>{r[1]}</span></td>
+                    <td>{r[2]}</td>
+                    <td>{r[3]}</td>
+                    <td className="lp-td-us">{r[4]}</td>
+                    <td className="lp-mock-rec">{r[5]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="lp-shot-cap">Example values for a 12-team PPR auction. Yours recalculate to your exact league, then update live during Draft Night Mode.</div>
         </div>
-        <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser, no account, nothing uploaded, and every value is explainable.</p>
-        <div className="lp-how" ref={howRef}>
+        <div className="lp-section">
+          <div className="lp-preview-eyebrow">The problem</div>
+          <h2 className="lp-preview-h">Auction drafts punish static cheat sheets</h2>
+          <div className="lp-prob-grid">
+            {problems.map((p, i) => <div className="lp-prob" key={i}><span className="lp-prob-x">✕</span><span>{p}</span></div>)}
+          </div>
+        </div>
+        <div className="lp-section" ref={howRef}>
           <div className="lp-preview-eyebrow">How it works</div>
-          <h2 className="lp-phases-title">Three steps to draft night</h2>
-          <div className="lp-steps">
-            <div className="lp-step"><div className="lp-step-n">1</div><div className="lp-step-h">Set your league</div><div className="lp-step-b">Teams, budget, roster slots, and full custom scoring. Paste or screenshot your settings and you're ready, no account required.</div></div>
-            <div className="lp-step"><div className="lp-step-n">2</div><div className="lp-step-h">Get your numbers</div><div className="lp-step-b">Market price, true value, and your personal max for every player, recalculated to your exact format and strategy.</div></div>
-            <div className="lp-step"><div className="lp-step-n">3</div><div className="lp-step-h">Draft with the navigator</div><div className="lp-step-b">Live guidance on the clock: who to target, how high to go, and when to let a player walk.</div></div>
+          <h2 className="lp-preview-h">Three numbers on every player</h2>
+          <div className="lp-three">
+            {threeNum.map(([t, d, k], i) => (
+              <div className={`lp-three-card lp-three-${k}`} key={i}>
+                <div className="lp-three-n">0{i + 1}</div>
+                <div className="lp-three-t">{t}</div>
+                <div className="lp-three-d">{d}</div>
+              </div>
+            ))}
+          </div>
+          <div className="lp-cta-row" style={{ marginTop: 26 }}>
+            <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
           </div>
         </div>
-        <div className="lp-compare">
-          <div className="lp-preview-eyebrow">How it compares</div>
-          <h2 className="lp-preview-h">The only auction tool built around a live AI co-pilot</h2>
-          <div className="lp-compare-cap">How the auction tools compare<sup className="lp-compare-fn">*</sup></div>
-          <div className="lp-compare-scroll">
-          <table className="lp-table">
-            <thead>
-              <tr><th></th><th className="lp-th-us">Iron Tuna</th><th>FantasyPros</th><th>Draft Sharks</th><th>ESPN / Yahoo / Sleeper</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Auction management: track all picks, bidder funds, max bids</td><td className="lp-td-us">✓</td><td className="lp-no">Manual entry only</td><td className="lp-yes">✓</td><td className="lp-mid">In-platform only</td></tr>
-              <tr><td>Live in-draft AI: who to bid on and your exact max, in real time</td><td className="lp-td-us">✓</td><td className="lp-no">Manual entry only</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">✗</td></tr>
-              <tr><td>AI assistant with live Q&amp;A, calibrated to your league and the current auction</td><td className="lp-td-us">✓</td><td className="lp-no">✗</td><td className="lp-no">✗</td><td className="lp-no">✗</td></tr>
-              <tr><td>Three numbers per player, price · true value · your max</td><td className="lp-td-us">✓</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid only</td><td className="lp-no">Generic $</td></tr>
-              <tr><td>Calibrated to your exact league &amp; scoring</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-yes">✓</td><td className="lp-no">Generic</td></tr>
-              <tr><td>Auction-first, not snake with auction bolted on</td><td className="lp-td-us">✓</td><td className="lp-no">✗</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
-              <tr><td>Free to start</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-no">✗</td><td className="lp-yes">✓</td></tr>
-              <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$48–96</td><td>Free (generic)</td></tr>
-            </tbody>
-          </table>
+        <div className="lp-section">
+          <div className="lp-preview-eyebrow">On draft night</div>
+          <h2 className="lp-preview-h">What Iron Tuna does during your draft</h2>
+          <div className="lp-proof-grid">
+            {proof.map(([t, d], i) => <div className="lp-proof" key={i}><div className="lp-proof-t">{t}</div><div className="lp-proof-d">{d}</div></div>)}
           </div>
-          <div className="lp-compare-note"><sup className="lp-compare-fn">*</sup> As of 2026, the date of posting. Competitor features and pricing reflect publicly listed plans and may change. FantasyPros' live draft sync covers snake drafts; real auction drafts use manual entry.</div>
         </div>
-        <div className="lp-phases-wrap">
-          <h2 className="lp-phases-title">Two tiers. One edge.</h2>
+        <div className="lp-section" ref={pricingRef}>
+          <div className="lp-preview-eyebrow">Free vs paid</div>
+          <h2 className="lp-preview-h">Start free. Upgrade for draft night.</h2>
           <div className="lp-tiers">
-          {tiers.map(([name, price, tag, items], i) => (
-            <div className={`lp-tier lp-tier-${i}${i === 1 ? ' lp-tier-top' : ''}`} key={i}>
-              {i === 1 && <div className="lp-tier-badge">Premium</div>}
-              <div className="lp-tier-head"><span className="lp-tier-name">{name}</span><span className="lp-tier-price">{price}</span></div>
-              <div className="lp-tier-tag">{tag}</div>
-              <ul className="lp-tier-list">{items.map((it, j) => <li key={j}>{it}</li>)}</ul>
-            </div>
-          ))}
+            {tiers.map(([name, price, tag, top, items, cta, target, ev], i) => (
+              <div className={`lp-tier lp-tier-${i}${top ? ' lp-tier-top' : ''}`} key={i}>
+                {top && <div className="lp-tier-badge">Recommended</div>}
+                <div className="lp-tier-head"><span className="lp-tier-name">{name}</span><span className="lp-tier-price">{price}</span></div>
+                <div className="lp-tier-tag">{tag}</div>
+                <ul className="lp-tier-list">{items.map((it, j) => <li key={j}>{it}</li>)}</ul>
+                <button className={`lp-cta ${top ? 'lp-cta-alt' : 'lp-cta-ghost'} lp-tier-cta`} onClick={() => go(target, ev)}>{cta}</button>
+              </div>
+            ))}
           </div>
+          <div className="lp-compare-note">Values are projections, not guarantees. The edge comes from reacting faster and more rationally than the room. Built for auction drafters, not snake drafts, and ready for custom and weird home-league settings.</div>
         </div>
-        <div className="lp-preview">
-          <div className="lp-preview-eyebrow">A look inside</div>
-          <h2 className="lp-preview-h">What you see when you're on the clock</h2>
-                    <img src="onclock.jpg" alt="Iron Tuna cheat sheet showing each player's projected price (PROJ), true value (VALUE), and personal max bid (YOU), with the Gameday Navigator coach" className="lp-shot-img" loading="lazy" />
-          <div className="lp-shot-cap">Three numbers on every player, <b style={{color:'var(--text-secondary)'}}>Proj</b> (market price), <b style={{color:'var(--text-secondary)'}}>Value</b> (true worth), and <b style={{color:'var(--gold-text)'}}>You</b> (your personal max), with the Gameday Navigator talking you through each bid in real time.</div>
-        </div>
-        <div className="lp-ai-section">
-          <div className="lp-preview-eyebrow">Purpose-built AI</div>
-          <h2 className="lp-preview-h">Not just another ChatGPT/Claude wrapper</h2>
-          <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s <b>Value Coach</b> lives inside your draft board, embedded with <b>your league’s scoring and every pick as it happens</b>. Built on real auction data and hundreds of drafts’ worth of bidding, it gives <b>live, relevant advice</b> the moment you need it. Think of it as a cheat code that makes you the sharpest manager at the table.</p>
+        <div className="lp-email">
+          {!emailDone ? (<>
+            <div className="lp-email-h">Save your league for draft night</div>
+            <p className="lp-email-b">Create a free account to save your league, reopen it on draft night, and get preseason auction updates.</p>
+            <div className="lp-email-row">
+              <input type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} onFocus={() => trk('email_capture_viewed', {})} onKeyDown={e => { if (e.key === 'Enter') submitEmail(); }} placeholder="you@email.com" className="lp-email-input" />
+              <button className="lp-cta" onClick={submitEmail}>Save My League</button>
+            </div>
+            <div className="lp-email-note">No spam. Just your saved league and preseason value updates.</div>
+          </>) : (
+            <div className="lp-email-done">You are on the list. We will email your saved league and preseason auction updates.</div>
+          )}
         </div>
         <div className="lp-faq" ref={faqRef}>
           <div className="lp-preview-eyebrow">FAQ</div>
           <h2 className="lp-preview-h">Questions, answered</h2>
-          {faqs.map(([q, a], i) => (
-            <div className="lp-faq-item" key={i}>
-              <div className="lp-faq-q">{q}</div>
-              <div className="lp-faq-a">{a}</div>
-            </div>
-          ))}
+          {faqs.map(([q, a], i) => (<div className="lp-faq-item" key={i}><div className="lp-faq-q">{q}</div><div className="lp-faq-a">{a}</div></div>))}
         </div>
-        <div className="lp-why"><b>Why it's better:</b> most tools hand you one generic number. Iron Tuna personalizes to your roster, your budget, and the live market, and shows its work, so every call is one you can trust.</div>
-        <div className="lp-cta-row">
-          <button className="lp-cta" onClick={enter}>Get my auction values, it's free</button>
-          <button className="lp-cta lp-cta-alt" onClick={() => go('board')}>Run your auction &amp; get advanced prep tools</button>
+        <div className="lp-cta-row" style={{ marginTop: 8 }}>
+          <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
+          <button className="lp-cta lp-cta-alt" onClick={() => go('board', 'draft_mode_clicked')}>Unlock Draft Night Mode</button>
         </div>
         <div className="lp-note">Works on draft night, even if the Wi-Fi drops.</div>
+        <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser, no account to start, nothing uploaded, and every value is explainable.</p>
       </div>
     </div>
   );
@@ -7753,7 +7837,7 @@ function App() {
       <div className="board-layout board-norail">
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} />
       </div>
-      {!has('coach') && (<div className="draftday-teaser no-print"><div className="ddt-body"><span className="ddt-lock">🔒</span><div><div className="ddt-title">Draft Day Mode, Advanced Auction Day Management</div><div className="ddt-text">This board is your pre-draft plan. On draft night, the live AI navigator tracks every team's budget and tells you who to bid on and exactly how high as picks come in.</div></div></div><button className="ddt-cta" onClick={() => setOverlay('pricing')}>See what's inside</button></div>)}
+      {!has('coach') && (<div className="draftday-teaser no-print"><div className="ddt-body"><span className="ddt-lock">🔒</span><div><div className="ddt-title">Draft Night Mode, Advanced Auction Day Management</div><div className="ddt-text">This board is your pre-draft plan. On draft night, the live AI navigator tracks every team's budget and tells you who to bid on and exactly how high as picks come in.</div></div></div><button className="ddt-cta" onClick={() => setOverlay('pricing')}>See what's inside</button></div>)}
       </>
     );
     if (view === 'board') return draftBoardEl;
