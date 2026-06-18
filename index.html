@@ -4017,6 +4017,13 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const wiModelKey = model || 'ideal';
   const wiModelLabel = (models.find(mm => mm[0] === wiModelKey) || ['ideal', 'Ideal Team'])[1];
   const wiPlan = useMemo(() => { if (!myTeam || !wiActive) return null; try { return buildModel(wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, activeAnchors); } catch (e) { return null; } }, [wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  const heatRows = useMemo(() => ['RB', 'WR', 'QB', 'TE'].map(pos => {
+    const all = (players || []).filter(p => p.position === pos).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+    const topN = all.slice(0, 12);
+    const left = topN.filter(p => !(draftedIds && draftedIds.has(p.id))).length;
+    const ms = marketState && marketState[pos];
+    return { pos, left, total: topN.length, heat: ms ? ms.heat : null, sample: ms ? ms.sampleSize : 0 };
+  }), [players, draftedIds, marketState]);
   const dyn = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => i && (i.text || '').length <= 300), [players, myTeam, teams, config, draftedIds, marketState, games]);
   const facts = useMemo(() => [...dyn, ...(PERF_NOTES.current || []), ...FANTASY_FACTS, ...(PERF_NOTES.library || [])], [dyn]);
   const flen = facts.length;
@@ -4083,6 +4090,24 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <span style={{ flexBasis: '100%', height: 0 }} />
         <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Draft any player straight from the sheet, no separate list: click to assign him to a team; drag to rerank.' : 'Build your board right here: click a player to target him; drag to rerank.'} Click a Proj price to edit it.</div>
         <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}><span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444', marginLeft: 10 }}>● potentially overpriced</span></div>
+        {myTeam && (
+          <div className="ch-market" style={{ flexBasis: '100%', marginTop: 11 }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-muted)', marginBottom: 6 }}>Position market</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {heatRows.map(r => {
+                const heatColor = r.heat === 'hot' ? '#ef4444' : r.heat === 'cold' ? 'var(--positive)' : 'var(--text-secondary)';
+                const heatLabel = r.sample >= 2 ? (r.heat === 'hot' ? 'running hot, let it pass' : r.heat === 'cold' ? 'cooling, pounce on value' : 'about fair, bid your number') : 'no read yet';
+                return (
+                  <div key={r.pos} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }} title={`${r.left} of the top ${r.total} ${r.pos}s are still available`}>
+                    <span className={`position-tag ${r.pos}`} style={{ minWidth: 30 }}>{r.pos}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: r.left <= 3 ? 'var(--gold-text)' : 'var(--text-secondary)' }}>{r.left}/{r.total} elite left</span>
+                    <span style={{ marginLeft: 'auto', color: heatColor, fontWeight: 600 }}>{heatLabel}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
       <div className="ch-insights-col">
         <div className="ch-insights ch-ins-facts">
