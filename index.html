@@ -6973,8 +6973,13 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   // so return the best plan across the unforced optimum and every strategy skeleton. It can never
   // score below another model.
   if (key === 'ideal') {
-    const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(planFor);
-    return cands.reduce((best, p) => (p && (!best || (p.starterPoints || 0) > (best.starterPoints || 0))) ? p : best, null);
+    const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(planFor).filter(Boolean);
+    // Prefer the highest-scoring plan that actually fits the budget; only fall back to
+    // an over-budget skeleton if nothing is feasible (so a forced what-if pick at a high
+    // price re-optimizes the rest instead of clinging to an unaffordable stud-stack).
+    const feas = cands.filter(p => p.feasible);
+    const pool = feas.length ? feas : cands;
+    return pool.reduce((best, p) => (!best || (p.starterPoints || 0) > (best.starterPoints || 0)) ? p : best, null);
   }
   return planFor(key);
 }
