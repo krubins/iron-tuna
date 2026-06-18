@@ -918,6 +918,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach-insights .ci-empty { font-size: 11px; color: var(--text-muted); }
 .coach.dock .coach-input textarea { min-height: 56px; }
 .main.board-main, .main.prep-main { padding-bottom: 150px; }
+.main.prep-main.coach-hidden { padding-bottom: 24px; }
+.coach-hidebtn { color: var(--positive) !important; }
 .main.is-draftboard { padding-bottom: 24px; }
 .main.board-collapsed { grid-template-columns: 1fr auto; }
 .main.board-full { grid-template-columns: 1fr; }
@@ -6513,8 +6515,9 @@ function buildCoachInsights(ctx) {
   if (mode === 'draft') return [{ label: 'Draft underway', text: 'Trends appear once a few players are in. For now, stick to your values and watch the first RB/WR runs to read the room.' }].concat(prep);
   return prep;
 }
-function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi }) {
+function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi, onOpenChange }) {
   const [open, setOpen] = useState(!locked);
+  useEffect(() => { onOpenChange && onOpenChange(open); }, [open]);
   const [msgs, setMsgs] = useState([{ role: 'bot', text: 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.', intro: true }]);
   const [text, setText] = useState('');
   const [pending, setPending] = useState(null);
@@ -6662,7 +6665,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   return (
     <div className={`coach ${big ? 'big' : 'dock'}`} style={!big ? { ...(dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : {}), ...(inputW ? { ['--coach-input-w']: inputW + 'px' } : {}) } : undefined}>
       {!big && <div className="coach-resize" onPointerDown={startDockResize} title="Drag to resize" />}
-      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}<button onClick={() => setOpen(false)} title="Minimize the coach">hide</button></div></div>
+      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span><button className="coach-hidebtn" onClick={() => setOpen(false)} title="Minimize the coach, gives the space back to the player list">hide</button></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}</div></div>
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
       <div className="coach-input">{!big && <div className="coach-col-resize" onPointerDown={startColResize} title="Drag to resize question vs. answer" />}<textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
@@ -6836,7 +6839,7 @@ function LegalModal({ onClose }) {
             </div>
           ) : (
             <div>
-              <p><b>Terms of Service (template).</b> Iron Tuna is a decision-support tool for fantasy drafts and provides no guarantee of results. Season passes are one-time purchases for the stated season. Refunds are available on request for first-time purchases.</p>
+              <p><b>Terms of Service (template).</b> Iron Tuna is a decision-support tool for fantasy drafts and provides no guarantee of results. Season passes are one-time purchases for the stated season.</p>
               <p style={{ marginTop: 8 }}>You are responsible for complying with your fantasy platform's terms when importing league data. This is placeholder text to be reviewed by counsel before launch.</p>
             </div>
           )}
@@ -7091,6 +7094,7 @@ function App() {
   const [assignPlayer, setAssignPlayer] = useState(null);
   const [customForcedIds, setCustomForcedIds] = useState(() => new Set());
   const [customBuilding, setCustomBuilding] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(true);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railOpen, setRailOpen] = useState(true);
@@ -7610,14 +7614,14 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} config={config} onOpenSettings={() => setView('settings')} />
-      <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'prep' && !coachOpen ? 'coach-hidden' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
-      {!showSplash && view === 'prep' && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
+      {!showSplash && view === 'prep' && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onOpenChange={setCoachOpen} />}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} seasonGames={SEASON_GAMES} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
