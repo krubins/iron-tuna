@@ -2445,7 +2445,7 @@ function LandingSplash({ onDismiss, onNav }) {
     ['Free Cheat Sheet', '$0', 'Value your league, no signup', false, [
       'Custom auction values for your exact league',
       'Full league scoring inputs',
-      'Player tiers and strategy models',
+      'Player tiers and auction strategy models',
       'Sortable, printable cheat sheet',
       'No signup required to start',
     ], 'Build My Free Auction Sheet', 'prep', 'hero_cta_click'],
@@ -2454,7 +2454,7 @@ function LandingSplash({ onDismiss, onNav }) {
       'Opponent budgets and money off the board',
       'Dynamic max bids that update as the room moves',
       'Roster construction guidance and position scarcity',
-      'The live AI Value Coach, calibrated to your draft',
+      'A Value Coach that answers player and price questions mid-auction',
       'Save and reopen your draft, works even if Wi-Fi drops',
     ], 'Unlock Draft Night Mode', 'board', 'draft_mode_clicked'],
   ];
@@ -2482,14 +2482,14 @@ function LandingSplash({ onDismiss, onNav }) {
       <div className="lp-inner">
         <div className="lp-hero it-hero">
           <LogoMark tagline height={208} className="landing-logo" />
-          <div className="lp-cmd">The auction draft weapon</div>
+          <div className="lp-cmd">For auction &amp; salary-cap leagues</div>
           <h1 className="lp-head">Stop guessing what to bid.</h1>
           <p className="lp-sub">Iron Tuna gives you <b>custom auction values</b>, <b>true player value</b>, and <b>your personal max bid</b> for every player in your exact league.</p>
           <div className="lp-cta-row" style={{ marginTop: 6 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
             <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See Draft Night Mode</button>
           </div>
-          <p className="lp-reassure">Free custom auction values, no signup. <b>Draft Night Mode</b> is a one-time $14.99, the live edge your league cannot get for free.</p>
+          <p className="lp-reassure">Free custom auction values, no signup. <b>Draft Night Mode</b> is a one-time $14.99 for live, on-the-clock max bids.</p>
           <p className="lp-urgency">Draft season is here. Walk into your auction knowing your exact max on every player.</p>
         </div>
         <div className="lp-mock">
@@ -2560,7 +2560,7 @@ function LandingSplash({ onDismiss, onNav }) {
                 <tr><td>Live in-draft max bid, recalculated every nomination</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">No</td></tr>
                 <tr><td>Tracks every team's budget and money off the board</td><td className="lp-td-us">Yes</td><td className="lp-no">Manual</td><td className="lp-no">Manual</td><td className="lp-yes">Yes</td><td className="lp-mid">Host only</td></tr>
                 <tr><td>Three numbers per player: market, true value, your max</td><td className="lp-td-us">Yes</td><td className="lp-mid">Values only</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid</td><td className="lp-no">Generic $</td></tr>
-                <tr><td>Live AI coach calibrated to your league and the room</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td></tr>
+                <tr><td>Live coach that answers player and price questions mid-auction</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td></tr>
                 <tr><td>Auction-first, not snake with auction bolted on</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-mid">Partial</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
                 <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$9.99/mo</td><td>~$48-96/yr</td><td>Free (generic)</td></tr>
               </tbody>
@@ -2607,7 +2607,7 @@ function LandingSplash({ onDismiss, onNav }) {
           <button className="lp-cta lp-cta-alt" onClick={() => go('board', 'draft_mode_clicked')}>Unlock Draft Night Mode</button>
         </div>
         <div className="lp-note">Works on draft night, even if the Wi-Fi drops.</div>
-        <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser, no account to start, nothing uploaded, and every value is explainable.</p>
+        <p className="lp-creditline">Built on ESPN and CBS projections, reliability-adjusted for injuries and consistency, then re-priced to your league. Runs in your browser, nothing uploaded, and every value shows its math.</p>
         <p className="lp-founder">Built by a 27-year auction player who got tired of overpaying, not a content farm. Values are projections, not guarantees, the edge is reacting faster and more rationally than the room.</p>
         <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
         <button className="lp-sticky-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet, free</button>
@@ -6924,7 +6924,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   }
   const active = [];
   Object.entries(valueAdjust || {}).forEach(([pos, obj]) => Object.entries(obj || {}).forEach(([tier, m]) => { if (Math.abs(m - 1) > 0.01) active.push(`${tier === 'all' ? '' : tier + ' '}${pos} ${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`); }));
-  if (embed && locked) return (<div className="coach embed coach-lockedbox"><div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Locked</span></span></div><div className="coach-lockedmsg">The live AI Value Coach sizes up any player, price, or strategy question as your draft unfolds, grounded in your league and live board.<button className="coach-unlockbtn" onClick={onUnlock}>Unlock the Value Coach</button></div></div>);
+  if (embed && locked) return (<div className="coach embed coach-lockedbox"><div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Locked</span></span></div><div className="coach-lockedmsg">Ask what a player is worth, how high to go, or where the value is, and get an answer grounded in your league and the live board.<button className="coach-unlockbtn" onClick={onUnlock}>Unlock the Value Coach</button></div></div>);
   if (!open && !embed) return (<button className={`coach-fab ${locked ? 'locked' : ''}`} onClick={() => locked ? onUnlock() : setOpen(true)} title={locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`}>{name}{locked ? ' · locked' : (active.length ? ` · ${active.length}` : '')}</button>);
   return (
     <div className={`coach ${embed ? 'embed' : (big ? 'big' : 'dock')}`} style={(!big && !embed) ? { ...(dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : {}), ...(inputW ? { ['--coach-input-w']: inputW + 'px' } : {}) } : undefined}>
