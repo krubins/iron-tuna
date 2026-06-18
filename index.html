@@ -617,8 +617,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .checkout-fake { font-family: var(--font-mono); color: var(--text-muted); }
 .checkout-stripe-note { font-size: 10px; color: var(--text-muted); margin-top: 8px; font-style: italic; }
 .header-acct { display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--border-subtle); }
-.signin-btn { background: var(--positive); border: none; color: #04231b; font-weight: 800; padding: 7px 16px; border-radius: 8px; font-size: 12.5px; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; box-shadow: 0 3px 12px rgba(45,212,163,0.32); transition: filter 0.12s; }
-.signin-btn:hover { filter: brightness(1.08); }
+.signin-btn { background: rgba(45,212,163,0.15); border: 1px solid var(--positive); color: var(--positive); font-weight: 700; padding: 6px 14px; border-radius: 10px; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; cursor: pointer; transition: background 0.12s; }
+.signin-btn:hover { background: rgba(45,212,163,0.28); }
 .tm-pill { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; padding: 4px 8px; border-radius: 10px; cursor: pointer; border: 1px solid var(--border-strong); }
 .tm-pill.on { background: rgba(45,212,163,0.15); color: var(--positive); border-color: var(--positive); }
 .tm-pill.off { background: var(--bg-elev); color: var(--text-muted); }
@@ -1064,8 +1064,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ribbon-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .lp-ribbon-links button { background: none; border: none; color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: color 0.12s, background 0.12s; }
 .lp-ribbon-links button:hover { color: var(--text-primary); background: var(--bg-elev); }
-.lp-ribbon-cta { color: #04231b !important; background: var(--positive) !important; font-weight: 800 !important; padding: 9px 20px !important; font-size: 13px !important; border-radius: 8px !important; box-shadow: 0 4px 14px rgba(45,212,163,0.4); text-transform: uppercase; letter-spacing: 0.05em; }
-.lp-ribbon-cta:hover { filter: brightness(1.08); background: var(--positive); color: #06281f; }
+.lp-ribbon-cta { color: var(--positive) !important; background: rgba(45,212,163,0.15) !important; border: 1px solid var(--positive) !important; font-weight: 700 !important; padding: 7px 15px !important; font-size: 12px !important; border-radius: 10px !important; box-shadow: none !important; text-transform: uppercase; letter-spacing: 0.07em; }
+.lp-ribbon-cta:hover { background: rgba(45,212,163,0.28) !important; color: var(--positive) !important; }
 .lp-faq { width: 100%; max-width: 720px; margin: 21px auto 30px; text-align: left; }
 .lp-faq-item { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
 .lp-faq-q { font-family: var(--font-display); font-size: 15px; color: var(--text-primary); letter-spacing: 0.02em; margin-bottom: 6px; }
@@ -3422,7 +3422,7 @@ function costColor(price, value) {
 }
 // ─── components/TeamsModal.jsx ──────────────────────────
 function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy, onAddPlayer, model, onSelectModel, targets, onToggleTarget }) {
-  const MODEL_LABELS = { ideal: 'Ideal Team', balanced: 'Balanced', targets: 'My Targets', heroRB: 'Hero RB', heroWR: 'Hero WR', heroQB: 'Hero QB', zeroRB: 'Zero RB', robustRB: 'Robust RB', eliteTE: 'Elite TE' };
+  const MODEL_LABELS = { ideal: 'Ideal Team', balanced: 'Balanced', targets: 'My Targets', heroRB: 'Hero RB', heroWR: 'Hero WR', heroQB: 'Hero QB', zeroRB: 'Zero RB', robustRB: 'Robust RB', robustWR: 'Robust WR', eliteTE: 'Elite TE' };
   const modelLabel = MODEL_LABELS[model || 'ideal'] || 'Ideal Team';
   const myTeam = teams.find(t => t.isMine);
   const playerMap = new Map();
@@ -3834,7 +3834,7 @@ function computeTierBreaks(list, pos) {
 function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => (i.text || '').length <= 240), [players, myTeam, teams, config, draftedIds, marketState, games]);
   const len = insights.length;
@@ -3843,7 +3843,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   return (
     <div className="cheat-header no-print">
       <div className="ch-models">
-        <span className="ch-models-label">Draft Models</span>
+        <span className="ch-models-label">Draft Models <span style={{ textTransform: 'none', fontWeight: 400, fontSize: '0.92em', opacity: 0.85 }}>(projected ppg)</span></span>
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
         {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
       </div>
@@ -3879,7 +3879,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const hlSet = cheatHighlights(byPos, highlight);
   const stratKey = (highlight && highlight !== 'targets') ? highlight : null;
   const minBid = (config && config.valuation && config.valuation.minBid) || 1;
-  const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: false });
+  const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: true });
   const COLSPEC = [
     ['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'],
     ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'],
@@ -4007,7 +4007,7 @@ function MockAuction({ players, config, seasonGames }) {
   const teamsN = numTeams;
   const totalSlots = (Object.values(config.roster || {}).reduce((s, r) => s + (r.total || 0), 0)) + ((config.flex && config.flex.count) || 0);
   const oppStrats = ['heroRB', 'zeroRB', 'heroWR', 'robustRB', 'eliteTE'];
-  const STRAT_LABELS = { balanced: 'Balanced', heroRB: 'Hero RB', zeroRB: 'Zero RB', heroWR: 'Hero WR', robustRB: 'Robust RB', eliteTE: 'Elite TE' };
+  const STRAT_LABELS = { balanced: 'Balanced', heroRB: 'Hero RB', zeroRB: 'Zero RB', heroWR: 'Hero WR', robustRB: 'Robust RB', robustWR: 'Robust WR', eliteTE: 'Elite TE' };
   const posRank = useMemo(() => { const by = {}, m = {}; (players || []).forEach(p => (by[p.position] = by[p.position] || []).push(p)); Object.values(by).forEach(a => { a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)); a.forEach((p, i) => m[p.id] = i + 1); }); return m; }, [players]);
   const fullPool = useMemo(() => (players || []).filter(p => p.auctionValue != null).slice().sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0)), [players]);
   const makeTeams = (n = numTeams, b = budget) => { const arr = []; for (let i = 0; i < n; i++) { const you = i === 0; arr.push({ id: i, name: you ? 'You' : 'CPU ' + i, you, strat: you ? 'balanced' : oppStrats[(i - 1) % oppStrats.length], budget: b, roster: [] }); } return arr; };
@@ -4240,7 +4240,7 @@ function PrepInsights({ players, config, seasonGames }) {
     <div className="insights">
       <div className="ins-section">
         <h3 className="ins-h">Cost per point above replacement</h3>
-        <p className="ins-sub">Auction dollars each starting tier costs per projected point over a replacement-level starter (per game). Higher means you are paying more for the same edge.</p>
+        <p className="ins-sub">Using each player's VALUE (his true worth at your scoring), the auction dollars each starting tier costs per projected point above a replacement-level starter (per game). Higher means you are paying more for the same edge.</p>
         {sorted.map(e => (
           <div key={e.pos} className="ins-bar-row">
             <span className={`position-tag ${e.pos}`}>{e.pos}</span>
@@ -4268,7 +4268,7 @@ function PrepInsights({ players, config, seasonGames }) {
       </div>
       <div className="ins-section">
         <h3 className="ins-h">Anticipated price vs. true value</h3>
-        <p className="ins-sub">Where the room is likely to overpay (predicted cost above value) and where bargains hide (value above predicted cost). Plan to pounce on the bargains and let rivals overpay for the traps.</p>
+        <p className="ins-sub">Where the room is likely to overpay (PROJ likely price above VALUE true worth) and where bargains hide (VALUE above PROJ). Plan to pounce on the bargains and let rivals overpay for the traps.</p>
         <div className="ins-twocol">
           <div>
             <div className="ins-coltitle good">Bargains, target these</div>
@@ -6348,7 +6348,7 @@ function buildCoachInsights(ctx) {
   POS.forEach(pos => {
     const a = byPos[pos] || []; if (a.length < 10) return;
     const tg = a.slice(0, 10); const dollars = tg.reduce((x, p) => x + priceOf(p), 0); const pts = tg.reduce((x, p) => x + Math.max(0, (p.projectedPoints || 0) / G), 0);
-    if (pts > 0) { const per = dollars / pts; prep.push({ label: pos + ' cost per point', text: 'The top 10 ' + pos + 's cost about $' + per.toFixed(1) + ' per projected point per game. ' + (per > 9 ? 'Pricey, make these dollars count.' : 'A relatively cheap place to buy points.') }); }
+    if (pts > 0) { const per = dollars / pts; prep.push({ label: pos + ' cost per point', text: 'The top 10 ' + pos + 's cost about $' + per.toFixed(1) + ' per projected point per game, based on their likely auction price (PROJ). ' + (per > 9 ? 'Pricey, make these dollars count.' : 'A relatively cheap place to buy points.') }); }
   });
   POS.forEach(pos => {
     const a = byPos[pos] || []; if (a.length < 10) return;
@@ -6779,6 +6779,7 @@ const MODEL_FOCUS = {
   targets: { focus: [], note: 'Builds the optimal team around the players you have flagged as targets (click a player\'s rank on the cheat sheet to flag). Your targets and the ideal picks that complete the roster are boxed in yellow.' },
   heroRB: { focus: ['RB'], note: 'Focus: RB, one elite anchor back. QB, WR, TE, K and DEF are taken at the best value available.' },
   robustRB: { focus: ['RB'], note: 'Focus: RB, three strong backs up front. QB, WR, TE, K and DEF are taken at the best value available.' },
+  robustWR: { focus: ['WR'], note: 'Focus: WR, three strong receivers up front. QB, RB, TE, K and DEF are taken at the best value available.' },
   zeroRB: { focus: ['WR'], note: 'Focus: WR, two studs up top. RB is intentionally left cheap / best-available late.' },
   heroWR: { focus: ['WR'], note: 'Focus: WR, one elite anchor receiver. QB, RB, TE, K and DEF are taken at the best value available.' },
   eliteTE: { focus: ['TE'], note: 'Focus: TE, pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
@@ -6789,23 +6790,34 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   (players || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
   const pick = (pos, i) => byPos[pos] && byPos[pos][i];
-  const forced = new Set();
-  const addF = p => { if (p) forced.add(p.id); };
-  // Anchor a full strategy skeleton so each model builds a distinct roster shape.
-  if (key === 'heroRB') { addF(pick('RB', 0)); addF(pick('RB', 23)); }            // one elite RB, value RB2
-  else if (key === 'robustRB') { addF(pick('RB', 0)); addF(pick('RB', 1)); addF(pick('RB', 2)); } // RB-heavy
-  else if (key === 'zeroRB') { addF(pick('RB', 17)); addF(pick('RB', 21)); addF(pick('WR', 0)); addF(pick('WR', 1)); } // cheap RBs, stud WRs
-  else if (key === 'heroWR') { addF(pick('WR', 0)); addF(pick('WR', 23)); }       // one elite WR, value WR2
-  else if (key === 'eliteTE') { addF(pick('TE', 0)); addF(pick('TE', 1)); }       // pay up for the TE edge
-  else if (key === 'heroQB') { addF(pick('QB', 0)); }                            // pay up for one elite QB
-  else if (key === 'balanced') { addF(pick('RB', 0)); addF(pick('WR', 0)); }     // even build, studs at RB+WR, no position punted
-  else if (key === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // build around your flagged targets
-  (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); // locked targets held constant across every model
-  return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true);
+  // Build the plan for a single strategy skeleton.
+  function planFor(k) {
+    const forced = new Set();
+    const addF = p => { if (p) forced.add(p.id); };
+    if (k === 'heroRB') { addF(pick('RB', 0)); addF(pick('RB', 23)); }            // one elite RB, value RB2
+    else if (k === 'robustRB') { addF(pick('RB', 0)); addF(pick('RB', 1)); addF(pick('RB', 2)); } // RB-heavy
+    else if (k === 'robustWR') { addF(pick('WR', 0)); addF(pick('WR', 1)); addF(pick('WR', 2)); } // WR-heavy
+    else if (k === 'zeroRB') { addF(pick('RB', 17)); addF(pick('RB', 21)); addF(pick('WR', 0)); addF(pick('WR', 1)); } // cheap RBs, stud WRs
+    else if (k === 'heroWR') { addF(pick('WR', 0)); addF(pick('WR', 23)); }       // one elite WR, value WR2
+    else if (k === 'eliteTE') { addF(pick('TE', 0)); addF(pick('TE', 1)); }       // pay up for the TE edge
+    else if (k === 'heroQB') { addF(pick('QB', 0)); }                            // pay up for one elite QB
+    else if (k === 'balanced') { addF(pick('RB', 0)); addF(pick('WR', 0)); }     // even build, studs at RB+WR
+    else if (k === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); }
+    (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); // locked targets held constant across every model
+    return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true);
+  }
+  // Ideal Team is, by definition, the single highest-scoring starting lineup you can assemble,
+  // so return the best plan across the unforced optimum and every strategy skeleton. It can never
+  // score below another model.
+  if (key === 'ideal') {
+    const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(planFor);
+    return cands.reduce((best, p) => (p && (!best || (p.starterPoints || 0) > (best.starterPoints || 0))) ? p : best, null);
+  }
+  return planFor(key);
 }
 function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
   const shownKey = model || 'ideal';
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
   const modelPts = useMemo(() => {
     if (!myTeam) return {};
@@ -6875,7 +6887,7 @@ function teamTaunt(team, players, config, games) {
   return jabs[Math.floor(Math.random() * jabs.length)];
 }
 function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets }) {
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const games = seasonGames || 17;
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   if (!myTeam) return null;
