@@ -7034,9 +7034,24 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     else if (k === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); }
     else if (k === 'custom') { (customForced || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // AI-built custom model
     (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); // locked targets held constant across every model
-    let fpAll;
-    (whatIfAnchors || []).forEach(a => { if (a && a.id != null && a.id !== '' && !di.has(a.id)) { forced.add(a.id); (fpAll = fpAll || {})[a.id] = Math.max(1, a.price || 1); } }); // What-if anchors folded into every model
-    return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll);
+    // What-if anchors are MANDATORY (they must appear at the set price). The skeleton and
+    // locked-target forces above are PREFERENCES that get relaxed if they would bust the budget.
+    let fpAll; const anchorSet = new Set();
+    (whatIfAnchors || []).forEach(a => { if (a && a.id != null && a.id !== '' && !di.has(a.id)) { anchorSet.add(a.id); forced.add(a.id); (fpAll = fpAll || {})[a.id] = Math.max(1, a.price || 1); } });
+    let plan = buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll);
+    if (anchorSet.size && plan && plan.feasible === false) {
+      // Drop the priciest non-anchor forced players first until the build fits, so the model
+      // becomes the most model-like version of itself that still includes the anchors.
+      const priceOfId = id => { const pp = (players || []).find(x => x.id === id); return pp ? Math.max(1, pp.marketValue != null ? pp.marketValue : (pp.auctionValue != null ? pp.auctionValue : 1)) : 0; };
+      const optional = [...forced].filter(id => !anchorSet.has(id)).sort((a, b) => priceOfId(b) - priceOfId(a));
+      const keep = new Set(forced);
+      for (const id of optional) {
+        keep.delete(id);
+        const relaxed = buildOptimalPlan(myTeam, players, config, di, undefined, keep, roleOverrides, true, fpAll);
+        if (relaxed) { plan = relaxed; if (relaxed.feasible) break; }
+      }
+    }
+    return plan;
   }
   // Ideal Team is, by definition, the single highest-scoring starting lineup you can assemble,
   // so return the best plan across the unforced optimum and every strategy skeleton. It can never
