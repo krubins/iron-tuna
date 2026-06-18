@@ -1013,6 +1013,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-preview-h::before { content: ''; display: block; width: 46px; height: 3px; margin: 0 0 14px; background: linear-gradient(90deg, var(--positive), var(--gold-text)); border-radius: 2px; }
 .lp-phases-title::after { content: ''; display: block; width: 64px; height: 3px; margin: 16px auto 0; background: linear-gradient(90deg, var(--positive), var(--gold-text)); border-radius: 2px; }
 .lp-shot { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.55); text-align: left; }
+.lp-shot-img { display: block; width: 100%; height: auto; border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.55); }
 .lp-shot-chrome { display: flex; align-items: center; gap: 7px; padding: 9px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border-subtle); }
 .lp-shot-chrome .d { width: 10px; height: 10px; border-radius: 50%; }
 .lp-shot-chrome .d.r { background: #ff5f57; } .lp-shot-chrome .d.y { background: #febc2e; } .lp-shot-chrome .d.g { background: #28c840; }
@@ -2328,24 +2329,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-preview">
           <div className="lp-preview-eyebrow">A look inside</div>
           <h2 className="lp-preview-h">What you see when you're on the clock</h2>
-          <div className="lp-shot">
-            <div className="lp-shot-chrome"><span className="d r" /><span className="d y" /><span className="d g" /><span className="lp-shot-url">iron-tuna, draft board</span></div>
-            <div className="lp-shot-board">
-              <div className="lp-shot-row lp-shot-head"><span>Player</span><span>Proj</span><span>Value</span><span className="you">You</span></div>
-              {shot.map(([pos, name, proj, val, you], i) => (
-                <div className="lp-shot-row" key={i}>
-                  <span className="pcell"><span className={`position-tag ${pos}`}>{pos}</span> {name}</span>
-                  <span>${proj}</span>
-                  <span>${val}</span>
-                  <span className="you">${you}</span>
-                </div>
-              ))}
-            </div>
-            <div className="lp-shot-coach">
-              <div className="lp-shot-coach-h">● Gameday Navigator</div>
-              <div className="lp-shot-bubble">Go to <b>$61</b> on Bijan, that's your switch price. Past it, the same dollars buy more starting points at WR. CeeDee is the better value if RB1 gets bid up.</div>
-            </div>
-          </div>
+                    <img src="onclock.jpg" alt="Iron Tuna cheat sheet showing each player's projected price (PROJ), true value (VALUE), and personal max bid (YOU), with the Gameday Navigator coach" className="lp-shot-img" loading="lazy" />
           <div className="lp-shot-cap">Three numbers on every player, <b style={{color:'var(--text-secondary)'}}>Proj</b> (market price), <b style={{color:'var(--text-secondary)'}}>Value</b> (true worth), and <b style={{color:'var(--gold-text)'}}>You</b> (your personal max), with the Gameday Navigator talking you through each bid in real time.</div>
         </div>
         <div className="lp-ai-section">
