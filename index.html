@@ -1484,8 +1484,7 @@ const FORMATS = {
       if (sp > 0.8) return { label: 'Safe to wait', tone: 'wait', survives: sp };
       return { label: 'Lean take', tone: 'lean', survives: sp };
     },
-    // TODO Phase 4: replace with buildSnakePlan (best-roster-by-survival planner).
-    planFills: (myTeam, players, config, draftedIds) => null,
+    planFills: (myTeam, players, config, draftedIds) => buildSnakePlan(myTeam, players, config, draftedIds),
   },
 };
 const getFormat = (config) => FORMATS[(config && config.format) || 'auction'] || FORMATS.auction;
@@ -5058,6 +5057,65 @@ function assignDraftedToStarters(myPlayers, config, roleOverrides) {
     if (best) { used.add(best.id); filled[fc > 1 ? `FLEX${i + 1}` : 'FLEX'] = best; }
   }
   return { filled };
+}
+// ─── Snake draft simulator — the sequential analog of buildOptimalPlan. ─────────
+// Simulates the rest of a snake draft from config.snake.draftSlot: at each of YOUR
+// picks, take the available player that most increases your projected STARTING
+// points (roster-legal via assignDraftedToStarters); at every other pick, the
+// opponent model removes the lowest-ADP player still on the board.
+function buildSnakePlan(myTeam, players, config, draftedIds) {
+  const T = config.teams || 12;
+  const slot = (config.snake && config.snake.draftSlot) || 1;
+  const totalSpots = totalRosterSpots(config);
+  const rounds = (config.snake && config.snake.rounds) || totalSpots;
+  const totalPicks = T * rounds;
+  const drafted = new Set(draftedIds || []);
+  const pmap = new Map(players.map(p => [p.id, p]));
+  const limits = {}; Object.entries(config.roster).forEach(([pos, c]) => { limits[pos] = c.total; });
+
+  // overall pick -> drafting slot (snake serpentine)
+  const slotAt = (o) => { const round = Math.ceil(o / T); const idx = ((o - 1) % T) + 1; return (round % 2 === 1) ? idx : (T - idx + 1); };
+  const roundOf = (o) => Math.ceil(o / T);
+
+  let myRoster = ((myTeam && myTeam.roster) || []).map(r => pmap.get(r.playerId)).filter(Boolean);
+  const taken = new Set([...drafted]);
+  // available, ordered by ADP (opponent model consumes the front of this list)
+  const availByAdp = players.filter(p => !taken.has(p.id)).sort((a, b) => (a.adp || 999) - (b.adp || 999));
+
+  const posCount = (roster, pos) => roster.reduce((n, p) => n + (p.position === pos ? 1 : 0), 0);
+  const canAdd = (roster, pos) => posCount(roster, pos) < (limits[pos] || 0);
+  const valOf = (p) => (p.vorp != null ? p.vorp : (p.projectedPoints || 0));
+  const starterPointsOf = (roster) => { const { filled } = assignDraftedToStarters(roster, config, {}); return Object.values(filled).reduce((s, p) => s + (p.projectedPoints || 0), 0); };
+
+  // Best pick for ME: maximize marginal starting points; tie-break by value;
+  // fall back to best legal player by value once starters are full (bench rounds).
+  const pickBestForMe = (roster) => {
+    const cur = starterPointsOf(roster);
+    const cands = availByAdp.filter(p => !taken.has(p.id) && canAdd(roster, p.position)).sort((a, b) => valOf(b) - valOf(a));
+    const pool = cands.slice(0, 60);
+    let best = null, bestGain = -Infinity, bestVal = -Infinity;
+    pool.forEach(p => {
+      const gain = starterPointsOf(roster.concat([p])) - cur;
+      if (gain > bestGain + 1e-6 || (Math.abs(gain - bestGain) <= 1e-6 && valOf(p) > bestVal)) { best = p; bestGain = gain; bestVal = valOf(p); }
+    });
+    if (!best && cands.length) best = cands[0];
+    return best;
+  };
+  const takeTopAdp = () => { for (let i = 0; i < availByAdp.length; i++) { const p = availByAdp[i]; if (!taken.has(p.id)) return p; } return null; };
+
+  const currentOverallPick = drafted.size + 1;
+  const byRound = [];
+  let recommendedNow = null;
+  for (let o = currentOverallPick; o <= totalPicks; o++) {
+    if (slotAt(o) === slot) {
+      const pick = pickBestForMe(myRoster);
+      if (pick) { taken.add(pick.id); myRoster = myRoster.concat([pick]); byRound.push({ round: roundOf(o), overall: o, player: pick }); if (recommendedNow == null) recommendedNow = pick; }
+    } else {
+      const opp = takeTopAdp();
+      if (opp) taken.add(opp.id);
+    }
+  }
+  return { yourRoster: myRoster, recommendedNow, byRound, projectedStarterPoints: starterPointsOf(myRoster) };
 }
 // Allocation strategy slider (stars & scrubs ... thick & deep) with a recommended marker.
 function BudgetSliders({ strategy, onChange }) {
