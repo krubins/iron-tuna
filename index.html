@@ -1492,8 +1492,9 @@ const FORMATS = {
     label: 'Best Ball',
     columns: [
       ['adp', 'ADP', 'Best-ball average draft position (Underdog/Drafters-style — QBs and upside go earlier).'],
-      ['ceiling', 'Ceiling', 'Upside-weighted projection. Best ball auto-starts your best weekly scores, so ceiling beats floor.'],
-      ['bestavail', 'Best avail', 'Ceiling rank among players still on the board.'],
+      ['ceiling', 'Ceiling', 'Upside-weighted projection per game. Best ball auto-starts your best weekly scores, so ceiling beats floor.'],
+      ['stack', 'Stack', 'Marked when drafting him stacks with a QB or pass-catcher you already roster (correlation).'],
+      ['survives', 'Survives%', "Estimated chance he's still on the board at your next pick."],
     ],
     // Annotate with ceiling + best-available rank (ranked by ceiling, not floor).
     valuePlayers: (players, config, draftedIds) => {
@@ -3328,7 +3329,7 @@ function QuickDraftModal({ player, teams, config, seasonGames, onConfirm, onClos
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: '0.03em' }}>{player.name}</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{player.position} · {player.team}</div>
         </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, textAlign: 'center' }}>
+        {(config.format || 'auction') === 'auction' && (<div style={{ display: 'flex', gap: 8, marginBottom: 16, textAlign: 'center' }}>
           <div style={{ flex: 1, background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '8px 4px' }}>
             <div style={{ fontSize: 9.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 3 }}>Proj</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--text-secondary)' }}>${projVal}</div>
@@ -3345,13 +3346,15 @@ function QuickDraftModal({ player, teams, config, seasonGames, onConfirm, onClos
             <div style={{ fontSize: 9.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 3 }}>PPG</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--text-secondary)' }}>{ppg}</div>
           </div>
-        </div>
+        </div>)}
         <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Drafted by</label>
         <select value={teamId} onChange={e => setTeamId(e.target.value)} style={{ width: '100%', marginBottom: 12 }}>
           {teams.map(t => (<option key={t.id} value={t.id}>{t.isMine ? '★ ' : ''}{t.name} (${t.budgetRemaining}, {t.spotsRemaining} slots)</option>))}
         </select>
+        {(config.format || 'auction') === 'auction' && (<>
         <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Winning bid</label>
         <input type="number" value={price} onChange={e => setPrice(e.target.value)} min="1" style={{ width: '100%', marginBottom: 12, fontFamily: 'var(--font-mono)' }} />
+        </>)}
         {(overMax || noSpots) && (
           <div style={{ padding: 8, background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--radius-sm)', fontSize: 11, color: 'var(--danger)', marginBottom: 12 }}>
             {noSpots && `${team.name} has no roster spots remaining.`}
@@ -3360,7 +3363,7 @@ function QuickDraftModal({ player, teams, config, seasonGames, onConfirm, onClos
         )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-          <button className="btn-draft" style={{ flex: 1 }} disabled={overMax || noSpots || priceNum < 1} onClick={() => onConfirm(teamId, priceNum)}>Confirm</button>
+          <button className="btn-draft" style={{ flex: 1 }} disabled={(config.format || 'auction') === 'auction' ? (overMax || noSpots || priceNum < 1) : noSpots} onClick={() => onConfirm(teamId, (config.format || 'auction') === 'auction' ? priceNum : 0)}>Confirm</button>
         </div>
       </div>
     </div>
@@ -3634,7 +3637,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
       const next = JSON.parse(JSON.stringify(prev));
       const keys = path.split('.');
       let cur = next;
-      for (let i = 0; i < keys.length - 1; i++) cur = cur[keys[i]];
+      for (let i = 0; i < keys.length - 1; i++) { if (cur[keys[i]] == null || typeof cur[keys[i]] !== 'object') cur[keys[i]] = {}; cur = cur[keys[i]]; }
       cur[keys[keys.length - 1]] = value;
       return next;
     });
@@ -3658,12 +3661,30 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
         <div className="settings-section-title">Import Your League Scoring</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Skip the manual entry: paste your league's scoring rules or upload a screenshot. Detected values fill the fields below for you to confirm.</p>
         <ScoringImport onApply={applyImport} />
+        <div className="settings-section-title">Draft Format</div>
+        <div className="settings-grid">
+          <div className="settings-row"><label>Format</label>
+            <select value={draft.format || 'auction'} onChange={e => update('format', e.target.value)}>
+              <option value="auction">Auction</option>
+              <option value="snake">Snake Draft</option>
+              <option value="bestball">Best Ball</option>
+            </select>
+          </div>
+          {draft.format === 'snake' && (<>
+            <div className="settings-row"><label>Your Draft Slot</label><input type="number" min="1" max={draft.teams} value={(draft.snake && draft.snake.draftSlot) || 1} onChange={e => update('snake.draftSlot', parseInt(e.target.value || 1))} /></div>
+            <div className="settings-row"><label>Rounds</label><input type="number" min="1" max="30" value={(draft.snake && draft.snake.rounds) || 16} onChange={e => update('snake.rounds', parseInt(e.target.value || 16))} /></div>
+          </>)}
+          {draft.format === 'bestball' && (<>
+            <div className="settings-row"><label>Your Draft Slot</label><input type="number" min="1" max={draft.teams} value={(draft.bestball && draft.bestball.draftSlot) || 1} onChange={e => update('bestball.draftSlot', parseInt(e.target.value || 1))} /></div>
+            <div className="settings-row"><label>Rounds</label><input type="number" min="1" max="30" value={(draft.bestball && draft.bestball.rounds) || 18} onChange={e => update('bestball.rounds', parseInt(e.target.value || 18))} /></div>
+          </>)}
+        </div>
         <div className="settings-section-title">League Basics</div>
         <div className="settings-grid">
           <div className="settings-row"><label>League Name</label><input type="text" value={draft.name} onChange={e => update('name', e.target.value)} /></div>
           <div className="settings-row"><label>Number of Teams</label><input type="number" min="2" max="20" value={draft.teams} onChange={e => update('teams', parseInt(e.target.value || 12))} /></div>
-          <div className="settings-row"><label>Auction Budget per Team</label><input type="number" min="20" max="1000" value={draft.budget} onChange={e => update('budget', parseInt(e.target.value || 120))} /></div>
-          <div className="settings-row"><label>Minimum Bid</label><input type="number" min="1" value={draft.valuation.minBid} onChange={e => update('valuation.minBid', parseInt(e.target.value || 1))} /></div>
+          {(draft.format || 'auction') === 'auction' && <div className="settings-row"><label>Auction Budget per Team</label><input type="number" min="20" max="1000" value={draft.budget} onChange={e => update('budget', parseInt(e.target.value || 120))} /></div>}
+          {(draft.format || 'auction') === 'auction' && <div className="settings-row"><label>Minimum Bid</label><input type="number" min="1" value={draft.valuation.minBid} onChange={e => update('valuation.minBid', parseInt(e.target.value || 1))} /></div>}
         </div>
         <div className="settings-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>Roster Slots</span><button type="button" className="preset-btn" onClick={applyStandardRoster}>Use standard roster</button></div>
         <div className="settings-grid">
@@ -3737,6 +3758,17 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
   const playerMap = new Map();
   players.forEach(p => playerMap.set(p.id, p));
   const games = seasonGames || 17;
+  const isNonAuction = !!(config.format && config.format !== 'auction');
+  const snakePlanMine = useMemo(() => {
+    if (!isNonAuction || !myTeam) return null;
+    try { return getFormat(config).planFills(myTeam, players, config, draftedIds || new Set()); } catch (e) { return null; }
+  }, [isNonAuction, config, myTeam, players, draftedIds]);
+  const posRankMap = useMemo(() => {
+    const m = new Map(); const groups = {};
+    players.forEach(p => (groups[p.position] = groups[p.position] || []).push(p));
+    Object.values(groups).forEach(arr => { arr.sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)); arr.forEach((p, i) => m.set(p.id, i + 1)); });
+    return m;
+  }, [players]);
   const projByTeam = useMemo(() => {
     const m = new Map();
     const di = draftedIds || new Set();
@@ -3840,14 +3872,36 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                 <input type="text" value={team.name} onChange={e => onRenameTeam(team.id, e.target.value)}
                   style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: 0, fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.04em', color: 'var(--text-primary)' }} />
               </div>
-              <div className="team-budget" style={{ marginTop: 4 }}>${team.budgetRemaining} <span style={{ fontSize: 12, color: '#e8edf2', fontWeight: 400, letterSpacing: '0.04em' }}>Remaining</span></div>
-              <div style={{ marginTop: 2, fontFamily: 'var(--font-mono)' }}><span style={{ fontSize: 16, color: 'var(--gold-text)', fontWeight: 600 }}>${maxBidC}</span> <span style={{ fontSize: 12, color: '#e8edf2', fontWeight: 400, letterSpacing: '0.04em' }}>Max Bid</span></div>
+              {isNonAuction
+                ? <div className="team-budget" style={{ marginTop: 4 }}>{team.roster.length} <span style={{ fontSize: 12, color: '#e8edf2', fontWeight: 400, letterSpacing: '0.04em' }}>Picks</span></div>
+                : (<>
+                  <div className="team-budget" style={{ marginTop: 4 }}>${team.budgetRemaining} <span style={{ fontSize: 12, color: '#e8edf2', fontWeight: 400, letterSpacing: '0.04em' }}>Remaining</span></div>
+                  <div style={{ marginTop: 2, fontFamily: 'var(--font-mono)' }}><span style={{ fontSize: 16, color: 'var(--gold-text)', fontWeight: 600 }}>${maxBidC}</span> <span style={{ fontSize: 12, color: '#e8edf2', fontWeight: 400, letterSpacing: '0.04em' }}>Max Bid</span></div>
+                </>)}
               <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--gold-text)', marginTop: 4 }}>
-                Starters {proj.filledStarters}/{proj.totalStarters} · {(proj.starterPoints / games).toFixed(1)} pts/gm
+                Starters {proj.filledStarters}/{proj.totalStarters} · {((isNonAuction ? proj.draftedStarterPoints : proj.starterPoints) / games).toFixed(1)} pts/gm
               </div>
               {!isCollapsed && (<>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Spent ${totalSpent} · {team.spotsRemaining} slots open</div>
-                <div style={{ marginTop: 10 }} onPointerDown={e => e.stopPropagation()}>
+                {!isNonAuction && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Spent ${totalSpent} · {team.spotsRemaining} slots open</div>}
+                {isNonAuction && (
+                  <div style={{ marginTop: 10 }} onPointerDown={e => e.stopPropagation()}>
+                    {team.roster.map((r, i) => { const dp = playerMap.get(r.playerId); return (
+                      <div key={'d' + i} className="rg-slot rg-filled" onClick={() => onRemovePick && onRemovePick(team.id, r.playerId)} title="Click to undo this pick">
+                        <span className="rg-label">{i + 1}</span>
+                        <span className="rg-name">{dp ? dp.name : r.playerId}</span>
+                        <span className="rg-price">{dp ? dp.position : r.position}</span>
+                        <span className="rg-pts">{dp ? (dp.projectedPoints / games).toFixed(1) : ''}</span>
+                      </div>); })}
+                    {team.isMine && snakePlanMine && (snakePlanMine.byRound || []).map((b, i) => (
+                      <div key={'g' + i} className="rg-slot rg-target" onClick={() => onFocusPlayer && onFocusPlayer(b.player.id)} title={`Projected pick \u2014 click to find ${b.player.name} in the list`}>
+                        <span className="rg-label">R{b.round}</span>
+                        <span className="rg-name" style={{ fontStyle: 'italic' }} title={`${b.player.name} \u00b7 ${(b.player.projectedPoints / games).toFixed(1)} pts/gm`}>Target {b.player.position}{posRankMap.get(b.player.id) || ''}</span>
+                        <span className="rg-price"></span>
+                        <span className="rg-pts">{(b.player.projectedPoints / games).toFixed(1)}</span>
+                      </div>))}
+                  </div>
+                )}
+                {!isNonAuction && (<div style={{ marginTop: 10 }} onPointerDown={e => e.stopPropagation()}>
                   {Object.keys(config.roster).map(pos => (
                     <React.Fragment key={pos}>
                       {(proj.grid[pos] || []).map((slot, i) => {
@@ -3869,9 +3923,10 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                       })}
                     </React.Fragment>
                   ))}
-                </div>
+                </div>)}
                 {!team.isMine && (<button className="btn-secondary" style={{ marginTop: 10, width: '100%' }} onClick={() => onSetMyTeam(team.id)}>Set as My Team</button>)}
-                {team.isMine && (<div className="mt-fillcap-note" style={{ marginTop: 8 }}>Ghosted rows are your undrafted slots, each set to the optimal available player for maximum points. Click one to lock it as a target.</div>)}
+                {team.isMine && !isNonAuction && (<div className="mt-fillcap-note" style={{ marginTop: 8 }}>Ghosted rows are your undrafted slots, each set to the optimal available player for maximum points. Click one to lock it as a target.</div>)}
+                {team.isMine && isNonAuction && (<div className="mt-fillcap-note" style={{ marginTop: 8 }}>Italic rows are your projected upcoming picks, simulated from ADP and survival odds. Click one to find that player.</div>)}
                 {team.isMine && (<div style={{ marginTop: 10, fontSize: 10, textAlign: 'center', color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>★ Your Team</div>)}
               </>)}
             </div>
@@ -4394,6 +4449,12 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   );
 }
 function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfAnchors, onSetAnchors, coachEl }) {
+  if (config && config.format && config.format !== 'auction') { try { players = getFormat(config).valuePlayers(players, config, draftedIds || new Set()); } catch (e) {} }
+  const _fmtSlot = (config && ((config.snake && config.snake.draftSlot) || (config.bestball && config.bestball.draftSlot))) || 1;
+  const _fmtCurPick = ((draftHistory && draftHistory.length) || 0) + 1;
+  const _fmtPun = picksUntilNextPick(_fmtSlot, (config && config.teams) || 12, _fmtCurPick);
+  const _fmtRecent = ((draftHistory || []).slice(-8)).map(d => (players || []).find(x => x.id === d.playerId)).filter(Boolean);
+  const _fmtMyRoster = (myTeam && myTeam.roster ? myTeam.roster.map(r => (players || []).find(x => x.id === r.playerId)).filter(Boolean) : []);
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const byPos = {};
@@ -4408,7 +4469,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const minBid = (config && config.valuation && config.valuation.minBid) || 1;
   const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: true, soft13: true, soft1517: true });
   const COLSPEC = getFormat(config).columns;
-  const activeCols = COLSPEC.filter(c => showCols[c[0]]);
+  const activeCols = COLSPEC.filter(c => showCols[c[0]] !== false);
   const gridT = `15px 16px minmax(0,1fr) auto ${activeCols.map(() => 'auto').join(' ')}`;
   const tierBreaksByPos = {};
   cols.forEach(([pos, nn]) => { tierBreaksByPos[pos] = computeTierBreaks((byPos[pos] || []).slice(0, nn), pos); });
@@ -4500,7 +4561,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
                 <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (softSched ? <>{softSched.early && showCols.soft13 ? <span className="cheat-soft" title={`Favorable weeks 1-3 for ${p.position}: ${softSched.early.opps.join(', ')}`}>Soft 1-3</span> : null}{softSched.late && showCols.soft1517 ? <span className="cheat-soft cheat-soft-late" title={`Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`}>Soft 15-17</span> : null}</> : null)}</span>
-                {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
+                {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : k === 'ppg' ? <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span> : k === 'adp' ? <span key={k} className="cheat-ppg" title="Average draft position">{p.adp != null ? Math.round(p.adp) : '\u2014'}</span> : k === 'bestavail' ? <span key={k} className="cheat-ppg" title="Best available rank (your highest-value player still on the board)">{p.bestAvailRank != null ? '#' + p.bestAvailRank : '\u2014'}</span> : k === 'survives' ? <span key={k} className="cheat-ppg" title="Chance he's still there at your next pick">{Math.round(survivalProb(p, _fmtCurPick, _fmtPun, _fmtRecent) * 100)}%</span> : k === 'ceiling' ? <span key={k} className="cheat-ppg" title="Upside-weighted projection per game">{p.ceiling != null ? (p.ceiling / (seasonGames || 17)).toFixed(1) : '\u2014'}</span> : k === 'stack' ? <span key={k} className="cheat-ppg" title="Stacks with a player you already roster">{bestballStackBoost(p, _fmtMyRoster, 1) > 0 ? '\u2605' : '\u2014'}</span> : null)}
               </div>
               );
             })}
@@ -6821,8 +6882,15 @@ function buildCoachContext(q, ctx) {
   const named = [];
   try { const f1 = findPlayer(stripEval(q), evalPlayers); if (f1.player) named.push(slim(f1.player)); } catch (e) {}
   try { const f2 = findPlayerInText(q, evalPlayers); if (f2.player && !named.find(n => n.name === f2.player.name)) named.push(slim(f2.player)); } catch (e) {}
-  const minBid = config.valuation.minBid;
+  const minBid = (config.valuation && config.valuation.minBid) || 1;
+  const _cfmt = config.format || 'auction';
   return {
+    format: _cfmt,
+    formatInfo: _cfmt === 'snake'
+      ? { draftSlot: (config.snake && config.snake.draftSlot) || 1, round: Math.floor((di.size || 0) / (config.teams || 12)) + 1, picksMade: di.size || 0 }
+      : _cfmt === 'bestball'
+      ? { draftSlot: (config.bestball && config.bestball.draftSlot) || 1, rounds: (config.bestball && config.bestball.rounds) || 18, ceilingWeighted: true }
+      : { budget: config.budget },
     league: { teams: config.teams, budget: config.budget, ppr: config.scoring && config.scoring.receptionPoints, roster: Object.fromEntries(Object.entries(config.roster).map(([k, v]) => [k, { starters: v.starters, total: v.total }])), flex: config.flex },
     myTeam: myTeam ? { budgetRemaining: myTeam.budgetRemaining, spotsRemaining: myTeam.spotsRemaining, maxBid: Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid), roster: (myTeam.roster || []).map(r => { const p = (evalPlayers || []).find(x => x.id === r.playerId); return { name: p ? p.name : r.playerId, pos: r.position, paid: r.price }; }) } : null,
     plan: plan ? { projectedStarterPtsPerGame: +(((plan.starterPoints) || 0) / g).toFixed(1), feasible: plan.feasible, targets: (plan.remainingStarterSlots || []).filter(s => s.player).map(s => ({ slot: s.label, player: s.player.name, est: s.targetPrice })) } : null,
@@ -6832,7 +6900,13 @@ function buildCoachContext(q, ctx) {
   };
 }
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
-  const sys = "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator. Answer like a sharp friend who knows ball: decisive and grounded ONLY in the live draft data provided.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Never invent players or stats not in the data.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  const _coachFmt = (contextObj && contextObj.format) || 'auction';
+  const _coachId = _coachFmt === 'snake'
+    ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. You think in ADP, pick order, position runs, and who will survive back to this manager's next pick (use the survives% and pick math in the data)."
+    : _coachFmt === 'bestball'
+    ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management."
+    : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
+  const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and grounded ONLY in the live draft data provided.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Never invent players or stats not in the data.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text }));
   hist.push({ role: 'user', content: userMsg });
   const ctrl = new AbortController();
@@ -7814,6 +7888,14 @@ function App() {
     if (!player) return;
     const team = teams.find(t => t.id === teamId);
     if (!team) return;
+    if (config.format && config.format !== 'auction') {
+      setTeams(prev => prev.map(t => t.id === teamId
+        ? { ...t, spotsRemaining: t.spotsRemaining - 1, roster: [...t.roster, { playerId, price: 0, position: player.position }] }
+        : t));
+      setDraftHistory(prev => [...prev, { playerId, teamId, price: 0, position: player.position, timestamp: Date.now() }]);
+      setCurrentNomination(null);
+      return;
+    }
     if (price < config.valuation.minBid) price = config.valuation.minBid;
     if (price > team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid) { alert(`That bid exceeds ${team.name}'s max bid.`); return; }
     setTeams(prev => prev.map(t => t.id === teamId
