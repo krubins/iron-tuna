@@ -746,6 +746,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-sold { font-size: 10px; color: var(--positive); font-weight: 700; font-variant-numeric: tabular-nums; }
 .cheat-scarce { font-size: 8px; font-weight: 700; letter-spacing: 0.04em; color: var(--gold-text); border: 1px solid rgba(212,160,23,0.5); border-radius: 3px; padding: 1px 4px; white-space: nowrap; }
 .cheat-scarce.scarce-last { color: #ff6b5e; border-color: rgba(255,107,94,0.55); }
+.cheat-soft { font-size: 7.5px; font-weight: 700; letter-spacing: 0.02em; color: #2dd4a3; border: 1px solid rgba(45,212,163,0.5); border-radius: 3px; padding: 1px 3px; white-space: nowrap; margin-left: 3px; }
+.cheat-soft-late { color: #5aa9ff; border-color: rgba(90,169,255,0.5); }
 .cheat-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .cheat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: start; }
 .cheat-col-group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -1169,6 +1171,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-step-n { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 18px; color: #06281f; background: var(--positive); margin-bottom: 14px; }
 .lp-step-h { font-family: var(--font-display); font-size: 19px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; }
 .lp-step-b { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; }
+@keyframes lmFloat { 0%, 100% { transform: translateY(0.8px); } 50% { transform: translateY(-1.9px); } }
+.lm-float { animation: lmFloat 3.4s ease-in-out infinite; will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .lm-float { animation: none; } }
 .lp-compare { width: 100%; max-width: 880px; margin: 38px auto 8px; text-align: left; }
 .lp-compare-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border-subtle); border-radius: 12px; }
 .lp-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
@@ -1720,7 +1725,7 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
   const myRank = ranks.findIndex(x => x.t.isMine) + 1;
   out.push({
     id: 'team-rank', severity: myRank <= Math.ceil(teams.length / 3) ? 'opportunity' : 'info',
-    headline: `Your build projects #${myRank} of ${teams.length}`,
+    headline: myRank <= Math.ceil(teams.length / 3) ? 'Your build is among the strongest in the league' : (myRank > Math.ceil(teams.length * 2 / 3) ? 'Your build is trailing the field' : 'Your build is right in the mix'),
     detail: `If your plan and targets land, your starters project ${(plan.starterPoints / games).toFixed(1)} pts/gm.`,
     action: myRank <= 4 ? "Strong roster, protect the edge, don't overspend chasing extras." : 'Climb by upgrading your weakest starter when value appears.',
   });
@@ -2180,7 +2185,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const shrink = 0;  // uniform uppercase wordmark (IRON TUNA), no per-letter taper
   const cmp = tagline ? 0.80 : 1;      // landing-only: compress IRON TUNA toward the fish + tagline width
   const advF = tagline ? 0.44 : 0.64;  // landing-only: condense letters horizontally
-  const SIZE_MULT = [1.25, 1.10, 1.05, 1.0, 1.0, 1.05, 1.10, 1.25]; // ends largest, tapering inward -> curved tops
+  const SIZE_MULT = [1.15, 1.10, 1.05, 1.0, 1.0, 1.05, 1.10, 1.15]; // ends largest, tapering toward the smallest middle letters
   const sizes = word.map((_, i) => base * cmp * (SIZE_MULT[i] || 1));
   const tracking = tagline ? 1.3 : 1.5;
   const wordGap = base * (tagline ? 0.18 : 0.30);
@@ -2249,13 +2254,12 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       )}
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${wordTx},${wordTy})`}>
-        {placed.map((g, i) => {
-          const gy = cy + 0.36 * (base * cmp - g.size); // align bottoms flat; taller end letters rise so the tops curve
-          return (
-            <text key={i} x={g.cx} y={gy} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
-                  textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
-          );
-        })}
+        {placed.map((g, i) => (
+          <text key={i} x={g.cx} y={cy} className={tagline ? 'lm-float' : undefined}
+                style={tagline ? { animationDelay: `${(i * 0.31).toFixed(2)}s`, animationDuration: `${(3.2 + (i % 3) * 0.5).toFixed(2)}s` } : undefined}
+                fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
+                textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
+        ))}
       </g>
       {tagline && (
         <text x={vbW / 2} y={taglineY} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
@@ -2435,7 +2439,7 @@ function LandingSplash({ onDismiss, onNav }) {
         </div>
         <div className="lp-ai-section">
           <div className="lp-preview-eyebrow">Purpose-built AI</div>
-          <h2 className="lp-preview-h">Not just another ChatGPT wrapper</h2>
+          <h2 className="lp-preview-h">Not just another ChatGPT/Claude wrapper</h2>
           <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s navigator is <b>embedded with years of fantasy football auction experience</b>, built on real auction drafts and hundreds of live bids. It reasons over <b>your exact league and scoring</b>, and factors your strategy to identify the price trends that will actually move your draft.</p>
         </div>
         <div className="lp-faq" ref={faqRef}>
@@ -3736,6 +3740,66 @@ const STRAT_TILT = {
   heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
+const SCHEDULE_2026 = {
+  ARI:{w1:"@ LAC",w2:"SEA",w3:"@ SF",w15:"NYJ",w16:"@ NO",w17:"LV"},
+  ATL:{w1:"@ PIT",w2:"CAR",w3:"@ GB",w15:"@ WAS",w16:"TB",w17:"NO"},
+  BAL:{w1:"@ IND",w2:"NO",w3:"@ DAL",w15:"@ PIT",w16:"CLE",w17:"@ CIN"},
+  BUF:{w1:"@ HOU",w2:"DET",w3:"LAC",w15:"CHI",w16:"@ DEN",w17:"@ MIA"},
+  CAR:{w1:"CHI",w2:"@ ATL",w3:"@ CLE",w15:"CIN",w16:"@ PIT",w17:"SEA"},
+  CHI:{w1:"@ CAR",w2:"MIN",w3:"PHI",w15:"@ BUF",w16:"GB",w17:"DET"},
+  CIN:{w1:"TB",w2:"@ HOU",w3:"@ PIT",w15:"@ CAR",w16:"@ IND",w17:"BAL"},
+  CLE:{w1:"@ JAX",w2:"@ TB",w3:"CAR",w15:"@ NYG",w16:"@ BAL",w17:"IND"},
+  DAL:{w1:"@ NYG",w2:"WAS",w3:"BAL",w15:"@ LAR",w16:"JAX",w17:"NYG"},
+  DEN:{w1:"@ KC",w2:"JAX",w3:"LAR",w15:"@ LV",w16:"BUF",w17:"@ NE"},
+  DET:{w1:"NO",w2:"@ BUF",w3:"NYJ",w15:"@ MIN",w16:"NYG",w17:"@ CHI"},
+  GB:{w1:"@ MIN",w2:"@ NYJ",w3:"ATL",w15:"MIA",w16:"@ CHI",w17:"HOU"},
+  HOU:{w1:"BUF",w2:"CIN",w3:"@ IND",w15:"JAX",w16:"@ PHI",w17:"@ GB"},
+  IND:{w1:"BAL",w2:"@ KC",w3:"HOU",w15:"@ TEN",w16:"CIN",w17:"@ CLE"},
+  JAX:{w1:"CLE",w2:"@ DEN",w3:"NE",w15:"@ HOU",w16:"@ DAL",w17:"WAS"},
+  KC:{w1:"DEN",w2:"IND",w3:"@ MIA",w15:"NE",w16:"SF",w17:"@ LAC"},
+  LAC:{w1:"ARI",w2:"LV",w3:"@ BUF",w15:"SF",w16:"@ MIA",w17:"KC"},
+  LAR:{w1:"SF",w2:"NYG",w3:"@ DEN",w15:"DAL",w16:"@ SEA",w17:"@ TB"},
+  LV:{w1:"MIA",w2:"@ LAC",w3:"@ NO",w15:"DEN",w16:"TEN",w17:"@ ARI"},
+  MIA:{w1:"@ LV",w2:"@ SF",w3:"KC",w15:"@ GB",w16:"LAC",w17:"BUF"},
+  MIN:{w1:"GB",w2:"@ CHI",w3:"@ TB",w15:"DET",w16:"WAS",w17:"@ NYJ"},
+  NE:{w1:"@ SEA",w2:"PIT",w3:"@ JAX",w15:"@ KC",w16:"@ NYJ",w17:"DEN"},
+  NO:{w1:"@ DET",w2:"@ BAL",w3:"LV",w15:"@ TB",w16:"ARI",w17:"@ ATL"},
+  NYG:{w1:"DAL",w2:"@ LAR",w3:"TEN",w15:"CLE",w16:"@ DET",w17:"@ DAL"},
+  NYJ:{w1:"@ TEN",w2:"GB",w3:"@ DET",w15:"@ ARI",w16:"NE",w17:"MIN"},
+  PHI:{w1:"WAS",w2:"@ TEN",w3:"@ CHI",w15:"SEA",w16:"HOU",w17:"@ SF"},
+  PIT:{w1:"ATL",w2:"@ NE",w3:"CIN",w15:"BAL",w16:"CAR",w17:"@ TEN"},
+  SF:{w1:"@ LAR",w2:"MIA",w3:"ARI",w15:"@ LAC",w16:"@ KC",w17:"PHI"},
+  SEA:{w1:"NE",w2:"@ ARI",w3:"@ WAS",w15:"@ PHI",w16:"LAR",w17:"@ CAR"},
+  TB:{w1:"@ CIN",w2:"CLE",w3:"MIN",w15:"NO",w16:"@ ATL",w17:"LAR"},
+  TEN:{w1:"NYJ",w2:"PHI",w3:"@ NYG",w15:"IND",w16:"@ LV",w17:"PIT"},
+  WAS:{w1:"@ PHI",w2:"@ DAL",w3:"SEA",w15:"ATL",w16:"@ MIN",w17:"@ JAX"},
+};
+const DVP_2025 = {
+  ARI:{QB:19,RB:30,WR:16,TE:30},ATL:{QB:17,RB:17,WR:24,TE:4},BAL:{QB:21,RB:16,WR:26,TE:9},BUF:{QB:4,RB:26,WR:7,TE:2},
+  CAR:{QB:6,RB:24,WR:10,TE:21},CHI:{QB:22,RB:18,WR:30,TE:13},CIN:{QB:26,RB:31,WR:9,TE:32},CLE:{QB:5,RB:19,WR:11,TE:16},
+  DAL:{QB:32,RB:27,WR:32,TE:11},DEN:{QB:9,RB:4,WR:2,TE:18},DET:{QB:24,RB:10,WR:31,TE:19},GB:{QB:12,RB:13,WR:20,TE:10},
+  HOU:{QB:3,RB:8,WR:6,TE:14},IND:{QB:18,RB:11,WR:27,TE:25},JAX:{QB:15,RB:2,WR:13,TE:23},KC:{QB:13,RB:7,WR:5,TE:5},
+  LAC:{QB:2,RB:6,WR:8,TE:6},LAR:{QB:14,RB:9,WR:22,TE:15},LV:{QB:16,RB:22,WR:21,TE:3},MIA:{QB:25,RB:25,WR:14,TE:28},
+  MIN:{QB:1,RB:12,WR:1,TE:7},NE:{QB:11,RB:3,WR:15,TE:17},NO:{QB:7,RB:15,WR:12,TE:12},NYG:{QB:23,RB:28,WR:23,TE:8},
+  NYJ:{QB:31,RB:32,WR:18,TE:26},PHI:{QB:10,RB:23,WR:3,TE:1},PIT:{QB:27,RB:5,WR:25,TE:29},SF:{QB:20,RB:20,WR:19,TE:24},
+  SEA:{QB:8,RB:1,WR:4,TE:20},TB:{QB:29,RB:14,WR:17,TE:27},TEN:{QB:28,RB:21,WR:29,TE:22},WAS:{QB:30,RB:29,WR:28,TE:31},
+};
+// Flag players whose 2026 opponents in weeks 1-3 (and 15-17) were collectively soft vs their position (1=toughest, 32=softest D in 2025).
+function scheduleSoftness(team, position) {
+  if (!['QB','RB','WR','TE'].includes(position)) return null;
+  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const sch = SCHEDULE_2026[tm]; if (!sch) return null;
+  const rankOf = opp => { const ab = (opp || '').toUpperCase().replace(/[^A-Z]/g, ''); const d = DVP_2025[ab]; return d ? d[position] : null; };
+  const avg = ws => { const r = ws.map(w => rankOf(sch[w])).filter(x => x != null); return r.length ? r.reduce((a, b) => a + b, 0) / r.length : null; };
+  const SOFT = 21; // average opponent DvP rank >= 21 of 32 => favorable
+  const ea = avg(['w1','w2','w3']), la = avg(['w15','w16','w17']);
+  const opps = ws => ws.map(w => sch[w]).filter(Boolean);
+  const res = {
+    early: ea != null && ea >= SOFT ? { opps: opps(['w1','w2','w3']) } : null,
+    late: la != null && la >= SOFT ? { opps: opps(['w15','w16','w17']) } : null,
+  };
+  return (res.early || res.late) ? res : null;
+}
 function scarcityFlags(players, draftedIds, config) {
   const map = new Map();
   const byPos = {};
@@ -3795,7 +3859,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
         {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
         <span style={{ flexBasis: '100%', height: 0 }} />
-        <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Click a player to assign to a team; drag to rerank.' : 'Click a player to target him; drag to rerank.'} Click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span></div>
+        <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Draft any player straight from the sheet, no separate list: click to assign him to a team; drag to rerank.' : 'Build your board right here: click a player to target him; drag to rerank.'} Click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span></div>
       </div>
       <div className="ch-insights">
         <div className="chi-head"><span>Insights{len > 1 ? ` · ${(idx % len) + 1}/${len}` : ''}</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
@@ -3897,6 +3961,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 if (rule) { you = Math.max(minBid, Math.round(youBase * (1 + rule.w * (tilt / 100)))); youDir = you > youBase ? 'up' : you < youBase ? 'down' : 'flat'; }
               }
               const tgap = you - cost;
+              const softSched = scheduleSoftness(p.team, p.position);
               let sign, nameColor, nameTitle;
               if (p.fit === 'target') {
                 sign = 'under'; nameColor = 'rgb(45, 212, 163)';
@@ -3914,7 +3979,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 <span className="cheat-star" title={targets && targets.has(p.id) ? 'Target \u2014 click to clear' : 'Click to set as a target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }}>{targets && targets.has(p.id) ? '\u2605' : '\u2606'}</span>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
-                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : null}</span>
+                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (softSched ? <>{softSched.early ? <span className="cheat-soft" title={`Favorable weeks 1-3 for ${p.position}: ${softSched.early.opps.join(', ')}`}>Soft 1-3</span> : null}{softSched.late ? <span className="cheat-soft cheat-soft-late" title={`Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`}>Soft 15-17</span> : null}</> : null)}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
