@@ -3422,7 +3422,7 @@ function costColor(price, value) {
 }
 // ─── components/TeamsModal.jsx ──────────────────────────
 function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy, onAddPlayer, model, onSelectModel, targets, onToggleTarget }) {
-  const MODEL_LABELS = { ideal: 'Ideal Team', balanced: 'Balanced', targets: 'My Targets', heroRB: 'Hero RB', heroWR: 'Hero WR', heroQB: 'Hero QB', zeroRB: 'Zero RB', robustRB: 'Robust RB', robustWR: 'Robust WR', eliteTE: 'Elite TE' };
+  const MODEL_LABELS = { ideal: 'Ideal Team', balanced: 'Balanced', targets: 'Favorites', heroRB: 'Hero RB', heroWR: 'Hero WR', heroQB: 'Hero QB', zeroRB: 'Zero RB', robustRB: 'Robust RB', robustWR: 'Robust WR', eliteTE: 'Elite TE', custom: 'Custom' };
   const modelLabel = MODEL_LABELS[model || 'ideal'] || 'Ideal Team';
   const myTeam = teams.find(t => t.isMine);
   const playerMap = new Map();
@@ -3831,10 +3831,11 @@ function computeTierBreaks(list, pos) {
   }
   return breaks;
 }
-function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices }) {
+function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices, customForced, onBuildCustom, customBuilding, onClearTargets }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
+  const [customDesc, setCustomDesc] = useState('');
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE'], ['custom', 'Custom']];
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => (i.text || '').length <= 240), [players, myTeam, teams, config, draftedIds, marketState, games]);
   const len = insights.length;
@@ -3845,7 +3846,14 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
       <div className="ch-models">
         <span className="ch-models-label">Draft Models <span style={{ textTransform: 'none', fontWeight: 400, fontSize: '0.92em', opacity: 0.85 }}>(projected ppg)</span></span>
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
+        {myTeam && model === 'custom' && (
+          <div className="ch-custom" style={{ flexBasis: '100%', display: 'flex', gap: 6, marginTop: 6 }}>
+            <input className="ch-custom-input" value={customDesc} onChange={e => setCustomDesc(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && onBuildCustom) onBuildCustom(customDesc); }} placeholder="Describe your model, e.g. two stud WRs, an elite TE, punt QB" style={{ flex: 1, background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '6px 9px', fontSize: 12 }} />
+            <button className="hm-tab" disabled={customBuilding} onClick={() => onBuildCustom && onBuildCustom(customDesc)}>{customBuilding ? 'Building\u2026' : 'Build with AI'}</button>
+          </div>
+        )}
         {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
+        {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear every player you've marked as a favorite">Reset favorites</button>}
       </div>
       <div className="ch-controls">
         <span className="ch-controls-label">Sheet</span>
@@ -3868,7 +3876,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
     </div>
   );
 }
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides }) {
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides, customForced, onBuildCustom, customBuilding, onClearTargets }) {
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const byPos = {};
@@ -3934,7 +3942,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   }
   return (
     <div className="cheatsheet">
-      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} />
+      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} customForced={customForced} onBuildCustom={onBuildCustom} customBuilding={customBuilding} onClearTargets={onClearTargets} />
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth at your scoring · <b>YOU</b> the most you should pay, given your roster &amp; budget</div>
       <div className="cheat-print-head only-print">
@@ -6785,8 +6793,9 @@ const MODEL_FOCUS = {
   zeroRB: { focus: ['WR'], note: 'Focus: WR, two studs up top. RB is intentionally left cheap / best-available late.' },
   heroWR: { focus: ['WR'], note: 'Focus: WR, one elite anchor receiver. QB, RB, TE, K and DEF are taken at the best value available.' },
   eliteTE: { focus: ['TE'], note: 'Focus: TE, pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
+  custom: { focus: [], note: 'Your own model. Describe a strategy and the AI anchors the players that best fit it, then completes the roster within your budget.' },
 };
-function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets) {
+function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets, customForced) {
   const di = draftedIds || new Set();
   const byPos = {};
   (players || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -6805,6 +6814,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     else if (k === 'heroQB') { addF(pick('QB', 0)); }                            // pay up for one elite QB
     else if (k === 'balanced') { addF(pick('RB', 0)); addF(pick('WR', 0)); }     // even build, studs at RB+WR
     else if (k === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); }
+    else if (k === 'custom') { (customForced || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // AI-built custom model
     (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); // locked targets held constant across every model
     return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true);
   }
@@ -6819,7 +6829,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
 }
 function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
   const shownKey = model || 'ideal';
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE'], ['custom', 'Custom']];
   const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
   const modelPts = useMemo(() => {
     if (!myTeam) return {};
@@ -6889,7 +6899,7 @@ function teamTaunt(team, players, config, games) {
   return jabs[Math.floor(Math.random() * jabs.length)];
 }
 function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets }) {
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'My Targets'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE'], ['custom', 'Custom']];
   const games = seasonGames || 17;
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   if (!myTeam) return null;
@@ -6980,6 +6990,8 @@ function App() {
     } catch (e) {}
   }
   const [assignPlayer, setAssignPlayer] = useState(null);
+  const [customForcedIds, setCustomForcedIds] = useState(() => new Set());
+  const [customBuilding, setCustomBuilding] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railOpen, setRailOpen] = useState(true);
@@ -7088,13 +7100,13 @@ function App() {
     const myTeam = teams.find(t => t.isMine);
     if (!myTeam) return null;
     const dIds = new Set(draftHistory.map(d => d.playerId));
-    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets);
+    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets, customForcedIds);
     const ids = new Set();
     if (plan && plan.slots) plan.slots.forEach(s => { if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id); });
     if (plan && plan.benchTargets) plan.benchTargets.forEach(bt => { if (!dIds.has(bt.playerId)) ids.add(bt.playerId); }); // include the model's backups
     if (draftModel === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
     return ids;
-  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets]);
+  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds]);
   useEffect(() => {
     if (remoteApplyRef.current) { remoteApplyRef.current = false; return; }
     try {
@@ -7303,6 +7315,36 @@ function App() {
   function handleResetRanks() { setRankOrder({}); }
   function handleFocusPlayer(id) { focusNonce.current += 1; setView('board'); setFocusPlayer({ id, n: focusNonce.current }); }
   function handleSetRole(playerId, role) { setRoleOverrides(prev => { const n = { ...prev }; if (!role || role === 'auto') delete n[playerId]; else n[playerId] = role; return n; }); }
+  function handleClearTargets() { setTargets(new Set()); }
+  async function handleBuildCustom(desc) {
+    const d = (desc || '').trim(); if (!d) return;
+    const mt = teams.find(t => t.isMine);
+    setDraftModel('custom');
+    if (!mt) return;
+    setCustomBuilding(true);
+    try {
+      const dIds = new Set(draftHistory.map(x => x.playerId));
+      const pool = personalizedPlayers.filter(p => !dIds.has(p.id));
+      const byPos = {};
+      pool.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+      Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
+      const lines = [];
+      ['QB', 'RB', 'WR', 'TE'].forEach(pos => (byPos[pos] || []).slice(0, 12).forEach(pl => lines.push(pl.name + ' | ' + pos + ' | ' + Math.round(pl.projectedPoints || 0) + ' pts | ~$' + (pl.marketValue != null ? pl.marketValue : (pl.auctionValue != null ? pl.auctionValue : 1)))));
+      const startSummary = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(pos => config.roster[pos] && config.roster[pos].starters).map(pos => config.roster[pos].starters + pos).join(', ') + ((config.flex && config.flex.count) ? (', ' + config.flex.count + ' FLEX') : '');
+      const sys = 'You are a fantasy football auction draft strategist. Given a user strategy and an available player pool, choose the specific players to ANCHOR as starters that best express that strategy and fit the budget. Reply with ONLY a JSON array of exact player full names taken from the pool (no more than the number of starting slots), and nothing else.';
+      const userMsg = 'Strategy: ' + d + '\n\nMy remaining budget: $' + mt.budgetRemaining + '. Starting lineup: ' + startSummary + '.\n\nAvailable players (name | pos | proj pts | est price):\n' + lines.join('\n') + '\n\nReturn ONLY the JSON array of player names to anchor.';
+      const r = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: sys, messages: [{ role: 'user', content: userMsg }], stream: false }) });
+      const j = await r.json();
+      const text = (j && j.text) || '';
+      let names = []; const mm = text.match(/\[[\s\S]*\]/);
+      if (mm) { try { names = JSON.parse(mm[0]); } catch (e) {} }
+      if (!Array.isArray(names)) names = [];
+      const nameToId = new Map(pool.map(pl => [pl.name.toLowerCase().trim(), pl.id]));
+      const ids = new Set();
+      names.forEach(nm => { const id = nameToId.get(String(nm).toLowerCase().trim()); if (id) ids.add(id); });
+      setCustomForcedIds(ids);
+    } catch (e) {} finally { setCustomBuilding(false); }
+  }
   function handleToggleTarget(id) {
     setTargets(prev => {
       if (prev.has(id)) { const n = new Set(prev); n.delete(id); return n; }
@@ -7443,7 +7485,7 @@ function App() {
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
           mode="live" modelFitIds={modelFitIds} draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory}
-          model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} />
+          model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} customForced={customForcedIds} onBuildCustom={handleBuildCustom} customBuilding={customBuilding} onClearTargets={handleClearTargets} />
       </>
     );
     const draftBoardEl = (
