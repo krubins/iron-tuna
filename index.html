@@ -943,7 +943,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-controls { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; }
 .ch-controls-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 6px; }
 .ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; height: 156px; overflow: hidden; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
-.ch-insights-col { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 300px; }
+.ch-insights-col { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 150px; }
 .ch-insights-col .ch-insights { box-shadow: none; }
 .ch-insights-col .ch-ins-facts { flex: 0 0 auto; height: 110px; position: relative; padding-top: 11px; }
 .ch-insights-col .ch-ins-facts .chi-body { padding-right: 4px; }
@@ -4036,11 +4036,6 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
     const ms = marketState && marketState[pos];
     return { pos, left, total: topN.length, heat: ms ? ms.heat : null, sample: ms ? ms.sampleSize : 0 };
   }), [players, draftedIds, marketState]);
-  const dyn = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => i && (i.text || '').length <= 300), [players, myTeam, teams, config, draftedIds, marketState, games]);
-  const facts = useMemo(() => [...dyn, ...(PERF_NOTES.current || []), ...FANTASY_FACTS, ...(PERF_NOTES.library || [])], [dyn]);
-  const flen = facts.length;
-  const [idx, setIdx] = useState(0);
-  useEffect(() => { if (flen <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % flen), 11000); return () => clearInterval(t); }, [flen]);
   return (
     <div className="cheat-header no-print">
       <div className="ch-models">
@@ -4122,10 +4117,6 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         )}
       </div>
       <div className="ch-insights-col">
-        <div className="ch-insights ch-ins-facts">
-          {flen > 1 && <span className="chi-nav chi-nav-float"><button onClick={() => setIdx(i => (i - 1 + flen) % flen)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % flen)} title="Next">▼</button></span>}
-          {flen ? <div className="chi-body"><div className="chi-label">{facts[idx % flen].label}</div><div className="chi-text">{facts[idx % flen].text}</div></div> : <div className="chi-body chi-empty">Draft intel appears here.</div>}
-        </div>
         {coachEl ? <div className="ch-coachslot">{coachEl}</div> : null}
       </div>
     </div>
@@ -6821,10 +6812,10 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   return (
     <div className={`coach ${embed ? 'embed' : (big ? 'big' : 'dock')}`} style={(!big && !embed) ? { ...(dockH ? { height: dockH, maxHeight: dockH, ['--dock-h']: dockH + 'px' } : {}), ...(inputW ? { ['--coach-input-w']: inputW + 'px' } : {}) } : undefined}>
       {!big && !embed && <div className="coach-resize" onPointerDown={startDockResize} title="Drag to resize" />}
-      <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span>{!embed && <button className="coach-hidebtn" onClick={() => setOpen(false)} title="Minimize the coach">hide</button>}</span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}</div></div>
+      {!embed && <div className="coach-head"><span className="coach-title">{name}<span className="coach-live">Always on</span><button className="coach-hidebtn" onClick={() => setOpen(false)} title="Minimize the coach">hide</button></span><div>{active.length > 0 && <button onClick={() => { onApply({}); setPending(null); }} title="Reset all adjustments">reset</button>}</div></div>}
       {active.length > 0 && <div className="coach-chips">{active.map((a, i) => <span key={i} className="coach-chip">{a}</span>)}</div>}
       <div className="coach-body" ref={bodyRef}>{msgs.map((m, i) => (m.intro && (text.length > 0 || msgs.length > 1)) ? null : <div key={i} className={`coach-msg ${m.role}`}>{m.text}</div>)}</div>
-      <div className="coach-input">{!big && <div className="coach-col-resize" onPointerDown={startColResize} title="Drag to resize question vs. answer" />}<textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.'} /><button onClick={send}>Send</button></div>
+      <div className="coach-input">{!big && <div className="coach-col-resize" onPointerDown={startColResize} title="Drag to resize question vs. answer" />}<textarea value={text} rows={3} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder={pending ? 'e.g. spread it across the others' : (embed ? 'Ask the Value Coach about any player, price, or strategy. Enter to send.' : 'Ask anything, players, prices, strategy. Enter to send, Shift+Enter for a new line.')} /><button onClick={send}>Send</button></div>
     </div>
   );
 }
