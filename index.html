@@ -1177,6 +1177,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-compare-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
 .lp-compare-cap { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px; }
 .lp-compare-fn { color: var(--gold-text); font-weight: 700; }
+.lp-threeline { font-size: 14.5px; color: var(--text-secondary); max-width: 620px; line-height: 1.6; margin: 22px auto 0; }
+.lp-threeline b { color: var(--text-primary); font-weight: 700; }
+.lp-threeline b.gold { color: var(--gold-text); }
+.lp-creditline { font-size: 12.5px; color: var(--text-muted); max-width: 680px; line-height: 1.6; margin: 30px auto 4px; }
 @media (max-width: 760px) { .lp-trust { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; } .lp-steps { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
   .landing-page { padding: 0 14px 60px; }
@@ -2365,26 +2369,9 @@ function LandingSplash({ onDismiss, onNav }) {
           <button className="lp-cta-quiet" onClick={scrollToHow}>See how it works ↓</button>
         </div>
         <p className="lp-reassure">Free custom auction values — no signup. The <b>live AI navigator</b> (Draft Day Mode) is a one-time $14.99 — the one edge your league can't get for free.</p>
-        <div className="it-value-strip" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginTop: 26, width: '100%', maxWidth: 680 }}>
-          <div className="it-card" style={{ flex: '1 1 180px', padding: '16px 18px', textAlign: 'left' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--it-text-dim)', marginBottom: 6 }}>Market price</div>
-            <div style={{ fontSize: 13.5, color: 'var(--it-text-mut)', lineHeight: 1.45 }}>What he'll cost in your auction.</div>
-          </div>
-          <div className="it-card it-card--accent" style={{ flex: '1 1 180px', padding: '16px 18px', textAlign: 'left' }}>
-            <div className="it-accent-text" style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>True value</div>
-            <div style={{ fontSize: 13.5, color: 'var(--it-text-mut)', lineHeight: 1.45 }}>What he's actually worth at your league settings.</div>
-          </div>
-          <div className="it-card" style={{ flex: '1 1 180px', padding: '16px 18px', textAlign: 'left' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--it-text-dim)', marginBottom: 6 }}>Your max</div>
-            <div style={{ fontSize: 13.5, color: 'var(--it-text-mut)', lineHeight: 1.45 }}>The most you should pay, given your roster and budget.</div>
-          </div>
+        <p className="lp-threeline">Three numbers on every player: <b>market price</b> (what he'll cost), <b>true value</b> (what he's worth at your settings), and <b className="gold">your max</b> (the most you should pay).</p>
         </div>
-        </div>
-        <div className="lp-trust">
-          <div className="lp-trust-item"><span className="lp-trust-k">Built on real intel</span>A compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources.</div>
-          <div className="lp-trust-item"><span className="lp-trust-k">Private by default</span>Runs entirely in your browser. No account, no password sharing, nothing uploaded.</div>
-          <div className="lp-trust-item"><span className="lp-trust-k">Shows its work</span>Every value is explainable — reliability-adjusted and tied to your exact league settings.</div>
-        </div>
+        <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser — no account, nothing uploaded — and every value is explainable.</p>
         <div className="lp-how" ref={howRef}>
           <div className="lp-preview-eyebrow">How it works</div>
           <h2 className="lp-phases-title">Three steps to draft night</h2>
@@ -2393,6 +2380,27 @@ function LandingSplash({ onDismiss, onNav }) {
             <div className="lp-step"><div className="lp-step-n">2</div><div className="lp-step-h">Get your numbers</div><div className="lp-step-b">Market price, true value, and your personal max for every player — recalculated to your exact format and strategy.</div></div>
             <div className="lp-step"><div className="lp-step-n">3</div><div className="lp-step-h">Draft with the navigator</div><div className="lp-step-b">Live guidance on the clock: who to target, how high to go, and when to let a player walk.</div></div>
           </div>
+        </div>
+        <div className="lp-compare">
+          <div className="lp-preview-eyebrow">How it compares</div>
+          <h2 className="lp-preview-h">The only auction tool built around a live AI co-pilot</h2>
+          <div className="lp-compare-cap">How the auction tools compare<sup className="lp-compare-fn">*</sup></div>
+          <div className="lp-compare-scroll">
+          <table className="lp-table">
+            <thead>
+              <tr><th></th><th className="lp-th-us">Iron Tuna</th><th>FantasyPros</th><th>Draft Sharks</th><th>ESPN / Yahoo / Sleeper</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Live in-draft AI — who to bid on &amp; your exact max, in real time</td><td className="lp-td-us">✓</td><td className="lp-no">Manual entry only</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">—</td></tr>
+              <tr><td>Three numbers per player — price · true value · your max</td><td className="lp-td-us">✓</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid only</td><td className="lp-no">Generic $</td></tr>
+              <tr><td>Calibrated to your exact league &amp; scoring</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-yes">✓</td><td className="lp-no">Generic</td></tr>
+              <tr><td>Auction-first — not snake with auction bolted on</td><td className="lp-td-us">✓</td><td className="lp-no">✗</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
+              <tr><td>Free to start</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-no">✗</td><td className="lp-yes">✓</td></tr>
+              <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$48–96</td><td>Free (generic)</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div className="lp-compare-note"><sup className="lp-compare-fn">*</sup> As of 2026, the date of posting. Competitor features and pricing reflect publicly listed plans and may change. FantasyPros' live draft sync covers snake drafts; real auction drafts use manual entry.</div>
         </div>
         <div className="lp-phases-wrap">
           <h2 className="lp-phases-title">Two tiers. One edge.</h2>
@@ -2417,27 +2425,6 @@ function LandingSplash({ onDismiss, onNav }) {
           <div className="lp-preview-eyebrow">Purpose-built AI</div>
           <h2 className="lp-preview-h">Not just another ChatGPT wrapper</h2>
           <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s navigator is <b>embedded with years of fantasy football auction experience</b>, built on real auction drafts and hundreds of live bids. It reasons over <b>your exact league and scoring</b>, and factors your strategy to identify the price trends that will actually move your draft.</p>
-        </div>
-        <div className="lp-compare">
-          <div className="lp-preview-eyebrow">How it compares</div>
-          <h2 className="lp-preview-h">The only auction tool built around a live AI co-pilot</h2>
-          <div className="lp-compare-cap">How the auction tools compare<sup className="lp-compare-fn">*</sup></div>
-          <div className="lp-compare-scroll">
-          <table className="lp-table">
-            <thead>
-              <tr><th></th><th className="lp-th-us">Iron Tuna</th><th>FantasyPros</th><th>Draft Sharks</th><th>ESPN / Yahoo / Sleeper</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Live in-draft AI — who to bid on &amp; your exact max, in real time</td><td className="lp-td-us">✓</td><td className="lp-no">Manual entry only</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">—</td></tr>
-              <tr><td>Three numbers per player — price · true value · your max</td><td className="lp-td-us">✓</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid only</td><td className="lp-no">Generic $</td></tr>
-              <tr><td>Calibrated to your exact league &amp; scoring</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-yes">✓</td><td className="lp-no">Generic</td></tr>
-              <tr><td>Auction-first — not snake with auction bolted on</td><td className="lp-td-us">✓</td><td className="lp-no">✗</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
-              <tr><td>Free to start</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-no">✗</td><td className="lp-yes">✓</td></tr>
-              <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$48–96</td><td>Free (generic)</td></tr>
-            </tbody>
-          </table>
-          </div>
-          <div className="lp-compare-note"><sup className="lp-compare-fn">*</sup> As of 2026, the date of posting. Competitor features and pricing reflect publicly listed plans and may change. FantasyPros' live draft sync covers snake drafts; real auction drafts use manual entry.</div>
         </div>
         <div className="lp-faq" ref={faqRef}>
           <div className="lp-preview-eyebrow">FAQ</div>
