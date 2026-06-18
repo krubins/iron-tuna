@@ -3393,11 +3393,6 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
               </div>
               {!isCollapsed && (<>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Spent ${totalSpent} · {team.spotsRemaining} slots open</div>
-                {team.isMine && (<div className="mt-fillcap">
-                  <div className="mt-fillcap-h">Projected fills · {modelLabel} model <span className="mt-ghost">(not yet drafted)</span></div>
-                  <div className="mt-fillcap-cols"><span>Slot</span><span>Suggested tier</span><span>$ proj</span><span>pts/gm</span></div>
-                  <div className="mt-fillcap-note">"QB14" = the 14th-best QB by projection, a tier not a named player. Click a ghosted row to lock it as a target.</div>
-                </div>)}
                 <div style={{ marginTop: 10 }} onPointerDown={e => e.stopPropagation()}>
                   {Object.keys(config.roster).map(pos => (
                     <React.Fragment key={pos}>
@@ -3422,6 +3417,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                   ))}
                 </div>
                 {!team.isMine && (<button className="btn-secondary" style={{ marginTop: 10, width: '100%' }} onClick={() => onSetMyTeam(team.id)}>Set as My Team</button>)}
+                {team.isMine && (<div className="mt-fillcap-note" style={{ marginTop: 8 }}>Ghosted rows are your undrafted slots, each set to the optimal available player for maximum points. Click one to lock it as a target.</div>)}
                 {team.isMine && (<div style={{ marginTop: 10, fontSize: 10, textAlign: 'center', color: 'var(--accent-text)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>★ Your Team</div>)}
               </>)}
             </div>
