@@ -2253,11 +2253,15 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       )}
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${wordTx},${wordTy})`}>
-        {placed.map((g, i) => (
-          <text key={i} x={g.cx} y={cy}
-                fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
-                textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
-        ))}
+        {placed.map((g, i) => {
+          const R = g.cx + g.size * 0.27; // right edge of the glyph
+          const tf = i === 6 ? `translate(${R} 0) scale(0.9 1) translate(${-R} 0)` : undefined; // pull the left side of the N in TUNA in ~10%
+          return (
+            <text key={i} x={g.cx} y={cy} transform={tf}
+                  fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
+                  textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
+          );
+        })}
       </g>
       {tagline && (
         <text x={vbW / 2} y={taglineY} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
