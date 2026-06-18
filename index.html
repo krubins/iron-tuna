@@ -950,7 +950,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cc-DEF .cheat-col-head { border-top-color: #9aa6b2; } .cc-DEF .cheat-col-head > span:first-child { color: #c2cdd7; }
 .landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 0 20px 60px; background: radial-gradient(1100px 560px at 50% -8%, rgba(45,212,163,0.07), transparent 60%), radial-gradient(820px 520px at 88% 12%, rgba(212,160,23,0.05), transparent 55%), radial-gradient(760px 620px at 6% 82%, rgba(45,212,163,0.045), transparent 60%), radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); }
 .lp-inner { position: relative; z-index: 2; max-width: 960px; margin: 20px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
-.lp-hero { min-height: calc(100vh - 260px); width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 18px; }
+.lp-hero { min-height: auto; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; }
 .lp-hero .landing-logo { margin-top: 0; margin-bottom: 22px; }
 .lp-hero .lp-head { margin-top: 0; }
 .lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.02em; color: var(--text-primary); line-height: 1.06; margin: 0 0 22px; max-width: 760px; }
@@ -974,7 +974,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-subline { color: var(--text-muted); margin-top: 16px; }
 .lp-sub-link { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.22); text-underline-offset: 4px; transition: color 0.12s, text-decoration-color 0.12s; }
 .lp-sub-link:hover { color: var(--text-primary); text-decoration-color: var(--gold-text); }
-.lp-phases-wrap { min-height: 100vh; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 64px 0; }
+.lp-phases-wrap { min-height: auto; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 28px; padding: 40px 0; }
 .lp-phases-title { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 44px); color: var(--text-primary); text-align: center; letter-spacing: 0.02em; margin: 0; }
 .lp-phases { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; width: 100%; margin: 0; text-align: left; }
 .lp-phase { position: relative; overflow: hidden; padding: 38px 36px 36px; background: linear-gradient(180deg, rgba(22,30,40,0.7), rgba(12,18,24,0.5)); border: 1px solid var(--border-subtle); border-radius: 16px; box-shadow: 0 16px 44px rgba(0,0,0,0.42); }
@@ -1148,6 +1148,32 @@ input:focus, select:focus { border-color: var(--accent); }
   .coach-col-resize { display: none; }
 }
 .landing-page { background: radial-gradient(140% 700px at 50% -8%, rgba(20,184,166,0.07), transparent 72%), radial-gradient(150% 820px at 50% 118%, rgba(20,184,166,0.03), transparent 66%), linear-gradient(180deg, #0d0f12 0%, #0a0b0d 55%, #08090b 100%); }
+/* ============ Landing overhaul: reassurance, trust band, how-it-works ============ */
+.lp-reassure { font-size: 13px; color: var(--text-muted); max-width: 540px; line-height: 1.55; margin: 18px auto 0; }
+.lp-reassure b { color: var(--text-secondary); }
+.lp-trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; max-width: 900px; margin: 44px auto 4px; text-align: left; }
+.lp-trust-item { background: rgba(255,255,255,0.025); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px 18px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); }
+.lp-trust-k { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--positive); margin-bottom: 8px; }
+.lp-how { width: 100%; max-width: 940px; margin: 40px auto 8px; scroll-margin-top: 72px; }
+.lp-how .lp-preview-eyebrow { display: flex; justify-content: center; }
+.lp-how .lp-phases-title { margin-bottom: 28px; }
+.lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; width: 100%; text-align: left; }
+.lp-step { position: relative; background: linear-gradient(180deg, rgba(22,30,40,0.55), rgba(12,18,24,0.4)); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 24px 22px; }
+.lp-step-n { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 18px; color: #06281f; background: var(--positive); margin-bottom: 14px; }
+.lp-step-h { font-family: var(--font-display); font-size: 19px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; }
+.lp-step-b { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; }
+@media (max-width: 760px) { .lp-trust { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; } .lp-steps { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .landing-page { padding: 0 14px 60px; }
+  .lp-hero .landing-logo { height: 180px !important; margin-bottom: 16px; }
+  .lp-head { margin-bottom: 16px; }
+  .lp-sub { margin-bottom: 22px; }
+  .lp-cta-row { width: 100%; flex-direction: column; gap: 10px; }
+  .lp-cta, .lp-cta-alt { width: 100%; max-width: 340px; padding: 15px 24px; }
+  .lp-cta-quiet { padding: 8px 10px; }
+  .lp-reassure { font-size: 12.5px; }
+  .lp-step { padding: 20px 18px; }
+}
   </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -2125,7 +2151,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const n = word.length;
   const center = (n - 1) / 2;
   const base = 50;
-  const shrink = 0.52;
+  const shrink = 0;  // uniform uppercase wordmark (IRON TUNA), no per-letter taper
   const cmp = tagline ? 0.80 : 1;      // landing-only: compress IRON TUNA toward the fish + tagline width
   const advF = tagline ? 0.44 : 0.64;  // landing-only: condense letters horizontally
   const sizes = word.map((_, i) => { const d = 1 - Math.abs(i - center) / center; return base * (1 - shrink * d) * cmp; });
@@ -2260,6 +2286,8 @@ function phaseIcon(i) {
 function LandingSplash({ onDismiss, onNav }) {
   const [fadingOut, setFadingOut] = useState(false);
   const faqRef = useRef(null);
+  const howRef = useRef(null);
+  function scrollToHow() { if (howRef.current) howRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   function enter() { setFadingOut(true); setTimeout(() => onDismiss && onDismiss(), 350); }
   function go(target) { if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } setFadingOut(true); setTimeout(() => { if (onNav) onNav(target); else if (onDismiss) onDismiss(); }, 350); }
   const tiers = [
@@ -2271,11 +2299,12 @@ function LandingSplash({ onDismiss, onNav }) {
       'The dollar allocation that builds your highest-scoring team',
       'Unlimited mock auctions against strategy-driven CPU managers',
     ]],
-    ['Auction Management', '$14.99', 'Live auction-day command', [
+    ['Draft Day Mode', '$14.99', 'Live auction-day command', [
       'Track player selection, available funds, and maximum remaining bid',
       'Roster targets that re-optimize as prices and availability shift',
       'Bid guidance that updates as the board moves',
-      'The always-on AI Value Coach and Gameday Navigator for in-auction custom advice.',
+      'The always-on AI Value Coach and Gameday Navigator for in-auction custom advice',
+      'Full refund anytime before you’ve drafted 10 players',
     ]],
   ];
   // First quote: founder. Second: intentional humor. Add genuine user testimonials here as they arrive.
@@ -2292,7 +2321,9 @@ function LandingSplash({ onDismiss, onNav }) {
     ['QB', 'Josh Allen', '9', '6', '7'],
   ];
   const faqs = [
-    ['Is it really free?', 'Yes, custom auction values for your exact league and scoring are free, no signup. The Advanced Auction Day Management package (the live management tool and the Value Coach) is the paid upgrade.'],
+    ['Is it really free?', 'Yes. Custom auction values for your exact league and scoring are free, with no signup. Draft Day Mode (the live management tool, Value Coach, and Gameday Navigator) is the $14.99 upgrade.'],
+    ['What if Draft Day Mode isn’t for me?', 'You get a full refund anytime before you’ve drafted 10 players — so you can try it live in your real auction and still back out if it isn’t pulling its weight.'],
+    ['Where do the projections come from?', 'A compilation of ESPN, CBS, decades of fantasy experience, and direct conversations with leading fantasy sources — then reliability-adjusted and recalculated to your exact scoring.'],
     ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
     ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing, enter your settings (or paste / screenshot your scoring) and you are ready.'],
     ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player, market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time.'],
@@ -2312,15 +2343,15 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero it-hero">
-        <LogoMark tagline height={420} className="landing-logo" />
-        <div className="lp-cmd">Auction Draft Command</div>
+        <LogoMark tagline height={300} className="landing-logo" />
+        <div className="lp-cmd">Fantasy Football Auction Draft Assistant</div>
         <h1 className="lp-head">Know what every player is worth.</h1>
-        <p className="lp-sub"><b>Free custom auction values</b>, calibrated to your league and your strategy. Plus a <b>live navigator</b>: who to bid on, how high, and why.</p>
-        <p className="lp-desc">Iron Tuna is a fantasy football auction draft tool built to help you dominate live salary-cap drafts. The fantasy football auction draft tool for smarter live bidding, real-time values, and better roster construction.</p>
-        <div className="lp-cta-row" style={{ marginTop: 4 }}>
-          <button className="lp-cta it-btn" onClick={() => go('prep')}>Get my auction values</button>
-          <button className="lp-cta-quiet" onClick={() => go('board')}>Auction-day management →</button>
+        <p className="lp-sub"><b>Custom auction values</b> calibrated to your league and scoring — plus a <b>live navigator</b> that tells you who to bid on, how high, and why.</p>
+        <div className="lp-cta-row" style={{ marginTop: 6 }}>
+          <button className="lp-cta it-btn" onClick={() => go('prep')}>Get my auction values — free</button>
+          <button className="lp-cta-quiet" onClick={scrollToHow}>See how it works ↓</button>
         </div>
+        <p className="lp-reassure">Free to value your league — no signup. <b>Draft Day Mode</b> is $14.99, with a full refund anytime before you've drafted 10 players.</p>
         <div className="it-value-strip" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginTop: 26, width: '100%', maxWidth: 680 }}>
           <div className="it-card" style={{ flex: '1 1 180px', padding: '16px 18px', textAlign: 'left' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--it-text-dim)', marginBottom: 6 }}>Market price</div>
@@ -2335,6 +2366,20 @@ function LandingSplash({ onDismiss, onNav }) {
             <div style={{ fontSize: 13.5, color: 'var(--it-text-mut)', lineHeight: 1.45 }}>The most you should pay, given your roster and budget.</div>
           </div>
         </div>
+        </div>
+        <div className="lp-trust">
+          <div className="lp-trust-item"><span className="lp-trust-k">Built on real intel</span>A compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources.</div>
+          <div className="lp-trust-item"><span className="lp-trust-k">Private by default</span>Runs entirely in your browser. No account, no password sharing, nothing uploaded.</div>
+          <div className="lp-trust-item"><span className="lp-trust-k">Shows its work</span>Every value is explainable — reliability-adjusted and tied to your exact league settings.</div>
+        </div>
+        <div className="lp-how" ref={howRef}>
+          <div className="lp-preview-eyebrow">How it works</div>
+          <h2 className="lp-phases-title">Three steps to draft night</h2>
+          <div className="lp-steps">
+            <div className="lp-step"><div className="lp-step-n">1</div><div className="lp-step-h">Set your league</div><div className="lp-step-b">Teams, budget, roster slots, and full custom scoring. Paste or screenshot your settings and you're ready — no account required.</div></div>
+            <div className="lp-step"><div className="lp-step-n">2</div><div className="lp-step-h">Get your numbers</div><div className="lp-step-b">Market price, true value, and your personal max for every player — recalculated to your exact format and strategy.</div></div>
+            <div className="lp-step"><div className="lp-step-n">3</div><div className="lp-step-h">Draft with the navigator</div><div className="lp-step-b">Live guidance on the clock: who to target, how high to go, and when to let a player walk.</div></div>
+          </div>
         </div>
         <div className="lp-phases-wrap">
           <h2 className="lp-phases-title">Two tiers. One edge.</h2>
@@ -2359,14 +2404,6 @@ function LandingSplash({ onDismiss, onNav }) {
           <div className="lp-preview-eyebrow">Purpose-built AI</div>
           <h2 className="lp-preview-h">Not just another ChatGPT wrapper</h2>
           <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s navigator is <b>embedded with years of fantasy football auction experience</b>, built on real auction drafts and hundreds of live bids. It reasons over <b>your exact league and scoring</b>, and factors your strategy to identify the price trends that will actually move your draft.</p>
-        </div>
-        <div className="lp-quotes">
-          {quotes.map(([q, who], i) => (
-            <figure className="lp-quote" key={i}>
-              <blockquote>{q}</blockquote>
-              <figcaption>{who}</figcaption>
-            </figure>
-          ))}
         </div>
         <div className="lp-faq" ref={faqRef}>
           <div className="lp-preview-eyebrow">FAQ</div>
