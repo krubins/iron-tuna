@@ -3595,7 +3595,7 @@ const STRAT_TILT = {
 };
 function computeTierBreaks(list, pos) {
   const breaks = new Set();
-  const manual = ({ QB: [1, 5], RB: [2], WR: [3, 5], TE: [2, 7, 12] }[pos]) || [];
+  const manual = ({ QB: [3, 7], RB: [2, 5], WR: [3, 5], TE: [2, 7, 12] }[pos]) || [];
   const n = (list || []).length;
   let lastManual = 0;
   manual.forEach(i => { if (i >= 1 && i < n) { breaks.add(i); if (i > lastManual) lastManual = i; } });
@@ -5298,19 +5298,42 @@ function applyQbActuals(scored, config) {
 }
 function applyTierShaping(scored) {
   const out = scored.map(p => ({ ...p }));
+  // (a) News-driven value nudges (mid-2026 offseason). Multiply projected points for matched names.
+  const NEWS = [
+    [/malik nabers/i, 0.85], [/rashee rice/i, 0.88], [/zach charbonnet/i, 0.80],
+    [/de.?von achane/i, 0.92], [/josh jacobs/i, 0.92], [/(^|\b)(rj|r\.j\.) harvey/i, 0.88], [/bucky irving/i, 0.92],
+    [/a\.?\s?j\.?\s?brown/i, 1.08], [/jaylen waddle/i, 1.08], [/d\.?\s?j\.?\s?moore/i, 1.06],
+    [/kenneth walker/i, 1.08], [/treveyon henderson/i, 1.10], [/aaron rodgers/i, 1.06],
+    [/jeremiyah love/i, 1.10], [/carnell tate/i, 1.08]
+  ];
+  out.forEach(p => { const nm = p.name || ''; for (let k = 0; k < NEWS.length; k++) { if (NEWS[k][0].test(nm)) { p.projectedPoints = (p.projectedPoints || 0) * NEWS[k][1]; break; } } });
   const byPos = {};
   out.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   const sortPos = pos => (byPos[pos] || []).slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
-  // 1) Force Amon-Ra St. Brown to WR rank 4 (ladder-preserving move; Drake London slides to 5).
-  const wr = sortPos('WR');
-  if (wr.length >= 5) {
-    const ladder = wr.map(p => p.projectedPoints || 0);
-    const order = wr.slice();
-    const idx = order.findIndex(p => /amon[ -]?ra/i.test(p.name || '') || /st\.?\s*brown/i.test(p.name || ''));
-    if (idx >= 0 && idx !== 3) { const [pl] = order.splice(idx, 1); order.splice(3, 0, pl); }
-    order.forEach((p, i) => { p.projectedPoints = ladder[i]; });
-  }
-  // 2) Narrow within tiers: pull each member 60% toward the tier mean (order preserved).
+  // (b) Ladder-preserving rank moves.
+  const moveToIndex = (pos, matcher, targetIdx) => {
+    const arr = sortPos(pos);
+    if (arr.length < 2) return;
+    const ladder = arr.map(p => p.projectedPoints || 0);
+    const order = arr.slice();
+    const i = order.findIndex(p => matcher(p.name || ''));
+    if (i < 0) return;
+    const j = Math.max(0, Math.min(order.length - 1, targetIdx));
+    if (i === j) return;
+    const [pl] = order.splice(i, 1); order.splice(j, 0, pl);
+    order.forEach((p, k) => { p.projectedPoints = ladder[k]; });
+  };
+  const moveAbove = (pos, matcherA, matcherB) => {
+    const arr = sortPos(pos);
+    const ia = arr.findIndex(p => matcherA(p.name || ''));
+    const ib = arr.findIndex(p => matcherB(p.name || ''));
+    if (ia < 0 || ib < 0 || ia <= ib) return;
+    moveToIndex(pos, matcherA, ib);
+  };
+  moveToIndex('WR', n => /amon[ -]?ra/i.test(n) || /st\.?\s*brown/i.test(n), 3); // Amon-Ra -> WR4
+  moveAbove('QB', n => /stafford/i.test(n), n => /dart/i.test(n));                 // Stafford above Jaxson Dart
+  moveToIndex('QB', n => /caleb williams/i.test(n), 14);                           // Caleb Williams -> QB15
+  // (c) Narrow within tiers: pull each member 60% toward the tier mean (order preserved).
   const narrow = (pos, ranges, f = 0.6) => {
     const arr = sortPos(pos);
     ranges.forEach(([a, b]) => {
@@ -5320,8 +5343,8 @@ function applyTierShaping(scored) {
       grp.forEach(p => { p.projectedPoints = mean + ((p.projectedPoints || 0) - mean) * (1 - f); });
     });
   };
-  narrow('QB', [[2, 5]]);
-  narrow('RB', [[1, 2]]);
+  narrow('QB', [[1, 3], [4, 7]]);
+  narrow('RB', [[1, 2], [3, 5]]);
   narrow('WR', [[1, 3], [4, 5]]);
   narrow('TE', [[1, 2], [3, 7], [8, 12]]);
   return out;
