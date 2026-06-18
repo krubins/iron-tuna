@@ -2391,7 +2391,6 @@ function LandingSplash({ onDismiss, onNav }) {
           <button className="lp-cta lp-cta-alt" onClick={() => go('board')}>DOMINATE YOUR AUCTION - $14.99</button>
         </div>
         <p className="lp-reassure">Free custom auction values, no signup. The <b>Draft Tracker with live AI Navigator</b> (Draft Day Mode) is a one-time $14.99, the edge your league can't get for free.</p>
-        <p className="lp-threeline">Three numbers on every player: <b>market price</b> (what he'll cost), <b>true value</b> (what he's worth at your settings), and <b className="gold">your max</b> (the most you should pay based on your roster and who is still available).</p>
         </div>
         <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser, no account, nothing uploaded, and every value is explainable.</p>
         <div className="lp-how" ref={howRef}>
@@ -2448,7 +2447,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-ai-section">
           <div className="lp-preview-eyebrow">Purpose-built AI</div>
           <h2 className="lp-preview-h">Not just another ChatGPT/Claude wrapper</h2>
-          <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s navigator is <b>embedded with years of fantasy football auction experience</b>, built on real auction drafts and hundreds of live bids. It reasons over <b>your exact league and scoring</b>, and factors your strategy to identify the price trends that will actually move your draft.</p>
+          <p className="lp-ai-body">Most so-called “AI” tools just forward your question to ChatGPT or Claude. Iron Tuna’s <b>Value Coach</b> lives inside your draft board, embedded with <b>your league’s scoring and every pick as it happens</b>. Built on real auction data and hundreds of drafts’ worth of bidding, it gives <b>live, relevant advice</b> the moment you need it. Think of it as a cheat code that makes you the sharpest manager at the table.</p>
         </div>
         <div className="lp-faq" ref={faqRef}>
           <div className="lp-preview-eyebrow">FAQ</div>
@@ -3939,6 +3938,11 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const pn = (PERF_NOTES.current || []).concat(PERF_NOTES.library || []); const plen = pn.length;
   const cyc = Math.max(blen, plen, 1);
   const [idx, setIdx] = useState(0);
+  const [wiOpen, setWiOpen] = useState(false);
+  const [wiId, setWiId] = useState('');
+  const [wiPrice, setWiPrice] = useState(0);
+  const wiPool = useMemo(() => (players || []).filter(p => !(draftedIds && draftedIds.has(p.id))).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).slice(0, 260), [players, draftedIds]);
+  const wiPlan = useMemo(() => { if (!myTeam || !wiId) return null; const wp = (players || []).find(p => String(p.id) === String(wiId)); if (!wp) return null; try { return buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([wp.id]), roleOverrides, true, { [wp.id]: Math.max(1, wiPrice || 1) }); } catch (e) { return null; } }, [myTeam, players, config, draftedIds, roleOverrides, wiId, wiPrice]);
   useEffect(() => { if (cyc <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % cyc), 12000); return () => clearInterval(t); }, [cyc]);
   return (
     <div className="cheat-header no-print">
@@ -3946,7 +3950,28 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <span className="ch-models-label">Draft Models <span style={{ textTransform: 'none', fontWeight: 400, fontSize: '0.92em', opacity: 0.85 }}>(projected ppg)</span></span>
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
         {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
+        {myTeam && <button className={`hm-tab ${wiOpen ? 'active' : ''}`} onClick={() => setWiOpen(o => !o)} title="See your best build if you commit to one player at a price you set">What if?</button>}
         {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear every player you've marked as a favorite">Reset favorites</button>}
+        {myTeam && wiOpen && (
+          <div className="ch-whatif" style={{ flexBasis: '100%', marginTop: 8, padding: '9px 11px', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 }}>
+              <span style={{ color: 'var(--text-muted)' }}>What if I land</span>
+              <select value={wiId} onChange={e => { const id = e.target.value; setWiId(id); const pl = wiPool.find(p => String(p.id) === String(id)); if (pl) setWiPrice(pl.marketValue != null ? pl.marketValue : (pl.auctionValue != null ? pl.auctionValue : 1)); }} style={{ background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12, maxWidth: 230 }}>
+                <option value="">choose a player…</option>
+                {wiPool.map(p => <option key={p.id} value={p.id}>{p.name} ({p.position})</option>)}
+              </select>
+              <span style={{ color: 'var(--text-muted)' }}>for $</span>
+              <input type="number" min="1" value={wiId ? wiPrice : ''} onChange={e => setWiPrice(parseInt(e.target.value) || 0)} style={{ width: 62, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12 }} />
+              <span style={{ color: 'var(--text-muted)' }}>? The model rebuilds the rest of your roster around that pick.</span>
+            </div>
+            {wiId && wiPlan && (
+              <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <div><b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> projected starting lineup{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · that price busts your budget, lower it</span> : null}.</div>
+                <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{wiPlan.slots.map((s, i) => <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, background: 'var(--bg-elev)', border: `1px solid ${String(s.player && s.player.id) === String(wiId) ? 'var(--positive)' : 'var(--border-subtle)'}`, borderRadius: 8, padding: '1px 6px' }}>{s.label}: {s.player ? s.player.name : '–'}{s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : ''}</span>)}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="ch-controls">
         <span className="ch-controls-label">Sheet</span>
@@ -4780,7 +4805,7 @@ function buildTeamRosterGrid(team, plan, players, config) {
   });
   return grid;
 }
-function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors) {
+function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices) {
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
   const R = myTeam.budgetRemaining;
@@ -4831,7 +4856,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
     const fps = players.filter(p => forcedSet.has(p.id) && !draftedIds.has(p.id)).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
     fps.forEach(fp => {
       const slot = remainingStarterSlots.find(s => fixed[s.label] == null && s.eligible.includes(fp.position));
-      if (slot) { used.add(fp.id); plan[slot.label] = fp; fixed[slot.label] = priceOf(fp); forcedCost += priceOf(fp); }
+      if (slot) { const fpr = (forcedPrices && forcedPrices[fp.id] != null) ? forcedPrices[fp.id] : priceOf(fp); used.add(fp.id); plan[slot.label] = fp; fixed[slot.label] = fpr; forcedCost += fpr; }
     });
   }
   // Apply what-if overrides next: lock those slots at the chosen price.
