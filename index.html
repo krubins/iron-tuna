@@ -939,6 +939,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-controls { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; }
 .ch-controls-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 6px; }
 .ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; height: 156px; overflow: hidden; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
+.ch-insights-col { display: flex; flex-direction: column; gap: 12px; height: 100%; }
+.ch-insights-col .ch-insights { height: auto; flex: 1 1 0; min-height: 0; box-shadow: none; }
+.ch-insights-col .chi-text { -webkit-line-clamp: 2; }
+.ch-ins-perf { border-color: rgba(90,169,255,0.35); }
+.ch-ins-perf .chi-label { color: #5aa9ff; }
+.chi-fresh { font-size: 9px; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
 .chi-head { display: flex; align-items: center; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 8px; }
 .chi-nav button { background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-secondary); width: 24px; height: 20px; border-radius: 4px; cursor: pointer; font-size: 9px; margin-left: 4px; padding: 0; }
 .chi-nav button:hover { border-color: var(--positive); color: var(--text-primary); }
@@ -3831,6 +3837,14 @@ function computeTierBreaks(list, pos) {
   }
   return breaks;
 }
+const PERF_NOTES = {
+  updated: 'Jun 18, 2026',
+  items: [
+    { label: 'WR risers', text: 'Josh Downs (IND) is a top offseason riser after the Michael Pittman Jr. trade opens the starting Z role. Ladd McConkey and Zachariah Branch (ATL WR2 upside) are also climbing boards.' },
+    { label: 'RB role changes', text: 'Rachaad White reunites with Jayden Daniels in Washington in a committee with Jacory Croskey-Merritt (soft-tissue injury, missed OTAs). David Montgomery still projects as an RB2 at 29.' },
+    { label: 'Injuries to watch', text: 'Malik Nabers (NYG) had surgery delayed, so Week 1 is not a lock; he rises if a full go at camp. Chris Rodriguez Jr. (foot surgery) is out until training camp at the earliest.' },
+  ],
+};
 function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices, customForced, onBuildCustom, customBuilding, onClearTargets }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
@@ -3840,12 +3854,15 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => (i.text || '').length <= 240), [players, myTeam, teams, config, draftedIds, marketState, games]);
   const len = insights.length;
   const [idx, setIdx] = useState(0);
+  const [pidx, setPidx] = useState(0);
+  const pn = PERF_NOTES.items; const plen = pn.length;
+  useEffect(() => { if (plen <= 1) return; const t = setInterval(() => setPidx(i => (i + 1) % plen), 22000); return () => clearInterval(t); }, [plen]);
   useEffect(() => { if (len <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % len), 20000); return () => clearInterval(t); }, [len]);
   return (
     <div className="cheat-header no-print">
       <div className="ch-models">
         <span className="ch-models-label">Draft Models <span style={{ textTransform: 'none', fontWeight: 400, fontSize: '0.92em', opacity: 0.85 }}>(projected ppg)</span></span>
-        {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
+        {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
         {myTeam && model === 'custom' && (
           <div className="ch-custom" style={{ flexBasis: '100%', display: 'flex', gap: 6, marginTop: 6 }}>
             <input className="ch-custom-input" value={customDesc} onChange={e => setCustomDesc(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && onBuildCustom) onBuildCustom(customDesc); }} placeholder="Describe your model, e.g. two stud WRs, an elite TE, punt QB" style={{ flex: 1, background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '6px 9px', fontSize: 12 }} />
@@ -3864,14 +3881,20 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
         <button className={`col-toggle ${showCols && showCols.soft13 ? 'on' : ''}`} title="Flag players with soft Weeks 1-3 matchups (hover the tag for opponents)" onClick={() => setShowCols(c => ({ ...c, soft13: !c.soft13 }))}>Soft 1-3</button>
-        <button className={`col-toggle ${showCols && showCols.soft1517 ? 'on' : ''}`} title="Flag players with soft Weeks 15-17 (fantasy playoffs) matchups" onClick={() => setShowCols(c => ({ ...c, soft1517: !c.soft1517 }))}>Soft 15-17</button>
+        <button className={`col-toggle ${showCols && showCols.soft1517 ? 'on' : ''}`} style={{ marginLeft: 'auto' }} title="Flag players with soft Weeks 15-17 (fantasy playoffs) matchups" onClick={() => setShowCols(c => ({ ...c, soft1517: !c.soft1517 }))}>Soft 15-17</button>
         {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
         <span style={{ flexBasis: '100%', height: 0 }} />
         <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Draft any player straight from the sheet, no separate list: click to assign him to a team; drag to rerank.' : 'Build your board right here: click a player to target him; drag to rerank.'} Click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span></div>
       </div>
-      <div className="ch-insights">
-        <div className="chi-head"><span>Insights</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
-        {insights.length ? <div className="chi-body"><div className="chi-label">{insights[idx % insights.length].label}</div><div className="chi-text">{insights[idx % insights.length].text}</div></div> : <div className="chi-body chi-empty">Insights appear as your board and draft develop.</div>}
+      <div className="ch-insights-col">
+        <div className="ch-insights ch-ins-money">
+          <div className="chi-head"><span>Bidding &amp; Budget</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
+          {insights.length ? <div className="chi-body"><div className="chi-label">{insights[idx % insights.length].label}</div><div className="chi-text">{insights[idx % insights.length].text}</div></div> : <div className="chi-body chi-empty">Bidding and budget insights appear as your board and draft develop.</div>}
+        </div>
+        <div className="ch-insights ch-ins-perf">
+          <div className="chi-head"><span>Player Performance <span className="chi-fresh">· upd {PERF_NOTES.updated}</span></span>{plen > 1 && <span className="chi-nav"><button onClick={() => setPidx(i => (i - 1 + plen) % plen)} title="Previous">▲</button><button onClick={() => setPidx(i => (i + 1) % plen)} title="Next">▼</button></span>}</div>
+          {plen ? <div className="chi-body"><div className="chi-label">{pn[pidx % plen].label}</div><div className="chi-text">{pn[pidx % plen].text}</div></div> : <div className="chi-body chi-empty">Player-performance notes refresh about 3 times a week.</div>}
+        </div>
       </div>
     </div>
   );
@@ -6905,7 +6928,7 @@ function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, s
   if (!myTeam) return null;
   return (
     <div className="header-models" title="Draft models, click to box a model's target players on the cheat sheet; click again to clear">
-      {models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>)}
+      {models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>)}
     </div>
   );
 }
