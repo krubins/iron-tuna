@@ -3935,13 +3935,17 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const [wiOpen, setWiOpen] = useState(false);
   const [wiName, setWiName] = useState('');
+  const [wiShow, setWiShow] = useState(false);
   const wiId = whatIfId || '';
   const wiPrice = whatIfPrice || 0;
   const setWi = (id, price) => { if (onSetWhatIf) onSetWhatIf(id, price); };
-  const wiPool = useMemo(() => (players || []).filter(p => !(draftedIds && draftedIds.has(p.id))).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).slice(0, 400), [players, draftedIds]);
+  const wiPool = useMemo(() => (players || []).filter(p => !(draftedIds && draftedIds.has(p.id))).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)), [players, draftedIds]);
   const wiActive = !!wiId;
-  function pickWiName(v) { setWiName(v); const t = v.toLowerCase().trim(); const pl = wiPool.find(p => `${p.name} (${p.position})`.toLowerCase() === t) || wiPool.find(p => p.name.toLowerCase() === t); if (pl) { setWi(pl.id, pl.marketValue != null ? pl.marketValue : (pl.auctionValue != null ? pl.auctionValue : 1)); } else { setWi('', 0); } }
-  function clearWi() { setWiName(''); setWi('', 0); }
+  const wiPriceOf = pl => pl.marketValue != null ? pl.marketValue : (pl.auctionValue != null ? pl.auctionValue : 1);
+  const wiMatches = useMemo(() => { const t = wiName.toLowerCase().trim(); const base = t ? wiPool.filter(p => p.name.toLowerCase().includes(t)) : wiPool; return base.slice(0, 10); }, [wiName, wiPool]);
+  function onWiInput(v) { setWiName(v); setWiShow(true); const t = v.toLowerCase().trim(); const pl = wiPool.find(p => `${p.name} (${p.position})`.toLowerCase() === t) || wiPool.find(p => p.name.toLowerCase() === t); if (pl) setWi(pl.id, wiPriceOf(pl)); else setWi('', 0); }
+  function chooseWi(pl) { setWiName(`${pl.name} (${pl.position})`); setWiShow(false); setWi(pl.id, wiPriceOf(pl)); }
+  function clearWi() { setWiName(''); setWiShow(false); setWi('', 0); }
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? wiId : undefined, wiPrice); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, wiId, wiPrice]);
   const wiModelKey = model || 'ideal';
   const wiModelLabel = (models.find(mm => mm[0] === wiModelKey) || ['ideal', 'Ideal Team'])[1];
@@ -3963,8 +3967,19 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
           <div className="ch-whatif" style={{ flexBasis: '100%', marginTop: 8, padding: '9px 11px', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 }}>
               <span style={{ color: 'var(--text-muted)' }}>What if I land</span>
-              <input list="ch-wi-players" value={wiName} onChange={e => pickWiName(e.target.value)} placeholder="type a player name…" style={{ width: 210, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: `1px solid ${wiActive ? 'var(--positive)' : 'var(--border-strong)'}`, borderRadius: 4, padding: '4px 8px', fontSize: 12 }} />
-              <datalist id="ch-wi-players">{wiPool.map(p => <option key={p.id} value={`${p.name} (${p.position})`} />)}</datalist>
+              <span style={{ position: 'relative', display: 'inline-block' }}>
+                <input value={wiName} onChange={e => onWiInput(e.target.value)} onFocus={() => setWiShow(true)} onBlur={() => setTimeout(() => setWiShow(false), 160)} placeholder="type a player name…" style={{ width: 210, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: `1px solid ${wiActive ? 'var(--positive)' : 'var(--border-strong)'}`, borderRadius: 4, padding: '4px 8px', fontSize: 12 }} />
+                {wiShow && wiMatches.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 60, minWidth: 230, maxHeight: 220, overflowY: 'auto', background: 'var(--bg-elev)', border: '1px solid var(--border-strong)', borderRadius: 4, marginTop: 2, boxShadow: '0 8px 22px rgba(0,0,0,0.55)' }}>
+                    {wiMatches.map(pl => (
+                      <div key={pl.id} onMouseDown={e => { e.preventDefault(); chooseWi(pl); }} style={{ padding: '5px 9px', fontSize: 12, cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', gap: 12 }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-base)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                        <span>{pl.name} <span style={{ color: 'var(--text-muted)' }}>({pl.position})</span></span>
+                        <span style={{ color: 'var(--gold-text)', fontFamily: 'var(--font-mono)' }}>${wiPriceOf(pl)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </span>
               <span style={{ color: 'var(--text-muted)' }}>for $</span>
               <input type="number" min="1" value={wiActive ? wiPrice : ''} onChange={e => setWi(wiId, parseInt(e.target.value) || 0)} style={{ width: 62, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12 }} />
               {wiActive && <button className="hm-tab" onClick={clearWi} title="Clear the what-if">clear</button>}
