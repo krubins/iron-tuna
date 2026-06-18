@@ -748,8 +748,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-sold { font-size: 10px; color: var(--positive); font-weight: 700; font-variant-numeric: tabular-nums; }
 .cheat-scarce { font-size: 8px; font-weight: 700; letter-spacing: 0.04em; color: var(--gold-text); border: 1px solid rgba(212,160,23,0.5); border-radius: 3px; padding: 1px 4px; white-space: nowrap; }
 .cheat-scarce.scarce-last { color: #ff6b5e; border-color: rgba(255,107,94,0.55); }
-.cheat-soft { font-size: 7.5px; font-weight: 700; letter-spacing: 0.02em; color: #2dd4a3; border: 1px solid rgba(45,212,163,0.5); border-radius: 3px; padding: 1px 3px; white-space: nowrap; margin-left: 3px; }
-.cheat-soft-late { color: #5aa9ff; border-color: rgba(90,169,255,0.5); }
+.cheat-soft { font-size: 7.5px; font-weight: 700; letter-spacing: 0.02em; color: #5aa9ff; border: 1px solid rgba(90,169,255,0.5); border-radius: 3px; padding: 1px 3px; white-space: nowrap; margin-left: 3px; }
+.cheat-soft-late { color: #b07cff; border-color: rgba(176,124,255,0.55); }
 .cheat-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .cheat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-items: start; }
 .cheat-col-group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -831,6 +831,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-cols-label { font-size: 12px; color: var(--text-muted); align-self: center; font-family: var(--font-body); letter-spacing: normal; }
 .col-toggle { font-size: 12px; padding: 5px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-muted); cursor: pointer; font-family: var(--font-body); letter-spacing: normal; }
 .col-toggle.on { background: rgba(45,212,163,0.14); border-color: var(--positive); color: var(--positive); }
+.col-toggle.soft-13.on { background: rgba(90,169,255,0.16); border-color: #5aa9ff; color: #5aa9ff; }
+.col-toggle.soft-1517.on { background: rgba(176,124,255,0.16); border-color: #b07cff; color: #b07cff; }
 .cheat-ppg { font-family: var(--font-mono); font-size: 10px; text-align: right; color: #7fa6c9; min-width: 20px; }
 .cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
 .col-toggle.price-clear { color: var(--gold-text); border-color: var(--gold-text); }
@@ -2380,7 +2382,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-hero it-hero">
         <LogoMark tagline height={300} className="landing-logo" />
         <div className="lp-cmd">Live AI Auction Draft Assistant</div>
-        <h1 className="lp-head">Know exactly how high to bid, live on the clock.</h1>
+        <h1 className="lp-head">Know exactly how high to bid when you're on the clock.</h1>
         <p className="lp-sub">On draft night, <b>track all bids</b> while a <b>live AI Navigator</b> tells you who to target, your exact max, and when to walk. It starts with <b>free custom values</b> calibrated to your league.</p>
         <div className="lp-cta-row" style={{ marginTop: 6 }}>
           <button className="lp-cta" onClick={() => go('prep')}>Get your auction values - FREE</button>
@@ -3837,38 +3839,110 @@ function computeTierBreaks(list, pos) {
   }
   return breaks;
 }
+const BIDDING_NOTES = [
+    { label: 'Spend it all', text: 'Leftover budget is wasted points. Plan to finish with $1 to $2 left, not a surplus.' },
+    { label: 'Stars and scrubs', text: 'Concentrating 70%+ of budget on three studs and filling with $1 to $3 players often beats spreading evenly.' },
+    { label: 'Balanced build', text: 'Four or five $20 to $40 players gives a higher floor than two superstars and a thin roster.' },
+    { label: 'The $1 endgame', text: 'Your last six to eight roster spots should cost $1 to $2 each, so reserve enough minimum bids.' },
+    { label: 'Set your max', text: 'Decide your true max before nominations open and never chase a dollar past it.' },
+    { label: 'Reserve math', text: 'Keep at least (open slots minus one) dollars so you can still fill every roster spot.' },
+    { label: 'Nominate to drain', text: 'Float players you do not want early to pull cash out of rivals\' wallets.' },
+    { label: 'Early inflation', text: 'Prices run hot in the first 20 nominations while everyone is flush. The bargains come later.' },
+    { label: 'Late deflation', text: 'When most wallets are tapped, elite value can fall to you cheap. Keep your powder dry.' },
+    { label: 'Tier, not rank', text: 'Pay up to stay inside a tier. Once a tier empties, pivot rather than overpay for the next one.' },
+    { label: 'Last in the tier', text: 'The final player in a strong tier often spikes as the room realizes the cliff is coming.' },
+    { label: 'Let runs pass', text: 'When a position run starts, sit it out unless the player is a target. Prices peak mid-run.' },
+    { label: 'Do not lead a run', text: 'Nominating the first RB often triggers a run that inflates your own later targets.' },
+    { label: 'Value over need early', text: 'Early on, take the best value available. Positional needs can be solved cheaply later.' },
+    { label: 'Pay for difference-makers', text: 'The premium for a true league-winner is worth it. The premium for a mid-tier name is not.' },
+    { label: 'Replacement cost', text: 'A player is worth his points above the freely available replacement, not his raw total.' },
+    { label: 'QB patience', text: 'In one-QB leagues, a late mid-QB or streaming usually beats paying up for an elite arm.' },
+    { label: 'TE barbell', text: 'Either pay up for a top-three TE or punt to a $1 to $2 TE. The muddy middle rarely pays off.' },
+    { label: 'K and DEF last', text: 'Spend $1 each on kicker and defense, every time. Never bid them up.' },
+    { label: 'Track the room', text: 'Know how much total cash and how many roster spots are left across all teams, not just yours.' },
+    { label: 'Bid to your number', text: 'Bid to your You value, not to the room\'s projected price.' },
+    { label: 'Pounce on value', text: 'When a player you like goes well under your max, take him even if he was not in the plan.' },
+    { label: 'Avoid the $2 trap', text: 'Overspending $2 to $3 again and again on bench bodies quietly drains your stud budget.' },
+    { label: 'Protect a whale fund', text: 'Keep enough cash to win one bidding war on a target you refuse to lose.' },
+    { label: 'Sit out overpays', text: 'If two rivals bid each other up, let them. Their lost budget is your future value.' },
+    { label: 'Scarcity premium', text: 'Scarce elite RB and TE supply justifies paying up. Deep WR pools reward waiting.' },
+    { label: 'Inflation is live', text: 'Every overpay raises remaining fair prices, every bargain lowers them. Adjust on the fly.' },
+    { label: 'Hide your sleeper', text: 'Do not nominate your favorite cheap target. Floating him invites rivals to bid him to your max.' },
+    { label: 'End-of-tier urgency', text: 'If only one or two players remain in a tier you need, be willing to pay the premium now.' },
+    { label: 'Spread your risk', text: 'Funding two or three reliable starters beats one superstar plus a roster of dart throws.' },
+    { label: 'Mid-draft re-check', text: 'Halfway through, recount slots and dollars and reset your per-slot budget to reality.' },
+    { label: 'Wait one more', text: 'At deep positions the ninth option often costs $1 and projects near the sixth.' },
+    { label: 'Pay the projection', text: 'Buy the projected role, not last season\'s box score.' },
+    { label: 'Bench for upside', text: 'Spend bench dollars on high-ceiling backups and handcuffs, not safe but capped veterans.' },
+    { label: 'Save for $1 wars', text: 'Keep a small float for the inevitable late dollar wars on sleepers you like.' },
+    { label: 'Superflex shift', text: 'In Superflex and two-QB leagues, quarterbacks carry real value. Budget for two.' },
+    { label: 'Cheap starters free studs', text: 'A $1 starter at a deep position frees money for an extra stud elsewhere.' },
+    { label: 'Do not double up blind', text: 'Pairing two studs at one position only works if the discount is real and other spots stay funded.' },
+    { label: 'Open with a stud', text: 'If you want an early anchor, nominate him before budgets thin and bidding turns cagey.' },
+    { label: 'Walk-away power', text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.' },
+];
 const PERF_NOTES = {
   updated: 'Jun 18, 2026',
-  items: [
-    { label: 'WR risers', text: 'Josh Downs (IND) is a top offseason riser after the Michael Pittman Jr. trade opens the starting Z role. Ladd McConkey and Zachariah Branch (ATL WR2 upside) are also climbing boards.' },
-    { label: 'RB role changes', text: 'Rachaad White reunites with Jayden Daniels in Washington in a committee with Jacory Croskey-Merritt (soft-tissue injury, missed OTAs). David Montgomery still projects as an RB2 at 29.' },
-    { label: 'Injuries to watch', text: 'Malik Nabers (NYG) had surgery delayed, so Week 1 is not a lock; he rises if a full go at camp. Chris Rodriguez Jr. (foot surgery) is out until training camp at the earliest.' },
+  current: [],
+  library: [
+    { label: 'Volume is king', text: 'Opportunity, meaning touches and targets, predicts fantasy points more reliably than efficiency.' },
+    { label: 'Target share', text: 'A receiver\'s share of his team\'s targets is stickier and more predictive than yards per catch.' },
+    { label: 'Bellcow backs', text: 'Running backs who handle both early downs and passing-down work carry the safest floors.' },
+    { label: 'Red-zone role', text: 'Goal-line and red-zone usage drives touchdowns, the most valuable and volatile scoring.' },
+    { label: 'Pass-catching RBs', text: 'Backs with receiving work hold PPR value even in committees or negative game scripts.' },
+    { label: 'Air yards', text: 'A receiver\'s downfield target volume signals touchdown upside before the scores arrive.' },
+    { label: 'Year-two WR leap', text: 'Wide receivers often break out in their second season more than as rookies.' },
+    { label: 'Rookie RBs play early', text: 'Running back is the position where rookies most often produce right away.' },
+    { label: 'Age curves', text: 'RB production tends to fall sharply after about age 28 to 29. Receivers age more gracefully.' },
+    { label: 'Offensive environment', text: 'Players in high-scoring, fast-paced offenses get more drives and more chances to score.' },
+    { label: 'QB play lifts catchers', text: 'An upgrade at quarterback raises the floor of every pass catcher around him.' },
+    { label: 'Line matters for RBs', text: 'Run-blocking quality swings rushing efficiency and goal-line success.' },
+    { label: 'Injury-return discount', text: 'Players returning from major injury often start slow. Value the ramp, not the old ceiling.' },
+    { label: 'Handcuff value', text: 'The backup to a workhorse RB can win leagues if the starter goes down.' },
+    { label: 'Standalone backups', text: 'A backup with passing-down or change-of-pace work has value even before any injury.' },
+    { label: 'Chase vacated targets', text: 'When a team loses a high-target player, those looks are up for grabs. Find the beneficiary.' },
+    { label: 'Coaching change', text: 'A new coordinator can reshape usage. Weight recent scheme fit over old roles.' },
+    { label: 'Schedule fades late', text: 'Early matchups matter, but talent and role win out over a full season.' },
+    { label: 'Regression to the mean', text: 'Outlier touchdown rates, very high or very low, usually normalize the next year.' },
+    { label: 'Snap share tells', text: 'Rising snap counts are an early tell of a growing role before the points follow.' },
+    { label: 'Committee risk', text: 'Ambiguous backfields cap every back\'s ceiling. Prioritize clear lead roles.' },
+    { label: 'Slot vs outside', text: 'Slot receivers earn steadier targets, outside receivers carry more boom-or-bust scoring.' },
+    { label: 'Draft capital sticks', text: 'Heavy investment, a high pick or big contract, signals a protected role.' },
+    { label: 'Count the mouths', text: 'Fewer pass-game options on a team means a bigger individual target share.' },
+    { label: 'Game script', text: 'Trailing teams pass more, lifting receivers. Leading teams run, lifting backs.' },
+    { label: 'Touchdown dependence', text: 'Players who score mostly on touchdowns are riskier week to week than yardage producers.' },
+    { label: 'Elite TE edge', text: 'A top tight end is a weekly positional advantage few rivals can match.' },
+    { label: 'Stream defenses', text: 'Defense scoring is matchup-driven. Target units facing weak offenses and turnover-prone QBs.' },
+    { label: 'Third-down back', text: 'In PPR, the passing-down back can out-score the early-down grinder.' },
+    { label: 'Workload risk', text: 'Backs with very high touch counts carry injury risk that can crater a season.' },
+    { label: 'New-team timing', text: 'Receivers changing teams often need time to build chemistry with a new quarterback.' },
+    { label: 'Landing spot', text: 'For rookie receivers, talent plus a clear target path matters more than draft slot alone.' },
+    { label: 'Veteran floors', text: 'Proven receivers in stable roles offer reliable floors even as their upside dips.' },
+    { label: 'Mobile QB floor', text: 'Quarterbacks who run add a high-floor scoring source defenses cannot easily take away.' },
+    { label: 'Pace and plays', text: 'Teams that run more total plays create more fantasy opportunities for everyone.' },
+    { label: 'Touch trend', text: 'A player gaining touches week over week can be more valuable than his season average shows.' },
+    { label: 'Depth-chart fragility', text: 'One injury ahead on the depth chart can turn a bench stash into a starter overnight.' },
+    { label: 'Efficiency is noisy', text: 'One big game on few touches is less predictive than steady, heavy usage.' },
+    { label: 'Plan the playoffs', text: 'Stagger your starters\' byes and note Weeks 15 to 17 matchups for the fantasy playoffs.' },
+    { label: 'Role over name', text: 'A clear every-down role on a bad team often out-scores a famous name in a crowded one.' },
   ],
 };
 function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices, customForced, onBuildCustom, customBuilding, onClearTargets }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
   const [customDesc, setCustomDesc] = useState('');
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE'], ['custom', 'Custom']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
-  const insights = useMemo(() => buildCoachInsights({ evalPlayers: players, myTeam, teams, config, draftedIds, marketState, games, mode: (draftedIds && draftedIds.size > 0) ? 'board' : 'prep' }).filter(i => (i.text || '').length <= 240), [players, myTeam, teams, config, draftedIds, marketState, games]);
-  const len = insights.length;
+  const bn = BIDDING_NOTES; const blen = bn.length;
+  const pn = (PERF_NOTES.current || []).concat(PERF_NOTES.library || []); const plen = pn.length;
+  const cyc = Math.max(blen, plen, 1);
   const [idx, setIdx] = useState(0);
-  const [pidx, setPidx] = useState(0);
-  const pn = PERF_NOTES.items; const plen = pn.length;
-  useEffect(() => { if (plen <= 1) return; const t = setInterval(() => setPidx(i => (i + 1) % plen), 22000); return () => clearInterval(t); }, [plen]);
-  useEffect(() => { if (len <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % len), 20000); return () => clearInterval(t); }, [len]);
+  useEffect(() => { if (cyc <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % cyc), 12000); return () => clearInterval(t); }, [cyc]);
   return (
     <div className="cheat-header no-print">
       <div className="ch-models">
         <span className="ch-models-label">Draft Models <span style={{ textTransform: 'none', fontWeight: 400, fontSize: '0.92em', opacity: 0.85 }}>(projected ppg)</span></span>
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
-        {myTeam && model === 'custom' && (
-          <div className="ch-custom" style={{ flexBasis: '100%', display: 'flex', gap: 6, marginTop: 6 }}>
-            <input className="ch-custom-input" value={customDesc} onChange={e => setCustomDesc(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && onBuildCustom) onBuildCustom(customDesc); }} placeholder="Describe your model, e.g. two stud WRs, an elite TE, punt QB" style={{ flex: 1, background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '6px 9px', fontSize: 12 }} />
-            <button className="hm-tab" disabled={customBuilding} onClick={() => onBuildCustom && onBuildCustom(customDesc)}>{customBuilding ? 'Building\u2026' : 'Build with AI'}</button>
-          </div>
-        )}
         {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
         {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear every player you've marked as a favorite">Reset favorites</button>}
       </div>
@@ -3880,20 +3954,22 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <span style={{ flexBasis: '100%', height: 0 }} />
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
-        <button className={`col-toggle ${showCols && showCols.soft13 ? 'on' : ''}`} title="Flag players with soft Weeks 1-3 matchups (hover the tag for opponents)" onClick={() => setShowCols(c => ({ ...c, soft13: !c.soft13 }))}>Soft 1-3</button>
-        <button className={`col-toggle ${showCols && showCols.soft1517 ? 'on' : ''}`} style={{ marginLeft: 'auto' }} title="Flag players with soft Weeks 15-17 (fantasy playoffs) matchups" onClick={() => setShowCols(c => ({ ...c, soft1517: !c.soft1517 }))}>Soft 15-17</button>
+        <span style={{ flexBasis: '100%', height: 0 }} />
+        <button className={`col-toggle soft-tog soft-13 ${showCols && showCols.soft13 ? 'on' : ''}`} title="Flag players with soft Weeks 1-3 matchups (hover the tag for opponents)" onClick={() => setShowCols(c => ({ ...c, soft13: !c.soft13 }))}>Soft 1-3</button>
+        <button className={`col-toggle soft-tog soft-1517 ${showCols && showCols.soft1517 ? 'on' : ''}`} title="Flag players with soft Weeks 15-17 (fantasy playoffs) matchups" onClick={() => setShowCols(c => ({ ...c, soft1517: !c.soft1517 }))}>Soft 15-17</button>
         {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
         <span style={{ flexBasis: '100%', height: 0 }} />
-        <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Draft any player straight from the sheet, no separate list: click to assign him to a team; drag to rerank.' : 'Build your board right here: click a player to target him; drag to rerank.'} Click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span></div>
+        <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Draft any player straight from the sheet, no separate list: click to assign him to a team; drag to rerank.' : 'Build your board right here: click a player to target him; drag to rerank.'} Click a Proj price to edit it.</div>
+        <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}><span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444', marginLeft: 10 }}>● potentially overpriced</span></div>
       </div>
       <div className="ch-insights-col">
         <div className="ch-insights ch-ins-money">
-          <div className="chi-head"><span>Bidding &amp; Budget</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
-          {insights.length ? <div className="chi-body"><div className="chi-label">{insights[idx % insights.length].label}</div><div className="chi-text">{insights[idx % insights.length].text}</div></div> : <div className="chi-body chi-empty">Bidding and budget insights appear as your board and draft develop.</div>}
+          <div className="chi-head"><span>Bidding &amp; Budget</span>{cyc > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + cyc) % cyc)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % cyc)} title="Next">▼</button></span>}</div>
+          {blen ? <div className="chi-body"><div className="chi-label">{bn[idx % blen].label}</div><div className="chi-text">{bn[idx % blen].text}</div></div> : <div className="chi-body chi-empty">Bidding and budget insights appear here.</div>}
         </div>
         <div className="ch-insights ch-ins-perf">
-          <div className="chi-head"><span>Player Performance <span className="chi-fresh">· upd {PERF_NOTES.updated}</span></span>{plen > 1 && <span className="chi-nav"><button onClick={() => setPidx(i => (i - 1 + plen) % plen)} title="Previous">▲</button><button onClick={() => setPidx(i => (i + 1) % plen)} title="Next">▼</button></span>}</div>
-          {plen ? <div className="chi-body"><div className="chi-label">{pn[pidx % plen].label}</div><div className="chi-text">{pn[pidx % plen].text}</div></div> : <div className="chi-body chi-empty">Player-performance notes refresh about 3 times a week.</div>}
+          <div className="chi-head"><span>Player Performance <span className="chi-fresh">· upd {PERF_NOTES.updated}</span></span></div>
+          {plen ? <div className="chi-body"><div className="chi-label">{pn[idx % plen].label}</div><div className="chi-text">{pn[idx % plen].text}</div></div> : <div className="chi-body chi-empty">Player-performance notes refresh about 3 times a week.</div>}
         </div>
       </div>
     </div>
@@ -6852,7 +6928,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
 }
 function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
   const shownKey = model || 'ideal';
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE'], ['custom', 'Custom']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
   const modelPts = useMemo(() => {
     if (!myTeam) return {};
@@ -6922,7 +6998,7 @@ function teamTaunt(team, players, config, games) {
   return jabs[Math.floor(Math.random() * jabs.length)];
 }
 function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets }) {
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE'], ['custom', 'Custom']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const games = seasonGames || 17;
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   if (!myTeam) return null;
