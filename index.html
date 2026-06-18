@@ -2245,7 +2245,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         {placed.map((g, i) => {
           const t = wordWidth > 0 ? (g.cx - wordWidth / 2) / (wordWidth / 2) : 0;
           const arcAmp = tagline ? 12 : 0;
-          const arcRot = tagline ? 8 : 0;
+          const arcRot = 0; // letters stay perfectly vertical; only the baseline arcs so the tops curve
           const gy = cy + arcAmp * (1 - t * t);
           const rot = arcRot * t;
           return (
