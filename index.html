@@ -3595,16 +3595,15 @@ const STRAT_TILT = {
 };
 function computeTierBreaks(list, pos) {
   const breaks = new Set();
-  const manual = ({ QB: [3, 7], RB: [2, 5], WR: [3, 5], TE: [2, 7, 12] }[pos]) || [];
-  const n = (list || []).length;
-  let lastManual = 0;
-  manual.forEach(i => { if (i >= 1 && i < n) { breaks.add(i); if (i > lastManual) lastManual = i; } });
   const pts = (list || []).map(p => p.projectedPoints || 0);
-  if (pts.length >= 4) {
-    const gaps = [];
-    for (let i = 1; i < pts.length; i++) gaps.push(pts[i - 1] - pts[i]);
-    const avg = gaps.reduce((s, x) => s + x, 0) / gaps.length;
-    for (let i = Math.max(1, lastManual + 1); i < pts.length; i++) { const g = pts[i - 1] - pts[i]; if (g >= avg * 1.7 && g > 0.5) breaks.add(i); }
+  if (pts.length < 4) return breaks;
+  const gaps = [];
+  for (let i = 1; i < pts.length; i++) gaps.push(pts[i - 1] - pts[i]);
+  const avg = gaps.reduce((s, x) => s + x, 0) / gaps.length;
+  for (let i = 1; i < pts.length; i++) { const g = pts[i - 1] - pts[i]; if (g >= avg * 1.7 && g > 0.5) breaks.add(i); }
+  if (breaks.size > 5) {
+    const arr = Array.from(breaks).map(i => ({ i, g: pts[i - 1] - pts[i] })).sort((a, b) => b.g - a.g).slice(0, 5).map(x => x.i);
+    return new Set(arr);
   }
   return breaks;
 }
@@ -6782,8 +6781,8 @@ function App() {
   }
   const SEASON_GAMES = 17;
   const baseValued = useMemo(() => {
-    const scored = applyQbActuals(players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) })), config);
-    const ranked = applyCustomRanks(applyTierShaping(applyBaselineRankFixes(scored)), rankOrder);
+    const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
+    const ranked = applyCustomRanks(scored, rankOrder);
     return buildValuations(ranked, config).players;
   }, [players, config, rankOrder]);
   const valuedPlayers = useMemo(() => {
