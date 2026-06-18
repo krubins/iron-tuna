@@ -3593,17 +3593,18 @@ const STRAT_TILT = {
   heroWR:   { WR: [{ maxRank: 2, w: 0.30 }, { w: -0.12 }], RB: [{ w: -0.06 }] },
   eliteTE:  { TE: [{ maxRank: 2, w: 0.35 }], RB: [{ w: -0.05 }], WR: [{ w: -0.05 }] },
 };
-function computeTierBreaks(list) {
+function computeTierBreaks(list, pos) {
   const breaks = new Set();
+  const manual = ({ QB: [1, 5], RB: [2], WR: [3, 5], TE: [2, 7, 12] }[pos]) || [];
+  const n = (list || []).length;
+  let lastManual = 0;
+  manual.forEach(i => { if (i >= 1 && i < n) { breaks.add(i); if (i > lastManual) lastManual = i; } });
   const pts = (list || []).map(p => p.projectedPoints || 0);
-  if (pts.length < 4) return breaks;
-  const gaps = [];
-  for (let i = 1; i < pts.length; i++) gaps.push(pts[i - 1] - pts[i]);
-  const avg = gaps.reduce((s, x) => s + x, 0) / gaps.length;
-  for (let i = 1; i < pts.length; i++) { const g = pts[i - 1] - pts[i]; if (g >= avg * 1.7 && g > 0.5) breaks.add(i); }
-  if (breaks.size > 5) {
-    const arr = Array.from(breaks).map(i => ({ i, g: pts[i - 1] - pts[i] })).sort((a, b) => b.g - a.g).slice(0, 5).map(x => x.i);
-    return new Set(arr);
+  if (pts.length >= 4) {
+    const gaps = [];
+    for (let i = 1; i < pts.length; i++) gaps.push(pts[i - 1] - pts[i]);
+    const avg = gaps.reduce((s, x) => s + x, 0) / gaps.length;
+    for (let i = Math.max(1, lastManual + 1); i < pts.length; i++) { const g = pts[i - 1] - pts[i]; if (g >= avg * 1.7 && g > 0.5) breaks.add(i); }
   }
   return breaks;
 }
@@ -3662,7 +3663,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const activeCols = COLSPEC.filter(c => showCols[c[0]]);
   const gridT = `15px 16px minmax(0,1fr) auto ${activeCols.map(() => 'auto').join(' ')}`;
   const tierBreaksByPos = {};
-  cols.forEach(([pos, nn]) => { tierBreaksByPos[pos] = computeTierBreaks((byPos[pos] || []).slice(0, nn)); });
+  cols.forEach(([pos, nn]) => { tierBreaksByPos[pos] = computeTierBreaks((byPos[pos] || []).slice(0, nn), pos); });
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
   const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -3707,7 +3708,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
       {mode === 'live'
         ? <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Click a player to mark him drafted · drag to re-rank · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>
         : <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Drag to re-rank · click a player to target him · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span> · <span style={{ color: 'var(--text-faint)' }}>hover any column or name for details</span>.</div>}
-      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth to a generic team · <b>YOU</b> your max bid (your budget &amp; roster) · <span className="cl-t">TARGET</span> worth a bid · <span className="cl-p">PASS</span> let it go</div>
+      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth to a generic team · <b>YOU</b> your max bid (your budget &amp; roster)</div>
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
@@ -3749,7 +3750,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 <span className="cheat-star" title={targets && targets.has(p.id) ? 'Target \u2014 click to clear' : 'Click to set as a target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }}>{targets && targets.has(p.id) ? '\u2605' : '\u2606'}</span>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
-                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : <span className={`cheat-tag ${sign === 'under' ? 'tg-target' : 'tg-pass'}`} title={sign === 'under' ? 'Your max bid is above the likely price — worth a bid' : 'Likely price meets or beats your max — let it go'}>{sign === 'under' ? 'TARGET' : 'PASS'}</span>}</span>
+                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : null}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
@@ -3802,11 +3803,12 @@ function MockAuction({ players, config, seasonGames }) {
   const sFactor = (strat, pos, rank) => { const tl = STRAT_TILT[strat]; if (!tl || !tl[pos]) return 1; const ru = tl[pos].find(r => r.maxRank == null || rank <= r.maxRank); return ru ? 1 + ru.w : 1; };
   const idNum = v => { const s = String(v); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % 100000; };
   const jitter = (a, b) => { const x = Math.sin((idNum(a) + 1) * 97.13 + (idNum(b) + 1) * 39.7) * 10000; return 0.85 + 0.3 * (x - Math.floor(x)); };
-  const aiMax = (t, p) => { if (slotsLeft(t) <= 0 || !p) return 0; const need = posTotal(p.position) - posCount(t, p.position); let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99); if (need <= 0) v *= 0.3; v *= jitter(t.id, p.id); return Math.max(0, Math.min(maxAllowed(t), Math.round(v))); };
+  const bidCap = p => 1.1 * Math.max(p.marketValue || 0, p.auctionValue || 0, p.inflatedValue || 0);
+  const aiMax = (t, p) => { if (slotsLeft(t) <= 0 || !p) return 0; const need = posTotal(p.position) - posCount(t, p.position); let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99); if (need <= 0) v *= 0.3; v *= jitter(t.id, p.id); v = Math.min(v, bidCap(p)); return Math.max(0, Math.min(maxAllowed(t), Math.round(v))); };
   function finish(nt0, dr0) {
     let nt = nt0.map(t => ({ ...t, roster: [...t.roster] })); let dr = new Set(dr0); let guard = 0;
     const slot = t => totalSlots - t.roster.length; const pc = (t, pos) => t.roster.filter(r => r.position === pos).length; const ma = t => Math.max(1, t.budget - (slot(t) - 1));
-    const aiM = (t, p) => { if (slot(t) <= 0 || !p) return 0; const need = posTotal(p.position) - pc(t, p.position); let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99); if (need <= 0) v *= 0.3; v *= jitter(t.id, p.id); return Math.max(0, Math.min(ma(t), Math.round(v))); };
+    const aiM = (t, p) => { if (slot(t) <= 0 || !p) return 0; const need = posTotal(p.position) - pc(t, p.position); let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99); if (need <= 0) v *= 0.3; v *= jitter(t.id, p.id); v = Math.min(v, bidCap(p)); return Math.max(0, Math.min(ma(t), Math.round(v))); };
     while (guard++ < teamsN * totalSlots + 80) {
       const cur = fullPool.find(p => !dr.has(p.id)); if (!cur) break;
       const needy = nt.filter(t => !t.you && slot(t) > 0); if (!needy.length) break;
@@ -5280,9 +5282,49 @@ function applyQbActuals(scored, config) {
   if (!m.size) return scored;
   return scored.map(p => {
     if (!m.has(p.id)) return p;
-    const stats = (p.position === 'K' || p.position === 'DEF') ? { ...m.get(p.id) } : { ...(p.projectedStats || {}), ...m.get(p.id) };
-    return { ...p, projectedStats: stats, projectedPoints: scorePlayer({ ...p, projectedStats: stats }, config) };
+    if (p.position === 'K' || p.position === 'DEF') {
+      const stats = { ...m.get(p.id) };
+      return { ...p, projectedStats: stats, projectedPoints: scorePlayer({ ...p, projectedStats: stats }, config) };
+    }
+    // Average last-year actuals (assigned by projected rank) with this year's projection.
+    const proj = p.projectedStats || {};
+    const act = m.get(p.id) || {};
+    const stats = { ...proj };
+    Object.keys(act).forEach(k => { const a = act[k], pj = proj[k]; stats[k] = (typeof a === 'number' && typeof pj === 'number') ? (a + pj) / 2 : a; });
+    const projPts = (typeof p.projectedPoints === 'number') ? p.projectedPoints : scorePlayer(p, config);
+    const actPts = scorePlayer({ ...p, projectedStats: { ...proj, ...act } }, config);
+    return { ...p, projectedStats: stats, projectedPoints: (projPts + actPts) / 2 };
   });
+}
+function applyTierShaping(scored) {
+  const out = scored.map(p => ({ ...p }));
+  const byPos = {};
+  out.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  const sortPos = pos => (byPos[pos] || []).slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+  // 1) Force Amon-Ra St. Brown to WR rank 4 (ladder-preserving move; Drake London slides to 5).
+  const wr = sortPos('WR');
+  if (wr.length >= 5) {
+    const ladder = wr.map(p => p.projectedPoints || 0);
+    const order = wr.slice();
+    const idx = order.findIndex(p => /amon[ -]?ra/i.test(p.name || '') || /st\.?\s*brown/i.test(p.name || ''));
+    if (idx >= 0 && idx !== 3) { const [pl] = order.splice(idx, 1); order.splice(3, 0, pl); }
+    order.forEach((p, i) => { p.projectedPoints = ladder[i]; });
+  }
+  // 2) Narrow within tiers: pull each member 60% toward the tier mean (order preserved).
+  const narrow = (pos, ranges, f = 0.6) => {
+    const arr = sortPos(pos);
+    ranges.forEach(([a, b]) => {
+      const grp = arr.slice(a - 1, b).filter(Boolean);
+      if (grp.length < 2) return;
+      const mean = grp.reduce((s, p) => s + (p.projectedPoints || 0), 0) / grp.length;
+      grp.forEach(p => { p.projectedPoints = mean + ((p.projectedPoints || 0) - mean) * (1 - f); });
+    });
+  };
+  narrow('QB', [[2, 5]]);
+  narrow('RB', [[1, 2]]);
+  narrow('WR', [[1, 3], [4, 5]]);
+  narrow('TE', [[1, 2], [3, 7], [8, 12]]);
+  return out;
 }
 function applyBaselineRankFixes(scored) {
   const qbs = scored.filter(p => p.position === 'QB').slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
@@ -6718,7 +6760,7 @@ function App() {
   const SEASON_GAMES = 17;
   const baseValued = useMemo(() => {
     const scored = applyQbActuals(players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) })), config);
-    const ranked = applyCustomRanks(applyBaselineRankFixes(scored), rankOrder);
+    const ranked = applyCustomRanks(applyTierShaping(applyBaselineRankFixes(scored)), rankOrder);
     return buildValuations(ranked, config).players;
   }, [players, config, rankOrder]);
   const valuedPlayers = useMemo(() => {
@@ -6770,7 +6812,7 @@ function App() {
       }
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : (isTgt ? 'target' : (needEligPos.has(p.position) ? 'open' : 'fade'));
-      return { ...p, marketPrice: adj.recommendedPrice, marketBasis: adj.basis, planTarget: isTgt, fit, worthPrice, personalValue: Math.max(minBid, Math.round(personalValue)) };
+      return { ...p, marketPrice: adj.recommendedPrice, marketBasis: adj.basis, planTarget: isTgt, fit, worthPrice, personalValue: (p.position === 'K' || p.position === 'DEF') ? minBid : Math.max(minBid, Math.round(personalValue)) };
     });
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
   const modelFitIds = useMemo(() => {
