@@ -1257,7 +1257,18 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-email-input { flex: 1 1 240px; max-width: 300px; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: 24px; padding: 13px 18px; color: var(--text-primary); font-size: 15px; }
 .lp-email-note { font-size: 11.5px; color: var(--text-muted); margin-top: 12px; }
 .lp-email-done { font-size: 16px; color: var(--positive); font-family: var(--font-display); letter-spacing: 0.02em; }
-@media (max-width: 760px) { .lp-prob-grid, .lp-three, .lp-proof-grid { grid-template-columns: 1fr; } }
+.lp-urgency { font-size: 12.5px; color: var(--positive); letter-spacing: 0.02em; margin: 12px 0 0; font-family: var(--font-mono); }
+.lp-live { width: 100%; max-width: 460px; margin: 24px auto 0; background: var(--bg-panel); border: 1px solid var(--positive); border-radius: 12px; padding: 16px 18px; box-shadow: 0 0 22px rgba(45,212,163,0.1); text-align: left; }
+.lp-live-head { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--positive); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.lp-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--positive); box-shadow: 0 0 8px var(--positive); }
+.lp-live-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13.5px; color: var(--text-secondary); }
+.lp-live-row b { color: var(--text-primary); }
+.lp-live-hot b { color: var(--gold-text); }
+.lp-live-bud { font-size: 11.5px; color: var(--text-muted); margin-top: 12px; font-family: var(--font-mono); }
+.lp-live-bud b { color: var(--text-secondary); }
+.lp-founder { font-size: 12.5px; color: var(--text-muted); max-width: 640px; line-height: 1.6; margin: 18px auto 4px; }
+.lp-sticky-cta { display: none; }
+@media (max-width: 760px) { .lp-prob-grid, .lp-three, .lp-proof-grid { grid-template-columns: 1fr; } .lp-inner { padding-bottom: 78px; } .lp-hero .landing-logo { height: 140px !important; } .lp-sticky-cta { display: block; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 15px; font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: 0.03em; box-shadow: 0 10px 30px rgba(0,0,0,0.55); } }
 @media (max-width: 760px) { .lp-trust { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; } .lp-steps { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
   .landing-page { padding: 0 14px 60px; }
@@ -2470,7 +2481,7 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero it-hero">
-          <LogoMark tagline height={300} className="landing-logo" />
+          <LogoMark tagline height={208} className="landing-logo" />
           <div className="lp-cmd">The auction draft weapon</div>
           <h1 className="lp-head">Stop guessing what to bid.</h1>
           <p className="lp-sub">Iron Tuna gives you <b>custom auction values</b>, <b>true player value</b>, and <b>your personal max bid</b> for every player in your exact league.</p>
@@ -2479,6 +2490,7 @@ function LandingSplash({ onDismiss, onNav }) {
             <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See Draft Night Mode</button>
           </div>
           <p className="lp-reassure">Free custom auction values, no signup. <b>Draft Night Mode</b> is a one-time $14.99, the live edge your league cannot get for free.</p>
+          <p className="lp-urgency">Draft season is here. Walk into your auction knowing your exact max on every player.</p>
         </div>
         <div className="lp-mock">
           <div className="lp-mock-bar"><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-title">Your auction sheet · 12-team · $200 · PPR</span></div>
@@ -2530,6 +2542,31 @@ function LandingSplash({ onDismiss, onNav }) {
           <div className="lp-proof-grid">
             {proof.map(([t, d], i) => <div className="lp-proof" key={i}><div className="lp-proof-t">{t}</div><div className="lp-proof-d">{d}</div></div>)}
           </div>
+          <div className="lp-live">
+            <div className="lp-live-head"><span className="lp-live-dot" /> On the clock</div>
+            <div className="lp-live-row"><span>Now bidding</span><b>Saquon Barkley &middot; RB</b></div>
+            <div className="lp-live-row"><span>Current bid</span><b>$41</b></div>
+            <div className="lp-live-row lp-live-hot"><span>Your max</span><b>$44 &middot; one more bid, then walk</b></div>
+            <div className="lp-live-bud">Budgets left &nbsp; You <b>$128</b> &nbsp; Mike <b>$44</b> &nbsp; Dana <b>$9</b> &nbsp; room avg <b>$61</b></div>
+          </div>
+        </div>
+        <div className="lp-section">
+          <div className="lp-preview-eyebrow">How it compares</div>
+          <h2 className="lp-preview-h">The only auction tool built around a live max bid</h2>
+          <div className="lp-compare-scroll">
+            <table className="lp-table">
+              <thead><tr><th></th><th className="lp-th-us">Iron Tuna</th><th>FantasyPros</th><th>RotoWire</th><th>Draft Sharks</th><th>ESPN / Yahoo</th></tr></thead>
+              <tbody>
+                <tr><td>Live in-draft max bid, recalculated every nomination</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">No</td></tr>
+                <tr><td>Tracks every team's budget and money off the board</td><td className="lp-td-us">Yes</td><td className="lp-no">Manual</td><td className="lp-no">Manual</td><td className="lp-yes">Yes</td><td className="lp-mid">Host only</td></tr>
+                <tr><td>Three numbers per player: market, true value, your max</td><td className="lp-td-us">Yes</td><td className="lp-mid">Values only</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid</td><td className="lp-no">Generic $</td></tr>
+                <tr><td>Live AI coach calibrated to your league and the room</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td></tr>
+                <tr><td>Auction-first, not snake with auction bolted on</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-mid">Partial</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
+                <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$9.99/mo</td><td>~$48-96/yr</td><td>Free (generic)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="lp-compare-note">As of 2026. Competitor features and pricing reflect publicly listed plans and may change. Most "live draft sync" tools cover snake drafts; real auctions still use manual entry.</div>
         </div>
         <div className="lp-section" ref={pricingRef}>
           <div className="lp-preview-eyebrow">Free vs paid</div>
@@ -2571,7 +2608,9 @@ function LandingSplash({ onDismiss, onNav }) {
         </div>
         <div className="lp-note">Works on draft night, even if the Wi-Fi drops.</div>
         <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser, no account to start, nothing uploaded, and every value is explainable.</p>
+        <p className="lp-founder">Built by a 27-year auction player who got tired of overpaying, not a content farm. Values are projections, not guarantees, the edge is reacting faster and more rationally than the room.</p>
         <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
+        <button className="lp-sticky-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet, free</button>
       </div>
     </div>
   );
