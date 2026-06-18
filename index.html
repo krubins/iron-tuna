@@ -1363,6 +1363,7 @@ input:focus, select:focus { border-color: var(--accent); }
 // ─── lib/leagueConfig.js ──────────────────────────
 const DEFAULT_LEAGUE_CONFIG = {
   name: "My League",
+  format: "auction", // "auction" | "snake" | "bestball" — see FORMATS registry below
   teams: 12,
   budget: 120,
   roster: {
@@ -1435,6 +1436,57 @@ const DEFAULT_LEAGUE_CONFIG = {
   },
   valuation: { minBid: 1, benchValueShare: 0.10, inflationFactor: 1.0 },
   strategy: { allocation: 0.55 }, // 0 = stars & scrubs ... 1 = thick & deep; 0.55 = recommended
+};
+// ─── lib/formats.js ──────────────────────────
+// Per-format adapter registry. Phase 0 wires the AUCTION format to the existing
+// engine with zero behavior change; SNAKE and BEST BALL drop in here in later phases.
+// (The named functions referenced below are hoisted, so registry order does not matter.)
+const FORMATS = {
+  auction: {
+    label: 'Auction',
+    columns: [
+      ['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'],
+      ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'],
+      ['you', 'You', 'Your personal max bid, the most you should pay given your roster, budget, and needs.'],
+      ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.'],
+    ],
+    // Auction valuation is computed inline in App (baseValued / personalizedPlayers useMemos);
+    // this hook is reserved for snake/bestball valuePlayers implementations.
+    valuePlayers: (players /*, config, draftedIds */) => players,
+    progress: (draftHistory, players, config) => computeMarketState(draftHistory, players, config),
+    planFills: (myTeam, players, config, draftedIds) => buildOptimalPlan(myTeam, players, config, draftedIds),
+    recommend: (player, team, config, marketState, marketAdjusted) => recommendBid(player, team, config, marketState, marketAdjusted),
+  },
+};
+const getFormat = (config) => FORMATS[(config && config.format) || 'auction'] || FORMATS.auction;
+// ─── lib/adp.js ──────────────────────────
+// Provisional ADP fallback so snake / best ball can reason about pick order
+// before real ADP data exists. Real ADP (if merged by name into player objects
+// upstream — e.g. from the /api/projections payload) takes precedence via the
+// `!= null` guards below.
+// TODO: replace with real FantasyPros (redraft) / Underdog (best ball) ADP.
+function attachProvisionalAdp(players, config) {
+  const byRedraft = [...players].sort((a, b) =>
+    (b.auctionValue || 0) - (a.auctionValue || 0) ||
+    (b.projectedPoints || 0) - (a.projectedPoints || 0));
+  const redraftRank = new Map(); byRedraft.forEach((p, i) => redraftRank.set(p.id, i + 1));
+  // Best ball pushes upside positions (QB/WR, premium TE) earlier; K/DEF later/undrafted.
+  const bbUpside = { QB: 1.12, WR: 1.06, TE: 1.04, RB: 1.0, K: 0.55, DEF: 0.55 };
+  const byBest = [...players].sort((a, b) =>
+    ((b.projectedPoints || 0) * (bbUpside[b.position] || 1)) -
+    ((a.projectedPoints || 0) * (bbUpside[a.position] || 1)));
+  const bestRank = new Map(); byBest.forEach((p, i) => bestRank.set(p.id, i + 1));
+  const fmt = (config && config.format) || 'auction';
+  return players.map(p => {
+    const adpRedraft = p.adpRedraft != null ? p.adpRedraft : (redraftRank.get(p.id) || 999);
+    const adpBestball = p.adpBestball != null ? p.adpBestball : (bestRank.get(p.id) || 999);
+    return { ...p, adpRedraft, adpBestball, adp: fmt === 'bestball' ? adpBestball : adpRedraft };
+  });
+}
+// Resolve a single player's ADP for the active format.
+const getAdp = (player, config) => {
+  if (!player) return 999;
+  return ((config && config.format) === 'bestball') ? player.adpBestball : player.adpRedraft;
 };
 function totalRosterSpots(config) {
   return Object.values(config.roster).reduce((sum, p) => sum + p.total, 0);
@@ -4242,12 +4294,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const stratKey = (highlight && highlight !== 'targets') ? highlight : null;
   const minBid = (config && config.valuation && config.valuation.minBid) || 1;
   const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: true, soft13: true, soft1517: true });
-  const COLSPEC = [
-    ['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'],
-    ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'],
-    ['you', 'You', 'Your personal max bid, the most you should pay given your roster, budget, and needs.'],
-    ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.'],
-  ];
+  const COLSPEC = getFormat(config).columns;
   const activeCols = COLSPEC.filter(c => showCols[c[0]]);
   const gridT = `15px 16px minmax(0,1fr) auto ${activeCols.map(() => 'auto').join(' ')}`;
   const tierBreaksByPos = {};
@@ -7435,7 +7482,7 @@ function App() {
   const baseValued = useMemo(() => {
     const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
     const ranked = applyCustomRanks(scored, rankOrder);
-    return applyPredictability(buildValuations(ranked, config).players, config);
+    return attachProvisionalAdp(applyPredictability(buildValuations(ranked, config).players, config), config);
   }, [players, config, rankOrder]);
   const valuedPlayers = useMemo(() => {
     const adjusted = applyValueAdjust(baseValued, valueAdjust, config);
