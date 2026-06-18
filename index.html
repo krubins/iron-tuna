@@ -858,7 +858,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-target .cheat-star { color: var(--gold-text); }
 .cheat-grid.has-hl .cheat-row.cheat-target { opacity: 1; }
 .cheat-row.cheat-modelfit { box-shadow: inset 3px 0 0 var(--gold-text); }
-.cheat-row.cheat-modelfit .cheat-rank::before { content: '\2605'; color: var(--gold-text); margin-right: 2px; font-size: 9px; }
+.cheat-row.cheat-modelfit .cheat-rank { color: var(--gold-text); font-weight: 700; }
 .cheat-row.cheat-tier-top { border-top: 2px solid rgba(234,179,8,0.6); margin-top: 3px; padding-top: 3px; }
 .cheat-team-inline { color: var(--text-muted); font-size: 10px; font-weight: 600; letter-spacing: 0.03em; margin-left: 6px; }
 .model-tab-pts { font-size: 9.5px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.02em; white-space: nowrap; }
@@ -943,10 +943,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-controls { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 8px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 13px 16px; min-height: 78px; }
 .ch-controls-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 6px; }
 .ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 13px 16px; height: 156px; overflow: hidden; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
-.ch-insights-col { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 360px; }
+.ch-insights-col { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 300px; }
 .ch-insights-col .ch-insights { box-shadow: none; }
-.ch-insights-col .ch-ins-facts { flex: 0 0 auto; height: 150px; }
+.ch-insights-col .ch-ins-facts { flex: 0 0 auto; height: 110px; position: relative; padding-top: 11px; }
+.ch-insights-col .ch-ins-facts .chi-body { padding-right: 4px; }
+.ch-insights-col .ch-ins-facts .chi-label { padding-right: 34px; }
 .ch-insights-col .ch-ins-facts .chi-text { -webkit-line-clamp: 4; }
+.chi-nav-float { position: absolute; top: 7px; right: 9px; z-index: 2; }
 .ch-coachslot { flex: 1 1 auto; min-height: 175px; display: flex; min-width: 0; }
 .ch-coachslot > .coach.embed { flex: 1 1 auto; }
 .coach.embed { position: static; width: 100%; max-width: none; height: 100%; min-height: 0; flex-direction: column; border: 1px solid var(--positive); border-radius: var(--radius-md); box-shadow: none; animation: none; }
@@ -2281,7 +2284,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       {tagline && (
         <text x={vbW / 2} y={taglineY} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
-              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb">{'RULE THE DRAFT.\u2002\u2002\u2002OWN THE LEAGUE.'}</text>
+              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb"><tspan dx={tagFs * 0.96}>RULE THE DRAFT.</tspan><tspan dx={tagFs * -0.96}>{'\u2002\u2002\u2002OWN THE LEAGUE.'}</tspan></text>
       )}
     </svg>
   );
@@ -4083,7 +4086,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
       </div>
       <div className="ch-insights-col">
         <div className="ch-insights ch-ins-facts">
-          <div className="chi-head"><span>Draft Intel</span>{flen > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + flen) % flen)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % flen)} title="Next">▼</button></span>}</div>
+          {flen > 1 && <span className="chi-nav chi-nav-float"><button onClick={() => setIdx(i => (i - 1 + flen) % flen)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % flen)} title="Next">▼</button></span>}
           {flen ? <div className="chi-body"><div className="chi-label">{facts[idx % flen].label}</div><div className="chi-text">{facts[idx % flen].text}</div></div> : <div className="chi-body chi-empty">Draft intel appears here.</div>}
         </div>
         {coachEl ? <div className="ch-coachslot">{coachEl}</div> : null}
