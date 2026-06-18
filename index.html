@@ -256,6 +256,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .insight-headline { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.03em; color: var(--text-primary); margin-bottom: 4px; }
 .insight-detail { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
 .insight-action { font-size: 12px; color: var(--text-primary); line-height: 1.5; padding: 8px; background: var(--bg-base); border-radius: var(--radius-sm); }
+.alerts-box { margin-top: 14px; border: 1px solid rgba(255,107,94,0.35); border-radius: var(--radius-md); padding: 10px 12px; background: rgba(255,107,94,0.05); }
+.alerts-h { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: #ff6b5e; margin-bottom: 8px; }
+.alert-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
+.alert-row:last-child { margin-bottom: 0; }
+.alert-text { flex: 1; }
+.alert-empty { font-size: 11px; color: var(--text-muted); }
+.ch-models-hint { flex-basis: 100%; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .tier-grid { display: flex; flex-direction: column; gap: 14px; }
 .tier-block { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-panel); overflow: hidden; }
 .tier-block.tier-status-low { border-color: rgba(245, 158, 11, 0.4); }
@@ -2173,8 +2180,8 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const shrink = 0;  // uniform uppercase wordmark (IRON TUNA), no per-letter taper
   const cmp = tagline ? 0.80 : 1;      // landing-only: compress IRON TUNA toward the fish + tagline width
   const advF = tagline ? 0.44 : 0.64;  // landing-only: condense letters horizontally
-  const sizes = word.map((_, i) => { const d = 1 - Math.abs(i - center) / center; return base * (1 - shrink * d) * cmp; });
-  if (sizes.length >= 6) { sizes[3] = sizes[2]; sizes[4] = sizes[5]; }
+  const SIZE_MULT = [1.25, 1.10, 1.05, 1.0, 1.0, 1.05, 1.10, 1.25]; // ends largest, tapering inward -> curved tops
+  const sizes = word.map((_, i) => base * cmp * (SIZE_MULT[i] || 1));
   const tracking = tagline ? 1.3 : 1.5;
   const wordGap = base * (tagline ? 0.18 : 0.30);
   let x = 0; const placed = [];
@@ -2195,8 +2202,8 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const fishY = tagline ? 2 : (cy - 27);
   const wordTx = tagline ? ((vbW - wordWidth) / 2) : tunaW;
   const wordTy = tagline ? (fishH - 1.5) : 0;
-  const vbH = tagline ? (fishH + 82) : (base * 1.12);
-  const taglineY = tagline ? (fishH + 64) : (vbH - base * 0.14);
+  const vbH = tagline ? (fishH + 70) : (base * 1.12);
+  const taglineY = tagline ? (fishH + 56) : (vbH - base * 0.14);
   const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return (
@@ -2243,13 +2250,9 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       )}
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${wordTx},${wordTy})`}>
         {placed.map((g, i) => {
-          const t = wordWidth > 0 ? (g.cx - wordWidth / 2) / (wordWidth / 2) : 0;
-          const arcAmp = tagline ? 12 : 0;
-          const arcRot = 0; // letters stay perfectly vertical; only the baseline arcs so the tops curve
-          const gy = cy + arcAmp * (1 - t * t);
-          const rot = arcRot * t;
+          const gy = cy + 0.36 * (base * cmp - g.size); // align bottoms flat; taller end letters rise so the tops curve
           return (
-            <text key={i} x={g.cx} y={gy} transform={`rotate(${rot} ${g.cx} ${gy})`} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
+            <text key={i} x={g.cx} y={gy} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
                   textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
           );
         })}
@@ -2645,6 +2648,26 @@ function InsightsPanel({ insights, marketState, sonar, onUnlock }) {
     </div>
   );
 }
+function AlertsBox({ players, draftedIds, config }) {
+  const di = draftedIds instanceof Set ? draftedIds : new Set(draftedIds || []);
+  const flags = scarcityFlags(players, di, config);
+  const byPos = {};
+  flags.forEach((fl, id) => { const pl = (players || []).find(p => p.id === id); if (pl) { (byPos[fl.pos] = byPos[fl.pos] || { count: fl.count, names: [] }).names.push(pl.name); } });
+  const alerts = Object.entries(byPos).map(([pos, info]) => ({ pos, count: info.count, names: info.names }));
+  return (
+    <div className="alerts-box">
+      <div className="alerts-h">Alerts</div>
+      {alerts.length ? alerts.map(a => (
+        <div key={a.pos} className={`alert-row ${a.count === 1 ? 'alert-crit' : ''}`}>
+          <span className={`position-tag ${a.pos}`}>{a.pos}</span>
+          <span className="alert-text">{a.count === 1
+            ? `Last startable ${a.pos} before a tier cliff: ${a.names.join(', ')}. Steep dropoff after him.`
+            : `Only 2 startable ${a.pos} left before a cliff: ${a.names.join(', ')}.`}</span>
+        </div>
+      )) : <div className="alert-empty">No scarcity alerts right now.</div>}
+    </div>
+  );
+}
 // ─── components/Sidebar.jsx ──────────────────────────
 function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketState, pointsMode, seasonGames, plan, targets, draftedIds, roleOverrides, currentNomination, onDraft, onClearNomination, onUpdateStrategy, sonar, onUnlockSonar, onShare, onCollapse }) {
   const [tab, setTab] = useState('team');
@@ -2729,6 +2752,7 @@ function Sidebar({ myTeam, teams, config, valuedPlayers, draftHistory, marketSta
         <div className="sidebar-section" style={{ flex: 1, overflowY: 'auto' }}>
           <h2>Market Insights</h2>
           <InsightsPanel insights={insights} marketState={marketState} sonar={sonar} onUnlock={onUnlockSonar} />
+          <AlertsBox players={valuedPlayers} draftedIds={draftedIds} config={config} />
         </div>
       )}
     </aside>
@@ -3759,6 +3783,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
       <div className="ch-models">
         <span className="ch-models-label">Draft Models</span>
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
+        {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
       </div>
       <div className="ch-controls">
         <span className="ch-controls-label">Sheet</span>
@@ -3847,7 +3872,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
     <div className="cheatsheet">
       <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} />
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
-      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth at your scoring · <b>YOU</b> the most you should pay, given your roster &amp; budget · pick a Draft Model to see your highest-scoring build</div>
+      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth at your scoring · <b>YOU</b> the most you should pay, given your roster &amp; budget</div>
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
@@ -3889,7 +3914,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
                 <span className="cheat-star" title={targets && targets.has(p.id) ? 'Target \u2014 click to clear' : 'Click to set as a target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }}>{targets && targets.has(p.id) ? '\u2605' : '\u2606'}</span>
                 <span className="cheat-rank" title={targets && targets.has(p.id) ? 'Flagged as a target \u2014 click to clear' : 'Click to flag as a potential target'} onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleTarget && onToggleTarget(p.id); }} style={{ cursor: 'pointer' }}>{i + 1}</span>
                 <span className={`cheat-name cn-${sign}`} style={{ color: nameColor }} title={nameTitle}>{p.name}{p.team ? <span className="cheat-team-inline">{(p.team || '').replace(/[^A-Za-z]/g, '')}</span> : null}</span>
-                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : (p.scarce ? <span className={`cheat-scarce ${p.scarce.count === 1 ? 'scarce-last' : ''}`} title={`${p.scarce.count === 1 ? 'Last startable' : '2 startable'} ${pos} left before a cliff \u2014 your max bid (YOU) is boosted to avoid the dropoff.`}>{p.scarce.count === 1 ? 'LAST 1' : '2 LEFT'}</span> : null)}</span>
+                <span className="cheat-team">{drafted ? <span className="cheat-sold">✓${dinfo ? dinfo.price : ''}</span> : null}</span>
                 {activeCols.map(([k]) => k === 'proj' ? <span key={k} className={`cheat-cost${p.priceOverridden ? ' price-override' : ''}`} title="Projected price, click to set your own; the rest re-prices to keep the pool constant" onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); if (onSetPrice) { const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost)); if (v !== null) onSetPrice(p.id, v); } }} style={{ cursor: onSetPrice ? 'pointer' : 'default' }}>${cost}</span> : k === 'value' ? <span key={k} className="cheat-val" title="Value (VBD)">${value}</span> : k === 'you' ? <span key={k} className={`cheat-you cy-${youDir}`} title="Your max bid">${you}</span> : <span key={k} className="cheat-ppg" title="Projected points per game">{(p.projectedPoints / (seasonGames || 17)).toFixed(1)}</span>)}
               </div>
               );
