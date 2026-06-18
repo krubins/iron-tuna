@@ -957,7 +957,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-sub { font-size: clamp(17px, 2.2vw, 21px); color: var(--text-secondary); max-width: 560px; line-height: 1.6; margin: 0 0 34px; }
 .lp-sub b { color: var(--gold-text); }
 .lp-desc { font-size: 14px; color: var(--text-muted); max-width: 600px; line-height: 1.6; margin: -16px 0 30px; }
-.lp-cmd { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); text-align: center; margin: 2px 0 16px; }
+.lp-cmd { font-family: var(--font-display); font-size: 17px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--positive); text-align: center; margin: 6px 0 14px; }
 .lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; width: 100%; margin-bottom: 22px; }
 .lp-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; text-align: left; }
 .lp-card-h { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.03em; color: var(--gold-text); margin-bottom: 6px; }
@@ -1053,7 +1053,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ribbon-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .lp-ribbon-links button { background: none; border: none; color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: color 0.12s, background 0.12s; }
 .lp-ribbon-links button:hover { color: var(--text-primary); background: var(--bg-elev); }
-.lp-ribbon-cta { color: #06281f !important; background: var(--positive); font-weight: 700; }
+.lp-ribbon-cta { color: #06281f !important; background: var(--positive); font-weight: 700; padding: 9px 18px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 4px 14px rgba(45,212,163,0.34); }
 .lp-ribbon-cta:hover { filter: brightness(1.08); background: var(--positive); color: #06281f; }
 .lp-faq { width: 100%; max-width: 720px; margin: 21px auto 30px; text-align: left; }
 .lp-faq-item { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
@@ -1135,7 +1135,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .assumptions-panel { flex-wrap: wrap; }
   .header-nav button, .filter-pill, .subtab, .hm-tab { min-height: 38px; }
   .hm-tab { min-height: 0; padding: 6px 8px; }
-  .lp-cmd { font-size: 11px; }
+  .lp-cmd { font-size: 13px; }
   /* Coach / Gameday dock stacks vertically on phones */
   .coach.dock { flex-direction: column; flex-wrap: nowrap; max-height: 74vh; }
   .coach.dock .coach-head, .coach.dock .coach-chips, .coach.dock .coach-input, .coach.dock .coach-body, .coach.dock .coach-insights {
@@ -2195,8 +2195,8 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const fishY = tagline ? 2 : (cy - 27);
   const wordTx = tagline ? ((vbW - wordWidth) / 2) : tunaW;
   const wordTy = tagline ? (fishH - 1.5) : 0;
-  const vbH = tagline ? (fishH + 70) : (base * 1.12);
-  const taglineY = tagline ? (fishH + 56) : (vbH - base * 0.14);
+  const vbH = tagline ? (fishH + 82) : (base * 1.12);
+  const taglineY = tagline ? (fishH + 64) : (vbH - base * 0.14);
   const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return (
@@ -2242,10 +2242,17 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       )}
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${wordTx},${wordTy})`}>
-        {placed.map((g, i) => (
-          <text key={i} x={g.cx} y={cy} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
-                textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
-        ))}
+        {placed.map((g, i) => {
+          const t = wordWidth > 0 ? (g.cx - wordWidth / 2) / (wordWidth / 2) : 0;
+          const arcAmp = tagline ? 12 : 0;
+          const arcRot = tagline ? 8 : 0;
+          const gy = cy + arcAmp * (1 - t * t);
+          const rot = arcRot * t;
+          return (
+            <text key={i} x={g.cx} y={gy} transform={`rotate(${rot} ${g.cx} ${gy})`} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
+                  textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
+          );
+        })}
       </g>
       {tagline && (
         <text x={vbW / 2} y={taglineY} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
@@ -2340,7 +2347,7 @@ function LandingSplash({ onDismiss, onNav }) {
   ];
   const faqs = [
     ['Is it really free?', 'Yes. Custom auction values for your exact league and scoring are free, with no signup. Draft Day Mode (the live management tool, Value Coach, and Gameday Navigator) is the $14.99 upgrade.'],
-    ['Where do the projections come from?', 'A compilation of ESPN, CBS, decades of fantasy experience, and direct conversations with leading fantasy sources — then reliability-adjusted and recalculated to your exact scoring.'],
+    ['Where do the projections come from?', 'A compilation of ESPN, CBS, decades of fantasy experience, and direct conversations with leading fantasy sources, then reliability-adjusted and recalculated to your exact scoring.'],
     ['Does it work for any league?', 'Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.'],
     ['Do I have to connect my league account?', 'No. Nothing to log into and no password sharing, enter your settings (or paste / screenshot your scoring) and you are ready.'],
     ['How is it different from other tools?', 'Most tools hand you one generic auction value. Iron Tuna gives three numbers per player, market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time.'],
@@ -2362,22 +2369,22 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-hero it-hero">
         <LogoMark tagline height={300} className="landing-logo" />
         <div className="lp-cmd">Live AI Auction Draft Assistant</div>
-        <h1 className="lp-head">Know exactly how high to bid — live, on the clock.</h1>
-        <p className="lp-sub">On draft night, a <b>live AI navigator</b> calls every bid with you: who to target, your exact max, and when to walk. It starts with <b>free custom values</b> calibrated to your league.</p>
+        <h1 className="lp-head">Know exactly how high to bid, live on the clock.</h1>
+        <p className="lp-sub">On draft night, <b>track all bids</b> while a <b>live AI Navigator</b> tells you who to target, your exact max, and when to walk. It starts with <b>free custom values</b> calibrated to your league.</p>
         <div className="lp-cta-row" style={{ marginTop: 6 }}>
-          <button className="lp-cta it-btn" onClick={() => go('prep')}>Get my auction values — free</button>
-          <button className="lp-cta-quiet" onClick={scrollToHow}>See how it works ↓</button>
+          <button className="lp-cta it-btn" onClick={() => go('prep')}>Get my auction values, free</button>
+          <button className="lp-cta lp-cta-alt" onClick={() => go('board')}>DOMINATE YOUR AUCTION - $14.99</button>
         </div>
-        <p className="lp-reassure">Free custom auction values — no signup. The <b>live AI navigator</b> (Draft Day Mode) is a one-time $14.99 — the one edge your league can't get for free.</p>
-        <p className="lp-threeline">Three numbers on every player: <b>market price</b> (what he'll cost), <b>true value</b> (what he's worth at your settings), and <b className="gold">your max</b> (the most you should pay).</p>
+        <p className="lp-reassure">Free custom auction values, no signup. The <b>Draft Tracker with live AI Navigator</b> (Draft Day Mode) is a one-time $14.99, the edge your league can't get for free.</p>
+        <p className="lp-threeline">Three numbers on every player: <b>market price</b> (what he'll cost), <b>true value</b> (what he's worth at your settings), and <b className="gold">your max</b> (the most you should pay based on your roster and who is still available).</p>
         </div>
-        <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser — no account, nothing uploaded — and every value is explainable.</p>
+        <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser, no account, nothing uploaded, and every value is explainable.</p>
         <div className="lp-how" ref={howRef}>
           <div className="lp-preview-eyebrow">How it works</div>
           <h2 className="lp-phases-title">Three steps to draft night</h2>
           <div className="lp-steps">
-            <div className="lp-step"><div className="lp-step-n">1</div><div className="lp-step-h">Set your league</div><div className="lp-step-b">Teams, budget, roster slots, and full custom scoring. Paste or screenshot your settings and you're ready — no account required.</div></div>
-            <div className="lp-step"><div className="lp-step-n">2</div><div className="lp-step-h">Get your numbers</div><div className="lp-step-b">Market price, true value, and your personal max for every player — recalculated to your exact format and strategy.</div></div>
+            <div className="lp-step"><div className="lp-step-n">1</div><div className="lp-step-h">Set your league</div><div className="lp-step-b">Teams, budget, roster slots, and full custom scoring. Paste or screenshot your settings and you're ready, no account required.</div></div>
+            <div className="lp-step"><div className="lp-step-n">2</div><div className="lp-step-h">Get your numbers</div><div className="lp-step-b">Market price, true value, and your personal max for every player, recalculated to your exact format and strategy.</div></div>
             <div className="lp-step"><div className="lp-step-n">3</div><div className="lp-step-h">Draft with the navigator</div><div className="lp-step-b">Live guidance on the clock: who to target, how high to go, and when to let a player walk.</div></div>
           </div>
         </div>
@@ -2391,10 +2398,11 @@ function LandingSplash({ onDismiss, onNav }) {
               <tr><th></th><th className="lp-th-us">Iron Tuna</th><th>FantasyPros</th><th>Draft Sharks</th><th>ESPN / Yahoo / Sleeper</th></tr>
             </thead>
             <tbody>
-              <tr><td>Live in-draft AI — who to bid on &amp; your exact max, in real time</td><td className="lp-td-us">✓</td><td className="lp-no">Manual entry only</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">—</td></tr>
-              <tr><td>Three numbers per player — price · true value · your max</td><td className="lp-td-us">✓</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid only</td><td className="lp-no">Generic $</td></tr>
+              <tr><td>Auction management: track all picks, bidder funds, max bids</td><td className="lp-td-us">✓</td><td className="lp-no">Manual entry only</td><td className="lp-yes">✓</td><td className="lp-mid">In-platform only</td></tr>
+              <tr><td>Live in-draft AI: who to bid on and your exact max, in real time</td><td className="lp-td-us">✓</td><td className="lp-no">Manual entry only</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">✗</td></tr>
+              <tr><td>Three numbers per player, price · true value · your max</td><td className="lp-td-us">✓</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid only</td><td className="lp-no">Generic $</td></tr>
               <tr><td>Calibrated to your exact league &amp; scoring</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-yes">✓</td><td className="lp-no">Generic</td></tr>
-              <tr><td>Auction-first — not snake with auction bolted on</td><td className="lp-td-us">✓</td><td className="lp-no">✗</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
+              <tr><td>Auction-first, not snake with auction bolted on</td><td className="lp-td-us">✓</td><td className="lp-no">✗</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
               <tr><td>Free to start</td><td className="lp-td-us">✓</td><td className="lp-yes">✓</td><td className="lp-no">✗</td><td className="lp-yes">✓</td></tr>
               <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$48–96</td><td>Free (generic)</td></tr>
             </tbody>
@@ -2963,9 +2971,13 @@ function DraftBoard({ players, draftedIds, draftHistory, teams, config, pointsMo
     </div>
   );
 }
-function QuickDraftModal({ player, teams, config, onConfirm, onClose }) {
+function QuickDraftModal({ player, teams, config, seasonGames, onConfirm, onClose }) {
   const [teamId, setTeamId] = useState(teams[0].id);
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
+  const projVal = player.marketValue != null ? player.marketValue : player.auctionValue;
+  const trueVal = player.auctionValue;
+  const youVal = player.personalValue != null ? player.personalValue : trueVal;
+  const ppg = (player.projectedPoints / (seasonGames || 17)).toFixed(1);
   const team = teams.find(t => t.id === teamId);
   const teamMax = team ? Math.max(config.valuation.minBid, team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid) : 999;
   const noSpots = team && team.spotsRemaining <= 0;
@@ -2976,9 +2988,27 @@ function QuickDraftModal({ player, teams, config, onConfirm, onClose }) {
       <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">Mark Drafted</div>
-        <div style={{ marginBottom: 16, marginTop: 12 }}>
+        <div style={{ marginBottom: 12, marginTop: 12 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: '0.03em' }}>{player.name}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{player.position} · {player.team} · Auction ${player.auctionValue}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{player.position} · {player.team}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, textAlign: 'center' }}>
+          <div style={{ flex: 1, background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '8px 4px' }}>
+            <div style={{ fontSize: 9.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 3 }}>Proj</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--text-secondary)' }}>${projVal}</div>
+          </div>
+          <div style={{ flex: 1, background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '8px 4px' }}>
+            <div style={{ fontSize: 9.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 3 }}>Value</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--text-secondary)' }}>${trueVal}</div>
+          </div>
+          <div style={{ flex: 1, background: 'rgba(212,160,23,0.10)', border: '1px solid var(--gold-text)', borderRadius: 'var(--radius-sm)', padding: '8px 4px' }}>
+            <div style={{ fontSize: 9.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--gold-text)', marginBottom: 3 }}>You</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--gold-text)', fontWeight: 700 }}>${youVal}</div>
+          </div>
+          <div style={{ flex: 1, background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '8px 4px' }}>
+            <div style={{ fontSize: 9.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 3 }}>PPG</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--text-secondary)' }}>{ppg}</div>
+          </div>
         </div>
         <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Drafted by</label>
         <select value={teamId} onChange={e => setTeamId(e.target.value)} style={{ width: '100%', marginBottom: 12 }}>
@@ -3319,7 +3349,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
           <button type="button" className={`preset-btn ${draft.scoring.passingTD === 4 ? 'on' : ''}`} onClick={() => update('scoring.passingTD', 4)}>Pass TD: 4</button>
           <button type="button" className={`preset-btn ${draft.scoring.passingTD === 6 ? 'on' : ''}`} onClick={() => update('scoring.passingTD', 6)}>Pass TD: 6</button>
         </div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0', gridColumn: '1 / -1' }}>One tap sets the common defaults — fine-tune any field below if your league differs.</p>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0', gridColumn: '1 / -1' }}>One tap sets the common defaults, fine-tune any field below if your league differs.</p>
         <div className="settings-section-title">Passing</div>
         <div className="settings-grid">
           <div className="settings-row"><label>Yards per point</label><input type="number" min="1" value={draft.scoring.passingYardsPerPoint} onChange={e => update('scoring.passingYardsPerPoint', parseFloat(e.target.value))} /></div>
@@ -3456,7 +3486,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
         <span>Projected pts/game assumes each team optimally fills its remaining starters within budget (incl. flex).<br />Updates as picks come in.</span>
         <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}><label style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>Card size<input type="range" min="180" max="440" step="20" value={cardSize} onChange={e => setCardSize(parseInt(e.target.value))} style={{ width: 92 }} /></label><button className="btn-secondary" onClick={toggleAll}>{allCollapsed ? 'Expand all' : 'Collapse all'}</button><button className="btn-secondary" onClick={onExport}>Export rosters (CSV)</button></span>
       </div>
-      {myTeam && onSelectModel && (<div className="board-models"><span className="board-models-label">Draft model</span><HeaderModelTabs myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} /><span className="board-models-hint">Same model the Cheatsheet uses — changes the projected fills below.</span></div>)}
+      {myTeam && onSelectModel && (<div className="board-models"><span className="board-models-label">Draft model</span><HeaderModelTabs myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} /><span className="board-models-hint">Same model the Cheatsheet uses, changes the projected fills below.</span></div>)}
       <div className="teams-overview" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))` }}>
         {teams.map(team => {
           const totalSpent = team.roster.reduce((sum, r) => sum + r.price, 0);
@@ -3468,7 +3498,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
             <div key={team.id} ref={el => { if (el) cardRefs.current[team.id] = el; else delete cardRefs.current[team.id]; }}
                  className={`team-card ${team.isMine ? 'mine' : ''}`}
                  onPointerDown={e => startCardDrag(e, team.id)}>
-              {(() => { const gg = teamGrades.get(team.id); return gg ? <div className={`team-grade ${gg.cls}`} title="Team grade — graded on a curve (league median = B); 85% starters (pts/gm), 15% reserves">{gg.g}</div> : null; })()}
+              {(() => { const gg = teamGrades.get(team.id); return gg ? <div className={`team-grade ${gg.cls}`} title="Team grade, graded on a curve (league median = B); 85% starters (pts/gm), 15% reserves">{gg.g}</div> : null; })()}
               <div className="tc-header">
                 <span className="drag-handle" title="Drag the card to reorder">⠿</span>
                 <input type="text" value={team.name} onChange={e => onRenameTeam(team.id, e.target.value)}
@@ -6761,7 +6791,7 @@ function HeaderModelTabs({ myTeam, players, config, draftedIds, roleOverrides, s
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   if (!myTeam) return null;
   return (
-    <div className="header-models" title="Draft models — click to box a model's target players on the cheat sheet; click again to clear">
+    <div className="header-models" title="Draft models, click to box a model's target players on the cheat sheet; click again to clear">
       {models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>)}
     </div>
   );
@@ -7319,7 +7349,7 @@ function App() {
       <div className="board-layout board-norail">
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} />
       </div>
-      {!has('coach') && (<div className="draftday-teaser no-print"><div className="ddt-body"><span className="ddt-lock">🔒</span><div><div className="ddt-title">Draft Day Mode — Advanced Auction Day Management</div><div className="ddt-text">This board is your pre-draft plan. On draft night, the live AI navigator tracks every team's budget and tells you who to bid on and exactly how high as picks come in.</div></div></div><button className="ddt-cta" onClick={() => setOverlay('pricing')}>See what's inside</button></div>)}
+      {!has('coach') && (<div className="draftday-teaser no-print"><div className="ddt-body"><span className="ddt-lock">🔒</span><div><div className="ddt-title">Draft Day Mode, Advanced Auction Day Management</div><div className="ddt-text">This board is your pre-draft plan. On draft night, the live AI navigator tracks every team's budget and tells you who to bid on and exactly how high as picks come in.</div></div></div><button className="ddt-cta" onClick={() => setOverlay('pricing')}>See what's inside</button></div>)}
       </>
     );
     if (view === 'board') return draftBoardEl;
@@ -7343,7 +7373,7 @@ function App() {
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
       {!showSplash && view === 'prep' && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
-      {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
+      {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} seasonGames={seasonGames} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} />}
