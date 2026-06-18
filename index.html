@@ -3933,16 +3933,22 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const games = seasonGames || 17;
   const [customDesc, setCustomDesc] = useState('');
   const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
-  const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
+  const [wiOpen, setWiOpen] = useState(false);
+  const [wiName, setWiName] = useState('');
+  const [wiId, setWiId] = useState('');
+  const [wiPrice, setWiPrice] = useState(0);
+  const wiPool = useMemo(() => (players || []).filter(p => !(draftedIds && draftedIds.has(p.id))).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).slice(0, 400), [players, draftedIds]);
+  const wiActive = !!wiId;
+  function pickWiName(v) { setWiName(v); const t = v.toLowerCase().trim(); const pl = wiPool.find(p => `${p.name} (${p.position})`.toLowerCase() === t) || wiPool.find(p => p.name.toLowerCase() === t); if (pl) { setWiId(pl.id); setWiPrice(pl.marketValue != null ? pl.marketValue : (pl.auctionValue != null ? pl.auctionValue : 1)); } else { setWiId(''); } }
+  function clearWi() { setWiName(''); setWiId(''); setWiPrice(0); }
+  const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? wiId : undefined, wiPrice); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, wiId, wiPrice]);
+  const wiModelKey = model || 'ideal';
+  const wiModelLabel = (models.find(mm => mm[0] === wiModelKey) || ['ideal', 'Ideal Team'])[1];
+  const wiPlan = useMemo(() => { if (!myTeam || !wiActive) return null; try { return buildModel(wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiId, wiPrice); } catch (e) { return null; } }, [wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, wiId, wiPrice, wiActive]);
   const bn = BIDDING_NOTES; const blen = bn.length;
   const pn = (PERF_NOTES.current || []).concat(PERF_NOTES.library || []); const plen = pn.length;
   const cyc = Math.max(blen, plen, 1);
   const [idx, setIdx] = useState(0);
-  const [wiOpen, setWiOpen] = useState(false);
-  const [wiId, setWiId] = useState('');
-  const [wiPrice, setWiPrice] = useState(0);
-  const wiPool = useMemo(() => (players || []).filter(p => !(draftedIds && draftedIds.has(p.id))).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).slice(0, 260), [players, draftedIds]);
-  const wiPlan = useMemo(() => { if (!myTeam || !wiId) return null; const wp = (players || []).find(p => String(p.id) === String(wiId)); if (!wp) return null; try { return buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([wp.id]), roleOverrides, true, { [wp.id]: Math.max(1, wiPrice || 1) }); } catch (e) { return null; } }, [myTeam, players, config, draftedIds, roleOverrides, wiId, wiPrice]);
   useEffect(() => { if (cyc <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % cyc), 12000); return () => clearInterval(t); }, [cyc]);
   return (
     <div className="cheat-header no-print">
@@ -3956,17 +3962,16 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
           <div className="ch-whatif" style={{ flexBasis: '100%', marginTop: 8, padding: '9px 11px', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 }}>
               <span style={{ color: 'var(--text-muted)' }}>What if I land</span>
-              <select value={wiId} onChange={e => { const id = e.target.value; setWiId(id); const pl = wiPool.find(p => String(p.id) === String(id)); if (pl) setWiPrice(pl.marketValue != null ? pl.marketValue : (pl.auctionValue != null ? pl.auctionValue : 1)); }} style={{ background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12, maxWidth: 230 }}>
-                <option value="">choose a player…</option>
-                {wiPool.map(p => <option key={p.id} value={p.id}>{p.name} ({p.position})</option>)}
-              </select>
+              <input list="ch-wi-players" value={wiName} onChange={e => pickWiName(e.target.value)} placeholder="type a player name…" style={{ width: 210, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: `1px solid ${wiActive ? 'var(--positive)' : 'var(--border-strong)'}`, borderRadius: 4, padding: '4px 8px', fontSize: 12 }} />
+              <datalist id="ch-wi-players">{wiPool.map(p => <option key={p.id} value={`${p.name} (${p.position})`} />)}</datalist>
               <span style={{ color: 'var(--text-muted)' }}>for $</span>
-              <input type="number" min="1" value={wiId ? wiPrice : ''} onChange={e => setWiPrice(parseInt(e.target.value) || 0)} style={{ width: 62, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12 }} />
-              <span style={{ color: 'var(--text-muted)' }}>? The model rebuilds the rest of your roster around that pick.</span>
+              <input type="number" min="1" value={wiActive ? wiPrice : ''} onChange={e => setWiPrice(parseInt(e.target.value) || 0)} style={{ width: 62, background: 'var(--bg-elev)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 4, padding: '4px 6px', fontSize: 12 }} />
+              {wiActive && <button className="hm-tab" onClick={clearWi} title="Clear the what-if">clear</button>}
+              <span style={{ color: 'var(--text-muted)' }}>? Then click any model above to build it around that pick.</span>
             </div>
-            {wiId && wiPlan && (
+            {wiActive && wiPlan && (
               <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                <div><b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> projected starting lineup{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · that price busts your budget, lower it</span> : null}.</div>
+                <div><b style={{ color: 'var(--gold-text)' }}>{wiModelLabel}</b> with this pick: <b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b>{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · that price busts your budget, lower it</span> : null}.</div>
                 <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{wiPlan.slots.map((s, i) => <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, background: 'var(--bg-elev)', border: `1px solid ${String(s.player && s.player.id) === String(wiId) ? 'var(--positive)' : 'var(--border-subtle)'}`, borderRadius: 8, padding: '1px 6px' }}>{s.label}: {s.player ? s.player.name : '–'}{s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : ''}</span>)}</div>
               </div>
             )}
@@ -6922,7 +6927,7 @@ const MODEL_FOCUS = {
   eliteTE: { focus: ['TE'], note: 'Focus: TE, pay up for the positional edge. QB, RB, WR, K and DEF are taken at the best value available.' },
   custom: { focus: [], note: 'Your own model. Describe a strategy and the AI anchors the players that best fit it, then completes the roster within your budget.' },
 };
-function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets, customForced) {
+function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfId, whatIfPrice) {
   const di = draftedIds || new Set();
   const byPos = {};
   (players || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -6943,7 +6948,9 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     else if (k === 'targets') { (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); }
     else if (k === 'custom') { (customForced || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); } // AI-built custom model
     (targets || new Set()).forEach(id => { if (!di.has(id)) forced.add(id); }); // locked targets held constant across every model
-    return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true);
+    if (whatIfId != null && whatIfId !== '' && !di.has(whatIfId)) forced.add(whatIfId); // What-if anchor folded into every model
+    const fpAll = (whatIfId != null && whatIfId !== '') ? { [whatIfId]: Math.max(1, whatIfPrice || 1) } : undefined;
+    return buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll);
   }
   // Ideal Team is, by definition, the single highest-scoring starting lineup you can assemble,
   // so return the best plan across the unforced optimum and every strategy skeleton. It can never
