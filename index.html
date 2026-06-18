@@ -1175,6 +1175,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-mid { color: var(--text-secondary); font-size: 12px; }
 .lp-no { color: var(--text-muted); font-size: 12px; }
 .lp-compare-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
+.lp-compare-cap { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px; }
+.lp-compare-fn { color: var(--gold-text); font-weight: 700; }
 @media (max-width: 760px) { .lp-trust { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; } .lp-steps { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
   .landing-page { padding: 0 14px 60px; }
@@ -2419,6 +2421,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-compare">
           <div className="lp-preview-eyebrow">How it compares</div>
           <h2 className="lp-preview-h">The only auction tool built around a live AI co-pilot</h2>
+          <div className="lp-compare-cap">How the auction tools compare<sup className="lp-compare-fn">*</sup></div>
           <div className="lp-compare-scroll">
           <table className="lp-table">
             <thead>
@@ -2434,7 +2437,7 @@ function LandingSplash({ onDismiss, onNav }) {
             </tbody>
           </table>
           </div>
-          <div className="lp-compare-note">Competitor features and pricing as of the 2026 season. FantasyPros' live draft sync covers snake drafts; real auction drafts use manual entry. Comparison reflects publicly listed plans and may change.</div>
+          <div className="lp-compare-note"><sup className="lp-compare-fn">*</sup> As of 2026, the date of posting. Competitor features and pricing reflect publicly listed plans and may change. FantasyPros' live draft sync covers snake drafts; real auction drafts use manual entry.</div>
         </div>
         <div className="lp-faq" ref={faqRef}>
           <div className="lp-preview-eyebrow">FAQ</div>
