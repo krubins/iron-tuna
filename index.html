@@ -1557,6 +1557,21 @@ function buildValuations(players, config) {
   const withMarket = calculateMarketValues(withValues, config);
   return { players: withMarket, replacement };
 }
+// Predictability adjustment: discount $ value where year-to-year production is least reliable,
+// so you don't pay a premium players aren't likely to earn. WR most consistent (full value);
+// K/DEF least (steep discount). Scales VALUE (auctionValue) and PROJ (marketValue); YOU follows.
+const POSITION_PREDICTABILITY = { WR: 1.00, QB: 0.98, TE: 0.93, RB: 0.90, K: 0.55, DEF: 0.50 };
+function applyPredictability(players, config) {
+  const minBid = (config.valuation && config.valuation.minBid) || 1;
+  return players.map(p => {
+    const f = POSITION_PREDICTABILITY[p.position];
+    if (f == null || f >= 1) return p;
+    const out = { ...p };
+    if (typeof out.auctionValue === 'number') out.auctionValue = Math.max(minBid, Math.round(out.auctionValue * f));
+    if (typeof out.marketValue === 'number') out.marketValue = Math.max(minBid, Math.round(out.marketValue * f));
+    return out;
+  });
+}
 function maxBid(team, player, config) {
   const remainingSpots = team.spotsRemaining;
   if (remainingSpots <= 0) return 0;
@@ -3652,6 +3667,8 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
         {priceOverrides && Object.keys(priceOverrides).length > 0 && <button className="col-toggle price-clear" title="Clear all your custom projected prices" onClick={onClearPrices}>⟲ {Object.keys(priceOverrides).length} custom price{Object.keys(priceOverrides).length > 1 ? 's' : ''}</button>}
+        <span style={{ flexBasis: '100%', height: 0 }} />
+        <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Click a player to assign to a team; drag to rerank.' : 'Click a player to target him; drag to rerank.'} Click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span></div>
       </div>
       <div className="ch-insights">
         <div className="chi-head"><span>Insights{len > 1 ? ` · ${(idx % len) + 1}/${len}` : ''}</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
@@ -3725,10 +3742,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
     <div className="cheatsheet">
       <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} />
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
-      {mode === 'live'
-        ? <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Click a player to mark him drafted · drag to re-rank · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span>.</div>
-        : <div className="section-meta no-print" style={{ marginBottom: 12, textTransform: 'none', letterSpacing: 'normal' }}>Drag to re-rank · click a player to target him · click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span>.</div>}
-      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth to a generic team · <b>YOU</b> your max bid (your budget &amp; roster)</div>
+      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth at your scoring · <b>YOU</b> the most you should pay, given your roster &amp; budget · pick a Draft Model to see your highest-scoring build</div>
       <div className="cheat-print-head only-print">
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
@@ -6804,7 +6818,7 @@ function App() {
   const baseValued = useMemo(() => {
     const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
     const ranked = applyCustomRanks(scored, rankOrder);
-    return buildValuations(ranked, config).players;
+    return applyPredictability(buildValuations(ranked, config).players, config);
   }, [players, config, rankOrder]);
   const valuedPlayers = useMemo(() => {
     const adjusted = applyValueAdjust(baseValued, valueAdjust, config);
@@ -7217,7 +7231,6 @@ function App() {
     }
     const cheatSheetEl = (
       <>
-        <Coachmark flag="seenSheetIntro" account={account} setAccount={setAccount}>Each player shows likely price (PROJ), true value based on your scoring system (VALUE), and the max amount you should pay based on your needs (YOU). Pick a model to see the roster that scores highest for your budget.</Coachmark>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
