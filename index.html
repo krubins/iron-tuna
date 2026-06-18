@@ -1364,6 +1364,8 @@ input:focus, select:focus { border-color: var(--accent); }
 const DEFAULT_LEAGUE_CONFIG = {
   name: "My League",
   format: "auction", // "auction" | "snake" | "bestball" — see FORMATS registry below
+  snake: { draftSlot: 6, rounds: 16 },
+  bestball: { rounds: 18, stackBonus: 0.15, lineupSlots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 } },
   teams: 12,
   budget: 120,
   roster: {
@@ -1485,6 +1487,45 @@ const FORMATS = {
       return { label: 'Lean take', tone: 'lean', survives: sp };
     },
     planFills: (myTeam, players, config, draftedIds) => buildSnakePlan(myTeam, players, config, draftedIds),
+  },
+  bestball: {
+    label: 'Best Ball',
+    columns: [
+      ['adp', 'ADP', 'Best-ball average draft position (Underdog/Drafters-style — QBs and upside go earlier).'],
+      ['ceiling', 'Ceiling', 'Upside-weighted projection. Best ball auto-starts your best weekly scores, so ceiling beats floor.'],
+      ['bestavail', 'Best avail', 'Ceiling rank among players still on the board.'],
+    ],
+    // Annotate with ceiling + best-available rank (ranked by ceiling, not floor).
+    valuePlayers: (players, config, draftedIds) => {
+      const drafted = draftedIds || new Set();
+      const withCeil = players.map(p => ({ ...p, ceiling: bestballCeiling(p) }));
+      const ranked = withCeil.filter(p => !drafted.has(p.id)).sort((a, b) => b.ceiling - a.ceiling);
+      const rankMap = new Map(); ranked.forEach((p, i) => rankMap.set(p.id, i + 1));
+      return withCeil.map(p => ({ ...p, bestAvailRank: rankMap.get(p.id) || null }));
+    },
+    progress: (draftHistory, players, config) => computeMarketState(draftHistory, players, config),
+    recommend: (player, myTeam, state) => {
+      state = state || {};
+      const sp = (state.survivalProb != null) ? state.survivalProb : 1;
+      const stack = state.stackTarget ? ' \u00b7 stacks your team' : '';
+      if (sp < 0.5) return { label: 'Take now' + stack, tone: 'take', survives: sp };
+      if (sp > 0.8) return { label: 'Safe to wait', tone: 'wait', survives: sp };
+      return { label: 'Lean take' + stack, tone: 'lean', survives: sp };
+    },
+    // Reuse the snake simulator with the best-ball roster, ceiling-as-points, adpBestball, and a live stack bonus.
+    planFills: (myTeam, players, config, draftedIds) => {
+      const bb = config.bestball || {};
+      const bbConfig = {
+        ...config,
+        roster: BESTBALL_ROSTER,
+        flex: BESTBALL_FLEX,
+        snake: { draftSlot: bb.draftSlot || (config.snake && config.snake.draftSlot) || 1, rounds: bb.rounds || 18 },
+      };
+      const bbPlayers = players.map(p => ({ ...p, projectedPoints: bestballCeiling(p), adp: (p.adpBestball != null ? p.adpBestball : p.adp) }));
+      const stackBonus = bb.stackBonus != null ? bb.stackBonus : 0.15;
+      const valueBoost = (player, roster) => bestballStackBoost(player, roster, stackBonus);
+      return buildSnakePlan(myTeam, bbPlayers, bbConfig, draftedIds, { valueBoost });
+    },
   },
 };
 const getFormat = (config) => FORMATS[(config && config.format) || 'auction'] || FORMATS.auction;
@@ -5063,7 +5104,8 @@ function assignDraftedToStarters(myPlayers, config, roleOverrides) {
 // picks, take the available player that most increases your projected STARTING
 // points (roster-legal via assignDraftedToStarters); at every other pick, the
 // opponent model removes the lowest-ADP player still on the board.
-function buildSnakePlan(myTeam, players, config, draftedIds) {
+function buildSnakePlan(myTeam, players, config, draftedIds, opts) {
+  const valueBoost = (opts && opts.valueBoost) || null;
   const T = config.teams || 12;
   const slot = (config.snake && config.snake.draftSlot) || 1;
   const totalSpots = totalRosterSpots(config);
@@ -5095,8 +5137,10 @@ function buildSnakePlan(myTeam, players, config, draftedIds) {
     const pool = cands.slice(0, 60);
     let best = null, bestGain = -Infinity, bestVal = -Infinity;
     pool.forEach(p => {
-      const gain = starterPointsOf(roster.concat([p])) - cur;
-      if (gain > bestGain + 1e-6 || (Math.abs(gain - bestGain) <= 1e-6 && valOf(p) > bestVal)) { best = p; bestGain = gain; bestVal = valOf(p); }
+      const boost = valueBoost ? valueBoost(p, roster) : 0;
+      const gain = (starterPointsOf(roster.concat([p])) - cur) * (1 + boost);
+      const v = valOf(p) * (1 + boost);
+      if (gain > bestGain + 1e-6 || (Math.abs(gain - bestGain) <= 1e-6 && v > bestVal)) { best = p; bestGain = gain; bestVal = v; }
     });
     if (!best && cands.length) best = cands[0];
     return best;
@@ -5116,6 +5160,25 @@ function buildSnakePlan(myTeam, players, config, draftedIds) {
     }
   }
   return { yourRoster: myRoster, recommendedNow, byRound, projectedStarterPoints: starterPointsOf(myRoster) };
+}
+// ─── lib/bestball.js — best ball IS a snake draft with a deeper roster, ceiling-weighted value, no in-season management. ───
+// Deeper roster, no K/DEF, extra QB/WR for upside.
+const BESTBALL_ROSTER = { QB: { total: 3, starters: 1 }, RB: { total: 6, starters: 2 }, WR: { total: 7, starters: 3 }, TE: { total: 2, starters: 1 } };
+const BESTBALL_FLEX = { count: 1, eligible: ["RB", "WR", "TE"] };
+// Ceiling = projection scaled by a per-position variance factor (weekly lineups auto-optimize, so upside beats floor).
+const BB_VARIANCE = { QB: 0.10, RB: 0.18, WR: 0.20, TE: 0.22, K: 0.05, DEF: 0.05 };
+function bestballCeiling(p) { return (p.projectedPoints || 0) * (1 + (BB_VARIANCE[p.position] != null ? BB_VARIANCE[p.position] : 0.12)); }
+// Correlation bonus when you already roster the same-team QB or pass-catcher.
+function bestballStackBoost(player, roster, bonus) {
+  if (!player || !player.team) return 0;
+  const isPasser = player.position === 'QB';
+  const isCatcher = player.position === 'WR' || player.position === 'TE';
+  if (!isPasser && !isCatcher) return 0;
+  const sameTeam = (roster || []).filter(r => r && r.team === player.team);
+  if (isPasser && sameTeam.some(r => r.position === 'WR' || r.position === 'TE')) return bonus;
+  if (isCatcher && sameTeam.some(r => r.position === 'QB')) return bonus;
+  if (isCatcher && sameTeam.some(r => r.position === 'WR' || r.position === 'TE')) return bonus * 0.4; // bring-back / double-stack
+  return 0;
 }
 // Allocation strategy slider (stars & scrubs ... thick & deep) with a recommended marker.
 function BudgetSliders({ strategy, onChange }) {
