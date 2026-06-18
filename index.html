@@ -1215,6 +1215,15 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-threeline b { color: var(--text-primary); font-weight: 700; }
 .lp-threeline b.gold { color: var(--gold-text); }
 .lp-creditline { font-size: 12.5px; color: var(--text-muted); max-width: 680px; line-height: 1.6; margin: 30px auto 4px; }
+.lp-seo-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; max-width: 680px; margin: 12px auto 4px; }
+.lp-seo-links a { color: var(--text-muted); font-size: 12px; letter-spacing: 0.02em; text-decoration: none; }
+.lp-seo-links a:hover { color: var(--positive); text-decoration: underline; }
+.upgrade-modal { text-align: center; }
+.upg-lock { font-size: 30px; margin: 2px 0 4px; }
+.upg-body { font-size: 14.5px; color: var(--text-secondary); line-height: 1.6; margin: 8px auto 18px; max-width: 360px; }
+.upg-cta { width: 100%; font-size: 15px; padding: 13px; }
+.upg-later { display: block; margin: 12px auto 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; }
+.upg-later:hover { color: var(--text-primary); }
 .lp-section { width: 100%; max-width: 880px; margin: 46px auto 8px; text-align: left; }
 .lp-mock { width: 100%; max-width: 880px; margin: 26px auto 10px; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.45); }
 .lp-mock-bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border-subtle); }
@@ -2562,6 +2571,7 @@ function LandingSplash({ onDismiss, onNav }) {
         </div>
         <div className="lp-note">Works on draft night, even if the Wi-Fi drops.</div>
         <p className="lp-creditline">Built on a compilation of ESPN, CBS, decades of experience, and direct conversations with leading fantasy sources. Runs entirely in your browser, no account to start, nothing uploaded, and every value is explainable.</p>
+        <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
       </div>
     </div>
   );
@@ -6984,6 +6994,20 @@ function PricingModal({ account, onBuy, onClose, onLegal }) {
     </div>
   );
 }
+function UpgradeModal({ reason, onUnlock, onClose }) {
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal upgrade-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>×</button>
+        <div className="upg-lock">🔒</div>
+        <div className="section-title" style={{ textAlign: 'center' }}>Unlock Draft Night Mode</div>
+        <p className="upg-body">Your cheat sheet is ready. <b>Draft Night Mode</b> tracks every bid and recalculates your max bid live{reason ? `, including ${reason}` : ''}. Unlock for <b>$14.99</b>.</p>
+        <button className="btn-draft upg-cta" onClick={onUnlock}>Unlock Draft Night Mode &middot; $14.99</button>
+        <button className="upg-later" onClick={onClose}>Maybe later</button>
+      </div>
+    </div>
+  );
+}
 function CheckoutModal({ tier, testMode, onComplete, onClose }) {
   const [busy, setBusy] = useState(false);
   function complete(mode) { setBusy(true); ITAnalytics.track('purchase_complete', { item: tier.id, mode }); setTimeout(() => { onComplete(); }, 350); }
@@ -7294,8 +7318,10 @@ function App() {
   useEffect(() => { try { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account)); } catch (e) {} }, [account]);
   useEffect(() => { ITAnalytics.track('app_open', {}); }, []);
   const has = id => entitled(account, id);
-  function grantEntitlement(id) { setAccount(a => ({ ...a, entitlements: { ...(a.entitlements || {}), [id]: true } })); ITAnalytics.track('purchase', { item: id, mode: account.testMode ? 'test' : 'live' }); }
-  function openCheckout(tier) { if (!tier) return; ITAnalytics.track('checkout_open', { item: tier.id }); setOverlay({ checkout: tier }); }
+  const [upgradeReason, setUpgradeReason] = useState('');
+  function grantEntitlement(id) { setAccount(a => ({ ...a, entitlements: { ...(a.entitlements || {}), [id]: true } })); ITAnalytics.track('purchase', { item: id, mode: account.testMode ? 'test' : 'live' }); ITAnalytics.track('purchase_completed', { item: id }); }
+  function openCheckout(tier) { if (!tier) return; ITAnalytics.track('checkout_open', { item: tier.id }); ITAnalytics.track('checkout_started', { item: tier.id }); setOverlay({ checkout: tier }); }
+  function promptUpgrade(reason) { if (has('coach')) return false; setUpgradeReason(reason || ''); ITAnalytics.track('upgrade_modal_viewed', { reason: reason || '' }); setOverlay('upgrade'); return true; }
   function handleSignIn(email) { if (!email) return; setAccount(a => ({ ...a, user: { email, since: Date.now() } })); ITAnalytics.track('sign_in', {}); setOverlay(null); }
   function handleSignOut() { setAccount(a => ({ ...a, user: null })); }
   function toggleTestMode() { setAccount(a => { const n = !a.testMode; ITAnalytics.track('testmode', { on: n }); return { ...a, testMode: n }; }); }
@@ -7372,9 +7398,12 @@ function App() {
   function handleLandingNav(target) {
     setView(target === 'board' ? 'board' : 'prep');
     if (target === 'signin') setOverlay('auth');
+    else ITAnalytics.track('free_sheet_started', { target });
     dismissSplash();
   }
   const SEASON_GAMES = 17;
+  const freeSheetDone = useRef(false);
+  useEffect(() => { if (!showSplash && view === 'prep' && !freeSheetDone.current) { freeSheetDone.current = true; ITAnalytics.track('free_sheet_completed', {}); } }, [showSplash, view]);
   const baseValued = useMemo(() => {
     const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
     const ranked = applyCustomRanks(scored, rankOrder);
@@ -7820,7 +7849,7 @@ function App() {
     if (view === 'mock') {
       return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
-    const coachEl = !showSplash ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />) : null;
+    const coachEl = !showSplash ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => promptUpgrade('the live AI Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />) : null;
     const cheatSheetEl = (
       <>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
@@ -7837,7 +7866,7 @@ function App() {
       <div className="board-layout board-norail">
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} />
       </div>
-      {!has('coach') && (<div className="draftday-teaser no-print"><div className="ddt-body"><span className="ddt-lock">🔒</span><div><div className="ddt-title">Draft Night Mode, Advanced Auction Day Management</div><div className="ddt-text">This board is your pre-draft plan. On draft night, the live AI navigator tracks every team's budget and tells you who to bid on and exactly how high as picks come in.</div></div></div><button className="ddt-cta" onClick={() => setOverlay('pricing')}>See what's inside</button></div>)}
+      {!has('coach') && (<div className="draftday-teaser no-print"><div className="ddt-body"><span className="ddt-lock">🔒</span><div><div className="ddt-title">Draft Night Mode, Advanced Auction Day Management</div><div className="ddt-text">This board is your pre-draft plan. On draft night, the live AI navigator tracks every team's budget and tells you who to bid on and exactly how high as picks come in.</div></div></div><button className="ddt-cta" onClick={() => promptUpgrade('every team\u2019s budget and live bid guidance')}>See what's inside</button></div>)}
       </>
     );
     if (view === 'board') return draftBoardEl;
@@ -7864,6 +7893,7 @@ function App() {
       {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} />}
+      {overlay === 'upgrade' && <UpgradeModal reason={upgradeReason} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} onClose={() => setOverlay(null)} />}
       {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
       {overlay === 'legal' && <LegalModal onClose={() => setOverlay(null)} />}
       {overlay === 'share' && <ShareModal text={shareText} onClose={() => setOverlay(null)} />}
