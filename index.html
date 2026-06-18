@@ -617,6 +617,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .checkout-fake { font-family: var(--font-mono); color: var(--text-muted); }
 .checkout-stripe-note { font-size: 10px; color: var(--text-muted); margin-top: 8px; font-style: italic; }
 .header-acct { display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--border-subtle); }
+.signin-btn { background: var(--positive); border: none; color: #04231b; font-weight: 800; padding: 7px 16px; border-radius: 8px; font-size: 12.5px; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; box-shadow: 0 3px 12px rgba(45,212,163,0.32); transition: filter 0.12s; }
+.signin-btn:hover { filter: brightness(1.08); }
 .tm-pill { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; padding: 4px 8px; border-radius: 10px; cursor: pointer; border: 1px solid var(--border-strong); }
 .tm-pill.on { background: rgba(45,212,163,0.15); color: var(--positive); border-color: var(--positive); }
 .tm-pill.off { background: var(--bg-elev); color: var(--text-muted); }
@@ -1062,7 +1064,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ribbon-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .lp-ribbon-links button { background: none; border: none; color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: color 0.12s, background 0.12s; }
 .lp-ribbon-links button:hover { color: var(--text-primary); background: var(--bg-elev); }
-.lp-ribbon-cta { color: #06281f !important; background: var(--positive); font-weight: 700; padding: 9px 18px; font-size: 12.5px; border-radius: 8px; box-shadow: 0 4px 14px rgba(45,212,163,0.34); }
+.lp-ribbon-cta { color: #04231b !important; background: var(--positive); font-weight: 800; padding: 9px 20px; font-size: 13px; border-radius: 8px; box-shadow: 0 4px 14px rgba(45,212,163,0.4); }
 .lp-ribbon-cta:hover { filter: brightness(1.08); background: var(--positive); color: #06281f; }
 .lp-faq { width: 100%; max-width: 720px; margin: 21px auto 30px; text-align: left; }
 .lp-faq-item { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
@@ -2300,7 +2302,7 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
         <span className="header-acct">
           <button className={`tm-pill ${account && account.testMode ? 'on' : 'off'}`} onClick={onToggleTest} title="Test mode unlocks all paid features. Toggle off to preview the gated (paid) experience.">{account && account.testMode ? 'TEST MODE' : 'LIVE'}</button>
           <button className="upgrade-btn" onClick={onUpgrade}>Upgrade</button>
-          <button onClick={onAccount}>{account && account.user ? account.user.email.split('@')[0] : 'Sign in'}</button>
+          <button className="signin-btn" onClick={onAccount}>{account && account.user ? account.user.email.split('@')[0] : 'Sign in'}</button>
         </span>
       </nav>
     </header>
