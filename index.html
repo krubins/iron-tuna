@@ -1171,9 +1171,6 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-step-n { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 18px; color: #06281f; background: var(--positive); margin-bottom: 14px; }
 .lp-step-h { font-family: var(--font-display); font-size: 19px; letter-spacing: 0.02em; color: var(--text-primary); margin-bottom: 8px; }
 .lp-step-b { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; }
-@keyframes lmFloat { 0%, 100% { transform: translateY(0.8px); } 50% { transform: translateY(-1.9px); } }
-.lm-float { animation: lmFloat 3.4s ease-in-out infinite; will-change: transform; }
-@media (prefers-reduced-motion: reduce) { .lm-float { animation: none; } }
 .lp-compare { width: 100%; max-width: 880px; margin: 38px auto 8px; text-align: left; }
 .lp-compare-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border-subtle); border-radius: 12px; }
 .lp-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
@@ -2255,8 +2252,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       )}
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${wordTx},${wordTy})`}>
         {placed.map((g, i) => (
-          <text key={i} x={g.cx} y={cy} className={tagline ? 'lm-float' : undefined}
-                style={tagline ? { animationDelay: `${(i * 0.31).toFixed(2)}s`, animationDuration: `${(3.2 + (i % 3) * 0.5).toFixed(2)}s` } : undefined}
+          <text key={i} x={g.cx} y={cy}
                 fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={g.size}
                 textAnchor="middle" dominantBaseline="central" fill={g.c}>{g.ch}</text>
         ))}
@@ -3862,7 +3858,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <div className="ch-controls-hint" style={{ flexBasis: '100%', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 2 }}>{isBoard ? 'Draft any player straight from the sheet, no separate list: click to assign him to a team; drag to rerank.' : 'Build your board right here: click a player to target him; drag to rerank.'} Click a Proj price to edit it. <span style={{ color: '#2dd4a3' }}>● potential bargain</span> <span style={{ color: '#ef4444' }}>● potentially overpriced</span></div>
       </div>
       <div className="ch-insights">
-        <div className="chi-head"><span>Insights{len > 1 ? ` · ${(idx % len) + 1}/${len}` : ''}</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
+        <div className="chi-head"><span>Insights</span>{len > 1 && <span className="chi-nav"><button onClick={() => setIdx(i => (i - 1 + len) % len)} title="Previous">▲</button><button onClick={() => setIdx(i => (i + 1) % len)} title="Next">▼</button></span>}</div>
         {insights.length ? <div className="chi-body"><div className="chi-label">{insights[idx % insights.length].label}</div><div className="chi-text">{insights[idx % insights.length].text}</div></div> : <div className="chi-body chi-empty">Insights appear as your board and draft develop.</div>}
       </div>
     </div>
@@ -7464,7 +7460,7 @@ function App() {
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
       {!showSplash && view === 'prep' && <ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has('coach')} onUnlock={() => openCheckout(TIERS.find(t => t.id === 'coach'))} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" big={false} ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />}
-      {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} seasonGames={seasonGames} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
+      {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} seasonGames={SEASON_GAMES} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
       {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} />}
