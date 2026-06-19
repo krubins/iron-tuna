@@ -1353,6 +1353,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .split-view .coach-beside { display: none; }
 @media (max-width: 1180px) { .split-view { flex-direction: column; } .split-view .split-pane { max-width: 100%; flex-basis: auto; width: 100%; } .split-view .split-pane-board { border-left: none; padding-left: 0; border-top: 1px solid var(--border-subtle); padding-top: 14px; } }
 @media print { .split-view { display: block; } .split-view .split-pane { max-width: 100%; } }
+.font-scale-bar { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 0 2px 8px; }
+.font-scale-bar .fs-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-right: 2px; }
+.font-scale-bar .fs-btn { width: 28px; height: 26px; border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-primary); border-radius: var(--radius-sm); font-weight: 700; font-size: 13px; line-height: 1; cursor: pointer; }
+.font-scale-bar .fs-btn:hover:not(:disabled) { border-color: var(--gold-text); color: var(--gold-text); }
+.font-scale-bar .fs-btn:disabled { opacity: 0.4; cursor: default; }
+.font-scale-bar .fs-pct { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); min-width: 38px; text-align: center; }
+.font-scale-bar .fs-reset { background: none; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; text-decoration: underline; }
+.font-scale-bar .fs-reset:hover { color: var(--text-primary); }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -8120,6 +8128,8 @@ function App() {
     dismissSplash();
   }
   const SEASON_GAMES = 17;
+  const [fontScale, setFontScale] = useState(() => { try { const v = parseFloat(localStorage.getItem('it_font_scale')); return (v && v >= 0.7 && v <= 1.6) ? v : 1; } catch (e) { return 1; } });
+  const adjustFont = d => setFontScale(s => { const n = Math.min(1.5, Math.max(0.7, Math.round((s + d) * 10) / 10)); try { localStorage.setItem('it_font_scale', String(n)); } catch (e) {} return n; });
   const freeSheetDone = useRef(false);
   useEffect(() => { if (!showSplash && view === 'prep' && !freeSheetDone.current) { freeSheetDone.current = true; ITAnalytics.track('free_sheet_completed', {}); } }, [showSplash, view]);
   const baseValued = useMemo(() => {
@@ -8624,7 +8634,16 @@ function App() {
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} autoExit={splashSeen && !landingStay} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => { setLandingStay(true); setShowSplash(true); }} config={config} onOpenSettings={() => setView('settings')} />
       <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'split' ? 'split-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
-        <div className="main-content">{renderMainContent()}</div>
+        {(view === 'prep' || view === 'board' || view === 'split') && (
+          <div className="font-scale-bar no-print">
+            <span className="fs-label">Font</span>
+            <button className="fs-btn" onClick={() => adjustFont(-0.1)} disabled={fontScale <= 0.7} title="Smaller font" aria-label="Smaller font">A&minus;</button>
+            <span className="fs-pct" title="Current size">{Math.round(fontScale * 100)}%</span>
+            <button className="fs-btn" onClick={() => adjustFont(0.1)} disabled={fontScale >= 1.5} title="Larger font" aria-label="Larger font">A+</button>
+            {fontScale !== 1 && <button className="fs-reset" onClick={() => { setFontScale(1); try { localStorage.setItem('it_font_scale', '1'); } catch (e) {} }} title="Reset to 100%">reset</button>}
+          </div>
+        )}
+        <div className="main-content" style={{ zoom: fontScale }}>{renderMainContent()}</div>
       </div>
       {view === 'settings' && (
         <SettingsModal config={config} onSave={handleConfigChange} onClose={() => setView('board')} onImportProjections={handleProjectionsImport}
