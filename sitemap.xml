@@ -7,4 +7,10 @@
   <url><loc>https://irontuna.com/custom-auction-values</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://irontuna.com/superflex-auction-values</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://irontuna.com/creators</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+
+  <url><loc>https://irontuna.com/guides</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/auction-draft-strategy</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/auction-nomination-strategy</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/auction-budget-allocation</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/dollar-endgame-handcuffs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>

@@ -2788,6 +2788,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
           <button onClick={() => go('prep', 'ribbon_prep')}>Prep</button>
           <button onClick={() => go('board', 'ribbon_auction_night')}>Auction Night</button>
           <button onClick={() => go('faq')}>FAQ</button>
+          <button onClick={() => { window.location.href = '/guides'; }}>Guides</button>
           <button onClick={() => go('legal')}>Terms</button>
           <button className="lp-ribbon-cta" onClick={() => go('signin')}>Sign in</button>
         </div>
@@ -4431,6 +4432,19 @@ const MODEL_DESC = {
   eliteTE: 'Elite TE: pay up for a top-three tight end for a weekly edge few rivals can match.',
 };
 const FANTASY_FACTS = [
+  { label: 'Split-backfield lottery', text: 'In an unsettled backfield, buy BOTH backs for $1-2 each. You are not guessing the winner, you are guaranteeing you roster whoever emerges, off a rival\'s bench.' },
+  { label: 'Pair: Vikings backfield', text: 'Aaron Jones and Jordan Mason both tend to go cheap in Minnesota. Buy both: an aging vet plus a capable younger back means one may seize the lead role for a dollar.' },
+  { label: 'Pair: Patriots backfield', text: 'Rhamondre Stevenson and TreVeyon Henderson split work in New England, and Henderson\'s snaps climbed late. Own both ends of the timeshare cheaply.' },
+  { label: 'Pair: Seahawks backfield', text: 'Kenneth Walker\'s durability and Zach Charbonnet\'s knee make Seattle wide open. A dollar on each backs the side that ends up healthy and featured.' },
+  { label: 'Pair: Steelers backfield', text: 'Jaylen Warren (pass downs) and Kaleb Johnson (early downs) is a true split. Roster both and you hold whoever the job tilts toward.' },
+  { label: 'Pair: Cardinals backfield', text: 'James Conner\'s age and injury history make Trey Benson the cheapest path to a featured back. Pair them for a dollar or two.' },
+  { label: 'Pair: Saints backfield', text: 'Alvin Kamara is past his prime and Kendre Miller is the next man up. Owning both is cheap insurance on the New Orleans lead role.' },
+  { label: 'Pair: Giants backfield', text: 'Tyrone Tracy and Cam Skattebo project as a genuine split with no clear bell cow. Buy both late and let the season decide.' },
+  { label: 'Pair: Jaguars backfield', text: 'Travis Etienne and Tank Bigsby have flip-flopped for two years. The committee is cheap, and the winner is a weekly starter.' },
+  { label: 'Pair: Packers handcuff', text: 'Josh Jacobs leads Green Bay, but MarShawn Lloyd at a dollar is a league-winner if Jacobs misses time. Stash the upside.' },
+  { label: 'Pair: Broncos backfield', text: 'J.K. Dobbins carries injury risk and RJ Harvey is an explosive rookie behind him. A dollar on each covers the Denver lead job.' },
+  { label: 'Pair: Rams handcuff', text: 'Kyren Williams is the lead, but Blake Corum is the cheapest route to a featured back in a strong Rams offense. Worth a late dollar.' },
+  { label: 'Vacated targets', text: 'When a team loses its top receiver, buy two cheap WRs behind him, like the Eagles\' WR2/WR3 after A.J. Brown\'s exit. One inherits the targets.' },
   { label: 'RB dead zone', text: 'The RB dead zone is real: backs drafted around RB15 to RB30 bust more than any other group, paying a starter\'s price for a backup\'s job security. Wait, then pay up or punt.' },
   { label: 'WR is deep', text: 'Wide receiver is the deepest position. The WR24 usually finishes within a couple points per game of the WR12, which is why you wait on WR and pay up at RB.' },
   { label: 'Bellcows are scarce', text: 'True three-down backs who run AND catch are the rarest asset in fantasy, usually fewer than ten. That scarcity is why elite RBs command the biggest auction premiums.' },
