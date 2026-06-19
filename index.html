@@ -7824,10 +7824,11 @@ function App() {
   const [authReason, setAuthReason] = useState('');
   const [focusPlayer, setFocusPlayer] = useState(null);
   const focusNonce = useRef(0);
-  const [showSplash, setShowSplash] = useState(!screenParam);
+  const splashSeen = (() => { try { return localStorage.getItem('iron_tuna_entered') === '1'; } catch (e) { return false; } })();
+  const [showSplash, setShowSplash] = useState(!screenParam && !splashSeen);
   function dismissSplash() {
     setShowSplash(false);
-    try { sessionStorage.setItem('iron_tuna_splash_seen', '1'); } catch (e) {}
+    try { localStorage.setItem('iron_tuna_entered', '1'); } catch (e) {}
   }
   function handleLandingNav(target) {
     setConfig(prev => ({ ...prev, format: 'auction' }));
