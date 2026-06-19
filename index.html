@@ -454,6 +454,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .rg-filled .rg-price { color: var(--accent-text); }
 .team-card .rg-label, .team-card .team-roster-summary, .team-card .team-roster-summary span, .team-card .rg-target .rg-name, .team-card .rg-empty .rg-name, .team-card .rg-target .rg-price, .team-card .rg-price { color: #e8edf2 !important; }
 .rg-target .rg-price { color: var(--text-faint); }
+.team-card .rg-slot.rg-target .rg-name, .team-card .rg-slot.rg-target .rg-price, .team-card .rg-slot.rg-target .rg-label { color: #6e7682 !important; }
+.team-card .rg-slot.rg-target { opacity: 0.72; }
+.team-card .rg-slot.rg-filled[draggable="true"] { cursor: grab; }
+.team-card .rg-slot.rg-filled[draggable="true"]:active { cursor: grabbing; }
 /* My Team projected fills: ghost vs real (#2) + locked targets (#6) */
 .team-card.mine .rg-slot.rg-target { opacity: 0.7; border-left: 2px dashed var(--border-accent); padding-left: 5px; }
 .team-card.mine .rg-slot.rg-filled { opacity: 1; }
@@ -2780,7 +2784,7 @@ function LandingSplash({ onDismiss, onNav }) {
         })()}
         <div className="lp-section" ref={howRef}>
           <div className="lp-preview-eyebrow">Three numbers, not one</div>
-          <h2 className="lp-preview-h">The only number that matters on the clock: your max</h2>
+          <h2 className="lp-preview-h">Know what the room will bid, and whether you should follow.</h2>
           <div className="lp-three">
             {threeNum.map(([t, dd, k]) => (
               <div className={`lp-three-card lp-three-${k}`} key={k}><div className="lp-three-t">{t}</div><div className="lp-three-d">{dd}</div></div>
@@ -3782,9 +3786,10 @@ function costColor(price, value) {
   return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
 }
 // ─── components/TeamsModal.jsx ──────────────────────────
-function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy, onAddPlayer, model, onSelectModel, targets, onToggleTarget }) {
+function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameTeam, onSetMyTeam, onExport, onRemovePick, onReorderTeams, roleOverrides, onSetRole, onFocusPlayer, onUpdateStrategy, onAddPlayer, model, onSelectModel, targets, onToggleTarget, slotOrder, onReorderSlot }) {
   const MODEL_LABELS = { ideal: 'Ideal Team', balanced: 'Balanced', targets: 'Favorites', heroRB: 'Hero RB', heroWR: 'Hero WR', heroQB: 'Hero QB', zeroRB: 'Zero RB', robustRB: 'Robust RB', robustWR: 'Robust WR', eliteTE: 'Elite TE', custom: 'Custom' };
   const modelLabel = MODEL_LABELS[model || 'ideal'] || 'Ideal Team';
+  const dragRef = useRef(null);
   const myTeam = teams.find(t => t.isMine);
   const playerMap = new Map();
   players.forEach(p => playerMap.set(p.id, p));
@@ -3808,12 +3813,12 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
       const ro = t.isMine ? roleOverrides : {};
       const cur = computeTeamStarters(t, players, tc, ro);
       const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro);
-      const grid = buildTeamRosterGrid(t, plan, players, tc);
+      const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
       const rosterPoints = t.roster.reduce((s, r) => { const p = playerMap.get(r.playerId); return s + (p ? (p.projectedPoints || 0) : 0); }, 0);
       m.set(t.id, { filledStarters: cur.filledStarters, totalStarters: cur.totalStarters, starterPoints: plan.starterPoints, draftedStarterPoints: cur.starterPoints, rosterPoints, grid });
     });
     return m;
-  }, [teams, players, config, draftedIds, roleOverrides, model, targets]);
+  }, [teams, players, config, draftedIds, roleOverrides, model, targets, slotOrder]);
   const teamGrades = useMemo(() => {
     let maxS = 0, maxB = 0;
     const rows = teams.map(t => {
@@ -3885,7 +3890,6 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
         <span>Projected pts/game assumes each team optimally fills its remaining starters within budget (incl. flex).<br />Updates as picks come in.</span>
         <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}><label style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>Card size<input type="range" min="180" max="440" step="20" value={cardSize} onChange={e => setCardSize(parseInt(e.target.value))} style={{ width: 92 }} /></label><button className="btn-secondary" onClick={toggleAll}>{allCollapsed ? 'Expand all' : 'Collapse all'}</button><button className="btn-secondary" onClick={onExport}>Export rosters (CSV)</button></span>
       </div>
-      {myTeam && onSelectModel && (<div className="board-models"><span className="board-models-label">Draft model</span><HeaderModelTabs myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} /><span className="board-models-hint">Same model the Cheatsheet uses, changes the projected fills below.</span></div>)}
       <div className="teams-overview" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))` }}>
         {teams.map(team => {
           const totalSpent = team.roster.reduce((sum, r) => sum + r.price, 0);
@@ -3939,10 +3943,23 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
                         const oppHide = !team.isMine;
                         const showAsOpen = !slot.drafted && (slot.empty || oppHide);
                         const locked = team.isMine && targets && slot.id && targets.has(slot.id);
+                        const _sp = slot.id != null ? playerMap.get(slot.id) : null;
+                        const _proj = _sp && _sp.marketValue != null ? _sp.marketValue : (_sp ? _sp.auctionValue : slot.value);
+                        const _val = _sp ? _sp.auctionValue : slot.value;
+                        const _you = (team.isMine && _sp && _sp.personalValue != null) ? _sp.personalValue : null;
+                        const _ppg = _sp ? (_sp.projectedPoints / games).toFixed(1) : (slot.pts != null ? (slot.pts / games).toFixed(1) : null);
+                        const _vals = (_proj != null ? ` \u00b7 Proj $${_proj}` : '') + (_val != null ? ` \u00b7 Value $${_val}` : '') + (_you != null ? ` \u00b7 You $${_you}` : '') + (_ppg != null ? ` \u00b7 ${_ppg} pts/gm` : '');
+                        const _title = (slot.empty || showAsOpen) ? 'Open slot'
+                          : slot.drafted ? `${slot.name} \u2014 paid $${slot.price}${_vals}${team.isMine ? ' \u00b7 drag to reorder' : ''}`
+                          : `${slot.name} (projected${slot.est ? `, ~$${slot.est}` : ''})${_vals}`;
                         return (
                         <div key={i} className={`rg-slot ${slot.drafted ? 'rg-filled' : showAsOpen ? 'rg-empty' : 'rg-target'}${locked ? ' rg-locked' : ''}`}
+                             draggable={!!slot.drafted}
+                             onDragStart={slot.drafted ? (e) => { dragRef.current = { teamId: team.id, pos, id: slot.id }; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(slot.id)); } catch (_) {} } : undefined}
+                             onDragOver={(e) => { const dr = dragRef.current; if (dr && dr.teamId === team.id && dr.pos === pos) e.preventDefault(); }}
+                             onDrop={(e) => { const dr = dragRef.current; dragRef.current = null; if (!dr || dr.teamId !== team.id || dr.pos !== pos) return; e.preventDefault(); const slots = proj.grid[pos] || []; const order = slots.filter(s => s.drafted && s.id != null).map(s => s.id); if (order.length < 2) return; const targetIdx = slots.slice(0, i).filter(s => s.drafted && s.id != null).length; const without = order.filter(id => id !== dr.id); without.splice(Math.min(targetIdx, without.length), 0, dr.id); onReorderSlot && onReorderSlot(team.id, pos, without); }}
                              onClick={slot.drafted ? () => setDetail({ team, pick: team.roster.find(r => r.playerId === slot.id) }) : (showAsOpen ? undefined : (team.isMine ? () => onToggleTarget && onToggleTarget(slot.id) : () => onFocusPlayer && onFocusPlayer(slot.id)))}
-                             title={slot.drafted ? 'Click for purchase details' : (showAsOpen ? 'Open slot' : (team.isMine ? (locked ? 'Locked target \u2014 click to unlock' : 'Click to lock as a target; the planner keeps this slot and re-solves the rest') : `${slot.name} · click to find in the list`))}>
+                             title={_title}>
                           <span className="rg-label">{slot.label}</span>
                           <span className="rg-name">{slot.drafted ? slot.name : (showAsOpen ? '(open)' : `${locked ? '\u2713 ' : ''}${pos}${slot.posRank || ''}`)}</span>
                           {slot.drafted
@@ -5351,7 +5368,7 @@ function computeTeamStarters(team, players, config, roleOverrides) {
 // drafted players sit in the slot matching their projection tier; empty slots
 // show the players the plan would target for an ideal roster within budget
 // (so you get one good starting QB + a cheap QB2, not the top two QBs overall).
-function buildTeamRosterGrid(team, plan, players, config) {
+function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   const pmap = new Map(players.map(p => [p.id, p]));
   // Global positional rank by projection (so an opponent's projected slot can show "WR17").
   const rankMap = new Map();
@@ -5365,7 +5382,21 @@ function buildTeamRosterGrid(team, plan, players, config) {
   (plan.benchTargets || []).forEach(bt => { const p = pmap.get(bt.playerId); if (p) add(p.position, { id: p.id, name: p.name, pts: p.projectedPoints || 0, est: bt.price, drafted: false, posRank: rankMap.get(p.id) }); });
   const grid = {};
   Object.entries(config.roster).forEach(([pos, c]) => {
-    const arr = (byPos[pos] || []).slice().sort((a, b) => b.pts - a.pts).slice(0, c.total);
+    const ord = orderForTeam && orderForTeam[pos];
+    const entries = (byPos[pos] || []).slice();
+    if (ord && ord.length) {
+      entries.sort((a, b) => {
+        const ia = a.id != null ? ord.indexOf(a.id) : -1;
+        const ib = b.id != null ? ord.indexOf(b.id) : -1;
+        if (ia !== -1 && ib !== -1) return ia - ib;
+        if (ia !== -1) return -1;
+        if (ib !== -1) return 1;
+        return b.pts - a.pts;
+      });
+    } else {
+      entries.sort((a, b) => b.pts - a.pts);
+    }
+    const arr = entries.slice(0, c.total);
     while (arr.length < c.total) arr.push({ empty: true, pts: 0 });
     grid[pos] = arr.map((e, i) => ({ ...e, label: pos + (i + 1) }));
   });
@@ -7771,6 +7802,7 @@ function App() {
   const [targets, setTargets] = useState(() => new Set(initialState?.targets || []));
   const [rankOrder, setRankOrder] = useState(initialState?.rankOrder || {});
   const [roleOverrides, setRoleOverrides] = useState(initialState?.roleOverrides || {});
+  const [slotOrder, setSlotOrder] = useState({});
   const [focusPlayer, setFocusPlayer] = useState(null);
   const focusNonce = useRef(0);
   const [showSplash, setShowSplash] = useState(!screenParam);
@@ -8077,6 +8109,7 @@ function App() {
   function handleResetRanks() { setRankOrder({}); }
   function handleFocusPlayer(id) { focusNonce.current += 1; setView('board'); setFocusPlayer({ id, n: focusNonce.current }); }
   function handleSetRole(playerId, role) { setRoleOverrides(prev => { const n = { ...prev }; if (!role || role === 'auto') delete n[playerId]; else n[playerId] = role; return n; }); }
+  function handleReorderSlot(teamId, pos, orderedIds) { setSlotOrder(prev => ({ ...prev, [teamId]: { ...(prev[teamId] || {}), [pos]: orderedIds } })); }
   function handleClearTargets() { setTargets(new Set()); }
   async function handleBuildCustom(desc) {
     const d = (desc || '').trim(); if (!d) return;
@@ -8256,7 +8289,7 @@ function App() {
       <Coachmark flag="seenBoardIntro" account={account} setAccount={setAccount}>Ghosted rows are the planner's projected best fills for your remaining slots and budget. Pick a model up top to change strategy, or click a slot to lock a target.</Coachmark>
       <div className="strategy-bar"><BudgetSliders strategy={config.strategy} onChange={handleUpdateStrategy} /><div className="taunt-wrap"><button className="taunt-btn" onClick={makeTaunt} title="Roast a random rival">🔥 Roast a Rival</button>{taunt && <div key={taunt.id} className="taunt-text" onClick={() => setTaunt(null)} title="Click to dismiss">{taunt.text}</div>}</div></div>
       <div className="board-layout board-norail">
-        <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} />
+        <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} slotOrder={slotOrder} onReorderSlot={handleReorderSlot} />
       </div>
       {!has(liveTier) && (() => {
         const ddt = config.format === 'snake'
