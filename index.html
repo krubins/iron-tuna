@@ -1522,7 +1522,7 @@ const FORMATS = {
         flex: BESTBALL_FLEX,
         snake: { draftSlot: bb.draftSlot || (config.snake && config.snake.draftSlot) || 1, rounds: bb.rounds || 18 },
       };
-      const bbPlayers = players.map(p => ({ ...p, projectedPoints: bestballCeiling(p), adp: (p.adpBestball != null ? p.adpBestball : p.adp) }));
+      const bbPlayers = players.map(p => ({ ...p, projectedPoints: bestballCeiling(p), vorp: (p.vorp || 0) * (1 + (BB_VARIANCE[p.position] != null ? BB_VARIANCE[p.position] : 0.12)), adp: (p.adpBestball != null ? p.adpBestball : p.adp) }));
       const stackBonus = bb.stackBonus != null ? bb.stackBonus : 0.15;
       const valueBoost = (player, roster) => bestballStackBoost(player, roster, stackBonus);
       return buildSnakePlan(myTeam, bbPlayers, bbConfig, draftedIds, { valueBoost });
@@ -5216,12 +5216,15 @@ function buildSnakePlan(myTeam, players, config, draftedIds, opts) {
     const cur = starterPointsOf(roster);
     const cands = availByAdp.filter(p => !taken.has(p.id) && canAdd(roster, p.position)).sort((a, b) => valOf(b) - valOf(a));
     const pool = cands.slice(0, 60);
-    let best = null, bestGain = -Infinity, bestVal = -Infinity;
+    let best = null, bestScore = -Infinity;
     pool.forEach(p => {
       const boost = valueBoost ? valueBoost(p, roster) : 0;
-      const gain = (starterPointsOf(roster.concat([p])) - cur) * (1 + boost);
-      const v = valOf(p) * (1 + boost);
-      if (gain > bestGain + 1e-6 || (Math.abs(gain - bestGain) <= 1e-6 && v > bestVal)) { best = p; bestGain = gain; bestVal = v; }
+      // Blend value-over-replacement (scarcity) with the marginal starting-points gain. This
+      // secures scarce studs first (so we don't take a low-VORP QB1 first overall) yet still
+      // fills required starter slots (QB/TE/K/DEF) at the right time instead of never.
+      const startsImprove = starterPointsOf(roster.concat([p])) - cur;
+      const score = (valOf(p) + 0.3 * startsImprove) * (1 + boost);
+      if (score > bestScore + 1e-6) { best = p; bestScore = score; }
     });
     if (!best && cands.length) best = cands[0];
     return best;
