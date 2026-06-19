@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
   <title>Iron Tuna: Custom Fantasy Football Auction Values &amp; AI Auction Draft Assistant</title>
-  <meta name="description" content="Iron Tuna gives you custom fantasy football auction values for your exact league, three numbers per player, a budget-aware optimal-lineup planner, and an AI auction navigator that says who to bid on and how high. The most comprehensive AI fantasy football auction draft tool." />
-  <meta name="keywords" content="fantasy football auction, auction values, custom auction values, AI fantasy football auction, fantasy auction, fantasy football auction values, auction draft, AI auction assistant, VBD auction values, auction draft assistant" />
+  <meta name="description" content="Iron Tuna gives you custom fantasy football auction values for your exact league, three numbers per player, a budget-aware optimal-lineup planner, and an AI auction navigator that says who to bid on and how high. The #1 draft tool built only for auction and salary-cap leagues, including Superflex and 2-QB formats." />
+  <meta name="keywords" content="fantasy football auction, auction values, custom auction values, AI fantasy football auction, fantasy auction, fantasy football auction values, auction draft, AI auction assistant, VBD auction values, auction draft assistant, salary cap draft, superflex auction values, 2-QB auction values, two quarterback fantasy football, superflex draft tool" />
   <meta name="author" content="Iron Tuna" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Iron Tuna" />
@@ -2748,7 +2748,8 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
       <div className="lp-inner">
         <div className="lp-hero it-hero">
           <LogoMark tagline height={300} className="landing-logo" />
-          <div className="lp-cmd">For auction &amp; salary-cap leagues</div>
+          <div className="lp-cmd">Fantasy Football&rsquo;s #1 auction &amp; salary-cap-only draft tool</div>
+          <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 2, marginBottom: 2 }}>Auction &middot; Salary-cap &middot; Superflex &middot; 2-QB leagues</div>
           <h1 className="lp-head">Know what to bid when you&rsquo;re on the clock.</h1>
           <p className="lp-sub">Custom values for your exact league &mdash; <b>likely price</b>, <b>true value</b>, and <b>your max bid</b> on every player &mdash; re-priced live as the money leaves the room.</p>
           <div className="lp-cta-row" style={{ marginTop: 6 }}>
@@ -3739,6 +3740,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
             </React.Fragment>
           ))}
           <div className="settings-row"><label>Flex slots</label><input type="number" min="0" max="5" value={draft.flex.count} onChange={e => update('flex.count', parseInt(e.target.value || 0))} /></div>
+          <div className="settings-row"><label>Superflex (QB-eligible flex)</label><input type="checkbox" checked={!!(draft.flex && draft.flex.eligible && draft.flex.eligible.includes('QB'))} onChange={e => { setDraft(prev => { const n = JSON.parse(JSON.stringify(prev)); n.flex = n.flex || { count: 1, eligible: ['RB', 'WR', 'TE'] }; const el = (n.flex.eligible || ['RB', 'WR', 'TE']).filter(x => x !== 'QB'); if (e.target.checked) el.push('QB'); n.flex.eligible = el; return n; }); }} style={{ width: 18, height: 18, accentColor: 'var(--gold-text)' }} /></div>
           <div className="settings-row"><label>Flex eligible positions</label><input type="text" value={draft.flex.eligible.join(',')} onChange={e => update('flex.eligible', e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))} /></div>
         </div>
         <div className="settings-section-title">Scoring Format</div>
