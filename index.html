@@ -2730,7 +2730,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
   const threeNum = [
     ['Market Price', 'What the room is likely to pay for him right now.', 'price'],
     ['True Value', 'What he is actually worth under your exact league settings.', 'value'],
-    ['Your Max (You)', 'The highest you should personally bid given your roster, budget, and needs. It can sit ABOVE true value on purpose, because chasing only value can leave you with a deep team of average players.', 'max'],
+    ['Your Max (You)', 'The highest you should personally bid, given your roster, budget, and remaining needs.', 'max'],
   ];
   const proof = [
     ['Tracks every team\'s budget', 'See who is flush and who is broke, so you know who can still bid you up and who is stuck bargain hunting.'],
@@ -2850,7 +2850,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
               <div className={`lp-three-card lp-three-${k}`} key={k}><div className="lp-three-t">{t}</div><div className="lp-three-d">{dd}</div></div>
             ))}
           </div>
-          <div className="lp-ideal" style={{ borderLeft: '3px solid var(--gold-text)' }}>Why <b>You</b> can beat true value: if the room overpays for premium players and you only ever pay value, you will be right on every single bid and still win <b>none</b> of the elite talent, ending up with a deep roster of average starters. Your Max is the most a player is worth to <b>your</b> lineup, so it tells you exactly how far over value to go to actually land the studs that win weeks.</div>
+          <div className="lp-ideal" style={{ borderLeft: '3px solid var(--gold-text)' }}><b>YOU</b> is your personal max bid, the most a player is worth to your starting lineup given your roster and budget.<br /><br />The YOU value may be higher than the true value, as elite players may cost more than &ldquo;Value.&rdquo; Holding strictly to &ldquo;Value&rdquo; may leave you with a deep team of only average players, with a lower scoring starting lineup.</div>
           <div className="lp-ideal">It also builds the <b>best team your budget can actually buy</b> &mdash; the highest-scoring legal roster your money affords &mdash; and names who to target. Spend every dollar, leave no points on the table.</div>
           <div className="lp-cta-row" style={{ marginTop: 22 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
