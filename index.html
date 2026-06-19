@@ -1373,6 +1373,16 @@ input:focus, select:focus { border-color: var(--accent); }
 .ds-sbtn { background: var(--bg-elev); border: 1px solid var(--border-strong); color: var(--text-primary); border-radius: var(--radius-sm); padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .ds-sbtn:hover { border-color: var(--gold-text); color: var(--gold-text); }
 .ds-ref { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+.rf-lede { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin: 8px 0 14px; }
+.rf-getcode { background: var(--gold-text); color: #1a1205; border: none; border-radius: 22px; padding: 12px 22px; font-weight: 700; font-size: 16px; cursor: pointer; }
+.rf-getcode:hover { filter: brightness(1.06); }
+.rf-codewrap { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 10px; }
+.rf-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.rf-code { font-family: var(--font-mono); font-size: 21px; font-weight: 700; color: var(--gold-text); letter-spacing: 0.05em; }
+.rf-linkrow { display: flex; gap: 8px; margin-bottom: 14px; }
+.rf-link { flex: 1; min-width: 0; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text-primary); font-size: 13px; font-family: var(--font-mono); }
+.rf-copy { background: rgba(45,212,163,0.14); color: var(--positive); border: 1px solid var(--positive); border-radius: var(--radius-sm); padding: 9px 13px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.rf-share-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 4px 0 8px; }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -4342,7 +4352,9 @@ function LogoMark({
       width: 'auto',
       display: 'block'
     },
-    xmlns: "http://www.w3.org/2000/svg"
+    xmlns: "http://www.w3.org/2000/svg",
+    role: "img",
+    "aria-label": "Iron Tuna"
   }, React.createElement("defs", null, React.createElement("linearGradient", {
     id: "ironBody",
     x1: "0",
@@ -4562,7 +4574,8 @@ function Header({
   onToggleTest,
   onHome,
   config,
-  onOpenSettings
+  onOpenSettings,
+  onShareEarn
 }) {
   const [resetOpen, setResetOpen] = useState(false);
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
@@ -4613,7 +4626,10 @@ function Header({
   }, "Your League (Roster, Scoring, and Budget)"), React.createElement("button", {
     onClick: () => window.open('/guides', '_blank', 'noopener'),
     title: "Auction strategy guides (opens in a new tab)"
-  }, "Guides"), React.createElement("span", {
+  }, "Guides"), React.createElement("button", {
+    onClick: onShareEarn,
+    title: "Share Iron Tuna and earn $2 per referral"
+  }, "Share & Earn"), React.createElement("span", {
     className: "reset-wrap"
   }, React.createElement("button", {
     onClick: () => setResetOpen(o => !o)
@@ -10525,7 +10541,7 @@ function DraftSummaryModal({
   const [copied, setCopied] = useState(false);
   const text = useMemo(() => tab === 'board' ? buildBoardText(teams, players, config) : buildDraftSummary(teams, players, config, games, funny), [teams, players, config, games, funny, tab]);
   const REF = 'Powered by IronTuna.com';
-  const SITE = 'https://irontuna.com';
+  const SITE = itRefLink();
   const shareBody = text + '\n\n' + REF + ' - build your free auction board at ' + SITE;
   const tweetText = (() => {
     const first = text.split('\n\n')[0];
@@ -10621,6 +10637,145 @@ function DraftSummaryModal({
   }, copied ? 'Copied!' : 'Copy text')), React.createElement("div", {
     className: "ds-ref"
   }, "Every share includes a clear \"Powered by IronTuna.com\" reference and link.")));
+}
+function genRefCode() {
+  return 'IT' + Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+function itRefLink() {
+  try {
+    const a = JSON.parse(localStorage.getItem('iron_tuna_account_v1') || '{}');
+    return a && a.refCode ? 'https://irontuna.com/?ref=' + encodeURIComponent(a.refCode) : 'https://irontuna.com';
+  } catch (e) {
+    return 'https://irontuna.com';
+  }
+}
+function ReferralModal({
+  account,
+  setAccount,
+  onClose
+}) {
+  const [copied, setCopied] = useState('');
+  const code = account && account.refCode;
+  function getCode() {
+    const c = genRefCode();
+    setAccount(a => Object.assign({}, a, {
+      refCode: c
+    }));
+    ITAnalytics.track('refcode_created', {});
+  }
+  const link = code ? 'https://irontuna.com/?ref=' + encodeURIComponent(code) : 'https://irontuna.com';
+  const REF = 'Powered by IronTuna.com';
+  const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values, true value, and a live max bid for every player. Grab a free one: ' + link + '  (' + REF + ')';
+  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values and live max-bid math for every player. Free cheat sheet:  (' + REF + ')';
+  function copy(what, val) {
+    try {
+      navigator.clipboard.writeText(val);
+      setCopied(what);
+      setTimeout(() => setCopied(''), 1600);
+      ITAnalytics.track('refer_share', {
+        via: what
+      });
+    } catch (e) {}
+  }
+  const openShare = (u, via) => {
+    window.open(u, '_blank', 'noopener,noreferrer');
+    ITAnalytics.track('refer_share', {
+      via: via
+    });
+  };
+  function nativeShare() {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Iron Tuna',
+        text: msg,
+        url: link
+      }).catch(() => {});
+      ITAnalytics.track('refer_share', {
+        via: 'native'
+      });
+    } else copy('link', msg);
+  }
+  const x = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(tweet) + '&url=' + encodeURIComponent(link);
+  const fb = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(link) + '&quote=' + encodeURIComponent(tweet);
+  const li = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(link);
+  const mail = 'mailto:?subject=' + encodeURIComponent('A free fantasy auction cheat sheet you should try') + '&body=' + encodeURIComponent(msg);
+  return React.createElement("div", {
+    className: "modal-bg",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "modal",
+    style: {
+      maxWidth: 520
+    },
+    onClick: e => e.stopPropagation()
+  }, React.createElement("button", {
+    className: "modal-close",
+    onClick: onClose,
+    "aria-label": "Close"
+  }, "×"), React.createElement("div", {
+    className: "section-title"
+  }, "Share & Earn $2"), React.createElement("p", {
+    className: "rf-lede"
+  }, "Forward your free cheat sheet to friends or post it anywhere. You earn ", React.createElement("b", null, "$2 for every friend who signs up"), " through your link, and every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
+    className: "rf-getcode",
+    onClick: getCode
+  }, "Get my referral code") : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "rf-codewrap"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "rf-label"
+  }, "Your code"), React.createElement("div", {
+    className: "rf-code"
+  }, code)), React.createElement("button", {
+    className: "rf-copy",
+    onClick: () => copy('code', code),
+    "aria-label": "Copy referral code"
+  }, copied === 'code' ? 'Copied!' : 'Copy code')), React.createElement("div", {
+    className: "rf-linkrow"
+  }, React.createElement("input", {
+    className: "rf-link",
+    readOnly: true,
+    value: link,
+    onFocus: e => e.target.select(),
+    "aria-label": "Your referral link"
+  }), React.createElement("button", {
+    className: "rf-copy",
+    onClick: () => copy('link', link),
+    "aria-label": "Copy referral link"
+  }, copied === 'link' ? 'Copied!' : 'Copy link')), React.createElement("div", {
+    className: "rf-share-label"
+  }, "Forward to a friend or post it"), React.createElement("div", {
+    className: "ds-share"
+  }, React.createElement("button", {
+    className: "ds-sbtn",
+    onClick: nativeShare,
+    "aria-label": "Share via your device"
+  }, "Share"), React.createElement("button", {
+    className: "ds-sbtn",
+    onClick: () => openShare(mail, 'email'),
+    "aria-label": "Email a friend"
+  }, "Email"), React.createElement("button", {
+    className: "ds-sbtn",
+    onClick: () => openShare(x, 'x'),
+    "aria-label": "Post to X"
+  }, "X / Twitter"), React.createElement("button", {
+    className: "ds-sbtn",
+    onClick: () => openShare(fb, 'facebook'),
+    "aria-label": "Share to Facebook"
+  }, "Facebook"), React.createElement("button", {
+    className: "ds-sbtn",
+    onClick: () => openShare(li, 'linkedin'),
+    "aria-label": "Share to LinkedIn"
+  }, "LinkedIn"), React.createElement("button", {
+    className: "ds-sbtn",
+    onClick: () => copy('msg', msg),
+    "aria-label": "Copy the share text"
+  }, copied === 'msg' ? 'Copied!' : 'Copy text'))), React.createElement("div", {
+    className: "ds-ref"
+  }, "Referrals are credited when your friend signs up through your link. ", React.createElement("a", {
+    href: "/creators",
+    target: "_blank",
+    rel: "noopener"
+  }, "How payouts work"), ".")));
 }
 function MockAuction({
   players,
@@ -17820,6 +17975,7 @@ function App() {
   }
   const [taunt, setTaunt] = useState(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [referOpen, setReferOpen] = useState(false);
   function makeTaunt() {
     const opps = teams.filter(t => !t.isMine);
     if (!opps.length) {
@@ -19137,7 +19293,8 @@ function App() {
       setShowSplash(true);
     },
     config: config,
-    onOpenSettings: () => setView('settings')
+    onOpenSettings: () => setView('settings'),
+    onShareEarn: () => setReferOpen(true)
   }), React.createElement("div", {
     className: `main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'split' ? 'split-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`
   }, (view === 'prep' || view === 'board' || view === 'split') && React.createElement("div", {
@@ -19233,6 +19390,10 @@ function App() {
     config: config,
     games: SEASON_GAMES,
     onClose: () => setSummaryOpen(false)
+  }), referOpen && React.createElement(ReferralModal, {
+    account: account,
+    setAccount: setAccount,
+    onClose: () => setReferOpen(false)
   }), purchaseToast && React.createElement("div", {
     className: `purchase-toast no-print tone-${purchaseToast.tone}`,
     onClick: () => setPurchaseToast(null),
