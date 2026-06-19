@@ -5313,19 +5313,19 @@ function BudgetSliders({ strategy, onChange }) {
   return (
     <div className="budgetsliders" onPointerDown={e => e.stopPropagation()}>
       <div className="bs-row">
+        <span className="bs-cap">Concentration · <b>Among Starters</b></span>
+        <span className="bs-edge">Top-heavy</span>
+        <input type="range" min="0" max="1" step="0.01" value={1 - conc} onChange={e => onChange({ concentration: 1 - parseFloat(e.target.value) })} title="Load up on a few elite starters vs spread starter spend evenly" />
+        <span className="bs-edge">Even</span>
+      </div>
+      <div className="bs-cap2">~<b>{top3Pct}%</b> of your starter budget concentrated on your top 3 starters.</div>
+      <div className="bs-row">
         <span className="bs-cap">Capital · <b>Starters vs Bench</b></span>
         <span className="bs-edge">Starters</span>
         <input type="range" min="0" max="1" step="0.01" value={alloc} onChange={e => onChange({ allocation: parseFloat(e.target.value) })} title="How much of your budget to hold back for bench depth vs spend on starters" />
         <span className="bs-edge">Bench</span>
       </div>
       <div className="bs-cap2">~<b>{benchPct}%</b> of your discretionary budget held for bench depth; the rest goes to starters.</div>
-      <div className="bs-row">
-        <span className="bs-cap">Concentration · <b>Among Starters</b></span>
-        <span className="bs-edge">Even</span>
-        <input type="range" min="0" max="1" step="0.01" value={conc} onChange={e => onChange({ concentration: parseFloat(e.target.value) })} title="Spread starter spend evenly vs load up on a few elite starters" />
-        <span className="bs-edge">Top-heavy</span>
-      </div>
-      <div className="bs-cap2">~<b>{top3Pct}%</b> of your starter budget concentrated on your top 3 starters.</div>
     </div>
   );
 }
