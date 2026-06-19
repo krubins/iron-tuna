@@ -4503,6 +4503,19 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   function chooseRow(i, pl) { setWiNames(ns => ns.map((x, j) => j === i ? `${pl.name} (${pl.position})` : x)); setWiShowRow(-1); setAnchorAt(i, pl.id, wiPriceOf(pl)); }
   function clearRow(i) { setWiNames(ns => ns.map((x, j) => j === i ? '' : x)); setWiShowRow(-1); setAnchorAt(i, '', 0); }
   const modelPts = useMemo(() => { if (!myTeam) return {}; const m = {}; models.forEach(([k]) => { try { const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? activeAnchors : undefined); m[k] = pl ? pl.starterPoints : null; } catch (e) { m[k] = null; } }); return m; }, [myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  const modelAlloc = useMemo(() => {
+    if (!myTeam) return null;
+    let plan; try { plan = buildModel(model || 'ideal', myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? activeAnchors : undefined); } catch (e) { return null; }
+    if (!plan) return null;
+    const minBid = (config.valuation && config.valuation.minBid) || 1;
+    const priceOf = p => (p.marketValue != null ? p.marketValue : (p.auctionValue != null ? p.auctionValue : minBid));
+    const byPos = {};
+    (myTeam.roster || []).forEach(r => { byPos[r.position] = (byPos[r.position] || 0) + (r.price || 0); });
+    ((plan.remainingStarterSlots) || []).forEach(sl => { if (sl.player) { const pos = sl.player.position; byPos[pos] = (byPos[pos] || 0) + (sl.targetPrice != null ? sl.targetPrice : priceOf(sl.player)); } });
+    (plan.benchTargets || []).forEach(b => { byPos[b.position] = (byPos[b.position] || 0) + (b.price || 0); });
+    const total = Object.values(byPos).reduce((a, b) => a + b, 0) || 1;
+    return ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => (byPos[p] || 0) > 0).map(p => ({ pos: p, dollars: Math.round(byPos[p]), pct: Math.round(byPos[p] / total * 100) }));
+  }, [myTeam, model, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
   const wiModelKey = model || 'ideal';
   const wiModelLabel = (models.find(mm => mm[0] === wiModelKey) || ['ideal', 'Ideal Team'])[1];
   const wiPlan = useMemo(() => { if (!myTeam || !wiActive) return null; try { return buildModel(wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, activeAnchors); } catch (e) { return null; } }, [wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
@@ -4528,6 +4541,12 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
             <span style={{ fontSize: 10.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>~<b>{Math.round(alloc * 35)}%</b> held for bench depth</span>
           </div>
         ); })()}
+        {myTeam && modelAlloc && modelAlloc.length > 0 && (
+          <div style={{ flexBasis: '100%', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 5, alignItems: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Budget by position</span>
+            {modelAlloc.map(a => (<span key={a.pos} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '1px 7px' }}>{a.pos} <b style={{ color: 'var(--gold-text)' }}>${a.dollars}</b> <span style={{ color: 'var(--text-muted)' }}>({a.pct}%)</span></span>))}
+          </div>
+        )}
         {myTeam && wiOpen && (
           <div className="ch-whatif" style={{ flexBasis: '100%', marginTop: 8, padding: '9px 11px', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.45 }}>What if you win these players at these prices? Pin up to three below, then click any model above to see its lineup and projected points rebuilt around your picks.</div>
