@@ -5606,8 +5606,9 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
   if (maxBid < minBid) return null;
   const forcedBase = targets ? Array.from(targets) : [];
   const ptsAt = P => {
-    const modified = players.map(x => x.id === player.id ? { ...x, inflatedValue: P, auctionValue: P } : x);
-    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true);
+    // Charge the price through forcedPrices, the SAME mechanism the What-if / board planner
+    // use, so the "You" switch price matches what the What-if shows at that price.
+    const pl = buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true, { [player.id]: P });
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   // If even at the minimum bid forcing him in doesn't improve on your baseline, he isn't
