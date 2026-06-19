@@ -306,8 +306,8 @@ input:focus, select:focus { border-color: var(--accent); }
 @keyframes eerieGlowSm { 0%, 100% { filter: drop-shadow(0 0 4px rgba(45,212,163,0.16)) drop-shadow(0 1px 2px rgba(0,0,0,0.5)); } 50% { filter: drop-shadow(0 0 10px rgba(45,212,163,0.40)) drop-shadow(0 1px 2px rgba(0,0,0,0.5)); } }
 .header-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; border-radius: 6px; transition: filter 0.12s; }
 .header-logo-btn:hover { filter: brightness(1.12); }
-.landing-splash { position: fixed; inset: 0; z-index: 1000; background: radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; opacity: 1; transition: opacity 0.6s ease-out; }
-.landing-splash.fading-out { opacity: 0; pointer-events: none; }
+.landing-splash { position: fixed; inset: 0; z-index: 1000; background: radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; opacity: 1; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out; will-change: transform; }
+.landing-splash.fading-out { transform: translateY(-100%); opacity: 0.85; pointer-events: none; }
 .landing-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; z-index: 2; }
 .landing-logo-container { width: 100vw; max-height: 82vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; z-index: 1; }
 .landing-logo { width: 100%; height: auto; display: block; animation: landingFadeIn 1.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; filter: drop-shadow(0 0 13px rgba(45, 212, 163, 0.15)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.55)); transform-origin: center center; }
@@ -2614,13 +2614,14 @@ function phaseIcon(i) {
   if (i === 0) return (<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="11" y="9" width="26" height="33" rx="3" /><path d="M18 9V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M17 21h14M17 28h14M17 35h9" /></svg>);
   return (<svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M26 5 13 27h9l-1 16 14-23h-9l2-15z" /></svg>);
 }
-function LandingSplash({ onDismiss, onNav }) {
+function LandingSplash({ onDismiss, onNav, autoExit }) {
   const [fadingOut, setFadingOut] = useState(false);
   const [emailVal, setEmailVal] = useState('');
   const [emailDone, setEmailDone] = useState(false);
   const [demoFmt, setDemoFmt] = useState('auction');
   const [pulse, setPulse] = useState(0);
   useEffect(() => { const t = setInterval(() => setPulse(x => (x + 1) % 1000), 1500); return () => clearInterval(t); }, []);
+  useEffect(() => { if (autoExit) { const t = setTimeout(() => go('prep'), 140); return () => clearTimeout(t); } }, []);
   function nudge(v, dir) {
     const s = String(v);
     if (s.indexOf('#') >= 0) return v;
@@ -2664,7 +2665,7 @@ function LandingSplash({ onDismiss, onNav }) {
     if (target === 'how') { if (howRef.current) howRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (target === 'modes') { if (modesRef.current) modesRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     setFadingOut(true);
-    setTimeout(() => { if (onNav) onNav(target, format); else if (onDismiss) onDismiss(); }, 350);
+    setTimeout(() => { if (onNav) onNav(target, format); else if (onDismiss) onDismiss(); }, 500);
   }
   function submitEmail() {
     const v = (emailVal || '').trim();
@@ -2783,19 +2784,6 @@ function LandingSplash({ onDismiss, onNav }) {
             </div>
           );
         })()}
-        <div className="lp-section" ref={howRef}>
-          <div className="lp-preview-eyebrow">Three numbers, not one</div>
-          <h2 className="lp-preview-h">Know what the room will bid, and whether you should follow.</h2>
-          <div className="lp-three">
-            {threeNum.map(([t, dd, k]) => (
-              <div className={`lp-three-card lp-three-${k}`} key={k}><div className="lp-three-t">{t}</div><div className="lp-three-d">{dd}</div></div>
-            ))}
-          </div>
-          <div className="lp-ideal">It also builds the <b>best team your budget can actually buy</b> &mdash; the highest-scoring legal roster your money affords &mdash; and names who to target. Spend every dollar, leave no points on the table.</div>
-          <div className="lp-cta-row" style={{ marginTop: 22 }}>
-            <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
-          </div>
-        </div>
         <div className="lp-section" ref={pricingRef}>
           <div className="lp-preview-eyebrow">Pricing</div>
           <h2 className="lp-preview-h">Free to plan. $14.99 to run it live.</h2>
@@ -2810,6 +2798,19 @@ function LandingSplash({ onDismiss, onNav }) {
                 <button className={feat ? 'btn-draft' : 'btn-secondary'} style={{ width: '100%' }} onClick={() => go(target, ev)}>{cta}</button>
               </div>
             ))}
+          </div>
+        </div>
+        <div className="lp-section" ref={howRef}>
+          <div className="lp-preview-eyebrow">Three numbers, not one</div>
+          <h2 className="lp-preview-h">Know what the room will bid, and whether you should follow.</h2>
+          <div className="lp-three">
+            {threeNum.map(([t, dd, k]) => (
+              <div className={`lp-three-card lp-three-${k}`} key={k}><div className="lp-three-t">{t}</div><div className="lp-three-d">{dd}</div></div>
+            ))}
+          </div>
+          <div className="lp-ideal">It also builds the <b>best team your budget can actually buy</b> &mdash; the highest-scoring legal roster your money affords &mdash; and names who to target. Spend every dollar, leave no points on the table.</div>
+          <div className="lp-cta-row" style={{ marginTop: 22 }}>
+            <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
           </div>
         </div>
         <div className="lp-section" ref={faqRef}>
@@ -7825,7 +7826,7 @@ function App() {
   const [focusPlayer, setFocusPlayer] = useState(null);
   const focusNonce = useRef(0);
   const splashSeen = (() => { try { return localStorage.getItem('iron_tuna_entered') === '1'; } catch (e) { return false; } })();
-  const [showSplash, setShowSplash] = useState(!screenParam && !splashSeen);
+  const [showSplash, setShowSplash] = useState(!screenParam);
   function dismissSplash() {
     setShowSplash(false);
     try { localStorage.setItem('iron_tuna_entered', '1'); } catch (e) {}
@@ -8333,7 +8334,7 @@ function App() {
   return (
     <div className="app">
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
-      {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} />}
+      {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} autoExit={splashSeen} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => setShowSplash(true)} config={config} onOpenSettings={() => setView('settings')} />
       <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
