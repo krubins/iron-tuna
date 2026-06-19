@@ -2025,7 +2025,7 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
   const out = [];
   if (!plan || !myTeam) return out;
   const games = seasonGames || 17;
-  const ranks = teams.map(t => ({ t, pts: t.isMine ? plan.starterPoints : buildOptimalPlan(t, players, { ...config, strategy: { ...(config.strategy || {}), allocation: 0.55 } }, draftedIds).starterPoints }));
+  const ranks = teams.map(t => ({ t, pts: t.isMine ? plan.starterPoints : buildOptimalPlan(t, players, { ...config, strategy: { ...(config.strategy || {}), allocation: 0.55 } }, draftedIds, undefined, undefined, undefined, true).starterPoints }));
   ranks.sort((a, b) => b.pts - a.pts);
   const myRank = ranks.findIndex(x => x.t.isMine) + 1;
   out.push({
@@ -3840,7 +3840,7 @@ function TeamsBoard({ teams, players, config, seasonGames, draftedIds, onRenameT
       const tc = t.isMine ? config : { ...config, strategy: { ...(config.strategy || {}), allocation: 0.55 } };
       const ro = t.isMine ? roleOverrides : {};
       const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro);
+      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true);
       const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
       const rosterPoints = t.roster.reduce((s, r) => { const p = playerMap.get(r.playerId); return s + (p ? (p.projectedPoints || 0) : 0); }, 0);
       m.set(t.id, { filledStarters: cur.filledStarters, totalStarters: cur.totalStarters, starterPoints: plan.starterPoints, draftedStarterPoints: cur.starterPoints, rosterPoints, grid });
