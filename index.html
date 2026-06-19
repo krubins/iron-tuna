@@ -955,11 +955,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
 .settings-league-summary { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); margin: 6px 0 16px; letter-spacing: 0.02em; }
-.cheat-header { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; align-items: stretch; margin-bottom: 10px; }
+.cheat-header { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: var(--ch-box-gap, 14px); align-items: stretch; margin-bottom: 12px; }
 .ch-models { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 6px; background: var(--bg-panel); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 8px 11px; min-height: 0; box-shadow: 0 0 10px rgba(245,184,0,0.06); }
 .ch-models-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-text); margin-bottom: 2px; }
 .ch-models-empty { font-size: 11px; color: var(--text-muted); }
-.ch-controls { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 6px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 11px; min-height: 0; }
+.ch-controls { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 6px; background: var(--bg-panel); border: 1px solid rgba(122,162,210,0.34); border-radius: var(--radius-md); padding: 8px 11px; min-height: 0; box-shadow: 0 0 10px rgba(122,162,210,0.06); }
 .ch-controls-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 2px; }
 .ch-insights { background: var(--bg-panel); border: 1px solid rgba(45,212,163,0.3); border-radius: var(--radius-md); padding: 8px 11px; height: auto; overflow: hidden; box-shadow: 0 0 10px rgba(45,212,163,0.07); }
 .ch-insights-col { display: flex; flex-direction: column; gap: 7px; height: 100%; min-height: 0; }
@@ -1347,7 +1347,13 @@ input:focus, select:focus { border-color: var(--accent); }
   .lp-reassure { font-size: 12.5px; }
   .lp-step { padding: 20px 18px; }
 }
-  </style>
+  .split-view { display: flex; gap: 16px; align-items: flex-start; width: 100%; }
+.split-view .split-pane { flex: 1 1 50%; min-width: 0; max-width: 50%; overflow-x: auto; }
+.split-view .split-pane-board { border-left: 1px solid var(--border-subtle); padding-left: 14px; }
+.split-view .coach-beside { display: none; }
+@media (max-width: 1180px) { .split-view { flex-direction: column; } .split-view .split-pane { max-width: 100%; flex-basis: auto; width: 100%; } .split-view .split-pane-board { border-left: none; padding-left: 0; border-top: 1px solid var(--border-subtle); padding-top: 14px; } }
+@media print { .split-view { display: block; } .split-view .split-pane { max-width: 100%; } }
+</style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
 {
@@ -1427,6 +1433,7 @@ input:focus, select:focus { border-color: var(--accent); }
 const DEFAULT_LEAGUE_CONFIG = {
   name: "My League",
   format: "auction", // "auction" | "snake" | "bestball" - see FORMATS registry below
+  benchPositions: "any", // "any" = bench fillable by any position; "fixed" = per-position totals are hard caps
   snake: { draftSlot: 6, rounds: 16 },
   bestball: { rounds: 18, stackBonus: 0.15, lineupSlots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 } },
   teams: 12,
@@ -1873,6 +1880,59 @@ function applyInflation(players, draftedPlayerIds, teamBudgets, config) {
     const adjusted = config.valuation.minBid + (p.auctionValue - config.valuation.minBid) * inflation;
     const adjMarket = config.valuation.minBid + ((p.marketValue ?? p.auctionValue) - config.valuation.minBid) * inflation;
     return { ...p, inflatedValue: Math.max(config.valuation.minBid, Math.round(adjusted)), marketValue: Math.max(config.valuation.minBid, Math.round(adjMarket)) };
+  });
+}
+function positionCapacity(config, pos) {
+  const t = (config.roster[pos] && config.roster[pos].total) || 0;
+  const fx = (config.flex && config.flex.eligible && config.flex.eligible.includes(pos)) ? (config.flex.count || 0) : 0;
+  return t + fx;
+}
+function positionFull(team, pos, config) {
+  if ((config.benchPositions || 'any') !== 'fixed') return false;
+  if (!team) return false;
+  const cnt = (team.roster || []).filter(r => r.position === pos).length;
+  return cnt >= positionCapacity(config, pos);
+}
+// Live positional demand: when few teams can still roster a position (set-positions caps) and
+// those that can are low on money, that position's likely price (Proj) and your max (You) ease
+// off. Computes a per-position factor vs the league-wide demand/supply ratio, bounded 0.4-1.2.
+function applyPositionalDemand(players, teams, config, draftedIds) {
+  const di = draftedIds || new Set();
+  if (!di.size || !teams || !teams.length) return players.map(p => ({ ...p, demandFactor: 1 }));
+  const minBid = config.valuation.minBid;
+  const fixed = (config.benchPositions || 'any') === 'fixed';
+  const POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+  const cap = pos => fixed ? positionCapacity(config, pos) : 999;
+  const tmax = t => Math.max(0, (t.budgetRemaining || 0) - Math.max(0, (t.spotsRemaining || 0) - 1) * minBid);
+  const demand = {}, supply = {};
+  POS.forEach(pos => {
+    let dollars = 0;
+    teams.forEach(t => {
+      if ((t.spotsRemaining || 0) <= 0) return;
+      const cnt = (t.roster || []).filter(r => r.position === pos).length;
+      if (cnt >= cap(pos)) return;
+      const m = tmax(t);
+      if (m > minBid) dollars += (m - minBid);
+    });
+    demand[pos] = dollars;
+  });
+  players.forEach(p => { if (di.has(p.id)) return; const v = (p.marketValue != null ? p.marketValue : (p.auctionValue != null ? p.auctionValue : minBid)); supply[p.position] = (supply[p.position] || 0) + Math.max(0, v - minBid); });
+  const totalD = POS.reduce((s, pos) => s + (demand[pos] || 0), 0);
+  const totalS = POS.reduce((s, pos) => s + (supply[pos] || 0), 0) || 1;
+  const globalRatio = totalD / totalS || 1;
+  const factor = {};
+  POS.forEach(pos => {
+    const local = (supply[pos] || 0) > 0 ? (demand[pos] / supply[pos]) : globalRatio;
+    let f = globalRatio > 0 ? local / globalRatio : 1;
+    if (!isFinite(f) || f <= 0) f = 1;
+    factor[pos] = Math.max(0.4, Math.min(1.2, f));
+  });
+  return players.map(p => {
+    const f = factor[p.position] != null ? factor[p.position] : 1;
+    if (di.has(p.id) || f === 1) return { ...p, demandFactor: f };
+    const out = { ...p, demandFactor: f };
+    if (typeof out.marketValue === 'number') out.marketValue = Math.max(minBid, Math.round(minBid + (out.marketValue - minBid) * f));
+    return out;
   });
 }
 function applyPriceOverrides(players, overrides, draftedIds, config) {
@@ -2657,6 +2717,7 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
       <nav className="header-nav">
         <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Cheat Sheet</button>
         <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Draft Board</button>
+        <button className={view === 'split' ? 'active' : ''} onClick={() => setView('split')} title="Show the cheat sheet and draft board side by side (best on a wide or second screen)">Split View</button>
         {(!config || (config.format || 'auction') === 'auction') && <button className={view === 'mock' ? 'active' : ''} onClick={() => setView('mock')}>Mock Auction</button>}
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Your League (Roster, Scoring, and Budget)</button>
         <button onClick={() => window.open('/guides', '_blank', 'noopener')} title="Auction strategy guides (opens in a new tab)">Guides</button>
@@ -3456,6 +3517,7 @@ function QuickDraftModal({ player, teams, config, seasonGames, onConfirm, onClos
   const team = teams.find(t => t.id === teamId);
   const teamMax = team ? Math.max(config.valuation.minBid, team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid) : 999;
   const noSpots = team && team.spotsRemaining <= 0;
+  const posFull = positionFull(team, player.position, config);
   const priceNum = parseInt(price, 10) || 0;
   const overMax = priceNum > teamMax;
   const posRank = (players && players.length) ? players.filter(x => x.position === player.position && (x.projectedPoints || 0) > (player.projectedPoints || 0)).length + 1 : null;
@@ -3514,15 +3576,16 @@ function QuickDraftModal({ player, teams, config, seasonGames, onConfirm, onClos
         <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Winning bid</label>
         <input type="number" value={price} onChange={e => setPrice(e.target.value)} min="1" style={{ width: '100%', marginBottom: 12, fontFamily: 'var(--font-mono)' }} />
         </>)}
-        {(overMax || noSpots) && (
+        {(overMax || noSpots || posFull) && (
           <div style={{ padding: 8, background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--radius-sm)', fontSize: 11, color: 'var(--danger)', marginBottom: 12 }}>
             {noSpots && `${team.name} has no roster spots remaining.`}
-            {overMax && !noSpots && `Exceeds ${team.name}'s max bid of $${teamMax}.`}
+            {posFull && !noSpots && `${team.name} already has every ${player.position} slot filled (set-positions mode).`}
+            {overMax && !noSpots && !posFull && `Exceeds ${team.name}'s max bid of $${teamMax}.`}
           </div>
         )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
-          <button className="btn-draft" style={{ flex: 1 }} disabled={(config.format || 'auction') === 'auction' ? (overMax || noSpots || priceNum < 1) : noSpots} onClick={() => onConfirm(teamId, (config.format || 'auction') === 'auction' ? priceNum : 0)}>Confirm</button>
+          <button className="btn-draft" style={{ flex: 1 }} disabled={(config.format || 'auction') === 'auction' ? (overMax || noSpots || posFull || priceNum < 1) : (noSpots || posFull)} onClick={() => onConfirm(teamId, (config.format || 'auction') === 'auction' ? priceNum : 0)}>Confirm</button>
         </div>
       </div>
     </div>
@@ -3835,6 +3898,7 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
               <div className="settings-row"><label>{pos}, Starters</label><input type="number" min="0" max={cfg.total} value={cfg.starters} onChange={e => update(`roster.${pos}.starters`, parseInt(e.target.value || 0))} /></div>
             </React.Fragment>
           ))}
+          <div className="settings-row"><label>Bench slots</label><select value={draft.benchPositions || 'any'} onChange={e => update('benchPositions', e.target.value)}><option value="any">Any position</option><option value="fixed">Set positions (hard caps)</option></select></div>
           <div className="settings-row"><label>Flex slots</label><input type="number" min="0" max="5" value={draft.flex.count} onChange={e => update('flex.count', parseInt(e.target.value || 0))} /></div>
           <div className="settings-row"><label>Superflex (QB-eligible flex)</label><input type="checkbox" checked={!!(draft.flex && draft.flex.eligible && draft.flex.eligible.includes('QB'))} onChange={e => { setDraft(prev => { const n = JSON.parse(JSON.stringify(prev)); n.flex = n.flex || { count: 1, eligible: ['RB', 'WR', 'TE'] }; const el = (n.flex.eligible || ['RB', 'WR', 'TE']).filter(x => x !== 'QB'); if (e.target.checked) el.push('QB'); n.flex.eligible = el; return n; }); }} style={{ width: 18, height: 18, accentColor: 'var(--gold-text)' }} /></div>
           <div className="settings-row"><label>Flex eligible positions</label><input type="text" value={draft.flex.eligible.join(',')} onChange={e => update('flex.eligible', e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))} /></div>
@@ -8067,7 +8131,8 @@ function App() {
     const adjusted = applyValueAdjust(baseValued, valueAdjust, config);
     const draftedIds = new Set(draftHistory.map(d => d.playerId));
     const inflated = applyInflation(adjusted, draftedIds, teams, config);
-    return applyPriceOverrides(inflated, priceOverrides, draftedIds, config);
+    const withOverrides = applyPriceOverrides(inflated, priceOverrides, draftedIds, config);
+    return applyPositionalDemand(withOverrides, teams, config, draftedIds);
   }, [baseValued, valueAdjust, config, draftHistory, teams, priceOverrides]);
   const marketState = useMemo(() => computeMarketState(draftHistory, valuedPlayers, config), [draftHistory, valuedPlayers, config]);
   const [draftModel, setDraftModel] = useState(null);
@@ -8075,7 +8140,7 @@ function App() {
     const myTeam = teams.find(t => t.isMine);
     const scarMap = scarcityFlags(valuedPlayers, new Set(draftHistory.map(d => d.playerId)), config);
     const scarBoost = (pv, fl, cap) => { if (!fl) return pv; const g = Math.min(1.3, Math.max(0.4, (fl.gapPts || 0) / 25)); const prem = Math.min(config.budget * 0.15, Math.round(config.budget * (fl.count === 1 ? 0.10 : 0.06) * g)); return Math.min(cap, pv + prem); };
-    if (!myTeam) return valuedPlayers.map(p => { const base = p.marketValue ?? p.auctionValue ?? config.valuation.minBid; const fl = scarMap.get(p.id); return ({ ...p, scarce: fl || null, personalValue: Math.round(scarBoost(base, fl, config.budget)) }); });
+    if (!myTeam) return valuedPlayers.map(p => { const base = p.marketValue ?? p.auctionValue ?? config.valuation.minBid; const fl = scarMap.get(p.id); return ({ ...p, scarce: fl || null, personalValue: Math.max(config.valuation.minBid, Math.round(scarBoost(base, fl, config.budget) * (p.demandFactor || 1))) }); });
     const draftedIds = new Set(draftHistory.map(d => d.playerId));
     const minBid = config.valuation.minBid;
     const maxBid = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
@@ -8114,6 +8179,7 @@ function App() {
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : (isTgt ? 'target' : (needEligPos.has(p.position) ? 'open' : 'fade'));
       const _fl = (p.position === 'K' || p.position === 'DEF' || draftedIds.has(p.id)) ? null : scarMap.get(p.id);
+      personalValue = Math.max(minBid, Math.round(personalValue * (p.demandFactor || 1)));
       return { ...p, marketPrice: adj.recommendedPrice, marketBasis: adj.basis, planTarget: isTgt, fit, worthPrice, scarce: _fl || null, personalValue };
     });
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
@@ -8192,6 +8258,7 @@ function App() {
     const teamMaxP = Math.max(config.valuation.minBid, team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid);
     if (team.spotsRemaining <= 0) { alert(`${team.name} has no roster spots remaining.`); return; }
     if (p > teamMaxP) { alert(`That bid exceeds ${team.name}'s max bid of $${teamMaxP}.`); return; }
+    if (positionFull(team, position, config)) { alert(`${team.name} already has every ${position} slot filled (set-positions mode).`); return; }
     setTeams(prev => prev.map(t => t.id === teamId ? { ...t, budgetRemaining: t.budgetRemaining - p, spotsRemaining: t.spotsRemaining - 1, roster: [...t.roster, { playerId: id, price: p, position }] } : t));
     setDraftHistory(prev => [...prev, { playerId: id, teamId, price: p, position, timestamp: Date.now() }]);
   }
@@ -8210,6 +8277,7 @@ function App() {
     }
     if (price < config.valuation.minBid) price = config.valuation.minBid;
     if (price > team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid) { alert(`That bid exceeds ${team.name}'s max bid.`); return; }
+    if (positionFull(team, player.position, config)) { alert(`${team.name} already has every ${player.position} slot filled (set-positions mode). Switch bench to "Any position" in your league settings to allow it.`); return; }
     setTeams(prev => prev.map(t => t.id === teamId
       ? { ...t, budgetRemaining: t.budgetRemaining - price, spotsRemaining: t.spotsRemaining - 1, roster: [...t.roster, { playerId, price, position: player.position }] }
       : t));
@@ -8514,7 +8582,7 @@ function App() {
     if (view === 'mock') {
       return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
-    const coachEl = (!showSplash && !currentNomination && !assignPlayer && view === 'prep') ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} />) : null;
+    const coachEl = (!showSplash && !currentNomination && !assignPlayer && (view === 'prep' || view === 'split')) ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} />) : null;
     const cheatSheetEl = (
       <>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
@@ -8541,6 +8609,7 @@ function App() {
       })()}
       </>
     );
+    if (view === 'split') return (<div className="split-view"><div className="split-pane split-pane-sheet">{cheatSheetEl}</div><div className="split-pane split-pane-board">{draftBoardEl}</div></div>);
     if (view === 'board') return draftBoardEl;
     return cheatSheetEl;
   }
@@ -8554,7 +8623,7 @@ function App() {
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><filter id="waterDistort" x="-14%" y="-14%" width="128%" height="128%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.028" numOctaves="2" seed="7" result="noise"><animate attributeName="baseFrequency" dur="13s" values="0.016 0.024;0.022 0.032;0.016 0.024" repeatCount="indefinite" /></feTurbulence><feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" /></filter></svg>
       {showSplash && <LandingSplash onDismiss={dismissSplash} onNav={handleLandingNav} autoExit={splashSeen && !landingStay} />}
       <Header view={view} setView={setView} onUndo={handleUndo} onReset={handleReset} canUndo={draftHistory.length > 0} pointsMode={pointsMode} setPointsMode={setPointsMode} dataInfo={dataInfo} account={account} onUpgrade={() => { ITAnalytics.track('upgrade_click', {}); setOverlay('pricing'); }} onAccount={() => setOverlay('auth')} onToggleTest={toggleTestMode} onHome={() => { setLandingStay(true); setShowSplash(true); }} config={config} onOpenSettings={() => setView('settings')} />
-      <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
+      <div className={`main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'split' ? 'split-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`}>
         <div className="main-content">{renderMainContent()}</div>
       </div>
       {view === 'settings' && (
