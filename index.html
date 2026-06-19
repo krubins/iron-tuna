@@ -4429,7 +4429,7 @@ const FANTASY_FACTS = [
   { label: 'Backups one snap away', text: 'One injury ahead on the depth chart turns a dollar bench stash into a weekly starter. Late, target backups a single snap from a featured role.' },
   { label: 'Volume over highlights', text: 'One huge game on a few touches is far less predictive than steady, heavy usage. Chase volume and role; let your leaguemates chase the highlight plays.' },
 ];
-function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfAnchors, onSetAnchors, coachEl }) {
+function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, teams, marketState, mode, onAddPlayer, onResetRanks, showCols, setShowCols, COLSPEC, priceOverrides, onClearPrices, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfAnchors, onSetAnchors, onUpdateStrategy, coachEl }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
   const [customDesc, setCustomDesc] = useState('');
@@ -4466,6 +4466,15 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} title={MODEL_DESC[k] || lbl} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
         {myTeam && <button className={`hm-tab ${wiOpen ? 'active' : ''}`} onClick={() => setWiOpen(o => !o)} title="What if you win specific players at set prices? Pin up to 3, then click any model to see its lineup and projected points rebuilt around those picks.">What if?</button>}
         {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear your favorites and any what-if anchors">Reset favorites</button>}
+        {myTeam && onUpdateStrategy && (() => { const alloc = (config.strategy && config.strategy.allocation != null) ? config.strategy.allocation : 0.55; return (
+          <div className="ch-depth" style={{ flexBasis: '100%', display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }} onPointerDown={e => e.stopPropagation()}>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Starters vs Depth</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Starters</span>
+            <input type="range" min="0" max="1" step="0.01" style={{ flex: '0 1 220px', accentColor: 'var(--gold-text)' }} value={alloc} onChange={e => onUpdateStrategy({ allocation: parseFloat(e.target.value) })} title="How much of your budget to hold back for bench depth vs spend on starters" />
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Depth</span>
+            <span style={{ fontSize: 10.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>~<b>{Math.round(alloc * 35)}%</b> held for bench depth</span>
+          </div>
+        ); })()}
         {myTeam && wiOpen && (
           <div className="ch-whatif" style={{ flexBasis: '100%', marginTop: 8, padding: '9px 11px', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.45 }}>What if you win these players at these prices? Pin up to three below, then click any model above to see its lineup and projected points rebuilt around your picks.</div>
@@ -4505,7 +4514,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         )}
       </div>
       <div className="ch-controls">
-        <span className="ch-controls-label">Sheet</span>
+        <span className="ch-controls-label">Columns &amp; Flags</span>
         {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
         {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>}
         {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>}
@@ -4530,7 +4539,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
     </div>
   );
 }
-function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfAnchors, onSetAnchors, coachEl }) {
+function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, onResetRanks, targets, onToggleTarget, onSetPrice, priceOverrides, onClearPrices, mode = 'prep', draftedIds, onAssignPlayer, onUnassignPlayer, onAddPlayer, teams, draftHistory, modelFitIds, model, onSelectModel, myTeam, marketState, roleOverrides, customForced, onBuildCustom, customBuilding, onClearTargets, whatIfAnchors, onSetAnchors, onUpdateStrategy, coachEl }) {
   if (config && config.format && config.format !== 'auction') { try { players = getFormat(config).valuePlayers(players, config, draftedIds || new Set()); } catch (e) {} }
   const _fmtSlot = (config && ((config.snake && config.snake.draftSlot) || (config.bestball && config.bestball.draftSlot))) || 1;
   const _fmtCurPick = ((draftHistory && draftHistory.length) || 0) + 1;
@@ -4597,7 +4606,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   }
   return (
     <div className="cheatsheet">
-      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} customForced={customForced} onBuildCustom={onBuildCustom} customBuilding={customBuilding} onClearTargets={onClearTargets} whatIfAnchors={whatIfAnchors} onSetAnchors={onSetAnchors} coachEl={coachEl} />
+      <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} customForced={customForced} onBuildCustom={onBuildCustom} customBuilding={customBuilding} onClearTargets={onClearTargets} whatIfAnchors={whatIfAnchors} onSetAnchors={onSetAnchors} onUpdateStrategy={onUpdateStrategy} coachEl={coachEl} />
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
       <div className="cheat-legend no-print">{(config.format || 'auction') === 'snake'
         ? <><b>ADP</b> where he typically goes · <b>BEST AVAIL</b> your top value left on the board · <b>SURVIVES%</b> odds he's there at your next pick</>
@@ -8359,7 +8368,7 @@ function App() {
           onRankReorder={handleRankReorder} onResetRanks={handleResetRanks} targets={targets} onToggleTarget={handleToggleTarget}
           onSetPrice={handleSetPrice} priceOverrides={priceOverrides} onClearPrices={clearPriceOverrides}
           mode="live" modelFitIds={modelFitIds} draftedIds={draftedIds} onAssignPlayer={setAssignPlayer} onUnassignPlayer={handleUnassignPlayer} onAddPlayer={() => setShowAddPlayer(true)} teams={teams} draftHistory={draftHistory}
-          model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} customForced={customForcedIds} onBuildCustom={handleBuildCustom} customBuilding={customBuilding} onClearTargets={handleClearTargets} whatIfAnchors={whatIfAnchors} onSetAnchors={setWhatIfAnchors} coachEl={coachEl} />
+          model={draftModel} onSelectModel={setDraftModel} myTeam={myTeam} marketState={marketState} roleOverrides={roleOverrides} customForced={customForcedIds} onBuildCustom={handleBuildCustom} customBuilding={customBuilding} onClearTargets={handleClearTargets} whatIfAnchors={whatIfAnchors} onSetAnchors={setWhatIfAnchors} onUpdateStrategy={handleUpdateStrategy} coachEl={coachEl} />
       </>
     );
     const draftBoardEl = (
