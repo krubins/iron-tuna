@@ -988,7 +988,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 0 20px 60px; background: radial-gradient(1100px 560px at 50% -8%, rgba(45,212,163,0.07), transparent 60%), radial-gradient(820px 520px at 88% 12%, rgba(212,160,23,0.05), transparent 55%), radial-gradient(760px 620px at 6% 82%, rgba(45,212,163,0.045), transparent 60%), radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); }
 .lp-inner { position: relative; z-index: 2; max-width: 960px; margin: 20px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
 .lp-hero { min-height: auto; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; }
-.lp-hero .landing-logo { margin-top: 0; margin-bottom: 22px; }
+.lp-hero .landing-logo { width: auto; height: 300px; margin-top: 0; margin-bottom: 16px; }
 .lp-hero .lp-head { margin-top: 0; }
 .lp-head { font-family: var(--font-display); font-size: clamp(30px, 5vw, 50px); letter-spacing: 0.02em; color: var(--text-primary); line-height: 1.06; margin: 0 0 22px; max-width: 760px; }
 .lp-sub { font-size: clamp(17px, 2.2vw, 21px); color: var(--text-secondary); max-width: 560px; line-height: 1.6; margin: 0 0 34px; }
@@ -2557,7 +2557,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
       </g>
       {tagline && (
         <text x={vbW / 2} y={taglineY} fontFamily="'Bebas Neue','Impact',sans-serif" fontSize={tagFs}
-              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb"><tspan dx={tagFs * -0.96}>RULE THE DRAFT.</tspan><tspan dx={tagFs * 0.96}>{'\u2002\u2002\u2002OWN THE LEAGUE.'}</tspan></text>
+              letterSpacing="0.18em" textAnchor="middle" fill="#9fe1cb"><tspan dx={0}>RULE THE DRAFT.</tspan><tspan dx={0}>{'\u2002\u2002\u2002OWN THE LEAGUE.'}</tspan></text>
       )}
     </svg>
   );
@@ -2729,7 +2729,6 @@ function LandingSplash({ onDismiss, onNav }) {
       <nav className="lp-ribbon">
         <div className="lp-ribbon-brand"><button className="lp-ribbon-logo-btn" onClick={e => { const sc = e.currentTarget.closest('.landing-page'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); }} title="Back to top" aria-label="Iron Tuna: back to top"><LogoMark height={22} /></button></div>
         <div className="lp-ribbon-links">
-          <button onClick={() => go('how')}>How it works</button>
           <button onClick={() => go('pricing')}>Draft Night Mode</button>
           <button onClick={() => go('faq')}>FAQ</button>
           <button className="lp-ribbon-cta" onClick={() => go('signin')}>Sign in</button>
@@ -2737,16 +2736,15 @@ function LandingSplash({ onDismiss, onNav }) {
       </nav>
       <div className="lp-inner">
         <div className="lp-hero it-hero">
-          <LogoMark tagline height={220} className="landing-logo" />
+          <LogoMark tagline height={300} className="landing-logo" />
           <div className="lp-cmd">For auction &amp; salary-cap leagues</div>
-          <h1 className="lp-head">Know the exact most to bid on every player. Live.</h1>
-          <p className="lp-sub">Iron Tuna turns your league&rsquo;s real scoring and budget into three numbers for every player &mdash; <b>likely price</b>, <b>true value</b>, and <b>your personal max</b> &mdash; then re-prices the whole board as money leaves the room. Walk in knowing your number on everyone. Walk out without a $3 max bid and four empty slots.</p>
+          <h1 className="lp-head">Know the exact most to bid. Live.</h1>
+          <p className="lp-sub">Custom values for your exact league &mdash; <b>likely price</b>, <b>true value</b>, and <b>your max bid</b> on every player &mdash; re-priced live as the money leaves the room.</p>
           <div className="lp-cta-row" style={{ marginTop: 6 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
             <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See Draft Night Mode</button>
           </div>
-          <p className="lp-reassure">Free, no account. Your exact scoring, in about two minutes. <b>Draft Night Mode</b> unlocks live tracking for a one-time $14.99.</p>
-          <p className="lp-urgency">Draft season is here. Walk into your auction with your max already decided on every player.</p>
+          <p className="lp-reassure">Free, no account. Draft Night Mode is a one-time $14.99.</p>
         </div>
         {(() => {
           const d = DEMO.auction;
@@ -2774,34 +2772,17 @@ function LandingSplash({ onDismiss, onNav }) {
             </div>
           );
         })()}
-        <div className="lp-section">
-          <div className="lp-preview-eyebrow">The problem</div>
-          <h2 className="lp-preview-h">A static cheat sheet loses your auction</h2>
-          <div className="lp-prob-grid">
-            {problems.map((pr, i) => <div className="lp-prob" key={i}><span className="lp-prob-x">✕</span><span>{pr}</span></div>)}
-          </div>
-        </div>
         <div className="lp-section" ref={howRef}>
-          <div className="lp-preview-eyebrow">How it works</div>
-          <h2 className="lp-preview-h">Three numbers on every player</h2>
+          <div className="lp-preview-eyebrow">Three numbers, not one</div>
+          <h2 className="lp-preview-h">The only number that matters on the clock: your max</h2>
           <div className="lp-three">
             {threeNum.map(([t, dd, k]) => (
-              <div className={`lp-three-card lp-three-${k}`} key={k}>
-                <div className="lp-three-t">{t}</div>
-                <div className="lp-three-d">{dd}</div>
-              </div>
+              <div className={`lp-three-card lp-three-${k}`} key={k}><div className="lp-three-t">{t}</div><div className="lp-three-d">{dd}</div></div>
             ))}
           </div>
-          <div className="lp-ideal">Then it builds the <b>best team your budget can actually buy</b>: the highest-scoring legal roster your remaining dollars can afford, with the exact players to target to get there. Spend every dollar, leave no points on the table.</div>
+          <div className="lp-ideal">It also builds the <b>best team your budget can actually buy</b> &mdash; the highest-scoring legal roster your money affords &mdash; and names who to target. Spend every dollar, leave no points on the table.</div>
           <div className="lp-cta-row" style={{ marginTop: 22 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
-          </div>
-        </div>
-        <div className="lp-section">
-          <div className="lp-preview-eyebrow">Draft Night Mode</div>
-          <h2 className="lp-preview-h">Your sheet, alive on the clock</h2>
-          <div className="lp-proof-grid">
-            {proof.map(([t, dd], i) => <div className="lp-proof" key={i}><div className="lp-proof-t">{t}</div><div className="lp-proof-d">{dd}</div></div>)}
           </div>
         </div>
         <div className="lp-section" ref={pricingRef}>
@@ -2819,19 +2800,15 @@ function LandingSplash({ onDismiss, onNav }) {
               </div>
             ))}
           </div>
-          <p className="lp-note" style={{ marginTop: 14 }}>One-time, one season. Less than you&rsquo;ll overpay for a single player you talk yourself into.</p>
         </div>
         <div className="lp-section" ref={faqRef}>
           <div className="lp-preview-eyebrow">FAQ</div>
           <h2 className="lp-preview-h">Questions, answered</h2>
-          {faqs.map(([q, a], i) => (<div className="lp-faq-item" key={i}><div className="lp-faq-q">{q}</div><div className="lp-faq-a">{a}</div></div>))}
+          <div className="lp-faq-item"><div className="lp-faq-q">Does this work for snake drafts?</div><div className="lp-faq-a">No, and that&rsquo;s the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, it&rsquo;s the sharpest tool you&rsquo;ll find.</div></div>
+          <div className="lp-faq-item"><div className="lp-faq-q">Can I use custom scoring?</div><div className="lp-faq-a">Anything &mdash; PPR, TE premium, superflex, odd home-league bonuses. Every value recalculates to your exact settings.</div></div>
+          <div className="lp-faq-item"><div className="lp-faq-q">Do I need an account?</div><div className="lp-faq-a">No. Build your full auction board with zero signup.</div></div>
         </div>
-        <div className="lp-cta-row" style={{ marginTop: 8 }}>
-          <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
-          <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See Draft Night Mode</button>
-        </div>
-        <p className="lp-creditline">Built on ESPN and CBS projections, reliability-adjusted for injuries and consistency, then re-priced to your exact league. Runs in your browser, nothing uploaded, and every value shows its math.</p>
-        <p className="lp-founder">Built by a 27-year auction player who got tired of overpaying, not a content farm. Values are projections, not guarantees, the edge is reacting faster and more rationally than the room.</p>
+        <p className="lp-creditline">Built on ESPN and CBS projections, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded.</p>
         <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
         <button className="lp-sticky-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
       </div>
