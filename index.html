@@ -315,7 +315,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .landing-splash.fading-out { transform: translateY(-100%); opacity: 0.85; pointer-events: none; }
 .landing-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; z-index: 2; }
 .landing-logo-container { width: 100vw; max-height: 82vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; z-index: 1; }
-.landing-logo { width: 100%; height: auto; display: block; animation: landingFadeIn 1.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; filter: drop-shadow(0 0 13px rgba(45, 212, 163, 0.15)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.55)); transform-origin: center center; }
+.landing-logo { width: 100%; height: auto; display: block; animation: landingFadeIn 1.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; filter: drop-shadow(0 0 42px rgba(45, 212, 163, 0.085)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.55)); transform-origin: center center; }
 @keyframes eerieGlow { 0%, 100% { filter: drop-shadow(0 0 15px rgba(45,212,163,0.18)) drop-shadow(0 4px 16px rgba(0,0,0,0.6)); } 50% { filter: drop-shadow(0 0 32px rgba(45,212,163,0.45)) drop-shadow(0 4px 16px rgba(0,0,0,0.6)); } }
 @keyframes kenBurnsZoom { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.12) translate(-2%, 1%); } }
 @keyframes landingFadeIn { 0% { opacity: 0; transform: scale(0.975); } 100% { opacity: 1; transform: scale(1); } }
@@ -1426,7 +1426,7 @@ input:focus, select:focus { border-color: var(--accent); }
 // ─── lib/leagueConfig.js ──────────────────────────
 const DEFAULT_LEAGUE_CONFIG = {
   name: "My League",
-  format: "auction", // "auction" | "snake" | "bestball" — see FORMATS registry below
+  format: "auction", // "auction" | "snake" | "bestball" - see FORMATS registry below
   snake: { draftSlot: 6, rounds: 16 },
   bestball: { rounds: 18, stackBonus: 0.15, lineupSlots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 } },
   teams: 12,
@@ -1525,7 +1525,7 @@ const FORMATS = {
   snake: {
     label: 'Snake',
     columns: [
-      ['adp', 'ADP', 'Average draft position — the overall pick where this player typically goes.'],
+      ['adp', 'ADP', 'Average draft position, the overall pick where this player typically goes.'],
       ['bestavail', 'Best avail', 'VORP rank among players still on the board (your best available value).'],
       ['survives', 'Survives%', 'Estimated chance this player is still available at your next pick.'],
     ],
@@ -1554,7 +1554,7 @@ const FORMATS = {
   bestball: {
     label: 'Best Ball',
     columns: [
-      ['adp', 'ADP', 'Best-ball average draft position (Underdog/Drafters-style — QBs and upside go earlier).'],
+      ['adp', 'ADP', 'Best-ball average draft position (Underdog/Drafters-style, QBs and upside go earlier).'],
       ['ceiling', 'Ceiling', 'Upside-weighted projection per game. Best ball auto-starts your best weekly scores, so ceiling beats floor.'],
       ['stack', 'Stack', 'Marked when drafting him stacks with a QB or pass-catcher you already roster (correlation).'],
       ['survives', 'Survives%', "Estimated chance he's still on the board at your next pick."],
@@ -1603,7 +1603,7 @@ const fmtMeta = (config) => FORMAT_META[(config && config.format) || 'auction'] 
 // ─── lib/adp.js ──────────────────────────
 // Provisional ADP fallback so snake / best ball can reason about pick order
 // before real ADP data exists. Real ADP (if merged by name into player objects
-// upstream — e.g. from the /api/projections payload) takes precedence via the
+// upstream - e.g. from the /api/projections payload) takes precedence via the
 // `!= null` guards below.
 // TODO: replace with real FantasyPros (redraft) / Underdog (best ball) ADP.
 function attachProvisionalAdp(players, config) {
@@ -1664,7 +1664,7 @@ function survivalProb(player, currentOverallPick, picksUntilNext, recentPicks) {
   if (samePos >= 3) survives *= 0.7;
   return Math.max(0, Math.min(1, survives));
 }
-// Self-test (silent unless a case fails — console.assert only logs on failure).
+// Self-test (silent unless a case fails - console.assert only logs on failure).
 console.assert(picksUntilNextPick(1, 12, 1) === 23, 'snake gap: slot1 r1 -> 23');
 console.assert(picksUntilNextPick(1, 12, 24) === 1, 'snake gap: slot1 r2 -> 1');
 console.assert(picksUntilNextPick(12, 12, 12) === 1, 'snake gap: slot12 r1 -> 1');
@@ -1947,6 +1947,31 @@ function applyPredictability(players, config) {
     const out = { ...p };
     if (typeof out.auctionValue === 'number') out.auctionValue = Math.max(minBid, Math.round(out.auctionValue * f));
     if (typeof out.marketValue === 'number') out.marketValue = Math.max(minBid, Math.round(out.marketValue * f));
+    return out;
+  });
+}
+// Renormalize so the VALUE and PROJ columns each spend the entire league budget over the
+// rostered pool. The position-predictability haircut otherwise leaves ~6-8% of the budget
+// unallocated, which biases the board toward red (overpriced). This restores every dollar
+// while preserving each column's relative ordering. Positional VBD-vs-market gaps are kept.
+function renormalizeToBudget(players, config) {
+  const minBid = (config.valuation && config.valuation.minBid) || 1;
+  const budget = totalLeagueBudget(config);
+  const byPos = {};
+  players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  Object.keys(byPos).forEach(pos => byPos[pos].sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)));
+  const rostered = new Set();
+  Object.entries(config.roster).forEach(([pos, cfg]) => { (byPos[pos] || []).slice(0, cfg.total * config.teams).forEach(p => rostered.add(p.id)); });
+  if (!rostered.size) return players;
+  const target = budget - rostered.size * minBid;
+  if (target <= 0) return players;
+  const scaleFor = key => { const above = players.filter(p => rostered.has(p.id)).reduce((s, p) => s + Math.max(0, (p[key] || minBid) - minBid), 0); return above > 0 ? target / above : 1; };
+  const fA = scaleFor('auctionValue'), fM = scaleFor('marketValue');
+  return players.map(p => {
+    if (!rostered.has(p.id)) return p;
+    const out = { ...p };
+    if (typeof out.auctionValue === 'number') out.auctionValue = Math.max(minBid, Math.round(minBid + (out.auctionValue - minBid) * fA));
+    if (typeof out.marketValue === 'number') out.marketValue = Math.max(minBid, Math.round(minBid + (out.marketValue - minBid) * fM));
     return out;
   });
 }
@@ -2566,7 +2591,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
           <stop offset="74%" stopColor="#b0c2c8" />
           <stop offset="100%" stopColor="#46555e" />
         </linearGradient>
-        <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#2dd4a3" floodOpacity="0.16" /></filter>
+        <filter id="itTealHalo" x="-120%" y="-120%" width="340%" height="340%"><feDropShadow dx="0" dy="0" stdDeviation="11" floodColor="#2dd4a3" floodOpacity="0.085" /></filter>
       </defs>
       <image href="/tuna.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={fishX} y={fishY} width={fishW} height={fishH} preserveAspectRatio="xMidYMid meet" />
       {false && (
@@ -2633,8 +2658,8 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
         <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Cheat Sheet</button>
         <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Draft Board</button>
         {(!config || (config.format || 'auction') === 'auction') && <button className={view === 'mock' ? 'active' : ''} onClick={() => setView('mock')}>Mock Auction</button>}
-        <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
-        <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
+        <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Your League (Roster, Scoring, and Budget)</button>
+        <button onClick={() => window.open('/guides', '_blank', 'noopener')} title="Auction strategy guides (opens in a new tab)">Guides</button>
         <span className="reset-wrap">
           <button onClick={() => setResetOpen(o => !o)}>Reset ▾</button>
           {resetOpen && (
@@ -2695,8 +2720,8 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
     bestball: { name: 'Best Ball', color: '#a78bfa', cols: ['ADP', 'Ceil', 'Stack'], liveCol: 1, note: 'Ceiling-weighted, with QB-to-receiver stacks auto-flagged.', rows: [
       ['Josh Allen', 'QB', ['1', '25.8', 'STK']],
       ["Ja'Marr Chase", 'WR', ['3', '21.4', 'STK']],
-      ['Bijan Robinson', 'RB', ['5', '19.9', '—']],
-      ['Brock Bowers', 'TE', ['24', '17.6', '—']],
+      ['Bijan Robinson', 'RB', ['5', '19.9', '-']],
+      ['Brock Bowers', 'TE', ['24', '17.6', '-']],
     ] },
   };
   const faqRef = useRef(null);
@@ -2800,7 +2825,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
           <div className="lp-cmd">Fantasy Football&rsquo;s #1 auction &amp; salary-cap-only draft tool</div>
           <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 2, marginBottom: 2 }}>Auction &middot; Salary-cap &middot; Superflex &middot; 2-QB leagues</div>
           <h1 className="lp-head">Know what to bid when you&rsquo;re on the clock.</h1>
-          <p className="lp-sub">Custom values for your exact league &mdash; <b>likely price</b>, <b>true value</b>, and <b>your max bid</b> on every player &mdash; re-priced live as the money leaves the room.</p>
+          <p className="lp-sub">Custom values for your exact league: <b>likely price</b>, <b>true value</b>, and <b>your max bid</b> on every player, re-priced live as the money leaves the room.</p>
           <div className="lp-cta-row" style={{ marginTop: 6 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
             <button className="lp-cta lp-cta-alt" onClick={() => go('board', 'secondary_cta_board')}>See Draft Night Mode</button>
@@ -2859,7 +2884,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
             ))}
           </div>
           <div className="lp-ideal" style={{ borderLeft: '3px solid var(--gold-text)' }}><b>YOU</b> is your personal max bid, the most a player is worth to your starting lineup given your roster and budget.<br /><br />The YOU value may be higher than the true value, as elite players may cost more than &ldquo;Value.&rdquo; Holding strictly to &ldquo;Value&rdquo; may leave you with a deep team of only average players, with a lower scoring starting lineup.</div>
-          <div className="lp-ideal">It also builds the <b>best team your budget can actually buy</b> &mdash; the highest-scoring legal roster your money affords &mdash; and names who to target. Spend every dollar, leave no points on the table.</div>
+          <div className="lp-ideal">It also builds the <b>best team your budget can actually buy</b>, the highest-scoring legal roster your money affords, and names who to target. Spend every dollar, leave no points on the table.</div>
           <div className="lp-cta-row" style={{ marginTop: 22 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
           </div>
@@ -5022,7 +5047,7 @@ function PrepInsights({ players, config, seasonGames }) {
   const bargains = priced.filter(g => g.gap <= -3).sort((a, b) => a.gap - b.gap).slice(0, 5);
   const traps = priced.filter(g => g.gap >= 3).sort((a, b) => b.gap - a.gap).slice(0, 5);
   const TRAITS = {
-    QB:  { inj: 'Low–moderate', cons: 'High',    note: 'Pocket passers are durable; rushing QBs carry more risk. Only one starts, so an injury is roster-defining. Established starters are among the most predictable year to year.' },
+    QB:  { inj: 'Low to moderate', cons: 'High',    note: 'Pocket passers are durable; rushing QBs carry more risk. Only one starts, so an injury is roster-defining. Established starters are among the most predictable year to year.' },
     RB:  { inj: 'Highest',      cons: 'Lowest',  note: 'Heavy workload plus contact, the most injury-prone starter with the shortest shelf life, and the most volatile production season to season.' },
     WR:  { inj: 'Moderate',     cons: 'High',    note: 'Soft-tissue (hamstring) injuries happen, but careers run longer and roles are stickier. Target share carries over, the most stable skill position year to year.' },
     TE:  { inj: 'Moderate',     cons: 'Streaky', note: 'A physical role with fewer touches than RB. Only the elite tier is reliable; there is a steep cliff after the top few.' },
@@ -5370,7 +5395,7 @@ function assignDraftedToStarters(myPlayers, config, roleOverrides) {
   }
   return { filled };
 }
-// ─── Snake draft simulator — the sequential analog of buildOptimalPlan. ─────────
+// Snake draft simulator: the sequential analog of buildOptimalPlan.
 // Simulates the rest of a snake draft from config.snake.draftSlot: at each of YOUR
 // picks, take the available player that most increases your projected STARTING
 // points (roster-legal via assignDraftedToStarters); at every other pick, the
@@ -5435,7 +5460,7 @@ function buildSnakePlan(myTeam, players, config, draftedIds, opts) {
   }
   return { yourRoster: myRoster, recommendedNow, byRound, projectedStarterPoints: starterPointsOf(myRoster) };
 }
-// ─── lib/bestball.js — best ball IS a snake draft with a deeper roster, ceiling-weighted value, no in-season management. ───
+// lib/bestball.js: best ball IS a snake draft with a deeper roster, ceiling-weighted value, no in-season management.
 // Deeper roster, no K/DEF, extra QB/WR for upside.
 const BESTBALL_ROSTER = { QB: { total: 3, starters: 1 }, RB: { total: 6, starters: 2 }, WR: { total: 7, starters: 3 }, TE: { total: 2, starters: 1 } };
 const BESTBALL_FLEX = { count: 1, eligible: ["RB", "WR", "TE"] };
@@ -7775,11 +7800,14 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     let fpAll; const anchorSet = new Set();
     (whatIfAnchors || []).forEach(a => { if (a && a.id != null && a.id !== '' && !di.has(a.id)) { anchorSet.add(a.id); forced.add(a.id); (fpAll = fpAll || {})[a.id] = Math.max(1, a.price || 1); } });
     let plan = buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll);
-    if (anchorSet.size && plan && plan.feasible === false) {
-      // Drop the priciest non-anchor forced players first until the build fits, so the model
-      // becomes the most model-like version of itself that still includes the anchors.
+    if (plan && plan.feasible === false) {
+      // Models must never target more than the budget allows. Drop the priciest forced
+      // (skeleton) players first until the build fits, protecting what-if anchors and the
+      // user's locked targets so the model stays the most model-like version of itself.
       const priceOfId = id => { const pp = (players || []).find(x => x.id === id); return pp ? Math.max(1, pp.marketValue != null ? pp.marketValue : (pp.auctionValue != null ? pp.auctionValue : 1)) : 0; };
-      const optional = [...forced].filter(id => !anchorSet.has(id)).sort((a, b) => priceOfId(b) - priceOfId(a));
+      const protectedIds = new Set(anchorSet);
+      (targets || new Set()).forEach(id => protectedIds.add(id));
+      const optional = [...forced].filter(id => !protectedIds.has(id)).sort((a, b) => priceOfId(b) - priceOfId(a));
       const keep = new Set(forced);
       for (const id of optional) {
         keep.delete(id);
@@ -8035,7 +8063,7 @@ function App() {
   const baseValued = useMemo(() => {
     const scored = normalizeToLastYear(players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) })), config);
     const ranked = applyCustomRanks(scored, rankOrder);
-    return attachProvisionalAdp(applyPredictability(buildValuations(ranked, config).players, config), config);
+    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config).players, config), config), config);
   }, [players, config, rankOrder]);
   const valuedPlayers = useMemo(() => {
     const adjusted = applyValueAdjust(baseValued, valueAdjust, config);
@@ -8075,7 +8103,7 @@ function App() {
     return valuedPlayers.map(p => {
       const adj = marketAdjustedPrice(p, marketState, config);
       // "You" = your switch price: the most you can pay before buying him stops making your
-      // best affordable team better. Pure — regardless of projection or value. If forcing him
+      // best affordable team better. Pure, regardless of projection or value. If forcing him
       // in never beats your current optimal lineup, your max is the $1 floor.
       let worthPrice = null;
       let personalValue = minBid;
@@ -8161,6 +8189,9 @@ function App() {
     if (!team) return;
     let p = parseInt(price, 10) || config.valuation.minBid;
     if (p < config.valuation.minBid) p = config.valuation.minBid;
+    const teamMaxP = Math.max(config.valuation.minBid, team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid);
+    if (team.spotsRemaining <= 0) { alert(`${team.name} has no roster spots remaining.`); return; }
+    if (p > teamMaxP) { alert(`That bid exceeds ${team.name}'s max bid of $${teamMaxP}.`); return; }
     setTeams(prev => prev.map(t => t.id === teamId ? { ...t, budgetRemaining: t.budgetRemaining - p, spotsRemaining: t.spotsRemaining - 1, roster: [...t.roster, { playerId: id, price: p, position }] } : t));
     setDraftHistory(prev => [...prev, { playerId: id, teamId, price: p, position, timestamp: Date.now() }]);
   }
