@@ -2621,7 +2621,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
   const [demoFmt, setDemoFmt] = useState('auction');
   const [pulse, setPulse] = useState(0);
   useEffect(() => { const t = setInterval(() => setPulse(x => (x + 1) % 1000), 1500); return () => clearInterval(t); }, []);
-  useEffect(() => { if (autoExit) { const t = setTimeout(() => go('prep'), 140); return () => clearTimeout(t); } }, []);
+  useEffect(() => { if (autoExit) { const t = setTimeout(() => go('prep'), 3000); return () => clearTimeout(t); } }, []);
   function nudge(v, dir) {
     const s = String(v);
     if (s.indexOf('#') >= 0) return v;
@@ -4434,7 +4434,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const facts = useMemo(() => [...dyn, ...(PERF_NOTES.current || []), ...FANTASY_FACTS, ...(PERF_NOTES.library || [])], [dyn]);
   const flen = facts.length;
   const [idx, setIdx] = useState(0);
-  useEffect(() => { if (flen <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % flen), 11000); return () => clearInterval(t); }, [flen]);
+  useEffect(() => { if (flen <= 1) return; const t = setInterval(() => setIdx(i => (i + 1) % flen), 22000); return () => clearInterval(t); }, [flen]);
   return (
     <div className="cheat-header no-print">
       <div className="ch-models">
@@ -4442,7 +4442,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         {myTeam && <span className="ch-models-hint">Pick a model to see your highest-scoring build.</span>}
         {myTeam ? models.map(([k, lbl]) => <button key={k} className={`hm-tab ${model === k ? 'active' : ''}`} title={MODEL_DESC[k] || lbl} onClick={() => onSelectModel(model === k ? null : k)}>{lbl}{modelPts[k] != null && (k !== 'custom' || (typeof customForced !== 'undefined' && customForced && customForced.size > 0)) ? <span className="hm-pts">{(modelPts[k] / games).toFixed(1)}</span> : null}</button>) : <span className="ch-models-empty">Mark your team on the Draft Board to see ideal builds.</span>}
         {myTeam && <button className={`hm-tab ${wiOpen ? 'active' : ''}`} onClick={() => setWiOpen(o => !o)} title="What if you win specific players at set prices? Pin up to 3, then click any model to see its lineup and projected points rebuilt around those picks.">What if?</button>}
-        {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear every player you've marked as a favorite">Reset favorites</button>}
+        {onClearTargets && <button className="hm-tab" style={{ marginLeft: 'auto' }} onClick={onClearTargets} title="Clear your favorites and any what-if anchors">Reset favorites</button>}
         {myTeam && wiOpen && (
           <div className="ch-whatif" style={{ flexBasis: '100%', marginTop: 8, padding: '9px 11px', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.45 }}>What if you win these players at these prices? Pin up to three below, then click any model above to see its lineup and projected points rebuilt around your picks.</div>
@@ -7177,7 +7177,7 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
   const [insightIdx, setInsightIdx] = useState(0);
   useEffect(() => {
     if (insights.length <= 1) return;
-    const t = setInterval(() => setInsightIdx(i => (i + 1) % insights.length), 9000);
+    const t = setInterval(() => setInsightIdx(i => (i + 1) % insights.length), 18000);
     return () => clearInterval(t);
   }, [insights.length]);
   const curInsight = insights.length ? insights[((insightIdx % insights.length) + insights.length) % insights.length] : null;
@@ -7632,7 +7632,7 @@ function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seaso
   const rivals = useMemo(() => (teams || []).filter(t => !t.isMine), [teams]);
   const [extraIdx, setExtraIdx] = useState(0);
   const extraLen = isBoard ? rivals.length : insights.length;
-  useEffect(() => { if (extraLen <= 1) return; const t = setInterval(() => setExtraIdx(i => (i + 1) % extraLen), 10000); return () => clearInterval(t); }, [extraLen]);
+  useEffect(() => { if (extraLen <= 1) return; const t = setInterval(() => setExtraIdx(i => (i + 1) % extraLen), 20000); return () => clearInterval(t); }, [extraLen]);
   const taunt = useMemo(() => (isBoard && rivals.length) ? teamTaunt(rivals[extraIdx % rivals.length], players, config, mxGames) : null, [isBoard, rivals, extraIdx, players, config, mxGames]);
   const games = seasonGames || 17;
   if (!myTeam) return (<aside className="sidebar models-panel"><div className="models-head">Draft Models</div><p style={{ fontSize: 12, color: 'var(--text-muted)', padding: 8 }}>Mark a team as yours on the Draft Board to see ideal builds.</p></aside>);
@@ -8134,7 +8134,7 @@ function App() {
   function handleFocusPlayer(id) { focusNonce.current += 1; setView('board'); setFocusPlayer({ id, n: focusNonce.current }); }
   function handleSetRole(playerId, role) { setRoleOverrides(prev => { const n = { ...prev }; if (!role || role === 'auto') delete n[playerId]; else n[playerId] = role; return n; }); }
   function handleReorderSlot(teamId, pos, orderedIds) { setSlotOrder(prev => ({ ...prev, [teamId]: { ...(prev[teamId] || {}), [pos]: orderedIds } })); }
-  function handleClearTargets() { setTargets(new Set()); }
+  function handleClearTargets() { setTargets(new Set()); setWhatIfAnchors([]); }
   async function handleBuildCustom(desc) {
     const d = (desc || '').trim(); if (!d) return;
     const mt = teams.find(t => t.isMine);
