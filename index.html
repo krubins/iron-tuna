@@ -2480,7 +2480,7 @@ let BASELINE_PROJECTIONS = [];  // hydrated at runtime from /api/projections
 // ─── components/LogoMark.jsx ──────────────────────────
 // Inline SVG wordmark: a realistic tuna at a slight turn, cast in riveted iron.
 function LogoMark({ height = 34, className = '', tagline = false, wavy = false }) {
-  const LETTER = '#f5f7fa';
+  const LETTER = 'url(#wordMetal)';
   const word = ['I', 'R', 'O', 'N', 'T', 'U', 'N', 'A'].map(ch => ({ ch, c: LETTER }));
   const n = word.length;
   const center = (n - 1) / 2;
@@ -2523,6 +2523,16 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         </linearGradient>
         <linearGradient id="ironFin" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#9aa6b2" /><stop offset="100%" stopColor="#222b36" />
+        </linearGradient>
+        {/* brushed-steel wordmark with a hint of the tuna's teal */}
+        <linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="20%" stopColor="#dde8ee" />
+          <stop offset="44%" stopColor="#a4bbc2" />
+          <stop offset="50%" stopColor="#7d99a0" />
+          <stop offset="55%" stopColor="#6f928b" />
+          <stop offset="74%" stopColor="#b0c2c8" />
+          <stop offset="100%" stopColor="#46555e" />
         </linearGradient>
         <filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#2dd4a3" floodOpacity="0.16" /></filter>
       </defs>
@@ -5418,7 +5428,7 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   });
   return grid;
 }
-function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench) {
+function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, switchReserve) {
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
   const R = myTeam.budgetRemaining;
@@ -5433,7 +5443,15 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   const remainingStarterSlots = slotDefs.filter(s => !filled[s.label]);
   const totalRemainingSlots = totalRosterSpots(config) - myTeam.roster.length;
   const remainingBench = Math.max(0, totalRemainingSlots - remainingStarterSlots.length);
-  const reserveBench = remainingBench * minBid;
+  let reserveBench = remainingBench * minBid;
+  if (switchReserve) {
+    // Switch-point assumption: set aside $2 for every roster spot still to fill, except K/DEF (~$1).
+    const kdBenchSlots = Math.max(0, (config.roster.K?.total || 0) - (config.roster.K?.starters || 0))
+                       + Math.max(0, (config.roster.DEF?.total || 0) - (config.roster.DEF?.starters || 0));
+    const kdBench = Math.min(kdBenchSlots, remainingBench);
+    const skillBench = Math.max(0, remainingBench - kdBench);
+    reserveBench = skillBench * 2 + kdBench * minBid;
+  }
   const avail = players.filter(p => !draftedIds.has(p.id));
   const byPos = {};
   avail.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
@@ -5608,7 +5626,7 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
   const ptsAt = P => {
     // Best STARTING lineup forcing him in at price P, spending the whole budget on starters
     // (noBench=true) so it's compared apples-to-apples with the no-player baseline.
-    const pl = buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true, { [player.id]: P }, true);
+    const pl = buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true, { [player.id]: P }, true, true);
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   // If even at the minimum bid forcing him in doesn't improve on your baseline, he isn't
@@ -7875,7 +7893,7 @@ function App() {
     const baselinePoints = basePlan ? basePlan.starterPoints : 0;
     // Dedicated no-bench-reserve baseline (best starting lineup spending the whole budget on
     // starters) used only for the "You" switch price, so both sides of the compare match.
-    const switchBaseline = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, true);
+    const switchBaseline = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, true, true);
     const switchBasePts = switchBaseline ? switchBaseline.starterPoints : baselinePoints;
     const planTargetIds = new Set();
     ((basePlan && basePlan.remainingStarterSlots) || []).forEach(s => { if (s.player) planTargetIds.add(s.player.id); });
