@@ -4779,16 +4779,14 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
               const tgap = you - cost;
               const softSched = scheduleSoftness(p.team, p.position);
               let sign, nameColor, nameTitle;
-              if (p.fit === 'target') {
-                sign = 'under'; nameColor = 'rgb(45, 212, 163)';
-                nameTitle = `Target, fits your optimal lineup right now. Worth paying up toward $${you} even above raw value, because his points maximize your starting team.`;
-              } else if (p.fit === 'fade') {
-                sign = 'over'; nameColor = 'rgb(239, 68, 68)';
-                nameTitle = `Off-target, you have already filled this spot in your optimal lineup, so his points land on your bench, not your score.`;
-              } else {
-                sign = Math.abs(tgap) <= 1 ? 'neutral' : tgap > 0 ? 'under' : 'over';
-                nameColor = costColor(cost, you);
-                nameTitle = sign === 'under' ? `Target, worth up to your $${you}; ~$${you - cost} of edge at the $${cost} price` : sign === 'over' ? `Fade, the $${cost} price is $${cost - you} above his value to your team ($${you})` : `Priced about right for your team ($${you})`;
+              {
+                // Good-buy color anchors against VALUE: green when the projected price is below
+                // his Value, red when above it. (You/target are shown via the star and You column.)
+                const vgap = value - cost;
+                sign = Math.abs(vgap) <= 1 ? 'neutral' : vgap > 0 ? 'under' : 'over';
+                nameColor = costColor(cost, value);
+                nameTitle = sign === 'under' ? `Good buy: the $${cost} price is about $${vgap} under his Value of $${value}.` : sign === 'over' ? `Overpay: the $${cost} price is about $${cost - value} above his Value of $${value}.` : `Priced about at his Value ($${value}).`;
+                if (p.fit === 'target') nameTitle += ' Your plan also targets him for an open starting slot.';
               }
               return (
               <div key={p.id} ref={el => { if (el) rowRefs.current[p.id] = el; }} data-pid={p.id} data-pos={pos} title={drafted ? (dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool') : undefined} className={`cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''}`} onPointerDown={e => startDrag(e, p.id, pos)} style={{ touchAction: 'none', gridTemplateColumns: gridT }}>
@@ -8106,7 +8104,9 @@ function App() {
       // best affordable team better. Pure, regardless of projection or value. If forcing him
       // in never beats your current optimal lineup, your max is the $1 floor.
       let worthPrice = null;
-      let personalValue = minBid;
+      // Fall back to true Value (not the $1 floor) for the long tail, so the cheat-sheet color
+      // reflects price-vs-value instead of painting every non-top-20 player red.
+      let personalValue = Math.max(minBid, p.auctionValue || minBid);
       if (!draftedIds.has(p.id) && p.position !== 'K' && p.position !== 'DEF' && relevant.has(p.id)) {
         worthPrice = switchPrice(p, switchBasePts, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
         if (worthPrice != null) personalValue = Math.max(minBid, Math.min(maxBid, Math.round(worthPrice)));
