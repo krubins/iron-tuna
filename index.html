@@ -2722,6 +2722,11 @@ function LandingSplash({ onDismiss, onNav }) {
     ['What happens if my Wi-Fi drops?', 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.'],
     ['Is this legal and fair to use in my league?', 'Yes. It is a smarter cheat sheet, the same as any rankings or values tool. Values are projections, not guarantees, and your edge comes from reacting faster and more rationally than the rest of the room.'],
     ['How is this different from a normal cheat sheet?', 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.'],
+    ['Does it handle superflex and two-QB leagues?', 'Yes. Add QB to your flex eligibility and every quarterback re-prices for the scarcity, so you know exactly how far up to go on the position.'],
+    ['What about keeper or auction-keeper leagues?', 'Mark the players already kept as drafted before you start. The remaining pool and the inflation math adjust around them, so your values stay accurate.'],
+    ['How accurate are the values?', 'They are projections, not guarantees. Iron Tuna builds on ESPN and CBS projections, reliability-adjusts for injuries and consistency, then converts to dollars at your exact settings. The edge is reacting faster and more rationally than the room, not predicting the future.'],
+    ['Can I use it on my phone?', 'Yes. It runs in any browser, so keep it open on your phone or a second tab and work straight from the board during the draft.'],
+    ['What is the difference between Prep and Auction Night?', 'Prep is your free cheat sheet: build your values, set your strategy, and study the board before the draft. Auction Night is the live draft board where you log each bid and track every budget on the clock.'],
   ];
   return (
     <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
@@ -2729,7 +2734,8 @@ function LandingSplash({ onDismiss, onNav }) {
       <nav className="lp-ribbon">
         <div className="lp-ribbon-brand"><button className="lp-ribbon-logo-btn" onClick={e => { const sc = e.currentTarget.closest('.landing-page'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); }} title="Back to top" aria-label="Iron Tuna: back to top"><LogoMark height={22} /></button></div>
         <div className="lp-ribbon-links">
-          <button onClick={() => go('pricing')}>Draft Night Mode</button>
+          <button onClick={() => go('prep', 'ribbon_prep')}>Prep</button>
+          <button onClick={() => go('board', 'ribbon_auction_night')}>Auction Night</button>
           <button onClick={() => go('faq')}>FAQ</button>
           <button className="lp-ribbon-cta" onClick={() => go('signin')}>Sign in</button>
         </div>
@@ -2804,9 +2810,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-section" ref={faqRef}>
           <div className="lp-preview-eyebrow">FAQ</div>
           <h2 className="lp-preview-h">Questions, answered</h2>
-          <div className="lp-faq-item"><div className="lp-faq-q">Does this work for snake drafts?</div><div className="lp-faq-a">No, and that&rsquo;s the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, it&rsquo;s the sharpest tool you&rsquo;ll find.</div></div>
-          <div className="lp-faq-item"><div className="lp-faq-q">Can I use custom scoring?</div><div className="lp-faq-a">Anything &mdash; PPR, TE premium, superflex, odd home-league bonuses. Every value recalculates to your exact settings.</div></div>
-          <div className="lp-faq-item"><div className="lp-faq-q">Do I need an account?</div><div className="lp-faq-a">No. Build your full auction board with zero signup.</div></div>
+          {faqs.map(([q, a], i) => (<div className="lp-faq-item" key={i}><div className="lp-faq-q">{q}</div><div className="lp-faq-a">{a}</div></div>))}
         </div>
         <p className="lp-creditline">Built on ESPN and CBS projections, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded.</p>
         <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
