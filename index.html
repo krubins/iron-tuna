@@ -976,7 +976,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .coach.embed .coach-input { order: 1; border-top: none; border-bottom: 1px solid rgba(45,212,163,0.25); padding: 7px 8px; }
 .coach.embed .coach-chips { order: 2; }
 .coach.embed .coach-body { order: 3; max-height: none; flex: 1 1 auto; }
-.coach.embed .coach-input textarea { min-height: 26px; height: 30px; font-size: 12.5px; padding: 5px 8px; }
+.coach.embed .coach-input textarea { min-height: 44px; height: 48px; font-size: 12.5px; padding: 5px 8px; }
 .coach.embed.coach-lockedbox { justify-content: flex-start; }
 .coach-lockedmsg { padding: 14px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; display: flex; flex-direction: column; gap: 10px; }
 .coach-unlockbtn { align-self: flex-start; background: rgba(45,212,163,0.15); border: 1px solid var(--positive); color: var(--positive); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; font-size: 12px; }
@@ -4276,12 +4276,17 @@ const DVP_2025 = {
   NYJ:{QB:31,RB:32,WR:18,TE:26},PHI:{QB:10,RB:23,WR:3,TE:1},PIT:{QB:27,RB:5,WR:25,TE:29},SF:{QB:20,RB:20,WR:19,TE:24},
   SEA:{QB:8,RB:1,WR:4,TE:20},TB:{QB:29,RB:14,WR:17,TE:27},TEN:{QB:28,RB:21,WR:29,TE:22},WAS:{QB:30,RB:29,WR:28,TE:31},
 };
-// Flag players whose 2026 opponents in weeks 1-3 (and 15-17) were collectively soft vs their position (1=toughest, 32=softest D in 2025).
+// 2025 offensive strength rank by points/game (1 = strongest offense / toughest for a DST, 32 = weakest / best streaming matchup). Source: 2025 final team scoring.
+const OFF_2025 = {
+  LAR:1, NE:2, SEA:3, BUF:4, DET:5, JAX:6, DAL:7, IND:8, CHI:9, SF:10, BAL:11, CIN:12, HOU:13, DEN:14, PIT:15, GB:16,
+  NYG:17, TB:18, PHI:19, LAC:20, KC:21, ARI:22, WAS:23, ATL:24, MIA:25, MIN:26, CAR:27, NO:28, NYJ:29, TEN:30, CLE:31, LV:32,
+};
+// Flag players whose 2026 opponents in weeks 1-3 (and 15-17) were collectively soft vs their position. For QB/RB/WR/TE we use 2025 defense-vs-position rank (1=toughest, 32=softest D); for DEF we use opponent OFFENSE rank (1=best offense, 32=worst), so a high average = facing weak offenses.
 function scheduleSoftness(team, position) {
-  if (!['QB','RB','WR','TE'].includes(position)) return null;
+  if (!['QB','RB','WR','TE','DEF'].includes(position)) return null;
   const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
   const sch = SCHEDULE_2026[tm]; if (!sch) return null;
-  const rankOf = opp => { const ab = (opp || '').toUpperCase().replace(/[^A-Z]/g, ''); const d = DVP_2025[ab]; return d ? d[position] : null; };
+  const rankOf = opp => { const ab = (opp || '').toUpperCase().replace(/[^A-Z]/g, ''); if (position === 'DEF') { const o = OFF_2025[ab]; return o != null ? o : null; } const d = DVP_2025[ab]; return d ? d[position] : null; };
   const avg = ws => { const r = ws.map(w => rankOf(sch[w])).filter(x => x != null); return r.length ? r.reduce((a, b) => a + b, 0) / r.length : null; };
   const SOFT = 21; // average opponent DvP rank >= 21 of 32 => favorable
   const ea = avg(['w1','w2','w3']), la = avg(['w15','w16','w17']);
@@ -4370,11 +4375,11 @@ const BIDDING_NOTES = [
 const PERF_NOTES = {
   updated: 'Jun 19, 2026',
   current: [
-    { label: 'AJ Brown to Patriots', text: 'A.J. Brown was traded from the Eagles to the New England Patriots and projects as a top target for QB Drake Maye in 2026.' },
-    { label: 'Smith leads Eagles WRs', text: 'With A.J. Brown gone, DeVonta Smith is now the clear No. 1 receiver in Philadelphia and should command a larger target share in 2026.' },
-    { label: 'Garrett joins Rams', text: 'The Browns traded pass rusher Myles Garrett to the Los Angeles Rams, boosting his IDP value on a contender. Jared Verse went to Cleveland.' },
-    { label: 'Gibbs as bellcow', text: 'Lions coach Dan Campbell said Jahmyr Gibbs will be Detroit\'s bellcow back in 2026, a strong signal for his workload.' },
-    { label: 'Nix downplays ankle', text: 'Broncos QB Bo Nix downplayed a minor ankle injury at mandatory minicamp and is expected to be ready for training camp.' },
+    { label: 'AJ Brown to Patriots', text: 'A.J. Brown was traded from the Eagles to New England, projecting near 130 targets as Drake Maye\'s top option. Buy Brown as a WR1; Maye is a value QB with a new alpha.' },
+    { label: 'Smith leads Eagles WRs', text: 'With A.J. Brown gone, DeVonta Smith is the clear No. 1 receiver in Philadelphia and should see a larger target share. Pay up a tier for Smith in 2026.' },
+    { label: 'Kraft PUP watch', text: 'Packers TE Tucker Kraft expects to open camp on PUP but says he should play Week 1. A breakout TE (TE4 before his injury) at a slight discount; have a contingency.' },
+    { label: 'Mahomes on track', text: 'Chiefs QB Patrick Mahomes practiced at OTAs and is on track for Week 1 versus Denver as he returns from injury. Any draft-day discount is a buying window at QB.' },
+    { label: 'Split-backfield lottery', text: 'In Minnesota, Aaron Jones and Jordan Mason both go cheap, yet one could seize the lead role. Buy both as a split-backfield lottery for a few dollars.' },
   ],
   library: [
     { label: 'Volume is king', text: 'Opportunity, meaning touches and targets, predicts fantasy points more reliably than efficiency.' },
