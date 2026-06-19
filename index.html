@@ -5606,9 +5606,8 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
   if (maxBid < minBid) return null;
   const forcedBase = targets ? Array.from(targets) : [];
   const ptsAt = P => {
-    // Charge the price through forcedPrices, the SAME mechanism the What-if / board planner
-    // use, so the "You" switch price matches what the What-if shows at that price.
-    const pl = buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true, { [player.id]: P });
+    const modified = players.map(x => x.id === player.id ? { ...x, inflatedValue: P, auctionValue: P } : x);
+    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true);
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   // If even at the minimum bid forcing him in doesn't improve on your baseline, he isn't
@@ -8296,7 +8295,7 @@ function App() {
     if (view === 'mock') {
       return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
-    const coachEl = !showSplash ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} />) : null;
+    const coachEl = (!showSplash && !currentNomination) ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} />) : null;
     const cheatSheetEl = (
       <>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
