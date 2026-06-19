@@ -1008,6 +1008,20 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-cta-alt:hover { background: var(--positive); filter: brightness(1.07); }
 .lp-cta-quiet { background: none; border: none; color: var(--text-secondary); font-family: var(--font-display); font-size: 16px; letter-spacing: 0.06em; cursor: pointer; padding: 14px 10px; transition: color 0.14s; }
 .lp-cta-quiet:hover { color: var(--text-primary); }
+.lp-minimal { overflow-y: auto; }
+.lp-min { max-width: 900px; margin: 0 auto; padding: 10px 20px 50px; display: flex; flex-direction: column; align-items: center; text-align: center; min-height: calc(100vh - 64px); justify-content: center; }
+.lp-min-logo { width: auto !important; height: 150px; margin-bottom: 10px; display: block; filter: drop-shadow(0 0 13px rgba(45,212,163,0.15)) drop-shadow(0 4px 16px rgba(0,0,0,0.55)); }
+.lp-min-head { font-family: var(--font-display); font-size: 50px; line-height: 1.05; letter-spacing: 0.01em; margin: 10px 0 12px; color: var(--text-primary); }
+.lp-min-sub { font-size: 17px; line-height: 1.5; color: var(--text-secondary); max-width: 580px; margin: 0 0 34px; }
+.lp-min-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; max-width: 840px; }
+.lp-min-card { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; text-align: left; background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 24px 22px; cursor: pointer; transition: transform .12s ease, background .12s ease, border-color .12s ease; }
+.lp-min-card:hover { transform: translateY(-3px); background: var(--bg-hover); }
+.lp-min-card-name { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; }
+.lp-min-card-hook { font-family: var(--font-display); font-size: 22px; line-height: 1.18; color: var(--text-primary); }
+.lp-min-card-go { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.05em; margin-top: 8px; }
+.lp-min-note { font-size: 13px; color: var(--text-muted); margin: 30px 0 0; }
+.lp-min-foot { text-align: center; padding: 22px 20px 40px; border-top: 1px solid var(--border-subtle); }
+@media (max-width: 760px) { .lp-min-grid { grid-template-columns: 1fr; } .lp-min-head { font-size: 34px; } .lp-min-sub { font-size: 15px; } }
 .lp-subline { color: var(--text-muted); margin-top: 16px; }
 .lp-sub-link { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.22); text-underline-offset: 4px; transition: color 0.12s, text-decoration-color 0.12s; }
 .lp-sub-link:hover { color: var(--text-primary); text-decoration-color: var(--gold-text); }
@@ -2650,151 +2664,37 @@ function LandingSplash({ onDismiss, onNav }) {
     ['How is this different from a normal cheat sheet?', 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.'],
   ];
   return (
-    <div className={`landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`}>
+    <div className={`landing-splash landing-page lp-minimal ${fadingOut ? 'fading-out' : ''}`}>
       <div className="landing-vignette" />
       <nav className="lp-ribbon">
         <div className="lp-ribbon-brand"><button className="lp-ribbon-logo-btn" onClick={e => { const sc = e.currentTarget.closest('.landing-page'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); }} title="Back to top" aria-label="Iron Tuna: back to top"><LogoMark height={22} /></button></div>
         <div className="lp-ribbon-links">
-          <button onClick={() => go('how')}>How it works</button>
-          <button onClick={() => go('pricing')}>Draft Night Mode</button>
-          <button onClick={() => go('faq')}>FAQ</button>
           <button className="lp-ribbon-cta" onClick={() => go('signin')}>Sign in</button>
         </div>
       </nav>
-      <div className="lp-inner">
-        <div className="lp-hero it-hero">
-          <LogoMark tagline height={208} className="landing-logo" />
-          <div className="lp-cmd">Custom values and a live draft coach, built for your exact league</div>
-          <h1 className="lp-head">Out-draft your whole league.</h1>
-          <p className="lp-sub">Iron Tuna builds <b>custom player values</b> for your exact scoring and roster, then coaches you live on the clock. Pick how you draft — <b>auction</b>, <b>snake</b>, or <b>best ball</b>.</p>
-          <p className="lp-reassure">Free custom values and a full cheat sheet in every format. Live draft tools are a one-time $14.99 per format.</p>
+      <div className="lp-min">
+        <LogoMark tagline height={150} className="lp-min-logo" />
+        <h1 className="lp-min-head">Free custom values. A live draft coach.</h1>
+        <p className="lp-min-sub">Built for <b>your exact league</b> &mdash; auction, snake, or best ball. Pick your draft to start.</p>
+        <div className="lp-min-grid">
+          {[
+            { fmt: 'auction', name: 'Auction', color: '#e0b341', hook: 'Know your exact max bid.' },
+            { fmt: 'snake', name: 'Snake', color: '#46a6ff', hook: 'Know who gets back to you.' },
+            { fmt: 'bestball', name: 'Best Ball', color: '#a78bfa', hook: 'Draft for ceiling and stacks.' },
+          ].map(seg => (
+            <button key={seg.fmt} className="lp-min-card" onClick={() => go('prep', 'mode_selected', seg.fmt)} style={{ borderTop: `3px solid ${seg.color}` }}>
+              <span className="lp-min-card-name" style={{ color: seg.color }}>{seg.name}</span>
+              <span className="lp-min-card-hook">{seg.hook}</span>
+              <span className="lp-min-card-go" style={{ color: seg.color }}>Start free &rarr;</span>
+            </button>
+          ))}
         </div>
-        <div className="lp-section lp-modes-section" ref={modesRef}>
-          <div className="lp-preview-eyebrow" style={{ textAlign: 'center' }}>Three drafts, three tools</div>
-          <h2 className="lp-preview-h" style={{ textAlign: 'center' }}>Pick your draft.</h2>
-          <div className="lp-modes-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 22 }}>
-            {[
-              { fmt: 'auction', name: 'Auction', color: '#e0b341', hook: 'Know your exact max bid.', bullets: ['Custom market price, true value, and your personal max on every player', 'Max bid that recalculates live as budgets drain', 'The best team your budget can still afford'] },
-              { fmt: 'snake', name: 'Snake', color: '#46a6ff', hook: "Know if he'll get back to you.", bullets: ['Survival odds for every player at your next pick', 'Take-now vs safe-to-wait calls from ADP and your roster', 'Your roster projected out, round by round'] },
-              { fmt: 'bestball', name: 'Best Ball', color: '#a78bfa', hook: 'Draft ceiling and stacks. No babysitting.', bullets: ['Ceiling-weighted values — upside over floor', 'A stack finder that pairs your QB with his pass-catchers', 'Deeper-roster planning across 18+ rounds'] },
-            ].map(seg => (
-              <div key={seg.fmt} className="lp-seg-card" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderTop: `3px solid ${seg.color}`, borderRadius: 14, padding: '22px 20px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.14em', textTransform: 'uppercase', color: seg.color, marginBottom: 10 }}>{seg.name}</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1.2, marginBottom: 14, color: 'var(--text-primary)' }}>{seg.hook}</div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px', display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  {seg.bullets.map((b, i) => <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.45, paddingLeft: 20, position: 'relative' }}><span style={{ position: 'absolute', left: 0, color: seg.color, fontWeight: 700 }}>✓</span>{b}</li>)}
-                </ul>
-                <button className="lp-seg-cta" onClick={() => go('prep', 'mode_selected', seg.fmt)} style={{ marginTop: 'auto', background: seg.color, color: '#10131a', border: 'none', borderRadius: 10, padding: '12px 14px', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.05em', cursor: 'pointer', fontWeight: 700 }}>Start {seg.name} free →</button>
-              </div>
-            ))}
-          </div>
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 16 }}>Every format is free to build: custom values plus the full cheat sheet. Live, on-the-clock draft tools are a one-time $14.99 per format.</p>
-        </div>
-        <div className="lp-mock">
-          <div className="lp-mock-bar"><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-title">Your cheat sheet &middot; custom numbers for every pick</span></div>
-          <img src="cheatsheet.png" alt="Iron Tuna auction cheat sheet: market price (Proj), true value (Value), and your personal max bid (You) for every player by position" className="lp-mock-img" loading="lazy" />
-          <div className="lp-shot-cap">The real cheat sheet, recalculated to your exact league. Auction shows your max bid; snake shows who survives to your next pick; best ball shows ceiling and stacks. Then it updates live during your draft.</div>
-        </div>
-        <div className="lp-section">
-          <div className="lp-preview-eyebrow">The problem</div>
-          <h2 className="lp-preview-h">A static cheat sheet loses your draft</h2>
-          <div className="lp-prob-grid">
-            {problems.map((p, i) => <div className="lp-prob" key={i}><span className="lp-prob-x">✕</span><span>{p}</span></div>)}
-          </div>
-        </div>
-        <div className="lp-section" ref={howRef}>
-          <div className="lp-preview-eyebrow">How it works</div>
-          <h2 className="lp-preview-h">Three numbers on every player</h2>
-          <div className="lp-three">
-            {threeNum.map(([t, d, k], i) => (
-              <div className={`lp-three-card lp-three-${k}`} key={i}>
-                <div className="lp-three-n">0{i + 1}</div>
-                <div className="lp-three-t">{t}</div>
-                <div className="lp-three-d">{d}</div>
-              </div>
-            ))}
-          </div>
-          <div className="lp-ideal">Then it builds the <b>ideal team your budget can actually buy</b>: the highest-scoring legal roster your money can afford, so you spend every dollar and leave no points on the table.</div>
-          <div className="lp-cta-row" style={{ marginTop: 22 }}>
-            <button className="lp-cta" onClick={() => go('modes', 'pick_draft_click')}>Pick your draft</button>
-          </div>
-        </div>
-        <div className="lp-section">
-          <div className="lp-preview-eyebrow">On draft night</div>
-          <h2 className="lp-preview-h">What Iron Tuna does during your draft</h2>
-          <div className="lp-proof-grid">
-            {proof.map(([t, d], i) => <div className="lp-proof" key={i}><div className="lp-proof-t">{t}</div><div className="lp-proof-d">{d}</div></div>)}
-          </div>
-          <div className="lp-live">
-            <div className="lp-live-head"><span className="lp-live-dot" /> On the clock</div>
-            <div className="lp-live-row"><span>Now bidding</span><b>Saquon Barkley &middot; RB</b></div>
-            <div className="lp-live-row"><span>Current bid</span><b>$41</b></div>
-            <div className="lp-live-row lp-live-hot"><span>Your max</span><b>$44 &middot; one more bid, then walk</b></div>
-            <div className="lp-live-bud">Budgets left &nbsp; You <b>$128</b> &nbsp; Mike <b>$44</b> &nbsp; Dana <b>$9</b> &nbsp; room avg <b>$61</b></div>
-          </div>
-        </div>
-        <div className="lp-section">
-          <div className="lp-preview-eyebrow">How it compares</div>
-          <h2 className="lp-preview-h">The only auction tool built around a live max bid</h2>
-          <div className="lp-compare-scroll">
-            <table className="lp-table">
-              <thead><tr><th></th><th className="lp-th-us">Iron Tuna</th><th>FantasyPros</th><th>RotoWire</th><th>Draft Sharks</th><th>ESPN / Yahoo</th></tr></thead>
-              <tbody>
-                <tr><td>Live in-draft max bid, recalculated every nomination</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-mid">Optimal-bid engine</td><td className="lp-no">No</td></tr>
-                <tr><td>Tracks every team's budget and money off the board</td><td className="lp-td-us">Yes</td><td className="lp-no">Manual</td><td className="lp-no">Manual</td><td className="lp-yes">Yes</td><td className="lp-mid">Host only</td></tr>
-                <tr><td>Three numbers per player: market, true value, your max</td><td className="lp-td-us">Yes</td><td className="lp-mid">Values only</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid</td><td className="lp-no">Generic $</td></tr>
-                <tr><td>Live coach that answers player and price questions mid-auction</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td></tr>
-                <tr><td>Purpose-built tools for auction, snake &amp; best ball</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-mid">Partial</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
-                <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$9.99/mo</td><td>~$48-96/yr</td><td>Free (generic)</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="lp-compare-note">As of 2026. Competitor features and pricing reflect publicly listed plans and may change. Most "live draft sync" tools cover snake drafts; real auctions still use manual entry.</div>
-        </div>
-        <div className="lp-section" ref={pricingRef}>
-          <div className="lp-preview-eyebrow">Free vs paid</div>
-          <h2 className="lp-preview-h">Start free. Upgrade for draft night.</h2>
-          <div className="lp-tiers">
-            {tiers.map(([name, price, tag, top, items, cta, target, ev], i) => (
-              <div className={`lp-tier lp-tier-${i}${top ? ' lp-tier-top' : ''}`} key={i}>
-                {top && <div className="lp-tier-badge">Recommended</div>}
-                <div className="lp-tier-head"><span className="lp-tier-name">{name}</span><span className="lp-tier-price">{price}</span></div>
-                <div className="lp-tier-tag">{tag}</div>
-                <ul className="lp-tier-list">{items.map((it, j) => <li key={j}>{it}</li>)}</ul>
-                <button className={`lp-cta ${top ? 'lp-cta-alt' : 'lp-cta-ghost'} lp-tier-cta`} onClick={() => go(target, ev)}>{cta}</button>
-              </div>
-            ))}
-          </div>
-          <div className="lp-compare-note">Values are projections, not guarantees. The edge comes from reacting faster and more rationally than the room. Built for auction drafters, not snake drafts, and ready for custom and weird home-league settings.</div>
-        </div>
-        <div className="lp-email">
-          {!emailDone ? (<>
-            <div className="lp-email-h">Save your league for draft night</div>
-            <p className="lp-email-b">Create a free account to save your league, reopen it on draft night, and get preseason auction updates.</p>
-            <div className="lp-email-row">
-              <input type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} onFocus={() => trk('email_capture_viewed', {})} onKeyDown={e => { if (e.key === 'Enter') submitEmail(); }} placeholder="you@email.com" className="lp-email-input" />
-              <button className="lp-cta" onClick={submitEmail}>Save My League</button>
-            </div>
-            <div className="lp-email-note">No spam. Just your saved league and preseason value updates.</div>
-          </>) : (
-            <div className="lp-email-done">You are on the list. We will email your saved league and preseason auction updates.</div>
-          )}
-        </div>
-        <div className="lp-faq" ref={faqRef}>
-          <div className="lp-preview-eyebrow">FAQ</div>
-          <h2 className="lp-preview-h">Questions, answered</h2>
-          {faqs.map(([q, a], i) => (<div className="lp-faq-item" key={i}><div className="lp-faq-q">{q}</div><div className="lp-faq-a">{a}</div></div>))}
-        </div>
-        <div className="lp-cta-row" style={{ marginTop: 8 }}>
-          <button className="lp-cta" onClick={() => go('modes', 'pick_draft_click')}>Pick your draft</button>
-          <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See pricing</button>
-        </div>
-        <div className="lp-note">Works on draft night, even if the Wi-Fi drops.</div>
-        <p className="lp-creditline">Built on ESPN and CBS projections, reliability-adjusted for injuries and consistency, then re-priced to your league. Runs in your browser, nothing uploaded, and every value shows its math.</p>
-        <p className="lp-founder">Built by a 27-year auction player who got tired of overpaying, not a content farm. Values are projections, not guarantees, the edge is reacting faster and more rationally than the room.</p>
-        <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
-        <button className="lp-sticky-cta" onClick={() => go('modes', 'pick_draft_click')}>Pick your draft &mdash; free</button>
+        <p className="lp-min-note">Free to build, no signup. Live in-draft tools are a one-time $14.99 per format.</p>
       </div>
+      <footer className="lp-min-foot">
+        <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
+        <p className="lp-creditline">Custom player values built on ESPN and CBS projections, reliability-adjusted for injuries and consistency, then re-priced to your exact league. Runs in your browser, nothing uploaded.</p>
+      </footer>
     </div>
   );
 }
