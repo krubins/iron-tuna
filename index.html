@@ -8352,7 +8352,7 @@ function App() {
     if (view === 'mock') {
       return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
-    const coachEl = (!showSplash && !currentNomination) ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} />) : null;
+    const coachEl = (!showSplash && !currentNomination && (view === 'prep' || !!assignPlayer)) ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} />) : null;
     const cheatSheetEl = (
       <>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
