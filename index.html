@@ -190,8 +190,6 @@ input:focus, select:focus { border-color: var(--accent); }
 .bid-input label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .modal-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .modal-bg.modal-left { justify-content: flex-start; padding-left: 48px; }
-.coach-beside .coach { left: 484px; right: auto; top: 50%; bottom: auto; transform: translateY(-50%); max-height: 82vh; }
-@media (max-width: 900px) { .coach-beside .coach { left: auto; right: 18px; top: auto; bottom: 18px; transform: none; } }
 @media (max-width: 760px) { .modal-bg.modal-left { justify-content: center; padding-left: 0; } }
 .modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); max-width: 900px; max-height: 85vh; width: 90%; overflow-y: auto; padding: 28px; position: relative; }
 .modal-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elev); font-size: 18px; color: var(--text-muted); }
@@ -2732,7 +2730,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
   const threeNum = [
     ['Market Price', 'What the room is likely to pay for him right now.', 'price'],
     ['True Value', 'What he is actually worth under your exact league settings.', 'value'],
-    ['Your Max', 'The highest you should personally bid, given your roster, budget, and remaining needs.', 'max'],
+    ['Your Max (You)', 'The highest you should personally bid given your roster, budget, and needs. It can sit ABOVE true value on purpose, because chasing only value can leave you with a deep team of average players.', 'max'],
   ];
   const proof = [
     ['Tracks every team\'s budget', 'See who is flush and who is broke, so you know who can still bid you up and who is stuck bargain hunting.'],
@@ -2761,7 +2759,6 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
     ], 'Unlock Draft Night Mode', 'board', 'draft_mode_clicked'],
   ];
   const faqs = [
-    ['Why would I ever bid above a player\'s value?', 'Because if the room overpays for premium players and you hold to true value, you will be right on every bid and still win none of the elite talent, ending up with a deep roster of average starters. Your max (the You number) accounts for this: it is the most a player is worth to YOUR lineup, which can sit above raw value when the points he adds to your starters beat what those dollars would buy elsewhere.'],
     ['Does this work for snake drafts?', 'No, and that is the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, this is the sharpest tool you will find. If you draft in pick order, use a rankings tool.'],
     ['Do I need to create an account?', 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft night.'],
     ['Can I use custom scoring?', 'Yes. Set your teams, budget, roster slots, and full custom scoring, and every value recalculates to your exact settings, including weird home-league rules.'],
@@ -2853,6 +2850,7 @@ function LandingSplash({ onDismiss, onNav, autoExit }) {
               <div className={`lp-three-card lp-three-${k}`} key={k}><div className="lp-three-t">{t}</div><div className="lp-three-d">{dd}</div></div>
             ))}
           </div>
+          <div className="lp-ideal" style={{ borderLeft: '3px solid var(--gold-text)' }}>Why <b>You</b> can beat true value: if the room overpays for premium players and you only ever pay value, you will be right on every single bid and still win <b>none</b> of the elite talent, ending up with a deep roster of average starters. Your Max is the most a player is worth to <b>your</b> lineup, so it tells you exactly how far over value to go to actually land the studs that win weeks.</div>
           <div className="lp-ideal">It also builds the <b>best team your budget can actually buy</b> &mdash; the highest-scoring legal roster your money affords &mdash; and names who to target. Spend every dollar, leave no points on the table.</div>
           <div className="lp-cta-row" style={{ marginTop: 22 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
