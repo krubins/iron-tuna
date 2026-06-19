@@ -844,7 +844,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 6.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
 }.hl-btn { font-size: 11px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
-.cheat-cols-label { font-size: 12px; color: var(--text-muted); align-self: center; font-family: var(--font-body); letter-spacing: normal; }
+.cheat-cols-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); align-self: center; font-family: var(--font-body); letter-spacing: normal; min-width: 46px; }
 .col-toggle { font-size: 12px; padding: 5px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-muted); cursor: pointer; font-family: var(--font-body); letter-spacing: normal; }
 .col-toggle.on { background: rgba(45,212,163,0.14); border-color: var(--positive); color: var(--positive); }
 .col-toggle.soft-13.on { background: rgba(90,169,255,0.16); border-color: #5aa9ff; color: #5aa9ff; }
@@ -4564,6 +4564,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
         <span style={{ flexBasis: '100%', height: 0 }} />
+        <span className="cheat-cols-label">Flags:</span>
         <button className={`col-toggle soft-tog soft-13 ${showCols && showCols.soft13 ? 'on' : ''}`} title="Flag players with soft Weeks 1-3 matchups (hover the tag for opponents)" onClick={() => setShowCols(c => ({ ...c, soft13: !c.soft13 }))}>Soft 1-3</button>
         <button className={`col-toggle soft-tog soft-1517 ${showCols && showCols.soft1517 ? 'on' : ''}`} title="Flag players with soft Weeks 15-17 (fantasy playoffs) matchups" onClick={() => setShowCols(c => ({ ...c, soft1517: !c.soft1517 }))}>Soft 15-17</button>
         <button className={`col-toggle soft-tog soft-inj ${showCols && showCols.injury ? 'on' : ''}`} title="Flag players carrying an injury designation (requires live data loaded)" onClick={() => setShowCols(c => ({ ...c, injury: !c.injury }))}>Injury</button>
