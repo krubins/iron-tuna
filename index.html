@@ -5418,7 +5418,7 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   });
   return grid;
 }
-function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices) {
+function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench) {
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
   const R = myTeam.budgetRemaining;
@@ -5489,7 +5489,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   // Right of center reserves extra budget for quality bench depth.
   const benchShare = alloc * 0.35; // starters-vs-bench axis: up to 35% of budget held for bench
   const anchorActive = !!(forcedPrices && Object.keys(forcedPrices).length);
-  const extraBench = anchorActive ? 0 : Math.round(benchShare * R);
+  const extraBench = (anchorActive || noBench) ? 0 : Math.round(benchShare * R);
   // Left end allows concentrating starter spend (stars & scrubs); center+ balances it.
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = 0.30 + conc * 0.55; // concentration axis: even spread (0.30) -> top-heavy (0.85)
@@ -5606,8 +5606,9 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
   if (maxBid < minBid) return null;
   const forcedBase = targets ? Array.from(targets) : [];
   const ptsAt = P => {
-    const modified = players.map(x => x.id === player.id ? { ...x, inflatedValue: P, auctionValue: P } : x);
-    const pl = buildOptimalPlan(myTeam, modified, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true);
+    // Best STARTING lineup forcing him in at price P, spending the whole budget on starters
+    // (noBench=true) so it's compared apples-to-apples with the no-player baseline.
+    const pl = buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true, { [player.id]: P }, true);
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   // If even at the minimum bid forcing him in doesn't improve on your baseline, he isn't
@@ -7872,6 +7873,10 @@ function App() {
     // Baseline optimal lineup (from value/cost fields; the planner ignores personalValue).
     const basePlan = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true);
     const baselinePoints = basePlan ? basePlan.starterPoints : 0;
+    // Dedicated no-bench-reserve baseline (best starting lineup spending the whole budget on
+    // starters) used only for the "You" switch price, so both sides of the compare match.
+    const switchBaseline = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, true);
+    const switchBasePts = switchBaseline ? switchBaseline.starterPoints : baselinePoints;
     const planTargetIds = new Set();
     ((basePlan && basePlan.remainingStarterSlots) || []).forEach(s => { if (s.player) planTargetIds.add(s.player.id); });
     (targets || new Set()).forEach(id => planTargetIds.add(id));
@@ -7892,7 +7897,7 @@ function App() {
       let worthPrice = null;
       let personalValue = minBid;
       if (!draftedIds.has(p.id) && p.position !== 'K' && p.position !== 'DEF' && relevant.has(p.id)) {
-        worthPrice = switchPrice(p, baselinePoints, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
+        worthPrice = switchPrice(p, switchBasePts, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
         if (worthPrice != null) personalValue = Math.max(minBid, Math.min(maxBid, Math.round(worthPrice)));
       }
       const isTgt = planTargetIds.has(p.id);
