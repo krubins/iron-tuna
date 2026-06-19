@@ -189,6 +189,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .bid-input input { flex: 1; text-align: right; font-family: var(--font-mono); font-size: 16px; }
 .bid-input label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .modal-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal-bg.modal-left { justify-content: flex-start; padding-left: 48px; }
+@media (max-width: 760px) { .modal-bg.modal-left { justify-content: center; padding-left: 0; } }
 .modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); max-width: 900px; max-height: 85vh; width: 90%; overflow-y: auto; padding: 28px; position: relative; }
 .modal-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elev); font-size: 18px; color: var(--text-muted); }
 .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
@@ -3399,7 +3401,7 @@ function QuickDraftModal({ player, teams, config, seasonGames, onConfirm, onClos
   const priceNum = parseInt(price, 10) || 0;
   const overMax = priceNum > teamMax;
   return (
-    <div className="modal-bg" onClick={onClose}>
+    <div className="modal-bg modal-left" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         <div className="section-title">Mark Drafted</div>
@@ -6298,6 +6300,32 @@ function applyQbActuals(scored, config) {
     return { ...p, projectedStats: stats, projectedPoints: (projPts + actPts) / 2 };
   });
 }
+function normalizeToLastYear(scored, config) {
+  // Projection feeds run hot: without this the whole pool scores well above last season.
+  // Rescale each position's projected points so its startable scoring LEVEL matches last
+  // year's actuals (the LAST_YEAR_*_STATS lines). Multiplicative per position, so this
+  // year's player-by-player ordering and gaps are preserved; only the level is corrected.
+  const LAST = { QB: LAST_YEAR_QB_STATS, RB: LAST_YEAR_RB_STATS, WR: LAST_YEAR_WR_STATS, TE: LAST_YEAR_TE_STATS, K: LAST_YEAR_K_STATS, DEF: LAST_YEAR_DEF_STATS };
+  const teams = (config && config.teams) || 12;
+  const sflex = !!(config && config.flex && config.flex.eligible && config.flex.eligible.includes('QB'));
+  const startK = { QB: Math.round(teams * (sflex ? 1.8 : 1.1)), RB: Math.round(teams * 2.6), WR: Math.round(teams * 2.6), TE: Math.round(teams * 1.1), K: teams, DEF: teams };
+  const out = scored.map(p => ({ ...p }));
+  Object.keys(LAST).forEach(pos => {
+    const arr = LAST[pos];
+    if (!arr || !arr.length) return;
+    const lastPts = arr.map(st => scorePlayer({ position: pos, projectedStats: st }, config)).filter(v => v > 0).sort((a, b) => b - a);
+    const players = out.filter(p => p.position === pos && (p.projectedPoints || 0) > 0).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+    if (lastPts.length < 3 || players.length < 3) return;
+    const K = Math.max(3, Math.min(startK[pos] || teams, lastPts.length, players.length));
+    const lastMean = lastPts.slice(0, K).reduce((s, v) => s + v, 0) / K;
+    const projMean = players.slice(0, K).reduce((s, p) => s + (p.projectedPoints || 0), 0) / K;
+    if (!(projMean > 0) || !(lastMean > 0)) return;
+    const f = lastMean / projMean;
+    if (f >= 0.98 && f <= 1.02) return; // already in line with last year
+    players.forEach(p => { p.projectedPoints = (p.projectedPoints || 0) * f; });
+  });
+  return out;
+}
 function applyTierShaping(scored) {
   const out = scored.map(p => ({ ...p }));
   // (a) News-driven value nudges (mid-2026 offseason). Multiply projected points for matched names.
@@ -7874,7 +7902,7 @@ function App() {
   const freeSheetDone = useRef(false);
   useEffect(() => { if (!showSplash && view === 'prep' && !freeSheetDone.current) { freeSheetDone.current = true; ITAnalytics.track('free_sheet_completed', {}); } }, [showSplash, view]);
   const baseValued = useMemo(() => {
-    const scored = players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) }));
+    const scored = normalizeToLastYear(players.map(p => ({ ...p, projectedPoints: scorePlayer(p, config) })), config);
     const ranked = applyCustomRanks(scored, rankOrder);
     return attachProvisionalAdp(applyPredictability(buildValuations(ranked, config).players, config), config);
   }, [players, config, rankOrder]);
