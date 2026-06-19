@@ -7159,7 +7159,7 @@ function buildCoachInsights(ctx) {
   if (mode === 'draft') return [{ label: 'Draft underway', text: 'Trends appear once a few players are in. For now, stick to your values and watch the first RB/WR runs to read the room.' }].concat(prep);
   return prep;
 }
-function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi, onOpenChange, embed }) {
+function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked, onUnlock, evalPlayers, myTeam, teams, draftedIds, seasonGames, onNominate, plan, marketState, name = 'Value Coach', big, ai, onSaveAi, onOpenChange, embed, onBeforeAsk }) {
   const [open, setOpen] = useState(!locked);
   useEffect(() => { onOpenChange && onOpenChange(open); }, [open]);
   const [msgs, setMsgs] = useState([{ role: 'bot', text: 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.', intro: true }]);
@@ -7240,7 +7240,9 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
     }
   }
   function send() {
-    const q = text.trim(); if (!q) return; setText('');
+    const q = text.trim(); if (!q) return;
+    if (onBeforeAsk && !onBeforeAsk()) return;
+    setText('');
     push('user', q);
     const lc0 = q.toLowerCase();
     const aiOn = ai && ai.enabled && ai.endpoint && (ai.format === 'proxy' || ai.key);
@@ -7456,13 +7458,13 @@ function CheckoutModal({ tier, testMode, onComplete, onClose }) {
     </div>
   );
 }
-function AuthModal({ account, onSignIn, onSignOut, onClose }) {
+function AuthModal({ account, onSignIn, onSignOut, onClose, reason }) {
   const [email, setEmail] = useState(account.user ? account.user.email : '');
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
-        <div className="section-title">Account</div>
+        <div className="section-title">{reason && !account.user ? 'Sign in to continue' : 'Account'}</div>
         {account.user ? (
           <div>
             <p style={{ fontSize: 13, margin: '12px 0' }}>Signed in as <b>{account.user.email}</b></p>
@@ -7470,7 +7472,7 @@ function AuthModal({ account, onSignIn, onSignOut, onClose }) {
           </div>
         ) : (
           <div>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '10px 0' }}>Sign in to save your leagues and unlocks across devices.</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '10px 0' }}>{reason ? `It\u2019s free \u2014 sign in ${reason}. Your custom values stay open to everyone, no account needed.` : 'Sign in to save your leagues and unlocks across devices.'}</p>
             <input type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-panel)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: 9, fontSize: 13 }} onKeyDown={e => { if (e.key === 'Enter') onSignIn(email.trim()); }} />
             <button className="btn-draft" style={{ width: '100%', marginTop: 10 }} onClick={() => onSignIn(email.trim())}>Continue</button>
             <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 10 }}>Placeholder sign-in, wire to magic-link or Google later. No password; nothing leaves your device in this build.</p>
@@ -7744,7 +7746,15 @@ function App() {
   function grantEntitlement(id) { setAccount(a => ({ ...a, entitlements: { ...(a.entitlements || {}), [id]: true } })); const fmt = config.format || 'auction'; ITAnalytics.track('purchase', { item: id, mode: account.testMode ? 'test' : 'live', format: fmt }); ITAnalytics.track('purchase_completed', { item: id, format: fmt }); }
   function openCheckout(tier) { if (!tier) return; const fmt = tier.format || config.format || 'auction'; ITAnalytics.track('checkout_open', { item: tier.id, format: fmt }); ITAnalytics.track('checkout_started', { item: tier.id, format: fmt }); setOverlay({ checkout: tier }); }
   function promptUpgrade(reason) { if (has(liveTier)) return false; setUpgradeReason(reason || ''); ITAnalytics.track('upgrade_modal_viewed', { reason: reason || '', format: config.format || 'auction' }); setOverlay('upgrade'); return true; }
-  function handleSignIn(email) { if (!email) return; setAccount(a => ({ ...a, user: { email, since: Date.now() } })); ITAnalytics.track('sign_in', {}); setOverlay(null); }
+  function handleSignIn(email) { if (!email) return; setAccount(a => ({ ...a, user: { email, since: Date.now() } })); ITAnalytics.track('sign_in', {}); setAuthReason(''); setOverlay(null); }
+  function requireSignIn(reason) { if (account.user) return true; setAuthReason(reason || ''); ITAnalytics.track('signin_wall', { reason: reason || '' }); setOverlay('auth'); return false; }
+  const COACH_FREE_LIMIT = 3;
+  function coachGate() {
+    if (account.user) return true;
+    if ((account.coachUses || 0) >= COACH_FREE_LIMIT) { requireSignIn('to keep using the Value Coach'); return false; }
+    setAccount(a => ({ ...a, coachUses: (a.coachUses || 0) + 1 }));
+    return true;
+  }
   function handleSignOut() { setAccount(a => ({ ...a, user: null })); }
   function toggleTestMode() { setAccount(a => { const n = !a.testMode; ITAnalytics.track('testmode', { on: n }); return { ...a, testMode: n }; }); }
   const [teams, setTeams] = useState(() => {
@@ -7811,6 +7821,7 @@ function App() {
   const [rankOrder, setRankOrder] = useState(initialState?.rankOrder || {});
   const [roleOverrides, setRoleOverrides] = useState(initialState?.roleOverrides || {});
   const [slotOrder, setSlotOrder] = useState({});
+  const [authReason, setAuthReason] = useState('');
   const [focusPlayer, setFocusPlayer] = useState(null);
   const focusNonce = useRef(0);
   const [showSplash, setShowSplash] = useState(!screenParam);
@@ -8096,6 +8107,7 @@ function App() {
     });
   }
   function handleRankReorder(draggedId, targetId) {
+    if (!requireSignIn('to move players and build your own cheat sheet')) return;
     const a = players.find(x => x.id === draggedId), b = players.find(x => x.id === targetId);
     if (!a || !b || a.position !== b.position) return;
     const pos = a.position;
@@ -8282,7 +8294,7 @@ function App() {
     if (view === 'mock') {
       return (<MockAuction players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} />);
     }
-    const coachEl = !showSplash ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} />) : null;
+    const coachEl = !showSplash ? (<ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} />) : null;
     const cheatSheetEl = (
       <>
         <Cheatsheet players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} pointsMode={pointsMode}
@@ -8334,7 +8346,7 @@ function App() {
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} highlightId={liveTier} />}
       {overlay === 'upgrade' && <UpgradeModal reason={upgradeReason} format={config.format} onUnlock={() => openCheckout(TIERS.find(t => t.id === liveTier))} onClose={() => setOverlay(null)} />}
-      {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => setOverlay(null)} />}
+      {overlay === 'auth' && <AuthModal account={account} onSignIn={handleSignIn} onSignOut={handleSignOut} onClose={() => { setAuthReason(''); setOverlay(null); }} reason={authReason} />}
       {overlay === 'legal' && <LegalModal onClose={() => setOverlay(null)} />}
       {overlay === 'share' && <ShareModal text={shareText} onClose={() => setOverlay(null)} />}
       {overlay && overlay.checkout && <CheckoutModal tier={overlay.checkout} testMode={account.testMode} onComplete={() => { grantEntitlement(overlay.checkout.id); setOverlay('pricing'); }} onClose={() => setOverlay(null)} />}
