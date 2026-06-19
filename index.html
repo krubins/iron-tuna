@@ -191,8 +191,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .modal-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .modal-bg.modal-left { justify-content: flex-start; padding-left: 48px; }
 @media (max-width: 760px) { .modal-bg.modal-left { justify-content: center; padding-left: 0; } }
-.coach-beside .coach { left: 470px; right: auto; top: 50%; bottom: auto; transform: translateY(-50%); max-height: 82vh; }
-@media (max-width: 900px) { .coach-beside .coach { left: auto; right: 18px; top: auto; bottom: 18px; transform: none; } }
+.coach-beside { position: fixed; left: 480px; top: 50%; transform: translateY(-50%); width: 330px; height: 380px; max-height: 80vh; z-index: 60; }
+.coach-beside .coach.embed { height: 100%; box-shadow: 0 18px 48px rgba(0,0,0,0.6); }
+@media (max-width: 900px) { .coach-beside { position: fixed; left: auto; right: 8px; bottom: 8px; top: auto; transform: none; width: auto; max-width: 92vw; height: 300px; } }
 .modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); max-width: 900px; max-height: 85vh; width: 90%; overflow-y: auto; padding: 28px; position: relative; }
 .modal-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elev); font-size: 18px; color: var(--text-muted); }
 .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
@@ -8492,7 +8493,7 @@ function App() {
           onLoadLive={handleLoadLiveData} loading={loading} dataInfo={dataInfo} />
       )}
       {assignPlayer && <QuickDraftModal player={assignPlayer} teams={teams} config={config} seasonGames={SEASON_GAMES} players={personalizedPlayers} myTeam={myTeam} onConfirm={(teamId, price) => { handleDraft(assignPlayer.id, teamId, price); setAssignPlayer(null); }} onClose={() => setAssignPlayer(null)} />}
-      {!showSplash && (assignPlayer || currentNomination) && <div className="coach-beside no-print"><ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} /></div>}
+      {!showSplash && (assignPlayer || currentNomination) && <div className="coach-beside no-print"><ValueCoach valueAdjust={valueAdjust} onApply={setValueAdjust} config={config} players={baseValued} teamsCount={teams.length} locked={!has(liveTier)} onUnlock={() => promptUpgrade('the live Value Coach and bid guidance')} evalPlayers={personalizedPlayers} myTeam={myTeam} teams={teams} draftedIds={draftedIds} seasonGames={SEASON_GAMES} onNominate={setCurrentNomination} plan={plan} marketState={marketState} name="Value Coach" embed ai={account.ai} onSaveAi={(nai) => setAccount(a => ({ ...a, ai: nai }))} onBeforeAsk={coachGate} /></div>}
       {showAddPlayer && <AddPlayerModal teams={teams} config={config} onAdd={(name, pos, nflTeam, teamId, price) => { handleAddDrafted(name, pos, nflTeam, teamId, price); setShowAddPlayer(false); }} onClose={() => setShowAddPlayer(false)} />}
       {purchaseToast && <div className={`purchase-toast no-print tone-${purchaseToast.tone}`} onClick={() => setPurchaseToast(null)} title="Click to dismiss">{purchaseToast.text}</div>}
       {overlay === 'pricing' && <PricingModal account={account} onBuy={openCheckout} onClose={() => setOverlay(null)} onLegal={() => setOverlay('legal')} highlightId={liveTier} />}
