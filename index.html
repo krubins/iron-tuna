@@ -769,6 +769,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-col { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
 .cheat-col-head { display: flex; justify-content: space-between; align-items: baseline; background: var(--bg-elev); padding: 5px 8px; font-family: var(--font-display); letter-spacing: 0.04em; color: var(--gold-text); border-bottom: 1px solid var(--border-strong); }
 .cheat-col-sub { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); letter-spacing: 0; }
+.cheat-col-head.cch-wrap { flex-direction: column; align-items: stretch; gap: 2px; }
+.cch-row { display: flex; justify-content: space-between; align-items: baseline; }
+.cch-trend { font-family: var(--font-mono); font-size: 8.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-secondary); line-height: 1.25; opacity: 0.92; }
 .cheat-row { display: grid; grid-template-columns: 16px minmax(0,1fr) auto auto auto auto; gap: 4px; align-items: center; padding: 3px 7px; font-size: 12.5px; cursor: grab; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .cheat-row:hover { background: var(--bg-elev); }
 .cheat-row.cheat-drop { box-shadow: inset 0 2px 0 var(--gold-text); }
@@ -4578,6 +4581,26 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
   const stratKey = (highlight && highlight !== 'targets') ? highlight : null;
   const minBid = (config && config.valuation && config.valuation.minBid) || 1;
   const [showCols, setShowCols] = useState({ proj: true, value: true, you: true, ppg: true, soft13: true, soft1517: true, injury: false, handcuff: false });
+  const posTrends = React.useMemo(() => {
+    const pm = new Map(); (players || []).forEach(p => pm.set(p.id, p));
+    const out = {};
+    ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].forEach(pos => {
+      const picks = (draftHistory || []).map(d => ({ price: d.price, p: pm.get(d.playerId) })).filter(x => x.p && x.p.position === pos && x.price != null);
+      if (picks.length < 3) return;
+      const ratioOf = arr => { const fair = arr.reduce((s, x) => s + (x.p.auctionValue || 0), 0); const act = arr.reduce((s, x) => s + (x.price || 0), 0); return fair > 0 ? act / fair : 1; };
+      picks.sort((a, b) => (b.p.auctionValue || 0) - (a.p.auctionValue || 0));
+      const overall = ratioOf(picks); const pct = Math.round((overall - 1) * 100);
+      const k = Math.max(1, Math.ceil(picks.length / 3)); const elite = picks.slice(0, k), rest = picks.slice(k);
+      const er = ratioOf(elite), rr = rest.length ? ratioOf(rest) : er;
+      let txt;
+      if (er >= 1.12 && rr <= 0.92 && rest.length) txt = `Elite ${pos}s running hot, bargains in the next tier`;
+      else if (overall >= 1.12) txt = `${pos}s running hot, about ${pct}% over value`;
+      else if (overall <= 0.9) txt = `${pos}s going cheap, about ${Math.abs(pct)}% under value`;
+      else txt = `${pos}s tracking near value`;
+      out[pos] = txt;
+    });
+    return out;
+  }, [draftHistory, players]);
   const handcuffMap = React.useMemo(() => { const m = new Map(); const byTeam = {}; (players || []).forEach(p => { if (p.position === 'RB' && p.team) (byTeam[p.team] = byTeam[p.team] || []).push(p); }); Object.values(byTeam).forEach(arr => { arr.sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)); const lead = arr[0], bup = arr[1]; if (lead && bup && (lead.projectedPoints || 0) >= (bup.projectedPoints || 0) * 1.3) m.set(bup.id, lead.name); }); return m; }, [players]);
   const COLSPEC = getFormat(config).columns;
   const activeCols = COLSPEC.filter(c => showCols[c[0]] !== false);
@@ -4643,7 +4666,7 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
           <div className="cheat-col-group" key={gi}>
           {grp.map(([pos, n]) => (
           <div className={`cheat-col cc-${pos}`} key={pos}>
-            <div className="cheat-col-head"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>
+            <div className="cheat-col-head cch-wrap"><div className="cch-row"><span>{pos}</span><span className="cheat-col-sub">top {n}</span></div>{posTrends[pos] ? <div className="cch-trend no-print" title={posTrends[pos]}>{posTrends[pos]}</div> : null}</div>
             <div className="cheat-col-labels" style={{ gridTemplateColumns: gridT }}><span /><span>#</span><span>Player</span><span /> {activeCols.map(([k, lbl, tip]) => <span key={k} className="cheat-col-lbl" title={tip}>{lbl}</span>)}</div>
             {(byPos[pos] || []).slice(0, n).map((p, i) => {
               const drafted = !!(draftedIds && draftedIds.has(p.id));
