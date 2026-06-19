@@ -97,6 +97,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .header-brand { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .header-brand h1 { font-family: var(--font-display); font-size: 28px; letter-spacing: 0.04em; font-weight: 400; }
 .header-brand .subtitle { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.15em; transform: translateX(50px); }
+.header.fmt-auction { box-shadow: inset 0 2px 0 #e0b341; }
+.header.fmt-snake { box-shadow: inset 0 2px 0 #46a6ff; }
+.header.fmt-bestball { box-shadow: inset 0 2px 0 #a78bfa; }
 .header-nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .header-nav button {
   padding: 8px 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
@@ -1530,6 +1533,13 @@ const FORMATS = {
   },
 };
 const getFormat = (config) => FORMATS[(config && config.format) || 'auction'] || FORMATS.auction;
+// Shared per-format visual identity (used by header, cheat sheet, and the landing segments).
+const FORMAT_META = {
+  auction:  { label: 'Auction',   color: '#e0b341', sub: 'Auction Draft Command' },
+  snake:    { label: 'Snake',     color: '#46a6ff', sub: 'Snake Draft Command' },
+  bestball: { label: 'Best Ball', color: '#a78bfa', sub: 'Best Ball Command' },
+};
+const fmtMeta = (config) => FORMAT_META[(config && config.format) || 'auction'] || FORMAT_META.auction;
 // ─── lib/adp.js ──────────────────────────
 // Provisional ADP fallback so snake / best ball can reason about pick order
 // before real ADP data exists. Real ADP (if merged by name into player objects
@@ -2522,17 +2532,17 @@ function Header({ view, setView, onUndo, onReset, canUndo, pointsMode, setPoints
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
   const startersSummary = config ? (() => { const parts = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => config.roster[p]).map(p => `${config.roster[p].starters}${p}`); if (config.flex && config.flex.count) parts.push(`${config.flex.count}FLEX`); return parts.join('/'); })() : '';
   return (
-    <header className="header">
+    <header className={`header fmt-${(config && config.format) || 'auction'}`}>
       <div className="header-brand">
         <button className="header-logo-btn" onClick={onHome} title="Back to start screen" aria-label="Iron Tuna: back to start"><LogoMark height={51} className="header-logo" /></button>
         <div className="header-brand-text">
-          <span className="subtitle">Auction Draft Command</span>
+          <span className="subtitle" style={{ color: fmtMeta(config).color, opacity: 0.9 }}>{fmtMeta(config).sub}</span>
         </div>
       </div>
       <nav className="header-nav">
         <button className={view === 'prep' ? 'active' : ''} onClick={() => setView('prep')}>Cheat Sheet</button>
         <button className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>Draft Board</button>
-        <button className={view === 'mock' ? 'active' : ''} onClick={() => setView('mock')}>Mock Auction</button>
+        {(!config || (config.format || 'auction') === 'auction') && <button className={view === 'mock' ? 'active' : ''} onClick={() => setView('mock')}>Mock Auction</button>}
         <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
         <button onClick={onUndo} disabled={!canUndo} style={{ opacity: canUndo ? 1 : 0.4 }}>Undo</button>
         <span className="reset-wrap">
@@ -2567,12 +2577,14 @@ function LandingSplash({ onDismiss, onNav }) {
   const faqRef = useRef(null);
   const howRef = useRef(null);
   const pricingRef = useRef(null);
+  const modesRef = useRef(null);
   const trk = (e, p) => { try { ITAnalytics.track(e, p || {}); } catch (_) {} };
   function go(target, ev, format) {
     if (ev) trk(ev, format ? { format } : {});
     if (target === 'faq') { if (faqRef.current) faqRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (target === 'pricing') { if (pricingRef.current) pricingRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (target === 'how') { if (howRef.current) howRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (target === 'modes') { if (modesRef.current) modesRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     setFadingOut(true);
     setTimeout(() => { if (onNav) onNav(target, format); else if (onDismiss) onDismiss(); }, 350);
   }
@@ -2618,7 +2630,7 @@ function LandingSplash({ onDismiss, onNav }) {
       'Sortable, printable cheat sheet',
       'The ideal team your budget can afford, no points left on the table',
       'No signup required to start',
-    ], 'Build My Free Auction Sheet', 'prep', 'hero_cta_click'],
+    ], 'Build your free cheat sheet', 'prep', 'hero_cta_click'],
     ['Draft Night Mode', '$14.99', 'Live auction-day command', true, [
       'Live auction tracking, every bid logged',
       'Opponent budgets and money off the board',
@@ -2652,44 +2664,40 @@ function LandingSplash({ onDismiss, onNav }) {
       <div className="lp-inner">
         <div className="lp-hero it-hero">
           <LogoMark tagline height={208} className="landing-logo" />
-          <div className="lp-cmd">For auction, snake &amp; best-ball leagues</div>
-          <h1 className="lp-head">Stop guessing what to bid.</h1>
-          <p className="lp-sub">Iron Tuna gives you <b>custom auction values</b>, <b>true player value</b>, and <b>your personal max bid</b> for every player in your exact league.</p>
-          <div className="lp-cta-row" style={{ marginTop: 6 }}>
-            <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
-            <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See Draft Night Mode</button>
-          </div>
-          <p className="lp-reassure">Free custom auction values, no signup. <b>Draft Night Mode</b> is a one-time $14.99 for live, on-the-clock max bids.</p>
-          <p className="lp-urgency">Draft season is here. Walk into your draft knowing exactly what to do on the clock.</p>
+          <div className="lp-cmd">Custom values and a live draft coach, built for your exact league</div>
+          <h1 className="lp-head">Out-draft your whole league.</h1>
+          <p className="lp-sub">Iron Tuna builds <b>custom player values</b> for your exact scoring and roster, then coaches you live on the clock. Pick how you draft — <b>auction</b>, <b>snake</b>, or <b>best ball</b>.</p>
+          <p className="lp-reassure">Free custom values and a full cheat sheet in every format. Live draft tools are a one-time $14.99 per format.</p>
         </div>
-        <div className="lp-section lp-modes-section">
-          <div className="lp-preview-eyebrow" style={{ textAlign: 'center' }}>Choose your draft</div>
-          <h2 className="lp-preview-h" style={{ textAlign: 'center' }}>One engine. Three ways to draft.</h2>
-          <div className="lp-modes-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 18 }}>
+        <div className="lp-section lp-modes-section" ref={modesRef}>
+          <div className="lp-preview-eyebrow" style={{ textAlign: 'center' }}>Three drafts, three tools</div>
+          <h2 className="lp-preview-h" style={{ textAlign: 'center' }}>Pick your draft.</h2>
+          <div className="lp-modes-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 22 }}>
             {[
-              ['auction', 'Auction', 'Know your exact max bid.', 'Custom values, true worth, and your personal max on every player — recalculated live as budgets drain.'],
-              ['snake', 'Snake', "Know if he'll get back to you.", 'Survival odds at your next pick, take-now vs wait calls, and your roster simulated round by round.'],
-              ['bestball', 'Best Ball', 'Draft for ceiling and stacks, no in-season babysitting.', 'Ceiling-weighted values, a stack finder for your QB, and deeper-roster planning across 18+ rounds.'],
-            ].map(([fmt, name, hook, bodyTxt]) => (
-              <button key={fmt} className="lp-mode-card" onClick={() => go('prep', 'mode_selected', fmt)}
-                style={{ textAlign: 'left', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '20px 18px', cursor: 'pointer', color: 'inherit' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold-text)', marginBottom: 8 }}>{name}</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, lineHeight: 1.2, marginBottom: 10, color: 'var(--text-primary)' }}>{hook}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>{bodyTxt}</div>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', color: 'var(--gold-text)' }}>Start free →</span>
-              </button>
+              { fmt: 'auction', name: 'Auction', color: '#e0b341', hook: 'Know your exact max bid.', bullets: ['Custom market price, true value, and your personal max on every player', 'Max bid that recalculates live as budgets drain', 'The best team your budget can still afford'] },
+              { fmt: 'snake', name: 'Snake', color: '#46a6ff', hook: "Know if he'll get back to you.", bullets: ['Survival odds for every player at your next pick', 'Take-now vs safe-to-wait calls from ADP and your roster', 'Your roster projected out, round by round'] },
+              { fmt: 'bestball', name: 'Best Ball', color: '#a78bfa', hook: 'Draft ceiling and stacks. No babysitting.', bullets: ['Ceiling-weighted values — upside over floor', 'A stack finder that pairs your QB with his pass-catchers', 'Deeper-roster planning across 18+ rounds'] },
+            ].map(seg => (
+              <div key={seg.fmt} className="lp-seg-card" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderTop: `3px solid ${seg.color}`, borderRadius: 14, padding: '22px 20px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.14em', textTransform: 'uppercase', color: seg.color, marginBottom: 10 }}>{seg.name}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1.2, marginBottom: 14, color: 'var(--text-primary)' }}>{seg.hook}</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  {seg.bullets.map((b, i) => <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.45, paddingLeft: 20, position: 'relative' }}><span style={{ position: 'absolute', left: 0, color: seg.color, fontWeight: 700 }}>✓</span>{b}</li>)}
+                </ul>
+                <button className="lp-seg-cta" onClick={() => go('prep', 'mode_selected', seg.fmt)} style={{ marginTop: 'auto', background: seg.color, color: '#10131a', border: 'none', borderRadius: 10, padding: '12px 14px', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.05em', cursor: 'pointer', fontWeight: 700 }}>Start {seg.name} free →</button>
+              </div>
             ))}
           </div>
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 14 }}>Free in every mode: custom values plus the full cheat sheet. Live draft tools unlock per format for a one-time $14.99.</p>
+          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 16 }}>Every format is free to build: custom values plus the full cheat sheet. Live, on-the-clock draft tools are a one-time $14.99 per format.</p>
         </div>
         <div className="lp-mock">
-          <div className="lp-mock-bar"><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-title">Your auction sheet &middot; market price, true value, your max</span></div>
+          <div className="lp-mock-bar"><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-dot" /><span className="lp-mock-title">Your cheat sheet &middot; custom numbers for every pick</span></div>
           <img src="cheatsheet.png" alt="Iron Tuna auction cheat sheet: market price (Proj), true value (Value), and your personal max bid (You) for every player by position" className="lp-mock-img" loading="lazy" />
-          <div className="lp-shot-cap">The real cheat sheet. Every player gets a market price, a true value, and your personal max, recalculated to your exact league, then updated live during Draft Night Mode.</div>
+          <div className="lp-shot-cap">The real cheat sheet, recalculated to your exact league. Auction shows your max bid; snake shows who survives to your next pick; best ball shows ceiling and stacks. Then it updates live during your draft.</div>
         </div>
         <div className="lp-section">
           <div className="lp-preview-eyebrow">The problem</div>
-          <h2 className="lp-preview-h">Auction drafts punish static cheat sheets</h2>
+          <h2 className="lp-preview-h">A static cheat sheet loses your draft</h2>
           <div className="lp-prob-grid">
             {problems.map((p, i) => <div className="lp-prob" key={i}><span className="lp-prob-x">✕</span><span>{p}</span></div>)}
           </div>
@@ -2708,7 +2716,7 @@ function LandingSplash({ onDismiss, onNav }) {
           </div>
           <div className="lp-ideal">Then it builds the <b>ideal team your budget can actually buy</b>: the highest-scoring legal roster your money can afford, so you spend every dollar and leave no points on the table.</div>
           <div className="lp-cta-row" style={{ marginTop: 22 }}>
-            <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
+            <button className="lp-cta" onClick={() => go('modes', 'pick_draft_click')}>Pick your draft</button>
           </div>
         </div>
         <div className="lp-section">
@@ -2736,7 +2744,7 @@ function LandingSplash({ onDismiss, onNav }) {
                 <tr><td>Tracks every team's budget and money off the board</td><td className="lp-td-us">Yes</td><td className="lp-no">Manual</td><td className="lp-no">Manual</td><td className="lp-yes">Yes</td><td className="lp-mid">Host only</td></tr>
                 <tr><td>Three numbers per player: market, true value, your max</td><td className="lp-td-us">Yes</td><td className="lp-mid">Values only</td><td className="lp-mid">Values only</td><td className="lp-mid">Optimal bid</td><td className="lp-no">Generic $</td></tr>
                 <tr><td>Live coach that answers player and price questions mid-auction</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td><td className="lp-no">No</td></tr>
-                <tr><td>Auction-first, not snake with auction bolted on</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-mid">Partial</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
+                <tr><td>Purpose-built tools for auction, snake &amp; best ball</td><td className="lp-td-us">Yes</td><td className="lp-no">No</td><td className="lp-mid">Partial</td><td className="lp-mid">Partial</td><td className="lp-mid">Host only</td></tr>
                 <tr><td>Price for auction features</td><td className="lp-td-us">$14.99 once</td><td>~$5.99/mo</td><td>~$9.99/mo</td><td>~$48-96/yr</td><td>Free (generic)</td></tr>
               </tbody>
             </table>
@@ -2778,14 +2786,14 @@ function LandingSplash({ onDismiss, onNav }) {
           {faqs.map(([q, a], i) => (<div className="lp-faq-item" key={i}><div className="lp-faq-q">{q}</div><div className="lp-faq-a">{a}</div></div>))}
         </div>
         <div className="lp-cta-row" style={{ marginTop: 8 }}>
-          <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet</button>
-          <button className="lp-cta lp-cta-alt" onClick={() => go('board', 'draft_mode_clicked')}>Unlock Draft Night Mode</button>
+          <button className="lp-cta" onClick={() => go('modes', 'pick_draft_click')}>Pick your draft</button>
+          <button className="lp-cta lp-cta-alt" onClick={() => go('pricing', 'secondary_cta_click')}>See pricing</button>
         </div>
         <div className="lp-note">Works on draft night, even if the Wi-Fi drops.</div>
         <p className="lp-creditline">Built on ESPN and CBS projections, reliability-adjusted for injuries and consistency, then re-priced to your league. Runs in your browser, nothing uploaded, and every value shows its math.</p>
         <p className="lp-founder">Built by a 27-year auction player who got tired of overpaying, not a content farm. Values are projections, not guarantees, the edge is reacting faster and more rationally than the room.</p>
         <div className="lp-seo-links"><a href="/fantasy-football-auction-values">Auction values</a><a href="/auction-draft-assistant">Auction draft assistant</a><a href="/salary-cap-draft-tool">Salary cap draft tool</a><a href="/custom-auction-values">Custom auction values</a><a href="/superflex-auction-values">Superflex values</a><a href="/creators">For creators</a></div>
-        <button className="lp-sticky-cta" onClick={() => go('prep', 'hero_cta_click')}>Build My Free Auction Sheet, free</button>
+        <button className="lp-sticky-cta" onClick={() => go('modes', 'pick_draft_click')}>Pick your draft &mdash; free</button>
       </div>
     </div>
   );
@@ -4537,9 +4545,13 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
     <div className="cheatsheet">
       <CheatHeader myTeam={myTeam} players={players} config={config} draftedIds={draftedIds} roleOverrides={roleOverrides} seasonGames={seasonGames} model={model} onSelectModel={onSelectModel} targets={targets} teams={teams} marketState={marketState} mode={mode} onAddPlayer={onAddPlayer} onResetRanks={onResetRanks} showCols={showCols} setShowCols={setShowCols} COLSPEC={COLSPEC} priceOverrides={priceOverrides} onClearPrices={onClearPrices} customForced={customForced} onBuildCustom={onBuildCustom} customBuilding={customBuilding} onClearTargets={onClearTargets} whatIfAnchors={whatIfAnchors} onSetAnchors={onSetAnchors} coachEl={coachEl} />
       {highlight && <div className="cheat-strat-desc no-print">{STRAT[highlight].desc}<button className="hl-clear" onClick={() => setHighlight(null)}>clear</button></div>}
-      <div className="cheat-legend no-print"><b>PROJ</b> likely auction price · <b>VALUE</b> true worth at your scoring · <b>YOU</b> the most you should pay, given your roster &amp; budget</div>
+      <div className="cheat-legend no-print">{(config.format || 'auction') === 'snake'
+        ? <><b>ADP</b> where he typically goes · <b>BEST AVAIL</b> your top value left on the board · <b>SURVIVES%</b> odds he's there at your next pick</>
+        : (config.format === 'bestball')
+        ? <><b>ADP</b> best-ball draft slot · <b>CEILING</b> his upside per game · <b>STACK</b> ★ pairs a QB you roster · <b>SURVIVES%</b> odds he lasts to your next pick</>
+        : <><b>PROJ</b> likely auction price · <b>VALUE</b> true worth at your scoring · <b>YOU</b> the most you should pay, given your roster &amp; budget</>}</div>
       <div className="cheat-print-head only-print">
-        <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>Auction Cheat Sheet</span></div>
+        <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>{fmtMeta(config).label} Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
         <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-you" />your max bid</span><span className="cph-key"><i className="k-grn" />worth targeting (≤ your max)</span><span className="cph-key"><i className="k-red" />price over your max</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
       </div>
