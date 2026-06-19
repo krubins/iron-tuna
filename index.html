@@ -2618,6 +2618,18 @@ function LandingSplash({ onDismiss, onNav }) {
   const [fadingOut, setFadingOut] = useState(false);
   const [emailVal, setEmailVal] = useState('');
   const [emailDone, setEmailDone] = useState(false);
+  const HERO_LINES = [
+    'Auction Drafts Are Different.',
+    'Auction Drafts Only.',
+    "Know what to bid when you're on the clock.",
+    'Auction Advice Customized for You.',
+    'Educated AI.',
+    'A Smarter Auction.',
+    'Bid Smarter.',
+    'A Cheat Code for Your Auction.',
+    'The Unfair Advantage for Your Auction.',
+  ];
+  const [heroLine] = useState(() => HERO_LINES[Math.floor(Math.random() * HERO_LINES.length)]);
   const [demoFmt, setDemoFmt] = useState('auction');
   const [pulse, setPulse] = useState(0);
   useEffect(() => { const t = setInterval(() => setPulse(x => (x + 1) % 1000), 1500); return () => clearInterval(t); }, []);
@@ -2748,7 +2760,7 @@ function LandingSplash({ onDismiss, onNav }) {
         <div className="lp-hero it-hero">
           <LogoMark tagline height={300} className="landing-logo" />
           <div className="lp-cmd">For auction &amp; salary-cap leagues</div>
-          <h1 className="lp-head">Know the exact most to bid. Live.</h1>
+          <h1 className="lp-head">{heroLine}</h1>
           <p className="lp-sub">Custom values for your exact league &mdash; <b>likely price</b>, <b>true value</b>, and <b>your max bid</b> on every player &mdash; re-priced live as the money leaves the room.</p>
           <div className="lp-cta-row" style={{ marginTop: 6 }}>
             <button className="lp-cta" onClick={() => go('prep', 'hero_cta_click')}>Build my free auction board</button>
