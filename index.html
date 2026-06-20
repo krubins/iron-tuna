@@ -4626,6 +4626,7 @@ function Header({
   onShareEarn
 }) {
   const [resetOpen, setResetOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
   const startersSummary = config ? (() => {
@@ -4658,17 +4659,31 @@ function Header({
   }, React.createElement("button", {
     className: view === 'prep' ? 'active' : '',
     onClick: () => setView('prep')
-  }, "Cheat Sheet"), React.createElement("button", {
-    className: view === 'board' ? 'active' : '',
-    onClick: () => setView('board')
+  }, "Cheat Sheet"), React.createElement("span", {
+    className: "reset-wrap"
+  }, React.createElement("button", {
+    className: view === 'board' || view === 'split' || view === 'mock' ? 'active' : '',
+    onClick: () => setMoreOpen(o => !o),
+    title: "Draft Board, Split View, Mock Auction"
+  }, "More ▾"), moreOpen && React.createElement("span", {
+    className: "reset-menu",
+    onMouseLeave: () => setMoreOpen(false)
+  }, React.createElement("button", {
+    onClick: () => {
+      setMoreOpen(false);
+      setView('board');
+    }
   }, "Draft Board"), React.createElement("button", {
-    className: view === 'split' ? 'active' : '',
-    onClick: () => setView('split'),
-    title: "Show the cheat sheet and draft board side by side (best on a wide or second screen)"
+    onClick: () => {
+      setMoreOpen(false);
+      setView('split');
+    }
   }, "Split View"), (!config || (config.format || 'auction') === 'auction') && React.createElement("button", {
-    className: view === 'mock' ? 'active' : '',
-    onClick: () => setView('mock')
-  }, "Mock Auction"), React.createElement("button", {
+    onClick: () => {
+      setMoreOpen(false);
+      setView('mock');
+    }
+  }, "Mock Auction"))), React.createElement("button", {
     className: view === 'settings' ? 'active' : '',
     onClick: () => setView('settings')
   }, "Your League (Roster, Scoring, and Budget)"), React.createElement("button", {
