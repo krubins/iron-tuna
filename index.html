@@ -10752,8 +10752,8 @@ function ReferralModal({
   }
   const link = code ? 'https://irontuna.com/?ref=' + encodeURIComponent(code) : 'https://irontuna.com';
   const REF = 'Powered by IronTuna.com';
-  const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values and a live max bid for every player. Grab a free one, and get $1 off Draft Night with my code: ' + link + '  (' + REF + ')';
-  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values + live max-bid math. Get $1 off Draft Night with my code:  (' + REF + ')';
+  const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values and a live max bid for every player. Grab a free one, and get $1 off the Full Site with my code: ' + link + '  (' + REF + ')';
+  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values + live max-bid math. Get $1 off the Full Site with my code:  (' + REF + ')';
   function copy(what, val) {
     try {
       navigator.clipboard.writeText(val);
@@ -10801,9 +10801,9 @@ function ReferralModal({
     "aria-label": "Close"
   }, "×"), React.createElement("div", {
     className: "section-title"
-  }, "Refer 3, Get Draft Night Free"), React.createElement("p", {
+  }, "Refer & Earn"), React.createElement("p", {
     className: "rf-lede"
-  }, "Forward your free cheat sheet to friends or post it anywhere. Friends get ", React.createElement("b", null, "$1 off Draft Night"), " with your code, and once ", React.createElement("b", null, "3 friends sign up"), " through your link, we refund your Draft Night purchase. It is on us. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
+  }, "Forward your free cheat sheet to friends or post it anywhere. You earn ", React.createElement("b", null, "$5 for every friend who signs up"), " for the Full Site ($14.99, includes Draft Night and the Draft Board), and they get ", React.createElement("b", null, "$1 off"), " with your code. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
     className: "rf-getcode",
     onClick: getCode
   }, "Get my referral code") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -10858,7 +10858,7 @@ function ReferralModal({
     "aria-label": "Copy the share text"
   }, copied === 'msg' ? 'Copied!' : 'Copy text'))), React.createElement("div", {
     className: "ds-ref"
-  }, "Friends get $1 off Draft Night, and your purchase is refunded once 3 of them sign up through your link. ", React.createElement("a", {
+  }, "You earn $5 for each friend who signs up for the Full Site through your link, and they get $1 off. ", React.createElement("a", {
     href: "/creators",
     target: "_blank",
     rel: "noopener"
