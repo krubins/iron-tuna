@@ -1395,7 +1395,9 @@ input:focus, select:focus { border-color: var(--accent); }
 @media (max-width: 760px) {
   html, body, #root { overflow-x: hidden; max-width: 100%; }
   .main, .main-content, .cheatsheet, .cheat-grid, .cheat-col, .cheat-header, .ch-models, .ch-controls, .ch-insights, .strategy-bar, .split-view, .split-pane { max-width: 100%; box-sizing: border-box; min-width: 0; }
-  .main { padding-left: 8px !important; padding-right: 8px !important; }
+  .main { padding-left: 0 !important; padding-right: 0 !important; }
+  .main-content { padding-top: 0 !important; padding-left: 8px !important; padding-right: 8px !important; overflow-x: hidden !important; overscroll-behavior-x: none; touch-action: pan-y; }
+  html, body { overscroll-behavior-x: none; touch-action: pan-y; }
   .cheat-row, .cheat-col-labels { padding-left: 6px; padding-right: 6px; }
   .ch-models input[type=range], .strategy-bar input[type=range] { max-width: 100%; }
   .strategy-bar { flex-wrap: wrap; }
