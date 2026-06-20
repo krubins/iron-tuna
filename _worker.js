@@ -552,33 +552,37 @@ async function handleCoach(request, env, c) {
     const ip = request.headers.get('cf-connecting-ip') || 'anon';
     const k = 'rl:' + ip;
     const n = parseInt((await env.RATE_KV.get(k)) || '0', 10);
-    if (n >= 30) return json({ error: 'Rate limit — give it a moment.' }, 429, c);
+    const _rmax = parseInt(env.RATE_MAX || '60', 10);
+    if (n >= _rmax) return json({ error: 'Rate limit — give it a moment.' }, 429, c);
     await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 600 });
   }
 
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
+  const primary = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
+  const fallbackModel = env.LLM_FALLBACK_MODEL || (provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-4o-mini');
+  const callModel = (model, stream) => provider === 'anthropic'
+    ? fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 700, system, messages, stream }) })
+    : fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages], stream }) });
+  const readText = j => provider === 'anthropic'
+    ? (j.content && j.content[0] && j.content[0].text) || ''
+    : (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
   try {
-    let upstream;
-    if (provider === 'anthropic') {
-      upstream = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: env.LLM_MODEL || 'claude-sonnet-4-6', max_tokens: 700, system, messages, stream: wantStream }),
-      });
-    } else {
-      upstream = await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY },
-        body: JSON.stringify({ model: env.LLM_MODEL || 'gpt-4o-mini', temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages], stream: wantStream }),
-      });
+    let upstream = null;
+    try { upstream = await callModel(primary, wantStream); } catch (e) { upstream = null; }
+    if (!upstream || !upstream.ok) {
+      // Self-heal: one retry on a fast fallback model so a transient blip or a
+      // primary-model issue does not take the coach offline mid-draft.
+      let fb = null;
+      try { fb = await callModel(fallbackModel, wantStream); } catch (e) { fb = null; }
+      if (fb && fb.ok) {
+        if (wantStream) return streamResponse(fb, provider, c);
+        return json({ text: readText(await fb.json()) }, 200, c);
+      }
+      const j = upstream ? await upstream.json().catch(() => ({})) : {};
+      return json({ error: (j.error && j.error.message) || 'Provider unavailable' }, 502, c);
     }
-    if (!upstream.ok) { const j = await upstream.json().catch(() => ({})); return json({ error: (j.error && j.error.message) || ('Provider ' + upstream.status) }, 502, c); }
     if (wantStream) return streamResponse(upstream, provider, c);
-    const j = await upstream.json();
-    const text = provider === 'anthropic'
-      ? (j.content && j.content[0] && j.content[0].text) || ''
-      : (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
-    return json({ text }, 200, c);
+    return json({ text: readText(await upstream.json()) }, 200, c);
   } catch (e) {
     return json({ error: String(e) }, 500, c);
   }
