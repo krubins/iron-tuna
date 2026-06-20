@@ -1411,6 +1411,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lead-capture .lc-btn { background: var(--positive); color: #06231b; border: none; border-radius: var(--radius-sm); padding: 9px 15px; font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
 .lead-capture .lc-x { position: absolute; top: 6px; right: 8px; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
 @media (max-width: 600px) { .lead-capture .lc-form { width: 100%; } .lead-capture .lc-form input { flex: 1; min-width: 0; } }
+.taunt-wrap .taunt-select { background: var(--bg-elev); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 9px; font-size: 13px; margin-right: 8px; max-width: 160px; }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -18183,6 +18184,7 @@ function App() {
     setPriceOverrides({});
   }
   const [taunt, setTaunt] = useState(null);
+  const [tauntTeamId, setTauntTeamId] = useState('');
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [referOpen, setReferOpen] = useState(false);
   function makeTaunt() {
@@ -18195,13 +18197,15 @@ function App() {
       });
       return;
     }
-    const t = taunt && taunt.name && opps.find(x => x.name === taunt.name) || opps[0];
+    const t = tauntTeamId ? opps.find(x => String(x.id) === String(tauntTeamId)) || opps[0] : opps[Math.floor(Math.random() * opps.length)];
     setTaunt({
       id: Date.now(),
       name: t.name,
       text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES)
     });
-    ITAnalytics.track('taunt', {});
+    ITAnalytics.track('taunt', {
+      team: t.name
+    });
   }
   function tauntTeam(t) {
     if (!t) return;
@@ -19387,11 +19391,21 @@ function App() {
       title: "Honest narrative recap of the entire board"
     }, "📋 Summarize"), React.createElement("div", {
       className: "taunt-wrap"
-    }, React.createElement("button", {
+    }, React.createElement("select", {
+      className: "taunt-select",
+      value: tauntTeamId,
+      onChange: e => setTauntTeamId(e.target.value),
+      title: "Pick a rival to roast"
+    }, React.createElement("option", {
+      value: ""
+    }, "Random rival"), teams.filter(t => !t.isMine).map(t => React.createElement("option", {
+      key: t.id,
+      value: t.id
+    }, t.name))), React.createElement("button", {
       className: "taunt-btn",
       onClick: makeTaunt,
-      title: "Roast a random rival"
-    }, "🔥 Roast a Rival"), taunt && React.createElement("div", {
+      title: "Roast the selected rival"
+    }, "🔥 Roast"), taunt && React.createElement("div", {
       key: taunt.id,
       className: "taunt-text",
       onClick: () => setTaunt(null),
