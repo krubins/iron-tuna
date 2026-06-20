@@ -1392,6 +1392,15 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-grid { grid-template-columns: 1fr !important; gap: 12px; }
   .main { padding-left: 12px !important; padding-right: 12px !important; }
 }
+@media (max-width: 760px) {
+  html, body, #root { overflow-x: hidden; max-width: 100%; }
+  .main, .main-content, .cheatsheet, .cheat-grid, .cheat-col, .cheat-header, .ch-models, .ch-controls, .ch-insights, .strategy-bar, .split-view, .split-pane { max-width: 100%; box-sizing: border-box; min-width: 0; }
+  .main { padding-left: 8px !important; padding-right: 8px !important; }
+  .cheat-row, .cheat-col-labels { padding-left: 6px; padding-right: 6px; }
+  .ch-models input[type=range], .strategy-bar input[type=range] { max-width: 100%; }
+  .strategy-bar { flex-wrap: wrap; }
+  .summarize-btn, .taunt-btn { margin-left: 0; }
+}
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -10281,10 +10290,10 @@ function Cheatsheet({
     value: mobPos,
     onChange: e => setMobPos(e.target.value),
     "aria-label": "Choose a position to view"
-  }, cols.map(([pos, n]) => React.createElement("option", {
+  }, cols.map(([pos]) => React.createElement("option", {
     key: pos,
     value: pos
-  }, pos, " — top ", n)))), React.createElement("div", {
+  }, pos)))), React.createElement("div", {
     className: `cheat-grid ${highlight ? 'has-hl' : ''}`
   }, colGroups.map((grp, gi) => React.createElement("div", {
     className: "cheat-col-group",
