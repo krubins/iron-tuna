@@ -187,7 +187,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .bid-input { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
 .bid-input input { flex: 1; text-align: right; font-family: var(--font-mono); font-size: 17px; }
 .bid-input label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
-.modal-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 120; }
 .modal-bg.modal-left { justify-content: flex-start; padding-left: 48px; }
 @media (max-width: 760px) { .modal-bg.modal-left { justify-content: center; padding-left: 0; } }
 .coach-beside { position: fixed; left: 548px; top: 50%; transform: translateY(-50%); width: 480px; max-width: calc(100vw - 564px); height: 480px; max-height: 84vh; z-index: 60; }
@@ -1385,14 +1385,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .rf-share-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 4px 0 8px; }
 .cheat-col-mobhide { display: none !important; }
 .cheat-mobnav { display: none; }
-@media (max-width: 760px) {
+@media (max-width: 600px) {
   .cheat-mobnav { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; position: sticky; top: 0; z-index: 6; background: var(--bg-base); padding: 8px 0; }
   .cheat-mobnav .cmn-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
   .cheat-mobnav select { flex: 1; padding: 12px 14px; font-size: 16px; background: var(--bg-elev); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: var(--font-display); letter-spacing: 0.04em; }
   .cheat-grid { grid-template-columns: 1fr !important; gap: 12px; }
   .main { padding-left: 12px !important; padding-right: 12px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 600px) {
   html, body, #root { overflow-x: hidden; max-width: 100%; }
   .main, .main-content, .cheatsheet, .cheat-grid, .cheat-col, .cheat-header, .ch-models, .ch-controls, .ch-insights, .strategy-bar, .split-view, .split-pane { max-width: 100%; box-sizing: border-box; min-width: 0; }
   .main { padding-left: 0 !important; padding-right: 0 !important; }
@@ -10052,11 +10052,11 @@ function Cheatsheet({
   const _fmtMyRoster = myTeam && myTeam.roster ? myTeam.roster.map(r => (players || []).find(x => x.id === r.playerId)).filter(Boolean) : [];
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
-  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 600px)').matches);
   const [mobPos, setMobPos] = useState('QB');
   useEffect(() => {
     if (!window.matchMedia) return;
-    const mq = window.matchMedia('(max-width: 760px)');
+    const mq = window.matchMedia('(max-width: 600px)');
     const fn = () => setIsNarrow(mq.matches);
     if (mq.addEventListener) mq.addEventListener('change', fn);else mq.addListener(fn);
     return () => {
@@ -10752,8 +10752,8 @@ function ReferralModal({
   }
   const link = code ? 'https://irontuna.com/?ref=' + encodeURIComponent(code) : 'https://irontuna.com';
   const REF = 'Powered by IronTuna.com';
-  const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values, true value, and a live max bid for every player. Grab a free one: ' + link + '  (' + REF + ')';
-  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values and live max-bid math for every player. Free cheat sheet:  (' + REF + ')';
+  const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values and a live max bid for every player. Grab a free one and get $1 off with my code: ' + link + '  (' + REF + ')';
+  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values + live max-bid math. Get $1 off with my code:  (' + REF + ')';
   function copy(what, val) {
     try {
       navigator.clipboard.writeText(val);
@@ -10803,7 +10803,7 @@ function ReferralModal({
     className: "section-title"
   }, "Share & Earn $2"), React.createElement("p", {
     className: "rf-lede"
-  }, "Forward your free cheat sheet to friends or post it anywhere. You earn ", React.createElement("b", null, "$2 for every friend who signs up"), " through your link, and every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
+  }, "Forward your free cheat sheet to friends or post it anywhere. Friends get ", React.createElement("b", null, "$1 off"), " with your code, and you earn ", React.createElement("b", null, "$2 for every friend who signs up"), " through your link. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
     className: "rf-getcode",
     onClick: getCode
   }, "Get my referral code") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -10858,7 +10858,7 @@ function ReferralModal({
     "aria-label": "Copy the share text"
   }, copied === 'msg' ? 'Copied!' : 'Copy text'))), React.createElement("div", {
     className: "ds-ref"
-  }, "Referrals are credited when your friend signs up through your link. ", React.createElement("a", {
+  }, "Your friend gets $1 off and you get $2 when they sign up through your link. ", React.createElement("a", {
     href: "/creators",
     target: "_blank",
     rel: "noopener"
