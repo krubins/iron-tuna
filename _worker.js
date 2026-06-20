@@ -507,6 +507,52 @@ export default {
       if (env.ANALYTICS_WEBHOOK) { try { const b = await request.text(); await fetch(env.ANALYTICS_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: b }); } catch (e) {} }
       return new Response(null, { status: 204, headers: c });
     }
+    if (url.pathname === '/api/checkout') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+      if (!env.STRIPE_SECRET_KEY) return json({ error: 'Server missing STRIPE_SECRET_KEY' }, 500, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      const ref = String(b.ref || '').slice(0, 40);
+      const email = String(b.email || '').slice(0, 120);
+      const auth = { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY };
+      const productId = env.STRIPE_PRODUCT_ID || 'prod_UjzvYZjhOXVnDT';
+      let priceId = env.STRIPE_PRICE_ID || '';
+      try {
+        if (!priceId) {
+          const pr = await fetch('https://api.stripe.com/v1/products/' + productId, { headers: auth });
+          const pj = await pr.json().catch(() => ({}));
+          if (pj && pj.default_price) priceId = typeof pj.default_price === 'string' ? pj.default_price : pj.default_price.id;
+          if (!priceId) { const lr = await fetch('https://api.stripe.com/v1/prices?active=true&limit=1&product=' + productId, { headers: auth }); const lj = await lr.json().catch(() => ({})); priceId = lj.data && lj.data[0] && lj.data[0].id; }
+        }
+        if (!priceId) return json({ error: 'No active price on product. Add a one-off price in Stripe.' }, 500, c);
+        const form = new URLSearchParams();
+        form.set('mode', 'payment');
+        form.set('line_items[0][price]', priceId);
+        form.set('line_items[0][quantity]', '1');
+        form.set('success_url', url.origin + '/?paid=1&cs={CHECKOUT_SESSION_ID}');
+        form.set('cancel_url', url.origin + '/?canceled=1');
+        form.set('allow_promotion_codes', 'true');
+        if (email) form.set('customer_email', email);
+        if (ref) { form.set('client_reference_id', ref); form.set('metadata[ref]', ref); }
+        const sr = await fetch('https://api.stripe.com/v1/checkout/sessions', { method: 'POST', headers: { ...auth, 'content-type': 'application/x-www-form-urlencoded' }, body: form.toString() });
+        const sj = await sr.json().catch(() => ({}));
+        if (!sr.ok || !sj.url) return json({ error: (sj.error && sj.error.message) || ('Stripe ' + sr.status) }, 502, c);
+        return json({ url: sj.url }, 200, c);
+      } catch (e) { return json({ error: String(e) }, 500, c); }
+    }
+    if (url.pathname === '/api/checkout/verify') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!env.STRIPE_SECRET_KEY) return json({ paid: false }, 200, c);
+      const cs = url.searchParams.get('cs');
+      if (!cs) return json({ paid: false }, 200, c);
+      try {
+        const r = await fetch('https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(cs), { headers: { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY } });
+        const j = await r.json().catch(() => ({}));
+        return json({ paid: !!(j && j.payment_status === 'paid'), email: (j.customer_details && j.customer_details.email) || null, ref: (j.metadata && j.metadata.ref) || null }, 200, c);
+      } catch (e) { return json({ paid: false }, 200, c); }
+    }
     if (url.pathname === '/api/coach') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });

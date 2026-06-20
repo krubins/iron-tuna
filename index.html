@@ -17454,6 +17454,7 @@ function CheckoutModal({
   onClose
 }) {
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
   useEffect(() => {
     try {
       ITAnalytics.track('checkout_started', {
@@ -17462,15 +17463,39 @@ function CheckoutModal({
       });
     } catch (e) {}
   }, []);
-  function complete(mode) {
+  async function pay() {
     setBusy(true);
-    ITAnalytics.track('purchase_complete', {
-      item: tier.id,
-      mode
-    });
-    setTimeout(() => {
-      onComplete();
-    }, 350);
+    setErr('');
+    let ref = '',
+      email = '';
+    try {
+      ref = localStorage.getItem('it_ref_in') || '';
+    } catch (e) {}
+    try {
+      const acc = JSON.parse(localStorage.getItem('iron_tuna_account_v1') || '{}');
+      email = acc.user && acc.user.email || '';
+    } catch (e) {}
+    try {
+      const r = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          ref,
+          email
+        })
+      });
+      const j = await r.json();
+      if (j && j.url) {
+        window.location.href = j.url;
+        return;
+      }
+      throw new Error(j && j.error || 'Could not start checkout');
+    } catch (e) {
+      setErr(String(e && e.message || e));
+      setBusy(false);
+    }
   }
   return React.createElement("div", {
     className: "modal-bg",
@@ -17508,44 +17533,30 @@ function CheckoutModal({
     style: {
       fontSize: 12,
       color: 'var(--text-muted)',
-      marginBottom: 14
+      marginBottom: 16
     }
-  }, "One-time, current season."), React.createElement("div", {
-    className: "checkout-card"
-  }, React.createElement("div", {
-    className: "checkout-row"
-  }, React.createElement("span", null, "Card number"), React.createElement("span", {
-    className: "checkout-fake"
-  }, "•••• •••• •••• 4242")), React.createElement("div", {
-    className: "checkout-row"
-  }, React.createElement("span", null, "Expiry / CVC"), React.createElement("span", {
-    className: "checkout-fake"
-  }, "12/29 · •••")), React.createElement("div", {
-    className: "checkout-stripe-note"
-  }, "Stripe Checkout goes here in production. Disabled in this build.")), React.createElement("button", {
+  }, "One-time, current season. 30-day money-back guarantee."), React.createElement("button", {
     className: "btn-draft",
     style: {
       width: '100%',
-      marginTop: 12
+      marginTop: 4
     },
     disabled: busy,
-    onClick: () => complete(testMode ? 'test' : 'live')
-  }, busy ? 'Processing…' : `Complete purchase, TEST (no charge)`), React.createElement("button", {
-    className: "btn-secondary",
+    onClick: pay
+  }, busy ? 'Redirecting to secure checkout…' : `Pay $${tier.price.toFixed(2)} with card`), err && React.createElement("p", {
     style: {
-      width: '100%',
-      marginTop: 8
-    },
-    disabled: true,
-    onClick: () => {}
-  }, "Pay with card (coming soon)"), React.createElement("p", {
+      fontSize: 12,
+      color: 'var(--danger)',
+      marginTop: 10
+    }
+  }, err), React.createElement("p", {
     style: {
       fontSize: 11,
       color: 'var(--text-muted)',
-      marginTop: 10,
+      marginTop: 12,
       textAlign: 'center'
     }
-  }, "No real payment is taken. This unlocks the feature for testing.")));
+  }, "Secure payment by Stripe. Your card details never touch Iron Tuna.")));
 }
 function AuthModal({
   account,
@@ -18233,6 +18244,51 @@ function App() {
         });
       }
       localStorage.setItem('it_last_visit', String(now));
+    } catch (e) {}
+  }, []);
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const refIn = sp.get('ref');
+      if (refIn) {
+        try {
+          localStorage.setItem('it_ref_in', refIn.slice(0, 40));
+        } catch (e) {}
+      }
+      const clean = () => {
+        try {
+          const u = new URL(window.location.href);
+          ['paid', 'cs', 'canceled'].forEach(k => u.searchParams.delete(k));
+          window.history.replaceState({}, '', u.pathname + (u.search || ''));
+        } catch (e) {}
+      };
+      if (sp.get('paid') === '1' && sp.get('cs')) {
+        fetch('/api/checkout/verify?cs=' + encodeURIComponent(sp.get('cs'))).then(r => r.json()).then(j => {
+          if (j && j.paid) {
+            setAccount(a => ({
+              ...a,
+              entitlements: {
+                ...(a.entitlements || {}),
+                bundle: true
+              }
+            }));
+            try {
+              ITAnalytics.track('purchase_completed', {
+                item: 'auction',
+                verified: true
+              });
+            } catch (e) {}
+            setPurchaseToast({
+              text: '\u2713 Payment received \u2014 Full Site unlocked. Thank you!',
+              tone: 'good',
+              id: Date.now()
+            });
+          }
+          clean();
+        }).catch(clean);
+      } else if (sp.get('canceled')) {
+        clean();
+      }
     } catch (e) {}
   }, []);
   const has = id => entitled(account, id);
