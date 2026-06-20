@@ -460,7 +460,7 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       try {
         const cache = caches.default;
-        const key = new Request(url.origin + '/api/live');
+        const key = new Request(url.origin + '/api/live?v=2');
         const hit = await cache.match(key);
         if (hit) { const r = new Response(hit.body, hit); for (const [k, v] of Object.entries(c)) r.headers.set(k, v); return r; }
         const up = await fetch('https://api.sleeper.app/v1/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } });
@@ -473,7 +473,9 @@ export default {
           if (!p || !FANT.has(p.position)) continue;
           const name = p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
           if (!name) continue;
-          const inj = p.injury_status || null;
+          const REAL = new Set(['Questionable', 'Doubtful', 'Out', 'IR', 'PUP', 'Sus', 'Suspended', 'COV', 'NFI', 'DNR']);
+          const injRaw = p.injury_status || null;
+          const inj = (injRaw && REAL.has(injRaw)) ? injRaw : null;
           const team = p.team || null;
           if (!inj && !team) continue;
           out[name] = { t: team, i: inj, s: p.status || null };
