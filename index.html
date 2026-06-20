@@ -4686,7 +4686,7 @@ function Header({
   }, "Mock Auction"))), React.createElement("button", {
     className: view === 'settings' ? 'active' : '',
     onClick: () => setView('settings')
-  }, "Your League (Roster, Scoring, and Budget)"), React.createElement("button", {
+  }, "Your League"), React.createElement("button", {
     onClick: () => window.open('/guides', '_blank', 'noopener'),
     title: "Auction strategy guides (opens in a new tab)"
   }, "Guides"), React.createElement("button", {
@@ -10752,8 +10752,8 @@ function ReferralModal({
   }
   const link = code ? 'https://irontuna.com/?ref=' + encodeURIComponent(code) : 'https://irontuna.com';
   const REF = 'Powered by IronTuna.com';
-  const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values and a live max bid for every player. Grab a free one and get $1 off with my code: ' + link + '  (' + REF + ')';
-  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values + live max-bid math. Get $1 off with my code:  (' + REF + ')';
+  const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values and a live max bid for every player. Grab a free one, and get $1 off Draft Night with my code: ' + link + '  (' + REF + ')';
+  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values + live max-bid math. Get $1 off Draft Night with my code:  (' + REF + ')';
   function copy(what, val) {
     try {
       navigator.clipboard.writeText(val);
@@ -10801,9 +10801,9 @@ function ReferralModal({
     "aria-label": "Close"
   }, "×"), React.createElement("div", {
     className: "section-title"
-  }, "Share & Earn $2"), React.createElement("p", {
+  }, "Refer 3, Get Draft Night Free"), React.createElement("p", {
     className: "rf-lede"
-  }, "Forward your free cheat sheet to friends or post it anywhere. Friends get ", React.createElement("b", null, "$1 off"), " with your code, and you earn ", React.createElement("b", null, "$2 for every friend who signs up"), " through your link. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
+  }, "Forward your free cheat sheet to friends or post it anywhere. Friends get ", React.createElement("b", null, "$1 off Draft Night"), " with your code, and once ", React.createElement("b", null, "3 friends sign up"), " through your link, we refund your Draft Night purchase. It is on us. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
     className: "rf-getcode",
     onClick: getCode
   }, "Get my referral code") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -10858,11 +10858,11 @@ function ReferralModal({
     "aria-label": "Copy the share text"
   }, copied === 'msg' ? 'Copied!' : 'Copy text'))), React.createElement("div", {
     className: "ds-ref"
-  }, "Your friend gets $1 off and you get $2 when they sign up through your link. ", React.createElement("a", {
+  }, "Friends get $1 off Draft Night, and your purchase is refunded once 3 of them sign up through your link. ", React.createElement("a", {
     href: "/creators",
     target: "_blank",
     rel: "noopener"
-  }, "How payouts work"), ".")));
+  }, "How it works"), ".")));
 }
 function MockAuction({
   players,
