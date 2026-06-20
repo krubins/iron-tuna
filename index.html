@@ -1403,6 +1403,14 @@ input:focus, select:focus { border-color: var(--accent); }
   .strategy-bar { flex-wrap: wrap; }
   .summarize-btn, .taunt-btn { margin-left: 0; }
 }
+.lead-capture { position: relative; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: linear-gradient(180deg, rgba(45,212,163,0.10), rgba(45,212,163,0.03)); border: 1px solid rgba(45,212,163,0.34); border-radius: var(--radius-md); padding: 11px 40px 11px 14px; margin-bottom: 12px; }
+.lead-capture .lc-text { flex: 1 1 260px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.45; }
+.lead-capture .lc-text b { color: var(--text-primary); }
+.lead-capture .lc-form { display: flex; gap: 8px; flex: 0 1 auto; }
+.lead-capture .lc-form input { background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text-primary); font-size: 14px; min-width: 180px; }
+.lead-capture .lc-btn { background: var(--positive); color: #06231b; border: none; border-radius: var(--radius-sm); padding: 9px 15px; font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+.lead-capture .lc-x { position: absolute; top: 6px; right: 8px; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
+@media (max-width: 600px) { .lead-capture .lc-form { width: 100%; } .lead-capture .lc-form input { flex: 1; min-width: 0; } }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -4958,7 +4966,7 @@ function LandingSplash({
     onClick: () => go('board', 'secondary_cta_board')
   }, "See Draft Night Mode")), React.createElement("p", {
     className: "lp-reassure"
-  }, "Free, no account. Draft Night Mode is a one-time $14.99.")), React.createElement("div", {
+  }, "Free, no account. Draft Night Mode is a one-time $14.99, with a 30-day money-back guarantee.")), React.createElement("div", {
     className: "lp-preview-eyebrow",
     style: {
       textAlign: 'center',
@@ -10006,6 +10014,70 @@ function CheatHeader({
     className: "ch-coachslot"
   }, coachEl) : null));
 }
+function LeadCapture() {
+  const [done, setDone] = useState(() => {
+    try {
+      return localStorage.getItem('it_lead') === '1';
+    } catch (e) {
+      return false;
+    }
+  });
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (done) return null;
+  function finish() {
+    try {
+      localStorage.setItem('it_lead', '1');
+    } catch (e) {}
+    setDone(true);
+  }
+  function submit(e) {
+    if (e) e.preventDefault();
+    const v = (email || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return;
+    setBusy(true);
+    try {
+      fetch('/api/lead', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: v,
+          source: 'cheatsheet'
+        })
+      });
+    } catch (e) {}
+    try {
+      ITAnalytics.track('lead_captured', {
+        source: 'cheatsheet'
+      });
+    } catch (e) {}
+    finish();
+  }
+  return React.createElement("div", {
+    className: "lead-capture no-print"
+  }, React.createElement("div", {
+    className: "lc-text"
+  }, React.createElement("b", null, "Get your sheet plus draft-day reminders."), " We will email injury and news updates as your players change, free."), React.createElement("form", {
+    className: "lc-form",
+    onSubmit: submit
+  }, React.createElement("input", {
+    type: "email",
+    value: email,
+    onChange: e => setEmail(e.target.value),
+    placeholder: "you@email.com",
+    "aria-label": "Your email"
+  }), React.createElement("button", {
+    type: "submit",
+    className: "lc-btn",
+    disabled: busy
+  }, busy ? 'Done' : 'Email it to me')), React.createElement("button", {
+    className: "lc-x",
+    onClick: finish,
+    "aria-label": "Dismiss"
+  }, "×"));
+}
 function Cheatsheet({
   players,
   config,
@@ -10299,7 +10371,7 @@ function Cheatsheet({
     className: "cph-key"
   }, React.createElement("i", {
     className: "k-hl"
-  }), "★ highlighted target"))), isNarrow && React.createElement("div", {
+  }), "★ highlighted target"))), mode !== 'live' || true ? React.createElement(LeadCapture, null) : null, isNarrow && React.createElement("div", {
     className: "cheat-mobnav no-print"
   }, React.createElement("span", {
     className: "cmn-label"
@@ -17089,16 +17161,43 @@ function ValueCoach({
 }
 const ITAnalytics = (() => {
   const KEY = 'iron_tuna_events_v1';
+  function anonId() {
+    try {
+      let id = localStorage.getItem('it_anon');
+      if (!id) {
+        id = 'a_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('it_anon', id);
+      }
+      return id;
+    } catch (e) {
+      return 'a_anon';
+    }
+  }
   function track(event, props) {
+    const p = props || {};
     try {
       const log = JSON.parse(localStorage.getItem(KEY) || '[]');
       log.push({
         event,
-        props: props || {},
+        props: p,
         t: Date.now()
       });
       localStorage.setItem(KEY, JSON.stringify(log.slice(-500)));
-      if (window.__IT_DEBUG) console.log('[analytics]', event, props || {});
+      if (window.__IT_DEBUG) console.log('[analytics]', event, p);
+    } catch (e) {}
+    try {
+      if (window.posthog && window.posthog.capture) window.posthog.capture(event, p);
+    } catch (e) {}
+    try {
+      const payload = JSON.stringify({
+        event,
+        props: p,
+        t: Date.now(),
+        uid: anonId()
+      });
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/track', new Blob([payload], {
+        type: 'application/json'
+      }));
     } catch (e) {}
   }
   return {
@@ -17230,6 +17329,13 @@ function PricingModal({
   onLegal,
   highlightId
 }) {
+  useEffect(() => {
+    try {
+      ITAnalytics.track('paywall_viewed', {
+        highlight: highlightId || null
+      });
+    } catch (e) {}
+  }, []);
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
@@ -17248,9 +17354,16 @@ function PricingModal({
     style: {
       fontSize: 13,
       color: 'var(--text-muted)',
-      marginBottom: 14
+      marginBottom: 6
     }
-  }, "One-time per season, not a subscription."), React.createElement("div", {
+  }, "One-time per season, not a subscription."), React.createElement("p", {
+    style: {
+      fontSize: 13,
+      color: 'var(--positive)',
+      marginBottom: 14,
+      fontWeight: 600
+    }
+  }, "30-day money-back guarantee. If it does not help your draft, email us for a full refund."), React.createElement("div", {
     className: "tier-grid"
   }, TIERS.map(t => {
     const owned = entitled(account, t.id);
@@ -17342,6 +17455,14 @@ function CheckoutModal({
   onClose
 }) {
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    try {
+      ITAnalytics.track('checkout_started', {
+        item: tier.id,
+        price: tier.price
+      });
+    } catch (e) {}
+  }, []);
   function complete(mode) {
     setBusy(true);
     ITAnalytics.track('purchase_complete', {
@@ -18100,6 +18221,17 @@ function App() {
   }, [account]);
   useEffect(() => {
     ITAnalytics.track('app_open', {});
+    try {
+      const last = parseInt(localStorage.getItem('it_last_visit') || '0', 10);
+      const now = Date.now();
+      if (last) {
+        const days = Math.round((now - last) / 86400000);
+        ITAnalytics.track('return_visit', {
+          days_since: days
+        });
+      }
+      localStorage.setItem('it_last_visit', String(now));
+    } catch (e) {}
   }, []);
   const has = id => entitled(account, id);
   const liveTier = config.format === 'snake' ? 'snake' : config.format === 'bestball' ? 'bestball' : 'auction';

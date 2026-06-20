@@ -488,6 +488,25 @@ export default {
         return r;
       } catch (e) { return json({ updated: Date.now(), players: {}, error: String(e) }, 200, c); }
     }
+    if (url.pathname === '/api/lead') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      let body = {}; try { body = await request.json(); } catch (e) {}
+      const email = (body.email || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid' }, 400, c);
+      if (env.LEAD_WEBHOOK) {
+        try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, source: body.source || 'cheatsheet', scoring: body.scoring || null, ts: Date.now() }) }); } catch (e) {}
+      }
+      return json({ ok: true, stored: !!env.LEAD_WEBHOOK }, 200, c);
+    }
+    if (url.pathname === '/api/track') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return new Response(null, { status: 204, headers: c });
+      if (env.ANALYTICS_WEBHOOK) { try { const b = await request.text(); await fetch(env.ANALYTICS_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: b }); } catch (e) {} }
+      return new Response(null, { status: 204, headers: c });
+    }
     if (url.pathname === '/api/coach') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
