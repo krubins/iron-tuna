@@ -16204,7 +16204,7 @@ function buildCoachContext(q, ctx) {
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _coachFmt = contextObj && contextObj.format || 'auction';
   const _coachId = _coachFmt === 'snake' ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. You think in ADP, pick order, position runs, and who will survive back to this manager's next pick (use the survives% and pick math in the data)." : _coachFmt === 'bestball' ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management." : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
-  const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and grounded ONLY in the live draft data provided.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Never invent players or stats not in the data.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
     content: m.text
@@ -16834,7 +16834,7 @@ function ValueCoach({
     const dirWord = factor < 1 ? 'down' : 'up';
     return `Done, ${p.descShort} I ${p.delta > 0 ? 'pulled it from' : 'sent it to'} ${srcLabel} (each ${dirWord} ~${Math.round(Math.abs(1 - factor) * 100)}%) so the board\'s total stays balanced.`;
   }
-  async function handleAI(q) {
+  async function handleAI(q, _retry) {
     const tid = msgIdRef.current++;
     setMsgs(m => [...m, {
       role: 'bot',
@@ -16865,6 +16865,10 @@ function ValueCoach({
       } : x));
     } catch (e) {
       setMsgs(m => m.filter(x => x._id !== tid));
+      if (!_retry) {
+        setTimeout(() => handleAI(q, true), 1200);
+        return;
+      }
       runEngine(q);
     }
   }
@@ -17065,7 +17069,7 @@ function ValueCoach({
       push('bot', "Let me focus on what matters most for your build right now:\n\n" + fb + "\n\nYou can also ask me about a specific player, a position tier, bargains, or your budget.");
       return;
     }
-    push('bot', "I can size up a player (“how much for Drake Maye?”), talk through a position (“how’s the TE tier?”), explain a call (“why is Bijan only $33?”), find value, check your budget, or tune values (“elite RBs pricier”, “reset”). Tell me a player, a position, or what you’re trying to do.");
+    push('bot', "I couldn’t reach Claude for that one just now. I can still size up a player (“how much for Drake Maye?”), talk through a position, find value, check your budget, or tune prices (“elite RBs pricier”, “reset”) from your live board. Try your question again in a moment.");
   }
   const active = [];
   Object.entries(valueAdjust || {}).forEach(([pos, obj]) => Object.entries(obj || {}).forEach(([tier, m]) => {
