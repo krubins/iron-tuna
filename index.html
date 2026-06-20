@@ -4187,6 +4187,34 @@ async function loadSleeperData(season) {
   }
   return out;
 }
+function _liveNorm(s) {
+  return (s || '').toLowerCase().replace(/[^a-z]/g, '');
+}
+async function fetchLiveStatus() {
+  try {
+    const r = await fetch('/api/live');
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && d.players ? d.players : null;
+  } catch (e) {
+    return null;
+  }
+}
+function applyLiveStatus(players, live) {
+  if (!live) return players;
+  const lm = {};
+  for (const k in live) lm[_liveNorm(k)] = live[k];
+  return (players || []).map(p => {
+    const L = lm[_liveNorm(p.name)];
+    if (!L) return p;
+    const np = {
+      ...p
+    };
+    if (L.i) np.injuryStatus = L.i;
+    if (L.t && p.position !== 'DEF' && L.t !== p.team) np.team = L.t;
+    return np;
+  });
+}
 function parseProjectionsCSV(csvText) {
   const lines = csvText.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
@@ -18183,6 +18211,7 @@ function App() {
   const [pointsMode, setPointsMode] = useState('perWeek');
   const [loading, setLoading] = useState(false);
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
+  const liveStatusRef = useRef(null);
   useEffect(() => {
     const savedFresh = initialState?.players && initialState.players.length && initialState.projVersion === PROJ_VERSION;
     if (savedFresh) return;
@@ -18191,7 +18220,9 @@ function App() {
       try {
         const data = await fetchBaselineProjections();
         if (!cancelled && data && data.length) {
-          setPlayers(buildInitialPlayers(data));
+          let players0 = buildInitialPlayers(data);
+          if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
+          setPlayers(players0);
           setDataInfo({
             source: 'Projections 2026',
             season: 2026,
@@ -18200,6 +18231,22 @@ function App() {
           });
         }
       } catch (e) {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const live = await fetchLiveStatus();
+      if (cancelled || !live) return;
+      liveStatusRef.current = live;
+      setPlayers(prev => applyLiveStatus(prev, live));
+      setDataInfo(di => di ? {
+        ...di,
+        live: true
+      } : di);
     })();
     return () => {
       cancelled = true;

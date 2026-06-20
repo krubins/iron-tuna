@@ -455,6 +455,37 @@ export default {
       if (ref && !/^https?:\/\/(www\.)?irontuna\.com|^https?:\/\/localhost|\.pages\.dev/.test(ref)) return new Response('forbidden', { status: 403 });
       return new Response(_xb64encode(JSON.stringify(PROJECTIONS), PROJ_KEY), { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } });
     }
+    if (url.pathname === '/api/live') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      try {
+        const cache = caches.default;
+        const key = new Request(url.origin + '/api/live');
+        const hit = await cache.match(key);
+        if (hit) { const r = new Response(hit.body, hit); for (const [k, v] of Object.entries(c)) r.headers.set(k, v); return r; }
+        const up = await fetch('https://api.sleeper.app/v1/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } });
+        if (!up.ok) return json({ updated: Date.now(), players: {} }, 200, c);
+        const all = await up.json();
+        const FANT = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+        const out = {};
+        for (const id in all) {
+          const p = all[id];
+          if (!p || !FANT.has(p.position)) continue;
+          const name = p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+          if (!name) continue;
+          const inj = p.injury_status || null;
+          const team = p.team || null;
+          if (!inj && !team) continue;
+          out[name] = { t: team, i: inj, s: p.status || null };
+        }
+        const body = JSON.stringify({ updated: Date.now(), players: out });
+        const store = new Response(body, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=21600' } });
+        await cache.put(key, store.clone());
+        const r = new Response(body, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=21600' } });
+        for (const [k, v] of Object.entries(c)) r.headers.set(k, v);
+        return r;
+      } catch (e) { return json({ updated: Date.now(), players: {}, error: String(e) }, 200, c); }
+    }
     if (url.pathname === '/api/coach') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
