@@ -4697,9 +4697,6 @@ function Header({
     className: view === 'settings' ? 'active' : '',
     onClick: () => setView('settings')
   }, "Your League"), React.createElement("button", {
-    onClick: () => window.open('/guides', '_blank', 'noopener'),
-    title: "Auction strategy guides (opens in a new tab)"
-  }, "Guides"), React.createElement("button", {
     onClick: onShareEarn,
     title: "Share Iron Tuna and earn $2 per referral"
   }, "Share & Earn"), React.createElement("span", {
@@ -4919,10 +4916,6 @@ function LandingSplash({
   }, "Auction Night"), React.createElement("button", {
     onClick: () => go('faq')
   }, "FAQ"), React.createElement("button", {
-    onClick: () => {
-      window.location.href = '/guides';
-    }
-  }, "Guides"), React.createElement("button", {
     onClick: () => go('legal')
   }, "Terms"), React.createElement("button", {
     className: "lp-ribbon-cta",
