@@ -497,7 +497,7 @@ export default {
       const email = (body.email || '').trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid' }, 400, c);
       if (env.LEAD_WEBHOOK) {
-        try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, source: body.source || 'cheatsheet', scoring: body.scoring || null, ts: Date.now() }) }); } catch (e) {}
+        try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, source: body.source || 'cheatsheet', type: body.type || 'lead', code: body.code || null, scoring: body.scoring || null, ts: Date.now() }) }); } catch (e) {}
       }
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK }, 200, c);
     }
@@ -533,9 +533,22 @@ export default {
         form.set('line_items[0][quantity]', '1');
         form.set('success_url', url.origin + '/?paid=1&cs={CHECKOUT_SESSION_ID}');
         form.set('cancel_url', url.origin + '/?canceled=1');
-        form.set('allow_promotion_codes', 'true');
         if (email) form.set('customer_email', email);
-        if (ref) { form.set('client_reference_id', ref); form.set('metadata[ref]', ref); }
+        if (ref) {
+          form.set('client_reference_id', ref);
+          form.set('metadata[ref]', ref);
+          const couponId = env.STRIPE_REFERRAL_COUPON || 'irontuna_ref_1off';
+          try {
+            const cg = await fetch('https://api.stripe.com/v1/coupons/' + couponId, { headers: auth });
+            if (!cg.ok) {
+              const cf = new URLSearchParams(); cf.set('id', couponId); cf.set('amount_off', '100'); cf.set('currency', 'usd'); cf.set('duration', 'once'); cf.set('name', 'Referral $1 off');
+              await fetch('https://api.stripe.com/v1/coupons', { method: 'POST', headers: { ...auth, 'content-type': 'application/x-www-form-urlencoded' }, body: cf.toString() });
+            }
+            form.set('discounts[0][coupon]', couponId);
+          } catch (e) { form.set('allow_promotion_codes', 'true'); }
+        } else {
+          form.set('allow_promotion_codes', 'true');
+        }
         const sr = await fetch('https://api.stripe.com/v1/checkout/sessions', { method: 'POST', headers: { ...auth, 'content-type': 'application/x-www-form-urlencoded' }, body: form.toString() });
         const sj = await sr.json().catch(() => ({}));
         if (!sr.ok || !sj.url) return json({ error: (sj.error && sj.error.message) || ('Stripe ' + sr.status) }, 502, c);
@@ -553,6 +566,20 @@ export default {
         const j = await r.json().catch(() => ({}));
         return json({ paid: !!(j && j.payment_status === 'paid'), email: (j.customer_details && j.customer_details.email) || null, ref: (j.metadata && j.metadata.ref) || null }, 200, c);
       } catch (e) { return json({ paid: false }, 200, c); }
+    }
+    if (url.pathname === '/api/stripe-webhook') {
+      if (request.method !== 'POST') return new Response('method', { status: 405 });
+      const sig = request.headers.get('stripe-signature') || '';
+      const raw = await request.text();
+      if (!(await verifyStripeSig(raw, sig, env.STRIPE_WEBHOOK_SECRET))) return new Response('bad signature', { status: 400 });
+      let evt = {}; try { evt = JSON.parse(raw); } catch (e) {}
+      if (evt && evt.type === 'checkout.session.completed') {
+        const s = (evt.data && evt.data.object) || {};
+        const rec = { event: 'referral_sale', ref: (s.metadata && s.metadata.ref) || s.client_reference_id || null, buyer_email: (s.customer_details && s.customer_details.email) || s.customer_email || null, amount_total: s.amount_total, currency: s.currency, session: s.id, ts: Date.now() };
+        if (rec.ref && env.REFERRAL_WEBHOOK) { try { await fetch(env.REFERRAL_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(rec) }); } catch (e) {} }
+        if (env.ANALYTICS_WEBHOOK) { try { await fetch(env.ANALYTICS_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(rec) }); } catch (e) {} }
+      }
+      return new Response('ok', { status: 200 });
     }
     if (url.pathname === '/api/coach') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -635,6 +662,20 @@ async function handleCoach(request, env, c) {
   }
 }
 
+async function verifyStripeSig(payload, header, secret) {
+  if (!secret || !header) return false;
+  try {
+    const parts = {}; header.split(',').forEach(kv => { const i = kv.indexOf('='); if (i > 0) parts[kv.slice(0, i)] = kv.slice(i + 1); });
+    const t = parts.t, v1 = parts.v1;
+    if (!t || !v1) return false;
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(t + '.' + payload));
+    const hex = [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, '0')).join('');
+    if (hex.length !== v1.length) return false;
+    let diff = 0; for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
+    return diff === 0;
+  } catch (e) { return false; }
+}
 async function verifyTurnstile(secret, token, ip) {
   if (!token) return false;
   const form = new FormData();

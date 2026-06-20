@@ -10812,10 +10812,33 @@ function ReferralModal({
   const code = account && account.refCode;
   function getCode() {
     const c = genRefCode();
+    let em = account && account.user && account.user.email || account && account.refEmail || '';
+    if (!em) {
+      try {
+        em = (window.prompt('Email for your referral payouts (where we send your $5 per signup):') || '').trim();
+      } catch (e) {}
+    }
     setAccount(a => Object.assign({}, a, {
-      refCode: c
+      refCode: c,
+      refEmail: em || a.refEmail || ''
     }));
     ITAnalytics.track('refcode_created', {});
+    if (em && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) {
+      try {
+        fetch('/api/lead', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: em,
+            source: 'referrer',
+            type: 'referrer',
+            code: c
+          })
+        });
+      } catch (e) {}
+    }
   }
   const link = code ? 'https://irontuna.com/?ref=' + encodeURIComponent(code) : 'https://irontuna.com';
   const REF = 'Powered by IronTuna.com';
