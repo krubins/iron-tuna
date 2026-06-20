@@ -1383,6 +1383,15 @@ input:focus, select:focus { border-color: var(--accent); }
 .rf-link { flex: 1; min-width: 0; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text-primary); font-size: 13px; font-family: var(--font-mono); }
 .rf-copy { background: rgba(45,212,163,0.14); color: var(--positive); border: 1px solid var(--positive); border-radius: var(--radius-sm); padding: 9px 13px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .rf-share-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 4px 0 8px; }
+.cheat-col-mobhide { display: none !important; }
+.cheat-mobnav { display: none; }
+@media (max-width: 760px) {
+  .cheat-mobnav { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; position: sticky; top: 0; z-index: 6; background: var(--bg-base); padding: 8px 0; }
+  .cheat-mobnav .cmn-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+  .cheat-mobnav select { flex: 1; padding: 12px 14px; font-size: 16px; background: var(--bg-elev); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: var(--font-display); letter-spacing: 0.04em; }
+  .cheat-grid { grid-template-columns: 1fr !important; gap: 12px; }
+  .main { padding-left: 12px !important; padding-right: 12px !important; }
+}
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -7615,6 +7624,7 @@ function TeamsBoard({
   const [detail, setDetail] = useState(null);
   function startCardDrag(e, id) {
     if (e.button !== undefined && e.button !== 0) return;
+    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button, input')) return;
     const el = cardRefs.current[id];
     if (!el) return;
@@ -10016,6 +10026,17 @@ function Cheatsheet({
   const _fmtMyRoster = myTeam && myTeam.roster ? myTeam.roster.map(r => (players || []).find(x => x.id === r.playerId)).filter(Boolean) : [];
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
+  const [mobPos, setMobPos] = useState('QB');
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia('(max-width: 760px)');
+    const fn = () => setIsNarrow(mq.matches);
+    if (mq.addEventListener) mq.addEventListener('change', fn);else mq.addListener(fn);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', fn);else mq.removeListener(fn);
+    };
+  }, []);
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
@@ -10107,6 +10128,7 @@ function Cheatsheet({
   });
   function startDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
+    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
     const el = rowRefs.current[id];
     if (!el) return;
@@ -10251,13 +10273,24 @@ function Cheatsheet({
     className: "cph-key"
   }, React.createElement("i", {
     className: "k-hl"
-  }), "★ highlighted target"))), React.createElement("div", {
+  }), "★ highlighted target"))), isNarrow && React.createElement("div", {
+    className: "cheat-mobnav no-print"
+  }, React.createElement("span", {
+    className: "cmn-label"
+  }, "Position"), React.createElement("select", {
+    value: mobPos,
+    onChange: e => setMobPos(e.target.value),
+    "aria-label": "Choose a position to view"
+  }, cols.map(([pos, n]) => React.createElement("option", {
+    key: pos,
+    value: pos
+  }, pos, " — top ", n)))), React.createElement("div", {
     className: `cheat-grid ${highlight ? 'has-hl' : ''}`
   }, colGroups.map((grp, gi) => React.createElement("div", {
     className: "cheat-col-group",
     key: gi
   }, grp.map(([pos, n]) => React.createElement("div", {
-    className: `cheat-col cc-${pos}`,
+    className: `cheat-col cc-${pos} ${isNarrow && pos !== mobPos ? 'cheat-col-mobhide' : ''}`,
     key: pos
   }, React.createElement("div", {
     className: "cheat-col-head cch-wrap"
@@ -10313,7 +10346,7 @@ function Cheatsheet({
       className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''}`,
       onPointerDown: e => startDrag(e, p.id, pos),
       style: {
-        touchAction: 'none',
+        touchAction: 'pan-y',
         gridTemplateColumns: gridT
       }
     }, React.createElement("span", {
@@ -13231,6 +13264,7 @@ function PlayersRail({
   }, [focusPlayer]);
   function startRankDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
+    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
     const info = rowRefs.current[id];
     if (!info || !info.el) return;
@@ -13476,7 +13510,7 @@ function PlayersRail({
         onPointerDown: e => startRankDrag(e, p.id, p.position),
         style: {
           cursor: 'grab',
-          touchAction: 'none'
+          touchAction: 'pan-y'
         }
       }, React.createElement("div", {
         className: "rr-l1",
