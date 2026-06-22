@@ -1073,6 +1073,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-mode-ico svg { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.55)); }
 .lp-mode-name { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.02em; font-weight: 700; }
 .lp-mode-line { font-size: 14px; color: var(--text-secondary); line-height: 1.4; flex: 1; }
+.lp-mode-bul { list-style: none; margin: 6px 0 2px; padding: 0; display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.lp-mode-bul li { position: relative; padding-left: 16px; font-size: 12.5px; color: var(--text-secondary, #aab2b8); line-height: 1.35; }
+.lp-mode-bul li::before { content: "▸"; position: absolute; left: 0; top: 0; color: var(--mode-accent); }
 .lp-mode-go { margin-top: 6px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mode-accent, var(--gold-text)); }
 .lp-demo-cta-row { padding: 12px 14px 14px; }
 .lp-demo-cta { width: 100%; border: none; border-radius: 10px; padding: 13px; font-family: var(--font-display); font-size: 16px; letter-spacing: 0.04em; font-weight: 700; color: #10131a; cursor: pointer; transition: filter 0.12s; }
@@ -1431,6 +1434,11 @@ input:focus, select:focus { border-color: var(--accent); }
 @media (max-width: 600px) { .lead-capture .lc-form { width: 100%; } .lead-capture .lc-form input { flex: 1; min-width: 0; } }
 .taunt-wrap .taunt-select { background: var(--bg-elev); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 9px; font-size: 13px; margin-right: 8px; max-width: 160px; }
 .roast-menu { left: auto; right: 0; max-height: 320px; overflow-y: auto; }
+
+.sheet-view-tog { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px; }
+.svt-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.svt-btn { background: rgba(255,255,255,0.04); color: var(--text-secondary); border: 1px solid var(--border-subtle, rgba(255,255,255,0.12)); border-radius: 7px; padding: 6px 12px; font-size: 12.5px; cursor: pointer; }
+.svt-btn.on { background: color-mix(in srgb, var(--mode-accent, #4ea3ff) 22%, transparent); border-color: var(--mode-accent, #4ea3ff); color: var(--text-primary); }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -10126,6 +10134,10 @@ function Cheatsheet({
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 600px)').matches);
   const [mobPos, setMobPos] = useState('QB');
+  const [sheetView, setSheetView] = useState('position');
+  const __snakeVal = !!(config && config.format === 'snake') && sheetView === 'value';
+  const colsV = __snakeVal ? [['ALL', 600]] : cols;
+  const colGroupsV = __snakeVal ? [[['ALL', 600]]] : colGroups;
   useEffect(() => {
     if (!window.matchMedia) return;
     const mq = window.matchMedia('(max-width: 600px)');
@@ -10138,6 +10150,7 @@ function Cheatsheet({
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
+  byPos.ALL = (players || []).slice().sort((a, b) => ((b.auctionValue != null ? b.auctionValue : b.projectedPoints || 0) - (a.auctionValue != null ? a.auctionValue : a.projectedPoints || 0)));
   const draftInfoMap = useMemo(() => {
     const m = {};
     const tn = new Map((teams || []).map(t => [t.id, t]));
@@ -10379,12 +10392,12 @@ function Cheatsheet({
     value: mobPos,
     onChange: e => setMobPos(e.target.value),
     "aria-label": "Choose a position to view"
-  }, cols.map(([pos]) => React.createElement("option", {
+  }, colsV.map(([pos]) => React.createElement("option", {
     key: pos,
     value: pos
-  }, pos)))), React.createElement("div", {
+  }, pos)))), (config && config.format === 'snake') && React.createElement("div", { className: "sheet-view-tog no-print" }, React.createElement("span", { className: "svt-label" }, "View"), React.createElement("button", { className: "svt-btn " + (sheetView === 'position' ? 'on' : ''), onClick: () => setSheetView('position') }, "By position"), React.createElement("button", { className: "svt-btn " + (sheetView === 'value' ? 'on' : ''), onClick: () => setSheetView('value') }, "By value")), React.createElement("div", {
     className: `cheat-grid ${highlight ? 'has-hl' : ''}`
-  }, colGroups.map((grp, gi) => React.createElement("div", {
+  }, colGroupsV.map((grp, gi) => React.createElement("div", {
     className: "cheat-col-group",
     key: gi
   }, grp.map(([pos, n]) => React.createElement("div", {
@@ -10394,9 +10407,9 @@ function Cheatsheet({
     className: "cheat-col-head cch-wrap"
   }, React.createElement("div", {
     className: "cch-row"
-  }, React.createElement("span", null, pos), React.createElement("span", {
+  }, React.createElement("span", null, pos === 'ALL' ? 'All players' : pos), React.createElement("span", {
     className: "cheat-col-sub"
-  }, "top ", n)), posTrends[pos] ? React.createElement("div", {
+  }, pos === 'ALL' ? 'ranked by value' : ["top ", n])), posTrends[pos] ? React.createElement("div", {
     className: "cch-trend no-print",
     title: posTrends[pos]
   }, posTrends[pos]) : null), React.createElement("div", {
@@ -18227,12 +18240,12 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-section lp-modes"
   }, React.createElement("div", {
     className: "lp-modes-grid"
-  }, [{ fmt: 'snake', name: 'Snake Draft', line: 'You pick in order, then wait a full round to pick again. We tell you who is likely to make it back to you, so you know when to grab a guy and when to wait.', cta: 'Build my snake board', accent: sAccent, icon: CLOCK_SVG }, { fmt: 'auction', name: 'Auction Draft', line: 'One shared budget, and every player is up for bid. We give you the most he is worth to your team, then re-figure it the second somebody else spends.', cta: 'Build my auction board', accent: aAccent, icon: GAVEL_SVG }].map(m => React.createElement("button", {
+  }, [{ fmt: 'snake', name: 'Snake Draft', line: 'You pick in order, then wait a full round to pick again. We tell you who is likely to make it back to you, so you know when to grab a guy and when to wait.', cta: 'Build my snake board', bullets: ['Overall rankings, top to bottom', 'Survival odds on every pick'], accent: sAccent, icon: CLOCK_SVG }, { fmt: 'auction', name: 'Auction Draft', line: 'One shared budget, and every player is up for bid. We give you the most he is worth to your team, then re-figure it the second somebody else spends.', cta: 'Build my auction board', bullets: ['Your exact max bid on any player', "Every team's budget, tracked live"], accent: aAccent, icon: GAVEL_SVG }].map(m => React.createElement("button", {
     key: m.fmt,
     className: "lp-mode-card",
     style: { '--mode-accent': m.accent },
     onClick: () => onPick(m.fmt)
-  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), React.createElement("span", { className: "lp-mode-line" }, m.line), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", {
+  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), React.createElement("span", { className: "lp-mode-line" }, m.line), React.createElement("ul", { className: "lp-mode-bul" }, (m.bullets || []).map((b, i) => React.createElement("li", { key: i }, b))), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", {
     className: "lp-section",
     ref: faqRef
   }, React.createElement("div", {
