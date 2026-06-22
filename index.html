@@ -4955,7 +4955,7 @@ function LandingSplash({
     }
   }, "Auction · Salary-cap · Superflex · 2-QB leagues"), React.createElement("h1", {
     className: "lp-head"
-  }, "Know what to do when you’re on the clock."), React.createElement("p", {
+  }, "Know what to bid when you’re on the clock."), React.createElement("p", {
     className: "lp-sub"
   }, "Custom values for your exact league: ", React.createElement("b", null, "likely price"), ", ", React.createElement("b", null, "true value"), ", and ", React.createElement("b", null, "your max bid"), " on every player, re-priced live as the money leaves the room."), React.createElement("div", {
     className: "lp-cta-row",
@@ -4971,47 +4971,6 @@ function LandingSplash({
   }, "See Draft Night Mode")), React.createElement("p", {
     className: "lp-reassure"
   }, "Free, no account. Draft Night Mode is a one-time $9.99, with a 30-day money-back guarantee.")), React.createElement("div", {
-    className: "lp-section lp-modes",
-    ref: modesRef
-  }, React.createElement("div", {
-    className: "lp-preview-eyebrow"
-  }, "Start here"), React.createElement("h2", {
-    className: "lp-preview-h"
-  }, "Pick how your league drafts."), React.createElement("div", {
-    className: "lp-modes-grid"
-  }, [{
-    fmt: 'auction',
-    name: 'Auction',
-    line: 'Know your exact max bid.'
-  }, {
-    fmt: 'snake',
-    name: 'Snake',
-    line: "Know if he'll get back to you."
-  }].map(m => {
-    const accent = (FORMAT_META[m.fmt] || FORMAT_META.auction).color;
-    return React.createElement("button", {
-      key: m.fmt,
-      className: "lp-mode-card",
-      style: {
-        '--mode-accent': accent
-      },
-      onClick: () => go('prep', 'mode_card_click', m.fmt)
-    }, React.createElement("span", {
-      className: "lp-mode-dot",
-      style: {
-        background: accent
-      }
-    }), React.createElement("span", {
-      className: "lp-mode-name",
-      style: {
-        color: accent
-      }
-    }, m.name), React.createElement("span", {
-      className: "lp-mode-line"
-    }, m.line), React.createElement("span", {
-      className: "lp-mode-go"
-    }, "Start \u2192"));
-  }))), React.createElement("div", {
     className: "lp-preview-eyebrow",
     style: {
       textAlign: 'center',
@@ -17608,7 +17567,8 @@ function CheckoutModal({
         },
         body: JSON.stringify({
           ref,
-          email
+          email,
+          path: (function(){ try { return window.location.pathname; } catch(e){ return '/'; } })()
         })
       });
       const j = await r.json();
@@ -18283,6 +18243,56 @@ function Coachmark({
     }))
   }, "Got it"));
 }
+function HubLanding({ onPick, onSignin, onTerms }) {
+  const faqRef = useRef(null);
+  const scrollFaq = () => { try { faqRef.current && faqRef.current.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} };
+  const aAccent = (FORMAT_META.auction || {}).color || 'var(--gold-text)';
+  const sAccent = (FORMAT_META.snake || {}).color || '#4ea3ff';
+  const HUB_FAQS = [['Does Iron Tuna work for both snake and auction drafts?', 'Yes. Pick your format above. Auction gives live max-bid math and budget tracking; Snake gives a best-available board and survival odds for your next pick.'], ['Do I need an account?', 'No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft night.'], ['Can I use my exact league scoring?', 'Yes. Set your scoring, roster slots, and league size, and every value recalculates to your settings, including superflex and 2-QB.'], ['How much does it cost?', 'The cheat sheet is free in both formats. The live Draft Night experience is a one-time $9.99 with a 30-day money-back guarantee.'], ['Can I use it during the live draft?', 'Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft.'], ['Is it fair to use in my league?', 'Yes. It is a smarter cheat sheet built on projections. Your edge comes from reacting faster and more rationally than the rest of the room.']];
+  return React.createElement("div", {
+    className: "landing-splash landing-page"
+  }, React.createElement("div", {
+    className: "landing-vignette"
+  }), React.createElement("nav", {
+    className: "lp-ribbon"
+  }, React.createElement("div", {
+    className: "lp-ribbon-brand"
+  }, React.createElement("button", {
+    className: "lp-ribbon-logo-btn",
+    onClick: () => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} },
+    title: "Iron Tuna",
+    "aria-label": "Iron Tuna"
+  }, React.createElement(LogoMark, { height: 22 }))), React.createElement("div", {
+    className: "lp-ribbon-links"
+  }, React.createElement("button", { onClick: scrollFaq }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Sign in"))), React.createElement("div", {
+    className: "lp-inner"
+  }, React.createElement("div", {
+    className: "lp-hero it-hero"
+  }, React.createElement(LogoMark, { tagline: true, height: 300, className: "landing-logo" })), React.createElement("div", {
+    className: "lp-section lp-modes"
+  }, React.createElement("div", {
+    className: "lp-preview-eyebrow"
+  }, "Start here"), React.createElement("h2", {
+    className: "lp-preview-h"
+  }, "Pick how your league drafts."), React.createElement("div", {
+    className: "lp-modes-grid"
+  }, [{ fmt: 'auction', name: 'Auction Draft', line: 'Know your exact max bid.', accent: aAccent }, { fmt: 'snake', name: 'Snake Draft', line: "Know if he'll get back to you.", accent: sAccent }].map(m => React.createElement("button", {
+    key: m.fmt,
+    className: "lp-mode-card",
+    style: { '--mode-accent': m.accent },
+    onClick: () => onPick(m.fmt)
+  }, React.createElement("span", { className: "lp-mode-dot", style: { background: m.accent } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), React.createElement("span", { className: "lp-mode-line" }, m.line), React.createElement("span", { className: "lp-mode-go" }, "Start →"))))), React.createElement("div", {
+    className: "lp-section",
+    ref: faqRef
+  }, React.createElement("div", {
+    className: "lp-preview-eyebrow"
+  }, "FAQ"), React.createElement("h2", {
+    className: "lp-preview-h"
+  }, "Questions, answered"), HUB_FAQS.map(([q, a], i) => React.createElement("div", {
+    className: "lp-faq-item",
+    key: i
+  }, React.createElement("div", { className: "lp-faq-q" }, q), React.createElement("div", { className: "lp-faq-a" }, a))))));
+}
 function App() {
   const initialState = (() => {
     try {
@@ -18299,7 +18309,9 @@ function App() {
     }
   })();
   const remoteApplyRef = useRef(false);
-  const [config, setConfig] = useState(initialState?.config || DEFAULT_LEAGUE_CONFIG);
+  const __itPath = (() => { try { return window.location.pathname || '/'; } catch (e) { return '/'; } })();
+  const __itFmt = __itPath.indexOf('/snakedraft') === 0 ? 'snake' : 'auction';
+  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; return { ...__b, format: __itFmt }; })());
   const [players, setPlayers] = useState(initialState?.players || buildInitialPlayers(BASELINE_PROJECTIONS));
   const [valueAdjust, setValueAdjust] = useState(initialState?.valueAdjust || {});
   const [priceOverrides, setPriceOverrides] = useState(initialState?.priceOverrides || {});
@@ -18380,10 +18392,11 @@ function App() {
           localStorage.setItem('it_ref_in', refIn.slice(0, 40));
         } catch (e) {}
       }
+      try { if (sp.get('signin') === '1') setOverlay('auth'); else if (sp.get('legal') === '1') setOverlay('legal'); } catch (e) {}
       const clean = () => {
         try {
           const u = new URL(window.location.href);
-          ['paid', 'cs', 'canceled'].forEach(k => u.searchParams.delete(k));
+          ['paid', 'cs', 'canceled', 'signin', 'legal'].forEach(k => u.searchParams.delete(k));
           window.history.replaceState({}, '', u.pathname + (u.search || ''));
         } catch (e) {}
       };
@@ -19684,6 +19697,8 @@ function App() {
     cta: 'Board',
     action: () => setView('board')
   }];
+  const __site = (() => { const p = (() => { try { return window.location.pathname || '/'; } catch (e) { return '/'; } })(); return p.indexOf('/snakedraft') === 0 ? 'snake' : p.indexOf('/auctiondraft') === 0 ? 'auction' : 'hub'; })();
+  if (__site === 'hub') return React.createElement(HubLanding, { onPick: (fmt) => { try { window.location.href = fmt === 'snake' ? '/snakedraft' : '/auctiondraft'; } catch (e) {} }, onSignin: () => { try { window.location.href = '/auctiondraft?signin=1'; } catch (e) {} }, onTerms: () => { try { window.location.href = '/auctiondraft?legal=1'; } catch (e) {} } });
   return React.createElement("div", {
     className: "app"
   }, React.createElement("svg", {

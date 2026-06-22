@@ -527,12 +527,13 @@ export default {
           if (!priceId) { const lr = await fetch('https://api.stripe.com/v1/prices?active=true&limit=1&product=' + productId, { headers: auth }); const lj = await lr.json().catch(() => ({})); priceId = lj.data && lj.data[0] && lj.data[0].id; }
         }
         if (!priceId) return json({ error: 'No active price on product. Add a one-off price in Stripe.' }, 500, c);
+        let __rp = '/'; try { __rp = String(b.path || '/'); } catch (e) {} if (!/^\/(auctiondraft|snakedraft)$/.test(__rp)) __rp = '/'; const __base = url.origin + __rp;
         const form = new URLSearchParams();
         form.set('mode', 'payment');
         form.set('line_items[0][price]', priceId);
         form.set('line_items[0][quantity]', '1');
-        form.set('success_url', url.origin + '/?paid=1&cs={CHECKOUT_SESSION_ID}');
-        form.set('cancel_url', url.origin + '/?canceled=1');
+        form.set('success_url', __base + '?paid=1&cs={CHECKOUT_SESSION_ID}');
+        form.set('cancel_url', __base + '?canceled=1');
         if (email) form.set('customer_email', email);
         if (ref) {
           form.set('client_reference_id', ref);
@@ -589,7 +590,9 @@ export default {
     }
     // Serve static assets, but tell browsers to revalidate HTML every load so
     // updates show up without a hard refresh (the app is a single index.html).
-    const resp = await env.ASSETS.fetch(request);
+    let __assetReq = request;
+    try { if (/^\/(auctiondraft|snakedraft)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request); } catch (e) {}
+    const resp = await env.ASSETS.fetch(__assetReq);
     const ct = resp.headers.get('content-type') || '';
     if (ct.includes('text/html')) {
       const r = new Response(resp.body, resp);
