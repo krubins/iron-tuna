@@ -6,7 +6,7 @@
   --it-accent-ink:#04211c; --it-radius:10px;
 }
 body{ background:var(--it-bg); color:var(--it-text-mut); }
-.it-hero{ position:relative; overflow:hidden; background:transparent; }
+.it-hero{ position:relative; background:transparent; }
 .it-hero::before{
   content:""; position:absolute; top:-120px; left:50%; transform:translateX(-50%);
   width:560px; height:340px; pointer-events:none; z-index:0;
@@ -28,3 +28,5 @@ body{ background:var(--it-bg); color:var(--it-text-mut); }
 }
 .it-btn:hover{ box-shadow:0 0 36px rgb(var(--it-accent-rgb)/0.45); }
 .it-accent-text{ color:var(--it-accent-soft); }
+
+.it-hero::before, .it-hero::after { display:none !important; }
