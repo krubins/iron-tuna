@@ -9743,7 +9743,7 @@ function CheatHeader({
         whiteSpace: 'nowrap'
       }
     }, "~", React.createElement("b", null, Math.round(alloc * 35), "%"), " held for bench depth"));
-  })(), myTeam && modelAlloc && modelAlloc.length > 0 && React.createElement("div", {
+  })(), myTeam && model && config && config.format !== 'snake' && modelAlloc && modelAlloc.length > 0 && React.createElement("div", {
     style: {
       flexBasis: '100%',
       display: 'flex',
