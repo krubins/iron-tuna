@@ -18259,14 +18259,7 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "landing-vignette"
   }), React.createElement("nav", {
     className: "lp-ribbon"
-  }, React.createElement("div", {
-    className: "lp-ribbon-brand"
-  }, React.createElement("button", {
-    className: "lp-ribbon-logo-btn",
-    onClick: () => { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} },
-    title: "Iron Tuna",
-    "aria-label": "Iron Tuna"
-  }, React.createElement(LogoMark, { height: 22 }))), React.createElement("div", {
+  }, React.createElement("div", { className: "lp-ribbon-spacer" }), React.createElement("div", {
     className: "lp-ribbon-links"
   }, React.createElement("button", { onClick: scrollFaq }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Sign in"))), React.createElement("div", {
     className: "lp-inner"
@@ -18274,9 +18267,7 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-hero it-hero"
   }, React.createElement(LogoMark, { tagline: true, height: 300, className: "landing-logo" })), React.createElement("div", {
     className: "lp-section lp-modes"
-  }, React.createElement("div", {
-    className: "lp-preview-eyebrow"
-  }, "Start here"), React.createElement("h2", {
+  }, React.createElement("h2", {
     className: "lp-preview-h"
   }, "Pick how your league drafts."), React.createElement("div", {
     className: "lp-modes-grid"
