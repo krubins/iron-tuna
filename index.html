@@ -50,8 +50,8 @@
   --gold: #f5b800;
   --gold-soft: #f5b80015;
   --gold-text: #ffcb33;
-  --positive: #2dd4a3;
-  --positive-soft: #2dd4a315;
+  --positive: #22d3ee;
+  --positive-soft: #22d3ee15;
   --warning: #f59e0b;
   --danger: #ef4444;
   --pos-qb: #d946ef;
@@ -209,7 +209,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .team-card { background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; position: relative; }
 .team-card .tc-header { padding-right: 40px; }
 .team-grade { position: absolute; top: 8px; right: 10px; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: 0.02em; }
-.team-grade.gr-a { background: rgba(45,212,163,0.16); color: #2dd4a3; border: 1px solid rgba(45,212,163,0.5); }
+.team-grade.gr-a { background: rgba(45,212,163,0.16); color: #22d3ee; border: 1px solid rgba(45,212,163,0.5); }
 .team-grade.gr-b { background: rgba(234,179,8,0.16); color: #f0c63a; border: 1px solid rgba(234,179,8,0.5); }
 .team-grade.gr-c { background: rgba(249,115,22,0.16); color: #f6924a; border: 1px solid rgba(249,115,22,0.5); }
 .team-grade.gr-d { background: rgba(239,68,68,0.15); color: #ef6a6a; border: 1px solid rgba(239,68,68,0.45); }
@@ -1064,7 +1064,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-demo-val.down { color: var(--danger); }
 .lp-demo-arrow { font-style: normal; font-size: 10px; margin-right: 4px; }
 .lp-demo-note { padding: 8px 16px 0; font-size: 13px; color: var(--text-muted); }
-.lp-modes-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 44px; max-width: 760px; margin: 16px auto 0; }
+.lp-modes-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 40px; max-width: 880px; margin: 16px auto 0; }
 .lp-mode-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; cursor: pointer; padding: 24px 22px 22px; border-radius: 16px; overflow: hidden; background: radial-gradient(120% 60% at 50% -12%, color-mix(in srgb, var(--mode-accent) 16%, transparent), transparent 70%), linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 55%, rgba(0,0,0,0.12) 100%); border: 1px solid color-mix(in srgb, var(--mode-accent) 30%, rgba(255,255,255,0.08)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 18px 42px -22px rgba(0,0,0,0.85), 0 0 30px -16px var(--mode-accent); transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
 .lp-mode-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--mode-accent) 22%, var(--mode-accent) 78%, transparent); box-shadow: 0 0 14px var(--mode-accent); opacity: 0.95; }
 .lp-mode-card:hover { transform: translateY(-5px); border-color: var(--mode-accent); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 28px 60px -22px rgba(0,0,0,0.9), 0 0 54px -8px var(--mode-accent); }
@@ -1073,7 +1073,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-mode-ico svg { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.55)); }
 .lp-mode-name { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.02em; font-weight: 700; }
 .lp-mode-line { font-size: 14px; color: var(--text-secondary); line-height: 1.4; }
-.lp-mode-bul { list-style: none; margin: 6px 0 2px; padding: 0; display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.lp-mode-bul { list-style: none; margin: 6px 0 2px; padding: 0; display: flex; flex-direction: column; gap: 9px; width: 100%; }
 .lp-mode-bul li { position: relative; padding-left: 16px; font-size: 12.5px; color: var(--text-secondary, #aab2b8); line-height: 1.35; }
 .lp-mode-bul li::before { content: "▸"; position: absolute; left: 0; top: 0; color: var(--mode-accent); }
 .lp-mode-go { margin-top: auto; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mode-accent, var(--gold-text)); }
@@ -1383,7 +1383,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .font-scale-bar .fs-reset { background: none; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; text-decoration: underline; }
 .font-scale-bar .fs-reset:hover { color: var(--text-primary); }
 :focus-visible { outline: 2px solid var(--gold-text); outline-offset: 2px; }
-.summarize-btn { margin-left: auto; background: linear-gradient(135deg, #2dd4a3, #1aa883); color: #06231b; border: none; border-radius: 20px; padding: 7px 15px; font-family: var(--font-display); font-size: 15px; letter-spacing: 0.03em; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(45,212,163,0.3); transition: transform 0.1s, filter 0.1s; }
+.summarize-btn { margin-left: auto; background: linear-gradient(135deg, #22d3ee, #1aa883); color: #06231b; border: none; border-radius: 20px; padding: 7px 15px; font-family: var(--font-display); font-size: 15px; letter-spacing: 0.03em; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(45,212,163,0.3); transition: transform 0.1s, filter 0.1s; }
 .summarize-btn:hover { transform: translateY(-1px); filter: brightness(1.07); }
 .strategy-bar .taunt-btn { margin-left: 8px; }
 .ds-tabs { display: flex; gap: 6px; margin: 10px 0 12px; flex-wrap: wrap; }
@@ -4517,7 +4517,7 @@ function LogoMark({
     dx: "0",
     dy: "0",
     stdDeviation: "11",
-    floodColor: "#2dd4a3",
+    floodColor: "#22d3ee",
     floodOpacity: "0.085"
   }))), React.createElement("image", {
     href: "/tuna.png",
@@ -9990,7 +9990,7 @@ function CheatHeader({
     }
   }, React.createElement("span", {
     style: {
-      color: '#2dd4a3'
+      color: '#22d3ee'
     }
   }, "● potential bargain"), " ", React.createElement("span", {
     style: {
@@ -18219,9 +18219,9 @@ function HubLanding({ onPick, onSignin, onTerms }) {
   const faqRef = useRef(null);
   const scrollFaq = () => { try { faqRef.current && faqRef.current.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} };
   const aAccent = '#e3b53a';
-  const sAccent = '#2dd4a3';
+  const sAccent = '#22d3ee';
   const GAVEL_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" y1="0" x2="0.85" y2="1"><stop offset="0" stop-color="#fdeeb0"/><stop offset="0.4" stop-color="#e9bf4e"/><stop offset="1" stop-color="#a06e15"/></linearGradient><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c89327"/><stop offset="1" stop-color="#6c4708"/></linearGradient><radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e9bf4e" stop-opacity="0.45"/><stop offset="1" stop-color="#e9bf4e" stop-opacity="0"/></radialGradient></defs><ellipse cx="36" cy="40" rx="30" ry="30" fill="url(#glow)"/><!-- sound block base --><rect x="16" y="56" width="40" height="8" rx="4" fill="url(#gd)"/><rect x="19" y="53" width="34" height="6" rx="3" fill="url(#g)"/><rect x="22" y="54" width="22" height="1.6" rx="0.8" fill="#fff" opacity="0.4"/><!-- gavel head+handle, rotated --><g transform="rotate(40 36 30)"><rect x="33" y="24" width="6" height="26" rx="3" fill="url(#g)" stroke="#7a520c" stroke-width="0.5"/><rect x="22" y="9" width="28" height="15" rx="5" fill="url(#g)" stroke="#7a520c" stroke-width="0.6"/><rect x="24.5" y="9" width="3.2" height="15" rx="1.4" fill="url(#gd)" opacity="0.65"/><rect x="44.3" y="9" width="3.2" height="15" rx="1.4" fill="url(#gd)" opacity="0.65"/><rect x="25" y="11" width="22" height="2.4" rx="1.2" fill="#fff" opacity="0.45"/></g></svg>';
-  const CLOCK_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dafaf2"/><stop offset=".5" stop-color="#37cfa8"/><stop offset="1" stop-color="#0f7a64"/></linearGradient><radialGradient id="sglow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#2dd4a3" stop-opacity="0.4"/><stop offset="1" stop-color="#2dd4a3" stop-opacity="0"/></radialGradient></defs><circle cx="36" cy="36" r="32" fill="url(#sglow)"/><path d="M14 17 H46 a10 10 0 0 1 0 20 H26 a10 10 0 0 0 0 20 H56" fill="none" stroke="url(#ice)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><!-- start node (pick 1) --><circle cx="14" cy="17" r="4" fill="#eaf6ff"/><!-- arrowhead at the end --><path d="M50 49 L57 57 L49 60" fill="none" stroke="#eaf6ff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CLOCK_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8f7fd"/><stop offset=".5" stop-color="#22d3ee"/><stop offset="1" stop-color="#0b7e9c"/></linearGradient><radialGradient id="sglow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#22d3ee" stop-opacity="0.4"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient></defs><circle cx="36" cy="36" r="32" fill="url(#sglow)"/><path d="M14 17 H46 a10 10 0 0 1 0 20 H26 a10 10 0 0 0 0 20 H56" fill="none" stroke="url(#ice)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><!-- start node (pick 1) --><circle cx="14" cy="17" r="4" fill="#eaf6ff"/><!-- arrowhead at the end --><path d="M50 49 L57 57 L49 60" fill="none" stroke="#eaf6ff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const HUB_FAQS = [['Does Iron Tuna work for both snake and auction drafts?', 'Yes. Pick your format above. Auction gives live max-bid math and budget tracking; Snake gives a best-available board and survival odds for your next pick.'], ['Do I need an account?', 'No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft night.'], ['Can I use my exact league scoring?', 'Yes. Set your scoring, roster slots, and league size, and every value recalculates to your settings, including superflex and 2-QB.'], ['How much does it cost?', 'The cheat sheet is free in both formats. The live Draft Night experience is a one-time $9.99 with a 30-day money-back guarantee.'], ['Can I use it during the live draft?', 'Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft.'], ['Is it fair to use in my league?', 'Yes. It is a smarter cheat sheet built on projections. Your edge comes from reacting faster and more rationally than the rest of the room.']];
   return React.createElement("div", {
     className: "landing-splash landing-page hub-landing"
@@ -18239,12 +18239,12 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-section lp-modes"
   }, React.createElement("div", {
     className: "lp-modes-grid"
-  }, [{ fmt: 'snake', name: 'Snake Draft', line: '', cta: 'Build my snake board', bullets: ['AI rankings that adjust based on your in-draft needs.', 'Odds that a player will be available for your next pick.', 'Elevated rankings for players that fit your roster.', 'Value Coach to provide live AI assistance based on your league as the draft unfolds.'], accent: sAccent, icon: CLOCK_SVG }, { fmt: 'auction', name: 'Auction Draft', line: 'We give you the most he is worth to your team, then re-figure it the second somebody else spends.', cta: 'Build my auction board', bullets: ['Your exact max bid on any player', "Every team's budget, tracked live"], accent: aAccent, icon: GAVEL_SVG }].map(m => React.createElement("button", {
+  }, [{ fmt: 'snake', name: 'Snake Draft', line: "We rerank players as the draft progresses based on your team's changing needs.", cta: 'Build my snake board', bullets: ['AI rankings that adjust based on your in-draft needs.', 'Odds that a player will be available for your next pick.', 'Elevated rankings for players that fit your roster.', 'Value Coach to provide live AI assistance based on your league as the draft unfolds.'], accent: sAccent, icon: CLOCK_SVG }, { fmt: 'auction', name: 'Auction Draft', line: "We rerank players as the draft progresses based on your team's changing needs.", cta: 'Build my auction board', bullets: ["Your exact max bid on any player, recalculated as the room spends.", "Every team's budget and roster needs, tracked live.", "The best roster your budget can still afford, re-solved every pick.", "Value Coach to provide live AI assistance based on your league as the draft unfolds."], accent: aAccent, icon: GAVEL_SVG }].map(m => React.createElement("button", {
     key: m.fmt,
     className: "lp-mode-card",
     style: { '--mode-accent': m.accent },
     onClick: () => onPick(m.fmt)
-  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), m.line ? React.createElement("span", { className: "lp-mode-line" }, m.line) : null, React.createElement("ul", { className: "lp-mode-bul" }, (m.bullets || []).map((b, i, arr) => React.createElement("li", { key: i, style: m.fmt === 'snake' && i === arr.length - 1 ? { fontWeight: 700, color: 'var(--text-primary)' } : undefined }, b))), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", { className: "lp-ai-line" }, React.createElement("span", { className: "lp-ai-a" }, "AI can beat the chess grandmasters. "), React.createElement("b", { className: "lp-ai-b" }, "It can beat your leaguemates.")), React.createElement("div", {
+  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), m.line ? React.createElement("span", { className: "lp-mode-line" }, m.line) : null, React.createElement("ul", { className: "lp-mode-bul" }, (m.bullets || []).map((b, i, arr) => React.createElement("li", { key: i, style: i === arr.length - 1 ? { fontWeight: 700, color: 'var(--text-primary)' } : undefined }, b))), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", { className: "lp-ai-line" }, React.createElement("span", { className: "lp-ai-a" }, "AI can beat the chess grandmasters. "), React.createElement("b", { className: "lp-ai-b" }, "It can beat your leaguemates.")), React.createElement("div", {
     className: "lp-section",
     ref: faqRef
   }, React.createElement("div", {
