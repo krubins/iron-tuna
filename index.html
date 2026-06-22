@@ -18269,14 +18269,14 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-section lp-modes"
   }, React.createElement("h2", {
     className: "lp-preview-h"
-  }, "Pick how your league drafts."), React.createElement("div", {
+  }, "How does your league draft?"), React.createElement("div", {
     className: "lp-modes-grid"
-  }, [{ fmt: 'auction', name: 'Auction Draft', line: 'Command the floor. Set the market. Bid for victory.', accent: aAccent, icon: GAVEL_SVG }, { fmt: 'snake', name: 'Snake Draft', line: "Strategize round-by-round. Anticipate your opponent's move.", accent: sAccent, icon: CLOCK_SVG }].map(m => React.createElement("button", {
+  }, [{ fmt: 'auction', name: 'Auction Draft', line: 'One shared budget, and every player is up for bid. We give you the most he is worth to your team, then re-figure it the second somebody else spends.', cta: 'Build my auction board', accent: aAccent, icon: GAVEL_SVG }, { fmt: 'snake', name: 'Snake Draft', line: 'You pick in order, then wait a full round to pick again. We tell you who is likely to make it back to you, so you know when to grab a guy and when to wait.', cta: 'Build my snake board', accent: sAccent, icon: CLOCK_SVG }].map(m => React.createElement("button", {
     key: m.fmt,
     className: "lp-mode-card",
     style: { '--mode-accent': m.accent },
     onClick: () => onPick(m.fmt)
-  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), React.createElement("span", { className: "lp-mode-line" }, m.line), React.createElement("span", { className: "lp-mode-go" }, "Start →"))))), React.createElement("div", {
+  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), React.createElement("span", { className: "lp-mode-line" }, m.line), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", {
     className: "lp-section",
     ref: faqRef
   }, React.createElement("div", {
