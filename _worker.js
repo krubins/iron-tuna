@@ -634,26 +634,47 @@ async function handleCoach(request, env, c) {
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
   const primary = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
   const fallbackModel = env.LLM_FALLBACK_MODEL || (provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-4o-mini');
-  const callModel = (model, stream) => provider === 'anthropic'
-    ? fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 700, system, messages, stream }) })
-    : fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages], stream }) });
+  const callModel = (model, stream, signal) => provider === 'anthropic'
+    ? fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 700, system, messages, stream }) })
+    : fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0.4, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages], stream }) });
+  // Retry transient overloads (429/529) and gateway blips with exponential backoff,
+  // plus a per-attempt timeout so a hung upstream never hangs the coach.
+  const RETRY_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 522, 524, 529]);
+  const _sleep = ms => new Promise(r => setTimeout(r, ms));
+  const callWithRetry = async (model, stream, tries) => {
+    let resp = null;
+    for (let i = 0; i < tries; i++) {
+      let ctrl = null, to = null;
+      try {
+        ctrl = new AbortController();
+        to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 24000);
+        resp = await callModel(model, stream, ctrl.signal);
+      } catch (e) { resp = null; }
+      finally { if (to) clearTimeout(to); }
+      if (resp && resp.ok) return resp;
+      if (resp && !RETRY_STATUS.has(resp.status)) return resp;
+      if (i < tries - 1) await _sleep(500 * Math.pow(2, i) + Math.floor(Math.random() * 250));
+    }
+    return resp;
+  };
   const readText = j => provider === 'anthropic'
     ? (j.content && j.content[0] && j.content[0].text) || ''
     : (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
   try {
-    let upstream = null;
-    try { upstream = await callModel(primary, wantStream); } catch (e) { upstream = null; }
+    // Primary model with backoff retries (rides out transient 429/529 overloads),
+    // then the fast fallback model with its own retries, so a busy provider
+    // self-heals instead of taking the coach offline mid-draft.
+    let upstream = await callWithRetry(primary, wantStream, 3);
     if (!upstream || !upstream.ok) {
-      // Self-heal: one retry on a fast fallback model so a transient blip or a
-      // primary-model issue does not take the coach offline mid-draft.
-      let fb = null;
-      try { fb = await callModel(fallbackModel, wantStream); } catch (e) { fb = null; }
+      const fb = await callWithRetry(fallbackModel, wantStream, 2);
       if (fb && fb.ok) {
         if (wantStream) return streamResponse(fb, provider, c);
         return json({ text: readText(await fb.json()) }, 200, c);
       }
       const j = upstream ? await upstream.json().catch(() => ({})) : {};
-      return json({ error: (j.error && j.error.message) || 'Provider unavailable' }, 502, c);
+      const msg = (j.error && j.error.message) || 'Provider unavailable';
+      const overloaded = /overload/i.test(msg) || (upstream && (upstream.status === 529 || upstream.status === 429));
+      return json({ error: overloaded ? 'The Value Coach is in high demand right now. Wait a few seconds and ask again.' : msg, retryable: !!overloaded }, overloaded ? 503 : 502, c);
     }
     if (wantStream) return streamResponse(upstream, provider, c);
     return json({ text: readText(await upstream.json()) }, 200, c);
