@@ -4974,7 +4974,7 @@ function LandingSplash({
     }
   }, "Auction · Salary-cap · Superflex · 2-QB leagues"), React.createElement("h1", {
     className: "lp-head"
-  }, "Know what to bid when you’re on the clock."), React.createElement("p", {
+  }, (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Know who your leaguemates will pick before they do." : "Know what to bid when you’re on the clock."), React.createElement("p", {
     className: "lp-sub"
   }, "Custom values for your exact league: ", React.createElement("b", null, "likely price"), ", ", React.createElement("b", null, "true value"), ", and ", React.createElement("b", null, "your max bid"), " on every player, re-priced live as the money leaves the room."), React.createElement("div", {
     className: "lp-cta-row",
