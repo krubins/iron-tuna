@@ -1056,6 +1056,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-demo-val.down { color: var(--danger); }
 .lp-demo-arrow { font-style: normal; font-size: 10px; margin-right: 4px; }
 .lp-demo-note { padding: 8px 16px 0; font-size: 13px; color: var(--text-muted); }
+.lp-modes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 6px; }
+.lp-mode-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; cursor: pointer; padding: 18px 18px 16px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.10); border-top: 3px solid var(--mode-accent, var(--gold-text)); transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
+.lp-mode-card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.06); box-shadow: 0 12px 30px rgba(0,0,0,0.45); }
+.lp-mode-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px var(--mode-accent, var(--gold-text)); }
+.lp-mode-name { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.02em; font-weight: 700; }
+.lp-mode-line { font-size: 14px; color: var(--text-secondary); line-height: 1.4; flex: 1; }
+.lp-mode-go { margin-top: 6px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mode-accent, var(--gold-text)); }
 .lp-demo-cta-row { padding: 12px 14px 14px; }
 .lp-demo-cta { width: 100%; border: none; border-radius: 10px; padding: 13px; font-family: var(--font-display); font-size: 16px; letter-spacing: 0.04em; font-weight: 700; color: #10131a; cursor: pointer; transition: filter 0.12s; }
 .lp-demo-cta:hover { filter: brightness(1.07); }
@@ -4884,7 +4891,7 @@ function LandingSplash({
   const problems = ['Static sheets tell you what a player is worth before the draft starts, not after the room has spent half its budget.', 'They ignore your remaining roster needs, so a player is worth a different amount to you than to the manager across the table.', 'They do not track who still has money, so you cannot see who is about to be forced into overpaying next.', 'Nothing stops you from chasing a player two or three bids too far, which is exactly how good drafts go bad.'];
   const threeNum = [['Market Price', 'What the room is likely to pay for him right now.', 'price'], ['True Value', 'What he is actually worth under your exact league settings.', 'value'], ['Your Max (You)', 'The highest you should personally bid, given your roster, budget, and remaining needs.', 'max']];
   const proof = [['Tracks every team\'s budget', 'See who is flush and who is broke, so you know who can still bid you up and who is stuck bargain hunting.'], ['Recalculates your max after every nomination', 'Your personal max bid updates the instant the board moves, so the number on screen is always current.'], ['Shows where the room is overpaying', 'Spot the runs and panic bids in real time, and let rivals torch their budgets on names.'], ['Finds value pockets by position', 'Know which positions still have cheap points left, and pounce before anyone else notices.'], ['Keeps your roster legal and balanced', 'Guidance that respects your open slots and budget, so you never get stuck unable to fill a starter.'], ['Helps you avoid panic bids', 'A clear walk-away number on every player, so you stop chasing and start winning the auction.']];
-  const tiers = [['Free Cheat Sheet', '$0', 'Value your league, no signup', false, ['Custom auction values for your exact league', 'Full league scoring inputs', 'Player tiers and auction strategy models', 'Sortable, printable cheat sheet', 'The ideal team your budget can afford, no points left on the table', 'No signup required to start'], 'Build my free auction board', 'prep', 'hero_cta_click'], ['Draft Night Mode', '$14.99', 'Live auction-day command', true, ['Live auction tracking, every bid logged', 'Opponent budgets and money off the board', 'Dynamic max bids that update as the room moves', 'Roster construction guidance and position scarcity', 'A Value Coach that answers player and price questions mid-auction', 'Save and reopen your draft, works even if Wi-Fi drops'], 'Unlock Draft Night Mode', 'board', 'draft_mode_clicked']];
+  const tiers = [['Free Cheat Sheet', '$0', 'Value your league, no signup', false, ['Custom auction values for your exact league', 'Full league scoring inputs', 'Player tiers and auction strategy models', 'Sortable, printable cheat sheet', 'The ideal team your budget can afford, no points left on the table', 'No signup required to start'], 'Build my free auction board', 'prep', 'hero_cta_click'], ['Draft Night Mode', '$9.99', 'Live auction-day command', true, ['Live auction tracking, every bid logged', 'Opponent budgets and money off the board', 'Dynamic max bids that update as the room moves', 'Roster construction guidance and position scarcity', 'A Value Coach that answers player and price questions mid-auction', 'Save and reopen your draft, works even if Wi-Fi drops'], 'Unlock Draft Night Mode', 'board', 'draft_mode_clicked']];
   const faqs = [['Does this work for snake drafts?', 'No, and that is the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, this is the sharpest tool you will find. If you draft in pick order, use a rankings tool.'], ['Do I need to create an account?', 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft night.'], ['Can I use custom scoring?', 'Yes. Set your teams, budget, roster slots, and full custom scoring, and every value recalculates to your exact settings, including weird home-league rules.'], ['Can I use it during a live draft?', 'Yes. Draft Night Mode is built to run live: log each bid, track every budget, and read your updated max bid as the auction unfolds.'], ['What happens if my Wi-Fi drops?', 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.'], ['Is this legal and fair to use in my league?', 'Yes. It is a smarter cheat sheet, the same as any rankings or values tool. Values are projections, not guarantees, and your edge comes from reacting faster and more rationally than the rest of the room.'], ['How is this different from a normal cheat sheet?', 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.'], ['Does it handle superflex and two-QB leagues?', 'Yes. Add QB to your flex eligibility and every quarterback re-prices for the scarcity, so you know exactly how far up to go on the position.'], ['What about keeper or auction-keeper leagues?', 'Mark the players already kept as drafted before you start. The remaining pool and the inflation math adjust around them, so your values stay accurate.'], ['How accurate are the values?', 'They are projections, not guarantees. Iron Tuna builds on ESPN and CBS projections, reliability-adjusts for injuries and consistency, then converts to dollars at your exact settings. The edge is reacting faster and more rationally than the room, not predicting the future.'], ['Can I use it on my phone?', 'Yes. It runs in any browser, so keep it open on your phone or a second tab and work straight from the board during the draft.'], ['What is the difference between Prep and Auction Night?', 'Prep is your free cheat sheet: build your values, set your strategy, and study the board before the draft. Auction Night is the live draft board where you log each bid and track every budget on the clock.']];
   return React.createElement("div", {
     className: `landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`
@@ -4910,6 +4917,8 @@ function LandingSplash({
   }))), React.createElement("div", {
     className: "lp-ribbon-links"
   }, React.createElement("button", {
+    onClick: () => go('modes')
+  }, "Modes"), React.createElement("button", {
     onClick: () => go('prep', 'ribbon_prep')
   }, "Prep"), React.createElement("button", {
     onClick: () => go('board', 'ribbon_auction_night')
@@ -4961,7 +4970,7 @@ function LandingSplash({
     onClick: () => go('board', 'secondary_cta_board')
   }, "See Draft Night Mode")), React.createElement("p", {
     className: "lp-reassure"
-  }, "Free, no account. Draft Night Mode is a one-time $14.99, with a 30-day money-back guarantee.")), React.createElement("div", {
+  }, "Free, no account. Draft Night Mode is a one-time $9.99, with a 30-day money-back guarantee.")), React.createElement("div", {
     className: "lp-preview-eyebrow",
     style: {
       textAlign: 'center',
@@ -5010,13 +5019,58 @@ function LandingSplash({
       className: "lp-demo-note"
     }, d.note));
   })(), React.createElement("div", {
+    className: "lp-section lp-modes",
+    ref: modesRef
+  }, React.createElement("div", {
+    className: "lp-preview-eyebrow"
+  }, "Choose your draft"), React.createElement("h2", {
+    className: "lp-preview-h"
+  }, "One tool, built for how your league actually drafts."), React.createElement("div", {
+    className: "lp-modes-grid"
+  }, [{
+    fmt: 'auction',
+    name: 'Auction',
+    line: 'Know your exact max bid.'
+  }, {
+    fmt: 'snake',
+    name: 'Snake',
+    line: "Know if he'll get back to you."
+  }, {
+    fmt: 'bestball',
+    name: 'Best Ball',
+    line: 'Draft for ceiling and stacks, no in-season babysitting.'
+  }].map(m => {
+    const accent = (FORMAT_META[m.fmt] || FORMAT_META.auction).color;
+    return React.createElement("button", {
+      key: m.fmt,
+      className: "lp-mode-card",
+      style: {
+        '--mode-accent': accent
+      },
+      onClick: () => go('prep', 'mode_card_click', m.fmt)
+    }, React.createElement("span", {
+      className: "lp-mode-dot",
+      style: {
+        background: accent
+      }
+    }), React.createElement("span", {
+      className: "lp-mode-name",
+      style: {
+        color: accent
+      }
+    }, m.name), React.createElement("span", {
+      className: "lp-mode-line"
+    }, m.line), React.createElement("span", {
+      className: "lp-mode-go"
+    }, "Start \u2192"));
+  }))), React.createElement("div", {
     className: "lp-section",
     ref: pricingRef
   }, React.createElement("div", {
     className: "lp-preview-eyebrow"
   }, "Pricing"), React.createElement("h2", {
     className: "lp-preview-h"
-  }, "Free to plan. $14.99 to run it live."), React.createElement("div", {
+  }, "Free to plan. $9.99 to run it live."), React.createElement("div", {
     className: "tier-grid"
   }, tiers.map(([name, price, blurb, feat, feats, cta, target, ev]) => React.createElement("div", {
     className: `tier-card ${feat ? 'feature' : ''}`,
@@ -7275,6 +7329,41 @@ function SettingsModal({
   }, "League Basics"), React.createElement("div", {
     className: "settings-grid"
   }, React.createElement("div", {
+    className: "settings-row"
+  }, React.createElement("label", null, "Draft Format"), React.createElement("select", {
+    value: draft.format || 'auction',
+    onChange: e => update('format', e.target.value)
+  }, React.createElement("option", {
+    value: "auction"
+  }, "Auction"), React.createElement("option", {
+    value: "snake"
+  }, "Snake"), React.createElement("option", {
+    value: "bestball"
+  }, "Best Ball"))), (draft.format || 'auction') === 'snake' && React.createElement("div", {
+    className: "settings-row"
+  }, React.createElement("label", null, "Your Draft Slot"), React.createElement("input", {
+    type: "number",
+    min: "1",
+    max: draft.teams || 12,
+    value: draft.snake && draft.snake.draftSlot || 6,
+    onChange: e => update('snake.draftSlot', parseInt(e.target.value || 6))
+  })), (draft.format || 'auction') === 'snake' && React.createElement("div", {
+    className: "settings-row"
+  }, React.createElement("label", null, "Rounds"), React.createElement("input", {
+    type: "number",
+    min: "1",
+    max: "40",
+    value: draft.snake && draft.snake.rounds || 16,
+    onChange: e => update('snake.rounds', parseInt(e.target.value || 16))
+  })), (draft.format || 'auction') === 'bestball' && React.createElement("div", {
+    className: "settings-row"
+  }, React.createElement("label", null, "Rounds"), React.createElement("input", {
+    type: "number",
+    min: "1",
+    max: "40",
+    value: draft.bestball && draft.bestball.rounds || 18,
+    onChange: e => update('bestball.rounds', parseInt(e.target.value || 18))
+  })), React.createElement("div", {
     className: "settings-row"
   }, React.createElement("label", null, "League Name"), React.createElement("input", {
     type: "text",
@@ -10896,7 +10985,7 @@ function ReferralModal({
     className: "section-title"
   }, "Refer & Earn"), React.createElement("p", {
     className: "rf-lede"
-  }, "Forward your free cheat sheet to friends or post it anywhere. You earn ", React.createElement("b", null, "$5 for every friend who signs up"), " for the Full Site ($14.99, includes Draft Night and the Draft Board), and they get ", React.createElement("b", null, "$1 off"), " with your code. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
+  }, "Forward your free cheat sheet to friends or post it anywhere. You earn ", React.createElement("b", null, "$5 for every friend who signs up"), " for the Full Site ($9.99, includes Draft Night and the Draft Board), and they get ", React.createElement("b", null, "$1 off"), " with your code. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
     className: "rf-getcode",
     onClick: getCode
   }, "Get my referral code") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -17294,10 +17383,24 @@ const ACCOUNT_KEY = 'iron_tuna_account_v1';
 const TIERS = [{
   id: 'auction',
   format: 'auction',
-  name: 'Draft Night Mode',
-  price: 14.99,
+  name: 'Auction Draft Night Mode',
+  price: 9.99,
   blurb: 'Live command for auction draft night.',
   features: ['Live max bid recalculated as every dollar leaves the room', 'Every team’s budget and roster needs, tracked in real time', 'The best team your budget can still afford, re-solved on every pick', 'Value Coach: ask who to target and exactly how high', 'Save and reopen your league, even if the Wi-Fi drops']
+}, {
+  id: 'snake',
+  format: 'snake',
+  name: 'Snake Draft Night Mode',
+  price: 9.99,
+  blurb: 'Live command for snake draft night.',
+  features: ['Live best-available board plus survival odds for your next pick', 'Will-he-get-back-to-you calls so you know whether to take now or wait', 'Position run alerts as the board comes off ahead of you', 'Value Coach that knows your exact draft slot', 'Save and reopen your draft, even if the Wi-Fi drops']
+}, {
+  id: 'bestball',
+  format: 'bestball',
+  name: 'Best Ball Draft Mode',
+  price: 9.99,
+  blurb: 'Draft for ceiling and stacks.',
+  features: ['Ceiling-weighted board built for best-ball scoring', 'Automatic stack detection for your QB-to-receiver pairings', 'Survival odds so you know who lasts to your next pick', 'Deeper-roster planner that keeps your full draft on plan', 'Value Coach for ceiling and stack questions as you draft']
 }];
 function loadAccount() {
   const def = {
@@ -17443,7 +17546,9 @@ function UpgradeModal({
 }) {
   const f = format || 'auction';
   const rsn = reason ? `, including ${reason}` : '';
-  const body = f === 'snake' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Night Mode"), " tells you who survives to your next pick and whether to take now or wait", rsn, ". Unlock for ", React.createElement("b", null, "$14.99"), ".") : f === 'bestball' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Night Mode"), " weights ceiling and surfaces your best stacks as you draft", rsn, ". Unlock for ", React.createElement("b", null, "$14.99"), ".") : React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Night Mode"), " tracks every bid and recalculates your max bid live", rsn, ". Unlock for ", React.createElement("b", null, "$14.99"), ".");
+  const tier = TIERS.find(t => t.id === f) || TIERS[0];
+  const priceLabel = '$' + (tier.price).toFixed(2);
+  const body = f === 'snake' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Night Mode"), " tells you who survives to your next pick and whether to take now or wait", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".") : f === 'bestball' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Night Mode"), " weights ceiling and surfaces your best stacks as you draft", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".") : React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Night Mode"), " tracks every bid and recalculates your max bid live", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".");
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
@@ -17468,7 +17573,7 @@ function UpgradeModal({
   }, body), React.createElement("button", {
     className: "btn-draft upg-cta",
     onClick: onUnlock
-  }, "Unlock Draft Night Mode · $14.99"), React.createElement("button", {
+  }, "Unlock Draft Night Mode · " + priceLabel), React.createElement("button", {
     className: "upg-later",
     onClick: onClose
   }, "Maybe later")));
@@ -18553,19 +18658,24 @@ function App() {
       localStorage.setItem('iron_tuna_entered', '1');
     } catch (e) {}
   }
-  function handleLandingNav(target) {
+  function handleLandingNav(target, format) {
     if (target === 'legal') {
       setOverlay('legal');
       dismissSplash();
       return;
     }
+    const fmt = format === 'snake' || format === 'bestball' || format === 'auction' ? format : 'auction';
     setConfig(prev => ({
       ...prev,
-      format: 'auction'
+      format: fmt
     }));
+    if (format) ITAnalytics.track('mode_selected', {
+      format: fmt
+    });
     setView(target === 'board' ? 'board' : 'prep');
     if (target === 'signin') setOverlay('auth');else ITAnalytics.track('free_sheet_started', {
-      target
+      target,
+      format: fmt
     });
     dismissSplash();
   }
@@ -18971,6 +19081,11 @@ function App() {
     }
   }
   function handleConfigChange(newConfig) {
+    if (newConfig && newConfig.format && newConfig.format !== config.format) {
+      ITAnalytics.track('mode_selected', {
+        format: newConfig.format
+      });
+    }
     setConfig(newConfig);
     setAccount(a => ({
       ...a,
