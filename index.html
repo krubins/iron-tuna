@@ -946,6 +946,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .board-subtabs { align-items: center; }
 .header-models { margin-left: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 5px; }
 .hm-tab { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13px; font-family: var(--font-body); background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: 5px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+.hm-select { background: var(--bg-elev, #14181c); color: var(--text-primary, #f4f6f7); border: 1px solid var(--border-subtle, rgba(255,255,255,0.14)); border-radius: 8px; padding: 7px 11px; font-size: 13px; font-family: var(--font-body); cursor: pointer; min-width: 210px; }
 .hm-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
 .hm-tab.active { border-color: var(--positive); color: var(--positive); background: rgba(45,212,163,0.12); }
 .hm-pts { font-size: 12px; color: var(--text-muted); }
@@ -9659,14 +9660,7 @@ function CheatHeader({
     }
   }, "(projected ppg)")), myTeam && React.createElement("span", {
     className: "ch-models-hint"
-  }, "Pick a model to see your highest-scoring build."), myTeam ? models.map(([k, lbl]) => React.createElement("button", {
-    key: k,
-    className: `hm-tab ${model === k ? 'active' : ''}`,
-    title: MODEL_DESC[k] || lbl,
-    onClick: () => onSelectModel(model === k ? null : k)
-  }, lbl, modelPts[k] != null && (k !== 'custom' || typeof customForced !== 'undefined' && customForced && customForced.size > 0) ? React.createElement("span", {
-    className: "hm-pts"
-  }, (modelPts[k] / games).toFixed(1)) : null)) : React.createElement("span", {
+  }, "Pick a model to see your highest-scoring build."), myTeam ? React.createElement("select", { className: "hm-select", value: model || "", onChange: e => onSelectModel(e.target.value || null) }, React.createElement("option", { value: "" }, "Choose a model\u2026"), models.map(([k, lbl]) => React.createElement("option", { key: k, value: k }, lbl + (modelPts[k] != null ? "  (" + (modelPts[k] / games).toFixed(1) + ")" : "")))) : React.createElement("span", {
     className: "ch-models-empty"
   }, "Mark your team on the Draft Board to see ideal builds."), myTeam && React.createElement("button", {
     className: `hm-tab ${wiOpen ? 'active' : ''}`,
