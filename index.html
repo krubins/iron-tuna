@@ -1440,6 +1440,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .svt-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
 .svt-btn { background: rgba(255,255,255,0.04); color: var(--text-secondary); border: 1px solid var(--border-subtle, rgba(255,255,255,0.12)); border-radius: 7px; padding: 6px 12px; font-size: 12.5px; cursor: pointer; }
 .svt-btn.on { background: color-mix(in srgb, var(--mode-accent, #4ea3ff) 22%, transparent); border-color: var(--mode-accent, #4ea3ff); color: var(--text-primary); }
+
+.lp-ai-line { width: 100%; max-width: 680px; margin: 30px auto 6px; text-align: center; font-family: var(--font-display); font-size: 23px; letter-spacing: 0.02em; line-height: 1.3; }
+.lp-ai-a { color: var(--text-secondary, #aab2b8); }
+.lp-ai-b { color: #5eead4; }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -18240,7 +18244,7 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-mode-card",
     style: { '--mode-accent': m.accent },
     onClick: () => onPick(m.fmt)
-  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), m.line ? React.createElement("span", { className: "lp-mode-line" }, m.line) : null, React.createElement("ul", { className: "lp-mode-bul" }, (m.bullets || []).map((b, i, arr) => React.createElement("li", { key: i, style: m.fmt === 'snake' && i === arr.length - 1 ? { fontWeight: 700, color: 'var(--text-primary)' } : undefined }, b))), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", {
+  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), m.line ? React.createElement("span", { className: "lp-mode-line" }, m.line) : null, React.createElement("ul", { className: "lp-mode-bul" }, (m.bullets || []).map((b, i, arr) => React.createElement("li", { key: i, style: m.fmt === 'snake' && i === arr.length - 1 ? { fontWeight: 700, color: 'var(--text-primary)' } : undefined }, b))), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", { className: "lp-ai-line" }, React.createElement("span", { className: "lp-ai-a" }, "AI can beat the chess grandmasters. "), React.createElement("b", { className: "lp-ai-b" }, "It can beat your leaguemates.")), React.createElement("div", {
     className: "lp-section",
     ref: faqRef
   }, React.createElement("div", {
