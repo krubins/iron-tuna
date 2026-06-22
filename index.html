@@ -1060,8 +1060,6 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-mode-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; cursor: pointer; padding: 18px 18px 16px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.10); border-top: 3px solid var(--mode-accent, var(--gold-text)); transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
 .lp-mode-card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.06); box-shadow: 0 12px 30px rgba(0,0,0,0.45); }
 .lp-mode-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px var(--mode-accent, var(--gold-text)); }
-.lp-mode-ico { display: flex; align-items: center; margin-bottom: 2px; }
-.lp-mode-ico svg { filter: drop-shadow(0 0 10px var(--mode-accent)); }
 .lp-mode-name { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.02em; font-weight: 700; }
 .lp-mode-line { font-size: 14px; color: var(--text-secondary); line-height: 1.4; flex: 1; }
 .lp-mode-go { margin-top: 6px; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mode-accent, var(--gold-text)); }
@@ -1248,7 +1246,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .coach.dock .coach-insights { display: none; }
   .coach-col-resize { display: none; }
 }
-.landing-page { background: radial-gradient(140% 700px at 50% -8%, rgba(20,184,166,0.10), transparent 72%), radial-gradient(150% 820px at 50% 118%, rgba(20,184,166,0.04), transparent 66%), radial-gradient(120% 78% at 50% 4%, rgba(6,14,9,0.34), rgba(4,9,6,0.82) 74%), linear-gradient(90deg, rgba(255,255,255,0.07) 0 2px, transparent 2px) 6% 0/100% 100% no-repeat, linear-gradient(90deg, rgba(255,255,255,0.07) 0 2px, transparent 2px) 94% 0/100% 100% no-repeat, repeating-linear-gradient(180deg, rgba(255,255,255,0.085) 0 2px, transparent 2px 58px), repeating-linear-gradient(180deg, rgba(255,255,255,0.022) 0 29px, rgba(0,0,0,0.022) 29px 58px), linear-gradient(180deg, #0d2c17 0%, #0a2412 55%, #07190d 100%); background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed; }
+.landing-page { background: radial-gradient(140% 700px at 50% -8%, rgba(20,184,166,0.07), transparent 72%), radial-gradient(150% 820px at 50% 118%, rgba(20,184,166,0.03), transparent 66%), linear-gradient(180deg, #0d0f12 0%, #0a0b0d 55%, #08090b 100%); }
 /* ============ Landing overhaul: reassurance, trust band, how-it-works ============ */
 .lp-reassure { font-size: 14px; color: var(--text-muted); max-width: 540px; line-height: 1.55; margin: 18px auto 0; }
 .lp-reassure b { color: var(--text-secondary); }
@@ -9155,25 +9153,22 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jun 21, 2026',
+  updated: 'Jun 22, 2026',
   current: [{
-    label: 'Walker to Chiefs',
-    text: 'Kenneth Walker signed with Kansas City and has a clear path to 15 to 18 carries plus goal line work, with Pacheco and Hunt gone. Pay up for a mid range RB1.'
+    label: 'Bucky Irving fade',
+    text: 'Bucky Irving is working back from offseason shoulder surgery and Tampa Bay added Kenneth Gainwell, who could open as the lead back. Discount Irving and grab Gainwell cheap as a high value contingency.'
   }, {
-    label: 'Love is the Arizona lead',
-    text: 'Arizona took Jeremiyah Love No. 3 overall and plans to feed him right away. Target the rookie as a likely RB1, and pay for the projected workload.'
+    label: 'Egbuka is Bucs WR1',
+    text: 'Mike Evans left for the 49ers, so Emeka Egbuka projects for the most Tampa Bay targets. Pay up for Egbuka as the ascending WR1, with Chris Godwin a cheaper bounce back dart.'
   }, {
-    label: 'Fade James Conner',
-    text: 'James Conner ADP has fallen hard after Arizona spent the No. 3 pick on Jeremiyah Love and added Tyler Allgeier. Do not pay last year prices, let someone else overbid.'
+    label: 'Alec Pierce ascends',
+    text: 'Indianapolis traded Michael Pittman Jr. to Pittsburgh and paid Alec Pierce on a new deal, making him the clear WR1. Target Pierce as a rising value, mindful of Tyler Warren competition.'
   }, {
-    label: 'Rice suspended 6 games',
-    text: 'Rashee Rice is suspended the first 6 games and returns Week 7. Discount him and stash as a boom or bust upside play, not a full price WR2.'
+    label: 'Rachaad White value',
+    text: 'Rachaad White joined the Commanders, reuniting with Jayden Daniels, and his ADP is climbing. He should handle high profile touches, so pay a modest price before the rise continues.'
   }, {
-    label: 'Charbonnet ACL recovery',
-    text: 'Zach Charbonnet is recovering from a torn ACL and may open 2026 on the sideline, and Kenneth Walker left for Kansas City. Treat the Seattle backfield as a cheap dart.'
-  }, {
-    label: 'Brooks cheap upside',
-    text: 'Jonathon Brooks says he is close to 100 percent after a second ACL and impressed at OTAs, going around RB38 with Rico Dowdle gone. A cheap late dart behind Chuba Hubbard.'
+    label: 'Brooks late upside',
+    text: 'Jonathon Brooks is healthy after a second ACL and has climbed about a round and a half in ADP. He is a late round RB3 with standalone upside, a fine value if you wait at running back.'
   }],
   library: [{
     label: 'Volume is king',
@@ -18250,8 +18245,6 @@ function HubLanding({ onPick, onSignin, onTerms }) {
   const scrollFaq = () => { try { faqRef.current && faqRef.current.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} };
   const aAccent = (FORMAT_META.auction || {}).color || 'var(--gold-text)';
   const sAccent = (FORMAT_META.snake || {}).color || '#4ea3ff';
-  const GAVEL_SVG = '<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/><path d="M3 21h7"/></svg>';
-  const CLOCK_SVG = '<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v4.7l3 1.8"/></svg>';
   const HUB_FAQS = [['Does Iron Tuna work for both snake and auction drafts?', 'Yes. Pick your format above. Auction gives live max-bid math and budget tracking; Snake gives a best-available board and survival odds for your next pick.'], ['Do I need an account?', 'No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft night.'], ['Can I use my exact league scoring?', 'Yes. Set your scoring, roster slots, and league size, and every value recalculates to your settings, including superflex and 2-QB.'], ['How much does it cost?', 'The cheat sheet is free in both formats. The live Draft Night experience is a one-time $9.99 with a 30-day money-back guarantee.'], ['Can I use it during the live draft?', 'Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft.'], ['Is it fair to use in my league?', 'Yes. It is a smarter cheat sheet built on projections. Your edge comes from reacting faster and more rationally than the rest of the room.']];
   return React.createElement("div", {
     className: "landing-splash landing-page"
@@ -18280,12 +18273,12 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-preview-h"
   }, "Pick how your league drafts."), React.createElement("div", {
     className: "lp-modes-grid"
-  }, [{ fmt: 'auction', name: 'Auction Draft', line: 'Command the floor. Set the market. Bid for victory.', accent: aAccent, icon: GAVEL_SVG }, { fmt: 'snake', name: 'Snake Draft', line: "Strategize round-by-round. Anticipate your opponent's move.", accent: sAccent, icon: CLOCK_SVG }].map(m => React.createElement("button", {
+  }, [{ fmt: 'auction', name: 'Auction Draft', line: 'Know your exact max bid.', accent: aAccent }, { fmt: 'snake', name: 'Snake Draft', line: "Know if he'll get back to you.", accent: sAccent }].map(m => React.createElement("button", {
     key: m.fmt,
     className: "lp-mode-card",
     style: { '--mode-accent': m.accent },
     onClick: () => onPick(m.fmt)
-  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), React.createElement("span", { className: "lp-mode-line" }, m.line), React.createElement("span", { className: "lp-mode-go" }, "Start →"))))), React.createElement("div", {
+  }, React.createElement("span", { className: "lp-mode-dot", style: { background: m.accent } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), React.createElement("span", { className: "lp-mode-line" }, m.line), React.createElement("span", { className: "lp-mode-go" }, "Start →"))))), React.createElement("div", {
     className: "lp-section",
     ref: faqRef
   }, React.createElement("div", {
