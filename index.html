@@ -1056,7 +1056,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-demo-val.down { color: var(--danger); }
 .lp-demo-arrow { font-style: normal; font-size: 10px; margin-right: 4px; }
 .lp-demo-note { padding: 8px 16px 0; font-size: 13px; color: var(--text-muted); }
-.lp-modes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 6px; }
+.lp-modes-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; max-width: 640px; margin: 16px auto 0; }
 .lp-mode-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; cursor: pointer; padding: 18px 18px 16px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.10); border-top: 3px solid var(--mode-accent, var(--gold-text)); transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
 .lp-mode-card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.06); box-shadow: 0 12px 30px rgba(0,0,0,0.45); }
 .lp-mode-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px var(--mode-accent, var(--gold-text)); }
@@ -4971,6 +4971,47 @@ function LandingSplash({
   }, "See Draft Night Mode")), React.createElement("p", {
     className: "lp-reassure"
   }, "Free, no account. Draft Night Mode is a one-time $9.99, with a 30-day money-back guarantee.")), React.createElement("div", {
+    className: "lp-section lp-modes",
+    ref: modesRef
+  }, React.createElement("div", {
+    className: "lp-preview-eyebrow"
+  }, "Start here"), React.createElement("h2", {
+    className: "lp-preview-h"
+  }, "Pick how your league drafts."), React.createElement("div", {
+    className: "lp-modes-grid"
+  }, [{
+    fmt: 'auction',
+    name: 'Auction',
+    line: 'Know your exact max bid.'
+  }, {
+    fmt: 'snake',
+    name: 'Snake',
+    line: "Know if he'll get back to you."
+  }].map(m => {
+    const accent = (FORMAT_META[m.fmt] || FORMAT_META.auction).color;
+    return React.createElement("button", {
+      key: m.fmt,
+      className: "lp-mode-card",
+      style: {
+        '--mode-accent': accent
+      },
+      onClick: () => go('prep', 'mode_card_click', m.fmt)
+    }, React.createElement("span", {
+      className: "lp-mode-dot",
+      style: {
+        background: accent
+      }
+    }), React.createElement("span", {
+      className: "lp-mode-name",
+      style: {
+        color: accent
+      }
+    }, m.name), React.createElement("span", {
+      className: "lp-mode-line"
+    }, m.line), React.createElement("span", {
+      className: "lp-mode-go"
+    }, "Start \u2192"));
+  }))), React.createElement("div", {
     className: "lp-preview-eyebrow",
     style: {
       textAlign: 'center',
@@ -5019,51 +5060,6 @@ function LandingSplash({
       className: "lp-demo-note"
     }, d.note));
   })(), React.createElement("div", {
-    className: "lp-section lp-modes",
-    ref: modesRef
-  }, React.createElement("div", {
-    className: "lp-preview-eyebrow"
-  }, "Choose your draft"), React.createElement("h2", {
-    className: "lp-preview-h"
-  }, "One tool, built for how your league actually drafts."), React.createElement("div", {
-    className: "lp-modes-grid"
-  }, [{
-    fmt: 'auction',
-    name: 'Auction',
-    line: 'Know your exact max bid.'
-  }, {
-    fmt: 'snake',
-    name: 'Snake',
-    line: "Know if he'll get back to you."
-  }, {
-    fmt: 'bestball',
-    name: 'Best Ball',
-    line: 'Draft for ceiling and stacks, no in-season babysitting.'
-  }].map(m => {
-    const accent = (FORMAT_META[m.fmt] || FORMAT_META.auction).color;
-    return React.createElement("button", {
-      key: m.fmt,
-      className: "lp-mode-card",
-      style: {
-        '--mode-accent': accent
-      },
-      onClick: () => go('prep', 'mode_card_click', m.fmt)
-    }, React.createElement("span", {
-      className: "lp-mode-dot",
-      style: {
-        background: accent
-      }
-    }), React.createElement("span", {
-      className: "lp-mode-name",
-      style: {
-        color: accent
-      }
-    }, m.name), React.createElement("span", {
-      className: "lp-mode-line"
-    }, m.line), React.createElement("span", {
-      className: "lp-mode-go"
-    }, "Start \u2192"));
-  }))), React.createElement("div", {
     className: "lp-section",
     ref: pricingRef
   }, React.createElement("div", {
@@ -7337,9 +7333,7 @@ function SettingsModal({
     value: "auction"
   }, "Auction"), React.createElement("option", {
     value: "snake"
-  }, "Snake"), React.createElement("option", {
-    value: "bestball"
-  }, "Best Ball"))), (draft.format || 'auction') === 'snake' && React.createElement("div", {
+  }, "Snake"))), (draft.format || 'auction') === 'snake' && React.createElement("div", {
     className: "settings-row"
   }, React.createElement("label", null, "Your Draft Slot"), React.createElement("input", {
     type: "number",
