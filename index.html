@@ -18664,7 +18664,7 @@ function App() {
       dismissSplash();
       return;
     }
-    const fmt = format === 'snake' || format === 'bestball' || format === 'auction' ? format : 'auction';
+    const fmt = format === 'snake' || format === 'bestball' || format === 'auction' ? format : (config.format || 'auction');
     setConfig(prev => ({
       ...prev,
       format: fmt
@@ -19727,7 +19727,7 @@ function App() {
   }))), showSplash && React.createElement(LandingSplash, {
     onDismiss: dismissSplash,
     onNav: handleLandingNav,
-    autoExit: splashSeen && !landingStay
+    autoExit: false
   }), React.createElement(Header, {
     view: view,
     setView: setView,
