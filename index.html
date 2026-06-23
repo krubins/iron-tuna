@@ -1730,6 +1730,22 @@ input:focus, select:focus { border-color: var(--accent); }
 .ip-tag-snake { color:#9fc2cd; background:rgba(34,211,238,0.06); }
 .ip-tag-auction { color:#cdb37a; background:rgba(227,181,58,0.06); }
 .ip-coach-col p { margin:0; font-size:13.5px; line-height:1.5; color:#aab0b8; }
+
+.mnp { margin: 6px 4px 8px; padding: 10px; border:1px solid var(--border-subtle); border-radius:10px; background: rgba(34,211,238,0.045); }
+.mnp-h { font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#22d3ee; margin-bottom:7px; }
+.mnp-rows { display:flex; flex-direction:column; gap:5px; }
+.mnp-row { display:grid; grid-template-columns:auto 1fr auto; gap:9px; align-items:center; font-size:12.5px; }
+.mnp-rd { font-family:var(--font-mono); font-size:11px; color:var(--text-muted); min-width:24px; }
+.mnp-pl { color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mnp-pl em { font-style:normal; font-family:var(--font-mono); font-size:9px; color:var(--text-muted); margin-left:6px; }
+.mnp-sv { font-family:var(--font-mono); font-size:12px; color:#67e8f9; text-align:right; }
+.mnp-whb { margin-top:10px; padding-top:9px; border-top:1px solid var(--border-subtle); }
+.mnp-whb-h { font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px; }
+.mnp-whb-in { display:flex; gap:6px; }
+.mnp-inp { flex:1; min-width:0; background:var(--bg-panel); border:1px solid var(--border-strong); border-radius:6px; padding:5px 8px; color:var(--text-primary); font-size:12px; }
+.mnp-rnd { flex:0 0 50px; }
+.mnp-out { margin-top:7px; font-size:12px; line-height:1.4; color:var(--text-secondary); }
+.mnp-hint { color:var(--text-muted); font-style:italic; }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -18344,6 +18360,45 @@ function ModelsPanel({
     return m;
   }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
   const isBoard = mode === 'board';
+  const isNonAuction = !!(config.format && config.format !== 'auction');
+  const [npQ, setNpQ] = useState('');
+  const [npR, setNpR] = useState('');
+  const nextFive = useMemo(() => {
+    if (!isNonAuction || !myTeam) return null;
+    let sp; try { sp = getFormat(config).planFills(myTeam, players, config, draftedIds || new Set()); } catch (e) { return null; }
+    const br = (sp && sp.byRound) || [];
+    if (!br.length) return null;
+    const teamsN = (config && config.teams) || 12;
+    const mySlot = (config && config.snake && config.snake.draftSlot) || 1;
+    const pa = r => r % 2 === 1 ? (r - 1) * teamsN + mySlot : r * teamsN - mySlot + 1;
+    const cur = ((draftedIds && draftedIds.size) || 0) + 1;
+    let nr = 1; while (pa(nr) < cur && nr < 60) nr++;
+    const g = seasonGames || 17;
+    return br.slice(0, 5).map((b, k) => {
+      const round = nr + k;
+      const until = Math.max(0, pa(round) - cur);
+      const surv = Math.round(survivalProb(b.player, cur, until, []) * 100);
+      return { round: round, player: b.player, surv: surv, ppg: (b.player.projectedPoints / g).toFixed(1) };
+    });
+  }, [isNonAuction, myTeam, players, config, draftedIds, seasonGames]);
+  const npResult = useMemo(() => {
+    if (!isNonAuction) return null;
+    const q = (npQ || '').trim().toLowerCase();
+    const rd = parseInt(npR, 10);
+    if (!q || !rd || rd < 1) return null;
+    const player = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
+    if (!player) return { err: 'No player matches "' + npQ.trim() + '".' };
+    const di = draftedIds || new Set();
+    if (di.has(player.id)) return { player: player, drafted: true };
+    const teamsN = (config && config.teams) || 12;
+    const mySlot = (config && config.snake && config.snake.draftSlot) || 1;
+    const pa = r => r % 2 === 1 ? (r - 1) * teamsN + mySlot : r * teamsN - mySlot + 1;
+    const targetPick = pa(rd);
+    const cur = ((di && di.size) || 0) + 1;
+    if (targetPick < cur) return { player: player, round: rd, passed: true };
+    const prob = Math.round(survivalProb(player, cur, targetPick - cur, []) * 100);
+    return { player: player, round: rd, prob: prob };
+  }, [isNonAuction, npQ, npR, players, config, draftedIds]);
   const mxGames = seasonGames || 17;
   const insights = useMemo(() => isBoard ? [] : buildCoachInsights({
     evalPlayers: players,
@@ -18408,7 +18463,7 @@ function ModelsPanel({
     className: "model-tab-pts"
   }, (modelPts[k] / games).toFixed(1), " pts/gm") : null))), plan && React.createElement("div", {
     className: "model-summary"
-  }, React.createElement("b", null, (plan.starterPoints / games).toFixed(1)), " pts/gm · ~$", cost, "/", config.budget, plan.feasible ? '' : ' · over'), React.createElement("div", {
+  }, React.createElement("b", null, (plan.starterPoints / games).toFixed(1)), " pts/gm · ~$", cost, "/", config.budget, plan.feasible ? '' : ' · over'), (isNonAuction && myTeam && nextFive ? React.createElement("div", { className: "mnp" }, React.createElement("div", { className: "mnp-h" }, "Next 5 rounds \u00b7 best available targets"), React.createElement("div", { className: "mnp-rows" }, nextFive.map((r, i) => React.createElement("div", { key: i, className: "mnp-row" }, React.createElement("span", { className: "mnp-rd" }, "R" + r.round), React.createElement("span", { className: "mnp-pl" }, r.player.name, React.createElement("em", null, r.player.position)), React.createElement("span", { className: "mnp-sv", title: "Estimated chance still available at your round " + r.round + " pick" }, r.surv + "%")))), React.createElement("div", { className: "mnp-whb" }, React.createElement("div", { className: "mnp-whb-h" }, "Will he be there?"), React.createElement("div", { className: "mnp-whb-in" }, React.createElement("input", { className: "mnp-inp", placeholder: "Player name", value: npQ, onChange: e => setNpQ(e.target.value) }), React.createElement("input", { className: "mnp-inp mnp-rnd", type: "number", min: "1", placeholder: "Rd", value: npR, onChange: e => setNpR(e.target.value) })), npResult ? React.createElement("div", { className: "mnp-out" }, npResult.err ? npResult.err : npResult.drafted ? (npResult.player.name + " is already off the board.") : npResult.passed ? ("Your round " + npResult.round + " pick has already passed.") : (npResult.player.name + ": ~" + npResult.prob + "% likely available at your round " + npResult.round + " pick.")) : React.createElement("div", { className: "mnp-out mnp-hint" }, "Type a player and a round to see their odds."))) : null), React.createElement("div", {
     className: "models-extra"
   }, React.createElement("div", {
     className: "mx-head"
