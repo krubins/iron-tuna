@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
   <title>Iron Tuna: Custom Fantasy Football Auction Values &amp; AI Auction Draft Assistant</title>
+<script>(function(){try{var p=location.pathname;if(p.indexOf("/snakedraft")===0)document.title="Iron Tuna: Snake Draft Rankings & AI Draft Assistant";else if(p.indexOf("/auctiondraft")===0)document.title="Iron Tuna: Custom Auction Values & AI Auction Draft Assistant";}catch(e){}})();</script>
   <meta name="description" content="Iron Tuna gives you custom fantasy football auction values for your exact league, three numbers per player, a budget-aware optimal-lineup planner, and an AI auction navigator that says who to bid on and how high. The #1 draft tool built only for auction and salary-cap leagues, including Superflex and 2-QB formats." />
   <meta name="keywords" content="fantasy football auction, auction values, custom auction values, AI fantasy football auction, fantasy auction, fantasy football auction values, auction draft, AI auction assistant, VBD auction values, auction draft assistant, salary cap draft, superflex auction values, 2-QB auction values, two quarterback fantasy football, superflex draft tool" />
   <meta name="author" content="Iron Tuna" />
@@ -1675,6 +1676,18 @@ input:focus, select:focus { border-color: var(--accent); }
 .ht-mani-2 { display:block; margin-top:6px; color:#fff; }
 @keyframes ht-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
 @media(prefers-reduced-motion:reduce){ .ht-blink{animation:none} }
+
+/* ===== Hardened landing pass: flat panels, hairline borders, de-glow ===== */
+.wmud-card { background:#0b0f14 !important; border:1px solid #1b242e !important; border-radius:10px !important; position:relative; padding-left:24px !important; }
+.wmud-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:#22d3ee; }
+.wmud-a .wmud-card { border:1px solid #1b242e !important; }
+.wmud-a .wmud-card::before { background:#e3b53a; }
+.wmud-title { font-family:var(--font-mono); font-size:13px; letter-spacing:0.1em; text-transform:uppercase; }
+.lp-tier { background:#0b0f14 !important; border:1px solid #1b242e !important; border-radius:10px !important; }
+.lp-tier-top { border-color:rgba(227,181,58,0.45) !important; box-shadow:none !important; }
+.lp-phase { background:#0b0f14 !important; border:1px solid #1b242e !important; border-radius:10px !important; box-shadow:none !important; }
+.lp-mock, .lp-shot, .lp-shot-img, .lp-demo { box-shadow:0 10px 30px -18px rgba(0,0,0,0.7) !important; }
+.lp-live { box-shadow:none !important; }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
