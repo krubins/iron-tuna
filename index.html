@@ -1462,6 +1462,16 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ai-b { color: #5eead4; }
 
 @media (min-width: 861px) { .cheat-grid { grid-template-columns: repeat(4, 1fr) !important; } }
+
+.whb { position: relative; display: inline-flex; }
+.whb-btn { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; padding: 7px 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, #22d3ee 40%, transparent); background: color-mix(in srgb, #22d3ee 12%, transparent); color: #d8f7fd; cursor: pointer; white-space: nowrap; }
+.whb-btn:hover { background: color-mix(in srgb, #22d3ee 22%, transparent); }
+.whb-panel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 40; width: 330px; max-width: 86vw; padding: 12px; border-radius: 12px; background: #0d141b; border: 1px solid color-mix(in srgb, #22d3ee 30%, rgba(255,255,255,0.08)); box-shadow: 0 18px 42px -18px rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 8px; }
+.whb-in { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-elev, #11181f); color: var(--text-primary, #e8edf2); font-size: 13px; }
+.whb-round { width: 120px; }
+.whb-res { font-size: 13px; line-height: 1.45; color: var(--text-secondary, #aab2b8); margin-top: 2px; }
+.whb-odds { color: #22d3ee; font-size: 18px; font-family: var(--font-display); margin-right: 2px; }
+.whb-err { color: var(--negative, #ff6b6b); }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -6031,6 +6041,29 @@ function DraftBoard({
   const [sortKey, setSortKey] = useState('personalValue');
   const [sortDir, setSortDir] = useState('desc');
   const [quickDraftPlayer, setQuickDraftPlayer] = useState(null);
+  const _dbFmt = (config && config.format) || 'auction';
+  const [whbOpen, setWhbOpen] = useState(false);
+  const [whbQuery, setWhbQuery] = useState('');
+  const [whbRound, setWhbRound] = useState('');
+  const whbResult = useMemo(() => {
+    if (_dbFmt !== 'snake') return null;
+    const q = (whbQuery || '').trim().toLowerCase();
+    const rd = parseInt(whbRound, 10);
+    if (!q || !rd || rd < 1) return null;
+    const player = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
+    if (!player) return { err: 'No player matches "' + whbQuery.trim() + '".' };
+    const di = draftedIds || new Set();
+    if (di.has(player.id)) return { player, drafted: true };
+    const teamsN = (config && config.teams) || 12;
+    const slot = (config && config.snake && config.snake.draftSlot) || 1;
+    const pickAt = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
+    const targetPick = pickAt(rd);
+    const currentPick = ((draftHistory && draftHistory.length) || 0) + 1;
+    if (targetPick < currentPick) return { player, round: rd, passed: true };
+    const recent = (draftHistory || []).slice(-8).map(d => (players || []).find(p => p.id === d.playerId)).filter(Boolean);
+    const prob = survivalProb(player, currentPick, targetPick - currentPick, recent);
+    return { player, round: rd, targetPick, odds: Math.max(0, Math.min(100, Math.round(prob * 100))) };
+  }, [_dbFmt, whbQuery, whbRound, players, draftHistory, draftedIds, config]);
   const myBoard = sortKey === 'myboard';
   const statColumns = useMemo(() => {
     const _fmt = (config && config.format) || 'auction';
@@ -6135,7 +6168,7 @@ function DraftBoard({
     placeholder: "Search by name or team...",
     value: search,
     onChange: e => setSearch(e.target.value)
-  }), React.createElement("div", {
+  }), _dbFmt === 'snake' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setWhbOpen(o => !o) }, "Will he be there?"), whbOpen && React.createElement("div", { className: "whb-panel" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQuery, onChange: e => setWhbQuery(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbRound, onChange: e => setWhbRound(e.target.value) }), whbResult && (whbResult.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResult.err) : whbResult.drafted ? React.createElement("div", { className: "whb-res" }, whbResult.player.name + " is already off the board.") : whbResult.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResult.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResult.odds + "%"), " chance " + whbResult.player.name + " (ADP " + (whbResult.player.adp != null ? Math.round(whbResult.player.adp) : "?") + ") is still on the board at your round " + whbResult.round + " pick (overall #" + whbResult.targetPick + ").")))), React.createElement("div", {
     className: "filter-pills"
   }, POSITIONS.map(p => React.createElement("button", {
     key: p,
@@ -16282,7 +16315,7 @@ function buildCoachContext(q, ctx) {
 }
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _coachFmt = contextObj && contextObj.format || 'auction';
-  const _coachId = _coachFmt === 'snake' ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. Think in ADP, pick order, and position runs. Maximize this manager's TOTAL points across the whole draft, not just the most points or highest VOR at this one slot. Look ahead before recommending: each player has an adp and a survives% (his chance of still being on the board at this manager's NEXT pick; picksToYourNextPick is in formatInfo). Proactively, even when not asked, tell them (1) who to grab NOW because his position is about to be picked clean and the drop-off to the next man at that position is steep, and (2) who they can let slide and target next round because he is likely to survive. Prefer taking a scarce position now over a slightly higher-scoring player at a deep position, and frame each call as value over the next player likely available at that position." : _coachFmt === 'bestball' ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management." : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
+  const _coachId = _coachFmt === 'snake' ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. Think in ADP, pick order, and position runs. Maximize this manager's TOTAL points across the whole draft, not just the most points or highest VOR at this one slot. Look ahead before recommending: each player has an adp and a survives% (his chance of still being on the board at this manager's NEXT pick; picksToYourNextPick is in formatInfo). Proactively, even when not asked, tell them (1) who to grab NOW because his position is about to be picked clean and the drop-off to the next man at that position is steep, and (2) who they can let slide and target next round because he is likely to survive. Prefer taking a scarce position now over a slightly higher-scoring player at a deep position, and frame each call as value over the next player likely available at that position. If asked whether a specific player will still be available in a given round, estimate it from his adp versus the overall pick number the manager holds that round (snake pick math from the draftSlot and league size in the data): an adp well past that pick number means good odds he survives, an adp at or before it means slim odds." : _coachFmt === 'bestball' ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management." : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
   const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
