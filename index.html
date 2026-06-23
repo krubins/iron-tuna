@@ -1483,6 +1483,23 @@ input:focus, select:focus { border-color: var(--accent); }
 .dlog-pl em { color: var(--text-muted, #6b7785); font-style: normal; font-size: 0.85em; margin-left: 4px; }
 .dlog-tm { color: var(--text-secondary, #aab2b8); white-space: nowrap; }
 .dlog-pr { color: #f7e08c; font-family: var(--font-mono); }
+
+.ba-drawer { position: fixed; left: 0; top: 70px; bottom: 0; width: 290px; z-index: 55; transform: translateX(-290px); transition: transform 0.22s ease; pointer-events: none; }
+.ba-drawer.open { transform: translateX(0); }
+.ba-inner { pointer-events: auto; height: 100%; width: 290px; display: flex; flex-direction: column; background: #0b1218; border-right: 1px solid var(--border-subtle); box-shadow: 8px 0 30px -16px rgba(0,0,0,0.8); }
+.ba-tab { pointer-events: auto; position: absolute; left: 290px; top: 16px; padding: 12px 6px; border: 1px solid var(--border-subtle); border-left: none; border-radius: 0 8px 8px 0; background: #0b1218; color: var(--text-secondary, #aab2b8); cursor: pointer; writing-mode: vertical-rl; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; white-space: nowrap; text-transform: uppercase; }
+.ba-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 8px; border-bottom: 1px solid var(--border-subtle); }
+.ba-title { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; color: var(--text-primary, #e8edf2); text-transform: uppercase; }
+.ba-sort { display: flex; gap: 4px; }
+.ba-sbtn { font-size: 10.5px; font-family: var(--font-mono); padding: 4px 7px; border-radius: 6px; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-muted, #6b7785); cursor: pointer; }
+.ba-sbtn.on { color: var(--text-primary, #e8edf2); border-color: color-mix(in srgb, #22d3ee 40%, transparent); background: color-mix(in srgb, #22d3ee 12%, transparent); }
+.ba-list { flex: 1; overflow-y: auto; padding: 4px 6px 12px; }
+.ba-row { display: grid; grid-template-columns: 42px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+.ba-row:hover { background: rgba(255,255,255,0.05); }
+.ba-pos { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; text-align: center; padding: 2px 0; border-radius: 4px; color: #0a0e12; }
+.ba-name { color: var(--text-primary, #e8edf2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ba-val { font-family: var(--font-mono); font-size: 12.5px; color: var(--gold-text, #f7e08c); }
+@media (max-width: 980px) { .ba-drawer { display: none; } }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -6028,6 +6045,30 @@ const FIXED_RIGHT_COLS = [{
   sortable: false,
   width: 150
 }];
+function BestAvailableDrawer({ players, draftedIds, fmt, onPick }) {
+  const [open, setOpen] = useState(true);
+  const [sort, setSort] = useState('value');
+  const POS_COLOR = { QB: '#ff6b6b', RB: '#4ade80', WR: '#38bdf8', TE: '#fbbf24', K: '#c084fc', DEF: '#94a3b8' };
+  const data = useMemo(() => {
+    const di = draftedIds || new Set();
+    const all = players || [];
+    const byPos = {};
+    all.forEach(p => { (byPos[p.position] = byPos[p.position] || []).push(p); });
+    Object.keys(byPos).forEach(k => byPos[k].sort((x, y) => (y.auctionValue || y.projectedPoints || 0) - (x.auctionValue || x.projectedPoints || 0)));
+    const rankMap = new Map();
+    Object.keys(byPos).forEach(pos => byPos[pos].forEach((p, i) => rankMap.set(p.id, pos + (i + 1))));
+    const valOf = p => p.personalValue != null ? p.personalValue : p.inflatedValue != null ? p.inflatedValue : p.auctionValue != null ? p.auctionValue : (p.projectedPoints || 0);
+    let avail = all.filter(p => !di.has(p.id));
+    if (sort === 'position') {
+      const order = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+      avail = avail.slice().sort((a, b) => { const oa = order.indexOf(a.position), ob = order.indexOf(b.position); if (oa !== ob) return (oa < 0 ? 99 : oa) - (ob < 0 ? 99 : ob); return valOf(b) - valOf(a); });
+    } else {
+      avail = avail.slice().sort((a, b) => valOf(b) - valOf(a));
+    }
+    return { list: avail.slice(0, 140), rankMap, valOf };
+  }, [players, draftedIds, sort]);
+  return React.createElement("div", { className: "ba-drawer" + (open ? " open" : "") }, React.createElement("button", { className: "ba-tab", onClick: () => setOpen(o => !o), title: "Best Available" }, open ? "\u2039" : "Best Available"), React.createElement("div", { className: "ba-inner" }, React.createElement("div", { className: "ba-head" }, React.createElement("span", { className: "ba-title" }, "Best Available"), React.createElement("div", { className: "ba-sort" }, React.createElement("button", { className: "ba-sbtn" + (sort === 'value' ? " on" : ""), onClick: () => setSort('value') }, "Value"), React.createElement("button", { className: "ba-sbtn" + (sort === 'position' ? " on" : ""), onClick: () => setSort('position') }, "Position"))), React.createElement("div", { className: "ba-list" }, data.list.map(p => React.createElement("div", { key: p.id, className: "ba-row", onClick: () => onPick && onPick(p.name), title: p.name }, React.createElement("span", { className: "ba-pos", style: { background: POS_COLOR[p.position] || '#888' } }, data.rankMap.get(p.id) || p.position), React.createElement("span", { className: "ba-name" }, p.name), React.createElement("span", { className: "ba-val" }, fmt === 'snake' ? Math.round(data.valOf(p)) : "$" + Math.round(data.valOf(p))))))));
+}
 function DraftBoard({
   players,
   draftedIds,
@@ -6165,7 +6206,7 @@ function DraftBoard({
   function renderStatCell(p, col) {
     return formatNum(col.get(p), col.precision ?? 1);
   }
-  return React.createElement("div", null, React.createElement("div", {
+  return React.createElement("div", null, React.createElement(BestAvailableDrawer, { players: players, draftedIds: draftedIds, fmt: _dbFmt, onPick: setSearch }), React.createElement("div", {
     className: "section-title"
   }, "Available Players"), React.createElement("div", {
     className: "section-meta"
