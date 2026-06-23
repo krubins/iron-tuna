@@ -4996,7 +4996,7 @@ function LandingSplash({
   }, React.createElement("button", {
     className: "lp-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, "Build my free auction board"), React.createElement("button", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : "Build my free auction board")), React.createElement("button", {
     className: "lp-cta lp-cta-alt",
     onClick: () => go('board', 'secondary_cta_board')
   }, "See Draft Night Mode")), React.createElement("p", {
@@ -5008,7 +5008,7 @@ function LandingSplash({
       marginTop: 4
     }
   }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "The unfair advantage in your snake draft" : "The unfair advantage for your auction")), (() => {
-    const d = DEMO.auction;
+    const d = DEMO[demoFmt] || DEMO.auction;
     const activeRow = pulse % d.rows.length;
     const dir = pulse % 2 ? 1 : -1;
     return React.createElement("div", {
@@ -5023,7 +5023,7 @@ function LandingSplash({
         textTransform: 'uppercase',
         color: 'var(--text-secondary)'
       }
-    }, "Your auction board"), React.createElement("span", {
+    }, "Your " + d.name + " board"), React.createElement("span", {
       className: "lp-demo-live"
     }, React.createElement("span", {
       className: "lp-demo-livedot"
@@ -5110,7 +5110,7 @@ function LandingSplash({
   }, React.createElement("button", {
     className: "lp-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, "Build my free auction board"))), React.createElement("div", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : "Build my free auction board")))), React.createElement("div", {
     className: "lp-section",
     ref: faqRef
   }, React.createElement("div", {
@@ -5140,7 +5140,7 @@ function LandingSplash({
   }, React.createElement("button", {
     className: "lp-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, "Build my free auction board"), React.createElement("button", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : "Build my free auction board")), React.createElement("button", {
     className: "lp-cta lp-cta-alt",
     onClick: () => go('board', 'secondary_cta_board')
   }, "See Draft Night Mode"))), React.createElement("p", {
@@ -5162,7 +5162,7 @@ function LandingSplash({
   }, "For creators")), React.createElement("button", {
     className: "lp-sticky-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, "Build my free auction board")));
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : "Build my free auction board"))));
 }
 function StrategySlider({
   value,
