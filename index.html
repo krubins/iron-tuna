@@ -1500,6 +1500,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .ba-name { color: var(--text-primary, #e8edf2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ba-val { font-family: var(--font-mono); font-size: 12.5px; color: var(--gold-text, #f7e08c); }
 @media (max-width: 980px) { .ba-drawer { display: none; } }
+
+.wmud { text-align: center; }
+.wmud-h { font-family: var(--font-display); font-size: clamp(22px, 3.4vw, 32px); letter-spacing: 0.01em; margin: 6px auto 22px; max-width: 760px; color: var(--text-primary, #e8edf2); }
+.wmud-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 880px; margin: 0 auto; text-align: left; }
+.wmud-card { padding: 20px; border-radius: 14px; background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border: 1px solid color-mix(in srgb, #22d3ee 22%, rgba(255,255,255,0.08)); }
+.wmud-title { font-family: var(--font-display); font-size: 17px; color: #22d3ee; letter-spacing: 0.02em; margin-bottom: 7px; }
+.wmud-body { font-size: 14px; line-height: 1.5; color: var(--text-secondary, #aab2b8); }
+@media (max-width: 760px) { .wmud-grid { grid-template-columns: 1fr; } }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -5043,7 +5051,7 @@ function LandingSplash({
     onClick: () => go('board', 'secondary_cta_board')
   }, "See Draft Night Mode")), React.createElement("p", {
     className: "lp-reassure"
-  }, "Free, no account. Draft Night Mode is a one-time $9.99, with a 30-day money-back guarantee.")), React.createElement("div", {
+  }, "Free, no account. Draft Night Mode is a one-time $9.99, with a 30-day money-back guarantee.")), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? React.createElement("div", { className: "lp-section wmud" }, React.createElement("div", { className: "lp-preview-eyebrow", style: { textAlign: 'center', marginTop: 4 } }, "What makes Iron Tuna different"), React.createElement("h2", { className: "wmud-h" }, "Built for the way a snake draft actually unfolds."), React.createElement("div", { className: "wmud-grid" }, React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "Drafts to your slot"), React.createElement("div", { className: "wmud-body" }, "A model built around your exact draft position picks the best team you can realistically get, and highlights the players in your queue who fit that plan at every round.")), React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "Rankings that move"), React.createElement("div", { className: "wmud-body" }, "Your rankings re-rank live as the draft unfolds, adjusting to your roster makeup and the points still on the board, so the smartest pick is always at the top.")), React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "Build around your guys"), React.createElement("div", { className: "wmud-body" }, "Lock in one or two players you love, even later-round targets, and Iron Tuna re-solves your optimal team around them, telling you when to wait and when a falling value is too good to pass.")), React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "A Value Coach in your corner"), React.createElement("div", { className: "wmud-body" }, "Ask anything mid-draft. The AI Value Coach reads your league live and flags positional cliffs, who will survive to your next pick, and when to change course.")))) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "lp-preview-eyebrow",
     style: {
       textAlign: 'center',
@@ -5091,7 +5099,7 @@ function LandingSplash({
     })))), React.createElement("div", {
       className: "lp-demo-note"
     }, d.note));
-  })(), React.createElement("div", {
+  })())), React.createElement("div", {
     className: "lp-section",
     ref: pricingRef
   }, React.createElement("div", {
