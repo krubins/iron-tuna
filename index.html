@@ -8039,7 +8039,7 @@ function TeamsBoard({
         color: 'var(--gold-text)',
         marginTop: 4
       }
-    }, "Starters ", proj.filledStarters, "/", proj.totalStarters, " · ", ((isNonAuction ? proj.draftedStarterPoints : proj.starterPoints) / games).toFixed(1), " pts/gm"), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
+    }, "Starters ", proj.filledStarters, "/", proj.totalStarters, " · ", (isNonAuction ? ((proj.draftedStarterPoints / games).toFixed(1) + " now \u2192 " + ((proj.starterPoints || 0) / games).toFixed(1) + " best pts/gm") : (((proj.starterPoints || 0) / games).toFixed(1) + " pts/gm"))), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
       style: {
         fontSize: 12,
         color: 'var(--text-muted)',
