@@ -7866,6 +7866,8 @@ function TeamsBoard({
     const minBidC = config.valuation.minBid;
     const maxBidC = Math.max(minBidC, team.budgetRemaining - (team.spotsRemaining - 1) * minBidC);
     const proj = projByTeam.get(team.id);
+    const _slotCount = {};
+    const _slotLabel = pos => { const a = pos === 'DEF' ? 'D' : pos; _slotCount[a] = (_slotCount[a] || 0) + 1; return a + _slotCount[a]; };
     const isCollapsed = collapsed.has(team.id);
     return React.createElement("div", {
       key: team.id,
@@ -7969,7 +7971,7 @@ function TeamsBoard({
         title: "Click to undo this pick"
       }, React.createElement("span", {
         className: "rg-label"
-      }, i + 1), React.createElement("span", {
+      }, _slotLabel(r.position)), React.createElement("span", {
         className: "rg-name"
       }, dp ? dp.name : r.playerId), React.createElement("span", {
         className: "rg-price"
@@ -7983,7 +7985,7 @@ function TeamsBoard({
       title: `Projected pick \u2014 click to find ${b.player.name} in the list`
     }, React.createElement("span", {
       className: "rg-label"
-    }, "R", b.round), React.createElement("span", {
+    }, _slotLabel(b.player.position)), React.createElement("span", {
       className: "rg-name",
       style: {
         fontStyle: 'italic'
