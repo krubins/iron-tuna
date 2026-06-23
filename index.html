@@ -1757,6 +1757,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .it-tag-gold { color: #f0c75a; }
 .it-tag-dim { color: #7c858c; }
 @keyframes itTagFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.it-foot { margin: 46px auto 26px; padding-top: 18px; max-width: 1000px; border-top: 1px solid var(--border-subtle, #22303b); display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: center; font-size: 13px; color: var(--text-muted, #8595a1); }
+.it-foot a { color: var(--text-secondary, #b6c2cc); text-decoration: none; }
+.it-foot a:hover { text-decoration: underline; }
+.it-foot-mark { color: var(--text-muted, #8595a1); }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -5382,7 +5387,7 @@ function LandingSplash({
     onClick: () => go('board', 'secondary_cta_board')
   }, "See Draft Night Mode"))), React.createElement("p", {
     className: "lp-creditline"
-  }, "Built on ESPN and CBS projections, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded."), React.createElement("div", {
+  }, "Built on projections from nationally recognized platforms, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded."), React.createElement("div", {
     className: "lp-seo-links"
   }, React.createElement("a", {
     href: "/fantasy-football-auction-values"
@@ -18604,12 +18609,16 @@ function HubLanding({ onPick, onSignin, onTerms }) {
   const faqRef = useRef(null);
   const scrollFaq = () => { try { faqRef.current && faqRef.current.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} };
   const AI_LINES = [
-    { a: "Someone in your league is already drafting with AI. ", b: "Right now, that edge is theirs, not yours." },
-    { a: "Walk into your draft with every pick scouted ", b: "and every value already solved." },
-    { a: "The manager who knocks you out this year won't study the hardest. ", b: "He'll have the best AI." },
-    { a: "Show up with the whole board already mapped. ", b: "Let the table wonder how you knew." },
-    { a: "Every league has a team that's always a step ahead. ", b: "This is the year they pull away." },
-    { a: "Build the roster that wins it in August. ", b: "Then coast all season long." }
+    { a: "Someone in your league is already drafting with AI. ", b: "Iron Tuna makes sure it isn't only them." },
+    { a: "Last year your leaguemates brought cheat sheets. ", b: "This year they brought a machine. So should you." },
+    { a: "Half your league will draft with an algorithm this season. ", b: "Don't be the half that doesn't." },
+    { a: "The guy who always wins isn't lucky anymore. ", b: "He has AI. Now you do too." },
+    { a: "AI is already in your draft room. ", b: "The only question is whose side it's on." },
+    { a: "Your rivals are quietly letting a model draft for them. ", b: "Iron Tuna is how you answer." },
+    { a: "Bring a printout to an AI draft and you're the bait. ", b: "Level the table." },
+    { a: "Everyone is about to have an unfair advantage. ", b: "Make sure you're not the one without it." },
+    { a: "The draft-day arms race already started. ", b: "Iron Tuna is your equalizer." },
+    { a: "They will have AI on draft night. ", b: "Don't show up outgunned." }
   ];
   const [aiIdx, setAiIdx] = useState(0);
   useEffect(() => { const t = setInterval(() => setAiIdx(i => (i + 1) % AI_LINES.length), 15000); return () => clearInterval(t); }, []);
@@ -18638,7 +18647,7 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-hero it-hero"
   }, React.createElement("div", { className: "lp-sticker hub-stk hub-stk-l", dangerouslySetInnerHTML: { __html: HUB_STK_SNAKE } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-r", dangerouslySetInnerHTML: { __html: HUB_STK_AUCTION } }), React.createElement(LogoMark, { tagline: true, height: 375, className: "landing-logo" }), React.createElement("div", { className: "it-tagline2" }, "You\u2019re either the ", React.createElement("span", { className: "it-tag-gold" }, "tuna"), " or the ", React.createElement("span", { className: "it-tag-dim" }, "bait"), ".")), React.createElement("div", {
     className: "lp-section lp-modes"
-  }, React.createElement("div", { className: "ip-stack" }, React.createElement("div", { className: "ip-row" }, React.createElement("button", { className: "ip-card ip-snake", onClick: () => onPick('snake'), dangerouslySetInnerHTML: { __html: SNAKE_PANEL } }), React.createElement("button", { className: "ip-card ip-auction", onClick: () => onPick('auction'), dangerouslySetInnerHTML: { __html: AUCTION_PANEL } })), React.createElement("div", { className: "ip-coach", dangerouslySetInnerHTML: { __html: VALUECOACH_HTML } }))), React.createElement("div", { className: "lp-ai-line", key: aiIdx }, React.createElement("span", { className: "lp-ai-a" }, AI_LINES[aiIdx].a), React.createElement("b", { className: "lp-ai-b" }, AI_LINES[aiIdx].b)), null));
+  }, React.createElement("div", { className: "ip-stack" }, React.createElement("div", { className: "ip-row" }, React.createElement("button", { className: "ip-card ip-snake", onClick: () => onPick('snake'), dangerouslySetInnerHTML: { __html: SNAKE_PANEL } }), React.createElement("button", { className: "ip-card ip-auction", onClick: () => onPick('auction'), dangerouslySetInnerHTML: { __html: AUCTION_PANEL } })), React.createElement("div", { className: "ip-coach", dangerouslySetInnerHTML: { __html: VALUECOACH_HTML } }))), React.createElement("div", { className: "lp-ai-line", key: aiIdx }, React.createElement("span", { className: "lp-ai-a" }, AI_LINES[aiIdx].a), React.createElement("b", { className: "lp-ai-b" }, AI_LINES[aiIdx].b)), React.createElement("footer", { className: "it-foot" }, React.createElement("a", { href: "/faq" }, "FAQ"), React.createElement("a", { href: "/terms" }, "Terms"), React.createElement("a", { href: "/privacy" }, "Privacy"), React.createElement("a", { href: "/support" }, "Support"), React.createElement("span", { className: "it-foot-mark" }, "Iron Tuna\u2122 \u00b7 \u00a9 2026 Iron Tuna"))));
 }
 function App() {
   const initialState = (() => {
