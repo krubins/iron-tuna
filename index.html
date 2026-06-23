@@ -6123,10 +6123,9 @@ function DraftBoard({
     const BYE_COL = { key: 'bye', label: 'Bye', align: 'right', sortable: false, get: p => byeOf(p.team), precision: 0 };
     const PPG_COL = { key: 'projectedPoints', label: 'PPG', align: 'right', sortable: true, get: p => p.projectedPoints != null ? p.projectedPoints / (seasonGames || 17) : null, precision: 1 };
     const SLOT_COL = { key: 'adp', label: 'Slot', align: 'right', sortable: true, get: p => p.adp != null ? Math.round(p.adp) : null, precision: 0 };
-    const RND_COL = { key: 'rnd', label: 'Rnd', align: 'right', sortable: false, get: p => p.adp != null ? Math.ceil(p.adp / ((config && config.teams) || 12)) : null, precision: 0 };
-    return _fmt === 'snake' ? [SLOT_COL, RND_COL, PPG_COL, BYE_COL] : [PPG_COL, BYE_COL];
+    return _fmt === 'snake' ? [SLOT_COL, PPG_COL, BYE_COL] : [PPG_COL, BYE_COL];
   }, [posFilter, pointsMode, seasonGames, config]);
-  const allColumns = useMemo(() => [...FIXED_LEFT_COLS, ...statColumns, ...(_dbFmt === 'snake' ? [{ key: 'actions', label: '', align: 'left', sortable: false, width: 150 }] : FIXED_RIGHT_COLS)], [statColumns, _dbFmt]);
+  const allColumns = useMemo(() => [...FIXED_LEFT_COLS, ...statColumns, ...FIXED_RIGHT_COLS], [statColumns]);
   function getSortValue(p, key) {
     if (key === 'rank') return 0;
     if (key === 'name') return p.name.toLowerCase();
@@ -6310,7 +6309,7 @@ function DraftBoard({
       style: {
         textAlign: col.align
       }
-    }, renderStatCell(p, col))), _dbFmt !== 'snake' && React.createElement(React.Fragment, null, React.createElement("td", {
+    }, renderStatCell(p, col))), React.createElement("td", {
       className: "col-value"
     }, "$", p.auctionValue), React.createElement("td", {
       className: "col-value",
@@ -6321,7 +6320,7 @@ function DraftBoard({
       className: "col-value col-personal"
     }, "$", p.personalValue ?? p.inflatedValue ?? p.auctionValue), React.createElement("td", {
       className: "col-paid"
-    }, drafted ? `$${drafted.price}` : '')), React.createElement("td", null, React.createElement("div", {
+    }, drafted ? `$${drafted.price}` : ''), React.createElement("td", null, React.createElement("div", {
       className: "player-row-action"
     }, myBoard && !drafted && React.createElement("span", {
       className: "move-btns"
@@ -9284,25 +9283,25 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jun 21, 2026',
+  updated: 'Jun 23, 2026',
   current: [{
-    label: 'Walker to Chiefs',
-    text: 'Kenneth Walker signed with Kansas City and has a clear path to 15 to 18 carries plus goal line work, with Pacheco and Hunt gone. Pay up for a mid range RB1.'
+    label: 'Brown to New England',
+    text: 'AJ Brown was traded from Philadelphia to the Patriots, giving Drake Maye a true No. 1 target. He profiles as a low end WR1, so pay up and expect a clear target spike.'
   }, {
-    label: 'Love is the Arizona lead',
-    text: 'Arizona took Jeremiyah Love No. 3 overall and plans to feed him right away. Target the rookie as a likely RB1, and pay for the projected workload.'
+    label: 'Egbuka is the Bucs WR1',
+    text: 'Mike Evans signed with the 49ers, and second year WR Emeka Egbuka is the favorite to lead Tampa Bay in targets with mid 20 percent share upside. Target Egbuka as a WR2 with top 10 ceiling.'
   }, {
-    label: 'Fade James Conner',
-    text: 'James Conner ADP has fallen hard after Arizona spent the No. 3 pick on Jeremiyah Love and added Tyler Allgeier. Do not pay last year prices, let someone else overbid.'
+    label: 'Wait on Rodgers',
+    text: 'Aaron Rodgers signed with the Steelers and reunited with Mike McCarthy, pushing his ADP up about two rounds. The ceiling is capped, so wait on QB rather than pay up.'
   }, {
-    label: 'Rice suspended 6 games',
-    text: 'Rashee Rice is suspended the first 6 games and returns Week 7. Discount him and stash as a boom or bust upside play, not a full price WR2.'
+    label: 'Target Josh Downs',
+    text: 'The Colts traded Michael Pittman Jr to the Steelers, vacating 111 targets. Josh Downs is the top beneficiary and projects near 100 targets, a value riser to target in the middle rounds.'
   }, {
-    label: 'Charbonnet ACL recovery',
-    text: 'Zach Charbonnet is recovering from a torn ACL and may open 2026 on the sideline, and Kenneth Walker left for Kansas City. Treat the Seattle backfield as a cheap dart.'
+    label: 'Walker to Kansas City',
+    text: 'Super Bowl LX MVP Kenneth Walker III signed with the Chiefs as their lead back. He carries clear RB1 upside in a strong offense, so be willing to pay up for early down and goal line work.'
   }, {
-    label: 'Brooks cheap upside',
-    text: 'Jonathon Brooks says he is close to 100 percent after a second ACL and impressed at OTAs, going around RB38 with Rico Dowdle gone. A cheap late dart behind Chuba Hubbard.'
+    label: 'Tuten leads Jacksonville',
+    text: 'Travis Etienne signed with the Saints, opening the Jaguars backfield for second year RB Bhayshul Tuten. He leads early, but Chris Rodriguez Jr factors in, so target Tuten and respect committee risk.'
   }],
   library: [{
     label: 'Volume is king',
@@ -16369,7 +16368,7 @@ function buildCoachContext(q, ctx) {
 }
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _coachFmt = contextObj && contextObj.format || 'auction';
-  const _coachId = _coachFmt === 'snake' ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. Think in ADP, pick order, and position runs. Maximize this manager's TOTAL points across the whole draft, not just the most points or highest VOR at this one slot. Look ahead before recommending: each player has an adp and a survives% (his chance of still being on the board at this manager's NEXT pick; picksToYourNextPick is in formatInfo). Proactively, even when not asked, tell them (1) who to grab NOW because his position is about to be picked clean and the drop-off to the next man at that position is steep, and (2) who they can let slide and target next round because he is likely to survive. Prefer taking a scarce position now over a slightly higher-scoring player at a deep position, and frame each call as value over the next player likely available at that position. If asked whether a specific player will still be available in a given round, estimate it from his adp versus the overall pick number the manager holds that round (snake pick math from the draftSlot and league size in the data): an adp well past that pick number means good odds he survives, an adp at or before it means slim odds. Warn about positional cliffs: when projected points drop steeply just past the next few players at a position, say so plainly. When the manager eyes an early-round player, point out if someone several rounds later projects similar points, or if a pair of cheap handcuff running backs from one backfield could match the production for far less draft capital. If the manager planned to wait on a position but a top option there falls to unusual value, recommend they reconsider taking him now, as a suggestion and not a command." : _coachFmt === 'bestball' ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management." : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
+  const _coachId = _coachFmt === 'snake' ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. Think in ADP, pick order, and position runs. Maximize this manager's TOTAL points across the whole draft, not just the most points or highest VOR at this one slot. Look ahead before recommending: each player has an adp and a survives% (his chance of still being on the board at this manager's NEXT pick; picksToYourNextPick is in formatInfo). Proactively, even when not asked, tell them (1) who to grab NOW because his position is about to be picked clean and the drop-off to the next man at that position is steep, and (2) who they can let slide and target next round because he is likely to survive. Prefer taking a scarce position now over a slightly higher-scoring player at a deep position, and frame each call as value over the next player likely available at that position. If asked whether a specific player will still be available in a given round, estimate it from his adp versus the overall pick number the manager holds that round (snake pick math from the draftSlot and league size in the data): an adp well past that pick number means good odds he survives, an adp at or before it means slim odds." : _coachFmt === 'bestball' ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management." : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
   const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
