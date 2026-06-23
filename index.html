@@ -1009,7 +1009,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cc-K .cheat-col-head { border-top-color: #8b5cf6; } .cc-K .cheat-col-head > span:first-child { color: #b18cff; }
 .cc-DEF .cheat-col-head { border-top-color: #9aa6b2; } .cc-DEF .cheat-col-head > span:first-child { color: #c2cdd7; }
 .landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 0 20px 60px; background: radial-gradient(1100px 560px at 50% -8%, rgba(45,212,163,0.07), transparent 60%), radial-gradient(820px 520px at 88% 12%, rgba(212,160,23,0.05), transparent 55%), radial-gradient(760px 620px at 6% 82%, rgba(45,212,163,0.045), transparent 60%), radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); }
-.lp-inner { position: relative; z-index: 2; max-width: 960px; margin: 20px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.lp-inner { position: relative; z-index: 2; max-width: 1300px; margin: 20px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
 .lp-hero { min-height: auto; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; }
 .lp-hero .landing-logo { width: auto; height: 319px; margin-top: 0; margin-bottom: 16px; }
 .lp-hero .lp-head { margin-top: 0; }
@@ -1064,7 +1064,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-demo-val.down { color: var(--danger); }
 .lp-demo-arrow { font-style: normal; font-size: 10px; margin-right: 4px; }
 .lp-demo-note { padding: 8px 16px 0; font-size: 13px; color: var(--text-muted); }
-.lp-modes-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 40px; max-width: 880px; margin: 16px auto 0; }
+.lp-modes-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 40px; max-width: 1240px; margin: 30px auto 0; }
 .lp-mode-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; cursor: pointer; padding: 24px 22px 22px; border-radius: 16px; overflow: hidden; background: radial-gradient(120% 60% at 50% -12%, color-mix(in srgb, var(--mode-accent) 16%, transparent), transparent 70%), linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 55%, rgba(0,0,0,0.12) 100%); border: 1px solid color-mix(in srgb, var(--mode-accent) 30%, rgba(255,255,255,0.08)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 18px 42px -22px rgba(0,0,0,0.85), 0 0 30px -16px var(--mode-accent); transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
 .lp-mode-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--mode-accent) 22%, var(--mode-accent) 78%, transparent); box-shadow: 0 0 14px var(--mode-accent); opacity: 0.95; }
 .lp-mode-card:hover { transform: translateY(-5px); border-color: var(--mode-accent); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 28px 60px -22px rgba(0,0,0,0.9), 0 0 54px -8px var(--mode-accent); }
@@ -1074,7 +1074,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-mode-name { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.02em; font-weight: 700; }
 .lp-mode-line { font-size: 14px; color: var(--text-secondary); line-height: 1.4; }
 .lp-mode-bul { list-style: none; margin: 6px 0 2px; padding: 0; display: flex; flex-direction: column; gap: 9px; width: 100%; }
-.lp-mode-bul li { position: relative; padding-left: 16px; font-size: 12.5px; color: var(--text-secondary, #aab2b8); line-height: 1.35; }
+.lp-mode-bul li { position: relative; padding-left: 16px; font-size: 12px; color: var(--text-secondary, #aab2b8); line-height: 1.4; white-space: nowrap; }
 .lp-mode-bul li::before { content: "▸"; position: absolute; left: 0; top: 0; color: var(--mode-accent); }
 .lp-mode-go { margin-top: auto; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mode-accent, var(--gold-text)); }
 .lp-demo-cta-row { padding: 12px 14px 14px; }
@@ -1359,7 +1359,20 @@ input:focus, select:focus { border-color: var(--accent); }
 @media (max-width: 600px) {
   .landing-page { padding: 0 14px 60px; }
   .lp-hero .landing-logo { height: 191px !important; margin-bottom: 16px; }
-.hub-landing .lp-hero .landing-logo { height: 220px !important; }
+.hub-landing .lp-hero .landing-logo { height: 242px !important; }
+
+.hub-hero-row { display: flex; align-items: center; justify-content: center; gap: 40px; width: 100%; }
+.hub-seal { flex: 0 0 auto; width: 140px; height: 140px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; line-height: 1.12; }
+.hub-seal-s { transform: rotate(-8deg); border: 2px solid #22d3ee; background: radial-gradient(circle at 50% 36%, rgba(34,211,238,0.18), rgba(34,211,238,0.035) 72%); box-shadow: 0 0 28px -8px rgba(34,211,238,0.55), inset 0 0 0 4px rgba(34,211,238,0.10); }
+.hub-seal-a { transform: rotate(8deg); border: 2px solid #e3b53a; background: radial-gradient(circle at 50% 36%, rgba(227,181,58,0.18), rgba(227,181,58,0.035) 72%); box-shadow: 0 0 28px -8px rgba(227,181,58,0.55), inset 0 0 0 4px rgba(227,181,58,0.10); }
+.hub-seal-star { font-size: 12px; line-height: 1; margin-bottom: 3px; }
+.hub-seal-s .hub-seal-star, .hub-seal-s .hub-seal-k { color: #22d3ee; }
+.hub-seal-a .hub-seal-star, .hub-seal-a .hub-seal-k { color: #e3b53a; }
+.hub-seal-k { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.16em; }
+.hub-seal-h { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text-primary, #fff); letter-spacing: 0.01em; margin: 3px 0 2px; }
+.hub-seal-sub { font-size: 10.5px; color: var(--text-secondary, #aab2b8); }
+@media (max-width: 980px) { .hub-seal { display: none; } .hub-hero-row { gap: 0; } }
+
   .lp-head { margin-bottom: 16px; }
   .lp-sub { margin-bottom: 22px; }
   .lp-cta-row { width: 100%; flex-direction: column; gap: 10px; }
@@ -4428,7 +4441,7 @@ function LogoMark({
   const fishX = tagline ? (vbW - fishW) / 2 : 2;
   const fishY = tagline ? 2 : cy - 27;
   const wordTx = tagline ? (vbW - wordWidth) / 2 : tunaW;
-  const wordTy = tagline ? fishH - 1.5 : 0;
+  const wordTy = tagline ? fishH + 0.5 : 0;
   const vbH = tagline ? fishH + 70 : base * 1.12;
   const taglineY = tagline ? fishH + 56 : vbH - base * 0.14;
   const rivets = [[40, 12], [54, 10.5], [68, 12], [80, 15], [26, 16], [44, 40], [58, 42], [72, 40], [33, 30], [50, 30], [66, 30], [80, 29]];
@@ -4622,7 +4635,7 @@ function LogoMark({
     fill: "#ffffff"
   })), React.createElement("g", {
     filter: wavy ? 'url(#waterDistort)' : undefined,
-    transform: `translate(${wordTx},${wordTy})`
+    transform: `translate(${wordTx},${wordTy}) translate(${wordWidth/2},${cy}) scale(${tagline ? 1.2 : 1}) translate(${-(wordWidth/2)},${-cy})`
   }, placed.map((g, i) => React.createElement("text", {
     key: i,
     x: g.cx,
@@ -4935,8 +4948,6 @@ function LandingSplash({
   }))), React.createElement("div", {
     className: "lp-ribbon-links"
   }, React.createElement("button", {
-    onClick: () => go('modes')
-  }, "Modes"), React.createElement("button", {
     onClick: () => go('prep', 'ribbon_prep')
   }, "Prep"), React.createElement("button", {
     onClick: () => go('board', 'ribbon_auction_night')
@@ -4956,11 +4967,11 @@ function LandingSplash({
     }
   }), React.createElement("div", {
     className: "lp-hero it-hero"
-  }, React.createElement(LogoMark, {
+  }, React.createElement("div", { className: "hub-hero-row" }, React.createElement("div", { className: "hub-seal hub-seal-s" }, React.createElement("span", { className: "hub-seal-star" }, "\u2605"), React.createElement("span", { className: "hub-seal-k" }, "BETTER"), React.createElement("b", { className: "hub-seal-h" }, "PREDICTION"), React.createElement("span", { className: "hub-seal-sub" }, "on snake drafts")), React.createElement(LogoMark, {
     tagline: true,
     height: 300,
     className: "landing-logo"
-  }), React.createElement("div", {
+  }), React.createElement("div", { className: "hub-seal hub-seal-a" }, React.createElement("span", { className: "hub-seal-star" }, "\u2605"), React.createElement("span", { className: "hub-seal-k" }, "BETTER"), React.createElement("b", { className: "hub-seal-h" }, "ACCURACY"), React.createElement("span", { className: "hub-seal-sub" }, "on auction values"))), React.createElement("div", {
     className: "lp-cmd"
   }, (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Far and away, Fantasy Football’s best AI Snake Draft tool." : "Fantasy Football’s #1 auction & salary-cap-only draft tool"), React.createElement("div", {
     style: {
@@ -10832,7 +10843,7 @@ function ReferralModal({
     let em = account && account.user && account.user.email || account && account.refEmail || '';
     if (!em) {
       try {
-        em = (window.prompt('Email for your referral payouts (where we send your $5 per signup):') || '').trim();
+        em = (window.prompt('Email for your referral payouts (where we send your $3 per signup):') || '').trim();
       } catch (e) {}
     }
     setAccount(a => Object.assign({}, a, {
@@ -10910,7 +10921,7 @@ function ReferralModal({
     className: "section-title"
   }, "Refer & Earn"), React.createElement("p", {
     className: "rf-lede"
-  }, "Forward your free cheat sheet to friends or post it anywhere. You earn ", React.createElement("b", null, "$5 for every friend who signs up"), " for the Full Site ($9.99, includes Draft Night and the Draft Board), and they get ", React.createElement("b", null, "$1 off"), " with your code. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
+  }, "Forward your free cheat sheet to friends or post it anywhere. You earn ", React.createElement("b", null, "$3 for every friend who signs up"), " for the Full Site ($9.99, includes Draft Night and the Draft Board), and they get ", React.createElement("b", null, "$1 off"), " with your code. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("button", {
     className: "rf-getcode",
     onClick: getCode
   }, "Get my referral code") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -10965,7 +10976,7 @@ function ReferralModal({
     "aria-label": "Copy the share text"
   }, copied === 'msg' ? 'Copied!' : 'Copy text'))), React.createElement("div", {
     className: "ds-ref"
-  }, "You earn $5 for each friend who signs up for the Full Site through your link, and they get $1 off. ", React.createElement("a", {
+  }, "You earn $3 for each friend who signs up for the Full Site through your link, and they get $1 off. ", React.createElement("a", {
     href: "/creators",
     target: "_blank",
     rel: "noopener"
@@ -18220,8 +18231,8 @@ function HubLanding({ onPick, onSignin, onTerms }) {
   const scrollFaq = () => { try { faqRef.current && faqRef.current.scrollIntoView({ behavior: 'smooth' }); } catch (e) {} };
   const aAccent = '#e3b53a';
   const sAccent = '#22d3ee';
-  const GAVEL_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0" y1="0" x2="0.85" y2="1"><stop offset="0" stop-color="#fdeeb0"/><stop offset="0.4" stop-color="#e9bf4e"/><stop offset="1" stop-color="#a06e15"/></linearGradient><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c89327"/><stop offset="1" stop-color="#6c4708"/></linearGradient><radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e9bf4e" stop-opacity="0.45"/><stop offset="1" stop-color="#e9bf4e" stop-opacity="0"/></radialGradient></defs><ellipse cx="36" cy="40" rx="30" ry="30" fill="url(#glow)"/><!-- sound block base --><rect x="16" y="56" width="40" height="8" rx="4" fill="url(#gd)"/><rect x="19" y="53" width="34" height="6" rx="3" fill="url(#g)"/><rect x="22" y="54" width="22" height="1.6" rx="0.8" fill="#fff" opacity="0.4"/><!-- gavel head+handle, rotated --><g transform="rotate(40 36 30)"><rect x="33" y="24" width="6" height="26" rx="3" fill="url(#g)" stroke="#7a520c" stroke-width="0.5"/><rect x="22" y="9" width="28" height="15" rx="5" fill="url(#g)" stroke="#7a520c" stroke-width="0.6"/><rect x="24.5" y="9" width="3.2" height="15" rx="1.4" fill="url(#gd)" opacity="0.65"/><rect x="44.3" y="9" width="3.2" height="15" rx="1.4" fill="url(#gd)" opacity="0.65"/><rect x="25" y="11" width="22" height="2.4" rx="1.2" fill="#fff" opacity="0.45"/></g></svg>';
-  const CLOCK_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8f7fd"/><stop offset=".5" stop-color="#22d3ee"/><stop offset="1" stop-color="#0b7e9c"/></linearGradient><radialGradient id="sglow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#22d3ee" stop-opacity="0.4"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient></defs><circle cx="36" cy="36" r="32" fill="url(#sglow)"/><path d="M14 17 H46 a10 10 0 0 1 0 20 H26 a10 10 0 0 0 0 20 H56" fill="none" stroke="url(#ice)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><!-- start node (pick 1) --><circle cx="14" cy="17" r="4" fill="#eaf6ff"/><!-- arrowhead at the end --><path d="M50 49 L57 57 L49 60" fill="none" stroke="#eaf6ff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const GAVEL_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="brass" x1="0" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".4" stop-color="#e9bf4e"/><stop offset="1" stop-color="#9a6a12"/></linearGradient><linearGradient id="brassD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#caa033"/><stop offset="1" stop-color="#6c4708"/></linearGradient><linearGradient id="band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8"/><stop offset="1" stop-color="#b9892a"/></linearGradient><radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e9bf4e" stop-opacity="0.42"/><stop offset="1" stop-color="#e9bf4e" stop-opacity="0"/></radialGradient></defs><ellipse cx="36" cy="38" rx="32" ry="32" fill="url(#glow)"/><!-- sound block (disc the gavel strikes) --><ellipse cx="34" cy="60" rx="22" ry="5.5" fill="url(#brassD)"/><ellipse cx="34" cy="58.4" rx="22" ry="5.5" fill="url(#brass)"/><ellipse cx="34" cy="57.6" rx="15" ry="2.6" fill="#fff" opacity="0.35"/><!-- gavel: cylindrical head + handle, angled --><g transform="rotate(38 36 30)"><!-- handle --><rect x="33.2" y="22" width="5.6" height="30" rx="2.8" fill="url(#brass)" stroke="#7a520c" stroke-width="0.5"/><rect x="34" y="24" width="1.7" height="26" rx="0.8" fill="#fff" opacity="0.45"/><!-- head (capsule) --><rect x="18" y="8" width="36" height="16" rx="8" fill="url(#brass)" stroke="#7a520c" stroke-width="0.7"/><!-- striking-face bands --><rect x="23.5" y="8" width="3.4" height="16" rx="1.5" fill="url(#band)" stroke="#7a520c" stroke-width="0.4"/><rect x="45.1" y="8" width="3.4" height="16" rx="1.5" fill="url(#band)" stroke="#7a520c" stroke-width="0.4"/><!-- end caps --><rect x="18" y="8" width="5.5" height="16" rx="6" fill="url(#brassD)" opacity="0.55"/><rect x="48.5" y="8" width="5.5" height="16" rx="6" fill="url(#brassD)" opacity="0.55"/><!-- top highlight --><rect x="26" y="10.5" width="18" height="3" rx="1.5" fill="#fff" opacity="0.5"/></g></svg>';
+  const CLOCK_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e7fbff"/><stop offset=".45" stop-color="#22d3ee"/><stop offset="1" stop-color="#0b7e9c"/></linearGradient><radialGradient id="sglow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#22d3ee" stop-opacity="0.40"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient></defs><circle cx="36" cy="36" r="33" fill="url(#sglow)"/><!-- coiled body --><path d="M50 14 C58 22 56 33 45 35 C32 37 28 47 36 54 C42 59 51 58 56 52" fill="none" stroke="url(#ice)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><!-- dorsal scale dots --><path d="M50 14 C58 22 56 33 45 35 C32 37 28 47 36 54 C42 59 51 58 56 52" fill="none" stroke="#0b6f8a" stroke-width="1.6" stroke-linecap="round" opacity="0.5" stroke-dasharray="0.5 5.5"/><!-- tail taper to a point --><path d="M55.5 52.5 C59 49 61 45.5 60.5 41.5" fill="none" stroke="url(#ice)" stroke-width="5" stroke-linecap="round"/><path d="M60.6 43 C61.4 41 61.4 39.3 60.6 37.8" fill="none" stroke="url(#ice)" stroke-width="2.4" stroke-linecap="round"/><!-- head + tongue (rotate together so tongue stays at the mouth) --><g transform="rotate(-30 50 14)"><!-- forked tongue from snout --><path d="M58 13 L67 13 M67 13 L69 11.4 M67 13 L69 14.6" fill="none" stroke="#ff5470" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="50" cy="13" rx="8.6" ry="6.7" fill="url(#ice)" stroke="#0b6f8a" stroke-width="0.6"/><ellipse cx="49" cy="11" rx="5.6" ry="2.8" fill="#cdf6fd" opacity="0.55"/><circle cx="53.4" cy="11.6" r="2" fill="#0a2a33"/><circle cx="52.7" cy="10.9" r="0.75" fill="#eafdff"/><circle cx="57.6" cy="13" r="0.7" fill="#0b6f8a"/></g></svg>';
   const HUB_FAQS = [['Does Iron Tuna work for both snake and auction drafts?', 'Yes. Pick your format above. Auction gives live max-bid math and budget tracking; Snake gives a best-available board and survival odds for your next pick.'], ['Do I need an account?', 'No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft night.'], ['Can I use my exact league scoring?', 'Yes. Set your scoring, roster slots, and league size, and every value recalculates to your settings, including superflex and 2-QB.'], ['How much does it cost?', 'The cheat sheet is free in both formats. The live Draft Night experience is a one-time $9.99 with a 30-day money-back guarantee.'], ['Can I use it during the live draft?', 'Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft.'], ['Is it fair to use in my league?', 'Yes. It is a smarter cheat sheet built on projections. Your edge comes from reacting faster and more rationally than the rest of the room.']];
   return React.createElement("div", {
     className: "landing-splash landing-page hub-landing"
@@ -18239,12 +18250,12 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-section lp-modes"
   }, React.createElement("div", {
     className: "lp-modes-grid"
-  }, [{ fmt: 'snake', name: 'Snake Draft', line: "We rerank players as the draft progresses based on your team's changing needs.", cta: 'Build my snake board', bullets: ['AI rankings that adjust based on your in-draft needs.', 'Odds that a player will be available for your next pick.', 'Elevated rankings for players that fit your roster.', 'Value Coach to provide live AI assistance based on your league as the draft unfolds.'], accent: sAccent, icon: CLOCK_SVG }, { fmt: 'auction', name: 'Auction Draft', line: "We rerank players as the draft progresses based on your team's changing needs.", cta: 'Build my auction board', bullets: ["Your exact max bid on any player, recalculated as the room spends.", "Every team's budget and roster needs, tracked live.", "The best roster your budget can still afford, re-solved every pick.", "Value Coach to provide live AI assistance based on your league as the draft unfolds."], accent: aAccent, icon: GAVEL_SVG }].map(m => React.createElement("button", {
+  }, [{ fmt: 'snake', name: 'Snake Draft', line: "We rerank players as the draft progresses based on your team's changing needs.", cta: 'Build my snake board', bullets: ['AI rankings that adjust based on your in-draft needs.', 'Odds that a player will be available for your next pick.', 'Elevated rankings for players that fit your roster.', 'Value Coach provides live AI assistance based on your league as the draft unfolds.'], accent: sAccent, icon: CLOCK_SVG }, { fmt: 'auction', name: 'Auction Draft', line: "We rerank players as the draft progresses based on your team's changing needs.", cta: 'Build my auction board', bullets: ["Your exact max bid on any player, recalculated as the room spends.", "Every team's budget and roster needs, tracked live.", "The best roster your budget can still afford, re-solved every pick.", "Value Coach provides live AI assistance based on your league as the draft unfolds."], accent: aAccent, icon: GAVEL_SVG }].map(m => React.createElement("button", {
     key: m.fmt,
     className: "lp-mode-card",
     style: { '--mode-accent': m.accent },
     onClick: () => onPick(m.fmt)
-  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), m.line ? React.createElement("span", { className: "lp-mode-line" }, m.line) : null, React.createElement("ul", { className: "lp-mode-bul" }, (m.bullets || []).map((b, i, arr) => React.createElement("li", { key: i, style: i === arr.length - 1 ? { fontWeight: 700, color: 'var(--text-primary)' } : undefined }, b))), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", { className: "lp-ai-line" }, React.createElement("span", { className: "lp-ai-a" }, "AI can beat the chess grandmasters. "), React.createElement("b", { className: "lp-ai-b" }, "It can beat your leaguemates.")), React.createElement("div", {
+  }, React.createElement("span", { className: "lp-mode-ico", style: { color: m.accent }, dangerouslySetInnerHTML: { __html: m.icon } }), React.createElement("span", { className: "lp-mode-name", style: { color: m.accent } }, m.name), m.line ? React.createElement("span", { className: "lp-mode-line" }, m.line) : null, React.createElement("ul", { className: "lp-mode-bul" }, (m.bullets || []).map((b, i, arr) => React.createElement("li", { key: i, style: i === arr.length - 1 ? { fontWeight: 700, color: 'var(--text-primary)' } : undefined }, b))), React.createElement("span", { className: "lp-mode-go" }, m.cta + " →"))))), React.createElement("div", { className: "lp-ai-line" }, React.createElement("span", { className: "lp-ai-a" }, "AI can beat the chess grandmasters. "), React.createElement("b", { className: "lp-ai-b" }, "It can help you to beat your leaguemates.")), React.createElement("div", {
     className: "lp-section",
     ref: faqRef
   }, React.createElement("div", {
