@@ -1472,6 +1472,17 @@ input:focus, select:focus { border-color: var(--accent); }
 .whb-res { font-size: 13px; line-height: 1.45; color: var(--text-secondary, #aab2b8); margin-top: 2px; }
 .whb-odds { color: #22d3ee; font-size: 18px; font-family: var(--font-display); margin-right: 2px; }
 .whb-err { color: var(--negative, #ff6b6b); }
+
+.dlog-btn { border-color: color-mix(in srgb, #e3b53a 45%, transparent) !important; background: color-mix(in srgb, #e3b53a 12%, transparent) !important; color: #f7e08c !important; }
+.dlog-btn:hover { background: color-mix(in srgb, #e3b53a 22%, transparent) !important; }
+.dlog-panel { width: 370px; max-height: 60vh; overflow-y: auto; }
+.dlog-list { display: flex; flex-direction: column; gap: 2px; }
+.dlog-row { display: grid; grid-template-columns: 24px minmax(0,1fr) auto auto; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.dlog-n { color: var(--text-muted, #6b7785); font-family: var(--font-mono); }
+.dlog-pl { color: var(--text-primary, #e8edf2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dlog-pl em { color: var(--text-muted, #6b7785); font-style: normal; font-size: 0.85em; margin-left: 4px; }
+.dlog-tm { color: var(--text-secondary, #aab2b8); white-space: nowrap; }
+.dlog-pr { color: #f7e08c; font-family: var(--font-mono); }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -6064,6 +6075,7 @@ function DraftBoard({
     const prob = survivalProb(player, currentPick, targetPick - currentPick, recent);
     return { player, round: rd, targetPick, odds: Math.max(0, Math.min(100, Math.round(prob * 100))) };
   }, [_dbFmt, whbQuery, whbRound, players, draftHistory, draftedIds, config]);
+  const [logOpen, setLogOpen] = useState(false);
   const myBoard = sortKey === 'myboard';
   const statColumns = useMemo(() => {
     const _fmt = (config && config.format) || 'auction';
@@ -6168,7 +6180,7 @@ function DraftBoard({
     placeholder: "Search by name or team...",
     value: search,
     onChange: e => setSearch(e.target.value)
-  }), _dbFmt === 'snake' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setWhbOpen(o => !o) }, "Will he be there?"), whbOpen && React.createElement("div", { className: "whb-panel" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQuery, onChange: e => setWhbQuery(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbRound, onChange: e => setWhbRound(e.target.value) }), whbResult && (whbResult.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResult.err) : whbResult.drafted ? React.createElement("div", { className: "whb-res" }, whbResult.player.name + " is already off the board.") : whbResult.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResult.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResult.odds + "%"), " chance " + whbResult.player.name + " (ADP " + (whbResult.player.adp != null ? Math.round(whbResult.player.adp) : "?") + ") is still on the board at your round " + whbResult.round + " pick (overall #" + whbResult.targetPick + ").")))), React.createElement("div", {
+  }), _dbFmt === 'snake' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setWhbOpen(o => !o) }, "Will he be there?"), whbOpen && React.createElement("div", { className: "whb-panel" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQuery, onChange: e => setWhbQuery(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbRound, onChange: e => setWhbRound(e.target.value) }), whbResult && (whbResult.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResult.err) : whbResult.drafted ? React.createElement("div", { className: "whb-res" }, whbResult.player.name + " is already off the board.") : whbResult.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResult.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResult.odds + "%"), " chance " + whbResult.player.name + " (ADP " + (whbResult.player.adp != null ? Math.round(whbResult.player.adp) : "?") + ") is still on the board at your round " + whbResult.round + " pick (overall #" + whbResult.targetPick + ").")))), _dbFmt === 'auction' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn dlog-btn", onClick: () => setLogOpen(o => !o) }, "Draft log"), logOpen && React.createElement("div", { className: "whb-panel dlog-panel" }, (draftHistory && draftHistory.length) ? React.createElement("div", { className: "dlog-list" }, draftHistory.map((d, i) => { const pl = (players || []).find(p => p.id === d.playerId); const tm = (teams || []).find(t => t.id === d.teamId); return React.createElement("div", { key: i, className: "dlog-row" }, React.createElement("span", { className: "dlog-n" }, i + 1), React.createElement("span", { className: "dlog-pl" }, pl ? pl.name : d.playerId, React.createElement("em", null, pl ? pl.position : d.position)), React.createElement("span", { className: "dlog-tm" }, tm ? tm.name : d.teamId), React.createElement("span", { className: "dlog-pr" }, "$" + d.price)); })) : React.createElement("div", { className: "whb-res" }, "No players have been won yet."))), React.createElement("div", {
     className: "filter-pills"
   }, POSITIONS.map(p => React.createElement("button", {
     key: p,
