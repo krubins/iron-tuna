@@ -1753,6 +1753,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-sticker.hub-stk-l { left: -15%; transform: rotate(-8deg); }
 .lp-sticker.hub-stk-r { right: -15%; left: auto; transform: rotate(8deg); }
 @media (max-width: 900px){ .lp-sticker.hub-stk { width: 89px; height: 89px; top: 3%; } .lp-sticker.hub-stk-l { left: 0; } .lp-sticker.hub-stk-r { right: 0; } }
+.it-tagline2 { margin-top: -2px; font-family: var(--font-display); font-size: clamp(18px, 2.6vw, 27px); letter-spacing: 0.06em; text-transform: uppercase; color: #c9d2d8; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -18632,7 +18633,7 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"
-  }, React.createElement("div", { className: "lp-sticker hub-stk hub-stk-l", dangerouslySetInnerHTML: { __html: HUB_STK_SNAKE } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-r", dangerouslySetInnerHTML: { __html: HUB_STK_AUCTION } }), React.createElement(LogoMark, { tagline: true, height: 375, className: "landing-logo" })), React.createElement("div", {
+  }, React.createElement("div", { className: "lp-sticker hub-stk hub-stk-l", dangerouslySetInnerHTML: { __html: HUB_STK_SNAKE } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-r", dangerouslySetInnerHTML: { __html: HUB_STK_AUCTION } }), React.createElement(LogoMark, { tagline: true, height: 375, className: "landing-logo" }), React.createElement("div", { className: "it-tagline2" }, "You\u2019re either the tuna or the bait.")), React.createElement("div", {
     className: "lp-section lp-modes"
   }, React.createElement("div", { className: "ip-stack" }, React.createElement("div", { className: "ip-row" }, React.createElement("button", { className: "ip-card ip-snake", onClick: () => onPick('snake'), dangerouslySetInnerHTML: { __html: SNAKE_PANEL } }), React.createElement("button", { className: "ip-card ip-auction", onClick: () => onPick('auction'), dangerouslySetInnerHTML: { __html: AUCTION_PANEL } })), React.createElement("div", { className: "ip-coach", dangerouslySetInnerHTML: { __html: VALUECOACH_HTML } }))), React.createElement("div", { className: "lp-ai-line", key: aiIdx }, React.createElement("span", { className: "lp-ai-a" }, AI_LINES[aiIdx].a), React.createElement("b", { className: "lp-ai-b" }, AI_LINES[aiIdx].b)), null));
 }
