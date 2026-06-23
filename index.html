@@ -9438,6 +9438,16 @@ const MODEL_DESC = {
   robustWR: 'Robust WR: spend up for multiple high-volume receivers and build around a deep WR corps.',
   eliteTE: 'Elite TE: pay up for a top-three tight end for a weekly edge few rivals can match.'
 };
+const SNAKE_MODEL_DESC = {
+  ideal: 'Ideal Team: the highest-scoring starting lineup you can realistically draft from your slot.',
+  heroRB: 'Hero RB: use an early pick on one elite running back, take value at RB2, and load up at the other spots.',
+  heroWR: 'Hero WR: use an early pick on one elite receiver, take value at WR2, and build out the other spots.',
+  heroQB: 'Hero QB: take one elite quarterback early and find value at the other positions.',
+  zeroRB: 'Zero RB: wait on running back and pour your early picks into elite, high-volume receivers.',
+  robustRB: 'Robust RB: use early picks on multiple workhorse running backs, the scarcest position in fantasy.',
+  robustWR: 'Robust WR: use early picks on multiple high-volume receivers and build a deep WR corps.',
+  eliteTE: 'Elite TE: draft a top-three tight end early for a weekly edge few rivals can match.'
+};
 const FANTASY_FACTS = [{
   label: 'Split-backfield lottery',
   text: 'In an unsettled backfield, buy BOTH backs for $1-2 each. You are not guessing the winner, you are guaranteeing you roster whoever emerges, off a rival\'s bench.'
@@ -18314,7 +18324,7 @@ function HeaderModelTabs({
   }, models.map(([k, lbl]) => React.createElement("button", {
     key: k,
     className: `hm-tab ${model === k ? 'active' : ''}`,
-    title: MODEL_DESC[k] || lbl,
+    title: (((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) && SNAKE_MODEL_DESC[k]) || MODEL_DESC[k] || lbl),
     onClick: () => onSelectModel(model === k ? null : k)
   }, lbl, modelPts[k] != null && (k !== 'custom' || typeof customForced !== 'undefined' && customForced && customForced.size > 0) ? React.createElement("span", {
     className: "hm-pts"
