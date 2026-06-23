@@ -1508,6 +1508,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .wmud-title { font-family: var(--font-display); font-size: 17px; color: #22d3ee; letter-spacing: 0.02em; margin-bottom: 7px; }
 .wmud-body { font-size: 14px; line-height: 1.5; color: var(--text-secondary, #aab2b8); }
 @media (max-width: 760px) { .wmud-grid { grid-template-columns: 1fr; } }
+
+.wmud-a .wmud-card { border: 1px solid color-mix(in srgb, #e3b53a 28%, rgba(255,255,255,0.08)); }
+.wmud-a .wmud-title { color: #e3b53a; }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -5099,7 +5102,7 @@ function LandingSplash({
     })))), React.createElement("div", {
       className: "lp-demo-note"
     }, d.note));
-  })())), React.createElement("div", {
+  })(), React.createElement("div", { className: "lp-section wmud wmud-a" }, React.createElement("div", { className: "lp-preview-eyebrow", style: { textAlign: 'center', marginTop: 4 } }, "What makes Iron Tuna different"), React.createElement("h2", { className: "wmud-h" }, "Built to win the auction room."), React.createElement("div", { className: "wmud-grid" }, React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "Values for your exact league"), React.createElement("div", { className: "wmud-body" }, "Three numbers per player tuned to your scoring, roster, and budget: the likely market price, the true value, and the most you personally should pay.")), React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "Max bids that move"), React.createElement("div", { className: "wmud-body" }, "Your personal max bid recalculates live as the room spends, so you always know the real ceiling on the player you want, not a static preseason number.")), React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "The best team your budget can buy"), React.createElement("div", { className: "wmud-body" }, "Iron Tuna re-solves the highest-scoring roster your remaining money can afford after every nomination, and names exactly who to target.")), React.createElement("div", { className: "wmud-card" }, React.createElement("div", { className: "wmud-title" }, "A Value Coach in your corner"), React.createElement("div", { className: "wmud-body" }, "Ask anything mid-auction. The AI Value Coach reads your league live, flags overpays and bargains, and tells you when to push and when to fold.")))))), React.createElement("div", {
     className: "lp-section",
     ref: pricingRef
   }, React.createElement("div", {
