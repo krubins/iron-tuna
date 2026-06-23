@@ -1174,7 +1174,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-quote figcaption { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); letter-spacing: 0.02em; }
 @media (max-width: 760px) { .lp-quotes { grid-template-columns: 1fr; gap: 24px; } }
 .lp-note { font-size: 12px; color: var(--text-muted); margin-top: 12px; }
-.lp-ribbon { position: sticky; top: 0; z-index: 20; width: 100%; max-width: 1080px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 4px; background: rgba(11,17,23,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border-subtle); }
+.lp-ribbon { position: sticky; top: 0; z-index: 20; width: auto; max-width: none; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px max(20px, calc((100vw - 1080px) / 2)); background: rgba(11,17,23,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border-subtle); }
 .lp-ribbon-brand { display: inline-flex; align-items: center; }
 .lp-ribbon-logo-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: inline-flex; align-items: center; transition: filter 0.12s; }
 .lp-ribbon-logo-btn:hover { filter: brightness(1.15); }
@@ -4443,6 +4443,7 @@ function LogoMark({
   const fishH = fishW / FISH_AR;
   const vbW = tagline ? Math.max(fishW, taglineW) + 26 : tunaW + wordWidth + 12;
   const ox = 0;
+  const _flip = tagline && (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0);
   const fishX = tagline ? (vbW - fishW) / 2 : 2;
   const fishY = tagline ? 2 : cy - 27;
   const wordTx = tagline ? (vbW - wordWidth) / 2 : tunaW;
@@ -4547,7 +4548,7 @@ function LogoMark({
     preserveAspectRatio: "xMidYMid meet"
   }), false && React.createElement("g", {
     filter: wavy ? 'url(#waterDistort)' : undefined,
-    transform: `translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`
+    transform: `translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)${_flip ? " translate(122,0) scale(-1,1)" : ""}`
   }, React.createElement("path", {
     d: "M90 27 C 98 24, 106 14, 114 7 C 108 18, 103 26, 101 29 C 103 32, 108 40, 114 51 C 106 44, 98 34, 90 31 C 89 30, 89 28, 90 27 Z",
     fill: "url(#ironFin)",
@@ -18260,9 +18261,9 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     { a: "Someone in your league is already drafting with AI. ", b: "Right now, that edge is theirs, not yours." },
     { a: "Walk into your draft with every pick scouted ", b: "and every value already solved." },
     { a: "The manager who knocks you out this year won't study the hardest. ", b: "He'll have the best AI." },
-    { a: "Draft like the sharpest manager in your league. ", b: "Then go be it." },
+    { a: "Show up with the whole board already mapped. ", b: "Let the table wonder how you knew." },
     { a: "Every league has a team that's always a step ahead. ", b: "This is the year they pull away." },
-    { a: "Win the draft ", b: "before anyone else has even opened their cheat sheet." }
+    { a: "Build the roster that wins it in August. ", b: "Then coast all season long." }
   ];
   const [aiIdx, setAiIdx] = useState(0);
   useEffect(() => { const t = setInterval(() => setAiIdx(i => (i + 1) % AI_LINES.length), 15000); return () => clearInterval(t); }, []);
