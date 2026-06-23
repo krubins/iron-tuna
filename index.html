@@ -36,7 +36,7 @@
 .hub-hero-row { display: flex; align-items: center; justify-content: center; gap: 44px; width: 100%; }
 .lp-ai-line { animation: aiFade 0.7s ease; }
 @keyframes aiFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-.hub-landing .lp-hero .landing-logo { height: 330px !important; }
+.hub-landing .lp-hero .landing-logo { height: 413px !important; }
 .hub-seal { flex: 0 0 auto; width: 146px; height: 146px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 12px; line-height: 1.14; box-sizing: border-box; }
 .hub-seal-s { transform: rotate(-8deg); border: 2px solid #22d3ee; background: radial-gradient(circle at 50% 36%, rgba(34,211,238,0.18), rgba(34,211,238,0.04) 72%); box-shadow: 0 0 30px -8px rgba(34,211,238,0.55), inset 0 0 0 4px rgba(34,211,238,0.10); }
 .hub-seal-a { transform: rotate(8deg); border: 2px solid #e3b53a; background: radial-gradient(circle at 50% 36%, rgba(227,181,58,0.18), rgba(227,181,58,0.04) 72%); box-shadow: 0 0 30px -8px rgba(227,181,58,0.55), inset 0 0 0 4px rgba(227,181,58,0.10); }
@@ -1027,7 +1027,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .landing-page { cursor: default; overflow-y: auto; justify-content: flex-start !important; padding: 0 20px 60px; background: radial-gradient(1100px 560px at 50% -8%, rgba(45,212,163,0.07), transparent 60%), radial-gradient(820px 520px at 88% 12%, rgba(212,160,23,0.05), transparent 55%), radial-gradient(760px 620px at 6% 82%, rgba(45,212,163,0.045), transparent 60%), radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); }
 .lp-inner { position: relative; z-index: 2; max-width: 1400px; margin: 20px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
 .lp-hero { min-height: auto; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; }
-.lp-hero .landing-logo { width: auto; height: 319px; margin-top: 0; margin-bottom: 16px; }
+.lp-hero .landing-logo { width: auto; height: 399px; margin-top: 0; margin-bottom: 16px; }
 .lp-hero .lp-head { margin-top: 0; }
 .lp-head { font-family: var(--font-display); font-size: clamp(31px, 5vw,51px); letter-spacing: 0.02em; color: var(--text-primary); line-height: 1.06; margin: 0 0 22px; max-width: 760px; }
 .lp-sub { font-size: clamp(18px, 2.2vw,22px); color: var(--text-secondary); max-width: 560px; line-height: 1.6; margin: 0 0 34px; }
@@ -1370,12 +1370,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-sticker { position: absolute; top: 6px; right: 8px; width: 150px; height: 150px; transform: rotate(7deg); z-index: 8; filter: drop-shadow(0 7px 18px rgba(0,0,0,0.55)); pointer-events: none; }
 .lp-sticker svg { width: 100%; height: 100%; display: block; }
 @media (max-width: 820px) { .lp-sticker { width: 104px; height: 104px; top: 2px; right: 2px; } }
-@media (max-width: 760px) { .lp-prob-grid, .lp-three, .lp-proof-grid, .lp-modes-grid { grid-template-columns: 1fr !important; } .lp-inner { padding-bottom: 78px; } .lp-hero .landing-logo { height: 149px !important; } .lp-sticky-cta { display: block; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 15px; font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.03em; box-shadow: 0 10px 30px rgba(0,0,0,0.55); } }
+@media (max-width: 760px) { .lp-prob-grid, .lp-three, .lp-proof-grid, .lp-modes-grid { grid-template-columns: 1fr !important; } .lp-inner { padding-bottom: 78px; } .lp-hero .landing-logo { height: 186px !important; } .lp-sticky-cta { display: block; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 15px; font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.03em; box-shadow: 0 10px 30px rgba(0,0,0,0.55); } }
 @media (max-width: 760px) { .lp-trust { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; } .lp-steps { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
   .landing-page { padding: 0 14px 60px; }
-  .lp-hero .landing-logo { height: 191px !important; margin-bottom: 16px; }
-.hub-landing .lp-hero .landing-logo { height: 242px !important; }
+  .lp-hero .landing-logo { height: 239px !important; margin-bottom: 16px; }
+.hub-landing .lp-hero .landing-logo { height: 303px !important; }
 
   .lp-head { margin-bottom: 16px; }
   .lp-sub { margin-bottom: 22px; }
@@ -18412,7 +18412,15 @@ function ModelsPanel({
     const t = setInterval(() => setExtraIdx(i => (i + 1) % extraLen), 20000);
     return () => clearInterval(t);
   }, [extraLen]);
-  const taunt = useMemo(() => isBoard && rivals.length ? teamTaunt(rivals[extraIdx % rivals.length], players, config, mxGames) : null, [isBoard, rivals, extraIdx, players, config, mxGames]);
+  const tauntState = useRef({ last: -1, counts: {} });
+  const taunt = useMemo(() => {
+    if (!(isBoard && rivals.length)) return null;
+    const _team = rivals[extraIdx % rivals.length];
+    const _st = tauntState.current;
+    if (_st.last !== extraIdx) { _st.counts[_team.id] = (_st.counts[_team.id] || 0) + 1; _st.last = extraIdx; }
+    const _n = (_st.counts[_team.id] || 1) - 1;
+    return teamTaunt(_team, players, config, mxGames, _n);
+  }, [isBoard, rivals, extraIdx, players, config, mxGames]);
   const games = seasonGames || 17;
   if (!myTeam) return React.createElement("aside", {
     className: "sidebar models-panel"
@@ -18491,50 +18499,42 @@ function ModelsPanel({
     className: "models-foot"
   }, "Click a model to box its target players on the cheat sheet; click it again to clear. Teal marks the positions this model targets; every other spot takes the best value available."));
 }
-function teamTaunt(team, players, config, games) {
+function teamTaunt(team, players, config, games, idx) {
   const g = games || 17;
+  const isAuction = !(config && config.format && config.format !== 'auction');
   const byId = new Map((players || []).map(p => [p.id, p]));
   const roster = (team.roster || []).map(r => {
     const pl = byId.get(r.playerId) || {};
-    return {
-      name: pl.name || 'a mystery man',
-      position: r.position,
-      price: r.price || 0,
-      value: pl.auctionValue || 0,
-      pts: pl.projectedPoints || 0
-    };
+    return { name: pl.name || 'a mystery man', position: r.position, price: r.price || 0, value: pl.auctionValue || 0, pts: pl.projectedPoints || 0 };
   });
   const filled = roster.length;
   const totalSpots = totalRosterSpots(config);
   const left = team.spotsRemaining != null ? team.spotsRemaining : totalSpots - filled;
-  const perSlot = left > 0 ? team.budgetRemaining / left : 0;
+  const perSlot = (isAuction && left > 0) ? team.budgetRemaining / left : 0;
   const byPos = {};
   roster.forEach(r => byPos[r.position] = (byPos[r.position] || 0) + 1);
-  const starterPts = mockStarterPts(roster.map(r => ({
-    position: r.position,
-    projectedPoints: r.pts
-  })), config, g);
+  const starterPts = mockStarterPts(roster.map(r => ({ position: r.position, projectedPoints: r.pts })), config, g);
   let worst = null;
-  roster.forEach(r => {
+  if (isAuction) roster.forEach(r => {
     const over = r.price - r.value;
-    if (r.value >= 3 && over >= 5 && (!worst || over > worst.over)) worst = {
-      name: r.name,
-      price: r.price,
-      over
-    };
+    if (r.value >= 3 && over >= 5 && (!worst || over > worst.over)) worst = { name: r.name, price: r.price, over: over };
   });
   const jabs = [];
-  if (filled === 0) jabs.push(`${team.name} hasn't won a single player and is clutching $${team.budgetRemaining} like the last lifeboat. Waiting for prices to drop? They won't.`);
-  if (worst) jabs.push(`${team.name} paid $${worst.price} for ${worst.name}, about $${worst.over} over the going rate. Big tipper, small returns.`);
+  if (filled === 0) jabs.push(isAuction ? `${team.name} hasn't won a single player and is clutching $${team.budgetRemaining} like the last lifeboat. Waiting for prices to drop? They won't.` : `${team.name} hasn't drafted a single player yet. The board is filling up without them.`);
+  if (isAuction && worst) jabs.push(`${team.name} paid $${worst.price} for ${worst.name}, about $${worst.over} over the going rate. Big tipper, small returns.`);
   if (filled >= 3 && !byPos['RB']) jabs.push(`${filled} players deep and ${team.name} still has zero running backs. Daring plan to win a league without the position that wins leagues.`);
   if (filled >= 3 && !byPos['WR']) jabs.push(`${team.name} forgot wide receivers exist. Those flex spots are going to feel awfully empty.`);
-  if (left > 0 && perSlot < 2 && filled < totalSpots - 1) jabs.push(`${team.name} has $${team.budgetRemaining} for ${left} spots. Enjoy a bench built entirely from the $1 bin.`);
-  if (left > 0 && perSlot > 14 && filled >= 3) jabs.push(`${team.name} is hoarding $${team.budgetRemaining} like a retirement account. It's an auction, not a savings plan, spend it.`);
+  if (isAuction && left > 0 && perSlot < 2 && filled < totalSpots - 1) jabs.push(`${team.name} has $${team.budgetRemaining} for ${left} spots. Enjoy a bench built entirely from the $1 bin.`);
+  if (isAuction && left > 0 && perSlot > 14 && filled >= 3) jabs.push(`${team.name} is hoarding $${team.budgetRemaining} like a retirement account. It's an auction, not a savings plan, spend it.`);
   if ((byPos['QB'] || 0) >= 2) jabs.push(`${team.name} rostered ${byPos['QB']} quarterbacks. You start one. Unless they're playing a format nobody told the rest of us about.`);
-  if (byPos['K'] || byPos['DEF']) jabs.push(`${team.name} spent real auction dollars on a ${byPos['K'] ? 'kicker' : 'defense'} early. Iron Tuna is physically cringing.`);
+  if (byPos['K'] || byPos['DEF']) jabs.push(`${team.name} ${isAuction ? 'spent real auction dollars on' : 'used an early pick on'} a ${byPos['K'] ? 'kicker' : 'defense'}. Iron Tuna is physically cringing.`);
   if (starterPts > 0 && filled >= Math.ceil(totalSpots * 0.5)) jabs.push(`${team.name}'s starters project for ${starterPts.toFixed(1)} pts/game. Adorable. Save them a seat in the consolation bracket.`);
-  if (!jabs.length) jabs.push(`${team.name} is being suspiciously competent, no glaring holes yet. Give them a few nominations; they'll find a way to mess it up.`);
-  return jabs[Math.floor(Math.random() * jabs.length)];
+  if (!isAuction && (byPos['RB'] || 0) >= 4) jabs.push(`${team.name} is hoarding running backs like the apocalypse is coming. You can only start so many.`);
+  if (!isAuction && filled >= 4 && !byPos['QB'] && !byPos['TE']) jabs.push(`${team.name} keeps reaching for the same spots and still has no QB or TE. Those bye weeks are going to be a horror show.`);
+  if (!isAuction && filled >= 5 && (byPos['WR'] || 0) === 0) jabs.push(`${team.name} is five picks in without a single wide receiver. Bold, in a league that starts three.`);
+  if (!jabs.length) jabs.push(`${team.name} is being suspiciously competent, no glaring holes yet. Give them a few picks; they'll find a way to mess it up.`);
+  const _n = (((idx || 0) % jabs.length) + jabs.length) % jabs.length;
+  return jabs[_n];
 }
 function HeaderModelTabs({
   myTeam,
@@ -18632,7 +18632,7 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"
-  }, React.createElement(LogoMark, { tagline: true, height: 300, className: "landing-logo" })), React.createElement("div", {
+  }, React.createElement(LogoMark, { tagline: true, height: 375, className: "landing-logo" })), React.createElement("div", {
     className: "lp-section lp-modes"
   }, React.createElement("div", { className: "ip-stack" }, React.createElement("div", { className: "ip-row" }, React.createElement("button", { className: "ip-card ip-snake", onClick: () => onPick('snake'), dangerouslySetInnerHTML: { __html: SNAKE_PANEL } }), React.createElement("button", { className: "ip-card ip-auction", onClick: () => onPick('auction'), dangerouslySetInnerHTML: { __html: AUCTION_PANEL } })), React.createElement("div", { className: "ip-coach", dangerouslySetInnerHTML: { __html: VALUECOACH_HTML } }))), React.createElement("div", { className: "lp-ai-line", key: aiIdx }, React.createElement("span", { className: "lp-ai-a" }, AI_LINES[aiIdx].a), React.createElement("b", { className: "lp-ai-b" }, AI_LINES[aiIdx].b)), React.createElement("div", {
     className: "lp-section",
