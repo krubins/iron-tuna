@@ -1688,6 +1688,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-phase { background:#0b0f14 !important; border:1px solid #1b242e !important; border-radius:10px !important; box-shadow:none !important; }
 .lp-mock, .lp-shot, .lp-shot-img, .lp-demo { box-shadow:0 10px 30px -18px rgba(0,0,0,0.7) !important; }
 .lp-live { box-shadow:none !important; }
+
+.otc { display:inline-flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid #1b242e; border-radius:8px; background:#0b0f14; font-family:var(--font-mono); font-size:11.5px; letter-spacing:0.03em; color:#8b97a3; white-space:nowrap; }
+.otc-dot { width:7px; height:7px; border-radius:50%; background:#5c6873; flex:0 0 auto; }
+.otc-mine { border-color:rgba(34,211,238,0.5); color:#67e8f9; }
+.otc-mine .otc-dot { background:#22d3ee; animation:ht-blink 1.4s steps(1,end) infinite; }
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -6285,6 +6290,20 @@ function DraftBoard({
   const [whbOpen, setWhbOpen] = useState(false);
   const [whbQuery, setWhbQuery] = useState('');
   const [whbRound, setWhbRound] = useState('');
+  const _otc = useMemo(() => {
+    if (_dbFmt !== 'snake') return null;
+    const T = (config && config.teams) || 12;
+    const mySlot = (config && config.snake && config.snake.draftSlot) || 1;
+    const made = (draftedIds && draftedIds.size) || 0;
+    const N = made + 1;
+    const r = Math.ceil(N / T);
+    const pos = N - (r - 1) * T;
+    const slotOnClock = (r % 2 === 1) ? pos : (T - pos + 1);
+    const myPick = rr => (rr % 2 === 1) ? (rr - 1) * T + mySlot : rr * T - mySlot + 1;
+    let myNext = N;
+    for (let rr = 1; rr <= 60; rr++) { const pk = myPick(rr); if (pk >= N) { myNext = pk; break; } }
+    return { N, r, slotOnClock, until: myNext - N, mine: myNext === N, mySlot };
+  }, [_dbFmt, config, draftedIds]);
   const whbResult = useMemo(() => {
     if (_dbFmt !== 'snake') return null;
     const q = (whbQuery || '').trim().toLowerCase();
@@ -6410,7 +6429,7 @@ function DraftBoard({
     placeholder: "Search by name or team...",
     value: search,
     onChange: e => setSearch(e.target.value)
-  }), _dbFmt === 'snake' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setWhbOpen(o => !o) }, "Will he be there?"), whbOpen && React.createElement("div", { className: "whb-panel" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQuery, onChange: e => setWhbQuery(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbRound, onChange: e => setWhbRound(e.target.value) }), whbResult && (whbResult.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResult.err) : whbResult.drafted ? React.createElement("div", { className: "whb-res" }, whbResult.player.name + " is already off the board.") : whbResult.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResult.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResult.odds + "%"), " chance " + whbResult.player.name + " (ADP " + (whbResult.player.adp != null ? Math.round(whbResult.player.adp) : "?") + ") is still on the board at your round " + whbResult.round + " pick (overall #" + whbResult.targetPick + ").")))), _dbFmt === 'auction' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn dlog-btn", onClick: () => setLogOpen(o => !o) }, "Draft log"), logOpen && React.createElement("div", { className: "whb-panel dlog-panel" }, (draftHistory && draftHistory.length) ? React.createElement("div", { className: "dlog-list" }, draftHistory.map((d, i) => { const pl = (players || []).find(p => p.id === d.playerId); const tm = (teams || []).find(t => t.id === d.teamId); return React.createElement("div", { key: i, className: "dlog-row" }, React.createElement("span", { className: "dlog-n" }, i + 1), React.createElement("span", { className: "dlog-pl" }, pl ? pl.name : d.playerId, React.createElement("em", null, pl ? pl.position : d.position)), React.createElement("span", { className: "dlog-tm" }, tm ? tm.name : d.teamId), React.createElement("span", { className: "dlog-pr" }, "$" + d.price)); })) : React.createElement("div", { className: "whb-res" }, "No players have been won yet."))), React.createElement("div", {
+  }), _dbFmt === 'snake' && _otc && React.createElement("div", { className: "otc" + (_otc.mine ? " otc-mine" : "") }, React.createElement("span", { className: "otc-dot" }), React.createElement("span", { className: "otc-txt" }, _otc.mine ? ("You\u0027re on the clock · Pick " + _otc.N + " · R" + _otc.r) : ("On the clock: Slot " + _otc.slotOnClock + " · R" + _otc.r + " · you\u0027re up in " + _otc.until + (_otc.until === 1 ? " pick" : " picks")))), _dbFmt === 'snake' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setWhbOpen(o => !o) }, "Will he be there?"), whbOpen && React.createElement("div", { className: "whb-panel" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQuery, onChange: e => setWhbQuery(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbRound, onChange: e => setWhbRound(e.target.value) }), whbResult && (whbResult.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResult.err) : whbResult.drafted ? React.createElement("div", { className: "whb-res" }, whbResult.player.name + " is already off the board.") : whbResult.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResult.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResult.odds + "%"), " chance " + whbResult.player.name + " (ADP " + (whbResult.player.adp != null ? Math.round(whbResult.player.adp) : "?") + ") is still on the board at your round " + whbResult.round + " pick (overall #" + whbResult.targetPick + ").")))), _dbFmt === 'auction' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn dlog-btn", onClick: () => setLogOpen(o => !o) }, "Draft log"), logOpen && React.createElement("div", { className: "whb-panel dlog-panel" }, (draftHistory && draftHistory.length) ? React.createElement("div", { className: "dlog-list" }, draftHistory.map((d, i) => { const pl = (players || []).find(p => p.id === d.playerId); const tm = (teams || []).find(t => t.id === d.teamId); return React.createElement("div", { key: i, className: "dlog-row" }, React.createElement("span", { className: "dlog-n" }, i + 1), React.createElement("span", { className: "dlog-pl" }, pl ? pl.name : d.playerId, React.createElement("em", null, pl ? pl.position : d.position)), React.createElement("span", { className: "dlog-tm" }, tm ? tm.name : d.teamId), React.createElement("span", { className: "dlog-pr" }, "$" + d.price)); })) : React.createElement("div", { className: "whb-res" }, "No players have been won yet."))), React.createElement("div", {
     className: "filter-pills"
   }, POSITIONS.map(p => React.createElement("button", {
     key: p,
