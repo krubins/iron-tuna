@@ -6123,7 +6123,8 @@ function DraftBoard({
     const BYE_COL = { key: 'bye', label: 'Bye', align: 'right', sortable: false, get: p => byeOf(p.team), precision: 0 };
     const PPG_COL = { key: 'projectedPoints', label: 'PPG', align: 'right', sortable: true, get: p => p.projectedPoints != null ? p.projectedPoints / (seasonGames || 17) : null, precision: 1 };
     const SLOT_COL = { key: 'adp', label: 'Slot', align: 'right', sortable: true, get: p => p.adp != null ? Math.round(p.adp) : null, precision: 0 };
-    return _fmt === 'snake' ? [SLOT_COL, PPG_COL, BYE_COL] : [PPG_COL, BYE_COL];
+    const RND_COL = { key: 'rnd', label: 'Rnd', align: 'right', sortable: false, get: p => p.adp != null ? Math.ceil(p.adp / ((config && config.teams) || 12)) : null, precision: 0 };
+    return _fmt === 'snake' ? [SLOT_COL, RND_COL, PPG_COL, BYE_COL] : [PPG_COL, BYE_COL];
   }, [posFilter, pointsMode, seasonGames, config]);
   const allColumns = useMemo(() => [...FIXED_LEFT_COLS, ...statColumns, ...(_dbFmt === 'snake' ? [{ key: 'actions', label: '', align: 'left', sortable: false, width: 150 }] : FIXED_RIGHT_COLS)], [statColumns, _dbFmt]);
   function getSortValue(p, key) {
