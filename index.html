@@ -1690,7 +1690,7 @@ input:focus, select:focus { border-color: var(--accent); }
 @media (max-width:680px){ .ip-row { grid-template-columns:1fr; } }
 .ip-card, .ip-coach { position:relative; border-radius:7px; border:1px solid #20252b; overflow:hidden;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.26), inset 1px 0 0 rgba(255,255,255,0.06), inset -1px 0 0 rgba(0,0,0,0.35), inset 0 -3px 7px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), 0 16px 34px -10px rgba(0,0,0,0.8); }
-.ip-card { display:block; width:100%; text-align:left; cursor:pointer; font:inherit; color:inherit; -webkit-appearance:none; appearance:none; padding:26px 24px; transition:transform .15s ease, box-shadow .15s ease; }
+.ip-card { display:flex; flex-direction:column; width:100%; text-align:left; cursor:pointer; font:inherit; color:inherit; -webkit-appearance:none; appearance:none; padding:26px 24px; transition:transform .15s ease, box-shadow .15s ease; }
 .ip-card:hover { transform:translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 4px rgba(0,0,0,0.55), 0 18px 34px -12px rgba(0,0,0,0.78); }
 .ip-snake { background:radial-gradient(125% 92% at 50% -6%, rgba(255,255,255,0.42), rgba(255,255,255,0) 55%), linear-gradient(180deg, #abadae 0%, #93989c 22%, #767d83 50%, #898f93 72%, #636a71 100%); }
 .ip-auction { background:radial-gradient(125% 92% at 50% -6%, rgba(255,255,255,0.42), rgba(255,255,255,0) 55%), linear-gradient(180deg, #abadae 0%, #93989c 22%, #767d83 50%, #898f93 72%, #636a71 100%); }
@@ -1717,7 +1717,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .ip-snake .ip-num { color:#8fb0bb; } .ip-auction .ip-num { color:#c2a86e; }
 .ip-specs b { display:block; font-family:var(--font-body); font-size:13.5px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:#22272d; text-shadow:0 1px 0 rgba(255,255,255,0.35); }
 .ip-specs span { display:block; font-size:14.5px; line-height:1.5; color:#3f454c; margin-top:4px; }
-.ip-cta { text-align:center; padding:11px; border-radius:5px; font-family:var(--font-display); font-size:16px; letter-spacing:0.12em; text-transform:uppercase; color:#d7dce2; background:linear-gradient(180deg,#2f343b,#21252a); border:1px solid #121418; box-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 2px 4px rgba(0,0,0,0.4); }
+.ip-cta { margin-top:auto; text-align:center; padding:11px; border-radius:5px; font-family:var(--font-display); font-size:16px; letter-spacing:0.12em; text-transform:uppercase; color:#d7dce2; background:linear-gradient(180deg,#2f343b,#21252a); border:1px solid #121418; box-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 2px 4px rgba(0,0,0,0.4); }
 .ip-snake:hover .ip-cta { color:#bfe6ef; background:linear-gradient(180deg,#363d45,#262c32); }
 .ip-auction:hover .ip-cta { color:#f0dca8; background:linear-gradient(180deg,#3a362c,#272319); }
 /* value coach plaque */
@@ -1753,7 +1753,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-sticker.hub-stk-l { left: -15%; transform: rotate(-8deg); }
 .lp-sticker.hub-stk-r { right: -15%; left: auto; transform: rotate(8deg); }
 @media (max-width: 900px){ .lp-sticker.hub-stk { width: 89px; height: 89px; top: 3%; } .lp-sticker.hub-stk-l { left: 0; } .lp-sticker.hub-stk-r { right: 0; } }
-.it-tagline2 { margin-top: -2px; font-family: var(--font-display); font-size: clamp(18px, 2.6vw, 27px); letter-spacing: 0.06em; text-transform: uppercase; color: #c9d2d8; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.6); animation: itTagFade 0.5s ease-out 0.7s backwards; }
+.it-tagline2 { margin-top: -2px; font-family: var(--font-display); font-size: clamp(18px, 2.6vw, 27px); letter-spacing: 0.06em; text-transform: uppercase; color: #c9d2d8; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.6); animation: landingFadeIn 0.6s ease-out 0.7s backwards; }
 .it-tag-gold { color: #f0c75a; }
 .it-tag-dim { color: #7c858c; }
 @keyframes itTagFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
