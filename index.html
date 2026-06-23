@@ -4824,7 +4824,7 @@ function LandingSplash({
   const [fadingOut, setFadingOut] = useState(false);
   const [emailVal, setEmailVal] = useState('');
   const [emailDone, setEmailDone] = useState(false);
-  const [demoFmt, setDemoFmt] = useState('auction');
+  const [demoFmt, setDemoFmt] = useState((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'snake' : ((typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? 'bestball' : 'auction'));
   const [pulse, setPulse] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setPulse(x => (x + 1) % 1000), 1500);
@@ -4930,7 +4930,7 @@ function LandingSplash({
   const problems = ['Static sheets tell you what a player is worth before the draft starts, not after the room has spent half its budget.', 'They ignore your remaining roster needs, so a player is worth a different amount to you than to the manager across the table.', 'They do not track who still has money, so you cannot see who is about to be forced into overpaying next.', 'Nothing stops you from chasing a player two or three bids too far, which is exactly how good drafts go bad.'];
   const threeNum = [['Market Price', 'What the room is likely to pay for him right now.', 'price'], ['True Value', 'What he is actually worth under your exact league settings.', 'value'], ['Your Max (You)', 'The highest you should personally bid, given your roster, budget, and remaining needs.', 'max']];
   const proof = [['Tracks every team\'s budget', 'See who is flush and who is broke, so you know who can still bid you up and who is stuck bargain hunting.'], ['Recalculates your max after every nomination', 'Your personal max bid updates the instant the board moves, so the number on screen is always current.'], ['Shows where the room is overpaying', 'Spot the runs and panic bids in real time, and let rivals torch their budgets on names.'], ['Finds value pockets by position', 'Know which positions still have cheap points left, and pounce before anyone else notices.'], ['Keeps your roster legal and balanced', 'Guidance that respects your open slots and budget, so you never get stuck unable to fill a starter.'], ['Helps you avoid panic bids', 'A clear walk-away number on every player, so you stop chasing and start winning the auction.']];
-  const tiers = [['Free Cheat Sheet', '$0', 'Value your league, no signup', false, ['Custom auction values for your exact league', 'Full league scoring inputs', 'Player tiers and auction strategy models', 'Sortable, printable cheat sheet', 'The ideal team your budget can afford, no points left on the table', 'No signup required to start'], 'Build my free auction board', 'prep', 'hero_cta_click'], ['Draft Night Mode', '$9.99', 'Live auction-day command', true, ['Live auction tracking, every bid logged', 'Opponent budgets and money off the board', 'Dynamic max bids that update as the room moves', 'Roster construction guidance and position scarcity', 'A Value Coach that answers player and price questions mid-auction', 'Save and reopen your draft, works even if Wi-Fi drops'], 'Unlock Draft Night Mode', 'board', 'draft_mode_clicked']];
+  const tiers = [['Free Cheat Sheet', '$0', 'Value your league, no signup', false, [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Custom rankings for your exact league' : 'Custom auction values for your exact league'), 'Full league scoring inputs', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Player tiers and snake strategy models' : 'Player tiers and auction strategy models'), 'Sortable, printable cheat sheet', 'The ideal team your budget can afford, no points left on the table', 'No signup required to start'], ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Build my free rankings' : 'Build my free auction board'), 'prep', 'hero_cta_click'], ['Draft Night Mode', '$9.99', 'Live auction-day command', true, ['Live auction tracking, every bid logged', 'Opponent budgets and money off the board', 'Dynamic max bids that update as the room moves', 'Roster construction guidance and position scarcity', 'A Value Coach that answers player and price questions mid-auction', 'Save and reopen your draft, works even if Wi-Fi drops'], 'Unlock Draft Night Mode', 'board', 'draft_mode_clicked']];
   const faqs = [['Does this work for snake drafts?', 'No, and that is the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, this is the sharpest tool you will find. If you draft in pick order, use a rankings tool.'], ['Do I need to create an account?', 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft night.'], ['Can I use custom scoring?', 'Yes. Set your teams, budget, roster slots, and full custom scoring, and every value recalculates to your exact settings, including weird home-league rules.'], ['Can I use it during a live draft?', 'Yes. Draft Night Mode is built to run live: log each bid, track every budget, and read your updated max bid as the auction unfolds.'], ['What happens if my Wi-Fi drops?', 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.'], ['Is this legal and fair to use in my league?', 'Yes. It is a smarter cheat sheet, the same as any rankings or values tool. Values are projections, not guarantees, and your edge comes from reacting faster and more rationally than the rest of the room.'], ['How is this different from a normal cheat sheet?', 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.'], ['Does it handle superflex and two-QB leagues?', 'Yes. Add QB to your flex eligibility and every quarterback re-prices for the scarcity, so you know exactly how far up to go on the position.'], ['What about keeper or auction-keeper leagues?', 'Mark the players already kept as drafted before you start. The remaining pool and the inflation math adjust around them, so your values stay accurate.'], ['How accurate are the values?', 'They are projections, not guarantees. Iron Tuna builds on ESPN and CBS projections, reliability-adjusts for injuries and consistency, then converts to dollars at your exact settings. The edge is reacting faster and more rationally than the room, not predicting the future.'], ['Can I use it on my phone?', 'Yes. It runs in any browser, so keep it open on your phone or a second tab and work straight from the board during the draft.'], ['What is the difference between Prep and Auction Night?', 'Prep is your free cheat sheet: build your values, set your strategy, and study the board before the draft. Auction Night is the live draft board where you log each bid and track every budget on the clock.']];
   return React.createElement("div", {
     className: `landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`
@@ -5007,7 +5007,7 @@ function LandingSplash({
       textAlign: 'center',
       marginTop: 4
     }
-  }, "The unfair advantage for your auction"), (() => {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "The unfair advantage in your snake draft" : "The unfair advantage for your auction")), (() => {
     const d = DEMO.auction;
     const activeRow = pulse % d.rows.length;
     const dir = pulse % 2 ? 1 : -1;
@@ -5131,7 +5131,7 @@ function LandingSplash({
     }
   }, React.createElement("h2", {
     className: "lp-preview-h"
-  }, "A cheat code for your auction."), React.createElement("div", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "A cheat code for your snake draft." : "A cheat code for your auction.")), React.createElement("div", {
     className: "lp-cta-row",
     style: {
       justifyContent: 'center',
@@ -18248,7 +18248,7 @@ function HubLanding({ onPick, onSignin, onTerms }) {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"
-  }, React.createElement("div", { className: "hub-hero-row" }, React.createElement("div", { className: "hub-seal hub-seal-s" }, React.createElement("span", { className: "hub-seal-star" }, "\u2605"), React.createElement("span", { className: "hub-seal-k" }, "BETTER"), React.createElement("b", { className: "hub-seal-h" }, "PREDICTION"), React.createElement("span", { className: "hub-seal-sub" }, "on snake drafts")), React.createElement(LogoMark, { tagline: true, height: 300, className: "landing-logo" }), React.createElement("div", { className: "hub-seal hub-seal-a" }, React.createElement("span", { className: "hub-seal-star" }, "\u2605"), React.createElement("span", { className: "hub-seal-k" }, "BETTER"), React.createElement("b", { className: "hub-seal-h" }, "ACCURACY"), React.createElement("span", { className: "hub-seal-sub" }, "on auction values")))), React.createElement("div", {
+  }, React.createElement(LogoMark, { tagline: true, height: 300, className: "landing-logo" })), React.createElement("div", {
     className: "lp-section lp-modes"
   }, React.createElement("div", {
     className: "lp-modes-grid"
@@ -19560,10 +19560,10 @@ function App() {
       setAccount: setAccount
     }, "Ghosted rows are the planner's projected best fills for your remaining slots and budget. Pick a model up top to change strategy, or click a slot to lock a target."), React.createElement("div", {
       className: "strategy-bar"
-    }, React.createElement(BudgetSliders, {
+    }, (config.format !== 'snake' && React.createElement(BudgetSliders, {
       strategy: config.strategy,
       onChange: handleUpdateStrategy
-    }), React.createElement("button", {
+    })), React.createElement("button", {
       className: "summarize-btn",
       onClick: () => setSummaryOpen(true),
       title: "Honest narrative recap of the entire board"
