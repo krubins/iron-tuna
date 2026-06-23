@@ -6029,7 +6029,13 @@ function DraftBoard({
   const [sortDir, setSortDir] = useState('desc');
   const [quickDraftPlayer, setQuickDraftPlayer] = useState(null);
   const myBoard = sortKey === 'myboard';
-  const statColumns = useMemo(() => makeStatColumns(posFilter, pointsMode, seasonGames), [posFilter, pointsMode, seasonGames]);
+  const statColumns = useMemo(() => {
+    const _fmt = (config && config.format) || 'auction';
+    const BYE_COL = { key: 'bye', label: 'Bye', align: 'right', sortable: false, get: p => byeOf(p.team), precision: 0 };
+    const PPG_COL = { key: 'projectedPoints', label: 'PPG', align: 'right', sortable: true, get: p => p.projectedPoints != null ? p.projectedPoints / (seasonGames || 17) : null, precision: 1 };
+    const SLOT_COL = { key: 'adp', label: 'Slot', align: 'right', sortable: true, get: p => p.adp != null ? Math.round(p.adp) : null, precision: 0 };
+    return _fmt === 'snake' ? [SLOT_COL, PPG_COL, BYE_COL] : [PPG_COL, BYE_COL];
+  }, [posFilter, pointsMode, seasonGames, config]);
   const allColumns = useMemo(() => [...FIXED_LEFT_COLS, ...statColumns, ...FIXED_RIGHT_COLS], [statColumns]);
   function getSortValue(p, key) {
     if (key === 'rank') return 0;
