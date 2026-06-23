@@ -1686,15 +1686,15 @@ input:focus, select:focus { border-color: var(--accent); }
 
 /* ===== Iron plaque chooser ===== */
 .ip-stack { width:100%; max-width:1000px; margin:30px auto 0; display:flex; flex-direction:column; gap:18px; }
-.ip-row { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.ip-row { display:grid; grid-template-columns:1fr 1fr; gap:36px; }
 @media (max-width:680px){ .ip-row { grid-template-columns:1fr; } }
 .ip-card, .ip-coach { position:relative; border-radius:7px; border:1px solid #14161a; overflow:hidden;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 4px rgba(0,0,0,0.55), 0 12px 26px -10px rgba(0,0,0,0.7); }
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), inset 0 0 0 1px rgba(255,255,255,0.02), inset 0 -2px 5px rgba(0,0,0,0.6), 0 14px 30px -10px rgba(0,0,0,0.75); }
 .ip-card { display:block; width:100%; text-align:left; cursor:pointer; font:inherit; color:inherit; -webkit-appearance:none; appearance:none; padding:26px 24px; transition:transform .15s ease, box-shadow .15s ease; }
 .ip-card:hover { transform:translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 4px rgba(0,0,0,0.55), 0 18px 34px -12px rgba(0,0,0,0.78); }
-.ip-snake { background:linear-gradient(180deg,#363c44 0%,#262b31 10%,#1d2025 55%,#181a1e 100%); }
-.ip-auction { background:linear-gradient(180deg,#3e3a31 0%,#2c281f 10%,#211e18 55%,#1a1813 100%); }
-.ip-coach { padding:24px 26px; background:linear-gradient(180deg,#32363c 0%,#23262b 12%,#1b1d21 60%,#16181b 100%); }
+.ip-snake { background:linear-gradient(118deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0) 20%, rgba(255,255,255,0) 68%, rgba(255,255,255,0.05) 100%), linear-gradient(180deg,#454c56 0%,#343a42 7%,#272d34 42%,#1d2126 82%,#181a1f 100%); }
+.ip-auction { background:linear-gradient(118deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0) 20%, rgba(255,255,255,0) 68%, rgba(255,236,200,0.05) 100%), linear-gradient(180deg,#46402f 0%,#34301f 7%,#272318 42%,#201d15 82%,#1a1813 100%); }
+.ip-coach { padding:24px 26px; background:linear-gradient(118deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 22%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.04) 100%), linear-gradient(180deg,#3a3f46 0%,#2a2f35 10%,#1f2228 55%,#17191d 100%); }
 /* corner rivets */
 .ip-card::before, .ip-coach::before { content:""; position:absolute; inset:0; pointer-events:none; border-radius:7px;
   background:
@@ -1703,22 +1703,22 @@ input:focus, select:focus { border-color: var(--accent); }
     radial-gradient(circle at 13px calc(100% - 13px), rgba(255,255,255,0.20) 0 1.5px, #3c4149 1.5px 3px, #0c0e11 3px 4.5px, transparent 4.5px),
     radial-gradient(circle at calc(100% - 13px) calc(100% - 13px), rgba(255,255,255,0.20) 0 1.5px, #3c4149 1.5px 3px, #0c0e11 3px 4.5px, transparent 4.5px); }
 /* brushed-metal texture */
-.ip-card::after, .ip-coach::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:7px; opacity:0.5;
-  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, rgba(0,0,0,0.02) 1px 2px, transparent 2px 4px); }
+.ip-card::after, .ip-coach::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:7px; opacity:0.6;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.028) 0 1px, rgba(0,0,0,0.05) 1px 2px, transparent 2px 3px); }
 .ip-card > *, .ip-coach > * { position:relative; z-index:2; }
 /* engraved header */
 .ip-head { display:flex; align-items:center; gap:11px; padding-bottom:14px; margin-bottom:15px; border-bottom:1px solid rgba(0,0,0,0.55); box-shadow:0 1px 0 rgba(255,255,255,0.045); }
 .ip-name { font-family:var(--font-display); font-size:19px; letter-spacing:0.13em; text-transform:uppercase; color:#cfd4da; text-shadow:0 1px 1px rgba(0,0,0,0.8), 0 -1px 0 rgba(255,255,255,0.05); }
 .ip-snake .ip-name { color:#c6d3d8; } .ip-auction .ip-name { color:#d9cdb2; }
-.ip-sub { font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#8a8f96; border:1px solid rgba(0,0,0,0.5); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05); padding:2px 7px; border-radius:3px; background:rgba(0,0,0,0.22); }
+.ip-sub { font-family:var(--font-display); font-size:13px; letter-spacing:0.1em; text-transform:uppercase; color:#9aa0a7; border:1px solid rgba(0,0,0,0.5); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05); padding:2px 7px; border-radius:3px; background:rgba(0,0,0,0.22); }
 .ip-intro { font-size:15px; line-height:1.5; color:#b6bbc2; margin:0 0 16px; }
-.ip-specs { list-style:none; margin:0 0 18px; padding:0; display:flex; flex-direction:column; gap:13px; }
-.ip-specs li { display:flex; gap:12px; }
+.ip-specs { list-style:none; margin:0 0 18px; padding:0; }
+.ip-specs li { padding:11px 0; border-top:1px solid rgba(0,0,0,0.45); box-shadow:0 -1px 0 rgba(255,255,255,0.035); } .ip-specs li:first-child { border-top:none; box-shadow:none; padding-top:0; }
 .ip-num { font-family:var(--font-mono); font-size:12px; font-weight:600; margin-top:1px; text-shadow:0 1px 0 rgba(0,0,0,0.6); }
 .ip-snake .ip-num { color:#8fb0bb; } .ip-auction .ip-num { color:#c2a86e; }
-.ip-specs b { display:block; font-family:var(--font-mono); font-size:11px; letter-spacing:0.07em; text-transform:uppercase; color:#d3d8de; }
-.ip-specs span { display:block; font-size:13px; line-height:1.35; color:#9298a0; margin-top:3px; }
-.ip-cta { text-align:center; padding:11px; border-radius:5px; font-family:var(--font-mono); font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#d7dce2; background:linear-gradient(180deg,#2f343b,#21252a); border:1px solid #121418; box-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 2px 4px rgba(0,0,0,0.4); }
+.ip-specs b { display:block; font-family:var(--font-display); font-size:15.5px; letter-spacing:0.05em; text-transform:uppercase; color:#dde2e8; }
+.ip-specs span { display:block; font-size:13px; line-height:1.4; color:#9298a0; margin-top:2px; }
+.ip-cta { text-align:center; padding:11px; border-radius:5px; font-family:var(--font-display); font-size:16px; letter-spacing:0.12em; text-transform:uppercase; color:#d7dce2; background:linear-gradient(180deg,#2f343b,#21252a); border:1px solid #121418; box-shadow:inset 0 1px 0 rgba(255,255,255,0.10), 0 2px 4px rgba(0,0,0,0.4); }
 .ip-snake:hover .ip-cta { color:#bfe6ef; background:linear-gradient(180deg,#363d45,#262c32); }
 .ip-auction:hover .ip-cta { color:#f0dca8; background:linear-gradient(180deg,#3a362c,#272319); }
 /* value coach plaque */
@@ -1727,7 +1727,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .ip-coach-sub { font-size:13px; color:#9298a0; }
 .ip-coach-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
 @media (max-width:680px){ .ip-coach-grid { grid-template-columns:1fr; gap:16px; } }
-.ip-coach-tag { display:inline-block; font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; padding:2px 8px; border-radius:3px; margin-bottom:9px; border:1px solid rgba(0,0,0,0.5); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05); }
+.ip-coach-tag { display:inline-block; font-family:var(--font-display); font-size:13px; letter-spacing:0.1em; text-transform:uppercase; padding:2px 8px; border-radius:3px; margin-bottom:9px; border:1px solid rgba(0,0,0,0.5); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05); }
 .ip-tag-snake { color:#9fc2cd; background:rgba(34,211,238,0.06); }
 .ip-tag-auction { color:#cdb37a; background:rgba(227,181,58,0.06); }
 .ip-coach-col p { margin:0; font-size:13.5px; line-height:1.5; color:#aab0b8; }
@@ -18613,8 +18613,8 @@ function HubLanding({ onPick, onSignin, onTerms }) {
   useEffect(() => { const t = setInterval(() => setAiIdx(i => (i + 1) % AI_LINES.length), 15000); return () => clearInterval(t); }, []);
   const aAccent = '#e3b53a';
   const sAccent = '#22d3ee';
-  const SNAKE_PANEL = `<div class="ip-head"><span class="ip-name">Snake Draft</span><span class="ip-sub">Pick-order</span></div><p class="ip-intro">See three rounds ahead and build the best roster your slot can reach.</p><ul class="ip-specs"><li><span class="ip-num">01</span><div><b>Real-time dynamic valuation</b><span>Rankings re-sort to your roster after every pick that comes off the board.</span></div></li><li><span class="ip-num">02</span><div><b>Survival probability</b><span>Exact odds each player returns to you at your next pick.</span></div></li><li><span class="ip-num">03</span><div><b>Roster-construction optimization</b><span>The highest-PPG build attainable from your draft slot, round by round.</span></div></li></ul><div class="ip-cta">Enter snake draft →</div>`;
-  const AUCTION_PANEL = `<div class="ip-head"><span class="ip-name">Auction Draft</span><span class="ip-sub">Salary-cap</span></div><p class="ip-intro">Spend every dollar where it converts to the most points your roster can field.</p><ul class="ip-specs"><li><span class="ip-num">01</span><div><b>Real-time dynamic valuation</b><span>Every player&#39;s price re-solves the instant a dollar leaves the room.</span></div></li><li><span class="ip-num">02</span><div><b>Algorithmic room tracking</b><span>Live budgets and roster holes across all teams.</span></div></li><li><span class="ip-num">03</span><div><b>Max-bid optimization</b><span>The strongest starting lineup your remaining cap can still buy.</span></div></li></ul><div class="ip-cta">Enter auction draft →</div>`;
+  const SNAKE_PANEL = `<div class="ip-head"><span class="ip-name">Snake Draft</span><span class="ip-sub">Pick-order</span></div><p class="ip-intro">See three rounds ahead and build the best roster your slot can reach.</p><ul class="ip-specs"><li><div><b>Real-time dynamic valuation</b><span>Rankings re-sort to your roster after every pick that comes off the board.</span></div></li><li><div><b>Survival probability</b><span>Exact odds each player returns to you at your next pick.</span></div></li><li><div><b>Roster-construction optimization</b><span>The highest-PPG build attainable from your draft slot, round by round.</span></div></li></ul><div class="ip-cta">Enter snake draft →</div>`;
+  const AUCTION_PANEL = `<div class="ip-head"><span class="ip-name">Auction Draft</span><span class="ip-sub">Salary-cap</span></div><p class="ip-intro">Spend every dollar where it converts to the most points your roster can field.</p><ul class="ip-specs"><li><div><b>Real-time dynamic valuation</b><span>Every player&#39;s price re-solves the instant a dollar leaves the room.</span></div></li><li><div><b>Algorithmic room tracking</b><span>Live budgets and roster holes across all teams.</span></div></li><li><div><b>Max-bid optimization</b><span>The strongest starting lineup your remaining cap can still buy.</span></div></li></ul><div class="ip-cta">Enter auction draft →</div>`;
   const VALUECOACH_HTML = `<div class="ip-coach-head"><span class="ip-coach-title">Value Coach</span><span class="ip-coach-sub">One engine. It runs in both formats.</span></div><div class="ip-coach-grid"><div class="ip-coach-col"><span class="ip-coach-tag ip-tag-snake">Snake</span><p>Computes multi-round survival probabilities to instantly recommend targets optimized for your specific roster construction.</p></div><div class="ip-coach-col"><span class="ip-coach-tag ip-tag-auction">Auction</span><p>Monitors real-time room spending to dynamically recalibrate your absolute maximum bid for every player on the fly.</p></div></div>`;
   const MANIFESTO_HTML = `The manager who knocks you out this year won&#39;t study the hardest.<span class="ht-mani-2">They&#39;ll have the <span class="ht-cy">better</span> <span class="ht-au">engine</span>.</span>`;
   const GAVEL_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="brass" x1="0" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".4" stop-color="#e9bf4e"/><stop offset="1" stop-color="#9a6a12"/></linearGradient><linearGradient id="brassD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#caa033"/><stop offset="1" stop-color="#6c4708"/></linearGradient><linearGradient id="band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8"/><stop offset="1" stop-color="#b9892a"/></linearGradient><radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e9bf4e" stop-opacity="0.42"/><stop offset="1" stop-color="#e9bf4e" stop-opacity="0"/></radialGradient></defs><ellipse cx="36" cy="38" rx="32" ry="32" fill="url(#glow)"/><!-- sound block (disc the gavel strikes) --><ellipse cx="34" cy="60" rx="22" ry="5.5" fill="url(#brassD)"/><ellipse cx="34" cy="58.4" rx="22" ry="5.5" fill="url(#brass)"/><ellipse cx="34" cy="57.6" rx="15" ry="2.6" fill="#fff" opacity="0.35"/><!-- gavel: cylindrical head + handle, angled --><g transform="rotate(38 36 30)"><!-- handle --><rect x="33.2" y="22" width="5.6" height="30" rx="2.8" fill="url(#brass)" stroke="#7a520c" stroke-width="0.5"/><rect x="34" y="24" width="1.7" height="26" rx="0.8" fill="#fff" opacity="0.45"/><!-- head (capsule) --><rect x="18" y="8" width="36" height="16" rx="8" fill="url(#brass)" stroke="#7a520c" stroke-width="0.7"/><!-- striking-face bands --><rect x="23.5" y="8" width="3.4" height="16" rx="1.5" fill="url(#band)" stroke="#7a520c" stroke-width="0.4"/><rect x="45.1" y="8" width="3.4" height="16" rx="1.5" fill="url(#band)" stroke="#7a520c" stroke-width="0.4"/><!-- end caps --><rect x="18" y="8" width="5.5" height="16" rx="6" fill="url(#brassD)" opacity="0.55"/><rect x="48.5" y="8" width="5.5" height="16" rx="6" fill="url(#brassD)" opacity="0.55"/><!-- top highlight --><rect x="26" y="10.5" width="18" height="3" rx="1.5" fill="#fff" opacity="0.5"/></g></svg>';
