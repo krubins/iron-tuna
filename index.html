@@ -810,6 +810,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-drop { box-shadow: inset 0 2px 0 var(--gold-text); }
 .cheat-rank { font-family: var(--font-mono); color: var(--text-muted); font-size: 12px; text-align: right; }
 .cheat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gverdict { display:inline-block; font-family:var(--font-body); font-size:8.5px; font-weight:800; letter-spacing:0.03em; padding:1px 4px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+.gv-grab { background:#f87171; color:#2a0a0a; }
+.gv-value { background:#4ade80; color:#062a13; }
+.gv-reach { background:rgba(251,191,36,0.20); color:#fbbf24; box-shadow:inset 0 0 0 1px rgba(251,191,36,0.5); }
+.gv-wait { background:rgba(139,151,163,0.18); color:#9aa6b1; }
+.cheat-tier-top[data-tierband] { margin-top:18px; position:relative; }
+.cheat-tier-top[data-tierband]::before { content: attr(data-tierband); position:absolute; top:-13px; left:7px; font-size:9px; font-weight:700; letter-spacing:0.06em; color: var(--text-muted,#8595a1); }
+.cheat-tier-top.cheat-cliff[data-tierband]::before { color:#f87171; }
 .cheat-team { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 .cheat-val { font-family: var(--font-mono); color: var(--text-secondary); font-size: 12px; text-align: right; min-width: 20px; }
 .cheat-cost { font-family: var(--font-mono); color: var(--text-secondary); font-size: 12px; text-align: right; min-width: 20px; }
@@ -10606,6 +10614,8 @@ function Cheatsheet({
   const _fmtPun = picksUntilNextPick(_fmtSlot, config && config.teams || 12, _fmtCurPick);
   const _fmtRecent = (draftHistory || []).slice(-8).map(d => (players || []).find(x => x.id === d.playerId)).filter(Boolean);
   const _fmtMyRoster = myTeam && myTeam.roster ? myTeam.roster.map(r => (players || []).find(x => x.id === r.playerId)).filter(Boolean) : [];
+  const _ovrRank = (() => { const m = new Map(); (players || []).slice().sort((x, y) => (y.personalValue != null ? y.personalValue : y.projectedPoints || 0) - (x.personalValue != null ? x.personalValue : x.projectedPoints || 0)).forEach((pp, ix) => m.set(pp.id, ix + 1)); return m; })();
+  const _userNextPick = (() => { const T = config && config.teams || 12; const sl = _fmtSlot; const pk = r => r % 2 === 1 ? (r - 1) * T + sl : r * T - sl + 1; for (let r = 1; r <= 40; r++) { const v = pk(r); if (v >= _fmtCurPick) return v; } return _fmtCurPick; })();
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 600px)').matches);
@@ -10707,6 +10717,19 @@ function Cheatsheet({
   cols.forEach(([pos, nn]) => {
     tierBreaksByPos[pos] = computeTierBreaks((byPos[pos] || []).slice(0, nn), pos);
   });
+  const _tierBandFor = (pos, i) => {
+    const arr = byPos[pos] || [];
+    const cc = cols.find(c => c[0] === pos);
+    const nn = cc ? cc[1] : arr.length;
+    const list = arr.slice(0, nn);
+    const breaks = [...new Set([0, ...(tierBreaksByPos[pos] || [])])].sort((a, b) => a - b);
+    const pi = breaks.indexOf(i);
+    const tierNum = (pi >= 0 ? pi : breaks.filter(b => b <= i).length - 1) + 1;
+    const next = pi >= 0 && pi < breaks.length - 1 ? breaks[pi + 1] : list.length;
+    const left = list.slice(i, next).filter(pp => !(draftedIds && draftedIds.has(pp.id))).length;
+    const cliff = left <= 2;
+    return { text: 'TIER ' + tierNum + ' \u00b7 ' + left + ' LEFT' + (cliff ? ' \u00b7 CLIFF AFTER' : ''), cliff: cliff };
+  };
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
   const dateStr = new Date().toLocaleDateString(undefined, {
@@ -10923,6 +10946,18 @@ function Cheatsheet({
       nameTitle = sign === 'under' ? `Good buy: the $${cost} price is about $${vgap} under his Value of $${value}.` : sign === 'over' ? `Overpay: the $${cost} price is about $${cost - value} above his Value of $${value}.` : `Priced about at his Value ($${value}).`;
       if (p.fit === 'target') nameTitle += ' Your plan also targets him for an open starting slot.';
     }
+    let _verdict = null, _tb = null;
+    if (config && config.format === 'snake') {
+      if (!drafted) {
+        const _av = Math.round(survivalProb(p, _fmtCurPick, _fmtPun, _fmtRecent) * 100);
+        if (_av <= 35) _verdict = { t: 'GRAB', c: 'gv-grab', title: 'Only ' + _av + '% odds he returns to you. Draft him now or lose him.' };
+        const _vr = _ovrRank.get(p.id) || 999;
+        const _gt = Math.max(-1, Math.min(1, (_userNextPick - _vr) / (2 * (config.teams || 12))));
+        const _lerp = (lo, hi, k) => Math.round(lo + (hi - lo) * Math.min(1, Math.max(0, k)));
+        if (_gt > 0.04) nameColor = 'rgb(' + _lerp(232, 34, _gt) + ',' + _lerp(238, 197, _gt) + ',' + _lerp(242, 94, _gt) + ')';else if (_gt < -0.04) nameColor = 'rgb(' + _lerp(232, 248, -_gt) + ',' + _lerp(238, 96, -_gt) + ',' + _lerp(242, 96, -_gt) + ')';else nameColor = '#eef3f7';
+      }
+      if (tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i)) _tb = _tierBandFor(pos, i);
+    }
     return React.createElement("div", {
       key: p.id,
       ref: el => {
@@ -10930,8 +10965,9 @@ function Cheatsheet({
       },
       "data-pid": p.id,
       "data-pos": pos,
+      "data-tierband": _tb ? _tb.text : undefined,
       title: drafted ? dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool' : undefined,
-      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''}`,
+      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''}`,
       onPointerDown: e => startDrag(e, p.id, pos),
       style: {
         touchAction: 'pan-y',
@@ -10962,7 +10998,7 @@ function Cheatsheet({
         color: nameColor
       },
       title: byeOf(p.team) ? `Bye week ${byeOf(p.team)}` : 'Bye week: TBD'
-    }, p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
+    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
       className: "cheat-hctag",
       title: `Handcuff to ${handcuffMap.get(p.id)}`
     }, React.createElement("svg", {
