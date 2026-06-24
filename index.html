@@ -798,7 +798,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-team { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 .cheat-val { font-family: var(--font-mono); color: var(--text-secondary); font-size: 12px; text-align: right; min-width: 20px; }
 .cheat-cost { font-family: var(--font-mono); color: var(--text-secondary); font-size: 12px; text-align: right; min-width: 20px; }
-.cheat-col-lbl { cursor: help; text-decoration: underline dotted; text-decoration-color: var(--text-faint); text-underline-offset: 2px; }
+.cheat-col-lbl { cursor: help; white-space: nowrap; text-decoration: underline dotted; text-decoration-color: var(--text-faint); text-underline-offset: 2px; }
 .cheat-col-lbl:hover { color: var(--text-secondary); text-decoration-color: var(--positive); }
 .cheat-you { font-family: var(--font-mono); font-size: 12px; text-align: right; min-width: 20px; font-weight: 700; color: var(--text-secondary); }
 .cheat-you.cy-up { color: var(--text-secondary); }
@@ -2033,7 +2033,7 @@ const FORMATS = {
   },
   snake: {
     label: 'Snake',
-    columns: [['adp', 'ADP', 'Average draft position, the overall pick where this player typically goes.'], ['bestavail', 'Best avail', 'VORP rank among players still on the board (your best available value).'], ['survives', 'Survives%', 'Estimated chance this player is still available at your next pick.']],
+    columns: [['adp', 'ADP', 'Average draft position, the overall pick where this player typically goes.'], ['survives', 'Available', 'Percent chance this player is still available to you after your next pick.'], ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.']],
     valuePlayers: (players, config, draftedIds) => {
       const drafted = draftedIds || new Set();
       const score = p => p.vorp != null ? p.vorp : p.auctionValue != null ? p.auctionValue : p.projectedPoints || 0;
@@ -10572,7 +10572,8 @@ function Cheatsheet({
   }, [players]);
   const COLSPEC = getFormat(config).columns;
   const activeCols = COLSPEC.filter(c => showCols[c[0]] !== false);
-  const gridT = `15px 16px minmax(0,1fr) auto ${activeCols.map(() => 'auto').join(' ')}`;
+  const _numColW = (config && config.format === 'snake') ? '58px' : 'auto';
+    const gridT = `15px 16px minmax(0,1fr) auto ${activeCols.map(() => _numColW).join(' ')}`;
   const tierBreaksByPos = {};
   cols.forEach(([pos, nn]) => {
     tierBreaksByPos[pos] = computeTierBreaks((byPos[pos] || []).slice(0, nn), pos);
@@ -10696,7 +10697,7 @@ function Cheatsheet({
     onClick: () => setHighlight(null)
   }, "clear")), React.createElement("div", {
     className: "cheat-legend no-print"
-  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " where he typically goes · ", React.createElement("b", null, "BEST AVAIL"), " your top value left on the board · ", React.createElement("b", null, "SURVIVES%"), " odds he's there at your next pick") : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick") : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget")), React.createElement("div", {
+  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game") : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick") : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget")), React.createElement("div", {
     className: "cheat-print-head only-print"
   }, React.createElement("div", {
     className: "cph-title"
