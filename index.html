@@ -810,6 +810,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .only-print { display: none; }
 .cheat-col-labels { display: grid; gap: 4px; align-items: center; padding: 3px 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); background: rgba(255,255,255,0.025); border-bottom: 1px solid var(--border-subtle); }
 .cheat-col-labels span:nth-child(n+4) { text-align: right; }
+.cheat-whb { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: rgba(45,212,163,0.06); }
+.cheat-whb-h { font-weight: 700; font-size: 13.5px; color: var(--text); margin-bottom: 2px; }
+.cheat-whb-sub { font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4; }
+.cheat-whb-in { display: flex; gap: 8px; margin-bottom: 6px; }
+.cheat-whb .whb-in { flex: 1; }
+.cheat-whb .whb-round { flex: 0 0 74px; }
+.whb-hint { color: var(--text-muted); }
 .cheat-print-foot { display: none; }
 .cheat-print-head { font-family: var(--font-display); font-size: 17px; color: #000; margin-bottom: 6px; }
 @media print {
@@ -2208,6 +2215,26 @@ function survivalProb(player, currentOverallPick, picksUntilNext, recentPicks) {
   const samePos = recent.filter(rp => rp && player && rp.position === player.position).length;
   if (samePos >= 3) survives *= 0.7;
   return Math.max(0, Math.min(1, survives));
+}
+function availabilityOdds(player, targetPick, players, draftedIds, draftHistory, config) {
+  const di = draftedIds || new Set();
+  const currentPick = (di.size || 0) + 1;
+  const picksUntil = targetPick - currentPick;
+  if (picksUntil <= 0) return 1;
+  const adp = player && player.adp != null ? player.adp : 999;
+  const sd = Math.max(3, 0.16 * adp);
+  let surv = 1 - normalCdf((targetPick - adp) / sd);
+  surv = Math.max(0, Math.min(1, surv));
+  const recent = (draftHistory || []).slice(-10).map(d => (players || []).find(p => p.id === d.playerId)).filter(Boolean);
+  const samePosRecent = recent.filter(rp => rp.position === player.position).length;
+  if (samePosRecent >= 3) surv *= 0.62;else if (samePosRecent === 2) surv *= 0.83;
+  const avail = (players || []).filter(p => !di.has(p.id));
+  const samePosAvail = avail.filter(p => p.position === player.position).sort((a, b) => (a.adp == null ? 999 : a.adp) - (b.adp == null ? 999 : b.adp));
+  const rankAmong = samePosAvail.findIndex(p => p.id === player.id);
+  if (rankAmong === 0) {
+    if (picksUntil >= 6) surv *= 0.78;else if (picksUntil >= 3) surv *= 0.88;
+  }
+  return Math.max(0, Math.min(1, surv));
 }
 console.assert(picksUntilNextPick(1, 12, 1) === 23, 'snake gap: slot1 r1 -> 23');
 console.assert(picksUntilNextPick(1, 12, 24) === 1, 'snake gap: slot1 r2 -> 1');
@@ -6323,7 +6350,7 @@ function DraftBoard({
     const currentPick = ((draftHistory && draftHistory.length) || 0) + 1;
     if (targetPick < currentPick) return { player, round: rd, passed: true };
     const recent = (draftHistory || []).slice(-8).map(d => (players || []).find(p => p.id === d.playerId)).filter(Boolean);
-    const prob = survivalProb(player, currentPick, targetPick - currentPick, recent);
+    const prob = availabilityOdds(player, targetPick, players, di, draftHistory, config);
     return { player, round: rd, targetPick, odds: Math.max(0, Math.min(100, Math.round(prob * 100))) };
   }, [_dbFmt, whbQuery, whbRound, players, draftHistory, draftedIds, config]);
   const [logOpen, setLogOpen] = useState(false);
@@ -9991,6 +10018,26 @@ function CheatHeader({
   const [idx, setIdx] = useState(0);
   const [colsOpen, setColsOpen] = useState(false);
   const colsRef = useRef(null);
+  const [whbQ, setWhbQ] = useState('');
+  const [whbR, setWhbR] = useState('');
+  const whbResultCheat = useMemo(() => {
+    if (!config || config.format !== 'snake') return null;
+    const q = (whbQ || '').trim().toLowerCase();
+    const rd = parseInt(whbR, 10);
+    if (!q || !rd || rd < 1) return null;
+    const pl = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
+    if (!pl) return { err: 'No player matches "' + whbQ.trim() + '".' };
+    const di = draftedIds || new Set();
+    if (di.has(pl.id)) return { player: pl, drafted: true };
+    const teamsN = config.teams || 12;
+    const slot = config.snake && config.snake.draftSlot || 1;
+    const pickAt = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
+    const targetPick = pickAt(rd);
+    const cur = (di.size || 0) + 1;
+    if (targetPick < cur) return { player: pl, round: rd, passed: true };
+    const odds = Math.max(0, Math.min(100, Math.round(availabilityOdds(pl, targetPick, players, di, [], config) * 100)));
+    return { player: pl, round: rd, targetPick, odds };
+  }, [config, whbQ, whbR, players, draftedIds]);
   useEffect(() => {
     if (!colsOpen) return;
     const onDocDown = e => {
@@ -10690,7 +10737,7 @@ function Cheatsheet({
   }, STRAT[highlight].desc, React.createElement("button", {
     className: "hl-clear",
     onClick: () => setHighlight(null)
-  }, "clear")), React.createElement("div", {
+  }, "clear")), ((config.format || 'auction') === 'snake' ? React.createElement("div", { className: "cheat-whb no-print" }, React.createElement("div", { className: "cheat-whb-h" }, "Will he be there?"), React.createElement("div", { className: "cheat-whb-sub" }, "Odds a player lasts to your next pick \u2014 from the live board, ADP, and position runs."), React.createElement("div", { className: "cheat-whb-in" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQ, onChange: e => setWhbQ(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbR, onChange: e => setWhbR(e.target.value) })), whbResultCheat ? (whbResultCheat.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResultCheat.err) : whbResultCheat.drafted ? React.createElement("div", { className: "whb-res" }, whbResultCheat.player.name + " is already off the board.") : whbResultCheat.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResultCheat.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResultCheat.odds + "%"), " chance " + whbResultCheat.player.name + " (ADP " + (whbResultCheat.player.adp != null ? Math.round(whbResultCheat.player.adp) : "?") + ") is still there at your round " + whbResultCheat.round + " pick (overall #" + whbResultCheat.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Enter a player and a round.")) : null), React.createElement("div", {
     className: "cheat-legend no-print"
   }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game") : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick") : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget")), React.createElement("div", {
     className: "cheat-print-head only-print"
