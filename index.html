@@ -2296,8 +2296,14 @@ function survivalProb(player, currentOverallPick, picksUntilNext, recentPicks) {
   let survives = 1 - normalCdf((nextPick - adp) / sd);
   survives = Math.max(0, Math.min(1, survives));
   const recent = (recentPicks || []).slice(-8);
-  const samePos = recent.filter(rp => rp && player && rp.position === player.position).length;
-  if (samePos >= 3) survives *= 0.7;
+  if (recent.length >= 4 && player) {
+    const samePos = recent.filter(rp => rp && rp.position === player.position).length;
+    const share = samePos / recent.length;
+    const base = { QB: 0.09, RB: 0.30, WR: 0.32, TE: 0.10, K: 0.04, DEF: 0.05 }[player.position] || 0.15;
+    if (share >= base * 1.8) survives *= 0.72;else if (share >= base * 1.3) survives *= 0.86;else if (share <= base * 0.4) survives *= 1.08;
+  } else if (recent.filter(rp => rp && player && rp.position === player.position).length >= 3) {
+    survives *= 0.7;
+  }
   return Math.max(0, Math.min(1, survives));
 }
 function availabilityOdds(player, targetPick, players, draftedIds, draftHistory, config) {
