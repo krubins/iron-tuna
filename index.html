@@ -10162,7 +10162,6 @@ function CheatHeader({
   const colsRef = useRef(null);
   const [whbQ, setWhbQ] = useState('');
   const [whbR, setWhbR] = useState('');
-  const [introDismissed, setIntroDismissed] = useState(() => { try { return localStorage.getItem('it_snake_cheat_intro') === '1'; } catch (e) { return false; } });
   const whbResultCheat = useMemo(() => {
     if (!config || config.format !== 'snake') return null;
     const q = (whbQ || '').trim().toLowerCase();
@@ -10684,6 +10683,7 @@ function Cheatsheet({
   const cols = [['QB', 30], ['RB', 55], ['WR', 55], ['TE', 30], ['K', 32], ['DEF', 32]];
   const colGroups = [[['QB', 30], ['K', 32]], [['RB', 55]], [['WR', 55]], [['TE', 30], ['DEF', 32]]];
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 600px)').matches);
+  const [introDismissed, setIntroDismissed] = useState(() => { try { return localStorage.getItem('it_snake_cheat_intro') === '1'; } catch (e) { return false; } });
   const [mobPos, setMobPos] = useState('QB');
   const [sheetView, setSheetView] = useState('position');
   const __snakeVal = !!(config && config.format === 'snake') && sheetView === 'value';
