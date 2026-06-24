@@ -11538,6 +11538,41 @@ function ReferralModal({
     rel: "noopener"
   }, "How it works"), ".")));
 }
+function buildGradeCard(o) {
+  const W = 1000, H = 540;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0b1117'; x.fillRect(0, 0, W, H);
+  const g = x.createRadialGradient(W / 2, -80, 40, W / 2, -80, 760);
+  g.addColorStop(0, 'rgba(45,212,163,0.12)'); g.addColorStop(1, 'rgba(45,212,163,0)');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(247,224,140,0.45)'; x.lineWidth = 3; x.strokeRect(16, 16, W - 32, H - 32);
+  x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+  x.fillStyle = '#cdd8de'; x.font = '800 34px Arial';
+  let wx = 56; const wm = 'IRON TUNA'; for (let i = 0; i < wm.length; i++) { x.fillText(wm[i], wx, 78); wx += x.measureText(wm[i]).width + 5; }
+  x.fillStyle = '#f7e08c'; x.font = '800 220px Arial'; x.fillText(o.grade, 50, 350);
+  x.fillStyle = '#e8eef2'; x.font = '800 44px Arial'; x.fillText(o.title || 'Snake Mock Draft', 430, 160);
+  x.fillStyle = '#b6c2cc'; x.font = '400 30px Arial';
+  x.fillText('Finished ' + o.rank + ' of ' + o.total, 430, 212);
+  x.fillText(o.pts.toFixed(1) + ' projected pts / game', 430, 254);
+  if (o.picks && o.picks.length) { x.fillStyle = '#8595a1'; x.font = '700 20px Arial'; x.fillText('TOP PICKS', 430, 312); x.fillStyle = '#cdd8de'; x.font = '400 25px Arial'; o.picks.slice(0, 4).forEach((p, i) => { x.fillText('\u2022 ' + p, 430, 348 + i * 36); }); }
+  x.fillStyle = '#2dd4a3'; x.font = '800 30px Arial'; x.textAlign = 'center'; x.fillText('Build yours free at irontuna.com', W / 2, H - 38);
+  return c;
+}
+function shareGradeCard(canvas, text) {
+  try {
+    canvas.toBlob(function (blob) {
+      if (!blob) { try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch (e) {} return; }
+      let file = null; try { file = new File([blob], 'iron-tuna-grade.png', { type: 'image/png' }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        navigator.share({ files: [file], text: text }).catch(function () {});
+      } else {
+        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'iron-tuna-grade.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+        try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch (e) {}
+      }
+    }, 'image/png');
+  } catch (e) { try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch (er) {} }
+}
 function MockSnakeDraft({ players, config, seasonGames }) {
   const games = seasonGames || 17;
   const [numTeams, setNumTeams] = useState(config.teams || 12);
@@ -11624,7 +11659,7 @@ function MockSnakeDraft({ players, config, seasonGames }) {
     const pct = mx > mn ? (myPts - mn) / (mx - mn) : 1;
     const grade = pct >= 0.92 ? 'A' : pct >= 0.8 ? 'A-' : pct >= 0.68 ? 'B+' : pct >= 0.55 ? 'B' : pct >= 0.4 ? 'B-' : 'C';
     const shareTxt = 'My Iron Tuna mock snake draft graded out at ' + grade + ' (' + myRank + '/' + teams.length + ', ' + (myPts / games).toFixed(1) + ' pts/gm). Build yours free at irontuna.com';
-    const share = () => { try { if (typeof ITAnalytics !== 'undefined') ITAnalytics.track('share_grade', { source: 'mock_draft', grade: grade }); } catch (e) {} try { if (navigator.share) { navigator.share({ title: 'Iron Tuna Mock Draft', text: shareTxt, url: 'https://irontuna.com/snakedraft' }).catch(function () {}); } else if (navigator.clipboard) { navigator.clipboard.writeText(shareTxt); alert('Grade ' + grade + ' copied — paste it anywhere to share.'); } } catch (e) {} };
+    const share = () => { try { if (typeof ITAnalytics !== 'undefined') ITAnalytics.track('share_grade', { source: 'mock_draft', grade: grade }); } catch (e) {} try { const myTeamRoster = ((teams.find(t => t.you) || {}).roster || []); const picks = myTeamRoster.slice(0, 4).map(p => p.name + ' (' + p.position + ')'); const card = buildGradeCard({ grade: grade, rank: myRank, total: teams.length, pts: myPts / games, title: 'Snake Mock Draft', picks: picks }); shareGradeCard(card, shareTxt); } catch (e) { try { if (navigator.clipboard) navigator.clipboard.writeText(shareTxt); } catch (er) {} } };
     return React.createElement("div", { className: "mock mock-done" }, React.createElement("div", { className: "mock-result-head" }, React.createElement("div", { className: "mock-grade" }, grade), React.createElement("div", null, React.createElement("div", { className: "mock-result-title" }, "You finished ", myRank, " of ", teams.length), React.createElement("div", { className: "mock-result-sub" }, (myPts / games).toFixed(1), " projected starter pts/game"))), React.createElement("div", { className: "mock-result-actions" }, React.createElement("button", { className: "mock-gate-btn", onClick: share }, "📣 Share my grade"), React.createElement("button", { className: "btn-secondary", onClick: () => reset() }, "New mock"), React.createElement("button", { className: "mock-gate-btn mock-upsell", onClick: () => { try { window.location.href = '/snakedraft'; } catch (e) {} } }, "Do it for real →")), React.createElement("table", { className: "mock-table" }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", null, "#"), React.createElement("th", null, "Team"), React.createElement("th", { className: "num" }, "Pts/gm"))), React.createElement("tbody", null, result.map((t, i) => React.createElement("tr", { key: t.id, className: t.you ? 'you' : '' }, React.createElement("td", null, i + 1), React.createElement("td", null, t.name), React.createElement("td", { className: "num" }, (t.pts / games).toFixed(1)))))), board);
   }
   return React.createElement("div", { className: "mock" }, React.createElement("div", { className: "mock-intro" }, "Mock snake draft from slot ", mySlot, " of ", numTeams, ". When you are on the clock, click a player to draft him. CPU managers auto-pick between your turns."), React.createElement("div", { className: "mock-top" }, React.createElement("div", null, React.createElement("b", null, yourTurn ? "⏱ You're on the clock" : ("CPU " + onClockSlot + " is picking…")), " · Round ", Math.ceil(overall / T), " · Pick ", overall, " · roster ", React.createElement("b", null, (me ? me.roster.length : 0), "/", totalSlots)), React.createElement("button", { className: "btn-secondary", onClick: () => reset() }, "Restart")), React.createElement("div", { className: "mock-settings" }, React.createElement("label", { className: "mock-set" }, "Teams ", React.createElement("select", { value: numTeams, onChange: e => { const n = Number(e.target.value); setNumTeams(n); const ms = Math.min(mySlot, n); setMySlot(ms); reset(n, ms); } }, teamOpts.map(n => React.createElement("option", { key: n, value: n }, n)))), React.createElement("label", { className: "mock-set" }, "Your slot ", React.createElement("select", { value: mySlot, onChange: e => { const v = Number(e.target.value); setMySlot(v); reset(numTeams, v); } }, slotOpts.map(n => React.createElement("option", { key: n, value: n }, n))))), React.createElement("div", { className: "mock-draftarea" }, React.createElement("div", { className: "mock-avail" }, React.createElement("div", { className: "mock-avail-h" }, yourTurn ? "Best available — click to draft" : "Best available"), React.createElement("div", { className: "mock-avail-list" }, avail.map(p => React.createElement("button", { key: p.id, className: "mock-avail-row" + (yourTurn ? ' pickable' : ''), disabled: !yourTurn, onClick: () => userPick(p), title: yourTurn ? 'Draft ' + p.name : '' }, React.createElement("span", { className: "mock-av-pos", style: { background: POS_COLOR[p.position] || '#888' } }, p.position), React.createElement("span", { className: "mock-av-name" }, p.name, p.team ? React.createElement("em", null, " " + String(p.team).replace(/[^A-Za-z]/g, '')) : null), React.createElement("span", { className: "mock-av-adp" }, p.adp != null ? 'ADP ' + Math.round(p.adp) : ''))))), React.createElement("div", { className: "mock-log" }, React.createElement("div", { className: "mock-log-h" }, "Picks"), log.map((l, i) => React.createElement("div", { key: i, className: "mock-log-row" + (l.you ? ' you' : '') }, l.txt)))), board);
