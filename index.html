@@ -7992,6 +7992,13 @@ function TeamsBoard({
   const projByTeam = useMemo(() => {
     const m = new Map();
     const di = draftedIds || new Set();
+    const _T = config.teams || teams.length;
+    const _mySlot = config.snake && config.snake.draftSlot || 1;
+    const _remSlots = [];
+    for (let _s = 1; _s <= _T; _s++) if (_s !== _mySlot) _remSlots.push(_s);
+    let _ri = 0;
+    const _snakeSlotMap = new Map();
+    teams.forEach(t => { _snakeSlotMap.set(t.id, t.isMine ? _mySlot : (_remSlots[_ri++ % (_remSlots.length || 1)] || _mySlot)); });
     teams.forEach(t => {
       const tc = t.isMine ? config : {
         ...config,
@@ -8004,7 +8011,7 @@ function TeamsBoard({
       const cur = computeTeamStarters(t, players, tc, ro);
       const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true);
       const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
-      const _projSP = (t.isMine && isNonAuction) ? (() => { try { return getFormat(config).planFills(t, players, tc, di).projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
+      const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; return buildSnakePlan(t, players, _tcS, di).projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
       const rosterPoints = t.roster.reduce((s, r) => {
         const p = playerMap.get(r.playerId);
         return s + (p ? p.projectedPoints || 0 : 0);
