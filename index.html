@@ -473,6 +473,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .rg-price { font-family: var(--font-mono); text-align: right; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end; }
 .rg-filled .rg-price { color: var(--accent-text); }
 .team-card .rg-label, .team-card .team-roster-summary, .team-card .team-roster-summary span, .team-card .rg-target .rg-name, .team-card .rg-empty .rg-name, .team-card .rg-target .rg-price, .team-card .rg-price { color: #e8edf2 !important; }
+.team-card .rg-pred .rg-name, .team-card .rg-pred .rg-price, .team-card .rg-pred .rg-label, .team-card .rg-pred .rg-pts { color: #8b97a3 !important; }
+.rg-pred { opacity: 0.9; }
+.rg-pred-pos { color: #6f7c89; font-style: normal; font-size: 11px; margin-left: 5px; }
 .rg-target .rg-price { color: var(--text-faint); }
 .team-card .rg-slot.rg-target .rg-name, .team-card .rg-slot.rg-target .rg-price { color: #6e7682 !important; }
 .team-card .rg-slot.rg-target { opacity: 0.72; }
@@ -8011,7 +8014,8 @@ function TeamsBoard({
       const cur = computeTeamStarters(t, players, tc, ro);
       const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true);
       const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
-      const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; return buildSnakePlan(t, players, _tcS, di).projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
+      let _snakePlanT = null;
+      const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; _snakePlanT = buildSnakePlan(t, players, _tcS, di); return _snakePlanT.projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
       const rosterPoints = t.roster.reduce((s, r) => {
         const p = playerMap.get(r.playerId);
         return s + (p ? p.projectedPoints || 0 : 0);
@@ -8022,7 +8026,8 @@ function TeamsBoard({
         starterPoints: _projSP,
         draftedStarterPoints: cur.starterPoints,
         rosterPoints,
-        grid
+        grid,
+        snakePicks: _snakePlanT && _snakePlanT.byRound ? _snakePlanT.byRound : []
       });
     });
     return m;
@@ -8311,9 +8316,9 @@ function TeamsBoard({
       }, dp ? dp.position : r.position), React.createElement("span", {
         className: "rg-pts"
       }, dp ? (dp.projectedPoints / games).toFixed(1) : ''));
-    }), team.isMine && snakePlanMine && (snakePlanMine.byRound || []).map((b, i) => React.createElement("div", {
+    }), (proj.snakePicks || []).map((b, i) => React.createElement("div", {
       key: 'g' + i,
-      className: "rg-slot rg-target",
+      className: "rg-slot rg-target rg-pred",
       onClick: () => onFocusPlayer && onFocusPlayer(b.player.id),
       title: `Projected pick \u2014 click to find ${b.player.name} in the list`
     }, React.createElement("span", {
@@ -8324,7 +8329,7 @@ function TeamsBoard({
         fontStyle: 'italic'
       },
       title: `${b.player.name} \u00b7 ${(b.player.projectedPoints / games).toFixed(1)} pts/gm`
-    }, "Target ", b.player.position, posRankMap.get(b.player.id) || ''), React.createElement("span", {
+    }, b.player.name, React.createElement("em", { className: "rg-pred-pos" }, " ", b.player.position, posRankMap.get(b.player.id) || '')), React.createElement("span", {
       className: "rg-price"
     }), React.createElement("span", {
       className: "rg-pts"
