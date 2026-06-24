@@ -5024,7 +5024,7 @@ function Header({
   }, React.createElement("button", {
     className: view === 'board' || view === 'split' || view === 'mock' ? 'active' : '',
     onClick: () => setMoreOpen(o => !o),
-    title: "Draft Board, Split View, Mock Auction"
+    title: "Draft Board, Mock Auction"
   }, "More ▾"), moreOpen && React.createElement("span", {
     className: "reset-menu",
     onMouseLeave: () => setMoreOpen(false)
@@ -5033,12 +5033,7 @@ function Header({
       setMoreOpen(false);
       setView('board');
     }
-  }, "Draft Board"), React.createElement("button", {
-    onClick: () => {
-      setMoreOpen(false);
-      setView('split');
-    }
-  }, "Split View"), (!config || (config.format || 'auction') === 'auction') && React.createElement("button", {
+  }, "Draft Board"), (!config || (config.format || 'auction') === 'auction') && React.createElement("button", {
     onClick: () => {
       setMoreOpen(false);
       setView('mock');
@@ -19194,6 +19189,17 @@ function App() {
     const myTeam = teams.find(t => t.isMine);
     if (!myTeam) return null;
     const dIds = new Set(draftHistory.map(d => d.playerId));
+    if (config && config.format === 'snake') {
+      // Snake: one pick per round. Box the round-by-round path (never multiple players from the same round/tier).
+      const ids = new Set();
+      if (draftModel === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
+      const _focus = (MODEL_FOCUS[draftModel] && MODEL_FOCUS[draftModel].focus) || [];
+      const _vb = _focus.length ? (p => _focus.indexOf(p.position) >= 0 ? 0.35 : 0) : null;
+      let _sp = null;
+      try { _sp = buildSnakePlan(myTeam, personalizedPlayers, config, dIds, _vb ? { valueBoost: _vb } : undefined); } catch (e) {}
+      if (_sp && _sp.byRound) _sp.byRound.forEach(b => { if (b.player && !dIds.has(b.player.id)) ids.add(b.player.id); });
+      return ids;
+    }
     const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets, customForcedIds, whatIfAnchors);
     const ids = new Set();
     if (plan && plan.slots) plan.slots.forEach(s => {
@@ -19991,7 +19997,11 @@ function App() {
       className: "summarize-btn",
       onClick: () => setSummaryOpen(true),
       title: "Honest narrative recap of the entire board"
-    }, "📋 Summarize"), React.createElement("div", {
+    }, "📋 Summarize"), React.createElement("button", {
+      className: "summarize-btn split-toggle-btn",
+      onClick: () => setView(view === 'split' ? 'board' : 'split'),
+      title: "Show the cheat sheet and draft board side by side"
+    }, view === 'split' ? "⊟ Exit split" : "⊞ Split view"), React.createElement("div", {
       className: "taunt-wrap"
     }, React.createElement("span", {
       className: "reset-wrap"
