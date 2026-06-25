@@ -14545,9 +14545,9 @@ function PlayersRail({
         onClick: () => onNominate(p)
       }, "Info"), React.createElement("button", {
         className: "btn-draft",
-        onClick: () => onNominate(p),
-        title: "Feature this player on the right with a price-by-price impact analysis"
-      }, "Up for bid"))));
+        onClick: () => (config && config.format === 'snake') ? setQuick(p) : onNominate(p),
+        title: (config && config.format === 'snake') ? "Draft this player to a team" : "Feature this player on the right with a price-by-price impact analysis"
+      }, (config && config.format === 'snake') ? "Draft" : "Up for bid"))));
     });
     return __rows;
   })(), list.length === 0 && React.createElement("div", {
