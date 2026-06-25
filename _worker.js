@@ -446,6 +446,13 @@ const PROJECTIONS = [
   { name: "Xavier Legette", position: "WR", team: "CAR", projectedStats: { rushYd: 14, rushTD: 0, rec: 25, recYd: 311, recTD: 2, fumLost: 0 }},
 ];
 
+async function saveContact(env, rec) {
+  if (!env || !env.LEADS_DB) return;
+  try {
+    await env.LEADS_DB.prepare('INSERT INTO contacts (email, phone, source, type, ref, path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(rec.email || '', rec.phone || '', rec.source || '', rec.type || '', rec.ref || '', rec.path || '', Date.now()).run();
+  } catch (e) {}
+}
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -499,7 +506,23 @@ export default {
       if (env.LEAD_WEBHOOK) {
         try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, source: body.source || 'cheatsheet', type: body.type || 'lead', code: body.code || null, scoring: body.scoring || null, ts: Date.now() }) }); } catch (e) {}
       }
-      return json({ ok: true, stored: !!env.LEAD_WEBHOOK }, 200, c);
+      await saveContact(env, { email: email, phone: String(body.phone || '').slice(0, 40), source: body.source || 'cheatsheet', type: body.type || 'lead', ref: body.code || '', path: '' });
+      return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
+    }
+    if (url.pathname === '/api/leads/export') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const key = url.searchParams.get('key') || '';
+      if (!env.LEADS_EXPORT_KEY || key !== env.LEADS_EXPORT_KEY) return new Response('Forbidden', { status: 403 });
+      if (!env.LEADS_DB) return new Response('No database bound (LEADS_DB)', { status: 500 });
+      try {
+        const q = await env.LEADS_DB.prepare('SELECT email, phone, source, type, ref, created_at FROM contacts ORDER BY created_at DESC').all();
+        const rows = (q && q.results) || [];
+        const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+        const out = [['email', 'phone', 'source', 'type', 'ref', 'date'].map(esc).join(',')];
+        rows.forEach(r => { const dt = new Date(r.created_at || 0).toISOString(); out.push([r.email, r.phone, r.source, r.type, r.ref, dt].map(esc).join(',')); });
+        return new Response(out.join('\r\n'), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="iron-tuna-leads.csv"' } });
+      } catch (e) { return new Response('Error: ' + String(e), { status: 500 }); }
     }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -516,6 +539,11 @@ export default {
       let b = {}; try { b = await request.json(); } catch (e) {}
       const ref = String(b.ref || '').slice(0, 40);
       const email = String(b.email || '').slice(0, 120);
+      const phone = String(b.phone || '').slice(0, 40);
+      if (env.LEAD_WEBHOOK && email) {
+        try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), phone: phone, source: 'checkout', type: 'purchase', ts: Date.now() }) }); } catch (e) {}
+      }
+      if (email) { await saveContact(env, { email: email.toLowerCase(), phone: phone, source: 'checkout', type: 'purchase', ref: ref, path: String(b.path || '') }); }
       const auth = { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY };
       const productId = env.STRIPE_PRODUCT_ID || 'prod_UjzvYZjhOXVnDT';
       let priceId = env.STRIPE_PRICE_ID || '';

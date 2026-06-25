@@ -3,5 +3,8 @@
   "main": "_worker.js",
   "compatibility_date": "2025-05-01",
   "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": true },
-  "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6" }
+  "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6" },
+  "d1_databases": [
+    { "binding": "LEADS_DB", "database_name": "iron-tuna-leads", "database_id": "75f7c43a-69cc-48eb-aa78-6ecfd91af2fb" }
+  ]
 }
