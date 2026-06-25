@@ -7014,7 +7014,7 @@ function QuickDraftModal({
   }, teams.map(t => React.createElement("option", {
     key: t.id,
     value: t.id
-  }, t.isMine ? '★ ' : '', t.name, " ($", t.budgetRemaining, ", ", t.spotsRemaining, " slots)"))), (config.format || 'auction') === 'auction' && React.createElement(React.Fragment, null, React.createElement("label", {
+  }, t.isMine ? '★ ' : '', t.name, (config.format || 'auction') === 'auction' ? (" ($" + t.budgetRemaining + ", " + t.spotsRemaining + " slots)") : (" (" + t.spotsRemaining + " slots)")))), (config.format || 'auction') === 'auction' && React.createElement(React.Fragment, null, React.createElement("label", {
     style: {
       display: 'block',
       fontSize: 12,
