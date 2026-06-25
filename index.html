@@ -249,8 +249,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .bm2-pl-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 2px 1px; align-items: baseline; }
 .bm2-pl-name { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bm2-pl-meta { color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
-.rail-sortpills { align-items: center; }
-.rail-sortlabel { font-size: 10px; color: var(--text-muted); letter-spacing: 0.04em; margin-right: 2px; text-transform: uppercase; }
+.rh-sorted { color: var(--gold-text) !important; font-weight: 800; }
 .bm-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-right: 4px; }
 .bm-collapsed { flex-direction: column; align-items: stretch; gap: 8px; max-width: 460px; }
 .bm-head { display: flex; align-items: center; gap: 10px; }
@@ -14509,11 +14508,7 @@ function PlayersRail({
     className: `filter-pill ${filterMode === 'bargains' ? 'active' : ''}`,
     onClick: () => setFilterMode(function (m) { return m === 'bargains' ? 'all' : 'bargains'; }),
     title: "Players worth more to you than the market price"
-  }, "Bargains")), (config && config.format !== 'snake') && React.createElement("div", {
-    className: "rail-pills rail-sortpills"
-  }, React.createElement("span", { className: "rail-sortlabel" }, "Sort $"), [["proj", "Proj"], ["val", "Val"], ["you", "You"]].map(function (o) {
-    return React.createElement("button", { key: o[0], className: "filter-pill " + (((boardSortKey || "you") === o[0]) ? "active" : ""), onClick: function () { setBoardSortKey && setBoardSortKey(o[0]); } }, o[1]);
-  })), React.createElement("div", {
+  }, "Bargains")), React.createElement("div", {
     className: "rail-pills"
   }, React.createElement("button", {
     className: "filter-pill",
@@ -14532,18 +14527,27 @@ function PlayersRail({
       gridTemplateColumns: `46px minmax(0,1fr) ${cw.proj}px ${cw.val}px ${cw.you}px`
     }
   }, React.createElement("span", null), React.createElement("span", null, "Player"), React.createElement("span", {
-    className: "rh"
-  }, (config && config.format === 'snake' ? "ADP" : "Proj"), React.createElement("span", {
+    className: "rh" + ((config && config.format !== 'snake' && (boardSortKey || 'you') === 'proj') ? " rh-sorted" : ""),
+    onClick: (config && config.format !== 'snake') ? (() => setBoardSortKey && setBoardSortKey('proj')) : undefined,
+    style: (config && config.format !== 'snake') ? { cursor: 'pointer' } : null,
+    title: (config && config.format !== 'snake') ? "Sort by likely market price" : null
+  }, (config && config.format === 'snake' ? "ADP" : "Proj"), (config && config.format !== 'snake' && (boardSortKey || 'you') === 'proj') ? " \u25be" : "", React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'proj')
   })), React.createElement("span", {
-    className: "rh"
-  }, (config && config.format === 'snake' ? "Pts" : "Val"), React.createElement("span", {
+    className: "rh" + ((config && config.format !== 'snake' && (boardSortKey || 'you') === 'val') ? " rh-sorted" : ""),
+    onClick: (config && config.format !== 'snake') ? (() => setBoardSortKey && setBoardSortKey('val')) : undefined,
+    style: (config && config.format !== 'snake') ? { cursor: 'pointer' } : null,
+    title: (config && config.format !== 'snake') ? "Sort by VBD value" : null
+  }, (config && config.format === 'snake' ? "Pts" : "Val"), (config && config.format !== 'snake' && (boardSortKey || 'you') === 'val') ? " \u25be" : "", React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'val')
   })), React.createElement("span", {
-    className: "rh you"
-  }, (config && config.format === 'snake' ? "Pos" : "You"), React.createElement("span", {
+    className: "rh you" + ((config && config.format !== 'snake' && (boardSortKey || 'you') === 'you') ? " rh-sorted" : ""),
+    onClick: (config && config.format !== 'snake') ? (() => setBoardSortKey && setBoardSortKey('you')) : undefined,
+    style: (config && config.format !== 'snake') ? { cursor: 'pointer' } : null,
+    title: (config && config.format !== 'snake') ? "Sort by your max bid" : null
+  }, (config && config.format === 'snake' ? "Pos" : "You"), (config && config.format !== 'snake' && (boardSortKey || 'you') === 'you') ? " \u25be" : "", React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'you')
   }))), (() => {
