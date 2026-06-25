@@ -247,6 +247,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .bm2-pl-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 2px 1px; align-items: baseline; }
 .bm2-pl-name { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bm2-pl-meta { color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+.rail-sortpills { align-items: center; }
+.rail-sortlabel { font-size: 10px; color: var(--text-muted); letter-spacing: 0.04em; margin-right: 2px; text-transform: uppercase; }
 .bm-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-right: 4px; }
 .bm-collapsed { flex-direction: column; align-items: stretch; gap: 8px; max-width: 460px; }
 .bm-head { display: flex; align-items: center; gap: 10px; }
@@ -10714,6 +10716,7 @@ function Cheatsheet({
   config,
   seasonGames,
   pointsMode,
+  boardSortKey,
   onRankReorder,
   onResetRanks,
   targets,
@@ -10811,10 +10814,12 @@ function Cheatsheet({
       if (mq.removeEventListener) mq.removeEventListener('change', fn);else mq.removeListener(fn);
     };
   }, []);
+  const _isSnakeCS = config && config.format === 'snake';
+  const _svC = p => boardSortKey === 'proj' ? (p.marketValue ?? p.auctionValue ?? 0) : boardSortKey === 'val' ? (p.auctionValue ?? 0) : (p.personalValue ?? p.marketValue ?? p.auctionValue ?? 0);
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
-  Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
-  byPos.ALL = (players || []).slice().sort((a, b) => ((b.auctionValue != null ? b.auctionValue : b.projectedPoints || 0) - (a.auctionValue != null ? a.auctionValue : a.projectedPoints || 0)));
+  Object.values(byPos).forEach(a => a.sort((x, y) => _isSnakeCS ? ((y.projectedPoints || 0) - (x.projectedPoints || 0)) : (_svC(y) - _svC(x))));
+  byPos.ALL = (players || []).slice().sort((a, b) => _isSnakeCS ? ((b.auctionValue != null ? b.auctionValue : b.projectedPoints || 0) - (a.auctionValue != null ? a.auctionValue : a.projectedPoints || 0)) : (_svC(b) - _svC(a)));
   const draftInfoMap = useMemo(() => {
     const m = {};
     const tn = new Map((teams || []).map(t => [t.id, t]));
@@ -14271,6 +14276,8 @@ function PlayersRail({
   onRankMove,
   onRankReorder,
   onResetRanks,
+  boardSortKey,
+  setBoardSortKey,
   focusPlayer,
   onCollapse
 }) {
@@ -14403,6 +14410,7 @@ function PlayersRail({
     return ['$40+', '$30-39', '$22-29', '$16-21', '$11-15', '$7-10', '$4-6', '$2-3', '$1'][k] || '';
   }
   const valueOf = p => p.personalValue ?? p.inflatedValue ?? p.auctionValue;
+  const sortVal = p => boardSortKey === 'proj' ? (p.marketValue ?? p.auctionValue ?? 0) : boardSortKey === 'val' ? (p.auctionValue ?? 0) : (p.personalValue ?? p.marketValue ?? p.auctionValue ?? 0);
   const orderIndex = useMemo(() => {
     const m = new Map();
     (customOrder || []).forEach((id, i) => m.set(id, i));
@@ -14429,10 +14437,10 @@ function PlayersRail({
         const gb = Math.max(b.personalValue || 0, b.auctionValue || 0) - (b.marketValue || 0);
         if (ga !== gb) return gb - ga;
       }
-      return valueOf(b) - valueOf(a);
+      return sortVal(b) - sortVal(a);
     });
     return l;
-  }, [players, draftedIds, posFilter, search, filterMode, sortMode, green, yellow, starred, orderIndex]);
+  }, [players, draftedIds, posFilter, search, filterMode, sortMode, green, yellow, starred, orderIndex, boardSortKey]);
   const visibleIds = useMemo(() => list.map(p => p.id), [list]);
   const myBoard = sortMode === 'myboard';
   const nextPickInfo = useMemo(() => {
@@ -14499,7 +14507,11 @@ function PlayersRail({
     className: `filter-pill ${filterMode === 'bargains' ? 'active' : ''}`,
     onClick: () => setFilterMode(function (m) { return m === 'bargains' ? 'all' : 'bargains'; }),
     title: "Players worth more to you than the market price"
-  }, "Bargains")), React.createElement("div", {
+  }, "Bargains")), (config && config.format !== 'snake') && React.createElement("div", {
+    className: "rail-pills rail-sortpills"
+  }, React.createElement("span", { className: "rail-sortlabel" }, "Sort $"), [["proj", "Proj"], ["val", "Val"], ["you", "You"]].map(function (o) {
+    return React.createElement("button", { key: o[0], className: "filter-pill " + (((boardSortKey || "you") === o[0]) ? "active" : ""), onClick: function () { setBoardSortKey && setBoardSortKey(o[0]); } }, o[1]);
+  })), React.createElement("div", {
     className: "rail-pills"
   }, React.createElement("button", {
     className: "filter-pill",
@@ -19634,6 +19646,7 @@ function App() {
   const [customOrder, setCustomOrder] = useState(initialState?.customOrder || []);
   const [targets, setTargets] = useState(() => new Set(initialState?.targets || []));
   const [rankOrder, setRankOrder] = useState(initialState?.rankOrder || {});
+  const [boardSortKey, setBoardSortKey] = useState('you');
   const [roleOverrides, setRoleOverrides] = useState(initialState?.roleOverrides || {});
   const [slotOrder, setSlotOrder] = useState({});
   const [authReason, setAuthReason] = useState('');
@@ -20641,6 +20654,7 @@ function App() {
       config: config,
       seasonGames: SEASON_GAMES,
       pointsMode: pointsMode,
+      boardSortKey: boardSortKey,
       onRankReorder: handleRankReorder,
       onResetRanks: handleResetRanks,
       targets: targets,
@@ -20756,6 +20770,8 @@ function App() {
       onRankMove: handleRankMove,
       onRankReorder: handleRankReorder,
       onResetRanks: handleResetRanks,
+      boardSortKey: boardSortKey,
+      setBoardSortKey: setBoardSortKey,
       focusPlayer: null,
       onCollapse: null
     }))), (view === 'board' && myTeam) && (function () {
