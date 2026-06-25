@@ -10133,26 +10133,7 @@ function CheatHeader({
   const [idx, setIdx] = useState(0);
   const [colsOpen, setColsOpen] = useState(false);
   const colsRef = useRef(null);
-  const [whbQ, setWhbQ] = useState('');
-  const [whbR, setWhbR] = useState('');
-  const whbResultCheat = useMemo(() => {
-    if (!config || config.format !== 'snake') return null;
-    const q = (whbQ || '').trim().toLowerCase();
-    const rd = parseInt(whbR, 10);
-    if (!q || !rd || rd < 1) return null;
-    const pl = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
-    if (!pl) return { err: 'No player matches "' + whbQ.trim() + '".' };
-    const di = draftedIds || new Set();
-    if (di.has(pl.id)) return { player: pl, drafted: true };
-    const teamsN = config.teams || 12;
-    const slot = config.snake && config.snake.draftSlot || 1;
-    const pickAt = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
-    const targetPick = pickAt(rd);
-    const cur = (di.size || 0) + 1;
-    if (targetPick < cur) return { player: pl, round: rd, passed: true };
-    const odds = Math.max(0, Math.min(100, Math.round(availabilityOdds(pl, targetPick, players, di, [], config) * 100)));
-    return { player: pl, round: rd, targetPick, odds };
-  }, [config, whbQ, whbR, players, draftedIds]);
+
   useEffect(() => {
     if (!colsOpen) return;
     const onDocDown = e => {
@@ -10624,6 +10605,26 @@ function Cheatsheet({
   onUpdateStrategy,
   coachEl
 }) {
+  const [whbQ, setWhbQ] = useState('');
+  const [whbR, setWhbR] = useState('');
+  const whbResultCheat = useMemo(() => {
+    if (!config || config.format !== 'snake') return null;
+    const q = (whbQ || '').trim().toLowerCase();
+    const rd = parseInt(whbR, 10);
+    if (!q || !rd || rd < 1) return null;
+    const pl = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
+    if (!pl) return { err: 'No player matches "' + whbQ.trim() + '".' };
+    const di = draftedIds || new Set();
+    if (di.has(pl.id)) return { player: pl, drafted: true };
+    const teamsN = config.teams || 12;
+    const slot = config.snake && config.snake.draftSlot || 1;
+    const pickAt = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
+    const targetPick = pickAt(rd);
+    const cur = (di.size || 0) + 1;
+    if (targetPick < cur) return { player: pl, round: rd, passed: true };
+    const odds = Math.max(0, Math.min(100, Math.round(availabilityOdds(pl, targetPick, players, di, [], config) * 100)));
+    return { player: pl, round: rd, targetPick, odds };
+  }, [config, whbQ, whbR, players, draftedIds]);
   if (config && config.format && config.format !== 'auction') {
     try {
       players = getFormat(config).valuePlayers(players, config, draftedIds || new Set());
@@ -20358,11 +20359,7 @@ function App() {
       className: "summarize-btn",
       onClick: () => setSummaryOpen(true),
       title: "Honest narrative recap of the entire board"
-    }, "📋 Summarize"), React.createElement("button", {
-      className: "summarize-btn split-toggle-btn",
-      onClick: () => setView(view === 'split' ? 'board' : 'split'),
-      title: "Show the cheat sheet and draft board side by side"
-    }, view === 'split' ? "⊟ Exit split" : "⊞ Split view"), React.createElement("div", {
+    }, "📋 Summarize"), React.createElement("div", {
       className: "taunt-wrap"
     }, React.createElement("span", {
       className: "reset-wrap"
