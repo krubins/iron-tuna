@@ -212,6 +212,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .board-coach-inline { margin: 4px 0 14px; }
 .board-coach-inline .coach.embed { height: auto; max-height: 46vh; box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
 .board-coach-inline .coach-body { flex: 0 1 auto; min-height: 0; }
+@media (max-width: 760px) { .teams-overview { grid-template-columns: 1fr !important; } }
 .snake-nom-card { background: var(--bg-panel); border: 1px solid var(--positive); border-radius: 12px; padding: 12px 14px; margin: 4px 0 14px; max-width: 440px; box-shadow: 0 8px 28px rgba(0,0,0,0.4); }
 .snc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .snc-name { font-family: var(--font-display); font-size: 17px; color: var(--text-primary); }
@@ -8243,7 +8244,7 @@ function TeamsBoard({
     proj: projByTeam.get(t.id)
   })).sort((a, b) => b.proj.starterPoints - a.proj.starterPoints);
   const [collapsed, setCollapsed] = useState(new Set());
-  const [cardSize, setCardSize] = useState(220);
+  const [cardSize, setCardSize] = useState(4);
   const cardRefs = useRef({});
   const [detail, setDetail] = useState(null);
   function startCardDrag(e, id) {
@@ -8352,11 +8353,11 @@ function TeamsBoard({
       alignItems: 'center',
       gap: 6
     }
-  }, "Card size", React.createElement("input", {
+  }, "Columns", React.createElement("input", {
     type: "range",
-    min: "180",
-    max: "440",
-    step: "20",
+    min: "2",
+    max: "6",
+    step: "1",
     value: cardSize,
     onChange: e => setCardSize(parseInt(e.target.value)),
     style: {
@@ -8371,7 +8372,7 @@ function TeamsBoard({
   }, "Export rosters (CSV)"))), React.createElement("div", {
     className: "teams-overview",
     style: {
-      gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))`
+      gridTemplateColumns: `repeat(${cardSize}, minmax(0, 1fr))`
     }
   }, teams.map(team => {
     const totalSpent = team.roster.reduce((sum, r) => sum + r.price, 0);
