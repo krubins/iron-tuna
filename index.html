@@ -14274,6 +14274,7 @@ function PlayersRail({
     e.preventDefault();
     const el = info.el;
     const startY = e.clientY;
+    let moved = false;
     const container = el.closest('.players-rail');
     el.style.transition = 'none';
     el.style.position = 'relative';
@@ -14286,6 +14287,7 @@ function PlayersRail({
       lastHi: null
     };
     const onMove = ev => {
+      if (Math.abs(ev.clientY - startY) > 4) moved = true;
       el.style.transform = `translateY(${ev.clientY - startY}px)`;
       if (container) {
         const cr = container.getBoundingClientRect();
@@ -14317,7 +14319,7 @@ function PlayersRail({
       el.style.boxShadow = '';
       el.style.cursor = '';
       if (st.lastHi && rowRefs.current[st.lastHi]) rowRefs.current[st.lastHi].el.classList.remove('rank-drop');
-      if (st.targetId && st.targetId !== id) onRankReorder(id, st.targetId);
+      if (st.targetId && st.targetId !== id) { onRankReorder(id, st.targetId); } else if (!moved) { const __pl = (players || []).find(x => x.id === id); if (__pl && onNominate) onNominate(__pl); }
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
