@@ -233,6 +233,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .snc-proj { color: var(--text-secondary); font-size: 13px; margin: 4px 0 10px; }
 
 .board-models-bar { margin: 4px 0 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.board-models-2pane { display: flex; gap: 16px; align-items: flex-start; margin: 4px 0 12px; flex-wrap: wrap; }
+.bm2-models { flex: 0 0 auto; max-width: 340px; }
+.bm2-models .header-models { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.bm2-models .hm-tab { justify-content: space-between; gap: 8px; padding: 5px 9px; font-size: 12.5px; min-width: 0; }
+.bm2-models .hm-pts { font-size: 11px; }
+.bm2-plan { flex: 1; min-width: 220px; max-width: 520px; }
+.bm2-plan-h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-bottom: 5px; }
 .bm-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-right: 4px; }
 .bm-collapsed { flex-direction: column; align-items: stretch; gap: 8px; max-width: 460px; }
 .bm-head { display: flex; align-items: center; gap: 10px; }
@@ -248,6 +255,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .strategy-bar-snake { justify-content: center; }
 .strategy-bar-snake .summarize-btn, .strategy-bar-snake .taunt-wrap { margin-left: 0; }
 .board-models-bar .header-models { flex-wrap: wrap; }
+.snc-btns { display: flex; gap: 8px; margin: 4px 0 10px; }
+.snc-btn { flex: 1; padding: 9px 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.snc-btn-whb { background: var(--bg-elev); border: 1px solid var(--border-strong); color: var(--text-primary); }
+.snc-btn-whb.on { border-color: var(--positive); color: var(--positive); }
+.snc-btn.snc-assign { display: block; width: auto; margin: 0; background: var(--positive); border: none; color: #04241c; font-weight: 800; }
 .snc-assign { display: block; width: 100%; margin: 2px 0 12px; padding: 9px 12px; background: var(--positive); border: none; border-radius: 8px; color: #04241c; font-weight: 800; font-size: 14px; cursor: pointer; }
 .snc-assign:hover { filter: brightness(1.08); }
 .snc-whb-h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px; font-weight: 700; }
@@ -19501,6 +19513,7 @@ function App() {
   });
   const [draftHistory, setDraftHistory] = useState(initialState?.draftHistory || []);
   const [currentNomination, setCurrentNomination] = useState(null);
+  const [nomWhbOpen, setNomWhbOpen] = useState(false);
   const [view, setView] = useState(screenParam === 'board' || screenParam === 'cheat' ? 'board' : initialState?.draftHistory?.length > 0 ? 'board' : 'prep');
   const [boardTab, setBoardTab] = useState(screenParam === 'board' ? 'draftboard' : 'cheatsheet');
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
@@ -20690,7 +20703,7 @@ function App() {
       className: "taunt-text",
       onClick: () => setTaunt(null),
       title: "Click to dismiss"
-    }, taunt.text))), (view === 'board' && config.format === 'snake' && currentNomination) && React.createElement("div", { className: "snake-nom-card no-print" }, React.createElement("div", { className: "snc-head" }, React.createElement("div", { className: "snc-name" }, currentNomination.name, React.createElement("span", { className: "snc-meta" }, " " + currentNomination.position + " \u00b7 " + (currentNomination.team || 'FA'))), React.createElement("button", { className: "snc-close", onClick: () => setCurrentNomination(null), title: "Close" }, "\u00d7")), React.createElement("div", { className: "snc-proj" }, "Projected ", React.createElement("b", null, (currentNomination.projectedPoints / SEASON_GAMES).toFixed(1)), " pts/game" + (currentNomination.adp != null ? " \u00b7 ADP " + Math.round(currentNomination.adp) : "")), React.createElement("button", { className: "snc-assign", onClick: () => setAssignPlayer(currentNomination) }, "Draft / assign to a team"), React.createElement("div", { className: "snc-whb-h" }, "Will he be there?"), (function () { var mine = (teams || []).find(function (t) { return t.isMine; }); if (!mine || !config.snake) return React.createElement("div", { className: "snc-hint" }, "Mark your team on the board to see availability odds."); var teamsN = config.teams || 12; var slot = (config.snake && config.snake.draftSlot) || 1; var pa = function (r) { return r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1; }; var cur = ((draftedIds && draftedIds.size) || 0) + 1; var nr = 1; while (pa(nr) < cur && nr < 60) nr++; var rows = []; var maxR = (config.snake.rounds || 16); for (var k = 0; k < 6 && (nr + k) <= maxR; k++) { var round = nr + k; var until = Math.max(0, pa(round) - cur); var s = Math.round(survivalProb(currentNomination, cur, until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; rows.push(React.createElement("div", { key: round, className: "snc-whb-row" }, React.createElement("span", null, "Round " + round), React.createElement("b", { style: { color: col } }, s + "%"))); } return React.createElement("div", { className: "snc-whb" }, rows); })()), (view === 'board' && config.format === 'snake' && !showSplash) && React.createElement("div", {
+    }, taunt.text))), (view === 'board' && config.format === 'snake' && currentNomination) && React.createElement("div", { className: "snake-nom-card no-print" }, React.createElement("div", { className: "snc-head" }, React.createElement("div", { className: "snc-name" }, currentNomination.name, React.createElement("span", { className: "snc-meta" }, " " + currentNomination.position + " \u00b7 " + (currentNomination.team || 'FA'))), React.createElement("button", { className: "snc-close", onClick: () => setCurrentNomination(null), title: "Close" }, "\u00d7")), React.createElement("div", { className: "snc-proj" }, "Projected ", React.createElement("b", null, (currentNomination.projectedPoints / SEASON_GAMES).toFixed(1)), " pts/game" + (currentNomination.adp != null ? " \u00b7 ADP " + Math.round(currentNomination.adp) : "")), React.createElement("div", { className: "snc-btns" }, React.createElement("button", { className: "snc-btn snc-btn-whb" + (nomWhbOpen ? " on" : ""), onClick: () => setNomWhbOpen(function (o) { return !o; }) }, "Will he be there?"), React.createElement("button", { className: "snc-btn snc-assign", onClick: () => setAssignPlayer(currentNomination) }, "Assign to a team")), nomWhbOpen && React.createElement("div", { className: "snc-whb-h" }, "Will he be there?"), nomWhbOpen && (function () { var mine = (teams || []).find(function (t) { return t.isMine; }); if (!mine || !config.snake) return React.createElement("div", { className: "snc-hint" }, "Mark your team on the board to see availability odds."); var teamsN = config.teams || 12; var slot = (config.snake && config.snake.draftSlot) || 1; var pa = function (r) { return r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1; }; var cur = ((draftedIds && draftedIds.size) || 0) + 1; var nr = 1; while (pa(nr) < cur && nr < 60) nr++; var rows = []; var maxR = (config.snake.rounds || 16); for (var k = 0; k < 6 && (nr + k) <= maxR; k++) { var round = nr + k; var until = Math.max(0, pa(round) - cur); var s = Math.round(survivalProb(currentNomination, cur, until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; rows.push(React.createElement("div", { key: round, className: "snc-whb-row" }, React.createElement("span", null, "Round " + round), React.createElement("b", { style: { color: col } }, s + "%"))); } return React.createElement("div", { className: "snc-whb" }, rows); })()), (view === 'board' && !showSplash) && React.createElement("div", {
       className: "board-coach-inline no-print"
     }, React.createElement(ValueCoach, {
     valueAdjust: valueAdjust,
@@ -20740,24 +20753,19 @@ function App() {
       onCollapse: null
     }))), (view === 'board' && myTeam) && ((config.format === 'snake') ? (function () {
       var MODELS = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
-      if (!draftModel) {
-        return React.createElement("div", { className: "board-models-bar no-print" }, React.createElement("span", { className: "bm-label" }, "Draft model:"), MODELS.map(function (mm) { return React.createElement("button", { key: mm[0], className: "hm-tab", onClick: function () { setDraftModel(mm[0]); } }, mm[1]); }));
-      }
-      var sel = MODELS.find(function (mm) { return mm[0] === draftModel; }) || [draftModel, draftModel];
+      var key = draftModel || 'ideal';
+      var lbl = (MODELS.find(function (m) { return m[0] === key; }) || [key, key])[1];
       var plan = null;
-      try { plan = buildModel(draftModel, myTeam, personalizedPlayers, config, draftedIds, roleOverrides, targets); } catch (e) {}
-      var pmap = {};
-      (personalizedPlayers || []).forEach(function (p) { pmap[p.id] = p; });
-      var teamsN = config.teams || 12;
-      var slot = (config.snake && config.snake.draftSlot) || 1;
+      try { plan = buildModel(key, myTeam, personalizedPlayers, config, draftedIds, roleOverrides, targets); } catch (e) {}
+      var pmap = {}; (personalizedPlayers || []).forEach(function (p) { pmap[p.id] = p; });
+      var teamsN = config.teams || 12; var slot = (config.snake && config.snake.draftSlot) || 1;
       var pa = function (r) { return r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1; };
-      var cur = ((draftedIds && draftedIds.size) || 0) + 1;
-      var nr = 1; while (pa(nr) < cur && nr < 60) nr++;
+      var cur = ((draftedIds && draftedIds.size) || 0) + 1; var nr = 1; while (pa(nr) < cur && nr < 60) nr++;
       var picks = [];
       ((plan && plan.remainingStarterSlots) || []).forEach(function (s) { if (s.player) picks.push(s.player); });
       ((plan && plan.benchTargets) || []).forEach(function (b) { var pl = pmap[b.playerId]; if (pl) picks.push(pl); });
       var rows = picks.map(function (pl, idx) { return { round: nr + idx, pos: pl.position, name: pl.name }; });
-      return React.createElement("div", { className: "board-models-bar bm-collapsed no-print" }, React.createElement("div", { className: "bm-head" }, React.createElement("span", { className: "hm-tab active" }, sel[1]), React.createElement("button", { className: "bm-change", onClick: function () { setDraftModel(null); } }, "Change model")), React.createElement("div", { className: "bm-rounds" }, rows.length ? rows.map(function (r) { return React.createElement("div", { key: r.round, className: "bm-round-row" }, React.createElement("span", { className: "bm-rd" }, "R" + r.round), React.createElement("span", { className: "bm-pos position-tag " + r.pos }, r.pos), React.createElement("span", { className: "bm-pl" }, r.name)); }) : React.createElement("div", { className: "bm-empty" }, "No remaining targets for this model.")));
+      return React.createElement("div", { className: "board-models-2pane no-print" }, React.createElement("div", { className: "bm2-models" }, React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + " \u2014 ideal by round"), rows.length ? rows.map(function (r) { return React.createElement("div", { key: r.round, className: "bm-round-row" }, React.createElement("span", { className: "bm-rd" }, "R" + r.round), React.createElement("span", { className: "bm-pos position-tag " + r.pos }, r.pos), React.createElement("span", { className: "bm-pl" }, r.name)); }) : React.createElement("div", { className: "bm-empty" }, "No remaining targets for this model.")));
     })() : React.createElement("div", { className: "board-models-bar no-print" }, React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets }))), React.createElement("div", {
       className: "board-layout board-norail"
     }, React.createElement(TeamsBoard, {
@@ -20953,7 +20961,7 @@ function App() {
       setAssignPlayer(null);
     },
     onClose: () => setAssignPlayer(null)
-  }), !showSplash && (assignPlayer || currentNomination || view === 'board') && !(view === 'board' && config.format === 'snake') && !referOpen && !summaryOpen && !overlay && React.createElement("div", {
+  }), !showSplash && (assignPlayer || currentNomination) && view !== 'board' && !referOpen && !summaryOpen && !overlay && React.createElement("div", {
     className: "coach-beside no-print" + (view === 'board' ? " coach-board" : "")
   }, React.createElement(ValueCoach, {
     valueAdjust: valueAdjust,
