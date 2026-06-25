@@ -231,7 +231,22 @@ input:focus, select:focus { border-color: var(--accent); }
 .snc-close { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
 .snc-close:hover { color: var(--text-primary); }
 .snc-proj { color: var(--text-secondary); font-size: 13px; margin: 4px 0 10px; }
-.board-models-bar { margin: 4px 0 12px; }
+
+.board-models-bar { margin: 4px 0 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bm-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-right: 4px; }
+.bm-collapsed { flex-direction: column; align-items: stretch; gap: 8px; max-width: 460px; }
+.bm-head { display: flex; align-items: center; gap: 10px; }
+.bm-change { background: none; border: 1px solid var(--border-strong); border-radius: 14px; padding: 4px 12px; color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+.bm-change:hover { color: var(--text-primary); border-color: var(--gold-text); }
+.bm-rounds { display: flex; flex-direction: column; gap: 1px; }
+.bm-round-row { display: grid; grid-template-columns: 40px 46px 1fr; gap: 8px; align-items: center; padding: 5px 6px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; }
+.bm-round-row:last-child { border-bottom: none; }
+.bm-rd { font-family: var(--font-mono); color: var(--text-muted); font-size: 12px; }
+.bm-pos { font-size: 10px; padding: 1px 5px; text-align: center; min-width: 0; }
+.bm-pl { color: var(--text-primary); }
+.bm-empty { color: var(--text-muted); font-size: 12px; padding: 4px 0; }
+.strategy-bar-snake { justify-content: center; }
+.strategy-bar-snake .summarize-btn, .strategy-bar-snake .taunt-wrap { margin-left: 0; }
 .board-models-bar .header-models { flex-wrap: wrap; }
 .snc-assign { display: block; width: 100%; margin: 2px 0 12px; padding: 9px 12px; background: var(--positive); border: none; border-radius: 8px; color: #04241c; font-weight: 800; font-size: 14px; cursor: pointer; }
 .snc-assign:hover { filter: brightness(1.08); }
@@ -20640,7 +20655,7 @@ function App() {
       account: account,
       setAccount: setAccount
     }, "Ghosted rows are the planner's projected best fills for your remaining slots and budget. Pick a model up top to change strategy, or click a slot to lock a target."), React.createElement("div", {
-      className: "strategy-bar"
+      className: "strategy-bar" + (config.format === 'snake' ? ' strategy-bar-snake' : '')
     }, (config.format !== 'snake' && React.createElement(BudgetSliders, {
       strategy: config.strategy,
       onChange: handleUpdateStrategy
@@ -20723,7 +20738,27 @@ function App() {
       onResetRanks: handleResetRanks,
       focusPlayer: null,
       onCollapse: null
-    }))), (view === 'board' && myTeam) && React.createElement("div", { className: "board-models-bar no-print" }, React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", {
+    }))), (view === 'board' && myTeam) && ((config.format === 'snake') ? (function () {
+      var MODELS = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
+      if (!draftModel) {
+        return React.createElement("div", { className: "board-models-bar no-print" }, React.createElement("span", { className: "bm-label" }, "Draft model:"), MODELS.map(function (mm) { return React.createElement("button", { key: mm[0], className: "hm-tab", onClick: function () { setDraftModel(mm[0]); } }, mm[1]); }));
+      }
+      var sel = MODELS.find(function (mm) { return mm[0] === draftModel; }) || [draftModel, draftModel];
+      var plan = null;
+      try { plan = buildModel(draftModel, myTeam, personalizedPlayers, config, draftedIds, roleOverrides, targets); } catch (e) {}
+      var pmap = {};
+      (personalizedPlayers || []).forEach(function (p) { pmap[p.id] = p; });
+      var teamsN = config.teams || 12;
+      var slot = (config.snake && config.snake.draftSlot) || 1;
+      var pa = function (r) { return r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1; };
+      var cur = ((draftedIds && draftedIds.size) || 0) + 1;
+      var nr = 1; while (pa(nr) < cur && nr < 60) nr++;
+      var picks = [];
+      ((plan && plan.remainingStarterSlots) || []).forEach(function (s) { if (s.player) picks.push(s.player); });
+      ((plan && plan.benchTargets) || []).forEach(function (b) { var pl = pmap[b.playerId]; if (pl) picks.push(pl); });
+      var rows = picks.map(function (pl, idx) { return { round: nr + idx, pos: pl.position, name: pl.name }; });
+      return React.createElement("div", { className: "board-models-bar bm-collapsed no-print" }, React.createElement("div", { className: "bm-head" }, React.createElement("span", { className: "hm-tab active" }, sel[1]), React.createElement("button", { className: "bm-change", onClick: function () { setDraftModel(null); } }, "Change model")), React.createElement("div", { className: "bm-rounds" }, rows.length ? rows.map(function (r) { return React.createElement("div", { key: r.round, className: "bm-round-row" }, React.createElement("span", { className: "bm-rd" }, "R" + r.round), React.createElement("span", { className: "bm-pos position-tag " + r.pos }, r.pos), React.createElement("span", { className: "bm-pl" }, r.name)); }) : React.createElement("div", { className: "bm-empty" }, "No remaining targets for this model.")));
+    })() : React.createElement("div", { className: "board-models-bar no-print" }, React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets }))), React.createElement("div", {
       className: "board-layout board-norail"
     }, React.createElement(TeamsBoard, {
       teams: teams,
