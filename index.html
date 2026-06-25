@@ -10161,6 +10161,27 @@ function CheatHeader({
       pct: Math.round(byPos[p] / total * 100)
     }));
   }, [myTeam, model, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  const modelTargets = useMemo(() => {
+    if (!myTeam) return null;
+    let plan;
+    try { plan = buildModel(model || 'ideal', myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? activeAnchors : undefined); }
+    catch (e) { return null; }
+    if (!plan) return null;
+    const pmap = {};
+    (players || []).forEach(p => { pmap[p.id] = p; });
+    const byPos = {};
+    (plan.remainingStarterSlots || []).forEach(sl => {
+      if (sl.player) {
+        const pos = sl.player.position;
+        (byPos[pos] = byPos[pos] || []).push({ name: sl.player.name, price: sl.targetPrice != null ? Math.round(sl.targetPrice) : null });
+      }
+    });
+    (plan.benchTargets || []).forEach(b => {
+      const pl = pmap[b.playerId];
+      if (pl) (byPos[b.position] = byPos[b.position] || []).push({ name: pl.name, price: b.price != null ? Math.round(b.price) : null });
+    });
+    return ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => (byPos[p] || []).length > 0).map(p => ({ pos: p, players: byPos[p] }));
+  }, [myTeam, model, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
   const wiModelKey = model || 'ideal';
   const wiModelLabel = (models.find(mm => mm[0] === wiModelKey) || ['ideal', 'Ideal Team'])[1];
   const wiPlan = useMemo(() => {
@@ -10281,7 +10302,7 @@ function CheatHeader({
         whiteSpace: 'nowrap'
       }
     }, "~", React.createElement("b", null, Math.round(alloc * 35), "%"), " held for bench depth"));
-  })(), myTeam && model && config && config.format !== 'snake' && modelAlloc && modelAlloc.length > 0 && React.createElement("div", {
+  })(), myTeam && model && config && config.format !== 'snake' && modelTargets && modelTargets.length > 0 && React.createElement("div", {
     style: {
       flexBasis: '100%',
       display: 'flex',
@@ -10300,7 +10321,7 @@ function CheatHeader({
       color: 'var(--text-secondary)',
       whiteSpace: 'nowrap'
     }
-  }, "Budget by position"), modelAlloc.map(a => React.createElement("span", {
+  }, "Target players by position"), modelTargets.map(a => React.createElement("span", {
     key: a.pos,
     style: {
       fontFamily: 'var(--font-mono)',
@@ -10308,17 +10329,13 @@ function CheatHeader({
       background: 'var(--bg-elev)',
       border: '1px solid var(--border-subtle)',
       borderRadius: 8,
-      padding: '1px 7px'
+      padding: '2px 8px'
     }
-  }, a.pos, " ", React.createElement("b", {
+  }, React.createElement("b", {
     style: {
       color: 'var(--gold-text)'
     }
-  }, "$", a.dollars), " ", React.createElement("span", {
-    style: {
-      color: 'var(--text-muted)'
-    }
-  }, "(", a.pct, "%)")))), myTeam && wiOpen && (config.format || 'auction') === 'auction' && React.createElement("div", {
+  }, a.pos), " ", a.players.map(function (pl) { return pl.name + (pl.price != null ? ' $' + pl.price : ''); }).join(", ")))), myTeam && wiOpen && (config.format || 'auction') === 'auction' && React.createElement("div", {
     className: "ch-whatif",
     style: {
       flexBasis: '100%',
@@ -18853,7 +18870,7 @@ function ModelsPanel({
     const cur = ((draftedIds && draftedIds.size) || 0) + 1;
     let nr = 1; while (pa(nr) < cur && nr < 60) nr++;
     const g = seasonGames || 17;
-    return br.slice(0, 5).map((b, k) => {
+    return br.slice(0, 20).map((b, k) => {
       const round = nr + k;
       const until = Math.max(0, pa(round) - cur);
       const surv = Math.round(survivalProb(b.player, cur, until, []) * 100);
@@ -18950,7 +18967,7 @@ function ModelsPanel({
     className: "model-tab-pts"
   }, (modelPts[k] / games).toFixed(1), " pts/gm") : null))), plan && React.createElement("div", {
     className: "model-summary"
-  }, React.createElement("b", null, (plan.starterPoints / games).toFixed(1)), " pts/gm · ~$", cost, "/", config.budget, plan.feasible ? '' : ' · over'), (isNonAuction && myTeam && nextFive ? React.createElement("div", { className: "mnp" }, React.createElement("div", { className: "mnp-h" }, "Next 5 rounds \u00b7 best available targets"), React.createElement("div", { className: "mnp-rows" }, nextFive.map((r, i) => React.createElement("div", { key: i, className: "mnp-row" }, React.createElement("span", { className: "mnp-rd" }, "R" + r.round), React.createElement("span", { className: "mnp-pl" }, r.player.name, React.createElement("em", null, r.player.position)), React.createElement("span", { className: "mnp-sv", title: "Estimated chance still available at your round " + r.round + " pick" }, r.surv + "%")))), React.createElement("div", { className: "mnp-whb" }, React.createElement("div", { className: "mnp-whb-h" }, "Will he be there?"), React.createElement("div", { className: "mnp-whb-in" }, React.createElement("input", { className: "mnp-inp", placeholder: "Player name", value: npQ, onChange: e => setNpQ(e.target.value) }), React.createElement("input", { className: "mnp-inp mnp-rnd", type: "number", min: "1", placeholder: "Rd", value: npR, onChange: e => setNpR(e.target.value) })), npResult ? React.createElement("div", { className: "mnp-out" }, npResult.err ? npResult.err : npResult.drafted ? (npResult.player.name + " is already off the board.") : npResult.passed ? ("Your round " + npResult.round + " pick has already passed.") : (npResult.player.name + ": ~" + npResult.prob + "% likely available at your round " + npResult.round + " pick.")) : React.createElement("div", { className: "mnp-out mnp-hint" }, "Type a player and a round to see their odds."))) : null), React.createElement("div", {
+  }, React.createElement("b", null, (plan.starterPoints / games).toFixed(1)), " pts/gm · ~$", cost, "/", config.budget, plan.feasible ? '' : ' · over'), (isNonAuction && myTeam && nextFive ? React.createElement("div", { className: "mnp" }, React.createElement("div", { className: "mnp-h" }, "Best available target \u00b7 each round"), React.createElement("div", { className: "mnp-rows" }, nextFive.map((r, i) => React.createElement("div", { key: i, className: "mnp-row" }, React.createElement("span", { className: "mnp-rd" }, "R" + r.round), React.createElement("span", { className: "mnp-pl" }, r.player.name, React.createElement("em", null, r.player.position)), React.createElement("span", { className: "mnp-sv", title: "Estimated chance still available at your round " + r.round + " pick" }, r.surv + "%")))), React.createElement("div", { className: "mnp-whb" }, React.createElement("div", { className: "mnp-whb-h" }, "Will he be there?"), React.createElement("div", { className: "mnp-whb-in" }, React.createElement("input", { className: "mnp-inp", placeholder: "Player name", value: npQ, onChange: e => setNpQ(e.target.value) }), React.createElement("input", { className: "mnp-inp mnp-rnd", type: "number", min: "1", placeholder: "Rd", value: npR, onChange: e => setNpR(e.target.value) })), npResult ? React.createElement("div", { className: "mnp-out" }, npResult.err ? npResult.err : npResult.drafted ? (npResult.player.name + " is already off the board.") : npResult.passed ? ("Your round " + npResult.round + " pick has already passed.") : (npResult.player.name + ": ~" + npResult.prob + "% likely available at your round " + npResult.round + " pick.")) : React.createElement("div", { className: "mnp-out mnp-hint" }, "Type a player and a round to see their odds."))) : null), React.createElement("div", {
     className: "models-extra"
   }, React.createElement("div", {
     className: "mx-head"
