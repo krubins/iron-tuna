@@ -14421,7 +14421,7 @@ function PlayersRail({
       letterSpacing: '0.04em',
       lineHeight: 1.5
     }
-  }, (config && config.format === 'snake') ? "● = force into lineup · ADP = avg draft position · Pts = proj points/game · Pos = rank at position" : ["● = force into lineup · ", React.createElement("b", { key: 'lp' }, "Proj"), " = likely market price · ", React.createElement("b", { key: 'lv' }, "Val"), " = VBD value · ", React.createElement("b", { key: 'ly', style: { color: 'var(--gold-text)' } }, "You"), " = your max bid"]), React.createElement("div", {
+  }, (config && config.format === 'snake') ? "● = lock player into your ideal team · ADP = avg draft position · Pts = proj points/game · Pos = positional rank" : ["● = force into lineup · ", React.createElement("b", { key: 'lp' }, "Proj"), " = likely market price · ", React.createElement("b", { key: 'lv' }, "Val"), " = VBD value · ", React.createElement("b", { key: 'ly', style: { color: 'var(--gold-text)' } }, "You"), " = your max bid"]), React.createElement("div", {
     className: "rail-controls"
   }, React.createElement("input", {
     type: "search",
@@ -14523,7 +14523,7 @@ function PlayersRail({
       }, React.createElement("button", {
         className: `target-dot ${targets.has(p.id) ? 'on' : ''}`,
         onClick: () => onToggleTarget(p.id),
-        title: targets.has(p.id) ? 'Remove from forced targets' : 'Target: force into your ideal lineup and re-solve'
+        title: targets.has(p.id) ? 'Locked into your ideal team \u2014 click to unlock' : 'Lock into your ideal team: the planner rebuilds your best roster around him'
       }), React.createElement("button", {
         className: `btn-star ${isStar ? 'on' : ''}`,
         onClick: () => onToggleStar(p.id),
