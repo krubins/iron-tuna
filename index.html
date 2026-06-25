@@ -14452,17 +14452,17 @@ function PlayersRail({
     }
   }, React.createElement("span", null), React.createElement("span", null, "Player"), React.createElement("span", {
     className: "rh"
-  }, "Proj", React.createElement("span", {
+  }, (config && config.format === 'snake' ? "ADP" : "Proj"), React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'proj')
   })), React.createElement("span", {
     className: "rh"
-  }, "Val", React.createElement("span", {
+  }, (config && config.format === 'snake' ? "Pts" : "Val"), React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'val')
   })), React.createElement("span", {
     className: "rh you"
-  }, "You", React.createElement("span", {
+  }, (config && config.format === 'snake' ? "Value" : "You"), React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'you')
   }))), (() => {
@@ -14518,14 +14518,14 @@ function PlayersRail({
         className: "rr-name"
       }, p.name), React.createElement("span", {
         className: "rr-c",
-        title: "Proj, likely market/auction price"
-      }, "$", projVal), React.createElement("span", {
+        title: (config && config.format === 'snake') ? "ADP (average draft position)" : "Proj, likely market/auction price"
+      }, (config && config.format === 'snake') ? (p.adp != null ? Math.round(p.adp) : '\u2014') : ('$' + projVal)), React.createElement("span", {
         className: "rr-c",
-        title: "Value, VBD fair value"
-      }, "$", valVal), React.createElement("span", {
+        title: (config && config.format === 'snake') ? "Projected points per game" : "Value, VBD fair value"
+      }, (config && config.format === 'snake') ? (p.projectedPoints != null ? (p.projectedPoints / games).toFixed(1) : '\u2014') : ('$' + valVal)), React.createElement("span", {
         className: "rr-c you",
-        title: "You, what you should be willing to pay"
-      }, "$", youVal)), React.createElement("div", {
+        title: (config && config.format === 'snake') ? "Your value score" : "You, what you should be willing to pay"
+      }, (config && config.format === 'snake') ? youVal : ('$' + youVal))), React.createElement("div", {
         className: "rr-l2"
       }, React.createElement("span", {
         className: "rr-meta"
