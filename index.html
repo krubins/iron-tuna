@@ -212,6 +212,17 @@ input:focus, select:focus { border-color: var(--accent); }
 .board-coach-inline { margin: 4px 0 14px; }
 .board-coach-inline .coach.embed { height: auto; max-height: 46vh; box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
 .board-coach-inline .coach-body { flex: 0 1 auto; min-height: 0; }
+.snake-nom-card { background: var(--bg-panel); border: 1px solid var(--positive); border-radius: 12px; padding: 12px 14px; margin: 4px 0 14px; max-width: 440px; box-shadow: 0 8px 28px rgba(0,0,0,0.4); }
+.snc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.snc-name { font-family: var(--font-display); font-size: 17px; color: var(--text-primary); }
+.snc-meta { color: var(--text-muted); font-size: 13px; font-family: var(--font-body); }
+.snc-close { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+.snc-close:hover { color: var(--text-primary); }
+.snc-proj { color: var(--text-secondary); font-size: 13px; margin: 4px 0 10px; }
+.snc-whb-h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px; font-weight: 700; }
+.snc-whb-row { display: flex; justify-content: space-between; padding: 4px 2px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
+.snc-whb-row:last-child { border-bottom: none; }
+.snc-hint { color: var(--text-muted); font-size: 12px; }
 .snake-rail-dock { display: none; }
 @media (min-width: 761px) {
   .has-snake-rail .main-content { padding-left: 390px; }
@@ -5978,7 +5989,7 @@ function Sidebar({
     onClick: () => setTab('insights')
   }, "Insights", insights.length > 0 && React.createElement("span", {
     className: "badge"
-  }, insights.length))), currentNomination && bidRec && React.createElement("div", {
+  }, insights.length))), currentNomination && bidRec && (config.format !== 'snake') && React.createElement("div", {
     className: "sidebar-section"
   }, React.createElement("h2", null, "Bid Assistant"), React.createElement(BidPanel, {
     player: currentNomination,
@@ -14518,7 +14529,9 @@ function PlayersRail({
         onClick: () => onToggleStar(p.id),
         title: isStar ? 'Unstar' : 'Star'
       }, "★")), React.createElement("span", {
-        className: "rr-name"
+        className: "rr-name",
+        onClick: e => { e.stopPropagation(); onNominate(p); },
+        style: { cursor: 'pointer' }
       }, p.name), React.createElement("span", {
         className: "rr-c",
         title: (config && config.format === 'snake') ? "ADP (average draft position)" : "Proj, likely market/auction price"
@@ -14546,11 +14559,11 @@ function PlayersRail({
       }, "●"), nextPickInfo && (function () { var s = Math.round(survivalProb(p, nextPickInfo.cur, nextPickInfo.until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; return React.createElement("span", { className: "rr-avail", title: "Estimated chance " + p.name + " is still available at your round " + nextPickInfo.round + " pick", style: { marginLeft: 6, fontWeight: 700, color: col } }, s + "%"); })()), React.createElement("button", {
         className: "btn-secondary",
         onClick: () => onNominate(p)
-      }, "Info"), React.createElement("button", {
+      }, "Info"), (config && config.format !== 'snake') && React.createElement("button", {
         className: "btn-draft",
-        onClick: () => (config && config.format === 'snake') ? setQuick(p) : onNominate(p),
-        title: (config && config.format === 'snake') ? "Draft this player to a team" : "Feature this player on the right with a price-by-price impact analysis"
-      }, (config && config.format === 'snake') ? "Draft" : "Up for bid"))));
+        onClick: () => onNominate(p),
+        title: "Feature this player on the right with a price-by-price impact analysis"
+      }, "Up for bid"))));
     });
     return __rows;
   })(), list.length === 0 && React.createElement("div", {
@@ -20614,7 +20627,7 @@ function App() {
       className: "taunt-text",
       onClick: () => setTaunt(null),
       title: "Click to dismiss"
-    }, taunt.text))), (view === 'board' && config.format === 'snake' && !showSplash) && React.createElement("div", {
+    }, taunt.text))), (view === 'board' && config.format === 'snake' && currentNomination) && React.createElement("div", { className: "snake-nom-card no-print" }, React.createElement("div", { className: "snc-head" }, React.createElement("div", { className: "snc-name" }, currentNomination.name, React.createElement("span", { className: "snc-meta" }, " " + currentNomination.position + " \u00b7 " + (currentNomination.team || 'FA'))), React.createElement("button", { className: "snc-close", onClick: () => setCurrentNomination(null), title: "Close" }, "\u00d7")), React.createElement("div", { className: "snc-proj" }, "Projected ", React.createElement("b", null, (currentNomination.projectedPoints / SEASON_GAMES).toFixed(1)), " pts/game" + (currentNomination.adp != null ? " \u00b7 ADP " + Math.round(currentNomination.adp) : "")), React.createElement("div", { className: "snc-whb-h" }, "Will he be there?"), (function () { var mine = (teams || []).find(function (t) { return t.isMine; }); if (!mine || !config.snake) return React.createElement("div", { className: "snc-hint" }, "Mark your team on the board to see availability odds."); var teamsN = config.teams || 12; var slot = (config.snake && config.snake.draftSlot) || 1; var pa = function (r) { return r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1; }; var cur = ((draftedIds && draftedIds.size) || 0) + 1; var nr = 1; while (pa(nr) < cur && nr < 60) nr++; var rows = []; var maxR = (config.snake.rounds || 16); for (var k = 0; k < 6 && (nr + k) <= maxR; k++) { var round = nr + k; var until = Math.max(0, pa(round) - cur); var s = Math.round(survivalProb(currentNomination, cur, until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; rows.push(React.createElement("div", { key: round, className: "snc-whb-row" }, React.createElement("span", null, "Round " + round), React.createElement("b", { style: { color: col } }, s + "%"))); } return React.createElement("div", { className: "snc-whb" }, rows); })()), (view === 'board' && config.format === 'snake' && !showSplash) && React.createElement("div", {
       className: "board-coach-inline no-print"
     }, React.createElement(ValueCoach, {
     valueAdjust: valueAdjust,
@@ -20651,13 +20664,13 @@ function App() {
       yellow: (planHighlights && planHighlights.yellow) || new Set(),
       targets: targets,
       onToggleTarget: handleToggleTarget,
-      starred: new Set(),
-      onToggleStar: () => {},
-      customOrder: [],
-      onReorder: () => {},
+      starred: starred,
+      onToggleStar: handleToggleStar,
+      customOrder: customOrder,
+      onReorder: handleReorder,
       onNominate: setCurrentNomination,
       onDraft: handleDraft,
-      onRankMove: () => {},
+      onRankMove: handleRankMove,
       onRankReorder: handleRankReorder,
       onResetRanks: handleResetRanks,
       focusPlayer: null,
