@@ -14398,6 +14398,12 @@ function PlayersRail({
     if (posFilter !== 'ALL') {
       const tiers = buildTiers(players.filter(p => !draftedIds.has(p.id)), posFilter);
       tiers.forEach((t, i) => t.players.forEach(p => m.set(p.id, i)));
+    } else if (config && config.format === 'snake') {
+      const teamsN = (config.teams) || 12;
+      players.forEach(p => {
+        const a = p.adp != null ? p.adp : null;
+        m.set(p.id, a != null ? Math.max(1, Math.ceil(a / teamsN)) : 99);
+      });
     } else {
       players.forEach(p => {
         const v = p.personalValue ?? p.marketValue ?? p.auctionValue ?? 1;
@@ -14405,9 +14411,10 @@ function PlayersRail({
       });
     }
     return m;
-  }, [players, posFilter, filterMode, draftedIds]);
+  }, [players, posFilter, filterMode, draftedIds, config]);
   function tierLabel(k) {
     if (posFilter !== 'ALL') return `Tier ${k + 1}`;
+    if (config && config.format === 'snake') return k === 99 ? 'Deep' : `Round ${k}`;
     return ['$40+', '$30-39', '$22-29', '$16-21', '$11-15', '$7-10', '$4-6', '$2-3', '$1'][k] || '';
   }
   const valueOf = p => p.personalValue ?? p.inflatedValue ?? p.auctionValue;
@@ -14437,6 +14444,16 @@ function PlayersRail({
         const ga = Math.max(a.personalValue || 0, a.auctionValue || 0) - (a.marketValue || 0);
         const gb = Math.max(b.personalValue || 0, b.auctionValue || 0) - (b.marketValue || 0);
         if (ga !== gb) return gb - ga;
+      }
+      if (config && config.format === 'snake') {
+        if (boardSortKey === 'pts') {
+          const pa = a.projectedPoints || 0, pb = b.projectedPoints || 0;
+          if (pa !== pb) return pb - pa;
+        } else {
+          const aa = a.adp != null ? a.adp : 9999, ba = b.adp != null ? b.adp : 9999;
+          if (aa !== ba) return aa - ba;
+        }
+        return (b.projectedPoints || 0) - (a.projectedPoints || 0);
       }
       return sortVal(b) - sortVal(a);
     });
@@ -14527,19 +14544,19 @@ function PlayersRail({
       gridTemplateColumns: `46px minmax(0,1fr) ${cw.proj}px ${cw.val}px ${cw.you}px`
     }
   }, React.createElement("span", null), React.createElement("span", null, "Player"), React.createElement("span", {
-    className: "rh" + ((config && config.format !== 'snake' && (boardSortKey || 'you') === 'proj') ? " rh-sorted" : ""),
-    onClick: (config && config.format !== 'snake') ? (() => setBoardSortKey && setBoardSortKey('proj')) : undefined,
-    style: (config && config.format !== 'snake') ? { cursor: 'pointer' } : null,
-    title: (config && config.format !== 'snake') ? "Sort by likely market price" : null
-  }, (config && config.format === 'snake' ? "ADP" : "Proj"), (config && config.format !== 'snake' && (boardSortKey || 'you') === 'proj') ? " \u25be" : "", React.createElement("span", {
+    className: "rh" + (((config && config.format === 'snake') ? (boardSortKey !== 'pts') : ((boardSortKey || 'you') === 'proj')) ? " rh-sorted" : ""),
+    onClick: (() => setBoardSortKey && setBoardSortKey((config && config.format === 'snake') ? 'adp' : 'proj')),
+    style: { cursor: 'pointer' },
+    title: (config && config.format === 'snake') ? "Sort by ADP" : "Sort by likely market price"
+  }, (config && config.format === 'snake' ? "ADP" : "Proj"), (((config && config.format === 'snake') ? (boardSortKey !== 'pts') : ((boardSortKey || 'you') === 'proj')) ? " \u25be" : ""), React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'proj')
   })), React.createElement("span", {
-    className: "rh" + ((config && config.format !== 'snake' && (boardSortKey || 'you') === 'val') ? " rh-sorted" : ""),
-    onClick: (config && config.format !== 'snake') ? (() => setBoardSortKey && setBoardSortKey('val')) : undefined,
-    style: (config && config.format !== 'snake') ? { cursor: 'pointer' } : null,
-    title: (config && config.format !== 'snake') ? "Sort by VBD value" : null
-  }, (config && config.format === 'snake' ? "Pts" : "Val"), (config && config.format !== 'snake' && (boardSortKey || 'you') === 'val') ? " \u25be" : "", React.createElement("span", {
+    className: "rh" + (((config && config.format === 'snake') ? (boardSortKey === 'pts') : ((boardSortKey || 'you') === 'val')) ? " rh-sorted" : ""),
+    onClick: (() => setBoardSortKey && setBoardSortKey((config && config.format === 'snake') ? 'pts' : 'val')),
+    style: { cursor: 'pointer' },
+    title: (config && config.format === 'snake') ? "Sort by projected points" : "Sort by VBD value"
+  }, (config && config.format === 'snake' ? "Pts" : "Val"), (((config && config.format === 'snake') ? (boardSortKey === 'pts') : ((boardSortKey || 'you') === 'val')) ? " \u25be" : ""), React.createElement("span", {
     className: "rh-grip",
     onPointerDown: e => startColResize(e, 'val')
   })), React.createElement("span", {
