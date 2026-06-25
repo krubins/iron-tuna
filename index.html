@@ -14385,7 +14385,7 @@ function PlayersRail({
   const myBoard = sortMode === 'myboard';
   const nextPickInfo = useMemo(() => {
     const mine = (teams || []).find(t => t.isMine);
-    if (!mine || !config || !config.snake) return null;
+    if (!mine || !config || config.format !== 'snake' || !config.snake) return null;
     const teamsN = config.teams || 12;
     const slot = (config.snake && config.snake.draftSlot) || 1;
     const pa = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
