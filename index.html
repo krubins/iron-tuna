@@ -18357,6 +18357,13 @@ function CheckoutModal({
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [email, setEmail] = useState(() => {
+    try {
+      const acc = JSON.parse(localStorage.getItem('iron_tuna_account_v1') || '{}');
+      return acc.user && acc.user.email || '';
+    } catch (e) { return ''; }
+  });
+  const [phone, setPhone] = useState('');
   useEffect(() => {
     try {
       ITAnalytics.track('checkout_started', {
@@ -18365,17 +18372,23 @@ function CheckoutModal({
       });
     } catch (e) {}
   }, []);
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
+  const phoneOk = ((phone || '').match(/\d/g) || []).length >= 10;
+  const canPay = emailOk && phoneOk && !busy;
+  function inStyle(invalid) {
+    return { width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid ' + (invalid ? 'var(--danger)' : 'var(--border-strong)'), background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 15, fontFamily: 'inherit' };
+  }
+  const lblStyle = { display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', margin: '10px 0 4px' };
   async function pay() {
+    if (!emailOk || !phoneOk) {
+      setErr('Please enter a valid email address and phone number to continue.');
+      return;
+    }
     setBusy(true);
     setErr('');
-    let ref = '',
-      email = '';
+    let ref = '';
     try {
       ref = localStorage.getItem('it_ref_in') || '';
-    } catch (e) {}
-    try {
-      const acc = JSON.parse(localStorage.getItem('iron_tuna_account_v1') || '{}');
-      email = acc.user && acc.user.email || '';
     } catch (e) {}
     try {
       const r = await fetch('/api/checkout', {
@@ -18385,7 +18398,8 @@ function CheckoutModal({
         },
         body: JSON.stringify({
           ref,
-          email,
+          email: (email || '').trim(),
+          phone: (phone || '').trim(),
           path: (function(){ try { return window.location.pathname; } catch(e){ return '/'; } })()
         })
       });
@@ -18436,15 +18450,45 @@ function CheckoutModal({
     style: {
       fontSize: 12,
       color: 'var(--text-muted)',
-      marginBottom: 16
+      marginBottom: 12
     }
-  }, "One-time purchase, current season."), React.createElement("button", {
+  }, "One-time purchase, current season."), React.createElement("label", {
+    style: lblStyle
+  }, "Email", React.createElement("span", { style: { color: 'var(--danger)' } }, " *")), React.createElement("input", {
+    type: "email",
+    inputMode: "email",
+    autoComplete: "email",
+    required: true,
+    value: email,
+    onChange: e => setEmail(e.target.value),
+    placeholder: "you@example.com",
+    style: inStyle(email && !emailOk)
+  }), React.createElement("label", {
+    style: lblStyle
+  }, "Phone", React.createElement("span", { style: { color: 'var(--danger)' } }, " *")), React.createElement("input", {
+    type: "tel",
+    inputMode: "tel",
+    autoComplete: "tel",
+    required: true,
+    value: phone,
+    onChange: e => setPhone(e.target.value),
+    placeholder: "(555) 123-4567",
+    style: inStyle(phone && !phoneOk)
+  }), React.createElement("p", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text-muted)',
+      margin: '6px 0 14px'
+    }
+  }, "Required for your receipt and account access."), React.createElement("button", {
     className: "btn-draft",
     style: {
       width: '100%',
-      marginTop: 4
+      marginTop: 4,
+      opacity: canPay ? 1 : 0.55,
+      cursor: canPay ? 'pointer' : 'not-allowed'
     },
-    disabled: busy,
+    disabled: !canPay,
     onClick: pay
   }, busy ? 'Redirecting to secure checkout…' : `Pay $${tier.price.toFixed(2)} with card`), err && React.createElement("p", {
     style: {
