@@ -14370,6 +14370,16 @@ function PlayersRail({
   }, [players, draftedIds, posFilter, search, filterMode, sortMode, green, yellow, starred, orderIndex]);
   const visibleIds = useMemo(() => list.map(p => p.id), [list]);
   const myBoard = sortMode === 'myboard';
+  const nextPickInfo = useMemo(() => {
+    const mine = (teams || []).find(t => t.isMine);
+    if (!mine || !config || !config.snake) return null;
+    const teamsN = config.teams || 12;
+    const slot = (config.snake && config.snake.draftSlot) || 1;
+    const pa = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
+    const cur = ((draftedIds && draftedIds.size) || 0) + 1;
+    let nr = 1; while (pa(nr) < cur && nr < 60) nr++;
+    return { cur: cur, until: Math.max(0, pa(nr) - cur), round: nr };
+  }, [teams, config, draftedIds]);
   return React.createElement("aside", {
     className: "players-rail"
   }, React.createElement("div", {
@@ -14530,7 +14540,7 @@ function PlayersRail({
         style: {
           color: riskColor(rsk)
         }
-      }, "●")), React.createElement("button", {
+      }, "●"), nextPickInfo && (function () { var s = Math.round(survivalProb(p, nextPickInfo.cur, nextPickInfo.until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; return React.createElement("span", { className: "rr-avail", title: "Estimated chance " + p.name + " is still available at your round " + nextPickInfo.round + " pick", style: { marginLeft: 6, fontWeight: 700, color: col } }, s + "%"); })()), React.createElement("button", {
         className: "btn-secondary",
         onClick: () => onNominate(p)
       }, "Info"), React.createElement("button", {
