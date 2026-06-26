@@ -11405,9 +11405,10 @@ function _summaryTeamRows(teams, players, config, games) {
   });
 }
 function buildDraftSummary(teams, players, config, games, funny) {
+  const isAuction = (config.format || 'auction') === 'auction';
   const rows = _summaryTeamRows(teams, players, config, games);
   const drafted = rows.reduce((s, r) => s + r.n, 0);
-  if (!drafted) return 'No players are on the board yet. Once teams start buying, hit Summarize again and I will give you an honest read on the whole room.';
+  if (!drafted) return isAuction ? 'No players are on the board yet. Once teams start buying, hit Summarize again and I will give you an honest read on the whole room.' : 'No players are off the board yet. Once teams start drafting, hit Summarize again and I will give you an honest read on the whole room.';
   const ranked = rows.slice().sort((a, b) => b.ppg - a.ppg);
   ranked.forEach((r, i) => {
     r.rank = i + 1;
@@ -11423,6 +11424,21 @@ function buildDraftSummary(teams, players, config, games, funny) {
       v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
+  // snake / best-ball value: a player projected better than his ADP draft cost is a steal
+  if (!isAuction) {
+    const projRank = new Map();
+    (players || []).slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).forEach((p, i) => projRank.set(p.id, i + 1));
+    rows.forEach(r => {
+      let best = null;
+      r.rp.forEach(p => {
+        const adp = p.adp != null ? p.adp : 999;
+        const gap = adp - (projRank.get(p.id) || 999);
+        if (!best || gap > best.gap) best = { p: p, gap: gap };
+      });
+      r.steal = best;
+    });
+  }
+  const bestValueTeam = isAuction ? bestBargain : rows.slice().sort((a, b) => (b.steal ? b.steal.gap : -999) - (a.steal ? a.steal.gap : -999))[0];
   const out = [];
   if (!funny) {
     out.push(rows.length + ' teams, ' + drafted + ' players off the board. Starting lineups are averaging about ' + f1(avg) + ' projected points per game, and ' + leader.t.name + ' sets the early pace at roughly ' + f1(leader.ppg) + '.');
@@ -11430,34 +11446,56 @@ function buildDraftSummary(teams, players, config, games, funny) {
       const strong = Object.entries(me.byPos).sort((a, b) => b[1] - a[1])[0];
       const lead = me.rank === 1 ? 'Your team is the one to beat. You project first at about ' + f1(me.ppg) + ' points per game' : me.rank <= 3 ? 'You are right in the thick of it, sitting ' + ord(me.rank) + ' at about ' + f1(me.ppg) + ' points per game' : 'You land ' + ord(me.rank) + ' on paper at about ' + f1(me.ppg) + ' points per game, and you are closer to the top than that number suggests';
       out.push(lead + (me.top ? ', anchored by ' + me.top.name + '.' : '.') + (strong ? ' Your ' + strong[0] + ' group is a genuine strength.' : ''));
-      if (me.bestVal && me.bestVal.g >= 2) out.push('Best value on your roster: ' + me.bestVal.p.name + ' at $' + (me.bestVal.p.price || 1) + ', comfortably under his roughly $' + me.bestVal.p.auctionValue + ' value. That is the kind of buy that wins leagues.');
+      if (isAuction) {
+        if (me.bestVal && me.bestVal.g >= 2) out.push('Best value on your roster: ' + me.bestVal.p.name + ' at $' + (me.bestVal.p.price || 1) + ', comfortably under his roughly $' + me.bestVal.p.auctionValue + ' value. That is the kind of buy that wins leagues.');
+      } else {
+        if (me.steal && me.steal.gap >= 10) out.push('Best value on your roster: ' + me.steal.p.name + ', who slid to you well past where he usually goes. That is the kind of pick that wins leagues.');
+      }
       const needPos = ['RB', 'WR', 'TE', 'QB'].filter(pos => config.roster[pos]).sort((a, b) => (me.byPos[a] || 0) - (me.byPos[b] || 0))[0];
-      if (needPos) out.push('If you want to nitpick, ' + needPos + ' is the spot to keep an eye on, and an easy one to reinforce with your remaining budget or on the waiver wire. Nothing here is a hole, just your next opportunity.');
+      if (needPos) out.push('If you want to nitpick, ' + needPos + ' is the spot to keep an eye on, and an easy one to reinforce with your ' + (isAuction ? 'remaining budget' : 'upcoming picks') + ' or on the waiver wire. Nothing here is a hole, just your next opportunity.');
     }
     const watch = ranked.find(r => !r.t.isMine) || ranked[0];
-    out.push('Around the room: ' + bigSpender.t.name + ' has spent the most ($' + bigSpender.spent + '), ' + bestBargain.t.name + ' has squeezed out the best value relative to price, and ' + watch.t.name + ' is the rival to keep honest. It is shaping up to be a real race.');
+    if (isAuction) {
+      out.push('Around the room: ' + bigSpender.t.name + ' has spent the most ($' + bigSpender.spent + '), ' + bestBargain.t.name + ' has squeezed out the best value relative to price, and ' + watch.t.name + ' is the rival to keep honest. It is shaping up to be a real race.');
+    } else {
+      out.push('Around the room: ' + leader.t.name + ' has the strongest starters so far' + (bestValueTeam && bestValueTeam.steal && bestValueTeam.steal.gap >= 8 ? ', ' + bestValueTeam.t.name + ' has mined the best value out of the board relative to ADP' : '') + ', and ' + watch.t.name + ' is the rival to keep honest. It is shaping up to be a real race.');
+    }
   } else {
     out.push('Alright, let us reel in this board. ' + rows.length + ' managers, ' + drafted + ' players gone, and ' + leader.t.name + ' is already strutting around at ' + f1(leader.ppg) + ' a game like the trophy is being engraved.');
     if (me) {
       const lead = me.rank === 1 ? 'You? Apex predator of this pond. First place, ' + f1(me.ppg) + ' a game, and frankly a little smug about it. Earned.' : me.rank <= 3 ? 'You snuck into ' + ord(me.rank) + ' like a tuna through a torn net, ' + f1(me.ppg) + ' a game, quietly terrifying.' : 'You are ' + ord(me.rank) + ' on paper, which sounds rough until you remember paper drafts do not win trophies. You have got the goods.';
       out.push(lead + (me.top ? ' ' + me.top.name + ' is your big fish and he is going to feed you all season.' : ''));
-      if (me.bestVal && me.bestVal.g >= 2) out.push('And ' + me.bestVal.p.name + ' for $' + (me.bestVal.p.price || 1) + '? Highway robbery. Somebody call the auction police.');
+      if (isAuction) {
+        if (me.bestVal && me.bestVal.g >= 2) out.push('And ' + me.bestVal.p.name + ' for $' + (me.bestVal.p.price || 1) + '? Highway robbery. Somebody call the auction police.');
+      } else {
+        if (me.steal && me.steal.gap >= 10) out.push('And landing ' + me.steal.p.name + ' that late? Highway robbery. Somebody check the replay.');
+      }
     }
     const worst = ranked[ranked.length - 1];
     if (worst && !worst.t.isMine) out.push('Spare a thought for ' + worst.t.name + ', currently assembling a starting lineup held together with duct tape and optimism at ' + f1(worst.ppg) + ' a game. Bless their heart.');
-    out.push(bigSpender.t.name + ' spent $' + bigSpender.spent + ' like it was Monopoly money, while ' + bestBargain.t.name + ' shopped the clearance rack and somehow came out smelling like roses. Draft on, you beautiful degenerates.');
+    if (isAuction) {
+      out.push(bigSpender.t.name + ' spent $' + bigSpender.spent + ' like it was Monopoly money, while ' + bestBargain.t.name + ' shopped the clearance rack and somehow came out smelling like roses. Draft on, you beautiful degenerates.');
+    } else {
+      out.push((bestValueTeam && bestValueTeam.steal ? bestValueTeam.t.name + ' has been fishing the bargain bin of the draft board and keeps reeling in keepers' : leader.t.name + ' is stacking studs like it is going out of style') + ', while everyone else pretends they meant to reach for a kicker that early. Draft on, you beautiful degenerates.');
+    }
   }
   return out.join('\n\n');
 }
 function buildBoardText(teams, players, config) {
+  const isAuction = (config.format || 'auction') === 'auction';
   const pmap = new Map((players || []).map(p => [p.id, p]));
   const lines = [];
   (teams || []).forEach(t => {
     const rp = _summaryRosterPlayers(t, pmap);
     if (!rp.length) return;
-    rp.sort((a, b) => (b.price || 0) - (a.price || 0));
-    const spent = (config.budget || 0) - (t.budgetRemaining || 0);
-    lines.push((t.isMine ? '★ ' : '') + t.name + ' ($' + spent + ' spent): ' + rp.map(p => p.name + ' $' + (p.price || 1)).join(', '));
+    if (isAuction) {
+      rp.sort((a, b) => (b.price || 0) - (a.price || 0));
+      const spent = (config.budget || 0) - (t.budgetRemaining || 0);
+      lines.push((t.isMine ? '★ ' : '') + t.name + ' ($' + spent + ' spent): ' + rp.map(p => p.name + ' $' + (p.price || 1)).join(', '));
+    } else {
+      rp.sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+      lines.push((t.isMine ? '★ ' : '') + t.name + ': ' + rp.map(p => p.name).join(', '));
+    }
   });
   return lines.length ? lines.join('\n') : 'No players drafted yet.';
 }
@@ -11474,7 +11512,7 @@ function DraftSummaryModal({
   const text = useMemo(() => tab === 'board' ? buildBoardText(teams, players, config) : buildDraftSummary(teams, players, config, games, funny), [teams, players, config, games, funny, tab]);
   const REF = 'Powered by IronTuna.com';
   const SITE = itRefLink();
-  const shareBody = text + '\n\n' + REF + ' - build your free auction board at ' + SITE;
+  const shareBody = text + '\n\n' + REF + ' - build your free ' + ((config.format || 'auction') === 'auction' ? 'auction board' : 'draft board') + ' at ' + SITE;
   const tweetText = (() => {
     const first = text.split('\n\n')[0];
     const base = first.length > 200 ? first.slice(0, 197) + '...' : first;
