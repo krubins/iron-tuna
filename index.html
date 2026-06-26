@@ -14361,7 +14361,7 @@ function PlayersRail({
       el.style.boxShadow = '';
       el.style.cursor = '';
       if (st.lastHi && rowRefs.current[st.lastHi]) rowRefs.current[st.lastHi].el.classList.remove('rank-drop');
-      if (st.targetId && st.targetId !== id) { onRankReorder(id, st.targetId); } else if (!moved) { const __pl = (players || []).find(x => x.id === id); if (__pl && onNominate) onNominate(__pl); }
+      if (st.targetId && st.targetId !== id) { onRankReorder(id, st.targetId); } else if (!moved) { const __pl = (players || []).find(x => x.id === id); if (__pl) setQuick(__pl); }
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
@@ -14646,7 +14646,7 @@ function PlayersRail({
         }
       }, "●"), nextPickInfo && (function () { var s = Math.round(survivalProb(p, nextPickInfo.cur, nextPickInfo.until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; return React.createElement("span", { className: "rr-avail", title: "Estimated chance " + p.name + " is still available at your round " + nextPickInfo.round + " pick", style: { marginLeft: 6, fontWeight: 700, color: col } }, s + "%"); })()), React.createElement("button", {
         className: "btn-secondary",
-        onClick: () => onNominate(p)
+        onClick: () => setQuick(p)
       }, "Info"), (config && config.format !== 'snake') && React.createElement("button", {
         className: "btn-draft",
         onClick: () => onNominate(p),
@@ -14665,6 +14665,9 @@ function PlayersRail({
     player: quick,
     teams: teams,
     config: config,
+    players: players,
+    seasonGames: seasonGames,
+    myTeam: teams.find(t => t.isMine),
     onConfirm: (teamId, price) => {
       onDraft(quick.id, teamId, price);
       setQuick(null);
@@ -20711,7 +20714,7 @@ function App() {
       flag: "seenBoardIntro",
       account: account,
       setAccount: setAccount
-    }, "Ghosted rows are the planner's projected best fills for your remaining slots and budget. Pick a model up top to change strategy, or click a slot to lock a target."), React.createElement("div", {
+    }, `Ghosted rows are the planner's projected best fills for your remaining slots${config.format === 'auction' ? ' and budget' : ''}. Pick a model up top to change strategy, or click a slot to lock a target.`), React.createElement("div", {
       className: "strategy-bar" + (config.format === 'snake' ? ' strategy-bar-snake' : '')
     }, (config.format !== 'snake' && React.createElement(BudgetSliders, {
       strategy: config.strategy,
@@ -21023,7 +21026,23 @@ function App() {
     },
     onClose: () => setAssignPlayer(null)
   }), !showSplash && (assignPlayer || currentNomination) && view !== 'board' && !referOpen && !summaryOpen && !overlay && React.createElement("div", {
-    className: "coach-beside no-print" + (view === 'board' ? " coach-board" : "")
+    className: "coach-beside no-print" + (view === 'board' ? " coach-board" : ""),
+    ref: el => {
+      if (!el || typeof window === 'undefined' || window.innerWidth < 1080) return;
+      const sync = () => {
+        const card = document.querySelector('.modal-bg.modal-left .modal');
+        if (!card) return;
+        const r = card.getBoundingClientRect();
+        el.style.top = r.top + 'px';
+        el.style.bottom = 'auto';
+        el.style.transform = 'none';
+        el.style.height = r.height + 'px';
+        el.style.left = (r.right + 20) + 'px';
+        el.style.width = r.width + 'px';
+        el.style.maxHeight = 'none';
+      };
+      window.requestAnimationFrame(sync);
+    }
   }, React.createElement(ValueCoach, {
     valueAdjust: valueAdjust,
     onApply: setValueAdjust,
