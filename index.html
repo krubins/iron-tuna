@@ -6851,6 +6851,7 @@ function QuickDraftModal({
   const _tough = typeof toughSchedule === 'function' ? toughSchedule(player.team, player.position) : null;
   const _vol = typeof volumeFlag === 'function' ? volumeFlag(player, players) : null;
   const _ol = typeof olFlag === 'function' ? olFlag(player) : null;
+  const _age = typeof ageFlag === 'function' ? ageFlag(player) : null;
   const _news = typeof playerNews === 'function' ? playerNews(player, players, config) : '';
   const _inj = typeof injuryOf === 'function' ? injuryOf(player) : (player.injuryStatus || null);
   const _mates = (players || []).filter(p => p.team === player.team && p.position === player.position).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
@@ -6881,7 +6882,7 @@ function QuickDraftModal({
   })();
   const _researchEl = React.createElement(React.Fragment, null, React.createElement("div", {
     style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 14 }
-  }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume"), _ol && React.createElement("span", { style: _chip(_ol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _ol.title }, _ol.t === 'OL+' ? "Good O-line" : "Bad O-line"), bye && React.createElement("span", { style: _chip(), title: "Bye week" }, "Bye " + bye)), _survRows && _survRows.length ? React.createElement("div", {
+  }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume"), _ol && React.createElement("span", { style: _chip(_ol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _ol.title }, _ol.t === 'OL+' ? "Good O-line" : "Bad O-line"), _age && React.createElement("span", { style: _chip('#ff6b6b'), title: _age.title }, _age.t), bye && React.createElement("span", { style: _chip(), title: "Bye week" }, "Bye " + bye)), _survRows && _survRows.length ? React.createElement("div", {
     style: { marginBottom: 14 }
   }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 } }, "Will he be there?"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, _survRows.map(rw => React.createElement("span", { key: rw.round, style: _chip(), title: rw.passed ? "Your round " + rw.round + " pick has already passed" : "Chance he lasts to your round " + rw.round + " pick" }, "R" + rw.round + " ", React.createElement("b", { style: { color: rw.passed ? 'var(--text-faint)' : (rw.s >= 70 ? '#46d39a' : rw.s >= 40 ? '#f0b24b' : '#ff6b6b') } }, rw.passed ? "—" : rw.s + "%"))))) : null);
   return React.createElement("div", {
@@ -9739,6 +9740,30 @@ function olFlag(player) {
   }
   return null;
 }
+// Age as of the 2026 season for fantasy-relevant veterans near the decline cliff.
+// Falls back to player.age (Sleeper) when present; unlisted players get no age flag.
+const AGE_2026 = {
+  "Derrick Henry": 32, "Alvin Kamara": 31, "Aaron Jones": 31, "Joe Mixon": 30, "Austin Ekeler": 31, "James Conner": 31, "Nick Chubb": 30, "Christian McCaffrey": 30, "Najee Harris": 28, "Saquon Barkley": 29, "Josh Jacobs": 28, "David Montgomery": 29, "Tony Pollard": 29, "Raheem Mostert": 34, "Jamaal Williams": 31, "Rhamondre Stevenson": 28,
+  "Mike Evans": 33, "Davante Adams": 33, "Keenan Allen": 34, "Tyreek Hill": 32, "Cooper Kupp": 33, "DeAndre Hopkins": 34, "Adam Thielen": 36, "Stefon Diggs": 33, "Amari Cooper": 32, "Brandin Cooks": 33, "Tyler Lockett": 34, "Calvin Ridley": 31, "Robert Woods": 34,
+  "Travis Kelce": 37, "Zach Ertz": 36, "George Kittle": 33, "Hunter Henry": 31, "Mark Andrews": 31, "Evan Engram": 32, "Dallas Goedert": 31, "Tyler Higbee": 33,
+  "Aaron Rodgers": 43, "Matthew Stafford": 38, "Russell Wilson": 38, "Kirk Cousins": 38, "Joe Flacco": 41
+};
+function ageOf(player) {
+  if (!player) return null;
+  if (typeof player.age === 'number') return player.age;
+  const a = AGE_2026[player.name];
+  return typeof a === 'number' ? a : null;
+}
+function ageFlag(player) {
+  if (!player) return null;
+  const a = ageOf(player);
+  if (a == null) return null;
+  const pos = player.position;
+  if (pos === 'RB' && a >= 28) return { t: 'Age ' + a, tone: 'bad', title: 'Age ' + a + ' — running backs tend to fall off a cliff around 28-30' };
+  if ((pos === 'WR' || pos === 'TE') && a >= 31) return { t: 'Age ' + a, tone: 'bad', title: 'Age ' + a + ' — past the typical peak; pass-catchers age better than backs, but the risk rises' };
+  if (pos === 'QB' && a >= 38) return { t: 'Age ' + a, tone: 'bad', title: 'Age ' + a + ' — a veteran QB; watch for late-career decline' };
+  return null;
+}
 function playerJabs(player, players, config) {
   if (!player) return ['Somebody overpaid for that guy. Riveting.'];
   const isSnake = (config && config.format) === 'snake';
@@ -9750,6 +9775,8 @@ function playerJabs(player, players, config) {
   const risk = typeof riskScore === 'function' ? riskScore(player) : null;
   const inj = typeof injuryOf === 'function' ? injuryOf(player) : null;
   const ol = typeof olFlag === 'function' ? olFlag(player) : null;
+  const ag = typeof ageFlag === 'function' ? ageFlag(player) : null;
+  const ageNum = typeof ageOf === 'function' ? ageOf(player) : null;
   const av = player.auctionValue, mv = player.marketValue;
   const overpay = (mv != null && av != null && mv > av) ? `$${mv - av} over his $${av} value` : 'top dollar';
   const Overpay = overpay.charAt(0).toUpperCase() + overpay.slice(1);
@@ -9761,6 +9788,7 @@ function playerJabs(player, players, config) {
   if (risk != null && risk >= 0.6) out.push(isSnake ? `Burning a real pick on boom-or-bust ${first}? The boom is theoretical. The bust is on tape.` : `${Overpay} for boom-or-bust ${first}. You bought the boom; he comes with the bust free.`);
   if (inj) out.push(isSnake ? `Drafting ${first} (${inj}) ahead of healthy guys is gutsy. The trainer's room sends its regards.` : `Real dollars on ${first} with a ${inj} tag — nothing safer than overpaying for a question mark.`);
   if (ol && ol.tone === 'bad') out.push(pos === 'RB' ? `${pay} ${first}, who runs behind one of the league's worst run-blocking lines — he'll meet a defender at the handoff.` : `${pay} ${first}, whose line can't block a revolving door. Enjoy watching him run for his life.`);
+  if (ag && ageNum != null) out.push(pos === 'RB' ? `${pay} a ${ageNum}-year-old running back. The wheels don't come with a warranty, champ.` : `${pay} ${first} at ${ageNum} — drafting the back of the baseball card, not the front.`);
   if (!isSnake && av != null && mv != null && mv > av + 2) out.push(`${first} is worth about $${av}. You paid like he's a first-rounder. The whole room said thank you.`);
   if (isSnake && player.adp != null) out.push(`ADP had ${first} going way later, but you just had to have him NOW. Patience is for people who win leagues.`);
   if (pos === 'K' || pos === 'DEF') out.push(isSnake ? `A ${pos}. This early. While startable skill players sit on the board. Iron Tuna is cringing for you.` : `Spending actual budget on a ${pos}. In this economy. Visionary.`);
@@ -9786,6 +9814,8 @@ function playerNews(player, players, config) {
   const mates = (players || []).filter(p => p.team === player.team && p.position === player.position).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
   const idx = mates.findIndex(p => p.id === player.id);
   if (pos === 'RB' && idx === 1 && mates[0]) body.push(`He's a snap away from a feature role as the handcuff to ${mates[0].name.split(' ').slice(-1)[0]}.`);
+  const ag = typeof ageFlag === 'function' ? ageFlag(player) : null;
+  if (ag) body.push(pos === 'RB' ? `At ${ageOf(player)} he's into the range where backs slow down in a hurry.` : `At ${ageOf(player)} he's on the back nine of his career, where the floor gets shakier.`);
   const ol = typeof olFlag === 'function' ? olFlag(player) : null;
   if (ol && ol.tone === 'good') body.push(pos === 'RB' ? `He runs behind one of the league's better run-blocking lines.` : `His line keeps the quarterback clean.`);
   else if (ol && ol.tone === 'bad') body.push(pos === 'RB' ? `He has to create on his own behind a leaky run-blocking line.` : `He works behind a shaky pass-blocking line.`);
@@ -10817,7 +10847,7 @@ function CheatHeader({
       flexBasis: '100%',
       height: 0
     }
-  }), React.createElement("div", { className: "cf-dd", ref: colsRef }, React.createElement("button", { className: "col-toggle cf-dd-btn", onClick: () => setColsOpen(o => !o) }, "Columns & flags \u25be"), colsOpen && React.createElement("div", { className: "cf-dd-menu", onPointerDown: e => e.stopPropagation() }, React.createElement("div", { className: "cf-dd-head" }, "Columns"), (COLSPEC || []).map(([k, lbl, tip]) => React.createElement("label", { key: k, className: "cf-dd-item", title: tip }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)), React.createElement("div", { className: "cf-dd-head" }, "Flags"), [['soft13', 'Soft 1-3 (favorable early)'], ['soft1517', 'Soft 15-17 (favorable playoffs)'], ['tough13', 'Tough 1-3 (hard early)'], ['tough1517', 'Tough 15-17 (hard playoffs)'], ['volume', 'Workhorse / Committee'], ['oline', 'O-line (run/pass block)'], ['injury', 'Injury'], ['handcuff', 'Handcuff']].map(([k, lbl]) => React.createElement("label", { key: k, className: "cf-dd-item" }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)))), priceOverrides && Object.keys(priceOverrides).length > 0 && React.createElement("button", {
+  }), React.createElement("div", { className: "cf-dd", ref: colsRef }, React.createElement("button", { className: "col-toggle cf-dd-btn", onClick: () => setColsOpen(o => !o) }, "Columns & flags \u25be"), colsOpen && React.createElement("div", { className: "cf-dd-menu", onPointerDown: e => e.stopPropagation() }, React.createElement("div", { className: "cf-dd-head" }, "Columns"), (COLSPEC || []).map(([k, lbl, tip]) => React.createElement("label", { key: k, className: "cf-dd-item", title: tip }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)), React.createElement("div", { className: "cf-dd-head" }, "Flags"), [['soft13', 'Soft 1-3 (favorable early)'], ['soft1517', 'Soft 15-17 (favorable playoffs)'], ['tough13', 'Tough 1-3 (hard early)'], ['tough1517', 'Tough 15-17 (hard playoffs)'], ['volume', 'Workhorse / Committee'], ['oline', 'O-line (run/pass block)'], ['age', 'Age / career arc'], ['injury', 'Injury'], ['handcuff', 'Handcuff']].map(([k, lbl]) => React.createElement("label", { key: k, className: "cf-dd-item" }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)))), priceOverrides && Object.keys(priceOverrides).length > 0 && React.createElement("button", {
     className: "col-toggle price-clear",
     title: "Clear all your custom projected prices",
     onClick: onClearPrices
@@ -11080,6 +11110,7 @@ function Cheatsheet({
     tough1517: false,
     volume: false,
     oline: false,
+    age: false,
     injury: false,
     handcuff: false
   });
@@ -11424,6 +11455,7 @@ function Cheatsheet({
     const toughSched = (showCols.tough13 || showCols.tough1517) ? toughSchedule(p.team, p.position) : null;
     const volFlag = showCols.volume ? volumeFlag(p, players) : null;
     const olF = showCols.oline ? olFlag(p) : null;
+    const ageF = showCols.age ? ageFlag(p) : null;
     let sign, nameColor, nameTitle;
     {
       const vgap = value - cost;
@@ -11521,7 +11553,7 @@ function Cheatsheet({
     }, "Soft 1-3") : null, softSched && softSched.late && showCols.soft1517 ? React.createElement("span", {
       className: "cheat-soft cheat-soft-late",
       title: `Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`
-    }, "Soft 15-17") : null, toughSched && toughSched.early && showCols.tough13 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 1-3 for ${p.position}: ${toughSched.early.opps.join(', ')}` }, "Tough 1-3") : null, toughSched && toughSched.late && showCols.tough1517 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 15-17 for ${p.position}: ${toughSched.late.opps.join(', ')}` }, "Tough 15-17") : null, volFlag ? React.createElement("span", { className: "cheat-soft", style: { color: volFlag.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: volFlag.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: volFlag.title }, volFlag.t) : null, olF ? React.createElement("span", { className: "cheat-soft", style: { color: olF.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: olF.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: olF.title }, olF.t) : null)), activeCols.map(([k]) => k === 'proj' ? React.createElement("span", {
+    }, "Soft 15-17") : null, toughSched && toughSched.early && showCols.tough13 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 1-3 for ${p.position}: ${toughSched.early.opps.join(', ')}` }, "Tough 1-3") : null, toughSched && toughSched.late && showCols.tough1517 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 15-17 for ${p.position}: ${toughSched.late.opps.join(', ')}` }, "Tough 15-17") : null, volFlag ? React.createElement("span", { className: "cheat-soft", style: { color: volFlag.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: volFlag.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: volFlag.title }, volFlag.t) : null, olF ? React.createElement("span", { className: "cheat-soft", style: { color: olF.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: olF.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: olF.title }, olF.t) : null, ageF ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: ageF.title }, ageF.t) : null)), activeCols.map(([k]) => k === 'proj' ? React.createElement("span", {
       key: k,
       className: `cheat-cost${p.priceOverridden ? ' price-override' : ''}`,
       title: "Projected price, click to set your own; the rest re-prices to keep the pool constant",
@@ -14856,11 +14888,13 @@ function PlayersRail({
       const _rtough = toughSchedule(p.team, p.position);
       const _rvol = volumeFlag(p, players);
       const _rol = typeof olFlag === 'function' ? olFlag(p) : null;
+      const _rage = typeof ageFlag === 'function' ? ageFlag(p) : null;
       const _rinj = typeof injuryOf === 'function' ? injuryOf(p) : null;
       const _railChips = [];
       if (_rinj) _railChips.push(['✚', '#ff6b6b', 'Injury: ' + _rinj]);
       if (_rvol) _railChips.push([_rvol.t, _rvol.tone === 'good' ? '#46d39a' : '#ff6b6b', _rvol.title]);
       if (_rol) _railChips.push([_rol.t, _rol.tone === 'good' ? '#46d39a' : '#ff6b6b', _rol.title]);
+      if (_rage) _railChips.push([_rage.t, '#ff6b6b', _rage.title]);
       if (_rsoft && _rsoft.early) _railChips.push(['Soft 1-3', '#5aa9ff', 'Favorable early schedule (wks 1-3)']); else if (_rtough && _rtough.early) _railChips.push(['Tough 1-3', '#ff6b6b', 'Tough early schedule (wks 1-3)']);
       if (_rsoft && _rsoft.late) _railChips.push(['Soft 15-17', '#b07cff', 'Favorable playoff schedule (wks 15-17)']); else if (_rtough && _rtough.late) _railChips.push(['Tough 15-17', '#ff6b6b', 'Tough playoff schedule (wks 15-17)']);
       const __tk = tierMap.get(p.id);
