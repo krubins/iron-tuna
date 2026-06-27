@@ -6845,6 +6845,8 @@ function QuickDraftModal({
   const _riskTxt = (_risk != null && typeof riskLabel === 'function') ? riskLabel(_risk) : null;
   const _riskCol = (_risk != null && typeof riskColor === 'function') ? riskColor(_risk) : 'var(--text-secondary)';
   const _soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(player.team, player.position) : null;
+  const _tough = typeof toughSchedule === 'function' ? toughSchedule(player.team, player.position) : null;
+  const _vol = typeof volumeFlag === 'function' ? volumeFlag(player, players) : null;
   const _inj = typeof injuryOf === 'function' ? injuryOf(player) : (player.injuryStatus || null);
   const _mates = (players || []).filter(p => p.team === player.team && p.position === player.position).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
   const _depthIdx = _mates.findIndex(p => p.id === player.id);
@@ -6874,7 +6876,7 @@ function QuickDraftModal({
   })();
   const _researchEl = React.createElement(React.Fragment, null, React.createElement("div", {
     style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 14 }
-  }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs")), _survRows && _survRows.length ? React.createElement("div", {
+  }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume")), _survRows && _survRows.length ? React.createElement("div", {
     style: { marginBottom: 14 }
   }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 } }, "Will he be there?"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, _survRows.map(rw => React.createElement("span", { key: rw.round, style: _chip(), title: rw.passed ? "Your round " + rw.round + " pick has already passed" : "Chance he lasts to your round " + rw.round + " pick" }, "R" + rw.round + " ", React.createElement("b", { style: { color: rw.passed ? 'var(--text-faint)' : (rw.s >= 70 ? '#46d39a' : rw.s >= 40 ? '#f0b24b' : '#ff6b6b') } }, rw.passed ? "—" : rw.s + "%"))))) : null);
   return React.createElement("div", {
@@ -9637,6 +9639,46 @@ function scheduleSoftness(team, position) {
   };
   return res.early || res.late ? res : null;
 }
+function toughSchedule(team, position) {
+  if (!['QB', 'RB', 'WR', 'TE', 'DEF'].includes(position)) return null;
+  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const sch = SCHEDULE_2026[tm];
+  if (!sch) return null;
+  const rankOf = opp => {
+    const ab = (opp || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (position === 'DEF') { const o = OFF_2025[ab]; return o != null ? o : null; }
+    const d = DVP_2025[ab];
+    return d ? d[position] : null;
+  };
+  const avg = ws => { const r = ws.map(w => rankOf(sch[w])).filter(x => x != null); return r.length ? r.reduce((a, b) => a + b, 0) / r.length : null; };
+  const TOUGH = 12;
+  const ea = avg(['w1', 'w2', 'w3']), la = avg(['w15', 'w16', 'w17']);
+  const opps = ws => ws.map(w => sch[w]).filter(Boolean);
+  const res = { early: ea != null && ea <= TOUGH ? { opps: opps(['w1', 'w2', 'w3']) } : null, late: la != null && la <= TOUGH ? { opps: opps(['w15', 'w16', 'w17']) } : null };
+  return res.early || res.late ? res : null;
+}
+function volumeFlag(player, players) {
+  if (!player || !players || !players.length) return null;
+  const pos = player.position;
+  if (pos === 'RB') {
+    const mates = players.filter(p => p.team === player.team && p.position === 'RB').sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+    if (mates.length && mates[0].id !== player.id) return null;
+    const lead = mates[0], second = mates[1];
+    const lp = lead ? lead.projectedPoints || 0 : 0;
+    if (!second) return lp > 0 ? { t: 'BELL', tone: 'good', title: 'Workhorse back — no real committee behind him' } : null;
+    const sp = second.projectedPoints || 0;
+    if (lp >= sp * 1.6) return { t: 'BELL', tone: 'good', title: 'Bell-cow back — clear lead over ' + second.name };
+    if (lp > 0 && sp >= lp * 0.78) return { t: 'RBBC', tone: 'bad', title: 'Committee backfield — touches split with ' + second.name };
+    return null;
+  }
+  if (pos === 'WR' || pos === 'TE') {
+    const rec = (player.projectedStats && player.projectedStats.rec) || 0;
+    const thr = pos === 'WR' ? 90 : 65;
+    if (rec >= thr) return { t: 'VOL', tone: 'good', title: 'High target volume (~' + rec + ' projected catches)' };
+    return null;
+  }
+  return null;
+}
 function scarcityFlags(players, draftedIds, config) {
   const map = new Map();
   const byPos = {};
@@ -10640,7 +10682,7 @@ function CheatHeader({
       flexBasis: '100%',
       height: 0
     }
-  }), React.createElement("div", { className: "cf-dd", ref: colsRef }, React.createElement("button", { className: "col-toggle cf-dd-btn", onClick: () => setColsOpen(o => !o) }, "Columns & flags \u25be"), colsOpen && React.createElement("div", { className: "cf-dd-menu", onPointerDown: e => e.stopPropagation() }, React.createElement("div", { className: "cf-dd-head" }, "Columns"), (COLSPEC || []).map(([k, lbl, tip]) => React.createElement("label", { key: k, className: "cf-dd-item", title: tip }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)), React.createElement("div", { className: "cf-dd-head" }, "Flags"), [['soft13', 'Soft 1-3'], ['soft1517', 'Soft 15-17'], ['injury', 'Injury'], ['handcuff', 'Handcuff']].map(([k, lbl]) => React.createElement("label", { key: k, className: "cf-dd-item" }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)))), priceOverrides && Object.keys(priceOverrides).length > 0 && React.createElement("button", {
+  }), React.createElement("div", { className: "cf-dd", ref: colsRef }, React.createElement("button", { className: "col-toggle cf-dd-btn", onClick: () => setColsOpen(o => !o) }, "Columns & flags \u25be"), colsOpen && React.createElement("div", { className: "cf-dd-menu", onPointerDown: e => e.stopPropagation() }, React.createElement("div", { className: "cf-dd-head" }, "Columns"), (COLSPEC || []).map(([k, lbl, tip]) => React.createElement("label", { key: k, className: "cf-dd-item", title: tip }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)), React.createElement("div", { className: "cf-dd-head" }, "Flags"), [['soft13', 'Soft 1-3 (favorable early)'], ['soft1517', 'Soft 15-17 (favorable playoffs)'], ['tough13', 'Tough 1-3 (hard early)'], ['tough1517', 'Tough 15-17 (hard playoffs)'], ['volume', 'Workhorse / Committee'], ['injury', 'Injury'], ['handcuff', 'Handcuff']].map(([k, lbl]) => React.createElement("label", { key: k, className: "cf-dd-item" }, React.createElement("input", { type: "checkbox", checked: !!(showCols && showCols[k]), onChange: () => setShowCols(c => ({ ...c, [k]: !c[k] })) }), lbl)))), priceOverrides && Object.keys(priceOverrides).length > 0 && React.createElement("button", {
     className: "col-toggle price-clear",
     title: "Clear all your custom projected prices",
     onClick: onClearPrices
@@ -10899,6 +10941,9 @@ function Cheatsheet({
     ppg: true,
     soft13: true,
     soft1517: true,
+    tough13: false,
+    tough1517: false,
+    volume: false,
     injury: false,
     handcuff: false
   });
@@ -11240,6 +11285,8 @@ function Cheatsheet({
     }
     const tgap = you - cost;
     const softSched = scheduleSoftness(p.team, p.position);
+    const toughSched = (showCols.tough13 || showCols.tough1517) ? toughSchedule(p.team, p.position) : null;
+    const volFlag = showCols.volume ? volumeFlag(p, players) : null;
     let sign, nameColor, nameTitle;
     {
       const vgap = value - cost;
@@ -11337,7 +11384,7 @@ function Cheatsheet({
     }, "Soft 1-3") : null, softSched && softSched.late && showCols.soft1517 ? React.createElement("span", {
       className: "cheat-soft cheat-soft-late",
       title: `Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`
-    }, "Soft 15-17") : null)), activeCols.map(([k]) => k === 'proj' ? React.createElement("span", {
+    }, "Soft 15-17") : null, toughSched && toughSched.early && showCols.tough13 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 1-3 for ${p.position}: ${toughSched.early.opps.join(', ')}` }, "Tough 1-3") : null, toughSched && toughSched.late && showCols.tough1517 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 15-17 for ${p.position}: ${toughSched.late.opps.join(', ')}` }, "Tough 15-17") : null, volFlag ? React.createElement("span", { className: "cheat-soft", style: { color: volFlag.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: volFlag.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: volFlag.title }, volFlag.t) : null)), activeCols.map(([k]) => k === 'proj' ? React.createElement("span", {
       key: k,
       className: `cheat-cost${p.priceOverridden ? ' price-override' : ''}`,
       title: "Projected price, click to set your own; the rest re-prices to keep the pool constant",
