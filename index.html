@@ -20181,6 +20181,10 @@ function App() {
     if (!player) return;
     const team = teams.find(t => t.id === teamId);
     if (!team) return;
+    if (team.spotsRemaining <= 0) {
+      alert(`${team.name} has no roster spots remaining.`);
+      return;
+    }
     if (config.format && config.format !== 'auction') {
       setTeams(prev => prev.map(t => t.id === teamId ? {
         ...t,
