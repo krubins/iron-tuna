@@ -7739,7 +7739,45 @@ function SettingsModal({
   dataInfo
 }) {
   const [draft, setDraft] = useState(JSON.parse(JSON.stringify(config)));
+  const [advRoster, setAdvRoster] = useState(false);
+  const [advScoring, setAdvScoring] = useState(false);
   const fileRef = useRef();
+  function setStarter(pos, v) {
+    v = Math.max(0, v | 0);
+    setDraft(prev => {
+      const n = JSON.parse(JSON.stringify(prev));
+      n.roster[pos] = n.roster[pos] || { total: 0, starters: 0 };
+      const old = n.roster[pos].starters || 0;
+      const bench = Math.max(0, (n.roster[pos].total || 0) - old);
+      n.roster[pos].starters = v;
+      n.roster[pos].total = v + bench;
+      return n;
+    });
+  }
+  function setSuperflex(on) {
+    setDraft(prev => {
+      const n = JSON.parse(JSON.stringify(prev));
+      n.flex = n.flex || { count: 1, eligible: ['RB', 'WR', 'TE'] };
+      const el = (n.flex.eligible || ['RB', 'WR', 'TE']).filter(x => x !== 'QB');
+      if (on) el.push('QB');
+      n.flex.eligible = el;
+      return n;
+    });
+  }
+  const _benchTotal = () => Object.values(draft.roster).reduce((s, c) => s + Math.max(0, (c.total || 0) - (c.starters || 0)), 0);
+  const _rosterTotal = () => Object.values(draft.roster).reduce((s, c) => s + (c.total || 0), 0) + (draft.flex && draft.flex.count || 0);
+  const _isSuperflex = !!(draft.flex && draft.flex.eligible && draft.flex.eligible.includes('QB'));
+  const sStyle = {
+    stepRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '5px 0' },
+    stepLbl: { fontSize: 14, color: 'var(--text-secondary)' },
+    stepCtl: { display: 'inline-flex', alignItems: 'center', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' },
+    stepBtn: { width: 30, height: 30, background: 'var(--bg-elev)', border: 'none', color: 'var(--text-primary)', fontSize: 17, lineHeight: 1, cursor: 'pointer' },
+    stepVal: { minWidth: 30, textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 15, color: 'var(--text-primary)' },
+    disc: { display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12.5, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 0', fontFamily: 'var(--font-body)', fontWeight: 700 }
+  };
+  function Stepper(label, val, onSet, min, max) {
+    return React.createElement("div", { style: sStyle.stepRow, key: label }, React.createElement("span", { style: sStyle.stepLbl }, label), React.createElement("div", { style: sStyle.stepCtl }, React.createElement("button", { type: "button", style: sStyle.stepBtn, onClick: () => onSet(Math.max(min, (val || 0) - 1)) }, "−"), React.createElement("span", { style: sStyle.stepVal }, val || 0), React.createElement("button", { type: "button", style: sStyle.stepBtn, onClick: () => onSet(Math.min(max, (val || 0) + 1)) }, "+")));
+  }
   function applyImport(partial) {
     setDraft(prev => {
       const next = JSON.parse(JSON.stringify(prev));
@@ -7954,70 +7992,40 @@ function SettingsModal({
       alignItems: 'center',
       justifyContent: 'space-between'
     }
-  }, React.createElement("span", null, "Roster Slots"), React.createElement("button", {
+  }, React.createElement("span", null, "Starting Lineup & Roster"), React.createElement("button", {
     type: "button",
     className: "preset-btn",
     onClick: applyStandardRoster
-  }, "Use standard roster")), React.createElement("div", {
+  }, "Use standard roster")), React.createElement("p", {
+    style: { fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 6px' }
+  }, "Set your starters, add a flex and bench — each team's roster sizes to match."), React.createElement("div", {
+    style: { padding: '2px 0' }
+  }, ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p]).map(pos => Stepper(pos + " starters", draft.roster[pos].starters, v => setStarter(pos, v), 0, 10)), Stepper("FLEX", draft.flex.count, v => update('flex.count', Math.max(0, v)), 0, 5), React.createElement("div", {
+    style: sStyle.stepRow
+  }, React.createElement("span", { style: sStyle.stepLbl }, "Superflex (QB in flex)"), React.createElement("button", {
+    type: "button",
+    onClick: () => setSuperflex(!_isSuperflex),
+    "aria-pressed": _isSuperflex,
+    title: "Allow a QB in your flex spot",
+    style: { width: 46, height: 26, borderRadius: 13, border: '1px solid var(--border-strong)', background: _isSuperflex ? 'var(--positive)' : 'var(--bg-elev)', position: 'relative', cursor: 'pointer', flex: '0 0 auto', padding: 0 }
+  }, React.createElement("span", { style: { position: 'absolute', top: 2, left: _isSuperflex ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left .15s' } }))), Stepper("Bench", _benchTotal(), v => setOpenBench(Math.max(0, v)), 0, 30)), React.createElement("div", {
+    style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }
+  }, React.createElement("b", { style: { color: 'var(--text-primary)' } }, _rosterTotal(), " players"), " per team · ", ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p] && draft.roster[p].starters > 0).map(p => draft.roster[p].starters + " " + p).join(" · "), draft.flex.count ? " · " + draft.flex.count + (_isSuperflex ? " SUPERFLEX" : " FLEX") : "", " · ", _benchTotal(), " bench"), React.createElement("button", {
+    type: "button",
+    style: sStyle.disc,
+    onClick: () => setAdvRoster(o => !o)
+  }, (advRoster ? "▾" : "▸") + " Advanced roster (per-position caps, flex eligibility)"), advRoster && React.createElement("div", {
     className: "settings-grid"
-  }, Object.entries(draft.roster).map(([pos, cfg]) => React.createElement(React.Fragment, {
+  }, Object.entries(draft.roster).map(([pos, cfg]) => React.createElement("div", {
+    className: "settings-row",
     key: pos
-  }, React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("label", null, pos, ", Total rostered"), React.createElement("input", {
+  }, React.createElement("label", null, pos, " max rostered"), React.createElement("input", {
     type: "number",
-    min: "0",
-    max: "10",
+    min: cfg.starters,
+    max: "12",
     value: cfg.total,
-    onChange: e => update(`roster.${pos}.total`, parseInt(e.target.value || 0))
-  })), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("label", null, pos, ", Starters"), React.createElement("input", {
-    type: "number",
-    min: "0",
-    max: cfg.total,
-    value: cfg.starters,
-    onChange: e => update(`roster.${pos}.starters`, parseInt(e.target.value || 0))
-  })))), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("label", null, "Open Bench Slots"), React.createElement("input", {
-    type: "number",
-    min: "0",
-    max: "30",
-    value: Object.entries(draft.roster).reduce((s, [p, c]) => s + Math.max(0, (c.total || 0) - (c.starters || 0)), 0),
-    onChange: e => setOpenBench(parseInt(e.target.value || 0))
-  })), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("label", null, "Flex slots"), React.createElement("input", {
-    type: "number",
-    min: "0",
-    max: "5",
-    value: draft.flex.count,
-    onChange: e => update('flex.count', parseInt(e.target.value || 0))
-  })), React.createElement("div", {
-    className: "settings-row"
-  }, React.createElement("label", null, "Superflex (QB-eligible flex)"), React.createElement("input", {
-    type: "checkbox",
-    checked: !!(draft.flex && draft.flex.eligible && draft.flex.eligible.includes('QB')),
-    onChange: e => {
-      setDraft(prev => {
-        const n = JSON.parse(JSON.stringify(prev));
-        n.flex = n.flex || {
-          count: 1,
-          eligible: ['RB', 'WR', 'TE']
-        };
-        const el = (n.flex.eligible || ['RB', 'WR', 'TE']).filter(x => x !== 'QB');
-        if (e.target.checked) el.push('QB');
-        n.flex.eligible = el;
-        return n;
-      });
-    },
-    style: {
-      width: 18,
-      height: 18,
-      accentColor: 'var(--gold-text)'
-    }
-  })), React.createElement("div", {
+    onChange: e => update(`roster.${pos}.total`, Math.max(cfg.starters, parseInt(e.target.value || 0)))
+  }))), React.createElement("div", {
     className: "settings-row"
   }, React.createElement("label", null, "Flex eligible positions"), React.createElement("input", {
     type: "text",
@@ -8056,7 +8064,11 @@ function SettingsModal({
       margin: '2px 0 0',
       gridColumn: '1 / -1'
     }
-  }, "One tap sets the common defaults, fine-tune any field below if your league differs."), React.createElement("div", {
+  }, "One tap sets the common defaults — open Advanced scoring only if your league is custom."), React.createElement("button", {
+    type: "button",
+    style: sStyle.disc,
+    onClick: () => setAdvScoring(o => !o)
+  }, (advScoring ? "▾" : "▸") + " Advanced scoring (yards per point, INTs, fumbles, custom)"), advScoring && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "settings-section-title"
   }, "Passing"), React.createElement("div", {
     className: "settings-grid"
@@ -8135,7 +8147,7 @@ function SettingsModal({
     step: "0.1",
     value: draft.scoring.rbReceptionPoints,
     onChange: e => update('scoring.rbReceptionPoints', parseFloat(e.target.value))
-  }))), React.createElement("div", {
+  })))), React.createElement("div", {
     style: {
       marginTop: 24,
       display: 'flex',
