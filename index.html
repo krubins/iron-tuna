@@ -6786,7 +6786,9 @@ function QuickDraftModal({
   onConfirm,
   onClose,
   players,
-  myTeam
+  myTeam,
+  draftedIds,
+  draftHistory
 }) {
   const [teamId, setTeamId] = useState(teams[0].id);
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
@@ -6837,6 +6839,44 @@ function QuickDraftModal({
     if (player.personalValue != null && av != null && player.personalValue > av) return 'Fits your build, his points lift your starting lineup more than his raw value suggests.';
     return 'Steady contributor at his price with no red flags in the projection.';
   })();
+  const _isSnake = (config.format || 'auction') === 'snake';
+  const _chip = col => ({ fontSize: 11, fontFamily: 'var(--font-mono)', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '2px 8px', color: col || 'var(--text-secondary)', whiteSpace: 'nowrap' });
+  const _risk = typeof riskScore === 'function' ? riskScore(player) : null;
+  const _riskTxt = (_risk != null && typeof riskLabel === 'function') ? riskLabel(_risk) : null;
+  const _riskCol = (_risk != null && typeof riskColor === 'function') ? riskColor(_risk) : 'var(--text-secondary)';
+  const _soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(player.team, player.position) : null;
+  const _inj = typeof injuryOf === 'function' ? injuryOf(player) : (player.injuryStatus || null);
+  const _mates = (players || []).filter(p => p.team === player.team && p.position === player.position).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+  const _depthIdx = _mates.findIndex(p => p.id === player.id);
+  const _role = (['RB', 'WR', 'TE'].indexOf(player.position) >= 0 && _mates.length > 1) ? (_depthIdx === 0 ? 'Lead ' + player.position : (_depthIdx === 1 && _mates[0] ? 'Backup to ' + _mates[0].name.split(' ').slice(-1)[0] : null)) : null;
+  const _projRank = (_isSnake && players) ? (players.slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).findIndex(p => p.id === player.id) + 1) : null;
+  const _adpGap = (_isSnake && player.adp != null && _projRank) ? Math.round(player.adp - _projRank) : null;
+  const _surplus = (!_isSnake && player.auctionValue != null && player.marketValue != null) ? (player.auctionValue - player.marketValue) : null;
+  const _survRows = (() => {
+    if (!_isSnake || !config.snake) return null;
+    const di = draftedIds || new Set();
+    const teamsN = config.teams || 12;
+    const slot = (config.snake && config.snake.draftSlot) || 1;
+    const maxR = config.snake.rounds || 16;
+    const pickAt = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
+    const cur = (di.size || 0) + 1;
+    let nr = 1;
+    while (pickAt(nr) < cur && nr < maxR) nr++;
+    const recent = (draftHistory || []).slice(-8).map(d => (players || []).find(p => p.id === d.playerId)).filter(Boolean);
+    const rows = [];
+    for (let k = 0; k < 6 && (nr + k) <= maxR; k++) {
+      const round = nr + k;
+      const tp = pickAt(round);
+      const passed = tp < cur;
+      rows.push({ round: round, passed: passed, s: passed ? null : Math.round(survivalProb(player, cur, Math.max(0, tp - cur), recent) * 100) });
+    }
+    return rows;
+  })();
+  const _researchEl = React.createElement(React.Fragment, null, React.createElement("div", {
+    style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 14 }
+  }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs")), _survRows && _survRows.length ? React.createElement("div", {
+    style: { marginBottom: 14 }
+  }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 } }, "Will he be there?"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, _survRows.map(rw => React.createElement("span", { key: rw.round, style: _chip(), title: rw.passed ? "Your round " + rw.round + " pick has already passed" : "Chance he lasts to your round " + rw.round + " pick" }, "R" + rw.round + " ", React.createElement("b", { style: { color: rw.passed ? 'var(--text-faint)' : (rw.s >= 70 ? '#46d39a' : rw.s >= 40 ? '#f0b24b' : '#ff6b6b') } }, rw.passed ? "—" : rw.s + "%"))))) : null);
   return React.createElement("div", {
     className: "modal-bg modal-left",
     onClick: onClose
@@ -6900,7 +6940,7 @@ function QuickDraftModal({
       color: '#f59e0b',
       fontWeight: 600
     }
-  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), (config.format || 'auction') === 'auction' && React.createElement("div", {
+  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _researchEl, (config.format || 'auction') === 'auction' && React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -14706,6 +14746,7 @@ function PlayersRail({
     players: players,
     seasonGames: seasonGames,
     myTeam: teams.find(t => t.isMine),
+    draftedIds: draftedIds,
     onConfirm: (teamId, price) => {
       onDraft(quick.id, teamId, price);
       setQuick(null);
@@ -21087,6 +21128,8 @@ function App() {
     seasonGames: SEASON_GAMES,
     players: personalizedPlayers,
     myTeam: myTeam,
+    draftedIds: draftedIds,
+    draftHistory: draftHistory,
     onConfirm: (teamId, price) => {
       handleDraft(assignPlayer.id, teamId, price);
       setAssignPlayer(null);
