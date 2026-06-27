@@ -19414,6 +19414,46 @@ function WillHeBeThere({ players, draftedIds, draftHistory, config }) {
   }, [q, rd, players, draftHistory, draftedIds, config]);
   return React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setOpen(o => !o), title: "Check the odds any player lasts to your pick in a chosen round" }, "Will he be there?"), open && React.createElement("div", { className: "whb-panel" }, React.createElement("div", { className: "whb-ac" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: q, onChange: e => { setQ(e.target.value); setShow(true); }, onFocus: () => setShow(true), onBlur: () => setTimeout(() => setShow(false), 170) }), (show && (q || '').trim()) ? React.createElement("div", { className: "whb-ac-list" }, (players || []).filter(function (p) { return p.name && p.name.toLowerCase().indexOf((q || '').toLowerCase().trim()) >= 0; }).slice(0, 6).map(function (p) { return React.createElement("div", { key: p.id, className: "whb-ac-item", onMouseDown: function () { setQ(p.name); setShow(false); } }, p.name, React.createElement("span", { className: "whb-ac-pos" }, " " + p.position)); })) : null), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: rd, onChange: e => setRd(e.target.value) }), result ? (result.err ? React.createElement("div", { className: "whb-res whb-err" }, result.err) : result.drafted ? React.createElement("div", { className: "whb-res" }, result.player.name + " is already off the board.") : result.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + result.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, result.odds + "%"), " chance " + result.player.name + " (ADP " + (result.player.adp != null ? Math.round(result.player.adp) : "?") + ") is still on the board at your round " + result.round + " pick (overall #" + result.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Type a player and a round to see his odds.")));
 }
+function QuickLogBar({ players, teams, draftedIds, config, onDraft }) {
+  const [q, setQ] = useState('');
+  const [show, setShow] = useState(false);
+  const [sel, setSel] = useState(null);
+  const [hi, setHi] = useState(0);
+  const isAuction = (config.format || 'auction') === 'auction';
+  const _my = (teams || []).find(t => t.isMine);
+  const [teamId, setTeamId] = useState(() => _my ? _my.id : ((teams && teams[0]) ? teams[0].id : ''));
+  const [price, setPrice] = useState('');
+  const di = draftedIds || new Set();
+  const matches = useMemo(() => {
+    const qq = (q || '').trim().toLowerCase();
+    if (!qq) return [];
+    return (players || []).filter(p => p.name && !di.has(p.id) && p.name.toLowerCase().indexOf(qq) >= 0).sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0)).slice(0, 7);
+  }, [q, players, di]);
+  function choose(p) { setSel(p); setShow(false); if (isAuction) setPrice(String(p.marketValue != null ? p.marketValue : (p.auctionValue || 1))); }
+  function commit() { if (!sel || teamId === '' || teamId == null) return; onDraft(sel.id, teamId, isAuction ? (parseInt(price, 10) || 1) : 0); setSel(null); setQ(''); setPrice(''); setShow(false); setHi(0); }
+  function reset() { setSel(null); setQ(''); setShow(false); setHi(0); }
+  function onKey(e) {
+    if (!matches.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHi(h => Math.min(matches.length - 1, h + 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi(h => Math.max(0, h - 1)); }
+    else if (e.key === 'Enter') { e.preventDefault(); choose(matches[hi] || matches[0]); }
+  }
+  const S = {
+    bar: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', background: 'var(--bg-panel)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '8px 12px', marginBottom: 12 },
+    lbl: { fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--gold-text)', whiteSpace: 'nowrap' },
+    wrap: { position: 'relative', flex: '1 1 220px', minWidth: 180 },
+    inp: { width: '100%', boxSizing: 'border-box', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '8px 11px', color: 'var(--text-primary)', fontSize: 14 },
+    list: { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 40, marginTop: 3, background: 'var(--bg-panel)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', overflow: 'hidden' },
+    item: on => ({ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '7px 11px', cursor: 'pointer', fontSize: 13.5, background: on ? 'var(--bg-elev)' : 'transparent' }),
+    meta: { color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 12 },
+    sel: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', padding: '6px 10px', background: 'var(--bg-elev)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)' },
+    team: { background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', color: 'var(--text-primary)', fontSize: 14 },
+    price: { width: 72, background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', color: 'var(--text-primary)', fontSize: 14 },
+    add: { background: 'var(--positive)', color: '#06281f', border: 'none', borderRadius: 'var(--radius-sm)', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', fontSize: 14 },
+    x: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }
+  };
+  return React.createElement("div", { style: S.bar, className: "no-print" }, React.createElement("span", { style: S.lbl }, "Log a pick"), sel ? React.createElement("span", { style: S.sel }, sel.name, React.createElement("span", { style: S.meta }, " " + sel.position + (sel.team ? " · " + sel.team : ""))) : React.createElement("div", { style: S.wrap }, React.createElement("input", { style: S.inp, placeholder: "Type a player name…", value: q, autoComplete: "off", onChange: e => { setQ(e.target.value); setShow(true); setHi(0); }, onFocus: () => setShow(true), onBlur: () => setTimeout(() => setShow(false), 170), onKeyDown: onKey }), (show && matches.length) ? React.createElement("div", { style: S.list }, matches.map((p, i) => React.createElement("div", { key: p.id, style: S.item(i === hi), onMouseEnter: () => setHi(i), onMouseDown: () => choose(p) }, React.createElement("span", null, p.name), React.createElement("span", { style: S.meta }, p.position + (isAuction ? " · $" + (p.auctionValue || 0) : (p.adp != null ? " · ADP " + Math.round(p.adp) : "")))))) : null), sel ? React.createElement(React.Fragment, null, React.createElement("select", { style: S.team, value: teamId == null ? '' : teamId, onChange: e => setTeamId(e.target.value), title: "Which team drafted him" }, (teams || []).map(t => React.createElement("option", { key: t.id, value: t.id }, (t.isMine ? "★ " : "") + t.name))), isAuction ? React.createElement("input", { style: S.price, type: "number", min: "1", placeholder: "$", value: price, autoFocus: true, onChange: e => setPrice(e.target.value), onKeyDown: e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }, title: "Winning bid" }) : null, React.createElement("button", { style: S.add, onClick: commit }, "Add"), React.createElement("button", { style: S.x, onClick: reset, title: "Cancel" }, "×")) : null);
+}
 function App() {
   const initialState = (() => {
     try {
@@ -20817,7 +20857,13 @@ function App() {
       flag: "seenBoardIntro",
       account: account,
       setAccount: setAccount
-    }, `Ghosted rows are the planner's projected best fills for your remaining slots${config.format === 'auction' ? ' and budget' : ''}. Pick a model up top to change strategy, or click a slot to lock a target.`), React.createElement("div", {
+    }, `Ghosted rows are the planner's projected best fills for your remaining slots${config.format === 'auction' ? ' and budget' : ''}. Pick a model up top to change strategy, or click a slot to lock a target.`), React.createElement(QuickLogBar, {
+      players: personalizedPlayers,
+      teams: teams,
+      draftedIds: draftedIds,
+      config: config,
+      onDraft: handleDraft
+    }), React.createElement("div", {
       className: "strategy-bar" + (config.format === 'snake' ? ' strategy-bar-snake' : '')
     }, (config.format !== 'snake' && React.createElement(BudgetSliders, {
       strategy: config.strategy,
