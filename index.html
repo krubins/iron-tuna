@@ -7891,6 +7891,19 @@ function SettingsModal({
       return n;
     });
   }
+  function applyTemplate(tpl) {
+    setDraft(prev => {
+      const n = JSON.parse(JSON.stringify(prev));
+      n.teams = tpl.teams;
+      n.scoring.receptionPoints = tpl.rec;
+      n.scoring.rbReceptionPoints = tpl.rec;
+      n.scoring.passingTD = tpl.passTD || 4;
+      Object.keys(n.roster).forEach(k => { if (PRESET_ROSTER[k]) n.roster[k] = { ...PRESET_ROSTER[k] }; });
+      n.flex = { count: 1, eligible: tpl.superflex ? ['RB', 'WR', 'TE', 'QB'] : ['RB', 'WR', 'TE'] };
+      if (tpl.budget && (n.format || 'auction') === 'auction') n.budget = tpl.budget;
+      return n;
+    });
+  }
   function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -7915,6 +7928,8 @@ function SettingsModal({
     const p = draft.scoring ? draft.scoring.receptionPoints : 0;
     return p >= 1 ? 'Full PPR' : p >= 0.5 ? 'Half-PPR' : 'Standard';
   })(), " · ", ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(x => draft.roster[x]).map(x => `${draft.roster[x].starters}${x}`).join('/'), draft.flex && draft.flex.count ? `/${draft.flex.count}FLEX` : ''), React.createElement("div", {
+    style: { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '6px 0 12px' }
+  }, React.createElement("span", { style: { fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 700, marginRight: 2 } }, "Quick start"), [['12-team PPR', { teams: 12, rec: 1, passTD: 4 }], ['10-team Half-PPR', { teams: 10, rec: 0.5, passTD: 4 }], ['12-team Standard', { teams: 12, rec: 0, passTD: 4 }], ['Superflex PPR', { teams: 12, rec: 1, passTD: 4, superflex: true }]].map(function (e) { return React.createElement("button", { key: e[0], type: "button", className: "preset-btn", title: "Fill these settings with a common league setup", onClick: function () { applyTemplate(e[1]); } }, e[0]); })), React.createElement("div", {
     className: "settings-section-title"
   }, "Import Your League Scoring"), React.createElement("p", {
     style: {
