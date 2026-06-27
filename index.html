@@ -6792,6 +6792,9 @@ function QuickDraftModal({
 }) {
   const [teamId, setTeamId] = useState(teams[0].id);
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
+  const [jab, setJab] = useState(null);
+  const _jabPool = typeof playerJabs === 'function' ? playerJabs(player, players, config) : [];
+  const _rollJab = () => { if (_jabPool.length) setJab(_jabPool[Math.floor(Math.random() * _jabPool.length)]); };
   const projVal = player.marketValue != null ? player.marketValue : player.auctionValue;
   const trueVal = player.auctionValue;
   const youVal = player.personalValue != null ? player.personalValue : trueVal;
@@ -6942,7 +6945,7 @@ function QuickDraftModal({
       color: '#f59e0b',
       fontWeight: 600
     }
-  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _researchEl, (config.format || 'auction') === 'auction' && React.createElement("div", {
+  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _researchEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: _rollJab, title: "Generate a jab to throw at whoever drafts him", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him"), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -9678,6 +9681,34 @@ function volumeFlag(player, players) {
     return null;
   }
   return null;
+}
+function playerJabs(player, players, config) {
+  if (!player) return ['Somebody actually drafted that guy. Bold.'];
+  const isSnake = (config && config.format) === 'snake';
+  const first = (player.name || 'He').split(' ')[0];
+  const pos = player.position;
+  const out = [];
+  const vol = typeof volumeFlag === 'function' ? volumeFlag(player, players) : null;
+  const tough = typeof toughSchedule === 'function' ? toughSchedule(player.team, player.position) : null;
+  const soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(player.team, player.position) : null;
+  const risk = typeof riskScore === 'function' ? riskScore(player) : null;
+  const inj = typeof injuryOf === 'function' ? injuryOf(player) : null;
+  const av = player.auctionValue, mv = player.marketValue;
+  if (vol && vol.t === 'RBBC') out.push(`Bold move drafting half a running back — ${first} splits that backfield like a Thanksgiving turkey.`);
+  if (tough && tough.late) out.push(`Enjoy ${first}'s playoff schedule. It's a meat grinder right when you need him most.`);
+  else if (tough && tough.early) out.push(`${first} opens against a murderers' row of defenses. Hope you like starting 0-3.`);
+  if (risk != null && risk >= 0.6) out.push(`${first}: boom-or-bust, and the tape says mostly bust. Brave little pick.`);
+  if (inj) out.push(`Drafting ${first} with a ${inj} tag? Living dangerously. Keep that trainer on speed dial.`);
+  if (!isSnake && av != null && mv != null && mv > av + 2) out.push(`You torched real money on ${first}. He's worth about $${av} and the whole room knows it.`);
+  if (isSnake && player.adp != null && typeof riskScore === 'function') out.push(`Reaching for ${first} this early? The board was begging you to wait a round.`);
+  if (pos === 'K' || pos === 'DEF') out.push(`A ${pos}? Already? Iron Tuna is physically cringing on your behalf.`);
+  if (soft && (soft.early || soft.late)) out.push(`Sure, ${first} has a soft stretch — and you'll still find a way to leave him on the bench that week.`);
+  out.push(`${first}? Cute. Adorable, even. Save him a seat in the consolation bracket.`);
+  out.push(`Bold of you to build around ${first}. The rest of us will send a fruit basket in Week 9.`);
+  out.push(`Locking in ${first}. Confidence is admirable — misplaced, but admirable.`);
+  out.push(`${first} to your squad. Somewhere, a fantasy analyst just sighed and closed his laptop.`);
+  out.push(`Congrats on ${first}. Nothing says "I peaked in the mock drafts" quite like that pick.`);
+  return out;
 }
 function scarcityFlags(players, draftedIds, config) {
   const map = new Map();
@@ -14715,6 +14746,15 @@ function PlayersRail({
       const valVal = p.auctionValue;
       const youVal = p.personalValue ?? p.marketValue ?? p.auctionValue;
       const rsk = riskScore(p);
+      const _rsoft = scheduleSoftness(p.team, p.position);
+      const _rtough = toughSchedule(p.team, p.position);
+      const _rvol = volumeFlag(p, players);
+      const _rinj = typeof injuryOf === 'function' ? injuryOf(p) : null;
+      const _railChips = [];
+      if (_rinj) _railChips.push(['✚', '#ff6b6b', 'Injury: ' + _rinj]);
+      if (_rvol) _railChips.push([_rvol.t, _rvol.tone === 'good' ? '#46d39a' : '#ff6b6b', _rvol.title]);
+      if (_rsoft && _rsoft.early) _railChips.push(['Soft 1-3', '#5aa9ff', 'Favorable early schedule (wks 1-3)']); else if (_rtough && _rtough.early) _railChips.push(['Tough 1-3', '#ff6b6b', 'Tough early schedule (wks 1-3)']);
+      if (_rsoft && _rsoft.late) _railChips.push(['Soft 15-17', '#b07cff', 'Favorable playoff schedule (wks 15-17)']); else if (_rtough && _rtough.late) _railChips.push(['Tough 15-17', '#ff6b6b', 'Tough playoff schedule (wks 15-17)']);
       const __tk = tierMap.get(p.id);
       if (showTiers && __tk !== undefined && __tk !== __prevTier) __rows.push(React.createElement("div", {
         key: 'sep-' + idx,
@@ -14781,7 +14821,7 @@ function PlayersRail({
         style: {
           color: riskColor(rsk)
         }
-      }, "●"), nextPickInfo && (function () { var s = Math.round(survivalProb(p, nextPickInfo.cur, nextPickInfo.until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; return React.createElement("span", { className: "rr-avail", title: "Estimated chance " + p.name + " is still available at your round " + nextPickInfo.round + " pick", style: { marginLeft: 6, fontWeight: 700, color: col } }, s + "%"); })()), React.createElement("button", {
+      }, "●"), nextPickInfo && (function () { var s = Math.round(survivalProb(p, nextPickInfo.cur, nextPickInfo.until, []) * 100); var col = s >= 70 ? '#46d39a' : s >= 40 ? '#f0b24b' : '#ff6b6b'; return React.createElement("span", { className: "rr-avail", title: "Estimated chance " + p.name + " is still available at your round " + nextPickInfo.round + " pick", style: { marginLeft: 6, fontWeight: 700, color: col } }, s + "%"); })(), _railChips.length ? React.createElement("span", { style: { display: 'inline-flex', flexWrap: 'wrap', gap: 3, marginLeft: 6, verticalAlign: 'middle' } }, _railChips.map((c, ci) => React.createElement("span", { key: ci, title: c[2], style: { fontSize: 8.5, fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '0.02em', whiteSpace: 'nowrap', border: '1px solid', borderColor: c[1] + '66', color: c[1], borderRadius: 3, padding: '0px 3px', lineHeight: 1.45 } }, c[0]))) : null), React.createElement("button", {
         className: "btn-secondary",
         onClick: () => setQuick(p)
       }, "Info"), (config && config.format !== 'snake') && React.createElement("button", {
