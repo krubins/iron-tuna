@@ -8225,6 +8225,7 @@ function TeamsBoard({
   onToggleTarget,
   slotOrder,
   onReorderSlot,
+  onViewCard,
   showPredicted = true
 }) {
   const MODEL_LABELS = {
@@ -8612,8 +8613,8 @@ function TeamsBoard({
       return React.createElement("div", {
         key: 'd' + i,
         className: "rg-slot rg-filled",
-        onClick: () => onRemovePick && onRemovePick(team.id, r.playerId),
-        title: "Click to undo this pick"
+        onClick: () => (dp && onViewCard) ? onViewCard(r.playerId) : (onRemovePick && onRemovePick(team.id, r.playerId)),
+        title: dp && onViewCard ? "View player card" : "Click to undo this pick"
       }, React.createElement("span", {
         className: "rg-label"
       }, _slotLabel(r.position)), React.createElement("span", {
@@ -8622,7 +8623,15 @@ function TeamsBoard({
         className: "rg-price"
       }, dp ? dp.position : r.position), React.createElement("span", {
         className: "rg-pts"
-      }, dp ? (dp.projectedPoints / games).toFixed(1) : ''));
+      }, dp ? (dp.projectedPoints / games).toFixed(1) : '', React.createElement("button", {
+        className: "undo-pick",
+        title: "Undo this pick",
+        style: { marginLeft: 6 },
+        onClick: e => {
+          e.stopPropagation();
+          onRemovePick && onRemovePick(team.id, r.playerId);
+        }
+      }, "×")));
     }), (showPredicted ? mockDraft.get(team.id) || [] : []).map((b, i) => React.createElement("div", {
       key: 'g' + i,
       className: "rg-slot rg-target rg-pred",
@@ -8691,7 +8700,7 @@ function TeamsBoard({
           without.splice(Math.min(targetIdx, without.length), 0, dr.id);
           onReorderSlot && onReorderSlot(team.id, pos, without);
         },
-        onClick: slot.drafted ? () => setDetail({
+        onClick: slot.drafted ? () => onViewCard ? onViewCard(slot.id) : setDetail({
           team,
           pick: team.roster.find(r => r.playerId === slot.id)
         }) : showAsOpen ? undefined : team.isMine ? () => onToggleTarget && onToggleTarget(slot.id) : () => onFocusPlayer && onFocusPlayer(slot.id),
@@ -21276,7 +21285,11 @@ function App() {
       targets: targets,
       onToggleTarget: handleToggleTarget,
       slotOrder: slotOrder,
-      onReorderSlot: handleReorderSlot
+      onReorderSlot: handleReorderSlot,
+      onViewCard: pid => {
+        const p = (personalizedPlayers || []).find(x => x.id === pid);
+        if (p) setAssignPlayer(p);
+      }
     })), !has(liveTier) && (() => {
       const ddt = config.format === 'snake' ? {
         title: 'Draft Day Mode, Live Snake Navigator',
