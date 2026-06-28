@@ -11925,6 +11925,8 @@ function ReferralModal({
   const [codeIn, setCodeIn] = useState((account && account.refCode) || genRefCode());
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmails, setInviteEmails] = useState('');
   const showForm = editing || !(code && account && account.refEmail && account.refPhone);
   function submitCode() {
     const em = (emailIn || '').trim();
@@ -11983,6 +11985,16 @@ function ReferralModal({
   const fb = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(link) + '&quote=' + encodeURIComponent(tweet);
   const li = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(link);
   const mail = 'mailto:?subject=' + encodeURIComponent('A free fantasy auction cheat sheet you should try') + '&body=' + encodeURIComponent(msg);
+  function emailFriends() {
+    const list = (inviteEmails || '').split(/[\s,;]+/).map(s => s.trim()).filter(s => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
+    if (!list.length) { setErr("Add at least one friend's email (separate multiple with commas)."); return; }
+    setErr('');
+    list.forEach(em => { try { fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: em, source: 'referral_invite', type: 'lead', code: code || '' }) }); } catch (e) {} });
+    try { ITAnalytics.track('refer_share', { via: 'email_invite', n: list.length }); } catch (e) {}
+    const url = 'mailto:' + list.join(',') + '?subject=' + encodeURIComponent('A free fantasy football cheat sheet you should try') + '&body=' + encodeURIComponent(msg);
+    try { window.location.href = url; } catch (e) {}
+    setInviteOpen(false); setInviteEmails('');
+  }
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
@@ -12048,8 +12060,8 @@ function ReferralModal({
     "aria-label": "Share via your device"
   }, "Share"), React.createElement("button", {
     className: "ds-sbtn",
-    onClick: () => openShare(mail, 'email'),
-    "aria-label": "Email a friend"
+    onClick: () => setInviteOpen(o => !o),
+    "aria-label": "Email friends"
   }, "Email"), React.createElement("button", {
     className: "ds-sbtn",
     onClick: () => openShare(x, 'x'),
@@ -12066,7 +12078,7 @@ function ReferralModal({
     className: "ds-sbtn",
     onClick: () => copy('msg', msg),
     "aria-label": "Copy the share text"
-  }, copied === 'msg' ? 'Copied!' : 'Copy text'))), React.createElement("div", {
+  }, copied === 'msg' ? 'Copied!' : 'Copy text')), inviteOpen && React.createElement("div", { style: { marginTop: 12, padding: '12px', background: 'var(--bg-elev)', border: '1px solid var(--border-strong)', borderRadius: 10 } }, React.createElement("div", { style: { fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 6 } }, "Email it to friends"), React.createElement("textarea", { value: inviteEmails, onChange: e => setInviteEmails(e.target.value), placeholder: "friend1@email.com, friend2@email.com", rows: 2, style: { width: '100%', boxSizing: 'border-box', background: 'var(--bg-panel)', border: '1px solid var(--border-strong)', borderRadius: 8, padding: '9px 11px', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', resize: 'vertical' } }), React.createElement("div", { style: { fontSize: 11.5, color: 'var(--text-muted)', margin: '6px 0 10px', lineHeight: 1.4 } }, "Separate with commas. We save them so you get referral credit, then open a pre-addressed email in your mail app with your link ready to send."), err && React.createElement("div", { style: { fontSize: 12.5, color: '#ff6b6b', marginBottom: 8 } }, err), React.createElement("button", { className: "rf-getcode", onClick: emailFriends, style: { width: '100%' } }, "Open pre-addressed email"))), React.createElement("div", {
     className: "ds-ref"
   }, "You earn $3 for every friend who buys the Full Site ($9.99) with your code, and they get $1 off. We send your $3 by PayPal to the email on your referral code once their purchase clears. ", React.createElement("a", {
     href: "/creators",
