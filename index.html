@@ -11923,6 +11923,7 @@ function ReferralModal({
   const [emailIn, setEmailIn] = useState((account && (account.refEmail || (account.user && account.user.email))) || '');
   const [phoneIn, setPhoneIn] = useState((account && account.refPhone) || '');
   const [codeIn, setCodeIn] = useState((account && account.refCode) || genRefCode());
+  const [passIn, setPassIn] = useState('');
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -11935,9 +11936,10 @@ function ReferralModal({
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { setErr('Enter a valid email address.'); return; }
     if (ph.replace(/\D/g, '').length < 10) { setErr('Enter a valid phone number (at least 10 digits).'); return; }
     if (cd.length < 4 || cd.length > 16) { setErr('Your code must be 4-16 letters or numbers.'); return; }
+    if ((passIn || '').length < 4) { setErr('Set a password (at least 4 characters) so you can check your signups.'); return; }
     setErr('Checking that code…');
     let claim = null;
-    try { const r = await fetch('/api/claim-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: cd, email: em, phone: ph }) }); claim = await r.json(); } catch (e) {}
+    try { const r = await fetch('/api/claim-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: cd, email: em, phone: ph, password: passIn }) }); claim = await r.json(); } catch (e) {}
     if (claim && claim.taken) { setErr('That code is already taken — pick another.'); return; }
     setErr('');
     setEditing(false);
@@ -12024,7 +12026,9 @@ function ReferralModal({
     type: "tel", value: phoneIn, onChange: e => setPhoneIn(e.target.value), placeholder: "(555) 123-4567", style: _inp, "aria-label": "Mobile phone"
   }), React.createElement("label", { style: _lbl }, "Choose your referral code"), React.createElement("input", {
     type: "text", value: codeIn, onChange: e => setCodeIn(e.target.value.toUpperCase()), placeholder: "e.g. KEN2026", maxLength: 16, style: { ..._inp, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }, "aria-label": "Your referral code"
-  }), React.createElement("div", { style: { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.4 } }, "4-16 letters or numbers. Make it your own, or keep the suggestion. We use your email and phone to pay out referrals and confirm it's you."), err && React.createElement("div", { style: { fontSize: 12.5, color: '#ff6b6b' } }, err), React.createElement("button", {
+  }), React.createElement("label", { style: _lbl }, "Set a password (to check your signups later)"), React.createElement("input", {
+    type: "password", value: passIn, onChange: e => setPassIn(e.target.value), placeholder: "at least 4 characters", style: _inp, "aria-label": "Affiliate password"
+  }), React.createElement("div", { style: { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.4 } }, "4-16 letters or numbers for the code. We pay out referrals to your email/phone. Your password lets you sign in at irontuna.com/?affiliate=1 to see who signed up under your code."), err && React.createElement("div", { style: { fontSize: 12.5, color: '#ff6b6b' } }, err), React.createElement("button", {
     className: "rf-getcode",
     onClick: submitCode,
     style: { marginTop: 2 }
@@ -19819,6 +19823,32 @@ function QuickLogBar({ players, teams, draftedIds, config, onDraft }) {
   };
   return React.createElement("div", { style: S.bar, className: "no-print" }, React.createElement("span", { style: S.lbl }, "Log a pick"), sel ? React.createElement("span", { style: S.sel }, sel.name, React.createElement("span", { style: S.meta }, " " + sel.position + (sel.team ? " · " + sel.team : ""))) : React.createElement("div", { style: S.wrap }, React.createElement("input", { style: S.inp, placeholder: "Type a player name…", value: q, autoComplete: "off", onChange: e => { setQ(e.target.value); setShow(true); setHi(0); }, onFocus: () => setShow(true), onBlur: () => setTimeout(() => setShow(false), 170), onKeyDown: onKey }), (show && matches.length) ? React.createElement("div", { style: S.list }, matches.map((p, i) => React.createElement("div", { key: p.id, style: S.item(i === hi), onMouseEnter: () => setHi(i), onMouseDown: () => choose(p) }, React.createElement("span", null, p.name), React.createElement("span", { style: S.meta }, p.position + (isAuction ? " · $" + (p.auctionValue || 0) : (p.adp != null ? " · ADP " + Math.round(p.adp) : "")))))) : null), sel ? React.createElement(React.Fragment, null, React.createElement("select", { style: S.team, value: teamId == null ? '' : teamId, onChange: e => setTeamId(e.target.value), title: "Which team drafted him" }, (teams || []).map(t => React.createElement("option", { key: t.id, value: t.id }, (t.isMine ? "★ " : "") + t.name))), isAuction ? React.createElement("input", { style: S.price, type: "number", min: "1", placeholder: "$", value: price, autoFocus: true, onChange: e => setPrice(e.target.value), onKeyDown: e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }, title: "Winning bid" }) : null, React.createElement("button", { style: S.add, onClick: commit }, "Add"), React.createElement("button", { style: S.x, onClick: reset, title: "Cancel" }, "×")) : null);
 }
+function AffiliatePortal() {
+  const [code, setCode] = useState('');
+  const [pass, setPass] = useState('');
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  async function login() {
+    const cd = (code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (cd.length < 4 || (pass || '').length < 4) { setErr('Enter your referral code and password.'); return; }
+    setLoading(true); setErr('');
+    try {
+      const r = await fetch('/api/affiliate-stats', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: cd, password: pass }) });
+      const j = await r.json();
+      if (j && j.ok) setData(j); else setErr("That code and password don't match — check both, or set a password by re-saving your code in Refer & Earn.");
+    } catch (e) { setErr('Could not reach the server.'); }
+    setLoading(false);
+  }
+  const inp = { width: '100%', boxSizing: 'border-box', background: 'var(--bg-base)', border: '1px solid var(--border-strong)', borderRadius: 8, padding: '10px 12px', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'inherit', marginTop: 8 };
+  const btn = { background: 'var(--gold-text, #e3b53a)', color: '#1a1205', border: 'none', borderRadius: 8, padding: '10px 14px', fontWeight: 700, fontSize: 14, cursor: 'pointer', width: '100%', marginTop: 12 };
+  const page = ch => React.createElement("div", { style: { minHeight: '100vh', background: 'var(--bg-base, #0b1117)', color: 'var(--text-primary)', fontFamily: 'var(--font-body, system-ui)' } }, ch);
+  const stat = (label, val) => React.createElement("div", { style: { flex: '1 1 130px', background: 'var(--bg-panel)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '12px 14px' } }, React.createElement("div", { style: { fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' } }, label), React.createElement("div", { style: { fontSize: 22, fontWeight: 700, marginTop: 2 } }, val));
+  if (!data) {
+    return page(React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 20 } }, React.createElement("div", { style: { width: '100%', maxWidth: 360, background: 'var(--bg-panel)', border: '1px solid var(--border-strong)', borderRadius: 12, padding: 24 } }, React.createElement("div", { style: { fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: '0.04em', marginBottom: 6 } }, "Affiliate Sign-in"), React.createElement("p", { style: { fontSize: 13, color: 'var(--text-muted)', margin: '0 0 14px', lineHeight: 1.5 } }, "Enter your referral code and the password you set in Refer & Earn, to see who signed up under your code."), React.createElement("input", { type: "text", value: code, onChange: e => setCode(e.target.value.toUpperCase()), placeholder: "Your referral code", style: { ...inp, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }, "aria-label": "Referral code" }), React.createElement("input", { type: "password", value: pass, onChange: e => setPass(e.target.value), onKeyDown: e => { if (e.key === 'Enter') login(); }, placeholder: "Your password", style: inp, "aria-label": "Password" }), err && React.createElement("div", { style: { color: '#ff6b6b', fontSize: 12.5, marginTop: 8, lineHeight: 1.4 } }, err), React.createElement("button", { onClick: login, disabled: loading, style: btn }, loading ? "Checking…" : "View my signups"))));
+  }
+  return page(React.createElement("div", { style: { maxWidth: 640, margin: '0 auto', padding: '28px 20px 60px' } }, React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 } }, React.createElement("div", null, React.createElement("div", { style: { fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '0.04em' } }, "Your Referrals"), React.createElement("div", { style: { fontSize: 13, color: 'var(--text-muted)', marginTop: 2 } }, "Code ", React.createElement("b", { style: { color: 'var(--gold-text)', fontFamily: 'var(--font-mono)' } }, data.code))), React.createElement("button", { onClick: () => { setData(null); setPass(''); }, style: { background: 'var(--bg-elev)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, cursor: 'pointer' } }, "Sign out")), React.createElement("div", { style: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 } }, stat("Sign-ups", data.purchaseCount), stat("Owed to you", '$' + data.owed), stat("Link clicks", data.clicks)), data.purchaseCount === 0 ? React.createElement("div", { style: { color: 'var(--text-muted)', padding: 20, textAlign: 'center', border: '1px solid var(--border-subtle)', borderRadius: 10 } }, "No paid sign-ups under your code yet. Share your link and they'll show up here.") : React.createElement("div", { style: { border: '1px solid var(--border-subtle)', borderRadius: 10, overflow: 'hidden' } }, React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, padding: '11px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-elev)', fontWeight: 700, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' } }, React.createElement("span", null, "Buyer"), React.createElement("span", { style: { textAlign: 'right' } }, "Date")), data.purchases.map((p, i) => React.createElement("div", { key: i, style: { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, padding: '9px 16px', borderBottom: '1px solid var(--border-subtle)', fontSize: 13 } }, React.createElement("span", null, p.email), React.createElement("span", { style: { textAlign: 'right', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 } }, p.date)))), React.createElement("p", { style: { fontSize: 11.5, color: 'var(--text-muted)', marginTop: 14, lineHeight: 1.5 } }, "$3 per paid sign-up. Buyer emails are masked for privacy. Payouts go by PayPal to the email on your code once purchases clear.")));
+}
 function AdminScoreboard() {
   const [keyInput, setKeyInput] = useState('');
   const [adminKey, setAdminKey] = useState(() => { try { return sessionStorage.getItem('it_admin_key') || ''; } catch (e) { return ''; } });
@@ -21518,6 +21548,8 @@ function App() {
   const __site = (() => { const p = (() => { try { return window.location.pathname || '/'; } catch (e) { return '/'; } })(); return p.indexOf('/snakedraft') === 0 ? 'snake' : p.indexOf('/auctiondraft') === 0 ? 'auction' : 'hub'; })();
   const __admin = (() => { try { const sp = new URLSearchParams(window.location.search); return sp.get('admin') === '1' || (window.location.pathname || '').replace(/\/+$/, '') === '/admin'; } catch (e) { return false; } })();
   if (__admin) return React.createElement(AdminScoreboard, null);
+  const __affiliate = (() => { try { const sp = new URLSearchParams(window.location.search); return sp.get('affiliate') === '1' || (window.location.pathname || '').replace(/\/+$/, '') === '/affiliate'; } catch (e) { return false; } })();
+  if (__affiliate) return React.createElement(AffiliatePortal, null);
   if (__site === 'hub') return React.createElement(HubLanding, { account: account, setAccount: setAccount, onPick: (fmt) => { try { window.location.href = fmt === 'snake' ? '/snakedraft' : '/auctiondraft'; } catch (e) {} }, onSignin: () => { try { window.location.href = '/auctiondraft?signin=1'; } catch (e) {} }, onTerms: () => { try { window.location.href = '/terms'; } catch (e) {} } });
   return React.createElement("div", {
     className: "app" + (view === 'board' ? ' has-snake-rail' : '')

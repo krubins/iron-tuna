@@ -543,6 +543,7 @@ export default {
       const email = (b.email || '').trim().toLowerCase();
       const phone = String(b.phone || '').slice(0, 40);
       const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+      const password = String(b.password || '');
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
       if (code.length < 4) return json({ ok: false, error: 'invalid_code' }, 400, c);
       if (!env.LEADS_DB) return json({ ok: true, code: code }, 200, c);
@@ -551,8 +552,26 @@ export default {
         const row = await env.LEADS_DB.prepare('SELECT email FROM codes WHERE code = ?').bind(code).first();
         if (!row || (row.email || '').toLowerCase() !== email) return json({ ok: false, taken: true }, 200, c);
         await env.LEADS_DB.prepare('UPDATE codes SET phone = ? WHERE code = ?').bind(phone, code).run();
+        if (password && password.length >= 4 && env.AUTH_SECRET) { const ph = await hmacSign(env.AUTH_SECRET, code + ':' + password); await env.LEADS_DB.prepare('UPDATE codes SET pass_hash = ? WHERE code = ?').bind(ph, code).run(); }
         return json({ ok: true, code: code }, 200, c);
       } catch (e) { return json({ ok: true, code: code }, 200, c); }
+    }
+    if (url.pathname === '/api/affiliate-stats' && request.method === 'POST') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+      const password = String(b.password || '');
+      if (!code || !password || !env.LEADS_DB || !env.AUTH_SECRET) return json({ ok: false, error: 'bad_login' }, 401, c);
+      try {
+        const row = await env.LEADS_DB.prepare('SELECT email, phone, pass_hash, created_at FROM codes WHERE code = ?').bind(code).first();
+        if (!row || !row.pass_hash) return json({ ok: false, error: 'bad_login' }, 401, c);
+        const ph = await hmacSign(env.AUTH_SECRET, code + ':' + password);
+        if (!timingSafeEq(ph, row.pass_hash)) return json({ ok: false, error: 'bad_login' }, 401, c);
+        const purchases = ((await env.LEADS_DB.prepare("SELECT email, created_at FROM contacts WHERE ref = ? AND type = 'purchase' ORDER BY created_at DESC").bind(code).all()).results) || [];
+        const lc = await env.LEADS_DB.prepare("SELECT count(*) AS n FROM contacts WHERE ref = ? AND type != 'purchase' AND type != 'referrer'").bind(code).first();
+        const mask = e => { const s = String(e || ''); const at = s.indexOf('@'); return at < 1 ? s : s[0] + '***' + s.slice(at); };
+        return json({ ok: true, code: code, email: row.email, phone: row.phone, since: row.created_at, purchases: purchases.map(p => ({ email: mask(p.email), date: new Date(p.created_at || 0).toISOString().slice(0, 10) })), purchaseCount: purchases.length, owed: purchases.length * 3, clicks: (lc && lc.n) || 0 }, 200, c);
+      } catch (e) { return json({ ok: false, error: 'server' }, 500, c); }
     }
     if (url.pathname === '/api/auth/request' && request.method === 'POST') {
       const c = corsHeaders(request.headers.get('Origin'));
