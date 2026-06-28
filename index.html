@@ -19043,6 +19043,13 @@ function AuthModal({
   reason
 }) {
   const [email, setEmail] = useState(account.user ? account.user.email : '');
+  const [restoreSent, setRestoreSent] = useState(false);
+  async function sendRestore() {
+    const em = (email || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return;
+    try { await fetch('/api/auth/request', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: em }) }); } catch (e) {}
+    setRestoreSent(true);
+  }
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
@@ -19099,7 +19106,17 @@ function AuthModal({
       marginTop: 10
     },
     onClick: () => onSignIn(email.trim())
-  }, "Continue"), React.createElement("p", {
+  }, "Continue"), React.createElement("div", {
+    style: { marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }
+  }, restoreSent ? React.createElement("p", {
+    style: { fontSize: 12.5, color: 'var(--positive)', margin: 0, lineHeight: 1.5 }
+  }, "If that email has a purchase, a one-time sign-in link is on its way (expires in 15 minutes). Open it on this device to unlock Draft Day Mode.") : React.createElement(React.Fragment, null, React.createElement("p", {
+    style: { fontSize: 12, color: 'var(--text-muted)', margin: '0 0 7px', lineHeight: 1.5 }
+  }, "Already bought Draft Day Mode? Restore it on this device or a new one:"), React.createElement("button", {
+    className: "btn-secondary",
+    style: { width: '100%' },
+    onClick: sendRestore
+  }, "Email me a sign-in link"))), React.createElement("p", {
     style: {
       fontSize: 11,
       color: 'var(--text-muted)',
@@ -19993,6 +20010,17 @@ function App() {
         clean();
       }
     } catch (e) {}
+  }, []);
+  useEffect(() => {
+    let restored = false;
+    try { const sp = new URLSearchParams(window.location.search); restored = sp.get('restored') === '1'; const l = sp.get('login'); if (l === 'used' || l === 'invalid') setPurchaseToast({ text: 'That sign-in link expired or was already used — request a new one.', tone: 'bad', id: Date.now() }); } catch (e) {}
+    fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => r.json()).then(d => {
+      if (d && d.entitled) {
+        setAccount(a => ({ ...a, entitlements: { ...(a.entitlements || {}), bundle: true }, user: a.user || { email: d.email } }));
+        if (restored) setPurchaseToast({ text: '✓ Signed in — your purchase is unlocked on this device.', tone: 'good', id: Date.now() });
+      }
+    }).catch(() => {});
+    try { const u = new URL(window.location.href); ['restored', 'login'].forEach(k => u.searchParams.delete(k)); window.history.replaceState({}, '', u.pathname + (u.search || '')); } catch (e) {}
   }, []);
   const has = id => entitled(account, id);
   const liveTier = config.format === 'snake' ? 'snake' : config.format === 'bestball' ? 'bestball' : 'auction';
