@@ -12046,7 +12046,11 @@ function ReferralModal({
     onClick: () => setEditing(true),
     title: "Change your code, email, or phone",
     style: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', padding: 0, margin: '2px 0 4px', alignSelf: 'flex-start' }
-  }, "Edit code & contact info"), React.createElement("div", {
+  }, "Edit code & contact info"), React.createElement("a", {
+    href: "/?affiliate=1",
+    title: "Sign in with your code + password to see who signed up under you",
+    style: { color: 'var(--gold-text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, textDecoration: 'none', margin: '0 0 6px', alignSelf: 'flex-start' }
+  }, "📊 Track your sign-ups →"), React.createElement("div", {
     className: "rf-linkrow"
   }, React.createElement("input", {
     className: "rf-link",
