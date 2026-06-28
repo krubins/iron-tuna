@@ -11928,16 +11928,20 @@ function ReferralModal({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmails, setInviteEmails] = useState('');
   const showForm = editing || !(code && account && account.refEmail && account.refPhone);
-  function submitCode() {
+  async function submitCode() {
     const em = (emailIn || '').trim();
     const ph = (phoneIn || '').trim();
     const cd = (codeIn || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { setErr('Enter a valid email address.'); return; }
     if (ph.replace(/\D/g, '').length < 10) { setErr('Enter a valid phone number (at least 10 digits).'); return; }
     if (cd.length < 4 || cd.length > 16) { setErr('Your code must be 4-16 letters or numbers.'); return; }
+    setErr('Checking that code…');
+    let claim = null;
+    try { const r = await fetch('/api/claim-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: cd, email: em, phone: ph }) }); claim = await r.json(); } catch (e) {}
+    if (claim && claim.taken) { setErr('That code is already taken — pick another.'); return; }
     setErr('');
     setEditing(false);
-    setAccount(a => Object.assign({}, a, { refCode: cd, refEmail: em, refPhone: ph }));
+    setAccount(a => Object.assign({}, a, { refCode: (claim && claim.code) || cd, refEmail: em, refPhone: ph }));
     ITAnalytics.track('refcode_created', {});
     try {
       fetch('/api/lead', {

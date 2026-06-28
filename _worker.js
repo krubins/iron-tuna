@@ -509,6 +509,25 @@ export default {
       await saveContact(env, { email: email, phone: String(body.phone || '').slice(0, 40), source: body.source || 'cheatsheet', type: body.type || 'lead', ref: body.code || '', path: '' });
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
     }
+    if (url.pathname === '/api/claim-code') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      const email = (b.email || '').trim().toLowerCase();
+      const phone = String(b.phone || '').slice(0, 40);
+      const code = String(b.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
+      if (code.length < 4) return json({ ok: false, error: 'invalid_code' }, 400, c);
+      if (!env.LEADS_DB) return json({ ok: true, code: code }, 200, c);
+      try {
+        await env.LEADS_DB.prepare('INSERT OR IGNORE INTO codes (code, email, phone, created_at) VALUES (?, ?, ?, ?)').bind(code, email, phone, Date.now()).run();
+        const row = await env.LEADS_DB.prepare('SELECT email FROM codes WHERE code = ?').bind(code).first();
+        if (!row || (row.email || '').toLowerCase() !== email) return json({ ok: false, taken: true }, 200, c);
+        await env.LEADS_DB.prepare('UPDATE codes SET phone = ? WHERE code = ?').bind(phone, code).run();
+        return json({ ok: true, code: code }, 200, c);
+      } catch (e) { return json({ ok: true, code: code }, 200, c); }
+    }
     if (url.pathname === '/api/leads/export') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
@@ -541,7 +560,7 @@ export default {
       const email = String(b.email || '').slice(0, 120);
       const phone = String(b.phone || '').slice(0, 40);
       if (env.LEAD_WEBHOOK && email) {
-        try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), phone: phone, source: 'checkout', type: 'purchase', ts: Date.now() }) }); } catch (e) {}
+        try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), phone: phone, source: 'checkout', type: 'purchase', code: ref || null, ts: Date.now() }) }); } catch (e) {}
       }
       if (email) { await saveContact(env, { email: email.toLowerCase(), phone: phone, source: 'checkout', type: 'purchase', ref: ref, path: String(b.path || '') }); }
       const auth = { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY };
