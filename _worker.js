@@ -18,6 +18,32 @@ const corsHeaders = (origin) => ({
 });
 const json = (obj, status, c) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', ...c } });
 
+// ── auth helpers (magic-link login + device cap) ──
+function b64urlEncode(bytes) { let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function b64urlToBytes(str) { str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; const b = atob(str); const o = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) o[i] = b.charCodeAt(i); return o; }
+async function hmacSign(secret, data) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(data)); return b64urlEncode(new Uint8Array(sig)); }
+function timingSafeEq(a, b) { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; }
+async function makeToken(secret, obj) { const p = b64urlEncode(new TextEncoder().encode(JSON.stringify(obj))); return p + '.' + await hmacSign(secret, p); }
+async function readToken(secret, token) { const parts = (token || '').split('.'); if (parts.length !== 2) return null; if (!timingSafeEq(parts[1], await hmacSign(secret, parts[0]))) return null; try { const o = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0]))); if (o.exp && Date.now() > o.exp) return null; return o; } catch (e) { return null; } }
+function parseCookie(str) { const o = {}; (str || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = p.slice(i + 1).trim(); }); return o; }
+async function isEntitled(env, email) {
+  // Authoritative: the entitlements table, written only on a VERIFIED-paid session
+  // (see /api/checkout/verify + stripe-webhook). Do NOT fall back to contacts:
+  // /api/checkout writes a 'purchase' contact at checkout START, before payment.
+  if (!email || !env.LEADS_DB) return false;
+  try { return !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) { return false; }
+}
+async function grantEntitlement(env, email) {
+  if (!email || !env.LEADS_DB) return;
+  try { await env.LEADS_DB.prepare('INSERT OR REPLACE INTO entitlements (email, product, paid_at) VALUES (?, ?, ?)').bind(email.toLowerCase(), 'bundle', Date.now()).run(); } catch (e) {}
+}
+async function sendLoginEmail(env, email, link) {
+  if (!env.RESEND_API_KEY) return;
+  const from = env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
+  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to unlock your purchase on this device:</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
+  try { await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: from, to: email, subject: 'Your Iron Tuna sign-in link', html: html }) }); } catch (e) {}
+}
+
 // ── projections data kept server-side (not shipped in the client HTML) ──
 const IT_KEY = 'IT_pk_7c1a93f0';
 const PROJ_KEY = 'tn$9xQ27z';
@@ -528,6 +554,48 @@ export default {
         return json({ ok: true, code: code }, 200, c);
       } catch (e) { return json({ ok: true, code: code }, 200, c); }
     }
+    if (url.pathname === '/api/auth/request' && request.method === 'POST') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      const email = String(b.email || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: true }, 200, c);
+      if (env.RATE_KV) { const k = 'mlreq:' + email; const n = parseInt(await env.RATE_KV.get(k) || '0', 10); if (n >= 5) return json({ ok: true }, 200, c); await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 86400 }); }
+      if (env.AUTH_SECRET && await isEntitled(env, email)) {
+        const nonce = crypto.randomUUID();
+        if (env.RATE_KV) await env.RATE_KV.put('mln:' + nonce, '1', { expirationTtl: 900 });
+        const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', exp: Date.now() + 15 * 60 * 1000 });
+        await sendLoginEmail(env, email, url.origin + '/api/auth/verify?token=' + encodeURIComponent(token));
+      }
+      return json({ ok: true }, 200, c);
+    }
+    if (url.pathname === '/api/auth/verify') {
+      const o = env.AUTH_SECRET ? await readToken(env.AUTH_SECRET, url.searchParams.get('token') || '') : null;
+      if (!o || o.t !== 'magic') return Response.redirect(url.origin + '/?login=invalid', 302);
+      if (env.RATE_KV) { if (!(await env.RATE_KV.get('mln:' + o.n))) return Response.redirect(url.origin + '/?login=used', 302); await env.RATE_KV.delete('mln:' + o.n); }
+      const email = o.e, now = Date.now(), sid = crypto.randomUUID(), cap = parseInt(env.MAX_DEVICES || '3', 10);
+      if (env.LEADS_DB) {
+        try {
+          const rows = ((await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE email=? ORDER BY last_seen ASC').bind(email).all()).results) || [];
+          for (let i = 0; i < rows.length - (cap - 1); i++) await env.LEADS_DB.prepare('DELETE FROM sessions WHERE id=?').bind(rows[i].id).run();
+          await env.LEADS_DB.prepare('INSERT INTO sessions (id,email,created_at,last_seen,ua) VALUES (?,?,?,?,?)').bind(sid, email, now, now, (request.headers.get('user-agent') || '').slice(0, 200)).run();
+        } catch (e) {}
+      }
+      const sess = await makeToken(env.AUTH_SECRET, { sid: sid, e: email, t: 'sess', exp: now + 90 * 24 * 3600 * 1000 });
+      return new Response(null, { status: 302, headers: { 'Location': url.origin + '/?restored=1', 'Set-Cookie': 'it_sess=' + sess + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (90 * 24 * 3600) } });
+    }
+    if (url.pathname === '/api/auth/me') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      const o = env.AUTH_SECRET ? await readToken(env.AUTH_SECRET, parseCookie(request.headers.get('Cookie'))['it_sess']) : null;
+      if (!o || o.t !== 'sess') return json({ entitled: false }, 200, c);
+      if (env.LEADS_DB) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return json({ entitled: false }, 200, c); await env.LEADS_DB.prepare('UPDATE sessions SET last_seen=? WHERE id=?').bind(Date.now(), o.sid).run(); } catch (e) {} }
+      return json({ entitled: await isEntitled(env, o.e), email: o.e, product: 'bundle' }, 200, c);
+    }
+    if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      const o = env.AUTH_SECRET ? await readToken(env.AUTH_SECRET, parseCookie(request.headers.get('Cookie'))['it_sess']) : null;
+      if (o && o.sid && env.LEADS_DB) { try { await env.LEADS_DB.prepare('DELETE FROM sessions WHERE id=?').bind(o.sid).run(); } catch (e) {} }
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...c, 'content-type': 'application/json', 'Set-Cookie': 'it_sess=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0' } });
+    }
     if (url.pathname === '/api/leads/export') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
@@ -612,7 +680,10 @@ export default {
       try {
         const r = await fetch('https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(cs), { headers: { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY } });
         const j = await r.json().catch(() => ({}));
-        return json({ paid: !!(j && j.payment_status === 'paid'), email: (j.customer_details && j.customer_details.email) || null, ref: (j.metadata && j.metadata.ref) || null }, 200, c);
+        const paid = !!(j && j.payment_status === 'paid');
+        const buyer = (j.customer_details && j.customer_details.email) || null;
+        if (paid && buyer) await grantEntitlement(env, buyer);
+        return json({ paid: paid, email: buyer, ref: (j.metadata && j.metadata.ref) || null }, 200, c);
       } catch (e) { return json({ paid: false }, 200, c); }
     }
     if (url.pathname === '/api/stripe-webhook') {
@@ -624,6 +695,7 @@ export default {
       if (evt && evt.type === 'checkout.session.completed') {
         const s = (evt.data && evt.data.object) || {};
         const rec = { event: 'referral_sale', ref: (s.metadata && s.metadata.ref) || s.client_reference_id || null, buyer_email: (s.customer_details && s.customer_details.email) || s.customer_email || null, amount_total: s.amount_total, currency: s.currency, session: s.id, ts: Date.now() };
+        if (rec.buyer_email) await grantEntitlement(env, rec.buyer_email);
         if (rec.ref && env.REFERRAL_WEBHOOK) { try { await fetch(env.REFERRAL_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(rec) }); } catch (e) {} }
         if (env.ANALYTICS_WEBHOOK) { try { await fetch(env.ANALYTICS_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(rec) }); } catch (e) {} }
       }
