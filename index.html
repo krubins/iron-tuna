@@ -11921,6 +11921,8 @@ function ReferralModal({
   const [phoneIn, setPhoneIn] = useState((account && account.refPhone) || '');
   const [codeIn, setCodeIn] = useState((account && account.refCode) || genRefCode());
   const [err, setErr] = useState('');
+  const [editing, setEditing] = useState(false);
+  const showForm = editing || !(code && account && account.refEmail && account.refPhone);
   function submitCode() {
     const em = (emailIn || '').trim();
     const ph = (phoneIn || '').trim();
@@ -11929,6 +11931,7 @@ function ReferralModal({
     if (ph.replace(/\D/g, '').length < 10) { setErr('Enter a valid phone number (at least 10 digits).'); return; }
     if (cd.length < 4 || cd.length > 16) { setErr('Your code must be 4-16 letters or numbers.'); return; }
     setErr('');
+    setEditing(false);
     setAccount(a => Object.assign({}, a, { refCode: cd, refEmail: em, refPhone: ph }));
     ITAnalytics.track('refcode_created', {});
     try {
@@ -11994,7 +11997,7 @@ function ReferralModal({
     className: "section-title"
   }, "Refer & Earn"), React.createElement("p", {
     className: "rf-lede"
-  }, "You earn ", React.createElement("b", null, "$3 for every friend who signs up"), " for the Full Site ($9.99, includes Draft Day and the Draft Board), and they get ", React.createElement("b", null, "$1 off"), " with your code. Every share carries a clear “Powered by IronTuna.com” credit."), !code ? React.createElement("div", {
+  }, "You earn ", React.createElement("b", null, "$3 for every friend who signs up"), " for the Full Site ($9.99, includes Draft Day and the Draft Board), and they get ", React.createElement("b", null, "$1 off"), " with your code. Every share carries a clear “Powered by IronTuna.com” credit."), showForm ? React.createElement("div", {
     style: { display: 'flex', flexDirection: 'column', gap: 9, margin: '4px 0 4px' }
   }, React.createElement("label", { style: _lbl }, "Email (required)"), React.createElement("input", {
     type: "email", value: emailIn, onChange: e => setEmailIn(e.target.value), placeholder: "you@email.com", style: _inp, "aria-label": "Email for referral payouts"
@@ -12006,7 +12009,7 @@ function ReferralModal({
     className: "rf-getcode",
     onClick: submitCode,
     style: { marginTop: 2 }
-  }, "Create my referral code")) : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, code ? "Save my code" : "Create my referral code")) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "rf-codewrap"
   }, React.createElement("div", null, React.createElement("div", {
     className: "rf-label"
@@ -12016,7 +12019,11 @@ function ReferralModal({
     className: "rf-copy",
     onClick: () => copy('code', code),
     "aria-label": "Copy referral code"
-  }, copied === 'code' ? 'Copied!' : 'Copy code')), React.createElement("div", {
+  }, copied === 'code' ? 'Copied!' : 'Copy code')), React.createElement("button", {
+    onClick: () => setEditing(true),
+    title: "Change your code, email, or phone",
+    style: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', padding: 0, margin: '2px 0 4px', alignSelf: 'flex-start' }
+  }, "Edit code & contact info"), React.createElement("div", {
     className: "rf-linkrow"
   }, React.createElement("input", {
     className: "rf-link",
