@@ -1,4 +1,4 @@
-// deploy: activate STRIPE_SECRET_KEY (2026-06-20T21:27Z)
+// deploy: activate STRIPE_SECRET_KEY (2026-06-20T21:27Z); LEADS_EXPORT_KEY + auth secrets (2026-06-28)
 // Cloudflare Pages — advanced mode single Worker.
 // Serves the static app AND the /api/coach LLM proxy. The API key stays server-side.
 //
