@@ -6961,7 +6961,7 @@ function QuickDraftModal({
       color: '#f59e0b',
       fontWeight: 600
     }
-  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: _rollJab, title: "Generate a jab to throw at whoever drafts him", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him"), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
+  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: () => { if (__INSULTS_OK) _rollJab(); else __INSULTS_LOCK(); }, title: __INSULTS_OK ? "Generate a jab to throw at whoever drafts him" : "Unlock to fire off built-in insults", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, !__INSULTS_OK ? "🔒 Insults — unlock" : (jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him")), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -9791,6 +9791,7 @@ function ageFlag(player) {
   if (pos === 'QB' && a >= 38) return { t: 'Age ' + a, tone: 'bad', title: 'Age ' + a + ' — a veteran QB; watch for late-career decline' };
   return null;
 }
+let __INSULTS_OK = false, __INSULTS_LOCK = () => {};
 function playerJabs(player, players, config) {
   if (!player) return ['Somebody overpaid for that guy. Riveting.'];
   const isSnake = (config && config.format) === 'snake';
@@ -9808,6 +9809,11 @@ function playerJabs(player, players, config) {
   const overpay = (mv != null && av != null && mv > av) ? `$${mv - av} over his $${av} value` : 'top dollar';
   const Overpay = overpay.charAt(0).toUpperCase() + overpay.slice(1);
   const pay = isSnake ? `Reaching for` : `Paying ${overpay} for`;
+  const _posList = (players || []).filter(p => p.position === pos).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+  const _pr = _posList.findIndex(p => p.id === player.id) + 1;
+  const posRank = _pr > 0 ? pos + _pr : pos;
+  const ppg = player.projectedPoints ? (player.projectedPoints / 17).toFixed(1) : null;
+  const team = player.team || 'his team';
   const out = [];
   if (vol && vol.t === 'RBBC') out.push(isSnake ? `Reaching for ${first}, a guy splitting his backfield three ways? Sure, every committee back screams "draft me early."` : `Paying ${overpay} for ${first} — half a running back, full price. Bold.`);
   if (tough && tough.late) out.push(isSnake ? `Spending an early pick on ${first} and his playoff-week meat grinder? Love planning to lose in December.` : `${Overpay} for ${first}, then his Week 15-17 schedule eats him alive. Worth every penny.`);
@@ -9820,9 +9826,11 @@ function playerJabs(player, players, config) {
   if (isSnake && player.adp != null) out.push(`ADP had ${first} going way later, but you just had to have him NOW. Patience is for people who win leagues.`);
   if (pos === 'K' || pos === 'DEF') out.push(isSnake ? `A ${pos}. This early. While startable skill players sit on the board. Iron Tuna is cringing for you.` : `Spending actual budget on a ${pos}. In this economy. Visionary.`);
   if (soft && (soft.early || soft.late)) out.push(`Yes, ${first} has a soft stretch — which you paid up for and will still bench that exact week. We've seen your lineups.`);
-  out.push(isSnake ? `${first} a full round before anyone else would've touched him. Nobody was bidding against you, champ.` : `${Overpay} for ${first}, and there was no other bidder. You bid against yourself. Twice.`);
-  out.push(isSnake ? `Reaching for ${first} like the board was on fire. It wasn't. He'd have been there two rounds later.` : `Lighting money on fire for ${first}. Somewhere your budgeting app just sent a concerned notification.`);
-  out.push(isSnake ? `Drafting ${first} that high — peak "I only know the names from last year" energy.` : `Overpaying for ${first} — peak "I only know the names from last year" energy.`);
+  if (_pr > 0 && _pr <= 4) out.push(isSnake ? `${first}, the consensus ${posRank}, taken right where every list had him. Groundbreaking — bet you pick the sun to rise, too.` : `${Overpay} for the ${posRank}, the chalkiest name on the board. Real bold, taking the guy every projection screams at you to take.`);
+  else if (_pr > 0) out.push(isSnake ? `${first} is our ${posRank} and you grabbed him rounds early — a pile of ${pos}s right behind him score within a point for free.` : `${Overpay} for the ${posRank} off the board. The ${pos}s ranked right behind him cost a few bucks and score nearly the same.`);
+  if (ppg && _pr > 6) out.push(isSnake ? `${first} projects ${ppg} a game — you reached for a guy you'll agonize over flexing every single week.` : `${Overpay} for ${first} and his ${ppg} a game. That's flex-bench production at league-winner prices.`);
+  out.push(isSnake ? `Nobody was racing you for ${first}. One more round of patience and you'd have looked smart instead of trigger-happy.` : `${Overpay} for ${first} with not one competing bid. You out-bid exactly one person in the room: yourself.`);
+  out.push(`This whole pick is a wager that ${team}'s offense goes right. Bold, betting your season on other people's jobs.`);
   return out;
 }
 function playerNews(player, players, config) {
@@ -19941,6 +19949,7 @@ function App() {
   const [resultsOpen, setResultsOpen] = useState(false);
   const draftDoneRef = useRef(false);
   function roastTeam(id) {
+    if (promptUpgrade('the built-in insults')) return;
     const opps = teams.filter(t => !t.isMine);
     if (!opps.length) {
       setTaunt({
@@ -20094,6 +20103,8 @@ function App() {
     setOverlay('upgrade');
     return true;
   }
+  __INSULTS_OK = has(liveTier);
+  __INSULTS_LOCK = () => promptUpgrade('the built-in insults');
   function handleSignIn(email) {
     if (!email) return;
     setAccount(a => ({
