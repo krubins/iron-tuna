@@ -5289,16 +5289,9 @@ function Header({
   }, "Reset Both"))), React.createElement("span", {
     className: "header-acct"
   }, React.createElement("button", {
-    className: `tm-pill ${account && account.testMode ? 'on' : 'off'}`,
-    onClick: onToggleTest,
-    title: "Test mode unlocks all paid features. Toggle off to preview the gated (paid) experience."
-  }, account && account.testMode ? 'TEST MODE' : 'LIVE'), React.createElement("button", {
     className: "upgrade-btn",
     onClick: onUpgrade
-  }, "Upgrade"), React.createElement("button", {
-    className: "signin-btn",
-    onClick: onAccount
-  }, account && account.user ? account.user.email.split('@')[0] : 'Sign in'))));
+  }, "Upgrade"))));
 }
 function phaseIcon(i) {
   const c = 'var(--positive)';
@@ -5487,7 +5480,7 @@ function LandingSplash({
   }, "Admin"), React.createElement("button", {
     className: "lp-ribbon-cta",
     onClick: () => go('signin')
-  }, "Sign in"))), React.createElement("div", {
+  }, "Restore"))), React.createElement("div", {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-sticker",
@@ -18753,7 +18746,6 @@ function loadAccount() {
 }
 function entitled(account, id) {
   if (!account) return false;
-  if (account.testMode) return true;
   const e = account.entitlements || {};
   if (e.bundle) return true;
   if (id === 'auction' && (e.auction || e.base || e.coach)) return true;
@@ -18769,6 +18761,7 @@ function PricingModal({
   onBuy,
   onClose,
   onLegal,
+  onRestore,
   highlightId
 }) {
   useEffect(() => {
@@ -18831,7 +18824,7 @@ function PricingModal({
       style: {
         opacity: 0.7
       }
-    }, account.testMode ? 'Unlocked (test mode)' : 'Unlocked') : React.createElement("button", {
+    }, 'Unlocked') : React.createElement("button", {
       className: "btn-draft",
       onClick: () => onBuy(t)
     }, "Unlock"));
@@ -18841,7 +18834,7 @@ function PricingModal({
       color: 'var(--text-muted)',
       marginTop: 14
     }
-  }, "Payments are a placeholder in this build, checkout simulates a purchase so everything is testable. By unlocking you agree to our ", React.createElement("a", {
+  }, "Secure one-time payment via Stripe. By unlocking you agree to our ", React.createElement("a", {
     href: "#",
     onClick: e => {
       e.preventDefault();
@@ -18850,13 +18843,17 @@ function PricingModal({
     style: {
       color: 'var(--gold-text)'
     }
-  }, "Privacy Policy & Terms"), ".")));
+  }, "Privacy Policy & Terms"), "."), React.createElement("button", {
+    onClick: onRestore,
+    style: { display: 'block', margin: '12px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', textDecoration: 'underline', fontSize: 12.5, cursor: 'pointer' }
+  }, "Already purchased? Restore access")));
 }
 function UpgradeModal({
   reason,
   format,
   onUnlock,
-  onClose
+  onClose,
+  onRestore
 }) {
   const f = format || 'auction';
   const rsn = reason ? `, including ${reason}` : '';
@@ -18890,7 +18887,10 @@ function UpgradeModal({
   }, "Unlock Draft Day Mode · " + priceLabel), React.createElement("button", {
     className: "upg-later",
     onClick: onClose
-  }, "Maybe later")));
+  }, "Maybe later"), React.createElement("button", {
+    onClick: onRestore,
+    style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', textDecoration: 'underline', fontSize: 12.5, cursor: 'pointer' }
+  }, "Already purchased? Restore access")));
 }
 function CheckoutModal({
   tier,
@@ -19077,24 +19077,16 @@ function AuthModal({
     onClick: onClose
   }, "×"), React.createElement("div", {
     className: "section-title"
-  }, reason && !account.user ? 'Sign in to continue' : 'Account'), account.user ? React.createElement("div", null, React.createElement("p", {
-    style: {
-      fontSize: 14,
-      margin: '12px 0'
-    }
-  }, "Signed in as ", React.createElement("b", null, account.user.email)), React.createElement("button", {
-    className: "btn-secondary",
-    onClick: () => {
-      onSignOut();
-      onClose();
-    }
-  }, "Sign out")) : React.createElement("div", null, React.createElement("p", {
+  }, "Restore your purchase"), restoreSent ? React.createElement("p", {
+    style: { fontSize: 13.5, color: 'var(--positive)', margin: '12px 0', lineHeight: 1.5 }
+  }, "If that email has a purchase, a one-time sign-in link is on its way (expires in 15 minutes). Open it on this device to unlock Draft Day Mode.") : React.createElement("div", null, React.createElement("p", {
     style: {
       fontSize: 13,
       color: 'var(--text-muted)',
-      margin: '10px 0'
+      margin: '10px 0',
+      lineHeight: 1.5
     }
-  }, reason ? `It\u2019s free \u2014 sign in ${reason}. Your custom values stay open to everyone, no account needed.` : 'Sign in to save your leagues and unlocks across devices.'), React.createElement("input", {
+  }, "Already bought Draft Day Mode? Enter the email you purchased with and we\u2019ll send a one-time link to unlock it on this device \u2014 no password needed."), React.createElement("input", {
     type: "text",
     value: email,
     onChange: e => setEmail(e.target.value),
@@ -19110,7 +19102,7 @@ function AuthModal({
       fontSize: 14
     },
     onKeyDown: e => {
-      if (e.key === 'Enter') onSignIn(email.trim());
+      if (e.key === 'Enter') sendRestore();
     }
   }), React.createElement("button", {
     className: "btn-draft",
@@ -19118,24 +19110,8 @@ function AuthModal({
       width: '100%',
       marginTop: 10
     },
-    onClick: () => onSignIn(email.trim())
-  }, "Continue"), React.createElement("div", {
-    style: { marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }
-  }, restoreSent ? React.createElement("p", {
-    style: { fontSize: 12.5, color: 'var(--positive)', margin: 0, lineHeight: 1.5 }
-  }, "If that email has a purchase, a one-time sign-in link is on its way (expires in 15 minutes). Open it on this device to unlock Draft Day Mode.") : React.createElement(React.Fragment, null, React.createElement("p", {
-    style: { fontSize: 12, color: 'var(--text-muted)', margin: '0 0 7px', lineHeight: 1.5 }
-  }, "Already bought Draft Day Mode? Restore it on this device or a new one:"), React.createElement("button", {
-    className: "btn-secondary",
-    style: { width: '100%' },
     onClick: sendRestore
-  }, "Email me a sign-in link"))), React.createElement("p", {
-    style: {
-      fontSize: 11,
-      color: 'var(--text-muted)',
-      marginTop: 10
-    }
-  }, "Placeholder sign-in, wire to magic-link or Google later. No password; nothing leaves your device in this build."))));
+  }, "Email me a sign-in link"))));
 }
 function LegalModal({
   onClose
@@ -19770,7 +19746,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     className: "lp-ribbon"
   }, React.createElement("div", { className: "lp-ribbon-spacer" }), React.createElement("div", {
     className: "lp-ribbon-links"
-  }, React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} }, title: "Admin dashboard" }, "Admin"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Sign in"))), React.createElement("div", {
+  }, React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} }, title: "Admin dashboard" }, "Admin"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Restore"))), React.createElement("div", {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"
@@ -20142,9 +20118,9 @@ function App() {
   }
   const COACH_FREE_LIMIT = 3;
   function coachGate() {
-    if (account.user) return true;
+    if (has(liveTier)) return true;
     if ((account.coachUses || 0) >= COACH_FREE_LIMIT) {
-      requireSignIn('to keep using the Value Coach');
+      promptUpgrade('the Value Coach');
       return false;
     }
     setAccount(a => ({
@@ -21769,11 +21745,13 @@ function App() {
     onBuy: openCheckout,
     onClose: () => setOverlay(null),
     onLegal: () => setOverlay('legal'),
+    onRestore: () => setOverlay('auth'),
     highlightId: liveTier
   }), overlay === 'upgrade' && React.createElement(UpgradeModal, {
     reason: upgradeReason,
     format: config.format,
     onUnlock: () => openCheckout(TIERS.find(t => t.id === liveTier)),
+    onRestore: () => setOverlay('auth'),
     onClose: () => setOverlay(null)
   }), overlay === 'auth' && React.createElement(AuthModal, {
     account: account,

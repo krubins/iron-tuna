@@ -714,7 +714,7 @@ export default {
       try {
         const r = await fetch('https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(cs), { headers: { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY } });
         const j = await r.json().catch(() => ({}));
-        const paid = !!(j && j.payment_status === 'paid');
+        const paid = !!(j && (j.payment_status === 'paid' || j.payment_status === 'no_payment_required'));
         const buyer = (j.customer_details && j.customer_details.email) || null;
         if (paid && buyer) await grantEntitlement(env, buyer);
         return json({ paid: paid, email: buyer, ref: (j.metadata && j.metadata.ref) || null }, 200, c);
