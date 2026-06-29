@@ -700,7 +700,7 @@ export default {
       if (!env.LEADS_EXPORT_KEY || key !== env.LEADS_EXPORT_KEY) return json({ ok: false, error: 'forbidden' }, 403, c);
       const INKEY = 'cfa001a08a37e330879014846e73cbbd';
       try {
-        const sm = await fetch(url.origin + '/sitemap.xml');
+        const sm = await env.ASSETS.fetch(new Request(new URL('/sitemap.xml', url).toString()));
         const xml = await sm.text();
         const urls = (xml.match(/<loc>([^<]+)<\/loc>/g) || []).map(m => m.replace(/<\/?loc>/g, '').trim()).filter(Boolean);
         if (!urls.length) return json({ ok: false, error: 'no_urls' }, 500, c);
