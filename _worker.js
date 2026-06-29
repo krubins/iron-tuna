@@ -802,6 +802,49 @@ export default {
     const resp = await env.ASSETS.fetch(__assetReq);
     const ct = resp.headers.get('content-type') || '';
     if (ct.includes('text/html')) {
+      // Per-route SEO/AEO meta for the SPA format routes (they're all served from the
+      // single index.html, which carries auction-focused meta). /auctiondraft + / keep
+      // that auction meta as-is; /snakedraft + /bestball get their own title, description,
+      // canonical, and OG/Twitter so they can rank for snake / best-ball queries.
+      const __seoKey = (url.pathname.replace(/\/+$/, '') || '/');
+      const __SPA_SEO = {
+        '/snakedraft': {
+          title: 'Iron Tuna: AI Snake Draft Assistant & Custom Fantasy Rankings',
+          desc: "Iron Tuna's snake draft tool builds custom rankings for your exact league scoring, shows live ADP and survival odds (the chance each player lasts to your next pick), flags tier cliffs, and runs an AI Value Coach that tells you who to draft on the clock. Free to start.",
+          url: 'https://irontuna.com/snakedraft',
+          ogt: 'Iron Tuna: know who your leaguemates will pick before they do.',
+          ogd: 'Custom snake-draft rankings for your exact scoring, live survival odds at your next pick, tier-cliff alerts, and an AI Value Coach on the clock. Free to try.'
+        },
+        '/bestball': {
+          title: 'Iron Tuna: AI Best Ball Draft Tool — Ceiling, Stacks & Playoff Edges',
+          desc: "Iron Tuna's best ball tool ranks by true ceiling, fires live stack alerts the moment a teammate is drafted, surfaces championship-week (Weeks 15-17) edges, and tunes an AI coach to your exact roster. Built for Underdog-style best ball. Free to start.",
+          url: 'https://irontuna.com/bestball',
+          ogt: 'Iron Tuna: your stacks light up the moment they go live.',
+          ogd: 'Ceiling-weighted best ball values, live stack detection, and championship-week edges tuned to your exact roster as you draft. Free to try.'
+        }
+      };
+      const __m = __SPA_SEO[__seoKey];
+      if (__m) {
+        let __html = await resp.text();
+        const __ix = __html.indexOf('</head>');
+        if (__ix > 0) {
+          const __esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          const __h = __html.slice(0, __ix)
+            .replace(/<title>[\s\S]*?<\/title>/, '<title>' + __esc(__m.title) + '</title>')
+            .replace(/(<meta name="description" content=")[^"]*(")/, '$1' + __esc(__m.desc) + '$2')
+            .replace(/(<link rel="canonical" href=")[^"]*(")/, '$1' + __m.url + '$2')
+            .replace(/(<meta property="og:url" content=")[^"]*(")/, '$1' + __m.url + '$2')
+            .replace(/(<meta property="og:title" content=")[^"]*(")/, '$1' + __esc(__m.ogt) + '$2')
+            .replace(/(<meta property="og:description" content=")[^"]*(")/, '$1' + __esc(__m.ogd) + '$2')
+            .replace(/(<meta name="twitter:title" content=")[^"]*(")/, '$1' + __esc(__m.ogt) + '$2')
+            .replace(/(<meta name="twitter:description" content=")[^"]*(")/, '$1' + __esc(__m.ogd) + '$2');
+          __html = __h + __html.slice(__ix);
+        }
+        const __r = new Response(__html, resp);
+        __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        __r.headers.delete('content-length');
+        return __r;
+      }
       const r = new Response(resp.body, resp);
       r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       return r;
