@@ -521,6 +521,38 @@ async function saveContact(env, rec) {
       .bind(rec.email || '', rec.phone || '', rec.source || '', rec.type || '', rec.ref || '', rec.path || '', Date.now()).run();
   } catch (e) {}
 }
+// ── opt-in marketing email (nurture). Dormant by default: sends only via the admin-gated
+//    /api/campaign-send, and only when RESEND_API_KEY + MAIL_ADDRESS (CAN-SPAM physical
+//    address) are set. Every send includes an unsubscribe link + List-Unsubscribe header. ──
+async function unsubToken(env, email) { return env.AUTH_SECRET ? await hmacSign(env.AUTH_SECRET, 'unsub:' + email) : ''; }
+async function isUnsubscribed(env, email) {
+  if (!env.LEADS_DB) return false;
+  try { return !!(await env.LEADS_DB.prepare('SELECT 1 FROM unsubscribes WHERE email=?').bind(email).first()); } catch (e) { return false; }
+}
+async function sendCampaignOne(env, origin, email, subject, inner) {
+  if (!env.RESEND_API_KEY || !env.MAIL_ADDRESS) return { skipped: 'not_configured' };
+  if (await isUnsubscribed(env, email)) return { skipped: 'unsubscribed' };
+  const token = await unsubToken(env, email);
+  const unsub = origin + '/api/unsubscribe?e=' + encodeURIComponent(email) + '&t=' + encodeURIComponent(token);
+  const html = inner + '<hr style="border:none;border-top:1px solid #d4dde3;margin:24px 0 12px"/>'
+    + '<p style="font-size:12px;color:#8595a1;line-height:1.5;font-family:system-ui,Arial">You received this because you built a free cheat sheet at irontuna.com. '
+    + '<a href="' + unsub + '" style="color:#8595a1">Unsubscribe</a>.<br/>' + env.MAIL_ADDRESS + '</p>';
+  const from = env.EMAIL_FROM_MARKETING || 'Iron Tuna <hello@irontuna.com>';
+  try {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from, to: email, subject, html, headers: { 'List-Unsubscribe': '<' + unsub + '>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }) });
+    return { ok: r.ok, status: r.status };
+  } catch (e) { return { ok: false, error: String(e).slice(0, 80) }; }
+}
+const CAMPAIGN_NURTURE = {
+  subject: 'Your fantasy draft is coming — here’s your edge',
+  inner: '<div style="font-family:system-ui,Arial;max-width:520px;color:#1a2129">'
+    + '<h2 style="color:#0b1117">Your cheat sheet is ready. Draft day is the hard part.</h2>'
+    + '<p>You already have your free custom values. The managers who win drafts have one more thing: live help <em>on the clock</em>.</p>'
+    + '<p><b>Draft Day Mode</b> ($9.99 once, no subscription) unlocks your league’s own scoring, a board you can reorder, and an AI Value Coach that tells you exactly who to draft and how much to pay — recalculated live as your draft unfolds.</p>'
+    + '<p style="margin:22px 0"><a href="https://irontuna.com/" style="background:#f5b800;color:#1a1205;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Unlock Draft Day Mode — $9.99</a></p>'
+    + '<p style="color:#667">Draft season fills up fast — lock it in before your draft so it’s ready when you’re on the clock.</p>'
+    + '</div>'
+};
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -741,6 +773,37 @@ export default {
         });
         return json({ ok: r.ok, status: r.status, submitted: urls.length, urls: urls }, 200, c);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
+    }
+    if (url.pathname === '/api/unsubscribe') {
+      const email = (url.searchParams.get('e') || '').trim().toLowerCase();
+      const t = url.searchParams.get('t') || '';
+      const ok = !!email && !!env.AUTH_SECRET && timingSafeEq(t, await hmacSign(env.AUTH_SECRET, 'unsub:' + email));
+      if (ok && env.LEADS_DB) { try { await env.LEADS_DB.prepare('INSERT OR IGNORE INTO unsubscribes (email, created_at) VALUES (?, ?)').bind(email, Date.now()).run(); } catch (e) {} }
+      const msg = ok ? 'You’re unsubscribed. You won’t receive marketing emails from Iron Tuna.' : 'This unsubscribe link is invalid or expired.';
+      return new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribe — Iron Tuna</title><div style="font-family:system-ui,Arial;max-width:480px;margin:64px auto;padding:0 22px;text-align:center;color:#1a2129"><h2>' + (ok ? 'Done' : 'Hmm') + '</h2><p style="color:#566">' + msg + '</p><p><a href="https://irontuna.com/" style="color:#0b9">Back to Iron Tuna</a></p></div>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
+    if (url.pathname === '/api/campaign-send' && request.method === 'POST') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.RESEND_API_KEY || !env.MAIL_ADDRESS) return json({ ok: false, error: 'not_configured', need: 'Set RESEND_API_KEY + MAIL_ADDRESS (a real physical postal address, required by CAN-SPAM) before sending.' }, 400, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      const camp = CAMPAIGN_NURTURE;
+      if (b.mode === 'test') {
+        const to = String(b.test || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json({ ok: false, error: 'bad_test_email' }, 400, c);
+        const r = await sendCampaignOne(env, url.origin, to, camp.subject, camp.inner);
+        return json({ ok: !!r.ok, result: r }, 200, c);
+      }
+      if (b.mode === 'all') {
+        if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+        const offset = Math.max(0, parseInt(b.offset || '0', 10) || 0);
+        const LIMIT = 40; // stay under the Workers subrequest cap; paginate via nextOffset
+        const rows = ((await env.LEADS_DB.prepare("SELECT DISTINCT email FROM contacts WHERE type='lead' AND email != '' ORDER BY email LIMIT ? OFFSET ?").bind(LIMIT, offset).all()).results) || [];
+        let sent = 0, skipped = 0;
+        for (const row of rows) { const r = await sendCampaignOne(env, url.origin, row.email, camp.subject, camp.inner); if (r && r.ok) sent++; else skipped++; }
+        return json({ ok: true, batch: rows.length, sent, skipped, nextOffset: rows.length === LIMIT ? offset + LIMIT : null }, 200, c);
+      }
+      return json({ ok: false, error: 'specify mode:"test" (with test:email) or mode:"all" (with optional offset)' }, 400, c);
     }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
