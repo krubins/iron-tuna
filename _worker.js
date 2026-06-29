@@ -645,6 +645,51 @@ export default {
         return new Response(out.join('\r\n'), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="iron-tuna-leads.csv"' } });
       } catch (e) { return new Response('Error: ' + String(e), { status: 500 }); }
     }
+    if (url.pathname === '/api/affiliate-reconcile') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const key = url.searchParams.get('key') || '';
+      if (!env.LEADS_EXPORT_KEY || key !== env.LEADS_EXPORT_KEY) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.STRIPE_SECRET_KEY) return json({ ok: false, error: 'no_stripe_key' }, 500, c);
+      const auth = { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY };
+      try {
+        // Source of truth = Stripe (the actual money). Page through paid checkout sessions
+        // that carry a referral code (metadata.ref or client_reference_id), then reconcile vs D1.
+        const byCode = {}; let starting = '', pages = 0, capped = false, totalPaid = 0;
+        while (true) {
+          if (pages >= 25) { capped = true; break; }
+          pages++;
+          const u = 'https://api.stripe.com/v1/checkout/sessions?limit=100' + (starting ? '&starting_after=' + encodeURIComponent(starting) : '');
+          const r = await fetch(u, { headers: auth });
+          const j = await r.json().catch(() => ({}));
+          if (j && j.error) return json({ ok: false, error: 'stripe', detail: (j.error.message || '').slice(0, 200) }, 502, c);
+          const data = (j && j.data) || [];
+          for (const s of data) {
+            if (s.payment_status !== 'paid') continue;
+            const ref = String((s.metadata && s.metadata.ref) || s.client_reference_id || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (!ref) continue;
+            totalPaid++;
+            const email = (s.customer_details && s.customer_details.email) || s.customer_email || '';
+            const rec = byCode[ref] || (byCode[ref] = { code: ref, stripeCount: 0, revenueCents: 0, sales: [] });
+            rec.stripeCount++; rec.revenueCents += (s.amount_total || 0);
+            rec.sales.push({ email: email, date: new Date((s.created || 0) * 1000).toISOString().slice(0, 10), amount: (s.amount_total || 0) / 100, session: s.id });
+          }
+          if (j && j.has_more && data.length) starting = data[data.length - 1].id; else break;
+        }
+        const codes = Object.keys(byCode);
+        if (env.LEADS_DB) {
+          let omap = {};
+          try { const owners = ((await env.LEADS_DB.prepare('SELECT code, email FROM codes').all()).results) || []; owners.forEach(o => { omap[String(o.code || '').toUpperCase()] = o.email; }); } catch (e) {}
+          for (const code of codes) {
+            byCode[code].ownerEmail = omap[code] || null;
+            try { const d = await env.LEADS_DB.prepare("SELECT count(*) AS n FROM contacts WHERE ref=? AND type='purchase'").bind(code).first(); byCode[code].d1Count = (d && d.n) || 0; } catch (e) { byCode[code].d1Count = null; }
+          }
+        }
+        const list = codes.map(k => { const r = byCode[k]; return { code: r.code, ownerEmail: r.ownerEmail || null, stripeCount: r.stripeCount, d1Count: (r.d1Count == null ? null : r.d1Count), mismatch: (r.d1Count != null && r.d1Count !== r.stripeCount), revenue: r.revenueCents / 100, owed: r.stripeCount * 3, sales: r.sales.sort((a, b) => a.date < b.date ? 1 : -1) }; }).sort((a, b) => b.owed - a.owed);
+        const totalOwed = list.reduce((s, r) => s + r.owed, 0);
+        return json({ ok: true, source: 'stripe', generatedAt: Date.now(), pagesScanned: pages, capped: capped, totalPaidReferredSales: totalPaid, totalOwed: totalOwed, affiliates: list }, 200, c);
+      } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
+    }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
