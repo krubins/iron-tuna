@@ -690,6 +690,28 @@ export default {
         return json({ ok: true, source: 'stripe', generatedAt: Date.now(), pagesScanned: pages, capped: capped, totalPaidReferredSales: totalPaid, totalOwed: totalOwed, affiliates: list }, 200, c);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
     }
+    if (url.pathname === '/api/indexnow-submit') {
+      // Admin-gated IndexNow ping: notifies Bing/Yandex of every URL in the sitemap so
+      // updates (e.g. daily auction-watch posts) get crawled within minutes. Key file is
+      // served at /<key>.txt. Re-run after a content deploy by visiting this URL with ?key=.
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const key = url.searchParams.get('key') || '';
+      if (!env.LEADS_EXPORT_KEY || key !== env.LEADS_EXPORT_KEY) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const INKEY = 'cfa001a08a37e330879014846e73cbbd';
+      try {
+        const sm = await fetch(url.origin + '/sitemap.xml');
+        const xml = await sm.text();
+        const urls = (xml.match(/<loc>([^<]+)<\/loc>/g) || []).map(m => m.replace(/<\/?loc>/g, '').trim()).filter(Boolean);
+        if (!urls.length) return json({ ok: false, error: 'no_urls' }, 500, c);
+        const r = await fetch('https://api.indexnow.org/indexnow', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({ host: 'irontuna.com', key: INKEY, keyLocation: 'https://irontuna.com/' + INKEY + '.txt', urlList: urls })
+        });
+        return json({ ok: r.ok, status: r.status, submitted: urls.length, urls: urls }, 200, c);
+      } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
+    }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });

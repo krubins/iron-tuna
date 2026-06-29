@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="bg" cx="28%" cy="22%" r="95%">
+      <stop offset="0%" stop-color="#2a1f47"/>
+      <stop offset="58%" stop-color="#0b1117"/>
+      <stop offset="100%" stop-color="#060a0e"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1200" height="9" fill="#a78bfa"/>
+  <text x="80" y="118" font-family="Arial, Helvetica, sans-serif" font-size="34" letter-spacing="7" font-weight="700" fill="#a78bfa">IRON TUNA</text>
+  <text x="74" y="338" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="800" fill="#eef4f8">Best Ball</text>
+  <text x="80" y="408" font-family="Arial, Helvetica, sans-serif" font-size="40" fill="#aebcc6">Ceiling-weighted values &#183; live stacks &#183; championship weeks</text>
+  <text x="80" y="566" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#6f8492">irontuna.com/bestball</text>
+</svg>
