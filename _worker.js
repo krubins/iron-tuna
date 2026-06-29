@@ -10,13 +10,39 @@
 //   LLM_ENDPOINT  (optional)  OpenAI-compatible endpoint override
 //   TURNSTILE_SECRET (optional) require a Turnstile token
 
+// Only reflect the CORS origin for our own site / Pages preview / localhost; any other
+// origin falls back to the canonical host so third-party sites can't read these APIs in a
+// browser. (Same-origin app requests are unaffected — CORS doesn't apply to them.)
+const ALLOW_ORIGIN = o => !!o && (/^https?:\/\/(www\.)?irontuna\.com$/.test(o) || /\.pages\.dev$/.test(o) || /^https?:\/\/localhost(:\d+)?$/.test(o));
+const SEC = {
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'SAMEORIGIN',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'permissions-policy': 'geolocation=(), microphone=(), camera=()',
+};
+function secure(r) { for (const k in SEC) r.headers.set(k, SEC[k]); return r; }
 const corsHeaders = (origin) => ({
-  'access-control-allow-origin': origin || '*',
+  'access-control-allow-origin': ALLOW_ORIGIN(origin) ? origin : 'https://irontuna.com',
   'access-control-allow-methods': 'POST, OPTIONS',
   'access-control-allow-headers': 'content-type',
   'vary': 'Origin',
 });
-const json = (obj, status, c) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', ...c } });
+// Per-IP rate limit using RATE_KV. Fails OPEN if RATE_KV isn't bound (no breakage), so it
+// only takes effect once the KV namespace is attached in Cloudflare.
+async function rl(env, request, bucket, max, ttlSec) {
+  if (!env.RATE_KV) return false;
+  try {
+    const ip = request.headers.get('cf-connecting-ip') || 'anon';
+    const k = 'rl:' + bucket + ':' + ip;
+    const n = parseInt((await env.RATE_KV.get(k)) || '0', 10);
+    if (n >= max) return true;
+    await env.RATE_KV.put(k, String(n + 1), { expirationTtl: ttlSec });
+    return false;
+  } catch (e) { return false; }
+}
+function adminOk(env, key) { return !!env.LEADS_EXPORT_KEY && timingSafeEq(String(key || ''), env.LEADS_EXPORT_KEY); }
+const json = (obj, status, c) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', ...SEC, ...c } });
 
 // ── auth helpers (magic-link login + device cap) ──
 function b64urlEncode(bytes) { let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
@@ -62,6 +88,7 @@ async function sendLoginEmail(env, email, link) {
 // ── projections data kept server-side (not shipped in the client HTML) ──
 const IT_KEY = 'IT_pk_7c1a93f0';
 const PROJ_KEY = 'tn$9xQ27z';
+let _PROJ_ENC = null; // memoized XOR+base64 payload (same every request; encode once per isolate)
 function _xb64encode(str, key) {
   const bytes = new TextEncoder().encode(str);
   let bin = '';
@@ -502,7 +529,8 @@ export default {
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
       const ref = request.headers.get('Referer') || '';
       if (ref && !/^https?:\/\/(www\.)?irontuna\.com|^https?:\/\/localhost|\.pages\.dev/.test(ref)) return new Response('forbidden', { status: 403 });
-      return new Response(_xb64encode(JSON.stringify(PROJECTIONS), PROJ_KEY), { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } });
+      if (!_PROJ_ENC) _PROJ_ENC = _xb64encode(JSON.stringify(PROJECTIONS), PROJ_KEY);
+      return secure(new Response(_PROJ_ENC, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } }));
     }
     if (url.pathname === '/api/live') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -541,6 +569,7 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      if (await rl(env, request, 'lead', 40, 600)) return json({ ok: false, error: 'rate' }, 429, c);
       let body = {}; try { body = await request.json(); } catch (e) {}
       const email = (body.email || '').trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid' }, 400, c);
@@ -554,6 +583,7 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      if (await rl(env, request, 'claim', 20, 600)) return json({ ok: false, error: 'rate' }, 429, c);
       let b = {}; try { b = await request.json(); } catch (e) {}
       const email = (b.email || '').trim().toLowerCase();
       const phone = String(b.phone || '').slice(0, 40);
@@ -634,7 +664,7 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const key = url.searchParams.get('key') || '';
-      if (!env.LEADS_EXPORT_KEY || key !== env.LEADS_EXPORT_KEY) return new Response('Forbidden', { status: 403 });
+      if (!adminOk(env, key)) return new Response('Forbidden', { status: 403 });
       if (!env.LEADS_DB) return new Response('No database bound (LEADS_DB)', { status: 500 });
       try {
         const q = await env.LEADS_DB.prepare('SELECT email, phone, source, type, ref, created_at FROM contacts ORDER BY created_at DESC').all();
@@ -649,7 +679,7 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const key = url.searchParams.get('key') || '';
-      if (!env.LEADS_EXPORT_KEY || key !== env.LEADS_EXPORT_KEY) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!adminOk(env, key)) return json({ ok: false, error: 'forbidden' }, 403, c);
       if (!env.STRIPE_SECRET_KEY) return json({ ok: false, error: 'no_stripe_key' }, 500, c);
       const auth = { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY };
       try {
@@ -697,7 +727,7 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const key = url.searchParams.get('key') || '';
-      if (!env.LEADS_EXPORT_KEY || key !== env.LEADS_EXPORT_KEY) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!adminOk(env, key)) return json({ ok: false, error: 'forbidden' }, 403, c);
       const INKEY = 'cfa001a08a37e330879014846e73cbbd';
       try {
         const sm = await env.ASSETS.fetch(new Request(new URL('/sitemap.xml', url).toString()));
@@ -723,6 +753,7 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+      if (await rl(env, request, 'checkout', 40, 600)) return json({ error: 'Too many attempts — wait a moment and try again.' }, 429, c);
       if (!env.STRIPE_SECRET_KEY) return json({ error: 'Server missing STRIPE_SECRET_KEY' }, 500, c);
       let b = {}; try { b = await request.json(); } catch (e) {}
       const ref = String(b.ref || '').slice(0, 40);
@@ -865,13 +896,13 @@ export default {
         const __r = new Response(__html, resp);
         __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         __r.headers.delete('content-length');
-        return __r;
+        return secure(__r);
       }
       const r = new Response(resp.body, resp);
       r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      return r;
+      return secure(r);
     }
-    return resp;
+    return secure(new Response(resp.body, resp));
   },
 };
 
