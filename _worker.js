@@ -37,6 +37,21 @@ async function grantEntitlement(env, email) {
   if (!email || !env.LEADS_DB) return;
   try { await env.LEADS_DB.prepare('INSERT OR REPLACE INTO entitlements (email, product, paid_at) VALUES (?, ?, ?)').bind(email.toLowerCase(), 'bundle', Date.now()).run(); } catch (e) {}
 }
+async function revokeEntitlement(env, email) {
+  // Pull paid access on refund / chargeback: removes the entitlement and signs
+  // the user out everywhere (so they can't restore on another device).
+  if (!email || !env.LEADS_DB) return;
+  const e = email.toLowerCase();
+  try { await env.LEADS_DB.prepare('DELETE FROM entitlements WHERE email=?').bind(e).run(); } catch (err) {}
+  try { await env.LEADS_DB.prepare('DELETE FROM sessions WHERE email=?').bind(e).run(); } catch (err) {}
+}
+async function chargeEmail(env, ch) {
+  let email = (ch && ch.billing_details && ch.billing_details.email) || (ch && ch.receipt_email) || null;
+  if (!email && ch && ch.id && env.STRIPE_SECRET_KEY) {
+    try { const r = await fetch('https://api.stripe.com/v1/charges/' + encodeURIComponent(ch.id), { headers: { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY } }); const cj = await r.json(); email = (cj.billing_details && cj.billing_details.email) || cj.receipt_email || null; } catch (e) {}
+  }
+  return email;
+}
 async function sendLoginEmail(env, email, link) {
   if (!env.RESEND_API_KEY) return;
   const from = env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
@@ -717,6 +732,15 @@ export default {
         if (rec.buyer_email) await grantEntitlement(env, rec.buyer_email);
         if (rec.ref && env.REFERRAL_WEBHOOK) { try { await fetch(env.REFERRAL_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(rec) }); } catch (e) {} }
         if (env.ANALYTICS_WEBHOOK) { try { await fetch(env.ANALYTICS_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(rec) }); } catch (e) {} }
+      } else if (evt && (evt.type === 'charge.refunded' || evt.type === 'refund.created')) {
+        const ch = (evt.data && evt.data.object) || {};
+        const email = await chargeEmail(env, ch.object === 'refund' ? { id: ch.charge } : ch);
+        if (email) await revokeEntitlement(env, email);
+      } else if (evt && evt.type === 'charge.dispute.created') {
+        const dp = (evt.data && evt.data.object) || {};
+        let email = (dp.evidence && dp.evidence.customer_email_address) || null;
+        if (!email) email = await chargeEmail(env, { id: dp.charge });
+        if (email) await revokeEntitlement(env, email);
       }
       return new Response('ok', { status: 200 });
     }

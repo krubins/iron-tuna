@@ -7764,7 +7764,9 @@ function SettingsModal({
   onImportProjections,
   onLoadLive,
   loading,
-  dataInfo
+  dataInfo,
+  canScore,
+  onUnlockScore
 }) {
   const [draft, setDraft] = useState(JSON.parse(JSON.stringify(config)));
   const [advRoster, setAdvRoster] = useState(false);
@@ -8076,7 +8078,10 @@ function SettingsModal({
     onChange: e => update('flex.eligible', e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))
   }))), React.createElement("div", {
     className: "settings-section-title"
-  }, "Scoring Format"), React.createElement("div", {
+  }, "Scoring Format"), (!canScore && React.createElement("div", {
+    onClick: onUnlockScore,
+    style: { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elev)', border: '1px solid var(--gold-text, #e3b53a)', borderRadius: 8, padding: '10px 12px', margin: '0 0 10px', fontSize: 12.5, lineHeight: 1.4 }
+  }, React.createElement("span", { style: { fontSize: 16 } }, "🔒"), React.createElement("span", null, React.createElement("b", { style: { color: 'var(--gold-text, #e3b53a)' } }, "Custom scoring is part of the unlock."), " You can see the default rankings free — tap to unlock your league's own scoring."))), React.createElement("div", {
     className: "settings-presets"
   }, React.createElement("button", {
     type: "button",
@@ -19170,11 +19175,21 @@ function LegalModal({
       maxHeight: '52vh',
       overflowY: 'auto'
     }
-  }, tab === 'privacy' ? React.createElement("div", null, React.createElement("p", null, React.createElement("b", null, "Privacy Policy (template)."), " Iron Tuna stores your draft state, league settings, and unlocks locally in your browser. We import public league data without a password. Screenshots you upload for scoring are read on your device (OCR) and are not transmitted to a server."), React.createElement("p", {
+  }, tab === 'privacy' ? React.createElement("div", null, React.createElement("p", null, React.createElement("b", null, "Privacy Policy."), " Iron Tuna stores your draft state, league settings, and unlocks locally in your browser. We import public league data without a password. Screenshots you upload for scoring are read on your device (OCR) and are not transmitted to a server."), React.createElement("p", {
     style: {
       marginTop: 8
     }
-  }, "When accounts and analytics are connected in production, we will collect the email you provide and anonymous product-usage events to improve the app. We will not sell your data. This is placeholder text to be reviewed by counsel before launch.")) : React.createElement("div", null, React.createElement("p", null, React.createElement("b", null, "Terms of Service."), " By accessing or using Iron Tuna you agree to these terms. Iron Tuna is a decision-support tool for fantasy drafts; values are projections, not guarantees, and we make no representation as to results, accuracy, or availability. Season passes are one-time purchases for the stated season."), React.createElement("p", {
+  }, React.createElement("b", null, "What we collect."), " Information you provide — your email address, and (if you join Refer & Earn) your phone number and the email addresses of friends you choose to invite. Payment details are entered directly with our payment processor, Stripe; we do not see or store your full card number. We also collect anonymous product-usage events (for example, which features you use) to improve the app."), React.createElement("p", {
+    style: { marginTop: 8 }
+  }, React.createElement("b", null, "How we use it."), " To provide the service, process purchases, send sign-in and account emails, operate the referral program, and improve the product. We do not sell your personal information."), React.createElement("p", {
+    style: { marginTop: 8 }
+  }, React.createElement("b", null, "Who we share it with."), " Service providers that run the product on our behalf — Stripe (payments), Resend (transactional email), and Cloudflare (hosting and database) — under their respective terms. We may disclose information where required by law."), React.createElement("p", {
+    style: { marginTop: 8 }
+  }, React.createElement("b", null, "Your choices."), " You can request access to, or deletion of, the personal information we hold by emailing info@irontuna.com. If a friend's email was shared with us through a referral and you want it removed, contact us and we will delete it. We may update this policy from time to time.")) : React.createElement("div", null, React.createElement("p", null, React.createElement("b", null, "Terms of Service."), " By accessing or using Iron Tuna you agree to these terms. Iron Tuna is a decision-support tool for fantasy drafts; values are projections, not guarantees, and we make no representation as to results, accuracy, or availability. Season passes are one-time purchases for the stated season."), React.createElement("p", {
+    style: {
+      marginTop: 8
+    }
+  }, React.createElement("b", null, "All sales final; no refunds."), " All purchases are final and non-refundable. By completing a purchase you authorize the charge and agree that no refund, return, or cancellation will be provided. If you believe a charge is in error, contact info@irontuna.com before initiating a chargeback. Initiating a chargeback or payment dispute may result in immediate and permanent termination of your access to the service."), React.createElement("p", {
     style: {
       marginTop: 8
     }
@@ -20784,6 +20799,11 @@ function App() {
     }
   }
   function handleConfigChange(newConfig) {
+    // Custom scoring is a paid feature: free users keep the default scoring.
+    if (newConfig && !has(liveTier) && JSON.stringify(newConfig.scoring || {}) !== JSON.stringify(config.scoring || {})) {
+      newConfig = { ...newConfig, scoring: config.scoring };
+      promptUpgrade("to use your league's own scoring");
+    }
     if (newConfig && newConfig.format && newConfig.format !== config.format) {
       ITAnalytics.track('mode_selected', {
         format: newConfig.format
@@ -20888,6 +20908,7 @@ function App() {
     })));
   }
   function handleRankMove(playerId, dir) {
+    if (promptUpgrade('to reorder players and build your own cheat sheet')) return;
     const pl = players.find(x => x.id === playerId);
     if (!pl) return;
     const pos = pl.position;
@@ -20913,7 +20934,7 @@ function App() {
     });
   }
   function handleRankReorder(draggedId, targetId) {
-    if (!requireSignIn('to move players and build your own cheat sheet')) return;
+    if (promptUpgrade('to reorder players and build your own cheat sheet')) return;
     const a = players.find(x => x.id === draggedId),
       b = players.find(x => x.id === targetId);
     if (!a || !b || a.position !== b.position) return;
@@ -21657,7 +21678,9 @@ function App() {
     onImportProjections: handleProjectionsImport,
     onLoadLive: handleLoadLiveData,
     loading: loading,
-    dataInfo: dataInfo
+    dataInfo: dataInfo,
+    canScore: has(liveTier),
+    onUnlockScore: () => { setView('board'); promptUpgrade("to use your league's own scoring"); }
   }), assignPlayer && React.createElement(QuickDraftModal, {
     player: assignPlayer,
     teams: teams,
