@@ -1081,6 +1081,9 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-grid.has-hl .cheat-row.cheat-target { opacity: 1; }
 .cheat-row.cheat-modelfit { box-shadow: inset 3px 0 0 var(--gold-text); }
 .cheat-row.cheat-modelfit .cheat-rank { color: var(--gold-text); font-weight: 700; }
+.cheat-row.cheat-stack { box-shadow: inset 3px 0 0 #a78bfa; background: rgba(167,139,250,0.10); }
+.cheat-row.cheat-stack .cheat-name::after { content: "STACK"; margin-left: 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: #c4b1ff; border: 1px solid rgba(167,139,250,0.6); border-radius: 4px; padding: 0 4px; vertical-align: middle; }
+.cheat-row.cheat-stack.cheat-modelfit { box-shadow: inset 3px 0 0 #a78bfa; }
 .cheat-row.cheat-tier-top { border-top: 1px solid rgba(234,179,8,0.5); margin-top: 4px; padding-top: 4px; }
 .cheat-team-inline { color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: 0.03em; margin-left: 6px; }
 .model-tab-pts { font-size: 10.5px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.02em; white-space: nowrap; }
@@ -1908,7 +1911,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .ip-card > *, .ip-coach > * { position:relative; z-index:2; }
 /* engraved header */
 .ip-head { display:flex; align-items:flex-start; gap:11px; min-height:30px; padding-bottom:14px; margin-bottom:15px; border-bottom:1px solid rgba(0,0,0,0.28); box-shadow:0 1px 0 rgba(255,255,255,0.5); }
-.ip-name { font-family:var(--font-display); font-size:19px; line-height:1; white-space:nowrap; letter-spacing:0.13em; text-transform:uppercase; color:#cfd4da; text-shadow:0 1px 1px rgba(0,0,0,0.8), 0 -1px 0 rgba(255,255,255,0.05); }
+.ip-name { font-family:var(--font-display); font-size:21.85px; line-height:1; white-space:nowrap; letter-spacing:0.13em; text-transform:uppercase; color:#cfd4da; text-shadow:0 1px 1px rgba(0,0,0,0.8), 0 -1px 0 rgba(255,255,255,0.05); }
 .ip-snake .ip-name, .ip-auction .ip-name { color:#262b31; text-shadow:0 1px 0 rgba(255,255,255,0.55), 0 -1px 0 rgba(0,0,0,0.18); }
 .ip-sub { font-family:var(--font-display); font-size:13px; letter-spacing:0.1em; text-transform:uppercase; color:#9aa0a7; border:1px solid rgba(0,0,0,0.5); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05); padding:2px 7px; border-radius:3px; background:rgba(0,0,0,0.22); }
 .ip-intro { font-size:15px; line-height:1.5; color:#363b42; margin:0 0 16px; }
@@ -5511,9 +5514,9 @@ function LandingSplash({
     }
   }, (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Snake · PPR · Superflex · Dynasty leagues" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Best Ball · Ceiling · Stacks · Underdog-style" : "Auction · Salary-cap · Superflex · 2-QB leagues"), React.createElement("h1", {
     className: "lp-head"
-  }, (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Know who your leaguemates will pick before they do." : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Draft for ceiling. The lineups set themselves." : "Know what to bid when you’re on the clock."), React.createElement("p", {
+  }, (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Know who your leaguemates will pick before they do." : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Your stacks light up the moment they’re live." : "Know what to bid when you’re on the clock."), React.createElement("p", {
     className: "lp-sub"
-  }, (typeof window !== "undefined" && (window.location.pathname.indexOf("/snakedraft") === 0 || window.location.pathname.indexOf("/bestball") === 0)) ? ["Custom rankings for your exact league. Rankings that ", React.createElement("b", { key: "s1" }, "change to reflect your roster"), ", and projections to tell you ", React.createElement("b", { key: "s2" }, "who will be available when the pick comes back to you"), "."] : ["Custom values for your exact league: ", React.createElement("b", { key: "a1" }, "likely price"), ", ", React.createElement("b", { key: "a2" }, "true value"), ", and ", React.createElement("b", { key: "a3" }, "your max bid"), " on every player, re-priced live as the money leaves the room."]), React.createElement("div", {
+  }, (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? ["Custom rankings for your exact league. Rankings that ", React.createElement("b", { key: "s1" }, "change to reflect your roster"), ", and projections to tell you ", React.createElement("b", { key: "s2" }, "who will be available when the pick comes back to you"), "."] : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? ["Ceiling-weighted rankings for your exact league, with ", React.createElement("b", { key: "b1" }, "live stack alerts"), " as the board moves and ", React.createElement("b", { key: "b2" }, "championship-week"), " targets baked in."] : ["Custom values for your exact league: ", React.createElement("b", { key: "a1" }, "likely price"), ", ", React.createElement("b", { key: "a2" }, "true value"), ", and ", React.createElement("b", { key: "a3" }, "your max bid"), " on every player, re-priced live as the money leaves the room."]), React.createElement("div", {
     className: "lp-cta-row",
     style: {
       marginTop: 6
@@ -11533,7 +11536,7 @@ function Cheatsheet({
       "data-pos": pos,
       "data-tierband": undefined,
       title: drafted ? dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool' : undefined,
-      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''}`,
+      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''} ${(config && config.format === 'bestball' && !drafted && _fmtMyRoster.length && typeof bestballStackBoost === 'function' && bestballStackBoost(p, _fmtMyRoster, 1) > 0) ? 'cheat-stack' : ''}`,
       onPointerDown: e => startDrag(e, p.id, pos),
       style: {
         touchAction: 'pan-y',
