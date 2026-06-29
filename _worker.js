@@ -753,7 +753,7 @@ export default {
     // Serve static assets, but tell browsers to revalidate HTML every load so
     // updates show up without a hard refresh (the app is a single index.html).
     let __assetReq = request;
-    try { if (/^\/(auctiondraft|snakedraft)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request); } catch (e) {}
+    try { if (/^\/(auctiondraft|snakedraft|bestball)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request); } catch (e) {}
     const resp = await env.ASSETS.fetch(__assetReq);
     const ct = resp.headers.get('content-type') || '';
     if (ct.includes('text/html')) {
