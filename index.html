@@ -11958,6 +11958,7 @@ function ReferralModal({
   const [phoneIn, setPhoneIn] = useState((account && account.refPhone) || '');
   const [codeIn, setCodeIn] = useState((account && account.refCode) || genRefCode());
   const [passIn, setPassIn] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -11971,6 +11972,7 @@ function ReferralModal({
     if (ph.replace(/\D/g, '').length < 10) { setErr('Enter a valid phone number (at least 10 digits).'); return; }
     if (cd.length < 4 || cd.length > 16) { setErr('Your code must be 4-16 letters or numbers.'); return; }
     if ((passIn || '').length < 4) { setErr('Set a password (at least 4 characters) so you can check your signups.'); return; }
+    if (!agreed) { setErr('Please check the box to accept the Affiliate Terms & Conditions.'); return; }
     setErr('Checking that code…');
     let claim = null;
     try { const r = await fetch('/api/claim-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: cd, email: em, phone: ph, password: passIn }) }); claim = await r.json(); } catch (e) {}
@@ -12062,7 +12064,7 @@ function ReferralModal({
     type: "text", value: codeIn, onChange: e => setCodeIn(e.target.value.toUpperCase()), placeholder: "e.g. KEN2026", maxLength: 16, style: { ..._inp, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }, "aria-label": "Your referral code"
   }), React.createElement("label", { style: _lbl }, "Set a password (to check your signups later)"), React.createElement("input", {
     type: "password", value: passIn, onChange: e => setPassIn(e.target.value), placeholder: "at least 4 characters", style: _inp, "aria-label": "Affiliate password"
-  }), React.createElement("div", { style: { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.4 } }, "4-16 letters or numbers for the code. We pay out referrals to your email/phone. Your password lets you sign in at irontuna.com/?affiliate=1 to see who signed up under your code."), err && React.createElement("div", { style: { fontSize: 12.5, color: '#ff6b6b' } }, err), React.createElement("button", {
+  }), React.createElement("div", { style: { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.4 } }, "4-16 letters or numbers for the code. We pay out referrals to your email/phone. Your password lets you sign in at irontuna.com/?affiliate=1 to see who signed up under your code."), React.createElement("label", { style: { display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45, cursor: 'pointer', marginTop: 6 } }, React.createElement("input", { type: "checkbox", checked: agreed, onChange: e => setAgreed(e.target.checked), style: { marginTop: 2, flexShrink: 0 }, "aria-label": "Accept affiliate terms and conditions" }), React.createElement("span", null, "I have read and agree to the ", React.createElement("a", { href: "/terms", target: "_blank", rel: "noopener", style: { color: 'var(--gold-text)' } }, "Affiliate Terms & Conditions"), ", including binding in-person arbitration in New Hampshire and that disputes may be consolidated at Iron Tuna's discretion.")), err && React.createElement("div", { style: { fontSize: 12.5, color: '#ff6b6b' } }, err), React.createElement("button", {
     className: "rf-getcode",
     onClick: submitCode,
     style: { marginTop: 2 }
@@ -19270,7 +19272,11 @@ function LegalModal({
     style: {
       marginTop: 8
     }
-  }, React.createElement("b", null, "Dispute resolution; governing law."), " These terms are governed by the laws of the State of New Hampshire, without regard to its conflict-of-laws principles. Any dispute, claim, or controversy arising out of or relating to the service or these terms shall be resolved exclusively by either litigation or binding arbitration seated in the State of New Hampshire, with the choice between litigation and arbitration to be made at Iron Tuna's sole election. You consent to the personal jurisdiction and venue of the state and federal courts located in New Hampshire and of any arbitral forum so seated. If Iron Tuna elects arbitration, each party shall share equally the fees and costs of the arbitrator, and any party's failure to timely pay its share of those fees when due shall constitute a default. Unless a verdict or award is issued entirely and in full adverse to Iron Tuna, Iron Tuna shall be entitled to recover its reasonable attorneys' fees and costs."), React.createElement("p", {
+  }, React.createElement("b", null, "Dispute resolution; governing law."), " These terms are governed by the laws of the State of New Hampshire, without regard to its conflict-of-laws principles. Any dispute, claim, or controversy arising out of or relating to the service or these terms shall be resolved exclusively by binding arbitration seated in, and conducted in person in, the State of New Hampshire. You consent to the personal jurisdiction and venue of any such arbitral forum and of the state and federal courts located in New Hampshire for any action to compel arbitration or to enforce an award. Iron Tuna may, in its sole discretion, aggregate or consolidate multiple claims or disputes (including those of multiple parties) into one or more consolidated arbitration proceedings. Each party shall share equally the arbitrator's fees and costs, and any party's failure to timely pay its share when due shall constitute a default."), React.createElement("p", {
+    style: {
+      marginTop: 8
+    }
+  }, React.createElement("b", null, "Attorneys' fees."), " If Iron Tuna is the prevailing party on any claim, Iron Tuna shall be entitled to recover its reasonable attorneys' fees and costs from the other party. Otherwise, each party shall bear its own attorneys' fees and costs, except that if the other party prevails on every claim and every aspect of the dispute, that party shall be entitled to recover its reasonable attorneys' fees and costs."), React.createElement("p", {
     style: {
       marginTop: 8
     }
