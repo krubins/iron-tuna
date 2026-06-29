@@ -5288,7 +5288,7 @@ function Header({
       setResetOpen(false);
       onReset('board');
     }
-  }, "Reset Auction Board"), React.createElement("button", {
+  }, (config && (config.format || 'auction') !== 'auction') ? "Reset Draft Board" : "Reset Auction Board"), React.createElement("button", {
     onClick: () => {
       setResetOpen(false);
       onReset('sheet');
@@ -6868,7 +6868,7 @@ function QuickDraftModal({
     if (player.personalValue != null && av != null && player.personalValue > av) return 'Fits your build, his points lift your starting lineup more than his raw value suggests.';
     return 'Steady contributor at his price with no red flags in the projection.';
   })();
-  const _isSnake = (config.format || 'auction') === 'snake';
+  const _isSnake = (config.format || 'auction') !== 'auction';
   const _chip = col => ({ fontSize: 11, fontFamily: 'var(--font-mono)', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '2px 8px', color: col || 'var(--text-secondary)', whiteSpace: 'nowrap' });
   const _risk = typeof riskScore === 'function' ? riskScore(player) : null;
   const _riskTxt = (_risk != null && typeof riskLabel === 'function') ? riskLabel(_risk) : null;
@@ -6887,11 +6887,12 @@ function QuickDraftModal({
   const _adpGap = (_isSnake && player.adp != null && _projRank) ? Math.round(player.adp - _projRank) : null;
   const _surplus = (!_isSnake && player.auctionValue != null && player.marketValue != null) ? (player.auctionValue - player.marketValue) : null;
   const _survRows = (() => {
-    if (!_isSnake || !config.snake) return null;
+    const _sk = config.snake || config.bestball;
+    if (!_isSnake || !_sk) return null;
     const di = draftedIds || new Set();
     const teamsN = config.teams || 12;
-    const slot = (config.snake && config.snake.draftSlot) || 1;
-    const maxR = config.snake.rounds || 16;
+    const slot = (_sk && _sk.draftSlot) || 1;
+    const maxR = _sk.rounds || 16;
     const pickAt = r => r % 2 === 1 ? (r - 1) * teamsN + slot : r * teamsN - slot + 1;
     const cur = (di.size || 0) + 1;
     let nr = 1;
@@ -20013,7 +20014,7 @@ function App() {
   const remoteApplyRef = useRef(false);
   const __itPath = (() => { try { return window.location.pathname || '/'; } catch (e) { return '/'; } })();
   const __itFmt = __itPath.indexOf('/snakedraft') === 0 ? 'snake' : __itPath.indexOf('/bestball') === 0 ? 'bestball' : 'auction';
-  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; return { ...__b, format: __itFmt }; })());
+  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; const __c = { ...__b, format: __itFmt }; if (__itFmt === 'bestball') { __c.roster = BESTBALL_ROSTER; __c.flex = BESTBALL_FLEX; } return __c; })());
   const [players, setPlayers] = useState(initialState?.players || buildInitialPlayers(BASELINE_PROJECTIONS));
   const [valueAdjust, setValueAdjust] = useState(initialState?.valueAdjust || {});
   const [priceOverrides, setPriceOverrides] = useState(initialState?.priceOverrides || {});
@@ -20248,7 +20249,8 @@ function App() {
     });
   }
   const [teams, setTeams] = useState(() => {
-    const cfg = initialState?.config || DEFAULT_LEAGUE_CONFIG;
+    let cfg = initialState?.config || DEFAULT_LEAGUE_CONFIG;
+    if (__itFmt === 'bestball') cfg = { ...cfg, roster: BESTBALL_ROSTER, flex: BESTBALL_FLEX };
     const loadedTeams = initialState?.teams || buildInitialTeams(cfg);
     const total = totalRosterSpots(cfg);
     return loadedTeams.map(t => ({
@@ -20855,7 +20857,8 @@ function App() {
   }
   function handleReset(kind) {
     const k = kind === 'board' || kind === 'sheet' || kind === 'both' ? kind : 'both';
-    const msg = k === 'board' ? 'Reset the Auction Board? Clears all draft picks and budgets. Team names and your "My Team" pick are kept.' : k === 'sheet' ? 'Reset the Cheat Sheet? Clears your custom ranks and price overrides.' : 'Reset both? Clears all draft picks AND your cheat-sheet changes. Team names and your "My Team" pick are kept.';
+    const _na = (config.format || 'auction') !== 'auction';
+    const msg = k === 'board' ? (_na ? 'Reset the Draft Board? Clears all draft picks. Team names and your "My Team" pick are kept.' : 'Reset the Auction Board? Clears all draft picks and budgets. Team names and your "My Team" pick are kept.') : k === 'sheet' ? ('Reset the Cheat Sheet? Clears your custom ranks' + (_na ? '.' : ' and price overrides.')) : 'Reset both? Clears all draft picks AND your cheat-sheet changes. Team names and your "My Team" pick are kept.';
     if (!window.confirm(msg + ' This cannot be undone.')) return;
     const total = totalRosterSpots(config);
     if (k === 'board' || k === 'both') {
