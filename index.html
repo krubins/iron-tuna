@@ -1633,6 +1633,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .lead-capture .lc-form input { background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text-primary); font-size: 14px; min-width: 180px; }
 .lead-capture .lc-btn { background: var(--positive); color: #06231b; border: none; border-radius: var(--radius-sm); padding: 9px 15px; font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
 .lead-capture .lc-x { position: absolute; top: 6px; right: 8px; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
+/* Comfortable thumb targets on phones (draft night) for the small standalone controls */
+@media (max-width: 760px) { .font-scale-bar .fs-btn { height: 38px; width: 38px; } .col-toggle { padding: 9px 13px; } .coach-unlockbtn { padding: 10px 14px; } .lead-capture .lc-x { font-size: 20px; padding: 4px 6px; top: 3px; right: 5px; } }
 @media (max-width: 600px) { .lead-capture .lc-form { width: 100%; } .lead-capture .lc-form input { flex: 1; min-width: 0; } }
 .taunt-wrap .taunt-select { background: var(--bg-elev); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 9px; font-size: 13px; margin-right: 8px; max-width: 160px; }
 .roast-menu { left: auto; right: 0; max-height: 320px; overflow-y: auto; }
@@ -18951,6 +18953,11 @@ function UpgradeModal({
   const tier = TIERS.find(t => t.id === f) || TIERS[0];
   const priceLabel = '$' + (tier.price).toFixed(2);
   const body = f === 'snake' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Day Mode"), " tells you who survives to your next pick and whether to take now or wait", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".") : f === 'bestball' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Day Mode"), " weights ceiling and surfaces your best stacks as you draft", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".") : React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Day Mode"), " tracks every bid and recalculates your max bid live", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".");
+  const bullets = f === 'snake'
+    ? ['Who survives to your next pick — take now or wait', 'Custom rankings for YOUR exact scoring', 'AI Value Coach: who to draft, on the clock', 'Reorder & build your own cheat sheet']
+    : f === 'bestball'
+    ? ['Ceiling values + live stack alerts as you draft', 'Custom values for YOUR exact scoring', 'AI Value Coach: who to draft, on the clock', 'Championship-week (Weeks 15-17) edges']
+    : ['Live max-bid math as the money leaves the room', 'Custom values for YOUR exact scoring', 'AI Value Coach: who to bid on and how high', 'Reorder & build your own cheat sheet'];
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
@@ -18972,7 +18979,11 @@ function UpgradeModal({
     }
   }, "Unlock Draft Day Mode"), React.createElement("p", {
     className: "upg-body"
-  }, body), React.createElement("button", {
+  }, body), React.createElement("ul", {
+    style: { listStyle: 'none', padding: 0, margin: '2px 0 12px', display: 'grid', gap: 7 }
+  }, bullets.map((b, i) => React.createElement("li", { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.4 } }, React.createElement("span", { style: { color: 'var(--positive)', fontWeight: 700, flexShrink: 0 } }, "✓"), b))), React.createElement("p", {
+    style: { fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 12px', lineHeight: 1.45 }
+  }, "You've already seen your real values free — this unlocks the live edge. One-time ", React.createElement("b", { style: { color: 'var(--text-secondary)' } }, priceLabel), " for the whole season, no subscription."), React.createElement("button", {
     className: "btn-draft upg-cta",
     onClick: onUnlock
   }, "Unlock Draft Day Mode · " + priceLabel), React.createElement("button", {
@@ -20138,11 +20149,7 @@ function App() {
                 verified: true
               });
             } catch (e) {}
-            setPurchaseToast({
-              text: '\u2713 Payment received \u2014 Full Site unlocked. Thank you!',
-              tone: 'good',
-              id: Date.now()
-            });
+            setPostBuyOpen(true);
           }
           clean();
         }).catch(clean);
@@ -20337,6 +20344,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railOpen, setRailOpen] = useState(true);
   const [purchaseToast, setPurchaseToast] = useState(null);
+  const [postBuyOpen, setPostBuyOpen] = useState(false);
   useEffect(() => {
     if (!purchaseToast) return;
     const t = setTimeout(() => setPurchaseToast(null), 3900);
@@ -21874,7 +21882,7 @@ function App() {
     className: `purchase-toast no-print tone-${purchaseToast.tone}`,
     onClick: () => setPurchaseToast(null),
     title: "Click to dismiss"
-  }, purchaseToast.text), overlay === 'pricing' && React.createElement(PricingModal, {
+  }, purchaseToast.text), postBuyOpen && React.createElement("div", { className: "modal-bg no-print", onClick: () => setPostBuyOpen(false) }, React.createElement("div", { className: "modal", style: { maxWidth: 460, textAlign: 'center' }, onClick: e => e.stopPropagation() }, React.createElement("button", { className: "modal-close", onClick: () => setPostBuyOpen(false) }, "×"), React.createElement("div", { style: { fontSize: 40, marginBottom: 4 } }, "🎉"), React.createElement("div", { className: "section-title", style: { textAlign: 'center' } }, "You're in — Draft Day Mode unlocked"), React.createElement("p", { style: { fontSize: 13.5, color: 'var(--text-secondary)', margin: '6px 0 16px' } }, "Payment received. Your full draft tools are live on this device — custom scoring, the live Value Coach, and your own board."), React.createElement("div", { style: { background: 'rgba(45,212,163,0.08)', border: '1px solid rgba(45,212,163,0.35)', borderRadius: 12, padding: '14px 16px', textAlign: 'left', marginBottom: 14 } }, React.createElement("div", { style: { fontWeight: 700, color: 'var(--positive)', marginBottom: 4 } }, "Want it for free?"), React.createElement("p", { style: { fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 } }, "Earn ", React.createElement("b", null, "$3 for every friend"), " who unlocks with your link — and they get $1 off. About four friends and your $9.99 has paid for itself.")), React.createElement("button", { className: "btn-draft", style: { width: '100%' }, onClick: () => { setPostBuyOpen(false); setReferOpen(true); } }, "Get my share link →"), React.createElement("button", { onClick: () => setPostBuyOpen(false), style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' } }, "Maybe later"))), overlay === 'pricing' && React.createElement(PricingModal, {
     account: account,
     onBuy: openCheckout,
     onClose: () => setOverlay(null),
