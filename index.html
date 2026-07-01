@@ -260,7 +260,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .bm-round-row:last-child { border-bottom: none; }
 .bm-rd { font-family: var(--font-mono); color: var(--text-muted); font-size: 12px; }
 .bm-pos { font-size: 10px; padding: 1px 5px; text-align: center; min-width: 0; }
-.bm-pl { color: var(--text-primary); }
+.bm-pl { color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bm-empty { color: var(--text-muted); font-size: 12px; padding: 4px 0; }
 .strategy-bar-snake { justify-content: center; }
 .strategy-bar-snake .summarize-btn, .strategy-bar-snake .taunt-wrap { margin-left: 0; }
@@ -1410,9 +1410,12 @@ input:focus, select:focus { border-color: var(--accent); }
   .header { padding: 12px 16px; }
   .header-brand h1 { font-size: 24px; }
   .main-content { padding: 16px 16px 130px; }
-  .prep-main, .main, .main.board-collapsed { grid-template-columns: 1fr; }
+  .prep-main, .main, .main.board-collapsed { grid-template-columns: minmax(0, 1fr); }
   .cheat-grid { grid-template-columns: repeat(2, 1fr); }
-  .board-layout { grid-template-columns: 1fr; }
+  /* minmax(0,1fr): a bare 1fr track grows to its content's min-width and pushes the page
+     past the viewport on phones */
+  .board-layout { grid-template-columns: minmax(0, 1fr); }
+  .board-layout > * { min-width: 0; }
   .settings-grid { grid-template-columns: 1fr 1fr; }
 }
 
@@ -1436,11 +1439,18 @@ input:focus, select:focus { border-color: var(--accent); }
 /* ============ Responsive: phones ============ */
 @media (max-width: 600px) {
   .header-brand h1 { font-size: 21px; }
-  .header-logo { height: 34px; }
+  /* !important beats the inline height LogoMark sets; without this the 51px logo forces the
+     whole app to ~409px min-width and phones clip the right edge. */
+  .header-logo { height: 36px !important; max-width: calc(100vw - 48px); }
   .main-content { padding: 12px 10px 168px; }
   .cheat-grid { grid-template-columns: 1fr; }
   .cheat-row { font-size: 14px; padding: 5px 8px; }
   .cheat-rank, .cheat-team, .cheat-val, .cheat-cost, .cheat-you { font-size: 12.5px; }
+  .cheat-soft { font-size: 10px; }
+  .cheat-col-lbl, .cheat-col-sub { font-size: 10px; }
+  .ch-depth { flex-wrap: wrap; row-gap: 6px; }
+  .section-meta, .section-meta > span { flex-wrap: wrap; row-gap: 6px; }
+  .bm-rounds3 { column-count: 1; }
   .filter-pill { font-size: 12px; padding: 6px 10px; }
   .modal { width: 96%; padding: 14px; border-radius: var(--radius-md); }
   .budget-stats, .bid-numbers { grid-template-columns: 1fr 1fr; }
