@@ -2012,7 +2012,7 @@ input:focus, select:focus { border-color: var(--accent); }
       "applicationCategory": "SportsApplication",
       "operatingSystem": "Any (web browser)",
       "description": "Iron Tuna is an AI fantasy football auction draft assistant that generates custom auction values for your exact league: likely market price, true VBD value, and your personal maximum bid for every player, plus a budget-aware optimal-lineup planner and an AI auction navigator.",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free custom auction values; optional paid Advanced Auction Day Management." },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free expert auction values; one-time $9.99 unlocks your league's custom scoring, custom values, and the live AI draft-day tools." },
       "featureList": [
         "Custom auction values for your exact league and scoring",
         "Three values per player: market price, true value, and your personal max bid",
@@ -2030,7 +2030,7 @@ input:focus, select:focus { border-color: var(--accent); }
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Is Iron Tuna really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Management package (the live management tool and the Value Coach) is the paid upgrade." } },
+        { "@type": "Question", "name": "Is Iron Tuna really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — the full draft board with expert default values is free, no signup. A one-time $9.99 unlocks values recalculated to your league's exact custom scoring, a reorderable board, the AI Value Coach, and the live Draft Day tools." } },
         { "@type": "Question", "name": "Does it work for any auction league?", "acceptedAnswer": { "@type": "Answer", "text": "Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings." } },
         { "@type": "Question", "name": "Do I have to connect my league account?", "acceptedAnswer": { "@type": "Answer", "text": "No. There is nothing to log into and no password sharing. Enter your settings (or paste or screenshot your scoring) and you are ready." } },
         { "@type": "Question", "name": "How is Iron Tuna different from other draft tools?", "acceptedAnswer": { "@type": "Answer", "text": "Most tools hand you one generic auction value. Iron Tuna gives three numbers per player: market price, true value, and your personal max, plus an AI navigator that tells you exactly how high to go in real time." } },
@@ -2049,20 +2049,20 @@ input:focus, select:focus { border-color: var(--accent); }
       <p>Iron Tuna is the most comprehensive AI tool for fantasy football auction drafts. It generates custom auction values for your exact league, three honest numbers for every player (likely market price, true VBD value, and your personal maximum bid), plus a budget-aware lineup planner and an AI fantasy auction navigator. Whether you call it a fantasy auction, a fantasy football auction draft, or simply custom auction values, Iron Tuna is built for it.</p>
       <h2>Free</h2>
       <ul>
-        <li>Custom auction values for your exact league and scoring</li>
+        <li>Expert auction values for every player, instantly, no signup</li>
         <li>Tiered cheat sheet and six strategy models</li>
         <li>A budget-aware optimal-lineup planner that finds the strategy and dollar allocation for your highest-scoring team</li>
       </ul>
-      <h2>Advanced Auction Day Management (paid)</h2>
+      <h2>Custom Values + Draft Day ($9.99, one-time)</h2>
       <ul>
-        <li>Track player selection, available funds, and maximum remaining bids</li>
-        <li>An always-on AI navigator: who to bid on, how high, and why</li>
-        <li>Proactive insight on emerging bidding trends in real time</li>
-        <li>An always-on AI Value Coach and Gameday Navigator</li>
+        <li>Your league's full custom scoring: every dollar value re-priced to your exact rules</li>
+        <li>Reorder any player and build the board you believe in</li>
+        <li>Track player selection, available funds, and maximum remaining bids on draft day</li>
+        <li>An always-on AI Value Coach: who to bid on, how high, and why — from planning through draft night</li>
       </ul>
       <h2>Frequently asked questions</h2>
       <h3>Is Iron Tuna really free?</h3>
-      <p>Yes. Custom auction values for your exact league and scoring are free with no signup. The Advanced Auction Day Management package is the paid upgrade.</p>
+      <p>Yes — the full draft board with expert default values is free, no signup. A one-time $9.99 unlocks values recalculated to your league's exact custom scoring, a reorderable board, the AI Value Coach, and the live Draft Day tools.</p>
       <h3>Does it work for any auction league?</h3>
       <p>Any auction league. Set your teams, budget, roster, and full custom scoring, and every value recalibrates to your exact settings.</p>
       <h3>How is it different from other tools?</h3>
@@ -5475,8 +5475,8 @@ function LandingSplash({
   const problems = ['Static sheets tell you what a player is worth before the draft starts, not after the room has spent half its budget.', 'They ignore your remaining roster needs, so a player is worth a different amount to you than to the manager across the table.', 'They do not track who still has money, so you cannot see who is about to be forced into overpaying next.', 'Nothing stops you from chasing a player two or three bids too far, which is exactly how good drafts go bad.'];
   const threeNum = [['Market Price', 'What the room is likely to pay for him right now.', 'price'], ['True Value', 'What he is actually worth under your exact league settings.', 'value'], ['Your Max (You)', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'The player\'s value to your starting lineup, adjusted for your roster and remaining needs.' : 'The highest you should personally bid, given your roster, budget, and remaining needs.'), 'max']];
   const proof = [['Tracks every team\'s budget', 'See who is flush and who is broke, so you know who can still bid you up and who is stuck bargain hunting.'], ['Recalculates your max after every nomination', 'Your personal max bid updates the instant the board moves, so the number on screen is always current.'], ['Shows where the room is overpaying', 'Spot the runs and panic bids in real time, and let rivals torch their budgets on names.'], ['Finds value pockets by position', 'Know which positions still have cheap points left, and pounce before anyone else notices.'], ['Keeps your roster legal and balanced', 'Guidance that respects your open slots and budget, so you never get stuck unable to fill a starter.'], ['Helps you avoid panic bids', 'A clear walk-away number on every player, so you stop chasing and start winning the auction.'], ['🔥 Roast a Rival', 'Talk trash with receipts: one tap generates a savage, shareable AI breakdown of any opponent’s roster — their reaches, their holes, their bargain-bin bench — live as the draft unfolds.']];
-  const tiers = [['Free Cheat Sheet', '$0', 'Value your league, no signup', false, [(_PF ? 'Custom rankings for your exact league' : 'Custom auction values for your exact league'), 'Full league scoring inputs', (_PF ? 'Player tiers and draft strategy models' : 'Player tiers and auction strategy models'), 'Sortable, printable cheat sheet', (_PF ? 'The ideal team for your draft position, no points left on the table' : 'The ideal team your budget can afford, no points left on the table'), 'No signup required to start'], (_PF ? 'Build my free board' : 'Build my free auction board'), 'prep', 'hero_cta_click'], ['Draft Day Mode', '$9.99', (_PF ? 'Live draft-day command' : 'Live auction-day command'), true, [(_PF ? 'Live pick tracking, every pick logged' : 'Live auction tracking, every bid logged'), (_PF ? null : 'Opponent budgets and money off the board'), (_PF ? 'Live survival odds and rankings that update as the board moves' : 'Dynamic max bids that update as the room moves'), 'Roster construction guidance and position scarcity', (_PF ? 'A Value Coach that answers player and strategy questions mid-draft' : 'A Value Coach that answers player and price questions mid-auction'), '🔥 Roast a Rival: a savage, shareable AI takedown of any opponent’s roster, served up live during the draft', 'Save and reopen your draft, works even if Wi-Fi drops'], 'Unlock Draft Day Mode', 'board', 'draft_mode_clicked']];
-  const faqs = [[((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Does this work for auction leagues?' : 'Does this work for snake drafts?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'This page is the snake tool, built for pick-order drafts: custom rankings that re-rank to your roster, survival odds for your next pick, and a live AI Value Coach. If your league spends a budget to bid on players, use our auction tool instead.' : 'No, and that is the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, this is the sharpest tool you will find. If you draft in pick order, use a rankings tool.')], ['Do I need to create an account?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'No. Build your free rankings with zero signup. You only make an account if you want to save your league and reopen it on draft day.' : 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft day.')], ['Can I use custom scoring?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes. Set your teams, draft slot, roster slots, and full custom scoring, and every ranking recalculates to your exact settings, including weird home-league rules.' : 'Yes. Set your teams, budget, roster slots, and full custom scoring, and every value recalculates to your exact settings, including weird home-league rules.')], ['Can I use it during a live draft?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes. Draft Day Mode is built to run live: log each pick, track every roster, and read your updated rankings and survival odds as the draft unfolds.' : 'Yes. Draft Day Mode is built to run live: log each bid, track every budget, and read your updated max bid as the auction unfolds.')], ['What happens if my Wi-Fi drops?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-draft.' : 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.')], ['How is this different from a normal cheat sheet?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'A normal sheet gives you one static ranking before the draft. Iron Tuna gives three numbers per player, then re-ranks live based on your roster, your remaining needs, and who has already come off the board.' : 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.')], ['Does it handle superflex and two-QB leagues?', 'Yes. Add QB to your flex eligibility and every quarterback re-prices for the scarcity, so you know exactly how far up to go on the position.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What about keeper or dynasty leagues?' : 'What about keeper or auction-keeper leagues?'), 'Mark the players already kept as drafted before you start. The remaining pool and the inflation math adjust around them, so your values stay accurate.'], ['How accurate are the values?', 'They are projections, not guarantees. Iron Tuna builds on ESPN and CBS projections, reliability-adjusts for injuries and consistency, then converts to dollars at your exact settings. The edge is reacting faster and more rationally than the room, not predicting the future.'], ['Can I use it on my phone?', 'Yes. It runs in any browser, so keep it open on your phone or a second tab and work straight from the board during the draft.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What is the difference between Prep and Draft Day?' : 'What is the difference between Prep and Auction Day?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Prep is your free cheat sheet: build your rankings, set your strategy, and study the board before the draft. Draft Day is the live draft board where you log each pick and track every roster as the draft unfolds.' : 'Prep is your free cheat sheet: build your values, set your strategy, and study the board before the draft. Auction Day is the live draft board where you log each bid and track every budget on the clock.')]];
+  const tiers = [['Free Cheat Sheet', '$0', 'Start planning in 60 seconds', false, [(_PF ? 'Expert rankings for every player, instantly' : 'Expert auction values for every player, instantly'), (_PF ? 'Player tiers and draft strategy models' : 'Player tiers and auction strategy models'), 'Sortable, printable cheat sheet', (_PF ? 'The ideal team for your draft position, no points left on the table' : 'The ideal team your budget can afford, no points left on the table'), 'No signup required to start'], (_PF ? 'Build my free board' : 'Build my free auction board'), 'prep', 'hero_cta_click'], [(_PF ? 'Custom Rankings + Draft Day' : 'Custom Values + Draft Day'), '$9.99', (_PF ? 'Your league’s real rankings, today' : 'Your league’s real values, today'), true, [(_PF ? 'Your league’s FULL custom scoring: every ranking recalculated to your exact rules' : 'Your league’s FULL custom scoring: every dollar value re-priced to your exact rules'), 'Reorder any player and build the board you actually believe in', 'A Value Coach that answers player and strategy questions from planning through draft night', (_PF ? 'On draft day: live pick tracking, survival odds, and rankings that update as the board moves' : 'On draft day: live bid tracking, opponent budgets, and a max bid that updates as the room moves'), '🔥 Roast a Rival: a savage, shareable AI takedown of any opponent’s roster, served up live during the draft', 'Save and reopen your draft, works even if Wi-Fi drops'], (_PF ? 'Unlock my league’s rankings' : 'Unlock my league’s values'), 'prep', 'draft_mode_clicked']];
+  const faqs = [[((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Does this work for auction leagues?' : 'Does this work for snake drafts?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'This page is the snake tool, built for pick-order drafts: custom rankings that re-rank to your roster, survival odds for your next pick, and a live AI Value Coach. If your league spends a budget to bid on players, use our auction tool instead.' : 'No, and that is the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, this is the sharpest tool you will find. If you draft in pick order, use a rankings tool.')], ['Do I need to create an account?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'No. Build your free rankings with zero signup. You only make an account if you want to save your league and reopen it on draft day.' : 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft day.')], ['Can I use custom scoring?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes — that is the heart of the $9.99 unlock. Enter your teams, draft slot, roster slots, and full custom scoring, and every ranking recalculates to your exact settings, including weird home-league rules. The free board uses expert default scoring so you can try it first.' : 'Yes — that is the heart of the $9.99 unlock. Enter your teams, budget, roster slots, and full custom scoring, and every value re-prices to your exact settings, including weird home-league rules. The free board uses expert default scoring so you can try it first.')], ['Can I use it during a live draft?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes. Draft Day Mode is built to run live: log each pick, track every roster, and read your updated rankings and survival odds as the draft unfolds.' : 'Yes. Draft Day Mode is built to run live: log each bid, track every budget, and read your updated max bid as the auction unfolds.')], ['What happens if my Wi-Fi drops?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-draft.' : 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.')], ['How is this different from a normal cheat sheet?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'A normal sheet gives you one static ranking before the draft. Iron Tuna gives three numbers per player, then re-ranks live based on your roster, your remaining needs, and who has already come off the board.' : 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.')], ['Does it handle superflex and two-QB leagues?', 'Yes. Add QB to your flex eligibility and every quarterback re-prices for the scarcity, so you know exactly how far up to go on the position.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What about keeper or dynasty leagues?' : 'What about keeper or auction-keeper leagues?'), 'Mark the players already kept as drafted before you start. The remaining pool and the inflation math adjust around them, so your values stay accurate.'], ['How accurate are the values?', 'They are projections, not guarantees. Iron Tuna builds on ESPN and CBS projections, reliability-adjusts for injuries and consistency, then converts to dollars at your exact settings. The edge is reacting faster and more rationally than the room, not predicting the future.'], ['Can I use it on my phone?', 'Yes. It runs in any browser, so keep it open on your phone or a second tab and work straight from the board during the draft.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What is the difference between Prep and Draft Day?' : 'What is the difference between Prep and Auction Day?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Prep is your free cheat sheet: build your rankings, set your strategy, and study the board before the draft. Draft Day is the live draft board where you log each pick and track every roster as the draft unfolds.' : 'Prep is your free cheat sheet: build your values, set your strategy, and study the board before the draft. Auction Day is the live draft board where you log each bid and track every budget on the clock.')]];
   return React.createElement("div", {
     className: `landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`
   }, React.createElement("div", {
@@ -5549,16 +5549,16 @@ function LandingSplash({
   }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")), React.createElement("button", {
     className: "lp-cta lp-cta-alt",
     onClick: () => go('board', 'secondary_cta_board')
-  }, "See Draft Day Mode")), React.createElement("p", {
+  }, "See everything you unlock")), React.createElement("p", {
     className: "lp-reassure"
-  }, "Free, no account. Draft Day Mode is a one-time $9.99.")), null, React.createElement("div", {
+  }, "Free to start, no account. Your league’s custom values — with all of Draft Day Mode included — one-time $9.99.")), null, React.createElement("div", {
     className: "lp-section",
     ref: pricingRef
   }, React.createElement("div", {
     className: "lp-preview-eyebrow"
   }, "Pricing"), React.createElement("h2", {
     className: "lp-preview-h"
-  }, "Free to plan. $9.99 to run it live."), React.createElement("div", {
+  }, "Free to try. $9.99 for YOUR league’s real values — draft day included."), React.createElement("div", {
     className: "tier-grid"
   }, tiers.map(([name, price, blurb, feat, feats, cta, target, ev]) => React.createElement("div", {
     className: `tier-card ${feat ? 'feature' : ''}`,
@@ -5631,7 +5631,7 @@ function LandingSplash({
   }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")), React.createElement("button", {
     className: "lp-cta lp-cta-alt",
     onClick: () => go('board', 'secondary_cta_board')
-  }, "See Draft Day Mode"))), React.createElement("p", {
+  }, "See everything you unlock"))), React.createElement("p", {
     className: "lp-creditline"
   }, "Built on projections from nationally recognized platforms, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded."), React.createElement("div", {
     className: "lp-seo-links"
@@ -8116,7 +8116,7 @@ function SettingsModal({
   }, "Scoring Format"), (!canScore && React.createElement("div", {
     onClick: onUnlockScore,
     style: { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elev)', border: '1px solid var(--gold-text, #e3b53a)', borderRadius: 8, padding: '10px 12px', margin: '0 0 10px', fontSize: 12.5, lineHeight: 1.4 }
-  }, React.createElement("span", { style: { fontSize: 16 } }, "🔒"), React.createElement("span", null, React.createElement("b", { style: { color: 'var(--gold-text, #e3b53a)' } }, "Custom scoring is part of the unlock."), " You can see the default rankings free — tap to unlock your league's own scoring."))), React.createElement("div", {
+  }, React.createElement("span", { style: { fontSize: 16 } }, "🔒"), React.createElement("span", null, React.createElement("b", { style: { color: 'var(--gold-text, #e3b53a)' } }, "Your league doesn’t score like the default."), " These values are built on expert default scoring — tap to unlock values rebuilt for YOUR league’s exact rules ($9.99 once, draft day included)."))), React.createElement("div", {
     className: "settings-presets"
   }, React.createElement("button", {
     type: "button",
@@ -18795,24 +18795,24 @@ const ACCOUNT_KEY = 'iron_tuna_account_v1';
 const TIERS = [{
   id: 'auction',
   format: 'auction',
-  name: 'Auction Draft Day Mode',
+  name: 'Custom Values + Draft Day',
   price: 9.99,
-  blurb: 'Live command for auction draft day.',
-  features: ['Live max bid recalculated as every dollar leaves the room', 'Every team’s budget and roster needs, tracked in real time', 'The best team your budget can still afford, re-solved on every pick', 'Value Coach: ask who to target and exactly how high', 'Save and reopen your league, even if the Wi-Fi drops']
+  blurb: 'Your league’s real values today — live auction command when you’re on the clock.',
+  features: ['Your league’s FULL custom scoring: every dollar value re-priced to your exact rules', 'Reorder any player and build the board you actually believe in', 'Value Coach: ask who to target and exactly how high, from planning through draft night', 'On draft day: live max bid recalculated as every dollar leaves the room', 'Every team’s budget and roster needs, tracked in real time', 'Save and reopen your league, even if the Wi-Fi drops']
 }, {
   id: 'snake',
   format: 'snake',
-  name: 'Snake Draft Day Mode',
+  name: 'Custom Rankings + Draft Day',
   price: 9.99,
-  blurb: 'Live command for snake draft day.',
-  features: ['Live best-available board plus survival odds for your next pick', 'Will-he-get-back-to-you calls so you know whether to take now or wait', 'Position run alerts as the board comes off ahead of you', 'Value Coach that knows your exact draft slot', 'Save and reopen your draft, even if the Wi-Fi drops']
+  blurb: 'Your league’s real rankings today — live draft command when you’re on the clock.',
+  features: ['Your league’s FULL custom scoring: every ranking recalculated to your exact rules', 'Reorder any player and build the board you actually believe in', 'Value Coach that knows your exact draft slot, from planning through draft night', 'On draft day: live best-available board plus survival odds for your next pick', 'Will-he-get-back-to-you calls so you know whether to take now or wait', 'Save and reopen your draft, even if the Wi-Fi drops']
 }, {
   id: 'bestball',
   format: 'bestball',
-  name: 'Best Ball Draft Mode',
+  name: 'Ceiling Values + Draft Day',
   price: 9.99,
-  blurb: 'Draft for ceiling and stacks.',
-  features: ['Ceiling-weighted board built for best-ball scoring', 'Automatic stack detection for your QB-to-receiver pairings', 'Survival odds so you know who lasts to your next pick', 'Deeper-roster planner that keeps your full draft on plan', 'Value Coach for ceiling and stack questions as you draft']
+  blurb: 'Your league’s real values today — stacks and ceiling live as you draft.',
+  features: ['Your league’s FULL custom scoring on a ceiling-weighted best-ball board', 'Reorder any player and build the board you actually believe in', 'Automatic stack detection for your QB-to-receiver pairings', 'Survival odds so you know who lasts to your next pick', 'Value Coach for ceiling and stack questions, from planning through draft night', 'Save and reopen your draft, even if the Wi-Fi drops']
 }];
 function loadAccount() {
   const def = {
@@ -18965,12 +18965,12 @@ function UpgradeModal({
   const rsn = reason ? `, including ${reason}` : '';
   const tier = TIERS.find(t => t.id === f) || TIERS[0];
   const priceLabel = '$' + (tier.price).toFixed(2);
-  const body = f === 'snake' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Day Mode"), " tells you who survives to your next pick and whether to take now or wait", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".") : f === 'bestball' ? React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Day Mode"), " weights ceiling and surfaces your best stacks as you draft", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".") : React.createElement(React.Fragment, null, "Your cheat sheet is ready. ", React.createElement("b", null, "Draft Day Mode"), " tracks every bid and recalculates your max bid live", rsn, ". Unlock for ", React.createElement("b", null, priceLabel), ".");
+  const body = f === 'snake' ? React.createElement(React.Fragment, null, "You’re looking at expert ", React.createElement("b", null, "default"), " rankings. Your league doesn’t score like the default — unlock rankings rebuilt for ", React.createElement("b", null, "YOUR exact scoring"), rsn, ", with all of Draft Day Mode included. One-time ", React.createElement("b", null, priceLabel), ".") : f === 'bestball' ? React.createElement(React.Fragment, null, "You’re looking at expert ", React.createElement("b", null, "default"), " values. Unlock ceiling values rebuilt for ", React.createElement("b", null, "YOUR exact scoring"), rsn, ", with live stacks on draft day included. One-time ", React.createElement("b", null, priceLabel), ".") : React.createElement(React.Fragment, null, "You’re looking at expert ", React.createElement("b", null, "default"), " values. Your league doesn’t score like the default — unlock dollar values re-priced for ", React.createElement("b", null, "YOUR exact scoring"), rsn, ", with all of Draft Day Mode included. One-time ", React.createElement("b", null, priceLabel), ".");
   const bullets = f === 'snake'
-    ? ['Who survives to your next pick — take now or wait', 'Custom rankings for YOUR exact scoring', 'AI Value Coach: who to draft, on the clock', 'Reorder & build your own cheat sheet']
+    ? ['Custom rankings for YOUR exact scoring — different scoring, different board', 'Reorder & build the cheat sheet you actually believe in', 'AI Value Coach: strategy answers while you plan', 'Draft day included: survival odds + who to take, live on the clock']
     : f === 'bestball'
-    ? ['Ceiling values + live stack alerts as you draft', 'Custom values for YOUR exact scoring', 'AI Value Coach: who to draft, on the clock', 'Championship-week (Weeks 15-17) edges']
-    : ['Live max-bid math as the money leaves the room', 'Custom values for YOUR exact scoring', 'AI Value Coach: who to bid on and how high', 'Reorder & build your own cheat sheet'];
+    ? ['Ceiling values for YOUR exact scoring', 'Reorder & build the board you actually believe in', 'AI Value Coach: stack and ceiling answers while you plan', 'Draft day included: live stack alerts + championship-week edges']
+    : ['Custom dollar values for YOUR exact scoring — different scoring, different prices', 'Reorder & build the cheat sheet you actually believe in', 'AI Value Coach: who to target and how high, while you plan', 'Draft day included: live max-bid math as the money leaves the room'];
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
@@ -18990,7 +18990,7 @@ function UpgradeModal({
     style: {
       textAlign: 'center'
     }
-  }, "Unlock Draft Day Mode"), React.createElement("p", {
+  }, f === 'snake' ? "Unlock your league’s real rankings" : "Unlock your league’s real values"), React.createElement("p", {
     className: "upg-body"
   }, body), React.createElement("ul", {
     style: { listStyle: 'none', padding: 0, margin: '2px 0 12px', display: 'grid', gap: 7 }
@@ -18999,7 +18999,7 @@ function UpgradeModal({
   }, "You've already seen your real values free — this unlocks the live edge. One-time ", React.createElement("b", { style: { color: 'var(--text-secondary)' } }, priceLabel), " for the whole season, no subscription."), React.createElement("button", {
     className: "btn-draft upg-cta",
     onClick: onUnlock
-  }, "Unlock Draft Day Mode · " + priceLabel), React.createElement("button", {
+  }, (f === 'snake' ? "Unlock my league’s rankings · " : "Unlock my league’s values · ") + priceLabel), React.createElement("button", {
     className: "upg-later",
     onClick: onClose
   }, "Maybe later"), React.createElement("button", {
