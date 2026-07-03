@@ -21798,14 +21798,7 @@ function App() {
     onShareEarn: () => setReferOpen(true)
   }), React.createElement("div", {
     className: `main ${view === 'prep' ? 'prep-main board-full' : ''} ${view === 'board' ? 'board-main board-full is-draftboard' : ''} ${view === 'split' ? 'split-main board-full is-draftboard' : ''} ${view === 'mock' ? 'board-full' : ''}`
-  }, view === 'prep' && (config.format || 'auction') === 'bestball' && React.createElement("div", {
-    style: { marginBottom: 14 }
-  }, React.createElement(BestBallCoach, {
-    myTeam: myTeam,
-    players: personalizedPlayers,
-    draftedIds: draftedIds,
-    config: config
-  })), (view === 'prep' || view === 'board' || view === 'split') && React.createElement("div", {
+  }, (view === 'prep' || view === 'board' || view === 'split') && React.createElement("div", {
     className: "font-scale-bar no-print"
   }, React.createElement("span", {
     className: "fs-label"
@@ -21838,7 +21831,14 @@ function App() {
     style: {
       zoom: fontScale
     }
-  }, renderMainContent())), view === 'settings' && React.createElement(SettingsModal, {
+  }, renderMainContent(), view === 'prep' && (config.format || 'auction') === 'bestball' && React.createElement("div", {
+    style: { marginTop: 18 }
+  }, React.createElement(BestBallCoach, {
+    myTeam: myTeam,
+    players: personalizedPlayers,
+    draftedIds: draftedIds,
+    config: config
+  })))), view === 'settings' && React.createElement(SettingsModal, {
     config: config,
     onSave: handleConfigChange,
     onClose: () => setView('board'),
