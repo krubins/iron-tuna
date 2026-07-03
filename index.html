@@ -11269,8 +11269,8 @@ function Cheatsheet({
     return m;
   }, [players]);
   const COLSPEC = getFormat(config).columns;
-  const activeCols = COLSPEC.filter(c => showCols[c[0]] !== false);
-  const _numColW = (config && config.format === 'snake') ? '58px' : 'auto';
+  const activeCols = COLSPEC.filter(c => showCols[c[0]] !== false).filter(c => !(c[0] === 'stack' && !_fmtMyRoster.length));
+  const _numColW = (config && config.format && config.format !== 'auction') ? '58px' : 'auto';
     const gridT = `15px 16px minmax(0,1fr) auto ${activeCols.map(() => _numColW).join(' ')}`;
   const tierBreaksByPos = {};
   cols.forEach(([pos, nn]) => {
@@ -11576,12 +11576,17 @@ function Cheatsheet({
       if (p.fit === 'target') nameTitle += ' Your plan also targets him for an open starting slot.';
     }
     let _verdict = null, _tb = null, _adpColor = null;
-    if (config && config.format === 'snake') {
+    if (config && (config.format === 'snake' || config.format === 'bestball')) {
       if (!drafted) {
-        const _vr = _ovrRank.get(p.id) || 999;
+        const _vr = (config.format === 'bestball' && p.bestAvailRank != null) ? p.bestAvailRank : (_ovrRank.get(p.id) || 999);
         if (p.adp != null) { const _diff = Math.round(p.adp) - _vr; if (_diff >= 8) _adpColor = '#34c759';else if (_diff <= -8) _adpColor = '#f87171'; }
       }
       if (tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i)) _tb = _tierBandFor(pos, i);
+    }
+    if (config && config.format === 'bestball') {
+      nameColor = _adpColor || 'var(--text-primary)';
+      sign = _adpColor === '#34c759' ? 'under' : _adpColor === '#f87171' ? 'over' : 'neutral';
+      nameTitle = _adpColor === '#34c759' ? 'Value at his ADP — he tends to fall past his ceiling ranking.' : _adpColor === '#f87171' ? 'A reach at his ADP — he goes earlier than his ceiling ranking.' : 'Drafted about where his ceiling ranks.';
     }
     return React.createElement("div", {
       key: p.id,
