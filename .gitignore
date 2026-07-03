@@ -1,0 +1,6 @@
+# Local validation tooling only — the deployed app has no build step (see HANDOFF.md).
+# These are used to syntax-check index.html before pushing; they must not deploy.
+node_modules/
+package.json
+package-lock.json
+scratch-*.js
