@@ -11149,6 +11149,7 @@ function Cheatsheet({
   const _fmtRecent = (draftHistory || []).slice(-8).map(d => (players || []).find(x => x.id === d.playerId)).filter(Boolean);
   const _fmtMyRoster = myTeam && myTeam.roster ? myTeam.roster.map(r => (players || []).find(x => x.id === r.playerId)).filter(Boolean) : [];
   const _ovrRank = (() => { const m = new Map(); (players || []).slice().sort((x, y) => (y.personalValue != null ? y.personalValue : y.projectedPoints || 0) - (x.personalValue != null ? x.personalValue : x.projectedPoints || 0)).forEach((pp, ix) => m.set(pp.id, ix + 1)); return m; })();
+  const _ceilRank = (() => { const m = new Map(); (players || []).slice().sort((x, y) => (y.ceiling != null ? y.ceiling : y.projectedPoints || 0) - (x.ceiling != null ? x.ceiling : x.projectedPoints || 0)).forEach((pp, ix) => m.set(pp.id, ix + 1)); return m; })();
   const _userNextPick = (() => { const T = config && config.teams || 12; const sl = _fmtSlot; const pk = r => r % 2 === 1 ? (r - 1) * T + sl : r * T - sl + 1; for (let r = 1; r <= 40; r++) { const v = pk(r); if (v >= _fmtCurPick) return v; } return _fmtCurPick; })();
   const _recPick = (() => {
     if (!(config && config.format === 'snake')) return null;
@@ -11578,7 +11579,7 @@ function Cheatsheet({
     let _verdict = null, _tb = null, _adpColor = null;
     if (config && (config.format === 'snake' || config.format === 'bestball')) {
       if (!drafted) {
-        const _vr = (config.format === 'bestball' && p.bestAvailRank != null) ? p.bestAvailRank : (_ovrRank.get(p.id) || 999);
+        const _vr = (config.format === 'bestball') ? (_ceilRank.get(p.id) || 999) : (_ovrRank.get(p.id) || 999);
         if (p.adp != null) { const _diff = Math.round(p.adp) - _vr; if (_diff >= 8) _adpColor = '#34c759';else if (_diff <= -8) _adpColor = '#f87171'; }
       }
       if (tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i)) _tb = _tierBandFor(pos, i);
