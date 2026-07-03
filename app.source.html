@@ -8454,6 +8454,11 @@ function App() {
   const COACH_FREE_LIMIT = 3;
   function coachGate() {
     if (account.user) return true;
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const isSummerPromo = (month === 7) || (month === 8 && day <= 10);
+    if (isSummerPromo) return true;
     if ((account.coachUses || 0) >= COACH_FREE_LIMIT) { requireSignIn('to keep using the Value Coach'); return false; }
     setAccount(a => ({ ...a, coachUses: (a.coachUses || 0) + 1 }));
     return true;
