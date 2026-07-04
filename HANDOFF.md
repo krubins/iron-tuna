@@ -125,4 +125,16 @@ No `.env` file is used in production; everything is configured in Cloudflare. Fo
 
 ---
 
+## 8. The 2026 Insights system (added July 2026)
+
+The 220-insight research set (auction/snake/best ball) is split three ways and is **fully self-publishing** — no manual action needed for releases:
+
+- **70 public** — pre-built as 14 static drop pages (`insights-YYYY-MM-DD.html`, "The Iron Tuna Five"): Thursdays in July, Mondays + Thursdays Aug 3 – Sep 3. `_worker.js` 302-redirects any future-dated drop page to `/insights` until **9:00am ET (13:00 UTC)** on its date, and filters unreleased URLs out of `sitemap.xml` on the fly. The `/insights` index page hides future drops client-side. Nothing to do on release days.
+- **30 vault** — email-gated on `/insights-vault`. `POST /api/insights-vault` validates the email, stores it via `saveContact` (D1 `contacts`, source `insights-vault`, also fires `LEAD_WEBHOOK`), and returns the vault JSON. Emails export via the existing `/api/leads/export?key=…`.
+- **120 premium** (grows to 150 when the next research batch lands) — embedded in `_worker.js` as `INSIGHTS_PREMIUM`, served XOR+base64 from `GET /api/insights` (same `IT_KEY`/referer pattern as `/api/projections`). Read UI: `/my-insights` (checks localStorage entitlements, falls back to `/api/auth/me`).
+
+Regeneration pipeline (source docs → all pages/data) lives in the session scratchpad scripts `build_insights.py` + `gen_pages.py`; the partition (which insight is public/vault/premium and which drop date) is `insights_partition.json`. To add the next 30 insights: parse them with the same field schema, append to `INSIGHTS_PREMIUM` (or swap 10 into future drop pages), and refresh `_INS_ENC` is automatic (memo re-encodes per isolate).
+
+---
+
 *Generated as part of the move to Claude Code. Questions about any section map directly to the files referenced above.*

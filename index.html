@@ -5499,6 +5499,8 @@ function LandingSplash({
   }, "Prep"), React.createElement("button", {
     onClick: () => go('board', 'ribbon_auction_night')
   }, ((typeof window !== "undefined" && (window.location.pathname.indexOf("/snakedraft") === 0 || window.location.pathname.indexOf("/bestball") === 0)) ? "Draft Day" : "Auction Day")), React.createElement("button", {
+    onClick: () => { try { window.location.href = "/insights"; } catch (e) {} }
+  }, "Insights"), React.createElement("button", {
     onClick: () => { try { window.location.href = "/faq"; } catch (e) {} }
   }, "FAQ"), React.createElement("button", {
     onClick: () => go('legal')
@@ -19907,7 +19909,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     className: "lp-ribbon"
   }, React.createElement("div", { className: "lp-ribbon-spacer" }), React.createElement("div", {
     className: "lp-ribbon-links"
-  }, React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} }, title: "Admin dashboard" }, "Admin"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Restore"))), React.createElement("div", {
+  }, React.createElement("button", { onClick: () => { try { window.location.href = "/insights"; } catch (e) {} } }, "Insights"), React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} }, title: "Admin dashboard" }, "Admin"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Restore"))), React.createElement("div", {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"
