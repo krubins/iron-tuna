@@ -250,7 +250,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
       var v = VIEW[it.view] || ['v-dep', esc(it.view)];
       var rows = fmtSel ? fmtRow(it, fmtSel) : fmtRow(it, 'auction') + fmtRow(it, 'snake') + fmtRow(it, 'bestball');
       h += '<article class="ins"><div><span class="badge ' + v[0] + '">' + v[1] + '</span><span class="badge plain">' + esc(it.section) + '</span><span class="badge plain">Confidence: ' + esc(it.conf) + '</span></div>'
-        + '<h2>' + esc(it.title) + '</h2><p>' + esc(it.core) + '</p>' + (it.effect ? '<p class="effect">Projected effect: ' + esc(it.effect) + '</p>' : '')
+        + '<h2>' + esc(it.title) + '</h2><p>' + esc(it.body || it.core) + '</p>' + (it.effect ? '<p class="effect">Projected effect: ' + esc(it.effect) + '</p>' : '')
         + rows
         + (it.auctionTailoring ? '<p style="font-size:13px;color:var(--muted);margin:10px 0 0">Tailored by: ' + esc(it.auctionTailoring) + ' Open your league in the app for exact numbers.</p>' : '')
         + '</article>';
