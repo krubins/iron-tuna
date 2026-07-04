@@ -73,8 +73,10 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 /* ── article layout for drop pages ── */
 .art{max-width:720px}
 .art-head{position:relative;padding-top:34px}
-.art-head::before{content:"";position:absolute;inset:-40px -80px auto -80px;height:280px;background:radial-gradient(420px 200px at 28% 20%,rgba(45,212,163,.13),transparent 70%);pointer-events:none;z-index:-1}
-.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 28px rgba(45,212,163,.22)}
+.art-head::before{content:"";position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:min(760px,120vw);height:400px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at center,rgba(45,212,163,.26) 0%,rgba(45,212,163,.10) 42%,rgba(45,212,163,0) 72%)}
+.art-head::after{content:"";position:absolute;inset:-60px -40px -10px;pointer-events:none;z-index:-1;opacity:.05;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");-webkit-mask:radial-gradient(ellipse 70% 80% at 50% 35%,#000 30%,transparent 78%);mask:radial-gradient(ellipse 70% 80% at 50% 35%,#000 30%,transparent 78%)}
+.art-head>*{position:relative;z-index:1}
+.art-h1,.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 34px rgba(45,212,163,.38),0 0 90px rgba(45,212,163,.16)}
 .byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
 .byline b{color:var(--sec);font-weight:600}
 .byline .dot{opacity:.5}
@@ -83,15 +85,14 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 section.call{border-top:1px solid var(--line);margin-top:34px;padding-top:26px}
 section.call:first-of-type{border-top:0;margin-top:22px;padding-top:0}
 section.call h2{font-size:clamp(21px,3vw,26px);line-height:1.25;margin:10px 0 12px}
-section.call h2 .no{color:var(--teal);font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;font-size:1.15em;margin-right:10px;letter-spacing:.02em}
 .sig{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent}
 .chip.under{color:var(--teal);border-color:rgba(45,212,163,.5)}
 .chip.over{color:var(--danger);border-color:rgba(239,91,91,.5)}
 .chip.fair{color:var(--gold);border-color:rgba(245,184,0,.45)}
-.statline{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--muted);margin:12px 0 0}
-.play{margin:14px 0 0;padding:12px 16px;background:linear-gradient(90deg,rgba(45,212,163,.07),transparent 70%);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.65;color:var(--sec);box-shadow:0 0 18px rgba(45,212,163,.05)}
-.play b{color:var(--text)}
+.statline{font-size:13.5px;font-style:italic;color:var(--muted);margin:12px 0 0}
+.art p.playline{margin:14px 0 0;font-size:16.5px;line-height:1.75;color:var(--sec)}
+.playline b{color:var(--text)}
 .endnote{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
 .endnote b{color:var(--sec)}
 .endnote a{color:var(--teal)}
@@ -109,8 +110,9 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 .count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
 .fmt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
 @media(max-width:720px){.fmt-cards{grid-template-columns:1fr}}
-.fmt-cards a.card{display:block;margin:0;color:var(--text)}
-.fmt-cards a.card:hover{border-color:var(--teal);text-decoration:none}
+.fmt-cards a.card{display:block;margin:0;color:var(--text);border-color:rgba(45,212,163,.28);box-shadow:0 0 16px rgba(45,212,163,.08);transition:box-shadow .2s ease,border-color .2s ease}
+.fmt-cards a.card:hover{border-color:rgba(45,212,163,.6);box-shadow:0 0 26px rgba(45,212,163,.18);text-decoration:none}
+.drop-list li:hover{border-color:rgba(45,212,163,.4)}
 .fmt-cards .fc-title{font-size:19px;font-weight:800;margin-bottom:6px}
 .fmt-cards p{margin:0;font-size:14px}
 .xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
@@ -137,38 +139,38 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 </div>
 <section class="call">
 <div class="sig"><span class="chip under">Underpriced</span><span class="chip">QB</span></div>
-<h2><span class="no">1</span>Drake Maye is the best elite-QB value</h2>
+<h2>1. Drake Maye is the best elite-QB value</h2>
 <p>He finished QB2 in fantasy scoring at 21.2 FPPG and now gets A.J. Brown, Romeo Doubs, and Alijah Vera-Tucker.</p>
-<div class="play"><b>The play in your builds:</b> Increase exposure, especially in correlated builds, stacks, and spike-week roster constructions. Aggressively target in round structures where he goes after Allen/Lamar/Hurts.</div>
-<p class="statline">Projected effect: +6% to +10% versus current price &nbsp;&middot;&nbsp; Confidence: High</p>
+<p class="playline"><b>The play:</b> Increase exposure, especially in correlated builds, stacks, and spike-week roster constructions. Aggressively target in round structures where he goes after Allen/Lamar/Hurts.</p>
+<p class="statline">Projected effect: +6% to +10% versus current price &middot; Confidence: High</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip under">Underpriced</span><span class="chip">Market</span></div>
-<h2><span class="no">2</span>New England became a classic year-three quarterback breakout setup in one offseason</h2>
+<h2>2. New England became a classic year-three quarterback breakout setup in one offseason</h2>
 <p>The Patriots added A.J. Brown, Romeo Doubs, Alijah Vera-Tucker, and already have a top-two fantasy QB season from Drake Maye in the books.</p>
-<div class="play"><b>The play in your builds:</b> Increase exposure, especially in correlated builds, stacks, and spike-week roster constructions. The Patriots are one of the best stackable offenses in fantasy.</div>
-<p class="statline">Projected effect: +5% to +8% team-pass expectation relative to market conservatism &nbsp;&middot;&nbsp; Confidence: High</p>
+<p class="playline"><b>The play:</b> Increase exposure, especially in correlated builds, stacks, and spike-week roster constructions. The Patriots are one of the best stackable offenses in fantasy.</p>
+<p class="statline">Projected effect: +5% to +8% team-pass expectation relative to market conservatism &middot; Confidence: High</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip over">Overpriced</span><span class="chip">RB</span></div>
-<h2><span class="no">3</span>De’Von Achane is being supported almost entirely by talent rather than environment</h2>
+<h2>3. De’Von Achane is being supported almost entirely by talent rather than environment</h2>
 <p>Miami extended him, but the Dolphins lost Tyreek Hill and Jaylen Waddle, signed Malik Willis, and project with a poor line.</p>
-<div class="play"><b>The play in your builds:</b> Underweight; use only as low-exposure value if the price falls or the player completes a strong correlation. Draft for ceiling, but understand the offense can collapse around him.</div>
-<p class="statline">Projected effect: -4% to -8% versus if he were in the 2025 Miami environment &nbsp;&middot;&nbsp; Confidence: High</p>
+<p class="playline"><b>The play:</b> Underweight; use only as low-exposure value if the price falls or the player completes a strong correlation. Draft for ceiling, but understand the offense can collapse around him.</p>
+<p class="statline">Projected effect: -4% to -8% versus if he were in the 2025 Miami environment &middot; Confidence: High</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip fair">Near fair value</span><span class="chip">WR</span></div>
-<h2><span class="no">4</span>CeeDee Lamb remains elite but is less likely to monopolize the offense with George Pickens still there</h2>
+<h2>4. CeeDee Lamb remains elite but is less likely to monopolize the offense with George Pickens still there</h2>
 <p>He still projects for nearly 98 catches and 1,298 yards, but the target environment is more balanced.</p>
-<div class="play"><b>The play in your builds:</b> Use at market exposure; let roster construction, stacking, and positional scarcity decide. Near market, not a screaming value.</div>
-<p class="statline">Projected effect: slightly more efficiency, slightly less pure volume &nbsp;&middot;&nbsp; Confidence: Medium</p>
+<p class="playline"><b>The play:</b> Use at market exposure; let roster construction, stacking, and positional scarcity decide. Near market, not a screaming value.</p>
+<p class="statline">Projected effect: slightly more efficiency, slightly less pure volume &middot; Confidence: Medium</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip under">Underpriced</span><span class="chip">TE</span></div>
-<h2><span class="no">5</span>Isaiah Likely is the best late-round TE target</h2>
+<h2>5. Isaiah Likely is the best late-round TE target</h2>
 <p>He profiles as the best late-round TE, and the Giants’ new scheme explicitly leans into multi-TE personnel.</p>
-<div class="play"><b>The play in your builds:</b> Increase exposure, especially in correlated builds, stacks, and spike-week roster constructions. One of the best cheap TE targets in the player pool.</div>
-<p class="statline">Projected effect: +12% to +18% versus late-round cost &nbsp;&middot;&nbsp; Confidence: High</p>
+<p class="playline"><b>The play:</b> Increase exposure, especially in correlated builds, stacks, and spike-week roster constructions. One of the best cheap TE targets in the player pool.</p>
+<p class="statline">Projected effect: +12% to +18% versus late-round cost &middot; Confidence: High</p>
 </section>
 <div class="endnote"><p><b>About this series.</b> These calls are drawn from Iron Tuna's 2026 research set &mdash; 250 stat-based insights covering auction, snake, and best ball. Five publish free every drop day through Labor Day (<a href="/bestball-insights">the full schedule</a>); the remaining 150 ship with <a href="https://irontuna.com/">Draft Day</a>, where each call is recalculated to your league's size, scoring, and roster. There is also a <a href="/insights-vault">30-insight vault</a> readers can open with an email. Values are projections, not guarantees.</p></div>
 <div class="eyebrow">More</div><div class="related"><a href="/bestball-insights">All best ball insights</a><a href="/insights">All formats</a><a href="/bestball-insights-2026-07-04">Previous drop</a><a href="/best-ball-draft-strategy">Best ball strategy</a></div>

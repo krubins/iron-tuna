@@ -73,8 +73,10 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 /* ── article layout for drop pages ── */
 .art{max-width:720px}
 .art-head{position:relative;padding-top:34px}
-.art-head::before{content:"";position:absolute;inset:-40px -80px auto -80px;height:280px;background:radial-gradient(420px 200px at 28% 20%,rgba(45,212,163,.13),transparent 70%);pointer-events:none;z-index:-1}
-.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 28px rgba(45,212,163,.22)}
+.art-head::before{content:"";position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:min(760px,120vw);height:400px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at center,rgba(45,212,163,.26) 0%,rgba(45,212,163,.10) 42%,rgba(45,212,163,0) 72%)}
+.art-head::after{content:"";position:absolute;inset:-60px -40px -10px;pointer-events:none;z-index:-1;opacity:.05;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");-webkit-mask:radial-gradient(ellipse 70% 80% at 50% 35%,#000 30%,transparent 78%);mask:radial-gradient(ellipse 70% 80% at 50% 35%,#000 30%,transparent 78%)}
+.art-head>*{position:relative;z-index:1}
+.art-h1,.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 34px rgba(45,212,163,.38),0 0 90px rgba(45,212,163,.16)}
 .byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
 .byline b{color:var(--sec);font-weight:600}
 .byline .dot{opacity:.5}
@@ -83,15 +85,14 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 section.call{border-top:1px solid var(--line);margin-top:34px;padding-top:26px}
 section.call:first-of-type{border-top:0;margin-top:22px;padding-top:0}
 section.call h2{font-size:clamp(21px,3vw,26px);line-height:1.25;margin:10px 0 12px}
-section.call h2 .no{color:var(--teal);font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;font-size:1.15em;margin-right:10px;letter-spacing:.02em}
 .sig{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent}
 .chip.under{color:var(--teal);border-color:rgba(45,212,163,.5)}
 .chip.over{color:var(--danger);border-color:rgba(239,91,91,.5)}
 .chip.fair{color:var(--gold);border-color:rgba(245,184,0,.45)}
-.statline{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--muted);margin:12px 0 0}
-.play{margin:14px 0 0;padding:12px 16px;background:linear-gradient(90deg,rgba(45,212,163,.07),transparent 70%);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.65;color:var(--sec);box-shadow:0 0 18px rgba(45,212,163,.05)}
-.play b{color:var(--text)}
+.statline{font-size:13.5px;font-style:italic;color:var(--muted);margin:12px 0 0}
+.art p.playline{margin:14px 0 0;font-size:16.5px;line-height:1.75;color:var(--sec)}
+.playline b{color:var(--text)}
 .endnote{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
 .endnote b{color:var(--sec)}
 .endnote a{color:var(--teal)}
@@ -109,8 +110,9 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 .count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
 .fmt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
 @media(max-width:720px){.fmt-cards{grid-template-columns:1fr}}
-.fmt-cards a.card{display:block;margin:0;color:var(--text)}
-.fmt-cards a.card:hover{border-color:var(--teal);text-decoration:none}
+.fmt-cards a.card{display:block;margin:0;color:var(--text);border-color:rgba(45,212,163,.28);box-shadow:0 0 16px rgba(45,212,163,.08);transition:box-shadow .2s ease,border-color .2s ease}
+.fmt-cards a.card:hover{border-color:rgba(45,212,163,.6);box-shadow:0 0 26px rgba(45,212,163,.18);text-decoration:none}
+.drop-list li:hover{border-color:rgba(45,212,163,.4)}
 .fmt-cards .fc-title{font-size:19px;font-weight:800;margin-bottom:6px}
 .fmt-cards p{margin:0;font-size:14px}
 .xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
@@ -137,38 +139,38 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 </div>
 <section class="call">
 <div class="sig"><span class="chip fair">Near fair value</span><span class="chip">QB</span></div>
-<h2><span class="no">1</span>Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye</h2>
+<h2>1. Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye</h2>
 <p>He played only 13 games in 2025 and is projected behind Allen and Maye by current market baseline.</p>
-<div class="play"><b>The play on the board:</b> Draft at market slot only; do not move up unless the tier is about to dry up. Draft, but prefer him only if he slips.</div>
-<p class="statline">Projected effect: -2% to -5% versus market if drafted as a clear top-two QB &nbsp;&middot;&nbsp; Confidence: Medium</p>
+<p class="playline"><b>The play:</b> Draft at market slot only; do not move up unless the tier is about to dry up. Draft, but prefer him only if he slips.</p>
+<p class="statline">Projected effect: -2% to -5% versus market if drafted as a clear top-two QB &middot; Confidence: Medium</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip under">Underpriced</span><span class="chip">RB</span></div>
-<h2><span class="no">2</span>James Cook is one of the best prices on the board</h2>
+<h2>2. James Cook is one of the best prices on the board</h2>
 <p>He profiles as the best-value RB for 2026, and he led the league in rushing yards in 2025 with 1,621.</p>
-<div class="play"><b>The play on the board:</b> Move the player or group up roughly one round, or to the front of the current tier. Aggressively target in round-two or round-three builds.</div>
-<p class="statline">Projected effect: +8% to +12% versus price &nbsp;&middot;&nbsp; Confidence: High</p>
+<p class="playline"><b>The play:</b> Move the player or group up roughly one round, or to the front of the current tier. Aggressively target in round-two or round-three builds.</p>
+<p class="statline">Projected effect: +8% to +12% versus price &middot; Confidence: High</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip over">Overpriced</span><span class="chip">RB</span></div>
-<h2><span class="no">3</span>Ashton Jeanty has one of the widest and most attractive rookie ranges in years</h2>
+<h2>3. Ashton Jeanty has one of the widest and most attractive rookie ranges in years</h2>
 <p>Current projections already give him 283.7 carries, 59 catches, and 216.4 standard points, and He profiles as the best-breakout RB.</p>
-<div class="play"><b>The play on the board:</b> Do not reach; consider only if the player or group falls at least a round below market cost. Clear target, but avoid overleveraging at ceiling price.</div>
-<p class="statline">Projected effect: +10% to +18% if he takes more of the Raiders’ high-value touches than projected &nbsp;&middot;&nbsp; Confidence: Medium</p>
+<p class="playline"><b>The play:</b> Do not reach; consider only if the player or group falls at least a round below market cost. Clear target, but avoid overleveraging at ceiling price.</p>
+<p class="statline">Projected effect: +10% to +18% if he takes more of the Raiders’ high-value touches than projected &middot; Confidence: Medium</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip under">Underpriced</span><span class="chip">WR</span></div>
-<h2><span class="no">4</span>DJ Moore is a big winner in Buffalo</h2>
+<h2>4. DJ Moore is a big winner in Buffalo</h2>
 <p>The Bills traded for him, and Josh Allen plus a top-tier line provide a better fantasy environment than his previous one.</p>
-<div class="play"><b>The play on the board:</b> Move the player or group up roughly one round, or to the front of the current tier. One of my favorite WR targets outside the top tier.</div>
-<p class="statline">Projected effect: +10% to +14% versus price if health holds &nbsp;&middot;&nbsp; Confidence: High</p>
+<p class="playline"><b>The play:</b> Move the player or group up roughly one round, or to the front of the current tier. One of my favorite WR targets outside the top tier.</p>
+<p class="statline">Projected effect: +10% to +14% versus price if health holds &middot; Confidence: High</p>
 </section>
 <section class="call">
 <div class="sig"><span class="chip under">Underpriced</span><span class="chip">WR</span></div>
-<h2><span class="no">5</span>Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling</h2>
+<h2>5. Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling</h2>
 <p>He profiles as the safest WR, and he posted a massive 36% target share with 359.9 PPR points in 2025.</p>
-<div class="play"><b>The play on the board:</b> Move the player or group up roughly one round, or to the front of the current tier. Great anchor in full PPR, less urgent in standard.</div>
-<p class="statline">Projected effect: fair to slightly positive at price &nbsp;&middot;&nbsp; Confidence: High</p>
+<p class="playline"><b>The play:</b> Move the player or group up roughly one round, or to the front of the current tier. Great anchor in full PPR, less urgent in standard.</p>
+<p class="statline">Projected effect: fair to slightly positive at price &middot; Confidence: High</p>
 </section>
 <div class="endnote"><p><b>About this series.</b> These calls are drawn from Iron Tuna's 2026 research set &mdash; 250 stat-based insights covering auction, snake, and best ball. Five publish free every drop day through Labor Day (<a href="/snake-insights">the full schedule</a>); the remaining 150 ship with <a href="https://irontuna.com/">Draft Day</a>, where each call is recalculated to your league's size, scoring, and roster. There is also a <a href="/insights-vault">30-insight vault</a> readers can open with an email. Values are projections, not guarantees.</p></div>
 <div class="eyebrow">More</div><div class="related"><a href="/snake-insights">All snake draft insights</a><a href="/insights">All formats</a><a href="/snake-insights-2026-07-16">Previous drop</a><a href="/snake-draft-strategy">Snake draft strategy</a></div>
