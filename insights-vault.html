@@ -141,7 +141,6 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
     var email = (document.getElementById('vault-email').value || '').trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = 'Enter a valid email to open the vault.'; return; }
     msg.textContent = 'Opening\u2026';
-    fetch('/api/lead', { method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({ email: email, source: 'insights-vault', type: 'lead' }) }).catch(function(){});
     open(email);
   });
   try { var saved = localStorage.getItem(KEY); if (saved) open(saved); } catch(e){}

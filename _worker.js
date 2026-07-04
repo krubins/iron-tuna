@@ -943,14 +943,15 @@ export default {
     // ── scheduled insight drops: future-dated pages 302 to the index until 9am ET (13:00 UTC) on their date ──
     const __insDrop = url.pathname.match(/^\/insights-(\d{4})-(\d{2})-(\d{2})(?:\.html)?$/);
     if (__insDrop) {
+      const __ds = __insDrop[1] + '-' + __insDrop[2] + '-' + __insDrop[3];
       const __rel = Date.UTC(+__insDrop[1], +__insDrop[2] - 1, +__insDrop[3], 13, 0, 0);
-      if (Date.now() < __rel) return Response.redirect(url.origin + '/insights', 302);
+      if (__ds !== '2026-07-04' && Date.now() < __rel) return Response.redirect(url.origin + '/insights', 302); // 2026-07-04 = launch drop, live immediately
     }
     if (url.pathname === '/sitemap.xml') {
       const __sm = await env.ASSETS.fetch(request);
       let __xml = await __sm.text();
       __xml = __xml.replace(/<url><loc>https:\/\/irontuna\.com\/insights-(\d{4})-(\d{2})-(\d{2})<\/loc>[\s\S]*?<\/url>\s*/g,
-        (blk, y, mo, dd) => (Date.now() < Date.UTC(+y, +mo - 1, +dd, 13, 0, 0) ? '' : blk));
+        (blk, y, mo, dd) => ((y + '-' + mo + '-' + dd) !== '2026-07-04' && Date.now() < Date.UTC(+y, +mo - 1, +dd, 13, 0, 0) ? '' : blk));
       return new Response(__xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
     let __assetReq = request;
