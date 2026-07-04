@@ -70,6 +70,32 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 .fmt b{color:var(--text);letter-spacing:.04em}
 .locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
 .locked-band h2{margin-top:0;color:var(--gold)}
+/* ── article layout for drop pages ── */
+.art{max-width:720px}
+.art-head{position:relative;padding-top:34px}
+.art-head::before{content:"";position:absolute;inset:-40px -80px auto -80px;height:280px;background:radial-gradient(420px 200px at 28% 20%,rgba(45,212,163,.13),transparent 70%);pointer-events:none;z-index:-1}
+.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 28px rgba(45,212,163,.22)}
+.byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
+.byline b{color:var(--sec);font-weight:600}
+.byline .dot{opacity:.5}
+.art .lede{font-size:clamp(17px,2.1vw,19.5px);margin-bottom:8px}
+.art p{font-size:16.5px;line-height:1.75}
+section.call{border-top:1px solid var(--line);margin-top:34px;padding-top:26px}
+section.call:first-of-type{border-top:0;margin-top:22px;padding-top:0}
+section.call h2{font-size:clamp(21px,3vw,26px);line-height:1.25;margin:10px 0 12px}
+section.call h2 .no{color:var(--teal);font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;font-size:1.15em;margin-right:10px;letter-spacing:.02em}
+.sig{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent}
+.chip.under{color:var(--teal);border-color:rgba(45,212,163,.5)}
+.chip.over{color:var(--danger);border-color:rgba(239,91,91,.5)}
+.chip.fair{color:var(--gold);border-color:rgba(245,184,0,.45)}
+.statline{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--muted);margin:12px 0 0}
+.play{margin:14px 0 0;padding:12px 16px;background:linear-gradient(90deg,rgba(45,212,163,.07),transparent 70%);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.65;color:var(--sec);box-shadow:0 0 18px rgba(45,212,163,.05)}
+.play b{color:var(--text)}
+.endnote{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
+.endnote b{color:var(--sec)}
+.endnote a{color:var(--teal)}
+.alsofmt{font-size:13.5px;color:var(--muted);margin:4px 0 0}
 .drop-list{list-style:none;padding:0;margin:18px 0}
 .drop-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel)}
 .drop-list li.future{opacity:.62}
@@ -122,9 +148,8 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 <li data-release="2026-08-31"><div><a class="dl-main" href="/snake-insights-2026-08-31" data-locked="Drops Monday, August 31, 2026">Snake Draft Insights &mdash; Monday, August 31, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The 49ers became more top-heavy at WR &middot; Jordan Love is quietly viable because the Packers’ l&hellip;</div></div><span class="dl-date">2026-08-31</span></li>
 <li data-release="2026-09-03"><div><a class="dl-main" href="/snake-insights-2026-09-03" data-locked="Drops Thursday, September 3, 2026">Snake Draft Insights &mdash; Thursday, September 3, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Kansas City is no longer a pure pass funnel &middot; Cam Ward is interesting mainly because Brian Daboll &hellip;</div></div><span class="dl-date">2026-09-03</span></li></ul>
 <div class="card"><strong><a href="/insights-vault">The Insight Vault — 30 more, free</a></strong><p>A bonus set of player-level calls, unlocked with your email. No purchase.</p></div>
-<div class="locked-band"><h2>The rest of the research set</h2>
-<p>These are the public sample. The premium set — 150 more calls at QB, RB, WR, and TE, including the late-round targets and the prices with a specific number attached — ships with the one-time $9.99 Draft Day unlock and is recalculated to your exact league size, scoring, and roster inside the app. New insights are added through Labor Day. There's also a <a href="/insights-vault">30-insight vault you can open free with your email</a>.</p>
-<div class="cta-row"><a class="btn" href="https://irontuna.com/">Unlock Premium Insights</a></div></div>
+<div class="card"><strong>The rest of the research set</strong>
+<p style="font-size:14.5px">These are the public sample. The premium set &mdash; 150 more calls at QB, RB, WR, and TE, including the late-round targets and the prices with a specific number attached &mdash; ships with the one-time $9.99 <a href="https://irontuna.com/">Draft Day</a> unlock, recalculated to your exact league size, scoring, and roster inside the app. New insights are added through Labor Day.</p></div>
 <div class="eyebrow">More</div><div class="related"><a href="/insights">All formats</a><a href="/snake-draft-strategy">Snake draft strategy</a><a href="/guides">All guides</a></div>
 </main>
 <script>

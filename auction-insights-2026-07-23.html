@@ -70,6 +70,32 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 .fmt b{color:var(--text);letter-spacing:.04em}
 .locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
 .locked-band h2{margin-top:0;color:var(--gold)}
+/* ── article layout for drop pages ── */
+.art{max-width:720px}
+.art-head{position:relative;padding-top:34px}
+.art-head::before{content:"";position:absolute;inset:-40px -80px auto -80px;height:280px;background:radial-gradient(420px 200px at 28% 20%,rgba(45,212,163,.13),transparent 70%);pointer-events:none;z-index:-1}
+.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 28px rgba(45,212,163,.22)}
+.byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
+.byline b{color:var(--sec);font-weight:600}
+.byline .dot{opacity:.5}
+.art .lede{font-size:clamp(17px,2.1vw,19.5px);margin-bottom:8px}
+.art p{font-size:16.5px;line-height:1.75}
+section.call{border-top:1px solid var(--line);margin-top:34px;padding-top:26px}
+section.call:first-of-type{border-top:0;margin-top:22px;padding-top:0}
+section.call h2{font-size:clamp(21px,3vw,26px);line-height:1.25;margin:10px 0 12px}
+section.call h2 .no{color:var(--teal);font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;font-size:1.15em;margin-right:10px;letter-spacing:.02em}
+.sig{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent}
+.chip.under{color:var(--teal);border-color:rgba(45,212,163,.5)}
+.chip.over{color:var(--danger);border-color:rgba(239,91,91,.5)}
+.chip.fair{color:var(--gold);border-color:rgba(245,184,0,.45)}
+.statline{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--muted);margin:12px 0 0}
+.play{margin:14px 0 0;padding:12px 16px;background:linear-gradient(90deg,rgba(45,212,163,.07),transparent 70%);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.65;color:var(--sec);box-shadow:0 0 18px rgba(45,212,163,.05)}
+.play b{color:var(--text)}
+.endnote{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
+.endnote b{color:var(--sec)}
+.endnote a{color:var(--teal)}
+.alsofmt{font-size:13.5px;color:var(--muted);margin:4px 0 0}
 .drop-list{list-style:none;padding:0;margin:18px 0}
 .drop-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel)}
 .drop-list li.future{opacity:.62}
@@ -101,49 +127,50 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
   </nav>
 </div></header>
 
-<main class="wrap">
+<main class="wrap art">
+<div class="art-head">
 <div class="eyebrow">Auction Insights</div>
 <h1>Auction Insights: July 23, 2026</h1>
-<p class="lede">Five research calls for July 23, 2026, each with the read for your auction room.</p>
-<div class="xfmt">Drafting a different format? Read these five for <a href="/snake-insights-2026-07-23">snake draft insights</a> or <a href="/bestball-insights-2026-07-23">best ball insights</a>.</div>
-<article class="ins">
-<div><span class="badge v-fair">NEAR FAIR VALUE</span><span class="badge plain">QB</span><span class="badge plain">Confidence: Medium</span></div>
-<h2>Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye</h2>
+<div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>July 23, 2026<span class="dot">&middot;</span>5 calls, auction edition</div>
+<p class="lede">Featuring Lamar Jackson, James Cook, Ashton Jeanty, DJ Moore, and Jaxon Smith-Njigba.</p>
+<p class="alsofmt">Also published in <a href="/snake-insights-2026-07-23">snake draft</a> and <a href="/bestball-insights-2026-07-23">best ball</a> editions.</p>
+</div>
+<section class="call">
+<div class="sig"><span class="chip fair">Near fair value</span><span class="chip">QB</span></div>
+<h2><span class="no">1</span>Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye</h2>
 <p>He played only 13 games in 2025 and is projected behind Allen and Maye by current market baseline.</p>
-<p class="effect">Projected effect: -2% to -5% versus market if drafted as a clear top-two QB</p>
-<div class="fmt"><b>The auction play:</b> Hold your price; buy only at or below your sheet value. <i>draft, but prefer him only if he slips.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-under">UNDERPRICED</span><span class="badge plain">RB</span><span class="badge plain">Confidence: High</span></div>
-<h2>James Cook is one of the best prices on the board</h2>
+<div class="play"><b>The play at the table:</b> Hold your price; buy only at or below your sheet value. Draft, but prefer him only if he slips.</div>
+<p class="statline">Projected effect: -2% to -5% versus market if drafted as a clear top-two QB &nbsp;&middot;&nbsp; Confidence: Medium</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip under">Underpriced</span><span class="chip">RB</span></div>
+<h2><span class="no">2</span>James Cook is one of the best prices on the board</h2>
 <p>He profiles as the best-value RB for 2026, and he led the league in rushing yards in 2025 with 1,621.</p>
-<p class="effect">Projected effect: +8% to +12% versus price</p>
-<div class="fmt"><b>The auction play:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. <i>aggressively target in round-two or round-three builds.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-over">OVERPRICED</span><span class="badge plain">RB</span><span class="badge plain">Confidence: Medium</span></div>
-<h2>Ashton Jeanty has one of the widest and most attractive rookie ranges in years</h2>
+<div class="play"><b>The play at the table:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. Aggressively target in round-two or round-three builds.</div>
+<p class="statline">Projected effect: +8% to +12% versus price &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip over">Overpriced</span><span class="chip">RB</span></div>
+<h2><span class="no">3</span>Ashton Jeanty has one of the widest and most attractive rookie ranges in years</h2>
 <p>Current projections already give him 283.7 carries, 59 catches, and 216.4 standard points, and He profiles as the best-breakout RB.</p>
-<p class="effect">Projected effect: +10% to +18% if he takes more of the Raiders’ high-value touches than projected</p>
-<div class="fmt"><b>The auction play:</b> Require a discount; stop bidding once the player or group reaches normal market value. <i>clear target, but avoid overleveraging at ceiling price.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-under">UNDERPRICED</span><span class="badge plain">WR</span><span class="badge plain">Confidence: High</span></div>
-<h2>DJ Moore is a big winner in Buffalo</h2>
+<div class="play"><b>The play at the table:</b> Require a discount; stop bidding once the player or group reaches normal market value. Clear target, but avoid overleveraging at ceiling price.</div>
+<p class="statline">Projected effect: +10% to +18% if he takes more of the Raiders’ high-value touches than projected &nbsp;&middot;&nbsp; Confidence: Medium</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip under">Underpriced</span><span class="chip">WR</span></div>
+<h2><span class="no">4</span>DJ Moore is a big winner in Buffalo</h2>
 <p>The Bills traded for him, and Josh Allen plus a top-tier line provide a better fantasy environment than his previous one.</p>
-<p class="effect">Projected effect: +10% to +14% versus price if health holds</p>
-<div class="fmt"><b>The auction play:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. <i>one of my favorite WR targets outside the top tier.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-under">UNDERPRICED</span><span class="badge plain">WR</span><span class="badge plain">Confidence: High</span></div>
-<h2>Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling</h2>
+<div class="play"><b>The play at the table:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. One of my favorite WR targets outside the top tier.</div>
+<p class="statline">Projected effect: +10% to +14% versus price if health holds &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip under">Underpriced</span><span class="chip">WR</span></div>
+<h2><span class="no">5</span>Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling</h2>
 <p>He profiles as the safest WR, and he posted a massive 36% target share with 359.9 PPR points in 2025.</p>
-<p class="effect">Projected effect: fair to slightly positive at price</p>
-<div class="fmt"><b>The auction play:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. <i>great anchor in full PPR, less urgent in standard.</i></div>
-</article>
-<div class="locked-band"><h2>The rest of the research set</h2>
-<p>These are the public sample. The premium set — 150 more calls at QB, RB, WR, and TE, including the late-round targets and the prices with a specific number attached — ships with the one-time $9.99 Draft Day unlock and is recalculated to your exact league size, scoring, and roster inside the app. New insights are added through Labor Day. There's also a <a href="/insights-vault">30-insight vault you can open free with your email</a>.</p>
-<div class="cta-row"><a class="btn" href="https://irontuna.com/">Unlock Premium Insights</a></div></div>
+<div class="play"><b>The play at the table:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. Great anchor in full PPR, less urgent in standard.</div>
+<p class="statline">Projected effect: fair to slightly positive at price &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<div class="endnote"><p><b>About this series.</b> These calls are drawn from Iron Tuna's 2026 research set &mdash; 250 stat-based insights covering auction, snake, and best ball. Five publish free every drop day through Labor Day (<a href="/auction-insights">the full schedule</a>); the remaining 150 ship with <a href="https://irontuna.com/">Draft Day</a>, where each call is recalculated to your league's size, scoring, and roster. There is also a <a href="/insights-vault">30-insight vault</a> readers can open with an email. Values are projections, not guarantees.</p></div>
 <div class="eyebrow">More</div><div class="related"><a href="/auction-insights">All auction insights</a><a href="/insights">All formats</a><a href="/auction-insights-2026-07-16">Previous drop</a><a href="/auction-draft-strategy">Auction draft strategy</a></div>
 </main>
 <footer class="site"><div class="wrap">

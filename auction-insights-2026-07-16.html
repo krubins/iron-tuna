@@ -70,6 +70,32 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 .fmt b{color:var(--text);letter-spacing:.04em}
 .locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
 .locked-band h2{margin-top:0;color:var(--gold)}
+/* ── article layout for drop pages ── */
+.art{max-width:720px}
+.art-head{position:relative;padding-top:34px}
+.art-head::before{content:"";position:absolute;inset:-40px -80px auto -80px;height:280px;background:radial-gradient(420px 200px at 28% 20%,rgba(45,212,163,.13),transparent 70%);pointer-events:none;z-index:-1}
+.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 28px rgba(45,212,163,.22)}
+.byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
+.byline b{color:var(--sec);font-weight:600}
+.byline .dot{opacity:.5}
+.art .lede{font-size:clamp(17px,2.1vw,19.5px);margin-bottom:8px}
+.art p{font-size:16.5px;line-height:1.75}
+section.call{border-top:1px solid var(--line);margin-top:34px;padding-top:26px}
+section.call:first-of-type{border-top:0;margin-top:22px;padding-top:0}
+section.call h2{font-size:clamp(21px,3vw,26px);line-height:1.25;margin:10px 0 12px}
+section.call h2 .no{color:var(--teal);font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;font-size:1.15em;margin-right:10px;letter-spacing:.02em}
+.sig{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent}
+.chip.under{color:var(--teal);border-color:rgba(45,212,163,.5)}
+.chip.over{color:var(--danger);border-color:rgba(239,91,91,.5)}
+.chip.fair{color:var(--gold);border-color:rgba(245,184,0,.45)}
+.statline{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--muted);margin:12px 0 0}
+.play{margin:14px 0 0;padding:12px 16px;background:linear-gradient(90deg,rgba(45,212,163,.07),transparent 70%);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;font-size:15.5px;line-height:1.65;color:var(--sec);box-shadow:0 0 18px rgba(45,212,163,.05)}
+.play b{color:var(--text)}
+.endnote{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
+.endnote b{color:var(--sec)}
+.endnote a{color:var(--teal)}
+.alsofmt{font-size:13.5px;color:var(--muted);margin:4px 0 0}
 .drop-list{list-style:none;padding:0;margin:18px 0}
 .drop-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel)}
 .drop-list li.future{opacity:.62}
@@ -101,49 +127,50 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
   </nav>
 </div></header>
 
-<main class="wrap">
+<main class="wrap art">
+<div class="art-head">
 <div class="eyebrow">Auction Insights</div>
 <h1>Auction Insights: July 16, 2026</h1>
-<p class="lede">Five research calls for July 16, 2026, each with the read for your auction room.</p>
-<div class="xfmt">Drafting a different format? Read these five for <a href="/snake-insights-2026-07-16">snake draft insights</a> or <a href="/bestball-insights-2026-07-16">best ball insights</a>.</div>
-<article class="ins">
-<div><span class="badge v-under">UNDERPRICED</span><span class="badge plain">QB</span><span class="badge plain">Confidence: High</span></div>
-<h2>Josh Allen remains the safest overall QB1, but not the best pure value</h2>
+<div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>July 16, 2026<span class="dot">&middot;</span>5 calls, auction edition</div>
+<p class="lede">Featuring Josh Allen, Arizona, Jahmyr Gibbs, Puka Nacua, and Tyler Warren.</p>
+<p class="alsofmt">Also published in <a href="/snake-insights-2026-07-16">snake draft</a> and <a href="/bestball-insights-2026-07-16">best ball</a> editions.</p>
+</div>
+<section class="call">
+<div class="sig"><span class="chip under">Underpriced</span><span class="chip">QB</span></div>
+<h2><span class="no">1</span>Josh Allen remains the safest overall QB1, but not the best pure value</h2>
 <p>He was QB1 in 2025 at 22.0 FPPG, and current consensus projects him for 372.2 standard fantasy points, again first among QBs.</p>
-<p class="effect">Projected effect: +0% to +4% versus price</p>
-<div class="fmt"><b>The auction play:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. <i>draft him if you want floor dominance, not because he is discounted.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-over">OVERPRICED</span><span class="badge plain">Market</span><span class="badge plain">Confidence: High</span></div>
-<h2>Arizona is the clearest macro fade because the offense got worse and the schedule got harder</h2>
+<div class="play"><b>The play at the table:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. Draft him if you want floor dominance, not because he is discounted.</div>
+<p class="statline">Projected effect: +0% to +4% versus price &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip over">Overpriced</span><span class="chip">Market</span></div>
+<h2><span class="no">2</span>Arizona is the clearest macro fade because the offense got worse and the schedule got harder</h2>
 <p>The Cardinals released Kyler Murray, moved to Jacoby Brissett, drafted Jeremiyah Love, and drew the hardest projected schedule in projected schedule modeling plus an official league top-five toughest slate.</p>
-<p class="effect">Projected effect: -5% to -10% to broad Cardinals scoring environment</p>
-<div class="fmt"><b>The auction play:</b> Require a discount; stop bidding once the player or group reaches normal market value. <i>draft Trey McBride because he can beat team weakness, but haircut the rest.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-over">OVERPRICED</span><span class="badge plain">RB</span><span class="badge plain">Confidence: High</span></div>
-<h2>Jahmyr Gibbs is appropriately expensive</h2>
+<div class="play"><b>The play at the table:</b> Require a discount; stop bidding once the player or group reaches normal market value. Draft Trey McBride because he can beat team weakness, but haircut the rest.</div>
+<p class="statline">Projected effect: -5% to -10% to broad Cardinals scoring environment &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip over">Overpriced</span><span class="chip">RB</span></div>
+<h2><span class="no">3</span>Jahmyr Gibbs is appropriately expensive</h2>
 <p>He was RB4 in 2025 PPR and projects for 301.5 standard fantasy points, tops among RBs.</p>
-<p class="effect">Projected effect: -1% to +3% versus price</p>
-<div class="fmt"><b>The auction play:</b> Require a discount; stop bidding once the player or group reaches normal market value. <i>pay up if you want stability, but do not expect a big discount.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-dep">FORMAT-DEPENDENT</span><span class="badge plain">WR</span><span class="badge plain">Confidence: High</span></div>
-<h2>Puka Nacua is expensive and still deserves it</h2>
+<div class="play"><b>The play at the table:</b> Require a discount; stop bidding once the player or group reaches normal market value. Pay up if you want stability, but do not expect a big discount.</div>
+<p class="statline">Projected effect: -1% to +3% versus price &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip ">Format-dependent</span><span class="chip">WR</span></div>
+<h2><span class="no">4</span>Puka Nacua is expensive and still deserves it</h2>
 <p>He led WRs in 2025 PPR scoring with 375 points and projects first again in 2026 receiving fantasy points.</p>
-<p class="effect">Projected effect: 0% to +5% versus market</p>
-<div class="fmt"><b>The auction play:</b> Keep the bid disciplined and let price decide. <i>no need to galaxy-brain fade.</i></div>
-</article>
-<article class="ins">
-<div><span class="badge v-under">UNDERPRICED</span><span class="badge plain">TE</span><span class="badge plain">Confidence: High</span></div>
-<h2>Tyler Warren is one of the best breakout TE values</h2>
+<div class="play"><b>The play at the table:</b> Keep the bid disciplined and let price decide. No need to galaxy-brain fade.</div>
+<p class="statline">Projected effect: 0% to +5% versus market &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<section class="call">
+<div class="sig"><span class="chip under">Underpriced</span><span class="chip">TE</span></div>
+<h2><span class="no">5</span>Tyler Warren is one of the best breakout TE values</h2>
 <p>He profiles as the best breakout TE, and he already finished TE4 in 2025 PPR.</p>
-<p class="effect">Projected effect: +10% to +14% versus price</p>
-<div class="fmt"><b>The auction play:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. <i>priority target if you miss McBride/Bowers.</i></div>
-</article>
-<div class="locked-band"><h2>The rest of the research set</h2>
-<p>These are the public sample. The premium set — 150 more calls at QB, RB, WR, and TE, including the late-round targets and the prices with a specific number attached — ships with the one-time $9.99 Draft Day unlock and is recalculated to your exact league size, scoring, and roster inside the app. New insights are added through Labor Day. There's also a <a href="/insights-vault">30-insight vault you can open free with your email</a>.</p>
-<div class="cta-row"><a class="btn" href="https://irontuna.com/">Unlock Premium Insights</a></div></div>
+<div class="play"><b>The play at the table:</b> Bid a few dollars above baseline value where needed; do not let the room win this at a flat sheet price. Priority target if you miss McBride/Bowers.</div>
+<p class="statline">Projected effect: +10% to +14% versus price &nbsp;&middot;&nbsp; Confidence: High</p>
+</section>
+<div class="endnote"><p><b>About this series.</b> These calls are drawn from Iron Tuna's 2026 research set &mdash; 250 stat-based insights covering auction, snake, and best ball. Five publish free every drop day through Labor Day (<a href="/auction-insights">the full schedule</a>); the remaining 150 ship with <a href="https://irontuna.com/">Draft Day</a>, where each call is recalculated to your league's size, scoring, and roster. There is also a <a href="/insights-vault">30-insight vault</a> readers can open with an email. Values are projections, not guarantees.</p></div>
 <div class="eyebrow">More</div><div class="related"><a href="/auction-insights">All auction insights</a><a href="/insights">All formats</a><a href="/auction-insights-2026-07-09">Previous drop</a><a href="/auction-draft-strategy">Auction draft strategy</a></div>
 </main>
 <footer class="site"><div class="wrap">
