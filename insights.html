@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-<title>2026 Fantasy Football Insights — The Iron Tuna Five | Iron Tuna</title>
-<meta name="description" content="Free stat-backed 2026 fantasy football insights, dropped five at a time through Labor Day. Auction, snake, and best ball reads on every call. 150 premium insights tailored to your league with the Draft Day unlock.">
+<title>2026 Fantasy Football Insights — Auction, Snake &amp; Best Ball | Iron Tuna</title>
+<meta name="description" content="Free stat-backed 2026 fantasy football insights through Labor Day, in three editions: auction, snake draft, and best ball. 150 premium insights tailored to your league ship with the Draft Day unlock.">
 <link rel="canonical" href="https://irontuna.com/insights">
-<meta property="og:title" content="2026 Fantasy Football Insights — The Iron Tuna Five | Iron Tuna">
-<meta property="og:description" content="Free stat-backed 2026 fantasy football insights, dropped five at a time through Labor Day. Auction, snake, and best ball reads on every call. 150 premium insights tailored to your league with the Draft Day unlock.">
-<meta property="og:type" content="article">
+<meta property="og:title" content="2026 Fantasy Football Insights — Auction, Snake &amp; Best Ball | Iron Tuna">
+<meta property="og:description" content="Free stat-backed 2026 fantasy football insights through Labor Day, in three editions: auction, snake draft, and best ball. 150 premium insights tailored to your league ship with the Draft Day unlock.">
+<meta property="og:type" content="website">
 <meta property="og:url" content="https://irontuna.com/insights">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -66,9 +66,8 @@ footer.site a{color:var(--muted)}
 article.ins{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:18px 0}
 article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 .effect{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;color:var(--gold);margin:10px 0 12px}
-.fmt{font-size:14.5px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--line2);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
+.fmt{font-size:14.5px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--teal);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
 .fmt b{color:var(--text);letter-spacing:.04em}
-.fmt.hot{border-left-color:var(--teal)}
 .locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
 .locked-band h2{margin-top:0;color:var(--gold)}
 .drop-list{list-style:none;padding:0;margin:18px 0}
@@ -82,6 +81,13 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 .filters button,.filters select,.filters input{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:9px;padding:8px 13px;font-size:14px;cursor:pointer}
 .filters button.on{border-color:var(--teal);color:var(--teal);background:rgba(45,212,163,.1)}
 .count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
+.fmt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
+@media(max-width:720px){.fmt-cards{grid-template-columns:1fr}}
+.fmt-cards a.card{display:block;margin:0;color:var(--text)}
+.fmt-cards a.card:hover{border-color:var(--teal);text-decoration:none}
+.fmt-cards .fc-title{font-size:19px;font-weight:800;margin-bottom:6px}
+.fmt-cards p{margin:0;font-size:14px}
+.xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
 </style>
 </head>
 <body>
@@ -97,29 +103,32 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 
 <main class="wrap">
 <div class="eyebrow">Insights</div>
-<h1>The Iron Tuna Five</h1>
-<p class="lede">Deep, stat-based research on the 2026 season — sabermetrics for your draft. Five free insights drop every Thursday in July, then Mondays <i>and</i> Thursdays through Labor Day. Every insight carries the read for all three formats: auction, snake, and best ball.</p>
-<div class="cta-row"><a class="btn" href="https://irontuna.com/">Build My Free Cheat Sheet</a><a class="btn alt" href="/insights-vault">Get 30 bonus insights free</a></div>
-<div class="grid">
-<div class="card"><h2 style="margin-top:0">70 free</h2><p>Dropped on this page, five at a time, from July 9 through September 3. Macro team calls, market fades, and price checks on the names everyone argues about.</p></div>
-<div class="card"><h2 style="margin-top:0">30 in the vault</h2><p>A bonus set unlocked with your email — no purchase. <a href="/insights-vault">Open the vault</a>.</p></div>
+<h1>2026 Insights, in your format</h1>
+<p class="lede">Deep, stat-based research on the 2026 season — sabermetrics for your draft. Every insight is published in three editions, so you only read the version that matches how you draft. Five drop free Thursdays in July, then Mondays <i>and</i> Thursdays through Labor Day.</p>
+<div class="fmt-cards">
+<a class="card" href="/auction-insights"><div class="fc-title">Auction</div><p>What each signal means for your bids, your budget, and when to walk away.</p></a>
+<a class="card" href="/snake-insights"><div class="fc-title">Snake</div><p>Who to move up a round, who to let pass, and where the tiers actually turn.</p></a>
+<a class="card" href="/bestball-insights"><div class="fc-title">Best Ball</div><p>Exposure, stacks, and the spike-week builds that win championship weeks.</p></a>
 </div>
-<div class="locked-band"><h2>150 premium, tailored to your league</h2><p>The full research set ships with the one-time $9.99 Draft Day unlock: every remaining QB, RB, WR, and TE call — the late-round targets, the tier cliffs, the prices with a specific number attached — recalculated to your league size, scoring, and roster inside the app. New insights are added through Labor Day. <a href="/my-insights">Already unlocked? Read them here.</a></p><div class="cta-row"><a class="btn" href="https://irontuna.com/">Unlock Premium Insights</a></div></div>
-<div class="eyebrow">The drops</div>
-<ul class="drop-list"><li data-release="2026-07-03"><div><a href="/insights-2026-07-04">The Iron Tuna Five &mdash; Saturday, July 4, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Arizona &middot; The 2026 PUP return-window change slightly i&hellip;</div></div><span class="dl-date">2026-07-04</span></li>
-<li data-release="2026-07-09"><div><a href="/insights-2026-07-09">The Iron Tuna Five &mdash; Thursday, July 9, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Detroit’s offense gets the single cleanest s &middot; The Rams’ late-season schedule&hellip;</div></div><span class="dl-date">2026-07-09</span></li>
-<li data-release="2026-07-16"><div><a href="/insights-2026-07-16">The Iron Tuna Five &mdash; Thursday, July 16, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Cleveland’s team environment should improve  &middot; New York Giants volume&hellip;</div></div><span class="dl-date">2026-07-16</span></li>
-<li data-release="2026-07-23"><div><a href="/insights-2026-07-23">The Iron Tuna Five &mdash; Thursday, July 23, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Tennessee’s offense should throw deeper in 2 &middot; Maye’s 2025 efficiency profile was not fluky&hellip;</div></div><span class="dl-date">2026-07-23</span></li>
-<li data-release="2026-07-30"><div><a href="/insights-2026-07-30">The Iron Tuna Five &mdash; Thursday, July 30, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Denver has one of the cleanest offensive-lin &middot; Lamar Jackson’s market still prices old rush&hellip;</div></div><span class="dl-date">2026-07-30</span></li>
-<li data-release="2026-08-06"><div><a href="/insights-2026-08-06">The Iron Tuna Five &mdash; Thursday, August 6, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The Jets’ schedule opens softer than the mar &middot; Daniels benefits from Washington’s offensive&hellip;</div></div><span class="dl-date">2026-08-06</span></li>
-<li data-release="2026-08-10"><div><a href="/insights-2026-08-10">The Iron Tuna Five &mdash; Monday, August 10, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Philadelphia’s passing tree got narrower aft &middot; Hurts’ favorable schedule prevents a stronge&hellip;</div></div><span class="dl-date">2026-08-10</span></li>
-<li data-release="2026-08-13"><div><a href="/insights-2026-08-13">The Iron Tuna Five &mdash; Thursday, August 13, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Chicago’s 2026 schedule creates unusual week &middot; Purdy’s weapon room&hellip;</div></div><span class="dl-date">2026-08-13</span></li>
-<li data-release="2026-08-17"><div><a href="/insights-2026-08-17">The Iron Tuna Five &mdash; Monday, August 17, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Green Bay’s late-season home weather &middot; Patrick Mahomes&hellip;</div></div><span class="dl-date">2026-08-17</span></li>
-<li data-release="2026-08-20"><div><a href="/insights-2026-08-20">The Iron Tuna Five &mdash; Thursday, August 20, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Miami &middot; Justin Herbert&hellip;</div></div><span class="dl-date">2026-08-20</span></li>
-<li data-release="2026-08-24"><div><a href="/insights-2026-08-24">The Iron Tuna Five &mdash; Monday, August 24, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The anytime onside-kick declaration rule mar &middot; Matthew Stafford&hellip;</div></div><span class="dl-date">2026-08-24</span></li>
-<li data-release="2026-08-27"><div><a href="/insights-2026-08-27">The Iron Tuna Five &mdash; Thursday, August 27, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The Ravens lost hidden support structure on  &middot; Jordan Love&hellip;</div></div><span class="dl-date">2026-08-27</span></li>
-<li data-release="2026-08-31"><div><a href="/insights-2026-08-31">The Iron Tuna Five &mdash; Monday, August 31, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">The 49ers became more top-heavy at WR &middot; Cam Ward&hellip;</div></div><span class="dl-date">2026-08-31</span></li>
-<li data-release="2026-09-03"><div><a href="/insights-2026-09-03">The Iron Tuna Five &mdash; Thursday, September 3, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Kansas City &middot; Justin Fields in Kansas City&hellip;</div></div><span class="dl-date">2026-09-03</span></li></ul>
+<div class="eyebrow">The schedule</div>
+<ul class="drop-list"><li data-release="2026-07-03"><div><span class="dl-main" style="font-weight:700">Saturday, July 4, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-07-04" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-07-04" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-07-04" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-07-04</span></li>
+<li data-release="2026-07-09"><div><span class="dl-main" style="font-weight:700">Thursday, July 9, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-07-09" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-07-09" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-07-09" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-07-09</span></li>
+<li data-release="2026-07-16"><div><span class="dl-main" style="font-weight:700">Thursday, July 16, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-07-16" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-07-16" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-07-16" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-07-16</span></li>
+<li data-release="2026-07-23"><div><span class="dl-main" style="font-weight:700">Thursday, July 23, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-07-23" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-07-23" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-07-23" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-07-23</span></li>
+<li data-release="2026-07-30"><div><span class="dl-main" style="font-weight:700">Thursday, July 30, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-07-30" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-07-30" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-07-30" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-07-30</span></li>
+<li data-release="2026-08-06"><div><span class="dl-main" style="font-weight:700">Thursday, August 6, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-06" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-06" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-06" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-06</span></li>
+<li data-release="2026-08-10"><div><span class="dl-main" style="font-weight:700">Monday, August 10, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-10" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-10" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-10" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-10</span></li>
+<li data-release="2026-08-13"><div><span class="dl-main" style="font-weight:700">Thursday, August 13, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-13" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-13" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-13" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-13</span></li>
+<li data-release="2026-08-17"><div><span class="dl-main" style="font-weight:700">Monday, August 17, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-17" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-17" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-17" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-17</span></li>
+<li data-release="2026-08-20"><div><span class="dl-main" style="font-weight:700">Thursday, August 20, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-20" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-20" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-20" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-20</span></li>
+<li data-release="2026-08-24"><div><span class="dl-main" style="font-weight:700">Monday, August 24, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-24" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-24" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-24" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-24</span></li>
+<li data-release="2026-08-27"><div><span class="dl-main" style="font-weight:700">Thursday, August 27, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-27" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-27" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-27" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-27</span></li>
+<li data-release="2026-08-31"><div><span class="dl-main" style="font-weight:700">Monday, August 31, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-08-31" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-08-31" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-08-31" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-08-31</span></li>
+<li data-release="2026-09-03"><div><span class="dl-main" style="font-weight:700">Thursday, September 3, 2026</span><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)"><a href="/auction-insights-2026-09-03" data-locked="Auction Insights">Auction Insights</a> &middot; <a href="/snake-insights-2026-09-03" data-locked="Snake Draft Insights">Snake Draft Insights</a> &middot; <a href="/bestball-insights-2026-09-03" data-locked="Best Ball Insights">Best Ball Insights</a></div></div><span class="dl-date">2026-09-03</span></li></ul>
+<div class="card"><strong><a href="/insights-vault">The Insight Vault — 30 more, free</a></strong><p>A bonus set of player-level calls at QB, RB, WR, and TE, unlocked with your email. No purchase.</p></div>
+<div class="locked-band"><h2>The rest of the research set</h2>
+<p>These are the public sample. The premium set — 150 more calls at QB, RB, WR, and TE, including the late-round targets and the prices with a specific number attached — ships with the one-time $9.99 Draft Day unlock and is recalculated to your exact league size, scoring, and roster inside the app. New insights are added through Labor Day. <a href="/my-insights">Already unlocked? Read them here.</a></p>
+<div class="cta-row"><a class="btn" href="https://irontuna.com/">Unlock Premium Insights</a></div></div>
 <div class="eyebrow">More</div><div class="related"><a href="/guides">All guides</a><a href="/auction-draft-strategy">Auction strategy</a><a href="/snake-draft-strategy">Snake strategy</a><a href="/best-ball-draft-strategy">Best ball strategy</a></div>
 </main>
 <script>
@@ -130,13 +139,14 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
     var rel = new Date(d + 'T13:00:00Z');
     if (now < rel) {
       li.classList.add('future');
-      var a = li.querySelector('a');
-      var span = document.createElement('span');
-      span.style.fontWeight = '700';
-      span.textContent = 'Drops ' + rel.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'}) + ' — The Iron Tuna Five';
-      a.replaceWith(span);
+      li.querySelectorAll('a').forEach(function(a){
+        var span = document.createElement('span');
+        span.style.fontWeight = a.classList.contains('dl-main') ? '700' : '400';
+        span.textContent = a.getAttribute('data-locked') || a.textContent;
+        a.replaceWith(span);
+      });
       var t = li.querySelector('.dl-teaser');
-      if (t) t.textContent = 'Five new insights unlock that morning.';
+      if (t) t.textContent = 'Five new insights unlock at 9am ET that morning.';
     }
   });
 })();

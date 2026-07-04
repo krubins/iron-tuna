@@ -7,10 +7,10 @@
 <title>My Premium Insights | Iron Tuna</title>
 <meta name="description" content="The full Iron Tuna premium research set — every 2026 insight tailored to your league. Included with the Draft Day unlock.">
 <link rel="canonical" href="https://irontuna.com/my-insights">
+<meta name="robots" content="noindex">
 <meta property="og:title" content="My Premium Insights | Iron Tuna">
 <meta property="og:description" content="The full Iron Tuna premium research set — every 2026 insight tailored to your league. Included with the Draft Day unlock.">
 <meta property="og:type" content="website">
-<meta name="robots" content="noindex">
 <meta property="og:url" content="https://irontuna.com/my-insights">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -67,9 +67,8 @@ footer.site a{color:var(--muted)}
 article.ins{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:18px 0}
 article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 .effect{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;color:var(--gold);margin:10px 0 12px}
-.fmt{font-size:14.5px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--line2);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
+.fmt{font-size:14.5px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--teal);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
 .fmt b{color:var(--text);letter-spacing:.04em}
-.fmt.hot{border-left-color:var(--teal)}
 .locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
 .locked-band h2{margin-top:0;color:var(--gold)}
 .drop-list{list-style:none;padding:0;margin:18px 0}
@@ -83,6 +82,13 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 .filters button,.filters select,.filters input{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:9px;padding:8px 13px;font-size:14px;cursor:pointer}
 .filters button.on{border-color:var(--teal);color:var(--teal);background:rgba(45,212,163,.1)}
 .count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
+.fmt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
+@media(max-width:720px){.fmt-cards{grid-template-columns:1fr}}
+.fmt-cards a.card{display:block;margin:0;color:var(--text)}
+.fmt-cards a.card:hover{border-color:var(--teal);text-decoration:none}
+.fmt-cards .fc-title{font-size:19px;font-weight:800;margin-bottom:6px}
+.fmt-cards p{margin:0;font-size:14px}
+.xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
 </style>
 </head>
 <body>
@@ -106,6 +112,12 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 <div class="cta-row"><a class="btn" href="https://irontuna.com/">Unlock Draft Day — $9.99</a><a class="btn alt" href="/insights">Read the free drops</a></div></div>
 </div>
 <div id="pi-body" style="display:none">
+<div class="filters" id="pi-fmt">
+  <button data-fmt="" class="on">All formats</button>
+  <button data-fmt="auction">Auction</button>
+  <button data-fmt="snake">Snake</button>
+  <button data-fmt="bestball">Best Ball</button>
+</div>
 <div class="filters" id="pi-filters">
   <button data-sec="" class="on">All</button>
   <button data-sec="QB">QB</button>
@@ -130,7 +142,11 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
   var lede = document.getElementById('pi-lede');
   function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
   var VIEW = {"Underpriced": ["v-under","UNDERPRICED"], "Overpriced or discount required": ["v-over","OVERPRICED"], "Price-sensitive / near fair value": ["v-fair","NEAR FAIR VALUE"], "Format-dependent / monitor price": ["v-dep","FORMAT-DEPENDENT"]};
-  var DATA = [], sec = '', view = '', q = '';
+  var FMT_LABEL = { auction: 'Auction', snake: 'Snake', bestball: 'Best Ball' };
+  var DATA = [], sec = '', view = '', q = '', fmtSel = '';
+  function fmtRow(it, key){
+    return '<div class="fmt"><b>' + FMT_LABEL[key] + ':</b> ' + esc(it[key + 'Positioning']) + '. <i>' + esc(it[key + 'Action']) + '</i></div>';
+  }
   function draw(){
     var list = DATA.filter(function(it){
       if (sec && it.section !== sec) return false;
@@ -142,11 +158,10 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
     var h = '';
     list.forEach(function(it){
       var v = VIEW[it.view] || ['v-dep', esc(it.view)];
+      var rows = fmtSel ? fmtRow(it, fmtSel) : fmtRow(it, 'auction') + fmtRow(it, 'snake') + fmtRow(it, 'bestball');
       h += '<article class="ins"><div><span class="badge ' + v[0] + '">' + v[1] + '</span><span class="badge plain">' + esc(it.section) + '</span><span class="badge plain">Confidence: ' + esc(it.conf) + '</span></div>'
         + '<h2>' + esc(it.title) + '</h2><p>' + esc(it.core) + '</p>' + (it.effect ? '<p class="effect">Projected effect: ' + esc(it.effect) + '</p>' : '')
-        + '<div class="fmt hot"><b>Auction:</b> ' + esc(it.auctionPositioning) + '. <i>' + esc(it.auctionAction) + '</i></div>'
-        + '<div class="fmt"><b>Snake:</b> ' + esc(it.snakePositioning) + '. <i>' + esc(it.snakeAction) + '</i></div>'
-        + '<div class="fmt"><b>Best Ball:</b> ' + esc(it.bestballPositioning) + '. <i>' + esc(it.bestballAction) + '</i></div>'
+        + rows
         + (it.auctionTailoring ? '<p style="font-size:13px;color:var(--muted);margin:10px 0 0">Tailored by: ' + esc(it.auctionTailoring) + ' Open your league in the app for exact numbers.</p>' : '')
         + '</article>';
     });
@@ -157,7 +172,7 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
       .then(function(r){ if (!r.ok) throw 0; return r.text(); })
       .then(function(t){
         DATA = JSON.parse(xdec(t.trim(), XK));
-        lede.textContent = DATA.length + ' premium insights — every one carries the auction, snake, and best ball read. New insights are added through Labor Day.';
+        lede.textContent = DATA.length + ' premium insights — pick your format, position, and verdict. New insights are added through Labor Day.';
         document.getElementById('pi-body').style.display = '';
         draw();
       })
@@ -180,6 +195,11 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
       .then(function(j){ if (j && j.entitled) show(); else locked(); })
       .catch(locked);
   }
+  document.getElementById('pi-fmt').addEventListener('click', function(ev){
+    var b = ev.target.closest('button'); if (!b) return;
+    document.querySelectorAll('#pi-fmt button').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on'); fmtSel = b.getAttribute('data-fmt') || ''; draw();
+  });
   document.getElementById('pi-filters').addEventListener('click', function(ev){
     var b = ev.target.closest('button'); if (!b) return;
     document.querySelectorAll('#pi-filters button').forEach(function(x){ x.classList.remove('on'); });
