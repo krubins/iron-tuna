@@ -250,6 +250,21 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </section>
 <div class="dropnav"><div class="dn prev"><small>Previous drop</small><a href="/bestball-insights-2026-07-04">Saturday, July 4, 2026</a></div><div class="dn next"><small>Next drop</small><a href="/bestball-insights-2026-07-16" data-release="2026-07-16" data-locked="Thursday, July 16, 2026 &mdash; unlocks 9am ET">Thursday, July 16, 2026</a></div></div>
 <div class="endnote"><p><b>About this series.</b> These calls are drawn from Iron Tuna's 2026 research set &mdash; 250 stat-based insights covering auction, snake, and best ball. Five publish free every drop day through Labor Day (<a href="/bestball-insights">the full schedule</a>); the remaining 150 ship with <a href="https://irontuna.com/">Draft Day</a>, where each call is recalculated to your league's size, scoring, and roster. There is also a <a href="/insights-vault">30-insight vault</a> readers can open with an email. Values are projections, not guarantees.</p></div>
+<div class="cta-band" id="it-insights-signup" style="margin-top:20px">
+<h2>Get these insights delivered</h2>
+<p>Fresh player signals every morning through draft season. Drop your email to get them in your inbox &mdash; add your cell number to also get the biggest moves by text.</p>
+<form id="itInsForm" onsubmit="return itInsSignup(event)" style="margin:0">
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+<input type="email" id="itInsEmail" required autocomplete="email" placeholder="you@email.com" style="flex:1 1 200px;min-width:0;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px">
+<input type="tel" id="itInsPhone" autocomplete="tel" placeholder="Cell phone (optional, for texts)" style="flex:1 1 200px;min-width:0;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px">
+<button type="submit" class="btn">Send me insights</button>
+</div>
+<p id="itInsMsg" role="status" style="margin:10px 0 0;font-size:14px;min-height:18px"></p>
+</form>
+</div>
+<script>
+function itInsSignup(e){e.preventDefault();var em=document.getElementById('itInsEmail').value.trim();var ph=document.getElementById('itInsPhone').value.trim();var m=document.getElementById('itInsMsg');if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){m.textContent='Please enter a valid email address.';m.style.color='#f87171';return false;}m.textContent='Signing you up…';m.style.color='var(--sec)';fetch('/api/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:em,phone:ph,source:'insights'})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){m.textContent=ph?'You’re in — insights by email, top moves by text.':'You’re in — insights are headed to your inbox.';m.style.color='var(--teal)';document.getElementById('itInsForm').reset();}else{m.textContent='Hmm, that didn’t go through. Please try again.';m.style.color='#f87171';}}).catch(function(){m.textContent='Network hiccup — please try again.';m.style.color='#f87171';});return false;}
+</script>
 </main>
 <script>
 (function(){
