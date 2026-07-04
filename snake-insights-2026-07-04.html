@@ -57,6 +57,114 @@ footer.site a{color:var(--muted)}
 .brand{display:inline-flex;align-items:center}.brand-logo{height:30px;width:auto;display:block}
 </style>
 <style>
+/* ── ambient canvas: layered light, never flat black ── */
+body.pg-ins{background:
+ radial-gradient(1000px 520px at 50% -140px,rgba(45,212,163,.17),transparent 64%),
+ radial-gradient(760px 560px at 88% 38%,rgba(45,212,163,.05),transparent 70%),
+ radial-gradient(640px 520px at 4% 78%,rgba(90,169,255,.045),transparent 72%),
+ linear-gradient(180deg,#0d151d 0%,#0b1218 44%,#0b1117 100%)}
+body.pg-ins::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.035;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+/* ── shared type ── */
+.art-h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(38px,6.5vw,60px);line-height:1.02;margin:10px 0 8px;text-shadow:0 0 34px rgba(45,212,163,.38),0 0 90px rgba(45,212,163,.16)}
+.art-head{position:relative;padding-top:38px}
+.art-head::before{content:"";position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:min(820px,124vw);height:420px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at center,rgba(45,212,163,.20) 0%,rgba(45,212,163,.08) 42%,rgba(45,212,163,0) 72%)}
+.art-head>*{position:relative;z-index:1}
+.byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
+.byline b{color:var(--sec);font-weight:600}
+.byline .dot{opacity:.5}
+.chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent;display:inline-block}
+.chip.under{color:var(--teal);border-color:rgba(45,212,163,.5)}
+.chip.over{color:var(--danger);border-color:rgba(239,91,91,.5)}
+.chip.fair{color:var(--gold);border-color:rgba(245,184,0,.45)}
+/* ── article canvas ── */
+.art{max-width:960px}
+.art .lede{font-size:clamp(17px,2.1vw,20px);max-width:760px}
+.alsofmt{font-size:13.5px;color:var(--muted);margin:4px 0 0}
+/* in-drop index */
+.toc{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 8px}
+.toc a{display:inline-flex;align-items:center;gap:9px;padding:9px 15px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.025);font-size:13.5px;color:var(--sec);transition:border-color .15s ease,box-shadow .15s ease}
+.toc a:hover{border-color:rgba(45,212,163,.55);box-shadow:0 0 14px rgba(45,212,163,.12);text-decoration:none;color:var(--text)}
+.tdot{width:8px;height:8px;border-radius:50%;background:var(--line2);flex:0 0 auto}
+.tdot.under{background:var(--teal);box-shadow:0 0 8px rgba(45,212,163,.6)}
+.tdot.over{background:var(--danger);box-shadow:0 0 8px rgba(239,91,91,.5)}
+.tdot.fair{background:var(--gold);box-shadow:0 0 8px rgba(245,184,0,.5)}
+/* editorial call grid */
+section.call{display:grid;grid-template-columns:118px minmax(0,1fr);gap:34px;border-top:1px solid var(--line);margin-top:40px;padding-top:34px;scroll-margin-top:80px}
+section.call:first-of-type{border-top:0}
+.call-side{position:relative}
+.cn{font-family:'Bebas Neue','Impact',sans-serif;font-size:88px;line-height:.85;color:rgba(45,212,163,.30);text-shadow:0 0 30px rgba(45,212,163,.25);user-select:none}
+.cmeta{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:16px}
+.cpos{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.cconf{font-size:12px;color:var(--muted)}
+.call-main{max-width:660px}
+section.call h2{font-size:clamp(21px,3vw,27px);line-height:1.22;margin:2px 0 14px}
+.call-main p{font-size:16.5px;line-height:1.75;color:var(--sec);margin:0 0 14px}
+.playline{color:var(--sec)}
+.playline b{color:var(--text)}
+.statline{font-size:13.5px;font-style:italic;color:var(--muted);margin:2px 0 0;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+/* effect range bar — small, instrumented */
+.ebar{position:relative;display:inline-block;width:96px;height:3px;background:var(--line2);border-radius:2px;vertical-align:middle;margin-left:10px;flex:0 0 auto}
+.ebar::before{content:"";position:absolute;left:50%;top:-3px;width:1px;height:9px;background:var(--muted);opacity:.7}
+.ebar i{position:absolute;top:0;height:3px;border-radius:2px;left:50%}
+.ebar i.pos{background:var(--teal);box-shadow:0 0 8px rgba(45,212,163,.5)}
+.ebar i.neg{background:var(--danger);box-shadow:0 0 8px rgba(239,91,91,.4);transform:translateX(-100%)}
+/* prev / next drop nav */
+.dropnav{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--line);margin-top:46px;padding-top:22px;font-size:14.5px}
+.dropnav .dn{max-width:46%}
+.dropnav .dn small{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.dropnav .dn a{font-weight:700}
+.dropnav .dn.next{text-align:right;margin-left:auto}
+.dropnav .locked{color:var(--muted);font-weight:600}
+.endnote{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
+.endnote b{color:var(--sec)}
+.endnote a{color:var(--teal)}
+@media(max-width:700px){
+ section.call{grid-template-columns:1fr;gap:10px}
+ .call-side{display:flex;align-items:center;gap:16px}
+ .cn{font-size:52px}
+ .cmeta{flex-direction:row;align-items:center;margin-top:0;flex-wrap:wrap}
+ .dropnav .dn{max-width:100%}
+}
+/* ── hub / index destination ── */
+.hub{max-width:1000px}
+.statrow{display:flex;gap:44px;flex-wrap:wrap;margin:26px 0 6px}
+.statrow .st{min-width:90px}
+.statrow .st b{display:block;font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;font-size:44px;line-height:1;color:var(--text);text-shadow:0 0 22px rgba(45,212,163,.3)}
+.statrow .st span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.nextdrop{display:inline-flex;align-items:center;gap:10px;margin:18px 0 0;padding:9px 16px;border:1px solid rgba(45,212,163,.35);border-radius:999px;font-size:13.5px;color:var(--sec);background:rgba(45,212,163,.06);box-shadow:0 0 16px rgba(45,212,163,.08)}
+.nextdrop .pulse{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px rgba(45,212,163,.9);animation:itpulse 2.2s ease-in-out infinite}
+@keyframes itpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.feat{border:1px solid rgba(45,212,163,.3);border-radius:14px;padding:24px 26px;margin:26px 0 8px;background:linear-gradient(180deg,rgba(45,212,163,.06),rgba(45,212,163,.015) 60%),var(--panel);box-shadow:0 0 30px rgba(45,212,163,.09)}
+.feat .feat-tag{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+.feat ul{list-style:none;margin:0 0 16px;padding:0}
+.feat li{display:flex;gap:11px;align-items:baseline;padding:7px 0;font-size:15.5px;color:var(--sec);border-bottom:1px solid rgba(255,255,255,.04)}
+.feat li:last-child{border-bottom:0}
+.feat li .tdot{position:relative;top:-1px}
+.feat-editions{display:flex;gap:10px;flex-wrap:wrap;font-size:14px}
+.feat-editions a{padding:8px 16px;border:1px solid var(--line2);border-radius:9px;color:var(--sec);font-weight:600}
+.feat-editions a:hover{border-color:rgba(45,212,163,.6);color:var(--text);text-decoration:none;box-shadow:0 0 14px rgba(45,212,163,.14)}
+.fmt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
+@media(max-width:720px){.fmt-cards{grid-template-columns:1fr}}
+.fmt-cards a.card{display:block;margin:0;color:var(--text);border-color:rgba(45,212,163,.28);box-shadow:0 0 16px rgba(45,212,163,.08);transition:box-shadow .2s ease,border-color .2s ease}
+.fmt-cards a.card:hover{border-color:rgba(45,212,163,.6);box-shadow:0 0 26px rgba(45,212,163,.18);text-decoration:none}
+.fmt-cards .fc-title{font-size:19px;font-weight:800;margin-bottom:6px}
+.fmt-cards p{margin:0;font-size:14px}
+.drop-list{list-style:none;padding:0;margin:18px 0}
+.drop-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel)}
+.drop-list li:hover{border-color:rgba(45,212,163,.4)}
+.drop-list li.future{opacity:.62}
+.drop-list .dl-date{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--muted);white-space:nowrap}
+.drop-list a{font-weight:700}
+input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:12px 14px;font-size:15px;width:min(320px,100%)}
+.vault-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.filters button,.filters select,.filters input{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:9px;padding:8px 13px;font-size:14px;cursor:pointer}
+.filters button.on{border-color:var(--teal);color:var(--teal);background:rgba(45,212,163,.1)}
+.count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
+.xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
+.locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
+.locked-band h2{margin-top:0;color:var(--gold)}
+/* legacy classes still used by vault/premium renderers */
 .badge{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:14px;padding:4px 11px;margin-right:8px;margin-bottom:4px}
 .v-under{background:rgba(45,212,163,.14);color:var(--teal);border:1px solid rgba(45,212,163,.45)}
 .v-over{background:rgba(239,91,91,.12);color:var(--danger);border:1px solid rgba(239,91,91,.45)}
@@ -68,57 +176,9 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 .effect{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;color:var(--gold);margin:10px 0 12px}
 .fmt{font-size:14.5px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--teal);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
 .fmt b{color:var(--text);letter-spacing:.04em}
-.locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
-.locked-band h2{margin-top:0;color:var(--gold)}
-/* ── article layout for drop pages ── */
-.art{max-width:720px}
-.art-head{position:relative;padding-top:34px}
-.art-head::before{content:"";position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:min(760px,120vw);height:400px;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at center,rgba(45,212,163,.26) 0%,rgba(45,212,163,.10) 42%,rgba(45,212,163,0) 72%)}
-.art-head::after{content:"";position:absolute;inset:-60px -40px -10px;pointer-events:none;z-index:-1;opacity:.05;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");-webkit-mask:radial-gradient(ellipse 70% 80% at 50% 35%,#000 30%,transparent 78%);mask:radial-gradient(ellipse 70% 80% at 50% 35%,#000 30%,transparent 78%)}
-.art-head>*{position:relative;z-index:1}
-.art-h1,.art h1{font-family:'Bebas Neue','Impact',sans-serif;font-weight:400;letter-spacing:.035em;font-size:clamp(34px,6vw,52px);margin:10px 0 8px;text-shadow:0 0 34px rgba(45,212,163,.38),0 0 90px rgba(45,212,163,.16)}
-.byline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted);margin:2px 0 10px}
-.byline b{color:var(--sec);font-weight:600}
-.byline .dot{opacity:.5}
-.art .lede{font-size:clamp(17px,2.1vw,19.5px);margin-bottom:8px}
-.art p{font-size:16.5px;line-height:1.75}
-section.call{border-top:1px solid var(--line);margin-top:34px;padding-top:26px}
-section.call:first-of-type{border-top:0;margin-top:22px;padding-top:0}
-section.call h2{font-size:clamp(21px,3vw,26px);line-height:1.25;margin:10px 0 12px}
-.sig{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.chip{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:3px 8px;border:1px solid var(--line2);color:var(--muted);background:transparent}
-.chip.under{color:var(--teal);border-color:rgba(45,212,163,.5)}
-.chip.over{color:var(--danger);border-color:rgba(239,91,91,.5)}
-.chip.fair{color:var(--gold);border-color:rgba(245,184,0,.45)}
-.statline{font-size:13.5px;font-style:italic;color:var(--muted);margin:12px 0 0}
-.art p.playline{margin:14px 0 0;font-size:16.5px;line-height:1.75;color:var(--sec)}
-.playline b{color:var(--text)}
-.endnote{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;font-size:13.5px;line-height:1.7;color:var(--muted)}
-.endnote b{color:var(--sec)}
-.endnote a{color:var(--teal)}
-.alsofmt{font-size:13.5px;color:var(--muted);margin:4px 0 0}
-.drop-list{list-style:none;padding:0;margin:18px 0}
-.drop-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel)}
-.drop-list li.future{opacity:.62}
-.drop-list .dl-date{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--muted);white-space:nowrap}
-.drop-list a{font-weight:700}
-input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:12px 14px;font-size:15px;width:min(320px,100%)}
-.vault-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}
-.filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
-.filters button,.filters select,.filters input{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:9px;padding:8px 13px;font-size:14px;cursor:pointer}
-.filters button.on{border-color:var(--teal);color:var(--teal);background:rgba(45,212,163,.1)}
-.count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
-.fmt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
-@media(max-width:720px){.fmt-cards{grid-template-columns:1fr}}
-.fmt-cards a.card{display:block;margin:0;color:var(--text);border-color:rgba(45,212,163,.28);box-shadow:0 0 16px rgba(45,212,163,.08);transition:box-shadow .2s ease,border-color .2s ease}
-.fmt-cards a.card:hover{border-color:rgba(45,212,163,.6);box-shadow:0 0 26px rgba(45,212,163,.18);text-decoration:none}
-.drop-list li:hover{border-color:rgba(45,212,163,.4)}
-.fmt-cards .fc-title{font-size:19px;font-weight:800;margin-bottom:6px}
-.fmt-cards p{margin:0;font-size:14px}
-.xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
 </style>
 </head>
-<body>
+<body class="pg-ins">
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.png" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="nav">
@@ -132,49 +192,78 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 <main class="wrap art">
 <div class="art-head">
 <div class="eyebrow">Snake Draft Insights</div>
-<h1>Snake Draft Insights: July 4, 2026</h1>
+<h1 class="art-h1">Snake Draft Insights: July 4, 2026</h1>
 <div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>July 4, 2026<span class="dot">&middot;</span>5 calls, snake edition</div>
 <p class="lede">Featuring Patrick Mahomes, Miami, Bijan Robinson, Jaylen Waddle, and Trey McBride.</p>
 <p class="alsofmt">Also published in <a href="/auction-insights-2026-07-04">auction</a> and <a href="/bestball-insights-2026-07-04">best ball</a> editions.</p>
+<div class="toc"><a href="#call-1"><span class="tdot over"></span>Patrick Mahomes</a><a href="#call-2"><span class="tdot over"></span>Miami</a><a href="#call-3"><span class="tdot over"></span>Bijan Robinson</a><a href="#call-4"><span class="tdot under"></span>Jaylen Waddle</a><a href="#call-5"><span class="tdot under"></span>Trey McBride</a></div>
 </div>
-<section class="call">
-<div class="sig"><span class="chip over">Overpriced</span><span class="chip">QB</span></div>
-<h2>1. Patrick Mahomes is a reputation trap if drafted as a top-tier fantasy QB</h2>
+<section class="call" id="call-1">
+<div class="call-side"><div class="cn">01</div>
+<div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">QB</span><span class="cconf">Medium confidence</span></div></div>
+<div class="call-main">
+<h2>Patrick Mahomes is a reputation trap if drafted as a top-tier fantasy QB</h2>
 <p>He is rehabbing the torn ACL he suffered in 2025 with no guaranteed Week 1 return, he averaged 21.2 FPPG in only 14 games, new KC rushing dynamics and the Walker/Fields additions likely lower pure pass volume.</p>
 <p class="playline"><b>The play:</b> Do not reach; consider only if the player or group falls at least a round below market cost. Only buy if he falls into the Herbert tier.</p>
-<p class="statline">Projected effect: -4% to -7% versus an elite-QB price &middot; Confidence: Medium</p>
+<p class="statline">Projected effect: -4% to -7% versus an elite-QB price<span class="ebar" role="img" aria-label="effect -4% to -7% versus an elite-QB price"><i class="neg" style="width:24px"></i></span></p>
+</div>
 </section>
-<section class="call">
-<div class="sig"><span class="chip over">Overpriced</span><span class="chip">Market</span></div>
-<h2>2. Miami is the most fragile fantasy ecosystem in football</h2>
+<section class="call" id="call-2">
+<div class="call-side"><div class="cn">02</div>
+<div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">Market</span><span class="cconf">High confidence</span></div></div>
+<div class="call-main">
+<h2>Miami is the most fragile fantasy ecosystem in football</h2>
 <p>The Dolphins signed Malik Willis, extended De’Von Achane, lost Tyreek Hill and Jaylen Waddle, and project with one of the league’s weakest offensive lines. They also face a rough schedule with difficult late cold-weather road games.</p>
 <p class="playline"><b>The play:</b> Do not reach; consider only if the player or group falls at least a round below market cost. Treat Miami outside Achane as a mostly avoid situation in redraft.</p>
-<p class="statline">Projected effect: -10% to -15% team passing expectation versus league median &middot; Confidence: High</p>
+<p class="statline">Projected effect: -10% to -15% team passing expectation versus league median<span class="ebar" role="img" aria-label="effect -10% to -15% team passing expectation versus league median"><i class="neg" style="width:45px"></i></span></p>
+</div>
 </section>
-<section class="call">
-<div class="sig"><span class="chip over">Overpriced</span><span class="chip">RB</span></div>
-<h2>3. Bijan Robinson is still a smash talent, but his market no longer leaves room for hidden upside</h2>
+<section class="call" id="call-3">
+<div class="call-side"><div class="cn">03</div>
+<div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">RB</span><span class="cconf">High confidence</span></div></div>
+<div class="call-main">
+<h2>Bijan Robinson is still a smash talent, but his market no longer leaves room for hidden upside</h2>
 <p>He was RB3 in 2025 and projects second in current consensus.</p>
 <p class="playline"><b>The play:</b> Do not reach; consider only if the player or group falls at least a round below market cost. Excellent pick, not an exploitable inefficiency.</p>
-<p class="statline">Projected effect: -1% to +4% versus price &middot; Confidence: High</p>
+<p class="statline">Projected effect: -1% to +4% versus price<span class="ebar" role="img" aria-label="effect -1% to +4% versus price"><i class="pos" style="width:17px"></i></span></p>
+</div>
 </section>
-<section class="call">
-<div class="sig"><span class="chip under">Underpriced</span><span class="chip">WR</span></div>
-<h2>4. Jaylen Waddle is a major fantasy winner from moving to Denver</h2>
+<section class="call" id="call-4">
+<div class="call-side"><div class="cn">04</div>
+<div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">WR</span><span class="cconf">High confidence</span></div></div>
+<div class="call-main">
+<h2>Jaylen Waddle is a major fantasy winner from moving to Denver</h2>
 <p>The Broncos traded for him, Denver’s line is elite, and Bo Nix is coming off a QB7 finish.</p>
 <p class="playline"><b>The play:</b> Move the player or group up roughly one round, or to the front of the current tier. Strong upside WR2 target.</p>
-<p class="statline">Projected effect: +12% to +18% versus price if the market is still anchored to damaged Miami context &middot; Confidence: High</p>
+<p class="statline">Projected effect: +12% to +18% versus price if the market is still anchored to damaged Miami context<span class="ebar" role="img" aria-label="effect +12% to +18% versus price if the market is still anchored to damaged Miami context"><i class="pos" style="width:45px"></i></span></p>
+</div>
 </section>
-<section class="call">
-<div class="sig"><span class="chip under">Underpriced</span><span class="chip">TE</span></div>
-<h2>5. Trey McBride is one of the few expensive tight ends still likely to return value</h2>
+<section class="call" id="call-5">
+<div class="call-side"><div class="cn">05</div>
+<div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">TE</span><span class="cconf">High confidence</span></div></div>
+<div class="call-main">
+<h2>Trey McBride is one of the few expensive tight ends still likely to return value</h2>
 <p>He was TE1 in 2025 PPR by a huge margin and projects for 113.6 catches and 1,099.7 yards in 2026.</p>
 <p class="playline"><b>The play:</b> Move the player or group up roughly one round, or to the front of the current tier. Pay up if you want a weekly structural edge.</p>
-<p class="statline">Projected effect: +5% to +10% versus price because the role is truly elite &middot; Confidence: High</p>
+<p class="statline">Projected effect: +5% to +10% versus price because the role is truly elite<span class="ebar" role="img" aria-label="effect +5% to +10% versus price because the role is truly elite"><i class="pos" style="width:32px"></i></span></p>
+</div>
 </section>
+<div class="dropnav"><div class="dn next"><small>Next drop</small><a href="/snake-insights-2026-07-09" data-release="2026-07-09" data-locked="Thursday, July 9, 2026 &mdash; unlocks 9am ET">Thursday, July 9, 2026</a></div></div>
 <div class="endnote"><p><b>About this series.</b> These calls are drawn from Iron Tuna's 2026 research set &mdash; 250 stat-based insights covering auction, snake, and best ball. Five publish free every drop day through Labor Day (<a href="/snake-insights">the full schedule</a>); the remaining 150 ship with <a href="https://irontuna.com/">Draft Day</a>, where each call is recalculated to your league's size, scoring, and roster. There is also a <a href="/insights-vault">30-insight vault</a> readers can open with an email. Values are projections, not guarantees.</p></div>
-<div class="eyebrow">More</div><div class="related"><a href="/snake-insights">All snake draft insights</a><a href="/insights">All formats</a><a href="/snake-draft-strategy">Snake draft strategy</a></div>
 </main>
+<script>
+(function(){
+  var el = document.querySelector('.dropnav [data-release]');
+  if (!el) return;
+  var rel = new Date(el.getAttribute('data-release') + 'T13:00:00Z');
+  if (new Date() < rel) {
+    var s = document.createElement('span');
+    s.className = 'locked';
+    s.textContent = el.getAttribute('data-locked');
+    el.replaceWith(s);
+  }
+})();
+</script>
 <footer class="site"><div class="wrap">
   <p>Iron Tuna builds custom draft values for your exact league — auction, snake, and best ball — then runs live on draft night. Values are projections, not guarantees. <a href="https://irontuna.com/">Build your free sheet</a> &middot; <a href="/insights">Insights</a> &middot; <a href="/guides">Guides</a> &middot; <a href="/creators">Creators &amp; affiliates</a></p>
 </div></footer>
