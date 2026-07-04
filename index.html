@@ -20448,6 +20448,7 @@ function App() {
   const [customOrder, setCustomOrder] = useState(initialState?.customOrder || []);
   const [targets, setTargets] = useState(() => new Set(initialState?.targets || []));
   const [rankOrder, setRankOrder] = useState(initialState?.rankOrder || {});
+  const [projUpdateAsk, setProjUpdateAsk] = useState(() => !!(initialState && initialState.players && initialState.players.length && initialState.projVersion && initialState.projVersion !== PROJ_VERSION && initialState.rankOrder && Object.keys(initialState.rankOrder).length > 0));
   const [boardSortKey, setBoardSortKey] = useState('val');
   const [roleOverrides, setRoleOverrides] = useState(initialState?.roleOverrides || {});
   const [slotOrder, setSlotOrder] = useState({});
@@ -21931,7 +21932,24 @@ function App() {
     players: personalizedPlayers,
     config: config,
     onClose: () => setResultsOpen(false)
-  }), purchaseToast && React.createElement("div", {
+  }), projUpdateAsk && React.createElement("div", {
+    className: "modal-bg"
+  }, React.createElement("div", {
+    className: "modal",
+    style: { maxWidth: 460 }
+  }, React.createElement("div", {
+    className: "section-title"
+  }, "Projections updated"), React.createElement("p", {
+    style: { fontSize: 14.5, lineHeight: 1.65, color: 'var(--text-secondary)', margin: '12px 0 18px' }
+  }, "Player projections were refreshed with the latest numbers from our sources. You have custom rank reorders saved. Keep your reorder layered on top of the new projections, or reset to the updated rankings?"), React.createElement("div", {
+    style: { display: 'flex', gap: 10, flexWrap: 'wrap' }
+  }, React.createElement("button", {
+    onClick: () => { setRankOrder({}); setProjUpdateAsk(false); },
+    style: { background: 'var(--positive, #2dd4a3)', color: '#04211c', border: 'none', borderRadius: 9, padding: '10px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
+  }, "Use updated rankings"), React.createElement("button", {
+    onClick: () => setProjUpdateAsk(false),
+    style: { background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-strong, #2c3b48)', borderRadius: 9, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }
+  }, "Keep my reorder")))), purchaseToast && React.createElement("div", {
     className: `purchase-toast no-print tone-${purchaseToast.tone}`,
     onClick: () => setPurchaseToast(null),
     title: "Click to dismiss"
