@@ -837,7 +837,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .mock-card { max-width: 680px; }
 .mock-board { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; }
 .mock-board-h { font-family: var(--font-display); font-size: 14px; color: var(--gold-text); margin-bottom: 10px; letter-spacing: 0.04em; }
-.mock-gate { display:flex; justify-content:center; padding:40px 16px; }
+.mock-gate { display:flex; justify-content:center; align-items:center; min-height:56vh; padding:40px 16px; }
 .mock-gate-card { width:100%; max-width:460px; border:1px solid var(--border-subtle); border-radius:14px; background:rgba(18,27,36,0.7); padding:26px 24px; text-align:center; }
 .mock-gate-h { font-family:var(--font-display); font-size:30px; letter-spacing:0.04em; text-transform:uppercase; color:var(--gold-text,#f7e08c); margin-bottom:8px; }
 .mock-gate-sub { font-size:14px; color:var(--text-secondary,#b6c2cc); line-height:1.55; margin-bottom:18px; }
@@ -1434,6 +1434,12 @@ input:focus, select:focus { border-color: var(--accent); }
   .settings-grid { grid-template-columns: 1fr; }
   .settings-row { grid-template-columns: 1fr 84px; }
   .strategy-bar { flex-wrap: wrap; gap: 8px; }
+  /* Sliders take the full row so their captions never squeeze into a
+     one-word-per-line column beside the Summarize / Roast buttons. */
+  .strategy-bar .budgetsliders { flex: 1 1 100%; width: 100%; }
+  .strategy-bar .bs-row input[type="range"] { max-width: none; }
+  .strategy-bar .summarize-btn { margin-left: 0; }
+  .strategy-bar .taunt-btn { margin-left: 0; }
   .board-subtabs { flex-wrap: wrap; row-gap: 8px; }
   .header-models { margin-left: 0; width: 100%; }
   .taunt-modal { max-width: 94%; }
@@ -1990,6 +1996,16 @@ input:focus, select:focus { border-color: var(--accent); }
 @media (max-width: 900px){ .lp-sticker.hub-stk { width: 110px; height: 110px; top: 3%; } .lp-sticker.hub-stk-l { left: 0; } .lp-sticker.hub-stk-r { right: 0; } }
 .it-tagline2 { margin-top: -2px; font-family: var(--font-display); font-size: clamp(18px, 2.6vw, 27px); letter-spacing: 0.06em; text-transform: uppercase; color: #c9d2d8; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.6); animation: landingFadeIn 0.6s ease-out 0.7s backwards; }
 .it-tagline0 { font-family: var(--font-display); font-size: clamp(18px, 2.6vw, 27px); letter-spacing: 0.08em; text-transform: uppercase; color: #e3eaef; text-align: center; margin-top: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); animation: landingFadeIn 0.6s ease-out 0.55s backwards; }
+.hub-cta-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 22px; animation: landingFadeIn 0.6s ease-out 0.85s backwards; }
+.hub-cta { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.07em; text-transform: uppercase; padding: 11px 22px; border-radius: 24px; cursor: pointer; background: rgba(10,16,22,0.55); transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease; }
+.hub-cta:hover { transform: translateY(-1px); }
+.hub-cta-snake { color: #7ee4f5; border: 1px solid rgba(34,211,238,0.65); }
+.hub-cta-snake:hover { background: rgba(34,211,238,0.16); box-shadow: 0 0 18px rgba(34,211,238,0.25); }
+.hub-cta-auction { color: #f7e08c; border: 1px solid rgba(227,181,58,0.65); }
+.hub-cta-auction:hover { background: rgba(227,181,58,0.16); box-shadow: 0 0 18px rgba(227,181,58,0.25); }
+.hub-cta-bestball { color: #c4b5fd; border: 1px solid rgba(167,139,250,0.65); }
+.hub-cta-bestball:hover { background: rgba(167,139,250,0.16); box-shadow: 0 0 18px rgba(167,139,250,0.25); }
+@media (max-width: 480px) { .hub-cta-row { gap: 8px; } .hub-cta { font-size: 14px; padding: 9px 15px; } }
 .it-tag-gold { color: #f0c75a; }
 .it-tag-dim { color: #f0c75a; }
 @keyframes itTagFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -5298,10 +5314,7 @@ function Header({
   }, "Your League"), React.createElement("button", {
     onClick: onShareEarn,
     title: "Share Iron Tuna and earn $2 per referral"
-  }, "Share & Earn"), React.createElement("button", {
-    onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} },
-    title: "Admin dashboard"
-  }, "Admin"), React.createElement("span", {
+  }, "Share & Earn"), React.createElement("span", {
     className: "reset-wrap"
   }, React.createElement("button", {
     onClick: () => setResetOpen(o => !o)
@@ -5523,12 +5536,10 @@ function LandingSplash({
   }, "Terms"), React.createElement("button", {
     onClick: () => { try { ITAnalytics.track('nav_click', { to: 'share_earn', from: 'ribbon' }); } catch (e) {} onShareEarn && onShareEarn(); }
   }, "Share & Earn"), React.createElement("button", {
-    onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} },
-    title: "Admin dashboard"
-  }, "Admin"), React.createElement("button", {
     className: "lp-ribbon-cta",
-    onClick: () => go('signin')
-  }, "Restore"))), React.createElement("div", {
+    onClick: () => go('signin'),
+    title: "Sign in to restore your purchase on this device"
+  }, "Sign in"))), React.createElement("div", {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-sticker",
@@ -19921,11 +19932,11 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     className: "lp-ribbon"
   }, React.createElement("div", { className: "lp-ribbon-spacer" }), React.createElement("div", {
     className: "lp-ribbon-links"
-  }, React.createElement("span", { className: "ins-dd" }, React.createElement("button", { type: "button", onClick: () => {} }, "Insights"), React.createElement("span", { className: "ins-dd-menu" }, React.createElement("button", { onClick: () => { try { window.location.href = "/auction-insights"; } catch (e) {} } }, "Auction"), React.createElement("button", { onClick: () => { try { window.location.href = "/snake-insights"; } catch (e) {} } }, "Snake"), React.createElement("button", { onClick: () => { try { window.location.href = "/bestball-insights"; } catch (e) {} } }, "Best Ball"))), React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} }, title: "Admin dashboard" }, "Admin"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Restore"))), React.createElement("div", {
+  }, React.createElement("span", { className: "ins-dd" }, React.createElement("button", { type: "button", onClick: () => {} }, "Insights"), React.createElement("span", { className: "ins-dd-menu" }, React.createElement("button", { onClick: () => { try { window.location.href = "/auction-insights"; } catch (e) {} } }, "Auction"), React.createElement("button", { onClick: () => { try { window.location.href = "/snake-insights"; } catch (e) {} } }, "Snake"), React.createElement("button", { onClick: () => { try { window.location.href = "/bestball-insights"; } catch (e) {} } }, "Best Ball"))), React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin, title: "Sign in to restore your purchase on this device" }, "Sign in"))), React.createElement("div", {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"
-  }, React.createElement("div", { className: "lp-sticker hub-stk hub-stk-l", dangerouslySetInnerHTML: { __html: HUB_STK_SNAKE } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-r", dangerouslySetInnerHTML: { __html: HUB_STK_AUCTION } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-b", dangerouslySetInnerHTML: { __html: HUB_STK_BESTBALL } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-c", dangerouslySetInnerHTML: { __html: HUB_STK_COACH } }), React.createElement(LogoMark, { tagline: true, height: 375, className: "landing-logo" }), React.createElement("div", { className: "it-tagline0" }, "AI is already in your draft room."), React.createElement("div", { className: "it-tagline2" }, "You\u2019re either the ", React.createElement("span", { className: "it-tag-gold" }, "tuna"), " or the ", React.createElement("span", { className: "it-tag-dim" }, "bait"), ".")), React.createElement("div", {
+  }, React.createElement("div", { className: "lp-sticker hub-stk hub-stk-l", dangerouslySetInnerHTML: { __html: HUB_STK_SNAKE } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-r", dangerouslySetInnerHTML: { __html: HUB_STK_AUCTION } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-b", dangerouslySetInnerHTML: { __html: HUB_STK_BESTBALL } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-c", dangerouslySetInnerHTML: { __html: HUB_STK_COACH } }), React.createElement(LogoMark, { tagline: true, height: 375, className: "landing-logo" }), React.createElement("div", { className: "it-tagline0" }, "AI is already in your draft room."), React.createElement("div", { className: "it-tagline2" }, "You\u2019re either the ", React.createElement("span", { className: "it-tag-gold" }, "tuna"), " or the ", React.createElement("span", { className: "it-tag-dim" }, "bait"), "."), React.createElement("div", { className: "hub-cta-row" }, React.createElement("button", { className: "hub-cta hub-cta-snake", onClick: () => onPick('snake') }, "Snake Draft \u2192"), React.createElement("button", { className: "hub-cta hub-cta-auction", onClick: () => onPick('auction') }, "Auction \u2192"), React.createElement("button", { className: "hub-cta hub-cta-bestball", onClick: () => onPick('bestball') }, "Best Ball \u2192"))), React.createElement("div", {
     className: "lp-section lp-modes"
   }, React.createElement("div", { className: "ip-stack" }, React.createElement("div", { className: "ip-row" }, React.createElement("button", { className: "ip-card ip-snake", onClick: () => onPick('snake'), dangerouslySetInnerHTML: { __html: SNAKE_PANEL } }), React.createElement("button", { className: "ip-card ip-auction", onClick: () => onPick('auction'), dangerouslySetInnerHTML: { __html: AUCTION_PANEL } }), React.createElement("button", { className: "ip-card ip-bestball", onClick: () => onPick('bestball'), dangerouslySetInnerHTML: { __html: BESTBALL_PANEL } })), React.createElement("div", { className: "ip-coach", dangerouslySetInnerHTML: { __html: VALUECOACH_HTML } }), React.createElement("div", { className: "ip-coach ip-insults", dangerouslySetInnerHTML: { __html: INSULTS_HTML } }))), React.createElement("div", { className: "lp-ai-line", key: aiIdx }, React.createElement("span", { className: "lp-ai-a" }, AI_LINES[aiIdx].a), React.createElement("b", { className: "lp-ai-b" }, AI_LINES[aiIdx].b)), React.createElement("footer", { className: "it-foot" }, React.createElement("a", { href: "/faq" }, "FAQ"), React.createElement("a", { href: "/terms" }, "Terms"), React.createElement("a", { href: "/privacy" }, "Privacy"), React.createElement("a", { href: "/support" }, "Support"), React.createElement("span", { className: "it-foot-mark" }, "Iron Tuna\u2122 \u00b7 \u00a9 2026 Iron Tuna")))), referOpen && React.createElement(ReferralModal, { account: account, setAccount: setAccount, onClose: () => setReferOpen(false) }));
 }
@@ -20350,7 +20361,13 @@ function App() {
   const [draftHistory, setDraftHistory] = useState(initialState?.draftHistory || []);
   const [currentNomination, setCurrentNomination] = useState(null);
   const [nomWhbOpen, setNomWhbOpen] = useState(false);
-  const [view, setView] = useState(screenParam === 'board' || screenParam === 'cheat' ? 'board' : initialState?.draftHistory?.length > 0 ? 'board' : 'prep');
+  const [view, setView] = useState(() => {
+    if (screenParam === 'board' || screenParam === 'cheat') return 'board';
+    if (initialState?.draftHistory?.length > 0) return 'board';
+    // Phones open on the cheat sheet (the product) instead of the Plan/config tab.
+    const phone = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+    return phone ? 'tiers' : 'prep';
+  });
   const [boardTab, setBoardTab] = useState(screenParam === 'board' ? 'draftboard' : 'cheatsheet');
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -20501,7 +20518,7 @@ function App() {
     if (format) ITAnalytics.track('mode_selected', {
       format: fmt
     });
-    setView(target === 'board' ? 'board' : 'prep');
+    setView(target === 'board' ? 'board' : isMobile ? 'tiers' : 'prep');
     if (target === 'signin') setOverlay('auth');else ITAnalytics.track('free_sheet_started', {
       target,
       format: fmt
@@ -20515,7 +20532,7 @@ function App() {
       ...prev,
       format: fmt
     }));
-    setView(target === 'board' ? 'board' : 'prep');
+    setView(target === 'board' ? 'board' : isMobile ? 'tiers' : 'prep');
   }
   const SEASON_GAMES = 17;
   const [fontScale, setFontScale] = useState(() => {
