@@ -5386,7 +5386,7 @@ function LandingSplash({
   useEffect(() => {
     const el = heroCtaRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(entries => { setStickyOn(!entries[0].isIntersecting); }, { threshold: 0 });
+    const io = new IntersectionObserver(entries => { const e = entries[0]; setStickyOn(!e.isIntersecting && e.boundingClientRect.top < 0); }, { threshold: 0 });
     io.observe(el);
     return () => io.disconnect();
   }, []);
