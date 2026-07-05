@@ -176,6 +176,8 @@ input.em{background:var(--elev);border:1px solid var(--line2);color:var(--text);
 .filters button,.filters select,.filters input{background:var(--elev);border:1px solid var(--line2);color:var(--sec);border-radius:9px;padding:8px 13px;font-size:14px;cursor:pointer}
 .filters button.on{border-color:var(--teal);color:var(--teal);background:rgba(45,212,163,.1)}
 .count-pill{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}
+.tailored{margin:10px 0 12px;padding:10px 14px;background:rgba(45,212,163,.08);border:1px solid rgba(45,212,163,.32);border-radius:9px;font-size:14.5px;line-height:1.55;color:var(--sec)}
+.tailored b{color:var(--teal)}
 .xfmt{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;font-size:14px}
 .locked-band{border:1px dashed var(--gold);border-radius:14px;padding:22px;background:rgba(245,184,0,.05);margin:34px 0}
 .locked-band h2{margin-top:0;color:var(--gold)}
@@ -248,6 +250,73 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   var VIEW = {"Underpriced": ["v-under","UNDERPRICED"], "Overpriced or discount required": ["v-over","OVERPRICED"], "Price-sensitive / near fair value": ["v-fair","NEAR FAIR VALUE"], "Format-dependent / monitor price": ["v-dep","FORMAT-DEPENDENT"]};
   var FMT_LABEL = { auction: 'Auction', snake: 'Snake', bestball: 'Best Ball' };
   var DATA = [], sec = '', view = '', q = '', fmtSel = '';
+  var SNAP = null;
+  try { SNAP = JSON.parse(localStorage.getItem('iron_tuna_values_v1') || 'null'); } catch (e) {}
+  if (SNAP && (!SNAP.players || !SNAP.players.length)) SNAP = null;
+  function normName(s){ return String(s || '').toLowerCase().replace(/(jr|sr|ii|iii|iv|v)\.?$/g, '').replace(/[^a-z]/g, ''); }
+  var byName = {}, byLast = {};
+  if (SNAP) {
+    SNAP.players.forEach(function(p){
+      byName[normName(p.n)] = p;
+      var last = normName(p.n.split(' ').slice(-1)[0]);
+      (byLast[last] = byLast[last] || []).push(p);
+    });
+  }
+  function findPlayer(it){
+    var entries = (it.players || '').split(';');
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i].trim(); if (!e) continue;
+      var k = normName(e);
+      var hit = byName[k];
+      if (hit && (it.section === 'Market' || hit.pos === it.section)) return hit;
+      var cands = (byLast[normName(e.split(' ').slice(-1)[0])] || []).filter(function(p){ return it.section === 'Market' || p.pos === it.section; });
+      if (cands.length === 1) return cands[0];
+    }
+    return null;
+  }
+  function pctRange(effect){
+    var m = (effect || '').match(/([+-]?\d+(?:\.\d+)?)\s*%\s*(?:to|–|-)\s*([+-]?\d+(?:\.\d+)?)\s*%/);
+    if (m) return [parseFloat(m[1]) / 100, parseFloat(m[2]) / 100];
+    var s = (effect || '').match(/([+-]\d+(?:\.\d+)?)\s*%/);
+    return s ? [parseFloat(s[1]) / 100, parseFloat(s[1]) / 100] : null;
+  }
+  function slotsMoved(p, pct){
+    var np = (p.pts || 0) * (1 + pct), n = 0;
+    for (var i = 0; i < SNAP.players.length; i++) {
+      var q2 = SNAP.players[i]; if (q2 === p) continue;
+      if (pct > 0 ? (q2.pts > p.pts && q2.pts <= np) : (q2.pts < p.pts && q2.pts >= np)) n++;
+    }
+    return n;
+  }
+  function tailoredLine(it){
+    if (!SNAP) return '';
+    var r = pctRange(it.effect);
+    if (!r) return '';
+    var p = findPlayer(it);
+    if (!p) return '';
+    var lo = Math.min(r[0], r[1]), hi = Math.max(r[0], r[1]);
+    var mid = (lo + hi) / 2, up = mid > 0;
+    var fmt = fmtSel || (SNAP.format === 'snake' || SNAP.format === 'bestball' ? SNAP.format : 'auction');
+    var t = '';
+    if (fmt === 'auction') {
+      var v = p.v || 0;
+      if (v < 1) return '';
+      var d1 = Math.max(1, Math.round(Math.abs(lo) * v)), d2 = Math.max(1, Math.round(Math.abs(hi) * v));
+      if (d2 < d1) { var tmp = d1; d1 = d2; d2 = tmp; }
+      var rng = d1 === d2 ? ('$' + d2) : ('$' + d1 + '–$' + d2);
+      t = esc(p.n) + ' sits at $' + v + ' on your sheet — ' + (up ? 'worth about ' + rng + ' more.' : 'trim about ' + rng + ' off.');
+    } else {
+      var s1 = slotsMoved(p, lo), s2 = slotsMoved(p, hi);
+      var a = Math.min(s1, s2), b = Math.max(s1, s2);
+      if (b === 0) t = 'in your ' + SNAP.teams + '-team league the shift is less than one draft slot — treat it as a hold.';
+      else {
+        var rounds = b / (SNAP.teams || 12);
+        var rt = rounds >= 0.9 ? ' (about ' + (Math.round(rounds * 10) / 10) + (rounds >= 1.5 ? ' rounds' : ' round') + ')' : (rounds >= 0.45 ? ' (about half a round)' : '');
+        t = 'move ' + esc(p.n) + (up ? ' up ' : ' down ') + (a === b ? b : a + '–' + b) + ' slots' + rt + ' in your ' + SNAP.teams + '-team league.';
+      }
+    }
+    return '<div class="tailored"><b>Your league:</b> ' + t + '</div>';
+  }
   function fmtRow(it, key){
     return '<div class="fmt"><b>' + FMT_LABEL[key] + ':</b> ' + esc(it[key + 'Positioning']) + '. <i>' + esc(it[key + 'Action']) + '</i></div>';
   }
@@ -265,8 +334,9 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
       var rows = fmtSel ? fmtRow(it, fmtSel) : fmtRow(it, 'auction') + fmtRow(it, 'snake') + fmtRow(it, 'bestball');
       h += '<article class="ins"><div><span class="badge ' + v[0] + '">' + v[1] + '</span><span class="badge plain">' + esc(it.section) + '</span><span class="badge plain">Confidence: ' + esc(it.conf) + '</span></div>'
         + '<h2>' + esc(it.title) + '</h2><p>' + esc(it.body || it.core) + '</p>' + (it.effect ? '<p class="effect">Projected effect: ' + esc(it.effect) + '</p>' : '')
+        + tailoredLine(it)
         + rows
-        + (it.auctionTailoring ? '<p style="font-size:13px;color:var(--muted);margin:10px 0 0">Tailored by: ' + esc(it.auctionTailoring) + ' Open your league in the app for exact numbers.</p>' : '')
+        + (!SNAP && it.auctionTailoring ? '<p style="font-size:13px;color:var(--muted);margin:10px 0 0">Tailored by: ' + esc(it.auctionTailoring) + ' Open your league in the app for exact numbers.</p>' : '')
         + '</article>';
     });
     document.getElementById('pi-list').innerHTML = h || '<p>No insights match those filters.</p>';
@@ -276,7 +346,13 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
       .then(function(r){ if (!r.ok) throw 0; return r.text(); })
       .then(function(t){
         DATA = JSON.parse(xdec(t.trim(), XK));
-        lede.textContent = DATA.length + ' premium insights — pick your format, position, and verdict. New insights are added through Labor Day.';
+        lede.textContent = DATA.length + ' premium insights' + (SNAP ? ' — every effect below is translated to your ' + SNAP.teams + '-team league.' : ' — pick your format, position, and verdict.');
+        if (!SNAP) {
+          var hint = document.createElement('p');
+          hint.style.cssText = 'font-size:13.5px;color:var(--gold);margin:6px 0 0';
+          hint.textContent = 'Tip: open your league in the app once, and every effect here will be shown in your league’s dollars, rounds, and slots.';
+          lede.parentNode.insertBefore(hint, lede.nextSibling);
+        }
         document.getElementById('pi-body').style.display = '';
         draw();
       })

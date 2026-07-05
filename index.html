@@ -20560,6 +20560,19 @@ function App() {
     const ranked = applyCustomRanks(scored, rankOrder);
     return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config).players, config), config), config);
   }, [players, config, rankOrder]);
+  useEffect(() => {
+    try {
+      if (!baseValued || !baseValued.length) return;
+      const snap = {
+        ts: Date.now(),
+        teams: config.teams,
+        budget: config.budget,
+        format: config.format || 'auction',
+        players: baseValued.map(p => ({ n: p.name, pos: p.position, v: p.auctionValue || 0, pts: Math.round((p.projectedPoints || 0) * 10) / 10 }))
+      };
+      localStorage.setItem('iron_tuna_values_v1', JSON.stringify(snap));
+    } catch (e) {}
+  }, [baseValued, config]);
   const valuedPlayers = useMemo(() => {
     const adjusted = applyValueAdjust(baseValued, valueAdjust, config);
     const draftedIds = new Set(draftHistory.map(d => d.playerId));
