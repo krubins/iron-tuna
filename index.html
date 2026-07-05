@@ -1998,6 +1998,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .it-foot a { color: var(--text-secondary, #b6c2cc); text-decoration: none; }
 .it-foot a:hover { text-decoration: underline; }
 .it-foot-mark { color: var(--text-muted, #8595a1); }
+
+.ins-dd{position:relative;display:inline-block}
+.ins-dd>button{font:inherit}
+.ins-dd .ins-dd-menu{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:6px;background:var(--bg-panel,#121b24);border:1px solid rgba(45,212,163,.4);border-radius:10px;padding:6px;z-index:80;min-width:132px;box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 16px rgba(45,212,163,.14);flex-direction:column}
+.ins-dd:hover .ins-dd-menu,.ins-dd:focus-within .ins-dd-menu{display:flex}
+.ins-dd .ins-dd-menu button{display:block;width:100%;text-align:left;padding:8px 13px;background:none;border:none;color:var(--text-secondary,#b6c2cc);cursor:pointer;border-radius:6px;font:inherit;font-size:13px;white-space:nowrap}
+.ins-dd .ins-dd-menu button:hover{background:rgba(45,212,163,.13);color:var(--text-primary,#fff)}
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -5498,9 +5505,17 @@ function LandingSplash({
     onClick: () => go('prep', 'ribbon_prep')
   }, "Prep"), React.createElement("button", {
     onClick: () => go('board', 'ribbon_auction_night')
-  }, ((typeof window !== "undefined" && (window.location.pathname.indexOf("/snakedraft") === 0 || window.location.pathname.indexOf("/bestball") === 0)) ? "Draft Day" : "Auction Day")), React.createElement("button", {
-    onClick: () => { try { window.location.href = "/insights"; } catch (e) {} }
-  }, "Insights"), React.createElement("button", {
+  }, ((typeof window !== "undefined" && (window.location.pathname.indexOf("/snakedraft") === 0 || window.location.pathname.indexOf("/bestball") === 0)) ? "Draft Day" : "Auction Day")), React.createElement("span", { className: "ins-dd" }, React.createElement("button", {
+    type: "button", onClick: () => {}
+  }, "Insights"), React.createElement("span", {
+    className: "ins-dd-menu"
+  }, React.createElement("button", {
+    onClick: () => { try { window.location.href = "/auction-insights"; } catch (e) {} }
+  }, "Auction"), React.createElement("button", {
+    onClick: () => { try { window.location.href = "/snake-insights"; } catch (e) {} }
+  }, "Snake"), React.createElement("button", {
+    onClick: () => { try { window.location.href = "/bestball-insights"; } catch (e) {} }
+  }, "Best Ball"))), React.createElement("button", {
     onClick: () => { try { window.location.href = "/faq"; } catch (e) {} }
   }, "FAQ"), React.createElement("button", {
     onClick: () => go('legal')
@@ -19905,7 +19920,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     className: "lp-ribbon"
   }, React.createElement("div", { className: "lp-ribbon-spacer" }), React.createElement("div", {
     className: "lp-ribbon-links"
-  }, React.createElement("button", { onClick: () => { try { window.location.href = "/insights"; } catch (e) {} } }, "Insights"), React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} }, title: "Admin dashboard" }, "Admin"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Restore"))), React.createElement("div", {
+  }, React.createElement("span", { className: "ins-dd" }, React.createElement("button", { type: "button", onClick: () => {} }, "Insights"), React.createElement("span", { className: "ins-dd-menu" }, React.createElement("button", { onClick: () => { try { window.location.href = "/auction-insights"; } catch (e) {} } }, "Auction"), React.createElement("button", { onClick: () => { try { window.location.href = "/snake-insights"; } catch (e) {} } }, "Snake"), React.createElement("button", { onClick: () => { try { window.location.href = "/bestball-insights"; } catch (e) {} } }, "Best Ball"))), React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { onClick: () => { try { window.location.href = '/?admin=1'; } catch (e) {} }, title: "Admin dashboard" }, "Admin"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin }, "Restore"))), React.createElement("div", {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"

@@ -59,6 +59,12 @@ footer.site a{color:var(--muted)}
 </style>
 <style>
 /* ── ambient canvas: layered light, never flat black ── */
+.nav-dd{position:relative;display:inline-block}
+.nav-dd .nav-dd-menu{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;background:var(--panel);border:1px solid rgba(45,212,163,.4);border-radius:10px;padding:6px;z-index:40;min-width:130px;box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 16px rgba(45,212,163,.14);flex-direction:column}
+.nav-dd:hover .nav-dd-menu,.nav-dd:focus-within .nav-dd-menu{display:flex}
+.nav-dd .nav-dd-menu a{display:block;margin:0;padding:8px 13px;border-radius:6px;text-transform:none;letter-spacing:.02em;font-size:13.5px;color:var(--sec)}
+.nav-dd .nav-dd-menu a:hover{background:rgba(45,212,163,.13);color:var(--text);text-decoration:none}
+
 body.pg-ins{background:
  radial-gradient(1000px 520px at 50% -140px,rgba(45,212,163,.17),transparent 64%),
  radial-gradient(760px 560px at 88% 38%,rgba(45,212,163,.05),transparent 70%),
@@ -183,7 +189,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.png" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="nav">
-    <a href="/insights">Insights</a>
+    <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a></span></span>
     <a href="/guides">Guides</a>
     <a href="https://irontuna.com/">Draft Night Mode</a>
     <a class="cta" href="https://irontuna.com/">Free sheet</a>
