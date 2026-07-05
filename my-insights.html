@@ -59,10 +59,11 @@ footer.site a{color:var(--muted)}
 </style>
 <style>
 /* ── ambient canvas: layered light, never flat black ── */
-.nav-dd{position:relative;display:inline-block}
-.nav-dd .nav-dd-menu{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;background:var(--panel);border:1px solid rgba(45,212,163,.4);border-radius:10px;padding:6px;z-index:40;min-width:130px;box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 16px rgba(45,212,163,.14);flex-direction:column}
-.nav-dd:hover .nav-dd-menu,.nav-dd:focus-within .nav-dd-menu{display:flex}
-.nav-dd .nav-dd-menu a{display:block;margin:0;padding:8px 13px;border-radius:6px;text-transform:none;letter-spacing:.02em;font-size:13.5px;color:var(--sec)}
+.nav-dd{position:relative;display:inline-block;padding:10px 0;margin:-10px 0}
+.nav-dd .nav-dd-menu{display:flex;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility 0s linear .3s;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:0;background:var(--panel);border:1px solid rgba(45,212,163,.4);border-radius:12px;padding:8px;z-index:40;min-width:170px;box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 16px rgba(45,212,163,.14);flex-direction:column}
+.nav-dd .nav-dd-menu::before{content:"";position:absolute;top:-16px;left:-14px;right:-14px;height:18px}
+.nav-dd:hover .nav-dd-menu,.nav-dd:focus-within .nav-dd-menu{visibility:visible;opacity:1;transition-delay:0s}
+.nav-dd .nav-dd-menu a{display:block;margin:0;padding:12px 16px;border-radius:8px;text-transform:none;letter-spacing:.02em;font-size:14px;color:var(--sec)}
 .nav-dd .nav-dd-menu a:hover{background:rgba(45,212,163,.13);color:var(--text);text-decoration:none}
 
 body.pg-ins{background:

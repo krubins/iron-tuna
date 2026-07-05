@@ -2001,9 +2001,10 @@ input:focus, select:focus { border-color: var(--accent); }
 
 .ins-dd{position:relative;display:inline-block}
 .ins-dd>button{font:inherit}
-.ins-dd .ins-dd-menu{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:6px;background:var(--bg-panel,#121b24);border:1px solid rgba(45,212,163,.4);border-radius:10px;padding:6px;z-index:80;min-width:132px;box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 16px rgba(45,212,163,.14);flex-direction:column}
-.ins-dd:hover .ins-dd-menu,.ins-dd:focus-within .ins-dd-menu{display:flex}
-.ins-dd .ins-dd-menu button{display:block;width:100%;text-align:left;padding:8px 13px;background:none;border:none;color:var(--text-secondary,#b6c2cc);cursor:pointer;border-radius:6px;font:inherit;font-size:13px;white-space:nowrap}
+.ins-dd .ins-dd-menu{display:flex;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility 0s linear .3s;position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:8px;background:var(--bg-panel,#121b24);border:1px solid rgba(45,212,163,.4);border-radius:12px;padding:8px;z-index:80;min-width:170px;box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 16px rgba(45,212,163,.14);flex-direction:column}
+.ins-dd .ins-dd-menu::before{content:"";position:absolute;top:-16px;left:-14px;right:-14px;height:18px}
+.ins-dd:hover .ins-dd-menu,.ins-dd:focus-within .ins-dd-menu{visibility:visible;opacity:1;transition-delay:0s}
+.ins-dd .ins-dd-menu button{display:block;width:100%;text-align:left;padding:12px 16px;background:none;border:none;color:var(--text-secondary,#b6c2cc);cursor:pointer;border-radius:8px;font:inherit;font-size:14px;white-space:nowrap}
 .ins-dd .ins-dd-menu button:hover{background:rgba(45,212,163,.13);color:var(--text-primary,#fff)}
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
