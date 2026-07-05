@@ -20191,11 +20191,11 @@ function App() {
           localStorage.setItem('it_ref_in', refIn.slice(0, 40));
         } catch (e) {}
       }
-      try { if (sp.get('signin') === '1') setOverlay('auth'); else if (sp.get('legal') === '1') setOverlay('legal'); } catch (e) {}
+      try { if (sp.get('signin') === '1') setOverlay('auth'); else if (sp.get('legal') === '1') setOverlay('legal'); else if (sp.get('buy') === '1') setOverlay('pricing'); } catch (e) {}
       const clean = () => {
         try {
           const u = new URL(window.location.href);
-          ['paid', 'cs', 'canceled', 'signin', 'legal'].forEach(k => u.searchParams.delete(k));
+          ['paid', 'cs', 'canceled', 'signin', 'legal', 'buy'].forEach(k => u.searchParams.delete(k));
           window.history.replaceState({}, '', u.pathname + (u.search || ''));
         } catch (e) {}
       };
