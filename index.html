@@ -1575,7 +1575,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-sticker { position: absolute; top: 6px; right: 8px; width: 216px; height: 216px; transform: rotate(7deg); z-index: 8; filter: drop-shadow(0 7px 18px rgba(0,0,0,0.55)); pointer-events: none; }
 .lp-sticker svg { width: 100%; height: 100%; display: block; }
 @media (max-width: 820px) { .lp-sticker, .lp-sticker.hub-stk, .lp-sticker.hub-stk-l, .lp-sticker.hub-stk-r { display: none !important; } }
-@media (max-width: 760px) { .lp-prob-grid, .lp-three, .lp-proof-grid, .lp-modes-grid { grid-template-columns: 1fr !important; } .lp-inner { padding-bottom: 78px; } .lp-hero .landing-logo { height: 186px !important; } .lp-sticky-cta { display: block; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 15px; font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.03em; box-shadow: 0 10px 30px rgba(0,0,0,0.55); } }
+@media (max-width: 760px) { .lp-prob-grid, .lp-three, .lp-proof-grid, .lp-modes-grid { grid-template-columns: 1fr !important; } .lp-inner { padding-bottom: 78px; } .lp-hero .landing-logo { height: 186px !important; } .lp-sticky-cta { display: block; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 60; background: var(--gold-text); color: #1a1205; border: none; border-radius: 26px; padding: 15px; font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.03em; box-shadow: 0 10px 30px rgba(0,0,0,0.55); opacity: 0; transform: translateY(160%); pointer-events: none; transition: opacity 0.22s ease, transform 0.22s ease; } .lp-sticky-cta.on { opacity: 1; transform: none; pointer-events: auto; } }
 @media (max-width: 760px) { .lp-trust { grid-template-columns: 1fr; gap: 12px; margin-top: 32px; } .lp-steps { grid-template-columns: 1fr; } }
 @media (max-width: 600px) {
   .landing-page { padding: 0 14px 60px; }
@@ -5391,9 +5391,18 @@ function LandingSplash({
   const [emailDone, setEmailDone] = useState(false);
   const [demoFmt, setDemoFmt] = useState((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'snake' : ((typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? 'bestball' : 'auction'));
   const [pulse, setPulse] = useState(0);
+  const [stickyOn, setStickyOn] = useState(false);
+  const heroCtaRef = useRef(null);
   useEffect(() => {
     const t = setInterval(() => setPulse(x => (x + 1) % 1000), 1500);
     return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    const el = heroCtaRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(entries => { const e = entries[0]; setStickyOn(!e.isIntersecting && e.boundingClientRect.top < 0); }, { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
   useEffect(() => {
     if (autoExit) {
@@ -5570,6 +5579,7 @@ function LandingSplash({
     className: "lp-sub"
   }, (typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? ["Custom rankings for your exact league. Rankings that ", React.createElement("b", { key: "s1" }, "change to reflect your roster"), ", and projections to tell you ", React.createElement("b", { key: "s2" }, "who will be available when the pick comes back to you"), "."] : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? ["Ceiling-weighted rankings for your exact league, with ", React.createElement("b", { key: "b1" }, "live stack alerts"), " as the board moves and ", React.createElement("b", { key: "b2" }, "championship-week"), " targets baked in."] : ["Custom values for your exact league: ", React.createElement("b", { key: "a1" }, "likely price"), ", ", React.createElement("b", { key: "a2" }, "true value"), ", and ", React.createElement("b", { key: "a3" }, "your max bid"), " on every player, re-priced live as the money leaves the room."]), React.createElement("div", {
     className: "lp-cta-row",
+    ref: heroCtaRef,
     style: {
       marginTop: 6
     }
@@ -5634,15 +5644,7 @@ function LandingSplash({
     }
   }, React.createElement("b", null, "YOU"), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? " is the player value to your starting lineup, adjusted for your roster and remaining needs." : " is your personal max bid, the most a player is worth to your starting lineup given your roster and budget."), React.createElement("br", null), React.createElement("br", null), "The YOU value may be higher than the true value, as elite players may cost more than “Value.” Holding strictly to “Value” may leave you with a deep team of only average players, with a lower scoring starting lineup."), React.createElement("div", {
     className: "lp-ideal"
-  }, "It also builds the ", React.createElement("b", null, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "best team you can draft from your slot" : "best team your budget can actually buy")), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? ", the highest-scoring roster you can reach from your pick, and names who to target each round. Leave no points on the table." : ", the highest-scoring legal roster your money affords, and names who to target. Spend every dollar, leave no points on the table.")), React.createElement("div", {
-    className: "lp-cta-row",
-    style: {
-      marginTop: 22
-    }
-  }, React.createElement("button", {
-    className: "lp-cta",
-    onClick: () => go('prep', 'hero_cta_click')
-  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board"))))), null, React.createElement("div", {
+  }, "It also builds the ", React.createElement("b", null, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "best team you can draft from your slot" : "best team your budget can actually buy")), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? ", the highest-scoring roster you can reach from your pick, and names who to target each round. Leave no points on the table." : ", the highest-scoring legal roster your money affords, and names who to target. Spend every dollar, leave no points on the table.")), null)), null, React.createElement("div", {
     className: "lp-section",
     style: {
       textAlign: 'center'
@@ -5666,7 +5668,7 @@ function LandingSplash({
   }, "Built on projections from nationally recognized platforms, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded."), React.createElement("div", {
     className: "lp-seo-links"
   }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? [React.createElement("a", { key: "s1", href: "/snakedraft" }, "Snake rankings"), React.createElement("a", { key: "s2", href: "/snakedraft" }, "Snake draft assistant"), React.createElement("a", { key: "s3", href: "/snakedraft" }, "Snake cheat sheet"), React.createElement("a", { key: "s4", href: "/snakedraft" }, "Custom snake rankings"), React.createElement("a", { key: "s5", href: "/snakedraft" }, "Superflex rankings"), React.createElement("a", { key: "s6", href: "/creators" }, "For creators")] : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? [React.createElement("a", { key: "b1", href: "/bestball" }, "Best ball rankings"), React.createElement("a", { key: "b2", href: "/bestball" }, "Best ball draft assistant"), React.createElement("a", { key: "b3", href: "/bestball" }, "Best ball cheat sheet"), React.createElement("a", { key: "b4", href: "/bestball" }, "Best ball stacks"), React.createElement("a", { key: "b5", href: "/bestball" }, "Superflex best ball"), React.createElement("a", { key: "b6", href: "/creators" }, "For creators")] : [React.createElement("a", { key: "a1", href: "/fantasy-football-auction-values" }, "Auction values"), React.createElement("a", { key: "a2", href: "/auction-draft-assistant" }, "Auction draft assistant"), React.createElement("a", { key: "a3", href: "/salary-cap-draft-tool" }, "Salary cap draft tool"), React.createElement("a", { key: "a4", href: "/custom-auction-values" }, "Custom auction values"), React.createElement("a", { key: "a5", href: "/superflex-auction-values" }, "Superflex values"), React.createElement("a", { key: "a6", href: "/creators" }, "For creators")])), React.createElement("button", {
-    className: "lp-sticky-cta",
+    className: "lp-sticky-cta" + (stickyOn ? " on" : ""),
     onClick: () => go('prep', 'hero_cta_click')
   }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board"))));
 }
@@ -10158,23 +10160,27 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jul 4, 2026',
+  updated: 'Jul 5, 2026',
   current: [
   {
-    label: 'Burden inherits targets',
-    text: 'DJ Moore and Olamide Zaccheaus left Chicago, vacating 166 targets. Luther Burden III posted elite rookie efficiency and is the top candidate to absorb them. Buy at a mid WR price, but expect boom-bust weeks.'
+    label: 'White fits Daniels',
+    text: 'Rachaad White signed with the Commanders, reuniting with college teammate Jayden Daniels. Camp buzz is real, but he shares the backfield with Jacory Croskey-Merritt and Jerome Ford. Bid a modest RB3 price, no more.'
   },
   {
-    label: 'Egbuka is the Bucs WR1',
-    text: 'Mike Evans signed with the 49ers, making Emeka Egbuka (63 catches, 938 yards as a rookie) Baker Mayfield\'s clear top target. Pay up to a solid WR2 price, his year two target share should jump.'
+    label: 'Nabers is a fade',
+    text: 'Malik Nabers had a second knee procedure this offseason and a Week 1 return is in doubt. His mid third round ADP still prices in a full season. Fade at cost, and only bid if he falls a round or two.'
   },
   {
-    label: 'Downs discount',
-    text: 'The Colts traded Michael Pittman to the Steelers in March, moving Josh Downs to second on the depth chart after a career low 88 targets. At a WR4 price he is a cheap volume rebound. Target him late.'
+    label: 'Olave cleared',
+    text: 'Chris Olave is cleared after the blood clot that ended his 2025 season and is on track for a full training camp. The market still applies a health discount. Buy his WR1 talent before that discount disappears.'
   },
   {
-    label: 'Brooks buzz building',
-    text: 'Jonathon Brooks is 20 months removed from his second ACL tear, and Carolina let Chuba Hubbard and Rico Dowdle walk, leaving a thin RB room. His ADP is up to the 11th round. Bid now before camp buzz raises the price.'
+    label: 'Mahomes risk discount',
+    text: 'Patrick Mahomes tore his ACL in December and a Week 1 return is hopeful, not certain. Drafters are still paying a low end QB1 price. Wait on him, and pair any bid with a safe starter.'
+  },
+  {
+    label: 'Pay up for JSN',
+    text: 'Jaxon Smith-Njigba earned a 35.7 percent target share on 162 targets in 2025, and Seattle added no serious threat to that volume. He now costs a first round pick. Pay it, his volume is as safe as it gets at WR.'
   }
   ],
   library: [{
