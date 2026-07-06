@@ -6012,8 +6012,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   const alloc = config.strategy?.allocation ?? 0.55;
   // Right of center reserves extra budget for quality bench depth.
   const benchShare = alloc * 0.35; // starters-vs-bench axis: up to 35% of budget held for bench
-  const anchorActive = !!(forcedPrices && Object.keys(forcedPrices).length);
-  const extraBench = (anchorActive || noBench) ? 0 : Math.round(benchShare * R);
+  const extraBench = noBench ? 0 : Math.round(benchShare * R);
   // Left end allows concentrating starter spend (stars & scrubs); center+ balances it.
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = 0.30 + conc * 0.55; // concentration axis: even spread (0.30) -> top-heavy (0.85)
@@ -8146,7 +8145,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
   const pick = (pos, i) => byPos[pos] && byPos[pos][i];
   // Build the plan for a single strategy skeleton.
-  function planFor(k) {
+  function planFor(k, noBench) {
     const forced = new Set();
     const addF = p => { if (p) forced.add(p.id); };
     if (k === 'heroRB') { addF(pick('RB', 0)); addF(pick('RB', 23)); }            // one elite RB, value RB2
@@ -8164,7 +8163,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     // locked-target forces above are PREFERENCES that get relaxed if they would bust the budget.
     let fpAll; const anchorSet = new Set();
     (whatIfAnchors || []).forEach(a => { if (a && a.id != null && a.id !== '' && !di.has(a.id)) { anchorSet.add(a.id); forced.add(a.id); (fpAll = fpAll || {})[a.id] = Math.max(1, a.price || 1); } });
-    let plan = buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll);
+    let plan = buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll, noBench);
     if (plan && plan.feasible === false) {
       // Models must never target more than the budget allows. Drop the priciest forced
       // (skeleton) players first until the build fits, protecting what-if anchors and the
@@ -8176,7 +8175,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
       const keep = new Set(forced);
       for (const id of optional) {
         keep.delete(id);
-        const relaxed = buildOptimalPlan(myTeam, players, config, di, undefined, keep, roleOverrides, true, fpAll);
+        const relaxed = buildOptimalPlan(myTeam, players, config, di, undefined, keep, roleOverrides, true, fpAll, noBench);
         if (relaxed) { plan = relaxed; if (relaxed.feasible) break; }
       }
     }
@@ -8186,7 +8185,9 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   // so return the best plan across the unforced optimum and every strategy skeleton. It can never
   // score below another model.
   if (key === 'ideal') {
-    const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(planFor).filter(Boolean);
+    // Spend the whole budget on starters (noBench) so the Ideal Team is the true highest-scoring
+    // affordable starting lineup — the ceiling no other model or what-if build can beat.
+    const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(k => planFor(k, true)).filter(Boolean);
     // Prefer the highest-scoring plan that actually fits the budget; only fall back to
     // an over-budget skeleton if nothing is feasible (so a forced what-if pick at a high
     // price re-optimizes the rest instead of clinging to an unaffordable stud-stack).
@@ -8194,7 +8195,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     const pool = feas.length ? feas : cands;
     return pool.reduce((best, p) => (!best || (p.starterPoints || 0) > (best.starterPoints || 0)) ? p : best, null);
   }
-  return planFor(key);
+  return planFor(key, false);
 }
 function ModelsPanel({ myTeam, players, config, draftedIds, roleOverrides, seasonGames, model, onSelectModel, targets, mode, teams, marketState }) {
   const shownKey = model || 'ideal';
