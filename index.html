@@ -5773,6 +5773,9 @@ function BidPanel({
     onDraft(player.id, winningTeamId, bidNum);
   }
   const positionHeat = marketState[player.position];
+  const _schedWeeks = typeof scheduleWeeksOf === 'function' ? scheduleWeeksOf(player.team) : null;
+  const _soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(player.team, player.position) : null;
+  const _tough = typeof toughSchedule === 'function' ? toughSchedule(player.team, player.position) : null;
   return React.createElement("div", {
     className: "bid-assistant active"
   }, React.createElement("div", {
@@ -5784,7 +5787,13 @@ function BidPanel({
     style: {
       marginLeft: 8
     }
-  }, positionHeat.heat === 'hot' && '🔥 hot', positionHeat.heat === 'cold' && '❄ cold', positionHeat.heat === 'neutral' && 'neutral')), React.createElement("div", {
+  }, positionHeat.heat === 'hot' && '🔥 hot', positionHeat.heat === 'cold' && '❄ cold', positionHeat.heat === 'neutral' && 'neutral')), _schedWeeks && React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: 'var(--text-secondary)',
+      marginTop: 2
+    }
+  }, _schedWeeks.early.length > 0 && React.createElement("div", null, "Early: ", _schedWeeks.early.join(', '), _soft && _soft.early ? ' — soft matchups' : _tough && _tough.early ? ' — tough matchups' : ''), _schedWeeks.late.length > 0 && React.createElement("div", null, "Late: ", _schedWeeks.late.join(', '), _soft && _soft.late ? ' — soft matchups' : _tough && _tough.late ? ' — tough matchups' : '')), React.createElement("div", {
     className: "bid-numbers",
     style: {
       gridTemplateColumns: 'repeat(4, 1fr)'
@@ -6920,6 +6929,7 @@ function QuickDraftModal({
   const _riskCol = (_risk != null && typeof riskColor === 'function') ? riskColor(_risk) : 'var(--text-secondary)';
   const _soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(player.team, player.position) : null;
   const _tough = typeof toughSchedule === 'function' ? toughSchedule(player.team, player.position) : null;
+  const _schedWeeks = typeof scheduleWeeksOf === 'function' ? scheduleWeeksOf(player.team) : null;
   const _vol = typeof volumeFlag === 'function' ? volumeFlag(player, players) : null;
   const _ol = typeof olFlag === 'function' ? olFlag(player) : null;
   const _age = typeof ageFlag === 'function' ? ageFlag(player) : null;
@@ -7010,7 +7020,12 @@ function QuickDraftModal({
       fontSize: 15,
       color: 'var(--text-secondary)'
     }
-  }, "2026 proj: ", statLine) : null, React.createElement("div", {
+  }, "2026 proj: ", statLine) : null, _schedWeeks && React.createElement("div", {
+    style: {
+      marginTop: 5,
+      fontSize: 13
+    }
+  }, _schedWeeks.early.length > 0 && React.createElement("div", null, "Early: ", _schedWeeks.early.join(', '), _soft && _soft.early ? ' — soft matchups' : _tough && _tough.early ? ' — tough matchups' : ''), _schedWeeks.late.length > 0 && React.createElement("div", null, "Late: ", _schedWeeks.late.join(', '), _soft && _soft.late ? ' — soft matchups' : _tough && _tough.late ? ' — tough matchups' : '')), React.createElement("div", {
     style: {
       marginTop: 7
     }
@@ -9800,6 +9815,16 @@ function toughSchedule(team, position) {
   const opps = ws => ws.map(w => sch[w]).filter(Boolean);
   const res = { early: ea != null && ea <= TOUGH ? { opps: opps(['w1', 'w2', 'w3']) } : null, late: la != null && la <= TOUGH ? { opps: opps(['w15', 'w16', 'w17']) } : null };
   return res.early || res.late ? res : null;
+}
+// Formats the known 2026 weeks (1-3, 15-17) for a team into display-ready "Wk# opp" strings.
+function scheduleWeeksOf(team) {
+  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const sch = SCHEDULE_2026[tm];
+  if (!sch) return null;
+  const label = w => sch[w] ? `Wk${w.slice(1)} ${sch[w]}` : null;
+  const early = ['w1', 'w2', 'w3'].map(label).filter(Boolean);
+  const late = ['w15', 'w16', 'w17'].map(label).filter(Boolean);
+  return early.length || late.length ? { early, late } : null;
 }
 function volumeFlag(player, players) {
   if (!player || !players || !players.length) return null;
