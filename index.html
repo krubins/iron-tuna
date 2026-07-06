@@ -19536,7 +19536,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   (players || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
   const pick = (pos, i) => byPos[pos] && byPos[pos][i];
-  function planFor(k, noBench) {
+  function planFor(k) {
     const forced = new Set();
     const addF = p => {
       if (p) forced.add(p.id);
@@ -19589,7 +19589,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
         (fpAll = fpAll || {})[a.id] = Math.max(1, a.price || 1);
       }
     });
-    let plan = buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll, noBench);
+    let plan = buildOptimalPlan(myTeam, players, config, di, undefined, forced, roleOverrides, true, fpAll);
     if (plan && plan.feasible === false) {
       const priceOfId = id => {
         const pp = (players || []).find(x => x.id === id);
@@ -19601,7 +19601,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
       const keep = new Set(forced);
       for (const id of optional) {
         keep.delete(id);
-        const relaxed = buildOptimalPlan(myTeam, players, config, di, undefined, keep, roleOverrides, true, fpAll, noBench);
+        const relaxed = buildOptimalPlan(myTeam, players, config, di, undefined, keep, roleOverrides, true, fpAll);
         if (relaxed) {
           plan = relaxed;
           if (relaxed.feasible) break;
@@ -19611,15 +19611,16 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     return plan;
   }
   if (key === 'ideal') {
-    // Ideal Team is, by definition, the single highest-scoring starting lineup your budget can
-    // afford, so it spends the whole budget on starters (noBench) rather than holding money back
-    // for bench depth. This keeps it the true ceiling no other model or what-if build can beat.
-    const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(k => planFor(k, true)).filter(Boolean);
+    // Ideal Team is the highest-scoring starting lineup your budget affords while still leaving
+    // room for backups (bench reserve is minimum $1/slot, or more if the Starters-vs-Depth slider
+    // is pushed toward depth). Every model and the what-if build use this same bench-reserve rule,
+    // so the Ideal is the ceiling no model or what-if can exceed.
+    const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(planFor).filter(Boolean);
     const feas = cands.filter(p => p.feasible);
     const pool = feas.length ? feas : cands;
     return pool.reduce((best, p) => !best || (p.starterPoints || 0) > (best.starterPoints || 0) ? p : best, null);
   }
-  return planFor(key, false);
+  return planFor(key);
 }
 function ModelsPanel({
   myTeam,
