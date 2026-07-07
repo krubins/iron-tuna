@@ -638,6 +638,36 @@ export default {
       await saveContact(env, { email: email, phone: String(body.phone || '').slice(0, 40), source: body.source || 'cheatsheet', type: body.type || 'lead', ref: body.code || '', path: '' });
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
     }
+    if (url.pathname === '/api/contact') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      if (await rl(env, request, 'contact', 12, 600)) return json({ ok: false, error: 'rate' }, 429, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      if (b.company) return json({ ok: true }, 200, c); // honeypot: bots fill this hidden field; pretend success
+      const email = (b.email || '').trim().toLowerCase();
+      const name = String(b.name || '').trim().slice(0, 120);
+      const message = String(b.message || '').trim().slice(0, 4000);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
+      if (message.length < 5) return json({ ok: false, error: 'empty' }, 400, c);
+      if (!env.RESEND_API_KEY) return json({ ok: false, error: 'unconfigured' }, 503, c);
+      const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const to = env.SUPPORT_TO || 'ken@irontuna.com';
+      const from = env.CONTACT_FROM || env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
+      const html = '<div style="font-family:system-ui,Arial;max-width:560px"><h2 style="color:#0b1117;margin:0 0 12px">New Iron Tuna support message</h2>'
+        + '<p style="margin:0 0 4px"><b>From:</b> ' + esc(name || '(no name)') + ' &lt;' + esc(email) + '&gt;</p>'
+        + '<hr style="border:none;border-top:1px solid #ddd;margin:14px 0"/>'
+        + '<div style="white-space:pre-wrap;color:#1a1a1a;font-size:15px;line-height:1.55">' + esc(message) + '</div></div>';
+      try {
+        const r = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' },
+          body: JSON.stringify({ from: from, to: to, reply_to: email, subject: 'Iron Tuna support — ' + (name || email), html: html })
+        });
+        if (!r.ok) return json({ ok: false, error: 'send' }, 502, c);
+      } catch (e) { return json({ ok: false, error: 'send' }, 502, c); }
+      return json({ ok: true }, 200, c);
+    }
     if (url.pathname === '/api/claim-code') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
