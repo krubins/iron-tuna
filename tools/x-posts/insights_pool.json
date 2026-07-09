@@ -1,0 +1,982 @@
+[
+  {
+    "id": "auction-insights-2026-07-04-0",
+    "format": "auction",
+    "title": "Patrick Mahomes is a reputation trap if drafted as a top-tier fantasy QB",
+    "url": "https://irontuna.com/auction-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "auction-insights-2026-07-04-1",
+    "format": "auction",
+    "title": "Miami is the most fragile fantasy ecosystem in football",
+    "url": "https://irontuna.com/auction-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "auction-insights-2026-07-04-2",
+    "format": "auction",
+    "title": "Bijan Robinson is still a smash talent, but his market no longer leaves room for hidden upside",
+    "url": "https://irontuna.com/auction-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "auction-insights-2026-07-04-3",
+    "format": "auction",
+    "title": "Jaylen Waddle is a major fantasy winner from moving to Denver",
+    "url": "https://irontuna.com/auction-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "auction-insights-2026-07-04-4",
+    "format": "auction",
+    "title": "Trey McBride is one of the few expensive tight ends still likely to return value",
+    "url": "https://irontuna.com/auction-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "auction-insights-2026-07-09-0",
+    "format": "auction",
+    "title": "Drake Maye is the best elite-QB value",
+    "url": "https://irontuna.com/auction-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "auction-insights-2026-07-09-1",
+    "format": "auction",
+    "title": "New England became a classic year-three quarterback breakout setup in one offseason",
+    "url": "https://irontuna.com/auction-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "auction-insights-2026-07-09-2",
+    "format": "auction",
+    "title": "De’Von Achane is being supported almost entirely by talent rather than environment",
+    "url": "https://irontuna.com/auction-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "auction-insights-2026-07-09-3",
+    "format": "auction",
+    "title": "CeeDee Lamb remains elite but is less likely to monopolize the offense with George Pickens still there",
+    "url": "https://irontuna.com/auction-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "auction-insights-2026-07-09-4",
+    "format": "auction",
+    "title": "Isaiah Likely is the best late-round TE target",
+    "url": "https://irontuna.com/auction-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "auction-insights-2026-07-16-0",
+    "format": "auction",
+    "title": "Josh Allen remains the safest overall QB1, but not the best pure value",
+    "url": "https://irontuna.com/auction-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "auction-insights-2026-07-16-1",
+    "format": "auction",
+    "title": "Arizona is the clearest macro fade because the offense got worse and the schedule got harder",
+    "url": "https://irontuna.com/auction-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "auction-insights-2026-07-16-2",
+    "format": "auction",
+    "title": "Jahmyr Gibbs is appropriately expensive",
+    "url": "https://irontuna.com/auction-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "auction-insights-2026-07-16-3",
+    "format": "auction",
+    "title": "Puka Nacua is expensive and still deserves it",
+    "url": "https://irontuna.com/auction-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "auction-insights-2026-07-16-4",
+    "format": "auction",
+    "title": "Tyler Warren is one of the best breakout TE values",
+    "url": "https://irontuna.com/auction-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "auction-insights-2026-07-23-0",
+    "format": "auction",
+    "title": "Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye",
+    "url": "https://irontuna.com/auction-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "auction-insights-2026-07-23-1",
+    "format": "auction",
+    "title": "James Cook is one of the best prices on the board",
+    "url": "https://irontuna.com/auction-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "auction-insights-2026-07-23-2",
+    "format": "auction",
+    "title": "Ashton Jeanty has one of the widest and most attractive rookie ranges in years",
+    "url": "https://irontuna.com/auction-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "auction-insights-2026-07-23-3",
+    "format": "auction",
+    "title": "DJ Moore is a big winner in Buffalo",
+    "url": "https://irontuna.com/auction-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "auction-insights-2026-07-23-4",
+    "format": "auction",
+    "title": "Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling",
+    "url": "https://irontuna.com/auction-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "auction-insights-2026-07-30-0",
+    "format": "auction",
+    "title": "The 2026 PUP return-window change slightly increases stash value",
+    "url": "https://irontuna.com/auction-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "auction-insights-2026-07-30-1",
+    "format": "auction",
+    "title": "Detroit’s offense gets the single cleanest schedule signal in the league",
+    "url": "https://irontuna.com/auction-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "auction-insights-2026-07-30-2",
+    "format": "auction",
+    "title": "The Rams’ late-season schedule is a hidden playoff risk",
+    "url": "https://irontuna.com/auction-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "auction-insights-2026-07-30-3",
+    "format": "auction",
+    "title": "Trevor Lawrence is still one of the cleanest bounce-forward bets",
+    "url": "https://irontuna.com/auction-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "auction-insights-2026-07-30-4",
+    "format": "auction",
+    "title": "Arizona’s quarterback downgrade actually strengthens McBride’s target-floor case",
+    "url": "https://irontuna.com/auction-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "auction-insights-2026-08-06-0",
+    "format": "auction",
+    "title": "Cleveland’s team environment should improve more than the public thinks",
+    "url": "https://irontuna.com/auction-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "auction-insights-2026-08-06-1",
+    "format": "auction",
+    "title": "New York Giants volume is likely to shift from three-WR spread to heavier TE/RB personnel",
+    "url": "https://irontuna.com/auction-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "auction-insights-2026-08-06-2",
+    "format": "auction",
+    "title": "Allen’s path to another QB1 finish now runs more through efficiency than raw rushing expansion",
+    "url": "https://irontuna.com/auction-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "auction-insights-2026-08-06-3",
+    "format": "auction",
+    "title": "Tennessee’s offense should throw deeper in 2026",
+    "url": "https://irontuna.com/auction-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "auction-insights-2026-08-06-4",
+    "format": "auction",
+    "title": "Klint Kubiak’s arrival is mildly positive for Bowers because the Raiders need easy middle-of-field offense",
+    "url": "https://irontuna.com/auction-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "auction-insights-2026-08-10-0",
+    "format": "auction",
+    "title": "Buffalo combines elite QB play, top-tier line play, and a major WR upgrade",
+    "url": "https://irontuna.com/auction-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "auction-insights-2026-08-10-1",
+    "format": "auction",
+    "title": "Maye’s 2025 efficiency profile was not fluky",
+    "url": "https://irontuna.com/auction-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "auction-insights-2026-08-10-2",
+    "format": "auction",
+    "title": "Denver has one of the cleanest offensive-line and schedule combinations for fantasy",
+    "url": "https://irontuna.com/auction-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "auction-insights-2026-08-10-3",
+    "format": "auction",
+    "title": "Kyren’s hard schedule amplifies the risk of smaller volume",
+    "url": "https://irontuna.com/auction-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "auction-insights-2026-08-10-4",
+    "format": "auction",
+    "title": "Loveland’s biggest hidden drag is schedule irregularity, not target competition",
+    "url": "https://irontuna.com/auction-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "auction-insights-2026-08-13-0",
+    "format": "auction",
+    "title": "The Jets’ schedule opens softer than the market is pricing",
+    "url": "https://irontuna.com/auction-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "auction-insights-2026-08-13-1",
+    "format": "auction",
+    "title": "Daniels benefits from Washington’s offensive-line investment in Laremy Tunsil",
+    "url": "https://irontuna.com/auction-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "auction-insights-2026-08-13-2",
+    "format": "auction",
+    "title": "Philadelphia’s passing tree got narrower after the A.J. Brown trade, but the schedule got friendlier",
+    "url": "https://irontuna.com/auction-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "auction-insights-2026-08-13-3",
+    "format": "auction",
+    "title": "Dallas’ passing efficiency should keep Javonte’s touchdown odds healthy",
+    "url": "https://irontuna.com/auction-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "auction-insights-2026-08-13-4",
+    "format": "auction",
+    "title": "Drake London is one of the best WR values on the board",
+    "url": "https://irontuna.com/auction-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "auction-insights-2026-08-17-0",
+    "format": "auction",
+    "title": "Chicago’s 2026 schedule creates unusual weekly-prep volatility",
+    "url": "https://irontuna.com/auction-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "auction-insights-2026-08-17-1",
+    "format": "auction",
+    "title": "Hurts’ favorable schedule prevents a stronger fade",
+    "url": "https://irontuna.com/auction-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "auction-insights-2026-08-17-2",
+    "format": "auction",
+    "title": "Dallas Goedert is a direct beneficiary of the A.J. Brown trade",
+    "url": "https://irontuna.com/auction-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "auction-insights-2026-08-17-3",
+    "format": "auction",
+    "title": "Blake Corum is the most important handcuff-plus back in fantasy",
+    "url": "https://irontuna.com/auction-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "auction-insights-2026-08-17-4",
+    "format": "auction",
+    "title": "Rome Odunze is one of the best breakout WR bets in fantasy",
+    "url": "https://irontuna.com/auction-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "auction-insights-2026-08-20-0",
+    "format": "auction",
+    "title": "Green Bay’s late-season home weather is a real hidden edge",
+    "url": "https://irontuna.com/auction-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "auction-insights-2026-08-20-1",
+    "format": "auction",
+    "title": "Purdy’s weapon room is stronger but target competition is real",
+    "url": "https://irontuna.com/auction-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "auction-insights-2026-08-20-2",
+    "format": "auction",
+    "title": "Harold Fannin Jr. is exactly the sort of second-wave tight end to buy in deeper leagues",
+    "url": "https://irontuna.com/auction-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "auction-insights-2026-08-20-3",
+    "format": "auction",
+    "title": "Kenneth Walker is one of the biggest team-change winners in fantasy",
+    "url": "https://irontuna.com/auction-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "auction-insights-2026-08-20-4",
+    "format": "auction",
+    "title": "Romeo Doubs’ signing matters because it raises New England’s pass-game floor, not because it crushes A.J. Brown",
+    "url": "https://irontuna.com/auction-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "auction-insights-2026-08-24-0",
+    "format": "auction",
+    "title": "The anytime onside-kick declaration rule marginally helps trailing pass volume",
+    "url": "https://irontuna.com/auction-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "auction-insights-2026-08-24-1",
+    "format": "auction",
+    "title": "Justin Herbert is the best midrange QB value",
+    "url": "https://irontuna.com/auction-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "auction-insights-2026-08-24-2",
+    "format": "auction",
+    "title": "Kraft gets a slight late-season bump from Green Bay weather context",
+    "url": "https://irontuna.com/auction-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "auction-insights-2026-08-24-3",
+    "format": "auction",
+    "title": "Baltimore’s loss of Ricard, Likely, and Linderbaum is the first meaningful structural hit to Henry’s fantasy value in a while",
+    "url": "https://irontuna.com/auction-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "auction-insights-2026-08-24-4",
+    "format": "auction",
+    "title": "Tetairoa McMillan remains a good player in a less obvious team context",
+    "url": "https://irontuna.com/auction-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "auction-insights-2026-08-27-0",
+    "format": "auction",
+    "title": "The Ravens lost hidden support structure on offense",
+    "url": "https://irontuna.com/auction-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "auction-insights-2026-08-27-1",
+    "format": "auction",
+    "title": "Matthew Stafford is expensive for a non-rushing QB, but the case is real",
+    "url": "https://irontuna.com/auction-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "auction-insights-2026-08-27-2",
+    "format": "auction",
+    "title": "Mark Andrews remains touchdown-reliant",
+    "url": "https://irontuna.com/auction-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "auction-insights-2026-08-27-3",
+    "format": "auction",
+    "title": "Barkley’s target environment can improve post-A.J. Brown",
+    "url": "https://irontuna.com/auction-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "auction-insights-2026-08-27-4",
+    "format": "auction",
+    "title": "Deebo Samuel in Washington is still a scheme-created weekly flex, not a true target king",
+    "url": "https://irontuna.com/auction-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "auction-insights-2026-08-31-0",
+    "format": "auction",
+    "title": "The 49ers became more top-heavy at WR",
+    "url": "https://irontuna.com/auction-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "auction-insights-2026-08-31-1",
+    "format": "auction",
+    "title": "Jordan Love is quietly viable because the Packers’ late-season conditions favor their offense",
+    "url": "https://irontuna.com/auction-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "auction-insights-2026-08-31-2",
+    "format": "auction",
+    "title": "Likely’s outlook is stronger in full PPR than standard because his edge comes from route volume and target design, not guaranteed touchdowns",
+    "url": "https://irontuna.com/auction-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "auction-insights-2026-08-31-3",
+    "format": "auction",
+    "title": "David Montgomery is vulnerable to subtle erosion",
+    "url": "https://irontuna.com/auction-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "auction-insights-2026-08-31-4",
+    "format": "auction",
+    "title": "Buffalo’s WR room is now good enough that Allen stacks should be diversified, not concentrated only on one pass-catcher",
+    "url": "https://irontuna.com/auction-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "auction-insights-2026-09-03-0",
+    "format": "auction",
+    "title": "Kansas City is no longer a pure pass funnel",
+    "url": "https://irontuna.com/auction-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "auction-insights-2026-09-03-1",
+    "format": "auction",
+    "title": "Cam Ward is interesting mainly because Brian Daboll should unlock more deep attempts",
+    "url": "https://irontuna.com/auction-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "auction-insights-2026-09-03-2",
+    "format": "auction",
+    "title": "T.J. Hockenson remains a risky rebound candidate",
+    "url": "https://irontuna.com/auction-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "auction-insights-2026-09-03-3",
+    "format": "auction",
+    "title": "Offensive-line dispersion matters more this year because so many star skill players changed teams",
+    "url": "https://irontuna.com/auction-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "auction-insights-2026-09-03-4",
+    "format": "auction",
+    "title": "Justin Fields in Kansas City is more interesting for real football than traditional redraft unless he actually starts",
+    "url": "https://irontuna.com/auction-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "snake-insights-2026-07-04-0",
+    "format": "snake",
+    "title": "Patrick Mahomes is a reputation trap if drafted as a top-tier fantasy QB",
+    "url": "https://irontuna.com/snake-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "snake-insights-2026-07-04-1",
+    "format": "snake",
+    "title": "Miami is the most fragile fantasy ecosystem in football",
+    "url": "https://irontuna.com/snake-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "snake-insights-2026-07-04-2",
+    "format": "snake",
+    "title": "Bijan Robinson is still a smash talent, but his market no longer leaves room for hidden upside",
+    "url": "https://irontuna.com/snake-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "snake-insights-2026-07-04-3",
+    "format": "snake",
+    "title": "Jaylen Waddle is a major fantasy winner from moving to Denver",
+    "url": "https://irontuna.com/snake-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "snake-insights-2026-07-04-4",
+    "format": "snake",
+    "title": "Trey McBride is one of the few expensive tight ends still likely to return value",
+    "url": "https://irontuna.com/snake-insights-2026-07-04",
+    "date": "2026-07-04"
+  },
+  {
+    "id": "snake-insights-2026-07-09-0",
+    "format": "snake",
+    "title": "Drake Maye is the best elite-QB value",
+    "url": "https://irontuna.com/snake-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "snake-insights-2026-07-09-1",
+    "format": "snake",
+    "title": "New England became a classic year-three quarterback breakout setup in one offseason",
+    "url": "https://irontuna.com/snake-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "snake-insights-2026-07-09-2",
+    "format": "snake",
+    "title": "De’Von Achane is being supported almost entirely by talent rather than environment",
+    "url": "https://irontuna.com/snake-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "snake-insights-2026-07-09-3",
+    "format": "snake",
+    "title": "CeeDee Lamb remains elite but is less likely to monopolize the offense with George Pickens still there",
+    "url": "https://irontuna.com/snake-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "snake-insights-2026-07-09-4",
+    "format": "snake",
+    "title": "Isaiah Likely is the best late-round TE target",
+    "url": "https://irontuna.com/snake-insights-2026-07-09",
+    "date": "2026-07-09"
+  },
+  {
+    "id": "snake-insights-2026-07-16-0",
+    "format": "snake",
+    "title": "Josh Allen remains the safest overall QB1, but not the best pure value",
+    "url": "https://irontuna.com/snake-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "snake-insights-2026-07-16-1",
+    "format": "snake",
+    "title": "Arizona is the clearest macro fade because the offense got worse and the schedule got harder",
+    "url": "https://irontuna.com/snake-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "snake-insights-2026-07-16-2",
+    "format": "snake",
+    "title": "Jahmyr Gibbs is appropriately expensive",
+    "url": "https://irontuna.com/snake-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "snake-insights-2026-07-16-3",
+    "format": "snake",
+    "title": "Puka Nacua is expensive and still deserves it",
+    "url": "https://irontuna.com/snake-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "snake-insights-2026-07-16-4",
+    "format": "snake",
+    "title": "Tyler Warren is one of the best breakout TE values",
+    "url": "https://irontuna.com/snake-insights-2026-07-16",
+    "date": "2026-07-16"
+  },
+  {
+    "id": "snake-insights-2026-07-23-0",
+    "format": "snake",
+    "title": "Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye",
+    "url": "https://irontuna.com/snake-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "snake-insights-2026-07-23-1",
+    "format": "snake",
+    "title": "James Cook is one of the best prices on the board",
+    "url": "https://irontuna.com/snake-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "snake-insights-2026-07-23-2",
+    "format": "snake",
+    "title": "Ashton Jeanty has one of the widest and most attractive rookie ranges in years",
+    "url": "https://irontuna.com/snake-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "snake-insights-2026-07-23-3",
+    "format": "snake",
+    "title": "DJ Moore is a big winner in Buffalo",
+    "url": "https://irontuna.com/snake-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "snake-insights-2026-07-23-4",
+    "format": "snake",
+    "title": "Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling",
+    "url": "https://irontuna.com/snake-insights-2026-07-23",
+    "date": "2026-07-23"
+  },
+  {
+    "id": "snake-insights-2026-07-30-0",
+    "format": "snake",
+    "title": "The 2026 PUP return-window change slightly increases stash value",
+    "url": "https://irontuna.com/snake-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "snake-insights-2026-07-30-1",
+    "format": "snake",
+    "title": "Detroit’s offense gets the single cleanest schedule signal in the league",
+    "url": "https://irontuna.com/snake-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "snake-insights-2026-07-30-2",
+    "format": "snake",
+    "title": "The Rams’ late-season schedule is a hidden playoff risk",
+    "url": "https://irontuna.com/snake-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "snake-insights-2026-07-30-3",
+    "format": "snake",
+    "title": "Trevor Lawrence is still one of the cleanest bounce-forward bets",
+    "url": "https://irontuna.com/snake-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "snake-insights-2026-07-30-4",
+    "format": "snake",
+    "title": "Arizona’s quarterback downgrade actually strengthens McBride’s target-floor case",
+    "url": "https://irontuna.com/snake-insights-2026-07-30",
+    "date": "2026-07-30"
+  },
+  {
+    "id": "snake-insights-2026-08-06-0",
+    "format": "snake",
+    "title": "Cleveland’s team environment should improve more than the public thinks",
+    "url": "https://irontuna.com/snake-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "snake-insights-2026-08-06-1",
+    "format": "snake",
+    "title": "New York Giants volume is likely to shift from three-WR spread to heavier TE/RB personnel",
+    "url": "https://irontuna.com/snake-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "snake-insights-2026-08-06-2",
+    "format": "snake",
+    "title": "Allen’s path to another QB1 finish now runs more through efficiency than raw rushing expansion",
+    "url": "https://irontuna.com/snake-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "snake-insights-2026-08-06-3",
+    "format": "snake",
+    "title": "Tennessee’s offense should throw deeper in 2026",
+    "url": "https://irontuna.com/snake-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "snake-insights-2026-08-06-4",
+    "format": "snake",
+    "title": "Klint Kubiak’s arrival is mildly positive for Bowers because the Raiders need easy middle-of-field offense",
+    "url": "https://irontuna.com/snake-insights-2026-08-06",
+    "date": "2026-08-06"
+  },
+  {
+    "id": "snake-insights-2026-08-10-0",
+    "format": "snake",
+    "title": "Buffalo combines elite QB play, top-tier line play, and a major WR upgrade",
+    "url": "https://irontuna.com/snake-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "snake-insights-2026-08-10-1",
+    "format": "snake",
+    "title": "Maye’s 2025 efficiency profile was not fluky",
+    "url": "https://irontuna.com/snake-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "snake-insights-2026-08-10-2",
+    "format": "snake",
+    "title": "Denver has one of the cleanest offensive-line and schedule combinations for fantasy",
+    "url": "https://irontuna.com/snake-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "snake-insights-2026-08-10-3",
+    "format": "snake",
+    "title": "Kyren’s hard schedule amplifies the risk of smaller volume",
+    "url": "https://irontuna.com/snake-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "snake-insights-2026-08-10-4",
+    "format": "snake",
+    "title": "Loveland’s biggest hidden drag is schedule irregularity, not target competition",
+    "url": "https://irontuna.com/snake-insights-2026-08-10",
+    "date": "2026-08-10"
+  },
+  {
+    "id": "snake-insights-2026-08-13-0",
+    "format": "snake",
+    "title": "The Jets’ schedule opens softer than the market is pricing",
+    "url": "https://irontuna.com/snake-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "snake-insights-2026-08-13-1",
+    "format": "snake",
+    "title": "Daniels benefits from Washington’s offensive-line investment in Laremy Tunsil",
+    "url": "https://irontuna.com/snake-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "snake-insights-2026-08-13-2",
+    "format": "snake",
+    "title": "Philadelphia’s passing tree got narrower after the A.J. Brown trade, but the schedule got friendlier",
+    "url": "https://irontuna.com/snake-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "snake-insights-2026-08-13-3",
+    "format": "snake",
+    "title": "Dallas’ passing efficiency should keep Javonte’s touchdown odds healthy",
+    "url": "https://irontuna.com/snake-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "snake-insights-2026-08-13-4",
+    "format": "snake",
+    "title": "Drake London is one of the best WR values on the board",
+    "url": "https://irontuna.com/snake-insights-2026-08-13",
+    "date": "2026-08-13"
+  },
+  {
+    "id": "snake-insights-2026-08-17-0",
+    "format": "snake",
+    "title": "Chicago’s 2026 schedule creates unusual weekly-prep volatility",
+    "url": "https://irontuna.com/snake-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "snake-insights-2026-08-17-1",
+    "format": "snake",
+    "title": "Hurts’ favorable schedule prevents a stronger fade",
+    "url": "https://irontuna.com/snake-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "snake-insights-2026-08-17-2",
+    "format": "snake",
+    "title": "Dallas Goedert is a direct beneficiary of the A.J. Brown trade",
+    "url": "https://irontuna.com/snake-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "snake-insights-2026-08-17-3",
+    "format": "snake",
+    "title": "Blake Corum is the most important handcuff-plus back in fantasy",
+    "url": "https://irontuna.com/snake-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "snake-insights-2026-08-17-4",
+    "format": "snake",
+    "title": "Rome Odunze is one of the best breakout WR bets in fantasy",
+    "url": "https://irontuna.com/snake-insights-2026-08-17",
+    "date": "2026-08-17"
+  },
+  {
+    "id": "snake-insights-2026-08-20-0",
+    "format": "snake",
+    "title": "Green Bay’s late-season home weather is a real hidden edge",
+    "url": "https://irontuna.com/snake-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "snake-insights-2026-08-20-1",
+    "format": "snake",
+    "title": "Purdy’s weapon room is stronger but target competition is real",
+    "url": "https://irontuna.com/snake-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "snake-insights-2026-08-20-2",
+    "format": "snake",
+    "title": "Harold Fannin Jr. is exactly the sort of second-wave tight end to buy in deeper leagues",
+    "url": "https://irontuna.com/snake-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "snake-insights-2026-08-20-3",
+    "format": "snake",
+    "title": "Kenneth Walker is one of the biggest team-change winners in fantasy",
+    "url": "https://irontuna.com/snake-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "snake-insights-2026-08-20-4",
+    "format": "snake",
+    "title": "Romeo Doubs’ signing matters because it raises New England’s pass-game floor, not because it crushes A.J. Brown",
+    "url": "https://irontuna.com/snake-insights-2026-08-20",
+    "date": "2026-08-20"
+  },
+  {
+    "id": "snake-insights-2026-08-24-0",
+    "format": "snake",
+    "title": "The anytime onside-kick declaration rule marginally helps trailing pass volume",
+    "url": "https://irontuna.com/snake-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "snake-insights-2026-08-24-1",
+    "format": "snake",
+    "title": "Justin Herbert is the best midrange QB value",
+    "url": "https://irontuna.com/snake-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "snake-insights-2026-08-24-2",
+    "format": "snake",
+    "title": "Kraft gets a slight late-season bump from Green Bay weather context",
+    "url": "https://irontuna.com/snake-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "snake-insights-2026-08-24-3",
+    "format": "snake",
+    "title": "Baltimore’s loss of Ricard, Likely, and Linderbaum is the first meaningful structural hit to Henry’s fantasy value in a while",
+    "url": "https://irontuna.com/snake-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "snake-insights-2026-08-24-4",
+    "format": "snake",
+    "title": "Tetairoa McMillan remains a good player in a less obvious team context",
+    "url": "https://irontuna.com/snake-insights-2026-08-24",
+    "date": "2026-08-24"
+  },
+  {
+    "id": "snake-insights-2026-08-27-0",
+    "format": "snake",
+    "title": "The Ravens lost hidden support structure on offense",
+    "url": "https://irontuna.com/snake-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "snake-insights-2026-08-27-1",
+    "format": "snake",
+    "title": "Matthew Stafford is expensive for a non-rushing QB, but the case is real",
+    "url": "https://irontuna.com/snake-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "snake-insights-2026-08-27-2",
+    "format": "snake",
+    "title": "Mark Andrews remains touchdown-reliant",
+    "url": "https://irontuna.com/snake-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "snake-insights-2026-08-27-3",
+    "format": "snake",
+    "title": "Barkley’s target environment can improve post-A.J. Brown",
+    "url": "https://irontuna.com/snake-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "snake-insights-2026-08-27-4",
+    "format": "snake",
+    "title": "Deebo Samuel in Washington is still a scheme-created weekly flex, not a true target king",
+    "url": "https://irontuna.com/snake-insights-2026-08-27",
+    "date": "2026-08-27"
+  },
+  {
+    "id": "snake-insights-2026-08-31-0",
+    "format": "snake",
+    "title": "The 49ers became more top-heavy at WR",
+    "url": "https://irontuna.com/snake-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "snake-insights-2026-08-31-1",
+    "format": "snake",
+    "title": "Jordan Love is quietly viable because the Packers’ late-season conditions favor their offense",
+    "url": "https://irontuna.com/snake-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "snake-insights-2026-08-31-2",
+    "format": "snake",
+    "title": "Likely’s outlook is stronger in full PPR than standard because his edge comes from route volume and target design, not guaranteed touchdowns",
+    "url": "https://irontuna.com/snake-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "snake-insights-2026-08-31-3",
+    "format": "snake",
+    "title": "David Montgomery is vulnerable to subtle erosion",
+    "url": "https://irontuna.com/snake-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "snake-insights-2026-08-31-4",
+    "format": "snake",
+    "title": "Buffalo’s WR room is now good enough that Allen stacks should be diversified, not concentrated only on one pass-catcher",
+    "url": "https://irontuna.com/snake-insights-2026-08-31",
+    "date": "2026-08-31"
+  },
+  {
+    "id": "snake-insights-2026-09-03-0",
+    "format": "snake",
+    "title": "Kansas City is no longer a pure pass funnel",
+    "url": "https://irontuna.com/snake-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "snake-insights-2026-09-03-1",
+    "format": "snake",
+    "title": "Cam Ward is interesting mainly because Brian Daboll should unlock more deep attempts",
+    "url": "https://irontuna.com/snake-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "snake-insights-2026-09-03-2",
+    "format": "snake",
+    "title": "T.J. Hockenson remains a risky rebound candidate",
+    "url": "https://irontuna.com/snake-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "snake-insights-2026-09-03-3",
+    "format": "snake",
+    "title": "Offensive-line dispersion matters more this year because so many star skill players changed teams",
+    "url": "https://irontuna.com/snake-insights-2026-09-03",
+    "date": "2026-09-03"
+  },
+  {
+    "id": "snake-insights-2026-09-03-4",
+    "format": "snake",
+    "title": "Justin Fields in Kansas City is more interesting for real football than traditional redraft unless he actually starts",
+    "url": "https://irontuna.com/snake-insights-2026-09-03",
+    "date": "2026-09-03"
+  }
+]
