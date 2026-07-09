@@ -1166,6 +1166,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
 .settings-league-summary { font-family: var(--font-mono); font-size: 13.5px; color: var(--text-secondary); margin: 6px 0 16px; letter-spacing: 0.02em; }
 .cheat-header { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: var(--ch-box-gap, 14px); align-items: stretch; margin-bottom: 12px; }
+.cheat-header.ch-simple { display: flex; flex-direction: column; }
+.ch-simplebar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.ch-sb-title { font-size: 12px; color: var(--text-muted); }
+.ch-sb-toggle { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.ch-sb-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); }
 .ch-models { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 6px; background: var(--bg-panel); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 8px 11px; min-height: 0; box-shadow: 0 0 10px rgba(245,184,0,0.06); }
 .ch-models-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-text); margin-bottom: 2px; }
 .ch-models-empty { font-size: 12px; color: var(--text-muted); }
@@ -10544,6 +10549,8 @@ function CheatHeader({
 }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
+  const [adv, setAdv] = useState(() => { try { return localStorage.getItem('it_cheat_adv') === '1'; } catch (e) { return false; } });
+  function toggleAdv() { setAdv(v => { const n = !v; try { localStorage.setItem('it_cheat_adv', n ? '1' : '0'); } catch (e) {} return n; }); }
   const [customDesc, setCustomDesc] = useState('');
   const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const [wiOpen, setWiOpen] = useState(false);
@@ -10691,8 +10698,16 @@ function CheatHeader({
     return () => clearInterval(t);
   }, [flen]);
   return React.createElement("div", {
-    className: "cheat-header no-print"
+    className: "cheat-header no-print " + (adv ? "ch-adv" : "ch-simple")
   }, React.createElement("div", {
+    className: "ch-simplebar"
+  }, React.createElement("span", {
+    className: "ch-sb-title"
+  }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("button", {
+    className: "ch-sb-toggle",
+    onClick: toggleAdv,
+    title: "Show or hide draft models, column & flag options, what-if, and PDF export"
+  }, adv ? "Hide tools ▴" : "Models, columns & tools ▾")), adv && React.createElement("div", {
     className: "ch-models"
   }, React.createElement("span", {
     className: "ch-models-label"
@@ -10968,7 +10983,7 @@ function CheatHeader({
       borderRadius: 8,
       padding: '1px 6px'
     }
-  }, s.label, ": ", s.player ? s.player.name : '–', s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : '')))))), React.createElement("div", {
+  }, s.label, ": ", s.player ? s.player.name : '–', s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : '')))))), adv && React.createElement("div", {
     className: "ch-controls"
   }, React.createElement("span", {
     className: "ch-controls-label"
@@ -11024,7 +11039,7 @@ function CheatHeader({
     }
   }, "● potentially overpriced"))), React.createElement("div", {
     className: "ch-insights-col"
-  }, React.createElement("div", {
+  }, adv && React.createElement("div", {
     className: "ch-insights ch-ins-facts"
   }, flen > 1 && React.createElement("span", {
     className: "chi-nav chi-nav-float"
