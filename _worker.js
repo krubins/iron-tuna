@@ -524,7 +524,7 @@ const PROJECTIONS = [
 // ── X (Twitter) auto-post: Mon/Wed/Fri, one auction + one snake insight, cycling through
 //    INSIGHTS_X_POOL. Requires X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 //    (OAuth 1.0a user-context tokens for @irontunafantasy with read+write access). See HANDOFF.md §10. ──
-const X_TAGLINE = 'The strongest, most advanced AI in fantasy football.';
+const X_TAGLINE = 'Run your draft using the strongest, most advanced AI in fantasy football.';
 const X_HASHTAGS = { auction: '#FantasyFootball #AuctionDraft #FFDraft', snake: '#FantasyFootball #SnakeDraft #FFDraft' };
 const X_MAX_LEN = 280;
 const X_URL_LEN = 23; // t.co always counts a URL as 23 chars regardless of true length
