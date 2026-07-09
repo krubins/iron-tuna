@@ -151,4 +151,44 @@ Fail-safe: if fetching is blocked (environment network policy) or all sources ar
 
 ---
 
+## 10. X (Twitter) auto-post (added July 2026)
+
+Posts to **@irontunafantasy** every **Monday, Wednesday, Friday at 14:00 UTC** (10am ET / 9am during EST) — one auction insight + one snake insight per run. Runs via a Cloudflare Worker **Cron Trigger**, no external scheduler needed.
+
+**How it works:**
+- `INSIGHTS_X_POOL` in `_worker.js` is a flat array of `{id, format, title, url, date}` extracted from the public `auction-insights-*.html` / `snake-insights-*.html` drop pages (140 insights: 70 auction + 70 snake). Regenerate it with `node tools/extract-insight-pool.mjs` whenever new drop pages are added, then paste the resulting `tools/x-posts/insights_pool.json` back into the `const INSIGHTS_X_POOL = [...]` line in `_worker.js` (no build step, so this is manual — see §2).
+- `composeTweet(insight)` builds: `🏈 {title}` + a blank line + **"The strongest, most advanced AI in fantasy football."** + the insight's canonical URL + format-specific hashtags (`#FantasyFootball #AuctionDraft #FFDraft` or `#FantasyFootball #SnakeDraft #FFDraft`). Longest current title produces a ~263-char tweet (under the 280 limit); titles that would overflow are truncated with an ellipsis.
+- `nextInsight(env, format)` cycles through the pool in order (oldest drop first) using `SELECT COUNT(*) FROM x_posts WHERE format=?` as the rotation index, so all 70 insights per format post once before any repeat. Only insights whose page `date` has already unlocked (≤ today) are eligible, so a scheduled post never links to a locked/future drop page.
+- `postTweet(env, text)` signs and calls `POST https://api.twitter.com/2/tweets` with **OAuth 1.0a** (HMAC-SHA1), since free/basic X API tiers only support posting via OAuth 1.0a user context, not app-only bearer tokens.
+- `scheduled(event, env, ctx)` at the bottom of `_worker.js` calls `runXAutoPost(env)`, which posts both formats and logs each attempt to a D1 table `x_posts (insight_id, format, tweet_id, ok, posted_at)`.
+- **Manual trigger for testing:** `GET /api/admin/x-post-now?key=<LEADS_EXPORT_KEY>` runs the same `runXAutoPost` on demand and returns the composed text + API result — use this to verify before waiting for the next cron tick.
+
+**One-time setup required (not yet done as of this handoff):**
+
+1. **Create an X Developer app for @irontunafantasy** at [developer.x.com](https://developer.x.com) (a paid API tier is required for write access on current X API pricing — check current tier pricing before committing). Enable **OAuth 1.0a** with **Read and Write** permissions, and generate:
+   - API Key & Secret (`X_API_KEY` / `X_API_SECRET`)
+   - Access Token & Secret **for the @irontunafantasy account specifically** (`X_ACCESS_TOKEN` / `X_ACCESS_TOKEN_SECRET`) — regenerate these after setting Read+Write, since tokens generated before that change stay read-only.
+2. **Add all four as Cloudflare secrets** on the `iron-tuna` Worker (`wrangler secret put X_API_KEY`, etc., or via the dashboard → Settings → Variables and Secrets → encrypt).
+3. **Create the `x_posts` D1 table** (has not been run against `iron-tuna-leads` yet):
+   ```sql
+   CREATE TABLE IF NOT EXISTS x_posts (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     insight_id TEXT NOT NULL,
+     format TEXT NOT NULL,
+     tweet_id TEXT,
+     ok INTEGER NOT NULL,
+     posted_at INTEGER NOT NULL
+   );
+   ```
+   Run via `wrangler d1 execute iron-tuna-leads --remote --command "..."` (the SQL above) or the Cloudflare dashboard's D1 console.
+4. **Deploy** (`git push` to `main`, or `wrangler deploy` — the cron trigger only takes effect after a deploy since it's declared in `wrangler.jsonc`).
+5. **Verify** with the manual-trigger route above before trusting the schedule.
+
+**Notes:**
+- If the four `X_*` secrets aren't set, `runXAutoPost` returns `{ok:false, error:'missing_x_credentials'}` and posts nothing — safe to deploy before the X app is ready.
+- To change cadence/time, edit the `triggers.crons` entry in `wrangler.jsonc`; to change hashtags/tagline, edit `X_TAGLINE` / `X_HASHTAGS` in `_worker.js`.
+- To draw from the 150-insight premium set instead of the public 70, a teaser/truncation strategy would be needed (premium content is currently paywalled behind `/my-insights`) — not implemented, by design, so free X posts don't give away paid-tier value.
+
+---
+
 *Generated as part of the move to Claude Code. Questions about any section map directly to the files referenced above.*
