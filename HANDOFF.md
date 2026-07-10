@@ -164,6 +164,7 @@ Posts to **@irontunafantasy** every **Monday, Wednesday, Friday at 14:00 UTC** (
 - **Wednesday-only third post:** `X_STRATEGY_POSTS` (8 hand-authored tweets on auction budget allocation — position spend %, stars-and-scrubs vs balanced, nomination timing, the $1 endgame/handcuffs — grounded in the copy on `/auction-budget-allocation`, `/auction-nomination-strategy`, `/dollar-endgame-handcuffs`) and `X_COACH_POSTS` (6 tweets promoting the live AI Value Coach, angled at "an AI that's actually in your draft" vs. pasting your roster into a generic chatbot) are interleaved into `X_WEDNESDAY_POOL`. `runXAutoPost` checks `new Date().getUTCDay() === 3` and, if it's Wednesday, posts one additional thread from that pool (rotation index via `SELECT COUNT(*) FROM x_posts WHERE format='wednesday'`) using its own tagline — **"Iron Tuna builds the most effective rankings and cheat sheets in fantasy football — powered by AI you control."** — instead of the standard `X_TAGLINE`. To test this path outside of an actual Wednesday, call the manual trigger with `&wednesday=1` (see below).
 - **Manual trigger for testing:** `GET /api/admin/x-post-now?key=<LEADS_EXPORT_KEY>` runs the same `runXAutoPost` on demand and returns the composed thread text + tweet IDs — use this to verify before waiting for the next cron tick. Add `&wednesday=1` to also force the Wednesday-only third post on a non-Wednesday test run.
 - **Manual delete (cleanup):** `GET /api/admin/x-delete?key=<LEADS_EXPORT_KEY>&id=<tweet_id>` deletes a single tweet by ID via OAuth 1.0a `DELETE /2/tweets/:id` — useful for removing a bad test post.
+- **Duplicate-text guard:** X rejects (`403 duplicate content`) any tweet whose text exactly matches one already posted from the account — forever, not just same-day, and a few insights share identical headline+takeaway text on both their auction and snake drop pages. `x_posts.text_hash` (SHA-256 of the hook tweet, added after the table's initial creation — `ALTER TABLE x_posts ADD COLUMN text_hash TEXT`) records every successful post; `pickNonDuplicate()` walks the rotation forward past any pool item whose composed text already has a matching hash before posting. Applies to all three pools (auction, snake, wednesday).
 
 **One-time setup required (not yet done as of this handoff):**
 
@@ -171,7 +172,7 @@ Posts to **@irontunafantasy** every **Monday, Wednesday, Friday at 14:00 UTC** (
    - API Key & Secret (`X_API_KEY` / `X_API_SECRET`)
    - Access Token & Secret **for the @irontunafantasy account specifically** (`X_ACCESS_TOKEN` / `X_ACCESS_TOKEN_SECRET`) — regenerate these after setting Read+Write, since tokens generated before that change stay read-only.
 2. **Add all four as Cloudflare secrets** on the `iron-tuna` Worker (`wrangler secret put X_API_KEY`, etc., or via the dashboard → Settings → Variables and Secrets → encrypt).
-3. **Create the `x_posts` D1 table** (has not been run against `iron-tuna-leads` yet):
+3. **Create the `x_posts` D1 table** (already run against `iron-tuna-leads` as of this handoff — included here for reference / disaster recovery):
    ```sql
    CREATE TABLE IF NOT EXISTS x_posts (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,7 +180,8 @@ Posts to **@irontunafantasy** every **Monday, Wednesday, Friday at 14:00 UTC** (
      format TEXT NOT NULL,
      tweet_id TEXT,
      ok INTEGER NOT NULL,
-     posted_at INTEGER NOT NULL
+     posted_at INTEGER NOT NULL,
+     text_hash TEXT
    );
    ```
    Run via `wrangler d1 execute iron-tuna-leads --remote --command "..."` (the SQL above) or the Cloudflare dashboard's D1 console.

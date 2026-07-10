@@ -657,50 +657,68 @@ function poolFor(format) {
   return INSIGHTS_X_POOL.filter(p => p.format === format && p.date <= new Date().toISOString().slice(0, 10));
 }
 
+async function textHash(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// X rejects exact-duplicate tweet text account-wide, forever — not just within one run, and not
+// scoped to a format (two public drop pages sometimes share the exact same headline+takeaway).
+// Walk the pool forward from the rotation index until the composed hook tweet doesn't collide
+// with anything already posted successfully.
+async function pickNonDuplicate(env, pool, startIdx, composeFn) {
+  if (!pool.length) return null;
+  let idx = startIdx % pool.length;
+  for (let attempts = 0; attempts < pool.length; attempts++) {
+    const item = pool[idx];
+    const tweets = composeFn(item);
+    const hash = await textHash(tweets[0]);
+    let dup = false;
+    if (env.LEADS_DB) {
+      try { dup = !!(await env.LEADS_DB.prepare('SELECT 1 FROM x_posts WHERE text_hash=? AND ok=1').bind(hash).first()); } catch (e) {}
+    }
+    if (!dup) return { item, tweets, hash };
+    idx = (idx + 1) % pool.length;
+  }
+  // Every item in the pool has already been tweeted verbatim (only plausible once fully cycled
+  // many times over) — post the original pick anyway rather than skip the slot entirely.
+  const item = pool[startIdx % pool.length];
+  const tweets = composeFn(item);
+  return { item, tweets, hash: await textHash(tweets[0]) };
+}
+
+async function postAndLog(env, format, id, tweets, hash) {
+  const posted = await postThread(env, tweets);
+  const ok = posted.every(p => p.ok);
+  const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
+  if (env.LEADS_DB) {
+    try {
+      await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at, text_hash) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(id, format, tweetIds, ok ? 1 : 0, Date.now(), hash).run();
+    } catch (e) {}
+  }
+  return { ok, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) };
+}
+
 async function runXAutoPost(env, opts) {
   if (!env.X_API_KEY || !env.X_API_SECRET || !env.X_ACCESS_TOKEN || !env.X_ACCESS_TOKEN_SECRET) return { ok: false, error: 'missing_x_credentials' };
-  const auctionPool = poolFor('auction');
-  const snakePool = poolFor('snake');
-  const auctionIdx = (await postedCount(env, 'auction')) % (auctionPool.length || 1);
-  let snakeIdx = (await postedCount(env, 'snake')) % (snakePool.length || 1);
-  const auctionInsight = auctionPool[auctionIdx];
-  // If today's two picks happen to share the same headline (public drop pages sometimes cover
-  // the same player from both formats), bump the snake pick so the two posts never read as duplicates.
-  if (auctionInsight && snakePool.length > 1 && snakePool[snakeIdx] && snakePool[snakeIdx].title === auctionInsight.title) {
-    snakeIdx = (snakeIdx + 1) % snakePool.length;
-  }
-  const picks = { auction: auctionInsight, snake: snakePool[snakeIdx] };
   const results = [];
   for (const format of ['auction', 'snake']) {
-    const insight = picks[format];
-    if (!insight) { results.push({ format, ok: false, error: 'no_insight_available' }); continue; }
-    const tweets = composeThread(insight);
-    const posted = await postThread(env, tweets);
-    const ok = posted.every(p => p.ok);
-    const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
-    if (env.LEADS_DB) {
-      try {
-        await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at) VALUES (?, ?, ?, ?, ?)')
-          .bind(insight.id, format, tweetIds, ok ? 1 : 0, Date.now()).run();
-      } catch (e) {}
-    }
-    results.push({ format, ok, insightId: insight.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) });
+    const pool = poolFor(format);
+    const startIdx = await postedCount(env, format);
+    const pick = await pickNonDuplicate(env, pool, startIdx, composeThread);
+    if (!pick) { results.push({ format, ok: false, error: 'no_insight_available' }); continue; }
+    const { ok, tweetIds, errors } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
+    results.push({ format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
   }
   const isWednesday = (opts && opts.forceWednesday) || new Date().getUTCDay() === 3;
   if (isWednesday && X_WEDNESDAY_POOL.length) {
-    const wedIdx = (await postedCount(env, 'wednesday')) % X_WEDNESDAY_POOL.length;
-    const post = X_WEDNESDAY_POOL[wedIdx];
-    const tweets = composeWednesdayThread(post);
-    const posted = await postThread(env, tweets);
-    const ok = posted.every(p => p.ok);
-    const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
-    if (env.LEADS_DB) {
-      try {
-        await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at) VALUES (?, ?, ?, ?, ?)')
-          .bind(post.id, 'wednesday', tweetIds, ok ? 1 : 0, Date.now()).run();
-      } catch (e) {}
+    const startIdx = await postedCount(env, 'wednesday');
+    const pick = await pickNonDuplicate(env, X_WEDNESDAY_POOL, startIdx, composeWednesdayThread);
+    if (pick) {
+      const { ok, tweetIds, errors } = await postAndLog(env, 'wednesday', pick.item.id, pick.tweets, pick.hash);
+      results.push({ format: 'wednesday', type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
     }
-    results.push({ format: 'wednesday', type: post.type, ok, insightId: post.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) });
   }
   return { ok: results.every(r => r.ok), results };
 }
