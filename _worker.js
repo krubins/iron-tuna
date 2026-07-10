@@ -805,6 +805,102 @@ function tweetCost(text) {
   return /https?:\/\//.test(text) ? 0.20 : 0.015;
 }
 
+// ── Threads auto-post: mirrors whatever content X posted (same picks, same run), so both
+//    platforms carry the same message the same day rather than running a second independent
+//    rotation. Requires THREADS_ACCESS_TOKEN (initial long-lived token) + THREADS_USER_ID.
+//    Free API (no per-post charge, unlike X), 500-char limit (well above anything we compose),
+//    and images post via a plain URL (env.ASSETS + irontuna.com serving them publicly) instead
+//    of X's separate multipart upload step. See HANDOFF.md §11. ──
+const THREADS_API = 'https://graph.threads.net/v1.0';
+
+async function getThreadsAccessToken(env) {
+  if (env.LEADS_DB) {
+    try {
+      const row = await env.LEADS_DB.prepare('SELECT access_token FROM threads_token ORDER BY id DESC LIMIT 1').first();
+      if (row && row.access_token) return row.access_token;
+    } catch (e) {}
+  }
+  return env.THREADS_ACCESS_TOKEN;
+}
+
+// Long-lived Threads tokens expire in 60 days and cannot be refreshed after expiry, and a Worker
+// can't rewrite its own secret at runtime — so the live token lives in D1 (seeded from the
+// THREADS_ACCESS_TOKEN secret on first use) and gets refreshed there well before expiry.
+async function maybeRefreshThreadsToken(env) {
+  if (!env.LEADS_DB) return;
+  let row = null;
+  try { row = await env.LEADS_DB.prepare('SELECT access_token, expires_at FROM threads_token ORDER BY id DESC LIMIT 1').first(); } catch (e) {}
+  const token = (row && row.access_token) || env.THREADS_ACCESS_TOKEN;
+  if (!token) return;
+  const expiresAt = row && row.expires_at;
+  const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+  if (expiresAt && expiresAt - Date.now() > tenDaysMs) return; // not due yet
+  try {
+    const url = `https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${encodeURIComponent(token)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (res.ok && data.access_token) {
+      const newExpiresAt = Date.now() + (data.expires_in || 5184000) * 1000; // default 60d
+      await env.LEADS_DB.prepare('INSERT INTO threads_token (access_token, expires_at, updated_at) VALUES (?, ?, ?)')
+        .bind(data.access_token, newExpiresAt, Date.now()).run();
+    }
+  } catch (e) {}
+}
+
+async function createThreadsContainer(env, text, opts) {
+  const token = await getThreadsAccessToken(env);
+  const params = new URLSearchParams({ text, access_token: token });
+  params.set('media_type', (opts && opts.imageUrl) ? 'IMAGE' : 'TEXT');
+  if (opts && opts.imageUrl) params.set('image_url', opts.imageUrl);
+  if (opts && opts.replyToId) params.set('reply_to_id', opts.replyToId);
+  const res = await fetch(`${THREADS_API}/${env.THREADS_USER_ID}/threads?${params.toString()}`, { method: 'POST' });
+  let data = {}; try { data = await res.json(); } catch (e) {}
+  return { ok: res.ok && !!data.id, status: res.status, data };
+}
+
+async function publishThreadsContainer(env, creationId) {
+  const token = await getThreadsAccessToken(env);
+  const params = new URLSearchParams({ creation_id: creationId, access_token: token });
+  const res = await fetch(`${THREADS_API}/${env.THREADS_USER_ID}/threads_publish?${params.toString()}`, { method: 'POST' });
+  let data = {}; try { data = await res.json(); } catch (e) {}
+  return { ok: res.ok && !!data.id, status: res.status, data };
+}
+
+async function postThreadsPost(env, text, replyToId, imageUrl) {
+  const created = await createThreadsContainer(env, text, { replyToId, imageUrl });
+  if (!created.ok) return { ok: false, status: created.status, data: created.data };
+  const published = await publishThreadsContainer(env, created.data.id);
+  return published;
+}
+
+async function postThreadsThread(env, texts, imageUrl) {
+  const posted = [];
+  let replyToId;
+  for (let i = 0; i < texts.length; i++) {
+    const res = await postThreadsPost(env, texts[i], replyToId, i === 0 ? imageUrl : undefined);
+    posted.push(res);
+    if (!res.ok) break;
+    replyToId = res.data && res.data.id;
+  }
+  return posted;
+}
+
+async function postAndLogThreads(env, format, id, tweets, imagePath) {
+  if (!env.THREADS_USER_ID || !(await getThreadsAccessToken(env))) return { ok: false, error: 'missing_threads_credentials' };
+  await maybeRefreshThreadsToken(env);
+  const imageUrl = imagePath ? `https://irontuna.com${imagePath}` : undefined;
+  const posted = await postThreadsThread(env, tweets, imageUrl);
+  const ok = posted.length > 0 && posted.every(p => p.ok);
+  const postIds = posted.map(p => (p.data && p.data.id) || '').filter(Boolean).join(',');
+  if (env.LEADS_DB) {
+    try {
+      await env.LEADS_DB.prepare('INSERT INTO threads_posts (insight_id, format, post_id, ok, posted_at) VALUES (?, ?, ?, ?, ?)')
+        .bind(id, format, postIds, ok ? 1 : 0, Date.now()).run();
+    } catch (e) {}
+  }
+  return { ok, postIds: postIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) };
+}
+
 async function postAndLog(env, format, id, tweets, hash, imagePath) {
   let mediaId;
   if (imagePath) {
@@ -828,7 +924,8 @@ async function postAndLog(env, format, id, tweets, hash, imagePath) {
 }
 
 async function runXAutoPost(env, opts) {
-  if (!env.X_API_KEY || !env.X_API_SECRET || !env.X_ACCESS_TOKEN || !env.X_ACCESS_TOKEN_SECRET) return { ok: false, error: 'missing_x_credentials' };
+  const hasX = env.X_API_KEY && env.X_API_SECRET && env.X_ACCESS_TOKEN && env.X_ACCESS_TOKEN_SECRET;
+  if (!hasX) return { ok: false, error: 'missing_x_credentials' };
   const results = [];
   for (const format of ['auction', 'snake']) {
     const pool = poolFor(format);
@@ -836,7 +933,11 @@ async function runXAutoPost(env, opts) {
     const pick = await pickNonDuplicate(env, pool, startIdx, composeThread);
     if (!pick) { results.push({ format, ok: false, error: 'no_insight_available' }); continue; }
     const { ok, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
-    results.push({ format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
+    results.push({ platform: 'x', format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
+    // Threads mirrors whatever X just posted (same content, same day) rather than running a
+    // second independent rotation; it posts even if the X side failed/was skipped for this slot.
+    const threadsResult = await postAndLogThreads(env, format, pick.item.id, pick.tweets);
+    if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format, ...threadsResult });
   }
   const dow = (opts && opts.forceDay != null) ? opts.forceDay : ((opts && opts.forceWednesday) ? 3 : new Date().getUTCDay());
   const bonus = X_BONUS_DAY_POOLS[dow];
@@ -846,10 +947,12 @@ async function runXAutoPost(env, opts) {
     const pick = await pickNonDuplicate(env, bonusPool, startIdx, bonus.compose);
     if (pick) {
       const { ok, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
-      results.push({ format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
+      results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
+      const threadsResult = await postAndLogThreads(env, bonus.format, pick.item.id, pick.tweets, pick.item.image);
+      if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ...threadsResult });
     }
   }
-  return { ok: results.every(r => r.ok), results };
+  return { ok: results.filter(r => r.platform === 'x').every(r => r.ok), results };
 }
 
 async function saveContact(env, rec) {
@@ -1230,6 +1333,16 @@ export default {
       const result = { ok: true, total, byFormat, note: 'Estimated from X\'s published pay-per-use pricing ($0.015/plain post, $0.20/post with a link); not an authoritative billing figure — check the X developer console Credits page for the real balance.' };
       if (startingBalance != null) result.estimatedRemaining = Math.max(0, startingBalance - total.spent);
       return json(result, 200, c);
+    }
+    if (url.pathname === '/api/admin/threads-status') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      let row = null;
+      try { row = await env.LEADS_DB.prepare('SELECT expires_at, updated_at FROM threads_token ORDER BY id DESC LIMIT 1').first(); } catch (e) {}
+      const usingSecretFallback = !row;
+      const daysUntilExpiry = row ? Math.round((row.expires_at - Date.now()) / 86400000) : null;
+      return json({ ok: true, hasStoredToken: !!row, usingSecretFallback, daysUntilExpiry, lastRefreshed: row ? new Date(row.updated_at).toISOString() : null }, 200, c);
     }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
