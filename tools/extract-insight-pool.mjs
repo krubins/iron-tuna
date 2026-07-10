@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const FORMATS = ['auction', 'snake'];
+const FORMATS = ['auction', 'snake', 'bestball'];
 
 function extractPage(format, file) {
   const html = readFileSync(ROOT + file, 'utf8');
@@ -59,4 +59,4 @@ writeFileSync(
   ROOT + 'tools/x-posts/insights_pool.json',
   JSON.stringify(pool, null, 2) + '\n'
 );
-console.log(`Wrote ${pool.length} insights (${pool.filter((p) => p.format === 'auction').length} auction, ${pool.filter((p) => p.format === 'snake').length} snake) to tools/x-posts/insights_pool.json`);
+console.log(`Wrote ${pool.length} insights (${FORMATS.map((f) => `${pool.filter((p) => p.format === f).length} ${f}`).join(', ')}) to tools/x-posts/insights_pool.json`);
