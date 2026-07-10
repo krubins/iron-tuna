@@ -556,11 +556,21 @@ const X_COACH_POSTS = [
     "Iron Tuna revalues every player live — based on who's left and what you still need — the moment your plan takes a punch.\n\nhttps://irontuna.com/\n\n#FantasyFootball #AuctionDraft #DraftStrategy",
   ] },
 ];
-// Interleaved so consecutive Wednesdays alternate topics: strategy, coach, strategy, coach, …
+// Comparison posts: price + feature contrasts vs. the default league-host draft kits (ESPN/Yahoo,
+// free but static) and paid subscription rankers (e.g. FantasyPros MVP, $5.99+/mo billed on
+// through every season) — angled at Iron Tuna's one-time $9.99, live re-pricing, and Value Coach.
+const X_COMPARISON_AUCTION_POSTS = [
+  { id: 'compare-auction-0', type: 'compare', text: "ESPN and Yahoo's free auction tool gives you ONE static dollar value for the whole draft. The room moves, prices shift, your sheet doesn't.\n\n💵 Iron Tuna re-prices every player live as bids come off the board — same $9.99, one time, not a subscription.", url: 'https://irontuna.com/' },
+  { id: 'compare-auction-1', type: 'compare', text: "Premium ranking subscriptions start around $5.99/month, every season, and still won't tell you who to bid on mid-auction.\n\n🤖 Iron Tuna's Value Coach is built INTO your live draft board — one-time $9.99, no recurring charge.", url: 'https://irontuna.com/' },
+  { id: 'compare-auction-2', type: 'compare', text: "Most 'premium' fantasy tools are subscriptions that renew every year whether you draft or not.\n\n💰 Iron Tuna is a one-time $9.99 — pay once, own your custom values and Value Coach for the season.", url: 'https://irontuna.com/' },
+  { id: 'compare-auction-3', type: 'compare', text: "A static pre-draft cheat sheet doesn't know your budget, your league's scoring, or what the room just paid for the last stud.\n\n📊 Iron Tuna's dollar values recalculate live around your exact league — most sites never adjust once the draft starts.", url: 'https://irontuna.com/' },
+];
+// Interleaved so consecutive Wednesdays cycle topics: strategy, coach, compare, strategy, coach, compare, …
 const X_WEDNESDAY_POOL = [];
-for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length); i++) {
+for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length, X_COMPARISON_AUCTION_POSTS.length); i++) {
   if (X_STRATEGY_POSTS[i]) X_WEDNESDAY_POOL.push(X_STRATEGY_POSTS[i]);
   if (X_COACH_POSTS[i]) X_WEDNESDAY_POOL.push(X_COACH_POSTS[i]);
+  if (X_COMPARISON_AUCTION_POSTS[i]) X_WEDNESDAY_POOL.push(X_COMPARISON_AUCTION_POSTS[i]);
 }
 
 // ── Tuesday/Thursday third post: snake-draft "survival odds" feature promo — knowing who'll
@@ -577,6 +587,18 @@ const X_SNAKE_FEATURE_POSTS = [
   { id: 'snake-feature-6', type: 'snake-feature', text: "The best value in a snake draft isn't the best player available — it's the best player who WON'T survive to your next pick. Iron Tuna calculates that difference for you, live.", url: 'https://irontuna.com/snakedraft' },
   { id: 'snake-feature-7', type: 'snake-feature', text: "Type in any player and a round number. Iron Tuna's Will-He-Be-Available tool gives you the exact odds he's still there when your pick comes, built from live ADP and position runs — not a guess.", url: 'https://irontuna.com/snakedraft' },
 ];
+const X_COMPARISON_SNAKE_POSTS = [
+  { id: 'compare-snake-0', type: 'compare', text: "Sleeper and ESPN give you a free draft room — and a ranking list that never tells you the odds a player survives to your next pick.\n\n🔮 Iron Tuna calculates that live, for every player, the whole draft. Free to start.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'compare-snake-1', type: 'compare', text: "A generic AI chatbot has no idea who's already gone in your league. A $6/month subscription tool gives you static rankings, not live advice.\n\n🤖 Iron Tuna's Value Coach already knows your board — free to start, $9.99 to unlock full custom scoring.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'compare-snake-2', type: 'compare', text: "A season of premium rankings from most fantasy sites costs $30-70+ a year, every year.\n\n💰 Iron Tuna's full custom snake board — your league's exact scoring, live survival odds, and the Value Coach — is a one-time $9.99.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'compare-snake-3', type: 'compare', text: "Most 'custom rankings' tools make you pay before you see anything. Iron Tuna's cheat sheet is free with zero signup — you only pay if you want it tuned to your exact league and taken live on draft day.", url: 'https://irontuna.com/snakedraft' },
+];
+// Interleaved so Tue/Thu cycle topics: feature, compare, feature, compare, …
+const X_SNAKE_BONUS_POOL = [];
+for (let i = 0; i < Math.max(X_SNAKE_FEATURE_POSTS.length, X_COMPARISON_SNAKE_POSTS.length); i++) {
+  if (X_SNAKE_FEATURE_POSTS[i]) X_SNAKE_BONUS_POOL.push(X_SNAKE_FEATURE_POSTS[i]);
+  if (X_COMPARISON_SNAKE_POSTS[i]) X_SNAKE_BONUS_POOL.push(X_COMPARISON_SNAKE_POSTS[i]);
+}
 
 function composeBonusThread(post, hashtags) {
   if (post.customTweets) return post.customTweets;
@@ -588,9 +610,9 @@ function composeSnakeFeatureThread(post) { return composeBonusThread(post, X_SNA
 
 // Maps UTC day-of-week (matches the cron's day field) to that day's bonus third post.
 const X_BONUS_DAY_POOLS = {
-  2: { pool: X_SNAKE_FEATURE_POSTS, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Tue
+  2: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Tue
   3: { pool: X_WEDNESDAY_POOL, compose: composeWednesdayThread, format: 'wednesday' }, // Wed
-  4: { pool: X_SNAKE_FEATURE_POSTS, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Thu
+  4: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Thu
 };
 
 function truncate(str, budget) {
