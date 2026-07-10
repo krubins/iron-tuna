@@ -6884,6 +6884,7 @@ function QuickDraftModal({
   const [teamId, setTeamId] = useState(teams[0].id);
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
   const [jab, setJab] = useState(null);
+  const [schedOpen, setSchedOpen] = useState(false);
   const _jabPool = typeof playerJabs === 'function' ? playerJabs(player, players, config) : [];
   const _rollJab = () => { if (_jabPool.length) setJab(_jabPool[Math.floor(Math.random() * _jabPool.length)]); };
   const projVal = player.marketValue != null ? player.marketValue : player.auctionValue;
@@ -6977,6 +6978,47 @@ function QuickDraftModal({
   }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume"), _ol && React.createElement("span", { style: _chip(_ol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _ol.title }, _ol.t === 'OL+' ? "Good O-line" : "Bad O-line"), _age && React.createElement("span", { style: _chip('#ff6b6b'), title: _age.title }, _age.t), bye && React.createElement("span", { style: _chip(), title: "Bye week" }, "Bye " + bye)), _survRows && _survRows.length ? React.createElement("div", {
     style: { marginBottom: 14 }
   }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 } }, "Will he be there?"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, _survRows.map(rw => React.createElement("span", { key: rw.round, style: _chip(), title: rw.passed ? "Your round " + rw.round + " pick has already passed" : "Chance he lasts to your round " + rw.round + " pick" }, "R" + rw.round + " ", React.createElement("b", { style: { color: rw.passed ? 'var(--text-faint)' : (rw.s >= 70 ? '#46d39a' : rw.s >= 40 ? '#f0b24b' : '#ff6b6b') } }, rw.passed ? "—" : rw.s + "%"))))) : null);
+  const _tmAb = (player.team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const _schWeeks = (typeof SCHEDULE_2026 !== 'undefined' && SCHEDULE_2026[_tmAb]) ? (() => {
+    const sch = SCHEDULE_2026[_tmAb];
+    const out = [];
+    for (let w = 1; w <= 18; w++) {
+      const opp = sch['w' + w] || null;
+      out.push({ w: w, opp: opp, rank: opp && typeof matchupRank === 'function' ? matchupRank(opp, player.position) : null });
+    }
+    return out;
+  })() : null;
+  const _schInfo = typeof seasonScheduleInfo === 'function' ? seasonScheduleInfo(player.team, player.position) : null;
+  const _schWord = _schInfo && _schInfo.tier ? MATCHUP_TIER_WORD[_schInfo.tier] : 'var(--text-secondary)';
+  const _schRated = typeof MATCHUP_POSITIONS !== 'undefined' && MATCHUP_POSITIONS.indexOf(player.position) >= 0;
+  const _schedEl = _schWeeks ? React.createElement("div", {
+    style: { marginBottom: 14 }
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setSchedOpen(o => !o),
+    title: _schInfo ? "2026 schedule strength vs " + player.position + ": " + (_schInfo.softRank <= 10 ? "#" + _schInfo.softRank + " easiest" : _schInfo.n - _schInfo.softRank < 10 ? "#" + (_schInfo.n - _schInfo.softRank + 1) + " toughest" : "middle of the pack") + " of " + _schInfo.n + " teams" : "2026 schedule",
+    style: { background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: _schWord, display: 'inline-flex', alignItems: 'center', gap: 6 }
+  }, "SCHEDULE", React.createElement("span", {
+    style: { fontSize: 9, color: 'var(--text-muted)' }
+  }, schedOpen ? "▲" : "▼")), schedOpen && React.createElement("div", {
+    style: { marginTop: 8 }
+  }, React.createElement("div", {
+    style: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }
+  }, _schWeeks.map(g => {
+    const tier = g.opp ? matchupTier(g.rank) : null;
+    const st = tier ? MATCHUP_TIER_STYLE[tier] : null;
+    return React.createElement("div", {
+      key: g.w,
+      title: !g.opp ? "Week " + g.w + ": bye" : "Week " + g.w + ": " + g.opp + (g.rank != null ? " · matchup rank " + g.rank + "/32 vs " + player.position + " (32 = easiest, 2025 pts allowed)" : ""),
+      style: { textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: st ? st.bg : 'var(--bg-elev)', border: '1px solid ' + (st ? st.bd : 'var(--border-subtle)'), color: st ? st.tx : g.opp ? 'var(--text-secondary)' : 'var(--text-faint)' }
+    }, React.createElement("div", {
+      style: { fontSize: 9, opacity: 0.75, letterSpacing: '0.05em' }
+    }, "W" + g.w), React.createElement("div", {
+      style: { fontSize: 11, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }
+    }, g.opp ? g.opp.replace(/\s+/g, '') : 'BYE'));
+  })), React.createElement("div", {
+    style: { marginTop: 6, fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.5 }
+  }, _schRated ? "Matchups vs " + player.position + " (2025 fantasy points allowed): dark green = 5 easiest, light green = next 5, pink = 6-10 toughest, dark red = 5 toughest." : "Matchup ratings not available for " + player.position + "."))) : null;
   return React.createElement("div", {
     className: "modal-bg modal-left",
     onClick: onClose
@@ -7040,7 +7082,7 @@ function QuickDraftModal({
       color: '#f59e0b',
       fontWeight: 600
     }
-  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: () => { if (__INSULTS_OK) _rollJab(); else __INSULTS_LOCK(); }, title: __INSULTS_OK ? "Generate a jab to throw at whoever drafts him" : "Unlock to fire off built-in insults", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, !__INSULTS_OK ? "🔒 Insults — unlock" : (jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him")), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
+  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, _schedEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: () => { if (__INSULTS_OK) _rollJab(); else __INSULTS_LOCK(); }, title: __INSULTS_OK ? "Generate a jab to throw at whoever drafts him" : "Unlock to fire off built-in insults", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, !__INSULTS_OK ? "🔒 Insults — unlock" : (jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him")), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -9300,260 +9342,100 @@ const STRAT_TILT = {
 };
 const SCHEDULE_2026 = {
   ARI: {
-    w1: "@ LAC",
-    w2: "SEA",
-    w3: "@ SF",
-    w15: "NYJ",
-    w16: "@ NO",
-    w17: "LV"
+    w1: "@ LAC", w2: "SEA", w3: "@ SF", w4: "@ NYG", w5: "DET", w6: "@ LAR", w7: "DEN", w8: "@ DAL", w9: "@ SEA", w10: "LAR", w11: "@ KC", w12: "WAS", w13: "PHI", w15: "NYJ", w16: "@ NO", w17: "LV", w18: "SF"
   },
   ATL: {
-    w1: "@ PIT",
-    w2: "CAR",
-    w3: "@ GB",
-    w15: "@ WAS",
-    w16: "TB",
-    w17: "NO"
+    w1: "@ PIT", w2: "CAR", w3: "@ GB", w4: "@ NO", w5: "BAL", w6: "CHI", w7: "SF", w8: "@ TB", w9: "CIN", w10: "KC", w12: "@ MIN", w13: "DET", w14: "@ CLE", w15: "@ WAS", w16: "TB", w17: "NO", w18: "@ CAR"
   },
   BAL: {
-    w1: "@ IND",
-    w2: "NO",
-    w3: "@ DAL",
-    w15: "@ PIT",
-    w16: "CLE",
-    w17: "@ CIN"
+    w1: "@ IND", w2: "NO", w3: "@ DAL", w4: "TEN", w5: "@ ATL", w6: "@ CLE", w7: "CIN", w8: "@ BUF", w9: "JAX", w10: "LAC", w11: "@ CAR", w12: "@ HOU", w14: "TB", w15: "@ PIT", w16: "CLE", w17: "@ CIN", w18: "PIT"
   },
   BUF: {
-    w1: "@ HOU",
-    w2: "DET",
-    w3: "LAC",
-    w15: "CHI",
-    w16: "@ DEN",
-    w17: "@ MIA"
+    w1: "@ HOU", w2: "DET", w3: "LAC", w4: "NE", w5: "@ LAR", w6: "@ LV", w8: "BAL", w9: "@ MIN", w10: "@ NYJ", w11: "MIA", w12: "KC", w13: "@ NE", w14: "@ GB", w15: "CHI", w16: "@ DEN", w17: "@ MIA", w18: "NYJ"
   },
   CAR: {
-    w1: "CHI",
-    w2: "@ ATL",
-    w3: "@ CLE",
-    w15: "CIN",
-    w16: "@ PIT",
-    w17: "SEA"
+    w1: "CHI", w2: "@ ATL", w3: "@ CLE", w4: "DET", w6: "@ PHI", w7: "TB", w8: "@ GB", w9: "DEN", w10: "@ NO", w11: "BAL", w12: "@ TB", w13: "@ MIN", w14: "NO", w15: "CIN", w16: "@ PIT", w17: "SEA", w18: "ATL"
   },
   CHI: {
-    w1: "@ CAR",
-    w2: "MIN",
-    w3: "PHI",
-    w15: "@ BUF",
-    w16: "GB",
-    w17: "DET"
+    w1: "@ CAR", w2: "MIN", w3: "PHI", w4: "NYJ", w5: "@ GB", w6: "@ ATL", w7: "NE", w8: "@ SEA", w9: "TB", w11: "NO", w12: "@ DET", w13: "JAX", w14: "@ MIA", w15: "@ BUF", w16: "GB", w17: "DET", w18: "@ MIN"
   },
   CIN: {
-    w1: "TB",
-    w2: "@ HOU",
-    w3: "@ PIT",
-    w15: "@ CAR",
-    w16: "@ IND",
-    w17: "BAL"
+    w1: "TB", w2: "@ HOU", w3: "@ PIT", w4: "JAX", w5: "@ MIA", w7: "@ BAL", w8: "TEN", w9: "@ ATL", w10: "PIT", w11: "@ WAS", w12: "NO", w13: "@ CLE", w14: "KC", w15: "@ CAR", w16: "@ IND", w17: "BAL", w18: "CLE"
   },
   CLE: {
-    w1: "@ JAX",
-    w2: "@ TB",
-    w3: "CAR",
-    w15: "@ NYG",
-    w16: "@ BAL",
-    w17: "IND"
+    w1: "@ JAX", w2: "@ TB", w3: "CAR", w4: "PIT", w5: "@ NYJ", w6: "BAL", w7: "@ TEN", w8: "@ PIT", w9: "@ NO", w10: "HOU", w12: "LV", w13: "CIN", w14: "ATL", w15: "@ NYG", w16: "@ BAL", w17: "IND", w18: "@ CIN"
   },
   DAL: {
-    w1: "@ NYG",
-    w2: "WAS",
-    w3: "BAL",
-    w15: "@ LAR",
-    w16: "JAX",
-    w17: "NYG"
+    w1: "@ NYG", w2: "WAS", w3: "BAL", w4: "@ HOU", w5: "TB", w6: "@ GB", w7: "@ PHI", w8: "ARI", w9: "@ IND", w10: "SF", w11: "TEN", w12: "PHI", w13: "@ SEA", w15: "@ LAR", w16: "JAX", w17: "NYG", w18: "@ WAS"
   },
   DEN: {
-    w1: "@ KC",
-    w2: "JAX",
-    w3: "LAR",
-    w15: "@ LV",
-    w16: "BUF",
-    w17: "@ NE"
+    w1: "@ KC", w2: "JAX", w3: "LAR", w4: "@ SF", w5: "@ LAC", w6: "SEA", w7: "@ ARI", w8: "KC", w9: "@ CAR", w11: "LV", w12: "@ PIT", w13: "MIA", w14: "@ NYJ", w15: "@ LV", w16: "BUF", w17: "@ NE", w18: "LAC"
   },
   DET: {
-    w1: "NO",
-    w2: "@ BUF",
-    w3: "NYJ",
-    w15: "@ MIN",
-    w16: "NYG",
-    w17: "@ CHI"
+    w1: "NO", w2: "@ BUF", w3: "NYJ", w4: "@ CAR", w5: "@ ARI", w7: "GB", w8: "MIN", w9: "@ MIA", w10: "NE", w11: "TB", w12: "CHI", w13: "@ ATL", w14: "TEN", w15: "@ MIN", w16: "NYG", w17: "@ CHI", w18: "@ GB"
   },
   GB: {
-    w1: "@ MIN",
-    w2: "@ NYJ",
-    w3: "ATL",
-    w15: "MIA",
-    w16: "@ CHI",
-    w17: "HOU"
+    w1: "@ MIN", w2: "@ NYJ", w3: "ATL", w4: "@ TB", w5: "CHI", w6: "DAL", w7: "@ DET", w8: "CAR", w9: "@ NE", w10: "MIN", w12: "@ LAR", w13: "@ NO", w14: "BUF", w15: "MIA", w16: "@ CHI", w17: "HOU", w18: "DET"
   },
   HOU: {
-    w1: "BUF",
-    w2: "CIN",
-    w3: "@ IND",
-    w15: "JAX",
-    w16: "@ PHI",
-    w17: "@ GB"
+    w1: "BUF", w2: "CIN", w3: "@ IND", w4: "DAL", w5: "@ TEN", w6: "@ JAX", w7: "NYG", w9: "@ LAC", w10: "@ CLE", w11: "IND", w12: "BAL", w13: "@ PIT", w14: "@ WAS", w15: "JAX", w16: "@ PHI", w17: "@ GB", w18: "TEN"
   },
   IND: {
-    w1: "BAL",
-    w2: "@ KC",
-    w3: "HOU",
-    w15: "@ TEN",
-    w16: "CIN",
-    w17: "@ CLE"
+    w1: "BAL", w2: "@ KC", w3: "HOU", w4: "@ WAS", w5: "@ PIT", w6: "TEN", w7: "@ MIN", w8: "@ JAX", w9: "DAL", w10: "MIA", w11: "@ HOU", w12: "NYG", w14: "@ PHI", w15: "@ TEN", w16: "CIN", w17: "@ CLE", w18: "JAX"
   },
   JAX: {
-    w1: "CLE",
-    w2: "@ DEN",
-    w3: "NE",
-    w15: "@ HOU",
-    w16: "@ DAL",
-    w17: "WAS"
+    w1: "CLE", w2: "@ DEN", w3: "NE", w4: "@ CIN", w5: "PHI", w6: "HOU", w8: "IND", w9: "@ BAL", w10: "@ TEN", w11: "@ NYG", w12: "TEN", w13: "@ CHI", w14: "PIT", w15: "@ HOU", w16: "@ DAL", w17: "WAS", w18: "@ IND"
   },
   KC: {
-    w1: "DEN",
-    w2: "IND",
-    w3: "@ MIA",
-    w15: "NE",
-    w16: "SF",
-    w17: "@ LAC"
+    w1: "DEN", w2: "IND", w3: "@ MIA", w4: "@ LV", w6: "LAC", w7: "@ SEA", w8: "@ DEN", w9: "NYJ", w10: "@ ATL", w11: "ARI", w12: "@ BUF", w13: "@ LAR", w14: "@ CIN", w15: "NE", w16: "SF", w17: "@ LAC", w18: "LV"
   },
   LAC: {
-    w1: "ARI",
-    w2: "LV",
-    w3: "@ BUF",
-    w15: "SF",
-    w16: "@ MIA",
-    w17: "KC"
+    w1: "ARI", w2: "LV", w3: "@ BUF", w4: "@ SEA", w5: "DEN", w6: "@ KC", w8: "@ LAR", w9: "HOU", w10: "@ BAL", w11: "NYJ", w12: "NE", w13: "@ TB", w14: "@ LV", w15: "SF", w16: "@ MIA", w17: "KC", w18: "@ DEN"
   },
   LAR: {
-    w1: "SF",
-    w2: "NYG",
-    w3: "@ DEN",
-    w15: "DAL",
-    w16: "@ SEA",
-    w17: "@ TB"
+    w1: "SF", w2: "NYG", w3: "@ DEN", w4: "@ PHI", w5: "BUF", w6: "ARI", w7: "@ LV", w8: "LAC", w9: "@ WAS", w10: "@ ARI", w12: "GB", w13: "KC", w14: "@ SF", w15: "DAL", w16: "@ SEA", w17: "@ TB", w18: "SEA"
   },
   LV: {
-    w1: "MIA",
-    w2: "@ LAC",
-    w3: "@ NO",
-    w15: "DEN",
-    w16: "TEN",
-    w17: "@ ARI"
+    w1: "MIA", w2: "@ LAC", w3: "@ NO", w4: "KC", w5: "@ NE", w6: "BUF", w7: "LAR", w8: "@ NYJ", w9: "@ SF", w10: "SEA", w11: "@ DEN", w12: "@ CLE", w14: "LAC", w15: "DEN", w16: "TEN", w17: "@ ARI", w18: "@ KC"
   },
   MIA: {
-    w1: "@ LV",
-    w2: "@ SF",
-    w3: "KC",
-    w15: "@ GB",
-    w16: "LAC",
-    w17: "BUF"
+    w1: "@ LV", w2: "@ SF", w3: "KC", w4: "@ MIN", w5: "CIN", w7: "@ NYJ", w8: "NE", w9: "DET", w10: "@ IND", w11: "@ BUF", w12: "NYJ", w13: "@ DEN", w14: "CHI", w15: "@ GB", w16: "LAC", w17: "BUF", w18: "@ NE"
   },
   MIN: {
-    w1: "GB",
-    w2: "@ CHI",
-    w3: "@ TB",
-    w15: "DET",
-    w16: "WAS",
-    w17: "@ NYJ"
+    w1: "GB", w2: "@ CHI", w3: "@ TB", w4: "MIA", w5: "@ NO", w7: "IND", w8: "@ DET", w9: "BUF", w10: "@ GB", w11: "@ SF", w12: "ATL", w13: "CAR", w14: "@ NE", w15: "DET", w16: "WAS", w17: "@ NYJ", w18: "CHI"
   },
   NE: {
-    w1: "@ SEA",
-    w2: "PIT",
-    w3: "@ JAX",
-    w15: "@ KC",
-    w16: "@ NYJ",
-    w17: "DEN"
+    w1: "@ SEA", w2: "PIT", w3: "@ JAX", w4: "@ BUF", w5: "LV", w6: "NYJ", w7: "@ CHI", w8: "@ MIA", w9: "GB", w10: "@ DET", w12: "@ LAC", w13: "BUF", w14: "MIN", w15: "@ KC", w16: "@ NYJ", w17: "DEN", w18: "MIA"
   },
   NO: {
-    w1: "@ DET",
-    w2: "@ BAL",
-    w3: "LV",
-    w15: "@ TB",
-    w16: "ARI",
-    w17: "@ ATL"
+    w1: "@ DET", w2: "@ BAL", w3: "LV", w4: "ATL", w5: "MIN", w6: "@ NYG", w7: "PIT", w9: "CLE", w10: "CAR", w11: "@ CHI", w12: "@ CIN", w13: "GB", w14: "@ CAR", w15: "@ TB", w16: "ARI", w17: "@ ATL", w18: "TB"
   },
   NYG: {
-    w1: "DAL",
-    w2: "@ LAR",
-    w3: "TEN",
-    w15: "CLE",
-    w16: "@ DET",
-    w17: "@ DAL"
+    w1: "DAL", w2: "@ LAR", w3: "TEN", w4: "ARI", w5: "@ WAS", w6: "NO", w7: "@ HOU", w9: "@ PHI", w10: "WAS", w11: "JAX", w12: "@ IND", w13: "SF", w14: "@ SEA", w15: "CLE", w16: "@ DET", w17: "@ DAL", w18: "PHI"
   },
   NYJ: {
-    w1: "@ TEN",
-    w2: "GB",
-    w3: "@ DET",
-    w15: "@ ARI",
-    w16: "NE",
-    w17: "MIN"
+    w1: "@ TEN", w2: "GB", w3: "@ DET", w4: "@ CHI", w5: "CLE", w6: "@ NE", w7: "MIA", w8: "LV", w9: "@ KC", w10: "BUF", w11: "@ LAC", w12: "@ MIA", w14: "DEN", w15: "@ ARI", w16: "NE", w17: "MIN", w18: "@ BUF"
   },
   PHI: {
-    w1: "WAS",
-    w2: "@ TEN",
-    w3: "@ CHI",
-    w15: "SEA",
-    w16: "HOU",
-    w17: "@ SF"
+    w1: "WAS", w2: "@ TEN", w3: "@ CHI", w4: "LAR", w5: "@ JAX", w6: "CAR", w7: "DAL", w8: "@ WAS", w9: "NYG", w11: "PIT", w12: "@ DAL", w13: "@ ARI", w14: "IND", w15: "SEA", w16: "HOU", w17: "@ SF", w18: "@ NYG"
   },
   PIT: {
-    w1: "ATL",
-    w2: "@ NE",
-    w3: "CIN",
-    w15: "BAL",
-    w16: "CAR",
-    w17: "@ TEN"
-  },
-  SF: {
-    w1: "@ LAR",
-    w2: "MIA",
-    w3: "ARI",
-    w15: "@ LAC",
-    w16: "@ KC",
-    w17: "PHI"
+    w1: "ATL", w2: "@ NE", w3: "CIN", w4: "@ CLE", w5: "IND", w6: "@ TB", w7: "@ NO", w8: "CLE", w10: "@ CIN", w11: "@ PHI", w12: "DEN", w13: "HOU", w14: "@ JAX", w15: "BAL", w16: "CAR", w17: "@ TEN", w18: "@ BAL"
   },
   SEA: {
-    w1: "NE",
-    w2: "@ ARI",
-    w3: "@ WAS",
-    w15: "@ PHI",
-    w16: "LAR",
-    w17: "@ CAR"
+    w1: "NE", w2: "@ ARI", w3: "@ WAS", w4: "LAC", w5: "SF", w6: "@ DEN", w7: "KC", w8: "CHI", w9: "ARI", w10: "@ LV", w12: "@ SF", w13: "DAL", w14: "NYG", w15: "@ PHI", w16: "LAR", w17: "@ CAR", w18: "@ LAR"
+  },
+  SF: {
+    w1: "@ LAR", w2: "MIA", w3: "ARI", w4: "DEN", w5: "@ SEA", w6: "WAS", w7: "@ ATL", w9: "LV", w10: "@ DAL", w11: "MIN", w12: "SEA", w13: "@ NYG", w14: "LAR", w15: "@ LAC", w16: "@ KC", w17: "PHI", w18: "@ ARI"
   },
   TB: {
-    w1: "@ CIN",
-    w2: "CLE",
-    w3: "MIN",
-    w15: "NO",
-    w16: "@ ATL",
-    w17: "LAR"
+    w1: "@ CIN", w2: "CLE", w3: "MIN", w4: "GB", w5: "@ DAL", w6: "PIT", w7: "@ CAR", w8: "ATL", w9: "@ CHI", w11: "@ DET", w12: "CAR", w13: "LAC", w14: "@ BAL", w15: "NO", w16: "@ ATL", w17: "LAR", w18: "@ NO"
   },
   TEN: {
-    w1: "NYJ",
-    w2: "PHI",
-    w3: "@ NYG",
-    w15: "IND",
-    w16: "@ LV",
-    w17: "PIT"
+    w1: "NYJ", w2: "PHI", w3: "@ NYG", w4: "@ BAL", w5: "HOU", w6: "@ IND", w7: "CLE", w8: "@ CIN", w10: "JAX", w11: "@ DAL", w12: "@ JAX", w13: "WAS", w14: "@ DET", w15: "IND", w16: "@ LV", w17: "PIT", w18: "@ HOU"
   },
   WAS: {
-    w1: "@ PHI",
-    w2: "@ DAL",
-    w3: "SEA",
-    w15: "ATL",
-    w16: "@ MIN",
-    w17: "@ JAX"
+    w1: "@ PHI", w2: "@ DAL", w3: "SEA", w4: "IND", w5: "NYG", w6: "@ SF", w8: "PHI", w9: "LAR", w10: "@ NYG", w11: "CIN", w12: "@ ARI", w13: "@ TEN", w14: "HOU", w15: "ATL", w16: "@ MIN", w17: "@ JAX", w18: "DAL"
   }
 };
 const DVP_2025 = {
@@ -9833,6 +9715,54 @@ function toughSchedule(team, position) {
   const opps = ws => ws.map(w => sch[w]).filter(Boolean);
   const res = { early: ea != null && ea <= TOUGH ? { opps: opps(['w1', 'w2', 'w3']) } : null, late: la != null && la <= TOUGH ? { opps: opps(['w15', 'w16', 'w17']) } : null };
   return res.early || res.late ? res : null;
+}
+const MATCHUP_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DEF'];
+function matchupRank(opp, position) {
+  if (!opp || MATCHUP_POSITIONS.indexOf(position) < 0) return null;
+  const ab = String(opp).toUpperCase().replace(/[^A-Z]/g, '');
+  if (position === 'DEF') {
+    const o = OFF_2025[ab];
+    return o != null ? o : null;
+  }
+  const d = DVP_2025[ab];
+  return d && d[position] != null ? d[position] : null;
+}
+function matchupTier(rank) {
+  if (rank == null) return null;
+  if (rank >= 28) return 'fav2';
+  if (rank >= 23) return 'fav1';
+  if (rank <= 5) return 'bad2';
+  if (rank <= 10) return 'bad1';
+  return null;
+}
+const MATCHUP_TIER_STYLE = {
+  fav2: { bg: 'rgba(22,163,74,0.50)', bd: 'rgba(34,197,94,0.75)', tx: '#eafff3' },
+  fav1: { bg: 'rgba(70,211,154,0.16)', bd: 'rgba(70,211,154,0.45)', tx: '#46d39a' },
+  bad2: { bg: 'rgba(185,28,28,0.52)', bd: 'rgba(239,68,68,0.75)', tx: '#ffecec' },
+  bad1: { bg: 'rgba(255,143,171,0.16)', bd: 'rgba(255,143,171,0.45)', tx: '#ff8fab' }
+};
+const MATCHUP_TIER_WORD = { fav2: '#22c55e', fav1: '#46d39a', bad2: '#ef4444', bad1: '#ff8fab' };
+const _seasonSchedCache = {};
+function seasonScheduleInfo(team, position) {
+  if (MATCHUP_POSITIONS.indexOf(position) < 0) return null;
+  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!SCHEDULE_2026[tm]) return null;
+  if (!_seasonSchedCache[position]) {
+    const rows = Object.keys(SCHEDULE_2026).map(t => {
+      const sch = SCHEDULE_2026[t];
+      const rs = Object.keys(sch).map(w => matchupRank(sch[w], position)).filter(x => x != null);
+      return { t: t, avg: rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : null };
+    }).filter(r => r.avg != null).sort((a, b) => b.avg - a.avg);
+    const m = { __n: rows.length };
+    rows.forEach((r, i) => { m[r.t] = { softRank: i + 1, avg: r.avg }; });
+    _seasonSchedCache[position] = m;
+  }
+  const cache = _seasonSchedCache[position];
+  const e = cache[tm];
+  if (!e) return null;
+  const n = cache.__n;
+  const tier = e.softRank <= 5 ? 'fav2' : e.softRank <= 10 ? 'fav1' : e.softRank > n - 5 ? 'bad2' : e.softRank > n - 10 ? 'bad1' : null;
+  return { tier: tier, softRank: e.softRank, n: n, avg: e.avg };
 }
 function volumeFlag(player, players) {
   if (!player || !players || !players.length) return null;
