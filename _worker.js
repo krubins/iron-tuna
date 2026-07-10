@@ -684,7 +684,7 @@ async function runXAutoPost(env, opts) {
           .bind(insight.id, format, tweetIds, ok ? 1 : 0, Date.now()).run();
       } catch (e) {}
     }
-    results.push({ format, ok, insightId: insight.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean) });
+    results.push({ format, ok, insightId: insight.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) });
   }
   const isWednesday = (opts && opts.forceWednesday) || new Date().getUTCDay() === 3;
   if (isWednesday && X_WEDNESDAY_POOL.length) {
@@ -700,7 +700,7 @@ async function runXAutoPost(env, opts) {
           .bind(post.id, 'wednesday', tweetIds, ok ? 1 : 0, Date.now()).run();
       } catch (e) {}
     }
-    results.push({ format: 'wednesday', type: post.type, ok, insightId: post.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean) });
+    results.push({ format: 'wednesday', type: post.type, ok, insightId: post.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) });
   }
   return { ok: results.every(r => r.ok), results };
 }
