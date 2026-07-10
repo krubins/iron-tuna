@@ -2290,6 +2290,20 @@ const DEFAULT_LEAGUE_CONFIG = {
     allocation: 0.55
   }
 };
+const CORE_ROSTER_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+// Saved configs can lose K/DEF roster keys (the best-ball page persists its
+// K/DEF-less roster into the shared storage key), and every roster UI hides
+// positions missing from config.roster. Restore any missing core position for
+// non-best-ball formats before the config is used.
+function healRosterPositions(cfg) {
+  if (!cfg || (cfg.format || 'auction') === 'bestball') return cfg;
+  const roster = cfg.roster || {};
+  const missing = CORE_ROSTER_POSITIONS.filter(p => !roster[p]);
+  if (!missing.length) return cfg;
+  const healed = { ...roster };
+  missing.forEach(p => { healed[p] = { ...DEFAULT_LEAGUE_CONFIG.roster[p] }; });
+  return { ...cfg, roster: healed };
+}
 const FORMATS = {
   auction: {
     label: 'Auction',
@@ -5593,10 +5607,7 @@ function LandingSplash({
   }, React.createElement("button", {
     className: "lp-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")), React.createElement("button", {
-    className: "lp-cta lp-cta-alt",
-    onClick: () => go('board', 'secondary_cta_board')
-  }, "See everything you unlock")), React.createElement("p", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board"))), React.createElement("p", {
     className: "lp-reassure"
   }, "Free to start, no account. Your league’s custom values — with all of Draft Day Mode included — one-time $9.99.")), null, React.createElement("div", {
     className: "lp-section",
@@ -5667,10 +5678,7 @@ function LandingSplash({
   }, React.createElement("button", {
     className: "lp-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")), React.createElement("button", {
-    className: "lp-cta lp-cta-alt",
-    onClick: () => go('board', 'secondary_cta_board')
-  }, "See everything you unlock"))), React.createElement("p", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")))), React.createElement("p", {
     className: "lp-creditline"
   }, "Built on projections from nationally recognized platforms, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded."), React.createElement("div", {
     className: "lp-seo-links"
@@ -7832,7 +7840,7 @@ function SettingsModal({
   canScore,
   onUnlockScore
 }) {
-  const [draft, setDraft] = useState(JSON.parse(JSON.stringify(config)));
+  const [draft, setDraft] = useState(healRosterPositions(JSON.parse(JSON.stringify(config))));
   const [advRoster, setAdvRoster] = useState(false);
   const [advScoring, setAdvScoring] = useState(false);
   const [notesStatus, setNotesStatus] = useState('');
@@ -13938,26 +13946,31 @@ function configForFormat(cfg, fmt) {
     ...cfg,
     format: fmt
   };
-  if (fmt === 'bestball' && cfg.format !== 'bestball') {
-    // Entering best ball: start from the Underdog-style default lineup.
-    next.roster = JSON.parse(JSON.stringify(BESTBALL_ROSTER));
-    next.flex = JSON.parse(JSON.stringify(BESTBALL_FLEX));
-  } else if (fmt !== 'bestball' && cfg.format === 'bestball') {
+  if (fmt === 'bestball') {
+    if (cfg.format !== 'bestball') {
+      // Entering best ball: start from the Underdog-style default lineup.
+      next.roster = JSON.parse(JSON.stringify(BESTBALL_ROSTER));
+      next.flex = JSON.parse(JSON.stringify(BESTBALL_FLEX));
+    } else {
+      next.roster = {
+        ...next.roster
+      };
+    }
+    // Zeroed placeholders so the K/DEF steppers still render in Your League.
+    CORE_ROSTER_POSITIONS.forEach(p => {
+      if (!next.roster[p]) next.roster[p] = {
+        total: 0,
+        starters: 0
+      };
+    });
+    return next;
+  }
+  if (cfg.format === 'bestball') {
     // Leaving best ball: its lineup has no K/DEF, so restore the standard roster.
     next.roster = JSON.parse(JSON.stringify(DEFAULT_LEAGUE_CONFIG.roster));
     next.flex = JSON.parse(JSON.stringify(DEFAULT_LEAGUE_CONFIG.flex));
-  } else {
-    next.roster = {
-      ...next.roster
-    };
   }
-  ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].forEach(p => {
-    if (!next.roster[p]) next.roster[p] = {
-      total: 0,
-      starters: 0
-    };
-  });
-  return next;
+  return healRosterPositions(next);
 }
 const BB_VARIANCE = {
   QB: 0.10,
@@ -19005,13 +19018,29 @@ function PricingModal({
       });
     } catch (e) {}
   }, []);
+  const pass = {
+    id: 'bundle',
+    name: 'Iron Tuna Season Pass',
+    price: 9.99
+  };
+  const owned = ['auction', 'snake', 'bestball'].every(id => entitled(account, id));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  function buy() {
+    setErr('');
+    setBusy(true);
+    Promise.resolve(onBuy(pass)).catch(e => {
+      setErr(String(e && e.message || e));
+      setBusy(false);
+    });
+  }
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
   }, React.createElement("div", {
     className: "modal",
     style: {
-      maxWidth: 740
+      maxWidth: 480
     },
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
@@ -19022,47 +19051,47 @@ function PricingModal({
   }, "Unlock Iron Tuna"), React.createElement("p", {
     style: {
       fontSize: 13,
-      color: 'var(--text-muted)',
-      marginBottom: 6
-    }
-  }, "One-time per season, not a subscription."), React.createElement("p", {
-    style: {
-      fontSize: 13,
       color: 'var(--positive)',
       marginBottom: 14,
       fontWeight: 600
     }
-  }, "One-time purchase for the current season, no subscription."), React.createElement("div", {
+  }, "One purchase unlocks everything. One-time for the current season, no subscription."), React.createElement("div", {
     className: "tier-grid"
-  }, TIERS.map(t => {
-    const owned = entitled(account, t.id);
-    const feat = t.id === (highlightId || 'auction');
-    return React.createElement("div", {
-      key: t.id,
-      className: `tier-card ${feat ? 'feature' : ''}`
-    }, feat && React.createElement("div", {
-      className: "tier-tag"
-    }, "Draft day"), React.createElement("div", {
-      className: "tier-name"
-    }, t.name), React.createElement("div", {
-      className: "tier-price"
-    }, "$", t.price.toFixed(2), React.createElement("span", null, "/season")), React.createElement("div", {
-      className: "tier-blurb"
-    }, t.blurb), React.createElement("ul", {
-      className: "tier-feats"
-    }, (t.features || []).map((f, i) => React.createElement("li", {
-      key: i
-    }, f))), owned ? React.createElement("button", {
-      className: "btn-secondary",
-      disabled: true,
-      style: {
-        opacity: 0.7
-      }
-    }, 'Unlocked') : React.createElement("button", {
-      className: "btn-draft",
-      onClick: () => onBuy(t)
-    }, "Unlock"));
-  })), React.createElement("p", {
+  }, React.createElement("div", {
+    className: "tier-card feature"
+  }, React.createElement("div", {
+    className: "tier-tag"
+  }, "Everything included"), React.createElement("div", {
+    className: "tier-name"
+  }, pass.name), React.createElement("div", {
+    className: "tier-price"
+  }, "$", pass.price.toFixed(2), React.createElement("span", null, "/season")), React.createElement("div", {
+    className: "tier-blurb"
+  }, "The whole site, one purchase: custom values and rankings for your exact league, plus live command on draft day."), React.createElement("ul", {
+    className: "tier-feats"
+  }, ['Auction, snake, and best ball — every format included', 'Your league’s FULL custom scoring: every value and ranking rebuilt to your exact rules', 'Reorder any player and build the board you actually believe in', 'Value Coach: ask who to target and exactly how high, from planning through draft night', 'On draft day: live max bid, best-available board, and survival odds for your next pick', 'Save and reopen your league, even if the Wi-Fi drops'].map((f, i) => React.createElement("li", {
+    key: i
+  }, f))), owned ? React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: 'var(--positive)',
+      fontWeight: 700,
+      fontSize: 14,
+      padding: '10px 0 2px'
+    }
+  }, "✓ Unlocked — everything is live on this account") : React.createElement("button", {
+    className: "btn-draft",
+    disabled: busy,
+    style: busy ? { opacity: 0.75, cursor: 'wait' } : undefined,
+    onClick: buy
+  }, busy ? 'Opening secure checkout…' : `Unlock · $${pass.price.toFixed(2)}`), err && React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: 'var(--danger)',
+      marginTop: 8,
+      textAlign: 'center'
+    }
+  }, err))), React.createElement("p", {
     style: {
       fontSize: 12,
       color: 'var(--text-muted)',
@@ -19089,6 +19118,16 @@ function UpgradeModal({
   onClose,
   onRestore
 }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  function buy() {
+    setErr('');
+    setBusy(true);
+    Promise.resolve(onUnlock()).catch(e => {
+      setErr(String(e && e.message || e));
+      setBusy(false);
+    });
+  }
   const f = format || 'auction';
   const rsn = reason ? `, including ${reason}` : '';
   const tier = TIERS.find(t => t.id === f) || TIERS[0];
@@ -19126,170 +19165,23 @@ function UpgradeModal({
     style: { fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 12px', lineHeight: 1.45 }
   }, "You've already seen your real values free — this unlocks the live edge. One-time ", React.createElement("b", { style: { color: 'var(--text-secondary)' } }, priceLabel), " for the whole season, no subscription."), React.createElement("button", {
     className: "btn-draft upg-cta",
-    onClick: onUnlock
-  }, (f === 'snake' ? "Unlock my league’s rankings · " : "Unlock my league’s values · ") + priceLabel), React.createElement("button", {
+    disabled: busy,
+    style: busy ? { opacity: 0.75, cursor: 'wait' } : undefined,
+    onClick: buy
+  }, busy ? 'Opening secure checkout…' : (f === 'snake' ? "Unlock my league’s rankings · " : "Unlock my league’s values · ") + priceLabel), err && React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: 'var(--danger)',
+      margin: '8px 0 0',
+      textAlign: 'center'
+    }
+  }, err), React.createElement("button", {
     className: "upg-later",
     onClick: onClose
   }, "Maybe later"), React.createElement("button", {
     onClick: onRestore,
     style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', textDecoration: 'underline', fontSize: 12.5, cursor: 'pointer' }
   }, "Already purchased? Restore access")));
-}
-function CheckoutModal({
-  tier,
-  testMode,
-  onComplete,
-  onClose
-}) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  const [email, setEmail] = useState(() => {
-    try {
-      const acc = JSON.parse(localStorage.getItem('iron_tuna_account_v1') || '{}');
-      return acc.user && acc.user.email || '';
-    } catch (e) { return ''; }
-  });
-  const [phone, setPhone] = useState('');
-  useEffect(() => {
-    try {
-      ITAnalytics.track('checkout_started', {
-        item: tier.id,
-        price: tier.price
-      });
-    } catch (e) {}
-  }, []);
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
-  const phoneOk = ((phone || '').match(/\d/g) || []).length >= 10;
-  const canPay = emailOk && phoneOk && !busy;
-  function inStyle(invalid) {
-    return { width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid ' + (invalid ? 'var(--danger)' : 'var(--border-strong)'), background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 15, fontFamily: 'inherit' };
-  }
-  const lblStyle = { display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', margin: '10px 0 4px' };
-  async function pay() {
-    if (!emailOk || !phoneOk) {
-      setErr('Please enter a valid email address and phone number to continue.');
-      return;
-    }
-    setBusy(true);
-    setErr('');
-    let ref = '';
-    try {
-      ref = localStorage.getItem('it_ref_in') || '';
-    } catch (e) {}
-    try {
-      const r = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          ref,
-          email: (email || '').trim(),
-          phone: (phone || '').trim(),
-          path: (function(){ try { return window.location.pathname; } catch(e){ return '/'; } })()
-        })
-      });
-      const j = await r.json();
-      if (j && j.url) {
-        window.location.href = j.url;
-        return;
-      }
-      throw new Error(j && j.error || 'Could not start checkout');
-    } catch (e) {
-      setErr(String(e && e.message || e));
-      setBusy(false);
-    }
-  }
-  return React.createElement("div", {
-    className: "modal-bg",
-    onClick: onClose
-  }, React.createElement("div", {
-    className: "modal",
-    style: {
-      maxWidth: 420
-    },
-    onClick: e => e.stopPropagation()
-  }, React.createElement("button", {
-    className: "modal-close",
-    onClick: onClose
-  }, "×"), React.createElement("div", {
-    className: "section-title"
-  }, "Checkout"), React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-      margin: '12px 0 4px'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontFamily: 'var(--font-display)',
-      fontSize: 19
-    }
-  }, tier.name), React.createElement("span", {
-    style: {
-      fontFamily: 'var(--font-mono)',
-      fontSize: 19,
-      color: 'var(--gold-text)'
-    }
-  }, "$", tier.price.toFixed(2))), React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: 'var(--text-muted)',
-      marginBottom: 12
-    }
-  }, "One-time purchase, current season."), React.createElement("label", {
-    style: lblStyle
-  }, "Email", React.createElement("span", { style: { color: 'var(--danger)' } }, " *")), React.createElement("input", {
-    type: "email",
-    inputMode: "email",
-    autoComplete: "email",
-    required: true,
-    value: email,
-    onChange: e => setEmail(e.target.value),
-    placeholder: "you@example.com",
-    style: inStyle(email && !emailOk)
-  }), React.createElement("label", {
-    style: lblStyle
-  }, "Phone", React.createElement("span", { style: { color: 'var(--danger)' } }, " *")), React.createElement("input", {
-    type: "tel",
-    inputMode: "tel",
-    autoComplete: "tel",
-    required: true,
-    value: phone,
-    onChange: e => setPhone(e.target.value),
-    placeholder: "(555) 123-4567",
-    style: inStyle(phone && !phoneOk)
-  }), React.createElement("p", {
-    style: {
-      fontSize: 11,
-      color: 'var(--text-muted)',
-      margin: '6px 0 14px'
-    }
-  }, "Required for your receipt and account access."), React.createElement("button", {
-    className: "btn-draft",
-    style: {
-      width: '100%',
-      marginTop: 4,
-      opacity: canPay ? 1 : 0.55,
-      cursor: canPay ? 'pointer' : 'not-allowed'
-    },
-    disabled: !canPay,
-    onClick: pay
-  }, busy ? 'Redirecting to secure checkout…' : `Pay $${tier.price.toFixed(2)} with card`), err && React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: 'var(--danger)',
-      marginTop: 10
-    }
-  }, err), React.createElement("p", {
-    style: {
-      fontSize: 11,
-      color: 'var(--text-muted)',
-      marginTop: 12,
-      textAlign: 'center'
-    }
-  }, "Secure payment by Stripe. Your card details never touch Iron Tuna.")));
 }
 function AuthModal({
   account,
@@ -20168,7 +20060,20 @@ function App() {
   const initialState = (() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const s = JSON.parse(raw);
+        // $120 was the old default budget. Saved sessions where the user never
+        // set a budget (and hasn't drafted) move to the $200 default.
+        const c = s && s.config;
+        if (c && c.budget === 120 && !c.budgetSet && (!s.draftHistory || s.draftHistory.length === 0)) {
+          c.budget = 200;
+          if (Array.isArray(s.teams)) s.teams.forEach(t => {
+            const spent = (t.roster || []).reduce((x, r) => x + (r.price || 0), 0);
+            t.budgetRemaining = 200 - spent;
+          });
+        }
+        return s;
+      }
     } catch (e) {}
     return null;
   })();
@@ -20313,26 +20218,7 @@ function App() {
   const has = id => entitled(account, id);
   const liveTier = config.format === 'snake' ? 'snake' : config.format === 'bestball' ? 'bestball' : 'auction';
   const [upgradeReason, setUpgradeReason] = useState('');
-  function grantEntitlement(id) {
-    setAccount(a => ({
-      ...a,
-      entitlements: {
-        ...(a.entitlements || {}),
-        [id]: true
-      }
-    }));
-    const fmt = config.format || 'auction';
-    ITAnalytics.track('purchase', {
-      item: id,
-      mode: account.testMode ? 'test' : 'live',
-      format: fmt
-    });
-    ITAnalytics.track('purchase_completed', {
-      item: id,
-      format: fmt
-    });
-  }
-  function openCheckout(tier) {
+  async function openCheckout(tier) {
     if (!tier) return;
     const fmt = tier.format || config.format || 'auction';
     ITAnalytics.track('checkout_open', {
@@ -20343,9 +20229,25 @@ function App() {
       item: tier.id,
       format: fmt
     });
-    setOverlay({
-      checkout: tier
+    let ref = '';
+    try {
+      ref = localStorage.getItem('it_ref_in') || '';
+    } catch (e) {}
+    const email = (account.user && account.user.email) || '';
+    const path = (() => { try { return window.location.pathname; } catch (e) { return '/'; } })();
+    const r = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({ ref, email, path })
     });
+    const j = await r.json();
+    if (j && j.url) {
+      window.location.href = j.url;
+      return;
+    }
+    throw new Error(j && j.error || 'Could not start checkout');
   }
   function promptUpgrade(reason) {
     if (has(liveTier)) return false;
@@ -20810,7 +20712,7 @@ function App() {
         return;
       }
       remoteApplyRef.current = true;
-      if (d.config) setConfig(d.config);
+      if (d.config) setConfig(configForFormat(d.config, __itFmt));
       if (d.players) setPlayers(d.players);
       if (d.teams) setTeams(d.teams);
       if (d.draftHistory) setDraftHistory(d.draftHistory);
@@ -21066,6 +20968,10 @@ function App() {
     if (newConfig && !has(liveTier) && JSON.stringify(newConfig.scoring || {}) !== JSON.stringify(config.scoring || {})) {
       newConfig = { ...newConfig, scoring: config.scoring };
       promptUpgrade("to use your league's own scoring");
+    }
+    // Once the user sets a budget themselves, it sticks — the $200 default migration never touches it again.
+    if (newConfig && newConfig.budget !== config.budget) {
+      newConfig = { ...newConfig, budgetSet: true };
     }
     if (newConfig && newConfig.format && newConfig.format !== config.format) {
       ITAnalytics.track('mode_selected', {
@@ -22088,14 +21994,6 @@ function App() {
     onClose: () => setOverlay(null)
   }), overlay === 'share' && React.createElement(ShareModal, {
     text: shareText,
-    onClose: () => setOverlay(null)
-  }), overlay && overlay.checkout && React.createElement(CheckoutModal, {
-    tier: overlay.checkout,
-    testMode: account.testMode,
-    onComplete: () => {
-      grantEntitlement(overlay.checkout.id);
-      setOverlay('pricing');
-    },
     onClose: () => setOverlay(null)
   }), !showSplash && !account.onboardingDismissed && draftHistory.length === 0 && React.createElement(OnboardingChecklist, {
     steps: onbSteps,
