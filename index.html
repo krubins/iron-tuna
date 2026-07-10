@@ -2290,6 +2290,20 @@ const DEFAULT_LEAGUE_CONFIG = {
     allocation: 0.55
   }
 };
+const CORE_ROSTER_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+// Saved configs can lose K/DEF roster keys (the best-ball page persists its
+// K/DEF-less roster into the shared storage key), and every roster UI hides
+// positions missing from config.roster. Restore any missing core position for
+// non-best-ball formats before the config is used.
+function healRosterPositions(cfg) {
+  if (!cfg || (cfg.format || 'auction') === 'bestball') return cfg;
+  const roster = cfg.roster || {};
+  const missing = CORE_ROSTER_POSITIONS.filter(p => !roster[p]);
+  if (!missing.length) return cfg;
+  const healed = { ...roster };
+  missing.forEach(p => { healed[p] = { ...DEFAULT_LEAGUE_CONFIG.roster[p] }; });
+  return { ...cfg, roster: healed };
+}
 const FORMATS = {
   auction: {
     label: 'Auction',
@@ -7832,7 +7846,7 @@ function SettingsModal({
   canScore,
   onUnlockScore
 }) {
-  const [draft, setDraft] = useState(JSON.parse(JSON.stringify(config)));
+  const [draft, setDraft] = useState(healRosterPositions(JSON.parse(JSON.stringify(config))));
   const [advRoster, setAdvRoster] = useState(false);
   const [advScoring, setAdvScoring] = useState(false);
   const [notesStatus, setNotesStatus] = useState('');
@@ -20048,7 +20062,7 @@ function App() {
   const remoteApplyRef = useRef(false);
   const __itPath = (() => { try { return window.location.pathname || '/'; } catch (e) { return '/'; } })();
   const __itFmt = __itPath.indexOf('/snakedraft') === 0 ? 'snake' : __itPath.indexOf('/bestball') === 0 ? 'bestball' : 'auction';
-  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; const __c = { ...__b, format: __itFmt }; if (__itFmt === 'bestball') { __c.roster = BESTBALL_ROSTER; __c.flex = BESTBALL_FLEX; } return __c; })());
+  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; const __c = { ...__b, format: __itFmt }; if (__itFmt === 'bestball') { __c.roster = BESTBALL_ROSTER; __c.flex = BESTBALL_FLEX; } return healRosterPositions(__c); })());
   const [players, setPlayers] = useState(initialState?.players || buildInitialPlayers(BASELINE_PROJECTIONS));
   const [valueAdjust, setValueAdjust] = useState(initialState?.valueAdjust || {});
   const [priceOverrides, setPriceOverrides] = useState(initialState?.priceOverrides || {});
@@ -20278,6 +20292,7 @@ function App() {
   const [teams, setTeams] = useState(() => {
     let cfg = initialState?.config || DEFAULT_LEAGUE_CONFIG;
     if (__itFmt === 'bestball') cfg = { ...cfg, roster: BESTBALL_ROSTER, flex: BESTBALL_FLEX };
+    else cfg = healRosterPositions({ ...cfg, format: __itFmt });
     const loadedTeams = initialState?.teams || buildInitialTeams(cfg);
     const total = totalRosterSpots(cfg);
     return loadedTeams.map(t => ({
@@ -20674,7 +20689,7 @@ function App() {
         return;
       }
       remoteApplyRef.current = true;
-      if (d.config) setConfig(d.config);
+      if (d.config) setConfig(__itFmt === 'bestball' ? { ...d.config, format: __itFmt, roster: BESTBALL_ROSTER, flex: BESTBALL_FLEX } : healRosterPositions({ ...d.config, format: __itFmt }));
       if (d.players) setPlayers(d.players);
       if (d.teams) setTeams(d.teams);
       if (d.draftHistory) setDraftHistory(d.draftHistory);
