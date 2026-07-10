@@ -797,6 +797,14 @@ async function pickNonDuplicate(env, pool, startIdx, composeFn) {
   return null;
 }
 
+// X's pay-per-use pricing (as of July 2026): $0.015 for a plain post, $0.20 for a post
+// containing a link — a post is only billed if it's actually created, so a rejected duplicate
+// (never created) costs nothing. This is an estimate for budget tracking, not an authoritative
+// billing figure — check the X developer console's Credits page for the real balance.
+function tweetCost(text) {
+  return /https?:\/\//.test(text) ? 0.20 : 0.015;
+}
+
 async function postAndLog(env, format, id, tweets, hash, imagePath) {
   let mediaId;
   if (imagePath) {
@@ -809,13 +817,14 @@ async function postAndLog(env, format, id, tweets, hash, imagePath) {
   const posted = await postThread(env, tweets, mediaId);
   const ok = posted.every(p => p.ok);
   const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
+  const cost = posted.reduce((sum, p, i) => sum + (p.ok ? tweetCost(tweets[i]) : 0), 0);
   if (env.LEADS_DB) {
     try {
-      await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at, text_hash) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(id, format, tweetIds, ok ? 1 : 0, Date.now(), hash).run();
+      await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at, text_hash, est_cost) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .bind(id, format, tweetIds, ok ? 1 : 0, Date.now(), hash, cost).run();
     } catch (e) {}
   }
-  return { ok, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) };
+  return { ok, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })), cost };
 }
 
 async function runXAutoPost(env, opts) {
@@ -826,8 +835,8 @@ async function runXAutoPost(env, opts) {
     const startIdx = await postedCount(env, format);
     const pick = await pickNonDuplicate(env, pool, startIdx, composeThread);
     if (!pick) { results.push({ format, ok: false, error: 'no_insight_available' }); continue; }
-    const { ok, tweetIds, errors } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
-    results.push({ format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
+    const { ok, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
+    results.push({ format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
   }
   const dow = (opts && opts.forceDay != null) ? opts.forceDay : ((opts && opts.forceWednesday) ? 3 : new Date().getUTCDay());
   const bonus = X_BONUS_DAY_POOLS[dow];
@@ -836,8 +845,8 @@ async function runXAutoPost(env, opts) {
     const startIdx = await postedCount(env, bonus.format);
     const pick = await pickNonDuplicate(env, bonusPool, startIdx, bonus.compose);
     if (pick) {
-      const { ok, tweetIds, errors } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
-      results.push({ format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
+      const { ok, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
+      results.push({ format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
     }
   }
   return { ok: results.every(r => r.ok), results };
@@ -1202,6 +1211,25 @@ export default {
       if (!/^\d+$/.test(id)) return json({ ok: false, error: 'bad_id' }, 400, c);
       const result = await deleteTweet(env, id);
       return json(result, result.ok ? 200 : 500, c);
+    }
+    if (url.pathname === '/api/admin/x-spend') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      const startingBalance = parseFloat(url.searchParams.get('balance') || '') || null;
+      let byFormat = [], total = { spent: 0, posts: 0, threads: 0, failed: 0 };
+      try {
+        byFormat = ((await env.LEADS_DB.prepare(
+          "SELECT format, SUM(CASE WHEN ok=1 THEN est_cost ELSE 0 END) AS spent, SUM(CASE WHEN ok=1 THEN 1 ELSE 0 END) AS threads, SUM(CASE WHEN ok=0 THEN 1 ELSE 0 END) AS failed FROM x_posts GROUP BY format"
+        ).all()).results) || [];
+        const totals = await env.LEADS_DB.prepare(
+          "SELECT SUM(CASE WHEN ok=1 THEN est_cost ELSE 0 END) AS spent, SUM(CASE WHEN ok=1 THEN 1 ELSE 0 END) AS threads, SUM(CASE WHEN ok=0 THEN 1 ELSE 0 END) AS failed FROM x_posts"
+        ).first();
+        total = { spent: (totals && totals.spent) || 0, threads: (totals && totals.threads) || 0, failed: (totals && totals.failed) || 0 };
+      } catch (e) {}
+      const result = { ok: true, total, byFormat, note: 'Estimated from X\'s published pay-per-use pricing ($0.015/plain post, $0.20/post with a link); not an authoritative billing figure — check the X developer console Credits page for the real balance.' };
+      if (startingBalance != null) result.estimatedRemaining = Math.max(0, startingBalance - total.spent);
+      return json(result, 200, c);
     }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
