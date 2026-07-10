@@ -529,6 +529,41 @@ const X_HASHTAGS = { auction: '#FantasyFootball #AuctionDraft #FFDraft', snake: 
 const X_MAX_LEN = 280;
 const X_URL_LEN = 23; // t.co always counts a URL as 23 chars regardless of true length
 
+// ── Wednesday-only third post: money-allocation strategy and Value Coach promo content,
+//    alternating. Hand-authored (not extracted from insight pages) and grounded in the copy on
+//    /auction-budget-allocation, /auction-nomination-strategy, and /dollar-endgame-handcuffs. ──
+const X_WED_TAGLINE = 'Iron Tuna builds the most effective rankings and cheat sheets in fantasy football — powered by AI you control.';
+const X_WED_HASHTAGS = '#FantasyFootball #AuctionDraft #DraftStrategy';
+const X_STRATEGY_POSTS = [
+  { id: 'strategy-0', type: 'strategy', text: "How you SPEND your auction budget matters more than who you rank #1.\n\n💰 A $200/12-team balanced build: ~38-42% RB, 28-32% WR, 10-14% QB, 8-10% TE. Set the shape before the bidding sets it for you.", url: 'https://irontuna.com/auction-budget-allocation' },
+  { id: 'strategy-1', type: 'strategy', text: 'Stars-and-scrubs vs balanced isn’t a personal preference — it’s dictated by the room.\n\n📊 When the top tier goes at value, concentrate your spend. When the room overpays for stars, spread out and dominate the middle, where the real bargains live.', url: 'https://irontuna.com/auction-budget-allocation' },
+  { id: 'strategy-2', type: 'strategy', text: "The #1 auction mistake: blowing your whole budget on starters, then getting stuck with a bench of $1 dart-throws.\n\n🎯 Reserve real money for 2-3 late swings with actual upside — that's what wins leagues in November.", url: 'https://irontuna.com/auction-budget-allocation' },
+  { id: 'strategy-3', type: 'strategy', text: "Nominating isn't a formality, it's a weapon.\n\n🐟 Put up the best player at a position you're already set at. Rivals bid each other up and drain money they'll never get to spend against you.", url: 'https://irontuna.com/auction-nomination-strategy' },
+  { id: 'strategy-4', type: 'strategy', text: "See a stud you're passing on? Nominate him EARLY, while every budget is still full.\n\n💵 Every dollar a rival spends on him is a dollar they can't use against you later in the room.", url: 'https://irontuna.com/auction-nomination-strategy' },
+  { id: 'strategy-5', type: 'strategy', text: 'Want to steal a mid-tier value target? Nominate him during a lull, after the big spenders have already committed their money.\n\n⏱️ Timing the nomination is half the discount.', url: 'https://irontuna.com/auction-nomination-strategy' },
+  { id: 'strategy-6', type: 'strategy', text: "Your real max bid all draft long = budget minus $1 for every open roster slot left.\n\n🚫 Break that rule early and you'll be the manager stuck overpaying — or worse, unable to fill your bench — late.", url: 'https://irontuna.com/dollar-endgame-handcuffs' },
+  { id: 'strategy-7', type: 'strategy', text: "The sharpest $1 play in auction drafts: buy BOTH backs in an unsettled RB committee.\n\n🎰 You're not predicting who wins the job — you're guaranteeing you roster him, for $2 total.", url: 'https://irontuna.com/dollar-endgame-handcuffs' },
+];
+const X_COACH_POSTS = [
+  { id: 'coach-0', type: 'coach', text: "Everyone's pasting their roster into ChatGPT mid-draft. The problem: it doesn't know your budget, your board, or who's already gone.\n\n🤖 Iron Tuna's Value Coach does — live, the whole draft, no copy-pasting required.", url: 'https://irontuna.com/' },
+  { id: 'coach-1', type: 'coach', text: "Imagine an AI that's actually watching your draft: every bid logged, every roster tracked, your personal max bid updating in real time.\n\n⚡ That's the Value Coach — not a chatbot you have to explain your league to first.", url: 'https://irontuna.com/' },
+  { id: 'coach-2', type: 'coach', text: "A generic AI chat can talk fantasy football in general. Iron Tuna's Value Coach is IN your draft — it already knows your remaining budget and what the room has spent before you even ask.", url: 'https://irontuna.com/' },
+  { id: 'coach-3', type: 'coach', text: "Rankings freeze the moment the draft starts. Iron Tuna's Value Coach doesn't.\n\n📈 An always-on AI that tells you who to bid on, how high, and why — from planning through the final pick.", url: 'https://irontuna.com/' },
+  { id: 'coach-4', type: 'coach', text: "The best draft tool isn't the one with the fanciest preseason rankings. It's the one that's still right when pick 87 happens.\n\n🧠 Iron Tuna's Value Coach re-prices every player live as the board moves.", url: 'https://irontuna.com/' },
+  { id: 'coach-5', type: 'coach', text: "Stop switching tabs to ask an AI for draft advice. Iron Tuna's Value Coach lives right on your board — it already has your scoring, your budget, and your roster loaded.", url: 'https://irontuna.com/' },
+];
+// Interleaved so consecutive Wednesdays alternate topics: strategy, coach, strategy, coach, …
+const X_WEDNESDAY_POOL = [];
+for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length); i++) {
+  if (X_STRATEGY_POSTS[i]) X_WEDNESDAY_POOL.push(X_STRATEGY_POSTS[i]);
+  if (X_COACH_POSTS[i]) X_WEDNESDAY_POOL.push(X_COACH_POSTS[i]);
+}
+
+function composeWednesdayThread(post) {
+  const reply = `${X_WED_TAGLINE}\n\n${post.url}\n\n${X_WED_HASHTAGS}`;
+  return [post.text, reply];
+}
+
 function truncate(str, budget) {
   if (str.length <= budget) return str;
   return str.slice(0, Math.max(0, budget - 1)).replace(/\s+\S*$/, '') + '…';
@@ -622,7 +657,7 @@ function poolFor(format) {
   return INSIGHTS_X_POOL.filter(p => p.format === format && p.date <= new Date().toISOString().slice(0, 10));
 }
 
-async function runXAutoPost(env) {
+async function runXAutoPost(env, opts) {
   if (!env.X_API_KEY || !env.X_API_SECRET || !env.X_ACCESS_TOKEN || !env.X_ACCESS_TOKEN_SECRET) return { ok: false, error: 'missing_x_credentials' };
   const auctionPool = poolFor('auction');
   const snakePool = poolFor('snake');
@@ -650,6 +685,22 @@ async function runXAutoPost(env) {
       } catch (e) {}
     }
     results.push({ format, ok, insightId: insight.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean) });
+  }
+  const isWednesday = (opts && opts.forceWednesday) || new Date().getUTCDay() === 3;
+  if (isWednesday && X_WEDNESDAY_POOL.length) {
+    const wedIdx = (await postedCount(env, 'wednesday')) % X_WEDNESDAY_POOL.length;
+    const post = X_WEDNESDAY_POOL[wedIdx];
+    const tweets = composeWednesdayThread(post);
+    const posted = await postThread(env, tweets);
+    const ok = posted.every(p => p.ok);
+    const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
+    if (env.LEADS_DB) {
+      try {
+        await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at) VALUES (?, ?, ?, ?, ?)')
+          .bind(post.id, 'wednesday', tweetIds, ok ? 1 : 0, Date.now()).run();
+      } catch (e) {}
+    }
+    results.push({ format: 'wednesday', type: post.type, ok, insightId: post.id, tweets, tweetIds: tweetIds.split(',').filter(Boolean) });
   }
   return { ok: results.every(r => r.ok), results };
 }
@@ -1000,7 +1051,8 @@ export default {
     if (url.pathname === '/api/admin/x-post-now') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
-      const result = await runXAutoPost(env);
+      const forceWednesday = url.searchParams.get('wednesday') === '1';
+      const result = await runXAutoPost(env, { forceWednesday });
       return json(result, result.ok ? 200 : 500, c);
     }
     if (url.pathname === '/api/admin/x-delete') {
