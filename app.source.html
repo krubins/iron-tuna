@@ -322,7 +322,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .landing-tagline { margin-top: 24px; font-family: var(--font-display); font-size: 19px; letter-spacing: 0.32em; color: rgba(159, 225, 203, 0.85); text-align: center; animation: taglineReveal 1.4s ease-out 0.6s backwards; z-index: 1; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); }
 @keyframes taglineReveal { 0% { opacity: 0; letter-spacing: 0.5em; } 100% { opacity: 1; letter-spacing: 0.32em; } }
 .landing-skip { position: absolute; bottom: 32px; font-size: 12px; color: rgba(164, 173, 186, 0.5); text-transform: uppercase; letter-spacing: 0.2em; animation: taglineReveal 1s ease-out 1.8s backwards; z-index: 1; }
-@media (prefers-reduced-motion: reduce) { .landing-logo { animation: landingFadeIn 0.6s ease-out backwards; } .landing-tagline { animation: taglineReveal 0.6s ease-out backwards; letter-spacing: 0.32em; } }
+@media (prefers-reduced-motion: reduce) { .landing-logo { animation: landingFadeIn 0.6s ease-out backwards; } .landing-tagline { animation: taglineReveal 0.6s ease-out backwards; letter-spacing: 0.32em; } .logo-bubbles { display: none; } }
 @media (max-width: 768px) { .landing-logo-container { width: 100vw; } .landing-tagline { font-size: 15px; letter-spacing: 0.24em; padding: 0 16px; } }
 .strategy-slider-compact { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .strategy-slider-compact:hover { border-color: var(--border-accent); }
@@ -2724,6 +2724,18 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <filter id="itTealHalo" x="-120%" y="-120%" width="340%" height="340%"><feDropShadow dx="0" dy="0" stdDeviation="11" floodColor="#2dd4a3" floodOpacity="0.085" /></filter>
       </defs>
       <image href="/tuna.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={fishX} y={fishY} width={fishW} height={fishH} preserveAspectRatio="xMidYMid meet" />
+      {/* simple bubbles drifting up from the fish's mouth */}
+      <g className="logo-bubbles">
+        {[[0.050, 0.013, 0.42, '3.2s', '0s'], [0.085, 0.019, 0.50, '4s', '1.3s'], [0.065, 0.010, 0.34, '3.6s', '2.4s']].map(([dx, br, rise, dur, begin], i) => {
+          const bx = fishX + fishW * dx, by = fishY + fishH * 0.50;
+          return (
+            <circle key={i} cx={bx} cy={by} r={fishW * br} fill="#cfece4" opacity="0">
+              <animate attributeName="cy" values={`${by};${by - fishH * rise}`} dur={dur} begin={begin} repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0;0.55;0.4;0" keyTimes="0;0.18;0.72;1" dur={dur} begin={begin} repeatCount="indefinite" />
+            </circle>
+          );
+        })}
+      </g>
       {false && (
       <g filter={wavy ? 'url(#waterDistort)' : undefined} transform={`translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)`}>
         {/* lunate tail */}
