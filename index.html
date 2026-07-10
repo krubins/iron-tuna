@@ -444,7 +444,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .landing-tagline { margin-top: 24px; font-family: var(--font-display); font-size: 19px; letter-spacing: 0.32em; color: rgba(159, 225, 203, 0.85); text-align: center; animation: taglineReveal 1.4s ease-out 0.6s backwards; z-index: 1; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); }
 @keyframes taglineReveal { 0% { opacity: 0; letter-spacing: 0.5em; } 100% { opacity: 1; letter-spacing: 0.32em; } }
 .landing-skip { position: absolute; bottom: 32px; font-size: 12px; color: rgba(164, 173, 186, 0.5); text-transform: uppercase; letter-spacing: 0.2em; animation: taglineReveal 1s ease-out 1.8s backwards; z-index: 1; }
-@media (prefers-reduced-motion: reduce) { .landing-logo { animation: landingFadeIn 0.6s ease-out backwards; } .landing-tagline { animation: taglineReveal 0.6s ease-out backwards; letter-spacing: 0.32em; } }
+@media (prefers-reduced-motion: reduce) { .landing-logo { animation: landingFadeIn 0.6s ease-out backwards; } .landing-tagline { animation: taglineReveal 0.6s ease-out backwards; letter-spacing: 0.32em; } .logo-bubbles { display: none; } }
 @media (max-width: 768px) { .landing-logo-container { width: 100vw; } .landing-tagline { font-size: 15px; letter-spacing: 0.24em; padding: 0 16px; } }
 .strategy-slider-compact { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .strategy-slider-compact:hover { border-color: var(--border-accent); }
@@ -5155,7 +5155,31 @@ function LogoMark({
     width: fishW,
     height: fishH,
     preserveAspectRatio: "xMidYMid meet"
-  }), false && React.createElement("g", {
+  }), React.createElement("g", {
+    className: "logo-bubbles"
+  }, [[0.055, 0.42, 0.009, '0;0.55;0.55;0;0', '0;0.08;0.72;0.88;1'], [0.090, 0.28, 0.014, '0;0;0.55;0.55;0;0', '0;0.10;0.18;0.74;0.90;1'], [0.135, 0.13, 0.019, '0;0;0.55;0.55;0;0', '0;0.20;0.28;0.76;0.92;1']].map(([dx, dy, br, vals, times], i) => {
+    const bx = fishX + fishW * dx,
+      by = fishY + fishH * dy;
+    return React.createElement("circle", {
+      key: i,
+      cx: bx,
+      cy: by,
+      r: fishW * br,
+      fill: "#cfece4",
+      opacity: "0"
+    }, React.createElement("animate", {
+      attributeName: "cy",
+      values: `${by};${by - fishH * 0.03}`,
+      dur: "4.8s",
+      repeatCount: "indefinite"
+    }), React.createElement("animate", {
+      attributeName: "opacity",
+      values: vals,
+      keyTimes: times,
+      dur: "4.8s",
+      repeatCount: "indefinite"
+    }));
+  })), false && React.createElement("g", {
     filter: wavy ? 'url(#waterDistort)' : undefined,
     transform: `translate(${2 + ox},${cy - 27}) scale(0.88) rotate(-6 58 30)${_flip ? " translate(122,0) scale(-1,1)" : ""}`
   }, React.createElement("path", {
