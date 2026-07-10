@@ -563,11 +563,35 @@ for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length); i++
   if (X_COACH_POSTS[i]) X_WEDNESDAY_POOL.push(X_COACH_POSTS[i]);
 }
 
-function composeWednesdayThread(post) {
+// ── Tuesday/Thursday third post: snake-draft "survival odds" feature promo — knowing who'll
+//    still be on the board several rounds out is worth more than a static ranking, and the AI
+//    navigator recalculates that live off actual draft progress (ADP, position runs, picks-to-go).
+const X_SNAKE_HASHTAGS = '#FantasyFootball #SnakeDraft #DraftStrategy';
+const X_SNAKE_FEATURE_POSTS = [
+  { id: 'snake-feature-0', type: 'snake-feature', text: 'Picking in round 2 is easy. The hard part is round 5 — will your RB4 still be there, or does the room run the position dry first?\n\n🔮 Iron Tuna gives you a real, live % chance any player survives to your next pick, recalculated after every selection.', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-feature-1', type: 'snake-feature', text: "A cheat sheet printed before the draft is already stale by pick 8.\n\n📡 Iron Tuna's snake tool watches every pick as it happens and re-forecasts who will still be on the board when your turn comes back around.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-feature-2', type: 'snake-feature', text: "Don't reach in round 2 for a player who'd still be there in round 3. Don't wait on one who won't survive round 4.\n\n🎯 Iron Tuna's live survival odds tell you which is which, pick by pick.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-feature-3', type: 'snake-feature', text: "Positions run dry in streaks, not evenly. Iron Tuna's AI watches the managers ahead of you and flags when a position is about to get picked clean — before you're stuck reaching.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-feature-4', type: 'snake-feature', text: "Your picks aren't independent events — what the managers ahead of you need changes who survives to you. Iron Tuna models exactly that, live, the whole draft.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-feature-5', type: 'snake-feature', text: "Static rankings tell you who's good. Iron Tuna's snake tool tells you who's still going to be there — a live mock draft running in the background, updating after every real pick.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-feature-6', type: 'snake-feature', text: "The best value in a snake draft isn't the best player available — it's the best player who WON'T survive to your next pick. Iron Tuna calculates that difference for you, live.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-feature-7', type: 'snake-feature', text: "Type in any player and a round number. Iron Tuna's Will-He-Be-Available tool gives you the exact odds he's still there when your pick comes, built from live ADP and position runs — not a guess.", url: 'https://irontuna.com/snakedraft' },
+];
+
+function composeBonusThread(post, hashtags) {
   if (post.customTweets) return post.customTweets;
-  const reply = `${X_WED_TAGLINE}\n\n${post.url}\n\n${X_WED_HASHTAGS}`;
+  const reply = `${X_WED_TAGLINE}\n\n${post.url}\n\n${hashtags || X_WED_HASHTAGS}`;
   return [post.text, reply];
 }
+function composeWednesdayThread(post) { return composeBonusThread(post, X_WED_HASHTAGS); }
+function composeSnakeFeatureThread(post) { return composeBonusThread(post, X_SNAKE_HASHTAGS); }
+
+// Maps UTC day-of-week (matches the cron's day field) to that day's bonus third post.
+const X_BONUS_DAY_POOLS = {
+  2: { pool: X_SNAKE_FEATURE_POSTS, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Tue
+  3: { pool: X_WEDNESDAY_POOL, compose: composeWednesdayThread, format: 'wednesday' }, // Wed
+  4: { pool: X_SNAKE_FEATURE_POSTS, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Thu
+};
 
 function truncate(str, budget) {
   if (str.length <= budget) return str;
@@ -716,13 +740,14 @@ async function runXAutoPost(env, opts) {
     const { ok, tweetIds, errors } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
     results.push({ format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
   }
-  const isWednesday = (opts && opts.forceWednesday) || new Date().getUTCDay() === 3;
-  if (isWednesday && X_WEDNESDAY_POOL.length) {
-    const startIdx = await postedCount(env, 'wednesday');
-    const pick = await pickNonDuplicate(env, X_WEDNESDAY_POOL, startIdx, composeWednesdayThread);
+  const dow = (opts && opts.forceDay != null) ? opts.forceDay : ((opts && opts.forceWednesday) ? 3 : new Date().getUTCDay());
+  const bonus = X_BONUS_DAY_POOLS[dow];
+  if (bonus && bonus.pool.length) {
+    const startIdx = await postedCount(env, bonus.format);
+    const pick = await pickNonDuplicate(env, bonus.pool, startIdx, bonus.compose);
     if (pick) {
-      const { ok, tweetIds, errors } = await postAndLog(env, 'wednesday', pick.item.id, pick.tweets, pick.hash);
-      results.push({ format: 'wednesday', type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
+      const { ok, tweetIds, errors } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash);
+      results.push({ format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
     }
   }
   return { ok: results.every(r => r.ok), results };
@@ -1075,7 +1100,9 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
       const forceWednesday = url.searchParams.get('wednesday') === '1';
-      const result = await runXAutoPost(env, { forceWednesday });
+      const dayParam = url.searchParams.get('day');
+      const forceDay = dayParam !== null ? parseInt(dayParam, 10) : null; // 0=Sun..6=Sat, matches cron day-of-week
+      const result = await runXAutoPost(env, { forceWednesday, forceDay });
       return json(result, result.ok ? 200 : 500, c);
     }
     if (url.pathname === '/api/admin/x-delete') {
