@@ -560,10 +560,10 @@ const X_COACH_POSTS = [
 // free but static) and paid subscription rankers (e.g. FantasyPros MVP, $5.99+/mo billed on
 // through every season) — angled at Iron Tuna's one-time $9.99, live re-pricing, and Value Coach.
 const X_COMPARISON_AUCTION_POSTS = [
-  { id: 'compare-auction-0', type: 'compare', text: "ESPN and Yahoo's free auction tool gives you ONE static dollar value for the whole draft. The room moves, prices shift, your sheet doesn't.\n\n💵 Iron Tuna re-prices every player live as bids come off the board — same $9.99, one time, not a subscription.", url: 'https://irontuna.com/' },
-  { id: 'compare-auction-1', type: 'compare', text: "Premium ranking subscriptions start around $5.99/month, every season, and still won't tell you who to bid on mid-auction.\n\n🤖 Iron Tuna's Value Coach is built INTO your live draft board — one-time $9.99, no recurring charge.", url: 'https://irontuna.com/' },
-  { id: 'compare-auction-2', type: 'compare', text: "Most 'premium' fantasy tools are subscriptions that renew every year whether you draft or not.\n\n💰 Iron Tuna is a one-time $9.99 — pay once, own your custom values and Value Coach for the season.", url: 'https://irontuna.com/' },
-  { id: 'compare-auction-3', type: 'compare', text: "A static pre-draft cheat sheet doesn't know your budget, your league's scoring, or what the room just paid for the last stud.\n\n📊 Iron Tuna's dollar values recalculate live around your exact league — most sites never adjust once the draft starts.", url: 'https://irontuna.com/' },
+  { id: 'compare-auction-0', type: 'compare', image: '/social/compare-auction.png', text: "ESPN and Yahoo's free auction tool gives you ONE static dollar value for the whole draft. The room moves, prices shift, your sheet doesn't.\n\n💵 Iron Tuna re-prices every player live as bids come off the board — same $9.99, one time, not a subscription.", url: 'https://irontuna.com/' },
+  { id: 'compare-auction-1', type: 'compare', image: '/social/compare-auction.png', text: "Premium ranking subscriptions start around $5.99/month, every season, and still won't tell you who to bid on mid-auction.\n\n🤖 Iron Tuna's Value Coach is built INTO your live draft board — one-time $9.99, no recurring charge.", url: 'https://irontuna.com/' },
+  { id: 'compare-auction-2', type: 'compare', image: '/social/compare-auction.png', text: "Most 'premium' fantasy tools are subscriptions that renew every year whether you draft or not.\n\n💰 Iron Tuna is a one-time $9.99 — pay once, own your custom values and Value Coach for the season.", url: 'https://irontuna.com/' },
+  { id: 'compare-auction-3', type: 'compare', image: '/social/compare-auction.png', text: "A static pre-draft cheat sheet doesn't know your budget, your league's scoring, or what the room just paid for the last stud.\n\n📊 Iron Tuna's dollar values recalculate live around your exact league — most sites never adjust once the draft starts.", url: 'https://irontuna.com/' },
 ];
 // Interleaved so consecutive Wednesdays cycle topics: strategy, coach, compare, strategy, coach, compare, …
 const X_WEDNESDAY_POOL = [];
@@ -588,10 +588,10 @@ const X_SNAKE_FEATURE_POSTS = [
   { id: 'snake-feature-7', type: 'snake-feature', text: "Type in any player and a round number. Iron Tuna's Will-He-Be-Available tool gives you the exact odds he's still there when your pick comes, built from live ADP and position runs — not a guess.", url: 'https://irontuna.com/snakedraft' },
 ];
 const X_COMPARISON_SNAKE_POSTS = [
-  { id: 'compare-snake-0', type: 'compare', text: "Sleeper and ESPN give you a free draft room — and a ranking list that never tells you the odds a player survives to your next pick.\n\n🔮 Iron Tuna calculates that live, for every player, the whole draft. Free to start.", url: 'https://irontuna.com/snakedraft' },
-  { id: 'compare-snake-1', type: 'compare', text: "A generic AI chatbot has no idea who's already gone in your league. A $6/month subscription tool gives you static rankings, not live advice.\n\n🤖 Iron Tuna's Value Coach already knows your board — free to start, $9.99 to unlock full custom scoring.", url: 'https://irontuna.com/snakedraft' },
-  { id: 'compare-snake-2', type: 'compare', text: "A season of premium rankings from most fantasy sites costs $30-70+ a year, every year.\n\n💰 Iron Tuna's full custom snake board — your league's exact scoring, live survival odds, and the Value Coach — is a one-time $9.99.", url: 'https://irontuna.com/snakedraft' },
-  { id: 'compare-snake-3', type: 'compare', text: "Most 'custom rankings' tools make you pay before you see anything. Iron Tuna's cheat sheet is free with zero signup — you only pay if you want it tuned to your exact league and taken live on draft day.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'compare-snake-0', type: 'compare', image: '/social/compare-snake.png', text: "Sleeper and ESPN give you a free draft room — and a ranking list that never tells you the odds a player survives to your next pick.\n\n🔮 Iron Tuna calculates that live, for every player, the whole draft. Free to start.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'compare-snake-1', type: 'compare', image: '/social/compare-snake.png', text: "A generic AI chatbot has no idea who's already gone in your league. A $6/month subscription tool gives you static rankings, not live advice.\n\n🤖 Iron Tuna's Value Coach already knows your board — free to start, $9.99 to unlock full custom scoring.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'compare-snake-2', type: 'compare', image: '/social/compare-snake.png', text: "A season of premium rankings from most fantasy sites costs $30-70+ a year, every year.\n\n💰 Iron Tuna's full custom snake board — your league's exact scoring, live survival odds, and the Value Coach — is a one-time $9.99.", url: 'https://irontuna.com/snakedraft' },
+  { id: 'compare-snake-3', type: 'compare', image: '/social/compare-snake.png', text: "Most 'custom rankings' tools make you pay before you see anything. Iron Tuna's cheat sheet is free with zero signup — you only pay if you want it tuned to your exact league and taken live on draft day.", url: 'https://irontuna.com/snakedraft' },
 ];
 // Interleaved so Tue/Thu cycle topics: feature, compare, feature, compare, …
 const X_SNAKE_BONUS_POOL = [];
@@ -666,10 +666,12 @@ async function xApiCall(env, method, url, extraParams) {
   return authHeader;
 }
 
-async function postTweet(env, text, replyToId) {
+async function postTweet(env, text, replyToId, mediaId) {
   const url = 'https://api.twitter.com/2/tweets';
   const authHeader = await xApiCall(env, 'POST', url);
-  const body = replyToId ? { text, reply: { in_reply_to_tweet_id: replyToId } } : { text };
+  const body = { text };
+  if (replyToId) body.reply = { in_reply_to_tweet_id: replyToId };
+  if (mediaId) body.media = { media_ids: [mediaId] };
   const res = await fetch(url, {
     method: 'POST',
     headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
@@ -679,11 +681,34 @@ async function postTweet(env, text, replyToId) {
   return { ok: res.ok, status: res.status, data };
 }
 
-async function postThread(env, tweets) {
+// Comparison-card graphics live as static site assets (/social/compare-*.png) so the Worker can
+// read the bytes straight from its own ASSETS binding instead of an external fetch.
+async function fetchAssetBytes(env, path) {
+  if (!env.ASSETS) return null;
+  try {
+    const res = await env.ASSETS.fetch(new Request('https://irontuna.com' + path));
+    if (!res.ok) return null;
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (e) { return null; }
+}
+
+// X media upload is v1.1-only. Sent as multipart/form-data (not x-www-form-urlencoded), so per
+// OAuth1.0a spec the body is NOT part of the signature base — same signer as the v2 JSON calls.
+async function uploadMedia(env, bytes, mimeType) {
+  const url = 'https://upload.twitter.com/1.1/media/upload.json';
+  const authHeader = await xApiCall(env, 'POST', url);
+  const form = new FormData();
+  form.append('media', new Blob([bytes], { type: mimeType }), 'card.png');
+  const res = await fetch(url, { method: 'POST', headers: { Authorization: authHeader }, body: form });
+  let data = {}; try { data = await res.json(); } catch (e) {}
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function postThread(env, tweets, mediaId) {
   const posted = [];
   let replyToId = undefined;
-  for (const text of tweets) {
-    const res = await postTweet(env, text, replyToId);
+  for (let i = 0; i < tweets.length; i++) {
+    const res = await postTweet(env, tweets[i], replyToId, i === 0 ? mediaId : undefined);
     posted.push(res);
     if (!res.ok) break; // don't post the reply if the hook tweet failed
     replyToId = res.data && res.data.data && res.data.data.id;
@@ -738,8 +763,16 @@ async function pickNonDuplicate(env, pool, startIdx, composeFn) {
   return { item, tweets, hash: await textHash(tweets[0]) };
 }
 
-async function postAndLog(env, format, id, tweets, hash) {
-  const posted = await postThread(env, tweets);
+async function postAndLog(env, format, id, tweets, hash, imagePath) {
+  let mediaId;
+  if (imagePath) {
+    const bytes = await fetchAssetBytes(env, imagePath);
+    if (bytes) {
+      const uploaded = await uploadMedia(env, bytes, 'image/png');
+      if (uploaded.ok) mediaId = uploaded.data && uploaded.data.media_id_string;
+    }
+  }
+  const posted = await postThread(env, tweets, mediaId);
   const ok = posted.every(p => p.ok);
   const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
   if (env.LEADS_DB) {
@@ -768,7 +801,7 @@ async function runXAutoPost(env, opts) {
     const startIdx = await postedCount(env, bonus.format);
     const pick = await pickNonDuplicate(env, bonus.pool, startIdx, bonus.compose);
     if (pick) {
-      const { ok, tweetIds, errors } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash);
+      const { ok, tweetIds, errors } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
       results.push({ format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors });
     }
   }
