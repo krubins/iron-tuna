@@ -2724,14 +2724,15 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
         <filter id="itTealHalo" x="-120%" y="-120%" width="340%" height="340%"><feDropShadow dx="0" dy="0" stdDeviation="11" floodColor="#2dd4a3" floodOpacity="0.085" /></filter>
       </defs>
       <image href="/tuna.png" filter={tagline ? 'url(#itTealHalo)' : undefined} x={fishX} y={fishY} width={fishW} height={fishH} preserveAspectRatio="xMidYMid meet" />
-      {/* simple bubbles drifting up from the fish's mouth */}
+      {/* simple bubbles: a fixed diagonal trail above the fish's head (small over the mouth up to large),
+          popping in mouth-first on one shared cycle with a slight upward drift */}
       <g className="logo-bubbles">
-        {[[0.050, 0.013, 0.42, '3.2s', '0s'], [0.085, 0.019, 0.50, '4s', '1.3s'], [0.065, 0.010, 0.34, '3.6s', '2.4s']].map(([dx, br, rise, dur, begin], i) => {
-          const bx = fishX + fishW * dx, by = fishY + fishH * 0.50;
+        {[[0.055, 0.42, 0.009, '0;0.55;0.55;0;0', '0;0.08;0.72;0.88;1'], [0.090, 0.28, 0.014, '0;0;0.55;0.55;0;0', '0;0.10;0.18;0.74;0.90;1'], [0.135, 0.13, 0.019, '0;0;0.55;0.55;0;0', '0;0.20;0.28;0.76;0.92;1']].map(([dx, dy, br, vals, times], i) => {
+          const bx = fishX + fishW * dx, by = fishY + fishH * dy;
           return (
             <circle key={i} cx={bx} cy={by} r={fishW * br} fill="#cfece4" opacity="0">
-              <animate attributeName="cy" values={`${by};${by - fishH * rise}`} dur={dur} begin={begin} repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0;0.55;0.4;0" keyTimes="0;0.18;0.72;1" dur={dur} begin={begin} repeatCount="indefinite" />
+              <animate attributeName="cy" values={`${by};${by - fishH * 0.03}`} dur="4.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values={vals} keyTimes={times} dur="4.8s" repeatCount="indefinite" />
             </circle>
           );
         })}
