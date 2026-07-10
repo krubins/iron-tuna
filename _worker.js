@@ -551,6 +551,10 @@ const X_COACH_POSTS = [
   { id: 'coach-3', type: 'coach', text: "Rankings freeze the moment the draft starts. Iron Tuna's Value Coach doesn't.\n\n📈 An always-on AI that tells you who to bid on, how high, and why — from planning through the final pick.", url: 'https://irontuna.com/' },
   { id: 'coach-4', type: 'coach', text: "The best draft tool isn't the one with the fanciest preseason rankings. It's the one that's still right when pick 87 happens.\n\n🧠 Iron Tuna's Value Coach re-prices every player live as the board moves.", url: 'https://irontuna.com/' },
   { id: 'coach-5', type: 'coach', text: "Stop switching tabs to ask an AI for draft advice. Iron Tuna's Value Coach lives right on your board — it already has your scoring, your budget, and your roster loaded.", url: 'https://irontuna.com/' },
+  { id: 'coach-6', type: 'coach', url: 'https://irontuna.com/', customTweets: [
+    'Mike Tyson: "Everyone has a plan until they get punched in the face."\n\n🥊 Auction drafts are the same — build the model that maximizes points per dollar, but adapt the second your guy costs more than planned.',
+    "Iron Tuna revalues every player live — based on who's left and what you still need — the moment your plan takes a punch.\n\nhttps://irontuna.com/\n\n#FantasyFootball #AuctionDraft #DraftStrategy",
+  ] },
 ];
 // Interleaved so consecutive Wednesdays alternate topics: strategy, coach, strategy, coach, …
 const X_WEDNESDAY_POOL = [];
@@ -560,6 +564,7 @@ for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length); i++
 }
 
 function composeWednesdayThread(post) {
+  if (post.customTweets) return post.customTweets;
   const reply = `${X_WED_TAGLINE}\n\n${post.url}\n\n${X_WED_HASHTAGS}`;
   return [post.text, reply];
 }
