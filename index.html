@@ -18979,13 +18979,19 @@ function PricingModal({
       });
     } catch (e) {}
   }, []);
+  const pass = {
+    id: 'bundle',
+    name: 'Iron Tuna Season Pass',
+    price: 9.99
+  };
+  const owned = ['auction', 'snake', 'bestball'].every(id => entitled(account, id));
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
   }, React.createElement("div", {
     className: "modal",
     style: {
-      maxWidth: 740
+      maxWidth: 480
     },
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
@@ -18996,47 +19002,38 @@ function PricingModal({
   }, "Unlock Iron Tuna"), React.createElement("p", {
     style: {
       fontSize: 13,
-      color: 'var(--text-muted)',
-      marginBottom: 6
-    }
-  }, "One-time per season, not a subscription."), React.createElement("p", {
-    style: {
-      fontSize: 13,
       color: 'var(--positive)',
       marginBottom: 14,
       fontWeight: 600
     }
-  }, "One-time purchase for the current season, no subscription."), React.createElement("div", {
+  }, "One purchase unlocks everything. One-time for the current season, no subscription."), React.createElement("div", {
     className: "tier-grid"
-  }, TIERS.map(t => {
-    const owned = entitled(account, t.id);
-    const feat = t.id === (highlightId || 'auction');
-    return React.createElement("div", {
-      key: t.id,
-      className: `tier-card ${feat ? 'feature' : ''}`
-    }, feat && React.createElement("div", {
-      className: "tier-tag"
-    }, "Draft day"), React.createElement("div", {
-      className: "tier-name"
-    }, t.name), React.createElement("div", {
-      className: "tier-price"
-    }, "$", t.price.toFixed(2), React.createElement("span", null, "/season")), React.createElement("div", {
-      className: "tier-blurb"
-    }, t.blurb), React.createElement("ul", {
-      className: "tier-feats"
-    }, (t.features || []).map((f, i) => React.createElement("li", {
-      key: i
-    }, f))), owned ? React.createElement("button", {
-      className: "btn-secondary",
-      disabled: true,
-      style: {
-        opacity: 0.7
-      }
-    }, 'Unlocked') : React.createElement("button", {
-      className: "btn-draft",
-      onClick: () => onBuy(t)
-    }, "Unlock"));
-  })), React.createElement("p", {
+  }, React.createElement("div", {
+    className: "tier-card feature"
+  }, React.createElement("div", {
+    className: "tier-tag"
+  }, "Everything included"), React.createElement("div", {
+    className: "tier-name"
+  }, pass.name), React.createElement("div", {
+    className: "tier-price"
+  }, "$", pass.price.toFixed(2), React.createElement("span", null, "/season")), React.createElement("div", {
+    className: "tier-blurb"
+  }, "The whole site, one purchase: custom values and rankings for your exact league, plus live command on draft day."), React.createElement("ul", {
+    className: "tier-feats"
+  }, ['Auction, snake, and best ball — every format included', 'Your league’s FULL custom scoring: every value and ranking rebuilt to your exact rules', 'Reorder any player and build the board you actually believe in', 'Value Coach: ask who to target and exactly how high, from planning through draft night', 'On draft day: live max bid, best-available board, and survival odds for your next pick', 'Save and reopen your league, even if the Wi-Fi drops'].map((f, i) => React.createElement("li", {
+    key: i
+  }, f))), owned ? React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: 'var(--positive)',
+      fontWeight: 700,
+      fontSize: 14,
+      padding: '10px 0 2px'
+    }
+  }, "✓ Unlocked — everything is live on this account") : React.createElement("button", {
+    className: "btn-draft",
+    onClick: () => onBuy(pass)
+  }, "Unlock"))), React.createElement("p", {
     style: {
       fontSize: 12,
       color: 'var(--text-muted)',
