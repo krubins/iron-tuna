@@ -995,6 +995,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-whb .whb-round { flex: 0 0 74px; }
 .whb-hint { color: var(--text-muted); }
 .cheat-print-foot { display: none; }
+.cheat-onepage-brand { display: none; }
 .cheat-print-head { font-family: var(--font-display); font-size: 17px; color: #000; margin-bottom: 6px; }
 @media print {
   @page { size: 11in 8.5in; margin: 0.3in; }
@@ -1044,6 +1045,12 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-target { background: #eafaf3 !important; }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 8px; }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 7.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
+  body.print-onepage .cheat-print-head, body.print-onepage .cheat-print-foot { display: none !important; }
+  body.print-onepage .cheat-onepage-brand { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: 0 0 6px; }
+  .cheat-onepage-brand .cob-sub { font-size: 9.5px; color: #5a6675; letter-spacing: 0.03em; font-family: Arial, sans-serif; text-align: right; }
+  .cheat-onepage-brand .cob-chip { background: #1a2430; border-radius: 4px; border-bottom: 2px solid #b8860b; padding: 4px 9px; display: flex; align-items: center; gap: 8px; }
+  .cheat-onepage-brand .cob-fish { height: 20px; width: auto; display: block; }
+  .cheat-onepage-brand .cob-name { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 17px; letter-spacing: 0.12em; color: #dde8ee; line-height: 1; }
 }.hl-btn { font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
 .cheat-cols-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); align-self: center; font-family: var(--font-body); letter-spacing: normal; min-width: 46px; }
@@ -9229,7 +9236,136 @@ function cheatHighlights(byPos, strategy) {
   Object.entries(r).forEach(([pos, ranges]) => ranges.forEach(([lo, hi]) => add(pos, lo, hi)));
   return set;
 }
+function cheatOnePageFit() {
+  // Measures the sheet's print-layout height by flipping the print stylesheets
+  // on synchronously (no paint happens mid-task), then returns the layout
+  // width, capped height, and transform scale that fit it on one
+  // letter-landscape page.
+  try {
+    const sheet = document.querySelector('.cheatsheet');
+    if (!sheet) return null;
+    const PAGE_W = 10.4 * 96;
+    const PAGE_H = 7.85 * 96;
+    const flipped = [];
+    for (let i = 0; i < document.styleSheets.length; i++) {
+      const ss = document.styleSheets[i];
+      if (ss.ownerNode && ss.ownerNode.id === 'cheat-page-style') continue;
+      let rules;
+      try {
+        rules = ss.cssRules;
+      } catch (e) {
+        continue;
+      }
+      if (!rules) continue;
+      for (let j = 0; j < rules.length; j++) {
+        const mt = rules[j].media && rules[j].media.mediaText;
+        if (!mt) continue;
+        // Flip print rules on, and viewport-width rules off, so the sheet is
+        // measured in the same fixed-width layout the print iframe renders.
+        if (mt.indexOf('print') !== -1 && mt.indexOf('not') === -1) flipped.push([rules[j], mt, 'all']);else if (mt.indexOf('width') !== -1) flipped.push([rules[j], mt, 'not all']);
+      }
+    }
+    const prevWidth = sheet.style.width;
+    let w = PAGE_W;
+    let h = 0;
+    try {
+      document.body.classList.add('print-onepage');
+      flipped.forEach(([r, mt, to]) => {
+        r.media.mediaText = to;
+      });
+      sheet.style.width = PAGE_W + 'px';
+      h = sheet.scrollHeight;
+      if (h > PAGE_H) {
+        // Too tall at page width: widen the layout so the scaled-down sheet
+        // still spans the full page width, then re-measure at that width.
+        w = Math.round(PAGE_W * (h / PAGE_H));
+        sheet.style.width = w + 'px';
+        h = sheet.scrollHeight || h;
+      }
+    } finally {
+      sheet.style.width = prevWidth;
+      flipped.forEach(([r, mt]) => {
+        try {
+          r.media.mediaText = mt;
+        } catch (e) {}
+      });
+      document.body.classList.remove('print-onepage');
+    }
+    if (!h) return null;
+    const scale = Math.min(1, PAGE_H / h * 0.99, PAGE_W / w);
+    return {
+      width: w,
+      height: Math.ceil(h * scale),
+      scale: scale
+    };
+  } catch (e) {
+    return null;
+  }
+}
+function printOnePagePdf() {
+  // Prints the sheet from a hidden same-origin iframe whose only flow content
+  // is a single page-sized box, so the print engine can never fragment the
+  // scaled sheet across pages the way it does in the main document.
+  try {
+    const sheet = document.querySelector('.cheatsheet');
+    const fit = cheatOnePageFit();
+    if (!sheet || !fit) return;
+    const PAGE_W = Math.floor(10.4 * 96);
+    const PAGE_H = Math.floor(7.85 * 96);
+    let fr = document.getElementById('cheat-print-frame');
+    if (!fr) {
+      fr = document.createElement('iframe');
+      fr.id = 'cheat-print-frame';
+      fr.setAttribute('aria-hidden', 'true');
+      fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+      document.body.appendChild(fr);
+    }
+    const headBits = [];
+    document.querySelectorAll('head style, head link[rel="stylesheet"]').forEach(n => {
+      if (n.id !== 'cheat-page-style') headBits.push(n.outerHTML);
+    });
+    let armed = true;
+    fr.onload = () => {
+      if (!armed) return;
+      armed = false;
+      const w = fr.contentWindow;
+      const ready = w.document.fonts && w.document.fonts.ready ? w.document.fonts.ready : Promise.resolve();
+      ready.then(() => setTimeout(() => {
+        try {
+          w.focus();
+          w.print();
+        } catch (e) {}
+      }, 150));
+    };
+    const doc = fr.contentDocument;
+    doc.open();
+    doc.write('<!doctype html><html><head><meta charset="utf-8">' + headBits.join('') + '<style>@page { size: 11in 8.5in; margin: 0.3in; } html, body { margin: 0; padding: 0; background: #fff; } #cheat-fit { width: ' + PAGE_W + 'px; height: ' + PAGE_H + 'px; overflow: hidden; } #cheat-scale { width: ' + fit.width + 'px; transform: scale(' + fit.scale + '); transform-origin: 0 0; } #cheat-scale .cheatsheet { position: static !important; width: 100% !important; } .cheat-print-foot { display: none !important; }</style></head><body class="print-onepage"><div id="cheat-fit"><div id="cheat-scale"><div class="cheatsheet">' + sheet.innerHTML + '</div></div></div></body></html>');
+    doc.close();
+    // The iframe prints at a fixed page width, so viewport-width media queries
+    // must never restyle it (print MQ evaluation is unreliable across engines).
+    try {
+      const sheets = doc.styleSheets;
+      for (let i = 0; i < sheets.length; i++) {
+        let rules;
+        try {
+          rules = sheets[i].cssRules;
+        } catch (e) {
+          continue;
+        }
+        if (!rules) continue;
+        for (let j = 0; j < rules.length; j++) {
+          const mt = rules[j].media && rules[j].media.mediaText;
+          if (mt && mt.indexOf('width') !== -1) rules[j].media.mediaText = 'not all';
+        }
+      }
+    } catch (e) {}
+  } catch (e) {}
+}
 function printPdf(size) {
+  if (size === 'onepage') {
+    printOnePagePdf();
+    return;
+  }
   try {
     const dims = size === 'legal' ? '14in 8.5in' : '11in 8.5in';
     let st = document.getElementById('cheat-page-style');
@@ -11018,13 +11154,17 @@ function CheatHeader({
   }, "Columns & Flags"), mode === 'live' && onAddPlayer && React.createElement("button", {
     className: "btn-draft",
     onClick: onAddPlayer
-  }, "+ Add player"), mode !== 'live' && React.createElement("button", {
+  }, "+ Add player"), React.createElement("button", {
     className: "btn-secondary",
     onClick: () => printPdf('letter')
-  }, "⤓ PDF · Letter"), mode !== 'live' && React.createElement("button", {
+  }, "⤓ PDF · Letter"), React.createElement("button", {
     className: "btn-secondary",
     onClick: () => printPdf('legal')
-  }, "⤓ PDF · Legal"), React.createElement("span", {
+  }, "⤓ PDF · Legal"), React.createElement("button", {
+    className: "btn-secondary",
+    title: "Shrink the whole sheet to fit a single letter-size page",
+    onClick: () => printPdf('onepage')
+  }, "⤓ PDF · 1 Page"), React.createElement("span", {
     style: {
       flexBasis: '100%',
       height: 0
@@ -11581,7 +11721,19 @@ function Cheatsheet({
     className: "cph-key"
   }, React.createElement("i", {
     className: "k-hl"
-  }), "★ highlighted target"))), mode !== 'live' || true ? React.createElement(LeadCapture, null) : null, isNarrow && React.createElement("div", {
+  }), "★ highlighted target"))), React.createElement("div", {
+    className: "cheat-onepage-brand"
+  }, React.createElement("div", {
+    className: "cob-sub"
+  }, fmtMeta(config).label, " Cheat Sheet · ", config.teams, " teams · $", config.budget, " budget · ", pprLabel, " · ", dateStr), React.createElement("div", {
+    className: "cob-chip"
+  }, React.createElement("img", {
+    src: "/tuna.png",
+    alt: "Iron Tuna",
+    className: "cob-fish"
+  }), React.createElement("span", {
+    className: "cob-name"
+  }, "IRON TUNA"))), mode !== 'live' || true ? React.createElement(LeadCapture, null) : null, isNarrow && React.createElement("div", {
     className: "cheat-mobnav no-print"
   }, React.createElement("span", {
     className: "cmn-label"
