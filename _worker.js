@@ -1344,6 +1344,92 @@ export default {
       const daysUntilExpiry = row ? Math.round((row.expires_at - Date.now()) / 86400000) : null;
       return json({ ok: true, hasStoredToken: !!row, usingSecretFallback, daysUntilExpiry, lastRefreshed: row ? new Date(row.updated_at).toISOString() : null }, 200, c);
     }
+    if (url.pathname === '/api/admin/dashboard') {
+      // Admin overview powering /admin: purchases (Stripe = the actual money),
+      // purchasers (entitlements = authoritative paid access), referrals (codes +
+      // per-code performance), lead capture, and a 30-day daily series. Same
+      // LEADS_EXPORT_KEY gate as the other admin routes.
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      const db = env.LEADS_DB;
+      const day = ts => new Date(ts || 0).toISOString().slice(0, 10);
+      try {
+        const out = { ok: true, generatedAt: Date.now() };
+        const ents = ((await db.prepare('SELECT email, product, paid_at FROM entitlements ORDER BY paid_at DESC').all()).results) || [];
+        const buyStarts = ((await db.prepare("SELECT email, ref, created_at FROM contacts WHERE type='purchase' ORDER BY created_at DESC").all()).results) || [];
+        const refByEmail = {};
+        for (let i = buyStarts.length - 1; i >= 0; i--) { const r = buyStarts[i]; if (r.ref) refByEmail[String(r.email || '').toLowerCase()] = r.ref; }
+        const entSet = new Set(ents.map(e => String(e.email || '').toLowerCase()));
+        out.purchasers = ents.map(e => ({ email: e.email, product: e.product, date: day(e.paid_at), ref: refByEmail[String(e.email || '').toLowerCase()] || '' }));
+        const startEmails = new Set(buyStarts.map(r => String(r.email || '').toLowerCase()));
+        const byType = ((await db.prepare('SELECT type, count(*) AS n FROM contacts GROUP BY type ORDER BY n DESC').all()).results) || [];
+        const bySource = ((await db.prepare('SELECT source, count(*) AS n FROM contacts GROUP BY source ORDER BY n DESC').all()).results) || [];
+        const recent = ((await db.prepare('SELECT email, source, type, ref, created_at FROM contacts ORDER BY created_at DESC LIMIT 30').all()).results) || [];
+        out.leads = { byType, bySource, recent: recent.map(r => ({ email: r.email, source: r.source, type: r.type, ref: r.ref, date: day(r.created_at) })) };
+        // referral codes + D1-side funnel (clicks / checkout starts); Stripe fills in paid sales below
+        const codes = ((await db.prepare('SELECT code, email, created_at FROM codes ORDER BY created_at DESC').all()).results) || [];
+        const perf = ((await db.prepare("SELECT ref, SUM(CASE WHEN type='purchase' THEN 1 ELSE 0 END) AS starts, SUM(CASE WHEN type NOT IN ('purchase','referrer') THEN 1 ELSE 0 END) AS clicks FROM contacts WHERE ref != '' GROUP BY ref").all()).results) || [];
+        const pmap = {}; perf.forEach(p => { pmap[String(p.ref || '').toUpperCase()] = p; });
+        const refs = {};
+        const blankRef = k => ({ code: k, ownerEmail: null, since: null, clicks: 0, checkoutStarts: 0, paidSales: 0, revenue: 0, owed: 0 });
+        codes.forEach(r => { const k = String(r.code || '').toUpperCase(); refs[k] = { ...blankRef(k), ownerEmail: r.email || null, since: day(r.created_at), clicks: (pmap[k] && pmap[k].clicks) || 0, checkoutStarts: (pmap[k] && pmap[k].starts) || 0 }; });
+        Object.keys(pmap).forEach(k => { if (!refs[k]) refs[k] = { ...blankRef(k), clicks: pmap[k].clicks || 0, checkoutStarts: pmap[k].starts || 0 }; });
+        // 30-day daily grid (UTC days, same convention as the rest of the admin JSON)
+        const daily = {};
+        for (let i = 29; i >= 0; i--) { const d = day(Date.now() - i * 86400000); daily[d] = { date: d, sales: 0, revenue: 0, leads: 0 }; }
+        const leadRows = ((await db.prepare("SELECT created_at FROM contacts WHERE type='lead' AND created_at >= ?").bind(Date.now() - 30 * 86400000).all()).results) || [];
+        leadRows.forEach(r => { const d = day(r.created_at); if (daily[d]) daily[d].leads++; });
+        // Stripe: page through paid checkout sessions (source of truth for money)
+        let sales = [], revenueCents = 0, stripeMeta = null;
+        if (env.STRIPE_SECRET_KEY) {
+          const auth = { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY };
+          let starting = '', pages = 0, capped = false;
+          while (true) {
+            if (pages >= 25) { capped = true; break; }
+            pages++;
+            const u = 'https://api.stripe.com/v1/checkout/sessions?limit=100' + (starting ? '&starting_after=' + encodeURIComponent(starting) : '');
+            const r = await fetch(u, { headers: auth });
+            const j = await r.json().catch(() => ({}));
+            if (j && j.error) { stripeMeta = { error: (j.error.message || '').slice(0, 200) }; break; }
+            const data = (j && j.data) || [];
+            for (const s of data) {
+              if (s.payment_status !== 'paid') continue;
+              const email = (s.customer_details && s.customer_details.email) || s.customer_email || '';
+              const ref = String((s.metadata && s.metadata.ref) || s.client_reference_id || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+              const cents = s.amount_total || 0, ts = (s.created || 0) * 1000;
+              revenueCents += cents;
+              sales.push({ email, ts, date: day(ts), amount: cents / 100, ref, session: s.id, entitled: entSet.has(String(email).toLowerCase()) });
+              if (ref) { const rr = refs[ref] || (refs[ref] = blankRef(ref)); rr.paidSales++; rr.revenue += cents / 100; rr.owed = rr.paidSales * 3; }
+              if (daily[day(ts)]) { daily[day(ts)].sales++; daily[day(ts)].revenue += cents / 100; }
+            }
+            if (j && j.has_more && data.length) starting = data[data.length - 1].id; else break;
+          }
+          sales.sort((a, b) => b.ts - a.ts);
+          if (!stripeMeta) stripeMeta = { pagesScanned: pages, capped };
+        }
+        out.sales = sales.map(s => ({ email: s.email, date: s.date, amount: s.amount, ref: s.ref, session: s.session, entitled: s.entitled }));
+        out.stripe = stripeMeta;
+        out.referrals = Object.keys(refs).map(k => refs[k]).sort((a, b) => (b.revenue - a.revenue) || (b.clicks - a.clicks));
+        out.daily = Object.keys(daily).sort().map(k => daily[k]);
+        const referred = out.referrals.reduce((s, r) => s + r.paidSales, 0);
+        let abandoned = 0; startEmails.forEach(e => { if (!entSet.has(e)) abandoned++; });
+        out.totals = {
+          revenue: revenueCents / 100,
+          paidSales: sales.length,
+          purchasers: ents.length,
+          leads: byType.filter(t => t.type === 'lead').reduce((s, t) => s + (t.n || 0), 0),
+          contacts: byType.reduce((s, t) => s + (t.n || 0), 0),
+          checkoutStarts: startEmails.size,
+          abandonedCheckouts: abandoned,
+          referralCodes: codes.length,
+          referredSales: referred,
+          referralOwed: referred * 3
+        };
+        return json(out, 200, c);
+      } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
+    }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
