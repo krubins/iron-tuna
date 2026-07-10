@@ -8120,11 +8120,11 @@ function SettingsModal({
     style: { fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 6px' }
   }, "Set your starters, add a flex and bench — each team's roster sizes to match."), React.createElement("div", {
     style: { padding: '2px 0' }
-  }, ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p]).map(pos => Stepper(pos + " starters", draft.roster[pos].starters, v => setStarter(pos, v), 0, 10)), Stepper("FLEX", draft.flex.count, v => update('flex.count', Math.max(0, v)), 0, 5), React.createElement("div", {
+  }, ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => Stepper(pos + " starters", draft.roster[pos] && draft.roster[pos].starters || 0, v => setStarter(pos, v), 0, 10)), Stepper("FLEX", draft.flex.count, v => update('flex.count', Math.max(0, v)), 0, 5), React.createElement("div", {
     style: sStyle.stepRow
   }, React.createElement("span", { style: sStyle.stepLbl, title: "Superflex adds a flex spot that can also start a QB. 2 QB means two required QB starters." }, "QB format"), React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' } }, React.createElement("button", { type: "button", className: `preset-btn ${!_isSuperflex && ((draft.roster.QB && draft.roster.QB.starters) || 1) < 2 ? 'on' : ''}`, onClick: () => setQbFormat('1qb') }, "1 QB"), React.createElement("button", { type: "button", className: `preset-btn ${!_isSuperflex && ((draft.roster.QB && draft.roster.QB.starters) || 1) >= 2 ? 'on' : ''}`, onClick: () => setQbFormat('2qb') }, "2 QB"), React.createElement("button", { type: "button", className: `preset-btn ${_isSuperflex ? 'on' : ''}`, onClick: () => setQbFormat('sf') }, "Superflex"))), React.createElement("div", {
     style: sStyle.stepRow
-  }, React.createElement("span", { style: sStyle.stepLbl, title: "Any position: bench spots can hold anyone. Locked: you reserve a set number of bench spots for each position." }, "Bench spots"), React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' } }, React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') !== 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'any') }, "Any position"), React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') === 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'fixed') }, "Locked by position"))), ((draft.benchPositions || 'any') !== 'fixed') && Stepper("Bench", _benchTotal(), v => setOpenBench(Math.max(0, v)), 0, 30), ((draft.benchPositions || 'any') === 'fixed') && React.createElement("div", { style: { padding: '2px 0 2px 14px', borderLeft: '2px solid var(--border-subtle)', margin: '4px 0 4px 2px' } }, React.createElement("p", { style: { fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 4px' } }, "Reserve bench spots per position:"), ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p]).map(pos => Stepper(pos + " reserves", Math.max(0, (draft.roster[pos].total || 0) - (draft.roster[pos].starters || 0)), v => update(`roster.${pos}.total`, (draft.roster[pos].starters || 0) + Math.max(0, v)), 0, 12)))), React.createElement("div", {
+  }, React.createElement("span", { style: sStyle.stepLbl, title: "Any position: bench spots can hold anyone. Locked: you reserve a set number of bench spots for each position." }, "Bench spots"), React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' } }, React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') !== 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'any') }, "Any position"), React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') === 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'fixed') }, "Locked by position"))), ((draft.benchPositions || 'any') !== 'fixed') && Stepper("Bench", _benchTotal(), v => setOpenBench(Math.max(0, v)), 0, 30), ((draft.benchPositions || 'any') === 'fixed') && React.createElement("div", { style: { padding: '2px 0 2px 14px', borderLeft: '2px solid var(--border-subtle)', margin: '4px 0 4px 2px' } }, React.createElement("p", { style: { fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 4px' } }, "Reserve bench spots per position:"), ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => Stepper(pos + " reserves", Math.max(0, ((draft.roster[pos] || {}).total || 0) - ((draft.roster[pos] || {}).starters || 0)), v => update(`roster.${pos}.total`, ((draft.roster[pos] || {}).starters || 0) + Math.max(0, v)), 0, 12)))), React.createElement("div", {
     style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }
   }, React.createElement("b", { style: { color: 'var(--text-primary)' } }, _rosterTotal(), " players"), " per team · ", ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p] && draft.roster[p].starters > 0).map(p => draft.roster[p].starters + " " + p).join(" · "), draft.flex.count ? " · " + draft.flex.count + (_isSuperflex ? " SUPERFLEX" : " FLEX") : "", " · ", _benchTotal(), " bench"), React.createElement("button", {
     type: "button",
@@ -13933,6 +13933,32 @@ const BESTBALL_FLEX = {
   count: 1,
   eligible: ["RB", "WR", "TE"]
 };
+function configForFormat(cfg, fmt) {
+  const next = {
+    ...cfg,
+    format: fmt
+  };
+  if (fmt === 'bestball' && cfg.format !== 'bestball') {
+    // Entering best ball: start from the Underdog-style default lineup.
+    next.roster = JSON.parse(JSON.stringify(BESTBALL_ROSTER));
+    next.flex = JSON.parse(JSON.stringify(BESTBALL_FLEX));
+  } else if (fmt !== 'bestball' && cfg.format === 'bestball') {
+    // Leaving best ball: its lineup has no K/DEF, so restore the standard roster.
+    next.roster = JSON.parse(JSON.stringify(DEFAULT_LEAGUE_CONFIG.roster));
+    next.flex = JSON.parse(JSON.stringify(DEFAULT_LEAGUE_CONFIG.flex));
+  } else {
+    next.roster = {
+      ...next.roster
+    };
+  }
+  ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].forEach(p => {
+    if (!next.roster[p]) next.roster[p] = {
+      total: 0,
+      starters: 0
+    };
+  });
+  return next;
+}
 const BB_VARIANCE = {
   QB: 0.10,
   RB: 0.18,
@@ -20156,7 +20182,7 @@ function App() {
   const remoteApplyRef = useRef(false);
   const __itPath = (() => { try { return window.location.pathname || '/'; } catch (e) { return '/'; } })();
   const __itFmt = __itPath.indexOf('/snakedraft') === 0 ? 'snake' : __itPath.indexOf('/bestball') === 0 ? 'bestball' : 'auction';
-  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; const __c = { ...__b, format: __itFmt }; if (__itFmt === 'bestball') { __c.roster = BESTBALL_ROSTER; __c.flex = BESTBALL_FLEX; } return __c; })());
+  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; return configForFormat(__b, __itFmt); })());
   const [players, setPlayers] = useState(initialState?.players || buildInitialPlayers(BASELINE_PROJECTIONS));
   const [valueAdjust, setValueAdjust] = useState(initialState?.valueAdjust || {});
   const [priceOverrides, setPriceOverrides] = useState(initialState?.priceOverrides || {});
@@ -20387,8 +20413,7 @@ function App() {
     });
   }
   const [teams, setTeams] = useState(() => {
-    let cfg = initialState?.config || DEFAULT_LEAGUE_CONFIG;
-    if (__itFmt === 'bestball') cfg = { ...cfg, roster: BESTBALL_ROSTER, flex: BESTBALL_FLEX };
+    let cfg = configForFormat(initialState?.config || DEFAULT_LEAGUE_CONFIG, __itFmt);
     const loadedTeams = initialState?.teams || buildInitialTeams(cfg);
     const total = totalRosterSpots(cfg);
     return loadedTeams.map(t => ({
