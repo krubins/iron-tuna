@@ -206,7 +206,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .modal-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1100; }
 .modal-bg.modal-left { justify-content: flex-start; padding-left: 48px; }
 @media (max-width: 760px) { .modal-bg.modal-left { justify-content: center; padding-left: 0; } }
-.coach-beside { position: fixed; left: 548px; top: 50%; transform: translateY(-50%); width: 480px; max-width: calc(100vw - 564px); height: 480px; max-height: 84vh; z-index: 125; }
+.coach-beside { position: fixed; left: 548px; top: 50%; transform: translateY(-50%); width: 480px; max-width: calc(100vw - 564px); height: 480px; max-height: 84vh; z-index: 1100; }
 .coach-beside .coach.embed { height: 100%; box-shadow: 0 18px 48px rgba(0,0,0,0.6); }
 .coach-beside.coach-board { left: auto; right: 12px; top: auto; bottom: 12px; transform: none; width: 340px; max-width: 34vw; height: 420px; max-height: 64vh; }
 .board-coach-inline { margin: 4px 0 14px; }
@@ -6884,7 +6884,7 @@ function QuickDraftModal({
   const [teamId, setTeamId] = useState(teams[0].id);
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
   const [jab, setJab] = useState(null);
-  const [schedOpen, setSchedOpen] = useState(false);
+  const [schedOpen, setSchedOpen] = useState(true);
   const _jabPool = typeof playerJabs === 'function' ? playerJabs(player, players, config) : [];
   const _rollJab = () => { if (_jabPool.length) setJab(_jabPool[Math.floor(Math.random() * _jabPool.length)]); };
   const projVal = player.marketValue != null ? player.marketValue : player.auctionValue;
@@ -6978,7 +6978,7 @@ function QuickDraftModal({
   }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume"), _ol && React.createElement("span", { style: _chip(_ol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _ol.title }, _ol.t === 'OL+' ? "Good O-line" : "Bad O-line"), _age && React.createElement("span", { style: _chip('#ff6b6b'), title: _age.title }, _age.t), bye && React.createElement("span", { style: _chip(), title: "Bye week" }, "Bye " + bye)), _survRows && _survRows.length ? React.createElement("div", {
     style: { marginBottom: 14 }
   }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 } }, "Will he be there?"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, _survRows.map(rw => React.createElement("span", { key: rw.round, style: _chip(), title: rw.passed ? "Your round " + rw.round + " pick has already passed" : "Chance he lasts to your round " + rw.round + " pick" }, "R" + rw.round + " ", React.createElement("b", { style: { color: rw.passed ? 'var(--text-faint)' : (rw.s >= 70 ? '#46d39a' : rw.s >= 40 ? '#f0b24b' : '#ff6b6b') } }, rw.passed ? "—" : rw.s + "%"))))) : null);
-  const _tmAb = (player.team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const _tmAb = typeof schedTeamAb === 'function' ? schedTeamAb(player.team) : (player.team || '').toUpperCase().replace(/[^A-Z]/g, '');
   const _schWeeks = (typeof SCHEDULE_2026 !== 'undefined' && SCHEDULE_2026[_tmAb]) ? (() => {
     const sch = SCHEDULE_2026[_tmAb];
     const out = [];
@@ -9666,9 +9666,14 @@ const OFF_2025 = {
   CLE: 31,
   LV: 32
 };
+const TEAM_AB_ALIAS = { JAC: 'JAX', WSH: 'WAS', OAK: 'LV', SD: 'LAC', STL: 'LAR' };
+function schedTeamAb(team) {
+  const ab = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  return TEAM_AB_ALIAS[ab] || ab;
+}
 function scheduleSoftness(team, position) {
   if (!['QB', 'RB', 'WR', 'TE', 'DEF'].includes(position)) return null;
-  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const tm = schedTeamAb(team);
   const sch = SCHEDULE_2026[tm];
   if (!sch) return null;
   const rankOf = opp => {
@@ -9700,7 +9705,7 @@ function scheduleSoftness(team, position) {
 }
 function toughSchedule(team, position) {
   if (!['QB', 'RB', 'WR', 'TE', 'DEF'].includes(position)) return null;
-  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const tm = schedTeamAb(team);
   const sch = SCHEDULE_2026[tm];
   if (!sch) return null;
   const rankOf = opp => {
@@ -9745,7 +9750,7 @@ const MATCHUP_TIER_WORD = { fav2: '#22c55e', fav1: '#46d39a', bad2: '#ef4444', b
 const _seasonSchedCache = {};
 function seasonScheduleInfo(team, position) {
   if (MATCHUP_POSITIONS.indexOf(position) < 0) return null;
-  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const tm = schedTeamAb(team);
   if (!SCHEDULE_2026[tm]) return null;
   if (!_seasonSchedCache[position]) {
     const rows = Object.keys(SCHEDULE_2026).map(t => {
