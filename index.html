@@ -2131,7 +2131,7 @@ const DEFAULT_LEAGUE_CONFIG = {
     }
   },
   teams: 12,
-  budget: 120,
+  budget: 200,
   roster: {
     QB: {
       total: 2,
@@ -8097,7 +8097,7 @@ function SettingsModal({
     min: "20",
     max: "1000",
     value: draft.budget,
-    onChange: e => update('budget', parseInt(e.target.value || 120))
+    onChange: e => update('budget', parseInt(e.target.value || 200))
   })), (draft.format || 'auction') === 'auction' && React.createElement("div", {
     className: "settings-row"
   }, React.createElement("label", null, "Minimum Bid"), React.createElement("input", {
@@ -13211,7 +13211,7 @@ function PrepMode({
     min: "20",
     max: "1000",
     value: config.budget,
-    onChange: e => onUpdateConfig('budget', parseInt(e.target.value || 120))
+    onChange: e => onUpdateConfig('budget', parseInt(e.target.value || 200))
   })), React.createElement("label", null, "Reception", React.createElement("select", {
     value: String(ppr),
     onChange: e => onUpdateConfig('scoring.receptionPoints', parseFloat(e.target.value))
@@ -20021,7 +20021,20 @@ function App() {
   const initialState = (() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const s = JSON.parse(raw);
+        // $120 was the old default budget. Saved sessions where the user never
+        // set a budget (and hasn't drafted) move to the $200 default.
+        const c = s && s.config;
+        if (c && c.budget === 120 && !c.budgetSet && (!s.draftHistory || s.draftHistory.length === 0)) {
+          c.budget = 200;
+          if (Array.isArray(s.teams)) s.teams.forEach(t => {
+            const spent = (t.roster || []).reduce((x, r) => x + (r.price || 0), 0);
+            t.budgetRemaining = 200 - spent;
+          });
+        }
+        return s;
+      }
     } catch (e) {}
     return null;
   })();
@@ -20917,6 +20930,10 @@ function App() {
     if (newConfig && !has(liveTier) && JSON.stringify(newConfig.scoring || {}) !== JSON.stringify(config.scoring || {})) {
       newConfig = { ...newConfig, scoring: config.scoring };
       promptUpgrade("to use your league's own scoring");
+    }
+    // Once the user sets a budget themselves, it sticks — the $200 default migration never touches it again.
+    if (newConfig && newConfig.budget !== config.budget) {
+      newConfig = { ...newConfig, budgetSet: true };
     }
     if (newConfig && newConfig.format && newConfig.format !== config.format) {
       ITAnalytics.track('mode_selected', {
