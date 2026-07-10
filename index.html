@@ -241,6 +241,19 @@ input:focus, select:focus { border-color: var(--accent); }
 .bm2-plan { flex: 1; min-width: 220px; max-width: 760px; }
 .bm2-plan-h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-bottom: 5px; }
 .bm2-wide .bm2-plan { max-width: 760px; }
+.board-models-wrap { margin: 4px 0 12px; }
+.board-models-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 4px 0 12px; }
+.board-models-wrap .board-models-bar { margin: 0 0 8px; }
+.board-models-wrap .board-models-2pane { margin: 0; }
+.bm-bar-title { font-size: 12px; color: var(--text-muted); }
+.bm-toggle { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.bm-toggle-pulse { animation: bmPulse 2.4s ease-in-out infinite; }
+.bm-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); animation: none; transform: none; }
+@keyframes bmPulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(245,184,0,0.15); border-color: rgba(245,184,0,0.35); color: var(--text-secondary); transform: scale(1); }
+  50% { box-shadow: 0 0 18px rgba(245,184,0,0.55); border-color: rgba(245,184,0,0.95); color: var(--gold-text); transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) { .bm-toggle-pulse { animation: none; } }
 .bm2-auction { column-count: 3; column-gap: 16px; }
 .bm-rounds3 { column-count: 3; column-gap: 16px; }
 .bm-rounds3 .bm-round-row { break-inside: avoid; -webkit-column-break-inside: avoid; }
@@ -20589,6 +20602,8 @@ function App() {
   }, [baseValued, valueAdjust, config, draftHistory, teams, priceOverrides]);
   const marketState = useMemo(() => computeMarketState(draftHistory, valuedPlayers, config), [draftHistory, valuedPlayers, config]);
   const [draftModel, setDraftModel] = useState(null);
+  const [boardModelsOpen, setBoardModelsOpen] = useState(() => { try { return localStorage.getItem('it_board_models') === '1'; } catch (e) { return false; } });
+  function toggleBoardModels() { setBoardModelsOpen(v => { const n = !v; try { localStorage.setItem('it_board_models', n ? '1' : '0'); } catch (e) {} return n; }); }
   const _basePersonalized = useMemo(() => {
     const myTeam = teams.find(t => t.isMine);
     const scarMap = scarcityFlags(valuedPlayers, new Set(draftHistory.map(d => d.playerId)), config);
@@ -21663,6 +21678,7 @@ function App() {
       focusPlayer: null,
       onCollapse: null
     }))), (view === 'board' && myTeam) && (function () {
+      if (!boardModelsOpen) return React.createElement("div", { className: "board-models-bar no-print" }, React.createElement("span", { className: "bm-bar-title" }, "Draft models hidden · pick a model to see your highest-scoring build"), React.createElement("button", { className: "bm-toggle bm-toggle-pulse", onClick: toggleBoardModels, title: "Show draft models and this board's target players" }, "Show draft models ▾"));
       var MODELS = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
       var key = draftModel || 'ideal';
       var lbl = (MODELS.find(function (m) { return m[0] === key; }) || [key, key])[1];
@@ -21691,7 +21707,7 @@ function App() {
         var groups = ORDER.filter(function (p) { return byPos[p] && byPos[p].length; }).map(function (p) { return { pos: p, players: byPos[p] }; });
         right = groups.length ? React.createElement("div", { className: "bm2-auction" }, groups.map(function (g) { return React.createElement("div", { key: g.pos, className: "bm2-posgroup" }, React.createElement("div", { className: "bm2-posh position-tag " + g.pos }, g.pos), g.players.map(function (pl, i) { return React.createElement("div", { key: i, className: "bm2-pl-row", style: { cursor: 'pointer' }, title: "View player card", onClick: function () { var f = pmap[pl.id]; if (f) setAssignPlayer(f); } }, React.createElement("span", { className: "bm2-pl-name" }, pl.name), React.createElement("span", { className: "bm2-pl-meta" }, "$" + pl.price + " · " + pl.ppg + "/gm")); })); })) : EMPTY;
       }
-      return React.createElement("div", { className: "board-models-2pane no-print bm2-wide" }, React.createElement("div", { className: "bm2-models" }, React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
+      return React.createElement("div", { className: "board-models-wrap no-print" }, React.createElement("div", { className: "board-models-bar" }, React.createElement("span", { className: "bm-bar-title" }, "Draft Models · click a model to see its target players"), React.createElement("button", { className: "bm-toggle", onClick: toggleBoardModels, title: "Hide draft models for a cleaner board" }, "Hide models ▴")), React.createElement("div", { className: "board-models-2pane bm2-wide" }, React.createElement("div", { className: "bm2-models" }, React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right)));
     })(), React.createElement("div", {
       className: "board-layout board-norail"
     }, React.createElement(TeamsBoard, {
