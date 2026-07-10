@@ -9919,7 +9919,6 @@ function playerJabs(player, players, config) {
   const pos = player.position;
   const vol = typeof volumeFlag === 'function' ? volumeFlag(player, players) : null;
   const tough = typeof toughSchedule === 'function' ? toughSchedule(player.team, player.position) : null;
-  const soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(player.team, player.position) : null;
   const risk = typeof riskScore === 'function' ? riskScore(player) : null;
   const inj = typeof injuryOf === 'function' ? injuryOf(player) : null;
   const ol = typeof olFlag === 'function' ? olFlag(player) : null;
@@ -9932,25 +9931,38 @@ function playerJabs(player, players, config) {
   const _posList = (players || []).filter(p => p.position === pos).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
   const _pr = _posList.findIndex(p => p.id === player.id) + 1;
   const posRank = _pr > 0 ? pos + _pr : pos;
-  const ppg = player.projectedPoints ? (player.projectedPoints / 17).toFixed(1) : null;
-  const team = player.team || 'his team';
+  const ppgN = player.projectedPoints ? player.projectedPoints / 17 : null;
+  const ppg = ppgN != null ? ppgN.toFixed(1) : null;
+  const seasonPts = player.projectedPoints ? Math.round(player.projectedPoints) : null;
+  const nxt = _pr > 0 && _posList.length > _pr ? _posList[_pr] : null;
+  const nxtPpgN = nxt && nxt.projectedPoints ? nxt.projectedPoints / 17 : null;
+  const nxtPpg = nxtPpgN != null ? nxtPpgN.toFixed(1) : null;
+  const _mate = pos === 'RB' ? (players || []).filter(p => p.team === player.team && p.position === 'RB' && p.id !== player.id).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0))[0] : null;
+  const matePpg = _mate && _mate.projectedPoints ? (_mate.projectedPoints / 17).toFixed(1) : null;
+  const _tm = (player.team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const olNum = typeof OL_2026 !== 'undefined' ? OL_2026[_tm] : null;
+  const lateOpps = tough && tough.late && tough.late.opps ? tough.late.opps.join(', ') : null;
+  const earlyOpps = tough && tough.early && tough.early.opps ? tough.early.opps.join(', ') : null;
   const out = [];
-  if (vol && vol.t === 'RBBC') out.push(isSnake ? `Reaching for ${first}, a guy splitting his backfield three ways? Sure, every committee back screams "draft me early."` : `Paying ${overpay} for ${first} — half a running back, full price. Bold.`);
-  if (tough && tough.late) out.push(isSnake ? `Spending an early pick on ${first} and his playoff-week meat grinder? Love planning to lose in December.` : `${Overpay} for ${first}, then his Week 15-17 schedule eats him alive. Worth every penny.`);
-  else if (tough && tough.early) out.push(isSnake ? `${first} this early, opening against a wall of elite defenses? Enjoy the 0-3 start you reached for.` : `Big money on ${first}, who opens against a murderers' row. Money well... evaporated.`);
-  if (risk != null && risk >= 0.6) out.push(isSnake ? `Burning a real pick on boom-or-bust ${first}? The boom is theoretical. The bust is on tape.` : `${Overpay} for boom-or-bust ${first}. You bought the boom; he comes with the bust free.`);
-  if (inj) out.push(isSnake ? `Drafting ${first} (${inj}) ahead of healthy guys is gutsy. The trainer's room sends its regards.` : `Real dollars on ${first} with a ${inj} tag — nothing safer than overpaying for a question mark.`);
-  if (ol && ol.tone === 'bad') out.push(pos === 'RB' ? `${pay} ${first}, who runs behind one of the league's worst run-blocking lines — he'll meet a defender at the handoff.` : `${pay} ${first}, whose line can't block a revolving door. Enjoy watching him run for his life.`);
-  if (ag && ageNum != null) out.push(pos === 'RB' ? `${pay} a ${ageNum}-year-old running back. The wheels don't come with a warranty, champ.` : `${pay} ${first} at ${ageNum} — drafting the back of the baseball card, not the front.`);
-  if (!isSnake && av != null && mv != null && mv > av + 2) out.push(`${first} is worth about $${av}. You paid like he's a first-rounder. The whole room said thank you.`);
-  if (isSnake && player.adp != null) out.push(`ADP had ${first} going way later, but you just had to have him NOW. Patience is for people who win leagues.`);
-  if (pos === 'K' || pos === 'DEF') out.push(isSnake ? `A ${pos}. This early. While startable skill players sit on the board. Iron Tuna is cringing for you.` : `Spending actual budget on a ${pos}. In this economy. Visionary.`);
-  if (soft && (soft.early || soft.late)) out.push(`Yes, ${first} has a soft stretch — which you paid up for and will still bench that exact week. We've seen your lineups.`);
-  if (_pr > 0 && _pr <= 4) out.push(isSnake ? `${first}, the consensus ${posRank}, taken right where every list had him. Groundbreaking — bet you pick the sun to rise, too.` : `${Overpay} for the ${posRank}, the chalkiest name on the board. Real bold, taking the guy every projection screams at you to take.`);
-  else if (_pr > 0) out.push(isSnake ? `${first} is our ${posRank} and you grabbed him rounds early — a pile of ${pos}s right behind him score within a point for free.` : `${Overpay} for the ${posRank} off the board. The ${pos}s ranked right behind him cost a few bucks and score nearly the same.`);
-  if (ppg && _pr > 6) out.push(isSnake ? `${first} projects ${ppg} a game — you reached for a guy you'll agonize over flexing every single week.` : `${Overpay} for ${first} and his ${ppg} a game. That's flex-bench production at league-winner prices.`);
-  out.push(isSnake ? `Nobody was racing you for ${first}. One more round of patience and you'd have looked smart instead of trigger-happy.` : `${Overpay} for ${first} with not one competing bid. You out-bid exactly one person in the room: yourself.`);
-  out.push(`This whole pick is a wager that ${team}'s offense goes right. Bold, betting your season on other people's jobs.`);
+  if (vol && vol.t === 'RBBC' && _mate && matePpg) out.push(isSnake ? `Reaching for ${first} while ${_mate.name} projects ${matePpg} a game out of the same backfield? Congrats on drafting half a timeshare.` : `${Overpay} for ${first}, who shares his own backfield with ${_mate.name} (${matePpg} projected pts/game). Half the touches, full price.`);
+  else if (vol && vol.t === 'RBBC') out.push(isSnake ? `Reaching for ${first}, a guy splitting his backfield? Sure, every committee back screams "draft me early."` : `Paying ${overpay} for ${first} — half a running back, full price. Bold.`);
+  if (lateOpps) out.push(isSnake ? `${first} draws ${lateOpps} in Weeks 15-17, all top defenses against ${pos}s. Love planning to lose in December.` : `${Overpay} for ${first}, whose playoff slate reads ${lateOpps} — a murderers' row for ${pos}s. Worth every penny.`);
+  else if (earlyOpps) out.push(isSnake ? `${first} this early, opening against ${earlyOpps}? Enjoy the 0-3 start you reached for.` : `Big money on ${first}, who opens against ${earlyOpps}. Money well... evaporated.`);
+  if (risk != null && risk >= 0.6) {
+    const riskWhy = [inj ? `the ${inj} tag` : null, ageNum != null && ageNum >= 30 ? `age ${ageNum}` : null, player.yearsExp === 0 ? 'zero NFL snaps' : null].filter(Boolean).join(', ');
+    out.push(`${first} scores ${Math.round(risk * 100)}/100 on our bust-risk meter${riskWhy ? ` (${riskWhy})` : ''}. ${isSnake ? 'You spent a real pick on the bust half.' : 'You paid for the boom; the bust rode along free.'}`);
+  }
+  if (inj) out.push(`${first} carries a ${inj} designation${ppg ? `, and his ${ppg}-a-game projection assumes he actually plays` : ''}. ${isSnake ? `Drafting the trainer's-room report ahead of healthy players — gutsy.` : 'Nothing safer than top dollar for a question mark.'}`);
+  if (ol && ol.tone === 'bad') out.push(pos === 'RB' && olNum ? `${pay} ${first}, whose line averages ${olNum.y} yards before contact and gets him stuffed at the line on ${olNum.s}% of runs. He meets a defender at the handoff.` : pos === 'QB' && olNum ? `${pay} ${first}, who gets pressured on ${olNum.p}% of dropbacks behind one of the league's worst lines. Enjoy watching him run for his life.` : olNum ? `${pay} ${first}, whose QB is pressured on ${olNum.p}% of dropbacks — the play dies before his route does.` : `${pay} ${first}, whose line can't block a revolving door.`);
+  if (ag && ageNum != null) out.push(pos === 'RB' ? `${pay} a ${ageNum}-year-old running back${ppg ? ` projected for ${ppg} a game` : ''}. The wheels don't come with a warranty, champ.` : `${pay} ${first} at ${ageNum} — drafting the back of the baseball card, not the front.`);
+  if (!isSnake && av != null && mv != null && mv > av + 2) out.push(`Our projections price ${first} at $${av}; the room pays about $${mv}. That $${mv - av} gap is pure vibes — his stat line doesn't cover it.`);
+  if (isSnake && player.adp != null) out.push(`ADP says ${first} goes around pick ${Math.round(player.adp)}${ppg ? `, and his ${ppg}-a-game projection is why` : ''}. You just had to have him NOW.`);
+  if (pos === 'K' || pos === 'DEF') out.push(isSnake ? `A ${pos}${ppg ? ` projected for ${ppg} a game` : ''}, this early, while startable skill players sit on the board. Iron Tuna is cringing for you.` : `Spending actual budget on a ${pos}${ppg ? ` and his ${ppg} points a game` : ''}. In this economy. Visionary.`);
+  if (nxt && ppg && nxtPpg && ppgN - nxtPpgN < 1.5) out.push(isSnake ? `${first} projects ${ppg} points a game. ${nxt.name}, still on the board, projects ${nxtPpg}. You reached to win a coin flip.` : `${Overpay} for ${ppg} a game when ${nxt.name} projects ${nxtPpg} and will cost a fraction. You paid retail for a rounding error.`);
+  if (ppg && _pr > 6) out.push(isSnake ? `${first} projects ${ppg} a game as the ${posRank} — you reached for a guy you'll agonize over flexing every single week.` : `${Overpay} for ${first} and his ${ppg} a game. That's flex-bench production at league-winner prices.`);
+  if (ppg && _pr > 0) out.push(isSnake ? `${first} projects ${ppg} points a game, the ${posRank} at his position. The spreadsheet already wrote this jab; we just read it out loud.` : `${Overpay} for the ${posRank} and his ${ppg} points a game. The projection is the punchline.`);
+  if (seasonPts) out.push(`${seasonPts} projected points for ${first}'s whole season. Screenshot it — that's the best-case scenario.`);
+  if (!out.length) out.push(`Our projections can't find a meaningful role for ${first}. You drafted a name, not a stat line.`);
   return out;
 }
 function playerNews(player, players, config) {
