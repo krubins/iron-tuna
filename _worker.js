@@ -788,11 +788,13 @@ async function pickNonDuplicate(env, pool, startIdx, composeFn) {
     if (!dup) return { item, tweets, hash };
     idx = (idx + 1) % pool.length;
   }
-  // Every item in the pool has already been tweeted verbatim (only plausible once fully cycled
-  // many times over) — post the original pick anyway rather than skip the slot entirely.
-  const item = pool[startIdx % pool.length];
-  const tweets = composeFn(item);
-  return { item, tweets, hash: await textHash(tweets[0]) };
+  // Every item in the currently-eligible pool has already been tweeted verbatim — this happens
+  // when a format's dated content is identical to another format's (early drop pages reuse the
+  // same title+takeaway across auction/snake) and the small early pool gets fully cycled before
+  // the next drop date unlocks. X would reject a repost with a 403 anyway, so skip the slot for
+  // today rather than burning an API call on a guaranteed failure; it resolves itself once more
+  // dates unlock.
+  return null;
 }
 
 async function postAndLog(env, format, id, tweets, hash, imagePath) {
