@@ -1664,11 +1664,21 @@ async function handleCoach(request, env, c) {
         resp = await callModel(model, stream, ctrl.signal);
       } catch (e) { resp = null; }
       finally { if (to) clearTimeout(to); }
-      if (resp && resp.ok) return resp;
-      if (resp && !RETRY_STATUS.has(resp.status)) return resp;
+      if (resp && resp.ok) {
+        if (!stream) return { resp };
+        // A 200 on a stream is not success yet: the provider can still send an
+        // in-stream error event (e.g. overloaded) or close before the first
+        // token, which used to be piped through and render as an empty reply.
+        // Only commit once the first content token has actually arrived.
+        const primed = await primeStream(resp, provider);
+        if (primed) return { resp, primed };
+        resp = null;
+      } else if (resp && !RETRY_STATUS.has(resp.status)) {
+        return { resp };
+      }
       if (i < tries - 1) await _sleep(500 * Math.pow(2, i) + Math.floor(Math.random() * 250));
     }
-    return resp;
+    return { resp };
   };
   const readText = j => provider === 'anthropic'
     ? (j.content && j.content[0] && j.content[0].text) || ''
@@ -1676,24 +1686,64 @@ async function handleCoach(request, env, c) {
   try {
     // Primary model with backoff retries (rides out transient 429/529 overloads),
     // then the fast fallback model with its own retries, so a busy provider
-    // self-heals instead of taking the coach offline mid-draft.
-    let upstream = await callWithRetry(primary, wantStream, 3);
-    if (!upstream || !upstream.ok) {
-      const fb = await callWithRetry(fallbackModel, wantStream, 2);
-      if (fb && fb.ok) {
-        if (wantStream) return streamResponse(fb, provider, c);
-        return json({ text: readText(await fb.json()) }, 200, c);
-      }
-      const j = upstream ? await upstream.json().catch(() => ({})) : {};
-      const msg = (j.error && j.error.message) || 'Provider unavailable';
-      const overloaded = /overload/i.test(msg) || (upstream && (upstream.status === 529 || upstream.status === 429));
-      return json({ error: overloaded ? 'The Value Coach is in high demand right now. Wait a few seconds and ask again.' : msg, retryable: !!overloaded }, overloaded ? 503 : 502, c);
+    // self-heals instead of taking the coach offline mid-draft. Streamed
+    // attempts only count as successful once the first token arrives (see
+    // callWithRetry/primeStream), and empty non-stream completions fall
+    // through to the fallback model the same way.
+    const finish = async ({ resp, primed }) => {
+      if (wantStream) return streamResponse(resp, provider, c, primed);
+      const t = readText(await resp.json().catch(() => ({})));
+      return t ? json({ text: t }, 200, c) : null;
+    };
+    const first = await callWithRetry(primary, wantStream, 3);
+    if (first.resp && first.resp.ok && (!wantStream || first.primed)) {
+      const out = await finish(first);
+      if (out) return out;
     }
-    if (wantStream) return streamResponse(upstream, provider, c);
-    return json({ text: readText(await upstream.json()) }, 200, c);
+    const fb = await callWithRetry(fallbackModel, wantStream, 2);
+    if (fb.resp && fb.resp.ok && (!wantStream || fb.primed)) {
+      const out = await finish(fb);
+      if (out) return out;
+    }
+    const upstream = first.resp;
+    const j = upstream ? await upstream.json().catch(() => ({})) : {};
+    const msg = (j.error && j.error.message) || 'Provider unavailable';
+    const overloaded = /overload/i.test(msg) || (upstream && (upstream.status === 529 || upstream.status === 429));
+    return json({ error: overloaded ? 'The Value Coach is in high demand right now. Wait a few seconds and ask again.' : msg, retryable: !!overloaded }, overloaded ? 503 : 502, c);
   } catch (e) {
     return json({ error: String(e) }, 500, c);
   }
+}
+
+// Reads an upstream SSE body until the first content token arrives, returning
+// the reader plus the chunks already consumed so streamResponse can replay
+// them. Returns null if the stream carries an error event, ends, or stalls
+// before any content — the caller treats that as a failed attempt and retries
+// instead of forwarding a token-less stream to the browser.
+async function primeStream(resp, provider) {
+  let reader;
+  try { reader = resp.body.getReader(); } catch (e) { return null; }
+  const dec = new TextDecoder();
+  const chunks = [];
+  let seen = '';
+  let timer = null;
+  try {
+    const timeout = new Promise(resolve => { timer = setTimeout(() => resolve({ timedOut: true }), 15000); });
+    while (true) {
+      const r = await Promise.race([reader.read(), timeout]);
+      if (r.timedOut || r.done) break;
+      chunks.push(r.value);
+      seen += dec.decode(r.value, { stream: true });
+      const hasText = provider === 'anthropic'
+        ? seen.indexOf('content_block_delta') >= 0
+        : /"delta"\s*:\s*\{[^}]*"content"/.test(seen);
+      if (hasText) { clearTimeout(timer); return { reader, chunks }; }
+      if (provider === 'anthropic' && /"type"\s*:\s*"error"/.test(seen)) break;
+    }
+  } catch (e) {}
+  if (timer) clearTimeout(timer);
+  try { reader.cancel(); } catch (e) {}
+  return null;
 }
 
 async function verifyStripeSig(payload, header, secret) {
@@ -1719,28 +1769,36 @@ async function verifyTurnstile(secret, token, ip) {
   return !!j.success;
 }
 
-function streamResponse(upstream, provider, c) {
-  const reader = upstream.body.getReader();
+function streamResponse(upstream, provider, c, primed) {
+  const reader = (primed && primed.reader) || upstream.body.getReader();
+  const pre = primed && primed.chunks ? primed.chunks.slice() : [];
   const dec = new TextDecoder(); const enc = new TextEncoder();
   let buf = '';
   const stream = new ReadableStream({
+    // pull must make progress (enqueue or close) before returning: a pull that
+    // resolves without enqueueing anything is not reliably re-invoked, so an
+    // upstream chunk carrying only non-delta events (message_start, ping, …)
+    // would otherwise stall the stream forever. Loop until we have output.
     async pull(controller) {
-      const { done, value } = await reader.read();
-      if (done) { controller.enqueue(enc.encode('data: [DONE]\n\n')); controller.close(); return; }
-      buf += dec.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, idx).trim(); buf = buf.slice(idx + 1);
-        if (!line.startsWith('data:')) continue;
-        const data = line.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const j = JSON.parse(data);
-          let delta = '';
-          if (provider === 'anthropic') { if (j.type === 'content_block_delta' && j.delta && j.delta.text) delta = j.delta.text; }
-          else { delta = (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) || ''; }
-          if (delta) controller.enqueue(enc.encode('data: ' + JSON.stringify(delta) + '\n\n'));
-        } catch (e) {}
+      while (true) {
+        const { done, value } = pre.length ? { done: false, value: pre.shift() } : await reader.read();
+        if (done) { controller.enqueue(enc.encode('data: [DONE]\n\n')); controller.close(); return; }
+        buf += dec.decode(value, { stream: true });
+        let idx, wrote = false;
+        while ((idx = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, idx).trim(); buf = buf.slice(idx + 1);
+          if (!line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const j = JSON.parse(data);
+            let delta = '';
+            if (provider === 'anthropic') { if (j.type === 'content_block_delta' && j.delta && j.delta.text) delta = j.delta.text; }
+            else { delta = (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) || ''; }
+            if (delta) { controller.enqueue(enc.encode('data: ' + JSON.stringify(delta) + '\n\n')); wrote = true; }
+          } catch (e) {}
+        }
+        if (wrote) return;
       }
     },
     cancel() { try { reader.cancel(); } catch (e) {} },
