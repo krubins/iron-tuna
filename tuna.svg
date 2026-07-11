@@ -105,8 +105,8 @@
   <path d="M266 276 C 330 296, 420 312, 510 314 C 462 336, 372 342, 318 326 C 292 314, 274 294, 262 284 Z"
         fill="url(#fin)" stroke="#141d27" stroke-width="7" stroke-linejoin="round"/>
 
-  <!-- mouth -->
-  <path d="M36 292 C 64 302, 90 308, 112 310" fill="none" stroke="#141d27" stroke-width="6" stroke-linecap="round"/>
+  <!-- mouth (thick enough to survive header-size downscaling) -->
+  <path d="M34 291 C 66 304, 98 311, 128 313" fill="none" stroke="#10181f" stroke-width="11" stroke-linecap="round"/>
 
   <!-- eye -->
   <circle cx="144" cy="250" r="33" fill="#1a232e"/>
