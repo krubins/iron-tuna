@@ -10924,7 +10924,7 @@ function CheatHeader({
     style: {
       color: 'var(--text-muted)'
     }
-  }, "(starters spend $", wiPlan.plannedStarterCost, " of $", wiPlan.budgetRemaining, "; the rest of the lineup is rebuilt to fit)"), wiPlan.feasible === false ? React.createElement("span", {
+  }, "(starters spend $", wiPlan.plannedStarterCost, " of $", wiPlan.budgetRemaining, ", leaving $", Math.max(0, wiPlan.budgetRemaining - wiPlan.plannedStarterCost), " for your bench; the rest of the lineup is rebuilt to fit)"), wiPlan.feasible === false ? React.createElement("span", {
     style: {
       color: 'var(--danger)'
     }
@@ -14278,8 +14278,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   });
   const alloc = config.strategy?.allocation ?? 0.55;
   const benchShare = alloc * 0.35;
-  const anchorActive = !!(forcedPrices && Object.keys(forcedPrices).length);
-  const extraBench = anchorActive || noBench ? 0 : Math.round(benchShare * R);
+  const extraBench = noBench ? 0 : Math.round(benchShare * R);
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = 0.30 + conc * 0.55;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);

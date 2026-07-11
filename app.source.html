@@ -4764,7 +4764,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
             })}
             {wiActive && wiPlan && (
               <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                <div><b style={{ color: 'var(--gold-text)' }}>{wiModelLabel}</b> with {activeAnchors.length === 1 ? 'this pick' : 'these picks'}: <b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> <span style={{ color: 'var(--text-muted)' }}>(starters spend ${wiPlan.plannedStarterCost} of ${wiPlan.budgetRemaining}; the rest of the lineup is rebuilt to fit)</span>{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · these prices bust your budget, lower them</span> : null}.</div>
+                <div><b style={{ color: 'var(--gold-text)' }}>{wiModelLabel}</b> with {activeAnchors.length === 1 ? 'this pick' : 'these picks'}: <b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> <span style={{ color: 'var(--text-muted)' }}>(starters spend ${wiPlan.plannedStarterCost} of ${wiPlan.budgetRemaining}, leaving ${Math.max(0, wiPlan.budgetRemaining - wiPlan.plannedStarterCost)} for your bench; the rest of the lineup is rebuilt to fit)</span>{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · these prices bust your budget, lower them</span> : null}.</div>
                 <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{wiPlan.slots.map((s, i) => <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, background: 'var(--bg-elev)', border: `1px solid ${s.player && anchorIds.has(String(s.player.id)) ? 'var(--positive)' : 'var(--border-subtle)'}`, borderRadius: 8, padding: '1px 6px' }}>{s.label}: {s.player ? s.player.name : '–'}{s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : ''}</span>)}</div>
               </div>
             )}
@@ -6012,8 +6012,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   const alloc = config.strategy?.allocation ?? 0.55;
   // Right of center reserves extra budget for quality bench depth.
   const benchShare = alloc * 0.35; // starters-vs-bench axis: up to 35% of budget held for bench
-  const anchorActive = !!(forcedPrices && Object.keys(forcedPrices).length);
-  const extraBench = (anchorActive || noBench) ? 0 : Math.round(benchShare * R);
+  const extraBench = noBench ? 0 : Math.round(benchShare * R);
   // Left end allows concentrating starter spend (stars & scrubs); center+ balances it.
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = 0.30 + conc * 0.55; // concentration axis: even spread (0.30) -> top-heavy (0.85)
