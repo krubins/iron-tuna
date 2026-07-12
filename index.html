@@ -6623,7 +6623,6 @@ function QuickDraftModal({
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
   const [jab, setJab] = useState(null);
   const [schedOpen, setSchedOpen] = useState(false);
-  const _openedAt = useRef(Date.now());
   const _jabPool = typeof playerJabs === 'function' ? playerJabs(player, players, config) : [];
   const _rollJab = () => { if (_jabPool.length) setJab(_jabPool[Math.floor(Math.random() * _jabPool.length)]); };
   const projVal = player.marketValue != null ? player.marketValue : player.auctionValue;
@@ -6760,12 +6759,7 @@ function QuickDraftModal({
   }, _schRated ? "Matchups vs " + player.position + " (2025 fantasy points allowed): dark green = 5 easiest, light green = next 5, pink = 6-10 toughest, dark red = 5 toughest." : "Matchup ratings not available for " + player.position + "."))) : null;
   return React.createElement("div", {
     className: "modal-bg modal-left",
-    onClick: () => {
-      // A touch tap opens this card on pointerup; the browser's synthesized
-      // click then lands on this backdrop and would close it instantly.
-      if (Date.now() - _openedAt.current < 500) return;
-      onClose();
-    }
+    onClick: onClose
   }, React.createElement("div", {
     className: "modal",
     style: {
@@ -8840,8 +8834,7 @@ function TierView({
   pointsMode,
   seasonGames,
   onNominate,
-  onUpdateStrategy,
-  onViewCard
+  onUpdateStrategy
 }) {
   const [position, setPosition] = useState('RB');
   const tiers = useMemo(() => buildTiers(players, position), [players, position]);
@@ -8887,10 +8880,7 @@ function TierView({
         key: p.id,
         className: `tier-player ${isDrafted ? 'drafted' : ''}`
       }, React.createElement("span", {
-        className: "tier-player-name",
-        onClick: onViewCard ? () => onViewCard(p) : undefined,
-        style: onViewCard ? { cursor: 'pointer' } : undefined,
-        title: onViewCard ? "View player card" : undefined
+        className: "tier-player-name"
       }, p.name), React.createElement("span", {
         className: "tier-player-team"
       }, p.team), React.createElement("span", {
@@ -10059,31 +10049,27 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jul 11, 2026',
+  updated: 'Jul 12, 2026',
   current: [
   {
-    label: 'Brown becomes Pats WR1',
-    text: 'A.J. Brown was traded from the Eagles to New England to reunite with HC Mike Vrabel and is immediately the Patriots top receiver. Pay up for him as a true WR1 anchor even in a brand new offense.'
+    label: 'Brown-Maye pay up',
+    text: 'A.J. Brown is up to a top-16 ADP after the June trade to New England. He is Drake Maye\'s clear alpha, so budget true WR1 money for Brown and treat the discount window as closed.'
   },
   {
-    label: 'Kittle Achilles watch',
-    text: 'George Kittle is rehabbing a torn Achilles and says he is on track for Week 1, but nothing is certain. Draft him as a high upside TE1 but temper your bid given real setback risk.'
+    label: 'Love worth the price',
+    text: 'Arizona took Jeremiyah Love No. 3 overall and gave him record rookie RB guarantees. That capital signals a feature role, pay up for Love and fade James Conner and Tyler Allgeier, whose ADPs keep sliding.'
   },
   {
-    label: 'Tuten in a 3-man mix',
-    text: 'Bhayshul Tuten has an edge over Chris Rodriguez in Jacksonville after a strong offseason, but HC Liam Coen says no one has won the RB job and a three back rotation looks likely. Do not pay a lead back price.'
+    label: 'Mitchell camp riser',
+    text: 'Adonai Mitchell is the biggest Underdog ADP riser of the past month, 18.02 to 15.05, and is listed as a Jets starter opposite Garrett Wilson. Buy now, his auction price should keep climbing through camp.'
   },
   {
-    label: 'Skattebo injury discount',
-    text: 'Cam Skattebo is ticketed as the Giants lead back after a severe ankle dislocation and fibula fracture last season. He is trending toward camp availability, worth a bid but not top-20 RB money yet.'
+    label: 'White cheap PPR role',
+    text: 'Rachaad White has the pass catching back role in Washington with Jayden Daniels, his old college QB. He still costs about a Round 10 pick, take him late for a dollar or two as a PPR floor play.'
   },
   {
-    label: 'White finds a role in DC',
-    text: 'Rachaad White signed with Washington for the pass catching back role behind Jacory Croskey-Merritt. That role alone supports his Round 10 ADP, take him late as a PPR value.'
-  },
-  {
-    label: 'Mitchell now WR3 in NY',
-    text: 'Adonai Mitchell has slid to third on the Jets receiver depth chart behind Garrett Wilson after the team added more pass catchers this offseason. Fade him as a reliable starter, treat him as a cheap late dart throw.'
+    label: 'Denver stays a committee',
+    text: 'The Broncos will rotate J.K. Dobbins, RJ Harvey and rookie Jonah Coleman, all going after pick 85. Harvey\'s receiving role gives him the safest floor, prefer him cheap and skip lead back money here.'
   }
   ],
   library: [{
@@ -11271,47 +11257,10 @@ function Cheatsheet({
     day: 'numeric',
     year: 'numeric'
   });
-  function rowTapAction(id) {
-    const _di = draftInfoMap[id];
-    if (_di) {
-      const pl = (players || []).find(x => x.id === id);
-      const nm = pl ? pl.name : 'This player';
-      if (onUnassignPlayer && window.confirm(`${nm} is on ${_di.team}${_di.price ? ` for $${_di.price}` : ''}. Remove him and return him to the available player pool?`)) onUnassignPlayer(id);
-    } else if (mode === 'live') {
-      if (onAssignPlayer) {
-        const pl = (players || []).find(x => x.id === id);
-        if (pl) onAssignPlayer(pl);
-      }
-    } else {
-      onToggleTarget && onToggleTarget(id);
-    }
-  }
   function startDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
+    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
-    if (e.pointerType === 'touch') {
-      // Touch: reordering lives on the grip handle, and scrolling must stay
-      // native (rows are touch-action: pan-y). Only detect a clean tap here —
-      // a scroll fires pointercancel (or moves past the slop) and does nothing.
-      const sy = e.clientY, sx = e.clientX;
-      let moved = false;
-      const onMove = ev => {
-        if (Math.abs(ev.clientY - sy) > 8 || Math.abs(ev.clientX - sx) > 8) moved = true;
-      };
-      const finish = () => {
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onTapUp);
-        document.removeEventListener('pointercancel', finish);
-      };
-      const onTapUp = () => {
-        finish();
-        if (!moved) rowTapAction(id);
-      };
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onTapUp);
-      document.addEventListener('pointercancel', finish);
-      return;
-    }
     const el = rowRefs.current[id];
     if (!el) return;
     e.preventDefault();
@@ -11366,7 +11315,19 @@ function Cheatsheet({
         clear();
         if (tid && tid !== id) onRankReorder(id, tid);
       } else {
-        rowTapAction(id);
+        const _di = draftInfoMap[id];
+        if (_di) {
+          const pl = (players || []).find(x => x.id === id);
+          const nm = pl ? pl.name : 'This player';
+          if (onUnassignPlayer && window.confirm(`${nm} is on ${_di.team}${_di.price ? ` for $${_di.price}` : ''}. Remove him and return him to the available player pool?`)) onUnassignPlayer(id);
+        } else if (mode === 'live') {
+          if (onAssignPlayer) {
+            const pl = (players || []).find(x => x.id === id);
+            if (pl) onAssignPlayer(pl);
+          }
+        } else {
+          onToggleTarget && onToggleTarget(id);
+        }
       }
     };
     document.addEventListener('pointermove', onMove);
@@ -14928,33 +14889,9 @@ function PlayersRail({
   }, [focusPlayer]);
   function startRankDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
+    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
     if (e.target.closest && e.target.closest('.rr-name')) return;
-    if (e.pointerType === 'touch') {
-      // Touch: keep native pan-y scrolling; a clean tap opens the player card,
-      // a scroll (pointercancel or movement past the slop) does nothing.
-      const sy = e.clientY, sx = e.clientX;
-      let moved = false;
-      const onMove = ev => {
-        if (Math.abs(ev.clientY - sy) > 8 || Math.abs(ev.clientX - sx) > 8) moved = true;
-      };
-      const finish = () => {
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onTapUp);
-        document.removeEventListener('pointercancel', finish);
-      };
-      const onTapUp = () => {
-        finish();
-        if (!moved) {
-          const __pl = (players || []).find(x => x.id === id);
-          if (__pl) setQuick(__pl);
-        }
-      };
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onTapUp);
-      document.addEventListener('pointercancel', finish);
-      return;
-    }
     const info = rowRefs.current[id];
     if (!info || !info.el) return;
     e.preventDefault();
@@ -21491,8 +21428,7 @@ function App() {
         pointsMode: pointsMode,
         seasonGames: SEASON_GAMES,
         onNominate: setCurrentNomination,
-        onUpdateStrategy: handleUpdateStrategy,
-        onViewCard: setAssignPlayer
+        onUpdateStrategy: handleUpdateStrategy
       });
     }
     if (view === 'mock') {
