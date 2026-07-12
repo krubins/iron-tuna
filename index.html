@@ -1070,6 +1070,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .col-toggle.soft-1517.on { background: rgba(176,124,255,0.16); border-color: #b07cff; color: #b07cff; }
 .cheat-ppg { font-family: var(--font-mono); font-size: 11px; text-align: right; color: #7fa6c9; min-width: 20px; }
 .cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
+.cheat-cost.price-shift-up { color: #e0a83c !important; }
+.cheat-cost.price-shift-down { color: #5aa9ff !important; }
 .col-toggle.price-clear { color: var(--gold-text); border-color: var(--gold-text); }
 .cheat-sep { width: 1px; align-self: stretch; background: var(--border-strong); margin: 0 4px; }
 .cheat-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
@@ -2855,30 +2857,84 @@ function applyPriceOverrides(players, overrides, draftedIds, config) {
   if (!overrides || Object.keys(overrides).length === 0) return players;
   const minBid = config.valuation.minBid;
   const di = draftedIds || new Set();
-  let delta = 0;
+  const next = new Map();
+  players.forEach(p => next.set(p.id, p.marketValue != null ? p.marketValue : p.auctionValue != null ? p.auctionValue : minBid));
   const overIds = new Set();
+  const moves = [];
   players.forEach(p => {
-    if (!di.has(p.id) && overrides[p.id] != null) {
-      const cur = p.marketValue != null ? p.marketValue : p.auctionValue || minBid;
-      delta += Math.max(minBid, overrides[p.id]) - cur;
-      overIds.add(p.id);
-    }
+    if (di.has(p.id) || overrides[p.id] == null) return;
+    const cur = next.get(p.id);
+    const want = Math.max(minBid, Math.round(overrides[p.id]));
+    if (want !== cur) moves.push({
+      pos: p.position,
+      delta: want - cur
+    });
+    next.set(p.id, want);
+    overIds.add(p.id);
   });
   const pool = players.filter(p => !di.has(p.id) && !overIds.has(p.id));
-  const totalHead = pool.reduce((sum, p) => sum + Math.max(0, (p.marketValue != null ? p.marketValue : minBid) - minBid), 0);
+  const POS_AFFINITY = 4;
+  moves.forEach(({
+    pos,
+    delta
+  }) => {
+    // Raising a price drains whole dollars from the rest of the board (dir -1);
+    // lowering one frees dollars that flow back out (dir +1). Same-position
+    // players absorb POS_AFFINITY times their share, weighted by headroom over
+    // the min bid, so the money moves among comparable players first. Largest-
+    // remainder rounding keeps the total pool exact; the loop re-runs when a
+    // player bottoms out at the min bid and his share must go elsewhere.
+    let remaining = Math.abs(delta);
+    const dir = delta > 0 ? -1 : 1;
+    let guard = 0;
+    while (remaining > 0 && guard++ < 50) {
+      const weights = pool.map(p => {
+        const head = next.get(p.id) - minBid;
+        if (dir < 0 && head <= 0) return 0;
+        return (dir < 0 ? head : head + 1) * (p.position === pos ? POS_AFFINITY : 1);
+      });
+      const totalW = weights.reduce((a, b) => a + b, 0);
+      if (totalW <= 0) break;
+      let allocated = 0;
+      const alloc = new Array(pool.length).fill(0);
+      const fracs = [];
+      pool.forEach((p, i) => {
+        if (!weights[i]) return;
+        const exact = remaining * weights[i] / totalW;
+        let n = Math.floor(exact);
+        if (dir < 0) n = Math.min(n, next.get(p.id) - minBid);
+        alloc[i] = n;
+        allocated += n;
+        fracs.push([exact - Math.floor(exact), i]);
+      });
+      fracs.sort((a, b) => b[0] - a[0]);
+      for (let k = 0; k < fracs.length && allocated < remaining; k++) {
+        const i = fracs[k][1];
+        if (dir < 0 && next.get(pool[i].id) - minBid - alloc[i] <= 0) continue;
+        alloc[i] += 1;
+        allocated += 1;
+      }
+      if (allocated <= 0) break;
+      pool.forEach((p, i) => {
+        if (alloc[i]) next.set(p.id, next.get(p.id) + dir * alloc[i]);
+      });
+      remaining -= allocated;
+    }
+  });
   return players.map(p => {
     if (di.has(p.id)) return p;
-    if (overrides[p.id] != null) return {
+    if (overIds.has(p.id)) return {
       ...p,
-      marketValue: Math.max(minBid, Math.round(overrides[p.id])),
+      marketValue: next.get(p.id),
       priceOverridden: true
     };
-    if (delta === 0 || totalHead <= 0) return p;
-    const head = Math.max(0, (p.marketValue != null ? p.marketValue : minBid) - minBid);
-    const adj = (p.marketValue != null ? p.marketValue : minBid) - delta * (head / totalHead);
+    const cur = p.marketValue != null ? p.marketValue : p.auctionValue != null ? p.auctionValue : minBid;
+    const nv = next.get(p.id);
+    if (nv === cur) return p;
     return {
       ...p,
-      marketValue: Math.max(minBid, Math.round(adj))
+      marketValue: nv,
+      priceShift: nv - cur
     };
   });
 }
@@ -11833,13 +11889,13 @@ function Cheatsheet({
       title: `Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`
     }, "Soft 15-17") : null, toughSched && toughSched.early && showCols.tough13 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 1-3 for ${p.position}: ${toughSched.early.opps.join(', ')}` }, "Tough 1-3") : null, toughSched && toughSched.late && showCols.tough1517 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 15-17 for ${p.position}: ${toughSched.late.opps.join(', ')}` }, "Tough 15-17") : null, volFlag ? React.createElement("span", { className: "cheat-soft", style: { color: volFlag.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: volFlag.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: volFlag.title }, volFlag.t) : null, olF ? React.createElement("span", { className: "cheat-soft", style: { color: olF.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: olF.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: olF.title }, olF.t) : null, ageF ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: ageF.title }, ageF.t) : null)), activeCols.map(([k]) => k === 'proj' ? React.createElement("span", {
       key: k,
-      className: `cheat-cost${p.priceOverridden ? ' price-override' : ''}`,
-      title: "Projected price, click to set your own; the rest re-prices to keep the pool constant",
+      className: `cheat-cost${p.priceOverridden ? ' price-override' : p.priceShift ? p.priceShift > 0 ? ' price-shift-up' : ' price-shift-down' : ''}`,
+      title: p.priceOverridden ? "Your custom price — click to change, leave blank to reset" : p.priceShift ? `Re-priced ${p.priceShift > 0 ? '+' : '−'}$${Math.abs(p.priceShift)} to balance your custom price${Object.keys(priceOverrides || {}).length > 1 ? 's' : ''} — dollars move among comparable players to keep the auction pool constant` : "Projected price, click to set your own; the rest re-prices to keep the pool constant",
       onPointerDown: e => e.stopPropagation(),
       onClick: e => {
         e.stopPropagation();
         if (onSetPrice) {
-          const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost));
+          const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The dollars come from (or go to) comparable players — ${p.position}s first — so the auction pool stays constant. Leave blank to reset.`, String(cost));
           if (v !== null) onSetPrice(p.id, v);
         }
       },
