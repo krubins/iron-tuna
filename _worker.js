@@ -1661,6 +1661,8 @@ async function handleCoach(request, env, c) {
   try { body = await request.json(); } catch (e) { return json({ error: 'Bad JSON' }, 400, c); }
   const system = String(body.system || '').slice(0, 40000);
   const messages = (Array.isArray(body.messages) ? body.messages : []).slice(-12);
+  while (messages.length && messages[0].role !== 'user') messages.shift(); // Anthropic rejects a conversation that opens with an assistant turn
+  if (!messages.length) return json({ error: 'No user message' }, 400, c);
   const wantStream = !!body.stream;
 
   if (env.TURNSTILE_SECRET) {
