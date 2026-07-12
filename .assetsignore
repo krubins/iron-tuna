@@ -7,5 +7,4 @@ package-lock.json
 node_modules
 DEPLOY.md
 HANDOFF.md
-app.source.html
 tools

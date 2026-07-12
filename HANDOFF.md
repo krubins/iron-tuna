@@ -24,15 +24,12 @@ This document is everything you need to pick the project up in Claude Code (or a
 |---|---|
 | Frontend | A **single file, `index.html`** (~1.1 MB). React + ReactDOM loaded from CDN. The app script is **pre-compiled JS** (`<script type="module">`, `React.createElement` calls — no in-browser Babel anymore). **`index.html` is the authoritative, deployed file — edit it directly.** |
 
-> **⚠️ `app.source.html` is a STALE partial JSX copy — do NOT "rebuild" `index.html` from it.**
-> It has drifted badly since the repo import: it completely lacks the snake-draft hub
-> (`HubLanding`), `MockSnakeDraft`, `WillHeBeThere`, the full 18-week `SCHEDULE_2026` +
-> `FullScheduleModal` (commit `007eba0` touched only `index.html`), `playerJabs`/`playerNews`,
-> best-ball support, `AffiliatePortal`, the `iron_tuna_values_v1` snapshot writer,
-> the projections re-baseline prompt, `healRosterPositions`, and more (~35 top-level
-> symbols). Compiling it would silently delete all of those shipped features.
-> Either regenerate it from the current build or delete it; until then treat `index.html`
-> as the single source of truth and mirror fixes into `app.source.html` only opportunistically. |
+> **There is no separate JSX "source" file.** `index.html` **is** the source — edit its
+> `<script type="module">` block directly. (A stale `app.source.html` used to sit alongside
+> it; it had drifted ~35 top-level symbols behind the real build — the whole snake-draft hub,
+> mock snake draft, full 18-week schedule, best ball, affiliate portal, etc. — so "rebuilding"
+> from it would have silently deleted shipped features. It was deleted in July 2026; recover it
+> from git history only if you intend to regenerate a faithful source, never to rebuild from.) |
 | Styling | One inline `<style>` block in `index.html` (starts at **line 35**). No Tailwind, no CSS modules, no preprocessor. |
 | Backend | **`_worker.js`** — a Cloudflare Worker that (a) serves the static files and (b) proxies two API routes: `/api/coach` (LLM "Gameday Navigator") and `/api/projections` (player projection data kept server-side). |
 | Data | Authoritative player projections live **inside `_worker.js`** (lightly obfuscated) and are fetched at runtime; `index.html` carries a client-side fallback/last-year stat-line remap. |
