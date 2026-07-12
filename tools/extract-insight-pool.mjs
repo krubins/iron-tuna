@@ -37,11 +37,20 @@ function extractPage(format, file) {
     }
     return last;
   });
+  // The quantified "Projected effect:" line every insight carries — this is the hard number
+  // that goes in the tweet (📊 line). Captured up to the <span class="ebar"> visual.
+  const stats = [...html.matchAll(/<p class="statline">Projected effect:([^<]*)</g)].map((m) => {
+    let s = unescape(m[1]).trim();
+    s = s.replace(/\s*—\s*/g, ', '); // no em dashes in anything we post (HANDOFF §10 style rule)
+    if (s.length > 110) s = s.slice(0, 100).replace(/\s+\S*$/, '') + '…';
+    return s;
+  });
   return titles.map((title, i) => ({
     id: `${slug}-${i}`,
     format,
     title,
     play: plays[i] || '',
+    stat: stats[i] || '',
     url: `https://irontuna.com/${slug}`,
     date,
   }));
