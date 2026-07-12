@@ -11119,7 +11119,7 @@ function CheatHeader({
     style: {
       color: 'var(--text-muted)'
     }
-  }, "(starters spend $", wiPlan.plannedStarterCost, " of $", wiPlan.budgetRemaining, "; the rest of the lineup is rebuilt to fit)"), wiPlan.feasible === false ? React.createElement("span", {
+  }, "(starters spend $", wiPlan.plannedStarterCost, " of $", wiPlan.budgetRemaining, ", leaving $", Math.max(0, wiPlan.budgetRemaining - wiPlan.plannedStarterCost), " for your bench; the rest of the lineup is rebuilt to fit)"), wiPlan.feasible === false ? React.createElement("span", {
     style: {
       color: 'var(--danger)'
     }
@@ -11394,8 +11394,11 @@ function Cheatsheet({
   const _svC = p => boardSortKey === 'proj' ? (p.marketValue ?? p.auctionValue ?? 0) : boardSortKey === 'val' ? (p.auctionValue ?? 0) : (p.personalValue ?? p.marketValue ?? p.auctionValue ?? 0);
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
-  Object.values(byPos).forEach(a => a.sort((x, y) => _isSnakeCS ? ((y.projectedPoints || 0) - (x.projectedPoints || 0)) : (_svC(y) - _svC(x))));
-  byPos.ALL = (players || []).slice().sort((a, b) => _isSnakeCS ? ((b.auctionValue != null ? b.auctionValue : b.projectedPoints || 0) - (a.auctionValue != null ? a.auctionValue : a.projectedPoints || 0)) : (_svC(b) - _svC(a)));
+  // Tie-break equal dollar values by projected points: drag-to-rerank reorders the
+  // points ladder, and without this tiebreak same-$ players (the whole tail of every
+  // position) sort in arbitrary dataset order and reranks never show up.
+  Object.values(byPos).forEach(a => a.sort((x, y) => _isSnakeCS ? ((y.projectedPoints || 0) - (x.projectedPoints || 0)) : ((_svC(y) - _svC(x)) || ((y.projectedPoints || 0) - (x.projectedPoints || 0)))));
+  byPos.ALL = (players || []).slice().sort((a, b) => _isSnakeCS ? ((b.auctionValue != null ? b.auctionValue : b.projectedPoints || 0) - (a.auctionValue != null ? a.auctionValue : a.projectedPoints || 0)) : ((_svC(b) - _svC(a)) || ((b.projectedPoints || 0) - (a.projectedPoints || 0))));
   const draftInfoMap = useMemo(() => {
     const m = {};
     const tn = new Map((teams || []).map(t => [t.id, t]));
@@ -14489,8 +14492,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   });
   const alloc = config.strategy?.allocation ?? 0.55;
   const benchShare = alloc * 0.35;
-  const anchorActive = !!(forcedPrices && Object.keys(forcedPrices).length);
-  const extraBench = anchorActive || noBench ? 0 : Math.round(benchShare * R);
+  const extraBench = noBench ? 0 : Math.round(benchShare * R);
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = 0.30 + conc * 0.55;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);
