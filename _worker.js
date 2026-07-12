@@ -565,12 +565,27 @@ const X_COMPARISON_AUCTION_POSTS = [
   { id: 'compare-auction-2', type: 'compare', image: '/social/compare-auction.png', text: "Subscription math: $5.99 a month is $72 a year if you forget to cancel, billed whether you draft or not.\n\n💰 Iron Tuna made the opposite bet: $9.99 one time, and you own your custom values and the Value Coach all season. If we don't help you win, that's all we ever get.", cta: 'Custom league values, live re-pricing, and an AI coach for less than two months of the other guys:', url: 'https://irontuna.com/' },
   { id: 'compare-auction-3', type: 'compare', image: '/social/compare-auction.png', text: "A pre-draft cheat sheet is a guess about a room it has never met.\n\n📊 It doesn't know your scoring, your budget, or that a WR just went $14 over value, which shifts the fair price of every receiver left. Iron Tuna recalculates all 408 values live, around YOUR league.", cta: 'Set your scoring once and every number on the sheet becomes yours, not a national average:', url: 'https://irontuna.com/' },
 ];
-// Interleaved so consecutive Wednesdays cycle topics: strategy, coach, compare, strategy, coach, compare, …
+// Mock Auction promos: mock snake drafts are everywhere, a real practice auction room is
+// genuinely rare — that's the differentiation angle. Feature claims below are grounded in the
+// MockAuction component in index.html: N-1 CPU managers (11 in the default 12-team room) drawn
+// from distinct strategy archetypes (Hero RB, Zero RB, Hero WR, Robust RB, Elite TE),
+// auto-nomination of the top remaining player, second-price winning (you pay $1 over the
+// second-highest max), the user's own league budget/roster config, and final standings by
+// projected starting-lineup points once your roster fills. Free behind an email gate.
+const X_MOCK_AUCTION_POSTS = [
+  { id: 'mock-0', type: 'mock', text: "Most managers' first live auction bid of 2026 will be in their REAL draft, with real money and no do-overs.\n\n🏋️ Iron Tuna's free Mock Auction fixes that: 11 CPU managers, live bidding, your league's exact budget and roster. Rehearse draft night before it counts.", cta: 'Your first bidding war of the year should cost you nothing. Run a free mock now:', url: 'https://irontuna.com/auctiondraft' },
+  { id: 'mock-1', type: 'mock', text: "Practice against a room that fights back. Iron Tuna's Mock Auction fields 11 CPU managers running distinct builds: Hero RB, Zero RB, Hero WR, Robust RB, Elite TE.\n\n🤼 Learn how each archetype bids against you BEFORE somebody runs it at you for real money.", cta: 'Every archetype you\'ll face on draft night, ready to spar. Free to run:', url: 'https://irontuna.com/auctiondraft' },
+  { id: 'mock-2', type: 'mock', text: "Auction 101 nobody practices: you don't pay your max bid, you pay $1 more than the second-highest. Iron Tuna's Mock Auction prices every win exactly that way.\n\n💵 Practice finding the line between 'stole him' and 'blew the plan'. Free, in your browser, on your league's settings.", cta: 'Bid discipline is a muscle. The Mock Auction is the gym:', url: 'https://irontuna.com/auctiondraft' },
+  { id: 'mock-3', type: 'mock', text: "A mock without a scoreboard is just clicking. Iron Tuna's Mock Auction finishes the room when your roster fills, then shows final standings by projected starting-lineup points.\n\n📊 You don't just get reps. You find out whether your plan would have WON the room.", cta: 'Practice with a scoreboard. See where you would have placed:', url: 'https://irontuna.com/auctiondraft' },
+  { id: 'mock-4', type: 'mock', text: "Free mock SNAKE drafts are everywhere. A real mock AUCTION room is almost impossible to find.\n\n🐟 Iron Tuna built one: auto-nominations, 11 CPU bidders with different strategies, your exact budget and roster, and final standings when it ends. Free with an email.", cta: 'The rarest practice room in fantasy football, free with an email:', url: 'https://irontuna.com/auctiondraft' },
+];
+// Interleaved so consecutive Wednesdays cycle topics: strategy, coach, compare, mock, strategy, …
 const X_WEDNESDAY_POOL = [];
-for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length, X_COMPARISON_AUCTION_POSTS.length); i++) {
+for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length, X_COMPARISON_AUCTION_POSTS.length, X_MOCK_AUCTION_POSTS.length); i++) {
   if (X_STRATEGY_POSTS[i]) X_WEDNESDAY_POOL.push(X_STRATEGY_POSTS[i]);
   if (X_COACH_POSTS[i]) X_WEDNESDAY_POOL.push(X_COACH_POSTS[i]);
   if (X_COMPARISON_AUCTION_POSTS[i]) X_WEDNESDAY_POOL.push(X_COMPARISON_AUCTION_POSTS[i]);
+  if (X_MOCK_AUCTION_POSTS[i]) X_WEDNESDAY_POOL.push(X_MOCK_AUCTION_POSTS[i]);
 }
 
 // ── Tuesday/Thursday third post: snake-draft "survival odds" feature promo — knowing who'll
