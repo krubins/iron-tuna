@@ -6465,7 +6465,7 @@ function DraftBoard({
     placeholder: "Search by name or team...",
     value: search,
     onChange: e => setSearch(e.target.value)
-  }), _dbFmt === 'snake' && _otc && React.createElement("div", { className: "otc" + (_otc.mine ? " otc-mine" : "") }, React.createElement("span", { className: "otc-dot" }), React.createElement("span", { className: "otc-txt" }, _otc.mine ? ("You\u0027re on the clock · Pick " + _otc.N + " · R" + _otc.r) : ("On the clock: Slot " + _otc.slotOnClock + " · R" + _otc.r + " · you\u0027re up in " + _otc.until + (_otc.until === 1 ? " pick" : " picks")))), false && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setWhbOpen(o => !o) }, "Will he be there?"), whbOpen && React.createElement("div", { className: "whb-panel" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQuery, onChange: e => setWhbQuery(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbRound, onChange: e => setWhbRound(e.target.value) }), whbResult && (whbResult.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResult.err) : whbResult.drafted ? React.createElement("div", { className: "whb-res" }, whbResult.player.name + " is already off the board.") : whbResult.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResult.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResult.odds + "%"), " chance " + whbResult.player.name + " (ADP " + (whbResult.player.adp != null ? Math.round(whbResult.player.adp) : "?") + ") is still on the board at your round " + whbResult.round + " pick (overall #" + whbResult.targetPick + ").")))), _dbFmt === 'auction' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn dlog-btn", onClick: () => setLogOpen(o => !o) }, "Draft log"), logOpen && React.createElement("div", { className: "whb-panel dlog-panel" }, (draftHistory && draftHistory.length) ? React.createElement("div", { className: "dlog-list" }, draftHistory.map((d, i) => { const pl = (players || []).find(p => p.id === d.playerId); const tm = (teams || []).find(t => t.id === d.teamId); return React.createElement("div", { key: i, className: "dlog-row" }, React.createElement("span", { className: "dlog-n" }, i + 1), React.createElement("span", { className: "dlog-pl" }, pl ? pl.name : d.playerId, React.createElement("em", null, pl ? pl.position : d.position)), React.createElement("span", { className: "dlog-tm" }, tm ? tm.name : d.teamId), React.createElement("span", { className: "dlog-pr" }, "$" + d.price)); })) : React.createElement("div", { className: "whb-res" }, "No players have been won yet."))), _dbFmt === 'snake' && React.createElement("button", { className: "pred-toggle" + (showPredicted ? " on" : ""), onClick: () => setShowPredicted(v => !v), title: "Show or hide each team\u2019s projected mock-draft picks" }, showPredicted ? "Predicted picks: On" : "Predicted picks: Off"), _dbFmt === 'snake' && draftHistory && draftHistory.length > 0 && React.createElement("button", { className: "pred-toggle share-grade-btn", title: "Grade your draft and share it", onClick: () => { try { const me = teams.find(t => t.isMine); if (!me) return; const ptsOf = t => { const pr = projByTeam.get(t.id) || {}; return pr.starterPoints || 0; }; const arr = teams.map(t => ptsOf(t)); const mx = Math.max.apply(null, arr), mn = Math.min.apply(null, arr); const myPts = ptsOf(me); const rank = teams.slice().sort((a, b) => ptsOf(b) - ptsOf(a)).findIndex(t => t.isMine) + 1; const pct = mx > mn ? (myPts - mn) / (mx - mn) : 1; const grade = pct >= 0.92 ? 'A' : pct >= 0.8 ? 'A-' : pct >= 0.68 ? 'B+' : pct >= 0.55 ? 'B' : pct >= 0.4 ? 'B-' : 'C'; const txt = 'My Iron Tuna snake draft grades out at ' + grade + ' (' + rank + '/' + teams.length + ', ' + (myPts / (seasonGames || 17)).toFixed(1) + ' pts/gm). Build yours free at irontuna.com'; try { if (typeof ITAnalytics !== 'undefined') ITAnalytics.track('share_grade', { source: 'board', grade: grade }); } catch (er) {} try { const picks = (me.roster || []).slice(0, 4).map(r => { const pp = playerMap.get(r.playerId); return (pp ? pp.name : r.playerId) + ' (' + r.position + ')'; }); const card = buildGradeCard({ grade: grade, rank: rank, total: teams.length, pts: myPts / (seasonGames || 17), title: 'Snake Draft', picks: picks }); shareGradeCard(card, txt); } catch (er2) { if (navigator.share) { navigator.share({ title: 'Iron Tuna Draft Grade', text: txt, url: 'https://irontuna.com/snakedraft' }).catch(function () {}); } else if (navigator.clipboard) { navigator.clipboard.writeText(txt); } } } catch (e) {} } }, "\ud83d\udce3 Grade & Share"), React.createElement("div", {
+  }), _dbFmt === 'snake' && _otc && React.createElement("div", { className: "otc" + (_otc.mine ? " otc-mine" : "") }, React.createElement("span", { className: "otc-dot" }), React.createElement("span", { className: "otc-txt" }, _otc.mine ? ("You\u0027re on the clock · Pick " + _otc.N + " · R" + _otc.r) : ("On the clock: Slot " + _otc.slotOnClock + " · R" + _otc.r + " · you\u0027re up in " + _otc.until + (_otc.until === 1 ? " pick" : " picks")))), false && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn", onClick: () => setWhbOpen(o => !o) }, "Will he be there?"), whbOpen && React.createElement("div", { className: "whb-panel" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQuery, onChange: e => setWhbQuery(e.target.value) }), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbRound, onChange: e => setWhbRound(e.target.value) }), whbResult && (whbResult.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResult.err) : whbResult.drafted ? React.createElement("div", { className: "whb-res" }, whbResult.player.name + " is already off the board.") : whbResult.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResult.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResult.odds + "%"), " chance " + whbResult.player.name + " (ADP " + (whbResult.player.adp != null ? Math.round(whbResult.player.adp) : "?") + ") is still on the board at your round " + whbResult.round + " pick (overall #" + whbResult.targetPick + ").")))), _dbFmt === 'auction' && React.createElement("div", { className: "whb" }, React.createElement("button", { className: "whb-btn dlog-btn", onClick: () => setLogOpen(o => !o) }, "Draft log"), logOpen && React.createElement("div", { className: "whb-panel dlog-panel" }, (draftHistory && draftHistory.length) ? React.createElement("div", { className: "dlog-list" }, draftHistory.map((d, i) => { const pl = (players || []).find(p => p.id === d.playerId); const tm = (teams || []).find(t => t.id === d.teamId); return React.createElement("div", { key: i, className: "dlog-row" }, React.createElement("span", { className: "dlog-n" }, i + 1), React.createElement("span", { className: "dlog-pl" }, pl ? pl.name : d.playerId, React.createElement("em", null, pl ? pl.position : d.position)), React.createElement("span", { className: "dlog-tm" }, tm ? tm.name : d.teamId), React.createElement("span", { className: "dlog-pr" }, "$" + d.price)); })) : React.createElement("div", { className: "whb-res" }, "No players have been won yet."))), _dbFmt === 'snake' && React.createElement("button", { className: "pred-toggle" + (showPredicted ? " on" : ""), onClick: () => setShowPredicted(v => !v), title: "Show or hide each team\u2019s projected mock-draft picks" }, showPredicted ? "Predicted picks: On" : "Predicted picks: Off"), _dbFmt === 'snake' && draftHistory && draftHistory.length > 0 && React.createElement("button", { className: "pred-toggle share-grade-btn", title: "Grade your draft and share it", onClick: () => { try { const me = teams.find(t => t.isMine); if (!me) return; const G = seasonGames || 17; const pmap = new Map((players || []).map(p => [p.id, p])); const rosterOf = t => (t.roster || []).map(r => { const p = pmap.get(r.playerId); return p ? { ...p, position: r.position || p.position } : null; }).filter(Boolean); const ptsOf = t => mockStarterPts(rosterOf(t), config, G) * G; const arr = teams.map(t => ptsOf(t)); const mx = Math.max.apply(null, arr), mn = Math.min.apply(null, arr); const myPts = ptsOf(me); const rank = teams.slice().sort((a, b) => ptsOf(b) - ptsOf(a)).findIndex(t => t.isMine) + 1; const pct = mx > mn ? (myPts - mn) / (mx - mn) : 1; const grade = pct >= 0.92 ? 'A' : pct >= 0.8 ? 'A-' : pct >= 0.68 ? 'B+' : pct >= 0.55 ? 'B' : pct >= 0.4 ? 'B-' : 'C'; const txt = 'My Iron Tuna snake draft grades out at ' + grade + ' (' + rank + '/' + teams.length + ', ' + (myPts / (seasonGames || 17)).toFixed(1) + ' pts/gm). Build yours free at irontuna.com'; try { if (typeof ITAnalytics !== 'undefined') ITAnalytics.track('share_grade', { source: 'board', grade: grade }); } catch (er) {} try { const picks = (me.roster || []).slice(0, 4).map(r => { const pp = pmap.get(r.playerId); return (pp ? pp.name : r.playerId) + ' (' + r.position + ')'; }); const card = buildGradeCard({ grade: grade, rank: rank, total: teams.length, pts: myPts / (seasonGames || 17), title: 'Snake Draft', picks: picks }); shareGradeCard(card, txt); } catch (er2) { if (navigator.share) { navigator.share({ title: 'Iron Tuna Draft Grade', text: txt, url: 'https://irontuna.com/snakedraft' }).catch(function () {}); } else if (navigator.clipboard) { navigator.clipboard.writeText(txt); } } } catch (e) {} } }, "\ud83d\udce3 Grade & Share"), React.createElement("div", {
     className: "filter-pills"
   }, POSITIONS.map(p => React.createElement("button", {
     key: p,
@@ -14175,7 +14175,12 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
     } else {
       entries.sort((a, b) => b.pts - a.pts);
     }
-    const arr = entries.slice(0, c.total);
+    // Owned players must never be dropped to make room for planned targets, and if a team
+    // holds more than c.total at a position the surplus overflows into extra rows rather
+    // than vanishing. Keep drafted entries first (in their sorted order), then planned/bench.
+    const owned = entries.filter(e => e.drafted);
+    const planned = entries.filter(e => !e.drafted);
+    const arr = owned.concat(planned).slice(0, Math.max(c.total, owned.length));
     while (arr.length < c.total) arr.push({
       empty: true,
       pts: 0
@@ -18349,29 +18354,6 @@ function ValueCoach({
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [msgs, open]);
   const mode = name === 'Gameday Navigator' ? 'draft' : 'prep';
-  const insights = useMemo(() => buildCoachInsights({
-    evalPlayers,
-    myTeam,
-    teams,
-    config,
-    draftedIds,
-    marketState,
-    games: seasonGames,
-    mode
-  }), [evalPlayers, myTeam, teams, config, draftedIds, marketState, seasonGames, mode]);
-  const [insightIdx, setInsightIdx] = useState(0);
-  useEffect(() => {
-    if (insights.length <= 1) return;
-    const t = setInterval(() => setInsightIdx(i => (i + 1) % insights.length), 18000);
-    return () => clearInterval(t);
-  }, [insights.length]);
-  const curInsight = insights.length ? insights[(insightIdx % insights.length + insights.length) % insights.length] : null;
-  const prevInsight = () => {
-    if (insights.length) setInsightIdx(i => (i - 1 + insights.length) % insights.length);
-  };
-  const nextInsight = () => {
-    if (insights.length) setInsightIdx(i => (i + 1) % insights.length);
-  };
   const [dockH, setDockH] = useState(null);
   const [inputW, setInputW] = useState(null);
   function startColResize(e) {
@@ -18457,9 +18439,9 @@ function ValueCoach({
     const dirWord = factor < 1 ? 'down' : 'up';
     return `Done, ${p.descShort} I ${p.delta > 0 ? 'pulled it from' : 'sent it to'} ${srcLabel} (each ${dirWord} ~${Math.round(Math.abs(1 - factor) * 100)}%) so the board\'s total stays balanced.`;
   }
-  async function handleAI(q, _retry) {
-    const tid = msgIdRef.current++;
-    setMsgs(m => [...m, {
+  async function handleAI(q, _retry, _tid) {
+    const tid = _tid != null ? _tid : msgIdRef.current++;
+    if (_tid == null) setMsgs(m => [...m, {
       role: 'bot',
       text: '…',
       _id: tid
@@ -18488,18 +18470,21 @@ function ValueCoach({
         _id: tid
       } : x));
     } catch (e) {
-      setMsgs(m => m.filter(x => x._id !== tid));
       if (!_retry) {
-        setTimeout(() => handleAI(q, true), 1200);
+        // Keep the placeholder in its original position so the eventual answer stays
+        // attached to this question even if the user has since asked another.
+        setTimeout(() => handleAI(q, true, tid), 1200);
         return;
       }
+      setMsgs(m => m.filter(x => x._id !== tid));
       runEngine(q);
     }
   }
   function send() {
     const q = text.trim();
     if (!q) return;
-    if (onBeforeAsk && !onBeforeAsk()) return;
+    // A pending follow-up is answering the coach's own question, not a new ask — don't gate it.
+    if (!pending && onBeforeAsk && !onBeforeAsk()) return;
     setText('');
     push('user', q);
     const lc0 = q.toLowerCase();
@@ -20095,12 +20080,15 @@ function App() {
     ITAnalytics.track('taunt', {});
   }
   const [account, setAccount] = useState(loadAccount);
+  const coachUsesRef = useRef((loadAccount().coachUses) || 0);
   const [overlay, setOverlay] = useState(null);
   const [shareText, setShareText] = useState('');
   useEffect(() => {
     try {
       localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
     } catch (e) {}
+    // Keep the gate ref in sync if account is loaded/restored from elsewhere.
+    if ((account.coachUses || 0) > coachUsesRef.current) coachUsesRef.current = account.coachUses || 0;
   }, [account]);
   useEffect(() => {
     ITAnalytics.track('app_open', {});
@@ -20240,13 +20228,17 @@ function App() {
   const COACH_FREE_LIMIT = 3;
   function coachGate() {
     if (has(liveTier)) return true;
-    if ((account.coachUses || 0) >= COACH_FREE_LIMIT) {
+    // Gate on a ref, not the render-closure account, so several sends in one tick can't
+    // each read the same pre-increment count and all pass.
+    if (coachUsesRef.current >= COACH_FREE_LIMIT) {
       promptUpgrade('the Value Coach');
       return false;
     }
+    coachUsesRef.current += 1;
+    const n = coachUsesRef.current;
     setAccount(a => ({
       ...a,
-      coachUses: (a.coachUses || 0) + 1
+      coachUses: Math.max(n, (a.coachUses || 0))
     }));
     return true;
   }
@@ -20356,6 +20348,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
   const liveStatusRef = useRef(null);
+  const [projLoadFailed, setProjLoadFailed] = useState(false);
+  const [projRetryNonce, setProjRetryNonce] = useState(0);
   // The version the current `players` state actually came from. Persisting a hardcoded
   // PROJ_VERSION would stamp stale saved players as fresh on first render (before the
   // baseline fetch resolves), permanently suppressing the re-baseline on later loads.
@@ -20372,19 +20366,24 @@ function App() {
           if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
           setPlayers(players0);
           playersVersionRef.current = PROJ_VERSION;
+          setProjLoadFailed(false);
           setDataInfo({
             source: 'Projections 2026',
             season: 2026,
             count: data.length,
             when: Date.now()
           });
+        } else if (!cancelled && !(data && data.length)) {
+          setProjLoadFailed(true);
         }
-      } catch (e) {}
+      } catch (e) {
+        if (!cancelled) setProjLoadFailed(true);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projRetryNonce]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -21958,7 +21957,16 @@ function App() {
   }, "Use updated rankings"), React.createElement("button", {
     onClick: () => setProjUpdateAsk(false),
     style: { background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-strong, #2c3b48)', borderRadius: 9, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }
-  }, "Keep my reorder")))), purchaseToast && React.createElement("div", {
+  }, "Keep my reorder")))), (projLoadFailed && (!players || players.length === 0)) && React.createElement("div", {
+    className: "modal-bg no-print"
+  }, React.createElement("div", { className: "modal", style: { maxWidth: 420, textAlign: 'center' } },
+    React.createElement("div", { className: "section-title" }, "Couldn\u2019t load player projections"),
+    React.createElement("p", { style: { fontSize: 14.5, lineHeight: 1.6, color: 'var(--text-secondary)', margin: '12px 0 18px' } }, "The projections request didn\u2019t make it through \u2014 this is usually a network blip or an ad blocker. Your sheet can\u2019t build without it."),
+    React.createElement("button", {
+      onClick: () => setProjRetryNonce(n => n + 1),
+      style: { background: 'var(--positive, #2dd4a3)', color: '#04211c', border: 'none', borderRadius: 9, padding: '10px 22px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
+    }, "Retry")
+  )), purchaseToast && React.createElement("div", {
     className: `purchase-toast no-print tone-${purchaseToast.tone}`,
     onClick: () => setPurchaseToast(null),
     title: "Click to dismiss"
