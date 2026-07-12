@@ -6623,6 +6623,7 @@ function QuickDraftModal({
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
   const [jab, setJab] = useState(null);
   const [schedOpen, setSchedOpen] = useState(false);
+  const _openedAt = useRef(Date.now());
   const _jabPool = typeof playerJabs === 'function' ? playerJabs(player, players, config) : [];
   const _rollJab = () => { if (_jabPool.length) setJab(_jabPool[Math.floor(Math.random() * _jabPool.length)]); };
   const projVal = player.marketValue != null ? player.marketValue : player.auctionValue;
@@ -6759,7 +6760,12 @@ function QuickDraftModal({
   }, _schRated ? "Matchups vs " + player.position + " (2025 fantasy points allowed): dark green = 5 easiest, light green = next 5, pink = 6-10 toughest, dark red = 5 toughest." : "Matchup ratings not available for " + player.position + "."))) : null;
   return React.createElement("div", {
     className: "modal-bg modal-left",
-    onClick: onClose
+    onClick: () => {
+      // A touch tap opens this card on pointerup; the browser's synthesized
+      // click then lands on this backdrop and would close it instantly.
+      if (Date.now() - _openedAt.current < 500) return;
+      onClose();
+    }
   }, React.createElement("div", {
     className: "modal",
     style: {
@@ -11261,10 +11267,47 @@ function Cheatsheet({
     day: 'numeric',
     year: 'numeric'
   });
+  function rowTapAction(id) {
+    const _di = draftInfoMap[id];
+    if (_di) {
+      const pl = (players || []).find(x => x.id === id);
+      const nm = pl ? pl.name : 'This player';
+      if (onUnassignPlayer && window.confirm(`${nm} is on ${_di.team}${_di.price ? ` for $${_di.price}` : ''}. Remove him and return him to the available player pool?`)) onUnassignPlayer(id);
+    } else if (mode === 'live') {
+      if (onAssignPlayer) {
+        const pl = (players || []).find(x => x.id === id);
+        if (pl) onAssignPlayer(pl);
+      }
+    } else {
+      onToggleTarget && onToggleTarget(id);
+    }
+  }
   function startDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
-    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
+    if (e.pointerType === 'touch') {
+      // Touch: reordering lives on the grip handle, and scrolling must stay
+      // native (rows are touch-action: pan-y). Only detect a clean tap here —
+      // a scroll fires pointercancel (or moves past the slop) and does nothing.
+      const sy = e.clientY, sx = e.clientX;
+      let moved = false;
+      const onMove = ev => {
+        if (Math.abs(ev.clientY - sy) > 8 || Math.abs(ev.clientX - sx) > 8) moved = true;
+      };
+      const finish = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onTapUp);
+        document.removeEventListener('pointercancel', finish);
+      };
+      const onTapUp = () => {
+        finish();
+        if (!moved) rowTapAction(id);
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onTapUp);
+      document.addEventListener('pointercancel', finish);
+      return;
+    }
     const el = rowRefs.current[id];
     if (!el) return;
     e.preventDefault();
@@ -11319,19 +11362,7 @@ function Cheatsheet({
         clear();
         if (tid && tid !== id) onRankReorder(id, tid);
       } else {
-        const _di = draftInfoMap[id];
-        if (_di) {
-          const pl = (players || []).find(x => x.id === id);
-          const nm = pl ? pl.name : 'This player';
-          if (onUnassignPlayer && window.confirm(`${nm} is on ${_di.team}${_di.price ? ` for $${_di.price}` : ''}. Remove him and return him to the available player pool?`)) onUnassignPlayer(id);
-        } else if (mode === 'live') {
-          if (onAssignPlayer) {
-            const pl = (players || []).find(x => x.id === id);
-            if (pl) onAssignPlayer(pl);
-          }
-        } else {
-          onToggleTarget && onToggleTarget(id);
-        }
+        rowTapAction(id);
       }
     };
     document.addEventListener('pointermove', onMove);
@@ -14893,9 +14924,33 @@ function PlayersRail({
   }, [focusPlayer]);
   function startRankDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
-    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
     if (e.target.closest && e.target.closest('.rr-name')) return;
+    if (e.pointerType === 'touch') {
+      // Touch: keep native pan-y scrolling; a clean tap opens the player card,
+      // a scroll (pointercancel or movement past the slop) does nothing.
+      const sy = e.clientY, sx = e.clientX;
+      let moved = false;
+      const onMove = ev => {
+        if (Math.abs(ev.clientY - sy) > 8 || Math.abs(ev.clientX - sx) > 8) moved = true;
+      };
+      const finish = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onTapUp);
+        document.removeEventListener('pointercancel', finish);
+      };
+      const onTapUp = () => {
+        finish();
+        if (!moved) {
+          const __pl = (players || []).find(x => x.id === id);
+          if (__pl) setQuick(__pl);
+        }
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onTapUp);
+      document.addEventListener('pointercancel', finish);
+      return;
+    }
     const info = rowRefs.current[id];
     if (!info || !info.el) return;
     e.preventDefault();
