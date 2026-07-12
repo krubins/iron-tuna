@@ -17,10 +17,16 @@ function extractPage(format, file) {
       .replace(/&amp;/g, '&')
       .replace(/&quot;/g, '"')
       .replace(/&#x2014;|&mdash;/g, '—');
-  const titles = [...html.matchAll(/<h2>([^<]*)<\/h2>/g)].map((m) => unescape(m[1]));
+  // Split the page into per-insight sections at each <h2> so a missing playline/statline
+  // in one insight can't shift a later insight's lines onto the wrong entry (index-zipping
+  // three independent matchAll arrays did exactly that when a mid-page statline was absent).
+  const sections = html.split(/(?=<h2>)/).filter((s) => s.startsWith('<h2>'));
+  const titles = sections.map((s) => unescape(s.match(/^<h2>([^<]*)<\/h2>/)[1]));
   // Each playline is "<generic strategy sentence>. <specific verdict sentence>." — the
   // specific sentence (last one) is the actionable, insight-specific takeaway worth tweeting.
-  const plays = [...html.matchAll(/<p class="playline"><b>The play:<\/b>([^<]*)<\/p>/g)].map((m) => {
+  const plays = sections.map((sec) => {
+    const m = sec.match(/<p class="playline"><b>The play:<\/b>([^<]*)<\/p>/);
+    if (!m) return '';
     const full = unescape(m[1]).trim();
     const sentences = full.split(/(?<=\.) /).filter(Boolean);
     let last = (sentences[sentences.length - 1] || full).trim();
@@ -37,9 +43,11 @@ function extractPage(format, file) {
     }
     return last;
   });
-  // The quantified "Projected effect:" line every insight carries — this is the hard number
+  // The quantified "Projected effect:" line most insights carry — this is the hard number
   // that goes in the tweet (📊 line). Captured up to the <span class="ebar"> visual.
-  const stats = [...html.matchAll(/<p class="statline">Projected effect:([^<]*)</g)].map((m) => {
+  const stats = sections.map((sec) => {
+    const m = sec.match(/<p class="statline">Projected effect:([^<]*)</);
+    if (!m) return '';
     let s = unescape(m[1]).trim();
     s = s.replace(/\s*—\s*/g, ', '); // no em dashes in anything we post (HANDOFF §10 style rule)
     if (s.length > 110) s = s.slice(0, 100).replace(/\s+\S*$/, '') + '…';

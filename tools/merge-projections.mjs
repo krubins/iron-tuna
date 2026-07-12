@@ -115,6 +115,12 @@ const newBlock = block.replace(entryRe, (full, name, pos, team, statsStr) => {
     const m = kv.trim().match(/^(\w+): (-?[\d.]+)$/);
     if (m) cur[m[1]] = parseFloat(m[2]);
   }
+  // The rewritten entry is rebuilt solely from `cur` — a kv that fails the parse regex
+  // (formatting drift, a future non-numeric field) would silently vanish from the worker.
+  if (statsStr.split(',').filter(x => x.trim()).length !== Object.keys(cur).length) {
+    console.error(`ABORT: unparseable stat kv in entry for ${name} (${pos}): { ${statsStr} }`);
+    process.exit(1);
+  }
   const samples = {};
   let hit = false;
   for (const s of bySource) {

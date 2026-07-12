@@ -1053,6 +1053,8 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 8px; }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 7.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
   body.print-onepage .cheat-print-head, body.print-onepage .cheat-print-foot { display: none !important; }
+  body.print-onepage .cheat-col-mobhide { display: block !important; }
+  body.print-onepage .cheat-mobnav { display: none !important; }
   body.print-onepage .cheat-onepage-brand { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: 0 0 6px; }
   .cheat-onepage-brand .cob-sub { font-size: 9.5px; color: #5a6675; letter-spacing: 0.03em; font-family: Arial, sans-serif; text-align: right; }
   .cheat-onepage-brand .cob-chip { background: #1a2430; border-radius: 4px; border-bottom: 2px solid #b8860b; padding: 4px 9px; display: flex; align-items: center; gap: 8px; }
@@ -1061,6 +1063,7 @@ input:focus, select:focus { border-color: var(--accent); }
   /* One-page export caps: top 30 QB/TE, top 55 RB/WR */
   body.print-onepage .cheat-col.cc-QB > :nth-child(n+31 of .cheat-row), body.print-onepage .cheat-col.cc-TE > :nth-child(n+31 of .cheat-row) { display: none !important; }
   body.print-onepage .cheat-col.cc-RB > :nth-child(n+56 of .cheat-row), body.print-onepage .cheat-col.cc-WR > :nth-child(n+56 of .cheat-row) { display: none !important; }
+  body.print-onepage .cheat-col.cc-ALL > :nth-child(n+56 of .cheat-row) { display: none !important; }
 }.hl-btn { font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
 .cheat-cols-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); align-self: center; font-family: var(--font-body); letter-spacing: normal; min-width: 46px; }
@@ -2578,7 +2581,9 @@ function applyTierScale(value, tiers) {
 }
 function yardageScore(yards, perPoint, threshold, bonuses = []) {
   if (yards < threshold) return 0;
-  let pts = yards / perPoint;
+  // A blanked scoring input saves NaN (parseFloat('')) — a bad divisor here would
+  // poison every projection on the board with NaN.
+  let pts = perPoint > 0 ? yards / perPoint : 0;
   for (const b of bonuses) {
     if (yards >= b.at) pts += b.points;
   }
@@ -2660,7 +2665,9 @@ function scoreDefense(stats = {}, config, games = 17) {
   pts += (stats.st2pt || 0) * s.specialTeams2pt;
   pts += (stats.stSafety1pt || 0) * s.specialTeamsSafety1pt;
   if (stats.ptsAllowed !== undefined && games > 0) {
-    const ppg = stats.ptsAllowed / games;
+    // Tiers are integer-bounded (1-3, 4-6, ...) but ppg is fractional — floor it so
+    // values like 3.4 or 20.6 don't fall in a gap and zero out the whole category.
+    const ppg = Math.floor(stats.ptsAllowed / games);
     pts += applyTierScale(ppg, s.pointsAllowed) * games;
   }
   return pts;
@@ -2816,7 +2823,19 @@ function positionFull(team, pos, config) {
   if ((config.benchPositions || 'any') !== 'fixed') return false;
   if (!team) return false;
   const cnt = (team.roster || []).filter(r => r.position === pos).length;
-  return cnt >= positionCapacity(config, pos);
+  const base = config.roster[pos] && config.roster[pos].total || 0;
+  const eligible = config.flex && config.flex.eligible && config.flex.eligible.includes(pos);
+  if (!eligible) return cnt >= base;
+  if (cnt < base) return false;
+  // Flex slots are SHARED across eligible positions — counting them per position would
+  // let one FLEX admit an extra RB and an extra WR and an extra TE simultaneously.
+  const flexN = config.flex.count || 0;
+  const flexUsed = (config.flex.eligible || []).reduce((sum, p) => {
+    const c = (team.roster || []).filter(r => r.position === p).length;
+    const b = config.roster[p] && config.roster[p].total || 0;
+    return sum + Math.max(0, c - b);
+  }, 0);
+  return flexUsed >= flexN;
 }
 function applyPositionalDemand(players, teams, config, draftedIds) {
   const di = draftedIds || new Set();
@@ -5004,14 +5023,14 @@ function parseProjectionsCSV(csvText) {
       const val = parseFloat(row[csvCol]);
       if (!isNaN(val)) projectedStats[ourKey] = val;
     }
-    let position = (row[findKey(headers, /^pos|position$/i)] || '').toUpperCase().replace(/[^A-Z]/g, '');
+    let position = (row[findKey(headers, /^(pos|position)$/i)] || '').toUpperCase().replace(/[^A-Z]/g, '');
     if (position === 'DST' || position === 'DEFENSE') position = 'DEF';
     const ptsCol = findKey(headers, /^(points|fpts|fpt|fantasypoints|proj(ected)?points|totalpoints)$/i);
     const points = ptsCol ? parseFloat(row[ptsCol]) : NaN;
     rows.push({
-      name: row[findKey(headers, /^name|player|playername$/i)] || '',
+      name: row[findKey(headers, /^(name|player|playername)$/i)] || '',
       position,
-      team: (row[findKey(headers, /^team|tm$/i)] || '').toUpperCase(),
+      team: (row[findKey(headers, /^(team|tm)$/i)] || '').toUpperCase(),
       projectedStats,
       points: isNaN(points) ? null : points
     });
@@ -6672,7 +6691,7 @@ function QuickDraftModal({
   const _adpGap = (_isSnake && player.adp != null && _projRank) ? Math.round(player.adp - _projRank) : null;
   const _surplus = (!_isSnake && player.auctionValue != null && player.marketValue != null) ? (player.auctionValue - player.marketValue) : null;
   const _survRows = (() => {
-    const _sk = config.snake || config.bestball;
+    const _sk = (config.format === 'bestball' ? config.bestball : config.snake) || config.snake || config.bestball;
     if (!_isSnake || !_sk) return null;
     const di = draftedIds || new Set();
     const teamsN = config.teams || 12;
@@ -6801,7 +6820,7 @@ function QuickDraftModal({
       color: '#f59e0b',
       fontWeight: 600
     }
-  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, _schedEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: () => { if (__INSULTS_OK) _rollJab(); else __INSULTS_LOCK(); }, title: __INSULTS_OK ? "Generate a jab to throw at whoever drafts him" : "Unlock to fire off built-in insults", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, !__INSULTS_OK ? "🔒 Insults — unlock" : (jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him")), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
+  }, "⚠ Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, _schedEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: () => { if (__INSULTS_OK) _rollJab(); else __INSULTS_LOCK(); }, title: __INSULTS_OK ? "Generate a jab to throw at whoever drafts him" : "Unlock to fire off built-in insults", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, !__INSULTS_OK ? "🔒 Insults — unlock" : (jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him")), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -7163,6 +7182,7 @@ function parseScoringText(text) {
       if (v) set('passingYardsPerPoint', v, 'Passing yds/pt');
     }
     if (/\b(interceptions?|ints?)\b/.test(l) && /(pass|thrown|qb)/.test(l)) set('passingInt', numIn(l), 'Interception thrown');
+    else if (/\b(interceptions?|ints?)\b/.test(l) && !isDef && (numIn(l) || 0) < 0) set('passingInt', numIn(l), 'Interception thrown');
     if (/rush/.test(l) && /(td|touchdown)/.test(l)) set('rushingTD', numIn(l), 'Rushing TD');else if (/rush/.test(l) && /(yards?|yds?)/.test(l)) {
       const v = yppFrom(l);
       if (v) set('rushingYardsPerPoint', v, 'Rushing yds/pt');
@@ -7540,7 +7560,7 @@ function ScoringImport({
     style: {
       display: 'none'
     },
-    onChange: e => doImage(e.target.files && e.target.files[0])
+    onChange: e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; doImage(f); }
   })), tab === 'manual' && React.createElement("div", null, React.createElement("div", {
     className: "imp-hint"
   }, "One-tap common settings, then fine-tune the detailed fields below."), React.createElement("div", {
@@ -7684,6 +7704,9 @@ function SettingsModal({
     });
   }
   function update(path, value) {
+    // Numeric scoring inputs pass parseFloat(e.target.value): blanking a field yields
+    // NaN, which would propagate through every projection. Store 0 instead.
+    if (typeof value === 'number' && isNaN(value)) value = 0;
     setDraft(prev => {
       const next = JSON.parse(JSON.stringify(prev));
       const keys = path.split('.');
@@ -8328,6 +8351,7 @@ function TeamsBoard({
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
       el.style.transform = '';
       el.style.transition = '';
       el.style.position = '';
@@ -8340,6 +8364,7 @@ function TeamsBoard({
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   }
   const allCollapsed = teams.length > 0 && teams.every(t => collapsed.has(t.id));
   function toggleCollapse(id) {
@@ -9093,7 +9118,7 @@ function printOnePagePdf() {
     };
     const doc = fr.contentDocument;
     doc.open();
-    doc.write('<!doctype html><html><head><meta charset="utf-8">' + headBits.join('') + '<style>@page { size: 11in 8.5in; margin: 0.3in; } html, body { margin: 0; padding: 0; background: #fff; } #cheat-fit { width: ' + PAGE_W + 'px; height: ' + PAGE_H + 'px; overflow: hidden; } #cheat-scale { width: ' + fit.width + 'px; transform: scale(' + fit.scale + '); transform-origin: 0 0; } #cheat-scale .cheatsheet { position: static !important; width: 100% !important; } .cheat-print-foot { display: none !important; }</style></head><body class="print-onepage"><div id="cheat-fit"><div id="cheat-scale"><div class="cheatsheet">' + sheet.innerHTML + '</div></div></div></body></html>');
+    doc.write('<!doctype html><html><head><meta charset="utf-8">' + headBits.join('') + '<style>@page { size: 11in 8.5in; margin: 0.3in; } html, body { margin: 0; padding: 0; background: #fff; } #cheat-fit { width: ' + PAGE_W + 'px; height: ' + PAGE_H + 'px; overflow: hidden; } #cheat-scale { width: ' + fit.width + 'px; transform: scale(' + fit.scale + '); transform-origin: 0 0; } #cheat-scale .cheatsheet { position: static !important; width: 100% !important; } .cheat-print-foot { display: none !important; } .cheat-col-mobhide { display: block !important; } .cheat-mobnav { display: none !important; }</style></head><body class="print-onepage"><div id="cheat-fit"><div id="cheat-scale"><div class="cheatsheet">' + sheet.innerHTML + '</div></div></div></body></html>');
     doc.close();
     // The iframe prints at a fixed page width, so viewport-width media queries
     // must never restyle it (print MQ evaluation is unreliable across engines).
@@ -10985,7 +11010,7 @@ function LeadCapture() {
           email: v,
           source: 'cheatsheet'
         })
-      });
+      }).catch(() => {});
     } catch (e) {}
     try {
       ITAnalytics.track('lead_captured', {
@@ -11111,6 +11136,7 @@ function Cheatsheet({
   const [sheetView, setSheetView] = useState('position');
   const __snakeVal = !!(config && config.format === 'snake') && sheetView === 'value';
   const colsV = __snakeVal ? [['ALL', 600]] : cols;
+  const effMobPos = colsV.some(([p]) => p === mobPos) ? mobPos : (colsV[0] ? colsV[0][0] : mobPos);
   const colGroupsV = __snakeVal ? [[['ALL', 600]]] : colGroups;
   useEffect(() => {
     if (!window.matchMedia) return;
@@ -11279,6 +11305,7 @@ function Cheatsheet({
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
       if (dragging) {
         el.style.transition = '';
         el.style.position = '';
@@ -11309,6 +11336,7 @@ function Cheatsheet({
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   }
   function startGripDrag(e, id, pos) {
     e.preventDefault();
@@ -11464,14 +11492,14 @@ function Cheatsheet({
     className: "sheet-topline no-print"
   }, React.createElement(LeadCapture, null), React.createElement("button", {
     className: "sheet-pdf1",
-    title: "Download the sheet as a single-page PDF (top 20 per position, Iron Tuna branded)",
+    title: "Download the sheet as a single-page PDF (top 30 QB/TE, 55 RB/WR, Iron Tuna branded)",
     onClick: () => printPdf('onepage')
   }, "⤓ 1-Page PDF")), isNarrow && React.createElement("div", {
     className: "cheat-mobnav no-print"
   }, React.createElement("span", {
     className: "cmn-label"
   }, "Position"), React.createElement("select", {
-    value: mobPos,
+    value: effMobPos,
     onChange: e => setMobPos(e.target.value),
     "aria-label": "Choose a position to view"
   }, colsV.map(([pos]) => React.createElement("option", {
@@ -11483,7 +11511,7 @@ function Cheatsheet({
     className: "cheat-col-group",
     key: gi
   }, grp.map(([pos, n]) => React.createElement("div", {
-    className: `cheat-col cc-${pos} ${isNarrow && pos !== mobPos ? 'cheat-col-mobhide' : ''}`,
+    className: `cheat-col cc-${pos} ${isNarrow && pos !== effMobPos ? 'cheat-col-mobhide' : ''}`,
     key: pos
   }, React.createElement("div", {
     className: "cheat-col-head cch-wrap"
@@ -12302,9 +12330,9 @@ function MockSnakeDraft({ players, config, seasonGames }) {
     const myPts = (result.find(r => r.you) || {}).pts || 0;
     const pct = mx > mn ? (myPts - mn) / (mx - mn) : 1;
     const grade = pct >= 0.92 ? 'A' : pct >= 0.8 ? 'A-' : pct >= 0.68 ? 'B+' : pct >= 0.55 ? 'B' : pct >= 0.4 ? 'B-' : 'C';
-    const shareTxt = 'My Iron Tuna mock snake draft graded out at ' + grade + ' (' + myRank + '/' + teams.length + ', ' + (myPts / games).toFixed(1) + ' pts/gm). Build yours free at irontuna.com';
-    const share = () => { try { if (typeof ITAnalytics !== 'undefined') ITAnalytics.track('share_grade', { source: 'mock_draft', grade: grade }); } catch (e) {} try { const myTeamRoster = ((teams.find(t => t.you) || {}).roster || []); const picks = myTeamRoster.slice(0, 4).map(p => p.name + ' (' + p.position + ')'); const card = buildGradeCard({ grade: grade, rank: myRank, total: teams.length, pts: myPts / games, title: 'Snake Mock Draft', picks: picks }); shareGradeCard(card, shareTxt); } catch (e) { try { if (navigator.clipboard) navigator.clipboard.writeText(shareTxt); } catch (er) {} } };
-    return React.createElement("div", { className: "mock mock-done" }, React.createElement("div", { className: "mock-result-head" }, React.createElement("div", { className: "mock-grade" }, grade), React.createElement("div", null, React.createElement("div", { className: "mock-result-title" }, "You finished ", myRank, " of ", teams.length), React.createElement("div", { className: "mock-result-sub" }, (myPts / games).toFixed(1), " projected starter pts/game"))), React.createElement("div", { className: "mock-result-actions" }, React.createElement("button", { className: "mock-gate-btn", onClick: share }, "📣 Share my grade"), React.createElement("button", { className: "btn-secondary", onClick: () => reset() }, "New mock"), React.createElement("button", { className: "mock-gate-btn mock-upsell", onClick: () => { try { window.location.href = '/snakedraft'; } catch (e) {} } }, "Do it for real →")), React.createElement("table", { className: "mock-table" }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", null, "#"), React.createElement("th", null, "Team"), React.createElement("th", { className: "num" }, "Pts/gm"))), React.createElement("tbody", null, result.map((t, i) => React.createElement("tr", { key: t.id, className: t.you ? 'you' : '' }, React.createElement("td", null, i + 1), React.createElement("td", null, t.name), React.createElement("td", { className: "num" }, (t.pts / games).toFixed(1)))))), board);
+    const shareTxt = 'My Iron Tuna mock snake draft graded out at ' + grade + ' (' + myRank + '/' + teams.length + ', ' + myPts.toFixed(1) + ' pts/gm). Build yours free at irontuna.com';
+    const share = () => { try { if (typeof ITAnalytics !== 'undefined') ITAnalytics.track('share_grade', { source: 'mock_draft', grade: grade }); } catch (e) {} try { const myTeamRoster = ((teams.find(t => t.you) || {}).roster || []); const picks = myTeamRoster.slice(0, 4).map(p => p.name + ' (' + p.position + ')'); const card = buildGradeCard({ grade: grade, rank: myRank, total: teams.length, pts: myPts, title: 'Snake Mock Draft', picks: picks }); shareGradeCard(card, shareTxt); } catch (e) { try { if (navigator.clipboard) navigator.clipboard.writeText(shareTxt); } catch (er) {} } };
+    return React.createElement("div", { className: "mock mock-done" }, React.createElement("div", { className: "mock-result-head" }, React.createElement("div", { className: "mock-grade" }, grade), React.createElement("div", null, React.createElement("div", { className: "mock-result-title" }, "You finished ", myRank, " of ", teams.length), React.createElement("div", { className: "mock-result-sub" }, myPts.toFixed(1), " projected starter pts/game"))), React.createElement("div", { className: "mock-result-actions" }, React.createElement("button", { className: "mock-gate-btn", onClick: share }, "📣 Share my grade"), React.createElement("button", { className: "btn-secondary", onClick: () => reset() }, "New mock"), React.createElement("button", { className: "mock-gate-btn mock-upsell", onClick: () => { try { window.location.href = '/snakedraft'; } catch (e) {} } }, "Do it for real →")), React.createElement("table", { className: "mock-table" }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", null, "#"), React.createElement("th", null, "Team"), React.createElement("th", { className: "num" }, "Pts/gm"))), React.createElement("tbody", null, result.map((t, i) => React.createElement("tr", { key: t.id, className: t.you ? 'you' : '' }, React.createElement("td", null, i + 1), React.createElement("td", null, t.name), React.createElement("td", { className: "num" }, t.pts.toFixed(1)))))), board);
   }
   return React.createElement("div", { className: "mock" }, React.createElement("div", { className: "mock-intro" }, "Mock snake draft from slot ", mySlot, " of ", numTeams, ". When you are on the clock, click a player to draft him. CPU managers auto-pick between your turns."), React.createElement("div", { className: "mock-top" }, React.createElement("div", null, React.createElement("b", null, yourTurn ? "⏱ You're on the clock" : ("CPU " + onClockSlot + " is picking…")), " · Round ", Math.ceil(overall / T), " · Pick ", overall, " · roster ", React.createElement("b", null, (me ? me.roster.length : 0), "/", totalSlots)), React.createElement("button", { className: "btn-secondary", onClick: () => reset() }, "Restart")), React.createElement("div", { className: "mock-settings" }, React.createElement("label", { className: "mock-set" }, "Teams ", React.createElement("select", { value: numTeams, onChange: e => { const n = Number(e.target.value); setNumTeams(n); const ms = Math.min(mySlot, n); setMySlot(ms); reset(n, ms); } }, teamOpts.map(n => React.createElement("option", { key: n, value: n }, n)))), React.createElement("label", { className: "mock-set" }, "Your slot ", React.createElement("select", { value: mySlot, onChange: e => { const v = Number(e.target.value); setMySlot(v); reset(numTeams, v); } }, slotOpts.map(n => React.createElement("option", { key: n, value: n }, n))))), React.createElement("div", { className: "mock-draftarea" }, React.createElement("div", { className: "mock-avail" }, React.createElement("div", { className: "mock-avail-h" }, yourTurn ? "Best available — click to draft" : "Best available"), React.createElement("div", { className: "mock-avail-list" }, avail.map(p => React.createElement("button", { key: p.id, className: "mock-avail-row" + (yourTurn ? ' pickable' : ''), disabled: !yourTurn, onClick: () => userPick(p), title: yourTurn ? 'Draft ' + p.name : '' }, React.createElement("span", { className: "mock-av-pos", style: { background: POS_COLOR[p.position] || '#888' } }, p.position), React.createElement("span", { className: "mock-av-name" }, p.name, p.team ? React.createElement("em", null, " " + String(p.team).replace(/[^A-Za-z]/g, '')) : null), React.createElement("span", { className: "mock-av-adp" }, p.adp != null ? 'ADP ' + Math.round(p.adp) : ''))))), React.createElement("div", { className: "mock-log" }, React.createElement("div", { className: "mock-log-h" }, "Picks"), log.map((l, i) => React.createElement("div", { key: i, className: "mock-log-row" + (l.you ? ' you' : '') }, l.txt)))), board);
 }
@@ -12463,7 +12491,7 @@ function MockAuction({
       you: t.you,
       strat: t.strat,
       pts: mockStarterPts(t.roster, config, games),
-      spent: config.budget - t.budget
+      spent: budget - t.budget
     })).sort((a, b) => b.pts - a.pts));
   }
   function act(youBidRaw) {
@@ -12487,7 +12515,14 @@ function MockAuction({
       const second = Math.max(yourMax, others.length ? Math.max(...others) : 0);
       price = Math.max(1, Math.min(topAi.max, second + 1));
     } else {
-      winner = aiBids.map(x => x.t).sort((a, b) => slotsLeft(b) - slotsLeft(a))[0];
+      const room = aiBids.map(x => x.t).filter(t => slotsLeft(t) > 0);
+      if (!room.length) {
+        const nd0 = new Set(drafted); nd0.add(current.id);
+        setDrafted(nd0);
+        if (slotsLeft(you) <= 0) finish(teams, nd0);
+        return;
+      }
+      winner = room.sort((a, b) => slotsLeft(b) - slotsLeft(a))[0];
       price = 1;
     }
     const nt = teams.map(t => ({
@@ -12517,6 +12552,19 @@ function MockAuction({
     if (winner.id === you.id && wt.roster.length >= totalSlots) finish(nt, nd);
   }
   function award(winnerId, price) {
+    const w0 = teams.find(t => t.id === winnerId);
+    if (!current || !w0) return;
+    if (slotsLeft(w0) <= 0) {
+      const room = teams.filter(t => !t.you && slotsLeft(t) > 0);
+      if (!room.length) {
+        const nd0 = new Set(drafted); nd0.add(current.id);
+        setDrafted(nd0);
+        if (slotsLeft(you) <= 0) finish(teams, nd0);
+        return;
+      }
+      winnerId = room.sort((a, b) => slotsLeft(b) - slotsLeft(a))[0].id;
+      price = 1;
+    }
     const nt = teams.map(t => ({
       ...t,
       roster: [...t.roster]
@@ -12592,7 +12640,7 @@ function MockAuction({
       highId,
       maxes
     });
-  }, [current ? current.id : null, bidMode, phase]);
+  }, [current ? current.id : null, bidMode, phase, salt]);
   function reset() {
     setTeams(makeTeams());
     setDrafted(new Set());
@@ -14533,6 +14581,7 @@ function bidLadder(player, baselinePoints, myTeam, players, config, draftedIds, 
     market
   };
 }
+const EMPTY_WHATIF_OVERRIDES = {};
 function PlanView({
   myTeam,
   players,
@@ -14546,7 +14595,7 @@ function PlanView({
   const [whatIfOn, setWhatIfOn] = useState(false);
   const [whatIf, setWhatIf] = useState({});
   const basePlan = useMemo(() => myTeam ? buildOptimalPlan(myTeam, players, config, draftedIds, undefined, targets, roleOverrides, true) : null, [myTeam, players, config, draftedIds, targets, roleOverrides]);
-  const activeOverrides = whatIfOn ? whatIf : {};
+  const activeOverrides = whatIfOn ? whatIf : EMPTY_WHATIF_OVERRIDES;
   const plan = useMemo(() => myTeam ? buildOptimalPlan(myTeam, players, config, draftedIds, activeOverrides, targets, roleOverrides, true) : null, [myTeam, players, config, draftedIds, activeOverrides, targets, roleOverrides]);
   if (!plan) return React.createElement("div", {
     className: "empty-state"
@@ -14789,6 +14838,7 @@ function TeamsPanel({
 function PlayersRail({
   players,
   draftedIds,
+  draftHistory,
   teams,
   config,
   pointsMode,
@@ -14840,6 +14890,7 @@ function PlayersRail({
     if (e.button !== undefined && e.button !== 0) return;
     if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
+    if (e.target.closest && e.target.closest('.rr-name')) return;
     const info = rowRefs.current[id];
     if (!info || !info.el) return;
     e.preventDefault();
@@ -14882,6 +14933,7 @@ function PlayersRail({
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
       el.style.transform = '';
       el.style.transition = '';
       el.style.position = '';
@@ -14894,6 +14946,7 @@ function PlayersRail({
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   }
   const [quick, setQuick] = useState(null);
   const [cw, setCw] = useState({
@@ -14916,9 +14969,11 @@ function PlayersRail({
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   }
   const games = seasonGames || 17;
   const tierMap = useMemo(() => {
@@ -15211,6 +15266,7 @@ function PlayersRail({
     seasonGames: seasonGames,
     myTeam: teams.find(t => t.isMine),
     draftedIds: draftedIds,
+    draftHistory: draftHistory,
     onConfirm: (teamId, price) => {
       onDraft(quick.id, teamId, price);
       setQuick(null);
@@ -17150,7 +17206,7 @@ function coachWhySlot(q, ctx) {
   if (!list.length) return null;
   const price = p => p.marketValue != null ? p.marketValue : p.auctionValue;
   const ppg = p => (p.projectedPoints / g).toFixed(1);
-  const slot = plan ? (plan.remainingStarterSlots || []).find(s => (s.eligible || []).includes(pos) && s.player) : null;
+  const slot = plan ? (plan.remainingStarterSlots || []).find(s => s.player && s.player.position === pos && (s.eligible || []).includes(pos)) : null;
   const planned = slot && slot.player || list[Math.min(rank - 1, list.length - 1)];
   const pi = Math.max(0, list.findIndex(p => p.id === planned.id));
   const tprice = slot ? slot.targetPrice : price(planned);
@@ -17214,7 +17270,7 @@ function coachPunt(q, ctx) {
   const leagueStart = Math.max(1, startersPer * teamsN);
   const cheapList = list.filter(p => price(p) <= Math.max(2, minBid + 1));
   const streamer = cheapList.length ? cheapList[0] : list[list.length - 1];
-  const slot = plan ? (plan.remainingStarterSlots || []).find(sl => (sl.eligible || []).includes(pos) && sl.player) : null;
+  const slot = plan ? (plan.remainingStarterSlots || []).find(sl => sl.player && sl.player.position === pos && (sl.eligible || []).includes(pos)) : null;
   const payUp = slot && slot.player || list.find(p => price(p) <= maxBid && price(p) >= 6) || list[0];
   const payUpPrice = slot ? slot.targetPrice : price(payUp);
   const dropGm = Math.max(0, ppg(payUp) - ppg(streamer));
@@ -17313,7 +17369,7 @@ function coachRecommendPos(q, ctx) {
   const minBid = config.valuation.minBid;
   const maxBid = myTeam ? Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid) : 999;
   const rankOf = p => list.findIndex(x => x.id === p.id) + 1;
-  const slot = plan ? (plan.remainingStarterSlots || []).find(s => (s.eligible || []).includes(pos) && s.player) : null;
+  const slot = plan ? (plan.remainingStarterSlots || []).find(s => s.player && s.player.position === pos && (s.eligible || []).includes(pos)) : null;
   const planPick = slot ? slot.player : null;
   const valueCand = list.map(p => ({
     p,
@@ -17417,7 +17473,7 @@ function coachWhyPlan(q, ctx) {
   L.push("The plan spends to maximize your whole starting lineup's points, not to upgrade any one position.");
   L.push("Money you save at one spot doesn't go back into the same position; it flows to wherever it buys the most points per dollar.");
   if (pos && plan) {
-    const slot = (plan.remainingStarterSlots || []).find(s => (s.eligible || []).includes(pos) && s.player);
+    const slot = (plan.remainingStarterSlots || []).find(s => s.player && s.player.position === pos && (s.eligible || []).includes(pos));
     if (slot) L.push(`Right now it pencils in ${slot.player.name} (~$${slot.targetPrice}) at ${pos}.`);
     if (pos === 'QB' || pos === 'TE' || pos === 'K' || pos === 'DEF') {
       L.push(`${pos} is shallow value, the gap from the 7th to the 9th option is small, so banking your bargain into RB/WR/FLEX (where points-per-dollar is higher) and taking a cheaper ${pos} actually projects MORE total points, even though the ${pos} label looks worse.`);
@@ -17646,7 +17702,7 @@ function coachPositionTake(q, ctx) {
   } else {
     L.push(`${pos} is fairly flat, small gaps between options, so don't pay a premium; let value come to you.`);
   }
-  const slot = plan ? (plan.remainingStarterSlots || []).find(s => (s.eligible || []).includes(pos) && s.player) : null;
+  const slot = plan ? (plan.remainingStarterSlots || []).find(s => s.player && s.player.position === pos && (s.eligible || []).includes(pos)) : null;
   if (slot) L.push(`Your plan currently targets ${slot.player.name} (~$${slot.targetPrice}, ${ppg(slot.player)} pts/gm) at ${pos}.`);
   return L.join(' ');
 }
@@ -18330,9 +18386,11 @@ function ValueCoach({
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   }
   function startDockResize(e) {
     e.preventDefault();
@@ -18343,9 +18401,11 @@ function ValueCoach({
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   }
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const tc = teamsCount || 12;
@@ -18571,7 +18631,7 @@ function ValueCoach({
         return;
       }
     }
-    if (/why/.test(lc)) {
+    if (/\bwhy\b/.test(lc)) {
       const wf = findPlayer(stripEval(q), ctx.evalPlayers);
       if (wf.player) {
         ITAnalytics.track('coach_why', {
@@ -18582,7 +18642,7 @@ function ValueCoach({
         return;
       }
     }
-    if (/(value|worth|proj|price|cost|number|bid|draft|target|grab|take|about|thoughts|evaluate|how much|good)/.test(lc)) {
+    if (/\b(value|worth|proj|price|cost|number|bid|draft|target|grab|take|about|thoughts|evaluate|how much|good)\b/.test(lc)) {
       const ef = findPlayer(stripEval(q), ctx.evalPlayers);
       if (ef.player) {
         evalAndNominate(ef.player);
@@ -19949,7 +20009,7 @@ function AdminScoreboard() {
   return page(React.createElement("div", { style: { maxWidth: 980, margin: '0 auto', padding: '28px 20px 60px' } }, React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 18 } }, React.createElement("div", { style: { fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '0.04em' } }, "Iron Tuna Admin"), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { onClick: () => load(adminKey), style: btnSm }, loading ? "…" : "Refresh"), React.createElement("a", { href: '/api/leads/export?key=' + encodeURIComponent(adminKey), style: { ...btnSm, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' } }, "Download CSV"), React.createElement("button", { onClick: () => { try { sessionStorage.removeItem('it_admin_key'); } catch (e) {} setRows(null); setAdminKey(''); setKeyInput(''); }, style: btnSm }, "Sign out"))), React.createElement("div", { style: { display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid var(--border-subtle)' } }, tabBtn('affiliates', 'Affiliates', report.totalAffiliates), tabBtn('purchases', 'Purchases', purchases.length), tabBtn('leads', 'Leads', leads.length), tabBtn('reconcile', 'Reconcile $', recon ? recon.affiliates.length : '·')), tab === 'affiliates' && React.createElement(React.Fragment, null, React.createElement("div", { style: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 } }, stat("Affiliates", report.totalAffiliates), stat("Active codes", report.totalCodes), stat("Purchases", report.totalPurchases), stat("Owed ($3/ea)", '$' + report.totalOwed)), report.list.length === 0 ? React.createElement("div", { style: { color: 'var(--text-muted)', padding: 20, textAlign: 'center' } }, "No codes or purchases recorded yet.") : React.createElement("div", { style: { border: '1px solid var(--border-subtle)', borderRadius: 10, overflow: 'hidden' } }, React.createElement("div", { style: { ...rowStyle, fontWeight: 700, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', background: 'var(--bg-elev)' } }, React.createElement("span", null, "Code"), React.createElement("span", null, "Affiliate (paid via)"), React.createElement("span", { style: { textAlign: 'right' } }, "Subs"), React.createElement("span", { style: { textAlign: 'right' } }, "Owed")), report.list.map(c => React.createElement(React.Fragment, { key: c.code }, React.createElement("div", { style: rowStyle }, React.createElement("span", { style: { fontFamily: 'var(--font-mono)', color: 'var(--gold-text)', fontWeight: 600 } }, c.code), c.affiliate ? React.createElement("span", null, React.createElement("div", null, c.affiliate.email || '—'), c.affiliate.phone ? React.createElement("div", { style: { fontSize: 11.5, color: 'var(--text-muted)' } }, c.affiliate.phone) : null) : React.createElement("span", { style: { color: '#f0b24b' }, title: "No referrer signup on file — this code was seen only on purchases" }, "(unregistered code)"), React.createElement("span", { style: numR }, c.count), React.createElement("span", { style: { ...numR, color: 'var(--positive)' } }, '$' + c.owed)), c.purchases.length > 0 && React.createElement("div", { style: { background: 'var(--bg-base)', padding: '4px 16px 12px', borderBottom: '1px solid var(--border-subtle)' } }, React.createElement("div", { style: { fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: '8px 0 4px' } }, "Subscribers who purchased with " + c.code), c.purchases.slice().sort(byDate).map((p, i) => React.createElement("div", { key: i, style: { display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, padding: '4px 0', borderBottom: '1px solid var(--border-subtle)' } }, React.createElement("span", null, p.email || '—', p.phone ? React.createElement("span", { style: { color: 'var(--text-muted)', marginLeft: 8 } }, p.phone) : null), React.createElement("span", { style: { color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 } }, (p.date || '').slice(0, 10))))))))), tab === 'purchases' && React.createElement(React.Fragment, null, React.createElement("div", { style: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 } }, stat("Purchases", purchases.length), stat("Revenue (gross)", '$' + (purchases.length * 9.99).toFixed(2))), flatTable(["Email", "Phone", "Code used", "Date"], '2fr 1.3fr 1fr 1fr', purchases, r => [r.email || '—', r.phone || '—', r.ref || '—', (r.date || '').slice(0, 10)], "No purchases recorded yet.")), tab === 'leads' && React.createElement(React.Fragment, null, React.createElement("div", { style: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 } }, stat("Leads", leads.length)), React.createElement("p", { style: { fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.5 } }, "Emails from cheat-sheet sign-ups, mock-draft gates, and addresses users forwarded to friends. Excludes affiliates and buyers (those have their own tabs)."), flatTable(["Email", "Phone", "Source", "Date"], '2fr 1.3fr 1fr 1fr', leads, r => [r.email || '—', r.phone || '—', r.source || '—', (r.date || '').slice(0, 10)], "No leads recorded yet.")), tab === 'reconcile' && React.createElement(React.Fragment, null, (reconLoading && !recon) ? React.createElement("div", { style: { color: 'var(--text-muted)', padding: 24, textAlign: 'center' } }, "Reading paid sales from Stripe… (this can take a few seconds)") : reconErr ? React.createElement("div", { style: { padding: 20 } }, React.createElement("div", { style: { color: '#ff6b6b', fontSize: 13, marginBottom: 10 } }, reconErr), React.createElement("button", { onClick: loadRecon, style: btn }, "Try again")) : !recon ? React.createElement("button", { onClick: loadRecon, style: btn }, "Load payouts from Stripe") : React.createElement(React.Fragment, null, React.createElement("div", { style: { display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 } }, stat("Owed (from Stripe)", '$' + recon.totalOwed), stat("Paid referred sales", recon.totalPaidReferredSales), stat("Affiliates", recon.affiliates.length)), React.createElement("p", { style: { fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.5 } }, "Source: Stripe — the actual money (paid checkout sessions carrying a referral code). This is the authoritative payout list. The \"DB\" column is your contacts database; a ⚠ flag means Stripe and the DB disagree on that code's count — investigate before paying.", recon.capped ? React.createElement("span", { style: { color: '#f0b24b', display: 'block', marginTop: 6 } }, "⚠ Showing the most recent 2,500 sessions — older sales not included.") : null), (recon.affiliates.filter(a => a.mismatch).length > 0) && React.createElement("div", { style: { background: 'rgba(240,178,75,0.1)', border: '1px solid rgba(240,178,75,0.4)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, color: '#f0b24b' } }, "Stripe vs DB mismatch on: " + recon.affiliates.filter(a => a.mismatch).map(a => a.code).join(', ')), recon.affiliates.length === 0 ? React.createElement("div", { style: { color: 'var(--text-muted)', padding: 20, textAlign: 'center' } }, "No paid referred sales in Stripe yet.") : React.createElement("div", { style: { border: '1px solid var(--border-subtle)', borderRadius: 10, overflow: 'hidden' } }, React.createElement("div", { style: { display: 'grid', gridTemplateColumns: reconCols, gap: 10, padding: '11px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-elev)', fontWeight: 700, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' } }, React.createElement("span", null, "Code"), React.createElement("span", null, "Affiliate"), React.createElement("span", { style: { textAlign: 'right' } }, "Stripe"), React.createElement("span", { style: { textAlign: 'right' } }, "DB"), React.createElement("span", { style: { textAlign: 'right' } }, "Revenue"), React.createElement("span", { style: { textAlign: 'right' } }, "Owed")), recon.affiliates.map(a => React.createElement(React.Fragment, { key: a.code }, React.createElement("div", { onClick: () => setOpenCode(openCode === a.code ? '' : a.code), style: { display: 'grid', gridTemplateColumns: reconCols, gap: 10, alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)', fontSize: 13.5, cursor: 'pointer' } }, React.createElement("span", { style: { fontFamily: 'var(--font-mono)', color: 'var(--gold-text)', fontWeight: 600 } }, (openCode === a.code ? '▾ ' : '▸ ') + a.code), React.createElement("span", { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, a.ownerEmail || React.createElement("span", { style: { color: '#f0b24b' }, title: "No referrer signup on file for this code" }, "(unregistered)")), React.createElement("span", { style: numR }, a.stripeCount), React.createElement("span", { style: { ...numR, color: a.mismatch ? '#f0b24b' : 'var(--text-secondary)' } }, (a.d1Count == null ? '—' : a.d1Count) + (a.mismatch ? ' ⚠' : '')), React.createElement("span", { style: numR }, '$' + a.revenue.toFixed(2)), React.createElement("span", { style: { ...numR, color: 'var(--positive)', fontWeight: 700 } }, '$' + a.owed)), openCode === a.code && React.createElement("div", { style: { background: 'var(--bg-base)', padding: '4px 16px 12px', borderBottom: '1px solid var(--border-subtle)' } }, React.createElement("div", { style: { fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', margin: '8px 0 4px' } }, "Paid sales under " + a.code + " (from Stripe)"), a.sales.map((s, i) => React.createElement("div", { key: i, style: { display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, padding: '4px 0', borderBottom: '1px solid var(--border-subtle)' } }, React.createElement("span", null, s.email || '—'), React.createElement("span", { style: { color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 } }, s.date + ' · $' + s.amount.toFixed(2)))))))))), React.createElement("p", { style: { fontSize: 11.5, color: 'var(--text-muted)', marginTop: 14, lineHeight: 1.5 } }, "Live contacts export. Affiliate payout shown at $3 per purchase per your referral terms — always confirm amounts and that payment cleared in Stripe before paying out.")));
 }
 function App() {
-  const initialState = (() => {
+  const initialState = React.useMemo(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -19968,7 +20028,7 @@ function App() {
       }
     } catch (e) {}
     return null;
-  })();
+  }, []);
   const screenParam = (() => {
     try {
       return new URLSearchParams(window.location.search).get('screen');
@@ -20296,6 +20356,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [dataInfo, setDataInfo] = useState(initialState?.dataInfo || null);
   const liveStatusRef = useRef(null);
+  // The version the current `players` state actually came from. Persisting a hardcoded
+  // PROJ_VERSION would stamp stale saved players as fresh on first render (before the
+  // baseline fetch resolves), permanently suppressing the re-baseline on later loads.
+  const playersVersionRef = useRef(initialState?.players && initialState.players.length ? (initialState.projVersion || null) : PROJ_VERSION);
   useEffect(() => {
     const savedFresh = initialState?.players && initialState.players.length && initialState.projVersion === PROJ_VERSION;
     if (savedFresh) return;
@@ -20307,6 +20371,7 @@ function App() {
           let players0 = buildInitialPlayers(data);
           if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
           setPlayers(players0);
+          playersVersionRef.current = PROJ_VERSION;
           setDataInfo({
             source: 'Projections 2026',
             season: 2026,
@@ -20585,7 +20650,7 @@ function App() {
         draftHistory,
         pointsMode,
         dataInfo,
-        projVersion: PROJ_VERSION,
+        projVersion: playersVersionRef.current || undefined,
         starred: Array.from(starred),
         customOrder,
         targets: Array.from(targets),
@@ -20607,7 +20672,7 @@ function App() {
       }
       remoteApplyRef.current = true;
       if (d.config) setConfig(configForFormat(d.config, __itFmt));
-      if (d.players) setPlayers(d.players);
+      if (d.players) { setPlayers(d.players); playersVersionRef.current = d.projVersion || playersVersionRef.current; }
       if (d.teams) setTeams(d.teams);
       if (d.draftHistory) setDraftHistory(d.draftHistory);
       if (d.pointsMode) setPointsMode(d.pointsMode);
@@ -20641,6 +20706,7 @@ function App() {
         return;
       }
       setPlayers(data);
+      playersVersionRef.current = PROJ_VERSION;
       setDataInfo({
         source: 'Live NFL',
         season,
@@ -20728,6 +20794,9 @@ function App() {
     }]);
   }
   function handleDraft(playerId, teamId, price) {
+    // Two entry points can confirm the same player back-to-back (e.g. quick-log + bid
+    // panel): a duplicate would double-charge the budget and leave undo inconsistent.
+    if (draftHistory.some(d => d.playerId === playerId)) return;
     const player = personalizedPlayers.find(p => p.id === playerId);
     if (!player) return;
     const team = teams.find(t => t.id === teamId);
@@ -20941,6 +21010,7 @@ function App() {
         replacement: 0
       }));
       setPlayers(newPlayers);
+      playersVersionRef.current = PROJ_VERSION;
       setDataInfo({
         source: 'CSV import',
         season: '',
@@ -21530,6 +21600,7 @@ function App() {
   })), (view === 'board') && React.createElement("div", { className: "snake-rail-dock no-print" }, React.createElement(ErrorBoundary, null, React.createElement(PlayersRail, {
       players: personalizedPlayers,
       draftedIds: draftedIds,
+      draftHistory: draftHistory,
       teams: teams,
       config: config,
       pointsMode: pointsMode,

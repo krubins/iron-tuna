@@ -214,7 +214,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </div>
 <div id="pi-locked" style="display:none">
 <div class="locked-band"><h2>Premium insights come with Draft Day</h2>
-<p>The full research set — every remaining QB, RB, WR, and TE call with auction, snake, and best ball reads — is included with the one-time $9.99 Draft Day unlock. If you bought on this device, open the app once and come back. If you bought on another device, sign in from the app and your unlock follows you.</p>
+<p>The full research set — every remaining QB, RB, WR, and TE call with auction, snake, and best ball reads — is included with the one-time $9.99 Draft Day unlock. Already bought? Sign in from the app with your purchase email and your unlock follows you here.</p>
 <div class="cta-row"><a class="btn" href="https://irontuna.com/?buy=1">Unlock Draft Day — $9.99</a><a class="btn alt" href="/insights">Read the free drops</a></div></div>
 </div>
 <div id="pi-body" style="display:none">
@@ -253,13 +253,16 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   var SNAP = null;
   try { SNAP = JSON.parse(localStorage.getItem('iron_tuna_values_v1') || 'null'); } catch (e) {}
   if (SNAP && (!SNAP.players || !SNAP.players.length)) SNAP = null;
-  function normName(s){ return String(s || '').toLowerCase().replace(/(jr|sr|ii|iii|iv|v)\.?$/g, '').replace(/[^a-z]/g, ''); }
+  function normName(s){ return String(s || '').toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\.?$/g, '').replace(/[^a-z]/g, ''); }
+  // Strip the suffix BEFORE taking the last word — "Kenneth Walker III" must key on
+  // "walker"; normName("III") is "", which would bucket all suffix names under one key.
+  function lastNameKey(s){ var w = String(s || '').trim().replace(/\s+(jr|sr|ii|iii|iv|v)\.?$/i, '').split(/\s+/); return normName(w[w.length - 1]); }
   var byName = {}, byLast = {};
   if (SNAP) {
     SNAP.players.forEach(function(p){
       byName[normName(p.n)] = p;
-      var last = normName(p.n.split(' ').slice(-1)[0]);
-      (byLast[last] = byLast[last] || []).push(p);
+      var last = lastNameKey(p.n);
+      if (last) (byLast[last] = byLast[last] || []).push(p);
     });
   }
   function findPlayer(it){
@@ -333,9 +336,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
       var v = VIEW[it.view] || ['v-dep', esc(it.view)];
       var rows = fmtSel ? fmtRow(it, fmtSel) : fmtRow(it, 'auction') + fmtRow(it, 'snake') + fmtRow(it, 'bestball');
       h += '<article class="ins"><div><span class="badge ' + v[0] + '">' + v[1] + '</span><span class="badge plain">' + esc(it.section) + '</span><span class="badge plain">Confidence: ' + esc(it.conf) + '</span></div>'
-        + '<h2>' + esc(it.title) + '</h2>' + String(it.body || it.core).split(/
-
-/).map(function(par){ return '<p>' + esc(par) + '</p>'; }).join('') + (it.effect ? '<p class="effect">Projected effect: ' + esc(it.effect) + '</p>' : '')
+        + '<h2>' + esc(it.title) + '</h2>' + String(it.body || it.core).split('\n\n').map(function(par){ return '<p>' + esc(par) + '</p>'; }).join('') + (it.effect ? '<p class="effect">Projected effect: ' + esc(it.effect) + '</p>' : '')
         + tailoredLine(it)
         + rows
         + (!SNAP && it.auctionTailoring ? '<p style="font-size:13px;color:var(--muted);margin:10px 0 0">Tailored by: ' + esc(it.auctionTailoring) + ' Open your league in the app for exact numbers.</p>' : '')
@@ -344,8 +345,8 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
     document.getElementById('pi-list').innerHTML = h || '<p>No insights match those filters.</p>';
   }
   function show(){
-    fetch('/api/insights', { headers: { 'x-it-key': IT_KEY } })
-      .then(function(r){ if (!r.ok) throw 0; return r.text(); })
+    fetch('/api/insights', { headers: { 'x-it-key': IT_KEY }, credentials: 'include' })
+      .then(function(r){ if (r.status === 401 || r.status === 403) { locked(); throw 1; } if (!r.ok) throw 0; return r.text(); })
       .then(function(t){
         DATA = JSON.parse(xdec(t.trim(), XK));
         lede.textContent = DATA.length + ' premium insights' + (SNAP ? ' — every effect below is translated to your ' + SNAP.teams + '-team league.' : ' — pick your format, position, and verdict.');
@@ -358,7 +359,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
         document.getElementById('pi-body').style.display = '';
         draw();
       })
-      .catch(function(){ lede.textContent = 'Could not load insights — refresh to retry.'; });
+      .catch(function(err){ if (err !== 1) lede.textContent = 'Could not load insights — refresh to retry.'; });
   }
   function locked(){
     lede.textContent = 'This page holds the full premium research set.';
