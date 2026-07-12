@@ -1421,6 +1421,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .lead-capture .lc-form input { background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text-primary); font-size: 14px; min-width: 180px; }
 .lead-capture .lc-btn { background: var(--positive); color: #06231b; border: none; border-radius: var(--radius-sm); padding: 9px 15px; font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
 .lead-capture .lc-x { position: absolute; top: 6px; right: 8px; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
+.sheet-topline { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; }
+.sheet-topline .lead-capture { flex: 1 1 320px; }
+.sheet-pdf1 { flex: 0 0 auto; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; background: var(--bg-elev); border: 1px solid var(--gold-text); color: var(--gold-text); border-radius: var(--radius-md); font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+.sheet-pdf1:hover { background: rgba(212,160,23,0.14); }
+@media (max-width: 600px) { .sheet-topline .sheet-pdf1 { width: 100%; justify-content: center; } }
 @media (max-width: 600px) { .lead-capture .lc-form { width: 100%; } .lead-capture .lc-form input { flex: 1; min-width: 0; } }
 .taunt-wrap .taunt-select { background: var(--bg-elev); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 9px; font-size: 13px; margin-right: 8px; max-width: 160px; }
 .roast-menu { left: auto; right: 0; max-height: 320px; overflow-y: auto; }
@@ -4890,7 +4895,6 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
         {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
         <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>
         <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>
-        <button className="btn-secondary" title="Shrink the whole sheet to fit a single letter-size page" onClick={() => printPdf('onepage')}>⤓ PDF · 1 Page</button>
         <span style={{ flexBasis: '100%', height: 0 }} />
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
@@ -5049,7 +5053,10 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         <div className="cob-sub">{fmtMeta(config).label} Cheat Sheet · {config.teams} teams · ${config.budget} budget · {pprLabel} · {dateStr}</div>
         <div className="cob-chip"><img src="/tuna.png" alt="Iron Tuna" className="cob-fish" /><span className="cob-name">IRON TUNA</span></div>
       </div>
-      {mode !== 'live' || true ? <LeadCapture /> : null}
+      <div className="sheet-topline no-print">
+        <LeadCapture />
+        <button className="sheet-pdf1" title="Download the sheet as a single-page PDF (top 20 per position, Iron Tuna branded)" onClick={() => printPdf('onepage')}>⤓ 1-Page PDF</button>
+      </div>
       {isNarrow && (
         <div className="cheat-mobnav no-print">
           <span className="cmn-label">Position</span>

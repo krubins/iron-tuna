@@ -1683,6 +1683,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .lead-capture .lc-form input { background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text-primary); font-size: 14px; min-width: 180px; }
 .lead-capture .lc-btn { background: var(--positive); color: #06231b; border: none; border-radius: var(--radius-sm); padding: 9px 15px; font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
 .lead-capture .lc-x { position: absolute; top: 6px; right: 8px; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
+.sheet-topline { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; }
+.sheet-topline .lead-capture { flex: 1 1 320px; }
+.sheet-pdf1 { flex: 0 0 auto; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; background: var(--bg-elev); border: 1px solid var(--gold-text); color: var(--gold-text); border-radius: var(--radius-md); font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+.sheet-pdf1:hover { background: rgba(212,160,23,0.14); }
+@media (max-width: 600px) { .sheet-topline .sheet-pdf1 { width: 100%; justify-content: center; } }
 /* Comfortable thumb targets on phones (draft night) for the small standalone controls */
 @media (max-width: 760px) { .font-scale-bar .fs-btn { height: 38px; width: 38px; } .col-toggle { padding: 9px 13px; } .coach-unlockbtn { padding: 10px 14px; } .lead-capture .lc-x { font-size: 20px; padding: 4px 6px; top: 3px; right: 5px; } }
 @media (max-width: 600px) { .lead-capture .lc-form { width: 100%; } .lead-capture .lc-form input { flex: 1; min-width: 0; } }
@@ -10876,11 +10881,7 @@ function CheatHeader({
   }, "⤓ PDF · Letter"), React.createElement("button", {
     className: "btn-secondary",
     onClick: () => printPdf('legal')
-  }, "⤓ PDF · Legal"), React.createElement("button", {
-    className: "btn-secondary",
-    title: "Shrink the whole sheet to fit a single letter-size page",
-    onClick: () => printPdf('onepage')
-  }, "⤓ PDF · 1 Page"), React.createElement("span", {
+  }, "⤓ PDF · Legal"), React.createElement("span", {
     style: {
       flexBasis: '100%',
       height: 0
@@ -11452,7 +11453,13 @@ function Cheatsheet({
     className: "cob-fish"
   }), React.createElement("span", {
     className: "cob-name"
-  }, "IRON TUNA"))), mode !== 'live' || true ? React.createElement(LeadCapture, null) : null, isNarrow && React.createElement("div", {
+  }, "IRON TUNA"))), React.createElement("div", {
+    className: "sheet-topline no-print"
+  }, React.createElement(LeadCapture, null), React.createElement("button", {
+    className: "sheet-pdf1",
+    title: "Download the sheet as a single-page PDF (top 20 per position, Iron Tuna branded)",
+    onClick: () => printPdf('onepage')
+  }, "⤓ 1-Page PDF")), isNarrow && React.createElement("div", {
     className: "cheat-mobnav no-print"
   }, React.createElement("span", {
     className: "cmn-label"
