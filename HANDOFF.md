@@ -22,7 +22,17 @@ This document is everything you need to pick the project up in Claude Code (or a
 
 | Layer | What it is |
 |---|---|
-| Frontend | A **single file, `index.html`** (~553 KB). React + ReactDOM loaded from CDN, **compiled in the browser by Babel Standalone** (`<script type="text/babel" data-presets="react">`, classic runtime). |
+| Frontend | A **single file, `index.html`** (~1.1 MB). React + ReactDOM loaded from CDN. The app script is **pre-compiled JS** (`<script type="module">`, `React.createElement` calls — no in-browser Babel anymore). **`index.html` is the authoritative, deployed file — edit it directly.** |
+
+> **⚠️ `app.source.html` is a STALE partial JSX copy — do NOT "rebuild" `index.html` from it.**
+> It has drifted badly since the repo import: it completely lacks the snake-draft hub
+> (`HubLanding`), `MockSnakeDraft`, `WillHeBeThere`, the full 18-week `SCHEDULE_2026` +
+> `FullScheduleModal` (commit `007eba0` touched only `index.html`), `playerJabs`/`playerNews`,
+> best-ball support, `AffiliatePortal`, the `iron_tuna_values_v1` snapshot writer,
+> the projections re-baseline prompt, `healRosterPositions`, and more (~35 top-level
+> symbols). Compiling it would silently delete all of those shipped features.
+> Either regenerate it from the current build or delete it; until then treat `index.html`
+> as the single source of truth and mirror fixes into `app.source.html` only opportunistically. |
 | Styling | One inline `<style>` block in `index.html` (starts at **line 35**). No Tailwind, no CSS modules, no preprocessor. |
 | Backend | **`_worker.js`** — a Cloudflare Worker that (a) serves the static files and (b) proxies two API routes: `/api/coach` (LLM "Gameday Navigator") and `/api/projections` (player projection data kept server-side). |
 | Data | Authoritative player projections live **inside `_worker.js`** (lightly obfuscated) and are fetched at runtime; `index.html` carries a client-side fallback/last-year stat-line remap. |
@@ -51,15 +61,21 @@ wrangler dev                   # uses wrangler.jsonc; serves _worker.js + assets
 - **Dev command:** `wrangler dev` (full) or `python3 -m http.server 8080` (frontend only).
 
 ### Editing & sanity-checking
-Edit `index.html` directly (in Claude Code the old size constraints don't apply). Before deploying, **always confirm the JSX still compiles** — a single bad escape silently white-screens the app:
+Edit `index.html` directly (in Claude Code the old size constraints don't apply). The app script is plain pre-compiled JS now, so before deploying, **always confirm it still parses** — a single bad escape silently white-screens the app:
 
 ```bash
-node -e 'const b=require("@babel/core"),fs=require("fs");
+node -e 'const fs=require("fs");
 const h=fs.readFileSync("index.html","utf8");
-const m=h.match(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/);
-b.transformSync(m[1],{presets:[["@babel/preset-react",{runtime:"classic"}]]});
-console.log("COMPILE OK");'
+const m=h.match(/<script type="module">([\s\S]*?)<\/script>/);
+new Function(m[1]);
+console.log("PARSE OK");'
 ```
+
+Also beware the escape-corruption bug class that has bitten this repo three times: a `\n` or `\b`
+written into a file as the *literal control byte* instead of backslash-n / backslash-b (a regex
+containing a real newline is a SyntaxError that kills the whole page's script; a real backspace
+byte inside a regex silently never matches). If a regex looks right but a page is dead or a match
+never fires, hexdump the line.
 
 ---
 

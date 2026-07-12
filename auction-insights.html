@@ -299,7 +299,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <div class="nextdrop" id="nextdrop" style="margin-top:14px"><span class="pulse"></span><span>Next drop</span></div>
 <div class="xfmt">Also available as <a href="/snake-insights">snake draft insights</a> and <a href="/bestball-insights">best ball insights</a>.</div>
 <div class="eyebrow">Every drop</div>
-<ul class="drop-list"><li data-release="2026-07-03"><div><a class="dl-main" href="/auction-insights-2026-07-04" data-locked="Drops Saturday, July 4, 2026">Auction Insights &mdash; Saturday, July 4, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Patrick Mahomes is a reputation trap if drafted as a &middot; Miami is the most fragile fantasy ecosystem in footb&hellip;</div></div><span class="dl-date">2026-07-04</span></li>
+<ul class="drop-list"><li data-release="2026-07-04"><div><a class="dl-main" href="/auction-insights-2026-07-04" data-locked="Drops Saturday, July 4, 2026">Auction Insights &mdash; Saturday, July 4, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Patrick Mahomes is a reputation trap if drafted as a &middot; Miami is the most fragile fantasy ecosystem in footb&hellip;</div></div><span class="dl-date">2026-07-04</span></li>
 <li data-release="2026-07-09"><div><a class="dl-main" href="/auction-insights-2026-07-09" data-locked="Drops Thursday, July 9, 2026">Auction Insights &mdash; Thursday, July 9, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Drake Maye is the best elite-QB value &middot; New England became a classic year-three quarterback &hellip;</div></div><span class="dl-date">2026-07-09</span></li>
 <li data-release="2026-07-16"><div><a class="dl-main" href="/auction-insights-2026-07-16" data-locked="Drops Thursday, July 16, 2026">Auction Insights &mdash; Thursday, July 16, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Josh Allen remains the safest overall QB1, but not t &middot; Arizona is the clearest macro fade because the offen&hellip;</div></div><span class="dl-date">2026-07-16</span></li>
 <li data-release="2026-07-23"><div><a class="dl-main" href="/auction-insights-2026-07-23" data-locked="Drops Thursday, July 23, 2026">Auction Insights &mdash; Thursday, July 23, 2026</a><div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">Lamar Jackson’s market still prices old rushing cert &middot; James Cook is one of the best prices on the board&hellip;</div></div><span class="dl-date">2026-07-23</span></li>
@@ -389,7 +389,8 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
       var d = new Date(future[0] + 'T13:00:00Z');
       var days = Math.ceil((d - now) / 86400000);
       var when = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-      nd.querySelector('span:last-child').textContent = 'Next drop: ' + when + ' at 9am ET' + (days <= 1 ? ' — tomorrow' : ' — in ' + days + ' days');
+      var dayDiff = Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86400000);
+      nd.querySelector('span:last-child').textContent = 'Next drop: ' + when + ' at 9am ET' + (dayDiff <= 0 ? ' — today' : dayDiff === 1 ? ' — tomorrow' : ' — in ' + dayDiff + ' days');
     } else { nd.style.display = 'none'; }
   }
 })();

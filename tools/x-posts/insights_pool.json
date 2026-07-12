@@ -562,7 +562,7 @@
     "format": "auction",
     "title": "Likely’s outlook is stronger in full PPR than standard because his edge comes from route volume and target design, not guaranteed touchdowns",
     "play": "Bump in full PPR.",
-    "stat": "-4% to -8% versus price if drafters assume unchanged efficiency",
+    "stat": "",
     "url": "https://irontuna.com/auction-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -571,7 +571,7 @@
     "format": "auction",
     "title": "David Montgomery is vulnerable to subtle erosion",
     "play": "Fade slightly unless he falls.",
-    "stat": "flatter weekly distribution",
+    "stat": "-4% to -8% versus price if drafters assume unchanged efficiency",
     "url": "https://irontuna.com/auction-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -580,7 +580,7 @@
     "format": "auction",
     "title": "Buffalo’s WR room is now good enough that Allen stacks should be diversified, not concentrated only on one pass-catcher",
     "play": "Mix DJ Moore and Dalton Kincaid/Dawson Knox around Allen exposures.",
-    "stat": "",
+    "stat": "flatter weekly distribution",
     "url": "https://irontuna.com/auction-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -1192,7 +1192,7 @@
     "format": "snake",
     "title": "Likely’s outlook is stronger in full PPR than standard because his edge comes from route volume and target design, not guaranteed touchdowns",
     "play": "Bump in full PPR.",
-    "stat": "-4% to -8% versus price if drafters assume unchanged efficiency",
+    "stat": "",
     "url": "https://irontuna.com/snake-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -1201,7 +1201,7 @@
     "format": "snake",
     "title": "David Montgomery is vulnerable to subtle erosion",
     "play": "Fade slightly unless he falls.",
-    "stat": "flatter weekly distribution",
+    "stat": "-4% to -8% versus price if drafters assume unchanged efficiency",
     "url": "https://irontuna.com/snake-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -1210,7 +1210,7 @@
     "format": "snake",
     "title": "Buffalo’s WR room is now good enough that Allen stacks should be diversified, not concentrated only on one pass-catcher",
     "play": "Mix DJ Moore and Dalton Kincaid/Dawson Knox around Allen exposures.",
-    "stat": "",
+    "stat": "flatter weekly distribution",
     "url": "https://irontuna.com/snake-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -1822,7 +1822,7 @@
     "format": "bestball",
     "title": "Likely’s outlook is stronger in full PPR than standard because his edge comes from route volume and target design, not guaranteed touchdowns",
     "play": "Bump in full PPR.",
-    "stat": "-4% to -8% versus price if drafters assume unchanged efficiency",
+    "stat": "",
     "url": "https://irontuna.com/bestball-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -1831,7 +1831,7 @@
     "format": "bestball",
     "title": "David Montgomery is vulnerable to subtle erosion",
     "play": "Fade slightly unless he falls.",
-    "stat": "flatter weekly distribution",
+    "stat": "-4% to -8% versus price if drafters assume unchanged efficiency",
     "url": "https://irontuna.com/bestball-insights-2026-08-31",
     "date": "2026-08-31"
   },
@@ -1840,7 +1840,7 @@
     "format": "bestball",
     "title": "Buffalo’s WR room is now good enough that Allen stacks should be diversified, not concentrated only on one pass-catcher",
     "play": "Mix DJ Moore and Dalton Kincaid/Dawson Knox around Allen exposures.",
-    "stat": "",
+    "stat": "flatter weekly distribution",
     "url": "https://irontuna.com/bestball-insights-2026-08-31",
     "date": "2026-08-31"
   },

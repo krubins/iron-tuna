@@ -1777,7 +1777,9 @@ function applyTierScale(value, tiers) {
 }
 function yardageScore(yards, perPoint, threshold, bonuses = []) {
   if (yards < threshold) return 0;
-  let pts = yards / perPoint;
+  // A blanked scoring input saves NaN (parseFloat('')) — a bad divisor here would
+  // poison every projection on the board with NaN.
+  let pts = perPoint > 0 ? yards / perPoint : 0;
   for (const b of bonuses) { if (yards >= b.at) pts += b.points; }
   return pts;
 }
@@ -1855,7 +1857,9 @@ function scoreDefense(stats = {}, config, games = 17) {
   pts += (stats.st2pt || 0) * s.specialTeams2pt;
   pts += (stats.stSafety1pt || 0) * s.specialTeamsSafety1pt;
   if (stats.ptsAllowed !== undefined && games > 0) {
-    const ppg = stats.ptsAllowed / games;
+    // Tiers are integer-bounded (1-3, 4-6, ...) but ppg is fractional — floor it so
+    // values like 3.4 or 20.6 don't fall in a gap and zero out the whole category.
+    const ppg = Math.floor(stats.ptsAllowed / games);
     pts += applyTierScale(ppg, s.pointsAllowed) * games;
   }
   return pts;
@@ -1974,7 +1978,19 @@ function positionFull(team, pos, config) {
   if ((config.benchPositions || 'any') !== 'fixed') return false;
   if (!team) return false;
   const cnt = (team.roster || []).filter(r => r.position === pos).length;
-  return cnt >= positionCapacity(config, pos);
+  const base = config.roster[pos] && config.roster[pos].total || 0;
+  const eligible = config.flex && config.flex.eligible && config.flex.eligible.includes(pos);
+  if (!eligible) return cnt >= base;
+  if (cnt < base) return false;
+  // Flex slots are SHARED across eligible positions — counting them per position would
+  // let one FLEX admit an extra RB and an extra WR and an extra TE simultaneously.
+  const flexN = config.flex.count || 0;
+  const flexUsed = (config.flex.eligible || []).reduce((sum, p) => {
+    const c = (team.roster || []).filter(r => r.position === p).length;
+    const b = config.roster[p] && config.roster[p].total || 0;
+    return sum + Math.max(0, c - b);
+  }, 0);
+  return flexUsed >= flexN;
 }
 // Live positional demand: when few teams can still roster a position (set-positions caps) and
 // those that can are low on money, that position's likely price (Proj) and your max (You) ease
@@ -2606,14 +2622,14 @@ function parseProjectionsCSV(csvText) {
       const val = parseFloat(row[csvCol]);
       if (!isNaN(val)) projectedStats[ourKey] = val;
     }
-    let position = (row[findKey(headers, /^pos|position$/i)] || '').toUpperCase().replace(/[^A-Z]/g, '');
+    let position = (row[findKey(headers, /^(pos|position)$/i)] || '').toUpperCase().replace(/[^A-Z]/g, '');
     if (position === 'DST' || position === 'DEFENSE') position = 'DEF';
     const ptsCol = findKey(headers, /^(points|fpts|fpt|fantasypoints|proj(ected)?points|totalpoints)$/i);
     const points = ptsCol ? parseFloat(row[ptsCol]) : NaN;
     rows.push({
-      name: row[findKey(headers, /^name|player|playername$/i)] || '',
+      name: row[findKey(headers, /^(name|player|playername)$/i)] || '',
       position,
-      team: (row[findKey(headers, /^team|tm$/i)] || '').toUpperCase(),
+      team: (row[findKey(headers, /^(team|tm)$/i)] || '').toUpperCase(),
       projectedStats,
       points: isNaN(points) ? null : points,
     });
@@ -3954,6 +3970,9 @@ function SettingsModal({ config, onSave, onClose, onImportProjections, onLoadLiv
     });
   }
   function update(path, value) {
+    // Numeric scoring inputs pass parseFloat(e.target.value): blanking a field yields
+    // NaN, which would propagate through every projection. Store 0 instead.
+    if (typeof value === 'number' && isNaN(value)) value = 0;
     setDraft(prev => {
       const next = JSON.parse(JSON.stringify(prev));
       const keys = path.split('.');
@@ -7985,9 +8004,9 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
       if (pf.player) { evalAndNominate(pf.player); if (pf.alternatives && pf.alternatives.length) push('bot', 'Also close: ' + pf.alternatives.map(a => a.name).join(', ') + '.'); return; }
     }
     // 1) "why" about a specific player
-    if (/why/.test(lc)) { const wf = findPlayer(stripEval(q), ctx.evalPlayers); if (wf.player) { ITAnalytics.track('coach_why', { player: wf.player.name }); push('bot', coachWhyPlayer(wf.player, ctx)); if (onNominate && !ctx.draftedIds.has(wf.player.id)) onNominate(wf.player); return; } }
+    if (/\bwhy\b/.test(lc)) { const wf = findPlayer(stripEval(q), ctx.evalPlayers); if (wf.player) { ITAnalytics.track('coach_why', { player: wf.player.name }); push('bot', coachWhyPlayer(wf.player, ctx)); if (onNominate && !ctx.draftedIds.has(wf.player.id)) onNominate(wf.player); return; } }
     // 2) player + a value/eval keyword -> evaluate
-    if (/(value|worth|proj|price|cost|number|bid|draft|target|grab|take|about|thoughts|evaluate|how much|good)/.test(lc)) { const ef = findPlayer(stripEval(q), ctx.evalPlayers); if (ef.player) { evalAndNominate(ef.player); if (ef.alternatives && ef.alternatives.length) push('bot', 'Also close: ' + ef.alternatives.map(a => a.name).join(', ') + '.'); return; } }
+    if (/\b(value|worth|proj|price|cost|number|bid|draft|target|grab|take|about|thoughts|evaluate|how much|good)\b/.test(lc)) { const ef = findPlayer(stripEval(q), ctx.evalPlayers); if (ef.player) { evalAndNominate(ef.player); if (ef.alternatives && ef.alternatives.length) push('bot', 'Also close: ' + ef.alternatives.map(a => a.name).join(', ') + '.'); return; } }
     // 3) strategy / state advice
     const pt = coachPositionTake(q, ctx); if (pt) { ITAnalytics.track('coach_postake', {}); push('bot', pt); return; }
     const adv = coachAdvise(q, ctx); if (adv) { ITAnalytics.track('coach_advise', {}); push('bot', adv); return; }
