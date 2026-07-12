@@ -493,10 +493,12 @@ input:focus, select:focus { border-color: var(--accent); }
 /* Collapsible board panels: draft models + budget sliders start minimized */
 .panel-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .panel-toggle:hover { border-color: var(--border-accent); color: var(--text-primary); }
-.bm2-min { margin: 4px 0 12px; }
-.bm2-hide { margin-bottom: 6px; }
-.budgetsliders-wrap { display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; }
-.budgetsliders-wrap .budgetsliders { flex: 1; }
+.board-panels { margin: 4px 0 12px; }
+.board-panels-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.board-panels .board-models-2pane { margin: 10px 0 0; }
+.board-sliders-panel { margin-top: 10px; max-width: 680px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; }
+.strategy-bar .summarize-btn { margin-left: 0; }
+.strategy-bar .taunt-wrap { margin-left: 0; align-items: flex-start; }
 .bs-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .bs-cap { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 .bs-cap b { color: var(--gold-text); }
@@ -9077,7 +9079,8 @@ function App() {
     const draftBoardEl = (
       <>
       <Coachmark flag="seenBoardIntro" account={account} setAccount={setAccount}>Ghosted rows are the planner's projected best fills for your remaining slots and budget. Pick a model up top to change strategy, or click a slot to lock a target.</Coachmark>
-      <div className="strategy-bar">{boardSlidersOpen ? (<div className="budgetsliders-wrap"><button className="panel-toggle" onClick={() => setBoardSlidersOpen(false)} title="Minimize the budget sliders">🎚 Sliders ▾</button><BudgetSliders strategy={config.strategy} onChange={handleUpdateStrategy} /></div>) : (<button className="panel-toggle" onClick={() => setBoardSlidersOpen(true)} title="Adjust how your budget is spread: concentration among starters, and starters vs bench">🎚 Budget Sliders ▸</button>)}<button className="summarize-btn" onClick={() => setSummaryOpen(true)} title="Honest narrative recap of the entire board">📋 Summarize</button><div className="taunt-wrap"><span className="reset-wrap"><button className="taunt-btn" onClick={() => setRoastOpen(o => !o)} title="Pick a rival to roast">🔥 Roast a Rival ▾</button>{roastOpen && (<span className="reset-menu roast-menu" onMouseLeave={() => setRoastOpen(false)}><button onClick={() => { setRoastOpen(false); roastTeam(null); }}>Random rival</button>{teams.filter(t => !t.isMine).map(t => <button key={t.id} onClick={() => { setRoastOpen(false); roastTeam(t.id); }}>{t.name}</button>)}</span>)}</span>{taunt && <div key={taunt.id} className="taunt-text" onClick={() => setTaunt(null)} title="Click to dismiss">{taunt.text}</div>}</div></div>
+      <div className="board-panels no-print"><div className="board-panels-row"><button className="panel-toggle" onClick={() => setBoardSlidersOpen(o => !o)} title={boardSlidersOpen ? "Minimize the budget sliders" : "Adjust how your budget is spread: concentration among starters, and starters vs bench"}>🎚 Budget Sliders{boardSlidersOpen ? ' ▾' : ' ▸'}</button></div>{boardSlidersOpen && <div className="board-sliders-panel"><BudgetSliders strategy={config.strategy} onChange={handleUpdateStrategy} /></div>}</div>
+      <div className="strategy-bar"><button className="summarize-btn" onClick={() => setSummaryOpen(true)} title="Honest narrative recap of the entire board">📋 Summarize</button><div className="taunt-wrap"><span className="reset-wrap"><button className="taunt-btn" onClick={() => setRoastOpen(o => !o)} title="Pick a rival to roast">🔥 Roast a Rival ▾</button>{roastOpen && (<span className="reset-menu roast-menu" onMouseLeave={() => setRoastOpen(false)}><button onClick={() => { setRoastOpen(false); roastTeam(null); }}>Random rival</button>{teams.filter(t => !t.isMine).map(t => <button key={t.id} onClick={() => { setRoastOpen(false); roastTeam(t.id); }}>{t.name}</button>)}</span>)}</span>{taunt && <div key={taunt.id} className="taunt-text" onClick={() => setTaunt(null)} title="Click to dismiss">{taunt.text}</div>}</div></div>
       <div className="board-layout board-norail">
         <TeamsBoard teams={teams} players={personalizedPlayers} config={config} seasonGames={SEASON_GAMES} draftedIds={draftedIds} onRenameTeam={handleRenameTeam} onSetMyTeam={handleSetMyTeam} onExport={handleExportRosters} onRemovePick={handleRemovePick} onReorderTeams={handleReorderTeams} roleOverrides={roleOverrides} onSetRole={handleSetRole} onFocusPlayer={handleFocusPlayer} onUpdateStrategy={handleUpdateStrategy} onAddPlayer={() => setShowAddPlayer(true)} model={draftModel} onSelectModel={setDraftModel} targets={targets} onToggleTarget={handleToggleTarget} slotOrder={slotOrder} onReorderSlot={handleReorderSlot} />
       </div>

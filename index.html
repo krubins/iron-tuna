@@ -252,10 +252,12 @@ input:focus, select:focus { border-color: var(--accent); }
 /* Collapsible board panels: draft models + budget sliders start minimized */
 .panel-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .panel-toggle:hover { border-color: var(--border-accent); color: var(--text-primary); }
-.bm2-min { margin: 4px 0 12px; }
-.bm2-hide { margin-bottom: 6px; }
-.budgetsliders-wrap { display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; }
-.budgetsliders-wrap .budgetsliders { flex: 1; }
+.board-panels { margin: 4px 0 12px; }
+.board-panels-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.board-panels .board-models-2pane { margin: 10px 0 0; }
+.board-sliders-panel { margin-top: 10px; max-width: 680px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; }
+.strategy-bar .summarize-btn { margin-left: 0; }
+.strategy-bar .taunt-wrap { margin-left: 0; align-items: flex-start; }
 .rh-sorted { color: var(--gold-text) !important; font-weight: 800; }
 .bm-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-right: 4px; }
 .bm-collapsed { flex-direction: column; align-items: stretch; gap: 8px; max-width: 460px; }
@@ -1472,7 +1474,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .strategy-bar { flex-wrap: wrap; gap: 8px; }
   /* Sliders take the full row so their captions never squeeze into a
      one-word-per-line column beside the Summarize / Roast buttons. */
-  .strategy-bar .budgetsliders, .strategy-bar .budgetsliders-wrap { flex: 1 1 100%; width: 100%; }
+  .strategy-bar .budgetsliders { flex: 1 1 100%; width: 100%; }
   .strategy-bar .bs-row input[type="range"] { max-width: none; }
   .strategy-bar .summarize-btn { margin-left: 0; }
   .strategy-bar .taunt-btn { margin-left: 0; }
@@ -21452,20 +21454,7 @@ function App() {
       onDraft: handleDraft
     }), React.createElement("div", {
       className: "strategy-bar" + (config.format !== 'auction' ? ' strategy-bar-snake' : '')
-    }, (config.format === 'auction' && (boardSlidersOpen ? React.createElement("div", {
-      className: "budgetsliders-wrap"
-    }, React.createElement("button", {
-      className: "panel-toggle",
-      onClick: () => setBoardSlidersOpen(false),
-      title: "Minimize the budget sliders"
-    }, "🎚 Sliders ▾"), React.createElement(BudgetSliders, {
-      strategy: config.strategy,
-      onChange: handleUpdateStrategy
-    })) : React.createElement("button", {
-      className: "panel-toggle",
-      onClick: () => setBoardSlidersOpen(true),
-      title: "Adjust how your budget is spread: concentration among starters, and starters vs bench"
-    }, "🎚 Budget Sliders ▸"))), (config.format !== 'auction' && React.createElement(WillHeBeThere, {
+    }, (config.format !== 'auction' && React.createElement(WillHeBeThere, {
       players: personalizedPlayers,
       draftedIds: draftedIds,
       draftHistory: draftHistory,
@@ -21551,15 +21540,24 @@ function App() {
       setBoardSortKey: setBoardSortKey,
       focusPlayer: null,
       onCollapse: null
-    }))), (view === 'board' && myTeam) && (function () {
+    }))), (view === 'board' || view === 'split') && (function () {
       var MODELS = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
       var key = draftModel || 'ideal';
       var lbl = (MODELS.find(function (m) { return m[0] === key; }) || [key, key])[1];
-      if (!boardModelsOpen) return React.createElement("div", { className: "board-models-2pane bm2-min no-print" }, React.createElement("button", {
+      var modelsToggle = myTeam ? React.createElement("button", {
         className: "panel-toggle",
-        onClick: function () { setBoardModelsOpen(true); },
-        title: "Show the draft models and this model's " + (config.format === 'snake' ? "ideal picks by round" : "target buys")
-      }, "📐 Draft Models · " + lbl + " ▸"));
+        onClick: function () { setBoardModelsOpen(!boardModelsOpen); },
+        title: boardModelsOpen ? "Minimize the draft models" : ("Show the draft models and this model's " + (config.format === 'snake' ? "ideal picks by round" : "target buys"))
+      }, "📐 Draft Models · " + lbl + (boardModelsOpen ? " ▾" : " ▸")) : null;
+      var slidersToggle = config.format === 'auction' ? React.createElement("button", {
+        className: "panel-toggle",
+        onClick: function () { setBoardSlidersOpen(!boardSlidersOpen); },
+        title: boardSlidersOpen ? "Minimize the budget sliders" : "Adjust how your budget is spread: concentration among starters, and starters vs bench"
+      }, "🎚 Budget Sliders" + (boardSlidersOpen ? " ▾" : " ▸")) : null;
+      if (!modelsToggle && !slidersToggle) return null;
+      var slidersEl = (boardSlidersOpen && config.format === 'auction') ? React.createElement("div", { className: "board-sliders-panel" }, React.createElement(BudgetSliders, { strategy: config.strategy, onChange: handleUpdateStrategy })) : null;
+      var modelsEl = null;
+      if (boardModelsOpen && myTeam) modelsEl = (function () {
       var plan = null;
       try { plan = buildModel(key, myTeam, personalizedPlayers, config, draftedIds, roleOverrides, targets); } catch (e) {}
       var pmap = {}; (personalizedPlayers || []).forEach(function (p) { pmap[p.id] = p; });
@@ -21585,11 +21583,9 @@ function App() {
         var groups = ORDER.filter(function (p) { return byPos[p] && byPos[p].length; }).map(function (p) { return { pos: p, players: byPos[p] }; });
         right = groups.length ? React.createElement("div", { className: "bm2-auction" }, groups.map(function (g) { return React.createElement("div", { key: g.pos, className: "bm2-posgroup" }, React.createElement("div", { className: "bm2-posh position-tag " + g.pos }, g.pos), g.players.map(function (pl, i) { return React.createElement("div", { key: i, className: "bm2-pl-row", style: { cursor: 'pointer' }, title: "View player card", onClick: function () { var f = pmap[pl.id]; if (f) setAssignPlayer(f); } }, React.createElement("span", { className: "bm2-pl-name" }, pl.name), React.createElement("span", { className: "bm2-pl-meta" }, "$" + pl.price + " · " + pl.ppg + "/gm")); })); })) : EMPTY;
       }
-      return React.createElement("div", { className: "board-models-2pane no-print bm2-wide" }, React.createElement("div", { className: "bm2-models" }, React.createElement("button", {
-        className: "panel-toggle bm2-hide",
-        onClick: function () { setBoardModelsOpen(false); },
-        title: "Minimize the draft models"
-      }, "📐 Draft Models ▾"), React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
+      return React.createElement("div", { className: "board-models-2pane bm2-wide" }, React.createElement("div", { className: "bm2-models" }, React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
+      })();
+      return React.createElement("div", { className: "board-panels no-print" }, React.createElement("div", { className: "board-panels-row" }, modelsToggle, slidersToggle), slidersEl, modelsEl);
     })(), React.createElement("div", {
       className: "board-layout board-norail"
     }, React.createElement(TeamsBoard, {
