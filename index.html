@@ -8840,7 +8840,8 @@ function TierView({
   pointsMode,
   seasonGames,
   onNominate,
-  onUpdateStrategy
+  onUpdateStrategy,
+  onViewCard
 }) {
   const [position, setPosition] = useState('RB');
   const tiers = useMemo(() => buildTiers(players, position), [players, position]);
@@ -8886,7 +8887,10 @@ function TierView({
         key: p.id,
         className: `tier-player ${isDrafted ? 'drafted' : ''}`
       }, React.createElement("span", {
-        className: "tier-player-name"
+        className: "tier-player-name",
+        onClick: onViewCard ? () => onViewCard(p) : undefined,
+        style: onViewCard ? { cursor: 'pointer' } : undefined,
+        title: onViewCard ? "View player card" : undefined
       }, p.name), React.createElement("span", {
         className: "tier-player-team"
       }, p.team), React.createElement("span", {
@@ -21487,7 +21491,8 @@ function App() {
         pointsMode: pointsMode,
         seasonGames: SEASON_GAMES,
         onNominate: setCurrentNomination,
-        onUpdateStrategy: handleUpdateStrategy
+        onUpdateStrategy: handleUpdateStrategy,
+        onViewCard: setAssignPlayer
       });
     }
     if (view === 'mock') {
