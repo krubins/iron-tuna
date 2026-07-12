@@ -1172,6 +1172,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-sb-toggle { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; white-space: nowrap; }
 .cheat-header.ch-simple .ch-sb-toggle { animation: chSbGlow 2.4s ease-in-out infinite; }
 .ch-sb-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); animation: none; transform: none; }
+.ch-sb-right { display: flex; align-items: center; gap: 8px; }
+.ch-sb-pdf { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+.ch-sb-pdf:hover, .ch-sb-pdf.open { border-color: var(--gold-text); color: var(--gold-text); }
+.ch-sb-pdf-opts { display: inline-flex; gap: 6px; }
+.ch-sb-pdf-opt { font-family: var(--font-body); font-weight: 700; font-size: 12px; color: var(--gold-text); background: var(--bg-panel); border: 1px solid var(--gold-text); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+.ch-sb-pdf-opt:hover { background: var(--gold-text); color: #14181d; }
 @keyframes chSbGlow {
   0%, 100% { box-shadow: 0 0 4px rgba(45,212,163,0.14); border-color: rgba(45,212,163,0.30); color: var(--text-secondary); transform: scale(1); }
   50% { box-shadow: 0 0 18px rgba(45,212,163,0.60); border-color: rgba(45,212,163,0.9); color: var(--positive); transform: scale(1.035); }
@@ -10645,6 +10651,8 @@ function CheatHeader({
   const [idx, setIdx] = useState(0);
   const [colsOpen, setColsOpen] = useState(false);
   const colsRef = useRef(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const pdfRef = useRef(null);
 
   useEffect(() => {
     if (!colsOpen) return;
@@ -10654,6 +10662,14 @@ function CheatHeader({
     document.addEventListener('pointerdown', onDocDown);
     return () => document.removeEventListener('pointerdown', onDocDown);
   }, [colsOpen]);
+  useEffect(() => {
+    if (!pdfOpen) return;
+    const onDocDown = e => {
+      if (pdfRef.current && !pdfRef.current.contains(e.target)) setPdfOpen(false);
+    };
+    document.addEventListener('pointerdown', onDocDown);
+    return () => document.removeEventListener('pointerdown', onDocDown);
+  }, [pdfOpen]);
   useEffect(() => {
     if (flen <= 1) return;
     const t = setInterval(() => setIdx(i => (i + 1) % flen), 22000);
@@ -10665,11 +10681,26 @@ function CheatHeader({
     className: "ch-simplebar"
   }, React.createElement("span", {
     className: "ch-sb-title"
-  }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("button", {
+  }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("div", {
+    className: "ch-sb-right",
+    ref: pdfRef
+  }, React.createElement("button", {
+    className: "ch-sb-pdf" + (pdfOpen ? " open" : ""),
+    onClick: () => setPdfOpen(o => !o),
+    title: "Save this cheat sheet as a one-page PDF"
+  }, "⤓ PDF"), pdfOpen && React.createElement("span", {
+    className: "ch-sb-pdf-opts"
+  }, React.createElement("button", {
+    className: "ch-sb-pdf-opt",
+    onClick: () => { setPdfOpen(false); printPdf('letter'); }
+  }, "Letter"), React.createElement("button", {
+    className: "ch-sb-pdf-opt",
+    onClick: () => { setPdfOpen(false); printPdf('legal'); }
+  }, "Legal")), React.createElement("button", {
     className: "ch-sb-toggle",
     onClick: toggleAdv,
     title: "Show or hide draft models, column & flag options, what-if, and PDF export"
-  }, adv ? "Hide tools ▴" : "Models, columns & tools ▾")), adv && React.createElement("div", {
+  }, adv ? "Hide tools ▴" : "Models, columns & tools ▾"))), adv && React.createElement("div", {
     className: "ch-models"
   }, React.createElement("span", {
     className: "ch-models-label"
