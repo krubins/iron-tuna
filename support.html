@@ -33,6 +33,20 @@ h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 .faq details[open] summary::before{content:"\2013"}
 .faq p{color:var(--sec);margin:10px 0 2px;padding-left:24px}
 .back{display:inline-block;margin:30px 0 10px;color:var(--sec)}
+form.contact{border:1px solid var(--line);background:rgba(18,27,36,0.5);border-radius:12px;padding:18px;margin:0 0 22px}
+form.contact .row{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+form.contact .row > div{flex:1 1 200px}
+form.contact label{display:block;font-size:13px;color:var(--sec);margin:0 0 5px}
+form.contact input,form.contact textarea{width:100%;background:#0b1117;border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;font-size:15px;padding:10px 12px}
+form.contact textarea{resize:vertical;min-height:120px}
+form.contact input:focus,form.contact textarea:focus{outline:none;border-color:var(--teal)}
+form.contact .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+form.contact button{background:var(--teal);color:#04231a;border:0;border-radius:8px;font-weight:700;font-size:15px;padding:11px 20px;cursor:pointer}
+form.contact button:disabled{opacity:.6;cursor:default}
+form.contact .note{color:var(--muted);font-size:13px;margin:10px 0 0}
+form.contact .msg{font-size:14px;margin:12px 0 0;min-height:18px}
+form.contact .msg.ok{color:var(--teal)}
+form.contact .msg.err{color:#f57272}
 footer{border-top:1px solid var(--line);margin-top:42px;padding:24px 0;color:var(--muted);font-size:13px}
 footer a{color:var(--sec);margin-right:16px}
 </style>
@@ -47,8 +61,29 @@ footer a{color:var(--sec);margin-right:16px}
   <h1>Support</h1>
   <p class="lead">Questions, bugs, or help with your draft? We're here.</p>
 
+  <form class="contact" id="contactForm" novalidate>
+    <div class="row">
+      <div>
+        <label for="cf-name">Name</label>
+        <input id="cf-name" name="name" type="text" autocomplete="name" placeholder="Your name"/>
+      </div>
+      <div>
+        <label for="cf-email">Email <span style="color:var(--teal)">*</span></label>
+        <input id="cf-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"/>
+      </div>
+    </div>
+    <div>
+      <label for="cf-message">How can we help? <span style="color:var(--teal)">*</span></label>
+      <textarea id="cf-message" name="message" required placeholder="Your league size, scoring, and a screenshot help us help you faster."></textarea>
+    </div>
+    <div class="hp" aria-hidden="true"><label>Company<input type="text" name="company" tabindex="-1" autocomplete="off"/></label></div>
+    <p class="note" style="margin:12px 0">We usually reply within a day.</p>
+    <button type="submit" id="cf-send">Send message</button>
+    <p class="msg" id="cf-msg" role="status" aria-live="polite"></p>
+  </form>
+
   <div class="card">
-    <b>Email us:</b> <a href="mailto:support@irontuna.com">support@irontuna.com</a>. We usually reply within a day. Including your league size, scoring, and a screenshot helps us help you faster.
+    <b>Prefer email?</b> Write us directly at <a href="mailto:ken@irontuna.com">ken@irontuna.com</a>.
   </div>
 
   <div class="faq">
@@ -58,11 +93,11 @@ footer a{color:var(--sec);margin-right:16px}
     </details>
     <details>
       <summary>How much does it cost, and can I get a refund?</summary>
-      <p>The cheat sheet is free in both snake and auction formats. The live Draft Day experience is a one-time $9.99 for the current season, with no subscription. If something isn't working right, email <a href="mailto:support@irontuna.com">support@irontuna.com</a> and we'll make it right.</p>
+      <p>The cheat sheet is free in both snake and auction formats. The live Draft Day experience is a one-time $9.99 for the current season, with no subscription. If something isn't working right, email <a href="mailto:ken@irontuna.com">ken@irontuna.com</a> and we'll make it right.</p>
     </details>
     <details>
       <summary>I paid but don't see Draft Day unlocked.</summary>
-      <p>Reopen Iron Tuna in the same browser you bought it in, or sign in with the email you used at checkout. If it still isn't showing, email <a href="mailto:support@irontuna.com">support@irontuna.com</a> with your receipt and we'll restore it.</p>
+      <p>Reopen Iron Tuna in the same browser you bought it in, or sign in with the email you used at checkout. If it still isn't showing, email <a href="mailto:ken@irontuna.com">ken@irontuna.com</a> with your receipt and we'll restore it.</p>
     </details>
     <details>
       <summary>Do I need an account?</summary>
@@ -78,5 +113,35 @@ footer a{color:var(--sec);margin-right:16px}
 </main>
 
 <footer><div class="wrap"><a href="/">Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a>&nbsp;&middot;&nbsp;Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</div></footer>
+<script>
+(function(){
+  var f = document.getElementById('contactForm');
+  if (!f) return;
+  var msg = document.getElementById('cf-msg');
+  var btn = document.getElementById('cf-send');
+  var EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  function show(text, ok){ msg.textContent = text; msg.className = 'msg ' + (ok ? 'ok' : 'err'); }
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = f.name.value.trim();
+    var email = f.email.value.trim();
+    var message = f.message.value.trim();
+    if (!EMAIL_RE.test(email)) { show('Please enter a valid email address.', false); f.email.focus(); return; }
+    if (message.length < 5) { show('Please add a short message.', false); f.message.focus(); return; }
+    btn.disabled = true; show('Sending…', true);
+    fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: name, email: email, message: message, company: f.company.value })
+    }).then(function(r){ return r.json().catch(function(){ return { ok: r.ok }; }); })
+      .then(function(d){
+        if (d && d.ok) { f.reset(); show('Thanks — your message is on its way. We’ll reply by email soon.', true); }
+        else if (d && d.error === 'rate') { show('Too many messages just now. Please try again in a few minutes.', false); btn.disabled = false; }
+        else { show('Sorry, that didn’t send. Please email ken@irontuna.com directly.', false); btn.disabled = false; }
+      })
+      .catch(function(){ show('Sorry, that didn’t send. Please email ken@irontuna.com directly.', false); btn.disabled = false; });
+  });
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Admin — Iron Tuna</title>
+<style>
+:root{--bg:#0b1117;--panel:#121b24;--elev:#16212c;--line:#22303b;--line2:#2c3b48;--text:#e8eef2;--sec:#b6c2cc;--muted:#8595a1;--teal:#2dd4a3;--gold:#f5b800;--danger:#ef5b5b;--series-sales:#1aa87e;--series-leads:#c98500}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header.site{position:sticky;top:0;z-index:10;background:rgba(11,17,23,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.site .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{font-weight:800;letter-spacing:.14em;font-size:15px;color:var(--text);white-space:nowrap}
+.brand b{color:var(--teal)}
+.brand .tag{color:var(--muted);font-weight:600;letter-spacing:.06em;margin-left:10px;text-transform:uppercase;font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{background:var(--elev);color:var(--sec);border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn:hover{border-color:var(--teal);color:var(--text)}
+.btn.primary{background:rgba(45,212,163,.14);color:var(--teal);border-color:var(--teal)}
+main{padding:22px 0 60px}
+h1{font-size:24px;margin:18px 0 4px}
+h2{font-size:16px;margin:0 0 12px;letter-spacing:.01em}
+.meta{color:var(--muted);font-size:13px;margin:0 0 18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 16px}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0 0 16px}
+@media(max-width:960px){.tiles{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile .lbl{color:var(--muted);font-size:12px;letter-spacing:.04em}
+.tile .val{font-size:24px;font-weight:600;margin-top:2px}
+.tile.hero .val{font-size:34px}
+.tile .sub{color:var(--muted);font-size:12px;margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:4px 0 0}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--muted);font-size:12px;letter-spacing:.04em;font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11px;border-radius:12px;padding:1px 9px;border:1px solid var(--line2);color:var(--sec)}
+.badge.ok{color:var(--teal);border-color:rgba(45,212,163,.5)}
+.badge.warn{color:var(--danger);border-color:rgba(239,91,91,.5)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.chip{background:var(--elev);border:1px solid var(--line);border-radius:16px;padding:4px 12px;font-size:12.5px;color:var(--sec)}
+.chip b{color:var(--text);font-weight:600}
+.empty{color:var(--muted);font-size:13.5px;padding:10px 0}
+.note{color:var(--muted);font-size:12.5px;margin-top:10px}
+/* gate */
+#gate .card{max-width:420px;margin:60px auto}
+#gate input{width:100%;background:var(--elev);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:11px 13px;font-size:14px;margin:10px 0 12px;font-family:inherit}
+#gate input:focus{outline:none;border-color:var(--teal)}
+#gateErr{color:var(--danger);font-size:13px;min-height:18px;margin:0 0 8px}
+/* chart */
+.legend{display:flex;gap:18px;margin:0 0 8px;font-size:13px;color:var(--sec)}
+.legend .key{display:inline-flex;align-items:center;gap:7px}
+.legend .swatch{width:14px;height:3px;border-radius:2px;display:inline-block}
+#chartbox{position:relative}
+#chart{width:100%;display:block}
+#tip{position:absolute;pointer-events:none;background:var(--elev);border:1px solid var(--line2);border-radius:9px;padding:8px 11px;font-size:12.5px;color:var(--sec);display:none;box-shadow:0 8px 22px rgba(0,0,0,.5);z-index:5;white-space:nowrap}
+#tip b{color:var(--text)}
+#tip .row{display:flex;align-items:center;gap:7px;margin-top:2px}
+#tip .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+details.tbl{margin-top:12px}
+details.tbl summary{color:var(--muted);font-size:12.5px;cursor:pointer}
+footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/">IRON <b>TUNA</b><span class="tag">Admin</span></a>
+  <div class="actions" id="hdrActions" hidden>
+    <button class="btn" id="csvBtn" type="button">Export leads CSV</button>
+    <button class="btn" id="reloadBtn" type="button">Refresh</button>
+    <button class="btn" id="lockBtn" type="button">Lock</button>
+  </div>
+</div></header>
+<main class="wrap">
+
+<section id="gate">
+  <div class="card">
+    <h2>Admin access</h2>
+    <p style="color:var(--sec);font-size:14px;margin:0">Enter the admin key (<code>LEADS_EXPORT_KEY</code>) to load the dashboard. It stays in this browser only.</p>
+    <input id="keyInput" type="password" placeholder="Admin key" autocomplete="off">
+    <div id="gateErr"></div>
+    <button class="btn primary" id="unlockBtn" type="button">Unlock dashboard</button>
+  </div>
+</section>
+
+<section id="dash" hidden>
+  <h1>Sales &amp; referrals</h1>
+  <p class="meta" id="metaLine"></p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>Last 30 days</h2>
+    <div class="legend">
+      <span class="key"><span class="swatch" style="background:var(--series-sales)"></span>Paid sales</span>
+      <span class="key"><span class="swatch" style="background:var(--series-leads)"></span>New leads</span>
+    </div>
+    <div id="chartbox">
+      <svg id="chart" viewBox="0 0 760 250" role="img" aria-label="Paid sales and new leads per day, last 30 days"></svg>
+      <div id="tip"></div>
+    </div>
+    <details class="tbl"><summary>View as table</summary><div class="tblwrap"><table id="dailyTbl"></table></div></details>
+  </div>
+
+  <div class="card">
+    <h2>Purchases <span class="badge" id="salesBadge"></span></h2>
+    <div class="tblwrap"><table id="salesTbl"></table></div>
+    <div class="note" id="salesNote"></div>
+  </div>
+
+  <div class="card">
+    <h2>Referrals</h2>
+    <div class="tblwrap"><table id="refTbl"></table></div>
+    <div class="note">Clicks and checkout starts come from the site database (D1); paid sales and revenue come from Stripe. Owed = $3 per paid referred sale, matching <code>/api/affiliate-reconcile</code>.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Purchasers (entitled)</h2>
+      <div class="tblwrap"><table id="purchTbl"></table></div>
+      <div class="note">The entitlements table — authoritative paid access. Refunds and chargebacks remove rows here automatically.</div>
+    </div>
+    <div class="card">
+      <h2>Leads</h2>
+      <div class="chips" id="srcChips"></div>
+      <div class="tblwrap"><table id="leadsTbl"></table></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer class="site"><div class="wrap">Iron Tuna admin. This page is key-gated and not indexed.</div></footer>
+
+<script>
+(function(){
+  var KEY_LS = 'it_admin_key';
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); };
+  var money = function(v){ return '$' + Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); };
+  var num = function(v){ return Number(v || 0).toLocaleString('en-US'); };
+
+  function getKey(){ try { return localStorage.getItem(KEY_LS) || ''; } catch(e){ return ''; } }
+  function setKey(k){ try { if (k) localStorage.setItem(KEY_LS, k); else localStorage.removeItem(KEY_LS); } catch(e){} }
+
+  function showGate(err){
+    $('gate').hidden = false; $('dash').hidden = true; $('hdrActions').hidden = true;
+    $('gateErr').textContent = err || '';
+  }
+  function showDash(){
+    $('gate').hidden = true; $('dash').hidden = false; $('hdrActions').hidden = false;
+  }
+
+  function load(){
+    var key = getKey();
+    if (!key) { showGate(''); return; }
+    $('gateErr').textContent = '';
+    fetch('/api/admin/dashboard?key=' + encodeURIComponent(key))
+      .then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+      .then(function(res){
+        if (res.status === 403 || (res.j && res.j.error === 'forbidden')) { setKey(''); showGate('That key was rejected. Try again.'); return; }
+        if (!res.j || !res.j.ok) { showGate('Server error: ' + esc((res.j && (res.j.error + (res.j.detail ? ' — ' + res.j.detail : ''))) || res.status)); return; }
+        render(res.j); showDash();
+      })
+      .catch(function(e){ showGate('Network error: ' + esc(e && e.message)); });
+  }
+
+  function tile(label, val, sub, hero){
+    return '<div class="tile' + (hero ? ' hero' : '') + '"><div class="lbl">' + esc(label) + '</div><div class="val">' + val + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>';
+  }
+
+  function render(d){
+    var t = d.totals || {};
+    $('metaLine').textContent = 'Generated ' + new Date(d.generatedAt || Date.now()).toLocaleString() +
+      (d.stripe && d.stripe.pagesScanned ? ' · Stripe: ' + d.stripe.pagesScanned + ' page(s) scanned' + (d.stripe.capped ? ' (capped — oldest sales beyond 2,500 sessions not included)' : '') : '') +
+      (d.stripe && d.stripe.error ? ' · Stripe error: ' + d.stripe.error : (d.stripe ? '' : ' · Stripe not configured — revenue unavailable'));
+
+    $('tiles').innerHTML =
+      tile('Revenue (Stripe)', money(t.revenue), num(t.paidSales) + ' paid sale' + (t.paidSales === 1 ? '' : 's'), true) +
+      tile('Purchasers', num(t.purchasers), 'entitled emails') +
+      tile('Referred sales', num(t.referredSales), money(t.referralOwed) + ' owed') +
+      tile('Referral codes', num(t.referralCodes), '') +
+      tile('Leads', num(t.leads), num(t.contacts) + ' contacts total') +
+      tile('Checkout starts', num(t.checkoutStarts), num(t.abandonedCheckouts) + ' not converted');
+
+    renderChart(d.daily || []);
+    renderDailyTable(d.daily || []);
+
+    // Purchases (Stripe paid sessions)
+    var sales = d.sales || [];
+    $('salesBadge').textContent = num(sales.length) + ' total';
+    if (!sales.length) { $('salesTbl').innerHTML = ''; $('salesNote').innerHTML = '<div class="empty">No paid Stripe sales found yet.</div>'; }
+    else {
+      var shown = sales.slice(0, 100);
+      $('salesTbl').innerHTML = '<tr><th>Date</th><th>Email</th><th class="num">Amount</th><th>Referral</th><th>Access</th></tr>' +
+        shown.map(function(s){
+          return '<tr><td>' + esc(s.date) + '</td><td>' + esc(s.email) + '</td><td class="num">' + money(s.amount) + '</td><td>' + (s.ref ? esc(s.ref) : '<span style="color:var(--muted)">—</span>') + '</td><td>' +
+            (s.entitled ? '<span class="badge ok">entitled</span>' : '<span class="badge warn">no entitlement</span>') + '</td></tr>';
+        }).join('');
+      $('salesNote').textContent = (sales.length > 100 ? 'Showing the 100 most recent of ' + num(sales.length) + ' sales. ' : '') +
+        '"No entitlement" means Stripe shows a payment but the email has no access row — usually a refund/chargeback revocation, otherwise worth a manual grant.';
+    }
+
+    // Referrals
+    var refs = d.referrals || [];
+    $('refTbl').innerHTML = !refs.length ? '<tr><td class="empty">No referral codes yet.</td></tr>' :
+      '<tr><th>Code</th><th>Owner</th><th>Since</th><th class="num">Clicks</th><th class="num">Checkout starts</th><th class="num">Paid sales</th><th class="num">Revenue</th><th class="num">Owed</th></tr>' +
+      refs.map(function(r){
+        return '<tr><td><b>' + esc(r.code) + '</b>' + (r.ownerEmail === null && r.paidSales ? ' <span class="badge warn">unclaimed</span>' : '') + '</td><td>' + (r.ownerEmail ? esc(r.ownerEmail) : '<span style="color:var(--muted)">—</span>') + '</td><td>' + (r.since ? esc(r.since) : '<span style="color:var(--muted)">—</span>') + '</td><td class="num">' + num(r.clicks) + '</td><td class="num">' + num(r.checkoutStarts) + '</td><td class="num">' + num(r.paidSales) + '</td><td class="num">' + money(r.revenue) + '</td><td class="num">' + money(r.owed) + '</td></tr>';
+      }).join('');
+
+    // Purchasers
+    var p = d.purchasers || [];
+    $('purchTbl').innerHTML = !p.length ? '<tr><td class="empty">No entitlements yet.</td></tr>' :
+      '<tr><th>Email</th><th>Paid</th><th>Product</th><th>Referral</th></tr>' +
+      p.slice(0, 100).map(function(e){
+        return '<tr><td>' + esc(e.email) + '</td><td>' + esc(e.date) + '</td><td>' + esc(e.product) + '</td><td>' + (e.ref ? esc(e.ref) : '<span style="color:var(--muted)">—</span>') + '</td></tr>';
+      }).join('');
+
+    // Leads
+    var srcs = (d.leads && d.leads.bySource) || [];
+    $('srcChips').innerHTML = srcs.map(function(s){ return '<span class="chip">' + esc(s.source || '(none)') + ' <b>' + num(s.n) + '</b></span>'; }).join('');
+    var recent = (d.leads && d.leads.recent) || [];
+    $('leadsTbl').innerHTML = !recent.length ? '<tr><td class="empty">No contacts yet.</td></tr>' :
+      '<tr><th>Date</th><th>Email</th><th>Source</th><th>Type</th><th>Ref</th></tr>' +
+      recent.map(function(r){
+        return '<tr><td>' + esc(r.date) + '</td><td>' + esc(r.email) + '</td><td>' + esc(r.source) + '</td><td>' + esc(r.type) + '</td><td>' + (r.ref ? esc(r.ref) : '<span style="color:var(--muted)">—</span>') + '</td></tr>';
+      }).join('');
+  }
+
+  // ── chart: two-series line, hover crosshair + tooltip ──
+  var chartData = [];
+  function renderChart(daily){
+    chartData = daily;
+    var svg = $('chart');
+    var W = 760, H = 250, padL = 40, padR = 64, padT = 14, padB = 26;
+    var iw = W - padL - padR, ih = H - padT - padB;
+    var n = daily.length;
+    var maxV = 0;
+    daily.forEach(function(r){ maxV = Math.max(maxV, r.sales, r.leads); });
+    var yMax = Math.max(4, Math.ceil(maxV / 4) * 4);
+    var x = function(i){ return padL + (n <= 1 ? iw / 2 : i * iw / (n - 1)); };
+    var y = function(v){ return padT + ih - (v / yMax) * ih; };
+    var parts = [];
+    // hairline gridlines + y ticks (clean numbers)
+    for (var g = 0; g <= 4; g++){
+      var gv = yMax * g / 4, gy = y(gv);
+      parts.push('<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="#22303b" stroke-width="1"/>');
+      parts.push('<text x="' + (padL - 8) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="11" fill="#8595a1" style="font-variant-numeric:tabular-nums">' + gv + '</text>');
+    }
+    // x labels: first, mid, last date
+    [0, Math.floor((n - 1) / 2), n - 1].forEach(function(i){
+      if (i < 0 || i >= n) return;
+      parts.push('<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="#8595a1">' + daily[i].date.slice(5) + '</text>');
+    });
+    var series = [
+      { key: 'sales', label: 'Sales', color: '#1aa87e' },
+      { key: 'leads', label: 'Leads', color: '#c98500' }
+    ];
+    // direct end labels: nudge apart if they collide
+    var endYs = series.map(function(s){ return n ? y(daily[n - 1][s.key]) : 0; });
+    if (n && Math.abs(endYs[0] - endYs[1]) < 14) {
+      var mid = (endYs[0] + endYs[1]) / 2;
+      endYs[0] = mid + (endYs[0] <= endYs[1] ? -7 : 7);
+      endYs[1] = mid + (endYs[0] <= endYs[1] ? 7 : -7);
+    }
+    series.forEach(function(s, si){
+      var pts = daily.map(function(r, i){ return x(i) + ',' + y(r[s.key]); }).join(' ');
+      parts.push('<polyline points="' + pts + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>');
+      if (n) {
+        // end marker with a 2px surface ring, plus the series end label in ink
+        parts.push('<circle cx="' + x(n - 1) + '" cy="' + y(daily[n - 1][s.key]) + '" r="4" fill="' + s.color + '" stroke="#121b24" stroke-width="2"/>');
+        parts.push('<text x="' + (x(n - 1) + 10) + '" y="' + (endYs[si] + 4) + '" font-size="11.5" fill="#b6c2cc">' + s.label + '</text>');
+      }
+    });
+    // crosshair + hover dots (hidden until hover)
+    parts.push('<line id="xhair" x1="0" y1="' + padT + '" x2="0" y2="' + (padT + ih) + '" stroke="#2c3b48" stroke-width="1" style="display:none"/>');
+    series.forEach(function(s, si){
+      parts.push('<circle id="hdot' + si + '" r="4" fill="' + s.color + '" stroke="#121b24" stroke-width="2" style="display:none"/>');
+    });
+    // full-plot hit target
+    parts.push('<rect id="hit" x="' + padL + '" y="' + padT + '" width="' + iw + '" height="' + ih + '" fill="transparent"/>');
+    svg.innerHTML = parts.join('');
+
+    var tip = $('tip'), box = $('chartbox');
+    function hide(){ tip.style.display = 'none'; $('xhair').style.display = 'none'; series.forEach(function(_, si){ $('hdot' + si).style.display = 'none'; }); }
+    function onmove(evt){
+      if (!n) return;
+      var rect = svg.getBoundingClientRect();
+      var sx = (evt.clientX - rect.left) * (W / rect.width);
+      var i = Math.round((sx - padL) / (n <= 1 ? 1 : iw / (n - 1)));
+      i = Math.max(0, Math.min(n - 1, i));
+      var r = chartData[i], cx = x(i);
+      var xh = $('xhair'); xh.setAttribute('x1', cx); xh.setAttribute('x2', cx); xh.style.display = '';
+      series.forEach(function(s, si){ var dt = $('hdot' + si); dt.setAttribute('cx', cx); dt.setAttribute('cy', y(r[s.key])); dt.style.display = ''; });
+      tip.innerHTML = '<b>' + esc(r.date) + '</b>' +
+        '<div class="row"><span class="dot" style="background:#1aa87e"></span>Paid sales <b>' + num(r.sales) + '</b>' + (r.revenue ? ' · ' + money(r.revenue) : '') + '</div>' +
+        '<div class="row"><span class="dot" style="background:#c98500"></span>New leads <b>' + num(r.leads) + '</b></div>';
+      tip.style.display = 'block';
+      var bw = box.clientWidth, px = cx * (rect.width / W);
+      tip.style.left = Math.min(Math.max(px + 14, 0), bw - tip.offsetWidth - 4) + 'px';
+      tip.style.top = '18px';
+    }
+    $('hit').addEventListener('mousemove', onmove);
+    svg.addEventListener('mouseleave', hide);
+  }
+
+  function renderDailyTable(daily){
+    $('dailyTbl').innerHTML = '<tr><th>Date</th><th class="num">Paid sales</th><th class="num">Revenue</th><th class="num">New leads</th></tr>' +
+      daily.slice().reverse().map(function(r){
+        return '<tr><td>' + esc(r.date) + '</td><td class="num">' + num(r.sales) + '</td><td class="num">' + money(r.revenue) + '</td><td class="num">' + num(r.leads) + '</td></tr>';
+      }).join('');
+  }
+
+  // wire up
+  $('unlockBtn').addEventListener('click', function(){ var k = $('keyInput').value.trim(); if (!k) { $('gateErr').textContent = 'Enter the key.'; return; } setKey(k); load(); });
+  $('keyInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('unlockBtn').click(); });
+  $('reloadBtn').addEventListener('click', load);
+  $('lockBtn').addEventListener('click', function(){ setKey(''); $('keyInput').value = ''; showGate(''); });
+  $('csvBtn').addEventListener('click', function(){ var k = getKey(); if (k) window.open('/api/leads/export?key=' + encodeURIComponent(k), '_blank'); });
+  load();
+})();
+</script>
+</body>
+</html>

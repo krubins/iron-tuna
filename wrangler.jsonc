@@ -6,5 +6,11 @@
   "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6" },
   "d1_databases": [
     { "binding": "LEADS_DB", "database_name": "iron-tuna-leads", "database_id": "75f7c43a-69cc-48eb-aa78-6ecfd91af2fb" }
-  ]
+  ],
+  "triggers": {
+    // 14:00 UTC = 10am ET (EDT) / 9am ET (EST) — every weekday. Posts one auction + one snake
+    // insight via runXAutoPost() in _worker.js's scheduled() handler, plus a 3rd bonus post on
+    // Tue/Wed/Thu (snake survival-odds / auction strategy+coach, per X_BONUS_DAY_POOLS). See HANDOFF.md §10.
+    "crons": ["0 14 * * 1-5"]
+  }
 }

@@ -995,6 +995,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-whb .whb-round { flex: 0 0 74px; }
 .whb-hint { color: var(--text-muted); }
 .cheat-print-foot { display: none; }
+.cheat-onepage-brand { display: none; }
 .cheat-print-head { font-family: var(--font-display); font-size: 17px; color: #000; margin-bottom: 6px; }
 @media print {
   @page { size: 11in 8.5in; margin: 0.3in; }
@@ -1044,6 +1045,15 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-target { background: #eafaf3 !important; }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 8px; }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 7.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
+  body.print-onepage .cheat-print-head, body.print-onepage .cheat-print-foot { display: none !important; }
+  body.print-onepage .cheat-onepage-brand { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: 0 0 6px; }
+  .cheat-onepage-brand .cob-sub { font-size: 9.5px; color: #5a6675; letter-spacing: 0.03em; font-family: Arial, sans-serif; text-align: right; }
+  .cheat-onepage-brand .cob-chip { background: #1a2430; border-radius: 4px; border-bottom: 2px solid #b8860b; padding: 4px 9px; display: flex; align-items: center; gap: 8px; }
+  .cheat-onepage-brand .cob-fish { height: 20px; width: auto; display: block; }
+  .cheat-onepage-brand .cob-name { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 17px; letter-spacing: 0.12em; color: #dde8ee; line-height: 1; }
+  /* One-page export: top 20 per position so the single page prints large enough to read */
+  body.print-onepage .cheat-col:not(.cc-ALL) > :nth-child(n+21 of .cheat-row) { display: none !important; }
+  body.print-onepage .cheat-col-sub { display: none; }
 }.hl-btn { font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
 .cheat-cols-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); align-self: center; font-family: var(--font-body); letter-spacing: normal; min-width: 46px; }
@@ -1060,6 +1070,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .col-toggle.soft-1517.on { background: rgba(176,124,255,0.16); border-color: #b07cff; color: #b07cff; }
 .cheat-ppg { font-family: var(--font-mono); font-size: 11px; text-align: right; color: #7fa6c9; min-width: 20px; }
 .cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
+.cheat-cost.price-shift-up { color: #e0a83c !important; }
+.cheat-cost.price-shift-down { color: #5aa9ff !important; }
 .col-toggle.price-clear { color: var(--gold-text); border-color: var(--gold-text); }
 .cheat-sep { width: 1px; align-self: stretch; background: var(--border-strong); margin: 0 4px; }
 .cheat-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
@@ -1166,6 +1178,17 @@ input:focus, select:focus { border-color: var(--accent); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
 .settings-league-summary { font-family: var(--font-mono); font-size: 13.5px; color: var(--text-secondary); margin: 6px 0 16px; letter-spacing: 0.02em; }
 .cheat-header { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: var(--ch-box-gap, 14px); align-items: stretch; margin-bottom: 12px; }
+.cheat-header.ch-simple { display: flex; flex-direction: column; }
+.ch-simplebar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.ch-sb-title { font-size: 12px; color: var(--text-muted); }
+.ch-sb-toggle { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.cheat-header.ch-simple .ch-sb-toggle { animation: chSbGlow 2.4s ease-in-out infinite; }
+.ch-sb-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); animation: none; transform: none; }
+@keyframes chSbGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(45,212,163,0.14); border-color: rgba(45,212,163,0.30); color: var(--text-secondary); transform: scale(1); }
+  50% { box-shadow: 0 0 18px rgba(45,212,163,0.60); border-color: rgba(45,212,163,0.9); color: var(--positive); transform: scale(1.035); }
+}
+@media (prefers-reduced-motion: reduce) { .cheat-header.ch-simple .ch-sb-toggle { animation: none; } }
 .ch-models { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 6px; background: var(--bg-panel); border: 1px solid rgba(245,184,0,0.3); border-radius: var(--radius-md); padding: 8px 11px; min-height: 0; box-shadow: 0 0 10px rgba(245,184,0,0.06); }
 .ch-models-label { flex-basis: 100%; font-family: var(--font-body); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold-text); margin-bottom: 2px; }
 .ch-models-empty { font-size: 12px; color: var(--text-muted); }
@@ -2010,6 +2033,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .it-foot { margin: 46px auto 26px; padding-top: 18px; max-width: 1000px; border-top: 1px solid var(--border-subtle, #22303b); display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: center; font-size: 13px; color: var(--text-muted, #8595a1); }
 .it-foot a { color: var(--text-secondary, #b6c2cc); text-decoration: none; }
 .it-foot a:hover { text-decoration: underline; }
+.it-foot a.it-foot-admin { color: var(--text-muted, #8595a1); }
 .it-foot-mark { color: var(--text-muted, #8595a1); }
 
 .ins-dd{position:relative;display:inline-block}
@@ -2120,7 +2144,7 @@ const DEFAULT_LEAGUE_CONFIG = {
     }
   },
   teams: 12,
-  budget: 120,
+  budget: 200,
   roster: {
     QB: {
       total: 2,
@@ -2279,6 +2303,20 @@ const DEFAULT_LEAGUE_CONFIG = {
     allocation: 0.55
   }
 };
+const CORE_ROSTER_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+// Saved configs can lose K/DEF roster keys (the best-ball page persists its
+// K/DEF-less roster into the shared storage key), and every roster UI hides
+// positions missing from config.roster. Restore any missing core position for
+// non-best-ball formats before the config is used.
+function healRosterPositions(cfg) {
+  if (!cfg || (cfg.format || 'auction') === 'bestball') return cfg;
+  const roster = cfg.roster || {};
+  const missing = CORE_ROSTER_POSITIONS.filter(p => !roster[p]);
+  if (!missing.length) return cfg;
+  const healed = { ...roster };
+  missing.forEach(p => { healed[p] = { ...DEFAULT_LEAGUE_CONFIG.roster[p] }; });
+  return { ...cfg, roster: healed };
+}
 const FORMATS = {
   auction: {
     label: 'Auction',
@@ -2819,30 +2857,84 @@ function applyPriceOverrides(players, overrides, draftedIds, config) {
   if (!overrides || Object.keys(overrides).length === 0) return players;
   const minBid = config.valuation.minBid;
   const di = draftedIds || new Set();
-  let delta = 0;
+  const next = new Map();
+  players.forEach(p => next.set(p.id, p.marketValue != null ? p.marketValue : p.auctionValue != null ? p.auctionValue : minBid));
   const overIds = new Set();
+  const moves = [];
   players.forEach(p => {
-    if (!di.has(p.id) && overrides[p.id] != null) {
-      const cur = p.marketValue != null ? p.marketValue : p.auctionValue || minBid;
-      delta += Math.max(minBid, overrides[p.id]) - cur;
-      overIds.add(p.id);
-    }
+    if (di.has(p.id) || overrides[p.id] == null) return;
+    const cur = next.get(p.id);
+    const want = Math.max(minBid, Math.round(overrides[p.id]));
+    if (want !== cur) moves.push({
+      pos: p.position,
+      delta: want - cur
+    });
+    next.set(p.id, want);
+    overIds.add(p.id);
   });
   const pool = players.filter(p => !di.has(p.id) && !overIds.has(p.id));
-  const totalHead = pool.reduce((sum, p) => sum + Math.max(0, (p.marketValue != null ? p.marketValue : minBid) - minBid), 0);
+  const POS_AFFINITY = 4;
+  moves.forEach(({
+    pos,
+    delta
+  }) => {
+    // Raising a price drains whole dollars from the rest of the board (dir -1);
+    // lowering one frees dollars that flow back out (dir +1). Same-position
+    // players absorb POS_AFFINITY times their share, weighted by headroom over
+    // the min bid, so the money moves among comparable players first. Largest-
+    // remainder rounding keeps the total pool exact; the loop re-runs when a
+    // player bottoms out at the min bid and his share must go elsewhere.
+    let remaining = Math.abs(delta);
+    const dir = delta > 0 ? -1 : 1;
+    let guard = 0;
+    while (remaining > 0 && guard++ < 50) {
+      const weights = pool.map(p => {
+        const head = next.get(p.id) - minBid;
+        if (dir < 0 && head <= 0) return 0;
+        return (dir < 0 ? head : head + 1) * (p.position === pos ? POS_AFFINITY : 1);
+      });
+      const totalW = weights.reduce((a, b) => a + b, 0);
+      if (totalW <= 0) break;
+      let allocated = 0;
+      const alloc = new Array(pool.length).fill(0);
+      const fracs = [];
+      pool.forEach((p, i) => {
+        if (!weights[i]) return;
+        const exact = remaining * weights[i] / totalW;
+        let n = Math.floor(exact);
+        if (dir < 0) n = Math.min(n, next.get(p.id) - minBid);
+        alloc[i] = n;
+        allocated += n;
+        fracs.push([exact - Math.floor(exact), i]);
+      });
+      fracs.sort((a, b) => b[0] - a[0]);
+      for (let k = 0; k < fracs.length && allocated < remaining; k++) {
+        const i = fracs[k][1];
+        if (dir < 0 && next.get(pool[i].id) - minBid - alloc[i] <= 0) continue;
+        alloc[i] += 1;
+        allocated += 1;
+      }
+      if (allocated <= 0) break;
+      pool.forEach((p, i) => {
+        if (alloc[i]) next.set(p.id, next.get(p.id) + dir * alloc[i]);
+      });
+      remaining -= allocated;
+    }
+  });
   return players.map(p => {
     if (di.has(p.id)) return p;
-    if (overrides[p.id] != null) return {
+    if (overIds.has(p.id)) return {
       ...p,
-      marketValue: Math.max(minBid, Math.round(overrides[p.id])),
+      marketValue: next.get(p.id),
       priceOverridden: true
     };
-    if (delta === 0 || totalHead <= 0) return p;
-    const head = Math.max(0, (p.marketValue != null ? p.marketValue : minBid) - minBid);
-    const adj = (p.marketValue != null ? p.marketValue : minBid) - delta * (head / totalHead);
+    const cur = p.marketValue != null ? p.marketValue : p.auctionValue != null ? p.auctionValue : minBid;
+    const nv = next.get(p.id);
+    if (nv === cur) return p;
     return {
       ...p,
-      marketValue: Math.max(minBid, Math.round(adj))
+      marketValue: nv,
+      priceShift: nv - cur
     };
   });
 }
@@ -5033,7 +5125,7 @@ function LogoMark({
   const wordTy = tagline ? fishH + 0.5 : 0;
   const vbH = tagline ? fishH + 82 : base * 1.12;
   const taglineY = tagline ? fishH + 66 : vbH - base * 0.14;
-  const rivets = [[40, 12], [54, 10.5], [68, 12], [80, 15], [26, 16], [44, 40], [58, 42], [72, 40], [33, 30], [50, 30], [66, 30], [80, 29]];
+  const rivets = [[38.9, 17.9], [37.9, 28.8], [39.5, 38.9], [54.9, 16.4], [53.9, 28.6], [55.5, 39.8], [71.2, 17.8], [70.8, 28.1], [72.5, 37.3]];
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return React.createElement("svg", {
     className: className,
@@ -5582,10 +5674,7 @@ function LandingSplash({
   }, React.createElement("button", {
     className: "lp-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")), React.createElement("button", {
-    className: "lp-cta lp-cta-alt",
-    onClick: () => go('board', 'secondary_cta_board')
-  }, "See everything you unlock")), React.createElement("p", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board"))), React.createElement("p", {
     className: "lp-reassure"
   }, "Free to start, no account. Your league’s custom values — with all of Draft Day Mode included — one-time $9.99.")), null, React.createElement("div", {
     className: "lp-section",
@@ -5656,10 +5745,7 @@ function LandingSplash({
   }, React.createElement("button", {
     className: "lp-cta",
     onClick: () => go('prep', 'hero_cta_click')
-  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")), React.createElement("button", {
-    className: "lp-cta lp-cta-alt",
-    onClick: () => go('board', 'secondary_cta_board')
-  }, "See everything you unlock"))), React.createElement("p", {
+  }, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Build my free rankings" : (typeof window !== "undefined" && window.location.pathname.indexOf("/bestball") === 0) ? "Build my free best-ball board" : "Build my free auction board")))), React.createElement("p", {
     className: "lp-creditline"
   }, "Built on projections from nationally recognized platforms, reliability-adjusted, then re-priced to your exact league. Runs in your browser, nothing uploaded."), React.createElement("div", {
     className: "lp-seo-links"
@@ -6499,7 +6585,7 @@ function QuickDraftModal({
   const [teamId, setTeamId] = useState(teams[0].id);
   const [price, setPrice] = useState(player.personalValue || player.inflatedValue || player.auctionValue);
   const [jab, setJab] = useState(null);
-  const [showFullSched, setShowFullSched] = useState(false);
+  const [schedOpen, setSchedOpen] = useState(false);
   const _jabPool = typeof playerJabs === 'function' ? playerJabs(player, players, config) : [];
   const _rollJab = () => { if (_jabPool.length) setJab(_jabPool[Math.floor(Math.random() * _jabPool.length)]); };
   const projVal = player.marketValue != null ? player.marketValue : player.auctionValue;
@@ -6556,7 +6642,6 @@ function QuickDraftModal({
   const _riskCol = (_risk != null && typeof riskColor === 'function') ? riskColor(_risk) : 'var(--text-secondary)';
   const _soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(player.team, player.position) : null;
   const _tough = typeof toughSchedule === 'function' ? toughSchedule(player.team, player.position) : null;
-  const _schedWeeks = typeof scheduleWeeksOf === 'function' ? scheduleWeeksOf(player.team) : null;
   const _vol = typeof volumeFlag === 'function' ? volumeFlag(player, players) : null;
   const _ol = typeof olFlag === 'function' ? olFlag(player) : null;
   const _age = typeof ageFlag === 'function' ? ageFlag(player) : null;
@@ -6594,6 +6679,47 @@ function QuickDraftModal({
   }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume"), _ol && React.createElement("span", { style: _chip(_ol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _ol.title }, _ol.t === 'OL+' ? "Good O-line" : "Bad O-line"), _age && React.createElement("span", { style: _chip('#ff6b6b'), title: _age.title }, _age.t), bye && React.createElement("span", { style: _chip(), title: "Bye week" }, "Bye " + bye)), _survRows && _survRows.length ? React.createElement("div", {
     style: { marginBottom: 14 }
   }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 } }, "Will he be there?"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, _survRows.map(rw => React.createElement("span", { key: rw.round, style: _chip(), title: rw.passed ? "Your round " + rw.round + " pick has already passed" : "Chance he lasts to your round " + rw.round + " pick" }, "R" + rw.round + " ", React.createElement("b", { style: { color: rw.passed ? 'var(--text-faint)' : (rw.s >= 70 ? '#46d39a' : rw.s >= 40 ? '#f0b24b' : '#ff6b6b') } }, rw.passed ? "—" : rw.s + "%"))))) : null);
+  const _tmAb = (player.team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const _schWeeks = (typeof SCHEDULE_2026 !== 'undefined' && SCHEDULE_2026[_tmAb]) ? (() => {
+    const sch = SCHEDULE_2026[_tmAb];
+    const out = [];
+    for (let w = 1; w <= 18; w++) {
+      const opp = sch['w' + w] || null;
+      out.push({ w: w, opp: opp, rank: opp && typeof matchupRank === 'function' ? matchupRank(opp, player.position) : null });
+    }
+    return out;
+  })() : null;
+  const _schInfo = typeof seasonScheduleInfo === 'function' ? seasonScheduleInfo(player.team, player.position) : null;
+  const _schWord = _schInfo && _schInfo.tier ? MATCHUP_TIER_WORD[_schInfo.tier] : 'var(--text-secondary)';
+  const _schRated = typeof MATCHUP_POSITIONS !== 'undefined' && MATCHUP_POSITIONS.indexOf(player.position) >= 0;
+  const _schedEl = _schWeeks ? React.createElement("div", {
+    style: { marginBottom: 14 }
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setSchedOpen(o => !o),
+    title: _schInfo ? "2026 schedule strength vs " + player.position + ": " + (_schInfo.softRank <= 10 ? "#" + _schInfo.softRank + " easiest" : _schInfo.n - _schInfo.softRank < 10 ? "#" + (_schInfo.n - _schInfo.softRank + 1) + " toughest" : "middle of the pack") + " of " + _schInfo.n + " teams" : "2026 schedule",
+    style: { background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: _schWord, display: 'inline-flex', alignItems: 'center', gap: 6 }
+  }, "SCHEDULE", React.createElement("span", {
+    style: { fontSize: 9, color: 'var(--text-muted)' }
+  }, schedOpen ? "▲" : "▼")), schedOpen && React.createElement("div", {
+    style: { marginTop: 8 }
+  }, React.createElement("div", {
+    style: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }
+  }, _schWeeks.map(g => {
+    const tier = g.opp ? matchupTier(g.rank) : null;
+    const st = tier ? MATCHUP_TIER_STYLE[tier] : null;
+    return React.createElement("div", {
+      key: g.w,
+      title: !g.opp ? "Week " + g.w + ": bye" : "Week " + g.w + ": " + g.opp + (g.rank != null ? " · matchup rank " + g.rank + "/32 vs " + player.position + " (32 = easiest, 2025 pts allowed)" : ""),
+      style: { textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: st ? st.bg : 'var(--bg-elev)', border: '1px solid ' + (st ? st.bd : 'var(--border-subtle)'), color: st ? st.tx : g.opp ? 'var(--text-secondary)' : 'var(--text-faint)' }
+    }, React.createElement("div", {
+      style: { fontSize: 9, opacity: 0.75, letterSpacing: '0.05em' }
+    }, "W" + g.w), React.createElement("div", {
+      style: { fontSize: 11, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }
+    }, g.opp ? g.opp.replace(/\s+/g, '') : 'BYE'));
+  })), React.createElement("div", {
+    style: { marginTop: 6, fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.5 }
+  }, _schRated ? "Matchups vs " + player.position + " (2025 fantasy points allowed): dark green = 5 easiest, light green = next 5, pink = 6-10 toughest, dark red = 5 toughest." : "Matchup ratings not available for " + player.position + "."))) : null;
   return React.createElement("div", {
     className: "modal-bg modal-left",
     onClick: onClose
@@ -6647,16 +6773,7 @@ function QuickDraftModal({
       fontSize: 15,
       color: 'var(--text-secondary)'
     }
-  }, "2026 proj: ", statLine) : null, _schedWeeks && React.createElement("div", {
-    style: {
-      marginTop: 5,
-      fontSize: 13
-    }
-  }, _schedWeeks.early.length > 0 && React.createElement("div", null, "Early: ", _schedWeeks.early.join(', '), _soft && _soft.early ? ' — soft matchups' : _tough && _tough.early ? ' — tough matchups' : ''), _schedWeeks.late.length > 0 && React.createElement("div", null, "Late: ", _schedWeeks.late.join(', '), _soft && _soft.late ? ' — soft matchups' : _tough && _tough.late ? ' — tough matchups' : ''), React.createElement("button", {
-    type: "button",
-    onClick: () => setShowFullSched(true),
-    style: { marginTop: 4, background: 'none', border: 'none', color: 'var(--accent-text)', cursor: 'pointer', fontSize: 12.5, textDecoration: 'underline', padding: 0 }
-  }, "Full schedule")), React.createElement("div", {
+  }, "2026 proj: ", statLine) : null, React.createElement("div", {
     style: {
       marginTop: 7
     }
@@ -6666,7 +6783,7 @@ function QuickDraftModal({
       color: '#f59e0b',
       fontWeight: 600
     }
-  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: () => { if (__INSULTS_OK) _rollJab(); else __INSULTS_LOCK(); }, title: __INSULTS_OK ? "Generate a jab to throw at whoever drafts him" : "Unlock to fire off built-in insults", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, !__INSULTS_OK ? "🔒 Insults — unlock" : (jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him")), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
+  }, "\\u26a0 Bye conflict: you already roster ", _byeConflicts.join(', '), " at ", player.position, " on Week ", bye, "."))), _news && React.createElement("div", { style: { margin: '0 0 12px', padding: '10px 12px', background: 'var(--bg-elev)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--gold-text)' } }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 } }, "Outlook"), React.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)' } }, _news)), _researchEl, _schedEl, React.createElement("div", { style: { margin: '0 0 14px' } }, React.createElement("button", { type: "button", onClick: () => { if (__INSULTS_OK) _rollJab(); else __INSULTS_LOCK(); }, title: __INSULTS_OK ? "Generate a jab to throw at whoever drafts him" : "Unlock to fire off built-in insults", style: { background: 'rgba(255,107,94,0.12)', color: '#ff8d4a', border: '1px solid rgba(255,107,94,0.5)', borderRadius: 'var(--radius-sm)', padding: '7px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, !__INSULTS_OK ? "🔒 Insults — unlock" : (jab ? "🎲 Another jab" : "🔥 Jab for whoever drafts him")), jab ? React.createElement("div", { style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-primary)', fontStyle: 'italic' } }, "“" + jab + "”", React.createElement("button", { type: "button", onClick: () => { try { navigator.clipboard.writeText(jab); } catch (e) {} }, style: { marginLeft: 8, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline', fontStyle: 'normal' } }, "copy")) : null), (config.format || 'auction') === 'auction' && React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
@@ -6828,10 +6945,7 @@ function QuickDraftModal({
     },
     disabled: (config.format || 'auction') === 'auction' ? overMax || noSpots || posFull || priceNum < 1 : noSpots || posFull,
     onClick: () => onConfirm(teamId, (config.format || 'auction') === 'auction' ? priceNum : 0)
-  }, "Confirm"))), showFullSched && React.createElement(FullScheduleModal, {
-    team: player.team,
-    onClose: () => setShowFullSched(false)
-  }));
+  }, "Confirm"))));
 }
 function AddPlayerModal({
   onAdd,
@@ -7470,7 +7584,7 @@ function SettingsModal({
   canScore,
   onUnlockScore
 }) {
-  const [draft, setDraft] = useState(JSON.parse(JSON.stringify(config)));
+  const [draft, setDraft] = useState(healRosterPositions(JSON.parse(JSON.stringify(config))));
   const [advRoster, setAdvRoster] = useState(false);
   const [advScoring, setAdvScoring] = useState(false);
   const [notesStatus, setNotesStatus] = useState('');
@@ -7735,7 +7849,7 @@ function SettingsModal({
     min: "20",
     max: "1000",
     value: draft.budget,
-    onChange: e => update('budget', parseInt(e.target.value || 120))
+    onChange: e => update('budget', parseInt(e.target.value || 200))
   })), (draft.format || 'auction') === 'auction' && React.createElement("div", {
     className: "settings-row"
   }, React.createElement("label", null, "Minimum Bid"), React.createElement("input", {
@@ -7758,11 +7872,11 @@ function SettingsModal({
     style: { fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 6px' }
   }, "Set your starters, add a flex and bench — each team's roster sizes to match."), React.createElement("div", {
     style: { padding: '2px 0' }
-  }, ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p]).map(pos => Stepper(pos + " starters", draft.roster[pos].starters, v => setStarter(pos, v), 0, 10)), Stepper("FLEX", draft.flex.count, v => update('flex.count', Math.max(0, v)), 0, 5), React.createElement("div", {
+  }, ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => Stepper(pos + " starters", draft.roster[pos] && draft.roster[pos].starters || 0, v => setStarter(pos, v), 0, 10)), Stepper("FLEX", draft.flex.count, v => update('flex.count', Math.max(0, v)), 0, 5), React.createElement("div", {
     style: sStyle.stepRow
   }, React.createElement("span", { style: sStyle.stepLbl, title: "Superflex adds a flex spot that can also start a QB. 2 QB means two required QB starters." }, "QB format"), React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' } }, React.createElement("button", { type: "button", className: `preset-btn ${!_isSuperflex && ((draft.roster.QB && draft.roster.QB.starters) || 1) < 2 ? 'on' : ''}`, onClick: () => setQbFormat('1qb') }, "1 QB"), React.createElement("button", { type: "button", className: `preset-btn ${!_isSuperflex && ((draft.roster.QB && draft.roster.QB.starters) || 1) >= 2 ? 'on' : ''}`, onClick: () => setQbFormat('2qb') }, "2 QB"), React.createElement("button", { type: "button", className: `preset-btn ${_isSuperflex ? 'on' : ''}`, onClick: () => setQbFormat('sf') }, "Superflex"))), React.createElement("div", {
     style: sStyle.stepRow
-  }, React.createElement("span", { style: sStyle.stepLbl, title: "Any position: bench spots can hold anyone. Locked: you reserve a set number of bench spots for each position." }, "Bench spots"), React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' } }, React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') !== 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'any') }, "Any position"), React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') === 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'fixed') }, "Locked by position"))), ((draft.benchPositions || 'any') !== 'fixed') && Stepper("Bench", _benchTotal(), v => setOpenBench(Math.max(0, v)), 0, 30), ((draft.benchPositions || 'any') === 'fixed') && React.createElement("div", { style: { padding: '2px 0 2px 14px', borderLeft: '2px solid var(--border-subtle)', margin: '4px 0 4px 2px' } }, React.createElement("p", { style: { fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 4px' } }, "Reserve bench spots per position:"), ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p]).map(pos => Stepper(pos + " reserves", Math.max(0, (draft.roster[pos].total || 0) - (draft.roster[pos].starters || 0)), v => update(`roster.${pos}.total`, (draft.roster[pos].starters || 0) + Math.max(0, v)), 0, 12)))), React.createElement("div", {
+  }, React.createElement("span", { style: sStyle.stepLbl, title: "Any position: bench spots can hold anyone. Locked: you reserve a set number of bench spots for each position." }, "Bench spots"), React.createElement("div", { style: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' } }, React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') !== 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'any') }, "Any position"), React.createElement("button", { type: "button", className: `preset-btn ${(draft.benchPositions || 'any') === 'fixed' ? 'on' : ''}`, onClick: () => update('benchPositions', 'fixed') }, "Locked by position"))), ((draft.benchPositions || 'any') !== 'fixed') && Stepper("Bench", _benchTotal(), v => setOpenBench(Math.max(0, v)), 0, 30), ((draft.benchPositions || 'any') === 'fixed') && React.createElement("div", { style: { padding: '2px 0 2px 14px', borderLeft: '2px solid var(--border-subtle)', margin: '4px 0 4px 2px' } }, React.createElement("p", { style: { fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 4px' } }, "Reserve bench spots per position:"), ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => Stepper(pos + " reserves", Math.max(0, ((draft.roster[pos] || {}).total || 0) - ((draft.roster[pos] || {}).starters || 0)), v => update(`roster.${pos}.total`, ((draft.roster[pos] || {}).starters || 0) + Math.max(0, v)), 0, 12)))), React.createElement("div", {
     style: { marginTop: 8, padding: '9px 12px', background: 'var(--bg-elev)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }
   }, React.createElement("b", { style: { color: 'var(--text-primary)' } }, _rosterTotal(), " players"), " per team · ", ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => draft.roster[p] && draft.roster[p].starters > 0).map(p => draft.roster[p].starters + " " + p).join(" · "), draft.flex.count ? " · " + draft.flex.count + (_isSuperflex ? " SUPERFLEX" : " FLEX") : "", " · ", _benchTotal(), " bench"), React.createElement("button", {
     type: "button",
@@ -7958,6 +8072,19 @@ function costColor(price, value) {
   const t = Math.min(1, Math.abs(d) / 10);
   const neutral = [245, 247, 250];
   const target = d > 0 ? [239, 68, 68] : [45, 212, 163];
+  const mix = neutral.map((n, i) => Math.round(n + (target[i] - n) * t));
+  return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
+}
+// Value-vs-ADP heat for snake/best-ball: how far a player's draft cost (ADP)
+// sits from where he ranks. diff = ADP - valueRank. Positive = he tends to
+// fall past his rank (a value you can wait on) -> green; negative = he goes
+// earlier than his rank (you'd have to reach) -> amber. Returns null (no tint)
+// when the gap is small. Colour is on the ADP number, never the player name.
+function adpValueColor(diff) {
+  if (diff == null || Math.abs(diff) < 4) return null;
+  const t = 0.35 + 0.65 * Math.min(1, (Math.abs(diff) - 4) / 14);
+  const neutral = [127, 166, 201];
+  const target = diff > 0 ? [45, 212, 163] : [224, 168, 60];
   const mix = neutral.map((n, i) => Math.round(n + (target[i] - n) * t));
   return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
 }
@@ -8228,7 +8355,7 @@ function TeamsBoard({
       justifyContent: 'space-between',
       alignItems: 'center'
     }
-  }, React.createElement("span", null, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Projected pts/game assumes each team optimally fills its remaining starters (incl. flex)." : "Projected pts/game assumes each team optimally fills its remaining starters within budget (incl. flex)."), React.createElement("br", null), "Updates as picks come in."), React.createElement("span", {
+  }, React.createElement("span", null, ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? "Projected pts/game assumes each team optimally fills its remaining starters (incl. flex)." : "Projected pts/game assumes each team optimally fills its remaining starters within budget (incl. flex)."), React.createElement("br", null), "Updates as picks come in.", (config.format || 'auction') === 'auction' && React.createElement(React.Fragment, null, React.createElement("br", null), "Dollar values are scaled to a $", config.budget || 200, " budget per team (", config.teams, " teams).")), React.createElement("span", {
     style: {
       display: 'inline-flex',
       gap: 10,
@@ -8845,7 +8972,136 @@ function cheatHighlights(byPos, strategy) {
   Object.entries(r).forEach(([pos, ranges]) => ranges.forEach(([lo, hi]) => add(pos, lo, hi)));
   return set;
 }
+function cheatOnePageFit() {
+  // Measures the sheet's print-layout height by flipping the print stylesheets
+  // on synchronously (no paint happens mid-task), then returns the layout
+  // width, capped height, and transform scale that fit it on one
+  // letter-landscape page.
+  try {
+    const sheet = document.querySelector('.cheatsheet');
+    if (!sheet) return null;
+    const PAGE_W = 10.4 * 96;
+    const PAGE_H = 7.85 * 96;
+    const flipped = [];
+    for (let i = 0; i < document.styleSheets.length; i++) {
+      const ss = document.styleSheets[i];
+      if (ss.ownerNode && ss.ownerNode.id === 'cheat-page-style') continue;
+      let rules;
+      try {
+        rules = ss.cssRules;
+      } catch (e) {
+        continue;
+      }
+      if (!rules) continue;
+      for (let j = 0; j < rules.length; j++) {
+        const mt = rules[j].media && rules[j].media.mediaText;
+        if (!mt) continue;
+        // Flip print rules on, and viewport-width rules off, so the sheet is
+        // measured in the same fixed-width layout the print iframe renders.
+        if (mt.indexOf('print') !== -1 && mt.indexOf('not') === -1) flipped.push([rules[j], mt, 'all']);else if (mt.indexOf('width') !== -1) flipped.push([rules[j], mt, 'not all']);
+      }
+    }
+    const prevWidth = sheet.style.width;
+    let w = PAGE_W;
+    let h = 0;
+    try {
+      document.body.classList.add('print-onepage');
+      flipped.forEach(([r, mt, to]) => {
+        r.media.mediaText = to;
+      });
+      sheet.style.width = PAGE_W + 'px';
+      h = sheet.scrollHeight;
+      if (h > PAGE_H) {
+        // Too tall at page width: widen the layout so the scaled-down sheet
+        // still spans the full page width, then re-measure at that width.
+        w = Math.round(PAGE_W * (h / PAGE_H));
+        sheet.style.width = w + 'px';
+        h = sheet.scrollHeight || h;
+      }
+    } finally {
+      sheet.style.width = prevWidth;
+      flipped.forEach(([r, mt]) => {
+        try {
+          r.media.mediaText = mt;
+        } catch (e) {}
+      });
+      document.body.classList.remove('print-onepage');
+    }
+    if (!h) return null;
+    const scale = Math.min(1, PAGE_H / h * 0.99, PAGE_W / w);
+    return {
+      width: w,
+      height: Math.ceil(h * scale),
+      scale: scale
+    };
+  } catch (e) {
+    return null;
+  }
+}
+function printOnePagePdf() {
+  // Prints the sheet from a hidden same-origin iframe whose only flow content
+  // is a single page-sized box, so the print engine can never fragment the
+  // scaled sheet across pages the way it does in the main document.
+  try {
+    const sheet = document.querySelector('.cheatsheet');
+    const fit = cheatOnePageFit();
+    if (!sheet || !fit) return;
+    const PAGE_W = Math.floor(10.4 * 96);
+    const PAGE_H = Math.floor(7.85 * 96);
+    let fr = document.getElementById('cheat-print-frame');
+    if (!fr) {
+      fr = document.createElement('iframe');
+      fr.id = 'cheat-print-frame';
+      fr.setAttribute('aria-hidden', 'true');
+      fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+      document.body.appendChild(fr);
+    }
+    const headBits = [];
+    document.querySelectorAll('head style, head link[rel="stylesheet"]').forEach(n => {
+      if (n.id !== 'cheat-page-style') headBits.push(n.outerHTML);
+    });
+    let armed = true;
+    fr.onload = () => {
+      if (!armed) return;
+      armed = false;
+      const w = fr.contentWindow;
+      const ready = w.document.fonts && w.document.fonts.ready ? w.document.fonts.ready : Promise.resolve();
+      ready.then(() => setTimeout(() => {
+        try {
+          w.focus();
+          w.print();
+        } catch (e) {}
+      }, 150));
+    };
+    const doc = fr.contentDocument;
+    doc.open();
+    doc.write('<!doctype html><html><head><meta charset="utf-8">' + headBits.join('') + '<style>@page { size: 11in 8.5in; margin: 0.3in; } html, body { margin: 0; padding: 0; background: #fff; } #cheat-fit { width: ' + PAGE_W + 'px; height: ' + PAGE_H + 'px; overflow: hidden; } #cheat-scale { width: ' + fit.width + 'px; transform: scale(' + fit.scale + '); transform-origin: 0 0; } #cheat-scale .cheatsheet { position: static !important; width: 100% !important; } .cheat-print-foot { display: none !important; }</style></head><body class="print-onepage"><div id="cheat-fit"><div id="cheat-scale"><div class="cheatsheet">' + sheet.innerHTML + '</div></div></div></body></html>');
+    doc.close();
+    // The iframe prints at a fixed page width, so viewport-width media queries
+    // must never restyle it (print MQ evaluation is unreliable across engines).
+    try {
+      const sheets = doc.styleSheets;
+      for (let i = 0; i < sheets.length; i++) {
+        let rules;
+        try {
+          rules = sheets[i].cssRules;
+        } catch (e) {
+          continue;
+        }
+        if (!rules) continue;
+        for (let j = 0; j < rules.length; j++) {
+          const mt = rules[j].media && rules[j].media.mediaText;
+          if (mt && mt.indexOf('width') !== -1) rules[j].media.mediaText = 'not all';
+        }
+      }
+    } catch (e) {}
+  } catch (e) {}
+}
 function printPdf(size) {
+  if (size === 'onepage') {
+    printOnePagePdf();
+    return;
+  }
   try {
     const dims = size === 'legal' ? '14in 8.5in' : '11in 8.5in';
     let st = document.getElementById('cheat-page-style');
@@ -8916,612 +9172,100 @@ const STRAT_TILT = {
 };
 const SCHEDULE_2026 = {
   ARI: {
-    w1: "@ LAC",
-    w2: "SEA",
-    w3: "@ SF",
-    w4: "@ NYG",
-    w5: "DET",
-    w6: "@ LAR",
-    w7: "DEN",
-    w8: "@ DAL",
-    w9: "@ SEA",
-    w10: "LAR",
-    w11: "@ KC",
-    w12: "WAS",
-    w13: "PHI",
-    w15: "NYJ",
-    w16: "@ NO",
-    w17: "LV",
-    w18: "SF"
+    w1: "@ LAC", w2: "SEA", w3: "@ SF", w4: "@ NYG", w5: "DET", w6: "@ LAR", w7: "DEN", w8: "@ DAL", w9: "@ SEA", w10: "LAR", w11: "@ KC", w12: "WAS", w13: "PHI", w15: "NYJ", w16: "@ NO", w17: "LV", w18: "SF"
   },
   ATL: {
-    w1: "@ PIT",
-    w2: "CAR",
-    w3: "@ GB",
-    w4: "@ NO",
-    w5: "BAL",
-    w6: "CHI",
-    w7: "SF",
-    w8: "@ TB",
-    w9: "CIN",
-    w10: "KC",
-    w12: "@ MIN",
-    w13: "DET",
-    w14: "@ CLE",
-    w15: "@ WAS",
-    w16: "TB",
-    w17: "NO",
-    w18: "@ CAR"
+    w1: "@ PIT", w2: "CAR", w3: "@ GB", w4: "@ NO", w5: "BAL", w6: "CHI", w7: "SF", w8: "@ TB", w9: "CIN", w10: "KC", w12: "@ MIN", w13: "DET", w14: "@ CLE", w15: "@ WAS", w16: "TB", w17: "NO", w18: "@ CAR"
   },
   BAL: {
-    w1: "@ IND",
-    w2: "NO",
-    w3: "@ DAL",
-    w4: "TEN",
-    w5: "@ ATL",
-    w6: "@ CLE",
-    w7: "CIN",
-    w8: "@ BUF",
-    w9: "JAX",
-    w10: "LAC",
-    w11: "@ CAR",
-    w12: "@ HOU",
-    w14: "TB",
-    w15: "@ PIT",
-    w16: "CLE",
-    w17: "@ CIN",
-    w18: "PIT"
+    w1: "@ IND", w2: "NO", w3: "@ DAL", w4: "TEN", w5: "@ ATL", w6: "@ CLE", w7: "CIN", w8: "@ BUF", w9: "JAX", w10: "LAC", w11: "@ CAR", w12: "@ HOU", w14: "TB", w15: "@ PIT", w16: "CLE", w17: "@ CIN", w18: "PIT"
   },
   BUF: {
-    w1: "@ HOU",
-    w2: "DET",
-    w3: "LAC",
-    w4: "NE",
-    w5: "@ LAR",
-    w6: "@ LV",
-    w8: "BAL",
-    w9: "@ MIN",
-    w10: "@ NYJ",
-    w11: "MIA",
-    w12: "KC",
-    w13: "@ NE",
-    w14: "@ GB",
-    w15: "CHI",
-    w16: "@ DEN",
-    w17: "@ MIA",
-    w18: "NYJ"
+    w1: "@ HOU", w2: "DET", w3: "LAC", w4: "NE", w5: "@ LAR", w6: "@ LV", w8: "BAL", w9: "@ MIN", w10: "@ NYJ", w11: "MIA", w12: "KC", w13: "@ NE", w14: "@ GB", w15: "CHI", w16: "@ DEN", w17: "@ MIA", w18: "NYJ"
   },
   CAR: {
-    w1: "CHI",
-    w2: "@ ATL",
-    w3: "@ CLE",
-    w4: "DET",
-    w6: "@ PHI",
-    w7: "TB",
-    w8: "@ GB",
-    w9: "DEN",
-    w10: "@ NO",
-    w11: "BAL",
-    w12: "@ TB",
-    w13: "@ MIN",
-    w14: "NO",
-    w15: "CIN",
-    w16: "@ PIT",
-    w17: "SEA",
-    w18: "ATL"
+    w1: "CHI", w2: "@ ATL", w3: "@ CLE", w4: "DET", w6: "@ PHI", w7: "TB", w8: "@ GB", w9: "DEN", w10: "@ NO", w11: "BAL", w12: "@ TB", w13: "@ MIN", w14: "NO", w15: "CIN", w16: "@ PIT", w17: "SEA", w18: "ATL"
   },
   CHI: {
-    w1: "@ CAR",
-    w2: "MIN",
-    w3: "PHI",
-    w4: "NYJ",
-    w5: "@ GB",
-    w6: "@ ATL",
-    w7: "NE",
-    w8: "@ SEA",
-    w9: "TB",
-    w11: "NO",
-    w12: "@ DET",
-    w13: "JAX",
-    w14: "@ MIA",
-    w15: "@ BUF",
-    w16: "GB",
-    w17: "DET",
-    w18: "@ MIN"
+    w1: "@ CAR", w2: "MIN", w3: "PHI", w4: "NYJ", w5: "@ GB", w6: "@ ATL", w7: "NE", w8: "@ SEA", w9: "TB", w11: "NO", w12: "@ DET", w13: "JAX", w14: "@ MIA", w15: "@ BUF", w16: "GB", w17: "DET", w18: "@ MIN"
   },
   CIN: {
-    w1: "TB",
-    w2: "@ HOU",
-    w3: "@ PIT",
-    w4: "JAX",
-    w5: "@ MIA",
-    w7: "@ BAL",
-    w8: "TEN",
-    w9: "@ ATL",
-    w10: "PIT",
-    w11: "@ WAS",
-    w12: "NO",
-    w13: "@ CLE",
-    w14: "KC",
-    w15: "@ CAR",
-    w16: "@ IND",
-    w17: "BAL",
-    w18: "CLE"
+    w1: "TB", w2: "@ HOU", w3: "@ PIT", w4: "JAX", w5: "@ MIA", w7: "@ BAL", w8: "TEN", w9: "@ ATL", w10: "PIT", w11: "@ WAS", w12: "NO", w13: "@ CLE", w14: "KC", w15: "@ CAR", w16: "@ IND", w17: "BAL", w18: "CLE"
   },
   CLE: {
-    w1: "@ JAX",
-    w2: "@ TB",
-    w3: "CAR",
-    w4: "PIT",
-    w5: "@ NYJ",
-    w6: "BAL",
-    w7: "@ TEN",
-    w8: "@ PIT",
-    w9: "@ NO",
-    w10: "HOU",
-    w12: "LV",
-    w13: "CIN",
-    w14: "ATL",
-    w15: "@ NYG",
-    w16: "@ BAL",
-    w17: "IND",
-    w18: "@ CIN"
+    w1: "@ JAX", w2: "@ TB", w3: "CAR", w4: "PIT", w5: "@ NYJ", w6: "BAL", w7: "@ TEN", w8: "@ PIT", w9: "@ NO", w10: "HOU", w12: "LV", w13: "CIN", w14: "ATL", w15: "@ NYG", w16: "@ BAL", w17: "IND", w18: "@ CIN"
   },
   DAL: {
-    w1: "@ NYG",
-    w2: "WAS",
-    w3: "BAL",
-    w4: "@ HOU",
-    w5: "TB",
-    w6: "@ GB",
-    w7: "@ PHI",
-    w8: "ARI",
-    w9: "@ IND",
-    w10: "SF",
-    w11: "TEN",
-    w12: "PHI",
-    w13: "@ SEA",
-    w15: "@ LAR",
-    w16: "JAX",
-    w17: "NYG",
-    w18: "@ WAS"
+    w1: "@ NYG", w2: "WAS", w3: "BAL", w4: "@ HOU", w5: "TB", w6: "@ GB", w7: "@ PHI", w8: "ARI", w9: "@ IND", w10: "SF", w11: "TEN", w12: "PHI", w13: "@ SEA", w15: "@ LAR", w16: "JAX", w17: "NYG", w18: "@ WAS"
   },
   DEN: {
-    w1: "@ KC",
-    w2: "JAX",
-    w3: "LAR",
-    w4: "@ SF",
-    w5: "@ LAC",
-    w6: "SEA",
-    w7: "@ ARI",
-    w8: "KC",
-    w9: "@ CAR",
-    w11: "LV",
-    w12: "@ PIT",
-    w13: "MIA",
-    w14: "@ NYJ",
-    w15: "@ LV",
-    w16: "BUF",
-    w17: "@ NE",
-    w18: "LAC"
+    w1: "@ KC", w2: "JAX", w3: "LAR", w4: "@ SF", w5: "@ LAC", w6: "SEA", w7: "@ ARI", w8: "KC", w9: "@ CAR", w11: "LV", w12: "@ PIT", w13: "MIA", w14: "@ NYJ", w15: "@ LV", w16: "BUF", w17: "@ NE", w18: "LAC"
   },
   DET: {
-    w1: "NO",
-    w2: "@ BUF",
-    w3: "NYJ",
-    w4: "@ CAR",
-    w5: "@ ARI",
-    w7: "GB",
-    w8: "MIN",
-    w9: "@ MIA",
-    w10: "NE",
-    w11: "TB",
-    w12: "CHI",
-    w13: "@ ATL",
-    w14: "TEN",
-    w15: "@ MIN",
-    w16: "NYG",
-    w17: "@ CHI",
-    w18: "@ GB"
+    w1: "NO", w2: "@ BUF", w3: "NYJ", w4: "@ CAR", w5: "@ ARI", w7: "GB", w8: "MIN", w9: "@ MIA", w10: "NE", w11: "TB", w12: "CHI", w13: "@ ATL", w14: "TEN", w15: "@ MIN", w16: "NYG", w17: "@ CHI", w18: "@ GB"
   },
   GB: {
-    w1: "@ MIN",
-    w2: "@ NYJ",
-    w3: "ATL",
-    w4: "@ TB",
-    w5: "CHI",
-    w6: "DAL",
-    w7: "@ DET",
-    w8: "CAR",
-    w9: "@ NE",
-    w10: "MIN",
-    w12: "@ LAR",
-    w13: "@ NO",
-    w14: "BUF",
-    w15: "MIA",
-    w16: "@ CHI",
-    w17: "HOU",
-    w18: "DET"
+    w1: "@ MIN", w2: "@ NYJ", w3: "ATL", w4: "@ TB", w5: "CHI", w6: "DAL", w7: "@ DET", w8: "CAR", w9: "@ NE", w10: "MIN", w12: "@ LAR", w13: "@ NO", w14: "BUF", w15: "MIA", w16: "@ CHI", w17: "HOU", w18: "DET"
   },
   HOU: {
-    w1: "BUF",
-    w2: "CIN",
-    w3: "@ IND",
-    w4: "DAL",
-    w5: "@ TEN",
-    w6: "@ JAX",
-    w7: "NYG",
-    w9: "@ LAC",
-    w10: "@ CLE",
-    w11: "IND",
-    w12: "BAL",
-    w13: "@ PIT",
-    w14: "@ WAS",
-    w15: "JAX",
-    w16: "@ PHI",
-    w17: "@ GB",
-    w18: "TEN"
+    w1: "BUF", w2: "CIN", w3: "@ IND", w4: "DAL", w5: "@ TEN", w6: "@ JAX", w7: "NYG", w9: "@ LAC", w10: "@ CLE", w11: "IND", w12: "BAL", w13: "@ PIT", w14: "@ WAS", w15: "JAX", w16: "@ PHI", w17: "@ GB", w18: "TEN"
   },
   IND: {
-    w1: "BAL",
-    w2: "@ KC",
-    w3: "HOU",
-    w4: "@ WAS",
-    w5: "@ PIT",
-    w6: "TEN",
-    w7: "@ MIN",
-    w8: "@ JAX",
-    w9: "DAL",
-    w10: "MIA",
-    w11: "@ HOU",
-    w12: "NYG",
-    w14: "@ PHI",
-    w15: "@ TEN",
-    w16: "CIN",
-    w17: "@ CLE",
-    w18: "JAX"
+    w1: "BAL", w2: "@ KC", w3: "HOU", w4: "@ WAS", w5: "@ PIT", w6: "TEN", w7: "@ MIN", w8: "@ JAX", w9: "DAL", w10: "MIA", w11: "@ HOU", w12: "NYG", w14: "@ PHI", w15: "@ TEN", w16: "CIN", w17: "@ CLE", w18: "JAX"
   },
   JAX: {
-    w1: "CLE",
-    w2: "@ DEN",
-    w3: "NE",
-    w4: "@ CIN",
-    w5: "PHI",
-    w6: "HOU",
-    w8: "IND",
-    w9: "@ BAL",
-    w10: "@ TEN",
-    w11: "@ NYG",
-    w12: "TEN",
-    w13: "@ CHI",
-    w14: "PIT",
-    w15: "@ HOU",
-    w16: "@ DAL",
-    w17: "WAS",
-    w18: "@ IND"
+    w1: "CLE", w2: "@ DEN", w3: "NE", w4: "@ CIN", w5: "PHI", w6: "HOU", w8: "IND", w9: "@ BAL", w10: "@ TEN", w11: "@ NYG", w12: "TEN", w13: "@ CHI", w14: "PIT", w15: "@ HOU", w16: "@ DAL", w17: "WAS", w18: "@ IND"
   },
   KC: {
-    w1: "DEN",
-    w2: "IND",
-    w3: "@ MIA",
-    w4: "@ LV",
-    w6: "LAC",
-    w7: "@ SEA",
-    w8: "@ DEN",
-    w9: "NYJ",
-    w10: "@ ATL",
-    w11: "ARI",
-    w12: "@ BUF",
-    w13: "@ LAR",
-    w14: "@ CIN",
-    w15: "NE",
-    w16: "SF",
-    w17: "@ LAC",
-    w18: "LV"
+    w1: "DEN", w2: "IND", w3: "@ MIA", w4: "@ LV", w6: "LAC", w7: "@ SEA", w8: "@ DEN", w9: "NYJ", w10: "@ ATL", w11: "ARI", w12: "@ BUF", w13: "@ LAR", w14: "@ CIN", w15: "NE", w16: "SF", w17: "@ LAC", w18: "LV"
   },
   LAC: {
-    w1: "ARI",
-    w2: "LV",
-    w3: "@ BUF",
-    w4: "@ SEA",
-    w5: "DEN",
-    w6: "@ KC",
-    w8: "@ LAR",
-    w9: "HOU",
-    w10: "@ BAL",
-    w11: "NYJ",
-    w12: "NE",
-    w13: "@ TB",
-    w14: "@ LV",
-    w15: "SF",
-    w16: "@ MIA",
-    w17: "KC",
-    w18: "@ DEN"
+    w1: "ARI", w2: "LV", w3: "@ BUF", w4: "@ SEA", w5: "DEN", w6: "@ KC", w8: "@ LAR", w9: "HOU", w10: "@ BAL", w11: "NYJ", w12: "NE", w13: "@ TB", w14: "@ LV", w15: "SF", w16: "@ MIA", w17: "KC", w18: "@ DEN"
   },
   LAR: {
-    w1: "SF",
-    w2: "NYG",
-    w3: "@ DEN",
-    w4: "@ PHI",
-    w5: "BUF",
-    w6: "ARI",
-    w7: "@ LV",
-    w8: "LAC",
-    w9: "@ WAS",
-    w10: "@ ARI",
-    w12: "GB",
-    w13: "KC",
-    w14: "@ SF",
-    w15: "DAL",
-    w16: "@ SEA",
-    w17: "@ TB",
-    w18: "SEA"
+    w1: "SF", w2: "NYG", w3: "@ DEN", w4: "@ PHI", w5: "BUF", w6: "ARI", w7: "@ LV", w8: "LAC", w9: "@ WAS", w10: "@ ARI", w12: "GB", w13: "KC", w14: "@ SF", w15: "DAL", w16: "@ SEA", w17: "@ TB", w18: "SEA"
   },
   LV: {
-    w1: "MIA",
-    w2: "@ LAC",
-    w3: "@ NO",
-    w4: "KC",
-    w5: "@ NE",
-    w6: "BUF",
-    w7: "LAR",
-    w8: "@ NYJ",
-    w9: "@ SF",
-    w10: "SEA",
-    w11: "@ DEN",
-    w12: "@ CLE",
-    w14: "LAC",
-    w15: "DEN",
-    w16: "TEN",
-    w17: "@ ARI",
-    w18: "@ KC"
+    w1: "MIA", w2: "@ LAC", w3: "@ NO", w4: "KC", w5: "@ NE", w6: "BUF", w7: "LAR", w8: "@ NYJ", w9: "@ SF", w10: "SEA", w11: "@ DEN", w12: "@ CLE", w14: "LAC", w15: "DEN", w16: "TEN", w17: "@ ARI", w18: "@ KC"
   },
   MIA: {
-    w1: "@ LV",
-    w2: "@ SF",
-    w3: "KC",
-    w4: "@ MIN",
-    w5: "CIN",
-    w7: "@ NYJ",
-    w8: "NE",
-    w9: "DET",
-    w10: "@ IND",
-    w11: "@ BUF",
-    w12: "NYJ",
-    w13: "@ DEN",
-    w14: "CHI",
-    w15: "@ GB",
-    w16: "LAC",
-    w17: "BUF",
-    w18: "@ NE"
+    w1: "@ LV", w2: "@ SF", w3: "KC", w4: "@ MIN", w5: "CIN", w7: "@ NYJ", w8: "NE", w9: "DET", w10: "@ IND", w11: "@ BUF", w12: "NYJ", w13: "@ DEN", w14: "CHI", w15: "@ GB", w16: "LAC", w17: "BUF", w18: "@ NE"
   },
   MIN: {
-    w1: "GB",
-    w2: "@ CHI",
-    w3: "@ TB",
-    w4: "MIA",
-    w5: "@ NO",
-    w7: "IND",
-    w8: "@ DET",
-    w9: "BUF",
-    w10: "@ GB",
-    w11: "@ SF",
-    w12: "ATL",
-    w13: "CAR",
-    w14: "@ NE",
-    w15: "DET",
-    w16: "WAS",
-    w17: "@ NYJ",
-    w18: "CHI"
+    w1: "GB", w2: "@ CHI", w3: "@ TB", w4: "MIA", w5: "@ NO", w7: "IND", w8: "@ DET", w9: "BUF", w10: "@ GB", w11: "@ SF", w12: "ATL", w13: "CAR", w14: "@ NE", w15: "DET", w16: "WAS", w17: "@ NYJ", w18: "CHI"
   },
   NE: {
-    w1: "@ SEA",
-    w2: "PIT",
-    w3: "@ JAX",
-    w4: "@ BUF",
-    w5: "LV",
-    w6: "NYJ",
-    w7: "@ CHI",
-    w8: "@ MIA",
-    w9: "GB",
-    w10: "@ DET",
-    w12: "@ LAC",
-    w13: "BUF",
-    w14: "MIN",
-    w15: "@ KC",
-    w16: "@ NYJ",
-    w17: "DEN",
-    w18: "MIA"
+    w1: "@ SEA", w2: "PIT", w3: "@ JAX", w4: "@ BUF", w5: "LV", w6: "NYJ", w7: "@ CHI", w8: "@ MIA", w9: "GB", w10: "@ DET", w12: "@ LAC", w13: "BUF", w14: "MIN", w15: "@ KC", w16: "@ NYJ", w17: "DEN", w18: "MIA"
   },
   NO: {
-    w1: "@ DET",
-    w2: "@ BAL",
-    w3: "LV",
-    w4: "ATL",
-    w5: "MIN",
-    w6: "@ NYG",
-    w7: "PIT",
-    w9: "CLE",
-    w10: "CAR",
-    w11: "@ CHI",
-    w12: "@ CIN",
-    w13: "GB",
-    w14: "@ CAR",
-    w15: "@ TB",
-    w16: "ARI",
-    w17: "@ ATL",
-    w18: "TB"
+    w1: "@ DET", w2: "@ BAL", w3: "LV", w4: "ATL", w5: "MIN", w6: "@ NYG", w7: "PIT", w9: "CLE", w10: "CAR", w11: "@ CHI", w12: "@ CIN", w13: "GB", w14: "@ CAR", w15: "@ TB", w16: "ARI", w17: "@ ATL", w18: "TB"
   },
   NYG: {
-    w1: "DAL",
-    w2: "@ LAR",
-    w3: "TEN",
-    w4: "ARI",
-    w5: "@ WAS",
-    w6: "NO",
-    w7: "@ HOU",
-    w9: "@ PHI",
-    w10: "WAS",
-    w11: "JAX",
-    w12: "@ IND",
-    w13: "SF",
-    w14: "@ SEA",
-    w15: "CLE",
-    w16: "@ DET",
-    w17: "@ DAL",
-    w18: "PHI"
+    w1: "DAL", w2: "@ LAR", w3: "TEN", w4: "ARI", w5: "@ WAS", w6: "NO", w7: "@ HOU", w9: "@ PHI", w10: "WAS", w11: "JAX", w12: "@ IND", w13: "SF", w14: "@ SEA", w15: "CLE", w16: "@ DET", w17: "@ DAL", w18: "PHI"
   },
   NYJ: {
-    w1: "@ TEN",
-    w2: "GB",
-    w3: "@ DET",
-    w4: "@ CHI",
-    w5: "CLE",
-    w6: "@ NE",
-    w7: "MIA",
-    w8: "LV",
-    w9: "@ KC",
-    w10: "BUF",
-    w11: "@ LAC",
-    w12: "@ MIA",
-    w14: "DEN",
-    w15: "@ ARI",
-    w16: "NE",
-    w17: "MIN",
-    w18: "@ BUF"
+    w1: "@ TEN", w2: "GB", w3: "@ DET", w4: "@ CHI", w5: "CLE", w6: "@ NE", w7: "MIA", w8: "LV", w9: "@ KC", w10: "BUF", w11: "@ LAC", w12: "@ MIA", w14: "DEN", w15: "@ ARI", w16: "NE", w17: "MIN", w18: "@ BUF"
   },
   PHI: {
-    w1: "WAS",
-    w2: "@ TEN",
-    w3: "@ CHI",
-    w4: "LAR",
-    w5: "@ JAX",
-    w6: "CAR",
-    w7: "DAL",
-    w8: "@ WAS",
-    w9: "NYG",
-    w11: "PIT",
-    w12: "@ DAL",
-    w13: "@ ARI",
-    w14: "IND",
-    w15: "SEA",
-    w16: "HOU",
-    w17: "@ SF",
-    w18: "@ NYG"
+    w1: "WAS", w2: "@ TEN", w3: "@ CHI", w4: "LAR", w5: "@ JAX", w6: "CAR", w7: "DAL", w8: "@ WAS", w9: "NYG", w11: "PIT", w12: "@ DAL", w13: "@ ARI", w14: "IND", w15: "SEA", w16: "HOU", w17: "@ SF", w18: "@ NYG"
   },
   PIT: {
-    w1: "ATL",
-    w2: "@ NE",
-    w3: "CIN",
-    w4: "@ CLE",
-    w5: "IND",
-    w6: "@ TB",
-    w7: "@ NO",
-    w8: "CLE",
-    w10: "@ CIN",
-    w11: "@ PHI",
-    w12: "DEN",
-    w13: "HOU",
-    w14: "@ JAX",
-    w15: "BAL",
-    w16: "CAR",
-    w17: "@ TEN",
-    w18: "@ BAL"
-  },
-  SF: {
-    w1: "@ LAR",
-    w2: "MIA",
-    w3: "ARI",
-    w4: "DEN",
-    w5: "@ SEA",
-    w6: "WAS",
-    w7: "@ ATL",
-    w9: "LV",
-    w10: "@ DAL",
-    w11: "MIN",
-    w12: "SEA",
-    w13: "@ NYG",
-    w14: "LAR",
-    w15: "@ LAC",
-    w16: "@ KC",
-    w17: "PHI",
-    w18: "@ ARI"
+    w1: "ATL", w2: "@ NE", w3: "CIN", w4: "@ CLE", w5: "IND", w6: "@ TB", w7: "@ NO", w8: "CLE", w10: "@ CIN", w11: "@ PHI", w12: "DEN", w13: "HOU", w14: "@ JAX", w15: "BAL", w16: "CAR", w17: "@ TEN", w18: "@ BAL"
   },
   SEA: {
-    w1: "NE",
-    w2: "@ ARI",
-    w3: "@ WAS",
-    w4: "LAC",
-    w5: "SF",
-    w6: "@ DEN",
-    w7: "KC",
-    w8: "CHI",
-    w9: "ARI",
-    w10: "@ LV",
-    w12: "@ SF",
-    w13: "DAL",
-    w14: "NYG",
-    w15: "@ PHI",
-    w16: "LAR",
-    w17: "@ CAR",
-    w18: "@ LAR"
+    w1: "NE", w2: "@ ARI", w3: "@ WAS", w4: "LAC", w5: "SF", w6: "@ DEN", w7: "KC", w8: "CHI", w9: "ARI", w10: "@ LV", w12: "@ SF", w13: "DAL", w14: "NYG", w15: "@ PHI", w16: "LAR", w17: "@ CAR", w18: "@ LAR"
+  },
+  SF: {
+    w1: "@ LAR", w2: "MIA", w3: "ARI", w4: "DEN", w5: "@ SEA", w6: "WAS", w7: "@ ATL", w9: "LV", w10: "@ DAL", w11: "MIN", w12: "SEA", w13: "@ NYG", w14: "LAR", w15: "@ LAC", w16: "@ KC", w17: "PHI", w18: "@ ARI"
   },
   TB: {
-    w1: "@ CIN",
-    w2: "CLE",
-    w3: "MIN",
-    w4: "GB",
-    w5: "@ DAL",
-    w6: "PIT",
-    w7: "@ CAR",
-    w8: "ATL",
-    w9: "@ CHI",
-    w11: "@ DET",
-    w12: "CAR",
-    w13: "LAC",
-    w14: "@ BAL",
-    w15: "NO",
-    w16: "@ ATL",
-    w17: "LAR",
-    w18: "@ NO"
+    w1: "@ CIN", w2: "CLE", w3: "MIN", w4: "GB", w5: "@ DAL", w6: "PIT", w7: "@ CAR", w8: "ATL", w9: "@ CHI", w11: "@ DET", w12: "CAR", w13: "LAC", w14: "@ BAL", w15: "NO", w16: "@ ATL", w17: "LAR", w18: "@ NO"
   },
   TEN: {
-    w1: "NYJ",
-    w2: "PHI",
-    w3: "@ NYG",
-    w4: "@ BAL",
-    w5: "HOU",
-    w6: "@ IND",
-    w7: "CLE",
-    w8: "@ CIN",
-    w10: "JAX",
-    w11: "@ DAL",
-    w12: "@ JAX",
-    w13: "WAS",
-    w14: "@ DET",
-    w15: "IND",
-    w16: "@ LV",
-    w17: "PIT",
-    w18: "@ HOU"
+    w1: "NYJ", w2: "PHI", w3: "@ NYG", w4: "@ BAL", w5: "HOU", w6: "@ IND", w7: "CLE", w8: "@ CIN", w10: "JAX", w11: "@ DAL", w12: "@ JAX", w13: "WAS", w14: "@ DET", w15: "IND", w16: "@ LV", w17: "PIT", w18: "@ HOU"
   },
   WAS: {
-    w1: "@ PHI",
-    w2: "@ DAL",
-    w3: "SEA",
-    w4: "IND",
-    w5: "NYG",
-    w6: "@ SF",
-    w8: "PHI",
-    w9: "LAR",
-    w10: "@ NYG",
-    w11: "CIN",
-    w12: "@ ARI",
-    w13: "@ TEN",
-    w14: "HOU",
-    w15: "ATL",
-    w16: "@ MIN",
-    w17: "@ JAX",
-    w18: "DAL"
+    w1: "@ PHI", w2: "@ DAL", w3: "SEA", w4: "IND", w5: "NYG", w6: "@ SF", w8: "PHI", w9: "LAR", w10: "@ NYG", w11: "CIN", w12: "@ ARI", w13: "@ TEN", w14: "HOU", w15: "ATL", w16: "@ MIN", w17: "@ JAX", w18: "DAL"
   }
 };
 const DVP_2025 = {
@@ -9846,6 +9590,54 @@ function FullScheduleModal({ team, onClose }) {
     React.createElement("div", { style: { color: 'var(--text-muted)' } }, "Week ", r.week),
     React.createElement("div", { style: { color: r.bye ? 'var(--text-muted)' : 'var(--text-primary)', fontStyle: r.bye ? 'italic' : 'normal' } }, r.bye ? "Bye" : r.opp)
   )))));
+}
+const MATCHUP_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DEF'];
+function matchupRank(opp, position) {
+  if (!opp || MATCHUP_POSITIONS.indexOf(position) < 0) return null;
+  const ab = String(opp).toUpperCase().replace(/[^A-Z]/g, '');
+  if (position === 'DEF') {
+    const o = OFF_2025[ab];
+    return o != null ? o : null;
+  }
+  const d = DVP_2025[ab];
+  return d && d[position] != null ? d[position] : null;
+}
+function matchupTier(rank) {
+  if (rank == null) return null;
+  if (rank >= 28) return 'fav2';
+  if (rank >= 23) return 'fav1';
+  if (rank <= 5) return 'bad2';
+  if (rank <= 10) return 'bad1';
+  return null;
+}
+const MATCHUP_TIER_STYLE = {
+  fav2: { bg: 'rgba(22,163,74,0.50)', bd: 'rgba(34,197,94,0.75)', tx: '#eafff3' },
+  fav1: { bg: 'rgba(70,211,154,0.16)', bd: 'rgba(70,211,154,0.45)', tx: '#46d39a' },
+  bad2: { bg: 'rgba(185,28,28,0.52)', bd: 'rgba(239,68,68,0.75)', tx: '#ffecec' },
+  bad1: { bg: 'rgba(255,143,171,0.16)', bd: 'rgba(255,143,171,0.45)', tx: '#ff8fab' }
+};
+const MATCHUP_TIER_WORD = { fav2: '#22c55e', fav1: '#46d39a', bad2: '#ef4444', bad1: '#ff8fab' };
+const _seasonSchedCache = {};
+function seasonScheduleInfo(team, position) {
+  if (MATCHUP_POSITIONS.indexOf(position) < 0) return null;
+  const tm = (team || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!SCHEDULE_2026[tm]) return null;
+  if (!_seasonSchedCache[position]) {
+    const rows = Object.keys(SCHEDULE_2026).map(t => {
+      const sch = SCHEDULE_2026[t];
+      const rs = Object.keys(sch).map(w => matchupRank(sch[w], position)).filter(x => x != null);
+      return { t: t, avg: rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : null };
+    }).filter(r => r.avg != null).sort((a, b) => b.avg - a.avg);
+    const m = { __n: rows.length };
+    rows.forEach((r, i) => { m[r.t] = { softRank: i + 1, avg: r.avg }; });
+    _seasonSchedCache[position] = m;
+  }
+  const cache = _seasonSchedCache[position];
+  const e = cache[tm];
+  if (!e) return null;
+  const n = cache.__n;
+  const tier = e.softRank <= 5 ? 'fav2' : e.softRank <= 10 ? 'fav1' : e.softRank > n - 5 ? 'bad2' : e.softRank > n - 10 ? 'bad1' : null;
+  return { tier: tier, softRank: e.softRank, n: n, avg: e.avg };
 }
 function volumeFlag(player, players) {
   if (!player || !players || !players.length) return null;
@@ -10202,27 +9994,31 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jul 5, 2026',
+  updated: 'Jul 11, 2026',
   current: [
   {
-    label: 'White fits Daniels',
-    text: 'Rachaad White signed with the Commanders, reuniting with college teammate Jayden Daniels. Camp buzz is real, but he shares the backfield with Jacory Croskey-Merritt and Jerome Ford. Bid a modest RB3 price, no more.'
+    label: 'Brown becomes Pats WR1',
+    text: 'A.J. Brown was traded from the Eagles to New England to reunite with HC Mike Vrabel and is immediately the Patriots top receiver. Pay up for him as a true WR1 anchor even in a brand new offense.'
   },
   {
-    label: 'Nabers is a fade',
-    text: 'Malik Nabers had a second knee procedure this offseason and a Week 1 return is in doubt. His mid third round ADP still prices in a full season. Fade at cost, and only bid if he falls a round or two.'
+    label: 'Kittle Achilles watch',
+    text: 'George Kittle is rehabbing a torn Achilles and says he is on track for Week 1, but nothing is certain. Draft him as a high upside TE1 but temper your bid given real setback risk.'
   },
   {
-    label: 'Olave cleared',
-    text: 'Chris Olave is cleared after the blood clot that ended his 2025 season and is on track for a full training camp. The market still applies a health discount. Buy his WR1 talent before that discount disappears.'
+    label: 'Tuten in a 3-man mix',
+    text: 'Bhayshul Tuten has an edge over Chris Rodriguez in Jacksonville after a strong offseason, but HC Liam Coen says no one has won the RB job and a three back rotation looks likely. Do not pay a lead back price.'
   },
   {
-    label: 'Mahomes risk discount',
-    text: 'Patrick Mahomes tore his ACL in December and a Week 1 return is hopeful, not certain. Drafters are still paying a low end QB1 price. Wait on him, and pair any bid with a safe starter.'
+    label: 'Skattebo injury discount',
+    text: 'Cam Skattebo is ticketed as the Giants lead back after a severe ankle dislocation and fibula fracture last season. He is trending toward camp availability, worth a bid but not top-20 RB money yet.'
   },
   {
-    label: 'Pay up for JSN',
-    text: 'Jaxon Smith-Njigba earned a 35.7 percent target share on 162 targets in 2025, and Seattle added no serious threat to that volume. He now costs a first round pick. Pay it, his volume is as safe as it gets at WR.'
+    label: 'White finds a role in DC',
+    text: 'Rachaad White signed with Washington for the pass catching back role behind Jacory Croskey-Merritt. That role alone supports his Round 10 ADP, take him late as a PPR value.'
+  },
+  {
+    label: 'Mitchell now WR3 in NY',
+    text: 'Adonai Mitchell has slid to third on the Jets receiver depth chart behind Garrett Wilson after the team added more pass catchers this offseason. Fade him as a reliable starter, treat him as a cheap late dart throw.'
   }
   ],
   library: [{
@@ -10590,6 +10386,8 @@ function CheatHeader({
 }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
+  const [adv, setAdv] = useState(() => { try { return localStorage.getItem('it_cheat_adv') === '1'; } catch (e) { return false; } });
+  function toggleAdv() { setAdv(v => { const n = !v; try { localStorage.setItem('it_cheat_adv', n ? '1' : '0'); } catch (e) {} return n; }); }
   const [customDesc, setCustomDesc] = useState('');
   const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const [wiOpen, setWiOpen] = useState(false);
@@ -10737,8 +10535,16 @@ function CheatHeader({
     return () => clearInterval(t);
   }, [flen]);
   return React.createElement("div", {
-    className: "cheat-header no-print"
+    className: "cheat-header no-print " + (adv ? "ch-adv" : "ch-simple")
   }, React.createElement("div", {
+    className: "ch-simplebar"
+  }, React.createElement("span", {
+    className: "ch-sb-title"
+  }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("button", {
+    className: "ch-sb-toggle",
+    onClick: toggleAdv,
+    title: "Show or hide draft models, column & flag options, what-if, and PDF export"
+  }, adv ? "Hide tools ▴" : "Models, columns & tools ▾")), adv && React.createElement("div", {
     className: "ch-models"
   }, React.createElement("span", {
     className: "ch-models-label"
@@ -10993,7 +10799,7 @@ function CheatHeader({
     style: {
       color: 'var(--text-muted)'
     }
-  }, "(starters spend $", wiPlan.plannedStarterCost, " of $", wiPlan.budgetRemaining, "; the rest of the lineup is rebuilt to fit)"), wiPlan.feasible === false ? React.createElement("span", {
+  }, "(starters spend $", wiPlan.plannedStarterCost, " of $", wiPlan.budgetRemaining, ", leaving $", Math.max(0, wiPlan.budgetRemaining - wiPlan.plannedStarterCost), " for your bench; the rest of the lineup is rebuilt to fit)"), wiPlan.feasible === false ? React.createElement("span", {
     style: {
       color: 'var(--danger)'
     }
@@ -11014,20 +10820,24 @@ function CheatHeader({
       borderRadius: 8,
       padding: '1px 6px'
     }
-  }, s.label, ": ", s.player ? s.player.name : '–', s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : '')))))), React.createElement("div", {
+  }, s.label, ": ", s.player ? s.player.name : '–', s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : '')))))), adv && React.createElement("div", {
     className: "ch-controls"
   }, React.createElement("span", {
     className: "ch-controls-label"
   }, "Columns & Flags"), mode === 'live' && onAddPlayer && React.createElement("button", {
     className: "btn-draft",
     onClick: onAddPlayer
-  }, "+ Add player"), mode !== 'live' && React.createElement("button", {
+  }, "+ Add player"), React.createElement("button", {
     className: "btn-secondary",
     onClick: () => printPdf('letter')
-  }, "⤓ PDF · Letter"), mode !== 'live' && React.createElement("button", {
+  }, "⤓ PDF · Letter"), React.createElement("button", {
     className: "btn-secondary",
     onClick: () => printPdf('legal')
-  }, "⤓ PDF · Legal"), React.createElement("span", {
+  }, "⤓ PDF · Legal"), React.createElement("button", {
+    className: "btn-secondary",
+    title: "Shrink the whole sheet to fit a single letter-size page",
+    onClick: () => printPdf('onepage')
+  }, "⤓ PDF · 1 Page"), React.createElement("span", {
     style: {
       flexBasis: '100%',
       height: 0
@@ -11070,7 +10880,7 @@ function CheatHeader({
     }
   }, "● potentially overpriced"))), React.createElement("div", {
     className: "ch-insights-col"
-  }, React.createElement("div", {
+  }, adv && React.createElement("div", {
     className: "ch-insights ch-ins-facts"
   }, flen > 1 && React.createElement("span", {
     className: "chi-nav chi-nav-float"
@@ -11264,8 +11074,11 @@ function Cheatsheet({
   const _svC = p => boardSortKey === 'proj' ? (p.marketValue ?? p.auctionValue ?? 0) : boardSortKey === 'val' ? (p.auctionValue ?? 0) : (p.personalValue ?? p.marketValue ?? p.auctionValue ?? 0);
   const byPos = {};
   (players || []).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
-  Object.values(byPos).forEach(a => a.sort((x, y) => _isSnakeCS ? ((y.projectedPoints || 0) - (x.projectedPoints || 0)) : (_svC(y) - _svC(x))));
-  byPos.ALL = (players || []).slice().sort((a, b) => _isSnakeCS ? ((b.auctionValue != null ? b.auctionValue : b.projectedPoints || 0) - (a.auctionValue != null ? a.auctionValue : a.projectedPoints || 0)) : (_svC(b) - _svC(a)));
+  // Tie-break equal dollar values by projected points: drag-to-rerank reorders the
+  // points ladder, and without this tiebreak same-$ players (the whole tail of every
+  // position) sort in arbitrary dataset order and reranks never show up.
+  Object.values(byPos).forEach(a => a.sort((x, y) => _isSnakeCS ? ((y.projectedPoints || 0) - (x.projectedPoints || 0)) : ((_svC(y) - _svC(x)) || ((y.projectedPoints || 0) - (x.projectedPoints || 0)))));
+  byPos.ALL = (players || []).slice().sort((a, b) => _isSnakeCS ? ((b.auctionValue != null ? b.auctionValue : b.projectedPoints || 0) - (a.auctionValue != null ? a.auctionValue : a.projectedPoints || 0)) : ((_svC(b) - _svC(a)) || ((b.projectedPoints || 0) - (a.projectedPoints || 0))));
   const draftInfoMap = useMemo(() => {
     const m = {};
     const tn = new Map((teams || []).map(t => [t.id, t]));
@@ -11547,9 +11360,9 @@ function Cheatsheet({
   }, STRAT[highlight].desc, React.createElement("button", {
     className: "hl-clear",
     onClick: () => setHighlight(null)
-  }, "clear")), ((config.format || 'auction') === 'snake' ? React.createElement("div", { className: "cheat-whb no-print" }, React.createElement("div", { className: "cheat-whb-h" }, "Will he be available?"), React.createElement("div", { className: "cheat-whb-sub" }, "Odds a player lasts to your next pick \u2014 from the live board, ADP, and position runs."), React.createElement("div", { className: "cheat-whb-in" }, React.createElement("div", { className: "whb-ac" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQ, onChange: e => { setWhbQ(e.target.value); setWhbShow(true); }, onFocus: () => setWhbShow(true), onBlur: () => setTimeout(() => setWhbShow(false), 170) }), (whbShow && (whbQ || "").trim()) ? React.createElement("div", { className: "whb-ac-list" }, (players || []).filter(function (p) { return p.name && p.name.toLowerCase().indexOf((whbQ || "").toLowerCase().trim()) >= 0; }).slice(0, 6).map(function (p) { return React.createElement("div", { key: p.id, className: "whb-ac-item", onMouseDown: function () { setWhbQ(p.name); setWhbShow(false); } }, p.name, React.createElement("span", { className: "whb-ac-pos" }, " " + p.position)); })) : null), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbR, onChange: e => setWhbR(e.target.value) })), whbResultCheat ? (whbResultCheat.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResultCheat.err) : whbResultCheat.drafted ? React.createElement("div", { className: "whb-res" }, whbResultCheat.player.name + " is already off the board.") : whbResultCheat.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResultCheat.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResultCheat.odds + "%"), " chance " + whbResultCheat.player.name + " (ADP " + (whbResultCheat.player.adp != null ? Math.round(whbResultCheat.player.adp) : "?") + ") is still there at your round " + whbResultCheat.round + " pick (overall #" + whbResultCheat.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Enter a player and a round.")) : null), ((config.format || 'auction') === 'snake' && !introDismissed ? React.createElement("div", { className: "cheat-intro no-print" }, React.createElement("span", { className: "ci-new" }, "NEW"), React.createElement("span", { className: "ci-body" }, "The ", React.createElement("b", { style: { color: '#34c759' } }, "ADP"), " number is tinted: ", React.createElement("b", { style: { color: '#34c759' } }, "green = a value"), " at his slot, ", React.createElement("b", { style: { color: '#f87171' } }, "red = a reach"), ". Tier breaks show as a line."), React.createElement("button", { className: "ci-x", onClick: () => { try { localStorage.setItem('it_snake_cheat_intro', '1'); } catch (e) {} setIntroDismissed(true); } }, "Got it \u00d7")) : null), ((config.format || 'auction') === 'snake' && _recPick ? React.createElement("div", { className: "cheat-recpick no-print" }, React.createElement("span", { className: "crp-tag" }, "YOUR PICK " + _recPick.label), React.createElement("span", { className: "crp-body" }, "Best on the board: ", React.createElement("b", null, _recPick.name), " ", React.createElement("em", null, _recPick.pos), " \u00b7 ", _recPick.av, "% he returns to you")) : null), ((config.format || 'auction') === 'snake' && _needs ? React.createElement("div", { className: "cheat-needs no-print" }, React.createElement("span", { className: "cn-label" }, "Your starters"), _needs.map(n => React.createElement("span", { key: n.pos, className: "cn-slot" + (n.met ? " met" : " open") }, n.pos, " ", n.have, "/", n.need, n.met ? " \u2713" : ""))) : null), React.createElement("div", {
+  }, "clear")), ((config.format || 'auction') === 'snake' ? React.createElement("div", { className: "cheat-whb no-print" }, React.createElement("div", { className: "cheat-whb-h" }, "Will he be available?"), React.createElement("div", { className: "cheat-whb-sub" }, "Odds a player lasts to your next pick \u2014 from the live board, ADP, and position runs."), React.createElement("div", { className: "cheat-whb-in" }, React.createElement("div", { className: "whb-ac" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQ, onChange: e => { setWhbQ(e.target.value); setWhbShow(true); }, onFocus: () => setWhbShow(true), onBlur: () => setTimeout(() => setWhbShow(false), 170) }), (whbShow && (whbQ || "").trim()) ? React.createElement("div", { className: "whb-ac-list" }, (players || []).filter(function (p) { return p.name && p.name.toLowerCase().indexOf((whbQ || "").toLowerCase().trim()) >= 0; }).slice(0, 6).map(function (p) { return React.createElement("div", { key: p.id, className: "whb-ac-item", onMouseDown: function () { setWhbQ(p.name); setWhbShow(false); } }, p.name, React.createElement("span", { className: "whb-ac-pos" }, " " + p.position)); })) : null), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbR, onChange: e => setWhbR(e.target.value) })), whbResultCheat ? (whbResultCheat.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResultCheat.err) : whbResultCheat.drafted ? React.createElement("div", { className: "whb-res" }, whbResultCheat.player.name + " is already off the board.") : whbResultCheat.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResultCheat.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResultCheat.odds + "%"), " chance " + whbResultCheat.player.name + " (ADP " + (whbResultCheat.player.adp != null ? Math.round(whbResultCheat.player.adp) : "?") + ") is still there at your round " + whbResultCheat.round + " pick (overall #" + whbResultCheat.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Enter a player and a round.")) : null), ((config.format || 'auction') === 'snake' && !introDismissed ? React.createElement("div", { className: "cheat-intro no-print" }, React.createElement("span", { className: "ci-new" }, "NEW"), React.createElement("span", { className: "ci-body" }, "The ", React.createElement("b", { style: { color: '#34c759' } }, "ADP"), " number is tinted: ", React.createElement("b", { style: { color: '#34c759' } }, "green = a value"), " at his slot, ", React.createElement("b", { style: { color: '#e0a83c' } }, "amber = going early"), ". Tier breaks show as a line."), React.createElement("button", { className: "ci-x", onClick: () => { try { localStorage.setItem('it_snake_cheat_intro', '1'); } catch (e) {} setIntroDismissed(true); } }, "Got it \u00d7")) : null), ((config.format || 'auction') === 'snake' && _recPick ? React.createElement("div", { className: "cheat-recpick no-print" }, React.createElement("span", { className: "crp-tag" }, "YOUR PICK " + _recPick.label), React.createElement("span", { className: "crp-body" }, "Best on the board: ", React.createElement("b", null, _recPick.name), " ", React.createElement("em", null, _recPick.pos), " \u00b7 ", _recPick.av, "% he returns to you")) : null), ((config.format || 'auction') === 'snake' && _needs ? React.createElement("div", { className: "cheat-needs no-print" }, React.createElement("span", { className: "cn-label" }, "Your starters"), _needs.map(n => React.createElement("span", { key: n.pos, className: "cn-slot" + (n.met ? " met" : " open") }, n.pos, " ", n.have, "/", n.need, n.met ? " \u2713" : ""))) : null), React.createElement("div", {
     className: "cheat-legend no-print"
-  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = a value at his ADP"), ", ", React.createElement("span", { style: { color: '#f87171', fontWeight: 700 } }, "red = a reach"), ".")) : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick") : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget")), React.createElement("div", {
+  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = a value at his ADP"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = going early"), ".")) : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = falls to you (value)"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = goes early"), ".")) : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget", React.createElement("span", { className: "cheat-heatleg" }, "All dollar values are scaled to a ", React.createElement("b", null, "$", config.budget || 200, " budget"), " per team (", config.teams, " teams). Change it under Your League and every price recalculates."))), React.createElement("div", {
     className: "cheat-print-head only-print"
   }, React.createElement("div", {
     className: "cph-title"
@@ -11584,7 +11397,19 @@ function Cheatsheet({
     className: "cph-key"
   }, React.createElement("i", {
     className: "k-hl"
-  }), "★ highlighted target"))), mode !== 'live' || true ? React.createElement(LeadCapture, null) : null, isNarrow && React.createElement("div", {
+  }), "★ highlighted target"))), React.createElement("div", {
+    className: "cheat-onepage-brand"
+  }, React.createElement("div", {
+    className: "cob-sub"
+  }, fmtMeta(config).label, " Cheat Sheet · ", config.teams, " teams · $", config.budget, " budget · ", pprLabel, " · ", dateStr), React.createElement("div", {
+    className: "cob-chip"
+  }, React.createElement("img", {
+    src: "/tuna.png",
+    alt: "Iron Tuna",
+    className: "cob-fish"
+  }), React.createElement("span", {
+    className: "cob-name"
+  }, "IRON TUNA"))), mode !== 'live' || true ? React.createElement(LeadCapture, null) : null, isNarrow && React.createElement("div", {
     className: "cheat-mobnav no-print"
   }, React.createElement("span", {
     className: "cmn-label"
@@ -11650,18 +11475,19 @@ function Cheatsheet({
       nameTitle = sign === 'under' ? `Good buy: the $${cost} price is about $${vgap} under his Value of $${value}.` : sign === 'over' ? `Overpay: the $${cost} price is about $${cost - value} above his Value of $${value}.` : `Priced about at his Value ($${value}).`;
       if (p.fit === 'target') nameTitle += ' Your plan also targets him for an open starting slot.';
     }
-    let _verdict = null, _tb = null, _adpColor = null;
+    let _verdict = null, _tb = null, _adpColor = null, _adpDir = null;
     if (config && (config.format === 'snake' || config.format === 'bestball')) {
+      const _rankBy = config.format === 'bestball' ? 'ceiling' : 'value-for-your-scoring';
       if (!drafted) {
         const _vr = (config.format === 'bestball') ? (_ceilRank.get(p.id) || 999) : (_ovrRank.get(p.id) || 999);
-        if (p.adp != null) { const _diff = Math.round(p.adp) - _vr; if (_diff >= 8) _adpColor = '#34c759';else if (_diff <= -8) _adpColor = '#f87171'; }
+        if (p.adp != null) { const _diff = Math.round(p.adp) - _vr; _adpColor = adpValueColor(_diff); if (_adpColor) _adpDir = _diff > 0 ? 'value' : 'reach'; }
       }
       if (tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i)) _tb = _tierBandFor(pos, i);
-    }
-    if (config && config.format === 'bestball') {
-      nameColor = _adpColor || 'var(--text-primary)';
-      sign = _adpColor === '#34c759' ? 'under' : _adpColor === '#f87171' ? 'over' : 'neutral';
-      nameTitle = _adpColor === '#34c759' ? 'Value at his ADP — he tends to fall past his ceiling ranking.' : _adpColor === '#f87171' ? 'A reach at his ADP — he goes earlier than his ceiling ranking.' : 'Drafted about where his ceiling ranks.';
+      // Names stay quality-neutral in draft formats — the value signal lives on
+      // the ADP number, so a top player never reads as "bad" (red).
+      nameColor = 'var(--text-primary)';
+      sign = 'neutral';
+      nameTitle = _adpDir === 'value' ? `Likely falls to you — his ADP runs later than his ${_rankBy} rank, so he's a value at his slot.` : _adpDir === 'reach' ? `Going early — his ADP runs ahead of his ${_rankBy} rank, so you'd have to reach for him.` : `Ranked by ${_rankBy}.`;
     }
     return React.createElement("div", {
       key: p.id,
@@ -11746,13 +11572,13 @@ function Cheatsheet({
       title: `Favorable weeks 15-17 for ${p.position}: ${softSched.late.opps.join(', ')}`
     }, "Soft 15-17") : null, toughSched && toughSched.early && showCols.tough13 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 1-3 for ${p.position}: ${toughSched.early.opps.join(', ')}` }, "Tough 1-3") : null, toughSched && toughSched.late && showCols.tough1517 ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: `Tough weeks 15-17 for ${p.position}: ${toughSched.late.opps.join(', ')}` }, "Tough 15-17") : null, volFlag ? React.createElement("span", { className: "cheat-soft", style: { color: volFlag.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: volFlag.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: volFlag.title }, volFlag.t) : null, olF ? React.createElement("span", { className: "cheat-soft", style: { color: olF.tone === 'good' ? '#46d39a' : '#ff6b6b', borderColor: olF.tone === 'good' ? 'rgba(70,211,154,0.5)' : 'rgba(255,107,94,0.5)' }, title: olF.title }, olF.t) : null, ageF ? React.createElement("span", { className: "cheat-soft", style: { color: '#ff6b6b', borderColor: 'rgba(255,107,94,0.5)' }, title: ageF.title }, ageF.t) : null)), activeCols.map(([k]) => k === 'proj' ? React.createElement("span", {
       key: k,
-      className: `cheat-cost${p.priceOverridden ? ' price-override' : ''}`,
-      title: "Projected price, click to set your own; the rest re-prices to keep the pool constant",
+      className: `cheat-cost${p.priceOverridden ? ' price-override' : p.priceShift ? p.priceShift > 0 ? ' price-shift-up' : ' price-shift-down' : ''}`,
+      title: p.priceOverridden ? "Your custom price — click to change, leave blank to reset" : p.priceShift ? `Re-priced ${p.priceShift > 0 ? '+' : '−'}$${Math.abs(p.priceShift)} to balance your custom price${Object.keys(priceOverrides || {}).length > 1 ? 's' : ''} — dollars move among comparable players to keep the auction pool constant` : "Projected price, click to set your own; the rest re-prices to keep the pool constant",
       onPointerDown: e => e.stopPropagation(),
       onClick: e => {
         e.stopPropagation();
         if (onSetPrice) {
-          const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The rest of the board re-prices to keep the auction pool constant. Leave blank to reset.`, String(cost));
+          const v = window.prompt(`Your predicted price for ${p.name} (currently $${cost}). The dollars come from (or go to) comparable players — ${p.position}s first — so the auction pool stays constant. Leave blank to reset.`, String(cost));
           if (v !== null) onSetPrice(p.id, v);
         }
       },
@@ -11774,8 +11600,8 @@ function Cheatsheet({
     }, (p.projectedPoints / (seasonGames || 17)).toFixed(1)) : k === 'adp' ? React.createElement("span", {
       key: k,
       className: "cheat-ppg",
-      style: _adpColor ? { color: _adpColor } : undefined,
-      title: _adpColor === '#34c759' ? "Tends to fall past his ranking \u2014 a value at this ADP" : _adpColor === '#f87171' ? "Goes earlier than his ranking \u2014 a reach at this ADP" : "Average draft position"
+      style: _adpColor ? { color: _adpColor, fontWeight: 700 } : undefined,
+      title: _adpDir === 'value' ? "Value \u2014 his ADP runs later than his ranking, so he tends to fall to you" : _adpDir === 'reach' ? "Reach \u2014 his ADP runs ahead of his ranking, so he goes early" : "Average draft position"
     }, p.adp != null ? Math.round(p.adp) : '\u2014') : k === 'bestavail' ? React.createElement("span", {
       key: k,
       className: "cheat-ppg",
@@ -13222,7 +13048,7 @@ function PrepMode({
     min: "20",
     max: "1000",
     value: config.budget,
-    onChange: e => onUpdateConfig('budget', parseInt(e.target.value || 120))
+    onChange: e => onUpdateConfig('budget', parseInt(e.target.value || 200))
   })), React.createElement("label", null, "Reception", React.createElement("select", {
     value: String(ppr),
     onChange: e => onUpdateConfig('scoring.receptionPoints', parseFloat(e.target.value))
@@ -13944,6 +13770,37 @@ const BESTBALL_FLEX = {
   count: 1,
   eligible: ["RB", "WR", "TE"]
 };
+function configForFormat(cfg, fmt) {
+  const next = {
+    ...cfg,
+    format: fmt
+  };
+  if (fmt === 'bestball') {
+    if (cfg.format !== 'bestball') {
+      // Entering best ball: start from the Underdog-style default lineup.
+      next.roster = JSON.parse(JSON.stringify(BESTBALL_ROSTER));
+      next.flex = JSON.parse(JSON.stringify(BESTBALL_FLEX));
+    } else {
+      next.roster = {
+        ...next.roster
+      };
+    }
+    // Zeroed placeholders so the K/DEF steppers still render in Your League.
+    CORE_ROSTER_POSITIONS.forEach(p => {
+      if (!next.roster[p]) next.roster[p] = {
+        total: 0,
+        starters: 0
+      };
+    });
+    return next;
+  }
+  if (cfg.format === 'bestball') {
+    // Leaving best ball: its lineup has no K/DEF, so restore the standard roster.
+    next.roster = JSON.parse(JSON.stringify(DEFAULT_LEAGUE_CONFIG.roster));
+    next.flex = JSON.parse(JSON.stringify(DEFAULT_LEAGUE_CONFIG.flex));
+  }
+  return healRosterPositions(next);
+}
 const BB_VARIANCE = {
   QB: 0.10,
   RB: 0.18,
@@ -14315,8 +14172,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   });
   const alloc = config.strategy?.allocation ?? 0.55;
   const benchShare = alloc * 0.35;
-  const anchorActive = !!(forcedPrices && Object.keys(forcedPrices).length);
-  const extraBench = anchorActive || noBench ? 0 : Math.round(benchShare * R);
+  const extraBench = noBench ? 0 : Math.round(benchShare * R);
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = 0.30 + conc * 0.55;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);
@@ -17847,7 +17703,7 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _coachFmt = contextObj && contextObj.format || 'auction';
   const _coachId = _coachFmt === 'snake' ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. Think in ADP, pick order, and position runs. Maximize this manager's TOTAL points across the whole draft, not just the most points or highest VOR at this one slot. Look ahead before recommending: each player has an adp and a survives% (his chance of still being on the board at this manager's NEXT pick; picksToYourNextPick is in formatInfo). Proactively, even when not asked, tell them (1) who to grab NOW because his position is about to be picked clean and the drop-off to the next man at that position is steep, and (2) who they can let slide and target next round because he is likely to survive. Prefer taking a scarce position now over a slightly higher-scoring player at a deep position, and frame each call as value over the next player likely available at that position. If asked whether a specific player will still be available in a given round, estimate it from his adp versus the overall pick number the manager holds that round (snake pick math from the draftSlot and league size in the data): an adp well past that pick number means good odds he survives, an adp at or before it means slim odds. Warn about positional cliffs: when projected points drop steeply just past the next few players at a position, say so plainly. When the manager eyes an early-round player, point out if someone several rounds later projects similar points, or if a pair of cheap handcuff running backs from one backfield could match the production for far less draft capital. If the manager planned to wait on a position but a top option there falls to unusual value, recommend they reconsider taking him now, as a suggestion and not a command." : _coachFmt === 'bestball' ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management." : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
   const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
-  const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({
+  const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…' && m.text !== '(no response)').map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
     content: m.text
   }));
@@ -17856,7 +17712,10 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
     content: userMsg
   });
   const ctrl = new AbortController();
-  let _to = setTimeout(() => ctrl.abort(), 20000);
+  // First-byte timeout is generous (the proxy may spend a while retrying an
+  // overloaded provider before the stream opens); once tokens flow, each
+  // subsequent chunk only gets the shorter idle window via _bump.
+  let _to = setTimeout(() => ctrl.abort(), 45000);
   const _bump = () => {
     clearTimeout(_to);
     _to = setTimeout(() => ctrl.abort(), 20000);
@@ -17911,8 +17770,10 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
           if (data === '[DONE]') continue;
           try {
             const delta = JSON.parse(data);
-            full += delta;
-            onDelta(full);
+            if (typeof delta === 'string' && delta) {
+              full += delta;
+              onDelta(full);
+            }
           } catch (e) {}
         }
       }
@@ -18502,9 +18363,10 @@ function ValueCoach({
         _id: tid
       } : x)) : null;
       const ans = await callLLM(q, ctxObj, ai, msgs, onDelta);
+      if (!ans || !String(ans).trim()) throw new Error('empty response');
       setMsgs(m => m.map(x => x._id === tid ? {
         role: 'bot',
-        text: ans || '(no response)',
+        text: ans,
         _id: tid
       } : x));
     } catch (e) {
@@ -18990,13 +18852,29 @@ function PricingModal({
       });
     } catch (e) {}
   }, []);
+  const pass = {
+    id: 'bundle',
+    name: 'Iron Tuna Season Pass',
+    price: 9.99
+  };
+  const owned = ['auction', 'snake', 'bestball'].every(id => entitled(account, id));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  function buy() {
+    setErr('');
+    setBusy(true);
+    Promise.resolve(onBuy(pass)).catch(e => {
+      setErr(String(e && e.message || e));
+      setBusy(false);
+    });
+  }
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
   }, React.createElement("div", {
     className: "modal",
     style: {
-      maxWidth: 740
+      maxWidth: 480
     },
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
@@ -19007,47 +18885,47 @@ function PricingModal({
   }, "Unlock Iron Tuna"), React.createElement("p", {
     style: {
       fontSize: 13,
-      color: 'var(--text-muted)',
-      marginBottom: 6
-    }
-  }, "One-time per season, not a subscription."), React.createElement("p", {
-    style: {
-      fontSize: 13,
       color: 'var(--positive)',
       marginBottom: 14,
       fontWeight: 600
     }
-  }, "One-time purchase for the current season, no subscription."), React.createElement("div", {
+  }, "One purchase unlocks everything. One-time for the current season, no subscription."), React.createElement("div", {
     className: "tier-grid"
-  }, TIERS.map(t => {
-    const owned = entitled(account, t.id);
-    const feat = t.id === (highlightId || 'auction');
-    return React.createElement("div", {
-      key: t.id,
-      className: `tier-card ${feat ? 'feature' : ''}`
-    }, feat && React.createElement("div", {
-      className: "tier-tag"
-    }, "Draft day"), React.createElement("div", {
-      className: "tier-name"
-    }, t.name), React.createElement("div", {
-      className: "tier-price"
-    }, "$", t.price.toFixed(2), React.createElement("span", null, "/season")), React.createElement("div", {
-      className: "tier-blurb"
-    }, t.blurb), React.createElement("ul", {
-      className: "tier-feats"
-    }, (t.features || []).map((f, i) => React.createElement("li", {
-      key: i
-    }, f))), owned ? React.createElement("button", {
-      className: "btn-secondary",
-      disabled: true,
-      style: {
-        opacity: 0.7
-      }
-    }, 'Unlocked') : React.createElement("button", {
-      className: "btn-draft",
-      onClick: () => onBuy(t)
-    }, "Unlock"));
-  })), React.createElement("p", {
+  }, React.createElement("div", {
+    className: "tier-card feature"
+  }, React.createElement("div", {
+    className: "tier-tag"
+  }, "Everything included"), React.createElement("div", {
+    className: "tier-name"
+  }, pass.name), React.createElement("div", {
+    className: "tier-price"
+  }, "$", pass.price.toFixed(2), React.createElement("span", null, "/season")), React.createElement("div", {
+    className: "tier-blurb"
+  }, "The whole site, one purchase: custom values and rankings for your exact league, plus live command on draft day."), React.createElement("ul", {
+    className: "tier-feats"
+  }, ['Auction, snake, and best ball — every format included', 'Your league’s FULL custom scoring: every value and ranking rebuilt to your exact rules', 'Reorder any player and build the board you actually believe in', 'Value Coach: ask who to target and exactly how high, from planning through draft night', 'On draft day: live max bid, best-available board, and survival odds for your next pick', 'Save and reopen your league, even if the Wi-Fi drops'].map((f, i) => React.createElement("li", {
+    key: i
+  }, f))), owned ? React.createElement("div", {
+    style: {
+      textAlign: 'center',
+      color: 'var(--positive)',
+      fontWeight: 700,
+      fontSize: 14,
+      padding: '10px 0 2px'
+    }
+  }, "✓ Unlocked — everything is live on this account") : React.createElement("button", {
+    className: "btn-draft",
+    disabled: busy,
+    style: busy ? { opacity: 0.75, cursor: 'wait' } : undefined,
+    onClick: buy
+  }, busy ? 'Opening secure checkout…' : `Unlock · $${pass.price.toFixed(2)}`), err && React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: 'var(--danger)',
+      marginTop: 8,
+      textAlign: 'center'
+    }
+  }, err))), React.createElement("p", {
     style: {
       fontSize: 12,
       color: 'var(--text-muted)',
@@ -19074,6 +18952,16 @@ function UpgradeModal({
   onClose,
   onRestore
 }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  function buy() {
+    setErr('');
+    setBusy(true);
+    Promise.resolve(onUnlock()).catch(e => {
+      setErr(String(e && e.message || e));
+      setBusy(false);
+    });
+  }
   const f = format || 'auction';
   const rsn = reason ? `, including ${reason}` : '';
   const tier = TIERS.find(t => t.id === f) || TIERS[0];
@@ -19111,170 +18999,23 @@ function UpgradeModal({
     style: { fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 12px', lineHeight: 1.45 }
   }, "You've already seen your real values free — this unlocks the live edge. One-time ", React.createElement("b", { style: { color: 'var(--text-secondary)' } }, priceLabel), " for the whole season, no subscription."), React.createElement("button", {
     className: "btn-draft upg-cta",
-    onClick: onUnlock
-  }, (f === 'snake' ? "Unlock my league’s rankings · " : "Unlock my league’s values · ") + priceLabel), React.createElement("button", {
+    disabled: busy,
+    style: busy ? { opacity: 0.75, cursor: 'wait' } : undefined,
+    onClick: buy
+  }, busy ? 'Opening secure checkout…' : (f === 'snake' ? "Unlock my league’s rankings · " : "Unlock my league’s values · ") + priceLabel), err && React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: 'var(--danger)',
+      margin: '8px 0 0',
+      textAlign: 'center'
+    }
+  }, err), React.createElement("button", {
     className: "upg-later",
     onClick: onClose
   }, "Maybe later"), React.createElement("button", {
     onClick: onRestore,
     style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', textDecoration: 'underline', fontSize: 12.5, cursor: 'pointer' }
   }, "Already purchased? Restore access")));
-}
-function CheckoutModal({
-  tier,
-  testMode,
-  onComplete,
-  onClose
-}) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  const [email, setEmail] = useState(() => {
-    try {
-      const acc = JSON.parse(localStorage.getItem('iron_tuna_account_v1') || '{}');
-      return acc.user && acc.user.email || '';
-    } catch (e) { return ''; }
-  });
-  const [phone, setPhone] = useState('');
-  useEffect(() => {
-    try {
-      ITAnalytics.track('checkout_started', {
-        item: tier.id,
-        price: tier.price
-      });
-    } catch (e) {}
-  }, []);
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
-  const phoneOk = ((phone || '').match(/\d/g) || []).length >= 10;
-  const canPay = emailOk && phoneOk && !busy;
-  function inStyle(invalid) {
-    return { width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid ' + (invalid ? 'var(--danger)' : 'var(--border-strong)'), background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 15, fontFamily: 'inherit' };
-  }
-  const lblStyle = { display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', margin: '10px 0 4px' };
-  async function pay() {
-    if (!emailOk || !phoneOk) {
-      setErr('Please enter a valid email address and phone number to continue.');
-      return;
-    }
-    setBusy(true);
-    setErr('');
-    let ref = '';
-    try {
-      ref = localStorage.getItem('it_ref_in') || '';
-    } catch (e) {}
-    try {
-      const r = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          ref,
-          email: (email || '').trim(),
-          phone: (phone || '').trim(),
-          path: (function(){ try { return window.location.pathname; } catch(e){ return '/'; } })()
-        })
-      });
-      const j = await r.json();
-      if (j && j.url) {
-        window.location.href = j.url;
-        return;
-      }
-      throw new Error(j && j.error || 'Could not start checkout');
-    } catch (e) {
-      setErr(String(e && e.message || e));
-      setBusy(false);
-    }
-  }
-  return React.createElement("div", {
-    className: "modal-bg",
-    onClick: onClose
-  }, React.createElement("div", {
-    className: "modal",
-    style: {
-      maxWidth: 420
-    },
-    onClick: e => e.stopPropagation()
-  }, React.createElement("button", {
-    className: "modal-close",
-    onClick: onClose
-  }, "×"), React.createElement("div", {
-    className: "section-title"
-  }, "Checkout"), React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-      margin: '12px 0 4px'
-    }
-  }, React.createElement("span", {
-    style: {
-      fontFamily: 'var(--font-display)',
-      fontSize: 19
-    }
-  }, tier.name), React.createElement("span", {
-    style: {
-      fontFamily: 'var(--font-mono)',
-      fontSize: 19,
-      color: 'var(--gold-text)'
-    }
-  }, "$", tier.price.toFixed(2))), React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: 'var(--text-muted)',
-      marginBottom: 12
-    }
-  }, "One-time purchase, current season."), React.createElement("label", {
-    style: lblStyle
-  }, "Email", React.createElement("span", { style: { color: 'var(--danger)' } }, " *")), React.createElement("input", {
-    type: "email",
-    inputMode: "email",
-    autoComplete: "email",
-    required: true,
-    value: email,
-    onChange: e => setEmail(e.target.value),
-    placeholder: "you@example.com",
-    style: inStyle(email && !emailOk)
-  }), React.createElement("label", {
-    style: lblStyle
-  }, "Phone", React.createElement("span", { style: { color: 'var(--danger)' } }, " *")), React.createElement("input", {
-    type: "tel",
-    inputMode: "tel",
-    autoComplete: "tel",
-    required: true,
-    value: phone,
-    onChange: e => setPhone(e.target.value),
-    placeholder: "(555) 123-4567",
-    style: inStyle(phone && !phoneOk)
-  }), React.createElement("p", {
-    style: {
-      fontSize: 11,
-      color: 'var(--text-muted)',
-      margin: '6px 0 14px'
-    }
-  }, "Required for your receipt and account access."), React.createElement("button", {
-    className: "btn-draft",
-    style: {
-      width: '100%',
-      marginTop: 4,
-      opacity: canPay ? 1 : 0.55,
-      cursor: canPay ? 'pointer' : 'not-allowed'
-    },
-    disabled: !canPay,
-    onClick: pay
-  }, busy ? 'Redirecting to secure checkout…' : `Pay $${tier.price.toFixed(2)} with card`), err && React.createElement("p", {
-    style: {
-      fontSize: 12,
-      color: 'var(--danger)',
-      marginTop: 10
-    }
-  }, err), React.createElement("p", {
-    style: {
-      fontSize: 11,
-      color: 'var(--text-muted)',
-      marginTop: 12,
-      textAlign: 'center'
-    }
-  }, "Secure payment by Stripe. Your card details never touch Iron Tuna.")));
 }
 function AuthModal({
   account,
@@ -19987,7 +19728,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     className: "lp-hero it-hero"
   }, React.createElement("div", { className: "lp-sticker hub-stk hub-stk-l", dangerouslySetInnerHTML: { __html: HUB_STK_SNAKE } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-r", dangerouslySetInnerHTML: { __html: HUB_STK_AUCTION } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-b", dangerouslySetInnerHTML: { __html: HUB_STK_BESTBALL } }), React.createElement("div", { className: "lp-sticker hub-stk hub-stk-c", dangerouslySetInnerHTML: { __html: HUB_STK_COACH } }), React.createElement(LogoMark, { tagline: true, height: 375, className: "landing-logo" }), React.createElement("div", { className: "it-tagline-lockup" }, "You\u2019re either the ", React.createElement("span", { className: "it-tag-gold" }, "tuna"), " or the ", React.createElement("span", { className: "it-tag-dim" }, "bait"), "."), React.createElement("div", { className: "it-tagline0 it-tagline-gap" }, "AI is already in your draft room."), React.createElement("div", { className: "it-tagline2" }, "Make sure yours is better.")), React.createElement("div", {
     className: "lp-section lp-modes"
-  }, React.createElement("div", { className: "ip-stack" }, React.createElement("div", { className: "ip-row" }, React.createElement("button", { className: "ip-card ip-snake", onClick: () => onPick('snake'), dangerouslySetInnerHTML: { __html: SNAKE_PANEL } }), React.createElement("button", { className: "ip-card ip-auction", onClick: () => onPick('auction'), dangerouslySetInnerHTML: { __html: AUCTION_PANEL } }), React.createElement("button", { className: "ip-card ip-bestball", onClick: () => onPick('bestball'), dangerouslySetInnerHTML: { __html: BESTBALL_PANEL } })), React.createElement("div", { className: "ip-coach", dangerouslySetInnerHTML: { __html: VALUECOACH_HTML } }), React.createElement("div", { className: "ip-coach ip-insults", dangerouslySetInnerHTML: { __html: INSULTS_HTML } }))), React.createElement("div", { className: "lp-ai-line", key: aiIdx }, React.createElement("span", { className: "lp-ai-a" }, AI_LINES[aiIdx].a), React.createElement("b", { className: "lp-ai-b" }, AI_LINES[aiIdx].b)), React.createElement("footer", { className: "it-foot" }, React.createElement("a", { href: "/faq" }, "FAQ"), React.createElement("a", { href: "/terms" }, "Terms"), React.createElement("a", { href: "/privacy" }, "Privacy"), React.createElement("a", { href: "/support" }, "Support"), React.createElement("span", { className: "it-foot-mark" }, "Iron Tuna\u2122 \u00b7 \u00a9 2026 Iron Tuna")))), referOpen && React.createElement(ReferralModal, { account: account, setAccount: setAccount, onClose: () => setReferOpen(false) }));
+  }, React.createElement("div", { className: "ip-stack" }, React.createElement("div", { className: "ip-row" }, React.createElement("button", { className: "ip-card ip-snake", onClick: () => onPick('snake'), dangerouslySetInnerHTML: { __html: SNAKE_PANEL } }), React.createElement("button", { className: "ip-card ip-auction", onClick: () => onPick('auction'), dangerouslySetInnerHTML: { __html: AUCTION_PANEL } }), React.createElement("button", { className: "ip-card ip-bestball", onClick: () => onPick('bestball'), dangerouslySetInnerHTML: { __html: BESTBALL_PANEL } })), React.createElement("div", { className: "ip-coach", dangerouslySetInnerHTML: { __html: VALUECOACH_HTML } }), React.createElement("div", { className: "ip-coach ip-insults", dangerouslySetInnerHTML: { __html: INSULTS_HTML } }))), React.createElement("div", { className: "lp-ai-line", key: aiIdx }, React.createElement("span", { className: "lp-ai-a" }, AI_LINES[aiIdx].a), React.createElement("b", { className: "lp-ai-b" }, AI_LINES[aiIdx].b)), React.createElement("footer", { className: "it-foot" }, React.createElement("a", { href: "/faq" }, "FAQ"), React.createElement("a", { href: "/terms" }, "Terms"), React.createElement("a", { href: "/privacy" }, "Privacy"), React.createElement("a", { href: "/support" }, "Support"), React.createElement("a", { className: "it-foot-admin", href: "/admin" }, "Admin"), React.createElement("span", { className: "it-foot-mark" }, "Iron Tuna\u2122 \u00b7 \u00a9 2026 Iron Tuna")))), referOpen && React.createElement(ReferralModal, { account: account, setAccount: setAccount, onClose: () => setReferOpen(false) }));
 }
 function WillHeBeThere({ players, draftedIds, draftHistory, config }) {
   const [open, setOpen] = useState(false);
@@ -20153,7 +19894,20 @@ function App() {
   const initialState = (() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const s = JSON.parse(raw);
+        // $120 was the old default budget. Saved sessions where the user never
+        // set a budget (and hasn't drafted) move to the $200 default.
+        const c = s && s.config;
+        if (c && c.budget === 120 && !c.budgetSet && (!s.draftHistory || s.draftHistory.length === 0)) {
+          c.budget = 200;
+          if (Array.isArray(s.teams)) s.teams.forEach(t => {
+            const spent = (t.roster || []).reduce((x, r) => x + (r.price || 0), 0);
+            t.budgetRemaining = 200 - spent;
+          });
+        }
+        return s;
+      }
     } catch (e) {}
     return null;
   })();
@@ -20167,7 +19921,7 @@ function App() {
   const remoteApplyRef = useRef(false);
   const __itPath = (() => { try { return window.location.pathname || '/'; } catch (e) { return '/'; } })();
   const __itFmt = __itPath.indexOf('/snakedraft') === 0 ? 'snake' : __itPath.indexOf('/bestball') === 0 ? 'bestball' : 'auction';
-  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; const __c = { ...__b, format: __itFmt }; if (__itFmt === 'bestball') { __c.roster = BESTBALL_ROSTER; __c.flex = BESTBALL_FLEX; } return __c; })());
+  const [config, setConfig] = useState((() => { const __b = initialState?.config || DEFAULT_LEAGUE_CONFIG; return configForFormat(__b, __itFmt); })());
   const [players, setPlayers] = useState(initialState?.players || buildInitialPlayers(BASELINE_PROJECTIONS));
   const [valueAdjust, setValueAdjust] = useState(initialState?.valueAdjust || {});
   const [priceOverrides, setPriceOverrides] = useState(initialState?.priceOverrides || {});
@@ -20298,26 +20052,7 @@ function App() {
   const has = id => entitled(account, id);
   const liveTier = config.format === 'snake' ? 'snake' : config.format === 'bestball' ? 'bestball' : 'auction';
   const [upgradeReason, setUpgradeReason] = useState('');
-  function grantEntitlement(id) {
-    setAccount(a => ({
-      ...a,
-      entitlements: {
-        ...(a.entitlements || {}),
-        [id]: true
-      }
-    }));
-    const fmt = config.format || 'auction';
-    ITAnalytics.track('purchase', {
-      item: id,
-      mode: account.testMode ? 'test' : 'live',
-      format: fmt
-    });
-    ITAnalytics.track('purchase_completed', {
-      item: id,
-      format: fmt
-    });
-  }
-  function openCheckout(tier) {
+  async function openCheckout(tier) {
     if (!tier) return;
     const fmt = tier.format || config.format || 'auction';
     ITAnalytics.track('checkout_open', {
@@ -20328,9 +20063,25 @@ function App() {
       item: tier.id,
       format: fmt
     });
-    setOverlay({
-      checkout: tier
+    let ref = '';
+    try {
+      ref = localStorage.getItem('it_ref_in') || '';
+    } catch (e) {}
+    const email = (account.user && account.user.email) || '';
+    const path = (() => { try { return window.location.pathname; } catch (e) { return '/'; } })();
+    const r = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({ ref, email, path })
     });
+    const j = await r.json();
+    if (j && j.url) {
+      window.location.href = j.url;
+      return;
+    }
+    throw new Error(j && j.error || 'Could not start checkout');
   }
   function promptUpgrade(reason) {
     if (has(liveTier)) return false;
@@ -20398,8 +20149,7 @@ function App() {
     });
   }
   const [teams, setTeams] = useState(() => {
-    let cfg = initialState?.config || DEFAULT_LEAGUE_CONFIG;
-    if (__itFmt === 'bestball') cfg = { ...cfg, roster: BESTBALL_ROSTER, flex: BESTBALL_FLEX };
+    let cfg = configForFormat(initialState?.config || DEFAULT_LEAGUE_CONFIG, __itFmt);
     const loadedTeams = initialState?.teams || buildInitialTeams(cfg);
     const total = totalRosterSpots(cfg);
     return loadedTeams.map(t => ({
@@ -20796,7 +20546,7 @@ function App() {
         return;
       }
       remoteApplyRef.current = true;
-      if (d.config) setConfig(d.config);
+      if (d.config) setConfig(configForFormat(d.config, __itFmt));
       if (d.players) setPlayers(d.players);
       if (d.teams) setTeams(d.teams);
       if (d.draftHistory) setDraftHistory(d.draftHistory);
@@ -21052,6 +20802,10 @@ function App() {
     if (newConfig && !has(liveTier) && JSON.stringify(newConfig.scoring || {}) !== JSON.stringify(config.scoring || {})) {
       newConfig = { ...newConfig, scoring: config.scoring };
       promptUpgrade("to use your league's own scoring");
+    }
+    // Once the user sets a budget themselves, it sticks — the $200 default migration never touches it again.
+    if (newConfig && newConfig.budget !== config.budget) {
+      newConfig = { ...newConfig, budgetSet: true };
     }
     if (newConfig && newConfig.format && newConfig.format !== config.format) {
       ITAnalytics.track('mode_selected', {
@@ -22058,7 +21812,7 @@ function App() {
     className: `purchase-toast no-print tone-${purchaseToast.tone}`,
     onClick: () => setPurchaseToast(null),
     title: "Click to dismiss"
-  }, purchaseToast.text), postBuyOpen && React.createElement("div", { className: "modal-bg no-print", onClick: () => setPostBuyOpen(false) }, React.createElement("div", { className: "modal", style: { maxWidth: 460, textAlign: 'center' }, onClick: e => e.stopPropagation() }, React.createElement("button", { className: "modal-close", onClick: () => setPostBuyOpen(false) }, "×"), React.createElement("div", { style: { fontSize: 40, marginBottom: 4 } }, "🎉"), React.createElement("div", { className: "section-title", style: { textAlign: 'center' } }, "You're in — Draft Day Mode unlocked"), React.createElement("p", { style: { fontSize: 13.5, color: 'var(--text-secondary)', margin: '6px 0 16px' } }, "Payment received. Your full draft tools are live on this device — custom scoring, the live Value Coach, and your own board."), React.createElement("div", { style: { background: 'rgba(45,212,163,0.08)', border: '1px solid rgba(45,212,163,0.35)', borderRadius: 12, padding: '14px 16px', textAlign: 'left', marginBottom: 14 } }, React.createElement("div", { style: { fontWeight: 700, color: 'var(--positive)', marginBottom: 4 } }, "Want it for free?"), React.createElement("p", { style: { fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 } }, "Earn ", React.createElement("b", null, "$3 for every friend"), " who unlocks with your link — and they get $1 off. About four friends and your $9.99 has paid for itself.")), React.createElement("button", { className: "btn-draft", style: { width: '100%' }, onClick: () => { setPostBuyOpen(false); setReferOpen(true); } }, "Get my share link →"), React.createElement("button", { onClick: () => setPostBuyOpen(false), style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' } }, "Maybe later"))), !showSplash && isMobile && view !== 'board' && currentNomination && nomCardEl, overlay === 'pricing' && React.createElement(PricingModal, {
+  }, purchaseToast.text), postBuyOpen && React.createElement("div", { className: "modal-bg no-print", onClick: () => setPostBuyOpen(false) }, React.createElement("div", { className: "modal", style: { maxWidth: 460, textAlign: 'center' }, onClick: e => e.stopPropagation() }, React.createElement("button", { className: "modal-close", onClick: () => setPostBuyOpen(false) }, "×"), React.createElement("div", { style: { fontSize: 40, marginBottom: 4 } }, "🎉"), React.createElement("div", { className: "section-title", style: { textAlign: 'center' } }, "You're in — Draft Day Mode unlocked"), React.createElement("p", { style: { fontSize: 13.5, color: 'var(--text-secondary)', margin: '6px 0 16px' } }, "Payment received. Your full draft tools are live on this device — custom scoring, the live Value Coach, and your own board."), React.createElement("div", { style: { background: 'rgba(45,212,163,0.08)', border: '1px solid rgba(45,212,163,0.35)', borderRadius: 12, padding: '14px 16px', textAlign: 'left', marginBottom: 14 } }, React.createElement("div", { style: { fontWeight: 700, color: 'var(--positive)', marginBottom: 4 } }, "Earn cash on every referral — no limit"), React.createElement("p", { style: { fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 } }, "Earn ", React.createElement("b", null, "$3 for every friend"), " who unlocks with your link — and they get $1 off.")), React.createElement("button", { className: "btn-draft", style: { width: '100%' }, onClick: () => { setPostBuyOpen(false); setReferOpen(true); } }, "Get my share link →"), React.createElement("button", { onClick: () => setPostBuyOpen(false), style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' } }, "Maybe later"))), !showSplash && isMobile && view !== 'board' && currentNomination && nomCardEl, overlay === 'pricing' && React.createElement(PricingModal, {
     account: account,
     onBuy: openCheckout,
     onClose: () => setOverlay(null),
@@ -22084,14 +21838,6 @@ function App() {
     onClose: () => setOverlay(null)
   }), overlay === 'share' && React.createElement(ShareModal, {
     text: shareText,
-    onClose: () => setOverlay(null)
-  }), overlay && overlay.checkout && React.createElement(CheckoutModal, {
-    tier: overlay.checkout,
-    testMode: account.testMode,
-    onComplete: () => {
-      grantEntitlement(overlay.checkout.id);
-      setOverlay('pricing');
-    },
     onClose: () => setOverlay(null)
   }), !showSplash && !account.onboardingDismissed && draftHistory.length === 0 && React.createElement(OnboardingChecklist, {
     steps: onbSteps,

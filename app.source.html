@@ -796,6 +796,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-col-labels { display: grid; gap: 4px; align-items: center; padding: 3px 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); background: rgba(255,255,255,0.025); border-bottom: 1px solid var(--border-subtle); }
 .cheat-col-labels span:nth-child(n+4) { text-align: right; }
 .cheat-print-foot { display: none; }
+.cheat-onepage-brand { display: none; }
 .cheat-print-head { font-family: var(--font-display); font-size: 17px; color: #000; margin-bottom: 6px; }
 @media print {
   @page { size: 11in 8.5in; margin: 0.3in; }
@@ -845,6 +846,15 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-target { background: #eafaf3 !important; }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 8px; }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 7.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
+  body.print-onepage .cheat-print-head, body.print-onepage .cheat-print-foot { display: none !important; }
+  body.print-onepage .cheat-onepage-brand { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: 0 0 6px; }
+  .cheat-onepage-brand .cob-sub { font-size: 9.5px; color: #5a6675; letter-spacing: 0.03em; font-family: Arial, sans-serif; text-align: right; }
+  .cheat-onepage-brand .cob-chip { background: #1a2430; border-radius: 4px; border-bottom: 2px solid #b8860b; padding: 4px 9px; display: flex; align-items: center; gap: 8px; }
+  .cheat-onepage-brand .cob-fish { height: 20px; width: auto; display: block; }
+  .cheat-onepage-brand .cob-name { font-family: 'Bebas Neue', Arial, sans-serif; font-size: 17px; letter-spacing: 0.12em; color: #dde8ee; line-height: 1; }
+  /* One-page export: top 20 per position so the single page prints large enough to read */
+  body.print-onepage .cheat-col:not(.cc-ALL) > :nth-child(n+21 of .cheat-row) { display: none !important; }
+  body.print-onepage .cheat-col-sub { display: none; }
 }.hl-btn { font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-secondary); cursor: pointer; }
 .hl-btn.active { background: var(--gold-text); color: #1a1205; border-color: var(--gold-text); font-weight: 700; }
 .cheat-cols-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); align-self: center; font-family: var(--font-body); letter-spacing: normal; min-width: 46px; }
@@ -2699,7 +2709,7 @@ function LogoMark({ height = 34, className = '', tagline = false, wavy = false }
   const wordTy = tagline ? (fishH - 1.5) : 0;
   const vbH = tagline ? (fishH + 70) : (base * 1.12);
   const taglineY = tagline ? (fishH + 56) : (vbH - base * 0.14);
-  const rivets = [[40,12],[54,10.5],[68,12],[80,15],[26,16],[44,40],[58,42],[72,40],[33,30],[50,30],[66,30],[80,29]];
+  const rivets = [[38.9,17.9],[37.9,28.8],[39.5,38.9],[54.9,16.4],[53.9,28.6],[55.5,39.8],[71.2,17.8],[70.8,28.1],[72.5,37.3]]; // 3 per plate seam, aligned rows
   const seams = ['M40 13 C 37 24, 37 34, 41 43', 'M56 11 C 53 23, 53 35, 57 44', 'M72 13 C 70 24, 70 33, 74 41'];
   return (
     <svg className={className} viewBox={`0 0 ${vbW} ${vbH}`} style={{ height, width: 'auto', display: 'block' }} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna">
@@ -4383,7 +4393,111 @@ function cheatHighlights(byPos, strategy) {
   Object.entries(r).forEach(([pos, ranges]) => ranges.forEach(([lo, hi]) => add(pos, lo, hi)));
   return set;
 }
+function cheatOnePageFit() {
+  // Measures the sheet's print-layout height by flipping the print stylesheets
+  // on synchronously (no paint happens mid-task), then returns the layout
+  // width, capped height, and transform scale that fit it on one
+  // letter-landscape page.
+  try {
+    const sheet = document.querySelector('.cheatsheet');
+    if (!sheet) return null;
+    const PAGE_W = 10.4 * 96;
+    const PAGE_H = 7.85 * 96;
+    const flipped = [];
+    for (let i = 0; i < document.styleSheets.length; i++) {
+      const ss = document.styleSheets[i];
+      if (ss.ownerNode && ss.ownerNode.id === 'cheat-page-style') continue;
+      let rules;
+      try { rules = ss.cssRules; } catch (e) { continue; }
+      if (!rules) continue;
+      for (let j = 0; j < rules.length; j++) {
+        const mt = rules[j].media && rules[j].media.mediaText;
+        if (!mt) continue;
+        // Flip print rules on, and viewport-width rules off, so the sheet is
+        // measured in the same fixed-width layout the print iframe renders.
+        if (mt.indexOf('print') !== -1 && mt.indexOf('not') === -1) flipped.push([rules[j], mt, 'all']);
+        else if (mt.indexOf('width') !== -1) flipped.push([rules[j], mt, 'not all']);
+      }
+    }
+    const prevWidth = sheet.style.width;
+    let w = PAGE_W;
+    let h = 0;
+    try {
+      document.body.classList.add('print-onepage');
+      flipped.forEach(([r, mt, to]) => { r.media.mediaText = to; });
+      sheet.style.width = PAGE_W + 'px';
+      h = sheet.scrollHeight;
+      if (h > PAGE_H) {
+        // Too tall at page width: widen the layout so the scaled-down sheet
+        // still spans the full page width, then re-measure at that width.
+        w = Math.round(PAGE_W * (h / PAGE_H));
+        sheet.style.width = w + 'px';
+        h = sheet.scrollHeight || h;
+      }
+    } finally {
+      sheet.style.width = prevWidth;
+      flipped.forEach(([r, mt]) => { try { r.media.mediaText = mt; } catch (e) {} });
+      document.body.classList.remove('print-onepage');
+    }
+    if (!h) return null;
+    const scale = Math.min(1, PAGE_H / h * 0.99, PAGE_W / w);
+    return { width: w, height: Math.ceil(h * scale), scale: scale };
+  } catch (e) { return null; }
+}
+function printOnePagePdf() {
+  // Prints the sheet from a hidden same-origin iframe whose only flow content
+  // is a single page-sized box, so the print engine can never fragment the
+  // scaled sheet across pages the way it does in the main document.
+  try {
+    const sheet = document.querySelector('.cheatsheet');
+    const fit = cheatOnePageFit();
+    if (!sheet || !fit) return;
+    const PAGE_W = Math.floor(10.4 * 96);
+    const PAGE_H = Math.floor(7.85 * 96);
+    let fr = document.getElementById('cheat-print-frame');
+    if (!fr) {
+      fr = document.createElement('iframe');
+      fr.id = 'cheat-print-frame';
+      fr.setAttribute('aria-hidden', 'true');
+      fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+      document.body.appendChild(fr);
+    }
+    const headBits = [];
+    document.querySelectorAll('head style, head link[rel="stylesheet"]').forEach(n => {
+      if (n.id !== 'cheat-page-style') headBits.push(n.outerHTML);
+    });
+    let armed = true;
+    fr.onload = () => {
+      if (!armed) return;
+      armed = false;
+      const w = fr.contentWindow;
+      const ready = w.document.fonts && w.document.fonts.ready ? w.document.fonts.ready : Promise.resolve();
+      ready.then(() => setTimeout(() => {
+        try { w.focus(); w.print(); } catch (e) {}
+      }, 150));
+    };
+    const doc = fr.contentDocument;
+    doc.open();
+    doc.write('<!doctype html><html><head><meta charset="utf-8">' + headBits.join('') + '<style>@page { size: 11in 8.5in; margin: 0.3in; } html, body { margin: 0; padding: 0; background: #fff; } #cheat-fit { width: ' + PAGE_W + 'px; height: ' + PAGE_H + 'px; overflow: hidden; } #cheat-scale { width: ' + fit.width + 'px; transform: scale(' + fit.scale + '); transform-origin: 0 0; } #cheat-scale .cheatsheet { position: static !important; width: 100% !important; } .cheat-print-foot { display: none !important; }</style></head><body class="print-onepage"><div id="cheat-fit"><div id="cheat-scale"><div class="cheatsheet">' + sheet.innerHTML + '</div></div></div></body></html>');
+    doc.close();
+    // The iframe prints at a fixed page width, so viewport-width media queries
+    // must never restyle it (print MQ evaluation is unreliable across engines).
+    try {
+      const sheets = doc.styleSheets;
+      for (let i = 0; i < sheets.length; i++) {
+        let rules;
+        try { rules = sheets[i].cssRules; } catch (e) { continue; }
+        if (!rules) continue;
+        for (let j = 0; j < rules.length; j++) {
+          const mt = rules[j].media && rules[j].media.mediaText;
+          if (mt && mt.indexOf('width') !== -1) rules[j].media.mediaText = 'not all';
+        }
+      }
+    } catch (e) {}
+  } catch (e) {}
+}
 function printPdf(size) {
+  if (size === 'onepage') { printOnePagePdf(); return; }
   try {
     const dims = size === 'legal' ? '14in 8.5in' : '11in 8.5in';
     let st = document.getElementById('cheat-page-style');
@@ -4764,7 +4878,7 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
             })}
             {wiActive && wiPlan && (
               <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                <div><b style={{ color: 'var(--gold-text)' }}>{wiModelLabel}</b> with {activeAnchors.length === 1 ? 'this pick' : 'these picks'}: <b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> <span style={{ color: 'var(--text-muted)' }}>(starters spend ${wiPlan.plannedStarterCost} of ${wiPlan.budgetRemaining}; the rest of the lineup is rebuilt to fit)</span>{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · these prices bust your budget, lower them</span> : null}.</div>
+                <div><b style={{ color: 'var(--gold-text)' }}>{wiModelLabel}</b> with {activeAnchors.length === 1 ? 'this pick' : 'these picks'}: <b style={{ color: 'var(--positive)' }}>{(wiPlan.starterPoints / games).toFixed(1)} pts/game</b> <span style={{ color: 'var(--text-muted)' }}>(starters spend ${wiPlan.plannedStarterCost} of ${wiPlan.budgetRemaining}, leaving ${Math.max(0, wiPlan.budgetRemaining - wiPlan.plannedStarterCost)} for your bench; the rest of the lineup is rebuilt to fit)</span>{wiPlan.feasible === false ? <span style={{ color: 'var(--danger)' }}> · these prices bust your budget, lower them</span> : null}.</div>
                 <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{wiPlan.slots.map((s, i) => <span key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, background: 'var(--bg-elev)', border: `1px solid ${s.player && anchorIds.has(String(s.player.id)) ? 'var(--positive)' : 'var(--border-subtle)'}`, borderRadius: 8, padding: '1px 6px' }}>{s.label}: {s.player ? s.player.name : '–'}{s.player ? ` $${s.price != null ? s.price : s.targetPrice}` : ''}</span>)}</div>
               </div>
             )}
@@ -4774,8 +4888,9 @@ function CheatHeader({ myTeam, players, config, draftedIds, roleOverrides, seaso
       <div className="ch-controls">
         <span className="ch-controls-label">Columns &amp; Flags</span>
         {mode === 'live' && onAddPlayer && <button className="btn-draft" onClick={onAddPlayer}>+ Add player</button>}
-        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>}
-        {mode !== 'live' && <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>}
+        <button className="btn-secondary" onClick={() => printPdf('letter')}>⤓ PDF · Letter</button>
+        <button className="btn-secondary" onClick={() => printPdf('legal')}>⤓ PDF · Legal</button>
+        <button className="btn-secondary" title="Shrink the whole sheet to fit a single letter-size page" onClick={() => printPdf('onepage')}>⤓ PDF · 1 Page</button>
         <span style={{ flexBasis: '100%', height: 0 }} />
         <span className="cheat-cols-label">Show:</span>
         {(COLSPEC || []).map(([k, lbl, tip]) => (<button key={k} className={`col-toggle ${showCols && showCols[k] ? 'on' : ''}`} title={tip} onClick={() => setShowCols(c => ({ ...c, [k]: !c[k] }))}>{lbl}</button>))}
@@ -4929,6 +5044,10 @@ function Cheatsheet({ players, config, seasonGames, pointsMode, onRankReorder, o
         <div className="cph-title"><LogoMark height={30} className="cph-logo" /><span>{fmtMeta(config).label} Cheat Sheet</span></div>
         <div className="cph-sub">{config.teams} teams · ${config.budget} budget · {pprLabel}{highlight ? ` · ${STRAT[highlight].label} model` : ''} · generated {dateStr}</div>
         <div className="cph-legend"><span className="cph-key"><i className="k-cost" />predicted cost</span><span className="cph-key"><i className="k-val" />value ($)</span><span className="cph-key"><i className="k-you" />your max bid</span><span className="cph-key"><i className="k-grn" />worth targeting (≤ your max)</span><span className="cph-key"><i className="k-red" />price over your max</span><span className="cph-key"><i className="k-hl" />★ highlighted target</span></div>
+      </div>
+      <div className="cheat-onepage-brand">
+        <div className="cob-sub">{fmtMeta(config).label} Cheat Sheet · {config.teams} teams · ${config.budget} budget · {pprLabel} · {dateStr}</div>
+        <div className="cob-chip"><img src="/tuna.png" alt="Iron Tuna" className="cob-fish" /><span className="cob-name">IRON TUNA</span></div>
       </div>
       {mode !== 'live' || true ? <LeadCapture /> : null}
       {isNarrow && (
@@ -6012,8 +6131,7 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   const alloc = config.strategy?.allocation ?? 0.55;
   // Right of center reserves extra budget for quality bench depth.
   const benchShare = alloc * 0.35; // starters-vs-bench axis: up to 35% of budget held for bench
-  const anchorActive = !!(forcedPrices && Object.keys(forcedPrices).length);
-  const extraBench = (anchorActive || noBench) ? 0 : Math.round(benchShare * R);
+  const extraBench = noBench ? 0 : Math.round(benchShare * R);
   // Left end allows concentrating starter spend (stars & scrubs); center+ balances it.
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = 0.30 + conc * 0.55; // concentration axis: even spread (0.30) -> top-heavy (0.85)
@@ -7544,10 +7662,13 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
     ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management."
     : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
   const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
-  const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…').map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text }));
+  const hist = (history || []).slice(-6).filter(m => m.text && m.text !== '…' && m.text !== '(no response)').map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.text }));
   hist.push({ role: 'user', content: userMsg });
   const ctrl = new AbortController();
-  let _to = setTimeout(() => ctrl.abort(), 20000);
+  // First-byte timeout is generous (the proxy may spend a while retrying an
+  // overloaded provider before the stream opens); once tokens flow, each
+  // subsequent chunk only gets the shorter idle window via _bump.
+  let _to = setTimeout(() => ctrl.abort(), 45000);
   const _bump = () => { clearTimeout(_to); _to = setTimeout(() => ctrl.abort(), 20000); };
   try {
   if (ai.format === 'proxy') {
@@ -7565,7 +7686,7 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
         const line = buf.slice(0, idx).trim(); buf = buf.slice(idx + 2);
         if (!line.startsWith('data:')) continue;
         const data = line.slice(5).trim(); if (data === '[DONE]') continue;
-        try { const delta = JSON.parse(data); full += delta; onDelta(full); } catch (e) {}
+        try { const delta = JSON.parse(data); if (typeof delta === 'string' && delta) { full += delta; onDelta(full); } } catch (e) {}
       }
     }
     return full;
@@ -7793,7 +7914,8 @@ function ValueCoach({ valueAdjust, onApply, config, players, teamsCount, locked,
       const ctxObj = buildCoachContext(q, { evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, games: seasonGames });
       const onDelta = ai.format === 'proxy' ? (full) => setMsgs(m => m.map(x => x._id === tid ? { role: 'bot', text: full, _id: tid } : x)) : null;
       const ans = await callLLM(q, ctxObj, ai, msgs, onDelta);
-      setMsgs(m => m.map(x => x._id === tid ? { role: 'bot', text: ans || '(no response)', _id: tid } : x));
+      if (!ans || !String(ans).trim()) throw new Error('empty response');
+      setMsgs(m => m.map(x => x._id === tid ? { role: 'bot', text: ans, _id: tid } : x));
     } catch (e) {
       setMsgs(m => m.filter(x => x._id !== tid));
       if (!_retry) { setTimeout(() => handleAI(q, true), 1200); return; }
