@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580" width="1000" height="580">
+  <defs>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#42546a"/>
+      <stop offset="0.42" stop-color="#7b8da1"/>
+      <stop offset="0.72" stop-color="#b4c1cf"/>
+      <stop offset="1" stop-color="#dbe3ea"/>
+    </linearGradient>
+    <linearGradient id="steelFin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a4b5e"/>
+      <stop offset="1" stop-color="#8496a9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- tail (behind body) -->
+  <path d="M 738 300
+           C 790 258, 842 208, 894 148
+           C 852 250, 852 350, 894 452
+           C 842 392, 790 342, 738 300 Z"
+        fill="url(#steelFin)" stroke="#131c28" stroke-width="15" stroke-linejoin="round"/>
+
+  <!-- first dorsal fin -->
+  <path d="M 320 178
+           C 335 112, 375 80, 435 74
+           C 410 112, 392 148, 386 180 Z"
+        fill="url(#steelFin)" stroke="#131c28" stroke-width="14" stroke-linejoin="round"/>
+
+  <!-- second dorsal fin -->
+  <path d="M 545 178
+           C 558 138, 582 122, 612 118
+           C 596 142, 586 165, 582 186 Z"
+        fill="url(#steelFin)" stroke="#131c28" stroke-width="13" stroke-linejoin="round"/>
+
+  <!-- anal fin -->
+  <path d="M 545 422
+           C 558 462, 582 478, 612 482
+           C 596 458, 586 435, 582 414 Z"
+        fill="url(#steelFin)" stroke="#131c28" stroke-width="13" stroke-linejoin="round"/>
+
+  <!-- finlets top -->
+  <g fill="url(#steelFin)" stroke="#131c28" stroke-width="11" stroke-linejoin="round">
+    <path d="M 645 208 L 671 170 L 680 204 Z"/>
+    <path d="M 703 228 L 728 192 L 737 226 Z"/>
+    <path d="M 752 262 L 774 232 L 782 264 Z"/>
+    <path d="M 645 392 L 671 430 L 680 396 Z"/>
+    <path d="M 703 372 L 728 408 L 737 374 Z"/>
+    <path d="M 752 338 L 774 368 L 782 336 Z"/>
+  </g>
+
+  <!-- body -->
+  <path d="M 52 302
+           C 130 205, 265 148, 425 150
+           C 560 152, 672 194, 745 246
+           C 772 266, 790 285, 793 300
+           C 790 315, 772 334, 745 354
+           C 672 406, 560 448, 425 450
+           C 265 452, 130 399, 52 302 Z"
+        fill="url(#steel)" stroke="#131c28" stroke-width="18" stroke-linejoin="round"/>
+
+  <!-- sheen along the back -->
+  <path d="M 140 240 C 230 185, 330 168, 435 168"
+        fill="none" stroke="#e9eff5" stroke-width="14" opacity="0.35" stroke-linecap="round"/>
+
+  <!-- panel seams -->
+  <g fill="none" stroke="#131c28" stroke-width="7" opacity="0.32" stroke-linecap="round">
+    <path d="M 358 160 C 350 252, 350 350, 360 442"/>
+    <path d="M 520 168 C 512 255, 512 345, 522 434"/>
+    <path d="M 662 210 C 655 270, 655 330, 663 392"/>
+  </g>
+
+  <!-- rivets on seams -->
+  <g fill="#131c28" opacity="0.42">
+    <circle cx="353" cy="232" r="8"/>
+    <circle cx="351" cy="301" r="8"/>
+    <circle cx="354" cy="370" r="8"/>
+    <circle cx="515" cy="238" r="8"/>
+    <circle cx="513" cy="301" r="8"/>
+    <circle cx="516" cy="364" r="8"/>
+    <circle cx="658" cy="262" r="7"/>
+    <circle cx="658" cy="340" r="7"/>
+  </g>
+
+  <!-- gill / operculum -->
+  <path d="M 234 188 C 270 252, 270 350, 236 414"
+        fill="none" stroke="#131c28" stroke-width="12" opacity="0.5" stroke-linecap="round"/>
+
+  <!-- mouth -->
+  <path d="M 62 316 C 96 332, 126 336, 154 331"
+        fill="none" stroke="#131c28" stroke-width="11" opacity="0.6" stroke-linecap="round"/>
+
+  <!-- pectoral fin -->
+  <path d="M 288 318
+           C 352 330, 418 366, 458 418
+           C 402 417, 342 398, 296 364 Z"
+        fill="url(#steelFin)" stroke="#131c28" stroke-width="14" stroke-linejoin="round"/>
+
+  <!-- eye -->
+  <circle cx="160" cy="278" r="33" fill="#eef2f6" stroke="#131c28" stroke-width="13"/>
+  <circle cx="155" cy="280" r="17" fill="#131c28"/>
+  <circle cx="149" cy="273" r="5.5" fill="#eef2f6"/>
+</svg>
