@@ -56,7 +56,12 @@ async function isEntitled(env, email) {
   // Authoritative: the entitlements table, written only on a VERIFIED-paid session
   // (see /api/checkout/verify + stripe-webhook). Do NOT fall back to contacts:
   // /api/checkout writes a 'purchase' contact at checkout START, before payment.
-  if (!email || !env.LEADS_DB) return false;
+  if (!email) return false;
+  // Comped accounts: these emails always have full access, no purchase required.
+  // Kept in code (not the DB) so owner access survives a DB reset.
+  const COMPED = ['kennethrubinstein@gmail.com', 'kennethrubinstein@icloud.com'];
+  if (COMPED.includes(String(email).toLowerCase().trim())) return true;
+  if (!env.LEADS_DB) return false;
   try { return !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) { return false; }
 }
 async function grantEntitlement(env, email) {
