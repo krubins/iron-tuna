@@ -2679,16 +2679,19 @@ function scorePlayer(player, config) {
     projectedStats
   } = player;
   if (!projectedStats) return 0;
+  // rankAdj: weekly news-based ranking nudge (0.85-1.15). Scales the scored value so
+  // ranking order shifts while the published stat line stays untouched.
+  const adj = player.rankAdj > 0 ? player.rankAdj : 1;
   switch (position) {
     case "QB":
     case "RB":
     case "WR":
     case "TE":
-      return scoreSkillPlayer(projectedStats, position, config);
+      return scoreSkillPlayer(projectedStats, position, config) * adj;
     case "K":
-      return scoreKicker(projectedStats, config);
+      return scoreKicker(projectedStats, config) * adj;
     case "DEF":
-      return scoreDefense(projectedStats, config);
+      return scoreDefense(projectedStats, config) * adj;
     default:
       return 0;
   }
@@ -15298,6 +15301,7 @@ function buildInitialPlayers(projectionsSource) {
     position: p.position,
     team: p.team,
     projectedStats: p.projectedStats,
+    rankAdj: p.rankAdj,
     projectedPoints: 0,
     auctionValue: 0,
     inflatedValue: 0,
