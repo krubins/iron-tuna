@@ -72,3 +72,20 @@ const surv = (adp, nextPick) => Math.round(100 * (1 - ncdf((nextPick - adp) / Ma
 console.log('\n— Survival odds (site formula) —');
 console.log('ADP 45, pick 52 (12 later):', surv(45, 52), '| ADP 40:', surv(40, 52), '| ADP 58:', surv(58, 52));
 console.log('ADP 33, pick 41 (8 later):', surv(33, 41));
+
+// ── Later-round discount stats (X_SNAKE_DISCOUNT_POSTS) ──
+// "Draft differently early when you know what's discounted late." Quoted as PPG gaps between
+// positional ranks plus survival-formula examples, NOT as overall-rank rounds: ranking 408
+// players by raw points compresses QBs to the top in a way market ADP never does, so
+// cross-position "he goes in round N" claims from that proxy would be wrong.
+console.log('\n— Later-round discount gaps (PPG, full PPR) —');
+console.log('QB1 / QB12 PPG:', ppg(g('QB', 1)), '/', ppg(g('QB', 12)), '(gap', ppg(g('QB', 1) - g('QB', 12)) + ')');
+console.log('TE1→TE6:', ppg(g('TE', 1) - g('TE', 6)), '| TE6→TE12:', ppg(g('TE', 6) - g('TE', 12)));
+console.log('WR36 PPG:', ppg(g('WR', 36)), '| RB30 PPG:', ppg(g('RB', 30)));
+// Survival odds of typical "discount" targets making it back to you: one lap (12 picks,
+// mid-round seat) vs. a full turn lap (24 picks). A discount you can't reach isn't a discount.
+console.log('\n— Can the discount wait? (survival across laps, site formula) —');
+console.log('ADP 90 (late-QB zone), 12 picks later:', surv(90, 102), '| 24 picks:', surv(90, 114));
+console.log('ADP 70 (mid-TE zone), 12 picks later:', surv(70, 82), '| 24 picks:', surv(70, 94));
+console.log('ADP 55 (RB2 zone), 12 picks later:', surv(55, 67), '| 24 picks:', surv(55, 79));
+console.log('ADP 80 (WR3 zone), 12 picks later:', surv(80, 92), '| 24 picks:', surv(80, 104));

@@ -613,12 +613,28 @@ const X_COMPARISON_SNAKE_POSTS = [
   { id: 'compare-snake-2', type: 'compare', image: '/social/compare-snake.png', text: "Premium fantasy rankings run $30-70 a year. Every year. Forever.\n\n💰 Iron Tuna's full custom board (your league's exact scoring, live survival odds, and the Value Coach) is $9.99 once. Spread over a 17-week season, that's 59 cents a week for your edge.", cta: "Pay once, draft sharper in every league you're in:", url: 'https://irontuna.com/snakedraft' },
   { id: 'compare-snake-3', type: 'compare', image: '/social/compare-snake.png', text: "Most 'custom rankings' tools make you pay before you see a single number.\n\n🆓 Iron Tuna's cheat sheet is free: all 408 players, priced for a standard league, no signup, no email, no card. Pay $9.99 once only if you want it tuned to YOUR league and live on draft day.", cta: 'The free sheet is one click away. See it before you spend a dollar:', url: 'https://irontuna.com/snakedraft' },
 ];
-// Interleaved so Tue/Thu cycle topics: feature, compare, feature, compare, …
+// "Later-round discounts" series: the early rounds should be drafted with the late-round
+// discount rack already priced in. Runs as a consecutive 6-part series once the interleaved
+// feature/compare rotation completes (appended after the interleave below, which also keeps
+// existing rotation indices stable). Stats from tools/compute-tweet-stats.mjs ("Later-round
+// discount gaps" / "Can the discount wait?" sections); football facts quoted from this repo's
+// Auction Watch pages (Kraft: 2026-06-19, Tuten: 2026-07-11), never from memory.
+const X_SNAKE_DISCOUNT_POSTS = [
+  { id: 'snake-discount-0', type: 'snake-discount', text: "The best snake drafters pick in round 2 with round 9 already scouted. If you know what will be discounted late, the early rounds change completely.\n\n📉 Our model: QB5 outscores QB12 by just 0.7 PPG. That late QB discount arrives every year. Spend the early pick at RB or WR.", cta: 'New series: how the late-round discount rack should drive your early picks. Free to start:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-1', type: 'snake-discount', text: "Know the shape of the TE discount before you're on the clock in round 5.\n\n🎯 Our model: TE1 to TE6 falls 3.0 PPG, but TE6 to TE12 falls just 1.2. Pay up for the elite or wait until the room forgets the position exists. The middle is where TE picks go to die.", cta: 'Iron Tuna prices every tier gap live, so you always know which discount is still coming:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-2', type: 'snake-discount', text: "Tucker Kraft was the TE4 before his injury, expects to open camp on the PUP list, and says he'll be ready Week 1 with no restrictions.\n\n💸 That is a known late-round TE discount sitting in plain sight. If you believe it, the early TE premium makes no sense. WRs early, Kraft late.", cta: 'Iron Tuna flags discounted breakouts on the live board before your league notices:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-3', type: 'snake-discount', text: "Jaguars HC Liam Coen praises Bhayshul Tuten's Year 2 growth, but Jacksonville looks likely to carry three backs. Committee fear creates discounts.\n\n📊 Our model has 11 RBs ranked outside the top 30 clearing 150+ points. Late RB value is real. Plan your early rounds around it.", cta: 'Committee backfields scare draft rooms into discounts. The math says harvest them:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-4', type: 'snake-discount', text: "The catch with late-round discounts: they only count if the player actually reaches your pick.\n\n🔮 Site formula: an ADP 90 player survives 12 more picks 20% of the time. 24 picks? 5%. A discount you planned in round 3 must be claimed a full lap early. Iron Tuna tracks it live.", cta: 'Every discount has a shelf life. Know it before the turn takes it away:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-5', type: 'snake-discount', text: "Two numbers to draft by:\n\n📈 60% of all value over replacement sits in the top 24 players. Meanwhile WR24 to WR48 drops just 2.5 PPG across 24 receivers.\n\nEarly rounds buy scarcity. Late rounds buy discounts. A plan that knows both beats a ranking that knows neither.", cta: 'Scarcity early, discounts late. Iron Tuna computes both sides of that trade live:', url: 'https://irontuna.com/snakedraft' },
+];
+// Interleaved so Tue/Thu cycle topics: feature, compare, feature, compare, … then the
+// discount series runs back-to-back as a themed 6-parter at the end of the cycle.
 const X_SNAKE_BONUS_POOL = [];
 for (let i = 0; i < Math.max(X_SNAKE_FEATURE_POSTS.length, X_COMPARISON_SNAKE_POSTS.length); i++) {
   if (X_SNAKE_FEATURE_POSTS[i]) X_SNAKE_BONUS_POOL.push(X_SNAKE_FEATURE_POSTS[i]);
   if (X_COMPARISON_SNAKE_POSTS[i]) X_SNAKE_BONUS_POOL.push(X_COMPARISON_SNAKE_POSTS[i]);
 }
+for (const p of X_SNAKE_DISCOUNT_POSTS) X_SNAKE_BONUS_POOL.push(p);
 
 // ── Friday-only bonus post: best ball is a genuinely separate, less common format, so this
 //    fires far less often than the others (1x/week vs. daily auction/snake and 2-3x/week Wed
