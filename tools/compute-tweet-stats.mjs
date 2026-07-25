@@ -73,19 +73,27 @@ console.log('\n— Survival odds (site formula) —');
 console.log('ADP 45, pick 52 (12 later):', surv(45, 52), '| ADP 40:', surv(40, 52), '| ADP 58:', surv(58, 52));
 console.log('ADP 33, pick 41 (8 later):', surv(33, 41));
 
-// ── Later-round discount stats (X_SNAKE_DISCOUNT_POSTS) ──
-// "Draft differently early when you know what's discounted late." Quoted as PPG gaps between
-// positional ranks plus survival-formula examples, NOT as overall-rank rounds: ranking 408
-// players by raw points compresses QBs to the top in a way market ADP never does, so
-// cross-position "he goes in round N" claims from that proxy would be wrong.
-console.log('\n— Later-round discount gaps (PPG, full PPR) —');
-console.log('QB1 / QB12 PPG:', ppg(g('QB', 1)), '/', ppg(g('QB', 12)), '(gap', ppg(g('QB', 1) - g('QB', 12)) + ')');
-console.log('TE1→TE6:', ppg(g('TE', 1) - g('TE', 6)), '| TE6→TE12:', ppg(g('TE', 6) - g('TE', 12)));
-console.log('WR36 PPG:', ppg(g('WR', 36)), '| RB30 PPG:', ppg(g('RB', 30)));
-// Survival odds of typical "discount" targets making it back to you: one lap (12 picks,
-// mid-round seat) vs. a full turn lap (24 picks). A discount you can't reach isn't a discount.
-console.log('\n— Can the discount wait? (survival across laps, site formula) —');
-console.log('ADP 90 (late-QB zone), 12 picks later:', surv(90, 102), '| 24 picks:', surv(90, 114));
-console.log('ADP 70 (mid-TE zone), 12 picks later:', surv(70, 82), '| 24 picks:', surv(70, 94));
-console.log('ADP 55 (RB2 zone), 12 picks later:', surv(55, 67), '| 24 picks:', surv(55, 79));
-console.log('ADP 80 (WR3 zone), 12 picks later:', surv(80, 92), '| 24 picks:', surv(80, 104));
+// ── Later-round discount stats, player-specific (X_SNAKE_DISCOUNT_POSTS) ──
+// "Draft differently early when you know what's discounted late." Every tweet in the series
+// quotes named players' full-PPR season projections and build-path sums of them. Build sums
+// add the displayed (rounded) values so the arithmetic a reader does on the tweet checks out.
+// "ADP" in the survival examples is the model's own VOR board rank (the same ordering
+// index.html's attachProvisionalAdp falls back to), NOT market ADP.
+const P = (name) => {
+  const p = players.find((x) => x.name === name);
+  return Math.round(pts(p));
+};
+const build = (...names) => names.reduce((s, n) => s + P(n), 0);
+console.log('\n— Later-round discounts, player-specific (season pts, full PPR) —');
+console.log('Gibbs:', P('Jahmyr Gibbs'), '| Chase:', P("Ja'Marr Chase"), '| Puka:', P('Puka Nacua'), '| G.Wilson:', P('Garrett Wilson'));
+console.log('K.Walker:', P('Kenneth Walker III'), '| Chase Brown:', P('Chase Brown'), '| Tuten:', P('Bhayshul Tuten'));
+console.log('Daniels:', P('Jayden Daniels'), '| Lawrence:', P('Trevor Lawrence'));
+console.log('McBride:', P('Trey McBride'), '| LaPorta:', P('Sam LaPorta'), '| Kraft:', P('Tucker Kraft'),
+  '| LaPorta→Kraft PPG:', ppg(P('Sam LaPorta') - P('Tucker Kraft')));
+console.log('A.Jones:', P('Aaron Jones'), '| J.Warren:', P('Jaylen Warren'), '| Dowdle:', P('Rico Dowdle'));
+console.log('1.01 builds: Chase+Walker+ChaseBrown =', build("Ja'Marr Chase", 'Kenneth Walker III', 'Chase Brown'),
+  '| Gibbs+GWilson+DSmith =', build('Jahmyr Gibbs', 'Garrett Wilson', 'DeVonta Smith'));
+console.log('QB builds: Lawrence+Walker =', build('Trevor Lawrence', 'Kenneth Walker III'),
+  '| Daniels+Tuten =', build('Jayden Daniels', 'Bhayshul Tuten'));
+// Can the discount actually wait for you? Board-rank ADP vs. the 1.01 turn (pick 24).
+console.log('Survival to the 1.01 turn: Chase Brown (ADP 25):', surv(25, 24), '| K.Walker (ADP 17):', surv(17, 24));
