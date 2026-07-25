@@ -526,19 +526,31 @@ const PROJECTIONS = [
   { name: "Xavier Legette", position: "WR", team: "CAR", projectedStats: { rushYd: 14, rushTD: 0, rec: 25, recYd: 311, recTD: 2, fumLost: 0 }},
 ];
 
-// ── X (Twitter) auto-post: Mon/Wed/Fri, one auction + one snake insight, cycling through
-//    INSIGHTS_X_POOL. Requires X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
+// ── X (Twitter) auto-post: ONE thread per weekday (see X_DAY_SLOTS), cycling each day's pool.
+//    Requires X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 //    (OAuth 1.0a user-context tokens for @irontunafantasy with read+write access). See HANDOFF.md §10. ──
 const X_TAGLINE = "The full breakdown is free, and Iron Tuna turns takes like this into live draft-day values for YOUR league's exact scoring.";
-const X_HASHTAGS = { auction: '#FantasyFootball #AuctionDraft #FFDraft', snake: '#FantasyFootball #SnakeDraft #FFDraft', bestball: '#FantasyFootball #BestBall #FFDraft' };
+// One hashtag, not three: tag stuffing reads as automation to both humans and the algorithm,
+// and hashtags stopped driving meaningful discovery on X years ago.
+const X_HASHTAGS = { auction: '#FantasyFootball', snake: '#FantasyFootball', bestball: '#BestBall' };
 const X_MAX_LEN = 280;
 const X_URL_LEN = 23; // t.co always counts a URL as 23 chars regardless of true length
+// X measurably suppresses posts that carry external links, which matters enormously for a
+// zero-follower account trying to get initial distribution (and link posts also cost 13x on
+// pay-per-use pricing: $0.20 vs $0.015). So X posts are link-free by default: replies end with
+// this marker line instead of a URL, pointing at the profile bio (the irontuna.com link MUST
+// live in the @irontunafantasy bio for this to work — manual, one-time). Wednesday's
+// conversion post is the one weekly exception that keeps a real URL. The Threads mirror swaps
+// the marker back to the real URL (linkifyForThreads) since Threads is free and doesn't
+// suppress links the same way.
+const X_LINK_IN_BIO = '🔗 Link in bio.';
+const linkifyForThreads = (tweets, url) => url ? tweets.map((t) => t.replace(X_LINK_IN_BIO, url)) : tweets;
 
 // ── Wednesday-only third post: money-allocation strategy and Value Coach promo content,
 //    alternating. Hand-authored (not extracted from insight pages) and grounded in the copy on
 //    /auction-budget-allocation, /auction-nomination-strategy, and /dollar-endgame-handcuffs. ──
 const X_WED_TAGLINE = 'Iron Tuna prices every player for YOUR league and re-prices the whole board live while you draft. Free to start.';
-const X_WED_HASHTAGS = '#FantasyFootball #AuctionDraft #DraftStrategy';
+const X_WED_HASHTAGS = '#FantasyFootball';
 const X_STRATEGY_POSTS = [
   { id: 'strategy-0', type: 'strategy', text: "Our 2026 model: only 88 players project above replacement in a 12-team league, and RB+WR hold 86% of that value.\n\n💰 That's the math behind the winning $200 split: 38-42% RB, 28-32% WR, 10-14% QB, 8-10% TE. Decide your shape before the bidding decides it for you.", cta: 'Iron Tuna builds the split for YOUR league size and scoring, then re-prices every player live as the room spends. Free to start:', url: 'https://irontuna.com/auction-budget-allocation' },
   { id: 'strategy-1', type: 'strategy', text: "Stars-and-scrubs vs balanced is not a preference. It's a read.\n\n📊 The top 24 players hold 60% of all value over replacement in our model. If the room sells them at or under sheet price, concentrate your spend. The second they go over, the profit moves to the middle. Follow it.", cta: 'Iron Tuna shows you live, player by player, whether your room is overpaying or underpaying. That read is your whole strategy:', url: 'https://irontuna.com/auction-budget-allocation' },
@@ -596,7 +608,7 @@ for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length, X_CO
 // ── Tuesday/Thursday third post: snake-draft "survival odds" feature promo — knowing who'll
 //    still be on the board several rounds out is worth more than a static ranking, and the AI
 //    navigator recalculates that live off actual draft progress (ADP, position runs, picks-to-go).
-const X_SNAKE_HASHTAGS = '#FantasyFootball #SnakeDraft #DraftStrategy';
+const X_SNAKE_HASHTAGS = '#FantasyFootball';
 const X_SNAKE_FEATURE_POSTS = [
   { id: 'snake-feature-0', type: 'snake-feature', text: "Round 2 picks itself. Your league gets won in rounds 4-6, on one question: does he make it back to me?\n\n🔮 Our survival model: a player with ADP 45 lasts 12 more picks just 17% of the time. ADP 58? 74%. Iron Tuna computes this live for every player, after every pick.", cta: 'Stop guessing who makes it back. Know it, pick by pick, free to start:', url: 'https://irontuna.com/snakedraft' },
   { id: 'snake-feature-1', type: 'snake-feature', text: "Since June: Dan Campbell named Gibbs his bellcow, David Montgomery got traded, A.J. Brown became a Patriot, Arizona released Kyler Murray.\n\n📡 A printed sheet is stale before pick 1 and dead by pick 8. Iron Tuna re-forecasts who survives to your next turn after every selection.", cta: 'A live board that updates with your real draft beats a printout every single time:', url: 'https://irontuna.com/snakedraft' },
@@ -655,12 +667,15 @@ const X_BESTBALL_FEATURE_POSTS = [
 // Each post carries its own `cta` reply line (falling back to the shared tagline) — this keeps
 // the reply copy tailored to the hook AND makes every reply's text unique, which matters because
 // X permanently rejects exact-duplicate tweets and many posts share the same landing URL.
-function composeBonusThread(post, hashtags) {
+function composeBonusThread(post, hashtags, keepLink) {
   if (post.customTweets) return post.customTweets;
-  const reply = `${post.cta || X_WED_TAGLINE}\n\n${post.url}\n\n${hashtags || X_WED_HASHTAGS}`;
+  // Link-free by default (see X_LINK_IN_BIO note); only Wednesday's conversion post keeps a
+  // real URL on X. The marker line is what linkifyForThreads swaps for the Threads mirror.
+  const dest = keepLink ? post.url : X_LINK_IN_BIO;
+  const reply = `${post.cta || X_WED_TAGLINE}\n\n${dest}\n\n${hashtags || X_WED_HASHTAGS}`;
   return [post.text, reply];
 }
-function composeWednesdayThread(post) { return composeBonusThread(post, X_WED_HASHTAGS); }
+function composeWednesdayThread(post) { return composeBonusThread(post, X_WED_HASHTAGS, true); }
 function composeSnakeFeatureThread(post) { return composeBonusThread(post, X_SNAKE_HASHTAGS); }
 // Extracted insights (from INSIGHTS_X_POOL) carry a 'play' key even when empty; hand-authored
 // feature posts never do — that's the dispatch signal between the two composers.
@@ -668,13 +683,18 @@ function composeBestballThread(item) {
   return ('play' in item) ? composeThread(item) : composeBonusThread(item, X_HASHTAGS.bestball);
 }
 
-// Maps UTC day-of-week (matches the cron's day field) to that day's bonus third post.
-// `dynamicPool()` (Friday) is resolved fresh per run, same as poolFor() elsewhere, so newly
-// unlocked best-ball drop pages become eligible immediately rather than at deploy time.
-const X_BONUS_DAY_POOLS = {
+// Maps UTC day-of-week (matches the cron's day field) to THE day's single post — one thread
+// per weekday, period. The old cadence (two insight threads + a bonus, 10-13 threads/week) was
+// the worst possible shape for a zero-follower account: high-volume, template-identical,
+// link-bearing output is exactly what X's algorithm buries as automation. Volume doesn't grow
+// an account; engagement does, so post less and make each one count (July 2026 reach rework).
+// `dynamicPool()` entries are resolved fresh per run, same as poolFor() elsewhere, so newly
+// unlocked drop pages become eligible immediately rather than at deploy time.
+const X_DAY_SLOTS = {
+  1: { dynamicPool: () => poolFor('auction'), compose: composeThread, format: 'auction' }, // Mon
   2: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Tue
   3: { pool: X_WEDNESDAY_POOL, compose: composeWednesdayThread, format: 'wednesday' }, // Wed
-  4: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Thu
+  4: { dynamicPool: () => poolFor('snake'), compose: composeThread, format: 'snake' }, // Thu
   5: { // Fri
     dynamicPool: () => {
       const insights = poolFor('bestball');
@@ -698,6 +718,14 @@ function truncate(str, budget) {
 // Two-tweet thread instead of one: tweet 1 is the hook + the insight's actual takeaway (not
 // just the headline), tweet 2 (a reply) carries the tagline/link/hashtags. A single tweet can't
 // fit both the headline and the substance of "deep insight" content within 280 chars.
+// '2026-07-16' → 'July 16' (falls back to the raw string on anything unparseable).
+function monthDayLabel(date) {
+  const m = String(date || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (!m) return String(date || 'latest');
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${months[Number(m[1]) - 1]} ${Number(m[2])}`;
+}
+
 function composeThread(insight) {
   const hashtags = X_HASHTAGS[insight.format] || '#FantasyFootball';
   // Hook = title + 📊 projected-effect stat + 💡 play verdict. The stat (extracted from the drop
@@ -716,12 +744,14 @@ function composeThread(insight) {
     const playBudget = X_MAX_LEN - hook.length - 5; // "\n\n💡 "
     if (playBudget > 15) hook += `\n\n💡 ${truncate(insight.play, playBudget)}`;
   }
-  // "Insight N of 5" both sells the click (four more takes behind the link) and keeps every
-  // reply's text unique per insight — X permanently 403s exact-duplicate tweets, and the five
-  // insights on one drop page share a URL, so a static tagline reply would collide.
+  // "Insight N of 5 in our <date> <format> drop" both sells the click (four more takes behind
+  // the bio link) and keeps every reply's text unique — X permanently 403s exact-duplicate
+  // tweets. The date+format descriptor matters: with no URL in the reply (link-free policy, see
+  // X_LINK_IN_BIO), a bare "Insight 1 of 5" would collide across every drop page and format.
   const idx = String(insight.id || '').match(/-(\d+)$/);
-  const lead = idx ? `Insight ${Number(idx[1]) + 1} of 5 in this drop. ${X_TAGLINE}` : X_TAGLINE;
-  const reply = `${lead}\n\n${insight.url}\n\n${hashtags}`;
+  const descriptor = `${monthDayLabel(insight.date)} ${insight.format} drop`;
+  const lead = idx ? `Insight ${Number(idx[1]) + 1} of 5 in our ${descriptor}. ${X_TAGLINE}` : `From our ${descriptor}. ${X_TAGLINE}`;
+  const reply = `${lead}\n\n${X_LINK_IN_BIO}\n\n${hashtags}`;
   return [hook, reply];
 }
 
@@ -1015,48 +1045,32 @@ async function runXAutoPost(env, opts) {
   const hasX = env.X_API_KEY && env.X_API_SECRET && env.X_ACCESS_TOKEN && env.X_ACCESS_TOKEN_SECRET;
   if (!hasX) return { ok: false, error: 'missing_x_credentials' };
   const results = [];
-  for (const format of ['auction', 'snake']) {
-    const pool = poolFor(format);
-    const startIdx = await postedCount(env, format);
-    const pick = await pickNonDuplicate(env, pool, startIdx, composeThread);
-    if (!pick) { results.push({ format, ok: false, error: 'no_insight_available' }); continue; }
-    // A network-layer throw (fetch rejecting, not an HTTP error) in one slot must not
-    // abort the other format's post, the Threads mirror, or the bonus post below.
-    try {
-      const { ok, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
-      results.push({ platform: 'x', format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
-    } catch (e) {
-      results.push({ platform: 'x', format, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
-    }
-    // Threads mirrors whatever X just posted (same content, same day) rather than running a
-    // second independent rotation; it posts even if the X side failed/was skipped for this slot.
-    try {
-      const threadsResult = await postAndLogThreads(env, format, pick.item.id, pick.tweets);
-      if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format, ...threadsResult });
-    } catch (e) {
-      results.push({ platform: 'threads', format, ok: false, error: 'network: ' + (e && e.message) });
-    }
-  }
+  // One post per weekday (see X_DAY_SLOTS). Off-days (Sat/Sun, and any day without a slot)
+  // post nothing — the cron is weekday-only anyway, so that only comes up on manual triggers.
   const dow = (opts && opts.forceDay != null) ? opts.forceDay : ((opts && opts.forceWednesday) ? 3 : new Date().getUTCDay());
-  const bonus = X_BONUS_DAY_POOLS[dow];
-  const bonusPool = bonus ? (bonus.dynamicPool ? bonus.dynamicPool() : bonus.pool) : null;
-  if (bonus && bonusPool && bonusPool.length) {
-    const startIdx = await postedCount(env, bonus.format);
-    const pick = await pickNonDuplicate(env, bonusPool, startIdx, bonus.compose);
-    if (pick) {
-      try {
-        const { ok, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
-        results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
-      } catch (e) {
-        results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
-      }
-      try {
-        const threadsResult = await postAndLogThreads(env, bonus.format, pick.item.id, pick.tweets, pick.item.image);
-        if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ...threadsResult });
-      } catch (e) {
-        results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ok: false, error: 'network: ' + (e && e.message) });
-      }
-    }
+  const slot = X_DAY_SLOTS[dow];
+  const pool = slot ? (slot.dynamicPool ? slot.dynamicPool() : slot.pool) : null;
+  if (!slot || !pool || !pool.length) return { ok: true, results: [{ ok: true, skipped: 'no_slot_for_day', day: dow }] };
+  const startIdx = await postedCount(env, slot.format);
+  const pick = await pickNonDuplicate(env, pool, startIdx, slot.compose);
+  if (!pick) return { ok: false, results: [{ format: slot.format, ok: false, error: 'no_insight_available' }] };
+  // A network-layer throw (fetch rejecting, not an HTTP error) on the X side must not
+  // abort the Threads mirror below.
+  try {
+    const { ok, tweetIds, errors, cost } = await postAndLog(env, slot.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
+    results.push({ platform: 'x', format: slot.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
+  } catch (e) {
+    results.push({ platform: 'x', format: slot.format, type: pick.item.type, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
+  }
+  // Threads mirrors whatever X just posted (same content, same day) rather than running a
+  // second independent rotation; it posts even if the X side failed/was skipped. The one
+  // difference: X's "Link in bio" marker becomes the real URL, since Threads doesn't suppress
+  // link posts the way X does and there's no per-post link surcharge there.
+  try {
+    const threadsResult = await postAndLogThreads(env, slot.format, pick.item.id, linkifyForThreads(pick.tweets, pick.item.url), pick.item.image);
+    if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format: slot.format, type: pick.item.type, ...threadsResult });
+  } catch (e) {
+    results.push({ platform: 'threads', format: slot.format, type: pick.item.type, ok: false, error: 'network: ' + (e && e.message) });
   }
   return { ok: results.filter(r => r.platform === 'x').every(r => r.ok), results };
 }
