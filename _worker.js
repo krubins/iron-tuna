@@ -532,7 +532,6 @@ const PROJECTIONS = [
 const X_TAGLINE = "The full breakdown is free, and Iron Tuna turns takes like this into live draft-day values for YOUR league's exact scoring.";
 const X_HASHTAGS = { auction: '#FantasyFootball #AuctionDraft #FFDraft', snake: '#FantasyFootball #SnakeDraft #FFDraft', bestball: '#FantasyFootball #BestBall #FFDraft' };
 const X_MAX_LEN = 280;
-const X_URL_LEN = 23; // t.co always counts a URL as 23 chars regardless of true length
 
 // ── Wednesday-only third post: money-allocation strategy and Value Coach promo content,
 //    alternating. Hand-authored (not extracted from insight pages) and grounded in the copy on
@@ -634,7 +633,9 @@ const X_BESTBALL_FEATURE_POSTS = [
 
 // Each post carries its own `cta` reply line (falling back to the shared tagline) — this keeps
 // the reply copy tailored to the hook AND makes every reply's text unique, which matters because
-// X permanently rejects exact-duplicate tweets and many posts share the same landing URL.
+// X permanently rejects exact-duplicate tweets. The URL never reaches X (stripSiteLinks() removes
+// it in postAndLog, per the Aug 2026 no-links-on-X decision), so the per-post cta text is the
+// only thing keeping X replies distinct across posts; Threads still receives the full reply.
 function composeBonusThread(post, hashtags) {
   if (post.customTweets) return post.customTweets;
   const reply = `${post.cta || X_WED_TAGLINE}\n\n${post.url}\n\n${hashtags || X_WED_HASHTAGS}`;
@@ -675,6 +676,13 @@ function truncate(str, budget) {
   return str.slice(0, Math.max(0, budget - 1)).replace(/\s+\S*$/, '') + '…';
 }
 
+// "2026-07-16" → "Jul 16, 2026" for the reply tweet's "Insight N of 5 in the … drop" line.
+const DROP_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function dropLabel(date) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
+  return m ? `${DROP_MONTHS[+m[2] - 1]} ${+m[3]}, ${m[1]}` : 'latest';
+}
+
 // Two-tweet thread instead of one: tweet 1 is the hook + the insight's actual takeaway (not
 // just the headline), tweet 2 (a reply) carries the tagline/link/hashtags. A single tweet can't
 // fit both the headline and the substance of "deep insight" content within 280 chars.
@@ -696,11 +704,15 @@ function composeThread(insight) {
     const playBudget = X_MAX_LEN - hook.length - 5; // "\n\n💡 "
     if (playBudget > 15) hook += `\n\n💡 ${truncate(insight.play, playBudget)}`;
   }
-  // "Insight N of 5" both sells the click (four more takes behind the link) and keeps every
-  // reply's text unique per insight — X permanently 403s exact-duplicate tweets, and the five
-  // insights on one drop page share a URL, so a static tagline reply would collide.
+  // "Insight N of 5 in the <date> drop" both sells the click (four more takes in the drop) and
+  // keeps every reply's text unique per insight — X permanently 403s exact-duplicate tweets, and
+  // since the URL is stripped before posting to X (see stripSiteLinks in postAndLog), the
+  // index + drop date + format hashtags must carry uniqueness on their own. The date includes
+  // the year so a future season's drops can never collide with this one's.
   const idx = String(insight.id || '').match(/-(\d+)$/);
-  const lead = idx ? `Insight ${Number(idx[1]) + 1} of 5 in this drop. ${X_TAGLINE}` : X_TAGLINE;
+  const lead = idx
+    ? `Insight ${Number(idx[1]) + 1} of 5 in the ${dropLabel(insight.date)} drop. ${X_TAGLINE}`
+    : X_TAGLINE;
   const reply = `${lead}\n\n${insight.url}\n\n${hashtags}`;
   return [hook, reply];
 }
@@ -969,6 +981,19 @@ async function postAndLogThreads(env, format, id, tweets, imagePath) {
   return { ok, postIds: postIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) };
 }
 
+// X posts carry no irontuna.com link (removed Aug 2026; also the difference between X's $0.20
+// link-post and $0.015 plain-post rates). The compose functions still emit the URL on its own
+// line so the Threads mirror (free API, no per-link charge) keeps posting it — this strips
+// that line from what goes to X only.
+function stripSiteLinks(text) {
+  return text
+    .split('\n')
+    .filter(line => !/https?:\/\/(www\.)?irontuna\.com/i.test(line))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 async function postAndLog(env, format, id, tweets, hash, imagePath) {
   let mediaId;
   if (imagePath) {
@@ -978,17 +1003,18 @@ async function postAndLog(env, format, id, tweets, hash, imagePath) {
       if (uploaded.ok) mediaId = uploaded.data && uploaded.data.media_id_string;
     }
   }
-  const posted = await postThread(env, tweets, mediaId);
+  const xTweets = tweets.map(stripSiteLinks);
+  const posted = await postThread(env, xTweets, mediaId);
   const ok = posted.every(p => p.ok);
   const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
-  const cost = posted.reduce((sum, p, i) => sum + (p.ok ? tweetCost(tweets[i]) : 0), 0);
+  const cost = posted.reduce((sum, p, i) => sum + (p.ok ? tweetCost(xTweets[i]) : 0), 0);
   if (env.LEADS_DB) {
     try {
       await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at, text_hash, est_cost) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .bind(id, format, tweetIds, ok ? 1 : 0, Date.now(), hash, cost).run();
     } catch (e) {}
   }
-  return { ok, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })), cost };
+  return { ok, tweets: xTweets, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })), cost };
 }
 
 async function runXAutoPost(env, opts) {
@@ -1003,8 +1029,8 @@ async function runXAutoPost(env, opts) {
     // A network-layer throw (fetch rejecting, not an HTTP error) in one slot must not
     // abort the other format's post, the Threads mirror, or the bonus post below.
     try {
-      const { ok, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
-      results.push({ platform: 'x', format, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
+      const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
+      results.push({ platform: 'x', format, ok, insightId: pick.item.id, tweets, tweetIds, errors, cost });
     } catch (e) {
       results.push({ platform: 'x', format, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
     }
@@ -1025,8 +1051,8 @@ async function runXAutoPost(env, opts) {
     const pick = await pickNonDuplicate(env, bonusPool, startIdx, bonus.compose);
     if (pick) {
       try {
-        const { ok, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
-        results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
+        const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
+        results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets, tweetIds, errors, cost });
       } catch (e) {
         results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
       }
