@@ -631,11 +631,31 @@ const X_BESTBALL_FEATURE_POSTS = [
   { id: 'bestball-feature-3', type: 'bestball-feature', text: "The Rams close on a very hard slate. In weekly-start leagues that's a playoff problem. In best ball it barely dents Puka: his down weeks bench themselves.\n\n🏈 Same player, two different values. Relabeled redraft rankings can't see that. Iron Tuna re-weights 408 players for it.", cta: 'Built for best ball from the ground up, not reskinned. See the difference:', url: 'https://irontuna.com/bestball' },
 ];
 
+// ── Monday-only bonus post: a poll. Polls get outsized engagement relative to broadcast posts
+//    and early engagement is what earns algorithmic distribution, so the week opens with one.
+//    Every fact below is sourced from this repo's own post copy / drop pages (same sourcing rule
+//    as the other hand-authored pools, HANDOFF §10) and every option is ≤25 chars (X's limit).
+//    X-only: the Threads API has no poll support, so the Threads mirror skips this slot. ──
+const X_POLL_POSTS = [
+  { id: 'poll-0', type: 'poll', text: "Rushing floors have flattened the QB tier: our 2026 model puts 0.7 PPG between QB5 and QB12.\n\n🗳️ What's your QB plan in a 12-team draft this year?", options: ['Pay up for elite', 'Wait for the mid tier', 'Last-dollar QB', 'Two cheap QBs'], cta: "There's no wrong answer, only wrong prices. Iron Tuna prices every QB for your league's exact scoring, live during your draft." },
+  { id: 'poll-1', type: 'poll', text: "Our model: RB12 to RB24 falls 3.1 PPG. WR12 to WR24 falls just 1.9.\n\n🗳️ Which position do you lock up first on draft day?", options: ['RB, beat the cliff', 'WR, safer floors', 'Best value up top', 'Elite TE first'], cta: 'The tier math changes with your scoring. Iron Tuna computes the real gaps for YOUR league and flags which tier won\'t wait for you.' },
+  { id: 'poll-2', type: 'poll', text: "Nothing public has settled New England's backfield, and that ambiguity suppresses both prices.\n\n🗳️ Who finishes 2026 as the Patriots RB to own?", options: ['Stevenson', 'TreVeyon Henderson', 'True committee', 'Neither, fade both'], cta: 'Ambiguous backfields are where late-draft profit lives. Iron Tuna prices both sides of every committee, live on your board.' },
+  { id: 'poll-3', type: 'poll', text: "Patrick Mahomes is rehabbing a torn ACL and our model prices him -4% to -7% versus an elite-QB tag.\n\n🗳️ What do you do when he's nominated?", options: ['Pay the name', 'Only at a discount', 'Hard pass', 'Depends on the room'], cta: 'Reputation names are where auction money goes to die. Iron Tuna tells you sticker from tax in real time.' },
+  { id: 'poll-4', type: 'poll', text: "Jaxon Smith-Njigba: 35.7% target share on 162 targets in 2025, and Seattle added zero competition for it.\n\n🗳️ Where does he go in your PPR snake draft?", options: ['Top 5 pick', 'Back half of Rd 1', 'Round 2', 'Regression incoming'], cta: 'Volume is the argument. The turn is the risk. Iron Tuna gives you his survival odds at your exact pick, live.' },
+  { id: 'poll-5', type: 'poll', text: "The top 24 players hold 60% of all value over replacement in our 2026 model.\n\n🗳️ How do you spend your $200 auction budget?", options: ['Stars and scrubs', 'Balanced build', 'Read the room', 'Punt the studs'], cta: "It's a read, not a preference. Iron Tuna shows you live whether your room is overpaying the top or the middle." },
+];
+// Poll hook is a {text, poll} object (postTweet turns t.poll into the v2 API's poll body);
+// the cta rides as a plain-text reply. No URL and no hashtags anywhere, so nothing to strip.
+function composePollThread(post) {
+  return [{ text: post.text, poll: { options: post.options, duration_minutes: 1440 } }, post.cta];
+}
+
 // Each post carries its own `cta` reply line (falling back to the shared tagline) — this keeps
 // the reply copy tailored to the hook AND makes every reply's text unique, which matters because
-// X permanently rejects exact-duplicate tweets. The URL never reaches X (stripSiteLinks() removes
-// it in postAndLog, per the Aug 2026 no-links-on-X decision), so the per-post cta text is the
-// only thing keeping X replies distinct across posts; Threads still receives the full reply.
+// X permanently rejects exact-duplicate tweets. Neither the URL nor the hashtag line ever
+// reaches X (toXCopy() removes both in postAndLog, per the Aug 2026 no-links/no-hashtags-on-X
+// decision), so the per-post cta text is the only thing keeping X replies distinct across
+// posts; Threads still receives the full reply.
 function composeBonusThread(post, hashtags) {
   if (post.customTweets) return post.customTweets;
   const reply = `${post.cta || X_WED_TAGLINE}\n\n${post.url}\n\n${hashtags || X_WED_HASHTAGS}`;
@@ -653,6 +673,7 @@ function composeBestballThread(item) {
 // `dynamicPool()` (Friday) is resolved fresh per run, same as poolFor() elsewhere, so newly
 // unlocked best-ball drop pages become eligible immediately rather than at deploy time.
 const X_BONUS_DAY_POOLS = {
+  1: { pool: X_POLL_POSTS, compose: composePollThread, format: 'poll' }, // Mon
   2: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Tue
   3: { pool: X_WEDNESDAY_POOL, compose: composeWednesdayThread, format: 'wednesday' }, // Wed
   4: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Thu
@@ -704,14 +725,16 @@ function composeThread(insight) {
     const playBudget = X_MAX_LEN - hook.length - 5; // "\n\n💡 "
     if (playBudget > 15) hook += `\n\n💡 ${truncate(insight.play, playBudget)}`;
   }
-  // "Insight N of 5 in the <date> drop" both sells the click (four more takes in the drop) and
-  // keeps every reply's text unique per insight — X permanently 403s exact-duplicate tweets, and
-  // since the URL is stripped before posting to X (see stripSiteLinks in postAndLog), the
-  // index + drop date + format hashtags must carry uniqueness on their own. The date includes
-  // the year so a future season's drops can never collide with this one's.
+  // "Insight N of 5 in the <date> <format> drop" both sells the click (four more takes in the
+  // drop) and keeps every reply's X text unique per insight — X permanently 403s exact-duplicate
+  // tweets, and since the URL and hashtag lines are both stripped before posting to X (see
+  // toXCopy in postAndLog), index + drop date + format word must carry uniqueness on their own.
+  // The format word matters: auction and snake drops share dates, so without it two same-index
+  // insights on one date would collide. The year is included so future seasons can't collide.
   const idx = String(insight.id || '').match(/-(\d+)$/);
+  const formatWord = insight.format === 'bestball' ? 'best ball' : insight.format;
   const lead = idx
-    ? `Insight ${Number(idx[1]) + 1} of 5 in the ${dropLabel(insight.date)} drop. ${X_TAGLINE}`
+    ? `Insight ${Number(idx[1]) + 1} of 5 in the ${dropLabel(insight.date)} ${formatWord} drop. ${X_TAGLINE}`
     : X_TAGLINE;
   const reply = `${lead}\n\n${insight.url}\n\n${hashtags}`;
   return [hook, reply];
@@ -747,10 +770,12 @@ async function xApiCall(env, method, url, extraParams) {
   return authHeader;
 }
 
-async function postTweet(env, text, replyToId, mediaId) {
+async function postTweet(env, tweet, replyToId, mediaId) {
   const url = 'https://api.twitter.com/2/tweets';
   const authHeader = await xApiCall(env, 'POST', url);
-  const body = { text };
+  const t = typeof tweet === 'string' ? { text: tweet } : tweet;
+  const body = { text: t.text };
+  if (t.poll) body.poll = t.poll;
   if (replyToId) body.reply = { in_reply_to_tweet_id: replyToId };
   if (mediaId) body.media = { media_ids: [mediaId] };
   const res = await fetch(url, {
@@ -839,7 +864,7 @@ async function pickNonDuplicate(env, pool, startIdx, composeFn) {
   for (let attempts = 0; attempts < pool.length; attempts++) {
     const item = pool[idx];
     const tweets = composeFn(item);
-    const hash = await textHash(tweets[0]);
+    const hash = await textHash(tweetText(tweets[0]));
     let dup = false;
     if (env.LEADS_DB) {
       try { dup = !!(await env.LEADS_DB.prepare('SELECT 1 FROM x_posts WHERE text_hash=? AND ok=1').bind(hash).first()); } catch (e) {}
@@ -981,18 +1006,25 @@ async function postAndLogThreads(env, format, id, tweets, imagePath) {
   return { ok, postIds: postIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) };
 }
 
-// X posts carry no irontuna.com link (removed Aug 2026; also the difference between X's $0.20
-// link-post and $0.015 plain-post rates). The compose functions still emit the URL on its own
-// line so the Threads mirror (free API, no per-link charge) keeps posting it — this strips
-// that line from what goes to X only.
-function stripSiteLinks(text) {
+// X copy carries neither the irontuna.com link (removed Aug 2026; also the difference between
+// X's $0.20 link-post and $0.015 plain-post rates) nor the trailing hashtag line (hashtags read
+// as automated filler on current X and add nothing to distribution there). The compose functions
+// still emit both on their own lines so the Threads mirror keeps them (free API, no per-link
+// charge, and hashtags still work as topic tags on Threads) — this strips those lines from what
+// goes to X only. No hand-authored copy line starts with '#', so line-leading '#' is a safe
+// hashtag-line signal.
+function toXCopy(text) {
   return text
     .split('\n')
-    .filter(line => !/https?:\/\/(www\.)?irontuna\.com/i.test(line))
+    .filter(line => !/https?:\/\/(www\.)?irontuna\.com/i.test(line) && !/^\s*#/.test(line))
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+
+// A thread entry is either a plain string or {text, poll} (Monday poll posts). Everything that
+// hashes, measures, or prices a tweet goes through tweetText() so both shapes work.
+function tweetText(t) { return typeof t === 'string' ? t : t.text; }
 
 async function postAndLog(env, format, id, tweets, hash, imagePath) {
   let mediaId;
@@ -1003,11 +1035,11 @@ async function postAndLog(env, format, id, tweets, hash, imagePath) {
       if (uploaded.ok) mediaId = uploaded.data && uploaded.data.media_id_string;
     }
   }
-  const xTweets = tweets.map(stripSiteLinks);
+  const xTweets = tweets.map(t => typeof t === 'string' ? toXCopy(t) : { ...t, text: toXCopy(t.text) });
   const posted = await postThread(env, xTweets, mediaId);
   const ok = posted.every(p => p.ok);
   const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
-  const cost = posted.reduce((sum, p, i) => sum + (p.ok ? tweetCost(xTweets[i]) : 0), 0);
+  const cost = posted.reduce((sum, p, i) => sum + (p.ok ? tweetCost(tweetText(xTweets[i])) : 0), 0);
   if (env.LEADS_DB) {
     try {
       await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at, text_hash, est_cost) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -1017,19 +1049,34 @@ async function postAndLog(env, format, id, tweets, hash, imagePath) {
   return { ok, tweets: xTweets, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })), cost };
 }
 
+// Auto-generated stat-card image for an extracted insight (see tools/build-insight-cards.mjs).
+// Existence-checked before use so a pool entry whose card hasn't been generated yet (new drop
+// page, generator not re-run) degrades to a text-only post instead of failing the Threads
+// container step on a 404 image URL.
+async function insightCardPath(env, item) {
+  const path = `/social/cards/${item.id}.png`;
+  return (await fetchAssetBytes(env, path)) ? path : undefined;
+}
+
 async function runXAutoPost(env, opts) {
   const hasX = env.X_API_KEY && env.X_API_SECRET && env.X_ACCESS_TOKEN && env.X_ACCESS_TOKEN_SECRET;
   if (!hasX) return { ok: false, error: 'missing_x_credentials' };
+  // Each cron tick posts one slot ('auction' / 'snake' / 'bonus') so the day's 2-3 threads land
+  // hours apart instead of in the same minute — see the three triggers in wrangler.jsonc. The
+  // manual x-post-now trigger passes no slots and runs all three at once, as before.
+  const slots = (opts && opts.slots) || ['auction', 'snake', 'bonus'];
   const results = [];
   for (const format of ['auction', 'snake']) {
+    if (!slots.includes(format)) continue;
     const pool = poolFor(format);
     const startIdx = await postedCount(env, format);
     const pick = await pickNonDuplicate(env, pool, startIdx, composeThread);
     if (!pick) { results.push({ format, ok: false, error: 'no_insight_available' }); continue; }
+    const image = await insightCardPath(env, pick.item);
     // A network-layer throw (fetch rejecting, not an HTTP error) in one slot must not
     // abort the other format's post, the Threads mirror, or the bonus post below.
     try {
-      const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash);
+      const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash, image);
       results.push({ platform: 'x', format, ok, insightId: pick.item.id, tweets, tweetIds, errors, cost });
     } catch (e) {
       results.push({ platform: 'x', format, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
@@ -1037,30 +1084,37 @@ async function runXAutoPost(env, opts) {
     // Threads mirrors whatever X just posted (same content, same day) rather than running a
     // second independent rotation; it posts even if the X side failed/was skipped for this slot.
     try {
-      const threadsResult = await postAndLogThreads(env, format, pick.item.id, pick.tweets);
+      const threadsResult = await postAndLogThreads(env, format, pick.item.id, pick.tweets, image);
       if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format, ...threadsResult });
     } catch (e) {
       results.push({ platform: 'threads', format, ok: false, error: 'network: ' + (e && e.message) });
     }
   }
   const dow = (opts && opts.forceDay != null) ? opts.forceDay : ((opts && opts.forceWednesday) ? 3 : new Date().getUTCDay());
-  const bonus = X_BONUS_DAY_POOLS[dow];
+  const bonus = slots.includes('bonus') ? X_BONUS_DAY_POOLS[dow] : null;
   const bonusPool = bonus ? (bonus.dynamicPool ? bonus.dynamicPool() : bonus.pool) : null;
   if (bonus && bonusPool && bonusPool.length) {
     const startIdx = await postedCount(env, bonus.format);
     const pick = await pickNonDuplicate(env, bonusPool, startIdx, bonus.compose);
     if (pick) {
+      // Hand-authored compare posts carry their own image; Friday's extracted best-ball
+      // insights (detected by their 'play' key, same dispatch as composeBestballThread)
+      // get their generated stat card like the daily insight slots do.
+      const image = pick.item.image || (('play' in pick.item) ? await insightCardPath(env, pick.item) : undefined);
       try {
-        const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
+        const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, image);
         results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets, tweetIds, errors, cost });
       } catch (e) {
         results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
       }
-      try {
-        const threadsResult = await postAndLogThreads(env, bonus.format, pick.item.id, pick.tweets, pick.item.image);
-        if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ...threadsResult });
-      } catch (e) {
-        results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ok: false, error: 'network: ' + (e && e.message) });
+      // Threads has no poll support, so poll threads (any non-string entry) are X-only.
+      if (pick.tweets.every(t => typeof t === 'string')) {
+        try {
+          const threadsResult = await postAndLogThreads(env, bonus.format, pick.item.id, pick.tweets, image);
+          if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ...threadsResult });
+        } catch (e) {
+          results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ok: false, error: 'network: ' + (e && e.message) });
+        }
       }
     }
   }
@@ -1749,7 +1803,16 @@ export default {
     return secure(new Response(resp.body, resp));
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runXAutoPost(env).catch(e => console.error('x-auto-post failed:', e && e.message)));
+    // Three staggered triggers (wrangler.jsonc), one slot each, so the day's posts land hours
+    // apart instead of in a single botlike burst. Keys must match the cron strings verbatim;
+    // an unrecognized cron falls back to a full run so a config drift never silently posts nothing.
+    const slotsByCron = {
+      '0 13 * * 1-5': ['auction'],
+      '0 16 * * 1-5': ['snake'],
+      '0 19 * * 1-5': ['bonus'],
+    };
+    const slots = slotsByCron[event.cron];
+    ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },
 };
 
