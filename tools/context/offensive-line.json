@@ -1,0 +1,63 @@
+{
+  "kind": "offensive-line",
+  "asOf": "2026-08-02",
+  "notes": "Offensive-line environment profiles. Tiers are 1 (elite) to 5 (league-worst); 3 is neutral and is the assumed default for any team not listed. Every fact is sourced from this repo's own drop pages and Auction Watch corpus (see sourcedFrom), never from memory. Refresh asOf when re-verified.",
+  "schema": {
+    "overallTier": "1 elite .. 5 worst",
+    "runBlockTier": "1 .. 5, run-blocking specifically",
+    "passProtectTier": "1 .. 5, pass protection specifically",
+    "trend": "one of: improved | stable | declined | overhauled",
+    "note": "short corpus-grounded description",
+    "sourcedFrom": "repo file(s) the facts came from"
+  },
+  "teams": {
+    "DEN": {
+      "overallTier": 1,
+      "runBlockTier": 1,
+      "passProtectTier": 1,
+      "trend": "stable",
+      "note": "Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy.",
+      "sourcedFrom": "insights drop pages (Denver environment analysis, Waddle trade analysis)"
+    },
+    "BUF": {
+      "overallTier": 1,
+      "runBlockTier": 2,
+      "passProtectTier": 1,
+      "trend": "stable",
+      "note": "Buffalo pairs Josh Allen with a top-tier offensive line, the two ingredients that most reliably convert a receiver's targets into fantasy points.",
+      "sourcedFrom": "insights drop pages (Bills trade-for-Moore analysis)"
+    },
+    "NE": {
+      "overallTier": 2,
+      "runBlockTier": 2,
+      "passProtectTier": 2,
+      "trend": "improved",
+      "note": "Top-tier line play supports Drake Maye; his 2025 efficiency profile was not fluky.",
+      "sourcedFrom": "insights drop pages (Maye environment analysis)"
+    },
+    "MIA": {
+      "overallTier": 5,
+      "runBlockTier": 4,
+      "passProtectTier": 5,
+      "trend": "declined",
+      "note": "Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder.",
+      "sourcedFrom": "insights drop pages (Miami fragile-ecosystem analysis)"
+    },
+    "CLE": {
+      "overallTier": 2,
+      "runBlockTier": 2,
+      "passProtectTier": 3,
+      "trend": "overhauled",
+      "note": "The Browns overhauled the offensive line to give the new Monken/Switzer run-action scheme time to function.",
+      "sourcedFrom": "insights drop pages (Browns coaching-hire analysis)"
+    },
+    "LAC": {
+      "overallTier": 2,
+      "runBlockTier": 2,
+      "passProtectTier": 3,
+      "trend": "improved",
+      "note": "An improved offensive line supports Omarion Hampton as the clear lead back under new OC Mike McDaniel.",
+      "sourcedFrom": "auction-watch corpus (Hampton lead-back analysis)"
+    }
+  }
+}

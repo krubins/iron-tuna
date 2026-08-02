@@ -1,0 +1,87 @@
+{
+  "kind": "schedule",
+  "asOf": "2026-08-02",
+  "notes": "Schedule environment profiles from the site's league schedule analysis. Leans are integers in [-2, 2]: positive is favorable for the offense, negative is hostile; 0 is neutral and is the assumed default for any team not listed. champWeeksLean covers fantasy championship weeks 15 to 17 specifically. Every fact is sourced from this repo's own drop pages and Auction Watch corpus (see sourcedFrom), never from memory.",
+  "schema": {
+    "seasonLean": "-2 hostile .. +2 favorable, full-season slate",
+    "champWeeksLean": "-2 .. +2, weeks 15 to 17 slate specifically",
+    "volatility": "true if week-to-week prep/matchup volatility is itself a flag",
+    "weather": "late-season weather note, or null",
+    "note": "short corpus-grounded description",
+    "sourcedFrom": "repo file(s) the facts came from"
+  },
+  "teams": {
+    "DET": {
+      "seasonLean": 2,
+      "champWeeksLean": 1,
+      "volatility": false,
+      "weather": null,
+      "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+      "sourcedFrom": "insights drop pages (schedule-winners analysis)"
+    },
+    "DEN": {
+      "seasonLean": 2,
+      "champWeeksLean": 1,
+      "volatility": false,
+      "weather": null,
+      "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+      "sourcedFrom": "insights drop pages (Denver environment analysis)"
+    },
+    "NYJ": {
+      "seasonLean": 1,
+      "champWeeksLean": 0,
+      "volatility": false,
+      "weather": null,
+      "note": "Projected schedule modeling puts the Jets among the easier slates, with early games to win.",
+      "sourcedFrom": "insights drop pages (schedule-winners analysis)"
+    },
+    "PHI": {
+      "seasonLean": 1,
+      "champWeeksLean": 0,
+      "volatility": false,
+      "weather": null,
+      "note": "A friendly slate does quiet work in Hurts' projection: league schedule analysis views Philadelphia's opponents as beneficial enough to hand back roughly half of the passing downgrade. A still-friendly team schedule also cushions Goedert's expanded target tree.",
+      "sourcedFrom": "insights drop pages (Hurts and Goedert analyses)"
+    },
+    "GB": {
+      "seasonLean": 0,
+      "champWeeksLean": 2,
+      "volatility": false,
+      "weather": "Potential snow games at Lambeau against Buffalo, Miami, and Houston late in the year. Snow compresses passing efficiency while nudging play-calling toward the run.",
+      "note": "Green Bay's late-season home weather is a real hidden edge. Jordan Love is quietly viable because late-season conditions favor their offense; Kraft gets a slight late-season bump; bump Lambeau-based Packers in fantasy playoff tiebreakers.",
+      "sourcedFrom": "insights drop pages (Lambeau weather analysis)"
+    },
+    "LAR": {
+      "seasonLean": -1,
+      "champWeeksLean": -2,
+      "volatility": false,
+      "weather": null,
+      "note": "League schedule analysis flags the Rams for one of the toughest slates in football, closing with the Packers, Chiefs, 49ers, and Seahawks twice. Kyren's hard schedule amplifies the risk of smaller volume.",
+      "sourcedFrom": "insights drop pages (Rams closing-slate analysis)"
+    },
+    "MIA": {
+      "seasonLean": -1,
+      "champWeeksLean": -1,
+      "volatility": false,
+      "weather": "Difficult late cold-weather road games arriving right when fantasy playoffs do.",
+      "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+      "sourcedFrom": "insights drop pages (Miami fragile-ecosystem analysis)"
+    },
+    "ARI": {
+      "seasonLean": -1,
+      "champWeeksLean": 0,
+      "volatility": false,
+      "weather": null,
+      "note": "Arizona is the clearest macro fade because the offense got worse and the schedule got harder.",
+      "sourcedFrom": "insights drop pages (macro-fade analysis)"
+    },
+    "CHI": {
+      "seasonLean": 0,
+      "champWeeksLean": 0,
+      "volatility": true,
+      "weather": null,
+      "note": "Chicago's 2026 schedule creates unusual weekly-prep volatility. Loveland's biggest hidden drag is schedule irregularity, not target competition.",
+      "sourcedFrom": "insights drop pages (Bears schedule analysis)"
+    }
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "kind": "coordinators",
+  "asOf": "2026-08-02",
+  "notes": "Play-caller / offensive-coordinator tendency profiles. Every fact is sourced from this repo's own drop pages and Auction Watch corpus (see sourcedFrom on each team), never from memory. Signals are integers in [-2, 2] unless noted. Refresh asOf whenever entries are re-verified against new corpus pages; generate-trend-insights.mjs treats files older than its freshness window as stale.",
+  "schema": {
+    "playCaller": "name of the OC or play-calling HC",
+    "isNewHire": "true if the play-caller is new to the team for 2026",
+    "passLean": "-2 run-heavy .. +2 pass-heavy, relative to league average",
+    "playActionLean": "-2 .. +2, how heavily the scheme leans on play-action / layered throws",
+    "rbPassGameUsage": "-2 .. +2, how heavily the scheme feeds RBs in the passing game",
+    "backfieldStyle": "one of: bellcow | lead-plus-change | committee",
+    "note": "short corpus-grounded description",
+    "sourcedFrom": "repo file(s) the facts came from"
+  },
+  "teams": {
+    "DET": {
+      "playCaller": "Drew Petzing",
+      "isNewHire": true,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 2,
+      "backfieldStyle": "bellcow",
+      "note": "New Lions OC Drew Petzing comes from an Arizona scheme that fed running backs heavily in the passing game. Dan Campbell called Jahmyr Gibbs the team's bellcow for 2026 and Detroit traded David Montgomery to Houston, clearing the early-down and goal-line work.",
+      "sourcedFrom": "auction-watch corpus (Petzing hire, Campbell bellcow quote, Montgomery trade)"
+    },
+    "LAC": {
+      "playCaller": "Mike McDaniel",
+      "isNewHire": true,
+      "passLean": 0,
+      "playActionLean": 1,
+      "rbPassGameUsage": 1,
+      "backfieldStyle": "lead-plus-change",
+      "note": "Los Angeles did not draft a running back and brought in Mike McDaniel as offensive coordinator, leaving Omarion Hampton as the clear lead back entering his second season, behind an improved offensive line.",
+      "sourcedFrom": "auction-watch corpus (McDaniel hire, Hampton lead-back note)"
+    },
+    "CLE": {
+      "playCaller": "Todd Monken and Travis Switzer",
+      "isNewHire": true,
+      "passLean": 0,
+      "playActionLean": 2,
+      "rbPassGameUsage": 1,
+      "backfieldStyle": "committee",
+      "note": "Todd Monken and Travis Switzer come from a Baltimore operation that ran a 60% run-action rate with top-four multi-RB usage and finished first in explosive pass rate and air yards per attempt. The Browns overhauled the offensive line to give that scheme time to function.",
+      "sourcedFrom": "insights drop pages (Monken/Switzer hire analysis)"
+    },
+    "JAX": {
+      "playCaller": "Liam Coen",
+      "isNewHire": false,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 0,
+      "backfieldStyle": "committee",
+      "note": "Head coach Liam Coen favors a backfield rotation. Bhayshul Tuten has pulled ahead of Chris Rodriguez after a strong offseason, but Coen has said no one has locked down the starting job.",
+      "sourcedFrom": "auction-watch corpus (Coen rotation notes, Tuten camp reports)"
+    },
+    "LV": {
+      "playCaller": "Kubiak-style staff",
+      "isNewHire": true,
+      "passLean": 0,
+      "playActionLean": 2,
+      "rbPassGameUsage": 0,
+      "backfieldStyle": "lead-plus-change",
+      "note": "Kubiak-style offenses lean on play-action and layered throws between the numbers, and the Raiders badly need cheap, repeatable completions in the middle of the field.",
+      "sourcedFrom": "auction-watch corpus (coordinator-change TE analysis)"
+    },
+    "WAS": {
+      "playCaller": "incumbent staff",
+      "isNewHire": false,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 1,
+      "backfieldStyle": "committee",
+      "note": "Washington's backfield is a true committee: Jacory Croskey-Merritt, free-agent addition Rachaad White as the passing-down option, and Jerome Ford. White's pass blocking should keep him on the field for Jayden Daniels.",
+      "sourcedFrom": "auction-watch corpus (Commanders committee notes)"
+    },
+    "TB": {
+      "playCaller": "incumbent staff",
+      "isNewHire": false,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 0,
+      "backfieldStyle": "committee",
+      "note": "The Buccaneers kept a three-man committee by signing Kenneth Gainwell and bringing back Sean Tucker alongside Bucky Irving. Irving remains the clear anchor.",
+      "sourcedFrom": "auction-watch corpus (Buccaneers backfield notes)"
+    },
+    "DEN": {
+      "playCaller": "incumbent staff",
+      "isNewHire": false,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 0,
+      "backfieldStyle": "committee",
+      "note": "Denver's backfield stays a three-man committee; the Broncos added Jonah Coleman in the draft. Discount RJ Harvey below true bellcow price until camp reports clarify the split.",
+      "sourcedFrom": "auction-watch corpus (Broncos three-back committee notes)"
+    },
+    "ARI": {
+      "playCaller": "incumbent staff",
+      "isNewHire": false,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 0,
+      "backfieldStyle": "committee",
+      "note": "Arizona spent the No. 3 pick on Jeremiyah Love and added Tyler Allgeier, leaving James Conner stuck in a crowded committee backfield in his age-31 season.",
+      "sourcedFrom": "auction-watch corpus (Cardinals backfield notes)"
+    },
+    "PIT": {
+      "playCaller": "incumbent staff",
+      "isNewHire": false,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 0,
+      "backfieldStyle": "committee",
+      "note": "Pittsburgh projects as a two-man committee with Jaylen Warren, with the early-down half priced around RB32. Rico Dowdle's two-year deal buried Kaleb Johnson on the depth chart.",
+      "sourcedFrom": "auction-watch corpus + HANDOFF fact list (Steelers committee, Dowdle deal)"
+    },
+    "NO": {
+      "playCaller": "incumbent staff",
+      "isNewHire": false,
+      "passLean": 0,
+      "playActionLean": 0,
+      "rbPassGameUsage": 0,
+      "backfieldStyle": "committee",
+      "note": "Travis Etienne left Jacksonville for the Saints, forming a committee with Alvin Kamara. Treat Kamara as a cheap flex and shave dollars off Etienne for the committee risk.",
+      "sourcedFrom": "auction-watch corpus (Saints backfield notes)"
+    }
+  }
+}

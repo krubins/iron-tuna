@@ -1,0 +1,1194 @@
+{
+  "generatedAt": "2026-08-02T14:57:50.927Z",
+  "scoring": "full PPR (matches compute-tweet-stats.mjs)",
+  "datasets": {
+    "coordinators": {
+      "asOf": "2026-08-02",
+      "teams": 11
+    },
+    "offensiveLine": {
+      "asOf": "2026-08-02",
+      "teams": 6
+    },
+    "schedule": {
+      "asOf": "2026-08-02",
+      "teams": 9
+    }
+  },
+  "insightCount": 21,
+  "insights": [
+    {
+      "id": "trend-2026-08-02-jahmyr-gibbs",
+      "date": "2026-08-02",
+      "player": "Jahmyr Gibbs",
+      "team": "DET",
+      "pos": "RB",
+      "posRank": 1,
+      "baselinePts": 373.2,
+      "baselinePpg": 22,
+      "direction": "buy",
+      "conviction": 5.45,
+      "netSignal": 4.95,
+      "netSignalBestball": 5.2,
+      "effectPct": {
+        "low": 7.4,
+        "high": 13.6
+      },
+      "effectPpg": {
+        "low": 1.6,
+        "high": 3
+      },
+      "snakeSlotDelta": 0,
+      "title": "Jahmyr Gibbs gets a stacked green light: play-caller tendencies and schedule all point the same way",
+      "body": "Locked-in bellcow role. New play-caller feeds backs in the passing game. Season slate lean +2. New Lions OC Drew Petzing comes from an Arizona scheme that fed running backs heavily in the passing game. Dan Campbell called Jahmyr Gibbs the team's bellcow for 2026 and Detroit traded David Montgomery to Houston, clearing the early-down and goal-line work. Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+      "statLine": "+7.4% to +13.6% versus baseline projection (+1.6 to +3 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 13.6% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Take him at his current board position with confidence; the trend data supports the price.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": 2,
+          "why": "Locked-in bellcow role",
+          "note": "New Lions OC Drew Petzing comes from an Arizona scheme that fed running backs heavily in the passing game. Dan Campbell called Jahmyr Gibbs the team's bellcow for 2026 and Detroit traded David Montgomery to Houston, clearing the early-down and goal-line work.",
+          "source": "auction-watch corpus (Petzing hire, Campbell bellcow quote, Montgomery trade)",
+          "bestballWeight": 2
+        },
+        {
+          "kind": "coordinator",
+          "weight": 1.5,
+          "why": "New play-caller feeds backs in the passing game",
+          "note": "New Lions OC Drew Petzing comes from an Arizona scheme that fed running backs heavily in the passing game. Dan Campbell called Jahmyr Gibbs the team's bellcow for 2026 and Detroit traded David Montgomery to Houston, clearing the early-down and goal-line work.",
+          "source": "auction-watch corpus (Petzing hire, Campbell bellcow quote, Montgomery trade)",
+          "bestballWeight": 1.5
+        },
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (Petzing hire, Campbell bellcow quote, Montgomery trade)",
+        "insights drop pages (schedule-winners analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-rj-harvey",
+      "date": "2026-08-02",
+      "player": "RJ Harvey",
+      "team": "DEN",
+      "pos": "RB",
+      "posRank": 36,
+      "baselinePts": 172.7,
+      "baselinePpg": 10.2,
+      "direction": "buy",
+      "conviction": 4.95,
+      "netSignal": 3.95,
+      "netSignalBestball": 4.2,
+      "effectPct": {
+        "low": 5.9,
+        "high": 10.9
+      },
+      "effectPpg": {
+        "low": 0.6,
+        "high": 1.1
+      },
+      "snakeSlotDelta": 16,
+      "title": "RJ Harvey gets a stacked green light: play-caller tendencies, offensive-line grade and schedule all point the same way",
+      "body": "Run blocking tier 1 of 5. Season slate lean +2. Cheap side of a committee with standalone value. Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy. Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips. Denver's backfield stays a three-man committee; the Broncos added Jonah Coleman in the draft. Discount RJ Harvey below true bellcow price until camp reports clarify the split.",
+      "statLine": "+5.9% to +10.9% versus baseline projection (+0.6 to +1.1 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 10.9% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 16 slots (1.3 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": 1,
+          "why": "Cheap side of a committee with standalone value",
+          "note": "Denver's backfield stays a three-man committee; the Broncos added Jonah Coleman in the draft. Discount RJ Harvey below true bellcow price until camp reports clarify the split.",
+          "source": "auction-watch corpus (Broncos three-back committee notes)",
+          "bestballWeight": 1
+        },
+        {
+          "kind": "oline",
+          "weight": 1.5,
+          "why": "Run blocking tier 1 of 5",
+          "note": "Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy.",
+          "source": "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+          "bestballWeight": 1.5
+        },
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (Broncos three-back committee notes)",
+        "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+        "insights drop pages (Denver environment analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-bo-nix",
+      "date": "2026-08-02",
+      "player": "Bo Nix",
+      "team": "DEN",
+      "pos": "QB",
+      "posRank": 9,
+      "baselinePts": 306.8,
+      "baselinePpg": 18,
+      "direction": "buy",
+      "conviction": 3.15,
+      "netSignal": 2.65,
+      "netSignalBestball": 2.9,
+      "effectPct": {
+        "low": 4,
+        "high": 7.3
+      },
+      "effectPpg": {
+        "low": 0.7,
+        "high": 1.3
+      },
+      "snakeSlotDelta": 7,
+      "title": "Bo Nix gets a stacked green light: offensive-line grade and schedule all point the same way",
+      "body": "Pass protection tier 1 of 5. Season slate lean +2. Championship-weeks (15 to 17) lean +1. Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy. Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+      "statLine": "+4% to +7.3% versus baseline projection (+0.7 to +1.3 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 7.3% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 7 slots (0.6 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": 1.2,
+          "why": "Pass protection tier 1 of 5",
+          "note": "Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy.",
+          "source": "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+        "insights drop pages (Denver environment analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-dylan-sampson",
+      "date": "2026-08-02",
+      "player": "Dylan Sampson",
+      "team": "CLE",
+      "pos": "RB",
+      "posRank": 50,
+      "baselinePts": 120,
+      "baselinePpg": 7.1,
+      "direction": "buy",
+      "conviction": 3,
+      "netSignal": 2.5,
+      "netSignalBestball": 2.5,
+      "effectPct": {
+        "low": 3.8,
+        "high": 6.9
+      },
+      "effectPpg": {
+        "low": 0.3,
+        "high": 0.5
+      },
+      "snakeSlotDelta": 9,
+      "title": "Dylan Sampson gets a stacked green light: play-caller tendencies and offensive-line grade all point the same way",
+      "body": "Cheap side of a committee with standalone value. New play-caller feeds backs in the passing game. Run blocking tier 2 of 5. Todd Monken and Travis Switzer come from a Baltimore operation that ran a 60% run-action rate with top-four multi-RB usage and finished first in explosive pass rate and air yards per attempt. The Browns overhauled the offensive line to give that scheme time to function. The Browns overhauled the offensive line to give the new Monken/Switzer run-action scheme time to function.",
+      "statLine": "+3.8% to +6.9% versus baseline projection (+0.3 to +0.5 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 6.9% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 9 slots (0.8 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Standard bump in best ball; draft to the high end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": 1,
+          "why": "Cheap side of a committee with standalone value",
+          "note": "Todd Monken and Travis Switzer come from a Baltimore operation that ran a 60% run-action rate with top-four multi-RB usage and finished first in explosive pass rate and air yards per attempt. The Browns overhauled the offensive line to give that scheme time to function.",
+          "source": "insights drop pages (Monken/Switzer hire analysis)",
+          "bestballWeight": 1
+        },
+        {
+          "kind": "coordinator",
+          "weight": 0.75,
+          "why": "New play-caller feeds backs in the passing game",
+          "note": "Todd Monken and Travis Switzer come from a Baltimore operation that ran a 60% run-action rate with top-four multi-RB usage and finished first in explosive pass rate and air yards per attempt. The Browns overhauled the offensive line to give that scheme time to function.",
+          "source": "insights drop pages (Monken/Switzer hire analysis)",
+          "bestballWeight": 0.75
+        },
+        {
+          "kind": "oline",
+          "weight": 0.75,
+          "why": "Run blocking tier 2 of 5",
+          "note": "The Browns overhauled the offensive line to give the new Monken/Switzer run-action scheme time to function.",
+          "source": "insights drop pages (Browns coaching-hire analysis)",
+          "bestballWeight": 0.75
+        }
+      ],
+      "sources": [
+        "insights drop pages (Monken/Switzer hire analysis)",
+        "insights drop pages (Browns coaching-hire analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-omarion-hampton",
+      "date": "2026-08-02",
+      "player": "Omarion Hampton",
+      "team": "LAC",
+      "pos": "RB",
+      "posRank": 16,
+      "baselinePts": 247.7,
+      "baselinePpg": 14.6,
+      "direction": "buy",
+      "conviction": 3,
+      "netSignal": 2.5,
+      "netSignalBestball": 2.5,
+      "effectPct": {
+        "low": 3.8,
+        "high": 6.9
+      },
+      "effectPpg": {
+        "low": 0.6,
+        "high": 1
+      },
+      "snakeSlotDelta": 6,
+      "title": "Omarion Hampton gets a stacked green light: play-caller tendencies and offensive-line grade all point the same way",
+      "body": "Clear lead-back role. New play-caller feeds backs in the passing game. Run blocking tier 2 of 5. Los Angeles did not draft a running back and brought in Mike McDaniel as offensive coordinator, leaving Omarion Hampton as the clear lead back entering his second season, behind an improved offensive line. An improved offensive line supports Omarion Hampton as the clear lead back under new OC Mike McDaniel.",
+      "statLine": "+3.8% to +6.9% versus baseline projection (+0.6 to +1 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 6.9% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 6 slots (0.5 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Standard bump in best ball; draft to the high end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": 1,
+          "why": "Clear lead-back role",
+          "note": "Los Angeles did not draft a running back and brought in Mike McDaniel as offensive coordinator, leaving Omarion Hampton as the clear lead back entering his second season, behind an improved offensive line.",
+          "source": "auction-watch corpus (McDaniel hire, Hampton lead-back note)",
+          "bestballWeight": 1
+        },
+        {
+          "kind": "coordinator",
+          "weight": 0.75,
+          "why": "New play-caller feeds backs in the passing game",
+          "note": "Los Angeles did not draft a running back and brought in Mike McDaniel as offensive coordinator, leaving Omarion Hampton as the clear lead back entering his second season, behind an improved offensive line.",
+          "source": "auction-watch corpus (McDaniel hire, Hampton lead-back note)",
+          "bestballWeight": 0.75
+        },
+        {
+          "kind": "oline",
+          "weight": 0.75,
+          "why": "Run blocking tier 2 of 5",
+          "note": "An improved offensive line supports Omarion Hampton as the clear lead back under new OC Mike McDaniel.",
+          "source": "auction-watch corpus (Hampton lead-back analysis)",
+          "bestballWeight": 0.75
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (McDaniel hire, Hampton lead-back note)",
+        "auction-watch corpus (Hampton lead-back analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-courtland-sutton",
+      "date": "2026-08-02",
+      "player": "Courtland Sutton",
+      "team": "DEN",
+      "pos": "WR",
+      "posRank": 29,
+      "baselinePts": 207.1,
+      "baselinePpg": 12.2,
+      "direction": "buy",
+      "conviction": 2.95,
+      "netSignal": 2.45,
+      "netSignalBestball": 2.7,
+      "effectPct": {
+        "low": 3.7,
+        "high": 6.7
+      },
+      "effectPpg": {
+        "low": 0.5,
+        "high": 0.8
+      },
+      "snakeSlotDelta": 12,
+      "title": "Courtland Sutton gets a stacked green light: offensive-line grade and schedule all point the same way",
+      "body": "Season slate lean +2. Pass protection tier 1 of 5 shapes target quality. Championship-weeks (15 to 17) lean +1. Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips. Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy.",
+      "statLine": "+3.7% to +6.7% versus baseline projection (+0.5 to +0.8 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 6.7% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 12 slots (1 round in a 12-team) ahead of his baseline board position.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": 1,
+          "why": "Pass protection tier 1 of 5 shapes target quality",
+          "note": "Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy.",
+          "source": "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+          "bestballWeight": 1
+        },
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+        "insights drop pages (Denver environment analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-jaylen-waddle",
+      "date": "2026-08-02",
+      "player": "Jaylen Waddle",
+      "team": "DEN",
+      "pos": "WR",
+      "posRank": 20,
+      "baselinePts": 223.9,
+      "baselinePpg": 13.2,
+      "direction": "buy",
+      "conviction": 2.95,
+      "netSignal": 2.45,
+      "netSignalBestball": 2.7,
+      "effectPct": {
+        "low": 3.7,
+        "high": 6.7
+      },
+      "effectPpg": {
+        "low": 0.5,
+        "high": 0.9
+      },
+      "snakeSlotDelta": 6,
+      "title": "Jaylen Waddle gets a stacked green light: offensive-line grade and schedule all point the same way",
+      "body": "Season slate lean +2. Pass protection tier 1 of 5 shapes target quality. Championship-weeks (15 to 17) lean +1. Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips. Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy.",
+      "statLine": "+3.7% to +6.7% versus baseline projection (+0.5 to +0.9 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 6.7% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 6 slots (0.5 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": 1,
+          "why": "Pass protection tier 1 of 5 shapes target quality",
+          "note": "Denver graded out No. 1 in offensive-line outlook. An elite line buys the time downfield routes need to develop, and Denver has one of the cleanest offensive-line and schedule combinations for fantasy.",
+          "source": "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+          "bestballWeight": 1
+        },
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Denver lands among the teams with favorable slates. A soft schedule keeps game scripts neutral or positive, which preserves play volume and red-zone trips.",
+          "source": "insights drop pages (Denver environment analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (Denver environment analysis, Waddle trade analysis)",
+        "insights drop pages (Denver environment analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-malik-willis",
+      "date": "2026-08-02",
+      "player": "Malik Willis",
+      "team": "MIA",
+      "pos": "QB",
+      "posRank": 25,
+      "baselinePts": 246.2,
+      "baselinePpg": 14.5,
+      "direction": "fade",
+      "conviction": 2.85,
+      "netSignal": -2.35,
+      "netSignalBestball": -2.6,
+      "effectPct": {
+        "low": -3.5,
+        "high": -6.5
+      },
+      "effectPpg": {
+        "low": -0.5,
+        "high": -0.9
+      },
+      "snakeSlotDelta": -8,
+      "title": "Malik Willis gets a stacked red flag: offensive-line grade and schedule all point the same way",
+      "body": "Pass protection tier 5 of 5. Season slate lean -1. Late-season weather flag. Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder. A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent. Difficult late cold-weather road games arriving right when fantasy playoffs do.",
+      "statLine": "-3.5% to -6.5% versus baseline projection (-0.5 to -0.9 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 3.5% to 6.5% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 8 slots (0.7 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Fade harder in best ball: the championship-weeks slate is hostile right when it matters most. Prefer him in managed leagues where you can bench the bad closing weeks."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": -1.2,
+          "why": "Pass protection tier 5 of 5",
+          "note": "Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.6,
+          "why": "Season slate lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.6
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.25,
+          "why": "Championship-weeks (15 to 17) lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.5
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.3,
+          "why": "Late-season weather flag",
+          "note": "Difficult late cold-weather road games arriving right when fantasy playoffs do.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.3
+        }
+      ],
+      "sources": [
+        "insights drop pages (Miami fragile-ecosystem analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-theo-wease-jr-",
+      "date": "2026-08-02",
+      "player": "Theo Wease Jr.",
+      "team": "MIA",
+      "pos": "WR",
+      "posRank": 59,
+      "baselinePts": 148.9,
+      "baselinePpg": 8.8,
+      "direction": "fade",
+      "conviction": 2.65,
+      "netSignal": -2.15,
+      "netSignalBestball": -2.4,
+      "effectPct": {
+        "low": -3.2,
+        "high": -5.9
+      },
+      "effectPpg": {
+        "low": -0.3,
+        "high": -0.5
+      },
+      "snakeSlotDelta": -8,
+      "title": "Theo Wease Jr. gets a stacked red flag: offensive-line grade and schedule all point the same way",
+      "body": "Pass protection tier 5 of 5 shapes target quality. Season slate lean -1. Late-season weather flag. Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder. A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent. Difficult late cold-weather road games arriving right when fantasy playoffs do.",
+      "statLine": "-3.2% to -5.9% versus baseline projection (-0.3 to -0.5 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 3.2% to 5.9% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 8 slots (0.7 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Fade harder in best ball: the championship-weeks slate is hostile right when it matters most. Prefer him in managed leagues where you can bench the bad closing weeks."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": -1,
+          "why": "Pass protection tier 5 of 5 shapes target quality",
+          "note": "Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -1
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.6,
+          "why": "Season slate lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.6
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.25,
+          "why": "Championship-weeks (15 to 17) lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.5
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.3,
+          "why": "Late-season weather flag",
+          "note": "Difficult late cold-weather road games arriving right when fantasy playoffs do.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.3
+        }
+      ],
+      "sources": [
+        "insights drop pages (Miami fragile-ecosystem analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-jeremiyah-love",
+      "date": "2026-08-02",
+      "player": "Jeremiyah Love",
+      "team": "ARI",
+      "pos": "RB",
+      "posRank": 6,
+      "baselinePts": 282.7,
+      "baselinePpg": 16.6,
+      "direction": "fade",
+      "conviction": 2.6,
+      "netSignal": -2.1,
+      "netSignalBestball": -2.1,
+      "effectPct": {
+        "low": -3.2,
+        "high": -5.8
+      },
+      "effectPpg": {
+        "low": -0.5,
+        "high": -1
+      },
+      "snakeSlotDelta": -9,
+      "title": "Jeremiyah Love gets a stacked red flag: play-caller tendencies and schedule all point the same way",
+      "body": "Committee backfield caps the lead back's ceiling. Season slate lean -1. Arizona spent the No. 3 pick on Jeremiyah Love and added Tyler Allgeier, leaving James Conner stuck in a crowded committee backfield in his age-31 season. Arizona is the clearest macro fade because the offense got worse and the schedule got harder.",
+      "statLine": "-3.2% to -5.8% versus baseline projection (-0.5 to -1 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 3.2% to 5.8% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 9 slots (0.8 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Standard fade in best ball; draft only at the low end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": -1.5,
+          "why": "Committee backfield caps the lead back's ceiling",
+          "note": "Arizona spent the No. 3 pick on Jeremiyah Love and added Tyler Allgeier, leaving James Conner stuck in a crowded committee backfield in his age-31 season.",
+          "source": "auction-watch corpus (Cardinals backfield notes)",
+          "bestballWeight": -1.5
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.6,
+          "why": "Season slate lean -1",
+          "note": "Arizona is the clearest macro fade because the offense got worse and the schedule got harder.",
+          "source": "insights drop pages (macro-fade analysis)",
+          "bestballWeight": -0.6
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (Cardinals backfield notes)",
+        "insights drop pages (macro-fade analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-greg-dulcich",
+      "date": "2026-08-02",
+      "player": "Greg Dulcich",
+      "team": "MIA",
+      "pos": "TE",
+      "posRank": 20,
+      "baselinePts": 146,
+      "baselinePpg": 8.6,
+      "direction": "fade",
+      "conviction": 2.35,
+      "netSignal": -1.85,
+      "netSignalBestball": -2.1,
+      "effectPct": {
+        "low": -2.8,
+        "high": -5.1
+      },
+      "effectPpg": {
+        "low": -0.2,
+        "high": -0.4
+      },
+      "snakeSlotDelta": -6,
+      "title": "Greg Dulcich gets a stacked red flag: offensive-line grade and schedule all point the same way",
+      "body": "Pass protection tier 5 of 5 shapes target quality. Season slate lean -1. Championship-weeks (15 to 17) lean -1. Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder. A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+      "statLine": "-2.8% to -5.1% versus baseline projection (-0.2 to -0.4 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 2.8% to 5.1% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 6 slots (0.5 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Fade harder in best ball: the championship-weeks slate is hostile right when it matters most. Prefer him in managed leagues where you can bench the bad closing weeks."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": -1,
+          "why": "Pass protection tier 5 of 5 shapes target quality",
+          "note": "Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -1
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.6,
+          "why": "Season slate lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.6
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.25,
+          "why": "Championship-weeks (15 to 17) lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (Miami fragile-ecosystem analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-de-von-achane",
+      "date": "2026-08-02",
+      "player": "De'Von Achane",
+      "team": "MIA",
+      "pos": "RB",
+      "posRank": 5,
+      "baselinePts": 297.9,
+      "baselinePpg": 17.5,
+      "direction": "fade",
+      "conviction": 2.1,
+      "netSignal": -1.6,
+      "netSignalBestball": -1.85,
+      "effectPct": {
+        "low": -2.4,
+        "high": -4.4
+      },
+      "effectPpg": {
+        "low": -0.4,
+        "high": -0.8
+      },
+      "snakeSlotDelta": -4,
+      "title": "De'Von Achane gets a stacked red flag: offensive-line grade and schedule all point the same way",
+      "body": "Run blocking tier 4 of 5. Season slate lean -1. Championship-weeks (15 to 17) lean -1. Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder. A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+      "statLine": "-2.4% to -4.4% versus baseline projection (-0.4 to -0.8 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 2.4% to 4.4% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 4 slots (0.3 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Fade harder in best ball: the championship-weeks slate is hostile right when it matters most. Prefer him in managed leagues where you can bench the bad closing weeks."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": -0.75,
+          "why": "Run blocking tier 4 of 5",
+          "note": "Miami projects with one of the league's weakest offensive lines. When protection erodes, offenses shorten their dropbacks and lean run-heavy, and everything downstream gets harder.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.75
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.6,
+          "why": "Season slate lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.6
+        },
+        {
+          "kind": "schedule",
+          "weight": -0.25,
+          "why": "Championship-weeks (15 to 17) lean -1",
+          "note": "A rough schedule compounds Miami's weak-line, downgraded-receiver ecosystem; the projected haircut to team passing expectation is ten to fifteen percent.",
+          "source": "insights drop pages (Miami fragile-ecosystem analysis)",
+          "bestballWeight": -0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (Miami fragile-ecosystem analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-bhayshul-tuten",
+      "date": "2026-08-02",
+      "player": "Bhayshul Tuten",
+      "team": "JAX",
+      "pos": "RB",
+      "posRank": 24,
+      "baselinePts": 207.7,
+      "baselinePpg": 12.2,
+      "direction": "fade",
+      "conviction": 1.5,
+      "netSignal": -1.5,
+      "netSignalBestball": -1.5,
+      "effectPct": {
+        "low": -2.3,
+        "high": -4.1
+      },
+      "effectPpg": {
+        "low": -0.3,
+        "high": -0.5
+      },
+      "snakeSlotDelta": -5,
+      "title": "Bhayshul Tuten is a fade on play-caller tendencies alone",
+      "body": "Committee backfield caps the lead back's ceiling. Head coach Liam Coen favors a backfield rotation. Bhayshul Tuten has pulled ahead of Chris Rodriguez after a strong offseason, but Coen has said no one has locked down the starting job.",
+      "statLine": "-2.3% to -4.1% versus baseline projection (-0.3 to -0.5 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 2.3% to 4.1% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 5 slots (0.4 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Standard fade in best ball; draft only at the low end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": -1.5,
+          "why": "Committee backfield caps the lead back's ceiling",
+          "note": "Head coach Liam Coen favors a backfield rotation. Bhayshul Tuten has pulled ahead of Chris Rodriguez after a strong offseason, but Coen has said no one has locked down the starting job.",
+          "source": "auction-watch corpus (Coen rotation notes, Tuten camp reports)",
+          "bestballWeight": -1.5
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (Coen rotation notes, Tuten camp reports)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-bucky-irving",
+      "date": "2026-08-02",
+      "player": "Bucky Irving",
+      "team": "TB",
+      "pos": "RB",
+      "posRank": 22,
+      "baselinePts": 211.5,
+      "baselinePpg": 12.4,
+      "direction": "fade",
+      "conviction": 1.5,
+      "netSignal": -1.5,
+      "netSignalBestball": -1.5,
+      "effectPct": {
+        "low": -2.3,
+        "high": -4.1
+      },
+      "effectPpg": {
+        "low": -0.3,
+        "high": -0.5
+      },
+      "snakeSlotDelta": -9,
+      "title": "Bucky Irving is a fade on play-caller tendencies alone",
+      "body": "Committee backfield caps the lead back's ceiling. The Buccaneers kept a three-man committee by signing Kenneth Gainwell and bringing back Sean Tucker alongside Bucky Irving. Irving remains the clear anchor.",
+      "statLine": "-2.3% to -4.1% versus baseline projection (-0.3 to -0.5 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 2.3% to 4.1% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 9 slots (0.8 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Standard fade in best ball; draft only at the low end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": -1.5,
+          "why": "Committee backfield caps the lead back's ceiling",
+          "note": "The Buccaneers kept a three-man committee by signing Kenneth Gainwell and bringing back Sean Tucker alongside Bucky Irving. Irving remains the clear anchor.",
+          "source": "auction-watch corpus (Buccaneers backfield notes)",
+          "bestballWeight": -1.5
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (Buccaneers backfield notes)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-jaylen-warren",
+      "date": "2026-08-02",
+      "player": "Jaylen Warren",
+      "team": "PIT",
+      "pos": "RB",
+      "posRank": 32,
+      "baselinePts": 187.3,
+      "baselinePpg": 11,
+      "direction": "fade",
+      "conviction": 1.5,
+      "netSignal": -1.5,
+      "netSignalBestball": -1.5,
+      "effectPct": {
+        "low": -2.3,
+        "high": -4.1
+      },
+      "effectPpg": {
+        "low": -0.3,
+        "high": -0.5
+      },
+      "snakeSlotDelta": -8,
+      "title": "Jaylen Warren is a fade on play-caller tendencies alone",
+      "body": "Committee backfield caps the lead back's ceiling. Pittsburgh projects as a two-man committee with Jaylen Warren, with the early-down half priced around RB32. Rico Dowdle's two-year deal buried Kaleb Johnson on the depth chart.",
+      "statLine": "-2.3% to -4.1% versus baseline projection (-0.3 to -0.5 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 2.3% to 4.1% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 8 slots (0.7 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Standard fade in best ball; draft only at the low end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": -1.5,
+          "why": "Committee backfield caps the lead back's ceiling",
+          "note": "Pittsburgh projects as a two-man committee with Jaylen Warren, with the early-down half priced around RB32. Rico Dowdle's two-year deal buried Kaleb Johnson on the depth chart.",
+          "source": "auction-watch corpus + HANDOFF fact list (Steelers committee, Dowdle deal)",
+          "bestballWeight": -1.5
+        }
+      ],
+      "sources": [
+        "auction-watch corpus + HANDOFF fact list (Steelers committee, Dowdle deal)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-rachaad-white",
+      "date": "2026-08-02",
+      "player": "Rachaad White",
+      "team": "WAS",
+      "pos": "RB",
+      "posRank": 35,
+      "baselinePts": 173.9,
+      "baselinePpg": 10.2,
+      "direction": "fade",
+      "conviction": 1.5,
+      "netSignal": -1.5,
+      "netSignalBestball": -1.5,
+      "effectPct": {
+        "low": -2.3,
+        "high": -4.1
+      },
+      "effectPpg": {
+        "low": -0.2,
+        "high": -0.4
+      },
+      "snakeSlotDelta": -8,
+      "title": "Rachaad White is a fade on play-caller tendencies alone",
+      "body": "Committee backfield caps the lead back's ceiling. Washington's backfield is a true committee: Jacory Croskey-Merritt, free-agent addition Rachaad White as the passing-down option, and Jerome Ford. White's pass blocking should keep him on the field for Jayden Daniels.",
+      "statLine": "-2.3% to -4.1% versus baseline projection (-0.2 to -0.4 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 2.3% to 4.1% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 8 slots (0.7 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Standard fade in best ball; draft only at the low end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": -1.5,
+          "why": "Committee backfield caps the lead back's ceiling",
+          "note": "Washington's backfield is a true committee: Jacory Croskey-Merritt, free-agent addition Rachaad White as the passing-down option, and Jerome Ford. White's pass blocking should keep him on the field for Jayden Daniels.",
+          "source": "auction-watch corpus (Commanders committee notes)",
+          "bestballWeight": -1.5
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (Commanders committee notes)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-travis-etienne",
+      "date": "2026-08-02",
+      "player": "Travis Etienne",
+      "team": "NO",
+      "pos": "RB",
+      "posRank": 19,
+      "baselinePts": 228.2,
+      "baselinePpg": 13.4,
+      "direction": "fade",
+      "conviction": 1.5,
+      "netSignal": -1.5,
+      "netSignalBestball": -1.5,
+      "effectPct": {
+        "low": -2.3,
+        "high": -4.1
+      },
+      "effectPpg": {
+        "low": -0.3,
+        "high": -0.6
+      },
+      "snakeSlotDelta": -4,
+      "title": "Travis Etienne is a fade on play-caller tendencies alone",
+      "body": "Committee backfield caps the lead back's ceiling. Travis Etienne left Jacksonville for the Saints, forming a committee with Alvin Kamara. Treat Kamara as a cheap flex and shave dollars off Etienne for the committee risk.",
+      "statLine": "-2.3% to -4.1% versus baseline projection (-0.3 to -0.6 PPG, full PPR)",
+      "actions": {
+        "auction": "Require roughly 2.3% to 4.1% off sheet price; let another manager pay for the name.",
+        "snake": "Let him fall about 4 slots (0.3 rounds in a 12-team) past his baseline board position before considering.",
+        "bestball": "Standard fade in best ball; draft only at the low end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "coordinator",
+          "weight": -1.5,
+          "why": "Committee backfield caps the lead back's ceiling",
+          "note": "Travis Etienne left Jacksonville for the Saints, forming a committee with Alvin Kamara. Treat Kamara as a cheap flex and shave dollars off Etienne for the committee risk.",
+          "source": "auction-watch corpus (Saints backfield notes)",
+          "bestballWeight": -1.5
+        }
+      ],
+      "sources": [
+        "auction-watch corpus (Saints backfield notes)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-amon-ra-st-brown",
+      "date": "2026-08-02",
+      "player": "Amon-Ra St. Brown",
+      "team": "DET",
+      "pos": "WR",
+      "posRank": 4,
+      "baselinePts": 326.5,
+      "baselinePpg": 19.2,
+      "direction": "buy",
+      "conviction": 1.45,
+      "netSignal": 1.45,
+      "netSignalBestball": 1.7,
+      "effectPct": {
+        "low": 2.2,
+        "high": 4
+      },
+      "effectPpg": {
+        "low": 0.4,
+        "high": 0.8
+      },
+      "snakeSlotDelta": 2,
+      "title": "Amon-Ra St. Brown is a buy on schedule alone",
+      "body": "Season slate lean +2. Championship-weeks (15 to 17) lean +1. Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+      "statLine": "+2.2% to +4% versus baseline projection (+0.4 to +0.8 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 4% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 2 slots (0.2 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (schedule-winners analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-isiah-pacheco",
+      "date": "2026-08-02",
+      "player": "Isiah Pacheco",
+      "team": "DET",
+      "pos": "RB",
+      "posRank": 42,
+      "baselinePts": 137.9,
+      "baselinePpg": 8.1,
+      "direction": "buy",
+      "conviction": 1.45,
+      "netSignal": 1.45,
+      "netSignalBestball": 1.7,
+      "effectPct": {
+        "low": 2.2,
+        "high": 4
+      },
+      "effectPpg": {
+        "low": 0.2,
+        "high": 0.3
+      },
+      "snakeSlotDelta": 3,
+      "title": "Isiah Pacheco is a buy on schedule alone",
+      "body": "Season slate lean +2. Championship-weeks (15 to 17) lean +1. Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+      "statLine": "+2.2% to +4% versus baseline projection (+0.2 to +0.3 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 4% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 3 slots (0.3 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (schedule-winners analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-jameson-williams",
+      "date": "2026-08-02",
+      "player": "Jameson Williams",
+      "team": "DET",
+      "pos": "WR",
+      "posRank": 30,
+      "baselinePts": 204.9,
+      "baselinePpg": 12.1,
+      "direction": "buy",
+      "conviction": 1.45,
+      "netSignal": 1.45,
+      "netSignalBestball": 1.7,
+      "effectPct": {
+        "low": 2.2,
+        "high": 4
+      },
+      "effectPpg": {
+        "low": 0.3,
+        "high": 0.5
+      },
+      "snakeSlotDelta": 6,
+      "title": "Jameson Williams is a buy on schedule alone",
+      "body": "Season slate lean +2. Championship-weeks (15 to 17) lean +1. Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+      "statLine": "+2.2% to +4% versus baseline projection (+0.3 to +0.5 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 4% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 6 slots (0.5 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Extra bump in best ball: the championship-weeks slate adds value exactly when it counts. Move him up a tier in weeks-15-to-17-weighted builds."
+      },
+      "signals": [
+        {
+          "kind": "schedule",
+          "weight": 1.2,
+          "why": "Season slate lean +2",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 1.2
+        },
+        {
+          "kind": "schedule",
+          "weight": 0.25,
+          "why": "Championship-weeks (15 to 17) lean +1",
+          "note": "Detroit's offense gets the single cleanest schedule signal in the league. Do not fade Gibbs, Amon-Ra, or Jameson on too-expensive schedule arguments.",
+          "source": "insights drop pages (schedule-winners analysis)",
+          "bestballWeight": 0.5
+        }
+      ],
+      "sources": [
+        "insights drop pages (schedule-winners analysis)"
+      ]
+    },
+    {
+      "id": "trend-2026-08-02-josh-allen",
+      "date": "2026-08-02",
+      "player": "Josh Allen",
+      "team": "BUF",
+      "pos": "QB",
+      "posRank": 1,
+      "baselinePts": 357.5,
+      "baselinePpg": 21,
+      "direction": "buy",
+      "conviction": 1.2,
+      "netSignal": 1.2,
+      "netSignalBestball": 1.2,
+      "effectPct": {
+        "low": 1.8,
+        "high": 3.3
+      },
+      "effectPpg": {
+        "low": 0.4,
+        "high": 0.7
+      },
+      "snakeSlotDelta": 1,
+      "title": "Josh Allen is a buy on offensive-line grade alone",
+      "body": "Pass protection tier 1 of 5. Buffalo pairs Josh Allen with a top-tier offensive line, the two ingredients that most reliably convert a receiver's targets into fantasy points.",
+      "statLine": "+1.8% to +3.3% versus baseline projection (+0.4 to +0.7 PPG, full PPR)",
+      "actions": {
+        "auction": "Pay up to 3.3% over sheet price before walking away; the environment signals are not in the market price yet.",
+        "snake": "Worth taking about 1 slot (0.1 rounds in a 12-team) ahead of his baseline board position.",
+        "bestball": "Standard bump in best ball; draft to the high end of the effect range."
+      },
+      "signals": [
+        {
+          "kind": "oline",
+          "weight": 1.2,
+          "why": "Pass protection tier 1 of 5",
+          "note": "Buffalo pairs Josh Allen with a top-tier offensive line, the two ingredients that most reliably convert a receiver's targets into fantasy points.",
+          "source": "insights drop pages (Bills trade-for-Moore analysis)",
+          "bestballWeight": 1.2
+        }
+      ],
+      "sources": [
+        "insights drop pages (Bills trade-for-Moore analysis)"
+      ]
+    }
+  ]
+}
