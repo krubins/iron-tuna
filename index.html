@@ -1677,7 +1677,7 @@ input:focus, select:focus { border-color: var(--accent); }
 }
 @media (max-width: 600px) {
   html, body, #root { overflow-x: hidden; max-width: 100%; }
-  .main, .main-content, .cheatsheet, .cheat-grid, .cheat-col, .cheat-header, .ch-models, .ch-controls, .ch-insights, .strategy-bar, .split-view, .split-pane { max-width: 100%; box-sizing: border-box; min-width: 0; }
+  .main, .main-content, .cheatsheet, .cheat-grid, .cheat-col, .cheat-header, .ch-models, .ch-controls, .ch-insights, .strategy-bar, .split-view, .split-pane, .sheet-assumptions { max-width: 100%; box-sizing: border-box; min-width: 0; }
   .main { padding-left: 0 !important; padding-right: 0 !important; }
   .main-content { padding-top: 0 !important; padding-left: 8px !important; padding-right: 8px !important; overflow-x: hidden !important; overscroll-behavior-x: none; touch-action: pan-y; }
   html, body { overscroll-behavior-x: none; touch-action: pan-y; }
@@ -11065,6 +11065,7 @@ function Cheatsheet({
   whatIfAnchors,
   onSetAnchors,
   onUpdateStrategy,
+  onOpenSettings,
   coachEl
 }) {
   const [whbQ, setWhbQ] = useState('');
@@ -11246,6 +11247,13 @@ function Cheatsheet({
   };
   const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
   const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
+  const passTd = config && config.scoring && config.scoring.passingTD != null ? config.scoring.passingTD : 4;
+  const isAuctionFmt = (config && config.format || 'auction') === 'auction';
+  const startersSummary = (() => {
+    const parts = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => config.roster && config.roster[p] && config.roster[p].starters > 0).map(p => `${config.roster[p].starters}${p}`);
+    if (config.flex && config.flex.count) parts.push(`${config.flex.count}FLEX`);
+    return parts.join('/');
+  })();
   const dateStr = new Date().toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -11394,9 +11402,29 @@ function Cheatsheet({
     handle.addEventListener('pointerup', onUp);
     handle.addEventListener('pointercancel', onUp);
   }
+  const assumeChip = (label, title) => React.createElement("button", {
+    className: "assume-chip",
+    onClick: onOpenSettings,
+    title: title
+  }, label);
+  const assumeSep = React.createElement("span", {
+    className: "assume-sep"
+  }, "·");
   return React.createElement("div", {
     className: "cheatsheet"
-  }, React.createElement(CheatHeader, {
+  }, React.createElement("div", {
+    className: "assumptions sheet-assumptions no-print"
+  }, React.createElement("div", {
+    className: "assumptions-main"
+  }, React.createElement("span", {
+    className: "assumptions-label"
+  }, (isAuctionFmt ? "Prices assume" : "Ranks assume")), React.createElement("span", {
+    className: "assumptions-val"
+  }, assumeChip(`${config.teams} teams`, "Change the number of teams in Your League"), assumeSep, isAuctionFmt && assumeChip(`$${config.budget} budget`, "Change the auction budget in Your League"), isAuctionFmt && assumeSep, assumeChip(`${pprLabel} scoring`, "Change reception scoring in Your League"), assumeSep, assumeChip(`${passTd}pt pass TD`, "Change passing TD points in Your League"), startersSummary ? assumeSep : null, startersSummary ? assumeChip(`starters ${startersSummary}`, "Change the starting lineup in Your League") : null)), onOpenSettings && React.createElement("button", {
+    className: "assumptions-edit",
+    onClick: onOpenSettings,
+    title: "Open Your League to change teams, budget, scoring, or roster"
+  }, "Change in Your League →")), React.createElement(CheatHeader, {
     myTeam: myTeam,
     players: players,
     config: config,
@@ -11440,7 +11468,7 @@ function Cheatsheet({
     className: "cph-logo"
   }), React.createElement("span", null, fmtMeta(config).label, " Cheat Sheet")), React.createElement("div", {
     className: "cph-sub"
-  }, config.teams, " teams · $", config.budget, " budget · ", pprLabel, highlight ? ` · ${STRAT[highlight].label} model` : '', " · generated ", dateStr), React.createElement("div", {
+  }, config.teams, " teams · $", config.budget, " budget · ", pprLabel, " · ", passTd, "pt pass TD", startersSummary ? ` · starters ${startersSummary}` : '', highlight ? ` · ${STRAT[highlight].label} model` : '', " · generated ", dateStr), React.createElement("div", {
     className: "cph-legend"
   }, React.createElement("span", {
     className: "cph-key"
@@ -13159,6 +13187,7 @@ function PrepMode({
   }, "Full scoring & roster →"))), React.createElement(Cheatsheet, {
     players: valuedPlayers,
     config: config,
+    onOpenSettings: onOpenSettings,
     seasonGames: seasonGames,
     pointsMode: pointsMode,
     onRankReorder: onRankReorder,
@@ -21497,6 +21526,7 @@ function App() {
       whatIfAnchors: whatIfAnchors,
       onSetAnchors: setWhatIfAnchors,
       onUpdateStrategy: handleUpdateStrategy,
+      onOpenSettings: () => setView('settings'),
       coachEl: coachEl
     }));
     const draftBoardEl = React.createElement(React.Fragment, null, React.createElement(Coachmark, {
