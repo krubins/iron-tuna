@@ -612,12 +612,32 @@ const X_COMPARISON_SNAKE_POSTS = [
   { id: 'compare-snake-2', type: 'compare', image: '/social/compare-snake.png', text: "Premium fantasy rankings run $30-70 a year. Every year. Forever.\n\n💰 Iron Tuna's full custom board (your league's exact scoring, live survival odds, and the Value Coach) is $9.99 once. Spread over a 17-week season, that's 59 cents a week for your edge.", cta: "Pay once, draft sharper in every league you're in:", url: 'https://irontuna.com/snakedraft' },
   { id: 'compare-snake-3', type: 'compare', image: '/social/compare-snake.png', text: "Most 'custom rankings' tools make you pay before you see a single number.\n\n🆓 Iron Tuna's cheat sheet is free: all 408 players, priced for a standard league, no signup, no email, no card. Pay $9.99 once only if you want it tuned to YOUR league and live on draft day.", cta: 'The free sheet is one click away. See it before you spend a dollar:', url: 'https://irontuna.com/snakedraft' },
 ];
-// Interleaved so Tue/Thu cycle topics: feature, compare, feature, compare, …
+// ── 'Later-round discounts' series: draft the early rounds differently when you know what
+// will be discounted in the later rounds. Every post leads with player-specific calls; every
+// number is a full-PPR season projection (or build-path sum of them) from the live PROJECTIONS
+// data, printed by tools/compute-tweet-stats.mjs ("Later-round discounts, player-specific"
+// section). ADPs quoted are the model's own VOR board ranks (the site's provisional-ADP
+// ordering), and build sums add the displayed rounded values so tweet arithmetic checks out.
+// Football facts quoted from this repo's Auction Watch pages (Kraft: 2026-06-19,
+// Tuten: 2026-07-11), never from memory. Runs as a consecutive 6-part series once the
+// interleaved feature/compare rotation completes (appended after the interleave below, which
+// also keeps existing rotation indices stable).
+const X_SNAKE_DISCOUNT_POSTS = [
+  { id: 'snake-discount-0', type: 'snake-discount', text: "The 1.01 is not Gibbs vs Ja'Marr Chase. It's two builds.\n\n🧮 Our model: Chase (337 pts) + Kenneth Walker III (274) + Chase Brown (259) at the turn = 870. Gibbs (373) beats that only if a WR like Garrett Wilson (263) survives 23 picks. The first pick depends on the late board.", cta: "Iron Tuna's live prediction engine re-prices both builds in real time, reading who's off the board and what every opponent still needs. See your draft's future first:", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-1', type: 'snake-discount', text: "Planning your 1.01 around round 2-3 discounts? Get the odds first.\n\n🔮 Our survival model: Chase Brown (259 pts, ADP 25) reaches the 1.01 turn 60% of the time. Kenneth Walker III (274, ADP 17)? About 1%. Same plan, wildly different odds. Both numbers move with every pick made.", cta: 'The live engine re-forecasts every survival number after each pick, from who is gone and what the rosters ahead of you still need. Visibility into the future, free to start:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-2', type: 'snake-discount', text: "Don't draft Jayden Daniels in the early rounds. Specifics:\n\n📉 Our model: Daniels 309 pts, Trevor Lawrence 297, rounds cheaper. Lawrence + Kenneth Walker III (274) = 571. Daniels + Bhayshul Tuten (208, the RB left where Lawrence goes) = 517. Same two spots, 54 points apart.", cta: 'The QB discount funds a whole extra starter. Iron Tuna\'s engine tracks which QBs and RBs survive, updating in real time as opponents fill roster slots:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-3', type: 'snake-discount', text: "Skip mid-round tight ends. Our model: Sam LaPorta 197 pts, Tucker Kraft 176. That gap: 1.2 PPG.\n\n💸 Kraft was the TE4 before his injury and expects to be ready Week 1 after opening camp on PUP. Pay up for Trey McBride (247) or take Kraft near TE12 prices. The middle is dead.", cta: 'Tier math exposes the fake discounts too. The live engine reads which opponents still need a TE and tells you if Kraft makes it back to your pick:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-4', type: 'snake-discount', text: "Committee fear is a coupon. Jaguars HC Liam Coen praises Bhayshul Tuten (208 pts in our model), but three-back talk keeps him at RB24 prices.\n\n📊 Deeper: Aaron Jones 190, Jaylen Warren 187, Rico Dowdle 185, all RB31 or later. The RB bin restocks late. Spend rounds 1-3 on WRs.", cta: '11 RBs outside the top 30 project 150+ points. Iron Tuna\'s engine updates their availability in real time as backfields come off the board:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-5', type: 'snake-discount', text: "Draft the early rounds backwards. Price discounts first:\n\n📈 Trevor Lawrence (297 pts) makes early QBs a luxury. Tucker Kraft (176) kills the mid-round TE. Aaron Jones (190) waits in double-digit rounds. Each discount you trust frees an early pick for Chase, Gibbs, or Puka (351).", cta: 'Know the late board, then draft the early one. The live prediction engine rebuilds the future after every pick: who is gone, who each opponent still needs, who reaches you:', url: 'https://irontuna.com/snakedraft' },
+];
+// Interleaved so Tue/Thu cycle topics: feature, compare, feature, compare, … then the
+// discount series runs back-to-back as a themed 6-parter at the end of the cycle.
 const X_SNAKE_BONUS_POOL = [];
 for (let i = 0; i < Math.max(X_SNAKE_FEATURE_POSTS.length, X_COMPARISON_SNAKE_POSTS.length); i++) {
   if (X_SNAKE_FEATURE_POSTS[i]) X_SNAKE_BONUS_POOL.push(X_SNAKE_FEATURE_POSTS[i]);
   if (X_COMPARISON_SNAKE_POSTS[i]) X_SNAKE_BONUS_POOL.push(X_COMPARISON_SNAKE_POSTS[i]);
 }
+for (const p of X_SNAKE_DISCOUNT_POSTS) X_SNAKE_BONUS_POOL.push(p);
 
 // ── Friday-only bonus post: best ball is a genuinely separate, less common format, so this
 //    fires far less often than the others (1x/week vs. daily auction/snake and 2-3x/week Wed
