@@ -8839,11 +8839,27 @@ function TierView({
   const [position, setPosition] = useState('RB');
   const tiers = useMemo(() => buildTiers(players, position), [players, position]);
   const positions = Object.keys(config.roster);
+  const isAuction = (config.format || 'auction') === 'auction';
+  const ppr = config && config.scoring ? config.scoring.receptionPoints : 0;
+  const pprLabel = ppr >= 1 ? 'Full PPR' : ppr >= 0.5 ? 'Half-PPR' : 'Standard';
+  const startersSummary = (() => {
+    const parts = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => config.roster[p]).map(p => `${config.roster[p].starters}${p}`);
+    if (config.flex && config.flex.count) parts.push(`${config.flex.count}FLEX`);
+    return parts.join('/');
+  })();
+  const leagueMeta = `${config.teams} teams${isAuction ? ` · $${config.budget} budget` : ''} · ${pprLabel} · ${startersSummary}` + (isAuction ? ' · player $ values scaled to this budget' : ' · sorted by value at this scoring');
   return React.createElement("div", null, React.createElement("div", {
     className: "section-title"
   }, "Tier View"), React.createElement("div", {
     className: "section-meta"
   }, "Players grouped by VORP tiers, drops between tiers signal scarcity inflection points."), React.createElement("div", {
+    className: "section-meta",
+    style: {
+      fontFamily: 'var(--font-mono)',
+      fontSize: 12,
+      color: 'var(--text-secondary)'
+    }
+  }, leagueMeta), React.createElement("div", {
     className: "filter-pills",
     style: {
       marginBottom: 12
