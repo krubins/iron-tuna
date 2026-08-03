@@ -20896,7 +20896,8 @@ function App() {
   function handleReset(kind) {
     const k = kind === 'board' || kind === 'sheet' || kind === 'both' ? kind : 'both';
     const _na = (config.format || 'auction') !== 'auction';
-    const msg = k === 'board' ? (_na ? 'Reset the Draft Board? Clears all draft picks. Team names and your "My Team" pick are kept.' : 'Reset the Auction Board? Clears all draft picks and budgets. Team names and your "My Team" pick are kept.') : k === 'sheet' ? ('Reset the Cheat Sheet? Clears your custom ranks' + (_na ? '.' : ' and price overrides.')) : 'Reset both? Clears all draft picks AND your cheat-sheet changes. Team names and your "My Team" pick are kept.';
+    const sheetMsg = 'Your custom ranks' + (_na ? '' : ', price overrides,') + ' and any edited or imported projections are cleared, and rankings revert to Iron Tuna’s current projections. Your scoring settings are kept.';
+    const msg = k === 'board' ? (_na ? 'Reset the Draft Board? Clears all draft picks. Team names and your "My Team" pick are kept.' : 'Reset the Auction Board? Clears all draft picks and budgets. Team names and your "My Team" pick are kept.') : k === 'sheet' ? 'Reset the Cheat Sheet? ' + sheetMsg : 'Reset both? Clears all draft picks. ' + sheetMsg + ' Team names and your "My Team" pick are kept.';
     if (!window.confirm(msg + ' This cannot be undone.')) return;
     const total = totalRosterSpots(config);
     if (k === 'board' || k === 'both') {
@@ -20913,6 +20914,34 @@ function App() {
       setRankOrder({});
       setPriceOverrides({});
       setCustomOrder([]);
+      setProjUpdateAsk(false);
+      // Rankings revert to the system's CURRENT projections, not the user-modified pool:
+      // `players` accumulates CSV imports, per-player stat edits, and added players, and
+      // clearing rank overrides alone would leave rankings computed from those. Re-fetch the
+      // baseline (so a reset also picks up projections shipped since the pool was saved).
+      // On fetch failure the current pool is kept — BASELINE_PROJECTIONS is an empty
+      // placeholder, so it is NOT a usable fallback here. Scoring config and team names
+      // are deliberately untouched.
+      (async () => {
+        let data = null;
+        try {
+          data = await fetchBaselineProjections();
+        } catch (e) {}
+        if (!data || !data.length) {
+          alert("Couldn't fetch the current projections, so the player pool was left as-is. Your ranks and overrides were still cleared — reset again once you're back online to restore Iron Tuna's projections.");
+          return;
+        }
+        let players0 = buildInitialPlayers(data);
+        if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
+        setPlayers(players0);
+        playersVersionRef.current = PROJ_VERSION;
+        setDataInfo({
+          source: 'Projections 2026',
+          season: 2026,
+          count: players0.length,
+          when: Date.now()
+        });
+      })();
     }
   }
   function handleConfigChange(newConfig) {
