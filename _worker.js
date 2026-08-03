@@ -526,31 +526,18 @@ const PROJECTIONS = [
   { name: "Xavier Legette", position: "WR", team: "CAR", projectedStats: { rushYd: 14, rushTD: 0, rec: 25, recYd: 311, recTD: 2, fumLost: 0 }},
 ];
 
-// ── X (Twitter) auto-post: ONE thread per weekday (see X_DAY_SLOTS), cycling each day's pool.
-//    Requires X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
+// ── X (Twitter) auto-post: Mon/Wed/Fri, one auction + one snake insight, cycling through
+//    INSIGHTS_X_POOL. Requires X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 //    (OAuth 1.0a user-context tokens for @irontunafantasy with read+write access). See HANDOFF.md §10. ──
 const X_TAGLINE = "The full breakdown is free, and Iron Tuna turns takes like this into live draft-day values for YOUR league's exact scoring.";
-// One hashtag, not three: tag stuffing reads as automation to both humans and the algorithm,
-// and hashtags stopped driving meaningful discovery on X years ago.
-const X_HASHTAGS = { auction: '#FantasyFootball', snake: '#FantasyFootball', bestball: '#BestBall' };
+const X_HASHTAGS = { auction: '#FantasyFootball #AuctionDraft #FFDraft', snake: '#FantasyFootball #SnakeDraft #FFDraft', bestball: '#FantasyFootball #BestBall #FFDraft' };
 const X_MAX_LEN = 280;
-const X_URL_LEN = 23; // t.co always counts a URL as 23 chars regardless of true length
-// X measurably suppresses posts that carry external links, which matters enormously for a
-// zero-follower account trying to get initial distribution (and link posts also cost 13x on
-// pay-per-use pricing: $0.20 vs $0.015). So X posts are link-free by default: replies end with
-// this marker line instead of a URL, pointing at the profile bio (the irontuna.com link MUST
-// live in the @irontunafantasy bio for this to work — manual, one-time). Wednesday's
-// conversion post is the one weekly exception that keeps a real URL. The Threads mirror swaps
-// the marker back to the real URL (linkifyForThreads) since Threads is free and doesn't
-// suppress links the same way.
-const X_LINK_IN_BIO = '🔗 Link in bio.';
-const linkifyForThreads = (tweets, url) => url ? tweets.map((t) => t.replace(X_LINK_IN_BIO, url)) : tweets;
 
 // ── Wednesday-only third post: money-allocation strategy and Value Coach promo content,
 //    alternating. Hand-authored (not extracted from insight pages) and grounded in the copy on
 //    /auction-budget-allocation, /auction-nomination-strategy, and /dollar-endgame-handcuffs. ──
 const X_WED_TAGLINE = 'Iron Tuna prices every player for YOUR league and re-prices the whole board live while you draft. Free to start.';
-const X_WED_HASHTAGS = '#FantasyFootball';
+const X_WED_HASHTAGS = '#FantasyFootball #AuctionDraft #DraftStrategy';
 const X_STRATEGY_POSTS = [
   { id: 'strategy-0', type: 'strategy', text: "Our 2026 model: only 88 players project above replacement in a 12-team league, and RB+WR hold 86% of that value.\n\n💰 That's the math behind the winning $200 split: 38-42% RB, 28-32% WR, 10-14% QB, 8-10% TE. Decide your shape before the bidding decides it for you.", cta: 'Iron Tuna builds the split for YOUR league size and scoring, then re-prices every player live as the room spends. Free to start:', url: 'https://irontuna.com/auction-budget-allocation' },
   { id: 'strategy-1', type: 'strategy', text: "Stars-and-scrubs vs balanced is not a preference. It's a read.\n\n📊 The top 24 players hold 60% of all value over replacement in our model. If the room sells them at or under sheet price, concentrate your spend. The second they go over, the profit moves to the middle. Follow it.", cta: 'Iron Tuna shows you live, player by player, whether your room is overpaying or underpaying. That read is your whole strategy:', url: 'https://irontuna.com/auction-budget-allocation' },
@@ -608,7 +595,7 @@ for (let i = 0; i < Math.max(X_STRATEGY_POSTS.length, X_COACH_POSTS.length, X_CO
 // ── Tuesday/Thursday third post: snake-draft "survival odds" feature promo — knowing who'll
 //    still be on the board several rounds out is worth more than a static ranking, and the AI
 //    navigator recalculates that live off actual draft progress (ADP, position runs, picks-to-go).
-const X_SNAKE_HASHTAGS = '#FantasyFootball';
+const X_SNAKE_HASHTAGS = '#FantasyFootball #SnakeDraft #DraftStrategy';
 const X_SNAKE_FEATURE_POSTS = [
   { id: 'snake-feature-0', type: 'snake-feature', text: "Round 2 picks itself. Your league gets won in rounds 4-6, on one question: does he make it back to me?\n\n🔮 Our survival model: a player with ADP 45 lasts 12 more picks just 17% of the time. ADP 58? 74%. Iron Tuna computes this live for every player, after every pick.", cta: 'Stop guessing who makes it back. Know it, pick by pick, free to start:', url: 'https://irontuna.com/snakedraft' },
   { id: 'snake-feature-1', type: 'snake-feature', text: "Since June: Dan Campbell named Gibbs his bellcow, David Montgomery got traded, A.J. Brown became a Patriot, Arizona released Kyler Murray.\n\n📡 A printed sheet is stale before pick 1 and dead by pick 8. Iron Tuna re-forecasts who survives to your next turn after every selection.", cta: 'A live board that updates with your real draft beats a printout every single time:', url: 'https://irontuna.com/snakedraft' },
@@ -625,8 +612,8 @@ const X_COMPARISON_SNAKE_POSTS = [
   { id: 'compare-snake-2', type: 'compare', image: '/social/compare-snake.png', text: "Premium fantasy rankings run $30-70 a year. Every year. Forever.\n\n💰 Iron Tuna's full custom board (your league's exact scoring, live survival odds, and the Value Coach) is $9.99 once. Spread over a 17-week season, that's 59 cents a week for your edge.", cta: "Pay once, draft sharper in every league you're in:", url: 'https://irontuna.com/snakedraft' },
   { id: 'compare-snake-3', type: 'compare', image: '/social/compare-snake.png', text: "Most 'custom rankings' tools make you pay before you see a single number.\n\n🆓 Iron Tuna's cheat sheet is free: all 408 players, priced for a standard league, no signup, no email, no card. Pay $9.99 once only if you want it tuned to YOUR league and live on draft day.", cta: 'The free sheet is one click away. See it before you spend a dollar:', url: 'https://irontuna.com/snakedraft' },
 ];
-// "Later-round discounts" series: the early rounds should be drafted with the late-round
-// discount rack already priced in. Every post leads with player-specific advice; every quoted
+// ── 'Later-round discounts' series: draft the early rounds differently when you know what
+// will be discounted in the later rounds. Every post leads with player-specific calls; every
 // number is a full-PPR season projection (or build-path sum of them) from the live PROJECTIONS
 // data, printed by tools/compute-tweet-stats.mjs ("Later-round discounts, player-specific"
 // section). ADPs quoted are the model's own VOR board ranks (the site's provisional-ADP
@@ -636,12 +623,12 @@ const X_COMPARISON_SNAKE_POSTS = [
 // interleaved feature/compare rotation completes (appended after the interleave below, which
 // also keeps existing rotation indices stable).
 const X_SNAKE_DISCOUNT_POSTS = [
-  { id: 'snake-discount-0', type: 'snake-discount', text: "The 1.01 is not Gibbs vs Ja'Marr Chase. It's two builds.\n\n🧮 Our model: Chase (337 pts) + Kenneth Walker III (274) + Chase Brown (259) at the turn = 870. Gibbs (373) beats that only if a WR like Garrett Wilson (263) also survives 23 picks. The first pick depends on the late board.", cta: "Iron Tuna's live prediction engine re-prices both builds in real time, reading who's off the board and what every opponent still needs. See your draft's future first:", url: 'https://irontuna.com/snakedraft' },
-  { id: 'snake-discount-1', type: 'snake-discount', text: "Planning your 1.01 around round 2-3 discounts? Get the odds first.\n\n🔮 Our survival model: Chase Brown (259 pts, ADP 25) reaches the 1.01 turn 60% of the time. Kenneth Walker III (274, ADP 17)? About 1%. Same plan, wildly different odds. And both numbers move with every pick made.", cta: 'The live engine re-forecasts every survival number after each pick, from who is gone and what the rosters ahead of you still need. Visibility into the future, free to start:', url: 'https://irontuna.com/snakedraft' },
-  { id: 'snake-discount-2', type: 'snake-discount', text: "Don't draft Jayden Daniels in the early rounds. Specifics:\n\n📉 Our model: Daniels 309 pts, Trevor Lawrence 297, rounds cheaper. Lawrence + Kenneth Walker III (274) = 571 points. Daniels + Bhayshul Tuten (208, the RB left where Lawrence goes) = 517. Same two spots, 54 points apart.", cta: 'The QB discount funds a whole extra starter. Iron Tuna\'s engine tracks which QBs and RBs survive, updating in real time as opponents fill roster slots:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-0', type: 'snake-discount', text: "The 1.01 is not Gibbs vs Ja'Marr Chase. It's two builds.\n\n🧮 Our model: Chase (337 pts) + Kenneth Walker III (274) + Chase Brown (259) at the turn = 870. Gibbs (373) beats that only if a WR like Garrett Wilson (263) survives 23 picks. The first pick depends on the late board.", cta: "Iron Tuna's live prediction engine re-prices both builds in real time, reading who's off the board and what every opponent still needs. See your draft's future first:", url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-1', type: 'snake-discount', text: "Planning your 1.01 around round 2-3 discounts? Get the odds first.\n\n🔮 Our survival model: Chase Brown (259 pts, ADP 25) reaches the 1.01 turn 60% of the time. Kenneth Walker III (274, ADP 17)? About 1%. Same plan, wildly different odds. Both numbers move with every pick made.", cta: 'The live engine re-forecasts every survival number after each pick, from who is gone and what the rosters ahead of you still need. Visibility into the future, free to start:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-2', type: 'snake-discount', text: "Don't draft Jayden Daniels in the early rounds. Specifics:\n\n📉 Our model: Daniels 309 pts, Trevor Lawrence 297, rounds cheaper. Lawrence + Kenneth Walker III (274) = 571. Daniels + Bhayshul Tuten (208, the RB left where Lawrence goes) = 517. Same two spots, 54 points apart.", cta: 'The QB discount funds a whole extra starter. Iron Tuna\'s engine tracks which QBs and RBs survive, updating in real time as opponents fill roster slots:', url: 'https://irontuna.com/snakedraft' },
   { id: 'snake-discount-3', type: 'snake-discount', text: "Skip mid-round tight ends. Our model: Sam LaPorta 197 pts, Tucker Kraft 176. That gap: 1.2 PPG.\n\n💸 Kraft was the TE4 before his injury and expects to be ready Week 1 after opening camp on PUP. Pay up for Trey McBride (247) or take Kraft near TE12 prices. The middle is dead.", cta: 'Tier math exposes the fake discounts too. The live engine reads which opponents still need a TE and tells you if Kraft makes it back to your pick:', url: 'https://irontuna.com/snakedraft' },
   { id: 'snake-discount-4', type: 'snake-discount', text: "Committee fear is a coupon. Jaguars HC Liam Coen praises Bhayshul Tuten (208 pts in our model), but three-back talk keeps him at RB24 prices.\n\n📊 Deeper: Aaron Jones 190, Jaylen Warren 187, Rico Dowdle 185, all RB31 or later. The RB bin restocks late. Spend rounds 1-3 on WRs.", cta: '11 RBs outside the top 30 project 150+ points. Iron Tuna\'s engine updates their availability in real time as backfields come off the board:', url: 'https://irontuna.com/snakedraft' },
-  { id: 'snake-discount-5', type: 'snake-discount', text: "Draft the early rounds backwards. Price discounts first:\n\n📈 Trevor Lawrence (297 pts) makes early QBs a luxury. Tucker Kraft (176) kills the mid-round TE. Aaron Jones (190) waits in double-digit rounds. Every discount you trust frees an early pick for Chase, Gibbs, or Puka (351).", cta: 'Know the late board, then draft the early one. The live prediction engine rebuilds the future after every pick: who is gone, who each opponent still needs, who reaches you:', url: 'https://irontuna.com/snakedraft' },
+  { id: 'snake-discount-5', type: 'snake-discount', text: "Draft the early rounds backwards. Price discounts first:\n\n📈 Trevor Lawrence (297 pts) makes early QBs a luxury. Tucker Kraft (176) kills the mid-round TE. Aaron Jones (190) waits in double-digit rounds. Each discount you trust frees an early pick for Chase, Gibbs, or Puka (351).", cta: 'Know the late board, then draft the early one. The live prediction engine rebuilds the future after every pick: who is gone, who each opponent still needs, who reaches you:', url: 'https://irontuna.com/snakedraft' },
 ];
 // Interleaved so Tue/Thu cycle topics: feature, compare, feature, compare, … then the
 // discount series runs back-to-back as a themed 6-parter at the end of the cycle.
@@ -664,18 +651,37 @@ const X_BESTBALL_FEATURE_POSTS = [
   { id: 'bestball-feature-3', type: 'bestball-feature', text: "The Rams close on a very hard slate. In weekly-start leagues that's a playoff problem. In best ball it barely dents Puka: his down weeks bench themselves.\n\n🏈 Same player, two different values. Relabeled redraft rankings can't see that. Iron Tuna re-weights 408 players for it.", cta: 'Built for best ball from the ground up, not reskinned. See the difference:', url: 'https://irontuna.com/bestball' },
 ];
 
+// ── Monday-only bonus post: a poll. Polls get outsized engagement relative to broadcast posts
+//    and early engagement is what earns algorithmic distribution, so the week opens with one.
+//    Every fact below is sourced from this repo's own post copy / drop pages (same sourcing rule
+//    as the other hand-authored pools, HANDOFF §10) and every option is ≤25 chars (X's limit).
+//    X-only: the Threads API has no poll support, so the Threads mirror skips this slot. ──
+const X_POLL_POSTS = [
+  { id: 'poll-0', type: 'poll', text: "Rushing floors have flattened the QB tier: our 2026 model puts 0.7 PPG between QB5 and QB12.\n\n🗳️ What's your QB plan in a 12-team draft this year?", options: ['Pay up for elite', 'Wait for the mid tier', 'Last-dollar QB', 'Two cheap QBs'], cta: "There's no wrong answer, only wrong prices. Iron Tuna prices every QB for your league's exact scoring, live during your draft." },
+  { id: 'poll-1', type: 'poll', text: "Our model: RB12 to RB24 falls 3.1 PPG. WR12 to WR24 falls just 1.9.\n\n🗳️ Which position do you lock up first on draft day?", options: ['RB, beat the cliff', 'WR, safer floors', 'Best value up top', 'Elite TE first'], cta: 'The tier math changes with your scoring. Iron Tuna computes the real gaps for YOUR league and flags which tier won\'t wait for you.' },
+  { id: 'poll-2', type: 'poll', text: "Nothing public has settled New England's backfield, and that ambiguity suppresses both prices.\n\n🗳️ Who finishes 2026 as the Patriots RB to own?", options: ['Stevenson', 'TreVeyon Henderson', 'True committee', 'Neither, fade both'], cta: 'Ambiguous backfields are where late-draft profit lives. Iron Tuna prices both sides of every committee, live on your board.' },
+  { id: 'poll-3', type: 'poll', text: "Patrick Mahomes is rehabbing a torn ACL and our model prices him -4% to -7% versus an elite-QB tag.\n\n🗳️ What do you do when he's nominated?", options: ['Pay the name', 'Only at a discount', 'Hard pass', 'Depends on the room'], cta: 'Reputation names are where auction money goes to die. Iron Tuna tells you sticker from tax in real time.' },
+  { id: 'poll-4', type: 'poll', text: "Jaxon Smith-Njigba: 35.7% target share on 162 targets in 2025, and Seattle added zero competition for it.\n\n🗳️ Where does he go in your PPR snake draft?", options: ['Top 5 pick', 'Back half of Rd 1', 'Round 2', 'Regression incoming'], cta: 'Volume is the argument. The turn is the risk. Iron Tuna gives you his survival odds at your exact pick, live.' },
+  { id: 'poll-5', type: 'poll', text: "The top 24 players hold 60% of all value over replacement in our 2026 model.\n\n🗳️ How do you spend your $200 auction budget?", options: ['Stars and scrubs', 'Balanced build', 'Read the room', 'Punt the studs'], cta: "It's a read, not a preference. Iron Tuna shows you live whether your room is overpaying the top or the middle." },
+];
+// Poll hook is a {text, poll} object (postTweet turns t.poll into the v2 API's poll body);
+// the cta rides as a plain-text reply. No URL and no hashtags anywhere, so nothing to strip.
+function composePollThread(post) {
+  return [{ text: post.text, poll: { options: post.options, duration_minutes: 1440 } }, post.cta];
+}
+
 // Each post carries its own `cta` reply line (falling back to the shared tagline) — this keeps
 // the reply copy tailored to the hook AND makes every reply's text unique, which matters because
-// X permanently rejects exact-duplicate tweets and many posts share the same landing URL.
-function composeBonusThread(post, hashtags, keepLink) {
+// X permanently rejects exact-duplicate tweets. Neither the URL nor the hashtag line ever
+// reaches X (toXCopy() removes both in postAndLog, per the Aug 2026 no-links/no-hashtags-on-X
+// decision), so the per-post cta text is the only thing keeping X replies distinct across
+// posts; Threads still receives the full reply.
+function composeBonusThread(post, hashtags) {
   if (post.customTweets) return post.customTweets;
-  // Link-free by default (see X_LINK_IN_BIO note); only Wednesday's conversion post keeps a
-  // real URL on X. The marker line is what linkifyForThreads swaps for the Threads mirror.
-  const dest = keepLink ? post.url : X_LINK_IN_BIO;
-  const reply = `${post.cta || X_WED_TAGLINE}\n\n${dest}\n\n${hashtags || X_WED_HASHTAGS}`;
+  const reply = `${post.cta || X_WED_TAGLINE}\n\n${post.url}\n\n${hashtags || X_WED_HASHTAGS}`;
   return [post.text, reply];
 }
-function composeWednesdayThread(post) { return composeBonusThread(post, X_WED_HASHTAGS, true); }
+function composeWednesdayThread(post) { return composeBonusThread(post, X_WED_HASHTAGS); }
 function composeSnakeFeatureThread(post) { return composeBonusThread(post, X_SNAKE_HASHTAGS); }
 // Extracted insights (from INSIGHTS_X_POOL) carry a 'play' key even when empty; hand-authored
 // feature posts never do — that's the dispatch signal between the two composers.
@@ -683,18 +689,14 @@ function composeBestballThread(item) {
   return ('play' in item) ? composeThread(item) : composeBonusThread(item, X_HASHTAGS.bestball);
 }
 
-// Maps UTC day-of-week (matches the cron's day field) to THE day's single post — one thread
-// per weekday, period. The old cadence (two insight threads + a bonus, 10-13 threads/week) was
-// the worst possible shape for a zero-follower account: high-volume, template-identical,
-// link-bearing output is exactly what X's algorithm buries as automation. Volume doesn't grow
-// an account; engagement does, so post less and make each one count (July 2026 reach rework).
-// `dynamicPool()` entries are resolved fresh per run, same as poolFor() elsewhere, so newly
-// unlocked drop pages become eligible immediately rather than at deploy time.
-const X_DAY_SLOTS = {
-  1: { dynamicPool: () => poolFor('auction'), compose: composeThread, format: 'auction' }, // Mon
+// Maps UTC day-of-week (matches the cron's day field) to that day's bonus third post.
+// `dynamicPool()` (Friday) is resolved fresh per run, same as poolFor() elsewhere, so newly
+// unlocked best-ball drop pages become eligible immediately rather than at deploy time.
+const X_BONUS_DAY_POOLS = {
+  1: { pool: X_POLL_POSTS, compose: composePollThread, format: 'poll' }, // Mon
   2: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Tue
   3: { pool: X_WEDNESDAY_POOL, compose: composeWednesdayThread, format: 'wednesday' }, // Wed
-  4: { dynamicPool: () => poolFor('snake'), compose: composeThread, format: 'snake' }, // Thu
+  4: { pool: X_SNAKE_BONUS_POOL, compose: composeSnakeFeatureThread, format: 'snakefeature' }, // Thu
   5: { // Fri
     dynamicPool: () => {
       const insights = poolFor('bestball');
@@ -715,17 +717,16 @@ function truncate(str, budget) {
   return str.slice(0, Math.max(0, budget - 1)).replace(/\s+\S*$/, '') + '…';
 }
 
+// "2026-07-16" → "Jul 16, 2026" for the reply tweet's "Insight N of 5 in the … drop" line.
+const DROP_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function dropLabel(date) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
+  return m ? `${DROP_MONTHS[+m[2] - 1]} ${+m[3]}, ${m[1]}` : 'latest';
+}
+
 // Two-tweet thread instead of one: tweet 1 is the hook + the insight's actual takeaway (not
 // just the headline), tweet 2 (a reply) carries the tagline/link/hashtags. A single tweet can't
 // fit both the headline and the substance of "deep insight" content within 280 chars.
-// '2026-07-16' → 'July 16' (falls back to the raw string on anything unparseable).
-function monthDayLabel(date) {
-  const m = String(date || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
-  if (!m) return String(date || 'latest');
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${months[Number(m[1]) - 1]} ${Number(m[2])}`;
-}
-
 function composeThread(insight) {
   const hashtags = X_HASHTAGS[insight.format] || '#FantasyFootball';
   // Hook = title + 📊 projected-effect stat + 💡 play verdict. The stat (extracted from the drop
@@ -744,14 +745,18 @@ function composeThread(insight) {
     const playBudget = X_MAX_LEN - hook.length - 5; // "\n\n💡 "
     if (playBudget > 15) hook += `\n\n💡 ${truncate(insight.play, playBudget)}`;
   }
-  // "Insight N of 5 in our <date> <format> drop" both sells the click (four more takes behind
-  // the bio link) and keeps every reply's text unique — X permanently 403s exact-duplicate
-  // tweets. The date+format descriptor matters: with no URL in the reply (link-free policy, see
-  // X_LINK_IN_BIO), a bare "Insight 1 of 5" would collide across every drop page and format.
+  // "Insight N of 5 in the <date> <format> drop" both sells the click (four more takes in the
+  // drop) and keeps every reply's X text unique per insight — X permanently 403s exact-duplicate
+  // tweets, and since the URL and hashtag lines are both stripped before posting to X (see
+  // toXCopy in postAndLog), index + drop date + format word must carry uniqueness on their own.
+  // The format word matters: auction and snake drops share dates, so without it two same-index
+  // insights on one date would collide. The year is included so future seasons can't collide.
   const idx = String(insight.id || '').match(/-(\d+)$/);
-  const descriptor = `${monthDayLabel(insight.date)} ${insight.format} drop`;
-  const lead = idx ? `Insight ${Number(idx[1]) + 1} of 5 in our ${descriptor}. ${X_TAGLINE}` : `From our ${descriptor}. ${X_TAGLINE}`;
-  const reply = `${lead}\n\n${X_LINK_IN_BIO}\n\n${hashtags}`;
+  const formatWord = insight.format === 'bestball' ? 'best ball' : insight.format;
+  const lead = idx
+    ? `Insight ${Number(idx[1]) + 1} of 5 in the ${dropLabel(insight.date)} ${formatWord} drop. ${X_TAGLINE}`
+    : X_TAGLINE;
+  const reply = `${lead}\n\n${insight.url}\n\n${hashtags}`;
   return [hook, reply];
 }
 
@@ -785,10 +790,12 @@ async function xApiCall(env, method, url, extraParams) {
   return authHeader;
 }
 
-async function postTweet(env, text, replyToId, mediaId) {
+async function postTweet(env, tweet, replyToId, mediaId) {
   const url = 'https://api.twitter.com/2/tweets';
   const authHeader = await xApiCall(env, 'POST', url);
-  const body = { text };
+  const t = typeof tweet === 'string' ? { text: tweet } : tweet;
+  const body = { text: t.text };
+  if (t.poll) body.poll = t.poll;
   if (replyToId) body.reply = { in_reply_to_tweet_id: replyToId };
   if (mediaId) body.media = { media_ids: [mediaId] };
   const res = await fetch(url, {
@@ -877,7 +884,7 @@ async function pickNonDuplicate(env, pool, startIdx, composeFn) {
   for (let attempts = 0; attempts < pool.length; attempts++) {
     const item = pool[idx];
     const tweets = composeFn(item);
-    const hash = await textHash(tweets[0]);
+    const hash = await textHash(tweetText(tweets[0]));
     let dup = false;
     if (env.LEADS_DB) {
       try { dup = !!(await env.LEADS_DB.prepare('SELECT 1 FROM x_posts WHERE text_hash=? AND ok=1').bind(hash).first()); } catch (e) {}
@@ -1019,6 +1026,26 @@ async function postAndLogThreads(env, format, id, tweets, imagePath) {
   return { ok, postIds: postIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })) };
 }
 
+// X copy carries neither the irontuna.com link (removed Aug 2026; also the difference between
+// X's $0.20 link-post and $0.015 plain-post rates) nor the trailing hashtag line (hashtags read
+// as automated filler on current X and add nothing to distribution there). The compose functions
+// still emit both on their own lines so the Threads mirror keeps them (free API, no per-link
+// charge, and hashtags still work as topic tags on Threads) — this strips those lines from what
+// goes to X only. No hand-authored copy line starts with '#', so line-leading '#' is a safe
+// hashtag-line signal.
+function toXCopy(text) {
+  return text
+    .split('\n')
+    .filter(line => !/https?:\/\/(www\.)?irontuna\.com/i.test(line) && !/^\s*#/.test(line))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// A thread entry is either a plain string or {text, poll} (Monday poll posts). Everything that
+// hashes, measures, or prices a tweet goes through tweetText() so both shapes work.
+function tweetText(t) { return typeof t === 'string' ? t : t.text; }
+
 async function postAndLog(env, format, id, tweets, hash, imagePath) {
   let mediaId;
   if (imagePath) {
@@ -1028,49 +1055,88 @@ async function postAndLog(env, format, id, tweets, hash, imagePath) {
       if (uploaded.ok) mediaId = uploaded.data && uploaded.data.media_id_string;
     }
   }
-  const posted = await postThread(env, tweets, mediaId);
+  const xTweets = tweets.map(t => typeof t === 'string' ? toXCopy(t) : { ...t, text: toXCopy(t.text) });
+  const posted = await postThread(env, xTweets, mediaId);
   const ok = posted.every(p => p.ok);
   const tweetIds = posted.map(p => (p.data && p.data.data && p.data.data.id) || '').filter(Boolean).join(',');
-  const cost = posted.reduce((sum, p, i) => sum + (p.ok ? tweetCost(tweets[i]) : 0), 0);
+  const cost = posted.reduce((sum, p, i) => sum + (p.ok ? tweetCost(tweetText(xTweets[i])) : 0), 0);
   if (env.LEADS_DB) {
     try {
       await env.LEADS_DB.prepare('INSERT INTO x_posts (insight_id, format, tweet_id, ok, posted_at, text_hash, est_cost) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .bind(id, format, tweetIds, ok ? 1 : 0, Date.now(), hash, cost).run();
     } catch (e) {}
   }
-  return { ok, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })), cost };
+  return { ok, tweets: xTweets, tweetIds: tweetIds.split(',').filter(Boolean), errors: posted.filter(p => !p.ok).map(p => ({ status: p.status, data: p.data })), cost };
+}
+
+// Auto-generated stat-card image for an extracted insight (see tools/build-insight-cards.mjs).
+// Existence-checked before use so a pool entry whose card hasn't been generated yet (new drop
+// page, generator not re-run) degrades to a text-only post instead of failing the Threads
+// container step on a 404 image URL.
+async function insightCardPath(env, item) {
+  const path = `/social/cards/${item.id}.png`;
+  return (await fetchAssetBytes(env, path)) ? path : undefined;
 }
 
 async function runXAutoPost(env, opts) {
   const hasX = env.X_API_KEY && env.X_API_SECRET && env.X_ACCESS_TOKEN && env.X_ACCESS_TOKEN_SECRET;
   if (!hasX) return { ok: false, error: 'missing_x_credentials' };
+  // Each cron tick posts one slot ('auction' / 'snake' / 'bonus') so the day's 2-3 threads land
+  // hours apart instead of in the same minute — see the three triggers in wrangler.jsonc. The
+  // manual x-post-now trigger passes no slots and runs all three at once, as before.
+  const slots = (opts && opts.slots) || ['auction', 'snake', 'bonus'];
   const results = [];
-  // One post per weekday (see X_DAY_SLOTS). Off-days (Sat/Sun, and any day without a slot)
-  // post nothing — the cron is weekday-only anyway, so that only comes up on manual triggers.
-  const dow = (opts && opts.forceDay != null) ? opts.forceDay : ((opts && opts.forceWednesday) ? 3 : new Date().getUTCDay());
-  const slot = X_DAY_SLOTS[dow];
-  const pool = slot ? (slot.dynamicPool ? slot.dynamicPool() : slot.pool) : null;
-  if (!slot || !pool || !pool.length) return { ok: true, results: [{ ok: true, skipped: 'no_slot_for_day', day: dow }] };
-  const startIdx = await postedCount(env, slot.format);
-  const pick = await pickNonDuplicate(env, pool, startIdx, slot.compose);
-  if (!pick) return { ok: false, results: [{ format: slot.format, ok: false, error: 'no_insight_available' }] };
-  // A network-layer throw (fetch rejecting, not an HTTP error) on the X side must not
-  // abort the Threads mirror below.
-  try {
-    const { ok, tweetIds, errors, cost } = await postAndLog(env, slot.format, pick.item.id, pick.tweets, pick.hash, pick.item.image);
-    results.push({ platform: 'x', format: slot.format, type: pick.item.type, ok, insightId: pick.item.id, tweets: pick.tweets, tweetIds, errors, cost });
-  } catch (e) {
-    results.push({ platform: 'x', format: slot.format, type: pick.item.type, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
+  for (const format of ['auction', 'snake']) {
+    if (!slots.includes(format)) continue;
+    const pool = poolFor(format);
+    const startIdx = await postedCount(env, format);
+    const pick = await pickNonDuplicate(env, pool, startIdx, composeThread);
+    if (!pick) { results.push({ format, ok: false, error: 'no_insight_available' }); continue; }
+    const image = await insightCardPath(env, pick.item);
+    // A network-layer throw (fetch rejecting, not an HTTP error) in one slot must not
+    // abort the other format's post, the Threads mirror, or the bonus post below.
+    try {
+      const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, format, pick.item.id, pick.tweets, pick.hash, image);
+      results.push({ platform: 'x', format, ok, insightId: pick.item.id, tweets, tweetIds, errors, cost });
+    } catch (e) {
+      results.push({ platform: 'x', format, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
+    }
+    // Threads mirrors whatever X just posted (same content, same day) rather than running a
+    // second independent rotation; it posts even if the X side failed/was skipped for this slot.
+    try {
+      const threadsResult = await postAndLogThreads(env, format, pick.item.id, pick.tweets, image);
+      if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format, ...threadsResult });
+    } catch (e) {
+      results.push({ platform: 'threads', format, ok: false, error: 'network: ' + (e && e.message) });
+    }
   }
-  // Threads mirrors whatever X just posted (same content, same day) rather than running a
-  // second independent rotation; it posts even if the X side failed/was skipped. The one
-  // difference: X's "Link in bio" marker becomes the real URL, since Threads doesn't suppress
-  // link posts the way X does and there's no per-post link surcharge there.
-  try {
-    const threadsResult = await postAndLogThreads(env, slot.format, pick.item.id, linkifyForThreads(pick.tweets, pick.item.url), pick.item.image);
-    if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format: slot.format, type: pick.item.type, ...threadsResult });
-  } catch (e) {
-    results.push({ platform: 'threads', format: slot.format, type: pick.item.type, ok: false, error: 'network: ' + (e && e.message) });
+  const dow = (opts && opts.forceDay != null) ? opts.forceDay : ((opts && opts.forceWednesday) ? 3 : new Date().getUTCDay());
+  const bonus = slots.includes('bonus') ? X_BONUS_DAY_POOLS[dow] : null;
+  const bonusPool = bonus ? (bonus.dynamicPool ? bonus.dynamicPool() : bonus.pool) : null;
+  if (bonus && bonusPool && bonusPool.length) {
+    const startIdx = await postedCount(env, bonus.format);
+    const pick = await pickNonDuplicate(env, bonusPool, startIdx, bonus.compose);
+    if (pick) {
+      // Hand-authored compare posts carry their own image; Friday's extracted best-ball
+      // insights (detected by their 'play' key, same dispatch as composeBestballThread)
+      // get their generated stat card like the daily insight slots do.
+      const image = pick.item.image || (('play' in pick.item) ? await insightCardPath(env, pick.item) : undefined);
+      try {
+        const { ok, tweets, tweetIds, errors, cost } = await postAndLog(env, bonus.format, pick.item.id, pick.tweets, pick.hash, image);
+        results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok, insightId: pick.item.id, tweets, tweetIds, errors, cost });
+      } catch (e) {
+        results.push({ platform: 'x', format: bonus.format, type: pick.item.type, ok: false, insightId: pick.item.id, error: 'network: ' + (e && e.message) });
+      }
+      // Threads has no poll support, so poll threads (any non-string entry) are X-only.
+      if (pick.tweets.every(t => typeof t === 'string')) {
+        try {
+          const threadsResult = await postAndLogThreads(env, bonus.format, pick.item.id, pick.tweets, image);
+          if (threadsResult.error !== 'missing_threads_credentials') results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ...threadsResult });
+        } catch (e) {
+          results.push({ platform: 'threads', format: bonus.format, type: pick.item.type, ok: false, error: 'network: ' + (e && e.message) });
+        }
+      }
+    }
   }
   return { ok: results.filter(r => r.platform === 'x').every(r => r.ok), results };
 }
@@ -1757,7 +1823,16 @@ export default {
     return secure(new Response(resp.body, resp));
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runXAutoPost(env).catch(e => console.error('x-auto-post failed:', e && e.message)));
+    // Three staggered triggers (wrangler.jsonc), one slot each, so the day's posts land hours
+    // apart instead of in a single botlike burst. Keys must match the cron strings verbatim;
+    // an unrecognized cron falls back to a full run so a config drift never silently posts nothing.
+    const slotsByCron = {
+      '0 13 * * 1-5': ['auction'],
+      '0 16 * * 1-5': ['snake'],
+      '0 19 * * 1-5': ['bonus'],
+    };
+    const slots = slotsByCron[event.cron];
+    ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },
 };
 

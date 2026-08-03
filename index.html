@@ -10049,27 +10049,27 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jul 22, 2026',
+  updated: 'Jul 26, 2026',
   current: [
   {
-    label: 'Brown to Patriots',
-    text: "A.J. Brown was traded from the Eagles to the Patriots this offseason, reuniting him with coach Mike Vrabel. DeVonta Smith now owns the Eagles' WR1 role, price Smith up and treat Brown as a value play in a new offense."
+    label: 'Maye ceiling raised',
+    text: "The Patriots' June trade for A.J. Brown gives Drake Maye a true alpha receiver, and Maye's price is climbing. Pay up a tier for Maye if you want a top-six QB finish at a non-elite cost."
   },
   {
-    label: 'Burden target bump',
-    text: 'The Bears traded DJ Moore to the Bills in March, clearing a path for Luther Burden III to see a bigger route and target share in year two. He is worth a modest price bump over his rookie season cost.'
+    label: 'Nabers discount',
+    text: "Malik Nabers avoided the PUP list to open Giants camp, but his ACL rehab included a second surgery and Week 1 is not assured. Around a WR13 price, let someone else pay full freight; only bid at a clear discount."
   },
   {
-    label: 'Denver backfield crowded',
-    text: 'RJ Harvey returns to a Broncos backfield with J.K. Dobbins back on a two year deal and rookie Jonah Coleman added in the draft. Discount Harvey below bellcow price until camp clarifies the touch split.'
+    label: 'Brooks value window',
+    text: "Jonathon Brooks drew strong reviews from Dave Canales at Panthers camp, and Rico Dowdle left in free agency. At an ADP near RB34 he is a cheap upside target before the market catches up."
   },
   {
-    label: 'Flowers is Ravens WR1',
-    text: "Zay Flowers was Baltimore's clear top target in 2025, far outpacing DeAndre Hopkins, and reached WR7 in half PPR scoring. Pay up for his target share, the safest Ravens pass catcher to roster."
+    label: 'Diggs still unsigned',
+    text: "Stefon Diggs remains a free agent with camps open after 85 catches for New England last year. Do not roster him at auction until he signs; if he lands somewhere, expect a modest WR3 price at most."
   },
   {
-    label: 'Jacobs efficiency fade',
-    text: "Josh Jacobs' yards per carry fell to 4.0 in 2025 from 4.4 the year before and he faded down the stretch after a knee injury. An offseason arrest adds further risk, shade his price below last year's cost."
+    label: 'Kamara locked in',
+    text: "Alvin Kamara restructured his deal on July 15 to stay in New Orleans, ending exit rumors. His floor as the Saints' passing-down back is secure. Pay a fair RB2/flex price, but not for a ceiling year at his age."
   }
   ],
   library: [{
@@ -20896,7 +20896,8 @@ function App() {
   function handleReset(kind) {
     const k = kind === 'board' || kind === 'sheet' || kind === 'both' ? kind : 'both';
     const _na = (config.format || 'auction') !== 'auction';
-    const msg = k === 'board' ? (_na ? 'Reset the Draft Board? Clears all draft picks. Team names and your "My Team" pick are kept.' : 'Reset the Auction Board? Clears all draft picks and budgets. Team names and your "My Team" pick are kept.') : k === 'sheet' ? ('Reset the Cheat Sheet? Clears your custom ranks' + (_na ? '.' : ' and price overrides.')) : 'Reset both? Clears all draft picks AND your cheat-sheet changes. Team names and your "My Team" pick are kept.';
+    const sheetMsg = 'Your custom ranks' + (_na ? '' : ', price overrides,') + ' and any edited or imported projections are cleared, and rankings revert to Iron Tuna’s current projections. Your scoring settings are kept.';
+    const msg = k === 'board' ? (_na ? 'Reset the Draft Board? Clears all draft picks. Team names and your "My Team" pick are kept.' : 'Reset the Auction Board? Clears all draft picks and budgets. Team names and your "My Team" pick are kept.') : k === 'sheet' ? 'Reset the Cheat Sheet? ' + sheetMsg : 'Reset both? Clears all draft picks. ' + sheetMsg + ' Team names and your "My Team" pick are kept.';
     if (!window.confirm(msg + ' This cannot be undone.')) return;
     const total = totalRosterSpots(config);
     if (k === 'board' || k === 'both') {
@@ -20913,6 +20914,34 @@ function App() {
       setRankOrder({});
       setPriceOverrides({});
       setCustomOrder([]);
+      setProjUpdateAsk(false);
+      // Rankings revert to the system's CURRENT projections, not the user-modified pool:
+      // `players` accumulates CSV imports, per-player stat edits, and added players, and
+      // clearing rank overrides alone would leave rankings computed from those. Re-fetch the
+      // baseline (so a reset also picks up projections shipped since the pool was saved).
+      // On fetch failure the current pool is kept — BASELINE_PROJECTIONS is an empty
+      // placeholder, so it is NOT a usable fallback here. Scoring config and team names
+      // are deliberately untouched.
+      (async () => {
+        let data = null;
+        try {
+          data = await fetchBaselineProjections();
+        } catch (e) {}
+        if (!data || !data.length) {
+          alert("Couldn't fetch the current projections, so the player pool was left as-is. Your ranks and overrides were still cleared — reset again once you're back online to restore Iron Tuna's projections.");
+          return;
+        }
+        let players0 = buildInitialPlayers(data);
+        if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
+        setPlayers(players0);
+        playersVersionRef.current = PROJ_VERSION;
+        setDataInfo({
+          source: 'Projections 2026',
+          season: 2026,
+          count: players0.length,
+          when: Date.now()
+        });
+      })();
     }
   }
   function handleConfigChange(newConfig) {
