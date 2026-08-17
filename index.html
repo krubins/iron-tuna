@@ -1195,6 +1195,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-header.ch-simple .ch-sb-toggle { animation: chSbGlow 2.4s ease-in-out infinite; }
 .ch-sb-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); animation: none; transform: none; }
 .ch-sb-right { display: flex; align-items: center; gap: 8px; }
+.ch-sb-undo { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--positive, #2dd4a3); background: rgba(45,212,163,0.10); border: 1px solid rgba(45,212,163,0.45); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+.ch-sb-undo:hover { background: rgba(45,212,163,0.20); border-color: var(--positive, #2dd4a3); }
 .ch-sb-pdf { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
 .ch-sb-pdf:hover, .ch-sb-pdf.open { border-color: var(--gold-text); color: var(--gold-text); }
 .ch-sb-pdf-opts { display: inline-flex; gap: 6px; }
@@ -10421,6 +10423,7 @@ function CheatHeader({
   mode,
   onAddPlayer,
   onResetRanks,
+  hasCustomRanks,
   showCols,
   setShowCols,
   COLSPEC,
@@ -10604,7 +10607,11 @@ function CheatHeader({
   }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("div", {
     className: "ch-sb-right",
     ref: pdfRef
-  }, React.createElement("button", {
+  }, hasCustomRanks && onResetRanks && React.createElement("button", {
+    className: "ch-sb-undo",
+    onClick: () => onResetRanks(),
+    title: "Undo your drag-and-drop rankings and go back to Iron Tuna's default order, rebuilt from the most recent projections"
+  }, "↺ Undo my rankings"), React.createElement("button", {
     className: "ch-sb-pdf" + (pdfOpen ? " open" : ""),
     onClick: () => setPdfOpen(o => !o),
     title: "Save this cheat sheet as a one-page PDF"
@@ -11040,6 +11047,7 @@ function Cheatsheet({
   boardSortKey,
   onRankReorder,
   onResetRanks,
+  hasCustomRanks,
   targets,
   onToggleTarget,
   onSetPrice,
@@ -11411,6 +11419,7 @@ function Cheatsheet({
     mode: mode,
     onAddPlayer: onAddPlayer,
     onResetRanks: onResetRanks,
+    hasCustomRanks: hasCustomRanks,
     showCols: showCols,
     setShowCols: setShowCols,
     COLSPEC: COLSPEC,
@@ -15109,8 +15118,8 @@ function PlayersRail({
   }, React.createElement("button", {
     className: "filter-pill",
     onClick: () => onResetRanks && onResetRanks(),
-    title: "Reset rankings to projection order"
-  }, "↺ Reset ranks")), React.createElement("div", {
+    title: "Undo your rankings and go back to Iron Tuna's default order, rebuilt from the most recent projections"
+  }, "↺ Undo my rankings")), React.createElement("div", {
     style: {
       fontSize: 10,
       color: 'var(--text-muted)',
@@ -20264,11 +20273,15 @@ function App() {
   const [nomWhbOpen, setNomWhbOpen] = useState(false);
   const [nomFullSchedOpen, setNomFullSchedOpen] = useState(false);
   const [view, setView] = useState(() => {
-    if (screenParam === 'board' || screenParam === 'cheat') return 'board';
+    // ?screen=cheat is the "Cheat Sheet" entry point from the front page — it has to land
+    // on the sheet itself ('prep'), on phones as well as desktop. Only ?screen=board opens
+    // the auction/draft board.
+    if (screenParam === 'cheat') return 'prep';
+    if (screenParam === 'board') return 'board';
     if (initialState?.draftHistory?.length > 0) return 'board';
-    // Phones open on the cheat sheet (the product) instead of the Plan/config tab.
-    const phone = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
-    return phone ? 'tiers' : 'prep';
+    // Every device opens on the cheat sheet (the product). 'prep' is the sheet; 'tiers' is
+    // the separate Tier View, reachable from its own tab.
+    return 'prep';
   });
   const [boardTab, setBoardTab] = useState(screenParam === 'board' ? 'draftboard' : 'cheatsheet');
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
@@ -20431,7 +20444,7 @@ function App() {
     if (format) ITAnalytics.track('mode_selected', {
       format: fmt
     });
-    setView(target === 'board' ? 'board' : isMobile ? 'tiers' : 'prep');
+    setView(target === 'board' ? 'board' : 'prep');
     if (target === 'signin') setOverlay('auth');else ITAnalytics.track('free_sheet_started', {
       target,
       format: fmt
@@ -20445,7 +20458,7 @@ function App() {
       ...prev,
       format: fmt
     }));
-    setView(target === 'board' ? 'board' : isMobile ? 'tiers' : 'prep');
+    setView(target === 'board' ? 'board' : 'prep');
   }
   const SEASON_GAMES = 17;
   const [fontScale, setFontScale] = useState(() => {
@@ -21111,8 +21124,36 @@ function App() {
       return order;
     });
   }
+  // "Undo my rankings" — drop every drag-to-rerank override AND rebuild the pool from the
+  // system's current projections, so the sheet comes back to the true default order instead
+  // of an order computed from hand-edited or CSV-imported numbers. Targets, price edits,
+  // scoring, team names and draft picks are deliberately left alone (that's what the fuller
+  // Reset Cheat Sheet in Settings is for). On a failed fetch the pool is kept as-is:
+  // BASELINE_PROJECTIONS is an empty placeholder and would wipe the sheet.
   function handleResetRanks() {
+    if (!window.confirm('Undo your rankings? The sheet goes back to Iron Tuna’s default order, rebuilt from the most recent projections. Any projections you imported or edited by hand are replaced. Your scoring, targets, price edits and draft picks are kept. This cannot be undone.')) return;
     setRankOrder({});
+    setProjUpdateAsk(false);
+    (async () => {
+      let data = null;
+      try {
+        data = await fetchBaselineProjections();
+      } catch (e) {}
+      if (!data || !data.length) {
+        alert("Your custom rankings were cleared, but the current projections couldn't be fetched, so the player pool was left as-is. Try again once you're back online to restore Iron Tuna's projections.");
+        return;
+      }
+      let players0 = buildInitialPlayers(data);
+      if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
+      setPlayers(players0);
+      playersVersionRef.current = PROJ_VERSION;
+      setDataInfo({
+        source: 'Projections 2026',
+        season: 2026,
+        count: players0.length,
+        when: Date.now()
+      });
+    })();
   }
   function handleFocusPlayer(id) {
     focusNonce.current += 1;
@@ -21501,6 +21542,7 @@ function App() {
       boardSortKey: boardSortKey,
       onRankReorder: handleRankReorder,
       onResetRanks: handleResetRanks,
+      hasCustomRanks: !!(rankOrder && Object.keys(rankOrder).length > 0),
       targets: targets,
       onToggleTarget: handleToggleTarget,
       onSetPrice: handleSetPrice,
@@ -21770,7 +21812,7 @@ function App() {
   if (__site === 'hub') return React.createElement(HubLanding, { account: account, setAccount: setAccount, onPick: (fmt) => { try { window.location.href = fmt === 'snake' ? '/snakedraft' : fmt === 'bestball' ? '/bestball' : '/auctiondraft'; } catch (e) {} }, onSignin: () => { try { window.location.href = '/auctiondraft?signin=1'; } catch (e) {} }, onTerms: () => { try { window.location.href = '/terms'; } catch (e) {} } });
   return React.createElement("div", {
     className: "app" + (view === 'board' ? ' has-snake-rail' : '')
-  }, isMobile && React.createElement("nav", { className: "mtab-bar", "aria-label": "Primary" }, [{ k: 'prep', label: 'Plan', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4" })) }, { k: 'board', label: 'Board', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M4 5h16M4 5v14M20 5v14M4 19h16M9 5v14M15 5v14" })) }, { k: 'tiers', label: 'Cheat', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M4 6h16M4 12h16M4 18h8" })) }, { k: 'coach', label: 'Coach', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8z" })) }, { k: '__more', label: 'More', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M5 12h.01M12 12h.01M19 12h.01" })) }].map(function(t) { return React.createElement("button", { key: t.k, className: "mtab" + ((t.k === '__more' ? moreOpen : view === t.k) ? " is-active" : ""), onClick: function() { if (t.k === '__more') { setMoreOpen(function(o){return !o;}); } else { setMoreOpen(false); setView(t.k); } }, "aria-label": t.label }, t.ico, React.createElement("span", { className: "mtab-label" }, t.label)); })), isMobile && moreOpen && React.createElement("div", { className: "msheet-backdrop", onClick: function(){ setMoreOpen(false); } }, React.createElement("div", { className: "msheet", onClick: function(e){ e.stopPropagation(); } }, React.createElement("div", { className: "msheet-grab" }), [['plan','Budget Plan'], [(config.format !== 'auction' ? 'mockdraft' : 'mock'), (config.format !== 'auction' ? 'Mock Draft' : 'Mock Auction')], ['settings','Settings']].map(function(it){ return React.createElement("button", { key: it[0], className: "msheet-item", onClick: function(){ setView(it[0]); setMoreOpen(false); } }, it[1]); }))), React.createElement("svg", {
+  }, isMobile && React.createElement("nav", { className: "mtab-bar", "aria-label": "Primary" }, [{ k: 'prep', label: 'Cheat', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4" })) }, { k: 'board', label: 'Board', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M4 5h16M4 5v14M20 5v14M4 19h16M9 5v14M15 5v14" })) }, { k: 'tiers', label: 'Tiers', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M4 6h16M4 12h16M4 18h8" })) }, { k: 'coach', label: 'Coach', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8z" })) }, { k: '__more', label: 'More', ico: React.createElement("svg", { className: "mtab-ico", viewBox: "0 0 24 24", "aria-hidden": "true" }, React.createElement("path", { d: "M5 12h.01M12 12h.01M19 12h.01" })) }].map(function(t) { return React.createElement("button", { key: t.k, className: "mtab" + ((t.k === '__more' ? moreOpen : view === t.k) ? " is-active" : ""), onClick: function() { if (t.k === '__more') { setMoreOpen(function(o){return !o;}); } else { setMoreOpen(false); setView(t.k); } }, "aria-label": t.label }, t.ico, React.createElement("span", { className: "mtab-label" }, t.label)); })), isMobile && moreOpen && React.createElement("div", { className: "msheet-backdrop", onClick: function(){ setMoreOpen(false); } }, React.createElement("div", { className: "msheet", onClick: function(e){ e.stopPropagation(); } }, React.createElement("div", { className: "msheet-grab" }), [['plan','Budget Plan'], [(config.format !== 'auction' ? 'mockdraft' : 'mock'), (config.format !== 'auction' ? 'Mock Draft' : 'Mock Auction')], ['settings','Settings']].map(function(it){ return React.createElement("button", { key: it[0], className: "msheet-item", onClick: function(){ setView(it[0]); setMoreOpen(false); } }, it[1]); }))), React.createElement("svg", {
     width: "0",
     height: "0",
     style: {
