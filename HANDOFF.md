@@ -111,6 +111,7 @@ Set these in the **Cloudflare dashboard → the `iron-tuna` project → Settings
 | `LLM_ENDPOINT` | No | No | Override for an OpenAI-compatible endpoint. |
 | `TURNSTILE_SECRET` | No | Yes | If set, `/api/coach` requires a Cloudflare Turnstile token. |
 | `RATE_KV` | No | n/a (binding) | Optional KV namespace binding for per-IP rate limiting on the coach route. |
+| `ODDS_API_KEY` | No | Yes | The Odds API key. **Without it the Vegas blend never activates** and `/api/projections` serves the committed numbers (see §9a). |
 
 No `.env` file is used in production; everything is configured in Cloudflare. For local `wrangler dev`, export `LLM_API_KEY` in your shell or use a `.dev.vars` file (git-ignored).
 
@@ -182,15 +183,21 @@ Default projections are meant to follow the **betting market** first and the con
 
 `node tools/test-vegas.mjs` covers the de-vig/probit/mean math, the TD split, and an end-to-end weighted merge against a scratch copy of the worker. Run it after touching either tool.
 
-**Not yet wired: the odds feed itself.** Steps 2–3 are built and tested; step 1 still needs a source of lines. See §9b.
+This offline path is the manual fallback. The **live** path is §9b, and it is the one that runs in production.
 
-## 9b. Getting the odds in (open decision)
+## 9b. Worker-side odds refresh (added August 2026)
 
-The sandbox the update agent runs in blocks all sportsbook and sports-media hosts, so odds cannot be pulled there. Options, cheapest first:
+The site pulls its own odds. The daily-update sandbox blocks every sportsbook host, but the Worker runs on Cloudflare's edge where outbound `fetch` is unrestricted — so the pull lives in `_worker.js`, not in `tools/`.
 
-- **Manual/seasonal.** Season-long futures barely move once posted in summer. Exporting lines once in August and refreshing a few times before Week 1 captures most of the value for zero infrastructure.
-- **The Odds API** (`api.the-odds-api.com`). Licensed and documented; player futures sit on a paid tier. Needs a key and an egress allowance for that host.
-- **Worker-side fetch.** `_worker.js` already runs crons and is on Cloudflare's edge, where outbound `fetch` is unrestricted — so it can pull odds in production even though the update agent cannot. This is the most robust path but puts a live third-party dependency in the request path; cache in KV and keep the committed `PROJECTIONS` as the fallback.
+**Shape:** a `0 11 * * *` cron calls `runOddsRefresh(env)` → provider fetch → de-vig + median→mean → match against `PROJECTIONS` → store the overlay in D1 (`odds_overlay`, created lazily on `LEADS_DB`). `/api/projections` calls `projectionsPayload(env)`, which reads that one cached row and serves `blendProjections(overlay)` at 3:1. **Requests never touch the sportsbook** — only the cron does.
+
+**Fail-safe by construction.** Every step may fail and the endpoint falls back to the committed `PROJECTIONS`. A provider error, an unparseable response, a name that matches no player or matches two, a line outside the plausibility band (`ODDS_BANDS` — catches per-game numbers read as season totals), fewer than `ODDS_MIN_MATCHED` (25) players matched, or an overlay older than 14 days all mean *no overlay is written or used*, never *bad numbers are served*. A thin pull leaves the previous good overlay in place.
+
+**Providers** live in `ODDS_PROVIDERS` and are tried in order; the first to return usable rows wins. Today that is **The Odds API** (`fetchOddsTheOddsApi`), gated on `ODDS_API_KEY` — set it and the blend activates on the next cron; leave it unset and the site serves committed numbers with no error. Adding a book means writing one function that returns `{ player, position, team, market, line, overOdds, underOdds }` rows and listing it. Position is taken from `PROJECTIONS`, never from the book, because books label markets and the site's roster is the authority on who is a TE.
+
+**Inspecting it:** `GET /api/admin/odds-status?key=$LEADS_EXPORT_KEY` reports which providers are configured, the cached overlay's age and match count, and whether the site is serving blended or committed numbers. Add `&refresh=1` to run the pull immediately instead of waiting for the cron, and `&sample=1` to see before/after stat lines for the first dozen changed players — that is the fastest way to confirm a new provider's mapping is right.
+
+**Keeping the math in sync:** `_worker.js` carries its own copy of the odds math because there is no build step. `node tools/test-worker-odds.mjs` lifts that section out of the source, runs it against stub projections, and asserts it agrees with `tools/vegas-to-projections.mjs` — so drift fails a test rather than silently changing values. Run both test files after touching either copy.
 
 ---
 

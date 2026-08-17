@@ -15,6 +15,7 @@
     //  - 16:00 snake insight thread
     //  - 19:00 day's bonus post (Mon poll, Tue/Thu snake feature, Wed auction strategy/coach,
     //    Fri best ball, per X_BONUS_DAY_POOLS). See HANDOFF.md §10.
-    "crons": ["0 13 * * 1-5", "0 16 * * 1-5", "0 19 * * 1-5"]
+    //  - 11:00 daily: Vegas odds refresh (posts nothing; see HANDOFF.md §9a)
+    "crons": ["0 11 * * *", "0 13 * * 1-5", "0 16 * * 1-5", "0 19 * * 1-5"]
   }
 }
