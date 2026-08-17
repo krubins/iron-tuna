@@ -26,7 +26,10 @@
 //  - FRESHNESS: sources with publishedAt older than 7 days are DISCARDED.
 //    Zero fresh sources -> exit 2 (nothing written) so the agent skips the day.
 //  - Averaging: when 2+ fresh sources project the same player, each stat is
-//    the mean of the sources that carry it; a lone source is used as-is.
+//    the WEIGHTED mean of the sources that carry it; a lone source is used
+//    as-is. The betting market ("vegas", produced by tools/vegas-to-projections.mjs)
+//    defaults to weight 3 against 1 for each projection feed, so Vegas leads
+//    wherever it prices a stat. See DEFAULT_WEIGHTS below.
 //  - Existing roster only: players are matched by normalized name + position.
 //    No players are added or removed; unmatched site players keep current
 //    numbers, unmatched source players are reported and ignored.
@@ -86,6 +89,26 @@ if (!fresh.length) {
   process.exit(2);
 }
 
+// ---------------------------------------------------------------- weights
+// Sources are averaged by WEIGHT, not evenly: the betting market is the
+// sharpest public forecast available, so it is deliberately worth several
+// consensus projection feeds. With vegas=3 and one other source at 1, a
+// merged stat lands 75% of the way from the projection to the Vegas number.
+// Override per source with SOURCE_WEIGHT_<NAME>, e.g. SOURCE_WEIGHT_VEGAS=5.
+const DEFAULT_WEIGHTS = { vegas: 3 };
+const VEGAS_MIN_WEIGHT = 2;
+const weightFor = src => {
+  const env = process.env[`SOURCE_WEIGHT_${String(src).toUpperCase()}`];
+  if (env != null) {
+    const n = parseFloat(env);
+    if (Number.isFinite(n) && n >= 0) return n;
+    console.error(`ABORT: SOURCE_WEIGHT_${String(src).toUpperCase()}="${env}" is not a non-negative number`);
+    process.exit(1);
+  }
+  return DEFAULT_WEIGHTS[String(src).toLowerCase()] ?? 1;
+};
+let vegasTouched = 0;
+
 // index source players by normalized name+position
 const bySource = fresh.map(j => {
   const map = new Map();
@@ -93,8 +116,9 @@ const bySource = fresh.map(j => {
     if (!p.name || !p.position || !p.stats) continue;
     map.set(norm(p.name) + '|' + String(p.position).toUpperCase(), p.stats);
   }
-  return { source: j.source, map };
+  return { source: j.source, weight: weightFor(j.source), map };
 });
+for (const s of bySource) console.log(`weight ${s.source} = ${s.weight}`);
 
 // ---------------------------------------------------------------- worker
 const w = fs.readFileSync(WORKER, 'utf8');
@@ -132,14 +156,20 @@ const newBlock = block.replace(entryRe, (full, name, pos, team, statsStr) => {
       if (!(k in cur)) continue;               // only stats the site models
       const n = Number(v);
       if (!Number.isFinite(n) || n < 0) continue;
-      (samples[k] = samples[k] || []).push(n);
+      (samples[k] = samples[k] || []).push({ v: n, w: s.weight });
     }
   }
   if (!hit) { kept++; return full; }
   updated++;
   const merged = { ...cur };
   for (const [k, arr] of Object.entries(samples)) {
-    const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+    // Weighted mean, so the betting market outranks the consensus projections
+    // wherever it prices a stat. A stat no book prices keeps its old blend,
+    // because only the sources that carry it appear in `arr`.
+    const wsum = arr.reduce((a, b) => a + b.w, 0);
+    const avg = wsum > 0 ? arr.reduce((a, b) => a + b.v * b.w, 0) / wsum
+                         : arr.reduce((a, b) => a + b.v, 0) / arr.length;
+    if (arr.some(x => x.w >= VEGAS_MIN_WEIGHT)) vegasTouched++;
     merged[k] = Math.round(avg * 10) / 10;
     if (Number.isInteger(cur[k]) && ['passTD', 'passInt', 'rushTD', 'recTD', 'rec', 'fumLost'].includes(k) === false) {
       merged[k] = Math.round(avg);
@@ -172,6 +202,7 @@ const MIN_MATCHED = parseInt(process.env.MIN_MATCHED || '25', 10);
 if (updated < MIN_MATCHED) { console.error(`ABORT: only ${updated} players matched (min ${MIN_MATCHED}) — sources look wrong`); process.exit(1); }
 
 console.log(`merge ok: ${updated} players updated from ${fresh.length} fresh source(s), ${kept} unchanged, ${total} total`);
+console.log(`vegas-weighted stat lines: ${vegasTouched}`);
 if (DRY) { console.log('dry run — no files written'); process.exit(0); }
 
 // ---------------------------------------------------------------- write

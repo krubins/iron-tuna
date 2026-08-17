@@ -1,0 +1,15 @@
+{
+  "_comment": "EXAMPLE ONLY — invented numbers, not real odds. Shows the shape tools/vegas-to-projections.mjs expects. Real book files go in tools/odds/ (gitignored), never here.",
+  "book": "draftkings",
+  "publishedAt": "2026-08-14T00:00:00Z",
+  "fetchedAt": "2026-08-15T10:00:00Z",
+  "markets": [
+    { "player": "Josh Allen", "position": "QB", "team": "BUF", "market": "passYd", "line": 3950.5, "overOdds": -115, "underOdds": -105 },
+    { "player": "Josh Allen", "position": "QB", "team": "BUF", "market": "passTD", "line": 27.5, "overOdds": -120, "underOdds": 100 },
+    { "player": "Josh Allen", "position": "QB", "team": "BUF", "market": "rushTD", "line": 8.5, "overOdds": -110, "underOdds": -110 },
+    { "player": "Bijan Robinson", "position": "RB", "team": "ATL", "market": "rushYd", "line": 1275.5, "overOdds": -110, "underOdds": -110 },
+    { "player": "Bijan Robinson", "position": "RB", "team": "ATL", "market": "rec", "line": 72.5, "overOdds": -105, "underOdds": -115 },
+    { "player": "Bijan Robinson", "position": "RB", "team": "ATL", "market": "recYd", "line": 655.5, "overOdds": -110, "underOdds": -110 },
+    { "player": "Bijan Robinson", "position": "RB", "team": "ATL", "market": "scrimmageTD", "line": 11.5, "overOdds": -125, "underOdds": 105 }
+  ]
+}
