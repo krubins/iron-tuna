@@ -1769,7 +1769,12 @@ export default {
       return new Response(__xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
     let __assetReq = request;
-    try { if (/^\/(auctiondraft|snakedraft|bestball)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request); } catch (e) {}
+    // "/" serves the news-style front page (front.html); the classic SPA hub moved to /hub.
+    // The SPA format routes (and /hub) all rewrite to "/" so the asset layer serves index.html.
+    try {
+      if (url.pathname === '/') __assetReq = new Request(new URL('/front.html', url).toString(), request);
+      else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
+    } catch (e) {}
     const resp = await env.ASSETS.fetch(__assetReq);
     const ct = resp.headers.get('content-type') || '';
     if (ct.includes('text/html')) {

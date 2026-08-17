@@ -249,3 +249,30 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 ---
 
 *Generated as part of the move to Claude Code. Questions about any section map directly to the files referenced above.*
+
+---
+
+## 12. August 2026: ESPN-style news front page at "/"
+
+- **`front.html` is the site's front page.** The worker serves it at `/`; the classic
+  SPA hub (HubLanding in `index.html`) moved to **`/hub`** ("Classic Home" in the nav)
+  and everything else (app routes, static pages) is unchanged. Snake and best ball
+  remain fully live — linked from the front page's secondary nav.
+- **Layout** (ESPN-inspired): black masthead with the fish + Bebas silver wordmark and
+  red accent bar; rotating lead story (auto-advances every 7s, the latest unlocked
+  insights drop); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
+  Market); **Asset Allocation** module (budget, nominations, $1 endgame guides + the
+  in-app planner); **Training Camp & Preseason** desk (the auction-watch pages,
+  newest featured).
+- **Data pipeline:** `node tools/build-front.mjs` re-extracts the embedded
+  `var STORIES` / `var REPORTS` arrays in `front.html` from the
+  `auction-insights-*.html` and `auction-watch-*.html` pages (joined to
+  `tools/x-posts/insights_pool.json` for play/stat lines). **Run it whenever a new
+  drop page or auction-watch page is added.** Insight visibility is date-gated
+  client-side with the same 9am-ET rule as the worker, so future drops are safe to
+  embed.
+- **Camp/preseason upkeep:** a scheduled Claude Routine ("Iron Tuna camp & preseason
+  desk") researches verified camp/preseason news daily, authors a new
+  `auction-watch-YYYY-MM-DD.html` when there is real signal, runs `build-front.mjs`,
+  and pushes — same guardrails as the §9 projections routine (skip on no
+  network/no verified news; no em dashes in authored copy).
