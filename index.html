@@ -8263,7 +8263,7 @@ function TeamsBoard({
       };
       const ro = t.isMine ? roleOverrides : {};
       const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true);
+      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, undefined, { noCap: true });
       const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
       let _snakePlanT = null;
       const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; _snakePlanT = buildSnakePlan(t, players, _tcS, di); return _snakePlanT.projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
@@ -10212,7 +10212,7 @@ const PERF_NOTES = {
   }]
 };
 const MODEL_DESC = {
-  ideal: 'Ideal Team: the single highest-scoring starting lineup you can afford with your remaining budget.',
+  ideal: 'Ideal Team: the single highest-scoring starting lineup your remaining budget can buy, solved exactly. It spends everything down to a $1 bench, so the sliders below shape the other models, not this one.',
   balanced: 'Balanced: an even build anchored by one stud RB and one stud WR, with no position neglected.',
   targets: 'Favorites: builds your roster around the players you have starred, then fills the rest optimally.',
   heroRB: 'Hero RB: pay up for one elite running back, take value at RB2, and load up at the other spots.',
@@ -14199,7 +14199,195 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   });
   return grid;
 }
-function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, switchReserve) {
+// Fill the open starter slots with the highest-scoring distinct set of players a
+// dollar budget can buy. This is a multiple-choice knapsack, so it is solved
+// exactly: one "exactly k players" knapsack per position, then a max-plus
+// combine across positions, maximised over every way of handing the FLEX slots
+// out to the positions they accept. The greedy points-per-dollar climb this
+// replaced stranded budget and could be beaten outright once part of the board
+// was gone.
+//
+// freeSlots: [{ label, eligible:[pos] }]  byPos: { pos: [players sorted] }
+// used: Set of ids already committed  cap: max price for any one player
+// Returns { picks: { label: player }, cost } or null when nothing fits.
+function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
+  if (!freeSlots.length) return { picks: {}, cost: 0 };
+  const B = Math.max(0, Math.floor(budget));
+  const NEG = -Infinity;
+
+  // slots that accept the same positions are interchangeable
+  const groups = [];
+  const gIndex = new Map();
+  freeSlots.forEach(s => {
+    const sig = s.eligible.slice().sort().join('|');
+    let g = gIndex.get(sig);
+    if (!g) {
+      g = { sig: sig, eligible: s.eligible.slice(), slots: [] };
+      gIndex.set(sig, g);
+      groups.push(g);
+    }
+    g.slots.push(s);
+  });
+
+  // every way to satisfy a group from the positions it accepts
+  const perGroup = groups.map(g => {
+    const outs = [];
+    const walk = (i, left, acc) => {
+      if (i === g.eligible.length) {
+        if (left === 0) outs.push(acc.slice());
+        return;
+      }
+      for (let n = 0; n <= left; n++) {
+        acc[i] = n;
+        walk(i + 1, left - n, acc);
+      }
+    };
+    walk(0, g.slots.length, []);
+    return outs;
+  });
+
+  // how many players any one position might have to supply
+  const maxK = {};
+  groups.forEach((g, gi) => {
+    g.eligible.forEach((pos, pi) => {
+      let m = 0;
+      perGroup[gi].forEach(d => { if (d[pi] > m) m = d[pi]; });
+      maxK[pos] = (maxK[pos] || 0) + m;
+    });
+  });
+
+  // "exactly k from this position, cost <= b" with enough breadcrumbs to
+  // rebuild the roster afterwards
+  const tables = {};
+  Object.keys(maxK).forEach(pos => {
+    const kmax = maxK[pos];
+    const pool = (byPos[pos] || []).filter(p => !used.has(p.id));
+    const dp = [];
+    const who = [];
+    const back = [];
+    for (let k = 0; k <= kmax; k++) {
+      dp.push(new Float64Array(B + 1).fill(NEG));
+      who.push(new Int32Array(B + 1).fill(-1));
+      back.push(new Int32Array(B + 1).fill(-1));
+    }
+    dp[0].fill(0);
+    for (let i = 0; i < pool.length; i++) {
+      const pr = priceOf(pool[i]);
+      if (pr > B || pr > cap) continue;
+      const pt = pool[i].projectedPoints || 0;
+      for (let k = kmax; k >= 1; k--) {
+        const prev = dp[k - 1], curr = dp[k];
+        for (let b = B; b >= pr; b--) {
+          const base = prev[b - pr];
+          if (base === NEG) continue;
+          if (base + pt > curr[b]) {
+            curr[b] = base + pt;
+            who[k][b] = i;
+            back[k][b] = b - pr;
+          }
+        }
+      }
+    }
+    // make each row monotone in budget so the combine can read dp[k][b]
+    // as "best with at most b dollars"
+    for (let k = 1; k <= kmax; k++) {
+      const row = dp[k];
+      const w = who[k], bk = back[k];
+      for (let b = 1; b <= B; b++) {
+        if (row[b - 1] > row[b]) { row[b] = row[b - 1]; w[b] = w[b - 1]; bk[b] = bk[b - 1]; }
+      }
+    }
+    tables[pos] = { dp: dp, who: who, back: back, pool: pool };
+  });
+
+  function chosen(pos, k, b) {
+    const t = tables[pos];
+    const out = [];
+    while (k > 0) {
+      const i = t.who[k][b];
+      if (i < 0) break;
+      out.push(t.pool[i]);
+      b = t.back[k][b];
+      k--;
+    }
+    return out;
+  }
+
+  // walk every combination of group distributions
+  let best = null;
+  const counts = {};
+  const walkGroups = gi => {
+    if (gi === groups.length) {
+      const positions = Object.keys(counts).filter(pos => counts[pos] > 0);
+      if (positions.some(pos => !tables[pos] || tables[pos].dp[counts[pos]] === undefined)) return;
+      let curr = new Float64Array(B + 1).fill(NEG);
+      curr[0] = 0;
+      const splits = [];
+      for (const pos of positions) {
+        const row = tables[pos].dp[counts[pos]];
+        const next = new Float64Array(B + 1).fill(NEG);
+        const take = new Int32Array(B + 1).fill(-1);
+        for (let b = 0; b <= B; b++) {
+          if (curr[b] === NEG) continue;
+          const had = curr[b];
+          for (let sp = 0; b + sp <= B; sp++) {
+            const v = row[sp];
+            if (v === NEG) continue;
+            if (had + v > next[b + sp]) { next[b + sp] = had + v; take[b + sp] = sp; }
+          }
+        }
+        splits.push({ pos: pos, take: take });
+        curr = next;
+      }
+      let bb = -1, bv = NEG;
+      for (let b = 0; b <= B; b++) if (curr[b] > bv) { bv = curr[b]; bb = b; }
+      if (bb < 0 || bv === NEG) return;
+      if (best && bv <= best.pts) return;
+      // rebuild: pull each position's players, then hand them to the slots
+      const byPosPicks = {};
+      let rem = bb;
+      for (let i = splits.length - 1; i >= 0; i--) {
+        const sp = splits[i].take[rem];
+        byPosPicks[splits[i].pos] = chosen(splits[i].pos, counts[splits[i].pos], sp)
+          .sort((a, b2) => (b2.projectedPoints || 0) - (a.projectedPoints || 0));
+        rem -= sp;
+      }
+      const picks = {};
+      let cost = 0;
+      let ok = true;
+      // dedicated slots draw first so the best players land in named slots
+      const order = groups.map((g, gi2) => gi2).sort((a, b2) => groups[a].eligible.length - groups[b2].eligible.length);
+      for (const gi2 of order) {
+        const g = groups[gi2];
+        const dist = g.__dist;
+        g.eligible.forEach((pos, pi) => {
+          for (let n = 0; n < dist[pi]; n++) {
+            const list = byPosPicks[pos] || [];
+            const pl = list.shift();
+            if (!pl) { ok = false; return; }
+            const slot = g.slots.find(sl => picks[sl.label] === undefined);
+            if (!slot) { ok = false; return; }
+            picks[slot.label] = pl;
+            cost += priceOf(pl);
+          }
+        });
+      }
+      if (!ok || Object.keys(picks).length !== freeSlots.length) return;
+      best = { picks: picks, cost: cost, pts: bv };
+      return;
+    }
+    for (const dist of perGroup[gi]) {
+      groups[gi].__dist = dist;
+      groups[gi].eligible.forEach((pos, pi) => { counts[pos] = (counts[pos] || 0) + dist[pi]; });
+      walkGroups(gi + 1);
+      groups[gi].eligible.forEach((pos, pi) => { counts[pos] -= dist[pi]; });
+    }
+  };
+  walkGroups(0);
+  return best;
+}
+function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, switchReserve, opts) {
+  opts = opts || {};
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
   const R = myTeam.budgetRemaining;
@@ -14291,49 +14479,29 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   const benchShare = alloc * 0.35;
   const extraBench = noBench ? 0 : Math.round(benchShare * R);
   const conc = config.strategy?.concentration ?? 0.5;
-  const perCap = 0.30 + conc * 0.55;
+  const perCap = opts.noCap ? Infinity : 0.30 + conc * 0.55;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);
   let budgetForStarters = Math.max(freeSlots.length * minBid, R - reserveBench - overrideCost - forcedCost - extraBench);
-  freeSlots.forEach(s => {
-    const c = cheapestFor(s.eligible);
-    if (c) {
-      used.add(c.id);
-      plan[s.label] = c;
-    }
-  });
-  let spent = freeSlots.reduce((sum, s) => sum + (plan[s.label] ? priceOf(plan[s.label]) : 0), 0);
-  let guard = 0;
-  while (guard++ < 3000) {
-    let bestMove = null;
+  const priceCap = perCap === Infinity ? Infinity : perCap * budgetForStarters + 0.001;
+  const bestSet = bestStarterSet(freeSlots, byPos, used, priceOf, budgetForStarters, priceCap);
+  if (bestSet) {
     freeSlots.forEach(s => {
-      const cur = plan[s.label];
-      const curPts = cur ? cur.projectedPoints : 0;
-      const curPrice = cur ? priceOf(cur) : 0;
-      s.eligible.forEach(pos => (byPos[pos] || []).forEach(c => {
-        if (used.has(c.id)) return;
-        const gain = c.projectedPoints - curPts;
-        if (gain <= 0) return;
-        if (spent - curPrice + priceOf(c) > budgetForStarters + 0.001) return;
-        if (perCap < 0.999 && priceOf(c) > perCap * budgetForStarters + 0.001) return;
-        const dCost = priceOf(c) - curPrice;
-        const eff = dCost <= 0 ? Infinity : gain / dCost;
-        if (!bestMove || eff > bestMove.eff || eff === bestMove.eff && gain > bestMove.gain) {
-          bestMove = {
-            slot: s,
-            cand: c,
-            eff,
-            gain,
-            dCost,
-            curId: cur ? cur.id : null
-          };
-        }
-      }));
+      const pl = bestSet.picks[s.label];
+      if (pl) {
+        used.add(pl.id);
+        plan[s.label] = pl;
+      }
     });
-    if (!bestMove) break;
-    if (bestMove.curId) used.delete(bestMove.curId);
-    used.add(bestMove.cand.id);
-    spent += bestMove.dCost;
-    plan[bestMove.slot.label] = bestMove.cand;
+  } else {
+    // Budget cannot cover even the cheapest legal set: show the cheapest one so
+    // the planner still renders, and let feasible:false flag the shortfall.
+    freeSlots.forEach(s => {
+      const c = cheapestFor(s.eligible);
+      if (c) {
+        used.add(c.id);
+        plan[s.label] = c;
+      }
+    });
   }
   const plannedStarterCost = remainingStarterSlots.reduce((sum, s) => sum + (fixed[s.label] != null ? fixed[s.label] : plan[s.label] ? priceOf(plan[s.label]) : 0), 0);
   const benchTargets = [];
@@ -19393,7 +19561,7 @@ function OnboardingChecklist({
 const MODEL_FOCUS = {
   ideal: {
     focus: [],
-    note: 'Balanced build, takes the best value at every position; no single spot is forced.'
+    note: 'The provably best starting lineup your budget can buy: every legal combination is solved, not approximated. It plays for maximum starter points and leaves the bench at minimum bid, so pick one of the shape models below if you want depth held back.'
   },
   targets: {
     focus: [],
@@ -19509,10 +19677,30 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     return plan;
   }
   if (key === 'ideal') {
+    // "The single highest-scoring starting lineup you can afford" is a plain
+    // optimisation, so solve it directly instead of taking the best of the
+    // shape presets. The presets each hold money back for bench depth, which
+    // left roughly a fifth of the budget unspent and cost ~5 points a game.
+    // Players the user has locked stay locked; nothing else is constrained.
+    const locked = new Set();
+    (targets || new Set()).forEach(id => {
+      if (!di.has(id)) locked.add(id);
+    });
+    let fpIdeal;
+    (whatIfAnchors || []).forEach(a => {
+      if (a && a.id != null && a.id !== '' && !di.has(a.id)) {
+        locked.add(a.id);
+        (fpIdeal = fpIdeal || {})[a.id] = Math.max(1, a.price || 1);
+      }
+    });
+    const best = buildOptimalPlan(myTeam, players, config, di, undefined, locked, roleOverrides, true, fpIdeal, true, undefined, {
+      noCap: true
+    });
+    if (best) return best;
     const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(planFor).filter(Boolean);
     const feas = cands.filter(p => p.feasible);
     const pool = feas.length ? feas : cands;
-    return pool.reduce((best, p) => !best || (p.starterPoints || 0) > (best.starterPoints || 0) ? p : best, null);
+    return pool.reduce((bestSoFar, p) => !bestSoFar || (p.starterPoints || 0) > (bestSoFar.starterPoints || 0) ? p : bestSoFar, null);
   }
   return planFor(key);
 }

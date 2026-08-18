@@ -297,3 +297,58 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 - **`?screen=cheat` now opens the cheat sheet.** It previously fell through to the board,
   which would have put the free "Build my free cheat sheet" CTA on `front.html` behind
   the paywall. `?screen=board` still opens the board (now locked for free users).
+
+---
+
+## 14. August 2026: the Ideal Team is now solved exactly
+
+Filling the open starter slots is a **multiple-choice knapsack** (one distinct
+player per slot, maximise projected points, total price inside a dollar budget).
+It used to be approximated by a greedy points-per-dollar hill climb in
+`buildOptimalPlan`. Two defects came out of that, both measured against an
+independent exact solver over the real projections:
+
+- **The Ideal Team left roughly a fifth of the budget unspent** — every one of 27
+  scenarios (budgets 100/200/300 x 0/1/2 FLEX x 0/40/90 players gone). It spent
+  $153 of $193 at default settings because `extraBench` (`allocation * 0.35 * R`)
+  was withheld even for a model documented as "the single highest-scoring
+  starting lineup you can afford". Cost: **+30 to +117 points, typically ~5
+  points a game**.
+- **The greedy climb was beaten at its own budget in 9 of 27 scenarios** (up to
+  +7.5 points), mostly mid-draft — precisely when the planner matters.
+
+What changed:
+
+- **`bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap)`** (just above
+  `buildOptimalPlan`) solves it exactly: an "exactly k players" knapsack per
+  position, a max-plus combine across positions, maximised over every way of
+  handing the FLEX slots to the positions they accept. Slots are grouped by
+  eligibility signature, so it generalises to any roster/flex shape in
+  `config.roster` / `config.flex`. Full player pools, no pruning — it is exact,
+  not heuristic. Reconstruction hands the best players to the dedicated slots
+  first (best RBs in RB1/RB2, the next one into FLEX).
+- `buildOptimalPlan` keeps every budget rule it had (`reserveBench`,
+  `extraBench`, overrides, forced picks, `perCap`) and only swaps the solver, so
+  the nine shape models still mean what they meant — they are just optimal
+  within their own constraints now. A 12th `opts` argument carries
+  `{ noCap: true }`.
+- **`buildModel('ideal', ...)`** no longer returns the best of the nine shape
+  presets. It calls `buildOptimalPlan` directly with `noBench` and `noCap`, so it
+  spends everything down to a $1 bench. Locked targets and what-if anchors are
+  still honoured as constraints; if it somehow returns nothing the old
+  best-of-presets path is the fallback.
+- **Opponent projections use the same full-budget optimum** (the `t.isMine`
+  ternary in the team-cards memo). The column promises "each team optimally fills
+  its remaining starters within budget", and before this my team was optimised
+  differently from everyone else's — on an empty board it read My Team 125.4
+  pts/gm against 120.4 for all eleven opponents. All twelve now read 125.4.
+- The Ideal model's tooltip and note say it ignores the concentration/bench
+  sliders, since those shape the other models.
+
+Cost: ~4-6 ms per model build, ~23 ms for a full 12-team board recompute.
+
+**Verifying a change here:** `bestStarterSet` is pure, so instrument a copy of
+`index.html` (append `window.__ITFN = { ... }` inside the module script, stash
+`buildModel`'s arguments on `window.__ITDBG`), serve it, and compare against an
+independently written knapsack in the page. The starved-budget case ($12 for 9
+slots) must still render 9/9 slots with `feasible: false`.
