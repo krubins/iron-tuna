@@ -333,6 +333,16 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   lead pool, so it never repeats the lead. *(If the rail ever looks stale, the cause is
   usually a new page added without re-running `build-front.mjs` — that is exactly how it
   got stuck showing July 22.)*
+> **Routing note (merge of PR #39 and #40):** both branches fixed `?screen=cheat`
+> landing on the draft board. PR #40's fix sent phones to `'tiers'`, which was right
+> against the *old* mobile tab bar where `'tiers'` was the tab labelled "Cheat". PR #39
+> relabels those tabs (`'prep'` = **Cheat**, `'tiers'` = **Tiers**), so the merged
+> behaviour routes `?screen=cheat` to `'prep'` on every device. Leaving `'tiers'` in
+> would have dropped phone traffic on a tab labelled "Tiers" showing the VORP tier view
+> instead of the cheat sheet. Settings-exit routing for free users follows the same
+> target. The paywalled board is unaffected: `?screen=cheat` is never locked,
+> `?screen=board` still is.
+
 - **The lead is a six-hour deep dive.** It is reserved for calls that go **beyond a
   single player** — coaching, offensive line, schedule, weather, rule changes — the
   read that earns a top click rather than one more player take. Those are tagged
@@ -365,3 +375,24 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   `auction-watch-YYYY-MM-DD.html` when there is real signal, runs `build-front.mjs`,
   and pushes — same guardrails as the §9 projections routine (skip on no
   network/no verified news; no em dashes in authored copy).
+
+---
+
+## 13. August 2026: the draft board is paywalled
+
+- **The live board (Auction Manager / Draft Board) is a paid screen.** In `index.html`,
+  `boardLocked` is true whenever `view` is `board` (or the unused `split`) and the user
+  has no entitlement for the live format. When it flips on, the upgrade modal opens
+  automatically and the board renders inside `.board-lock`: `.board-lock-inner` gets
+  `pointer-events: none` so nothing on the board can be clicked, dragged or typed into,
+  and `.board-lock-veil` (an absolutely positioned scrim carrying the "…is locked" card)
+  reopens the upgrade modal on any click. The header nav and the mobile tab bar sit
+  outside the lock, so a free user is never trapped on the board.
+- The auto-open waits for `authChecked` (the `/api/auth/me` round trip) so a buyer
+  restoring access on a new device does not see the prompt flash. Unlocking, or leaving
+  the board, closes the prompt.
+- **Free tier is unchanged:** the cheat sheet (`prep` on desktop, `tiers` on phones),
+  tiers, plan, mock auction/draft and settings are all still open.
+- **`?screen=cheat` now opens the cheat sheet.** It previously fell through to the board,
+  which would have put the free "Build my free cheat sheet" CTA on `front.html` behind
+  the paywall. `?screen=board` still opens the board (now locked for free users).
