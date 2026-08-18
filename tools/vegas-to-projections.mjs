@@ -69,8 +69,11 @@ const CV = {
   scrimmageTD: 0.40
 };
 const MARKETS = new Set(Object.keys(CV));
-// Markets the site models as whole numbers.
-const INTEGER_STATS = new Set(['passTD', 'passInt', 'rushTD', 'recTD', 'fumLost']);
+// Everything stays at one decimal. Expected touchdowns are expectations, not
+// counts, and merge-projections.mjs keeps a decimal for these stats too —
+// rounding to integers here would throw away precision before the weighted
+// mean ever sees it.
+const round1 = v => Math.round(v * 10) / 10;
 
 export const norm = s => String(s || '').toLowerCase()
   .replace(/\b(jr|sr|ii|iii|iv|v)\.?$/g, '')
@@ -207,7 +210,7 @@ export function buildSource(books, current = new Map()) {
       delete stats.scrimmageTD;
     }
     for (const k of Object.keys(stats)) {
-      stats[k] = INTEGER_STATS.has(k) ? Math.round(stats[k]) : Math.round(stats[k] * 10) / 10;
+      stats[k] = round1(stats[k]);
     }
     players.push({ name: rec.name, position: rec.position, team: rec.team, stats });
   }

@@ -239,7 +239,7 @@ img{max-width:100%}
 
 <footer class="foot"><div class="wrap">
   <a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
-  <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+  <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0)</span>
 </div></footer>
 
 <script>
@@ -339,15 +339,38 @@ var REPORTS = [{"date":"2026-07-26","title":"Auction Watch: July 26, 2026","desc
   document.getElementById('leadNext').onclick = function(){ li = (li + 1) % leadPool.length; pinned = true; renderLead(); };
   renderLead(); startTick();
 
-  // ── top headlines rail: newest stories beyond the lead drop + latest camp report ──
-  var rail = document.getElementById('railList');
-  var railItems = [];
-  if (REPORTS.length) railItems.push({ title: REPORTS[0].title, url: REPORTS[0].url, meta: 'Camp report · ' + fmtShort(REPORTS[0].date) });
+  // ── top headlines rail: strictly newest-first across BOTH desks ───────────
+  // Camp reports and insight calls are merged into one feed and sorted by date,
+  // rather than pinning the newest camp report to the top: a July camp report
+  // must not outrank an August drop just because it came from the other desk.
+  // Dates are ISO (YYYY-MM-DD) so a plain string compare is a date compare.
+  var RAIL_MAX = 9;          // rail slots
+  var RAIL_MIN_TOP_DAY = 3;  // never show the newest day as a lone headline
   var inLead = {};
   leadPool.forEach(function(s){ inLead[s.url] = 1; });
-  live.filter(function(s){ return !inLead[s.url]; }).slice(0, 7).forEach(function(s){
-    railItems.push({ title: s.title, url: s.url, meta: s.pos + ' · ' + fmtShort(s.date) });
+
+  var railPool = [];
+  live.forEach(function(s){
+    if (inLead[s.url]) return;                       // already the lead / in its rail
+    railPool.push({ date: s.date, title: s.title, url: s.url, meta: s.pos + ' · ' + fmtShort(s.date) });
   });
+  REPORTS.filter(function(r){ return unlocked(r.date); }).forEach(function(r){
+    railPool.push({ date: r.date, title: r.title, url: r.url, meta: 'Camp report · ' + fmtShort(r.date) });
+  });
+  railPool.sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+
+  // The newest day leads the rail with a real cluster, not a single item. It is
+  // already at the front after the sort; this only guarantees the slice cannot
+  // cut the day short, and it no-ops when the day has fewer stories to give.
+  var railItems = railPool.slice(0, RAIL_MAX);
+  if (railPool.length) {
+    var topDay = railPool[0].date;
+    var haveTop = railItems.filter(function(x){ return x.date === topDay; }).length;
+    var wantTop = Math.min(RAIL_MIN_TOP_DAY, railPool.filter(function(x){ return x.date === topDay; }).length);
+    if (haveTop < wantTop) railItems = railPool.slice(0, RAIL_MAX + (wantTop - haveTop));
+  }
+
+  var rail = document.getElementById('railList');
   railItems.forEach(function(it){
     var el = document.createElement('li');
     el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';

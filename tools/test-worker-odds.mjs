@@ -44,6 +44,7 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
   return { _oddsImpliedProb, _oddsDevigOver, _oddsProbit, _oddsExpectedTotal, _oddsNorm,
            buildVegasOverlay, blendProjections, runOddsRefresh, projectionsPayload,
            VEGAS_WEIGHT, ODDS_MIN_MATCHED, ODDS_PROVIDERS, fetchOddsTheOddsApi,
+           _csvSplit, fetchTeamEnvNflverse, buildTeamEnvOverlay,
            get encCalls() { return _PROJ_ENC; } };
 `);
 let encoded = null;
@@ -124,8 +125,11 @@ console.log('\nblend');
 }
 {
   const out = W.blendProjections({ 'testquarterback|QB': { passTD: 30 } });
-  // (24 + 3*30)/4 = 28.5 -> integer stat
-  ok('integer stats stay integers', Number.isInteger(out.find(p => p.name === 'Test Quarterback').projectedStats.passTD));
+  // (24 + 3*30)/4 = 28.5 — kept as a decimal, matching merge-projections.mjs.
+  // Rounding to 28 would discard a real part of the market's opinion.
+  ok('touchdown expectations keep their decimal',
+    near(out.find(p => p.name === 'Test Quarterback').projectedStats.passTD, 28.5, 1e-9),
+    String(out.find(p => p.name === 'Test Quarterback').projectedStats.passTD));
 }
 {
   const out = W.blendProjections({ 'testrunner|RB': { rushYd: NaN, rec: -5 } });
@@ -218,6 +222,117 @@ console.log('\nThe Odds API adapter');
   let threw = false;
   try { await W6.fetchOddsTheOddsApi({}); } catch (e) { threw = /ODDS_API_KEY/.test(e.message); }
   ok('missing key throws rather than calling out', threw);
+}
+
+// ── team-environment provider, against the REAL committed pool ──────────────
+const realPool = (() => {
+  const st = src.indexOf('const PROJECTIONS = [');
+  const re = /\{ name: "([^"]+)", position: "([^"]+)", team: "([^"]+)", projectedStats: \{ ([^}]*) \}\}/g;
+  const out = []; let m;
+  const seg = src.slice(st, src.indexOf('\n];', st));
+  while ((m = re.exec(seg))) {
+    const stats = {};
+    for (const kv of m[4].split(',')) { const q = kv.trim().match(/^(\w+): (-?[\d.]+)$/); if (q) stats[q[1]] = parseFloat(q[2]); }
+    out.push({ name: m[1], position: m[2], team: m[3], projectedStats: stats });
+  }
+  return out;
+})();
+let fetchUrl = null, fetchBody = null;
+const R = harness(realPool, str => { encoded = str; return 'ENC'; }, 'k',
+  async (u) => { fetchUrl = u; return { ok: true, text: async () => fetchBody, json: async () => JSON.parse(fetchBody) }; });
+
+console.log('\nquote-aware CSV split');
+{
+  const f = R._csvSplit('2026_01_NE_SEA,2026,1,"Gillette, MA",3.5,44.5');
+  ok('a comma inside quotes does not split the field', f.length === 6 && f[3] === 'Gillette, MA', JSON.stringify(f));
+  const dq = 'a,' + '"say ""hi""' + '",b';
+  ok('doubled quotes unescape', R._csvSplit(dq)[1] === 'say ' + '"hi"', JSON.stringify(R._csvSplit(dq)));
+}
+
+console.log('\nteam-env overlay maths');
+{
+  // Mirror the worker's own points model so "agreement" really is agreement.
+  const td = {}, kick = {};
+  for (const p of realPool) {
+    const t = p.team === 'LAR' ? 'LA' : p.team === 'JAC' ? 'JAX' : p.team;
+    if (t === 'FA') continue;
+    td[t] = (td[t] || 0) + (p.projectedStats.passTD || 0) + (p.projectedStats.rushTD || 0);
+    kick[t] = (kick[t] || 0) + (p.projectedStats.xpMade || 0) + (p.projectedStats.fgMade || 0) * 3;
+  }
+  const commonT = Object.keys(td).filter(t => td[t] > 0);
+  const kv = commonT.filter(t => kick[t] > 0).map(t => kick[t]);
+  const kMean = kv.reduce((a, b) => a + b, 0) / kv.length;
+  const projTD = {};
+  for (const t of commonT) projTD[t] = td[t] * 6 + (kick[t] > 0 ? kick[t] : kMean);
+  // Vegas agreeing exactly with the projections must move nothing.
+  const agree = { ...projTD };
+  const r = R.buildTeamEnvOverlay(agree);
+  const off = Object.entries(r.factors).filter(([, f]) => Math.abs(f - 1) > 1e-9);
+  ok('agreement with the projections is a no-op', off.length === 0, JSON.stringify(off.slice(0, 3)));
+
+  const skew = { ...agree };
+  const target = Object.keys(projTD).sort()[0];
+  skew[target] = agree[target] * 3;
+  const r2 = R.buildTeamEnvOverlay(skew);
+  ok('a team Vegas likes more than the projections gets a factor > 1', r2.factors[target] > 1, String(r2.factors[target]));
+  ok('the factor is clamped, not unbounded', r2.factors[target] <= 1.18 + 1e-9, String(r2.factors[target]));
+  ok('every factor stays inside the clamp band',
+    Object.values(r2.factors).every(f => f >= 0.85 - 1e-9 && f <= 1.18 + 1e-9));
+
+  const before = realPool.find(p => (p.team === target) && p.projectedStats.rushTD > 0 && p.projectedStats.rushYd > 0);
+  if (before) {
+    const ov = r2.overlay[R._oddsNorm(before.name) + '|' + before.position];
+    const tdLift = ov.rushTD / before.projectedStats.rushTD;
+    const ydLift = ov.rushYd / before.projectedStats.rushYd;
+    ok('yardage is damped relative to touchdowns', ydLift <= tdLift + 1e-6, 'td ' + tdLift.toFixed(3) + ' yd ' + ydLift.toFixed(3));
+  }
+  ok('too few priced teams yields nothing rather than garbage',
+    R.buildTeamEnvOverlay({ BUF: 25, KC: 24 }).matched === 0);
+}
+
+console.log('\nprovider merge order');
+{
+  const merged = {};
+  for (const ov of [{ 'joshallen|QB': { passYd: 5000 } }, { 'joshallen|QB': { passYd: 4000, passTD: 30 } }]) {
+    for (const [k, stats] of Object.entries(ov)) {
+      const dst = merged[k] || (merged[k] = {});
+      for (const [s2, v] of Object.entries(stats)) if (!(s2 in dst)) dst[s2] = v;
+    }
+  }
+  ok('a real prop is not overwritten by the team inference', merged['joshallen|QB'].passYd === 5000);
+  ok('team inference still fills stats the prop did not cover', merged['joshallen|QB'].passTD === 30);
+}
+
+console.log('\nlive nflverse pull (real network)');
+try {
+  const res = await fetch('https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv');
+  if (!res.ok) throw new Error('http ' + res.status);
+  fetchBody = await res.text();
+  const ppg = await R.fetchTeamEnvNflverse({});
+  const n = Object.keys(ppg).length;
+  ok('hit the nflverse release asset', /nflverse-data\/releases/.test(fetchUrl), fetchUrl);
+  ok('priced all 32 teams', n === 32, 'got ' + n);
+  const vals = Object.values(ppg);
+  ok('implied points per game are plausible', Math.min(...vals) > 12 && Math.max(...vals) < 34,
+    Math.min(...vals).toFixed(1) + '..' + Math.max(...vals).toFixed(1));
+  const built = R.buildTeamEnvOverlay(ppg);
+  ok('overlay covers most of the pool', built.matched > 300, String(built.matched));
+  const fv = Object.values(built.factors);
+  ok('factors cluster near 1 rather than sprawling',
+    (Math.max(...fv) - Math.min(...fv)) < 0.45, 'range ' + (Math.max(...fv) - Math.min(...fv)).toFixed(3));
+  ok('few teams are pinned at the clamp',
+    fv.filter(f => f >= 1.18 - 1e-9 || f <= 0.85 + 1e-9).length <= 4,
+    String(fv.filter(f => f >= 1.18 - 1e-9 || f <= 0.85 + 1e-9).length));
+  const blended = R.blendProjections(built.overlay);
+  ok('pool length preserved through the blend', blended.length === realPool.length);
+  let moved = 0;
+  for (let i = 0; i < blended.length; i++) if (blended[i].projectedStats !== realPool[i].projectedStats) moved++;
+  ok('real lines actually move real players', moved > 200, String(moved));
+  const ranked = Object.entries(built.factors).sort((a, b) => b[1] - a[1]);
+  console.log('       biggest Vegas upgrades:', ranked.slice(0, 4).map(([t, f]) => t + ' ' + f.toFixed(3)).join('  '));
+  console.log('       biggest Vegas fades   :', ranked.slice(-4).map(([t, f]) => t + ' ' + f.toFixed(3)).join('  '));
+} catch (e) {
+  console.log('  SKIP live nflverse pull (' + e.message + ')');
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

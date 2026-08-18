@@ -69,7 +69,7 @@ console.log('\nbuildSource');
   ok('one player across two books', players.length === 1);
   ok('counted every market', marketCount === 3, `got ${marketCount}`);
   ok('consensus is the mean of books', near(players[0].stats.passYd, 4100, 1e-6), JSON.stringify(players[0].stats));
-  ok('TD stat rounded to an integer', Number.isInteger(players[0].stats.passTD));
+  ok('TD stat keeps one decimal', near(players[0].stats.passTD, 28.5, 1e-9), String(players[0].stats.passTD));
 
   const unknown = buildSource([{ book: 'x', publishedAt: '2026-08-14T00:00:00Z', markets: [
     { player: 'Nobody', position: 'WR', market: 'jerseyNumber', line: 5, overOdds: -110, underOdds: -110 }
@@ -91,7 +91,8 @@ console.log('\nscrimmageTD split');
   const noCur = buildSource([{ book: 'a', publishedAt: '2026-08-14T00:00:00Z', markets: [
     { player: 'Ghost Player', position: 'WR', market: 'scrimmageTD', line: 10, overOdds: -110, underOdds: -110 }
   ] }]).players[0].stats;
-  ok('unknown player falls back to position norms', noCur.recTD === 10 && noCur.rushTD === 1, JSON.stringify(noCur));
+  // WR norm is a 95/5 rec/rush split of the 10 scrimmage TDs, kept at one decimal.
+  ok('unknown player falls back to position norms', near(noCur.recTD, 9.5) && near(noCur.rushTD, 0.5), JSON.stringify(noCur));
 }
 
 console.log('\nend-to-end weighted merge');

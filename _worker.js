@@ -1208,7 +1208,12 @@ const ODDS_CV = {
   recYd: 0.30, recTD: 0.40, rec: 0.28,
   scrimmageTD: 0.40
 };
-const ODDS_INTEGER_STATS = new Set(['passTD', 'passInt', 'rushTD', 'recTD', 'fumLost']);
+// Expected touchdowns are expectations, not counts: 3.4 is a more honest
+// projection than 3, and tools/merge-projections.mjs already keeps a decimal
+// for exactly these stats. Forcing them to integers here would both contradict
+// the offline pipeline and silently erase small adjustments (a 1.18 factor on a
+// 1-TD player rounds straight back to 1). One decimal everywhere.
+const _oddsRound = v => Math.round(v * 10) / 10;
 // Loose plausibility bands for a full-season total. A pull that lands outside
 // these is a parsing bug (per-game numbers mistaken for season totals, cents
 // read as a line, etc.), not a bold projection.
@@ -1323,9 +1328,169 @@ async function fetchOddsTheOddsApi(env) {
   return rows;
 }
 
-// Providers are tried in order; the first that yields usable rows wins.
+// nflverse game lines — FREE, no key, no subscription, CC BY 4.0 (attribution
+// only), served from GitHub. This is the provider that actually runs: it needs
+// no credentials, so the Vegas blend is live out of the box.
+//
+// It carries GAME lines (spread + total), not player props. Those still say
+// plenty about a player: the pair implies each team's expected points, which is
+// the scoring environment every skill player on that roster inherits. See
+// buildTeamEnvOverlay for how that becomes a stat adjustment without
+// double-counting what the projections already believe.
+const NFLVERSE_GAMES_URL = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
+const TEAM_ALIAS = { LAR: 'LA', JAC: 'JAX', WSH: 'WAS', LVR: 'LV', OAK: 'LV', SD: 'LAC', STL: 'LA' };
+const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u; };
+// Yardage tracks scoring environment far less tightly than touchdowns do, so a
+// team's factor is damped before it touches yards. Judgement call, not a fit.
+const TEAMENV_YARD_EXP = 0.5;
+const TEAMENV_CLAMP = [0.85, 1.18];   // a data glitch must not rewrite a roster
+const TEAMENV_MIN_GAMES = 3;          // too few priced games -> leave the team alone
+const TEAMENV_TD_STATS = ['passTD', 'rushTD', 'recTD'];
+const TEAMENV_YARD_STATS = ['passYd', 'rushYd', 'recYd'];
+
+// Minimal quote-aware CSV line splitter. games.csv carries free-text columns
+// (stadium, referee) that can contain commas, so a plain split would misalign
+// every field after them.
+function _csvSplit(line) {
+  const out = [];
+  let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) {
+      if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+// Returns { TEAM: impliedPointsPerGame } for the newest season that has lines.
+async function fetchTeamEnvNflverse(env) {
+  const r = await fetch(NFLVERSE_GAMES_URL, { cf: { cacheTtl: 3600 } });
+  if (!r.ok) throw new Error('nflverse ' + r.status);
+  const text = await r.text();
+  const lines = text.split('\n');
+  if (lines.length < 2) throw new Error('nflverse: empty');
+  const head = _csvSplit(lines[0]);
+  const col = {};
+  ['season', 'week', 'home_team', 'away_team', 'spread_line', 'total_line'].forEach(k => { col[k] = head.indexOf(k); });
+  for (const k of Object.keys(col)) if (col[k] < 0) throw new Error('nflverse: missing column ' + k);
+
+  // game_id is the first field and starts with the season, so the newest season
+  // can be found (and every other row skipped) without parsing 2MB of CSV.
+  let season = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const u = lines[i].indexOf('_');
+    if (u > 0) { const y = +lines[i].slice(0, u); if (y > season && y < 3000) season = y; }
+  }
+  if (!season) throw new Error('nflverse: no season found');
+  const prefix = season + '_';
+
+  const acc = {};
+  const add = (t, pts) => { const k = teamKey(t); (acc[k] = acc[k] || []).push(pts); };
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].startsWith(prefix)) continue;
+    const f = _csvSplit(lines[i]);
+    const spread = parseFloat(f[col.spread_line]);
+    const total = parseFloat(f[col.total_line]);
+    if (!Number.isFinite(spread) || !Number.isFinite(total)) continue;   // unpriced game
+    if (total < 20 || total > 80 || Math.abs(spread) > 30) continue;     // junk row
+    // spread_line is the HOME margin, so the pair splits the total into the two
+    // sides' implied points: home = total/2 + spread/2, away = total/2 - spread/2.
+    add(f[col.home_team], total / 2 + spread / 2);
+    add(f[col.away_team], total / 2 - spread / 2);
+  }
+  const ppg = {};
+  for (const [t, arr] of Object.entries(acc)) {
+    if (arr.length < TEAMENV_MIN_GAMES) continue;
+    ppg[t] = arr.reduce((a, b) => a + b, 0) / arr.length;
+  }
+  if (Object.keys(ppg).length < 16) throw new Error('nflverse: only ' + Object.keys(ppg).length + ' teams priced');
+  return ppg;
+}
+
+// Turn Vegas implied team scoring into per-player stat adjustments.
+//
+// The trap here is DOUBLE COUNTING: the committed projections already have an
+// opinion about which offenses are good, so scaling by raw Vegas points would
+// apply that opinion twice. Instead both sides are reduced to a league-relative
+// index and the adjustment is the RATIO of the two — if Vegas and the
+// projections already agree on a team's standing the factor is 1.0 and nothing
+// moves. Only genuine disagreement changes a number.
+//
+// Both sides must be in the SAME UNIT, and that unit is points. Comparing a
+// touchdown index against Vegas points systematically over-corrects, because
+// weak offenses take a larger share of their points from field goals: on the
+// real 2026 lines that mismatch stretched the factor range to 0.57 and pushed
+// Miami to 1.33, versus 0.40 and 1.15 once both sides are points.
+//
+// Team offensive points = (passTD + rushTD) * 6 + xpMade + fgMade * 3.
+// recTD is deliberately excluded — a receiving touchdown IS the quarterback's
+// passing touchdown, so counting both would double every passing score. Teams
+// with no kicker in the pool borrow the league-average kicking contribution
+// rather than being scored as if they never kick.
+function buildTeamEnvOverlay(vegasPPG) {
+  const EMPTY = { overlay: {}, matched: 0, teams: 0, factors: {} };
+  const teams = Object.keys(vegasPPG || {});
+  if (teams.length < 16) return EMPTY;
+
+  const td = {}, kick = {};
+  for (const p of PROJECTIONS) {
+    const t = teamKey(p.team);
+    if (!t || t === 'FA') continue;
+    const st = p.projectedStats || {};
+    td[t] = (td[t] || 0) + (st.passTD || 0) + (st.rushTD || 0);
+    kick[t] = (kick[t] || 0) + (st.xpMade || 0) + (st.fgMade || 0) * 3;
+  }
+  const common = teams.filter(t => td[t] > 0);
+  if (common.length < 16) return EMPTY;
+
+  const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const kicked = common.filter(t => kick[t] > 0).map(t => kick[t]);
+  const kMean = kicked.length ? mean(kicked) : 0;
+  const projPoints = {};
+  for (const t of common) projPoints[t] = td[t] * 6 + (kick[t] > 0 ? kick[t] : kMean);
+
+  const vMean = mean(common.map(t => vegasPPG[t]));
+  const pMean = mean(common.map(t => projPoints[t]));
+  if (!(vMean > 0) || !(pMean > 0)) return EMPTY;
+
+  const factors = {};
+  for (const t of common) {
+    const f = (vegasPPG[t] / vMean) / (projPoints[t] / pMean);
+    if (!Number.isFinite(f) || f <= 0) continue;
+    factors[t] = Math.min(TEAMENV_CLAMP[1], Math.max(TEAMENV_CLAMP[0], f));
+  }
+
+  const overlay = {};
+  for (const p of PROJECTIONS) {
+    const f = factors[teamKey(p.team)];
+    if (!f) continue;
+    const st = p.projectedStats || {};
+    const out = {};
+    const put = (k, v) => {
+      if (!Number.isFinite(v) || v < 0) return;
+      const band = ODDS_BANDS[k];
+      if (band && (v < band[0] || v > band[1])) return;   // never emit an implausible total
+      out[k] = _oddsRound(v);
+    };
+    for (const k of TEAMENV_TD_STATS) if (st[k] > 0) put(k, st[k] * f);
+    for (const k of TEAMENV_YARD_STATS) if (st[k] > 0) put(k, st[k] * Math.pow(f, TEAMENV_YARD_EXP));
+    if (Object.keys(out).length) overlay[_oddsNorm(p.name) + '|' + p.position] = out;
+  }
+  return { overlay, matched: Object.keys(overlay).length, teams: common.length, factors };
+}
+
+// Providers run in priority order and their overlays are MERGED, earlier wins
+// per player+stat. Player props (when a key is configured) are strictly better
+// than a team-wide inference, so they go first and the free team-environment
+// provider fills in every stat and player the props did not cover.
 const ODDS_PROVIDERS = [
-  { name: 'the-odds-api', fn: fetchOddsTheOddsApi, needs: env => !!env.ODDS_API_KEY }
+  { name: 'the-odds-api', kind: 'props',   fn: fetchOddsTheOddsApi,   needs: env => !!env.ODDS_API_KEY },
+  { name: 'nflverse',     kind: 'teamenv', fn: fetchTeamEnvNflverse }
 ];
 
 // ── overlay build ──────────────────────────────────────────────────────────
@@ -1378,7 +1543,7 @@ function buildVegasOverlay(rows) {
       delete stats.scrimmageTD;
     }
     for (const k of Object.keys(stats)) {
-      stats[k] = ODDS_INTEGER_STATS.has(k) ? Math.round(stats[k]) : Math.round(stats[k] * 10) / 10;
+      stats[k] = _oddsRound(stats[k]);
     }
     overlay[key] = stats;
   }
@@ -1399,8 +1564,7 @@ function blendProjections(overlay) {
       if (!(k in stats)) continue;                 // only stats the site models
       const n = Number(val);
       if (!Number.isFinite(n) || n < 0) continue;
-      const blended = (stats[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT);
-      stats[k] = ODDS_INTEGER_STATS.has(k) ? Math.round(blended) : Math.round(blended * 10) / 10;
+      stats[k] = _oddsRound((stats[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
       touched = true;
     }
     return touched ? { ...p, projectedStats: stats } : p;
@@ -1433,23 +1597,42 @@ async function oddsCacheWrite(env, overlay, provider, matched) {
 async function runOddsRefresh(env) {
   if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
   const tried = [];
+  const merged = {};
+  const used = [];
   for (const p of ODDS_PROVIDERS) {
     if (p.needs && !p.needs(env)) { tried.push({ provider: p.name, skipped: 'not configured' }); continue; }
-    let rows;
+    let overlay = null, info = {};
     try {
-      rows = await p.fn(env);
+      const raw = await p.fn(env);
+      if (p.kind === 'teamenv') {
+        const r = buildTeamEnvOverlay(raw);
+        overlay = r.overlay;
+        info = { teams: r.teams, matched: r.matched };
+      } else {
+        const r = buildVegasOverlay(raw);
+        overlay = r.overlay;
+        info = { rows: (raw || []).length, matched: r.matched, skipped: r.skipped };
+      }
     } catch (e) {
-      tried.push({ provider: p.name, error: (e && e.message) || 'failed' });
+      tried.push({ provider: p.name, kind: p.kind, error: (e && e.message) || 'failed' });
       continue;
     }
-    const { overlay, matched, skipped } = buildVegasOverlay(rows);
-    tried.push({ provider: p.name, rows: (rows || []).length, matched, skipped });
-    if (matched < ODDS_MIN_MATCHED) continue;   // treat a thin pull as broken; keep the old overlay
-    await oddsCacheWrite(env, overlay, p.name, matched);
-    _PROJ_ENC = null;                            // force re-encode with the new blend
-    return { ok: true, provider: p.name, matched, skipped, tried };
+    // Earlier providers win per player+stat, so a real player prop is never
+    // overwritten by the coarser team-wide inference behind it.
+    let added = 0;
+    for (const [k, stats] of Object.entries(overlay || {})) {
+      const dst = merged[k] || (merged[k] = {});
+      for (const [stat, v] of Object.entries(stats)) if (!(stat in dst)) { dst[stat] = v; added++; }
+    }
+    tried.push({ provider: p.name, kind: p.kind, ...info, contributed: added });
+    if (added) used.push(p.name);
   }
-  return { ok: false, error: 'no_usable_provider', tried };
+  const matched = Object.keys(merged).length;
+  // A thin merge is treated as broken and the previous good overlay is kept.
+  if (matched < ODDS_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', matched, tried };
+  await oddsCacheWrite(env, merged, used.join('+') || 'none', matched);
+  _PROJ_ENC = null;                            // force re-encode with the new blend
+  return { ok: true, provider: used.join('+'), matched, tried };
 }
 
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
