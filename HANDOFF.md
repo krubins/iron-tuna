@@ -296,11 +296,30 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   and everything else (app routes, static pages) is unchanged. Snake and best ball
   remain fully live — linked from the front page's secondary nav.
 - **Layout** (ESPN-inspired): black masthead with the fish + Bebas silver wordmark and
-  red accent bar; rotating lead story (auto-advances every 7s, the latest unlocked
-  insights drop); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
+  red accent bar; **deep-dive lead** (see below); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
   Market); **Asset Allocation** module (budget, nominations, $1 endgame guides + the
   in-app planner); **Training Camp & Preseason** desk (the auction-watch pages,
   newest featured).
+- **The lead is a six-hour deep dive.** It is reserved for calls that go **beyond a
+  single player** — coaching, offensive line, schedule, weather, rule changes — the
+  read that earns a top click rather than one more player take. Those are tagged
+  `deep: 1` at build time from the insight pages' own **`Market`** position label, so
+  the classification is the site's existing editorial call and does not drift as copy
+  changes; single-player QB/RB/WR/TE calls are never eligible. Each also gets a `topic`
+  desk label (SCHEDULE / OFFENSIVE LINE / COACHING / WEATHER / RULE CHANGE / TEAM
+  TREND) matched from the **title first**, body only as a fallback, so a passing
+  mention deep in a paragraph cannot relabel a story.
+  - **Cadence:** the slot is `floor(Date.now() / 6h) % pool`, derived from the wall
+    clock rather than a carousel timer — so every visitor sees the *same* lead and it
+    turns over at 00/06/12/18 UTC. The pool is the 8 most recent unlocked deep dives
+    (`LEAD_WINDOW`), a two-day cycle before anything repeats.
+  - Arrows and dots still browse by hand; doing so **pins** the lead (hides the
+    countdown and stops the auto-rollover) so a reader's choice is never yanked away.
+    A tab left open rolls to the next deep dive when the boundary passes.
+  - The Top Headlines rail excludes whatever is in the lead pool, so it no longer
+    repeats the lead now that the pool spans dates.
+  - If no deep dive has unlocked yet it falls back to the latest drop's calls, so the
+    lead is never empty on a fresh season.
 - **Data pipeline:** `node tools/build-front.mjs` re-extracts the embedded
   `var STORIES` / `var REPORTS` arrays in `front.html` from the
   `auction-insights-*.html` and `auction-watch-*.html` pages (joined to
