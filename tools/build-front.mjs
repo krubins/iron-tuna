@@ -90,6 +90,11 @@ const LEAD_FACES = 3;
 const headshots = JSON.parse(read('tools/nfl-headshots.json'));
 const SUFFIX = /\s+(?:Jr\.?|Sr\.?|I{2,3}|IV|V)$/i;
 const reEsc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Same slug rule tools/build-headshots.mjs keys its rows by, so a name read out
+// of the projections lands on the right headshot row.
+const slug = name => name.toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // One player can be written more than one way, so index every spelling we are
 // willing to accept and point them all at the same roster entry.
@@ -136,6 +141,155 @@ const enlist = keys => {
   }
 };
 
+// ── the team's face, for a story that names nobody ─────────────────────────
+// Some deep dives are about a whole team — a schedule, a coaching staff, an
+// offensive line — and name no player at all. Those run the team's headline
+// player instead, and the band says so: it is labelled with the team, not
+// "In this story", so the photo never implies a quote the story never made.
+//
+// "Headline player" is the site's own answer, not a popularity guess: the
+// highest full-PPR projection on that roster, read straight out of the
+// PROJECTIONS block in _worker.js that prices the whole app.
+const TEAMS = {
+  ARI: ['Arizona Cardinals', 'Arizona', 'Cardinals'],
+  ATL: ['Atlanta Falcons', 'Atlanta', 'Falcons'],
+  BAL: ['Baltimore Ravens', 'Baltimore', 'Ravens'],
+  BUF: ['Buffalo Bills', 'Buffalo', 'Bills'],
+  CAR: ['Carolina Panthers', 'Carolina', 'Panthers'],
+  CHI: ['Chicago Bears', 'Chicago', 'Bears'],
+  CIN: ['Cincinnati Bengals', 'Cincinnati', 'Bengals'],
+  CLE: ['Cleveland Browns', 'Cleveland', 'Browns'],
+  DAL: ['Dallas Cowboys', 'Dallas', 'Cowboys'],
+  DEN: ['Denver Broncos', 'Denver', 'Broncos'],
+  DET: ['Detroit Lions', 'Detroit', 'Lions'],
+  GB:  ['Green Bay Packers', 'Green Bay', 'Packers'],
+  HOU: ['Houston Texans', 'Houston', 'Texans'],
+  IND: ['Indianapolis Colts', 'Indianapolis', 'Indy', 'Colts'],
+  JAX: ['Jacksonville Jaguars', 'Jacksonville', 'Jaguars', 'Jags'],
+  KC:  ['Kansas City Chiefs', 'Kansas City', 'Chiefs'],
+  LAC: ['Los Angeles Chargers', 'Chargers'],
+  LAR: ['Los Angeles Rams', 'Rams'],
+  LV:  ['Las Vegas Raiders', 'Las Vegas', 'Raiders'],
+  MIA: ['Miami Dolphins', 'Miami', 'Dolphins'],
+  MIN: ['Minnesota Vikings', 'Minnesota', 'Vikings'],
+  NE:  ['New England Patriots', 'New England', 'Patriots'],
+  NO:  ['New Orleans Saints', 'New Orleans', 'Saints'],
+  NYG: ['New York Giants', 'Giants'],
+  NYJ: ['New York Jets', 'Jets'],
+  PHI: ['Philadelphia Eagles', 'Philadelphia', 'Eagles'],
+  PIT: ['Pittsburgh Steelers', 'Pittsburgh', 'Steelers'],
+  SEA: ['Seattle Seahawks', 'Seattle', 'Seahawks'],
+  SF:  ['San Francisco 49ers', 'San Francisco', '49ers', 'Niners'],
+  TB:  ['Tampa Bay Buccaneers', 'Tampa Bay', 'Buccaneers', 'Bucs'],
+  TEN: ['Tennessee Titans', 'Tennessee', 'Titans'],
+  WAS: ['Washington Commanders', 'Washington', 'Commanders'],
+};
+// "New York" and "Los Angeles" are deliberately absent above: each is two
+// teams, so only the nickname disambiguates them and a bare city is dropped
+// rather than guessed at.
+const teamAlias = new Map();
+for (const [ab, names] of Object.entries(TEAMS)) for (const n of names) teamAlias.set(n, ab);
+const TEAM_RE = new RegExp(
+  '\\b(' + [...teamAlias.keys()].sort((a, b) => b.length - a.length).map(reEsc).join('|') + ')\\b',
+  'g',
+);
+const teamFor = (title, body) => {
+  const rank = new Map();
+  const scan = (text, inTitle) => {
+    for (const m of String(text).matchAll(TEAM_RE)) {
+      const ab = teamAlias.get(m[1]);
+      const cur = rank.get(ab);
+      if (cur) { cur.hits++; cur.inTitle = cur.inTitle || inTitle; }
+      else rank.set(ab, { ab, hits: 1, inTitle });
+    }
+  };
+  scan(title, true);
+  scan(body, false);
+  // The title is the editorial subject: a Cleveland story that mentions the
+  // coordinator's old Baltimore staff is still a Cleveland story.
+  const best = [...rank.values()].sort((a, b) => (b.inTitle - a.inTitle) || (b.hits - a.hits))[0];
+  return best ? best.ab : null;
+};
+
+// Full-PPR season points, the ranking the whole site is priced on. Only the
+// order matters here, so the default scoring is enough — no league settings.
+const ppr = s =>
+  (s.passYd || 0) / 25 + (s.passTD || 0) * 4 - (s.passInt || 0) * 2 +
+  (s.rushYd || 0) / 10 + (s.rushTD || 0) * 6 +
+  (s.recYd || 0) / 10 + (s.recTD || 0) * 6 + (s.rec || 0) - (s.fumLost || 0) * 2;
+
+const worker = read('_worker.js');
+const projStart = worker.indexOf('const PROJECTIONS = [');
+if (projStart < 0) {
+  console.error('ABORT: could not find PROJECTIONS in _worker.js');
+  process.exit(1);
+}
+const projBlock = worker.slice(projStart, worker.indexOf('\n];', projStart));
+const bySlug = new Map(headshots.map(p => [p.k, p]));
+const depth = new Map();   // team -> [{slug, pts}] best first
+for (const m of projBlock.matchAll(
+  /\{\s*name:\s*"([^"]+)",\s*position:\s*"([^"]+)",\s*team:\s*"([^"]*)",\s*projectedStats:\s*\{([^}]*)\}/g)) {
+  const [, name, pos, rawTeam] = m;
+  if (!['QB', 'RB', 'WR', 'TE'].includes(pos)) continue;   // no kickers or defenses as a team's face
+  const team = rawTeam === 'JAC' ? 'JAX' : rawTeam;        // both spellings appear in the projections
+  if (!team || team === 'FA') continue;                    // a free agent is nobody's face
+  const stats = Object.fromEntries([...m[4].matchAll(/(\w+)\s*:\s*(-?[\d.]+)/g)].map(s => [s[1], +s[2]]));
+  if (!depth.has(team)) depth.set(team, []);
+  depth.get(team).push({ k: slug(name), pts: ppr(stats) });
+}
+for (const list of depth.values()) list.sort((a, b) => b.pts - a.pts);
+
+// Walk down the depth chart until someone has a photo, so a team whose leader
+// is too new for the headshot release still gets a face rather than none.
+const teamFace = ab => (depth.get(ab) || []).map(r => r.k).find(k => bySlug.has(k)) || null;
+
+// ── short names ────────────────────────────────────────────────────────────
+// Headlines drop the first name once a player is established — "Bowers",
+// "Kyren", "Kraft". Resolving those league-wide would be reckless (half the
+// league answers to "Williams", and "Likely" is an ordinary English word), so
+// a bare name is only read against the roster of the team the story is about,
+// and only when exactly one player there answers to it. Anything ambiguous is
+// left unmatched: a missing face costs nothing, a wrong one costs trust.
+const rosters = new Map();
+for (const pl of headshots) {
+  if (!rosters.has(pl.t)) rosters.set(pl.t, []);
+  rosters.get(pl.t).push(pl);
+}
+const shortIndex = ab => {
+  const idx = new Map();
+  for (const pl of rosters.get(ab) || []) {
+    const parts = pl.n.replace(SUFFIX, '').trim().split(/\s+/);
+    for (const tok of [parts[0], parts[parts.length - 1]]) {
+      if (!tok || tok.length < 4) continue;                   // "Cam", "Bo": too short to be safe
+      idx.set(tok, idx.has(tok) ? null : pl);                 // null marks the name as taken twice
+    }
+  }
+  return idx;
+};
+const findByShortName = (ab, title, body) => {
+  const idx = shortIndex(ab);
+  const names = [...idx.keys()].filter(t => idx.get(t)).sort((a, b) => b.length - a.length);
+  if (!names.length) return [];
+  // Case-sensitive on purpose: it is what separates the tight end Likely from
+  // the adverb likely.
+  const re = new RegExp('\\b(' + names.map(reEsc).join('|') + ')\\b', 'g');
+  const rank = new Map();
+  const scan = (text, inTitle) => {
+    for (const m of String(text).matchAll(re)) {
+      const pl = idx.get(m[1]);
+      const cur = rank.get(pl.k);
+      if (cur) { cur.hits++; cur.inTitle = cur.inTitle || inTitle; }
+      else rank.set(pl.k, { pl, hits: 1, first: m.index, inTitle });
+    }
+  };
+  scan(title, true);
+  scan(body, false);
+  return [...rank.values()]
+    .sort((a, b) => (b.inTitle - a.inTitle) || (b.hits - a.hits) || (a.first - b.first))
+    .slice(0, LEAD_FACES)
+    .map(r => r.pl.k);
+};
+
 const stories = [];
 for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort()) {
   const date = f.match(/(\d{4}-\d{2}-\d{2})/)[1];
@@ -149,7 +303,20 @@ for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.t
     const pos = cpos ? norm(cpos[1]) : '';
     const body = norm(blk.replace(/<[^>]+>/g, ' '));
     const deep = isDeep(pos);
-    const ppl = findPlayers(title, body);
+    let ppl = findPlayers(title, body), teamLabel = '';
+    if (!ppl.length) {
+      // Nobody named in full. Work out whose story it is, then try the short
+      // names against that roster, and only fall back to the team's headline
+      // player once the copy really has named no one.
+      const ab = teamFor(title, body);
+      if (ab) {
+        ppl = findByShortName(ab, title, body);
+        if (!ppl.length) {
+          const face = teamFace(ab);
+          if (face) { ppl = [face]; teamLabel = TEAMS[ab][0]; }
+        }
+      }
+    }
     enlist(ppl);
     stories.push({
       title,
@@ -162,6 +329,7 @@ for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.t
       url: '/' + f.replace('.html', '') + '#call-' + m[1],
       ...(deep ? { deep: 1, topic: topicFor(title, body) } : {}),
       ...(ppl.length ? { ppl } : {}),
+      ...(teamLabel ? { tm: teamLabel } : {}),
     });
   }
 }

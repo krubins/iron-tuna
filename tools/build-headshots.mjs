@@ -23,6 +23,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = 'https://github.com/nflverse/nflverse-data/releases/download/players/players.csv';
 const POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'FB']);
 const MIN_LAST_SEASON = 2024;
+// nflverse and the app's own PROJECTIONS block disagree on a few club codes.
+// Normalise to the projections' spelling so one team lookup hits in both.
+const TEAM_FIX = { LA: 'LAR', JAC: 'JAX', WSH: 'WAS', SD: 'LAC', OAK: 'LV', STL: 'LAR' };
+const team = t => TEAM_FIX[t] || t || '';
 
 // A minimal RFC-4180 row splitter: nflverse quotes any field containing a comma
 // (the headshot URLs do, via Cloudinary's `f_auto,q_auto`), so a naive split on
@@ -73,9 +77,9 @@ for (const line of lines.slice(1)) {
   // Two players can share a name (and a slug). Prefer the one who played most
   // recently; a stale duplicate would otherwise put the wrong face on the lead.
   const prior = seen.has(key) ? players.find(p => p.k === key) : null;
-  if (prior) { if (last > prior.s) Object.assign(prior, { t: r[col.latest_team], p: pos, e: espn, h: shot, s: last }); continue; }
+  if (prior) { if (last > prior.s) Object.assign(prior, { t: team(r[col.latest_team]), p: pos, e: espn, h: shot, s: last }); continue; }
   seen.add(key);
-  players.push({ k: key, n: name, t: r[col.latest_team] || '', p: pos, e: espn || '', h: shot || '', s: last });
+  players.push({ k: key, n: name, t: team(r[col.latest_team]), p: pos, e: espn || '', h: shot || '', s: last });
 }
 players.sort((a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : 0));
 
