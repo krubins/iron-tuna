@@ -276,3 +276,24 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   `auction-watch-YYYY-MM-DD.html` when there is real signal, runs `build-front.mjs`,
   and pushes — same guardrails as the §9 projections routine (skip on no
   network/no verified news; no em dashes in authored copy).
+
+---
+
+## 13. August 2026: the draft board is paywalled
+
+- **The live board (Auction Manager / Draft Board) is a paid screen.** In `index.html`,
+  `boardLocked` is true whenever `view` is `board` (or the unused `split`) and the user
+  has no entitlement for the live format. When it flips on, the upgrade modal opens
+  automatically and the board renders inside `.board-lock`: `.board-lock-inner` gets
+  `pointer-events: none` so nothing on the board can be clicked, dragged or typed into,
+  and `.board-lock-veil` (an absolutely positioned scrim carrying the "…is locked" card)
+  reopens the upgrade modal on any click. The header nav and the mobile tab bar sit
+  outside the lock, so a free user is never trapped on the board.
+- The auto-open waits for `authChecked` (the `/api/auth/me` round trip) so a buyer
+  restoring access on a new device does not see the prompt flash. Unlocking, or leaving
+  the board, closes the prompt.
+- **Free tier is unchanged:** the cheat sheet (`prep` on desktop, `tiers` on phones),
+  tiers, plan, mock auction/draft and settings are all still open.
+- **`?screen=cheat` now opens the cheat sheet.** It previously fell through to the board,
+  which would have put the free "Build my free cheat sheet" CTA on `front.html` behind
+  the paywall. `?screen=board` still opens the board (now locked for free users).
