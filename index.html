@@ -2064,6 +2064,23 @@ input:focus, select:focus { border-color: var(--accent); }
 .ins-dd:hover .ins-dd-menu,.ins-dd:focus-within .ins-dd-menu{visibility:visible;opacity:1;transition-delay:0s}
 .ins-dd .ins-dd-menu button{display:block;width:100%;text-align:left;padding:12px 16px;background:none;border:none;color:var(--text-secondary,#b6c2cc);cursor:pointer;border-radius:8px;font:inherit;font-size:14px;white-space:nowrap}
 .ins-dd .ins-dd-menu button:hover{background:rgba(45,212,163,.13);color:var(--text-primary,#fff)}
+/* Paywalled draft board: visible behind the upgrade prompt, but inert. */
+.board-lock { position: relative; min-height: 60vh; }
+.board-lock-inner { pointer-events: none; user-select: none; }
+.board-lock-inner .snake-rail-dock, .board-lock-inner .snake-nom-card { opacity: 0.4; }
+.board-lock-inner input, .board-lock-inner button, .board-lock-inner select, .board-lock-inner textarea, .board-lock-inner a { pointer-events: none !important; }
+.board-lock-veil { position: absolute; inset: -20px -24px -40px; z-index: 40; cursor: pointer; display: flex; justify-content: center; background: linear-gradient(180deg, rgba(6,8,11,0.58) 0%, rgba(6,8,11,0.74) 45%, rgba(6,8,11,0.9) 100%); backdrop-filter: saturate(0.6) blur(1.5px); -webkit-backdrop-filter: saturate(0.6) blur(1.5px); }
+.board-lock-veil:focus-visible { outline: 2px solid var(--gold-text); outline-offset: -4px; }
+.board-lock-badge { position: sticky; top: 24px; align-self: flex-start; margin-top: 40px; max-width: 420px; text-align: center; padding: 22px 24px 20px; border-radius: 14px; border: 1px solid var(--gold-text); background: var(--bg-panel); box-shadow: 0 18px 48px rgba(0,0,0,0.55); }
+.blb-lock { font-size: 26px; display: block; margin-bottom: 6px; }
+.blb-title { font-family: var(--font-display); font-size: 21px; letter-spacing: 0.04em; color: var(--gold-text); }
+.blb-text { font-size: 13px; line-height: 1.5; color: var(--text-secondary); margin: 8px 0 14px; }
+.blb-cta { display: inline-block; background: var(--gold-text); color: #10130c; font-weight: 700; font-size: 13.5px; border-radius: 8px; padding: 9px 18px; }
+@media (max-width: 760px) {
+  .board-lock-veil { inset: -12px -10px -168px; }
+  .board-lock-badge { margin-top: 24px; max-width: none; margin-left: 6px; margin-right: 6px; padding: 18px 16px 16px; }
+}
+
 </style>
   <link rel="stylesheet" href="hero-dark.css" />
   <script type="application/ld+json">
@@ -20136,6 +20153,7 @@ function App() {
       }
     } catch (e) {}
   }, []);
+  const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
     let restored = false;
     try { const sp = new URLSearchParams(window.location.search); restored = sp.get('restored') === '1'; const l = sp.get('login'); if (l === 'used' || l === 'invalid') setPurchaseToast({ text: 'That sign-in link expired or was already used — request a new one.', tone: 'bad', id: Date.now() }); } catch (e) {}
@@ -20144,7 +20162,7 @@ function App() {
         setAccount(a => ({ ...a, entitlements: { ...(a.entitlements || {}), bundle: true }, user: a.user || { email: d.email } }));
         if (restored) setPurchaseToast({ text: '✓ Signed in — your purchase is unlocked on this device.', tone: 'good', id: Date.now() });
       }
-    }).catch(() => {});
+    }).catch(() => {}).then(() => setAuthChecked(true), () => setAuthChecked(true));
     try { const u = new URL(window.location.href); ['restored', 'login'].forEach(k => u.searchParams.delete(k)); window.history.replaceState({}, '', u.pathname + (u.search || '')); } catch (e) {}
   }, []);
   const has = id => entitled(account, id);
@@ -20264,13 +20282,26 @@ function App() {
   const [nomWhbOpen, setNomWhbOpen] = useState(false);
   const [nomFullSchedOpen, setNomFullSchedOpen] = useState(false);
   const [view, setView] = useState(() => {
-    if (screenParam === 'board' || screenParam === 'cheat') return 'board';
-    if (initialState?.draftHistory?.length > 0) return 'board';
     // Phones open on the cheat sheet (the product) instead of the Plan/config tab.
     const phone = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+    if (screenParam === 'board') return 'board';
+    if (screenParam === 'cheat') return phone ? 'tiers' : 'prep';
+    if (initialState?.draftHistory?.length > 0) return 'board';
     return phone ? 'tiers' : 'prep';
   });
   const [boardTab, setBoardTab] = useState(screenParam === 'board' ? 'draftboard' : 'cheatsheet');
+  // The live draft board (Auction Manager) is a paid feature. Free users still see
+  // it, but it is dimmed and inert behind the upgrade prompt.
+  const boardLocked = (view === 'board' || view === 'split') && !has(liveTier);
+  const boardLockName = (config.format || 'auction') === 'auction' ? 'Auction Manager' : 'Draft Board';
+  const boardLockPrice = '$' + ((TIERS.find(t => t.id === liveTier) || TIERS[0]).price).toFixed(2);
+  useEffect(() => {
+    if (boardLocked && authChecked) promptUpgrade('the live ' + boardLockName);
+  }, [boardLocked, authChecked]);
+  useEffect(() => {
+    // Unlocking (or leaving the board) retires the prompt.
+    if (!boardLocked) setOverlay(o => o === 'upgrade' ? null : o);
+  }, [boardLocked]);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => {
@@ -21863,7 +21894,29 @@ function App() {
     style: {
       zoom: fontScale
     }
-  }, renderMainContent(), view === 'prep' && (config.format || 'auction') === 'bestball' && React.createElement("div", {
+  }, boardLocked ? React.createElement("div", {
+    className: "board-lock"
+  }, React.createElement("div", {
+    className: "board-lock-inner",
+    "aria-hidden": "true"
+  }, renderMainContent()), React.createElement("div", {
+    className: "board-lock-veil",
+    role: "button",
+    tabIndex: 0,
+    title: "Unlock the " + boardLockName + " to use the board",
+    onClick: () => promptUpgrade('the live ' + boardLockName),
+    onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); promptUpgrade('the live ' + boardLockName); } }
+  }, React.createElement("div", {
+    className: "board-lock-badge"
+  }, React.createElement("span", {
+    className: "blb-lock"
+  }, "\ud83d\udd12"), React.createElement("div", {
+    className: "blb-title"
+  }, boardLockName + " is locked"), React.createElement("div", {
+    className: "blb-text"
+  }, "This is the live board \u2014 every team\u2019s budget, max-bid math and the Value Coach as picks come in. Unlock it to make a single move here."), React.createElement("span", {
+    className: "blb-cta"
+  }, "Unlock \u00b7 " + boardLockPrice)))) : renderMainContent(), view === 'prep' && (config.format || 'auction') === 'bestball' && React.createElement("div", {
     style: { marginTop: 18 }
   }, React.createElement(BestBallCoach, {
     myTeam: myTeam,
@@ -21873,13 +21926,13 @@ function App() {
   })))), view === 'settings' && React.createElement(SettingsModal, {
     config: config,
     onSave: handleConfigChange,
-    onClose: () => setView('board'),
+    onClose: () => setView(has(liveTier) ? 'board' : isMobile ? 'tiers' : 'prep'),
     onImportProjections: handleProjectionsImport,
     onLoadLive: handleLoadLiveData,
     loading: loading,
     dataInfo: dataInfo,
     canScore: has(liveTier),
-    onUnlockScore: () => { setView('board'); promptUpgrade("to use your league's own scoring"); }
+    onUnlockScore: () => { setView(has(liveTier) ? 'board' : isMobile ? 'tiers' : 'prep'); promptUpgrade("to use your league's own scoring"); }
   }), assignPlayer && React.createElement(QuickDraftModal, {
     player: assignPlayer,
     teams: teams,
