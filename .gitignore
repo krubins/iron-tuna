@@ -5,3 +5,10 @@ package.json
 package-lock.json
 scratch-*
 .dev.vars
+
+# Raw sportsbook pulls and the merged source files they produce. These are
+# inputs to tools/vegas-to-projections.mjs + tools/merge-projections.mjs; the
+# committed artifact is the updated PROJECTIONS block in _worker.js, not the
+# scratch data. tools/odds.example/ IS committed as schema documentation.
+tools/odds/
+tools/sources/

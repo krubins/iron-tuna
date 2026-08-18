@@ -1180,6 +1180,477 @@ const CAMPAIGN_NURTURE = {
     + '<p style="color:#667">Draft season fills up fast — lock it in before your draft so it’s ready when you’re on the clock.</p>'
     + '</div>'
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// Vegas-weighted projections
+// ════════════════════════════════════════════════════════════════════════════
+// A daily cron pulls season-long player props, converts them to expected stat
+// totals, and blends them over PROJECTIONS at VEGAS_WEIGHT:1. The blend is
+// cached in D1 and served by /api/projections.
+//
+// The math mirrors tools/vegas-to-projections.mjs exactly — there is no build
+// step here, so the two implementations are kept in sync by hand and
+// cross-checked by tools/test-vegas.mjs. Change one, change both.
+//
+// FAIL-SAFE BY CONSTRUCTION. Every step is allowed to fail and the endpoint
+// falls back to the committed PROJECTIONS: a provider error, an unparseable
+// response, too few matched players, or a value outside the sanity bands all
+// mean "no overlay is written", never "bad numbers are served". Nothing about
+// the request path depends on the provider being up — requests read a cached
+// D1 row, never the sportsbook.
+
+const VEGAS_WEIGHT = 3;               // vegas : each projection feed
+const ODDS_MIN_MATCHED = 25;          // below this the pull is treated as broken
+const ODDS_MAX_AGE_MS = 14 * 86400000; // overlay older than this is ignored
+const ODDS_CV = {
+  passYd: 0.20, passTD: 0.28, passInt: 0.35,
+  rushYd: 0.30, rushTD: 0.40,
+  recYd: 0.30, recTD: 0.40, rec: 0.28,
+  scrimmageTD: 0.40
+};
+// Expected touchdowns are expectations, not counts: 3.4 is a more honest
+// projection than 3, and tools/merge-projections.mjs already keeps a decimal
+// for exactly these stats. Forcing them to integers here would both contradict
+// the offline pipeline and silently erase small adjustments (a 1.18 factor on a
+// 1-TD player rounds straight back to 1). One decimal everywhere.
+const _oddsRound = v => Math.round(v * 10) / 10;
+// Loose plausibility bands for a full-season total. A pull that lands outside
+// these is a parsing bug (per-game numbers mistaken for season totals, cents
+// read as a line, etc.), not a bold projection.
+const ODDS_BANDS = {
+  passYd: [1200, 6500], passTD: [4, 60], passInt: [0, 30],
+  rushYd: [150, 2600], rushTD: [0, 30],
+  recYd: [150, 2300], recTD: [0, 30], rec: [10, 160],
+  scrimmageTD: [0, 40]
+};
+
+const _oddsNorm = s => String(s || '').toLowerCase()
+  .replace(/\b(jr|sr|ii|iii|iv|v)\.?$/g, '')
+  .replace(/[^a-z]/g, '');
+
+function _oddsImpliedProb(american) {
+  const n = Number(american);
+  if (!Number.isFinite(n) || n === 0) return null;
+  return n > 0 ? 100 / (n + 100) : -n / (-n + 100);
+}
+function _oddsDevigOver(overOdds, underOdds) {
+  const po = _oddsImpliedProb(overOdds), pu = _oddsImpliedProb(underOdds);
+  if (po == null || pu == null) return null;
+  const sum = po + pu;
+  return sum > 0 ? po / sum : null;
+}
+// Acklam's inverse normal CDF.
+function _oddsProbit(p) {
+  if (!(p > 0 && p < 1)) return null;
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+             1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+             6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+             -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+             3.754408661907416e+00];
+  const pl = 0.02425, ph = 1 - pl;
+  let q, r;
+  if (p < pl) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+           ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  if (p > ph) {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  q = p - 0.5; r = q * q;
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+         (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+}
+// Posted line + de-vigged P(over) -> expected season total. See the tool's
+// header for why this is line + sigma*z rather than just the line.
+function _oddsExpectedTotal(line, pOver, market) {
+  const L = Number(line);
+  if (!Number.isFinite(L) || L < 0) return null;
+  if (pOver == null) return L;
+  const z = _oddsProbit(Math.min(0.995, Math.max(0.005, pOver)));
+  if (z == null) return L;
+  return Math.max(0, L + (ODDS_CV[market] ?? 0.30) * L * z);
+}
+
+// ── providers ──────────────────────────────────────────────────────────────
+// Each returns a flat array of
+//   { player, position, team, market, line, overOdds, underOdds }
+// or throws. Add a provider by writing one of these and listing it below.
+
+// The Odds API — documented, stable schema. Used whenever ODDS_API_KEY is set.
+const ODDS_API_MARKET_MAP = {
+  player_pass_yds: 'passYd', player_pass_tds: 'passTD', player_pass_interceptions: 'passInt',
+  player_rush_yds: 'rushYd', player_rush_tds: 'rushTD',
+  player_reception_yds: 'recYd', player_receptions: 'rec', player_reception_tds: 'recTD',
+  player_tds_over: 'scrimmageTD'
+};
+async function fetchOddsTheOddsApi(env) {
+  const key = env.ODDS_API_KEY;
+  if (!key) throw new Error('no ODDS_API_KEY');
+  const markets = Object.keys(ODDS_API_MARKET_MAP).join(',');
+  const base = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds';
+  const u = `${base}?apiKey=${encodeURIComponent(key)}&regions=us&oddsFormat=american&markets=${encodeURIComponent(markets)}`;
+  const r = await fetch(u, { cf: { cacheTtl: 0 } });
+  if (!r.ok) throw new Error('odds-api ' + r.status);
+  const data = await r.json();
+  const rows = [];
+  for (const ev of Array.isArray(data) ? data : []) {
+    for (const bk of ev.bookmakers || []) {
+      for (const mk of bk.markets || []) {
+        const stat = ODDS_API_MARKET_MAP[mk.key];
+        if (!stat) continue;
+        // Outcomes come in Over/Under pairs keyed by `description` (the player).
+        const byPlayer = new Map();
+        for (const oc of mk.outcomes || []) {
+          const who = oc.description || oc.participant;
+          if (!who) continue;
+          if (!byPlayer.has(who)) byPlayer.set(who, {});
+          const side = String(oc.name || '').toLowerCase();
+          if (side === 'over') byPlayer.get(who).over = oc;
+          else if (side === 'under') byPlayer.get(who).under = oc;
+        }
+        for (const [who, pair] of byPlayer) {
+          const line = pair.over?.point ?? pair.under?.point;
+          if (line == null) continue;
+          rows.push({
+            player: who, position: null, team: null, market: stat, line,
+            overOdds: pair.over?.price ?? null, underOdds: pair.under?.price ?? null
+          });
+        }
+      }
+    }
+  }
+  return rows;
+}
+
+// nflverse game lines — FREE, no key, no subscription, CC BY 4.0 (attribution
+// only), served from GitHub. This is the provider that actually runs: it needs
+// no credentials, so the Vegas blend is live out of the box.
+//
+// It carries GAME lines (spread + total), not player props. Those still say
+// plenty about a player: the pair implies each team's expected points, which is
+// the scoring environment every skill player on that roster inherits. See
+// buildTeamEnvOverlay for how that becomes a stat adjustment without
+// double-counting what the projections already believe.
+const NFLVERSE_GAMES_URL = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
+const TEAM_ALIAS = { LAR: 'LA', JAC: 'JAX', WSH: 'WAS', LVR: 'LV', OAK: 'LV', SD: 'LAC', STL: 'LA' };
+const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u; };
+// Yardage tracks scoring environment far less tightly than touchdowns do, so a
+// team's factor is damped before it touches yards. Judgement call, not a fit.
+const TEAMENV_YARD_EXP = 0.5;
+const TEAMENV_CLAMP = [0.85, 1.18];   // a data glitch must not rewrite a roster
+const TEAMENV_MIN_GAMES = 3;          // too few priced games -> leave the team alone
+const TEAMENV_TD_STATS = ['passTD', 'rushTD', 'recTD'];
+const TEAMENV_YARD_STATS = ['passYd', 'rushYd', 'recYd'];
+
+// Minimal quote-aware CSV line splitter. games.csv carries free-text columns
+// (stadium, referee) that can contain commas, so a plain split would misalign
+// every field after them.
+function _csvSplit(line) {
+  const out = [];
+  let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) {
+      if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+// Returns { TEAM: impliedPointsPerGame } for the newest season that has lines.
+async function fetchTeamEnvNflverse(env) {
+  const r = await fetch(NFLVERSE_GAMES_URL, { cf: { cacheTtl: 3600 } });
+  if (!r.ok) throw new Error('nflverse ' + r.status);
+  const text = await r.text();
+  const lines = text.split('\n');
+  if (lines.length < 2) throw new Error('nflverse: empty');
+  const head = _csvSplit(lines[0]);
+  const col = {};
+  ['season', 'week', 'home_team', 'away_team', 'spread_line', 'total_line'].forEach(k => { col[k] = head.indexOf(k); });
+  for (const k of Object.keys(col)) if (col[k] < 0) throw new Error('nflverse: missing column ' + k);
+
+  // game_id is the first field and starts with the season, so the newest season
+  // can be found (and every other row skipped) without parsing 2MB of CSV.
+  let season = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const u = lines[i].indexOf('_');
+    if (u > 0) { const y = +lines[i].slice(0, u); if (y > season && y < 3000) season = y; }
+  }
+  if (!season) throw new Error('nflverse: no season found');
+  const prefix = season + '_';
+
+  const acc = {};
+  const add = (t, pts) => { const k = teamKey(t); (acc[k] = acc[k] || []).push(pts); };
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].startsWith(prefix)) continue;
+    const f = _csvSplit(lines[i]);
+    const spread = parseFloat(f[col.spread_line]);
+    const total = parseFloat(f[col.total_line]);
+    if (!Number.isFinite(spread) || !Number.isFinite(total)) continue;   // unpriced game
+    if (total < 20 || total > 80 || Math.abs(spread) > 30) continue;     // junk row
+    // spread_line is the HOME margin, so the pair splits the total into the two
+    // sides' implied points: home = total/2 + spread/2, away = total/2 - spread/2.
+    add(f[col.home_team], total / 2 + spread / 2);
+    add(f[col.away_team], total / 2 - spread / 2);
+  }
+  const ppg = {};
+  for (const [t, arr] of Object.entries(acc)) {
+    if (arr.length < TEAMENV_MIN_GAMES) continue;
+    ppg[t] = arr.reduce((a, b) => a + b, 0) / arr.length;
+  }
+  if (Object.keys(ppg).length < 16) throw new Error('nflverse: only ' + Object.keys(ppg).length + ' teams priced');
+  return ppg;
+}
+
+// Turn Vegas implied team scoring into per-player stat adjustments.
+//
+// The trap here is DOUBLE COUNTING: the committed projections already have an
+// opinion about which offenses are good, so scaling by raw Vegas points would
+// apply that opinion twice. Instead both sides are reduced to a league-relative
+// index and the adjustment is the RATIO of the two — if Vegas and the
+// projections already agree on a team's standing the factor is 1.0 and nothing
+// moves. Only genuine disagreement changes a number.
+//
+// Both sides must be in the SAME UNIT, and that unit is points. Comparing a
+// touchdown index against Vegas points systematically over-corrects, because
+// weak offenses take a larger share of their points from field goals: on the
+// real 2026 lines that mismatch stretched the factor range to 0.57 and pushed
+// Miami to 1.33, versus 0.40 and 1.15 once both sides are points.
+//
+// Team offensive points = (passTD + rushTD) * 6 + xpMade + fgMade * 3.
+// recTD is deliberately excluded — a receiving touchdown IS the quarterback's
+// passing touchdown, so counting both would double every passing score. Teams
+// with no kicker in the pool borrow the league-average kicking contribution
+// rather than being scored as if they never kick.
+function buildTeamEnvOverlay(vegasPPG) {
+  const EMPTY = { overlay: {}, matched: 0, teams: 0, factors: {} };
+  const teams = Object.keys(vegasPPG || {});
+  if (teams.length < 16) return EMPTY;
+
+  const td = {}, kick = {};
+  for (const p of PROJECTIONS) {
+    const t = teamKey(p.team);
+    if (!t || t === 'FA') continue;
+    const st = p.projectedStats || {};
+    td[t] = (td[t] || 0) + (st.passTD || 0) + (st.rushTD || 0);
+    kick[t] = (kick[t] || 0) + (st.xpMade || 0) + (st.fgMade || 0) * 3;
+  }
+  const common = teams.filter(t => td[t] > 0);
+  if (common.length < 16) return EMPTY;
+
+  const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const kicked = common.filter(t => kick[t] > 0).map(t => kick[t]);
+  const kMean = kicked.length ? mean(kicked) : 0;
+  const projPoints = {};
+  for (const t of common) projPoints[t] = td[t] * 6 + (kick[t] > 0 ? kick[t] : kMean);
+
+  const vMean = mean(common.map(t => vegasPPG[t]));
+  const pMean = mean(common.map(t => projPoints[t]));
+  if (!(vMean > 0) || !(pMean > 0)) return EMPTY;
+
+  const factors = {};
+  for (const t of common) {
+    const f = (vegasPPG[t] / vMean) / (projPoints[t] / pMean);
+    if (!Number.isFinite(f) || f <= 0) continue;
+    factors[t] = Math.min(TEAMENV_CLAMP[1], Math.max(TEAMENV_CLAMP[0], f));
+  }
+
+  const overlay = {};
+  for (const p of PROJECTIONS) {
+    const f = factors[teamKey(p.team)];
+    if (!f) continue;
+    const st = p.projectedStats || {};
+    const out = {};
+    const put = (k, v) => {
+      if (!Number.isFinite(v) || v < 0) return;
+      const band = ODDS_BANDS[k];
+      if (band && (v < band[0] || v > band[1])) return;   // never emit an implausible total
+      out[k] = _oddsRound(v);
+    };
+    for (const k of TEAMENV_TD_STATS) if (st[k] > 0) put(k, st[k] * f);
+    for (const k of TEAMENV_YARD_STATS) if (st[k] > 0) put(k, st[k] * Math.pow(f, TEAMENV_YARD_EXP));
+    if (Object.keys(out).length) overlay[_oddsNorm(p.name) + '|' + p.position] = out;
+  }
+  return { overlay, matched: Object.keys(overlay).length, teams: common.length, factors };
+}
+
+// Providers run in priority order and their overlays are MERGED, earlier wins
+// per player+stat. Player props (when a key is configured) are strictly better
+// than a team-wide inference, so they go first and the free team-environment
+// provider fills in every stat and player the props did not cover.
+const ODDS_PROVIDERS = [
+  { name: 'the-odds-api', kind: 'props',   fn: fetchOddsTheOddsApi,   needs: env => !!env.ODDS_API_KEY },
+  { name: 'nflverse',     kind: 'teamenv', fn: fetchTeamEnvNflverse }
+];
+
+// ── overlay build ──────────────────────────────────────────────────────────
+// Position comes from PROJECTIONS, not the book: books label markets, not
+// fantasy positions, and the site's roster is the authority on who is a TE.
+function _oddsProjectionIndex() {
+  const idx = new Map();
+  for (const p of PROJECTIONS) {
+    const k = _oddsNorm(p.name);
+    // Ambiguous names (same normalized name at two positions) are dropped
+    // rather than guessed — a misassigned line is worse than a missing one.
+    if (idx.has(k)) idx.set(k, null);
+    else idx.set(k, p);
+  }
+  return idx;
+}
+
+function buildVegasOverlay(rows) {
+  const idx = _oddsProjectionIndex();
+  const per = new Map();
+  const skipped = { unmatched: 0, unknownMarket: 0, outOfBand: 0, unusable: 0 };
+  for (const row of rows || []) {
+    const stat = row.market;
+    if (!ODDS_CV[stat]) { skipped.unknownMarket++; continue; }
+    const target = idx.get(_oddsNorm(row.player));
+    if (!target) { skipped.unmatched++; continue; }
+    const band = ODDS_BANDS[stat];
+    const raw = Number(row.line);
+    if (!Number.isFinite(raw) || raw < band[0] || raw > band[1]) { skipped.outOfBand++; continue; }
+    const exp = _oddsExpectedTotal(raw, _oddsDevigOver(row.overOdds, row.underOdds), stat);
+    if (exp == null) { skipped.unusable++; continue; }
+    const key = _oddsNorm(target.name) + '|' + target.position;
+    if (!per.has(key)) per.set(key, { name: target.name, position: target.position, samples: {} });
+    (per.get(key).samples[stat] = per.get(key).samples[stat] || []).push(exp);
+  }
+
+  const overlay = {};
+  for (const [key, rec] of per) {
+    const stats = {};
+    for (const [k, arr] of Object.entries(rec.samples)) {
+      stats[k] = arr.reduce((a, c) => a + c, 0) / arr.length;   // consensus across books
+    }
+    if (stats.scrimmageTD != null) {
+      const cur = PROJECTIONS.find(p => _oddsNorm(p.name) + '|' + p.position === key);
+      const cr = cur?.projectedStats?.rushTD, cc = cur?.projectedStats?.recTD;
+      const share = (cr != null && cc != null && (cr + cc) > 0) ? cr / (cr + cc)
+        : rec.position === 'RB' ? 0.8 : rec.position === 'QB' ? 1 : 0.05;
+      if (stats.rushTD == null) stats.rushTD = stats.scrimmageTD * share;
+      if (stats.recTD == null) stats.recTD = stats.scrimmageTD * (1 - share);
+      delete stats.scrimmageTD;
+    }
+    for (const k of Object.keys(stats)) {
+      stats[k] = _oddsRound(stats[k]);
+    }
+    overlay[key] = stats;
+  }
+  return { overlay, matched: Object.keys(overlay).length, skipped };
+}
+
+// Weighted blend over the committed pool. Only stats the market actually
+// prices move; everything else is passed through untouched, so a player can
+// carry Vegas yardage next to committed TDs. That is intentional.
+function blendProjections(overlay) {
+  if (!overlay) return PROJECTIONS;
+  return PROJECTIONS.map(p => {
+    const v = overlay[_oddsNorm(p.name) + '|' + p.position];
+    if (!v) return p;
+    const stats = { ...p.projectedStats };
+    let touched = false;
+    for (const [k, val] of Object.entries(v)) {
+      if (!(k in stats)) continue;                 // only stats the site models
+      const n = Number(val);
+      if (!Number.isFinite(n) || n < 0) continue;
+      stats[k] = _oddsRound((stats[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
+      touched = true;
+    }
+    return touched ? { ...p, projectedStats: stats } : p;
+  });
+}
+
+// ── D1 cache ───────────────────────────────────────────────────────────────
+async function oddsCacheInit(env) {
+  await env.LEADS_DB.prepare(
+    'CREATE TABLE IF NOT EXISTS odds_overlay (id INTEGER PRIMARY KEY, payload TEXT, provider TEXT, matched INTEGER, updated_at INTEGER)'
+  ).run();
+}
+async function oddsCacheRead(env) {
+  if (!env || !env.LEADS_DB) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, provider, matched, updated_at FROM odds_overlay WHERE id=1').first();
+    if (!row || !row.payload) return null;
+    if (!row.updated_at || Date.now() - row.updated_at > ODDS_MAX_AGE_MS) return null;
+    return { overlay: JSON.parse(row.payload), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
+  } catch (e) { return null; }
+}
+async function oddsCacheWrite(env, overlay, provider, matched) {
+  await oddsCacheInit(env);
+  await env.LEADS_DB.prepare(
+    'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (1, ?, ?, ?, ?)'
+  ).bind(JSON.stringify(overlay), provider, matched, Date.now()).run();
+}
+
+// ── orchestration ──────────────────────────────────────────────────────────
+async function runOddsRefresh(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const tried = [];
+  const merged = {};
+  const used = [];
+  for (const p of ODDS_PROVIDERS) {
+    if (p.needs && !p.needs(env)) { tried.push({ provider: p.name, skipped: 'not configured' }); continue; }
+    let overlay = null, info = {};
+    try {
+      const raw = await p.fn(env);
+      if (p.kind === 'teamenv') {
+        const r = buildTeamEnvOverlay(raw);
+        overlay = r.overlay;
+        info = { teams: r.teams, matched: r.matched };
+      } else {
+        const r = buildVegasOverlay(raw);
+        overlay = r.overlay;
+        info = { rows: (raw || []).length, matched: r.matched, skipped: r.skipped };
+      }
+    } catch (e) {
+      tried.push({ provider: p.name, kind: p.kind, error: (e && e.message) || 'failed' });
+      continue;
+    }
+    // Earlier providers win per player+stat, so a real player prop is never
+    // overwritten by the coarser team-wide inference behind it.
+    let added = 0;
+    for (const [k, stats] of Object.entries(overlay || {})) {
+      const dst = merged[k] || (merged[k] = {});
+      for (const [stat, v] of Object.entries(stats)) if (!(stat in dst)) { dst[stat] = v; added++; }
+    }
+    tried.push({ provider: p.name, kind: p.kind, ...info, contributed: added });
+    if (added) used.push(p.name);
+  }
+  const matched = Object.keys(merged).length;
+  // A thin merge is treated as broken and the previous good overlay is kept.
+  if (matched < ODDS_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', matched, tried };
+  await oddsCacheWrite(env, merged, used.join('+') || 'none', matched);
+  _PROJ_ENC = null;                            // force re-encode with the new blend
+  return { ok: true, provider: used.join('+'), matched, tried };
+}
+
+// Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
+// read at most once per isolate, and zero reads once warm.
+let _PROJ_BLEND_AT = 0;
+async function projectionsPayload(env) {
+  const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
+  if (_PROJ_ENC && fresh) return _PROJ_ENC;
+  let pool = PROJECTIONS;
+  try {
+    const cached = await oddsCacheRead(env);
+    if (cached && cached.overlay) pool = blendProjections(cached.overlay);
+  } catch (e) { /* fall back to the committed pool */ }
+  _PROJ_ENC = _xb64encode(JSON.stringify(pool), PROJ_KEY);
+  _PROJ_BLEND_AT = Date.now();
+  return _PROJ_ENC;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -1188,8 +1659,8 @@ export default {
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
       const ref = request.headers.get('Referer') || '';
       if (ref && !/^https?:\/\/(www\.)?irontuna\.com(\/|$)|^https?:\/\/localhost(:\d+)?(\/|$)|^https:\/\/[^/]+\.pages\.dev(\/|$)/.test(ref)) return new Response('forbidden', { status: 403 });
-      if (!_PROJ_ENC) _PROJ_ENC = _xb64encode(JSON.stringify(PROJECTIONS), PROJ_KEY);
-      return secure(new Response(_PROJ_ENC, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } }));
+      const payload = await projectionsPayload(env);
+      return secure(new Response(payload, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } }));
     }
     if (url.pathname === '/api/insights') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
@@ -1491,6 +1962,35 @@ export default {
         return json({ ok: true, batch: rows.length, sent, skipped, nextOffset: rows.length === LIMIT ? offset + LIMIT : null }, 200, c);
       }
       return json({ ok: false, error: 'specify mode:"test" (with test:email) or mode:"all" (with optional offset)' }, 400, c);
+    }
+    if (url.pathname === '/api/admin/odds-status') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      // ?refresh=1 runs the pull now instead of waiting for the cron.
+      let ran = null;
+      if (url.searchParams.get('refresh') === '1') {
+        try { ran = await runOddsRefresh(env); } catch (e) { ran = { ok: false, error: (e && e.message) || 'failed' }; }
+      }
+      const cached = await oddsCacheRead(env);
+      // ?sample=1 shows what the blend actually did to a few players, so a bad
+      // pull is visible without decoding /api/projections by hand.
+      let sample = null;
+      if (url.searchParams.get('sample') === '1' && cached && cached.overlay) {
+        const blended = blendProjections(cached.overlay);
+        sample = [];
+        for (let i = 0; i < blended.length && sample.length < 12; i++) {
+          if (blended[i].projectedStats === PROJECTIONS[i].projectedStats) continue;
+          sample.push({ name: blended[i].name, position: blended[i].position, before: PROJECTIONS[i].projectedStats, after: blended[i].projectedStats });
+        }
+      }
+      return json({
+        ok: true,
+        providers: ODDS_PROVIDERS.map(p => ({ name: p.name, configured: !p.needs || p.needs(env) })),
+        vegasWeight: VEGAS_WEIGHT,
+        cached: cached ? { provider: cached.provider, matched: cached.matched, updatedAt: cached.updatedAt, ageHours: +((Date.now() - cached.updatedAt) / 3600000).toFixed(1) } : null,
+        serving: cached ? 'vegas-blended' : 'committed projections (no usable overlay)',
+        ran, sample
+      }, 200, c);
     }
     if (url.pathname === '/api/admin/x-post-now') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -1836,6 +2336,13 @@ export default {
       '0 16 * * 1-5': ['snake'],
       '0 19 * * 1-5': ['bonus'],
     };
+    // Daily odds refresh runs on its own trigger and posts nothing.
+    if (event.cron === '0 11 * * *') {
+      ctx.waitUntil(runOddsRefresh(env)
+        .then(r => console.log('odds refresh:', JSON.stringify(r)))
+        .catch(e => console.error('odds refresh failed:', e && e.message)));
+      return;
+    }
     const slots = slotsByCron[event.cron];
     ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },

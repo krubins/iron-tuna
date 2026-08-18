@@ -111,6 +111,7 @@ Set these in the **Cloudflare dashboard → the `iron-tuna` project → Settings
 | `LLM_ENDPOINT` | No | No | Override for an OpenAI-compatible endpoint. |
 | `TURNSTILE_SECRET` | No | Yes | If set, `/api/coach` requires a Cloudflare Turnstile token. |
 | `RATE_KV` | No | n/a (binding) | Optional KV namespace binding for per-IP rate limiting on the coach route. |
+| `ODDS_API_KEY` | No | Yes | The Odds API key. **Optional upgrade only** — the Vegas blend runs without it on the free nflverse provider (§9b). Setting it adds per-player props on top. |
 
 No `.env` file is used in production; everything is configured in Cloudflare. For local `wrangler dev`, export `LLM_API_KEY` in your shell or use a `.dev.vars` file (git-ignored).
 
@@ -154,7 +155,7 @@ A scheduled Claude session runs daily to refresh player projections:
 
 1. The agent fetches season-long projections from **ESPN, SportsLine, and NFL.com** and verifies each source's projections were published within the **preceding 7 days** (stale or undated sources are excluded).
 2. Fresh sources are written to `tools/sources/<source>.json` (schema documented at the top of `tools/merge-projections.mjs`).
-3. `node tools/merge-projections.mjs` merges them: multi-source stats are **averaged**, players are matched by normalized name+position against the existing `PROJECTIONS` roster (no adds/removes), and hard sanity checks abort on any anomaly (count change, NaN, implausible leaders, <25 matches, worker parse failure). Zero fresh sources → exit 2, no changes.
+3. `node tools/merge-projections.mjs` merges them: multi-source stats are a **weighted average** (see §9a — Vegas defaults to weight 3, every projection feed to 1), players are matched by normalized name+position against the existing `PROJECTIONS` roster (no adds/removes), and hard sanity checks abort on any anomaly (count change, NaN, implausible leaders, <25 matches, worker parse failure). Zero fresh sources → exit 2, no changes.
 **League tailoring:** the app persists a compact sheet snapshot to localStorage (`iron_tuna_values_v1`: name/pos/$value/points + teams/budget/format) whenever `baseValued` recomputes. `/my-insights` reads it and translates each premium insight's percentage effect into the buyer's units — auction: dollars against the player's sheet price; snake/best ball: draft slots (and rounds) by re-ranking the snapshot. No snapshot → generic percentages plus a set-up-your-league hint.
 
 4. On success it bumps `PROJ_VERSION` in `index.html` (date-stamped). Users with saved state re-baseline on next load; users who **reordered rankings** get an in-app prompt — "Use updated rankings" (clears `rankOrder`) or "Keep my reorder" (overlay persists on the new numbers).
@@ -163,6 +164,68 @@ A scheduled Claude session runs daily to refresh player projections:
 Fail-safe: if fetching is blocked (environment network policy) or all sources are stale, the day is skipped with no repo changes. `tools/` is in `.assetsignore` so it never serves publicly.
 
 ---
+
+## 9a. Vegas-weighted projections (added August 2026)
+
+Default projections are meant to follow the **betting market** first and the consensus projection feeds second. The betting market is the sharpest public forecast available: it is priced with real money, it moves on news within minutes, and season-long totals already price in injury/availability risk (the book pays on yards actually accumulated — so **do not haircut a Vegas number again for games missed**).
+
+**Pipeline:** raw book lines → `tools/vegas-to-projections.mjs` → `tools/sources/vegas.json` → `tools/merge-projections.mjs` → `PROJECTIONS` in `_worker.js`.
+
+1. Drop one JSON file per sportsbook into `tools/odds/` (gitignored). Shape is documented at the top of `tools/vegas-to-projections.mjs`; a committed sample lives in `tools/odds.example/`. Season-long markets recognised: `passYd passTD passInt rushYd rushTD recYd recTD rec scrimmageTD`.
+2. `node tools/vegas-to-projections.mjs` converts them. Two corrections turn a posted total into a projection:
+   - **De-vig.** Both sides carry juice, so raw implied probabilities sum to >1. Each side's American price is converted to a probability and the pair normalised to sum to 1, leaving the market's honest `P(over)`.
+   - **Median → mean.** The line sits near the market's *median*; fantasy scoring needs the *mean*. Modelling a season total as roughly normal, `E[X] = line + σ·Φ⁻¹(P(over))`, with σ a per-market coefficient of variation × the line. At a balanced price the mean *is* the line, so the correction only bites when a book prices one side hard — which keeps the result robust to σ being somewhat off.
+   
+   Multiple books are de-vigged and converted **first**, then averaged, so a book with wide juice can't drag the consensus. A combined `scrimmageTD` market is split into `rushTD`/`recTD` using the player's *current* projected ratio rather than an invented split.
+3. `node tools/merge-projections.mjs` blends by **weight**, not evenly. `DEFAULT_WEIGHTS = { vegas: 3 }`, everything else 1 — so with one projection feed a merged stat lands **75% of the way from the projection to the Vegas number**. Override per source with `SOURCE_WEIGHT_<NAME>` (e.g. `SOURCE_WEIGHT_VEGAS=5`, or `=1` to restore a plain mean).
+
+**Coverage is per stat, not per player.** Only the sources that actually carry a stat appear in its average, so a stat no book prices (`passInt`, kicker and DEF lines, deep bench players) keeps its existing projection-feed blend untouched. That is deliberate, but it means a player can end up with Vegas yardage next to projection-fed TDs — worth remembering when a line looks internally odd.
+
+`node tools/test-vegas.mjs` covers the de-vig/probit/mean math, the TD split, and an end-to-end weighted merge against a scratch copy of the worker. Run it after touching either tool.
+
+This offline path is the manual fallback. The **live** path is §9b, and it is the one that runs in production.
+
+## 9b. Worker-side odds refresh (added August 2026)
+
+The site pulls its own odds. The daily-update sandbox blocks every sportsbook host, but the Worker runs on Cloudflare's edge where outbound `fetch` is unrestricted, so the pull lives in `_worker.js`, not in `tools/`.
+
+**Shape:** a `0 11 * * *` cron calls `runOddsRefresh(env)` → provider fetch → convert → match against `PROJECTIONS` → store the overlay in D1 (`odds_overlay`, created lazily on `LEADS_DB`). `/api/projections` calls `projectionsPayload(env)`, which reads that one cached row and serves `blendProjections(overlay)` at 3:1. **Requests never touch a data provider** — only the cron does.
+
+### Providers
+
+Providers run in priority order and their overlays are **merged, earlier wins per player+stat** — so a real player prop is never overwritten by the coarser team-wide inference behind it.
+
+| Provider | Needs | What it gives |
+|---|---|---|
+| `the-odds-api` | `ODDS_API_KEY` (paid tier) | Per-player season props. Optional upgrade. |
+| **`nflverse`** | **nothing** | **Game lines → team scoring environment. This is the one that actually runs.** |
+
+**nflverse is free, keyless, and CC BY 4.0** (attribution only — credited in the `front.html` footer; keep that credit if you keep the data). It is fetched from a GitHub release asset, so no sportsbook ToS is involved: DraftKings' internal JSON is keyless too but their terms prohibit automated access, which is why it is not used here.
+
+### Turning game lines into stat adjustments
+
+`games.csv` carries a spread and a total per game, not player props. The pair implies each side's expected points — `home = total/2 + spread/2`, `away = total/2 - spread/2` — which is the scoring environment every skill player on that roster inherits.
+
+Two things keep that honest:
+
+- **No double counting.** The committed projections already have an opinion about which offenses are good, so scaling by raw Vegas points would apply that opinion twice. Both sides are reduced to a league-relative index and the factor is the **ratio of the two**: when Vegas and the projections agree on a team's standing the factor is exactly 1.0 and nothing moves. Only genuine disagreement changes a number.
+- **Same units on both sides — points, not touchdowns.** Team offensive points are `(passTD + rushTD) * 6 + xpMade + fgMade * 3`; `recTD` is excluded because a receiving touchdown *is* the quarterback's passing touchdown. Comparing a touchdown index against Vegas points systematically over-corrects, since weak offenses take a larger share of their points from field goals: on the real 2026 lines that mismatch stretched the factor range to 0.57 and pushed Miami to 1.33, versus 0.40 and 1.15 once both sides are points.
+
+The factor hits touchdowns at full strength and yardage damped (`TEAMENV_YARD_EXP = 0.5`), because yards track scoring environment far less tightly than touchdowns do — a judgement call, not a fit. Receptions, interceptions and fumbles are left alone. Every factor is clamped to `TEAMENV_CLAMP` (0.85–1.18) so a bad pull cannot rewrite a roster, and a team with fewer than `TEAMENV_MIN_GAMES` priced games is skipped entirely.
+
+**Known limitation:** this is a team-wide signal, so it moves every player on a roster in the same direction. It cannot tell you that one receiver specifically is being underrated — that needs player props, i.e. `ODDS_API_KEY`. Free season-long *player* props do not appear to exist.
+
+### Fail-safe by construction
+
+Every step may fail and the endpoint falls back to the committed `PROJECTIONS`. A provider error, an unparseable response, a name matching no player or two players, a line outside the plausibility band (`ODDS_BANDS`), fewer than `ODDS_MIN_MATCHED` (25) players matched, or an overlay older than 14 days all mean *no overlay is written or used*, never *bad numbers are served*. A thin pull leaves the previous good overlay in place.
+
+### Inspecting and testing
+
+`GET /api/admin/odds-status?key=$LEADS_EXPORT_KEY` reports which providers are configured, the cached overlay's age and match count, and whether the site is serving blended or committed numbers. `&refresh=1` runs the pull immediately; `&sample=1` shows before/after stat lines for the first dozen changed players.
+
+`node tools/test-worker-odds.mjs` lifts the Vegas section out of `_worker.js`, runs it against stub *and* real projections, asserts the worker's odds math still agrees with `tools/vegas-to-projections.mjs` (they are hand-synced — there is no build step), and **pulls the live nflverse file** so the provider is exercised against real data. `node tools/test-vegas.mjs` covers the offline path. Run both after touching either.
+
+**One decimal everywhere.** Expected touchdowns are expectations, not counts — `28.5` is a more honest projection than `28`, and `merge-projections.mjs` already keeps a decimal for these stats. Forcing integers silently erased small adjustments (a 1.18 factor on a 1-TD player rounds straight back to 1).
 
 ## 10. X (Twitter) auto-post (added July 2026)
 
@@ -259,11 +322,47 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   and everything else (app routes, static pages) is unchanged. Snake and best ball
   remain fully live — linked from the front page's secondary nav.
 - **Layout** (ESPN-inspired): black masthead with the fish + Bebas silver wordmark and
-  red accent bar; rotating lead story (auto-advances every 7s, the latest unlocked
-  insights drop); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
+  red accent bar; **deep-dive lead** (see below); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
   Market); **Asset Allocation** module (budget, nominations, $1 endgame guides + the
   in-app planner); **Training Camp & Preseason** desk (the auction-watch pages,
   newest featured).
+- **Top Headlines is one merged, strictly newest-first feed.** Camp reports and insight
+  calls are sorted together by date rather than pinning the newest camp report to slot 0,
+  which used to let a July camp report outrank an August drop. `RAIL_MIN_TOP_DAY` keeps the
+  newest day from appearing as a lone headline. The rail also excludes whatever is in the
+  lead pool, so it never repeats the lead. *(If the rail ever looks stale, the cause is
+  usually a new page added without re-running `build-front.mjs` — that is exactly how it
+  got stuck showing July 22.)*
+> **Routing note (merge of PR #39 and #40):** both branches fixed `?screen=cheat`
+> landing on the draft board. PR #40's fix sent phones to `'tiers'`, which was right
+> against the *old* mobile tab bar where `'tiers'` was the tab labelled "Cheat". PR #39
+> relabels those tabs (`'prep'` = **Cheat**, `'tiers'` = **Tiers**), so the merged
+> behaviour routes `?screen=cheat` to `'prep'` on every device. Leaving `'tiers'` in
+> would have dropped phone traffic on a tab labelled "Tiers" showing the VORP tier view
+> instead of the cheat sheet. Settings-exit routing for free users follows the same
+> target. The paywalled board is unaffected: `?screen=cheat` is never locked,
+> `?screen=board` still is.
+
+- **The lead is a six-hour deep dive.** It is reserved for calls that go **beyond a
+  single player** — coaching, offensive line, schedule, weather, rule changes — the
+  read that earns a top click rather than one more player take. Those are tagged
+  `deep: 1` at build time from the insight pages' own **`Market`** position label, so
+  the classification is the site's existing editorial call and does not drift as copy
+  changes; single-player QB/RB/WR/TE calls are never eligible. Each also gets a `topic`
+  desk label (SCHEDULE / OFFENSIVE LINE / COACHING / WEATHER / RULE CHANGE / TEAM
+  TREND) matched from the **title first**, body only as a fallback, so a passing
+  mention deep in a paragraph cannot relabel a story.
+  - **Cadence:** the slot is `floor(Date.now() / 6h) % pool`, derived from the wall
+    clock rather than a carousel timer — so every visitor sees the *same* lead and it
+    turns over at 00/06/12/18 UTC. The pool is the 8 most recent unlocked deep dives
+    (`LEAD_WINDOW`), a two-day cycle before anything repeats.
+  - Arrows and dots still browse by hand; doing so **pins** the lead (hides the
+    countdown and stops the auto-rollover) so a reader's choice is never yanked away.
+    A tab left open rolls to the next deep dive when the boundary passes.
+  - The Top Headlines rail excludes whatever is in the lead pool, so it no longer
+    repeats the lead now that the pool spans dates.
+  - If no deep dive has unlocked yet it falls back to the latest drop's calls, so the
+    lead is never empty on a fresh season.
 - **Data pipeline:** `node tools/build-front.mjs` re-extracts the embedded
   `var STORIES` / `var REPORTS` arrays in `front.html` from the
   `auction-insights-*.html` and `auction-watch-*.html` pages (joined to
