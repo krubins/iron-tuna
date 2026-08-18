@@ -1,0 +1,106 @@
+name: checks
+
+# There is no build step and no package manager in this repo (see HANDOFF.md §2),
+# so nothing here installs anything — every check is plain node against the files
+# that actually deploy.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # A single bad escape silently white-screens the whole app, so parsing the
+      # deployed files is the highest-value check in the repo.
+      - name: Parse _worker.js
+        run: node --check _worker.js
+
+      - name: Parse the index.html app script
+        run: |
+          node -e '
+            const fs = require("fs");
+            const h = fs.readFileSync("index.html", "utf8");
+            const m = h.match(/<script type="module">([\s\S]*?)<\/script>/);
+            if (!m) { console.error("no <script type=module> block found"); process.exit(1); }
+            new Function(m[1]);
+            console.log("index.html PARSE OK");
+          '
+
+      - name: Parse the front.html scripts
+        run: |
+          node -e '
+            const fs = require("fs");
+            const h = fs.readFileSync("front.html", "utf8");
+            const blocks = [...h.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+            if (!blocks.length) { console.error("no <script> blocks found"); process.exit(1); }
+            blocks.forEach(b => new Function(b[1]));
+            console.log("front.html PARSE OK (" + blocks.length + " blocks)");
+          '
+
+      - name: Parse wrangler.jsonc
+        run: |
+          node -e '
+            const fs = require("fs");
+            JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8").replace(/^\s*\/\/.*$/gm, ""));
+            console.log("wrangler.jsonc OK");
+          '
+
+      # HANDOFF.md §3 documents an escape-corruption bug that has bitten this repo
+      # three times: a control byte written into a file literally instead of as an
+      # escape. A literal newline in a regex is a SyntaxError the parse checks
+      # above already catch — but a literal backspace (0x08) inside a regex parses
+      # fine and then silently never matches. Only a byte scan finds that one.
+      - name: No stray control bytes in deployed source
+        run: |
+          node -e '
+            const fs = require("fs");
+            const files = ["index.html", "front.html", "_worker.js"];
+            let bad = 0;
+            for (const f of files) {
+              const buf = fs.readFileSync(f);
+              for (let i = 0; i < buf.length; i++) {
+                const c = buf[i];
+                // Allow tab (9), newline (10), carriage return (13).
+                if (c < 0x20 && c !== 9 && c !== 10 && c !== 13) {
+                  const line = buf.slice(0, i).toString("utf8").split("\n").length;
+                  console.error(`${f}:${line} stray control byte 0x${c.toString(16).padStart(2, "0")}`);
+                  bad++;
+                  if (bad > 20) { console.error("...more"); process.exit(1); }
+                }
+              }
+            }
+            if (bad) process.exit(1);
+            console.log("no stray control bytes");
+          '
+
+      # front.html embeds STORIES/REPORTS extracted from the drop and auction-watch
+      # pages. Adding a page without re-running build-front.mjs leaves that array
+      # stale — which is exactly how Top Headlines got stuck showing an old camp
+      # report. Rebuilding here must produce no diff.
+      - name: front.html is rebuilt from its source pages
+        run: |
+          node tools/build-front.mjs
+          if ! git diff --quiet -- front.html; then
+            echo "::error file=front.html::front.html is stale — run 'node tools/build-front.mjs' and commit the result"
+            git --no-pager diff --stat -- front.html
+            exit 1
+          fi
+          echo "front.html is up to date"
+
+      # The odds math is duplicated between _worker.js and tools/ because there is
+      # no bundler; test-worker-odds.mjs lifts the worker's copy out of the source
+      # and asserts the two still agree, so drift fails here instead of quietly
+      # changing the numbers people draft on. It also pulls the live nflverse file
+      # — that step self-skips on a network blip rather than failing the build.
+      - name: Odds pipeline tests (build-time tools)
+        run: node tools/test-vegas.mjs
+
+      - name: Odds pipeline tests (worker, incl. worker/tool sync)
+        run: node tools/test-worker-odds.mjs
