@@ -754,6 +754,9 @@ input:focus, select:focus { border-color: var(--accent); }
 @keyframes coachPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 .coach-head button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; margin-left: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
 .coach-head button:hover { color: var(--text-primary); }
+.coach.embed.coach-min { cursor: pointer; height: auto; min-height: 0; flex: 0 0 auto; align-self: start; }
+.coach.embed.coach-min .coach-head { border-bottom: none; }
+.ch-coachslot > .coach.embed.coach-min { flex: 0 0 auto; }
 .coach-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); }
 .coach-chip { font-size: 11px; font-family: var(--font-mono); background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 10px; padding: 2px 7px; color: var(--text-secondary); }
 .coach-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -18421,10 +18424,18 @@ function ValueCoach({
   embed,
   onBeforeAsk
 }) {
-  const [open, setOpen] = useState(!locked);
+  const [open, setOpen] = useState(() => {
+    if (locked) return false;
+    // The embedded Value Coach remembers its minimized state across views and reloads.
+    if (embed) { try { return localStorage.getItem('it_coach_min') !== '1'; } catch (e) { return true; } }
+    return true;
+  });
   useEffect(() => {
     onOpenChange && onOpenChange(open);
   }, [open]);
+  useEffect(() => {
+    if (!locked && embed) { try { localStorage.setItem('it_coach_min', open ? '0' : '1'); } catch (e) {} }
+  }, [open, locked, embed]);
   const [msgs, setMsgs] = useState(() => {
     const _f = config && config.format;
     const _t = _f === 'bestball' ? 'I\'m your draft navigator. Ask me to size up a player (“how high should I take Drake Maye?”), find stacks (“best stack for my QB?”), or strategize (“who’s a championship-week value?”, “any ceiling plays slipping past their ADP?”). I can also tune values: “boost RB upside”, “reset”.' : _f === 'snake' ? 'I\'m your draft navigator. Ask me to size up a player (“when will Drake Maye go?”), explain a call (“is Bijan a reach here?”), or strategize (“who should I target?”, “any values slipping past their ADP?”). I can also tune values: “elite RBs 20% better”, “reset”.' : 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.';
@@ -18788,6 +18799,20 @@ function ValueCoach({
     onClick: () => locked ? onUnlock() : setOpen(true),
     title: locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`
   }, name, locked ? ' · locked' : active.length ? ` · ${active.length}` : '');
+  if (!open && embed) return React.createElement("div", {
+    className: "coach embed coach-min",
+    onClick: () => setOpen(true),
+    title: `Expand the ${name}`
+  }, React.createElement("div", {
+    className: "coach-head"
+  }, React.createElement("span", {
+    className: "coach-title"
+  }, name, React.createElement("span", {
+    className: "coach-live"
+  }, "minimized")), React.createElement("div", null, React.createElement("button", {
+    onClick: e => { e.stopPropagation(); setOpen(true); },
+    title: `Expand the ${name}`
+  }, "show"))));
   return React.createElement("div", {
     className: `coach ${embed ? 'embed' : big ? 'big' : 'dock'}`,
     style: !big && !embed ? {
@@ -18804,7 +18829,7 @@ function ValueCoach({
     className: "coach-resize",
     onPointerDown: startDockResize,
     title: "Drag to resize"
-  }), !embed && React.createElement("div", {
+  }), React.createElement("div", {
     className: "coach-head"
   }, React.createElement("span", {
     className: "coach-title"
@@ -18814,7 +18839,7 @@ function ValueCoach({
     className: "coach-hidebtn",
     onClick: () => setOpen(false),
     title: "Minimize the coach"
-  }, "hide")), React.createElement("div", null, active.length > 0 && React.createElement("button", {
+  }, embed ? "minimize" : "hide")), React.createElement("div", null, active.length > 0 && React.createElement("button", {
     onClick: () => {
       onApply({});
       setPending(null);
