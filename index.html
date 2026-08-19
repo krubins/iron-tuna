@@ -10,8 +10,10 @@
 
   gtag('config', 'AW-18397866361');
 </script>
-<!-- Event snippet for Purchase conversion page
-In your html page, add the snippet and call gtag_report_conversion when someone clicks on the chosen link or button. -->
+<!-- Event snippet for Purchase conversion page.
+The live conversion fires in the app on the server-verified Stripe success return
+(?paid=1&cs=...) with value 9.99 and the checkout-session id as transaction_id.
+gtag_report_conversion is kept for any future click-tracked link or button. -->
 <script>
 function gtag_report_conversion(url) {
   var callback = function () {
@@ -21,7 +23,7 @@ function gtag_report_conversion(url) {
   };
   gtag('event', 'conversion', {
       'send_to': 'AW-18397866361/PIr0COO29uMcEPnS5MRE',
-      'value': 1.0,
+      'value': 9.99,
       'currency': 'USD',
       'transaction_id': '',
       'event_callback': callback
@@ -20183,6 +20185,17 @@ function App() {
                 verified: true
               });
             } catch (e) {}
+            // Google Ads purchase conversion: fired only on the server-verified Stripe
+            // success return. The checkout-session id doubles as transaction_id so Google
+            // deduplicates if this URL is ever revisited.
+            try {
+              gtag('event', 'conversion', {
+                'send_to': 'AW-18397866361/PIr0COO29uMcEPnS5MRE',
+                'value': 9.99,
+                'currency': 'USD',
+                'transaction_id': sp.get('cs')
+              });
+            } catch (e) {}
             setPostBuyOpen(true);
           }
           clean();
@@ -20209,9 +20222,6 @@ function App() {
   const [upgradeReason, setUpgradeReason] = useState('');
   async function openCheckout(tier) {
     if (!tier) return;
-    // Google Ads purchase-conversion: fire on the click that starts checkout, before the
-    // async Stripe redirect below (no url arg — this function handles its own navigation).
-    try { gtag_report_conversion(); } catch (e) {}
     const fmt = tier.format || config.format || 'auction';
     ITAnalytics.track('checkout_open', {
       item: tier.id,
