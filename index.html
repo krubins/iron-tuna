@@ -454,6 +454,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-rankmode .ch-rm-opt.on { background: var(--positive-soft, rgba(34,211,238,0.12)); color: var(--positive, #22d3ee); }
 .vegas-flag { display: inline-block; margin-right: 5px; font-family: var(--font-mono); font-weight: 800; font-size: 10px; line-height: 1.5; color: var(--gold-text); border: 1px solid rgba(245,184,0,0.55); border-radius: 3px; padding: 0 4px; cursor: help; vertical-align: 1px; }
 .vegas-flag.down { color: #ff8080; border-color: rgba(255,107,107,0.55); }
+.vegas-rank { display: inline-block; margin-right: 5px; font-family: var(--font-mono); font-weight: 800; font-size: 10px; line-height: 1.5; color: #35c98a; border: 1px solid rgba(53,201,138,0.5); border-radius: 3px; padding: 0 4px; cursor: help; vertical-align: 1px; white-space: nowrap; }
+.vegas-rank.down { color: #ff8080; border-color: rgba(255,107,107,0.55); }
 .tier-player-team { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; }
 .tier-player-value { font-family: var(--font-mono); font-size: 13px; text-align: right; color: var(--gold-text); font-weight: 500; }
 .prep-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 28px; }
@@ -2759,6 +2761,70 @@ function vegasTitle(vi) {
   if (!vi) return '';
   const parts = Object.entries(vi.stats).filter(e => Array.isArray(e[1]) && e[1].length >= 3 && e[1][0] !== e[1][2]).map(e => (VEGAS_STAT_LABELS[e[0]] || e[0]) + ' ' + _vgFmt(e[0], e[1][0]) + ' \u2192 ' + _vgFmt(e[0], e[1][2]) + ' (Vegas ' + _vgFmt(e[0], e[1][1]) + ')');
   return 'Vegas lines moved this projection ' + (vi.delta > 0 ? '+' : '') + vi.delta + ' season pts \u00b7 ' + parts.join(' \u00b7 ');
+}
+// How far the odds moved a player ON THE BOARD, not just in points. A reader
+// ranks by position, so "Vegas took him from RB14 to RB9" is the sentence that
+// matters; the points delta alone leaves them to guess whether it mattered.
+//
+// Both boards are ranked over the SAME pool, because a rank is relative: when
+// the odds lift one player everyone below moves too, and ranking only the moved
+// players would invent shifts that do not exist.
+function vegasRankShifts(players, config) {
+  const out = new Map();
+  if (!players || !players.length || !config) return out;
+  const byPos = {};
+  for (const p of players) (byPos[p.position] = byPos[p.position] || []).push(p);
+  for (const list of Object.values(byPos)) {
+    const withOdds = [], without = [];
+    for (const p of list) {
+      const vg = p.vegas;
+      let base = p.projectedStats;
+      if (vg && base) {
+        base = { ...base };
+        for (const k in vg) { const a = vg[k]; if (Array.isArray(a) && a.length >= 3 && k in base) base[k] = a[0]; }
+      }
+      withOdds.push({ id: p.id, s: scorePlayer({ ...p, projectedPointsOverride: null }, config) });
+      without.push({ id: p.id, s: scorePlayer({ ...p, projectedPointsOverride: null, projectedStats: base }, config) });
+    }
+    const rank = arr => {
+      const m = new Map();
+      [...arr].sort((a, b) => b.s - a.s).forEach((e, i) => m.set(e.id, i + 1));
+      return m;
+    };
+    const rNow = rank(withOdds), rBase = rank(without);
+    const sNow = new Map(withOdds.map(e => [e.id, e.s])), sBase = new Map(without.map(e => [e.id, e.s]));
+    for (const p of list) {
+      if (!p.vegas) continue;                       // the market never priced them
+      const before = rBase.get(p.id), after = rNow.get(p.id);
+      if (before == null || after == null) continue;
+      out.set(p.id, {
+        before, after,
+        move: before - after,                       // + => the odds moved them UP
+        pts: Math.round(((sNow.get(p.id) || 0) - (sBase.get(p.id) || 0)) * 10) / 10
+      });
+    }
+  }
+  return out;
+}
+// Shown when the odds moved the player's rank at all, or moved enough points to
+// matter even without crossing anyone. Silent otherwise — a chip on every row
+// would be wallpaper.
+function vegasRankEl(player, shifts, config) {
+  const sh = shifts && shifts.get(player.id);
+  if (!sh) return null;
+  if (!sh.move && Math.abs(sh.pts) < VEGAS_FLAG_MIN_PTS) return null;
+  const up = sh.move > 0 || (!sh.move && sh.pts > 0);
+  const label = sh.move ? (sh.move > 0 ? '\u25b2' : '\u25bc') + Math.abs(sh.move)
+                        : (sh.pts > 0 ? '+' : '') + sh.pts;
+  const detail = sh.move
+    ? `Vegas odds moved this player from ${player.position}${sh.before} to ${player.position}${sh.after}`
+    : `Vegas odds did not change this player's ${player.position} rank`;
+  const vi = vegasImpact(player, config);
+  return React.createElement("span", {
+    className: "vegas-rank" + (up ? "" : " down"),
+    title: detail + ` (${sh.pts > 0 ? '+' : ''}${sh.pts} season pts)` + (vi ? ' \u00b7 ' + vegasTitle(vi).replace(/^Vegas lines moved this projection [^\u00b7]*\u00b7 /, '') : ''),
+    "aria-label": detail
+  }, label);
 }
 function vegasFlagEl(player, config) {
   const vi = vegasImpact(player, config);
@@ -11196,6 +11262,9 @@ function Cheatsheet({
   onUpdateStrategy,
   coachEl
 }) {
+  // Odds impact per row: computed once for the whole pool, not per player,
+  // because a rank is only meaningful against the same board.
+  const vegasShifts = React.useMemo(() => vegasRankShifts(players, config), [players, config]);
   const [whbQ, setWhbQ] = useState('');
   const [whbR, setWhbR] = useState('');
   const [whbShow, setWhbShow] = useState(false);
@@ -11736,7 +11805,7 @@ function Cheatsheet({
         color: nameColor
       },
       title: byeOf(p.team) ? `Bye week ${byeOf(p.team)}` : 'Bye week: TBD'
-    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
+    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
       className: "cheat-hctag",
       title: `Handcuff to ${handcuffMap.get(p.id)}`
     }, React.createElement("svg", {
@@ -14991,6 +15060,9 @@ function PlayersRail({
   focusPlayer,
   onCollapse
 }) {
+  // Odds impact per row: computed once for the whole pool, not per player,
+  // because a rank is only meaningful against the same board.
+  const vegasShifts = React.useMemo(() => vegasRankShifts(players, config), [players, config]);
   const [search, setSearch] = useState('');
   const [posFilter, setPosFilter] = useState('ALL');
   const [filterMode, setFilterMode] = useState('all');
@@ -15347,7 +15419,7 @@ function PlayersRail({
         className: "rr-name",
         onClick: e => { e.stopPropagation(); onNominate(p); },
         style: { cursor: 'pointer' }
-      }, vegasFlagEl(p, config), p.name), React.createElement("span", {
+      }, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name), React.createElement("span", {
         className: "rr-c",
         title: (config && config.format !== 'auction') ? "ADP (average draft position)" : "Proj, likely market/auction price"
       }, (config && config.format !== 'auction') ? (p.adp != null ? Math.round(p.adp) : '\u2014') : ('$' + projVal)), React.createElement("span", {

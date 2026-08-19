@@ -256,6 +256,16 @@ When conflicts do not fill the twelve slots, up to `COLUMN_MAX_AGREE` (3) **agre
 - **Game lines are not player props.** The free `nflverse` provider prices *games*; real player props need `ODDS_API_KEY`. The response carries `basis: 'gamelines' | 'props'` and the card's footer states which, plus "team-level signal — it prices the offense, not the individual target share". Presenting a team-wide inference as a prop would be the exact sloppiness the column exists to call out.
 - **Team rank alone misleads.** The team-environment factor is a *ratio* of Vegas's league-relative standing to the projections', so a top-five offense can still be a downgrade if the consensus already has it top three. Every item therefore carries **both** `teamRank` (odds) and `teamRankConsensus` (from `_colTeamProjRank()`), and the card always states the pair. Brock Purdy is the live example: San Francisco is 4th in implied points and still a fade, because the consensus has them 3rd.
 
+### The response is versioned, and that is not optional
+
+`/api/vegas-column` is cached publicly for 15 minutes. The first contract change shipped without a version and readers saw **"QBundefined"** and **"pass TD NaN"** for a quarter of an hour: new HTML met an old cached payload whose fields had been renamed, and the fields that happened to keep their names (`rankMarket`, `priceDelta`) rendered fine, which is what made it look like a data bug rather than a cache-skew one.
+
+Two mechanisms now prevent it, and **both** are needed:
+- `COLUMN_CONTRACT` is echoed in the response and requested by the client as `?v=N`, so a page and a payload of different vintages can never meet — the cached copies are keyed apart, in the isolate (`_COLUMN_KEY`) and at the edge (distinct URL).
+- The client drops any payload whose `contract` is not its own, and drops any individual item missing a field it prints (`VS_REQUIRED` / `vsUsable`). An unrecognised shape renders the empty state.
+
+**Bump `COLUMN_CONTRACT` and `VS_CONTRACT` together on any change to the item shape.** `node render-check` (scratch harness) has a `stale` mode that replays the exact production failure.
+
 ### Cadence
 
 Six-hour wall-clock slots (00/06/12/18 UTC), same mechanism and the same phase shift as the front-page lead — six-hour slots divide evenly into the day, so without `+ floor(slot / n)` a reader who always checks at the same hour would be stuck on a fraction of the cases forever. Arrows and dots browse by hand and **pin** the rotation. `oddsCtxWrite()` stores the implied points per team as row 2 of `odds_overlay` on each refresh (no migration: same table, same lifecycle).
@@ -416,6 +426,26 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   the one section on the page whose content is **computed rather than authored** — its
   cases come from `/api/vegas-column`, not from `STORIES`, so `build-front.mjs` does not
   touch it and it never needs a copy refresh. Full contract in **§9c**.
+- **The lead carries artwork** (`#leadArt`), an inline SVG plate in the featured team's
+  colours. **No club logo, wordmark or player likeness is reproduced** — none of that is
+  ours to publish. What is used is a team's colours (a fact, not a creative work) plus the
+  abbreviation, drawn as original geometry. `TEAM_ART` in `front.html` holds the palette;
+  `inkOn()` picks the type colour from the background's luminance, because white on
+  Pittsburgh's yellow is unreadable.
+  - The team comes from `story.team`, set by `build-front.mjs` from **the headline only**.
+    The body fallback that works for topics is too loose here: "Offensive-line dispersion
+    matters more this year" is a league-wide piece that cites Buffalo in paragraph three,
+    and body matching handed it Buffalo's colours. League-wide stories get the neutral
+    plate — currently 17 of 20 deep dives name a team, and the 3 that don't are the two
+    rule-change pieces and the dispersion one, correctly.
+- **Odds impact on every player row** (`vegasRankEl` / `vegasRankShifts` in `index.html`,
+  wired into **`Cheatsheet`** and **`PlayersRail`** — the cheat sheet and the auction
+  manager). The old `vegasFlagEl` "V" badge only said *that* the odds mattered, and only on
+  hover; the chip says **how far they moved the player on the board** (`▲3` / `▼2`), which
+  is the sentence a drafter actually needs. Both boards are ranked over the **same pool**,
+  because a rank is relative — ranking only the priced players would invent shifts that
+  never happened. Memoised per component; silent unless the rank moved or the points delta
+  clears `VEGAS_FLAG_MIN_PTS`. Covered by `node tools/test-vegas-rank-chip.mjs`.
 - **Data pipeline:** `node tools/build-front.mjs` re-extracts the embedded
   `var STORIES` / `var REPORTS` arrays in `front.html` from the
   `auction-insights-*.html` and `auction-watch-*.html` pages (joined to

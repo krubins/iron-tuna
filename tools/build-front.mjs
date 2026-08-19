@@ -4,7 +4,9 @@
 //               label, priced view chip) joined to tools/x-posts/insights_pool.json for
 //               the play/stat lines. Each story also carries `deep` (1 when the call is a
 //               structural read rather than a single-player call) and `topic` (the desk
-//               label shown on the front page lead). See DEEP/TOPICS below.
+//               label shown on the front page lead) and `team` (the NFL team the
+//               call is about, used to colour the lead's plate). See DEEP/TOPICS
+//               and TEAMS below.
 //   REPORTS  <- every auction-watch-YYYY-MM-DD.html page (title + meta description),
 //               newest first — this is the Training Camp & Preseason desk
 //
@@ -63,6 +65,54 @@ const matchTopic = text => {
 };
 const topicFor = (title, body) => matchTopic(title) || matchTopic(body) || 'Team trend';
 
+// ── team detection, for the lead's artwork ─────────────────────────────────
+// The front page draws an original team-coloured plate beside the lead, so each
+// story needs to know whose story it is. Same discipline as the topic matcher:
+// the TITLE is the editorial summary and is matched first, the body only as a
+// fallback, so a rival mentioned in passing three paragraphs down cannot claim
+// the artwork. A miss costs a neutral plate, never a wrong team's colours.
+//
+// Ambiguity is resolved by matching CITY and NICKNAME separately: "New York"
+// alone cannot pick between the Giants and the Jets, so the bare city is not a
+// key at all for shared markets — only "Giants"/"Jets" are. Same for Los
+// Angeles and the two California pairs.
+const TEAMS = [
+  ['ARI', ['Arizona', 'Cardinals']],          ['ATL', ['Atlanta', 'Falcons']],
+  ['BAL', ['Baltimore', 'Ravens']],           ['BUF', ['Buffalo', 'Bills']],
+  ['CAR', ['Carolina', 'Panthers']],          ['CHI', ['Chicago', 'Bears']],
+  ['CIN', ['Cincinnati', 'Bengals']],         ['CLE', ['Cleveland', 'Browns']],
+  ['DAL', ['Dallas', 'Cowboys']],             ['DEN', ['Denver', 'Broncos']],
+  ['DET', ['Detroit', 'Lions']],              ['GB',  ['Green Bay', 'Packers']],
+  ['HOU', ['Houston', 'Texans']],             ['IND', ['Indianapolis', 'Colts']],
+  ['JAX', ['Jacksonville', 'Jaguars']],       ['KC',  ['Kansas City', 'Chiefs']],
+  ['LV',  ['Las Vegas', 'Raiders']],          ['LAC', ['Chargers']],
+  ['LAR', ['Rams']],                          ['MIA', ['Miami', 'Dolphins']],
+  ['MIN', ['Minnesota', 'Vikings']],          ['NE',  ['New England', 'Patriots']],
+  ['NO',  ['New Orleans', 'Saints']],         ['NYG', ['Giants']],
+  ['NYJ', ['Jets']],                          ['PHI', ['Philadelphia', 'Eagles']],
+  ['PIT', ['Pittsburgh', 'Steelers']],        ['SF',  ['San Francisco', '49ers', 'Niners']],
+  ['SEA', ['Seattle', 'Seahawks']],           ['TB',  ['Tampa Bay', 'Buccaneers', 'Bucs']],
+  ['TEN', ['Tennessee', 'Titans']],           ['WAS', ['Washington', 'Commanders']]
+];
+const matchTeam = text => {
+  // Earliest mention wins, so "Cleveland's environment should improve more than
+  // Pittsburgh expects" is a Cleveland story, not a Pittsburgh one.
+  let best = null, at = Infinity;
+  for (const [abbr, names] of TEAMS) {
+    for (const n of names) {
+      const m = new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').exec(text);
+      if (m && m.index < at) { at = m.index; best = abbr; }
+    }
+  }
+  return best;
+};
+// TITLE ONLY — deliberately. The body fallback that works for topics is too
+// loose here: "Offensive-line dispersion matters more this year" is a
+// league-wide piece that happens to cite Buffalo in paragraph three, and body
+// matching handed it Buffalo's colours. A league-wide story should get the
+// neutral plate, so if the headline does not name a team, nothing does.
+const teamFor = (title) => matchTeam(title) || null;
+
 const stories = [];
 for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort()) {
   const date = f.match(/(\d{4}-\d{2}-\d{2})/)[1];
@@ -86,6 +136,7 @@ for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.t
       date,
       url: '/' + f.replace('.html', '') + '#call-' + m[1],
       ...(deep ? { deep: 1, topic: topicFor(title, body) } : {}),
+      ...(function () { const t = teamFor(title); return t ? { team: t } : {}; })(),
     });
   }
 }

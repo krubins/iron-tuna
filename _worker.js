@@ -1609,6 +1609,13 @@ const COLUMN_MIN_BID = 1;
 const COLUMN_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
 const COLUMN_MIN_RANK_GAP = 2;        // below this the "disagreement" is noise
 const COLUMN_MIN_PRICE_GAP = 2;       // ...or a dollar of rounding
+// Bump on ANY change to the item shape the front page reads. The response is
+// cached publicly for 15 minutes, so without a version in the request URL a
+// renamed field means new HTML meets an old cached payload and the page prints
+// "undefined" at readers for a quarter of an hour. The client asks for ?v=N and
+// only renders items whose shape it recognises; the two together make a
+// contract change safe to deploy.
+const COLUMN_CONTRACT = 2;
 const COLUMN_MAX_ITEMS = 12;          // three days of six-hour slots
 const COLUMN_MAX_AGREE = 3;           // agreement cases are filler, never the point
 const COLUMN_AGREE_MAX_RANK = 24;     // and only worth printing near the top of a board
@@ -1886,6 +1893,7 @@ let _PROJ_BLEND_AT = 0;
 let _ODDS_KICK_AT = 0;
 let _COLUMN_CACHE = null;
 let _COLUMN_AT = 0;
+let _COLUMN_KEY = '';
 async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
@@ -1930,21 +1938,28 @@ export default {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       const c = corsHeaders(request.headers.get('Origin'));
       const now = Date.now();
-      if (_COLUMN_CACHE && now - _COLUMN_AT < 900000) return json(_COLUMN_CACHE, 200, { ...c, 'cache-control': 'public, max-age=900' });
+      // Vary the cached copy by the contract the caller asked for, so an old
+      // page and a new one can never be handed each other's payload.
+      const want = url.searchParams.get('v') || '';
+      const ck = 'v' + want;
+      if (_COLUMN_CACHE && _COLUMN_KEY === ck && now - _COLUMN_AT < 900000) {
+        return json(_COLUMN_CACHE, 200, { ...c, 'cache-control': 'public, max-age=900' });
+      }
       let out = { ok: false, error: 'no_overlay', items: [] };
       try {
         const cached = await oddsCacheRead(env);
         if (cached && cached.overlay) {
           const tctx = await oddsCtxRead(env);
           const built = buildVegasColumn(cached.overlay, tctx);
-          out = { ...built, provider: cached.provider, asOf: cached.updatedAt,
+          out = { ...built, contract: COLUMN_CONTRACT, provider: cached.provider, asOf: cached.updatedAt,
                   // The free provider prices GAMES, not players. Saying otherwise
                   // would sell a team-wide inference as a player prop, which is
                   // exactly the sloppiness this column exists to call out.
                   basis: /the-odds-api/.test(cached.provider || '') ? 'props' : 'gamelines' };
         }
       } catch (e) { out = { ok: false, error: 'unavailable', items: [] }; }
-      _COLUMN_CACHE = out; _COLUMN_AT = now;
+      if (out.contract == null) out.contract = COLUMN_CONTRACT;
+      _COLUMN_CACHE = out; _COLUMN_AT = now; _COLUMN_KEY = ck;
       return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
     }
     if (url.pathname === '/api/insights') {
