@@ -52,15 +52,21 @@ function timingSafeEq(a, b) { if (a.length !== b.length) return false; let r = 0
 async function makeToken(secret, obj) { const p = b64urlEncode(new TextEncoder().encode(JSON.stringify(obj))); return p + '.' + await hmacSign(secret, p); }
 async function readToken(secret, token) { const parts = (token || '').split('.'); if (parts.length !== 2) return null; if (!timingSafeEq(parts[1], await hmacSign(secret, parts[0]))) return null; try { const o = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0]))); if (o.exp && Date.now() > o.exp) return null; return o; } catch (e) { return null; } }
 function parseCookie(str) { const o = {}; (str || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = p.slice(i + 1).trim(); }); return o; }
+// Comped accounts: these emails always have full access, no purchase required.
+// Kept in code (not the DB) so owner access survives a DB reset. Module scope so
+// /api/admin/grant can tell you when a DB row is redundant, and so /api/admin/
+// revoke can warn that it cannot remove access granted here.
+//
+// This list is for OWNER access. To comp someone else, use /api/admin/grant —
+// a third party's address does not belong in a source file, and git history
+// keeps it forever.
+const COMPED_EMAILS = ['kennethrubinstein@gmail.com', 'kennethrubinstein@icloud.com'];
 async function isEntitled(env, email) {
   // Authoritative: the entitlements table, written only on a VERIFIED-paid session
   // (see /api/checkout/verify + stripe-webhook). Do NOT fall back to contacts:
   // /api/checkout writes a 'purchase' contact at checkout START, before payment.
   if (!email) return false;
-  // Comped accounts: these emails always have full access, no purchase required.
-  // Kept in code (not the DB) so owner access survives a DB reset.
-  const COMPED = ['kennethrubinstein@gmail.com', 'kennethrubinstein@icloud.com'];
-  if (COMPED.includes(String(email).toLowerCase().trim())) return true;
+  if (COMPED_EMAILS.includes(String(email).toLowerCase().trim())) return true;
   if (!env.LEADS_DB) return false;
   try { return !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) { return false; }
 }
@@ -2262,6 +2268,61 @@ export default {
         return json({ ok: true, batch: rows.length, sent, skipped, nextOffset: rows.length === LIMIT ? offset + LIMIT : null }, 200, c);
       }
       return json({ ok: false, error: 'specify mode:"test" (with test:email) or mode:"all" (with optional offset)' }, 400, c);
+    }
+    // Comp or pull paid access for one address, from a URL — the alternative is a
+    // wrangler d1 command, which cannot be run from a phone and is the wrong shape
+    // for something done repeatedly. Same LEADS_EXPORT_KEY gate as every other
+    // admin route.
+    //
+    // GET, matching /api/admin/x-post-now and /api/admin/x-delete, so it works
+    // from a browser address bar. Both directions are reversible: grant is undone
+    // by revoke, and revoke by grant (the person signs in again), so neither
+    // warrants a confirmation step that would defeat the point.
+    if (url.pathname === '/api/admin/grant' || url.pathname === '/api/admin/revoke') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      const email = String(url.searchParams.get('email') || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
+      const revoking = url.pathname.endsWith('revoke');
+      const comped = COMPED_EMAILS.includes(email);
+      let hadRow = false;
+      try { hadRow = !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) {}
+      let sessionsCleared = 0;
+      try {
+        if (revoking) {
+          // Counted first, then delegated: revokeEntitlement is the one definition
+          // of what revoking means (entitlement + every session, so no live cookie
+          // survives on a device). Re-implementing those deletes here would drift
+          // the moment a third cleanup step is added there.
+          const n = await env.LEADS_DB.prepare('SELECT COUNT(*) AS c FROM sessions WHERE email=?').bind(email).first();
+          sessionsCleared = (n && n.c) || 0;
+          await revokeEntitlement(env, email);
+        } else {
+          await grantEntitlement(env, email);
+        }
+      } catch (e) {
+        return json({ ok: false, error: 'db_failed', detail: (e && e.message) || 'failed' }, 500, c);
+      }
+      const entitled = await isEntitled(env, email);
+      return json({
+        ok: true,
+        action: revoking ? 'revoke' : 'grant',
+        email,
+        entitled,
+        changed: revoking ? hadRow : !hadRow,
+        // Say plainly when the request did not do what it looks like it did.
+        note: comped
+          ? (revoking
+              ? 'STILL HAS ACCESS: this address is in COMPED_EMAILS in _worker.js. Remove it there and redeploy to fully revoke.'
+              : 'Already comped in code (COMPED_EMAILS); the database row is redundant but harmless.')
+          : revoking
+            ? (hadRow ? 'Access removed and signed out everywhere.' : 'No entitlement row existed; nothing to remove.')
+            : (hadRow ? 'Already had access; row refreshed.' : 'Access granted.'),
+        sessionsCleared,
+        signIn: revoking ? undefined : 'https://irontuna.com/auctiondraft?signin=1'
+      }, 200, c);
     }
     if (url.pathname === '/api/admin/odds-status') {
       const c = corsHeaders(request.headers.get('Origin'));
