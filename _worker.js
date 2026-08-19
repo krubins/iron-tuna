@@ -1575,6 +1575,181 @@ function blendProjections(overlay) {
   });
 }
 
+// ── §9c. "Vegas vs. Rankings & ADP" column ─────────────────────────────────
+// The editorial thesis: a sportsbook has money at risk on every number it
+// prints, so its lines are priced off repeatable trends and statistical
+// modelling and corrected the moment they are wrong. A ranking costs its author
+// nothing. Where the two disagree, the column shows the disagreement and lets
+// the reader decide — it never asserts the book is right.
+//
+// Everything below is COMPUTED from the same cached overlay the projections
+// blend uses. Nothing here is hand-written copy, so the column cannot go stale
+// while the odds move, and it cannot claim a disagreement that isn't in the data.
+//
+// HAND-SYNCED with index.html: COLUMN_SCORING mirrors DEFAULT_LEAGUE_CONFIG.
+// scoring, COLUMN_CURVE mirrors LEAGUE_MARKET_CURVE, and _colScore mirrors
+// scoreSkillPlayer/yardageScore/countScore. There is no build step. If you
+// change scoring or the curve on the client, change it here too —
+// tools/test-worker-column.mjs asserts the two stay in agreement.
+const COLUMN_SCORING = {
+  passingYardsPerPoint: 25, passingYardsThreshold: 125, passingTD: 4, passingInt: -2,
+  rushingYardsPerPoint: 10, rushingYardsThreshold: 0, rushingTD: 6,
+  receivingYardsPerPoint: 10, receivingYardsThreshold: 0, receivingTD: 6,
+  receptionPoints: 1, rbReceptionPoints: 1, fumbleLost: -2
+};
+const COLUMN_CURVE = {
+  QB: [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2],
+  RB: [43, 40, 38, 33, 30, 28, 25, 23, 22, 20, 19, 18, 15, 12, 11, 9, 8, 8, 7, 6, 6, 6, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  WR: [42, 40, 36, 35, 31, 28, 24, 24, 17, 16, 15, 14, 12, 12, 10, 9, 9, 9, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  TE: [32, 28, 20, 14, 11, 9, 7, 6, 5, 5, 3, 2, 2, 2, 1, 1]
+};
+const COLUMN_CURVE_BUDGET = 1440;     // the curve's own scale, as on the client
+const COLUMN_LEAGUE_BUDGET = 12 * 200; // the site's default league: 12 teams, $200
+const COLUMN_MIN_BID = 1;
+const COLUMN_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
+const COLUMN_MIN_RANK_GAP = 2;        // below this the "disagreement" is noise
+const COLUMN_MIN_PRICE_GAP = 2;       // ...or a dollar of rounding
+const COLUMN_MAX_ITEMS = 12;          // three days of six-hour slots
+
+// Faithful port of the client's skill-player scoring. Only the stats the site
+// actually projects are read, and only skill positions are scored — K and DEF
+// carry no market lines, so they are never column material.
+function _colScore(stats, position) {
+  const s = COLUMN_SCORING;
+  const yd = (yards, per, threshold) => (yards < threshold || !(per > 0)) ? 0 : yards / per;
+  let pts = 0;
+  pts += yd(stats.passYd || 0, s.passingYardsPerPoint, s.passingYardsThreshold);
+  pts += (stats.passTD || 0) * s.passingTD;
+  pts += (stats.passInt || 0) * s.passingInt;
+  pts += yd(stats.rushYd || 0, s.rushingYardsPerPoint, s.rushingYardsThreshold);
+  pts += (stats.rushTD || 0) * s.rushingTD;
+  pts += yd(stats.recYd || 0, s.receivingYardsPerPoint, s.receivingYardsThreshold);
+  pts += (stats.recTD || 0) * s.receivingTD;
+  pts += (stats.rec || 0) * (position === 'RB' ? s.rbReceptionPoints : s.receptionPoints);
+  pts += (stats.fumLost || 0) * s.fumbleLost;
+  return pts;
+}
+
+// Curve slot -> dollars in the site's default league.
+function _colPrice(position, rankIndex) {
+  const curve = COLUMN_CURVE[position] || [];
+  const scale = COLUMN_LEAGUE_BUDGET / COLUMN_CURVE_BUDGET;
+  const base = rankIndex < curve.length ? curve[rankIndex] : COLUMN_MIN_BID;
+  return Math.max(COLUMN_MIN_BID, Math.round(base * scale));
+}
+
+// Where the RANKINGS put each team's offence, on the same points model
+// buildTeamEnvOverlay uses for the Vegas side. Without this a card can only say
+// "Vegas has San Francisco 4th in implied points", which reads as a promotion
+// even when the odds are a downgrade — the team-environment factor is a RATIO,
+// so what matters is Vegas's rank against the ranking's rank, not either alone.
+// HAND-SYNCED with buildTeamEnvOverlay's points model; change both together.
+function _colTeamProjRank() {
+  const td = {}, kick = {};
+  for (const p of PROJECTIONS) {
+    const t = teamKey(p.team);
+    if (!t || t === 'FA') continue;
+    const st = p.projectedStats || {};
+    td[t] = (td[t] || 0) + (st.passTD || 0) + (st.rushTD || 0);
+    kick[t] = (kick[t] || 0) + (st.xpMade || 0) + (st.fgMade || 0) * 3;
+  }
+  const teams = Object.keys(td).filter(t => td[t] > 0);
+  const kicked = teams.filter(t => kick[t] > 0).map(t => kick[t]);
+  const kMean = kicked.length ? kicked.reduce((a, b) => a + b, 0) / kicked.length : 0;
+  const pts = {};
+  for (const t of teams) pts[t] = td[t] * 6 + (kick[t] > 0 ? kick[t] : kMean);
+  const rank = {};
+  Object.entries(pts).sort((a, b) => b[1] - a[1]).forEach(([t], i) => { rank[t] = i + 1; });
+  return rank;
+}
+
+// The market's view of a player at FULL strength — not the 3:1 blend the sheet
+// serves. The column is about what the odds say on their own, so it must not be
+// diluted by the projections it is being compared against.
+function _colVegasStats(p, overlay) {
+  const v = overlay[_oddsNorm(p.name) + '|' + p.position];
+  if (!v) return null;
+  const stats = { ...p.projectedStats };
+  const moved = [];
+  for (const [k, val] of Object.entries(v)) {
+    if (!(k in stats)) continue;                 // only stats the site models
+    const n = Number(val);
+    if (!Number.isFinite(n) || n < 0) continue;
+    if (stats[k] === n) continue;
+    moved.push({ stat: k, ranked: stats[k], market: n });
+    stats[k] = n;
+  }
+  return moved.length ? { stats, moved } : null;
+}
+
+// Rank every skill player twice — once off the committed projections (the
+// "rankings" board) and once off the market's numbers (the "odds" board) — and
+// return the players the two boards disagree about most.
+//
+// Players the market does not price still occupy slots on both boards: when the
+// odds push someone up, somebody else is pushed down, and hiding that would
+// overstate the gap for the player who moved.
+function buildVegasColumn(overlay, ctx) {
+  if (!overlay || typeof overlay !== 'object') return { ok: false, error: 'no_overlay', items: [] };
+  const projTeamRank = _colTeamProjRank();
+  const byPos = {};
+  for (const p of PROJECTIONS) {
+    if (!COLUMN_POSITIONS.includes(p.position)) continue;
+    const st = p.projectedStats || {};
+    const veg = _colVegasStats(p, overlay);
+    (byPos[p.position] = byPos[p.position] || []).push({
+      name: p.name, team: teamKey(p.team), position: p.position,
+      ptsRanked: _colScore(st, p.position),
+      ptsMarket: _colScore(veg ? veg.stats : st, p.position),
+      moved: veg ? veg.moved : null
+    });
+  }
+
+  const items = [];
+  for (const pos of COLUMN_POSITIONS) {
+    const list = byPos[pos] || [];
+    if (list.length < 2) continue;
+    // Keyed by list index, never by name: two players sharing a name at one
+    // position would otherwise overwrite each other's rank and mis-price both.
+    const rankOf = key => {
+      const order = list.map((r, i) => i).sort((a, b) => list[b][key] - list[a][key]);
+      const m = new Map();
+      order.forEach((srcIdx, rank) => m.set(srcIdx, rank));
+      return m;
+    };
+    const rRanked = rankOf('ptsRanked'), rMarket = rankOf('ptsMarket');
+    for (let li = 0; li < list.length; li++) {
+      const r = list[li];
+      if (!r.moved) continue;                          // the market never priced them
+      const iR = rRanked.get(li), iM = rMarket.get(li);
+      const priceRanked = _colPrice(pos, iR), priceMarket = _colPrice(pos, iM);
+      const rankDelta = iR - iM;                       // + => the odds like him MORE
+      const priceDelta = priceMarket - priceRanked;
+      const inPlay = iR < (COLUMN_CURVE[pos] || []).length || iM < (COLUMN_CURVE[pos] || []).length;
+      if (!inPlay) continue;                           // undraftable either way
+      if (Math.abs(rankDelta) < COLUMN_MIN_RANK_GAP && Math.abs(priceDelta) < COLUMN_MIN_PRICE_GAP) continue;
+      items.push({
+        name: r.name, team: r.team, position: pos,
+        rankRanked: iR + 1, rankMarket: iM + 1, rankDelta,
+        ptsRanked: Math.round(r.ptsRanked * 10) / 10,
+        ptsMarket: Math.round(r.ptsMarket * 10) / 10,
+        ptsDelta: Math.round((r.ptsMarket - r.ptsRanked) * 10) / 10,
+        priceRanked, priceMarket, priceDelta,
+        side: rankDelta > 0 ? 'under' : 'over',        // under/over-valued BY THE RANKINGS
+        moved: r.moved.map(m => ({ stat: m.stat, ranked: _oddsRound(m.ranked), market: _oddsRound(m.market) })),
+        teamImplied: ctx && ctx.ppg && ctx.ppg[r.team] != null ? Math.round(ctx.ppg[r.team] * 10) / 10 : null,
+        teamRank: ctx && ctx.rank && ctx.rank[r.team] != null ? ctx.rank[r.team] : null,
+        teamRankRanked: projTeamRank[r.team] != null ? projTeamRank[r.team] : null
+      });
+    }
+  }
+
+  // Dollars first: an auction reader feels a $9 gap far more than three rank slots.
+  items.sort((a, b) => Math.abs(b.priceDelta) - Math.abs(a.priceDelta)
+    || Math.abs(b.ptsDelta) - Math.abs(a.ptsDelta));
+  return { ok: true, items: items.slice(0, COLUMN_MAX_ITEMS), scanned: PROJECTIONS.length };
+}
+
 // ── D1 cache ───────────────────────────────────────────────────────────────
 async function oddsCacheInit(env) {
   await env.LEADS_DB.prepare(
@@ -1588,6 +1763,28 @@ async function oddsCacheRead(env) {
     if (!row || !row.payload) return null;
     if (!row.updated_at || Date.now() - row.updated_at > ODDS_MAX_AGE_MS) return null;
     return { overlay: JSON.parse(row.payload), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
+  } catch (e) { return null; }
+}
+// The column's money-line evidence: implied points per game per team, and the
+// league rank that goes with it. Stored as row 2 of the same table so it shares
+// the overlay's lifecycle and needs no migration — a reader that only wants the
+// overlay never sees it.
+async function oddsCtxWrite(env, ppg) {
+  if (!ppg || !Object.keys(ppg).length) return;
+  await oddsCacheInit(env);
+  const rank = {};
+  Object.entries(ppg).sort((a, b) => b[1] - a[1]).forEach(([t], i) => { rank[t] = i + 1; });
+  await env.LEADS_DB.prepare(
+    'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (2, ?, ?, ?, ?)'
+  ).bind(JSON.stringify({ ppg, rank }), 'teamctx', Object.keys(ppg).length, Date.now()).run();
+}
+async function oddsCtxRead(env) {
+  if (!env || !env.LEADS_DB) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, updated_at FROM odds_overlay WHERE id=2').first();
+    if (!row || !row.payload) return null;
+    if (!row.updated_at || Date.now() - row.updated_at > ODDS_MAX_AGE_MS) return null;
+    return JSON.parse(row.payload);
   } catch (e) { return null; }
 }
 async function oddsCacheWrite(env, overlay, provider, matched) {
@@ -1612,6 +1809,10 @@ async function runOddsRefresh(env) {
         const r = buildTeamEnvOverlay(raw);
         overlay = r.overlay;
         info = { teams: r.teams, matched: r.matched };
+        // Keep the implied team points behind the overlay: the Vegas column
+        // quotes them as the money-line evidence for a call. Best effort — the
+        // overlay itself must never fail to write because this did.
+        try { await oddsCtxWrite(env, raw); } catch (e) { console.error('odds ctx write failed:', e && e.message); }
       } else {
         const r = buildVegasOverlay(raw);
         overlay = r.overlay;
@@ -1643,6 +1844,8 @@ async function runOddsRefresh(env) {
 // read at most once per isolate, and zero reads once warm.
 let _PROJ_BLEND_AT = 0;
 let _ODDS_KICK_AT = 0;
+let _COLUMN_CACHE = null;
+let _COLUMN_AT = 0;
 async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
@@ -1679,6 +1882,30 @@ export default {
       if (ref && !/^https?:\/\/(www\.)?irontuna\.com(\/|$)|^https?:\/\/localhost(:\d+)?(\/|$)|^https:\/\/[^/]+\.pages\.dev(\/|$)/.test(ref)) return new Response('forbidden', { status: 403 });
       const payload = await projectionsPayload(env, ctx);
       return secure(new Response(payload, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } }));
+    }
+    // Public, read-only: the front page is a static asset and cannot hold the
+    // projections key, and there is nothing paid here — this is the free column,
+    // and it ships numbers the site already publishes on the cheat sheet.
+    if (url.pathname === '/api/vegas-column') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      const now = Date.now();
+      if (_COLUMN_CACHE && now - _COLUMN_AT < 900000) return json(_COLUMN_CACHE, 200, { ...c, 'cache-control': 'public, max-age=900' });
+      let out = { ok: false, error: 'no_overlay', items: [] };
+      try {
+        const cached = await oddsCacheRead(env);
+        if (cached && cached.overlay) {
+          const tctx = await oddsCtxRead(env);
+          const built = buildVegasColumn(cached.overlay, tctx);
+          out = { ...built, provider: cached.provider, asOf: cached.updatedAt,
+                  // The free provider prices GAMES, not players. Saying otherwise
+                  // would sell a team-wide inference as a player prop, which is
+                  // exactly the sloppiness this column exists to call out.
+                  basis: /the-odds-api/.test(cached.provider || '') ? 'props' : 'gamelines' };
+        }
+      } catch (e) { out = { ok: false, error: 'unavailable', items: [] }; }
+      _COLUMN_CACHE = out; _COLUMN_AT = now;
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
     }
     if (url.pathname === '/api/insights') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });

@@ -138,6 +138,38 @@ img{max-width:100%}
 .alloc-card p{font-size:13.5px;color:var(--ink-2)}
 .alloc-card .go{margin-top:auto;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--red)}
 
+/* ── vegas vs. rankings ── */
+.vs-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
+@media(max-width:860px){.vs-wrap{grid-template-columns:1fr}}
+.vs-thesis{background:var(--mast);color:#e8ebee;border-radius:6px;padding:18px 20px}
+.vs-thesis h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:22px;letter-spacing:.05em;color:#fff}
+.vs-thesis p{font-size:13.5px;line-height:1.55;color:#c2c8cf;margin-top:8px}
+.vs-thesis b{color:#fff}
+.vs-thesis ol{margin:12px 0 0 18px;padding:0}
+.vs-thesis li{font-size:13px;line-height:1.5;color:#c2c8cf;margin-bottom:7px}
+.vs-thesis li b{color:var(--teal)}
+.vs-case{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px 12px;min-height:220px}
+.vs-kick{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+.vs-case h3{font-size:19px;font-weight:800;line-height:1.3}
+.vs-case h3 .vs-vs{color:var(--ink-3);font-weight:700}
+.vs-board{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:13px 0 0}
+.vs-col{border:1px solid var(--line);border-radius:5px;padding:9px 11px}
+.vs-col.odds{border-color:#bfe6d2;background:#f4fbf7}
+.vs-col h4{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.vs-col .vs-rank{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:27px;letter-spacing:.03em;line-height:1.1;margin-top:3px}
+.vs-col .vs-money{font-size:12.5px;color:var(--ink-2);font-weight:700}
+.vs-ev{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:11px;border-top:1px solid var(--line);padding-top:9px}
+.vs-ev b{color:var(--ink)}
+.vs-basis{font-size:11.5px;color:var(--ink-3);margin-top:7px;line-height:1.45}
+.vs-foot{display:flex;align-items:center;gap:10px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.vs-when{font-size:11.5px;color:var(--ink-3)}
+.vs-arrows{margin-left:auto;display:flex;gap:6px}
+.vs-arrow{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:4px;cursor:pointer;font-size:15px;line-height:1;color:var(--ink-2)}
+.vs-arrow:hover{border-color:var(--ink-3);color:var(--ink)}
+.vs-dots{display:flex;gap:5px;flex-wrap:wrap}
+.vs-dot{width:7px;height:7px;padding:0;border-radius:50%;border:0;background:#d3d8de;cursor:pointer}
+.vs-dot.on{background:var(--red)}
+.vs-empty{font-size:13px;color:var(--ink-3);line-height:1.55;padding:14px 0}
 /* ── camp ── */
 .camp-note{font-size:13px;color:var(--ink-3);margin:-6px 0 14px}
 .camp-note b{color:var(--ink-2)}
@@ -233,6 +265,23 @@ img{max-width:100%}
   <div class="sec-head" id="positions"><h2>Position Intel</h2><a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
   <p class="sec-sub">Every story is a stat-backed call from the 2026 research set, read through an auction lens. New drops land through Labor Day.</p>
   <div class="pos-grid" id="posGrid"></div>
+
+  <div class="sec-head" id="vegas"><h2>Vegas vs. Rankings &amp; ADP</h2><a class="sec-more" href="/auctiondraft?screen=cheat">See it on your cheat sheet &rarr;</a></div>
+  <p class="sec-sub">Where the betting market and the ranking industry disagree about a player &mdash; recomputed from the live lines, with a new case every six hours.</p>
+  <div class="vs-wrap">
+    <div class="vs-thesis">
+      <h3>Why the odds get a vote</h3>
+      <p>A sportsbook posts a number with <b>its own money behind it</b>. Get it wrong and sharp bettors take the other side until it moves, so every line is priced off repeatable trends, statistical modelling, and injury and usage news the moment it lands &mdash; then corrected in public, continuously.</p>
+      <p>A ranking carries no such penalty. <b>Anyone with a TikTok account and a hunch can publish a top 200</b>, never revisit it, and pay nothing when it misses. That is not an argument that the book is always right. It is an argument that when a priced market and an unpriced list disagree, <b>the disagreement is worth a look</b>.</p>
+      <ol>
+        <li><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points per game &mdash; the scoring environment every skill player on that roster inherits.</li>
+        <li><b>Compare like with like.</b> The useful question is never &ldquo;is this team good?&rdquo; but whether the market ranks that offense <em>higher or lower than your ranking sheet already does</em>.</li>
+        <li><b>Buy the gap, not the name.</b> The edge is the distance between a player&rsquo;s price and his market-implied value &mdash; a cheap player the odds like is worth more than a stud they merely agree on.</li>
+        <li><b>Respect the clamp.</b> One weird line is noise. Treat a gap as a tiebreaker between players you already rate closely, not a reason to blow up your board.</li>
+      </ol>
+    </div>
+    <div class="vs-case" id="vsCase"><p class="vs-empty">Loading the current case&hellip;</p></div>
+  </div>
 
   <div class="sec-head" id="allocation"><h2>Asset Allocation</h2><a class="sec-more" href="/guides">All guides &rarr;</a></div>
   <p class="sec-sub">How to spend the $200: budget shape, nomination tactics, and the endgame.</p>
@@ -369,6 +418,140 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
   document.getElementById('leadPrev').onclick = function(){ li = (li - 1 + leadPool.length) % leadPool.length; pinned = true; renderLead(); };
   document.getElementById('leadNext').onclick = function(){ li = (li + 1) % leadPool.length; pinned = true; renderLead(); };
   renderLead(); startTick();
+
+
+  // ── Vegas vs. Rankings & ADP ───────────────────────────────────────────────
+  // The cases are COMPUTED, never written: /api/vegas-column re-ranks the whole
+  // board off the cached odds overlay and returns the players the two boards
+  // disagree about most. Nothing here can go stale while the lines move, and
+  // nothing here can claim a disagreement the data does not contain.
+  //
+  // Same wall-clock rotation as the lead, on a six-hour slot, and for the same
+  // reason: every visitor sees the same case, and it turns over at 00/06/12/18
+  // UTC. The phase shift is load-bearing for the same reason it is up there —
+  // 6h slots divide evenly into the day, so without it a reader who always
+  // checks at the same hour would be stuck on a fraction of the cases forever.
+  var VS_SLOT_MS = 6 * 60 * 60 * 1000;
+  var VS_STAT_LABELS = { passYd: 'pass yds', passTD: 'pass TD', passInt: 'INT', rushYd: 'rush yds',
+                         rushTD: 'rush TD', recYd: 'rec yds', recTD: 'rec TD', rec: 'receptions' };
+  var vsItems = [], vsMeta = null, vsIdx = 0, vsPinned = false, vsTick = null;
+
+  function vsSlotIndex(n) {
+    if (!n) return 0;
+    var slot = Math.floor(Date.now() / VS_SLOT_MS);
+    var shift = n > 2 ? Math.floor(slot / n) : 0;
+    return (((slot + shift) % n) + n) % n;
+  }
+  function vsCountdown() {
+    var ms = VS_SLOT_MS - (Date.now() % VS_SLOT_MS);
+    var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    return h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+  }
+  function vsNum(n) { return (n > 0 ? '+' : '') + n; }
+  function vsStat(k, v) { return /Yd$/.test(k) || k === 'rec' ? String(Math.round(v)) : String(Math.round(v * 10) / 10); }
+
+  function renderCase() {
+    var host = document.getElementById('vsCase');
+    if (!host) return;
+    if (!vsItems.length) {
+      // No overlay yet, or the pull is mid-refresh. Say so plainly rather than
+      // inventing a case — the column's whole argument is that numbers are earned.
+      host.innerHTML = '<p class="vs-empty">No case on the board right now. The odds feed refreshes daily; ' +
+        'when the market and the ranking sheet disagree by enough to matter, the next case appears here.</p>';
+      return;
+    }
+    var i = ((vsIdx % vsItems.length) + vsItems.length) % vsItems.length;
+    var it = vsItems[i];
+    var under = it.rankDelta > 0;
+    var pos = it.position;
+    var h = '';
+    h += '<div class="vs-kick">' +
+         '<span class="badge badge-pos">' + esc(pos) + '</span>' +
+         '<span class="badge ' + (under ? 'badge-under' : 'badge-over') + '">Rankings ' + (under ? 'too low' : 'too high') + '</span>' +
+         '<span class="badge badge-fair">Case ' + (i + 1) + ' of ' + vsItems.length + '</span>' +
+         '</div>';
+    h += '<h3>' + esc(it.name) + ': <span class="vs-vs">the rankings say</span> ' + esc(pos + it.rankRanked) +
+         ', <span class="vs-vs">the odds say</span> ' + esc(pos + it.rankMarket) + '.</h3>';
+    h += '<div class="vs-board">' +
+         '<div class="vs-col"><h4>Ranking sheet</h4><div class="vs-rank">' + esc(pos + it.rankRanked) + '</div>' +
+         '<div class="vs-money">$' + it.priceRanked + ' &middot; ' + it.ptsRanked + ' pts</div></div>' +
+         '<div class="vs-col odds"><h4>Market implied</h4><div class="vs-rank">' + esc(pos + it.rankMarket) + '</div>' +
+         '<div class="vs-money">$' + it.priceMarket + ' &middot; ' + it.ptsMarket + ' pts</div></div>' +
+         '</div>';
+
+    var ev = '<b>' + vsNum(it.priceDelta) + ' dollars</b> and <b>' + vsNum(it.ptsDelta) + ' season points</b> of daylight between the two boards.';
+    if (it.teamImplied != null && it.teamRankRanked != null && it.teamRank != null) {
+      // The money-line evidence, stated as a comparison. The team-environment
+      // signal is a RATIO, so an absolute rank alone would mislead: a top-five
+      // offense can still be a downgrade if the sheet already has it top three.
+      ev += ' The line on ' + esc(it.team) + ' implies <b>' + it.teamImplied + ' points a game</b> \u2014 ' +
+            (it.teamRank < it.teamRankRanked ? 'the market ranks that offense #' + it.teamRank +
+              ', ahead of the #' + it.teamRankRanked + ' the ranking sheet gives it.'
+             : it.teamRank > it.teamRankRanked ? 'the market ranks that offense #' + it.teamRank +
+              ', behind the #' + it.teamRankRanked + ' the ranking sheet gives it.'
+             : 'both boards rank that offense #' + it.teamRank + '.');
+    }
+    if (it.moved && it.moved.length) {
+      ev += ' Lines moved: ' + it.moved.slice(0, 3).map(function (m) {
+        return (VS_STAT_LABELS[m.stat] || m.stat) + ' ' + vsStat(m.stat, m.ranked) + ' \u2192 ' + vsStat(m.stat, m.market);
+      }).join(' &middot; ') + '.';
+    }
+    h += '<p class="vs-ev">' + ev + '</p>';
+
+    // Never dress a game line up as a player prop. The free provider prices
+    // games; player props need a paid key, and saying otherwise would be the
+    // exact sin this column is about.
+    var basis = vsMeta && vsMeta.basis === 'props'
+      ? 'Basis: player props, de-vigged to an expected season total.'
+      : 'Basis: money lines and game totals, converted to implied team points. Team-level signal &mdash; it prices the offense, not the individual target share.';
+    if (vsMeta && vsMeta.asOf) basis += ' Lines as of ' + new Date(vsMeta.asOf).toISOString().slice(0, 10) + '.';
+    basis += ' Prices shown for a 12-team, $200 auction.';
+    h += '<p class="vs-basis">' + basis + '</p>';
+
+    h += '<div class="vs-foot"><div class="vs-dots" id="vsDots"></div>' +
+         '<span class="vs-when">' + (vsPinned ? 'browsing by hand' : 'next case in ' + vsCountdown()) + '</span>' +
+         '<span class="vs-arrows">' +
+         '<button class="vs-arrow" id="vsPrev" aria-label="Previous case">&#8249;</button>' +
+         '<button class="vs-arrow" id="vsNext" aria-label="Next case">&#8250;</button>' +
+         '</span></div>';
+    host.innerHTML = h;
+
+    var dots = document.getElementById('vsDots');
+    vsItems.forEach(function (_, k) {
+      var b = document.createElement('button');
+      b.className = 'vs-dot' + (k === i ? ' on' : '');
+      b.setAttribute('aria-label', 'Case ' + (k + 1) + ' of ' + vsItems.length);
+      b.onclick = function () { vsIdx = k; vsPinned = true; renderCase(); };
+      dots.appendChild(b);
+    });
+    document.getElementById('vsPrev').onclick = function () { vsIdx = (i - 1 + vsItems.length) % vsItems.length; vsPinned = true; renderCase(); };
+    document.getElementById('vsNext').onclick = function () { vsIdx = (i + 1) % vsItems.length; vsPinned = true; renderCase(); };
+  }
+
+  // Same contract as the lead's ticker: refresh the countdown, roll over when
+  // the boundary passes on a tab left open, and stand down entirely once the
+  // reader has browsed by hand.
+  function startCaseTick() {
+    if (vsTick) clearInterval(vsTick);
+    vsTick = setInterval(function () {
+      if (vsPinned || !vsItems.length) return;
+      var next = vsSlotIndex(vsItems.length);
+      if (next !== vsIdx) { vsIdx = next; }
+      renderCase();
+    }, 30000);
+  }
+
+  // A failed fetch must leave the thesis standing and say nothing false.
+  fetch('/api/vegas-column', { headers: { 'accept': 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      vsItems = (d && d.ok && Array.isArray(d.items)) ? d.items : [];
+      vsMeta = d || null;
+      vsIdx = vsSlotIndex(vsItems.length);
+      renderCase();
+      startCaseTick();
+    })
+    .catch(function () { vsItems = []; renderCase(); });
 
   // ── top headlines rail: strictly newest-first across BOTH desks ───────────
   // Camp reports and insight calls are merged into one feed and sorted by date,
