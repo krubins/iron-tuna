@@ -10149,23 +10149,31 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jul 26, 2026',
+  updated: 'Aug 19, 2026',
   current: [
+  {
+    label: 'Diggs lands in Washington',
+    text: "Stefon Diggs signed a one-year deal worth up to $12 million with Washington on August 5, giving Jayden Daniels a proven second option behind Terry McLaurin. A modest WR3/flex price is fair; do not pay for his old Buffalo ceiling."
+  },
+  {
+    label: 'Pearsall out for the year',
+    text: "The 49ers ruled Ricky Pearsall out for 2026; he will have season-ending PCL surgery. He is off the board entirely, and with Kittle still on PUP the remaining San Francisco pass catchers get only a modest bump."
+  },
+  {
+    label: 'Nabers discount shrinking',
+    text: "Malik Nabers has ramped through individual drills all camp, and joining team periods was the next step as of mid-August. The ACL-risk discount is narrowing; bid closer to sheet price, but confirm his status draft week."
+  },
+  {
+    label: 'McLaurin glued to Daniels',
+    text: "Terry McLaurin has run a route on every Jayden Daniels pass play this preseason and is tied for the team target lead at 27 percent. Usage that clean is worth sheet price with confidence."
+  },
   {
     label: 'Maye ceiling raised',
     text: "The Patriots' June trade for A.J. Brown gives Drake Maye a true alpha receiver, and Maye's price is climbing. Pay up a tier for Maye if you want a top-six QB finish at a non-elite cost."
   },
   {
-    label: 'Nabers discount',
-    text: "Malik Nabers avoided the PUP list to open Giants camp, but his ACL rehab included a second surgery and Week 1 is not assured. Around a WR13 price, let someone else pay full freight; only bid at a clear discount."
-  },
-  {
     label: 'Brooks value window',
-    text: "Jonathon Brooks drew strong reviews from Dave Canales at Panthers camp, and Rico Dowdle left in free agency. At an ADP near RB34 he is a cheap upside target before the market catches up."
-  },
-  {
-    label: 'Diggs still unsigned',
-    text: "Stefon Diggs remains a free agent with camps open after 85 catches for New England last year. Do not roster him at auction until he signs; if he lands somewhere, expect a modest WR3 price at most."
+    text: "Jonathon Brooks drew strong reviews from Dave Canales at Panthers camp and has looked sharp cutting and catching. At an ADP near RB34 he is a cheap upside target before the market catches up."
   },
   {
     label: 'Kamara locked in',
@@ -15398,7 +15406,7 @@ function PlayersRail({
 }
 const STORAGE_KEY = 'iron_tuna_draft_state_v2';
 const PROJ_KEY = 'tn$9xQ27z';
-const PROJ_VERSION = '2026.4'; // bumped 2026-08-19: Vegas-blend annotations + Pearsall removal reach saved sessions
+const PROJ_VERSION = '2026.5'; // bumped 2026-08-19: Diggs signed in Washington (was FA/zeroed)
 function _xb64decode(s, key) {
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
