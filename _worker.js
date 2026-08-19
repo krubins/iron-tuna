@@ -1610,6 +1610,8 @@ const COLUMN_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
 const COLUMN_MIN_RANK_GAP = 2;        // below this the "disagreement" is noise
 const COLUMN_MIN_PRICE_GAP = 2;       // ...or a dollar of rounding
 const COLUMN_MAX_ITEMS = 12;          // three days of six-hour slots
+const COLUMN_MAX_AGREE = 3;           // agreement cases are filler, never the point
+const COLUMN_AGREE_MAX_RANK = 24;     // and only worth printing near the top of a board
 
 // Faithful port of the client's skill-player scoring. Only the stats the site
 // actually projects are read, and only skill positions are scored — K and DEF
@@ -1663,6 +1665,20 @@ function _colTeamProjRank() {
   return rank;
 }
 
+// What THIS site actually ships for a player: the committed projection with the
+// odds blended in at VEGAS_WEIGHT. Mirrors blendProjections — the column must
+// quote the number a reader will find on their own cheat sheet, not a private one.
+function _colBlendStats(committed, market) {
+  const out = { ...committed };
+  for (const [k, v] of Object.entries(market)) {
+    if (!(k in out)) continue;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) continue;
+    out[k] = _oddsRound((out[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
+  }
+  return out;
+}
+
 // The market's view of a player at FULL strength — not the 3:1 blend the sheet
 // serves. The column is about what the odds say on their own, so it must not be
 // diluted by the projections it is being compared against.
@@ -1676,7 +1692,7 @@ function _colVegasStats(p, overlay) {
     const n = Number(val);
     if (!Number.isFinite(n) || n < 0) continue;
     if (stats[k] === n) continue;
-    moved.push({ stat: k, ranked: stats[k], market: n });
+    moved.push({ stat: k, consensus: stats[k], market: n });
     stats[k] = n;
   }
   return moved.length ? { stats, moved } : null;
@@ -1699,13 +1715,20 @@ function buildVegasColumn(overlay, ctx) {
     const veg = _colVegasStats(p, overlay);
     (byPos[p.position] = byPos[p.position] || []).push({
       name: p.name, team: teamKey(p.team), position: p.position,
-      ptsRanked: _colScore(st, p.position),
+      // Three boards, and the distinction is the whole column:
+      //   consensus — the committed analyst projections, odds-blind. This is
+      //               what a normal ranking or ADP list is built on.
+      //   ironTuna  — what THIS site ships: the same projections with the odds
+      //               blended in at VEGAS_WEIGHT. The reader can go look it up.
+      //   market    — the odds alone, undiluted, quoted as the underlying signal.
+      ptsConsensus: _colScore(st, p.position),
+      ptsIronTuna: _colScore(veg ? _colBlendStats(st, veg.stats) : st, p.position),
       ptsMarket: _colScore(veg ? veg.stats : st, p.position),
       moved: veg ? veg.moved : null
     });
   }
 
-  const items = [];
+  const conflicts = [], agreements = [];
   for (const pos of COLUMN_POSITIONS) {
     const list = byPos[pos] || [];
     if (list.length < 2) continue;
@@ -1717,37 +1740,54 @@ function buildVegasColumn(overlay, ctx) {
       order.forEach((srcIdx, rank) => m.set(srcIdx, rank));
       return m;
     };
-    const rRanked = rankOf('ptsRanked'), rMarket = rankOf('ptsMarket');
+    const rCon = rankOf('ptsConsensus'), rIT = rankOf('ptsIronTuna'), rMkt = rankOf('ptsMarket');
+    const curveLen = (COLUMN_CURVE[pos] || []).length;
     for (let li = 0; li < list.length; li++) {
       const r = list[li];
       if (!r.moved) continue;                          // the market never priced them
-      const iR = rRanked.get(li), iM = rMarket.get(li);
-      const priceRanked = _colPrice(pos, iR), priceMarket = _colPrice(pos, iM);
-      const rankDelta = iR - iM;                       // + => the odds like him MORE
-      const priceDelta = priceMarket - priceRanked;
-      const inPlay = iR < (COLUMN_CURVE[pos] || []).length || iM < (COLUMN_CURVE[pos] || []).length;
-      if (!inPlay) continue;                           // undraftable either way
-      if (Math.abs(rankDelta) < COLUMN_MIN_RANK_GAP && Math.abs(priceDelta) < COLUMN_MIN_PRICE_GAP) continue;
-      items.push({
+      const iC = rCon.get(li), iI = rIT.get(li), iM = rMkt.get(li);
+      if (iC >= curveLen && iI >= curveLen) continue;   // undraftable on either board
+      const priceConsensus = _colPrice(pos, iC), priceIronTuna = _colPrice(pos, iI);
+      const rankDelta = iC - iI;                       // + => Iron Tuna rates them higher
+      const priceDelta = priceIronTuna - priceConsensus;
+      const item = {
         name: r.name, team: r.team, position: pos,
-        rankRanked: iR + 1, rankMarket: iM + 1, rankDelta,
-        ptsRanked: Math.round(r.ptsRanked * 10) / 10,
+        rankConsensus: iC + 1, rankIronTuna: iI + 1, rankMarket: iM + 1, rankDelta,
+        ptsConsensus: Math.round(r.ptsConsensus * 10) / 10,
+        ptsIronTuna: Math.round(r.ptsIronTuna * 10) / 10,
         ptsMarket: Math.round(r.ptsMarket * 10) / 10,
-        ptsDelta: Math.round((r.ptsMarket - r.ptsRanked) * 10) / 10,
-        priceRanked, priceMarket, priceDelta,
-        side: rankDelta > 0 ? 'under' : 'over',        // under/over-valued BY THE RANKINGS
-        moved: r.moved.map(m => ({ stat: m.stat, ranked: _oddsRound(m.ranked), market: _oddsRound(m.market) })),
+        ptsDelta: Math.round((r.ptsIronTuna - r.ptsConsensus) * 10) / 10,
+        priceConsensus, priceIronTuna, priceDelta,
+        side: rankDelta > 0 ? 'under' : rankDelta < 0 ? 'over' : 'flat',
+        moved: r.moved.map(m => ({ stat: m.stat, consensus: _oddsRound(m.consensus), market: _oddsRound(m.market) })),
         teamImplied: ctx && ctx.ppg && ctx.ppg[r.team] != null ? Math.round(ctx.ppg[r.team] * 10) / 10 : null,
         teamRank: ctx && ctx.rank && ctx.rank[r.team] != null ? ctx.rank[r.team] : null,
-        teamRankRanked: projTeamRank[r.team] != null ? projTeamRank[r.team] : null
-      });
+        teamRankConsensus: projTeamRank[r.team] != null ? projTeamRank[r.team] : null
+      };
+      if (Math.abs(rankDelta) >= COLUMN_MIN_RANK_GAP || Math.abs(priceDelta) >= COLUMN_MIN_PRICE_GAP) {
+        conflicts.push({ ...item, kind: 'conflict' });
+      } else if (iC === iI && iC < COLUMN_AGREE_MAX_RANK) {
+        // Confirmation, not conflict: the market priced this player and landed
+        // on the same slot the consensus did. Only worth printing near the top
+        // of the board — "the odds agree the WR61 is the WR61" says nothing.
+        agreements.push({ ...item, kind: 'agree' });
+      }
     }
   }
 
   // Dollars first: an auction reader feels a $9 gap far more than three rank slots.
-  items.sort((a, b) => Math.abs(b.priceDelta) - Math.abs(a.priceDelta)
+  conflicts.sort((a, b) => Math.abs(b.priceDelta) - Math.abs(a.priceDelta)
     || Math.abs(b.ptsDelta) - Math.abs(a.ptsDelta));
-  return { ok: true, items: items.slice(0, COLUMN_MAX_ITEMS), scanned: PROJECTIONS.length };
+  // Agreements are a FALLBACK, never competition for a real disagreement: they
+  // only fill slots the conflicts left empty, and never more than a few. The
+  // expensive end first — a confirmed $50 price is worth reading, a confirmed $2
+  // one is not.
+  agreements.sort((a, b) => b.priceConsensus - a.priceConsensus);
+  const room = Math.max(0, COLUMN_MAX_ITEMS - conflicts.length);
+  const filler = agreements.slice(0, Math.min(room, COLUMN_MAX_AGREE));
+  const items = conflicts.slice(0, COLUMN_MAX_ITEMS).concat(filler);
+  return { ok: true, items, conflicts: Math.min(conflicts.length, COLUMN_MAX_ITEMS),
+           agreements: filler.length, scanned: PROJECTIONS.length };
 }
 
 // ── D1 cache ───────────────────────────────────────────────────────────────

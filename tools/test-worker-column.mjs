@@ -38,10 +38,11 @@ const section = src.slice(s, e);
 const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', `
   let _PROJ_ENC = null;
   ${section}
-  return { buildVegasColumn, _colScore, _colPrice, _colVegasStats, _oddsNorm,
+  return { buildVegasColumn, _colScore, _colPrice, _colVegasStats, _colBlendStats, _oddsNorm,
            fetchTeamEnvNflverse, buildTeamEnvOverlay,
            COLUMN_SCORING, COLUMN_CURVE, COLUMN_CURVE_BUDGET, COLUMN_LEAGUE_BUDGET,
-           COLUMN_MAX_ITEMS, COLUMN_MIN_RANK_GAP, COLUMN_MIN_PRICE_GAP, COLUMN_POSITIONS };
+           COLUMN_MAX_ITEMS, COLUMN_MIN_RANK_GAP, COLUMN_MIN_PRICE_GAP, COLUMN_POSITIONS,
+           COLUMN_MAX_AGREE, COLUMN_AGREE_MAX_RANK, VEGAS_WEIGHT };
 `);
 
 const realPool = (() => {
@@ -155,14 +156,49 @@ console.log('\ngap detection');
   const { items } = W.buildVegasColumn(overlay);
   const c = items.find(i => i.name === 'Charlie Passer');
   ok('the moved player is surfaced', !!c, JSON.stringify(items));
-  ok('the odds liking him more reads as under-ranked', c && c.side === 'under' && c.rankDelta > 0, c && `${c.side}/${c.rankDelta}`);
-  ok('his market price is above his ranked price', c && c.priceMarket > c.priceRanked, c && `${c.priceRanked} -> ${c.priceMarket}`);
+  ok('the odds liking them more reads as consensus-too-low', c && c.side === 'under' && c.rankDelta > 0, c && `${c.side}/${c.rankDelta}`);
+  ok('the odds-adjusted price is above the consensus price', c && c.priceIronTuna > c.priceConsensus, c && `${c.priceConsensus} -> ${c.priceIronTuna}`);
   ok('the moved stat lines are carried as evidence', c && c.moved.some(m => m.stat === 'passTD' && m.market === 34));
   ok('unpriced players never become column items', !items.some(i => i.name === 'Alpha Passer' && !i.moved));
+  ok('every item is a conflict or an agreement', items.every(i => i.kind === 'conflict' || i.kind === 'agree'));
 
   // Somebody has to fall when somebody rises: the board is re-ranked whole.
   const both = W.buildVegasColumn(overlay).items;
   ok('only market-priced players are reported', both.every(i => i.moved && i.moved.length));
+}
+
+// ── 4b. the three boards are the right three ───────────────────────────────
+// The shipped Iron Tuna number must sit BETWEEN the consensus and the raw
+// market, at the blend weight — that is the column's whole claim about itself.
+console.log('\nconsensus vs Iron Tuna vs raw market');
+{
+  const overlay = { [W._oddsNorm('Charlie Passer') + '|QB']: { passTD: 34, passYd: 4300 } };
+  const c = W.buildVegasColumn(overlay).items.find(i => i.name === 'Charlie Passer');
+  ok('Iron Tuna sits between the consensus and the market',
+     c && c.ptsIronTuna > c.ptsConsensus && c.ptsIronTuna < c.ptsMarket,
+     c && `${c.ptsConsensus} / ${c.ptsIronTuna} / ${c.ptsMarket}`);
+  ok('...and lands at the published blend weight',
+     c && Math.abs(c.ptsIronTuna - (c.ptsConsensus + W.VEGAS_WEIGHT * c.ptsMarket) / (1 + W.VEGAS_WEIGHT)) < 0.6,
+     c && String(c.ptsIronTuna));
+  ok('the raw market rank is reported alongside', c && c.rankMarket > 0);
+  const blended = W._colBlendStats({ passTD: 20, passYd: 4000 }, { passTD: 40 });
+  ok('the blend helper mirrors blendProjections', Math.abs(blended.passTD - 35) < 1e-9, String(blended.passTD));
+  ok('the blend helper leaves unpriced stats alone', blended.passYd === 4000);
+}
+
+// ── 4c. agreement cases are a fallback, never the point ────────────────────
+console.log('\nagreement fallback');
+{
+  // Nudge a top player so the market prices him but lands on the same slot.
+  const tiny = { [W._oddsNorm('Alpha Passer') + '|QB']: { passYd: 4010 } };
+  const out = W.buildVegasColumn(tiny);
+  const a = out.items.find(i => i.name === 'Alpha Passer');
+  ok('a market-priced player who does not move becomes an agreement', a && a.kind === 'agree', JSON.stringify(out.items));
+  ok('an agreement sits on the same slot in both boards', a && a.rankConsensus === a.rankIronTuna);
+  ok('agreements are counted separately from conflicts', out.agreements >= 1 && out.conflicts === out.items.filter(i => i.kind === 'conflict').length);
+  ok('conflicts always come before agreements',
+     out.items.every((it, i) => it.kind !== 'conflict' || out.items.slice(0, i).every(p => p.kind === 'conflict')));
+  ok('agreements never exceed their cap', out.items.filter(i => i.kind === 'agree').length <= W.COLUMN_MAX_AGREE);
 }
 
 // ── 5. against the real committed pool ─────────────────────────────────────
@@ -175,14 +211,18 @@ console.log('\nreal pool, synthetic market');
   const hit = out.items.find(i => i.name === target.name);
   ok('a real player with a big market gap is surfaced', !!hit, target.name);
   ok('money-line context rides along when available', hit && hit.teamImplied === 26.4 && hit.teamRank === 3);
+  ok('a full board leaves no room for agreement filler',
+     out.conflicts < R.COLUMN_MAX_ITEMS || out.agreements === 0, `${out.conflicts}/${out.agreements}`);
   ok('items never exceed the cap', out.items.length <= R.COLUMN_MAX_ITEMS);
   ok('items are sorted by dollar gap, largest first',
      out.items.every((it, i) => i === 0 || Math.abs(out.items[i - 1].priceDelta) >= Math.abs(it.priceDelta)));
   ok('a null team context does not throw', R.buildVegasColumn(overlay, null).ok === true);
   ok('every item is inside the draftable curve',
-     out.items.every(i => i.rankRanked <= R.COLUMN_CURVE[i.position].length || i.rankMarket <= R.COLUMN_CURVE[i.position].length));
+     out.items.every(i => i.rankConsensus <= R.COLUMN_CURVE[i.position].length || i.rankIronTuna <= R.COLUMN_CURVE[i.position].length));
   ok('every item clears one of the noise floors',
-     out.items.every(i => Math.abs(i.rankDelta) >= R.COLUMN_MIN_RANK_GAP || Math.abs(i.priceDelta) >= R.COLUMN_MIN_PRICE_GAP));
+     out.items.every(i => i.kind === 'agree' || Math.abs(i.rankDelta) >= R.COLUMN_MIN_RANK_GAP || Math.abs(i.priceDelta) >= R.COLUMN_MIN_PRICE_GAP));
+  ok('agreement filler is always near the top of its board',
+     out.items.filter(i => i.kind === 'agree').every(i => i.rankConsensus <= R.COLUMN_AGREE_MAX_RANK));
 }
 
 // ── 6. end to end on the live nflverse lines ───────────────────────────────
@@ -200,12 +240,13 @@ console.log('\nlive nflverse pull (network)');
     ok('real lines produce at least one disagreement', col.items.length > 0, JSON.stringify(col).slice(0, 200));
     ok('every real item carries its evidence', col.items.every(i => i.moved.length && i.teamImplied != null));
     ok('every real item can compare the two boards on team scoring',
-       col.items.every(i => i.teamRank != null && i.teamRankRanked != null));
+       col.items.every(i => i.teamRank != null && i.teamRankConsensus != null));
     console.log('\n  top disagreements right now:');
     for (const i of col.items.slice(0, 5)) {
-      console.log(`    ${i.position}${i.rankRanked} -> ${i.position}${i.rankMarket}  ${i.name} (${i.team})  ` +
-                  `$${i.priceRanked} -> $${i.priceMarket}  ${i.ptsDelta > 0 ? '+' : ''}${i.ptsDelta} pts  ` +
-                  `[${i.teamImplied} implied pts/g: odds #${i.teamRank} vs rankings #${i.teamRankRanked}]`);
+      console.log(`    ${i.position}${i.rankConsensus} -> ${i.position}${i.rankIronTuna} (market ${i.position}${i.rankMarket})  ` +
+                  `${i.name} (${i.team})  $${i.priceConsensus} -> $${i.priceIronTuna}  ` +
+                  `${i.ptsDelta > 0 ? '+' : ''}${i.ptsDelta} pts  ` +
+                  `[${i.teamImplied} implied pts/g: odds #${i.teamRank} vs consensus #${i.teamRankConsensus}]`);
     }
   } catch (err) {
     // A blocked or flaky network must not read as a code failure.

@@ -267,16 +267,17 @@ img{max-width:100%}
   <div class="pos-grid" id="posGrid"></div>
 
   <div class="sec-head" id="vegas"><h2>Vegas vs. Rankings &amp; ADP</h2><a class="sec-more" href="/auctiondraft?screen=cheat">See it on your cheat sheet &rarr;</a></div>
-  <p class="sec-sub">Where the betting market and the ranking industry disagree about a player &mdash; recomputed from the live lines, with a new case every six hours.</p>
+  <p class="sec-sub">Iron Tuna prices every player against the betting market. Almost nobody else does. These are the players where that changes the number &mdash; recomputed from the live lines, with a new case every six hours.</p>
   <div class="vs-wrap">
     <div class="vs-thesis">
       <h3>Why the odds get a vote</h3>
       <p>A sportsbook posts a number with <b>its own money behind it</b>. Get it wrong and sharp bettors take the other side until it moves, so every line is priced off repeatable trends, statistical modelling, and injury and usage news the moment it lands &mdash; then corrected in public, continuously.</p>
       <p>A ranking carries no such penalty. <b>Anyone with a TikTok account and a hunch can publish a top 200</b>, never revisit it, and pay nothing when it misses. That is not an argument that the book is always right. It is an argument that when a priced market and an unpriced list disagree, <b>the disagreement is worth a look</b>.</p>
+      <p><b>Iron Tuna&rsquo;s prices already carry the odds</b> &mdash; every value on your cheat sheet is blended toward the market. Almost no ranking or ADP list does that. So each case here is the gap between what the consensus is charging you and <b>what the lines say the player is worth</b>.</p>
       <ol>
         <li><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points per game &mdash; the scoring environment every skill player on that roster inherits.</li>
-        <li><b>Compare like with like.</b> The useful question is never &ldquo;is this team good?&rdquo; but whether the market ranks that offense <em>higher or lower than your ranking sheet already does</em>.</li>
-        <li><b>Buy the gap, not the name.</b> The edge is the distance between a player&rsquo;s price and his market-implied value &mdash; a cheap player the odds like is worth more than a stud they merely agree on.</li>
+        <li><b>Compare like with like.</b> The useful question is never &ldquo;is this team good?&rdquo; but whether the market ranks that offense <em>higher or lower than the consensus projections already do</em>.</li>
+        <li><b>Buy the gap, not the name.</b> The edge is the distance between a player&rsquo;s consensus price and the market-implied one &mdash; a cheap player the odds like is worth more than a stud everyone already agrees on.</li>
         <li><b>Respect the clamp.</b> One weird line is noise. Treat a gap as a tiebreaker between players you already rate closely, not a reason to blow up your board.</li>
       </ol>
     </div>
@@ -457,43 +458,53 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
       // No overlay yet, or the pull is mid-refresh. Say so plainly rather than
       // inventing a case — the column's whole argument is that numbers are earned.
       host.innerHTML = '<p class="vs-empty">No case on the board right now. The odds feed refreshes daily; ' +
-        'when the market and the ranking sheet disagree by enough to matter, the next case appears here.</p>';
+        'when the market and the consensus rankings disagree by enough to matter, the next case appears here.</p>';
       return;
     }
     var i = ((vsIdx % vsItems.length) + vsItems.length) % vsItems.length;
     var it = vsItems[i];
+    var agree = it.kind === 'agree';
     var under = it.rankDelta > 0;
     var pos = it.position;
+    var last = it.name.split(' ').slice(-1)[0];
     var h = '';
     h += '<div class="vs-kick">' +
          '<span class="badge badge-pos">' + esc(pos) + '</span>' +
-         '<span class="badge ' + (under ? 'badge-under' : 'badge-over') + '">Rankings ' + (under ? 'too low' : 'too high') + '</span>' +
+         (agree ? '<span class="badge badge-fair">Odds confirm the price</span>'
+                : '<span class="badge ' + (under ? 'badge-under' : 'badge-over') + '">Consensus ' + (under ? 'too low' : 'too high') + '</span>') +
          '<span class="badge badge-fair">Case ' + (i + 1) + ' of ' + vsItems.length + '</span>' +
          '</div>';
-    h += '<h3>' + esc(it.name) + ': <span class="vs-vs">the rankings say</span> ' + esc(pos + it.rankRanked) +
-         ', <span class="vs-vs">the odds say</span> ' + esc(pos + it.rankMarket) + '.</h3>';
+    h += agree
+      ? '<h3>' + esc(it.name) + ': <span class="vs-vs">the odds back the consensus at</span> ' + esc(pos + it.rankConsensus) + '.</h3>'
+      : '<h3>' + esc(it.name) + ': <span class="vs-vs">consensus says</span> ' + esc(pos + it.rankConsensus) +
+        ', <span class="vs-vs">Iron Tuna says</span> ' + esc(pos + it.rankIronTuna) + '.</h3>';
     h += '<div class="vs-board">' +
-         '<div class="vs-col"><h4>Ranking sheet</h4><div class="vs-rank">' + esc(pos + it.rankRanked) + '</div>' +
-         '<div class="vs-money">$' + it.priceRanked + ' &middot; ' + it.ptsRanked + ' pts</div></div>' +
-         '<div class="vs-col odds"><h4>Market implied</h4><div class="vs-rank">' + esc(pos + it.rankMarket) + '</div>' +
-         '<div class="vs-money">$' + it.priceMarket + ' &middot; ' + it.ptsMarket + ' pts</div></div>' +
+         '<div class="vs-col"><h4>Consensus rankings &amp; ADP</h4><div class="vs-rank">' + esc(pos + it.rankConsensus) + '</div>' +
+         '<div class="vs-money">$' + it.priceConsensus + ' &middot; ' + it.ptsConsensus + ' pts</div></div>' +
+         '<div class="vs-col odds"><h4>Iron Tuna &mdash; odds-adjusted</h4><div class="vs-rank">' + esc(pos + it.rankIronTuna) + '</div>' +
+         '<div class="vs-money">$' + it.priceIronTuna + ' &middot; ' + it.ptsIronTuna + ' pts</div></div>' +
          '</div>';
 
-    var ev = '<b>' + vsNum(it.priceDelta) + ' dollars</b> and <b>' + vsNum(it.ptsDelta) + ' season points</b> of daylight between the two boards.';
-    if (it.teamImplied != null && it.teamRankRanked != null && it.teamRank != null) {
+    // Agreement cases are filler and say so. Dressing one up as an edge would be
+    // the same sin as inventing a case: there is nothing to act on here.
+    var ev = agree
+      ? 'The market priced ' + esc(last) + ' and landed on the <b>same slot</b> the consensus did, so the odds blend leaves this price where it was. Confirmation rather than an edge \u2014 but a price you can pay without wondering.'
+      : '<b>' + vsNum(it.priceDelta) + ' dollars</b> and <b>' + vsNum(it.ptsDelta) + ' season points</b> between what the consensus charges and what Iron Tuna pays. ' +
+        'On the lines alone, before blending, the market has ' + esc(last) + ' at <b>' + esc(pos + it.rankMarket) + '</b>.';
+    if (it.teamImplied != null && it.teamRankConsensus != null && it.teamRank != null) {
       // The money-line evidence, stated as a comparison. The team-environment
       // signal is a RATIO, so an absolute rank alone would mislead: a top-five
       // offense can still be a downgrade if the sheet already has it top three.
       ev += ' The line on ' + esc(it.team) + ' implies <b>' + it.teamImplied + ' points a game</b> \u2014 ' +
-            (it.teamRank < it.teamRankRanked ? 'the market ranks that offense #' + it.teamRank +
-              ', ahead of the #' + it.teamRankRanked + ' the ranking sheet gives it.'
-             : it.teamRank > it.teamRankRanked ? 'the market ranks that offense #' + it.teamRank +
-              ', behind the #' + it.teamRankRanked + ' the ranking sheet gives it.'
+            (it.teamRank < it.teamRankConsensus ? 'the market ranks that offense #' + it.teamRank +
+              ', ahead of the #' + it.teamRankConsensus + ' the consensus projections give it.'
+             : it.teamRank > it.teamRankConsensus ? 'the market ranks that offense #' + it.teamRank +
+              ', behind the #' + it.teamRankConsensus + ' the consensus projections give it.'
              : 'both boards rank that offense #' + it.teamRank + '.');
     }
     if (it.moved && it.moved.length) {
       ev += ' Lines moved: ' + it.moved.slice(0, 3).map(function (m) {
-        return (VS_STAT_LABELS[m.stat] || m.stat) + ' ' + vsStat(m.stat, m.ranked) + ' \u2192 ' + vsStat(m.stat, m.market);
+        return (VS_STAT_LABELS[m.stat] || m.stat) + ' ' + vsStat(m.stat, m.consensus) + ' \u2192 ' + vsStat(m.stat, m.market);
       }).join(' &middot; ') + '.';
     }
     h += '<p class="vs-ev">' + ev + '</p>';
