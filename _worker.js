@@ -1643,28 +1643,42 @@ async function runOddsRefresh(env) {
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
 // read at most once per isolate, and zero reads once warm.
 let _PROJ_BLEND_AT = 0;
-async function projectionsPayload(env) {
+let _ODDS_KICK_AT = 0;
+async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
   let pool = PROJECTIONS;
+  let overlayAt = 0;
   try {
     const cached = await oddsCacheRead(env);
-    if (cached && cached.overlay) pool = blendProjections(cached.overlay);
+    if (cached && cached.overlay) { pool = blendProjections(cached.overlay); overlayAt = cached.updatedAt || 0; }
   } catch (e) { /* fall back to the committed pool */ }
+  // Self-healing: a missing or day-stale overlay means the 11:00 UTC cron failed or never
+  // ran. Kick at most one background refresh per isolate-hour off this request; the
+  // response itself never waits on the sportsbook and still serves whatever it has.
+  if (ctx && Date.now() - overlayAt > 26 * 3600000 && Date.now() - _ODDS_KICK_AT > 3600000) {
+    _ODDS_KICK_AT = Date.now();
+    try {
+      ctx.waitUntil(runOddsRefresh(env).then(r => {
+        console.log('odds self-heal:', JSON.stringify(r && { ok: r.ok, matched: r.matched, error: r.error }));
+        if (r && r.ok) { _PROJ_ENC = null; _PROJ_BLEND_AT = 0; }
+      }).catch(e => console.error('odds self-heal failed:', e && e.message)));
+    } catch (e) {}
+  }
   _PROJ_ENC = _xb64encode(JSON.stringify(pool), PROJ_KEY);
   _PROJ_BLEND_AT = Date.now();
   return _PROJ_ENC;
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
       const ref = request.headers.get('Referer') || '';
       if (ref && !/^https?:\/\/(www\.)?irontuna\.com(\/|$)|^https?:\/\/localhost(:\d+)?(\/|$)|^https:\/\/[^/]+\.pages\.dev(\/|$)/.test(ref)) return new Response('forbidden', { status: 403 });
-      const payload = await projectionsPayload(env);
+      const payload = await projectionsPayload(env, ctx);
       return secure(new Response(payload, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } }));
     }
     if (url.pathname === '/api/insights') {
