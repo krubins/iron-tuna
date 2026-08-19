@@ -1952,6 +1952,257 @@ async function projectionsPayload(env, ctx) {
   return _PROJ_ENC;
 }
 
+// ── first-party traffic counting ───────────────────────────────────────────
+// Cloudflare's own analytics live in a dashboard this code cannot reach, and
+// the site had no server-side record of a visit at all — /admin could show
+// revenue and leads but not whether anybody had turned up. This counts page
+// views into the same D1 the rest of the admin data comes from, so the numbers
+// are ours: no third-party script, no beacon, nothing for an ad blocker to
+// strip, and no request to anywhere but this Worker.
+//
+// What is counted, and what deliberately is not:
+//   - GET requests that return HTML. An image, a script, /api/* — none of those
+//     are page views, and counting them would inflate every number on the page.
+//   - Not obvious robots (UA match). A crawler is traffic, but it is not a
+//     reader, and mixing the two makes the figure useless for deciding anything.
+//   - Not /admin. That is the owner reading their own dashboard.
+//
+// Unique visitors come from `it_v`, a random first-party cookie holding no
+// personal information — exactly the "random anonymous identifier" the privacy
+// policy already discloses. A reader sending DNT or Sec-GPC gets counted in the
+// totals and given NO identifier at all: the aggregate stays honest either way,
+// and nobody who asked not to be tracked is.
+const TRAFFIC_COOKIE = 'it_v';
+const TRAFFIC_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+const TRAFFIC_BOT = /bot|crawl|spider|slurp|bingpreview|headless|phantom|puppeteer|playwright|curl\/|wget\/|python-requests|libwww|okhttp|axios\/|node-fetch|go-http-client|java\/|scrapy|facebookexternalhit|whatsapp|telegram|discord|slack|preview|monitor|uptime|pingdom|lighthouse|gtmetrix|semrush|ahrefs|mj12|dotbot|petalbot|bytespider|applebot|yandex|baidu/i;
+const TRAFFIC_KEY_MAX = 120;
+const TRAFFIC_VISITOR_RETENTION_DAYS = 120;
+let _TRAFFIC_BUF = [];
+let _TRAFFIC_FLUSHING = false;
+let _TRAFFIC_INIT = false;
+let _TRAFFIC_PRUNED = 0;
+
+function trafficDay(ts) { return new Date(ts).toISOString().slice(0, 10); }
+
+// A path, not a URL: no query string (it carries campaign junk and occasionally
+// an email address), no trailing slash, lower-cased, length-capped. The table
+// should read like the sitemap, not like a request log.
+function trafficPath(pathname) {
+  let p = String(pathname || '/').split('?')[0].split('#')[0];
+  if (p.length > 1) p = p.replace(/\/+$/, '');
+  if (!p) p = '/';
+  p = p.toLowerCase();
+  return p.length > TRAFFIC_KEY_MAX ? p.slice(0, TRAFFIC_KEY_MAX) : p;
+}
+
+// Referrer as a bare host. The full URL is somebody else's page and can carry
+// their query parameters; the host is the only part that answers "where is this
+// traffic coming from". Our own domain is "direct" — a click from one Iron Tuna
+// page to another is not a referral, and letting it in would make irontuna.com
+// the top referrer to itself forever.
+function trafficReferrer(ref, selfHost) {
+  if (!ref) return 'direct';
+  let h;
+  try { h = new URL(ref).hostname.toLowerCase().replace(/^www\./, ''); } catch (e) { return 'direct'; }
+  if (!h) return 'direct';
+  const self = String(selfHost || '').toLowerCase().replace(/^www\./, '');
+  if (h === self) return 'direct';
+  return h.length > TRAFFIC_KEY_MAX ? h.slice(0, TRAFFIC_KEY_MAX) : h;
+}
+
+function trafficIsBot(ua) { return !ua || TRAFFIC_BOT.test(ua); }
+
+// 16 random bytes as hex — the same shape as the other ids in this file, and
+// carrying nothing about the person it identifies.
+function trafficNewVid() {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+}
+
+async function trafficInit(db) {
+  if (_TRAFFIC_INIT) return;
+  await db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS pageviews (day TEXT NOT NULL, path TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, path))'),
+    db.prepare('CREATE TABLE IF NOT EXISTS referrers (day TEXT NOT NULL, host TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, host))'),
+    db.prepare('CREATE TABLE IF NOT EXISTS visitors (day TEXT NOT NULL, vid TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, is_new INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, vid))')
+  ]);
+  _TRAFFIC_INIT = true;
+}
+
+// The buffer is capped. A flush that fails leaves its views in place to be
+// retried by the next request, which is right — but D1 being down for an hour
+// must not turn a page-view counter into a memory leak in a long-lived isolate.
+// Past the cap the OLDEST views are dropped: if something has to be lost, lose
+// the stale count rather than the live one.
+const TRAFFIC_BUF_MAX = 500;
+
+// Buffer, then flush on the same request through waitUntil. NOT a timer-based
+// batcher: a quiet site serves most page views from a fresh isolate that would
+// be recycled long before any timer fired, so "flush every 30 seconds" silently
+// loses almost everything at exactly the traffic level where every view counts.
+// Flushing per request keeps the number honest; the buffer still coalesces the
+// views that genuinely arrive together, which is when batching is worth
+// anything at all.
+function trafficQueue(view) {
+  _TRAFFIC_BUF.push(view);
+  if (_TRAFFIC_BUF.length > TRAFFIC_BUF_MAX) _TRAFFIC_BUF.splice(0, _TRAFFIC_BUF.length - TRAFFIC_BUF_MAX);
+}
+
+async function trafficFlush(env) {
+  if (_TRAFFIC_FLUSHING || !_TRAFFIC_BUF.length || !env || !env.LEADS_DB) return 0;
+  _TRAFFIC_FLUSHING = true;
+  let written = 0;
+  try {
+    const db = env.LEADS_DB;
+    await trafficInit(db);
+    // Drain in a LOOP, not once. Views queued by requests that arrive while a
+    // write is in flight are still ours to land: the flush guard turns their own
+    // flush call into a no-op, so without this they sit in the buffer waiting
+    // for some later request to happen along, and are lost outright if the
+    // isolate is recycled first. The loop is also where the batching earns its
+    // keep — the views that arrived together get written together.
+    while (_TRAFFIC_BUF.length) {
+      const batch = _TRAFFIC_BUF;
+      _TRAFFIC_BUF = [];
+      // Collapse the buffer before it becomes SQL: N views of one page on one day
+      // are one statement, not N.
+      const pages = new Map(), refs = new Map(), vis = new Map();
+      for (const v of batch) {
+        const pk = v.day + ' ' + v.path;
+        pages.set(pk, (pages.get(pk) || 0) + 1);
+        const rk = v.day + ' ' + v.ref;
+        refs.set(rk, (refs.get(rk) || 0) + 1);
+        if (v.vid) {
+          const vk = v.day + ' ' + v.vid;
+          const cur = vis.get(vk) || { views: 0, isNew: 0 };
+          cur.views += 1;
+          cur.isNew = cur.isNew || (v.isNew ? 1 : 0);
+          vis.set(vk, cur);
+        }
+      }
+      const stmts = [];
+      for (const [k, n] of pages) {
+        const sp = k.indexOf(' ');
+        stmts.push(db.prepare('INSERT INTO pageviews (day, path, views) VALUES (?, ?, ?) ON CONFLICT(day, path) DO UPDATE SET views = views + ?')
+          .bind(k.slice(0, sp), k.slice(sp + 1), n, n));
+      }
+      for (const [k, n] of refs) {
+        const sp = k.indexOf(' ');
+        stmts.push(db.prepare('INSERT INTO referrers (day, host, views) VALUES (?, ?, ?) ON CONFLICT(day, host) DO UPDATE SET views = views + ?')
+          .bind(k.slice(0, sp), k.slice(sp + 1), n, n));
+      }
+      for (const [k, v] of vis) {
+        const sp = k.indexOf(' ');
+        // is_new is written only by the INSERT half: a returning visitor must
+        // never be able to flip an existing day's row back to "new".
+        stmts.push(db.prepare('INSERT INTO visitors (day, vid, views, is_new) VALUES (?, ?, ?, ?) ON CONFLICT(day, vid) DO UPDATE SET views = views + ?')
+          .bind(k.slice(0, sp), k.slice(sp + 1), v.views, v.isNew, v.views));
+      }
+      if (stmts.length) await db.batch(stmts);
+      written += stmts.length;
+    }
+    // The visitor table is the only one that grows with people rather than with
+    // days, so it is the only one that needs pruning. Once a day is plenty.
+    const now = Date.now();
+    if (now - _TRAFFIC_PRUNED > 86400000) {
+      _TRAFFIC_PRUNED = now;
+      await db.prepare('DELETE FROM visitors WHERE day < ?')
+        .bind(trafficDay(now - TRAFFIC_VISITOR_RETENTION_DAYS * 86400000)).run();
+    }
+    return written;
+  } catch (e) {
+    // Analytics must never break the page it is counting. A failed write is a
+    // lost view, which is the right thing to trade away here.
+    return written;
+  } finally {
+    _TRAFFIC_FLUSHING = false;
+  }
+}
+
+// Called on the HTML responses the asset layer serves. Returns that response,
+// with the visitor cookie attached when one needs minting.
+function trafficRecord(request, url, response, env, ctx) {
+  try {
+    if (!env || !env.LEADS_DB) return response;
+    if (request.method !== 'GET') return response;
+    const path = trafficPath(url.pathname);
+    if (path === '/admin' || path.indexOf('/api/') === 0) return response;
+    const ua = request.headers.get('User-Agent') || '';
+    if (trafficIsBot(ua)) return response;
+    // Asked not to be tracked: counted, never identified.
+    const optOut = request.headers.get('DNT') === '1' || request.headers.get('Sec-GPC') === '1';
+    let vid = null, isNew = false;
+    if (!optOut) {
+      vid = parseCookie(request.headers.get('Cookie'))[TRAFFIC_COOKIE] || null;
+      if (!/^[0-9a-f]{32}$/.test(vid || '')) { vid = trafficNewVid(); isNew = true; }
+    }
+    trafficQueue({
+      day: trafficDay(Date.now()),
+      path,
+      ref: trafficReferrer(request.headers.get('Referer'), url.hostname),
+      vid,
+      isNew
+    });
+    if (ctx && ctx.waitUntil) ctx.waitUntil(trafficFlush(env));
+    if (isNew) {
+      // HTML here is served no-store, so a cookie set on it cannot be cached
+      // and handed to the next reader as their identity.
+      response.headers.append('Set-Cookie',
+        TRAFFIC_COOKIE + '=' + vid + '; Path=/; Max-Age=' + TRAFFIC_COOKIE_MAX_AGE + '; SameSite=Lax; Secure; HttpOnly');
+    }
+  } catch (e) { /* never break a page over a counter */ }
+  return response;
+}
+
+// The /admin traffic panel: a daily series plus the paths and referrers behind
+// it, all out of tables this Worker writes itself.
+async function trafficReport(db, days) {
+  const span = Math.max(1, Math.min(365, (days | 0) || 30));
+  const since = trafficDay(Date.now() - (span - 1) * 86400000);
+  const rows = (sql, args) => db.prepare(sql).bind(...args).all()
+    .then(r => (r && r.results) || []).catch(() => []);
+  const [views, uniques, paths, refs] = await Promise.all([
+    rows('SELECT day, SUM(views) AS views FROM pageviews WHERE day >= ? GROUP BY day ORDER BY day', [since]),
+    rows('SELECT day, COUNT(*) AS visitors, SUM(is_new) AS new_visitors FROM visitors WHERE day >= ? GROUP BY day ORDER BY day', [since]),
+    rows('SELECT path, SUM(views) AS views FROM pageviews WHERE day >= ? GROUP BY path ORDER BY views DESC LIMIT 25', [since]),
+    rows('SELECT host, SUM(views) AS views FROM referrers WHERE day >= ? GROUP BY host ORDER BY views DESC LIMIT 25', [since])
+  ]);
+  const byDay = {};
+  for (let i = span - 1; i >= 0; i--) {
+    const d = trafficDay(Date.now() - i * 86400000);
+    byDay[d] = { date: d, views: 0, visitors: 0, newVisitors: 0 };
+  }
+  views.forEach(r => { if (byDay[r.day]) byDay[r.day].views = r.views || 0; });
+  uniques.forEach(r => {
+    if (!byDay[r.day]) return;
+    byDay[r.day].visitors = r.visitors || 0;
+    byDay[r.day].newVisitors = r.new_visitors || 0;
+  });
+  const daily = Object.values(byDay);
+  const sum = (list, k) => list.reduce((a, r) => a + (r[k] || 0), 0);
+  // Unique visitors do NOT add up across days — the same person on Monday and
+  // Tuesday is one visitor, not two — so a window's uniques are counted from
+  // the rows, never summed from the series.
+  const uniqIn = n => db.prepare('SELECT COUNT(DISTINCT vid) AS n FROM visitors WHERE day >= ?')
+    .bind(trafficDay(Date.now() - (n - 1) * 86400000)).first()
+    .then(r => (r && r.n) || 0).catch(() => 0);
+  const [v7, vWindow] = await Promise.all([uniqIn(Math.min(span, 7)), uniqIn(span)]);
+  const today = daily[daily.length - 1] || { views: 0, visitors: 0 };
+  return {
+    days: span,
+    daily,
+    topPaths: paths.map(r => ({ path: r.path, views: r.views || 0 })),
+    topReferrers: refs.map(r => ({ host: r.host, views: r.views || 0 })),
+    totals: {
+      viewsToday: today.views, visitorsToday: today.visitors,
+      views7: sum(daily.slice(-7), 'views'), visitors7: v7,
+      viewsWindow: sum(daily, 'views'), visitorsWindow: vWindow,
+      newVisitorsWindow: sum(daily, 'newVisitors')
+    }
+  };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -2429,6 +2680,26 @@ export default {
       const daysUntilExpiry = row ? Math.round((row.expires_at - Date.now()) / 86400000) : null;
       return json({ ok: true, hasStoredToken: !!row, usingSecretFallback, daysUntilExpiry, lastRefreshed: row ? new Date(row.updated_at).toISOString() : null }, 200, c);
     }
+    if (url.pathname === '/api/admin/traffic') {
+      // First-party traffic for the /admin panel. Same LEADS_EXPORT_KEY gate as
+      // every other admin route, and its own endpoint rather than another field
+      // on /api/admin/dashboard: that one pages through Stripe and can take
+      // seconds, and a page-view chart should not wait on a payments API.
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      try {
+        // Land anything still buffered in this isolate before reading, so a
+        // refresh right after a visit is not confusingly one view behind.
+        await trafficFlush(env);
+        await trafficInit(env.LEADS_DB);
+        const days = parseInt(url.searchParams.get('days') || '30', 10);
+        return json({ ok: true, generatedAt: Date.now(), ...(await trafficReport(env.LEADS_DB, days)) }, 200, c);
+      } catch (e) {
+        return json({ ok: false, error: 'unavailable', detail: (e && e.message) || '' }, 500, c);
+      }
+    }
     if (url.pathname === '/api/admin/dashboard') {
       // Admin overview powering /admin: purchases (Stripe = the actual money),
       // purchasers (entitlements = authoritative paid access), referrals (codes +
@@ -2706,11 +2977,11 @@ export default {
         const __r = new Response(__html, resp);
         __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         __r.headers.delete('content-length');
-        return secure(__r);
+        return trafficRecord(request, url, secure(__r), env, ctx);
       }
       const r = new Response(resp.body, resp);
       r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      return secure(r);
+      return trafficRecord(request, url, secure(r), env, ctx);
     }
     return secure(new Response(resp.body, resp));
   },

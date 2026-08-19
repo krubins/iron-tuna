@@ -291,6 +291,27 @@ Six-hour wall-clock slots (00/06/12/18 UTC), same mechanism and the same phase s
 
 `node tools/test-you-column.mjs` drives the real app in Chromium and asserts PROJ and VALUE never rise down the board, that `You` does not jump at the rank-20 seam, and that nobody outside the window is priced at full VALUE. **It fails on the pre-fix code** — verified by reverting. It needs `playwright-core`, `react` and `react-dom` resolvable plus a Chromium binary, and skips cleanly when they are absent.
 
+## 9e. Comping access from a URL (added August 2026)
+
+Two admin routes hand out and pull paid access for one address, behind the same `LEADS_EXPORT_KEY` gate as every other admin route:
+
+```
+GET /api/admin/grant?key=<LEADS_EXPORT_KEY>&email=<address>
+GET /api/admin/revoke?key=<LEADS_EXPORT_KEY>&email=<address>
+```
+
+The alternative was `wrangler d1 execute --remote` with a hand-written INSERT, which cannot be run from a phone and is the wrong shape for something done repeatedly. GET, matching `/api/admin/x-post-now` and `/api/admin/x-delete`, so it works from a browser address bar. Both directions are reversible — grant is undone by revoke, revoke by grant (they sign in again) — so neither carries a confirmation step that would defeat the point.
+
+**After a grant, the person signs in at `/auctiondraft?signin=1`** with that address; the response hands back that URL so it can be pasted straight into a message. **Order matters:** `/api/auth/request` only sends a magic link to an address that is *already* entitled, and returns `ok:true` either way, so an early sign-in attempt looks like a silently broken login rather than a missing grant.
+
+Details worth knowing:
+- The address is lowercased before the write, because `isEntitled` looks it up as it appears in the session and every path that creates one lowercases it. A mixed-case row would never match.
+- `revoke` delegates to `revokeEntitlement()` rather than re-implementing its deletes, so the definition of "revoked" stays in one place — it clears the entitlement **and every session**, since leaving a session behind signs nobody out.
+- `changed` distinguishes a real change from a no-op, so a double-tap on a phone reads honestly.
+- **The comped-in-code trap:** `COMPED_EMAILS` (module scope in `_worker.js`) always has access, so a `revoke` on one of those addresses looks like it worked and does nothing. The response says `STILL HAS ACCESS` and names the fix. That list is for **owner access only** — to comp anyone else use `grant`, because a third party's address does not belong in a source file and git history keeps it forever.
+
+`node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
+
 ## 9f. The reader's own league, on every page that prints a number (added August 2026)
 
 A story that quotes a price or a points total is quoting a *league*. Left alone, every one of them quoted the site's default — 12 teams, $200, full PPR — which is the wrong league for most readers: a $300 budget re-prices the entire board, half-PPR or six-point passing TDs re-order it. `/it-league.js` is the one place that knows what the reader actually plays, and the news pages read their numbers through it.
@@ -327,27 +348,6 @@ Ranks are the exception: they need the whole pool, which only the reader's saved
 ### Maintenance
 
 `it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library.
-
-## 9e. Comping access from a URL (added August 2026)
-
-Two admin routes hand out and pull paid access for one address, behind the same `LEADS_EXPORT_KEY` gate as every other admin route:
-
-```
-GET /api/admin/grant?key=<LEADS_EXPORT_KEY>&email=<address>
-GET /api/admin/revoke?key=<LEADS_EXPORT_KEY>&email=<address>
-```
-
-The alternative was `wrangler d1 execute --remote` with a hand-written INSERT, which cannot be run from a phone and is the wrong shape for something done repeatedly. GET, matching `/api/admin/x-post-now` and `/api/admin/x-delete`, so it works from a browser address bar. Both directions are reversible — grant is undone by revoke, revoke by grant (they sign in again) — so neither carries a confirmation step that would defeat the point.
-
-**After a grant, the person signs in at `/auctiondraft?signin=1`** with that address; the response hands back that URL so it can be pasted straight into a message. **Order matters:** `/api/auth/request` only sends a magic link to an address that is *already* entitled, and returns `ok:true` either way, so an early sign-in attempt looks like a silently broken login rather than a missing grant.
-
-Details worth knowing:
-- The address is lowercased before the write, because `isEntitled` looks it up as it appears in the session and every path that creates one lowercases it. A mixed-case row would never match.
-- `revoke` delegates to `revokeEntitlement()` rather than re-implementing its deletes, so the definition of "revoked" stays in one place — it clears the entitlement **and every session**, since leaving a session behind signs nobody out.
-- `changed` distinguishes a real change from a no-op, so a double-tap on a phone reads honestly.
-- **The comped-in-code trap:** `COMPED_EMAILS` (module scope in `_worker.js`) always has access, so a `revoke` on one of those addresses looks like it worked and does nothing. The response says `STILL HAS ACCESS` and names the fix. That list is for **owner access only** — to comp anyone else use `grant`, because a third party's address does not belong in a source file and git history keeps it forever.
-
-`node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
 
 ## 10. X (Twitter) auto-post (added July 2026)
 
@@ -557,3 +557,55 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 - **`?screen=cheat` now opens the cheat sheet.** It previously fell through to the board,
   which would have put the free "Build my free cheat sheet" CTA on `front.html` behind
   the paywall. `?screen=board` still opens the board (now locked for free users).
+
+## 14. August 2026: first-party traffic on /admin
+
+Cloudflare's own analytics live in a dashboard nothing in this repo can reach, and the site had no server-side record of a visit at all — `/admin` could show revenue and leads but not whether anybody had turned up. The Worker now counts page views into the same D1 the rest of the admin data comes from.
+
+### What is counted
+
+`trafficRecord()` runs on the two HTML exits of the asset handler, so the rule is simply "if a reader got a page, it counts":
+
+- **GET requests that return HTML.** An image, a script, `/api/*` — none of those are page views, and counting them would inflate every number on the panel.
+- **Not obvious robots.** UA match (`TRAFFIC_BOT`). A crawler is traffic but it is not a reader, and mixing the two makes the figure useless for deciding anything. A blank UA counts as a robot.
+- **Not `/admin`.** That is the owner reading their own dashboard.
+
+The SPA routes (`/auctiondraft`, `/snakedraft`, `/bestball`, `/hub`) rewrite to `index.html` at the asset layer but keep their own `url.pathname`, so they appear as themselves in the breakdown rather than all collapsing into `/`.
+
+### Keys, and why they are narrow
+
+`trafficPath()` strips the query string and fragment, drops a trailing slash and lower-cases. A query string carries campaign junk and occasionally an email address; none of it belongs in a table keyed by page. `trafficReferrer()` keeps only the **host**, and maps our own domain to `direct` — a click from one Iron Tuna page to another is not a referral, and letting it through would make irontuna.com the top referrer to itself forever.
+
+### Visitors, and the privacy line
+
+Unique visitors come from `it_v`, a random 32-hex first-party cookie (`HttpOnly; Secure; SameSite=Lax`, one year) holding nothing about the person — exactly the "random anonymous identifier" `privacy.html` already discloses, so **no policy change was needed**. A cookie value that does not match `/^[0-9a-f]{32}$/` is replaced rather than trusted.
+
+**A reader sending `DNT: 1` or `Sec-GPC: 1` is counted in the views and given no identifier at all.** Both halves are deliberate: drop the view and the site under-reports itself; keep the id and the header meant nothing. Those readers therefore appear in page views and never in the visitor numbers, and the panel's footnote says so.
+
+### Writes: buffered, looped, capped, upserted
+
+- Views queue in a module-level buffer and flush through `ctx.waitUntil` **on the same request**. Not a timer: a quiet site serves most page views from a fresh isolate that would be recycled long before any timer fired, so "flush every 30 seconds" silently loses almost everything at exactly the traffic level where every view matters.
+- The flush **drains in a loop**, because views queued by requests arriving mid-write have their own flush call turned into a no-op by the `_TRAFFIC_FLUSHING` guard. Without the loop they wait for some later request and are lost if the isolate dies first.
+- The buffer is **capped at 500**, dropping oldest-first. A failed write leaves its views queued for the next request to retry, which is right — but D1 down for an hour must not turn a page-view counter into a memory leak.
+- Every write is `INSERT … ON CONFLICT(day, key) DO UPDATE SET views = views + ?`, so a retried batch cannot double-count. `visitors.is_new` is set **only** by the INSERT half: a returning reader must never be able to flip an existing day's row back to "new".
+- **A failed write is a lost view, and that is the intended trade.** `trafficRecord` and `trafficFlush` both swallow everything; analytics must never break the page it is counting.
+
+Three tables, created on first write (`trafficInit`, no migration step): `pageviews(day, path, views)`, `referrers(day, host, views)`, `visitors(day, vid, views, is_new)`. Only `visitors` grows with people rather than with days, so it is the only one pruned — 120 days, once a day.
+
+### The panel
+
+`GET /api/admin/traffic?key=…&days=30`, behind the same `LEADS_EXPORT_KEY` gate as every other admin route. **Its own endpoint, not another field on `/api/admin/dashboard`:** that one pages through Stripe and can take seconds, and a page-view chart has no business waiting on a payments API — this way a Stripe outage still leaves traffic working, and vice versa. It flushes the isolate's buffer before reading, so a refresh straight after a visit is not confusingly one view behind.
+
+`admin.html` renders four tiles, a two-series line chart, and bar-in-table rankings of top pages and top referrers, plus the daily table under `View as table`.
+
+**Unique visitors do not add up across days** — the same person on Monday and Tuesday is one visitor, not two — so a window's uniques come from `COUNT(DISTINCT vid)`, never from summing the series. This is the one arithmetic mistake the panel could make and still look plausible, and it has its own test.
+
+### Chart conventions
+
+`drawLineChart(cfg)` is one renderer for both cards: the sales chart and the traffic chart pass their own SVG/tooltip ids, rows, series and tooltip formatter. They were one copy-paste away from drifting into two different-looking charts on one page. Hover ids are namespaced per chart (`<svgId>-xhair`, `-hdot0`), which is what stops the two tooltips fighting.
+
+Traffic uses **blue `#2f8fd6` / orange `#d1791f`**, distinct from the sales card's green/amber because they are a distinct measure. The pair was chosen with the `dataviz` skill's validator against this panel's `#121b24` surface, not by eye: it passes the lightness band, chroma floor, CVD separation (worst adjacent ΔE 24.2 protan, 27.0 tritan), the normal-vision floor and contrast. Both cards carry a legend **and** direct end labels, so a series is never identified by colour alone. Re-run `node scripts/validate_palette.js "#2f8fd6,#d1791f" --mode dark --surface "#121b24"` from the skill directory if either colour changes.
+
+### Maintenance
+
+**`node tools/test-worker-traffic.mjs`** evaluates the real traffic section out of `_worker.js` against a stub D1 that records every statement. It covers the key normalisation, the bot list, everything that must NOT be counted, the DNT/GPC contract, cookie flags, conservation across the flush (however the buffer splits into batches, every view lands exactly once), the buffer cap under a dead database, the report's window arithmetic, and that the Worker and `admin.html` still agree on the endpoint and the series names. Run it after touching the counter, the endpoint, or the panel.
