@@ -20847,18 +20847,63 @@ function App() {
       arr.sort((a, b) => b.projectedPoints - a.projectedPoints);
       arr.slice(0, 20).forEach(p => relevant.add(p.id));
     });
-    return valuedPlayers.map(p => {
+    // switchPrice is a plan rebuild per player, so it only runs for the players
+    // above (`relevant`) — everyone else used to fall straight back to
+    // auctionValue. That cutoff was VISIBLE: inside the window You is a marginal
+    // value well under VALUE, outside it You WAS the full VALUE, so the column
+    // fell all the way down the board and then jumped back up at the seam. It
+    // priced WR21 above WR16 purely for being outside the window.
+    //
+    // Fix: carry the window's own discount past its edge instead of dropping it.
+    // Players the optimiser never priced keep the shape of the ones it did —
+    // scaled by the discount at the edge, and never allowed to exceed the
+    // cheapest player the optimiser actually priced.
+    const _pre = valuedPlayers.map(p => {
       const adj = marketAdjustedPrice(p, marketState, config);
       let worthPrice = null;
-      let personalValue = Math.max(minBid, p.auctionValue || minBid);
+      let personalValue = null;                      // null = the optimiser never saw them
       if (!draftedIds.has(p.id) && p.position !== 'K' && p.position !== 'DEF' && relevant.has(p.id)) {
         worthPrice = switchPrice(p, switchBasePts, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
         if (worthPrice != null) personalValue = Math.max(minBid, Math.min(maxBid, Math.round(worthPrice)));
       }
+      return { p, adj, worthPrice, personalValue };
+    });
+    // Per position: how much the optimiser discounted the cheapest players it
+    // priced, and what it priced them at. The median over the bottom of the
+    // window rather than the single last player, so one odd line cannot set the
+    // slope for the whole tail.
+    const _tail = {};
+    _pre.forEach(r => {
+      if (r.personalValue == null || draftedIds.has(r.p.id)) return;
+      const av = Math.max(1, r.p.auctionValue || 1);
+      (_tail[r.p.position] = _tail[r.p.position] || []).push({ av, ratio: r.personalValue / av, pv: r.personalValue });
+    });
+    const _edge = {};
+    Object.entries(_tail).forEach(([pos, arr]) => {
+      arr.sort((a, b) => b.av - a.av);                       // priciest first
+      const bottom = arr.slice(-Math.min(5, arr.length));    // the window's cheap end
+      const ratios = bottom.map(x => x.ratio).sort((a, b) => a - b);
+      const med = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 1;
+      _edge[pos] = {
+        ratio: Math.min(1, Math.max(0.05, med)),
+        cap: arr.length ? Math.min(...arr.map(x => x.pv)) : null
+      };
+    });
+    return _pre.map(({ p, adj, worthPrice, personalValue }) => {
+      let pv = personalValue;
+      if (pv == null) {
+        const e = _edge[p.position];
+        const base = Math.max(minBid, p.auctionValue || minBid);
+        pv = e ? Math.max(minBid, Math.round(base * e.ratio)) : base;
+        // The seam must never step UP: nobody the optimiser skipped can be worth
+        // more to you than the cheapest player it actually priced.
+        if (e && e.cap != null) pv = Math.min(pv, e.cap);
+        pv = Math.max(minBid, pv);
+      }
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : isTgt ? 'target' : needEligPos.has(p.position) ? 'open' : 'fade';
       const _fl = p.position === 'K' || p.position === 'DEF' || draftedIds.has(p.id) ? null : scarMap.get(p.id);
-      personalValue = Math.max(minBid, Math.round(personalValue * (p.demandFactor || 1)));
+      pv = Math.max(minBid, Math.round(pv * (p.demandFactor || 1)));
       return {
         ...p,
         marketPrice: adj.recommendedPrice,
@@ -20867,7 +20912,7 @@ function App() {
         fit,
         worthPrice,
         scarce: _fl || null,
-        personalValue
+        personalValue: pv
       };
     });
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
