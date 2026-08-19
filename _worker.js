@@ -314,7 +314,6 @@ const PROJECTIONS = [
   { name: "Tank Dell", position: "WR", team: "HOU", projectedStats: { rushYd: 44, rushTD: 0, rec: 36, recYd: 465, recTD: 4, fumLost: 0 }},
   { name: "Jordan Addison", position: "WR", team: "MIN", projectedStats: { rushYd: 17, rushTD: 1, rec: 58, recYd: 772, recTD: 4, fumLost: 0 }},
   { name: "Jordyn Tyson", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 65, recYd: 915, recTD: 6, fumLost: 0 }},
-  { name: "Ricky Pearsall", position: "WR", team: "SF", projectedStats: { rushYd: 23, rushTD: 0, rec: 59, recYd: 811, recTD: 4, fumLost: 0 }},
   { name: "Jayden Reed", position: "WR", team: "GB", projectedStats: { rushYd: 66, rushTD: 0, rec: 62, recYd: 732, recTD: 5, fumLost: 0 }},
   { name: "Romeo Doubs", position: "WR", team: "NE", projectedStats: { rushYd: 1, rushTD: 0, rec: 62, recYd: 766, recTD: 7, fumLost: 0 }},
   { name: "John Metchie III", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rec: 66, recYd: 596, recTD: 4 }},
