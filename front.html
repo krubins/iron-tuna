@@ -283,16 +283,16 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
   live.sort(function(a,b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
   var latestDate = live.length ? live[0].date : null;
 
-  // ── the lead: one deep dive per six-hour slot ──────────────────────────────
+  // ── the lead: one deep dive per three-hour slot ────────────────────────────
   // The lead is reserved for calls that go BEYOND A SINGLE PLAYER — coaching,
   // offensive line, schedule, weather, rule changes. Those are tagged `deep` at
   // build time from the insight pages' own Market label (tools/build-front.mjs).
   //
-  // It changes on a six-hour clock, not a carousel timer: the slot is derived
+  // It changes on a three-hour clock, not a carousel timer: the slot is derived
   // from the wall clock, so every visitor sees the SAME lead and it turns over
-  // at 00/06/12/18 UTC. A reader who lands twice in one morning gets one
-  // consistent front page; a reader who comes back after lunch gets a new one.
-  var SLOT_MS = 6 * 60 * 60 * 1000;
+  // at 00/03/06/09/12/15/18/21 UTC. A reader who lands twice inside one slot
+  // gets one consistent front page; a reader who comes back later gets a new one.
+  var SLOT_MS = 3 * 60 * 60 * 1000;
   var LEAD_WINDOW = 8;              // most recent N deep dives stay in rotation
   var deep = live.filter(function(s){ return s.deep; });
   // Fall back to the latest drop if no deep dive has unlocked yet, so the lead
@@ -301,10 +301,19 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
   var leadPool = isDeepLead ? deep.slice(0, LEAD_WINDOW)
                             : live.filter(function(s){ return s.date === latestDate; });
 
+  // A plain `slot % pool` would lock the rotation to the time of day whenever the
+  // pool divides evenly into the 8 slots a day (which it does at a full
+  // LEAD_WINDOW of 8): a reader who always checks at 4pm would see the same deep
+  // dive forever. Advancing one extra step per completed pass rotates the phase
+  // daily, so a fixed-hour reader gets a different lead each day and works
+  // through the whole pool. The shift is skipped for tiny pools, where it could
+  // land on the same story twice in a row instead of moving on.
   function slotIndex(){
-    if (!leadPool.length) return 0;
-    var n = Math.floor(Date.now() / SLOT_MS) % leadPool.length;
-    return (n + leadPool.length) % leadPool.length;   // guard a negative clock
+    var n = leadPool.length;
+    if (!n) return 0;
+    var slot = Math.floor(Date.now() / SLOT_MS);
+    var shift = n > 2 ? Math.floor(slot / n) : 0;
+    return (((slot + shift) % n) + n) % n;            // guard a negative clock
   }
   function msToNextSlot(){ return SLOT_MS - (Date.now() % SLOT_MS); }
   function fmtCountdown(ms){
@@ -344,7 +353,7 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
     });
   }
   // No carousel timer. This only refreshes the countdown and rolls the lead
-  // over when the six-hour boundary passes on a tab left open — and it stands
+  // over when the three-hour boundary passes on a tab left open — and it stands
   // down entirely once the reader has browsed by hand, so their choice is
   // never yanked out from under them.
   function startTick(){

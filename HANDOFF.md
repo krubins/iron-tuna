@@ -343,7 +343,7 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 > target. The paywalled board is unaffected: `?screen=cheat` is never locked,
 > `?screen=board` still is.
 
-- **The lead is a six-hour deep dive.** It is reserved for calls that go **beyond a
+- **The lead is a three-hour deep dive.** It is reserved for calls that go **beyond a
   single player** — coaching, offensive line, schedule, weather, rule changes — the
   read that earns a top click rather than one more player take. Those are tagged
   `deep: 1` at build time from the insight pages' own **`Market`** position label, so
@@ -352,10 +352,20 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   desk label (SCHEDULE / OFFENSIVE LINE / COACHING / WEATHER / RULE CHANGE / TEAM
   TREND) matched from the **title first**, body only as a fallback, so a passing
   mention deep in a paragraph cannot relabel a story.
-  - **Cadence:** the slot is `floor(Date.now() / 6h) % pool`, derived from the wall
-    clock rather than a carousel timer — so every visitor sees the *same* lead and it
-    turns over at 00/06/12/18 UTC. The pool is the 8 most recent unlocked deep dives
-    (`LEAD_WINDOW`), a two-day cycle before anything repeats.
+  - **Cadence:** the slot is derived from the wall clock rather than a carousel timer
+    — so every visitor sees the *same* lead — and it turns over every **three hours**,
+    at 00/03/06/09/12/15/18/21 UTC. The pool is the 8 most recent unlocked deep dives
+    (`LEAD_WINDOW`), so a full pass takes a day.
+  - **Why the index is not plain `slot % pool`:** at a full `LEAD_WINDOW` of 8 the pool
+    divides evenly into the 8 slots a day, which would pin each story to a fixed time
+    of day forever — a reader who always checks at 4pm would see the same deep dive
+    every single visit. `slotIndex()` therefore adds `floor(slot / pool)`, advancing one
+    extra step per completed pass, so the phase rotates daily and a fixed-hour reader
+    works through the whole pool over `pool` days. The shift is skipped when the pool
+    has 2 or fewer stories, where it would land on the same story twice in a row
+    instead of moving on. **Keep this in mind before changing `SLOT_MS` or
+    `LEAD_WINDOW`:** any cadence that divides evenly into 24h reintroduces the
+    time-of-day lock without it.
   - Arrows and dots still browse by hand; doing so **pins** the lead (hides the
     countdown and stops the auto-rollover) so a reader's choice is never yanked away.
     A tab left open rolls to the next deep dive when the boundary passes.
