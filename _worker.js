@@ -1559,15 +1559,20 @@ function blendProjections(overlay) {
     const v = overlay[_oddsNorm(p.name) + '|' + p.position];
     if (!v) return p;
     const stats = { ...p.projectedStats };
+    // vegas[k] = [committed, marketImplied, blended] — shipped to the client so the
+    // cheat sheet can flag players whose ranking the odds moved and show the numbers.
+    const vg = {};
     let touched = false;
     for (const [k, val] of Object.entries(v)) {
       if (!(k in stats)) continue;                 // only stats the site models
       const n = Number(val);
       if (!Number.isFinite(n) || n < 0) continue;
+      const before = stats[k];
       stats[k] = _oddsRound((stats[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
+      vg[k] = [before, _oddsRound(n), stats[k]];
       touched = true;
     }
-    return touched ? { ...p, projectedStats: stats } : p;
+    return touched ? { ...p, projectedStats: stats, vegas: vg } : p;
   });
 }
 
