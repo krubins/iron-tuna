@@ -218,6 +218,7 @@ if (projStart < 0) {
 const projBlock = worker.slice(projStart, worker.indexOf('\n];', projStart));
 const bySlug = new Map(headshots.map(p => [p.k, p]));
 const depth = new Map();   // team -> [{slug, pts}] best first
+const priced = [];         // every skill player the app puts a price on
 for (const m of projBlock.matchAll(
   /\{\s*name:\s*"([^"]+)",\s*position:\s*"([^"]+)",\s*team:\s*"([^"]*)",\s*projectedStats:\s*\{([^}]*)\}/g)) {
   const [, name, pos, rawTeam] = m;
@@ -225,14 +226,53 @@ for (const m of projBlock.matchAll(
   const team = rawTeam === 'JAC' ? 'JAX' : rawTeam;        // both spellings appear in the projections
   if (!team || team === 'FA') continue;                    // a free agent is nobody's face
   const stats = Object.fromEntries([...m[4].matchAll(/(\w+)\s*:\s*(-?[\d.]+)/g)].map(s => [s[1], +s[2]]));
+  const pts = ppr(stats);
   if (!depth.has(team)) depth.set(team, []);
-  depth.get(team).push({ k: slug(name), pts: ppr(stats) });
+  depth.get(team).push({ k: slug(name), pts });
+  priced.push({ k: slug(name), n: name, pos, pts });
 }
 for (const list of depth.values()) list.sort((a, b) => b.pts - a.pts);
 
 // Walk down the depth chart until someone has a photo, so a team whose leader
 // is too new for the headshot release still gets a face rather than none.
 const teamFace = ab => (depth.get(ab) || []).map(r => r.k).find(k => bySlug.has(k)) || null;
+
+// ── a bare name with no team anywhere ──────────────────────────────────────
+// "Maye's 2025 efficiency profile was not fluky" names a player and nothing
+// else: no full name, no club. Reading a lone surname against the whole league
+// would be reckless, but against the ~345 players this app actually prices, and
+// only at the position the call itself is filed under, it is a narrow question:
+// among priced quarterbacks, "Maye" is one man.
+//
+// Where it is still not one man, the projection settles it — but only when the
+// gap is decisive. "Allen" at QB is Josh (357 points) and Kyle (4); a call about
+// "another QB1 finish" is plainly the former, and DOMINANCE keeps the rule from
+// quietly picking a favourite in a genuine tie. Title only: this is the widest
+// net in the file, and a headline is a deliberate sentence, where a capitalised
+// word is a name rather than prose that happened to start a sentence.
+const DOMINANCE = 5;
+const pricedByPos = new Map();
+for (const pl of priced) {
+  if (!bySlug.has(pl.k)) continue;                       // no photo, nothing to show
+  if (!pricedByPos.has(pl.pos)) pricedByPos.set(pl.pos, new Map());
+  const idx = pricedByPos.get(pl.pos);
+  for (const tok of pl.n.replace(SUFFIX, '').trim().split(/\s+/).filter((_, i, a) => i === 0 || i === a.length - 1)) {
+    if (tok.length < 4) continue;
+    idx.set(tok, (idx.get(tok) || []).concat(pl));
+  }
+}
+const findByPricedName = (pos, title) => {
+  const idx = pricedByPos.get(pos);
+  if (!idx) return [];
+  const re = new RegExp('\\b(' + [...idx.keys()].sort((a, b) => b.length - a.length).map(reEsc).join('|') + ')\\b', 'g');
+  const out = [];
+  for (const m of String(title).matchAll(re)) {
+    const runners = idx.get(m[1]).slice().sort((a, b) => b.pts - a.pts);
+    if (runners.length > 1 && !(runners[0].pts >= DOMINANCE * Math.max(runners[1].pts, 1))) continue;
+    if (!out.includes(runners[0].k)) out.push(runners[0].k);
+  }
+  return out.slice(0, LEAD_FACES);
+};
 
 // ── short names ────────────────────────────────────────────────────────────
 // Headlines drop the first name once a player is established — "Bowers",
@@ -307,6 +347,9 @@ for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.t
       //     paragraph three must not end up fronted by a Bill.
       const nameScope = story_team || matchTeam(body);
       if (nameScope) ppl = findByShortName(nameScope, title, body);
+      // Still nothing, and no club to read against either: fall back to the
+      // priced roster at this call's own position.
+      if (!ppl.length && ['QB', 'RB', 'WR', 'TE'].includes(pos)) ppl = findByPricedName(pos, title);
       if (!ppl.length && story_team) {
         const face = teamFace(story_team);
         if (face) { ppl = [face]; teamLabel = story_team; }
