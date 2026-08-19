@@ -12430,7 +12430,10 @@ function MockAuction({
   seasonGames
 }) {
   const games = seasonGames || 17;
-  const INFLATION = 1.15;
+  // CPU bids key off the projected auction price (Proj), the number the room is
+  // expected to pay, with a mild competitive-heat bump. (Formerly VBD value * 1.15.)
+  const INFLATION = 1.05;
+  const mktPrice = p => p.marketValue != null ? p.marketValue : p.inflatedValue != null ? p.inflatedValue : p.auctionValue || 1;
   const [numTeams, setNumTeams] = useState(config.teams || 12);
   const [budget, setBudget] = useState(config.budget || 200);
   const teamsN = numTeams;
@@ -12455,7 +12458,7 @@ function MockAuction({
     });
     return m;
   }, [players]);
-  const fullPool = useMemo(() => (players || []).filter(p => p.auctionValue != null).slice().sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0)), [players]);
+  const fullPool = useMemo(() => (players || []).filter(p => p.auctionValue != null).slice().sort((a, b) => (b.marketValue != null ? b.marketValue : b.auctionValue || 0) - (a.marketValue != null ? a.marketValue : a.auctionValue || 0)), [players]);
   const makeTeams = (n = numTeams, b = budget) => {
     const arr = [];
     for (let i = 0; i < n; i++) {
@@ -12524,7 +12527,7 @@ function MockAuction({
   const aiMax = (t, p) => {
     if (slotsLeft(t) <= 0 || !p) return 0;
     const need = posTotal(p.position) - posCount(t, p.position);
-    let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
+    let v = mktPrice(p) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
     if (need <= 0) v *= 0.3;else { const fn = teams.filter(tt => posTotal(p.position) - posCount(tt, p.position) > 0 && slotsLeft(tt) > 0).length; v *= 1 + 0.5 * Math.max(0, fn - 2) / teamsN; }
     v *= jitter(t.id, p.id);
     v = Math.min(v, bidCap(p));
@@ -12543,7 +12546,7 @@ function MockAuction({
     const aiM = (t, p) => {
       if (slot(t) <= 0 || !p) return 0;
       const need = posTotal(p.position) - pc(t, p.position);
-      let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
+      let v = mktPrice(p) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
       if (need <= 0) v *= 0.3;else { const fn = nt.filter(tt => posTotal(p.position) - pc(tt, p.position) > 0 && slot(tt) > 0).length; v *= 1 + 0.5 * Math.max(0, fn - 2) / teamsN; }
       v *= jitter(t.id, p.id);
       v = Math.min(v, bidCap(p));
