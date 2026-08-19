@@ -447,6 +447,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .tier-player.drafted { opacity: 0.35; }
 .tier-player.drafted .tier-player-name { text-decoration: line-through; }
 .tier-player-name { font-weight: 500; }
+.ch-rankmode { display: inline-flex; align-items: center; gap: 0; border: 1px solid var(--border-strong); border-radius: 999px; overflow: hidden; margin-right: 8px; }
+.ch-rankmode .ch-rm-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); padding: 0 8px 0 10px; }
+.ch-rankmode .ch-rm-opt { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 5px 11px; background: none; border: none; color: var(--text-muted); cursor: pointer; }
+.ch-rankmode .ch-rm-opt:hover { color: var(--text-primary); }
+.ch-rankmode .ch-rm-opt.on { background: var(--positive-soft, rgba(34,211,238,0.12)); color: var(--positive, #22d3ee); }
 .vegas-flag { display: inline-block; margin-right: 5px; font-family: var(--font-mono); font-weight: 800; font-size: 10px; line-height: 1.5; color: var(--gold-text); border: 1px solid rgba(245,184,0,0.55); border-radius: 3px; padding: 0 4px; cursor: help; vertical-align: 1px; }
 .vegas-flag.down { color: #ff8080; border-color: rgba(255,107,107,0.55); }
 .tier-player-team { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; }
@@ -3072,7 +3077,7 @@ const LEAGUE_MARKET_CURVE = {
   K: [2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 };
-function calculateMarketValues(players, config) {
+function calculateMarketValues(players, config, anchors) {
   const minBid = config.valuation.minBid;
   const scale = totalLeagueBudget(config) / LEAGUE_CURVE_BUDGET;
   const byPos = {};
@@ -3081,8 +3086,13 @@ function calculateMarketValues(players, config) {
   const priceById = new Map();
   Object.entries(byPos).forEach(([pos, list]) => {
     const curve = LEAGUE_MARKET_CURVE[pos] || [];
+    // Anchored players keep their original curve slot, so the market price (Proj) does
+    // not drift when projection updates or reorders shuffle the ranking. Projection
+    // changes flow into Value / You / PPG and the ORDER of the sheet, not into what the
+    // room is expected to pay. Unanchored (newly added) players price off their live rank.
     list.forEach((p, i) => {
-      const base = i < curve.length ? curve[i] : minBid;
+      const slot = anchors && anchors[p.id] != null ? anchors[p.id] : i;
+      const base = slot < curve.length ? curve[slot] : minBid;
       priceById.set(p.id, Math.max(minBid, Math.round(base * scale)));
     });
   });
@@ -3091,7 +3101,7 @@ function calculateMarketValues(players, config) {
     marketValue: priceById.get(p.id) ?? minBid
   }));
 }
-function buildValuations(players, config) {
+function buildValuations(players, config, marketAnchors) {
   const byPos = {};
   players.forEach(p => {
     byPos[p.position] = byPos[p.position] || [];
@@ -3100,7 +3110,7 @@ function buildValuations(players, config) {
   const replacement = calculateReplacementLevels(byPos, config);
   const withVorp = calculateVORP(players, replacement);
   const withValues = calculateAuctionValues(withVorp, config);
-  const withMarket = calculateMarketValues(withValues, config);
+  const withMarket = calculateMarketValues(withValues, config, marketAnchors);
   return {
     players: withMarket,
     replacement
@@ -10512,6 +10522,8 @@ function CheatHeader({
   onAddPlayer,
   onResetRanks,
   hasCustomRanks,
+  rankMode,
+  onRankMode,
   showCols,
   setShowCols,
   COLSPEC,
@@ -10695,7 +10707,18 @@ function CheatHeader({
   }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("div", {
     className: "ch-sb-right",
     ref: pdfRef
-  }, hasCustomRanks && onResetRanks && React.createElement("button", {
+  }, hasCustomRanks && rankMode && onRankMode && React.createElement("span", {
+    className: "ch-rankmode",
+    title: "When projections update: follow the new rankings, or keep your custom order pinned. Your reorder is saved either way."
+  }, React.createElement("span", { className: "ch-rm-label" }, "Ranks"), React.createElement("button", {
+    className: "ch-rm-opt" + (rankMode === 'updates' ? ' on' : ''),
+    onClick: () => onRankMode('updates'),
+    title: "Rank by Iron Tuna's projections. Projection updates re-order the sheet automatically; your custom order is kept and returns if you switch back."
+  }, "Follow updates"), React.createElement("button", {
+    className: "ch-rm-opt" + (rankMode === 'custom' ? ' on' : ''),
+    onClick: () => onRankMode('custom'),
+    title: "Pin your drag-and-drop order on top of the projections. Updates still refresh Value, You and PPG, but not your order."
+  }, "My order")), hasCustomRanks && onResetRanks && React.createElement("button", {
     className: "ch-sb-undo",
     onClick: () => onResetRanks(),
     title: "Undo your drag-and-drop rankings and go back to Iron Tuna's default order, rebuilt from the most recent projections"
@@ -11136,6 +11159,8 @@ function Cheatsheet({
   onRankReorder,
   onResetRanks,
   hasCustomRanks,
+  rankMode,
+  onRankMode,
   targets,
   onToggleTarget,
   onSetPrice,
@@ -11508,6 +11533,8 @@ function Cheatsheet({
     onAddPlayer: onAddPlayer,
     onResetRanks: onResetRanks,
     hasCustomRanks: hasCustomRanks,
+    rankMode: rankMode,
+    onRankMode: onRankMode,
     showCols: showCols,
     setShowCols: setShowCols,
     COLSPEC: COLSPEC,
@@ -20555,7 +20582,22 @@ function App() {
   const [customOrder, setCustomOrder] = useState(initialState?.customOrder || []);
   const [targets, setTargets] = useState(() => new Set(initialState?.targets || []));
   const [rankOrder, setRankOrder] = useState(initialState?.rankOrder || {});
-  const [projUpdateAsk, setProjUpdateAsk] = useState(() => !!(initialState && initialState.players && initialState.players.length && initialState.projVersion && initialState.projVersion !== PROJ_VERSION && initialState.rankOrder && Object.keys(initialState.rankOrder).length > 0));
+  // Rankings mode: 'custom' pins the user's drag-and-drop order on top of projections;
+  // 'updates' follows projection updates. Non-destructive — the reorder is kept either
+  // way and simply not applied in 'updates' mode. Persisted outside the draft state so
+  // it survives re-baselines.
+  const [rankMode, setRankMode] = useState(() => {
+    try { const m = localStorage.getItem('it_rank_mode'); if (m === 'custom' || m === 'updates') return m; } catch (e) {}
+    return initialState?.rankOrder && Object.keys(initialState.rankOrder).length > 0 ? 'custom' : 'updates';
+  });
+  useEffect(() => { try { localStorage.setItem('it_rank_mode', rankMode); } catch (e) {} }, [rankMode]);
+  // Market-curve slot per player, frozen at first pricing so Proj stays stable across
+  // projection updates. Cleared by Reset Cheat Sheet to re-derive from current data.
+  const [marketAnchors, setMarketAnchors] = useState(initialState?.marketAnchors || null);
+  const [projUpdateAsk, setProjUpdateAsk] = useState(() => {
+    try { const m = localStorage.getItem('it_rank_mode'); if (m === 'custom' || m === 'updates') return false; } catch (e) {} // the toggle already answers this
+    return !!(initialState && initialState.players && initialState.players.length && initialState.projVersion && initialState.projVersion !== PROJ_VERSION && initialState.rankOrder && Object.keys(initialState.rankOrder).length > 0);
+  });
   const [boardSortKey, setBoardSortKey] = useState('val');
   const [roleOverrides, setRoleOverrides] = useState(initialState?.roleOverrides || {});
   const [slotOrder, setSlotOrder] = useState({});
@@ -20648,9 +20690,22 @@ function App() {
       ...p,
       projectedPoints: scorePlayer(p, config)
     })), config);
-    const ranked = applyCustomRanks(scored, rankOrder);
-    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config).players, config), config), config);
-  }, [players, config, rankOrder]);
+    const ranked = applyCustomRanks(scored, rankMode === 'custom' ? rankOrder : {});
+    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config, marketAnchors).players, config), config), config);
+  }, [players, config, rankOrder, rankMode, marketAnchors]);
+  useEffect(() => {
+    // Seed the market anchors once, from the UNCUSTOMIZED projection ordering (no rank
+    // reorders applied), so a user's own reorder never bakes into the market prices;
+    // afterward Proj is pinned to those slots until the user resets the cheat sheet.
+    if (marketAnchors || !players || !players.length) return;
+    const byPos = {};
+    players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+    const a = {};
+    Object.values(byPos).forEach(list => {
+      list.slice().sort((x, y) => scorePlayer(y, config) - scorePlayer(x, config)).forEach((p, i) => { a[p.id] = i; });
+    });
+    setMarketAnchors(a);
+  }, [players, config, marketAnchors]);
   useEffect(() => {
     try {
       if (!baseValued || !baseValued.length) return;
@@ -20807,10 +20862,11 @@ function App() {
         rankOrder,
         roleOverrides,
         valueAdjust,
-        priceOverrides
+        priceOverrides,
+        marketAnchors
       }));
     } catch (e) {}
-  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides]);
+  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides, marketAnchors]);
   useEffect(() => {
     function onStorage(e) {
       if (e.key !== STORAGE_KEY || !e.newValue) return;
@@ -21075,6 +21131,7 @@ function App() {
       setRankOrder({});
       setPriceOverrides({});
       setCustomOrder([]);
+      setMarketAnchors(null);
       setProjUpdateAsk(false);
       // Rankings revert to the system's CURRENT projections, not the user-modified pool:
       // `players` accumulates CSV imports, per-player stat edits, and added players, and
@@ -21247,6 +21304,7 @@ function App() {
   }
   function handleRankReorder(draggedId, targetId) {
     if (promptUpgrade('to reorder players and build your own cheat sheet')) return;
+    setRankMode('custom'); // dragging IS choosing your own order
     const a = players.find(x => x.id === draggedId),
       b = players.find(x => x.id === targetId);
     if (!a || !b || a.position !== b.position) return;
@@ -21691,6 +21749,8 @@ function App() {
       onRankReorder: handleRankReorder,
       onResetRanks: handleResetRanks,
       hasCustomRanks: !!(rankOrder && Object.keys(rankOrder).length > 0),
+      rankMode: rankMode,
+      onRankMode: setRankMode,
       targets: targets,
       onToggleTarget: handleToggleTarget,
       onSetPrice: handleSetPrice,
@@ -22180,13 +22240,13 @@ function App() {
     className: "section-title"
   }, "Projections updated"), React.createElement("p", {
     style: { fontSize: 14.5, lineHeight: 1.65, color: 'var(--text-secondary)', margin: '12px 0 18px' }
-  }, "Player projections were refreshed with the latest numbers from our sources. You have custom rank reorders saved. Keep your reorder layered on top of the new projections, or reset to the updated rankings?"), React.createElement("div", {
+  }, "Player projections were refreshed with the latest numbers from our sources. You have custom rank reorders saved. Follow the updated rankings, or keep your own order pinned? You can switch anytime with the toggle on the cheat sheet — your reorder is kept either way."), React.createElement("div", {
     style: { display: 'flex', gap: 10, flexWrap: 'wrap' }
   }, React.createElement("button", {
-    onClick: () => { setRankOrder({}); setProjUpdateAsk(false); },
+    onClick: () => { setRankMode('updates'); setProjUpdateAsk(false); },
     style: { background: 'var(--positive, #2dd4a3)', color: '#04211c', border: 'none', borderRadius: 9, padding: '10px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
   }, "Use updated rankings"), React.createElement("button", {
-    onClick: () => setProjUpdateAsk(false),
+    onClick: () => { setRankMode('custom'); setProjUpdateAsk(false); },
     style: { background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-strong, #2c3b48)', borderRadius: 9, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }
   }, "Keep my reorder")))), (projLoadFailed && (!players || players.length === 0)) && React.createElement("div", {
     className: "modal-bg no-print"
