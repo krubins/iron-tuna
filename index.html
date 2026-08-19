@@ -447,6 +447,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .tier-player.drafted { opacity: 0.35; }
 .tier-player.drafted .tier-player-name { text-decoration: line-through; }
 .tier-player-name { font-weight: 500; }
+.vegas-flag { display: inline-block; margin-right: 5px; font-family: var(--font-mono); font-weight: 800; font-size: 10px; line-height: 1.5; color: var(--gold-text); border: 1px solid rgba(245,184,0,0.55); border-radius: 3px; padding: 0 4px; cursor: help; vertical-align: 1px; }
+.vegas-flag.down { color: #ff8080; border-color: rgba(255,107,107,0.55); }
 .tier-player-team { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; }
 .tier-player-value { font-family: var(--font-mono); font-size: 13px; text-align: right; color: var(--gold-text); font-weight: 500; }
 .prep-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 28px; }
@@ -2722,6 +2724,38 @@ function scoreDefense(stats = {}, config, games = 17) {
     pts += applyTierScale(ppg, s.pointsAllowed) * games;
   }
   return pts;
+}
+// ── Vegas-impact helpers ────────────────────────────────────────────────────
+// /api/projections marks players whose stats were blended with sportsbook prop
+// lines: p.vegas = { stat: [committedProjection, vegasImplied, blended] }. The
+// cheat sheet shows a V next to any player the blend moves by at least
+// VEGAS_FLAG_MIN_PTS season points, with the underlying numbers on hover.
+const VEGAS_STAT_LABELS = { passYd: 'pass yds', passTD: 'pass TD', passInt: 'INT', rushYd: 'rush yds', rushTD: 'rush TD', recYd: 'rec yds', recTD: 'rec TD', rec: 'receptions', scrimmageTD: 'scrimmage TD' };
+const VEGAS_FLAG_MIN_PTS = 8;
+const _vgFmt = (k, v) => /Yd$/.test(k) || k === 'rec' ? String(Math.round(v)) : String(Math.round(v * 10) / 10);
+function vegasImpact(player, config) {
+  const vg = player && player.vegas;
+  if (!vg || !config) return null;
+  const baseStats = { ...player.projectedStats };
+  let any = false;
+  for (const k in vg) { const a = vg[k]; if (Array.isArray(a) && a.length >= 3 && k in baseStats) { baseStats[k] = a[0]; any = true; } }
+  if (!any) return null;
+  const now = scorePlayer({ ...player, projectedPointsOverride: null }, config);
+  const base = scorePlayer({ ...player, projectedPointsOverride: null, projectedStats: baseStats }, config);
+  const delta = Math.round((now - base) * 10) / 10;
+  if (!Number.isFinite(delta) || delta === 0) return null;
+  return { delta, stats: vg };
+}
+function vegasSignificant(vi) { return !!vi && Math.abs(vi.delta) >= VEGAS_FLAG_MIN_PTS; }
+function vegasTitle(vi) {
+  if (!vi) return '';
+  const parts = Object.entries(vi.stats).filter(e => Array.isArray(e[1]) && e[1].length >= 3 && e[1][0] !== e[1][2]).map(e => (VEGAS_STAT_LABELS[e[0]] || e[0]) + ' ' + _vgFmt(e[0], e[1][0]) + ' \u2192 ' + _vgFmt(e[0], e[1][2]) + ' (Vegas ' + _vgFmt(e[0], e[1][1]) + ')');
+  return 'Vegas lines moved this projection ' + (vi.delta > 0 ? '+' : '') + vi.delta + ' season pts \u00b7 ' + parts.join(' \u00b7 ');
+}
+function vegasFlagEl(player, config) {
+  const vi = vegasImpact(player, config);
+  if (!vegasSignificant(vi)) return null;
+  return React.createElement("span", { className: "vegas-flag" + (vi.delta < 0 ? " down" : ""), title: vegasTitle(vi), "aria-label": "Ranking significantly impacted by Vegas odds" }, "V");
 }
 function scorePlayer(player, config) {
   if (player.projectedPointsOverride != null) return player.projectedPointsOverride;
@@ -6865,7 +6899,9 @@ function QuickDraftModal({
     style: {
       marginTop: 7
     }
-  }, playerFact), _byeConflicts.length > 0 && React.createElement("div", {
+  }, playerFact), (function () { const vi = vegasImpact(player, config); return vi ? React.createElement("div", {
+    style: { marginTop: 7, fontSize: 13.5, color: 'var(--text-secondary)', border: '1px solid rgba(245,184,0,.4)', background: 'var(--gold-soft)', borderRadius: 6, padding: '7px 10px' }
+  }, React.createElement("b", { style: { color: 'var(--gold-text)' } }, "Vegas impact: ", (vi.delta > 0 ? '+' : ''), vi.delta, " pts"), " \u00b7 ", Object.entries(vi.stats).filter(e => Array.isArray(e[1]) && e[1].length >= 3 && e[1][0] !== e[1][2]).map(e => (VEGAS_STAT_LABELS[e[0]] || e[0]) + ' ' + _vgFmt(e[0], e[1][0]) + ' \u2192 ' + _vgFmt(e[0], e[1][2]) + ' (Vegas ' + _vgFmt(e[0], e[1][1]) + ')').join(' \u00b7 ')) : null; })(), _byeConflicts.length > 0 && React.createElement("div", {
     style: {
       marginTop: 6,
       color: '#f59e0b',
@@ -8932,7 +8968,7 @@ function TierView({
         className: `tier-player ${isDrafted ? 'drafted' : ''}`
       }, React.createElement("span", {
         className: "tier-player-name"
-      }, p.name), React.createElement("span", {
+      }, vegasFlagEl(p, config), p.name), React.createElement("span", {
         className: "tier-player-team"
       }, p.team), React.createElement("span", {
         className: "tier-player-value"
@@ -11662,7 +11698,7 @@ function Cheatsheet({
         color: nameColor
       },
       title: byeOf(p.team) ? `Bye week ${byeOf(p.team)}` : 'Bye week: TBD'
-    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
+    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
       className: "cheat-hctag",
       title: `Handcuff to ${handcuffMap.get(p.id)}`
     }, React.createElement("svg", {
@@ -15270,7 +15306,7 @@ function PlayersRail({
         className: "rr-name",
         onClick: e => { e.stopPropagation(); onNominate(p); },
         style: { cursor: 'pointer' }
-      }, p.name), React.createElement("span", {
+      }, vegasFlagEl(p, config), p.name), React.createElement("span", {
         className: "rr-c",
         title: (config && config.format !== 'auction') ? "ADP (average draft position)" : "Proj, likely market/auction price"
       }, (config && config.format !== 'auction') ? (p.adp != null ? Math.round(p.adp) : '\u2014') : ('$' + projVal)), React.createElement("span", {
@@ -15352,6 +15388,7 @@ function buildInitialPlayers(projectionsSource) {
     position: p.position,
     team: p.team,
     projectedStats: p.projectedStats,
+    vegas: p.vegas || null,
     projectedPoints: 0,
     auctionValue: 0,
     inflatedValue: 0,
