@@ -1621,7 +1621,7 @@ const COLUMN_MIN_PRICE_GAP = 2;       // ...or a dollar of rounding
 // "undefined" at readers for a quarter of an hour. The client asks for ?v=N and
 // only renders items whose shape it recognises; the two together make a
 // contract change safe to deploy.
-const COLUMN_CONTRACT = 2;
+const COLUMN_CONTRACT = 3;   // 3: items carry their stat lines so a reader's own scoring can re-score them
 const COLUMN_MAX_ITEMS = 12;          // three days of six-hour slots
 const COLUMN_MAX_AGREE = 3;           // agreement cases are filler, never the point
 const COLUMN_AGREE_MAX_RANK = 24;     // and only worth printing near the top of a board
@@ -1643,6 +1643,24 @@ function _colScore(stats, position) {
   pts += (stats.rec || 0) * (position === 'RB' ? s.rbReceptionPoints : s.receptionPoints);
   pts += (stats.fumLost || 0) * s.fumbleLost;
   return pts;
+}
+
+// The stat line a card is built from, trimmed to the stats the site actually
+// models and rounded once. The front page ships this to the reader's browser so
+// a league with half-PPR or six-point passing TDs can re-score the card in its
+// OWN scoring instead of reading the site default's points back at itself.
+// Points are a pure function of a stat line, so shipping the line is the whole
+// of what a client needs — and it stays a public, cacheable payload, because
+// nothing in it is specific to any reader.
+const COLUMN_STAT_KEYS = ['passYd', 'passTD', 'passInt', 'rushYd', 'rushTD',
+                          'recYd', 'recTD', 'rec', 'fumLost'];
+function _colStatLine(stats) {
+  const out = {};
+  for (const k of COLUMN_STAT_KEYS) {
+    const n = Number((stats || {})[k]);
+    if (Number.isFinite(n)) out[k] = _oddsRound(n);
+  }
+  return out;
 }
 
 // Curve slot -> dollars in the site's default league.
@@ -1737,6 +1755,9 @@ function buildVegasColumn(overlay, ctx) {
       ptsConsensus: _colScore(st, p.position),
       ptsIronTuna: _colScore(veg ? _colBlendStats(st, veg.stats) : st, p.position),
       ptsMarket: _colScore(veg ? veg.stats : st, p.position),
+      statsConsensus: st,
+      statsIronTuna: veg ? _colBlendStats(st, veg.stats) : st,
+      statsMarket: veg ? veg.stats : st,
       moved: veg ? veg.moved : null
     });
   }
@@ -1770,6 +1791,11 @@ function buildVegasColumn(overlay, ctx) {
         ptsIronTuna: Math.round(r.ptsIronTuna * 10) / 10,
         ptsMarket: Math.round(r.ptsMarket * 10) / 10,
         ptsDelta: Math.round((r.ptsIronTuna - r.ptsConsensus) * 10) / 10,
+        // The three boards' stat lines, for a reader whose league does not score
+        // the way this page's defaults do. Same three boards as the points above.
+        statsConsensus: _colStatLine(r.statsConsensus),
+        statsIronTuna: _colStatLine(r.statsIronTuna),
+        statsMarket: _colStatLine(r.statsMarket),
         priceConsensus, priceIronTuna, priceDelta,
         side: rankDelta > 0 ? 'under' : rankDelta < 0 ? 'over' : 'flat',
         moved: r.moved.map(m => ({ stat: m.stat, consensus: _oddsRound(m.consensus), market: _oddsRound(m.market) })),
