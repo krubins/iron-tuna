@@ -5,6 +5,9 @@ package.json
 package-lock.json
 scratch-*
 .dev.vars
+# wrangler's local state (miniflare's D1 sqlite, caches) — created by
+# `wrangler dev --local` and `d1 execute --local`, never deployed.
+.wrangler/
 
 # Raw sportsbook pulls and the merged source files they produce. These are
 # inputs to tools/vegas-to-projections.mjs + tools/merge-projections.mjs; the

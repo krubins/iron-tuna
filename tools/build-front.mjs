@@ -4,12 +4,16 @@
 //               label, priced view chip, named players) joined to tools/x-posts/insights_pool.json for
 //               the play/stat lines. Each story also carries `deep` (1 when the call is a
 //               structural read rather than a single-player call) and `topic` (the desk
-//               label shown on the front page lead). See DEEP/TOPICS below.
+//               label shown on the front page lead) and `team` (the NFL team the
+//               call is about, used to colour the lead's plate). See DEEP/TOPICS
+//               and TEAMS below.
 //   REPORTS  <- every auction-watch-YYYY-MM-DD.html page (title + meta description),
 //               newest first — this is the Training Camp & Preseason desk
 //   PLAYERS  <- the headshot rows for every player named by a story above, looked up
 //               in tools/nfl-headshots.json. Each story carries `ppl`, the slugs of
-//               the players it names, and the lead renders their photos.
+//               the players it names, and the lead renders their photos. A team
+//               story that names nobody carries `tm` instead — the club whose
+//               headline player stands in, which the band prints as its label.
 //
 // Run after adding a new insights drop page or a new auction-watch (camp/preseason)
 // page:  node tools/build-front.mjs
@@ -69,6 +73,53 @@ const matchTopic = text => {
 };
 const topicFor = (title, body) => matchTopic(title) || matchTopic(body) || 'Team trend';
 
+// ── team detection, for the lead's artwork ─────────────────────────────────
+// The front page draws an original team-coloured plate beside the lead, so each
+// story needs to know whose story it is. Same discipline as the topic matcher:
+// the TITLE is the editorial summary and is matched first, the body only as a
+// fallback, so a rival mentioned in passing three paragraphs down cannot claim
+// the artwork. A miss costs a neutral plate, never a wrong team's colours.
+//
+// Ambiguity is resolved by matching CITY and NICKNAME separately: "New York"
+// alone cannot pick between the Giants and the Jets, so the bare city is not a
+// key at all for shared markets — only "Giants"/"Jets" are. Same for Los
+// Angeles and the two California pairs.
+const TEAMS = [
+  ['ARI', ['Arizona', 'Cardinals']],          ['ATL', ['Atlanta', 'Falcons']],
+  ['BAL', ['Baltimore', 'Ravens']],           ['BUF', ['Buffalo', 'Bills']],
+  ['CAR', ['Carolina', 'Panthers']],          ['CHI', ['Chicago', 'Bears']],
+  ['CIN', ['Cincinnati', 'Bengals']],         ['CLE', ['Cleveland', 'Browns']],
+  ['DAL', ['Dallas', 'Cowboys']],             ['DEN', ['Denver', 'Broncos']],
+  ['DET', ['Detroit', 'Lions']],              ['GB',  ['Green Bay', 'Packers']],
+  ['HOU', ['Houston', 'Texans']],             ['IND', ['Indianapolis', 'Colts']],
+  ['JAX', ['Jacksonville', 'Jaguars']],       ['KC',  ['Kansas City', 'Chiefs']],
+  ['LV',  ['Las Vegas', 'Raiders']],          ['LAC', ['Chargers']],
+  ['LAR', ['Rams']],                          ['MIA', ['Miami', 'Dolphins']],
+  ['MIN', ['Minnesota', 'Vikings']],          ['NE',  ['New England', 'Patriots']],
+  ['NO',  ['New Orleans', 'Saints']],         ['NYG', ['Giants']],
+  ['NYJ', ['Jets']],                          ['PHI', ['Philadelphia', 'Eagles']],
+  ['PIT', ['Pittsburgh', 'Steelers']],        ['SF',  ['San Francisco', '49ers', 'Niners']],
+  ['SEA', ['Seattle', 'Seahawks']],           ['TB',  ['Tampa Bay', 'Buccaneers', 'Bucs']],
+  ['TEN', ['Tennessee', 'Titans']],           ['WAS', ['Washington', 'Commanders']]
+];
+const matchTeam = text => {
+  // Earliest mention wins, so "Cleveland's environment should improve more than
+  // Pittsburgh expects" is a Cleveland story, not a Pittsburgh one.
+  let best = null, at = Infinity;
+  for (const [abbr, names] of TEAMS) {
+    for (const n of names) {
+      const m = new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').exec(text);
+      if (m && m.index < at) { at = m.index; best = abbr; }
+    }
+  }
+  return best;
+};
+// TITLE ONLY — deliberately. The body fallback that works for topics is too
+// loose here: "Offensive-line dispersion matters more this year" is a
+// league-wide piece that happens to cite Buffalo in paragraph three, and body
+// matching handed it Buffalo's colours. A league-wide story should get the
+// neutral plate, so if the headline does not name a team, nothing does.
+const teamFor = (title) => matchTeam(title) || null;
 // ── player photos ──────────────────────────────────────────────────────────
 // The lead runs a photo of the players its story is actually about. Names are
 // matched against tools/nfl-headshots.json (built from the nflverse players
@@ -143,73 +194,13 @@ const enlist = keys => {
 
 // ── the team's face, for a story that names nobody ─────────────────────────
 // Some deep dives are about a whole team — a schedule, a coaching staff, an
-// offensive line — and name no player at all. Those run the team's headline
-// player instead, and the band says so: it is labelled with the team, not
-// "In this story", so the photo never implies a quote the story never made.
+// offensive line — and name no player. Those run the team's headline player
+// instead, and the band says so: it is labelled with the team, not "In this
+// story", so the photo never implies a quote the story never made.
 //
 // "Headline player" is the site's own answer, not a popularity guess: the
 // highest full-PPR projection on that roster, read straight out of the
 // PROJECTIONS block in _worker.js that prices the whole app.
-const TEAMS = {
-  ARI: ['Arizona Cardinals', 'Arizona', 'Cardinals'],
-  ATL: ['Atlanta Falcons', 'Atlanta', 'Falcons'],
-  BAL: ['Baltimore Ravens', 'Baltimore', 'Ravens'],
-  BUF: ['Buffalo Bills', 'Buffalo', 'Bills'],
-  CAR: ['Carolina Panthers', 'Carolina', 'Panthers'],
-  CHI: ['Chicago Bears', 'Chicago', 'Bears'],
-  CIN: ['Cincinnati Bengals', 'Cincinnati', 'Bengals'],
-  CLE: ['Cleveland Browns', 'Cleveland', 'Browns'],
-  DAL: ['Dallas Cowboys', 'Dallas', 'Cowboys'],
-  DEN: ['Denver Broncos', 'Denver', 'Broncos'],
-  DET: ['Detroit Lions', 'Detroit', 'Lions'],
-  GB:  ['Green Bay Packers', 'Green Bay', 'Packers'],
-  HOU: ['Houston Texans', 'Houston', 'Texans'],
-  IND: ['Indianapolis Colts', 'Indianapolis', 'Indy', 'Colts'],
-  JAX: ['Jacksonville Jaguars', 'Jacksonville', 'Jaguars', 'Jags'],
-  KC:  ['Kansas City Chiefs', 'Kansas City', 'Chiefs'],
-  LAC: ['Los Angeles Chargers', 'Chargers'],
-  LAR: ['Los Angeles Rams', 'Rams'],
-  LV:  ['Las Vegas Raiders', 'Las Vegas', 'Raiders'],
-  MIA: ['Miami Dolphins', 'Miami', 'Dolphins'],
-  MIN: ['Minnesota Vikings', 'Minnesota', 'Vikings'],
-  NE:  ['New England Patriots', 'New England', 'Patriots'],
-  NO:  ['New Orleans Saints', 'New Orleans', 'Saints'],
-  NYG: ['New York Giants', 'Giants'],
-  NYJ: ['New York Jets', 'Jets'],
-  PHI: ['Philadelphia Eagles', 'Philadelphia', 'Eagles'],
-  PIT: ['Pittsburgh Steelers', 'Pittsburgh', 'Steelers'],
-  SEA: ['Seattle Seahawks', 'Seattle', 'Seahawks'],
-  SF:  ['San Francisco 49ers', 'San Francisco', '49ers', 'Niners'],
-  TB:  ['Tampa Bay Buccaneers', 'Tampa Bay', 'Buccaneers', 'Bucs'],
-  TEN: ['Tennessee Titans', 'Tennessee', 'Titans'],
-  WAS: ['Washington Commanders', 'Washington', 'Commanders'],
-};
-// "New York" and "Los Angeles" are deliberately absent above: each is two
-// teams, so only the nickname disambiguates them and a bare city is dropped
-// rather than guessed at.
-const teamAlias = new Map();
-for (const [ab, names] of Object.entries(TEAMS)) for (const n of names) teamAlias.set(n, ab);
-const TEAM_RE = new RegExp(
-  '\\b(' + [...teamAlias.keys()].sort((a, b) => b.length - a.length).map(reEsc).join('|') + ')\\b',
-  'g',
-);
-const teamFor = (title, body) => {
-  const rank = new Map();
-  const scan = (text, inTitle) => {
-    for (const m of String(text).matchAll(TEAM_RE)) {
-      const ab = teamAlias.get(m[1]);
-      const cur = rank.get(ab);
-      if (cur) { cur.hits++; cur.inTitle = cur.inTitle || inTitle; }
-      else rank.set(ab, { ab, hits: 1, inTitle });
-    }
-  };
-  scan(title, true);
-  scan(body, false);
-  // The title is the editorial subject: a Cleveland story that mentions the
-  // coordinator's old Baltimore staff is still a Cleveland story.
-  const best = [...rank.values()].sort((a, b) => (b.inTitle - a.inTitle) || (b.hits - a.hits))[0];
-  return best ? best.ab : null;
-};
 
 // Full-PPR season points, the ranking the whole site is priced on. Only the
 // order matters here, so the default scoring is enough — no league settings.
@@ -303,18 +294,22 @@ for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.t
     const pos = cpos ? norm(cpos[1]) : '';
     const body = norm(blk.replace(/<[^>]+>/g, ' '));
     const deep = isDeep(pos);
+    const story_team = teamFor(title);
     let ppl = findPlayers(title, body), teamLabel = '';
     if (!ppl.length) {
-      // Nobody named in full. Work out whose story it is, then try the short
-      // names against that roster, and only fall back to the team's headline
-      // player once the copy really has named no one.
-      const ab = teamFor(title, body);
-      if (ab) {
-        ppl = findByShortName(ab, title, body);
-        if (!ppl.length) {
-          const face = teamFace(ab);
-          if (face) { ppl = [face]; teamLabel = TEAMS[ab][0]; }
-        }
+      // Nobody named in full. Two different questions follow, and they deserve
+      // two different levels of caution:
+      //
+      //   which roster does a bare "Bowers" belong to?  The body may answer it.
+      //     Reading a surname against the wrong roster simply fails to match.
+      //   whose face do we put up when nobody was named?  Title only, per the
+      //     plate's rule above. A league-wide piece that cites Buffalo in
+      //     paragraph three must not end up fronted by a Bill.
+      const nameScope = story_team || matchTeam(body);
+      if (nameScope) ppl = findByShortName(nameScope, title, body);
+      if (!ppl.length && story_team) {
+        const face = teamFace(story_team);
+        if (face) { ppl = [face]; teamLabel = story_team; }
       }
     }
     enlist(ppl);
@@ -328,6 +323,7 @@ for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.t
       date,
       url: '/' + f.replace('.html', '') + '#call-' + m[1],
       ...(deep ? { deep: 1, topic: topicFor(title, body) } : {}),
+      ...(story_team ? { team: story_team } : {}),
       ...(ppl.length ? { ppl } : {}),
       ...(teamLabel ? { tm: teamLabel } : {}),
     });

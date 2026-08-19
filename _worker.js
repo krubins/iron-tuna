@@ -52,15 +52,21 @@ function timingSafeEq(a, b) { if (a.length !== b.length) return false; let r = 0
 async function makeToken(secret, obj) { const p = b64urlEncode(new TextEncoder().encode(JSON.stringify(obj))); return p + '.' + await hmacSign(secret, p); }
 async function readToken(secret, token) { const parts = (token || '').split('.'); if (parts.length !== 2) return null; if (!timingSafeEq(parts[1], await hmacSign(secret, parts[0]))) return null; try { const o = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0]))); if (o.exp && Date.now() > o.exp) return null; return o; } catch (e) { return null; } }
 function parseCookie(str) { const o = {}; (str || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = p.slice(i + 1).trim(); }); return o; }
+// Comped accounts: these emails always have full access, no purchase required.
+// Kept in code (not the DB) so owner access survives a DB reset. Module scope so
+// /api/admin/grant can tell you when a DB row is redundant, and so /api/admin/
+// revoke can warn that it cannot remove access granted here.
+//
+// This list is for OWNER access. To comp someone else, use /api/admin/grant —
+// a third party's address does not belong in a source file, and git history
+// keeps it forever.
+const COMPED_EMAILS = ['kennethrubinstein@gmail.com', 'kennethrubinstein@icloud.com'];
 async function isEntitled(env, email) {
   // Authoritative: the entitlements table, written only on a VERIFIED-paid session
   // (see /api/checkout/verify + stripe-webhook). Do NOT fall back to contacts:
   // /api/checkout writes a 'purchase' contact at checkout START, before payment.
   if (!email) return false;
-  // Comped accounts: these emails always have full access, no purchase required.
-  // Kept in code (not the DB) so owner access survives a DB reset.
-  const COMPED = ['kennethrubinstein@gmail.com', 'kennethrubinstein@icloud.com'];
-  if (COMPED.includes(String(email).toLowerCase().trim())) return true;
+  if (COMPED_EMAILS.includes(String(email).toLowerCase().trim())) return true;
   if (!env.LEADS_DB) return false;
   try { return !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) { return false; }
 }
@@ -314,7 +320,6 @@ const PROJECTIONS = [
   { name: "Tank Dell", position: "WR", team: "HOU", projectedStats: { rushYd: 44, rushTD: 0, rec: 36, recYd: 465, recTD: 4, fumLost: 0 }},
   { name: "Jordan Addison", position: "WR", team: "MIN", projectedStats: { rushYd: 17, rushTD: 1, rec: 58, recYd: 772, recTD: 4, fumLost: 0 }},
   { name: "Jordyn Tyson", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 65, recYd: 915, recTD: 6, fumLost: 0 }},
-  { name: "Ricky Pearsall", position: "WR", team: "SF", projectedStats: { rushYd: 23, rushTD: 0, rec: 59, recYd: 811, recTD: 4, fumLost: 0 }},
   { name: "Jayden Reed", position: "WR", team: "GB", projectedStats: { rushYd: 66, rushTD: 0, rec: 62, recYd: 732, recTD: 5, fumLost: 0 }},
   { name: "Romeo Doubs", position: "WR", team: "NE", projectedStats: { rushYd: 1, rushTD: 0, rec: 62, recYd: 766, recTD: 7, fumLost: 0 }},
   { name: "John Metchie III", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rec: 66, recYd: 596, recTD: 4 }},
@@ -516,7 +521,7 @@ const PROJECTIONS = [
 
   { name: "Alvin Kamara", position: "RB", team: "NO", projectedStats: { rushYd: 479, rushTD: 2, rec: 34, recYd: 230, recTD: 1, fumLost: 0 }},
   { name: "Chris Bell", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 41, recYd: 533, recTD: 3, fumLost: 0 }},
-  { name: "Stefon Diggs", position: "WR", team: "FA", projectedStats: { rushYd: 3, rushTD: 0, rec: 0, recYd: 3, recTD: 0, fumLost: 0 }},
+  { name: "Stefon Diggs", position: "WR", team: "WAS", projectedStats: { rushYd: 8, rushTD: 0, rec: 62, recYd: 741, recTD: 4, fumLost: 1 }},
   { name: "Jack Bech", position: "WR", team: "LV", projectedStats: { rushYd: 0, rushTD: 1, rec: 43, recYd: 486, recTD: 3, fumLost: 0 }},
   { name: "Brandon Aiyuk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 1, recYd: 3, recTD: 0, fumLost: 0 }},
   { name: "Tre' Harris", position: "WR", team: "LAC", projectedStats: { rushYd: 0, rushTD: 0, rec: 34, recYd: 405, recTD: 2, fumLost: 0 }},
@@ -1559,16 +1564,243 @@ function blendProjections(overlay) {
     const v = overlay[_oddsNorm(p.name) + '|' + p.position];
     if (!v) return p;
     const stats = { ...p.projectedStats };
+    // vegas[k] = [committed, marketImplied, blended] — shipped to the client so the
+    // cheat sheet can flag players whose ranking the odds moved and show the numbers.
+    const vg = {};
     let touched = false;
     for (const [k, val] of Object.entries(v)) {
       if (!(k in stats)) continue;                 // only stats the site models
       const n = Number(val);
       if (!Number.isFinite(n) || n < 0) continue;
+      const before = stats[k];
       stats[k] = _oddsRound((stats[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
+      vg[k] = [before, _oddsRound(n), stats[k]];
       touched = true;
     }
-    return touched ? { ...p, projectedStats: stats } : p;
+    return touched ? { ...p, projectedStats: stats, vegas: vg } : p;
   });
+}
+
+// ── §9c. "Vegas vs. Rankings & ADP" column ─────────────────────────────────
+// The editorial thesis: a sportsbook has money at risk on every number it
+// prints, so its lines are priced off repeatable trends and statistical
+// modelling and corrected the moment they are wrong. A ranking costs its author
+// nothing. Where the two disagree, the column shows the disagreement and lets
+// the reader decide — it never asserts the book is right.
+//
+// Everything below is COMPUTED from the same cached overlay the projections
+// blend uses. Nothing here is hand-written copy, so the column cannot go stale
+// while the odds move, and it cannot claim a disagreement that isn't in the data.
+//
+// HAND-SYNCED with index.html: COLUMN_SCORING mirrors DEFAULT_LEAGUE_CONFIG.
+// scoring, COLUMN_CURVE mirrors LEAGUE_MARKET_CURVE, and _colScore mirrors
+// scoreSkillPlayer/yardageScore/countScore. There is no build step. If you
+// change scoring or the curve on the client, change it here too —
+// tools/test-worker-column.mjs asserts the two stay in agreement.
+const COLUMN_SCORING = {
+  passingYardsPerPoint: 25, passingYardsThreshold: 125, passingTD: 4, passingInt: -2,
+  rushingYardsPerPoint: 10, rushingYardsThreshold: 0, rushingTD: 6,
+  receivingYardsPerPoint: 10, receivingYardsThreshold: 0, receivingTD: 6,
+  receptionPoints: 1, rbReceptionPoints: 1, fumbleLost: -2
+};
+const COLUMN_CURVE = {
+  QB: [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2],
+  RB: [43, 40, 38, 33, 30, 28, 25, 23, 22, 20, 19, 18, 15, 12, 11, 9, 8, 8, 7, 6, 6, 6, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  WR: [42, 40, 36, 35, 31, 28, 24, 24, 17, 16, 15, 14, 12, 12, 10, 9, 9, 9, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  TE: [32, 28, 20, 14, 11, 9, 7, 6, 5, 5, 3, 2, 2, 2, 1, 1]
+};
+const COLUMN_CURVE_BUDGET = 1440;     // the curve's own scale, as on the client
+const COLUMN_LEAGUE_BUDGET = 12 * 200; // the site's default league: 12 teams, $200
+const COLUMN_MIN_BID = 1;
+const COLUMN_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
+const COLUMN_MIN_RANK_GAP = 2;        // below this the "disagreement" is noise
+const COLUMN_MIN_PRICE_GAP = 2;       // ...or a dollar of rounding
+// Bump on ANY change to the item shape the front page reads. The response is
+// cached publicly for 15 minutes, so without a version in the request URL a
+// renamed field means new HTML meets an old cached payload and the page prints
+// "undefined" at readers for a quarter of an hour. The client asks for ?v=N and
+// only renders items whose shape it recognises; the two together make a
+// contract change safe to deploy.
+const COLUMN_CONTRACT = 2;
+const COLUMN_MAX_ITEMS = 12;          // three days of six-hour slots
+const COLUMN_MAX_AGREE = 3;           // agreement cases are filler, never the point
+const COLUMN_AGREE_MAX_RANK = 24;     // and only worth printing near the top of a board
+
+// Faithful port of the client's skill-player scoring. Only the stats the site
+// actually projects are read, and only skill positions are scored — K and DEF
+// carry no market lines, so they are never column material.
+function _colScore(stats, position) {
+  const s = COLUMN_SCORING;
+  const yd = (yards, per, threshold) => (yards < threshold || !(per > 0)) ? 0 : yards / per;
+  let pts = 0;
+  pts += yd(stats.passYd || 0, s.passingYardsPerPoint, s.passingYardsThreshold);
+  pts += (stats.passTD || 0) * s.passingTD;
+  pts += (stats.passInt || 0) * s.passingInt;
+  pts += yd(stats.rushYd || 0, s.rushingYardsPerPoint, s.rushingYardsThreshold);
+  pts += (stats.rushTD || 0) * s.rushingTD;
+  pts += yd(stats.recYd || 0, s.receivingYardsPerPoint, s.receivingYardsThreshold);
+  pts += (stats.recTD || 0) * s.receivingTD;
+  pts += (stats.rec || 0) * (position === 'RB' ? s.rbReceptionPoints : s.receptionPoints);
+  pts += (stats.fumLost || 0) * s.fumbleLost;
+  return pts;
+}
+
+// Curve slot -> dollars in the site's default league.
+function _colPrice(position, rankIndex) {
+  const curve = COLUMN_CURVE[position] || [];
+  const scale = COLUMN_LEAGUE_BUDGET / COLUMN_CURVE_BUDGET;
+  const base = rankIndex < curve.length ? curve[rankIndex] : COLUMN_MIN_BID;
+  return Math.max(COLUMN_MIN_BID, Math.round(base * scale));
+}
+
+// Where the RANKINGS put each team's offence, on the same points model
+// buildTeamEnvOverlay uses for the Vegas side. Without this a card can only say
+// "Vegas has San Francisco 4th in implied points", which reads as a promotion
+// even when the odds are a downgrade — the team-environment factor is a RATIO,
+// so what matters is Vegas's rank against the ranking's rank, not either alone.
+// HAND-SYNCED with buildTeamEnvOverlay's points model; change both together.
+function _colTeamProjRank() {
+  const td = {}, kick = {};
+  for (const p of PROJECTIONS) {
+    const t = teamKey(p.team);
+    if (!t || t === 'FA') continue;
+    const st = p.projectedStats || {};
+    td[t] = (td[t] || 0) + (st.passTD || 0) + (st.rushTD || 0);
+    kick[t] = (kick[t] || 0) + (st.xpMade || 0) + (st.fgMade || 0) * 3;
+  }
+  const teams = Object.keys(td).filter(t => td[t] > 0);
+  const kicked = teams.filter(t => kick[t] > 0).map(t => kick[t]);
+  const kMean = kicked.length ? kicked.reduce((a, b) => a + b, 0) / kicked.length : 0;
+  const pts = {};
+  for (const t of teams) pts[t] = td[t] * 6 + (kick[t] > 0 ? kick[t] : kMean);
+  const rank = {};
+  Object.entries(pts).sort((a, b) => b[1] - a[1]).forEach(([t], i) => { rank[t] = i + 1; });
+  return rank;
+}
+
+// What THIS site actually ships for a player: the committed projection with the
+// odds blended in at VEGAS_WEIGHT. Mirrors blendProjections — the column must
+// quote the number a reader will find on their own cheat sheet, not a private one.
+function _colBlendStats(committed, market) {
+  const out = { ...committed };
+  for (const [k, v] of Object.entries(market)) {
+    if (!(k in out)) continue;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) continue;
+    out[k] = _oddsRound((out[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
+  }
+  return out;
+}
+
+// The market's view of a player at FULL strength — not the 3:1 blend the sheet
+// serves. The column is about what the odds say on their own, so it must not be
+// diluted by the projections it is being compared against.
+function _colVegasStats(p, overlay) {
+  const v = overlay[_oddsNorm(p.name) + '|' + p.position];
+  if (!v) return null;
+  const stats = { ...p.projectedStats };
+  const moved = [];
+  for (const [k, val] of Object.entries(v)) {
+    if (!(k in stats)) continue;                 // only stats the site models
+    const n = Number(val);
+    if (!Number.isFinite(n) || n < 0) continue;
+    if (stats[k] === n) continue;
+    moved.push({ stat: k, consensus: stats[k], market: n });
+    stats[k] = n;
+  }
+  return moved.length ? { stats, moved } : null;
+}
+
+// Rank every skill player twice — once off the committed projections (the
+// "rankings" board) and once off the market's numbers (the "odds" board) — and
+// return the players the two boards disagree about most.
+//
+// Players the market does not price still occupy slots on both boards: when the
+// odds push someone up, somebody else is pushed down, and hiding that would
+// overstate the gap for the player who moved.
+function buildVegasColumn(overlay, ctx) {
+  if (!overlay || typeof overlay !== 'object') return { ok: false, error: 'no_overlay', items: [] };
+  const projTeamRank = _colTeamProjRank();
+  const byPos = {};
+  for (const p of PROJECTIONS) {
+    if (!COLUMN_POSITIONS.includes(p.position)) continue;
+    const st = p.projectedStats || {};
+    const veg = _colVegasStats(p, overlay);
+    (byPos[p.position] = byPos[p.position] || []).push({
+      name: p.name, team: teamKey(p.team), position: p.position,
+      // Three boards, and the distinction is the whole column:
+      //   consensus — the committed analyst projections, odds-blind. This is
+      //               what a normal ranking or ADP list is built on.
+      //   ironTuna  — what THIS site ships: the same projections with the odds
+      //               blended in at VEGAS_WEIGHT. The reader can go look it up.
+      //   market    — the odds alone, undiluted, quoted as the underlying signal.
+      ptsConsensus: _colScore(st, p.position),
+      ptsIronTuna: _colScore(veg ? _colBlendStats(st, veg.stats) : st, p.position),
+      ptsMarket: _colScore(veg ? veg.stats : st, p.position),
+      moved: veg ? veg.moved : null
+    });
+  }
+
+  const conflicts = [], agreements = [];
+  for (const pos of COLUMN_POSITIONS) {
+    const list = byPos[pos] || [];
+    if (list.length < 2) continue;
+    // Keyed by list index, never by name: two players sharing a name at one
+    // position would otherwise overwrite each other's rank and mis-price both.
+    const rankOf = key => {
+      const order = list.map((r, i) => i).sort((a, b) => list[b][key] - list[a][key]);
+      const m = new Map();
+      order.forEach((srcIdx, rank) => m.set(srcIdx, rank));
+      return m;
+    };
+    const rCon = rankOf('ptsConsensus'), rIT = rankOf('ptsIronTuna'), rMkt = rankOf('ptsMarket');
+    const curveLen = (COLUMN_CURVE[pos] || []).length;
+    for (let li = 0; li < list.length; li++) {
+      const r = list[li];
+      if (!r.moved) continue;                          // the market never priced them
+      const iC = rCon.get(li), iI = rIT.get(li), iM = rMkt.get(li);
+      if (iC >= curveLen && iI >= curveLen) continue;   // undraftable on either board
+      const priceConsensus = _colPrice(pos, iC), priceIronTuna = _colPrice(pos, iI);
+      const rankDelta = iC - iI;                       // + => Iron Tuna rates them higher
+      const priceDelta = priceIronTuna - priceConsensus;
+      const item = {
+        name: r.name, team: r.team, position: pos,
+        rankConsensus: iC + 1, rankIronTuna: iI + 1, rankMarket: iM + 1, rankDelta,
+        ptsConsensus: Math.round(r.ptsConsensus * 10) / 10,
+        ptsIronTuna: Math.round(r.ptsIronTuna * 10) / 10,
+        ptsMarket: Math.round(r.ptsMarket * 10) / 10,
+        ptsDelta: Math.round((r.ptsIronTuna - r.ptsConsensus) * 10) / 10,
+        priceConsensus, priceIronTuna, priceDelta,
+        side: rankDelta > 0 ? 'under' : rankDelta < 0 ? 'over' : 'flat',
+        moved: r.moved.map(m => ({ stat: m.stat, consensus: _oddsRound(m.consensus), market: _oddsRound(m.market) })),
+        teamImplied: ctx && ctx.ppg && ctx.ppg[r.team] != null ? Math.round(ctx.ppg[r.team] * 10) / 10 : null,
+        teamRank: ctx && ctx.rank && ctx.rank[r.team] != null ? ctx.rank[r.team] : null,
+        teamRankConsensus: projTeamRank[r.team] != null ? projTeamRank[r.team] : null
+      };
+      if (Math.abs(rankDelta) >= COLUMN_MIN_RANK_GAP || Math.abs(priceDelta) >= COLUMN_MIN_PRICE_GAP) {
+        conflicts.push({ ...item, kind: 'conflict' });
+      } else if (iC === iI && iC < COLUMN_AGREE_MAX_RANK) {
+        // Confirmation, not conflict: the market priced this player and landed
+        // on the same slot the consensus did. Only worth printing near the top
+        // of the board — "the odds agree the WR61 is the WR61" says nothing.
+        agreements.push({ ...item, kind: 'agree' });
+      }
+    }
+  }
+
+  // Dollars first: an auction reader feels a $9 gap far more than three rank slots.
+  conflicts.sort((a, b) => Math.abs(b.priceDelta) - Math.abs(a.priceDelta)
+    || Math.abs(b.ptsDelta) - Math.abs(a.ptsDelta));
+  // Agreements are a FALLBACK, never competition for a real disagreement: they
+  // only fill slots the conflicts left empty, and never more than a few. The
+  // expensive end first — a confirmed $50 price is worth reading, a confirmed $2
+  // one is not.
+  agreements.sort((a, b) => b.priceConsensus - a.priceConsensus);
+  const room = Math.max(0, COLUMN_MAX_ITEMS - conflicts.length);
+  const filler = agreements.slice(0, Math.min(room, COLUMN_MAX_AGREE));
+  const items = conflicts.slice(0, COLUMN_MAX_ITEMS).concat(filler);
+  return { ok: true, items, conflicts: Math.min(conflicts.length, COLUMN_MAX_ITEMS),
+           agreements: filler.length, scanned: PROJECTIONS.length };
 }
 
 // ── D1 cache ───────────────────────────────────────────────────────────────
@@ -1584,6 +1816,28 @@ async function oddsCacheRead(env) {
     if (!row || !row.payload) return null;
     if (!row.updated_at || Date.now() - row.updated_at > ODDS_MAX_AGE_MS) return null;
     return { overlay: JSON.parse(row.payload), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
+  } catch (e) { return null; }
+}
+// The column's money-line evidence: implied points per game per team, and the
+// league rank that goes with it. Stored as row 2 of the same table so it shares
+// the overlay's lifecycle and needs no migration — a reader that only wants the
+// overlay never sees it.
+async function oddsCtxWrite(env, ppg) {
+  if (!ppg || !Object.keys(ppg).length) return;
+  await oddsCacheInit(env);
+  const rank = {};
+  Object.entries(ppg).sort((a, b) => b[1] - a[1]).forEach(([t], i) => { rank[t] = i + 1; });
+  await env.LEADS_DB.prepare(
+    'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (2, ?, ?, ?, ?)'
+  ).bind(JSON.stringify({ ppg, rank }), 'teamctx', Object.keys(ppg).length, Date.now()).run();
+}
+async function oddsCtxRead(env) {
+  if (!env || !env.LEADS_DB) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, updated_at FROM odds_overlay WHERE id=2').first();
+    if (!row || !row.payload) return null;
+    if (!row.updated_at || Date.now() - row.updated_at > ODDS_MAX_AGE_MS) return null;
+    return JSON.parse(row.payload);
   } catch (e) { return null; }
 }
 async function oddsCacheWrite(env, overlay, provider, matched) {
@@ -1608,6 +1862,10 @@ async function runOddsRefresh(env) {
         const r = buildTeamEnvOverlay(raw);
         overlay = r.overlay;
         info = { teams: r.teams, matched: r.matched };
+        // Keep the implied team points behind the overlay: the Vegas column
+        // quotes them as the money-line evidence for a call. Best effort — the
+        // overlay itself must never fail to write because this did.
+        try { await oddsCtxWrite(env, raw); } catch (e) { console.error('odds ctx write failed:', e && e.message); }
       } else {
         const r = buildVegasOverlay(raw);
         overlay = r.overlay;
@@ -1638,29 +1896,77 @@ async function runOddsRefresh(env) {
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
 // read at most once per isolate, and zero reads once warm.
 let _PROJ_BLEND_AT = 0;
-async function projectionsPayload(env) {
+let _ODDS_KICK_AT = 0;
+let _COLUMN_CACHE = null;
+let _COLUMN_AT = 0;
+let _COLUMN_KEY = '';
+async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
   let pool = PROJECTIONS;
+  let overlayAt = 0;
   try {
     const cached = await oddsCacheRead(env);
-    if (cached && cached.overlay) pool = blendProjections(cached.overlay);
+    if (cached && cached.overlay) { pool = blendProjections(cached.overlay); overlayAt = cached.updatedAt || 0; }
   } catch (e) { /* fall back to the committed pool */ }
+  // Self-healing: a missing or day-stale overlay means the 11:00 UTC cron failed or never
+  // ran. Kick at most one background refresh per isolate-hour off this request; the
+  // response itself never waits on the sportsbook and still serves whatever it has.
+  if (ctx && Date.now() - overlayAt > 26 * 3600000 && Date.now() - _ODDS_KICK_AT > 3600000) {
+    _ODDS_KICK_AT = Date.now();
+    try {
+      ctx.waitUntil(runOddsRefresh(env).then(r => {
+        console.log('odds self-heal:', JSON.stringify(r && { ok: r.ok, matched: r.matched, error: r.error }));
+        if (r && r.ok) { _PROJ_ENC = null; _PROJ_BLEND_AT = 0; }
+      }).catch(e => console.error('odds self-heal failed:', e && e.message)));
+    } catch (e) {}
+  }
   _PROJ_ENC = _xb64encode(JSON.stringify(pool), PROJ_KEY);
   _PROJ_BLEND_AT = Date.now();
   return _PROJ_ENC;
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
       const ref = request.headers.get('Referer') || '';
       if (ref && !/^https?:\/\/(www\.)?irontuna\.com(\/|$)|^https?:\/\/localhost(:\d+)?(\/|$)|^https:\/\/[^/]+\.pages\.dev(\/|$)/.test(ref)) return new Response('forbidden', { status: 403 });
-      const payload = await projectionsPayload(env);
+      const payload = await projectionsPayload(env, ctx);
       return secure(new Response(payload, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'private, max-age=300' } }));
+    }
+    // Public, read-only: the front page is a static asset and cannot hold the
+    // projections key, and there is nothing paid here — this is the free column,
+    // and it ships numbers the site already publishes on the cheat sheet.
+    if (url.pathname === '/api/vegas-column') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      const now = Date.now();
+      // Vary the cached copy by the contract the caller asked for, so an old
+      // page and a new one can never be handed each other's payload.
+      const want = url.searchParams.get('v') || '';
+      const ck = 'v' + want;
+      if (_COLUMN_CACHE && _COLUMN_KEY === ck && now - _COLUMN_AT < 900000) {
+        return json(_COLUMN_CACHE, 200, { ...c, 'cache-control': 'public, max-age=900' });
+      }
+      let out = { ok: false, error: 'no_overlay', items: [] };
+      try {
+        const cached = await oddsCacheRead(env);
+        if (cached && cached.overlay) {
+          const tctx = await oddsCtxRead(env);
+          const built = buildVegasColumn(cached.overlay, tctx);
+          out = { ...built, contract: COLUMN_CONTRACT, provider: cached.provider, asOf: cached.updatedAt,
+                  // The free provider prices GAMES, not players. Saying otherwise
+                  // would sell a team-wide inference as a player prop, which is
+                  // exactly the sloppiness this column exists to call out.
+                  basis: /the-odds-api/.test(cached.provider || '') ? 'props' : 'gamelines' };
+        }
+      } catch (e) { out = { ok: false, error: 'unavailable', items: [] }; }
+      if (out.contract == null) out.contract = COLUMN_CONTRACT;
+      _COLUMN_CACHE = out; _COLUMN_AT = now; _COLUMN_KEY = ck;
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
     }
     if (url.pathname === '/api/insights') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
@@ -1962,6 +2268,61 @@ export default {
         return json({ ok: true, batch: rows.length, sent, skipped, nextOffset: rows.length === LIMIT ? offset + LIMIT : null }, 200, c);
       }
       return json({ ok: false, error: 'specify mode:"test" (with test:email) or mode:"all" (with optional offset)' }, 400, c);
+    }
+    // Comp or pull paid access for one address, from a URL — the alternative is a
+    // wrangler d1 command, which cannot be run from a phone and is the wrong shape
+    // for something done repeatedly. Same LEADS_EXPORT_KEY gate as every other
+    // admin route.
+    //
+    // GET, matching /api/admin/x-post-now and /api/admin/x-delete, so it works
+    // from a browser address bar. Both directions are reversible: grant is undone
+    // by revoke, and revoke by grant (the person signs in again), so neither
+    // warrants a confirmation step that would defeat the point.
+    if (url.pathname === '/api/admin/grant' || url.pathname === '/api/admin/revoke') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      const email = String(url.searchParams.get('email') || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
+      const revoking = url.pathname.endsWith('revoke');
+      const comped = COMPED_EMAILS.includes(email);
+      let hadRow = false;
+      try { hadRow = !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) {}
+      let sessionsCleared = 0;
+      try {
+        if (revoking) {
+          // Counted first, then delegated: revokeEntitlement is the one definition
+          // of what revoking means (entitlement + every session, so no live cookie
+          // survives on a device). Re-implementing those deletes here would drift
+          // the moment a third cleanup step is added there.
+          const n = await env.LEADS_DB.prepare('SELECT COUNT(*) AS c FROM sessions WHERE email=?').bind(email).first();
+          sessionsCleared = (n && n.c) || 0;
+          await revokeEntitlement(env, email);
+        } else {
+          await grantEntitlement(env, email);
+        }
+      } catch (e) {
+        return json({ ok: false, error: 'db_failed', detail: (e && e.message) || 'failed' }, 500, c);
+      }
+      const entitled = await isEntitled(env, email);
+      return json({
+        ok: true,
+        action: revoking ? 'revoke' : 'grant',
+        email,
+        entitled,
+        changed: revoking ? hadRow : !hadRow,
+        // Say plainly when the request did not do what it looks like it did.
+        note: comped
+          ? (revoking
+              ? 'STILL HAS ACCESS: this address is in COMPED_EMAILS in _worker.js. Remove it there and redeploy to fully revoke.'
+              : 'Already comped in code (COMPED_EMAILS); the database row is redundant but harmless.')
+          : revoking
+            ? (hadRow ? 'Access removed and signed out everywhere.' : 'No entitlement row existed; nothing to remove.')
+            : (hadRow ? 'Already had access; row refreshed.' : 'Access granted.'),
+        sessionsCleared,
+        signIn: revoking ? undefined : 'https://irontuna.com/auctiondraft?signin=1'
+      }, 200, c);
     }
     if (url.pathname === '/api/admin/odds-status') {
       const c = corsHeaders(request.headers.get('Origin'));

@@ -1,6 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+</script>
+<!-- Event snippet for Purchase conversion page.
+The live conversion fires in the app on the server-verified Stripe success return
+(?paid=1&cs=...) with value 9.99 and the checkout-session id as transaction_id.
+gtag_report_conversion is kept for any future click-tracked link or button. -->
+<script>
+function gtag_report_conversion(url) {
+  var callback = function () {
+    if (typeof(url) != 'undefined') {
+      window.location = url;
+    }
+  };
+  gtag('event', 'conversion', {
+      'send_to': 'AW-18397866361/PIr0COO29uMcEPnS5MRE',
+      'value': 9.99,
+      'currency': 'USD',
+      'transaction_id': '',
+      'event_callback': callback
+      // 'new_customer': true /* calculate dynamically, populate with true/false */,
+  });
+  return false;
+}
+</script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
@@ -415,6 +447,15 @@ input:focus, select:focus { border-color: var(--accent); }
 .tier-player.drafted { opacity: 0.35; }
 .tier-player.drafted .tier-player-name { text-decoration: line-through; }
 .tier-player-name { font-weight: 500; }
+.ch-rankmode { display: inline-flex; align-items: center; gap: 0; border: 1px solid var(--border-strong); border-radius: 999px; overflow: hidden; margin-right: 8px; }
+.ch-rankmode .ch-rm-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); padding: 0 8px 0 10px; }
+.ch-rankmode .ch-rm-opt { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 5px 11px; background: none; border: none; color: var(--text-muted); cursor: pointer; }
+.ch-rankmode .ch-rm-opt:hover { color: var(--text-primary); }
+.ch-rankmode .ch-rm-opt.on { background: var(--positive-soft, rgba(34,211,238,0.12)); color: var(--positive, #22d3ee); }
+.vegas-flag { display: inline-block; margin-right: 5px; font-family: var(--font-mono); font-weight: 800; font-size: 10px; line-height: 1.5; color: var(--gold-text); border: 1px solid rgba(245,184,0,0.55); border-radius: 3px; padding: 0 4px; cursor: help; vertical-align: 1px; }
+.vegas-flag.down { color: #ff8080; border-color: rgba(255,107,107,0.55); }
+.vegas-rank { display: inline-block; margin-right: 5px; font-family: var(--font-mono); font-weight: 800; font-size: 10px; line-height: 1.5; color: #35c98a; border: 1px solid rgba(53,201,138,0.5); border-radius: 3px; padding: 0 4px; cursor: help; vertical-align: 1px; white-space: nowrap; }
+.vegas-rank.down { color: #ff8080; border-color: rgba(255,107,107,0.55); }
 .tier-player-team { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; }
 .tier-player-value { font-family: var(--font-mono); font-size: 13px; text-align: right; color: var(--gold-text); font-weight: 500; }
 .prep-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 28px; }
@@ -720,6 +761,9 @@ input:focus, select:focus { border-color: var(--accent); }
 @keyframes coachPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 .coach-head button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; margin-left: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
 .coach-head button:hover { color: var(--text-primary); }
+.coach.embed.coach-min { cursor: pointer; height: auto; min-height: 0; flex: 0 0 auto; align-self: start; }
+.coach.embed.coach-min .coach-head { border-bottom: none; }
+.ch-coachslot > .coach.embed.coach-min { flex: 0 0 auto; }
 .coach-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); }
 .coach-chip { font-size: 11px; font-family: var(--font-mono); background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 10px; padding: 2px 7px; color: var(--text-secondary); }
 .coach-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -2691,6 +2735,102 @@ function scoreDefense(stats = {}, config, games = 17) {
   }
   return pts;
 }
+// ── Vegas-impact helpers ────────────────────────────────────────────────────
+// /api/projections marks players whose stats were blended with sportsbook prop
+// lines: p.vegas = { stat: [committedProjection, vegasImplied, blended] }. The
+// cheat sheet shows a V next to any player the blend moves by at least
+// VEGAS_FLAG_MIN_PTS season points, with the underlying numbers on hover.
+const VEGAS_STAT_LABELS = { passYd: 'pass yds', passTD: 'pass TD', passInt: 'INT', rushYd: 'rush yds', rushTD: 'rush TD', recYd: 'rec yds', recTD: 'rec TD', rec: 'receptions', scrimmageTD: 'scrimmage TD' };
+const VEGAS_FLAG_MIN_PTS = 8;
+const _vgFmt = (k, v) => /Yd$/.test(k) || k === 'rec' ? String(Math.round(v)) : String(Math.round(v * 10) / 10);
+function vegasImpact(player, config) {
+  const vg = player && player.vegas;
+  if (!vg || !config) return null;
+  const baseStats = { ...player.projectedStats };
+  let any = false;
+  for (const k in vg) { const a = vg[k]; if (Array.isArray(a) && a.length >= 3 && k in baseStats) { baseStats[k] = a[0]; any = true; } }
+  if (!any) return null;
+  const now = scorePlayer({ ...player, projectedPointsOverride: null }, config);
+  const base = scorePlayer({ ...player, projectedPointsOverride: null, projectedStats: baseStats }, config);
+  const delta = Math.round((now - base) * 10) / 10;
+  if (!Number.isFinite(delta) || delta === 0) return null;
+  return { delta, stats: vg };
+}
+function vegasSignificant(vi) { return !!vi && Math.abs(vi.delta) >= VEGAS_FLAG_MIN_PTS; }
+function vegasTitle(vi) {
+  if (!vi) return '';
+  const parts = Object.entries(vi.stats).filter(e => Array.isArray(e[1]) && e[1].length >= 3 && e[1][0] !== e[1][2]).map(e => (VEGAS_STAT_LABELS[e[0]] || e[0]) + ' ' + _vgFmt(e[0], e[1][0]) + ' \u2192 ' + _vgFmt(e[0], e[1][2]) + ' (Vegas ' + _vgFmt(e[0], e[1][1]) + ')');
+  return 'Vegas lines moved this projection ' + (vi.delta > 0 ? '+' : '') + vi.delta + ' season pts \u00b7 ' + parts.join(' \u00b7 ');
+}
+// How far the odds moved a player ON THE BOARD, not just in points. A reader
+// ranks by position, so "Vegas took him from RB14 to RB9" is the sentence that
+// matters; the points delta alone leaves them to guess whether it mattered.
+//
+// Both boards are ranked over the SAME pool, because a rank is relative: when
+// the odds lift one player everyone below moves too, and ranking only the moved
+// players would invent shifts that do not exist.
+function vegasRankShifts(players, config) {
+  const out = new Map();
+  if (!players || !players.length || !config) return out;
+  const byPos = {};
+  for (const p of players) (byPos[p.position] = byPos[p.position] || []).push(p);
+  for (const list of Object.values(byPos)) {
+    const withOdds = [], without = [];
+    for (const p of list) {
+      const vg = p.vegas;
+      let base = p.projectedStats;
+      if (vg && base) {
+        base = { ...base };
+        for (const k in vg) { const a = vg[k]; if (Array.isArray(a) && a.length >= 3 && k in base) base[k] = a[0]; }
+      }
+      withOdds.push({ id: p.id, s: scorePlayer({ ...p, projectedPointsOverride: null }, config) });
+      without.push({ id: p.id, s: scorePlayer({ ...p, projectedPointsOverride: null, projectedStats: base }, config) });
+    }
+    const rank = arr => {
+      const m = new Map();
+      [...arr].sort((a, b) => b.s - a.s).forEach((e, i) => m.set(e.id, i + 1));
+      return m;
+    };
+    const rNow = rank(withOdds), rBase = rank(without);
+    const sNow = new Map(withOdds.map(e => [e.id, e.s])), sBase = new Map(without.map(e => [e.id, e.s]));
+    for (const p of list) {
+      if (!p.vegas) continue;                       // the market never priced them
+      const before = rBase.get(p.id), after = rNow.get(p.id);
+      if (before == null || after == null) continue;
+      out.set(p.id, {
+        before, after,
+        move: before - after,                       // + => the odds moved them UP
+        pts: Math.round(((sNow.get(p.id) || 0) - (sBase.get(p.id) || 0)) * 10) / 10
+      });
+    }
+  }
+  return out;
+}
+// Shown when the odds moved the player's rank at all, or moved enough points to
+// matter even without crossing anyone. Silent otherwise — a chip on every row
+// would be wallpaper.
+function vegasRankEl(player, shifts, config) {
+  const sh = shifts && shifts.get(player.id);
+  if (!sh) return null;
+  if (!sh.move && Math.abs(sh.pts) < VEGAS_FLAG_MIN_PTS) return null;
+  const up = sh.move > 0 || (!sh.move && sh.pts > 0);
+  const label = sh.move ? (sh.move > 0 ? '\u25b2' : '\u25bc') + Math.abs(sh.move)
+                        : (sh.pts > 0 ? '+' : '') + sh.pts;
+  const detail = sh.move
+    ? `Vegas odds moved this player from ${player.position}${sh.before} to ${player.position}${sh.after}`
+    : `Vegas odds did not change this player's ${player.position} rank`;
+  const vi = vegasImpact(player, config);
+  return React.createElement("span", {
+    className: "vegas-rank" + (up ? "" : " down"),
+    title: detail + ` (${sh.pts > 0 ? '+' : ''}${sh.pts} season pts)` + (vi ? ' \u00b7 ' + vegasTitle(vi).replace(/^Vegas lines moved this projection [^\u00b7]*\u00b7 /, '') : ''),
+    "aria-label": detail
+  }, label);
+}
+function vegasFlagEl(player, config) {
+  const vi = vegasImpact(player, config);
+  if (!vegasSignificant(vi)) return null;
+  return React.createElement("span", { className: "vegas-flag" + (vi.delta < 0 ? " down" : ""), title: vegasTitle(vi), "aria-label": "Ranking significantly impacted by Vegas odds" }, "V");
+}
 function scorePlayer(player, config) {
   if (player.projectedPointsOverride != null) return player.projectedPointsOverride;
   const {
@@ -3003,7 +3143,7 @@ const LEAGUE_MARKET_CURVE = {
   K: [2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 };
-function calculateMarketValues(players, config) {
+function calculateMarketValues(players, config, anchors) {
   const minBid = config.valuation.minBid;
   const scale = totalLeagueBudget(config) / LEAGUE_CURVE_BUDGET;
   const byPos = {};
@@ -3012,8 +3152,13 @@ function calculateMarketValues(players, config) {
   const priceById = new Map();
   Object.entries(byPos).forEach(([pos, list]) => {
     const curve = LEAGUE_MARKET_CURVE[pos] || [];
+    // Anchored players keep their original curve slot, so the market price (Proj) does
+    // not drift when projection updates or reorders shuffle the ranking. Projection
+    // changes flow into Value / You / PPG and the ORDER of the sheet, not into what the
+    // room is expected to pay. Unanchored (newly added) players price off their live rank.
     list.forEach((p, i) => {
-      const base = i < curve.length ? curve[i] : minBid;
+      const slot = anchors && anchors[p.id] != null ? anchors[p.id] : i;
+      const base = slot < curve.length ? curve[slot] : minBid;
       priceById.set(p.id, Math.max(minBid, Math.round(base * scale)));
     });
   });
@@ -3022,7 +3167,7 @@ function calculateMarketValues(players, config) {
     marketValue: priceById.get(p.id) ?? minBid
   }));
 }
-function buildValuations(players, config) {
+function buildValuations(players, config, marketAnchors) {
   const byPos = {};
   players.forEach(p => {
     byPos[p.position] = byPos[p.position] || [];
@@ -3031,7 +3176,7 @@ function buildValuations(players, config) {
   const replacement = calculateReplacementLevels(byPos, config);
   const withVorp = calculateVORP(players, replacement);
   const withValues = calculateAuctionValues(withVorp, config);
-  const withMarket = calculateMarketValues(withValues, config);
+  const withMarket = calculateMarketValues(withValues, config, marketAnchors);
   return {
     players: withMarket,
     replacement
@@ -6833,7 +6978,9 @@ function QuickDraftModal({
     style: {
       marginTop: 7
     }
-  }, playerFact), _byeConflicts.length > 0 && React.createElement("div", {
+  }, playerFact), (function () { const vi = vegasImpact(player, config); return vi ? React.createElement("div", {
+    style: { marginTop: 7, fontSize: 13.5, color: 'var(--text-secondary)', border: '1px solid rgba(245,184,0,.4)', background: 'var(--gold-soft)', borderRadius: 6, padding: '7px 10px' }
+  }, React.createElement("b", { style: { color: 'var(--gold-text)' } }, "Vegas impact: ", (vi.delta > 0 ? '+' : ''), vi.delta, " pts"), " \u00b7 ", Object.entries(vi.stats).filter(e => Array.isArray(e[1]) && e[1].length >= 3 && e[1][0] !== e[1][2]).map(e => (VEGAS_STAT_LABELS[e[0]] || e[0]) + ' ' + _vgFmt(e[0], e[1][0]) + ' \u2192 ' + _vgFmt(e[0], e[1][2]) + ' (Vegas ' + _vgFmt(e[0], e[1][1]) + ')').join(' \u00b7 ')) : null; })(), _byeConflicts.length > 0 && React.createElement("div", {
     style: {
       marginTop: 6,
       color: '#f59e0b',
@@ -8900,7 +9047,7 @@ function TierView({
         className: `tier-player ${isDrafted ? 'drafted' : ''}`
       }, React.createElement("span", {
         className: "tier-player-name"
-      }, p.name), React.createElement("span", {
+      }, vegasFlagEl(p, config), p.name), React.createElement("span", {
         className: "tier-player-team"
       }, p.team), React.createElement("span", {
         className: "tier-player-value"
@@ -10068,23 +10215,31 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Jul 26, 2026',
+  updated: 'Aug 19, 2026',
   current: [
+  {
+    label: 'Diggs lands in Washington',
+    text: "Stefon Diggs signed a one-year deal worth up to $12 million with Washington on August 5, giving Jayden Daniels a proven second option behind Terry McLaurin. A modest WR3/flex price is fair; do not pay for his old Buffalo ceiling."
+  },
+  {
+    label: 'Pearsall out for the year',
+    text: "The 49ers ruled Ricky Pearsall out for 2026; he will have season-ending PCL surgery. He is off the board entirely, and with Kittle still on PUP the remaining San Francisco pass catchers get only a modest bump."
+  },
+  {
+    label: 'Nabers discount shrinking',
+    text: "Malik Nabers has ramped through individual drills all camp, and joining team periods was the next step as of mid-August. The ACL-risk discount is narrowing; bid closer to sheet price, but confirm his status draft week."
+  },
+  {
+    label: 'McLaurin glued to Daniels',
+    text: "Terry McLaurin has run a route on every Jayden Daniels pass play this preseason and is tied for the team target lead at 27 percent. Usage that clean is worth sheet price with confidence."
+  },
   {
     label: 'Maye ceiling raised',
     text: "The Patriots' June trade for A.J. Brown gives Drake Maye a true alpha receiver, and Maye's price is climbing. Pay up a tier for Maye if you want a top-six QB finish at a non-elite cost."
   },
   {
-    label: 'Nabers discount',
-    text: "Malik Nabers avoided the PUP list to open Giants camp, but his ACL rehab included a second surgery and Week 1 is not assured. Around a WR13 price, let someone else pay full freight; only bid at a clear discount."
-  },
-  {
     label: 'Brooks value window',
-    text: "Jonathon Brooks drew strong reviews from Dave Canales at Panthers camp, and Rico Dowdle left in free agency. At an ADP near RB34 he is a cheap upside target before the market catches up."
-  },
-  {
-    label: 'Diggs still unsigned',
-    text: "Stefon Diggs remains a free agent with camps open after 85 catches for New England last year. Do not roster him at auction until he signs; if he lands somewhere, expect a modest WR3 price at most."
+    text: "Jonathon Brooks drew strong reviews from Dave Canales at Panthers camp and has looked sharp cutting and catching. At an ADP near RB34 he is a cheap upside target before the market catches up."
   },
   {
     label: 'Kamara locked in',
@@ -10441,6 +10596,8 @@ function CheatHeader({
   onAddPlayer,
   onResetRanks,
   hasCustomRanks,
+  rankMode,
+  onRankMode,
   showCols,
   setShowCols,
   COLSPEC,
@@ -10624,7 +10781,18 @@ function CheatHeader({
   }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("div", {
     className: "ch-sb-right",
     ref: pdfRef
-  }, hasCustomRanks && onResetRanks && React.createElement("button", {
+  }, hasCustomRanks && rankMode && onRankMode && React.createElement("span", {
+    className: "ch-rankmode",
+    title: "When projections update: follow the new rankings, or keep your custom order pinned. Your reorder is saved either way."
+  }, React.createElement("span", { className: "ch-rm-label" }, "Ranks"), React.createElement("button", {
+    className: "ch-rm-opt" + (rankMode === 'updates' ? ' on' : ''),
+    onClick: () => onRankMode('updates'),
+    title: "Rank by Iron Tuna's projections. Projection updates re-order the sheet automatically; your custom order is kept and returns if you switch back."
+  }, "Follow updates"), React.createElement("button", {
+    className: "ch-rm-opt" + (rankMode === 'custom' ? ' on' : ''),
+    onClick: () => onRankMode('custom'),
+    title: "Pin your drag-and-drop order on top of the projections. Updates still refresh Value, You and PPG, but not your order."
+  }, "My order")), hasCustomRanks && onResetRanks && React.createElement("button", {
     className: "ch-sb-undo",
     onClick: () => onResetRanks(),
     title: "Undo your drag-and-drop rankings and go back to Iron Tuna's default order, rebuilt from the most recent projections"
@@ -11065,6 +11233,8 @@ function Cheatsheet({
   onRankReorder,
   onResetRanks,
   hasCustomRanks,
+  rankMode,
+  onRankMode,
   targets,
   onToggleTarget,
   onSetPrice,
@@ -11092,6 +11262,9 @@ function Cheatsheet({
   onUpdateStrategy,
   coachEl
 }) {
+  // Odds impact per row: computed once for the whole pool, not per player,
+  // because a rank is only meaningful against the same board.
+  const vegasShifts = React.useMemo(() => vegasRankShifts(players, config), [players, config]);
   const [whbQ, setWhbQ] = useState('');
   const [whbR, setWhbR] = useState('');
   const [whbShow, setWhbShow] = useState(false);
@@ -11437,6 +11610,8 @@ function Cheatsheet({
     onAddPlayer: onAddPlayer,
     onResetRanks: onResetRanks,
     hasCustomRanks: hasCustomRanks,
+    rankMode: rankMode,
+    onRankMode: onRankMode,
     showCols: showCols,
     setShowCols: setShowCols,
     COLSPEC: COLSPEC,
@@ -11630,7 +11805,7 @@ function Cheatsheet({
         color: nameColor
       },
       title: byeOf(p.team) ? `Bye week ${byeOf(p.team)}` : 'Bye week: TBD'
-    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
+    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
       className: "cheat-hctag",
       title: `Handcuff to ${handcuffMap.get(p.id)}`
     }, React.createElement("svg", {
@@ -12359,7 +12534,10 @@ function MockAuction({
   seasonGames
 }) {
   const games = seasonGames || 17;
-  const INFLATION = 1.15;
+  // CPU bids key off the projected auction price (Proj), the number the room is
+  // expected to pay, with a mild competitive-heat bump. (Formerly VBD value * 1.15.)
+  const INFLATION = 1.05;
+  const mktPrice = p => p.marketValue != null ? p.marketValue : p.inflatedValue != null ? p.inflatedValue : p.auctionValue || 1;
   const [numTeams, setNumTeams] = useState(config.teams || 12);
   const [budget, setBudget] = useState(config.budget || 200);
   const teamsN = numTeams;
@@ -12384,7 +12562,7 @@ function MockAuction({
     });
     return m;
   }, [players]);
-  const fullPool = useMemo(() => (players || []).filter(p => p.auctionValue != null).slice().sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0)), [players]);
+  const fullPool = useMemo(() => (players || []).filter(p => p.auctionValue != null).slice().sort((a, b) => (b.marketValue != null ? b.marketValue : b.auctionValue || 0) - (a.marketValue != null ? a.marketValue : a.auctionValue || 0)), [players]);
   const makeTeams = (n = numTeams, b = budget) => {
     const arr = [];
     for (let i = 0; i < n; i++) {
@@ -12453,7 +12631,7 @@ function MockAuction({
   const aiMax = (t, p) => {
     if (slotsLeft(t) <= 0 || !p) return 0;
     const need = posTotal(p.position) - posCount(t, p.position);
-    let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
+    let v = mktPrice(p) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
     if (need <= 0) v *= 0.3;else { const fn = teams.filter(tt => posTotal(p.position) - posCount(tt, p.position) > 0 && slotsLeft(tt) > 0).length; v *= 1 + 0.5 * Math.max(0, fn - 2) / teamsN; }
     v *= jitter(t.id, p.id);
     v = Math.min(v, bidCap(p));
@@ -12472,7 +12650,7 @@ function MockAuction({
     const aiM = (t, p) => {
       if (slot(t) <= 0 || !p) return 0;
       const need = posTotal(p.position) - pc(t, p.position);
-      let v = (p.auctionValue || 1) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
+      let v = mktPrice(p) * sFactor(t.strat, p.position, posRank[p.id] || 99) * INFLATION;
       if (need <= 0) v *= 0.3;else { const fn = nt.filter(tt => posTotal(p.position) - pc(tt, p.position) > 0 && slot(tt) > 0).length; v *= 1 + 0.5 * Math.max(0, fn - 2) / teamsN; }
       v *= jitter(t.id, p.id);
       v = Math.min(v, bidCap(p));
@@ -14882,6 +15060,9 @@ function PlayersRail({
   focusPlayer,
   onCollapse
 }) {
+  // Odds impact per row: computed once for the whole pool, not per player,
+  // because a rank is only meaningful against the same board.
+  const vegasShifts = React.useMemo(() => vegasRankShifts(players, config), [players, config]);
   const [search, setSearch] = useState('');
   const [posFilter, setPosFilter] = useState('ALL');
   const [filterMode, setFilterMode] = useState('all');
@@ -15238,7 +15419,7 @@ function PlayersRail({
         className: "rr-name",
         onClick: e => { e.stopPropagation(); onNominate(p); },
         style: { cursor: 'pointer' }
-      }, p.name), React.createElement("span", {
+      }, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name), React.createElement("span", {
         className: "rr-c",
         title: (config && config.format !== 'auction') ? "ADP (average draft position)" : "Proj, likely market/auction price"
       }, (config && config.format !== 'auction') ? (p.adp != null ? Math.round(p.adp) : '\u2014') : ('$' + projVal)), React.createElement("span", {
@@ -15297,7 +15478,7 @@ function PlayersRail({
 }
 const STORAGE_KEY = 'iron_tuna_draft_state_v2';
 const PROJ_KEY = 'tn$9xQ27z';
-const PROJ_VERSION = '2026.3';
+const PROJ_VERSION = '2026.5'; // bumped 2026-08-19: Diggs signed in Washington (was FA/zeroed)
 function _xb64decode(s, key) {
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
@@ -15320,6 +15501,7 @@ function buildInitialPlayers(projectionsSource) {
     position: p.position,
     team: p.team,
     projectedStats: p.projectedStats,
+    vegas: p.vegas || null,
     projectedPoints: 0,
     auctionValue: 0,
     inflatedValue: 0,
@@ -17836,7 +18018,12 @@ function buildCoachContext(q, ctx) {
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _coachFmt = contextObj && contextObj.format || 'auction';
   const _coachId = _coachFmt === 'snake' ? "You are Iron Tuna, an elite fantasy-football SNAKE-draft navigator. Think in ADP, pick order, and position runs. Maximize this manager's TOTAL points across the whole draft, not just the most points or highest VOR at this one slot. Look ahead before recommending: each player has an adp and a survives% (his chance of still being on the board at this manager's NEXT pick; picksToYourNextPick is in formatInfo). Proactively, even when not asked, tell them (1) who to grab NOW because his position is about to be picked clean and the drop-off to the next man at that position is steep, and (2) who they can let slide and target next round because he is likely to survive. Prefer taking a scarce position now over a slightly higher-scoring player at a deep position, and frame each call as value over the next player likely available at that position. If asked whether a specific player will still be available in a given round, estimate it from his adp versus the overall pick number the manager holds that round (snake pick math from the draftSlot and league size in the data): an adp well past that pick number means good odds he survives, an adp at or before it means slim odds. Warn about positional cliffs: when projected points drop steeply just past the next few players at a position, say so plainly. When the manager eyes an early-round player, point out if someone several rounds later projects similar points, or if a pair of cheap handcuff running backs from one backfield could match the production for far less draft capital. If the manager planned to wait on a position but a top option there falls to unusual value, recommend they reconsider taking him now, as a suggestion and not a command." : _coachFmt === 'bestball' ? "You are Iron Tuna, an elite fantasy-football BEST-BALL navigator. Weekly lineups auto-optimize, so prize ceiling and upside over floor, reward stacking a QB with his own pass-catchers, and remember there is no in-season management." : "You are Iron Tuna, an elite fantasy-football AUCTION-draft navigator.";
-  const sys = _coachId + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  // Anchor the model in the current season: without this it drifts to its training
+  // data and presents last season's rosters and results as current.
+  const _nowD = new Date();
+  const _seasonYr = _nowD.getMonth() < 2 ? _nowD.getFullYear() - 1 : _nowD.getFullYear();
+  const _seasonCtx = " SEASON CONTEXT, critical: today is " + _nowD.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + " and this draft is for the " + _seasonYr + " NFL season. The " + (_seasonYr - 1) + " season is LAST season, already finished; label any " + (_seasonYr - 1) + " stats as last season's. All projections in the data below are " + _seasonYr + " season projections. Rosters, coaches, and depth charts may have changed since " + (_seasonYr - 1) + ": trust the team assignments and numbers in the provided data over your memory, and if you are unsure whether an offseason move happened, say so instead of asserting last season's situation as current."
+  const sys = _coachId + _seasonCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value (overvalued, the room will likely overpay) and GREEN when Proj is below Value (a bargain); each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED/overvalued player is NOT automatically a pass. Some players are worth paying ABOVE true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, that positional scarcity is exactly why a player's 'You' (personal max / switch price) can sit above his Value. When advising on a red player, weigh his positional PPG edge and his 'You' number, not just the Proj-vs-Value gap; paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).filter(m => m.text && m.text !== '…' && m.text !== '(no response)' && !m.intro).slice(-6).map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
     content: m.text
@@ -18352,10 +18539,18 @@ function ValueCoach({
   embed,
   onBeforeAsk
 }) {
-  const [open, setOpen] = useState(!locked);
+  const [open, setOpen] = useState(() => {
+    if (locked) return false;
+    // The embedded Value Coach remembers its minimized state across views and reloads.
+    if (embed) { try { return localStorage.getItem('it_coach_min') !== '1'; } catch (e) { return true; } }
+    return true;
+  });
   useEffect(() => {
     onOpenChange && onOpenChange(open);
   }, [open]);
+  useEffect(() => {
+    if (!locked && embed) { try { localStorage.setItem('it_coach_min', open ? '0' : '1'); } catch (e) {} }
+  }, [open, locked, embed]);
   const [msgs, setMsgs] = useState(() => {
     const _f = config && config.format;
     const _t = _f === 'bestball' ? 'I\'m your draft navigator. Ask me to size up a player (“how high should I take Drake Maye?”), find stacks (“best stack for my QB?”), or strategize (“who’s a championship-week value?”, “any ceiling plays slipping past their ADP?”). I can also tune values: “boost RB upside”, “reset”.' : _f === 'snake' ? 'I\'m your draft navigator. Ask me to size up a player (“when will Drake Maye go?”), explain a call (“is Bijan a reach here?”), or strategize (“who should I target?”, “any values slipping past their ADP?”). I can also tune values: “elite RBs 20% better”, “reset”.' : 'I\'m your draft navigator. Ask me to size up a player (“how much for Drake Maye?”), explain a call (“why is Bijan only $33?”), or strategize (“who should I target?”, “any bargains?”, “what\'s my budget?”). I can also tune values: “elite RBs 20% pricier”, “reset”.';
@@ -18719,6 +18914,20 @@ function ValueCoach({
     onClick: () => locked ? onUnlock() : setOpen(true),
     title: locked ? `Unlock the ${name}` : `${name}, ask about players or tune values`
   }, name, locked ? ' · locked' : active.length ? ` · ${active.length}` : '');
+  if (!open && embed) return React.createElement("div", {
+    className: "coach embed coach-min",
+    onClick: () => setOpen(true),
+    title: `Expand the ${name}`
+  }, React.createElement("div", {
+    className: "coach-head"
+  }, React.createElement("span", {
+    className: "coach-title"
+  }, name, React.createElement("span", {
+    className: "coach-live"
+  }, "minimized")), React.createElement("div", null, React.createElement("button", {
+    onClick: e => { e.stopPropagation(); setOpen(true); },
+    title: `Expand the ${name}`
+  }, "show"))));
   return React.createElement("div", {
     className: `coach ${embed ? 'embed' : big ? 'big' : 'dock'}`,
     style: !big && !embed ? {
@@ -18735,7 +18944,7 @@ function ValueCoach({
     className: "coach-resize",
     onPointerDown: startDockResize,
     title: "Drag to resize"
-  }), !embed && React.createElement("div", {
+  }), React.createElement("div", {
     className: "coach-head"
   }, React.createElement("span", {
     className: "coach-title"
@@ -18745,7 +18954,7 @@ function ValueCoach({
     className: "coach-hidebtn",
     onClick: () => setOpen(false),
     title: "Minimize the coach"
-  }, "hide")), React.createElement("div", null, active.length > 0 && React.createElement("button", {
+  }, embed ? "minimize" : "hide")), React.createElement("div", null, active.length > 0 && React.createElement("button", {
     onClick: () => {
       onApply({});
       setPending(null);
@@ -20153,6 +20362,17 @@ function App() {
                 verified: true
               });
             } catch (e) {}
+            // Google Ads purchase conversion: fired only on the server-verified Stripe
+            // success return. The checkout-session id doubles as transaction_id so Google
+            // deduplicates if this URL is ever revisited.
+            try {
+              gtag('event', 'conversion', {
+                'send_to': 'AW-18397866361/PIr0COO29uMcEPnS5MRE',
+                'value': 9.99,
+                'currency': 'USD',
+                'transaction_id': sp.get('cs')
+              });
+            } catch (e) {}
             setPostBuyOpen(true);
           }
           clean();
@@ -20442,7 +20662,22 @@ function App() {
   const [customOrder, setCustomOrder] = useState(initialState?.customOrder || []);
   const [targets, setTargets] = useState(() => new Set(initialState?.targets || []));
   const [rankOrder, setRankOrder] = useState(initialState?.rankOrder || {});
-  const [projUpdateAsk, setProjUpdateAsk] = useState(() => !!(initialState && initialState.players && initialState.players.length && initialState.projVersion && initialState.projVersion !== PROJ_VERSION && initialState.rankOrder && Object.keys(initialState.rankOrder).length > 0));
+  // Rankings mode: 'custom' pins the user's drag-and-drop order on top of projections;
+  // 'updates' follows projection updates. Non-destructive — the reorder is kept either
+  // way and simply not applied in 'updates' mode. Persisted outside the draft state so
+  // it survives re-baselines.
+  const [rankMode, setRankMode] = useState(() => {
+    try { const m = localStorage.getItem('it_rank_mode'); if (m === 'custom' || m === 'updates') return m; } catch (e) {}
+    return initialState?.rankOrder && Object.keys(initialState.rankOrder).length > 0 ? 'custom' : 'updates';
+  });
+  useEffect(() => { try { localStorage.setItem('it_rank_mode', rankMode); } catch (e) {} }, [rankMode]);
+  // Market-curve slot per player, frozen at first pricing so Proj stays stable across
+  // projection updates. Cleared by Reset Cheat Sheet to re-derive from current data.
+  const [marketAnchors, setMarketAnchors] = useState(initialState?.marketAnchors || null);
+  const [projUpdateAsk, setProjUpdateAsk] = useState(() => {
+    try { const m = localStorage.getItem('it_rank_mode'); if (m === 'custom' || m === 'updates') return false; } catch (e) {} // the toggle already answers this
+    return !!(initialState && initialState.players && initialState.players.length && initialState.projVersion && initialState.projVersion !== PROJ_VERSION && initialState.rankOrder && Object.keys(initialState.rankOrder).length > 0);
+  });
   const [boardSortKey, setBoardSortKey] = useState('val');
   const [roleOverrides, setRoleOverrides] = useState(initialState?.roleOverrides || {});
   const [slotOrder, setSlotOrder] = useState({});
@@ -20535,9 +20770,22 @@ function App() {
       ...p,
       projectedPoints: scorePlayer(p, config)
     })), config);
-    const ranked = applyCustomRanks(scored, rankOrder);
-    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config).players, config), config), config);
-  }, [players, config, rankOrder]);
+    const ranked = applyCustomRanks(scored, rankMode === 'custom' ? rankOrder : {});
+    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config, marketAnchors).players, config), config), config);
+  }, [players, config, rankOrder, rankMode, marketAnchors]);
+  useEffect(() => {
+    // Seed the market anchors once, from the UNCUSTOMIZED projection ordering (no rank
+    // reorders applied), so a user's own reorder never bakes into the market prices;
+    // afterward Proj is pinned to those slots until the user resets the cheat sheet.
+    if (marketAnchors || !players || !players.length) return;
+    const byPos = {};
+    players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+    const a = {};
+    Object.values(byPos).forEach(list => {
+      list.slice().sort((x, y) => scorePlayer(y, config) - scorePlayer(x, config)).forEach((p, i) => { a[p.id] = i; });
+    });
+    setMarketAnchors(a);
+  }, [players, config, marketAnchors]);
   useEffect(() => {
     try {
       if (!baseValued || !baseValued.length) return;
@@ -20599,18 +20847,63 @@ function App() {
       arr.sort((a, b) => b.projectedPoints - a.projectedPoints);
       arr.slice(0, 20).forEach(p => relevant.add(p.id));
     });
-    return valuedPlayers.map(p => {
+    // switchPrice is a plan rebuild per player, so it only runs for the players
+    // above (`relevant`) — everyone else used to fall straight back to
+    // auctionValue. That cutoff was VISIBLE: inside the window You is a marginal
+    // value well under VALUE, outside it You WAS the full VALUE, so the column
+    // fell all the way down the board and then jumped back up at the seam. It
+    // priced WR21 above WR16 purely for being outside the window.
+    //
+    // Fix: carry the window's own discount past its edge instead of dropping it.
+    // Players the optimiser never priced keep the shape of the ones it did —
+    // scaled by the discount at the edge, and never allowed to exceed the
+    // cheapest player the optimiser actually priced.
+    const _pre = valuedPlayers.map(p => {
       const adj = marketAdjustedPrice(p, marketState, config);
       let worthPrice = null;
-      let personalValue = Math.max(minBid, p.auctionValue || minBid);
+      let personalValue = null;                      // null = the optimiser never saw them
       if (!draftedIds.has(p.id) && p.position !== 'K' && p.position !== 'DEF' && relevant.has(p.id)) {
         worthPrice = switchPrice(p, switchBasePts, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
         if (worthPrice != null) personalValue = Math.max(minBid, Math.min(maxBid, Math.round(worthPrice)));
       }
+      return { p, adj, worthPrice, personalValue };
+    });
+    // Per position: how much the optimiser discounted the cheapest players it
+    // priced, and what it priced them at. The median over the bottom of the
+    // window rather than the single last player, so one odd line cannot set the
+    // slope for the whole tail.
+    const _tail = {};
+    _pre.forEach(r => {
+      if (r.personalValue == null || draftedIds.has(r.p.id)) return;
+      const av = Math.max(1, r.p.auctionValue || 1);
+      (_tail[r.p.position] = _tail[r.p.position] || []).push({ av, ratio: r.personalValue / av, pv: r.personalValue });
+    });
+    const _edge = {};
+    Object.entries(_tail).forEach(([pos, arr]) => {
+      arr.sort((a, b) => b.av - a.av);                       // priciest first
+      const bottom = arr.slice(-Math.min(5, arr.length));    // the window's cheap end
+      const ratios = bottom.map(x => x.ratio).sort((a, b) => a - b);
+      const med = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 1;
+      _edge[pos] = {
+        ratio: Math.min(1, Math.max(0.05, med)),
+        cap: arr.length ? Math.min(...arr.map(x => x.pv)) : null
+      };
+    });
+    return _pre.map(({ p, adj, worthPrice, personalValue }) => {
+      let pv = personalValue;
+      if (pv == null) {
+        const e = _edge[p.position];
+        const base = Math.max(minBid, p.auctionValue || minBid);
+        pv = e ? Math.max(minBid, Math.round(base * e.ratio)) : base;
+        // The seam must never step UP: nobody the optimiser skipped can be worth
+        // more to you than the cheapest player it actually priced.
+        if (e && e.cap != null) pv = Math.min(pv, e.cap);
+        pv = Math.max(minBid, pv);
+      }
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : isTgt ? 'target' : needEligPos.has(p.position) ? 'open' : 'fade';
       const _fl = p.position === 'K' || p.position === 'DEF' || draftedIds.has(p.id) ? null : scarMap.get(p.id);
-      personalValue = Math.max(minBid, Math.round(personalValue * (p.demandFactor || 1)));
+      pv = Math.max(minBid, Math.round(pv * (p.demandFactor || 1)));
       return {
         ...p,
         marketPrice: adj.recommendedPrice,
@@ -20619,7 +20912,7 @@ function App() {
         fit,
         worthPrice,
         scarce: _fl || null,
-        personalValue
+        personalValue: pv
       };
     });
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
@@ -20694,10 +20987,11 @@ function App() {
         rankOrder,
         roleOverrides,
         valueAdjust,
-        priceOverrides
+        priceOverrides,
+        marketAnchors
       }));
     } catch (e) {}
-  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides]);
+  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides, marketAnchors]);
   useEffect(() => {
     function onStorage(e) {
       if (e.key !== STORAGE_KEY || !e.newValue) return;
@@ -20962,6 +21256,7 @@ function App() {
       setRankOrder({});
       setPriceOverrides({});
       setCustomOrder([]);
+      setMarketAnchors(null);
       setProjUpdateAsk(false);
       // Rankings revert to the system's CURRENT projections, not the user-modified pool:
       // `players` accumulates CSV imports, per-player stat edits, and added players, and
@@ -21134,6 +21429,7 @@ function App() {
   }
   function handleRankReorder(draggedId, targetId) {
     if (promptUpgrade('to reorder players and build your own cheat sheet')) return;
+    setRankMode('custom'); // dragging IS choosing your own order
     const a = players.find(x => x.id === draggedId),
       b = players.find(x => x.id === targetId);
     if (!a || !b || a.position !== b.position) return;
@@ -21578,6 +21874,8 @@ function App() {
       onRankReorder: handleRankReorder,
       onResetRanks: handleResetRanks,
       hasCustomRanks: !!(rankOrder && Object.keys(rankOrder).length > 0),
+      rankMode: rankMode,
+      onRankMode: setRankMode,
       targets: targets,
       onToggleTarget: handleToggleTarget,
       onSetPrice: handleSetPrice,
@@ -22067,13 +22365,13 @@ function App() {
     className: "section-title"
   }, "Projections updated"), React.createElement("p", {
     style: { fontSize: 14.5, lineHeight: 1.65, color: 'var(--text-secondary)', margin: '12px 0 18px' }
-  }, "Player projections were refreshed with the latest numbers from our sources. You have custom rank reorders saved. Keep your reorder layered on top of the new projections, or reset to the updated rankings?"), React.createElement("div", {
+  }, "Player projections were refreshed with the latest numbers from our sources. You have custom rank reorders saved. Follow the updated rankings, or keep your own order pinned? You can switch anytime with the toggle on the cheat sheet — your reorder is kept either way."), React.createElement("div", {
     style: { display: 'flex', gap: 10, flexWrap: 'wrap' }
   }, React.createElement("button", {
-    onClick: () => { setRankOrder({}); setProjUpdateAsk(false); },
+    onClick: () => { setRankMode('updates'); setProjUpdateAsk(false); },
     style: { background: 'var(--positive, #2dd4a3)', color: '#04211c', border: 'none', borderRadius: 9, padding: '10px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
   }, "Use updated rankings"), React.createElement("button", {
-    onClick: () => setProjUpdateAsk(false),
+    onClick: () => { setRankMode('custom'); setProjUpdateAsk(false); },
     style: { background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-strong, #2c3b48)', borderRadius: 9, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }
   }, "Keep my reorder")))), (projLoadFailed && (!players || players.length === 0)) && React.createElement("div", {
     className: "modal-bg no-print"
