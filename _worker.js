@@ -515,7 +515,7 @@ const PROJECTIONS = [
 
   { name: "Alvin Kamara", position: "RB", team: "NO", projectedStats: { rushYd: 479, rushTD: 2, rec: 34, recYd: 230, recTD: 1, fumLost: 0 }},
   { name: "Chris Bell", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 41, recYd: 533, recTD: 3, fumLost: 0 }},
-  { name: "Stefon Diggs", position: "WR", team: "FA", projectedStats: { rushYd: 3, rushTD: 0, rec: 0, recYd: 3, recTD: 0, fumLost: 0 }},
+  { name: "Stefon Diggs", position: "WR", team: "WAS", projectedStats: { rushYd: 8, rushTD: 0, rec: 62, recYd: 741, recTD: 4, fumLost: 1 }},
   { name: "Jack Bech", position: "WR", team: "LV", projectedStats: { rushYd: 0, rushTD: 1, rec: 43, recYd: 486, recTD: 3, fumLost: 0 }},
   { name: "Brandon Aiyuk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 1, recYd: 3, recTD: 0, fumLost: 0 }},
   { name: "Tre' Harris", position: "WR", team: "LAC", projectedStats: { rushYd: 0, rushTD: 0, rec: 34, recYd: 405, recTD: 2, fumLost: 0 }},
