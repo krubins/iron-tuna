@@ -384,7 +384,14 @@
       var h = host && host.querySelector ? host.querySelector('h2') : null;
       var posEl = call && call.querySelector ? call.querySelector('.cpos') : null;
       var pos = posEl ? (posEl.textContent || '').trim() : '';
-      var line = tailor(el.textContent, h ? h.textContent : '', pos);
+      // The player can be in the headline (the insight drops name him there) or
+      // in a "Who it moves" line (the coaching column's headlines name the
+      // COACH, and the player only appears underneath). Search both, headline
+      // first, so a call is never left untranslated because of where its
+      // subject happens to sit.
+      var whoEl = host && host.querySelector ? host.querySelector('p.who') : null;
+      var subject = ((h ? h.textContent : '') + ' \u00b7 ' + (whoEl ? whoEl.textContent : '')).trim();
+      var line = tailor(el.textContent, subject, pos);
       if (!line) return;
       var d = doc.createElement('p');
       d.className = 'it-yours';

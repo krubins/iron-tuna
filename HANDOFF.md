@@ -524,6 +524,17 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   "Projected effect" lines, and the Asset Allocation blurb's `$200` all restate
   themselves for a reader with a saved league, and are left exactly as authored for
   one without.
+- **Position Intel has a hierarchy, not a list** (`.pos-mod`). Five narrow auto-fit
+  columns meant five stacks of six identical headlines; the card now leads with one
+  story per position at size, with the player's face and the actual play, then three
+  follow-ups that look secondary. Two columns wide (Market spans both), four stories
+  a card, and only the lead carries its "your league" translation — one per card
+  reads as an aside, one per row read as wallpaper.
+- **`discEl(p)`** is the shared photo disc: the lead band's `faceEl` and the position
+  modules both build on it. Photos are hot-linked and fall back to initials, so they
+  cannot be verified in a sandbox without egress — check them on a deployed preview.
+- **The Play-Caller Premium module** (`#coaching`, §15) sits between Position Intel
+  and Asset Allocation, fed by `var COLUMN` from the same build script.
 - **Data pipeline:** `node tools/build-front.mjs` re-extracts the embedded
   `var STORIES` / `var REPORTS` arrays in `front.html` from the
   `auction-insights-*.html` and `auction-watch-*.html` pages (joined to
@@ -557,3 +568,90 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 - **`?screen=cheat` now opens the cheat sheet.** It previously fell through to the board,
   which would have put the free "Build my free cheat sheet" CTA on `front.html` behind
   the paywall. `?screen=board` still opens the board (now locked for free users).
+
+## 14. August 2026: first-party traffic on /admin
+
+Cloudflare's own analytics live in a dashboard nothing in this repo can reach, and the site had no server-side record of a visit at all — `/admin` could show revenue and leads but not whether anybody had turned up. The Worker now counts page views into the same D1 the rest of the admin data comes from.
+
+### What is counted
+
+`trafficRecord()` runs on the two HTML exits of the asset handler, so the rule is simply "if a reader got a page, it counts":
+
+- **GET requests that return HTML.** An image, a script, `/api/*` — none of those are page views, and counting them would inflate every number on the panel.
+- **Not obvious robots.** UA match (`TRAFFIC_BOT`). A crawler is traffic but it is not a reader, and mixing the two makes the figure useless for deciding anything. A blank UA counts as a robot.
+- **Not `/admin`.** That is the owner reading their own dashboard.
+
+The SPA routes (`/auctiondraft`, `/snakedraft`, `/bestball`, `/hub`) rewrite to `index.html` at the asset layer but keep their own `url.pathname`, so they appear as themselves in the breakdown rather than all collapsing into `/`.
+
+### Keys, and why they are narrow
+
+`trafficPath()` strips the query string and fragment, drops a trailing slash and lower-cases. A query string carries campaign junk and occasionally an email address; none of it belongs in a table keyed by page. `trafficReferrer()` keeps only the **host**, and maps our own domain to `direct` — a click from one Iron Tuna page to another is not a referral, and letting it through would make irontuna.com the top referrer to itself forever.
+
+### Visitors, and the privacy line
+
+Unique visitors come from `it_v`, a random 32-hex first-party cookie (`HttpOnly; Secure; SameSite=Lax`, one year) holding nothing about the person — exactly the "random anonymous identifier" `privacy.html` already discloses, so **no policy change was needed**. A cookie value that does not match `/^[0-9a-f]{32}$/` is replaced rather than trusted.
+
+**A reader sending `DNT: 1` or `Sec-GPC: 1` is counted in the views and given no identifier at all.** Both halves are deliberate: drop the view and the site under-reports itself; keep the id and the header meant nothing. Those readers therefore appear in page views and never in the visitor numbers, and the panel's footnote says so.
+
+### Writes: buffered, looped, capped, upserted
+
+- Views queue in a module-level buffer and flush through `ctx.waitUntil` **on the same request**. Not a timer: a quiet site serves most page views from a fresh isolate that would be recycled long before any timer fired, so "flush every 30 seconds" silently loses almost everything at exactly the traffic level where every view matters.
+- The flush **drains in a loop**, because views queued by requests arriving mid-write have their own flush call turned into a no-op by the `_TRAFFIC_FLUSHING` guard. Without the loop they wait for some later request and are lost if the isolate dies first.
+- The buffer is **capped at 500**, dropping oldest-first. A failed write leaves its views queued for the next request to retry, which is right — but D1 down for an hour must not turn a page-view counter into a memory leak.
+- Every write is `INSERT … ON CONFLICT(day, key) DO UPDATE SET views = views + ?`, so a retried batch cannot double-count. `visitors.is_new` is set **only** by the INSERT half: a returning reader must never be able to flip an existing day's row back to "new".
+- **A failed write is a lost view, and that is the intended trade.** `trafficRecord` and `trafficFlush` both swallow everything; analytics must never break the page it is counting.
+
+Three tables, created on first write (`trafficInit`, no migration step): `pageviews(day, path, views)`, `referrers(day, host, views)`, `visitors(day, vid, views, is_new)`. Only `visitors` grows with people rather than with days, so it is the only one pruned — 120 days, once a day.
+
+### The panel
+
+`GET /api/admin/traffic?key=…&days=30`, behind the same `LEADS_EXPORT_KEY` gate as every other admin route. **Its own endpoint, not another field on `/api/admin/dashboard`:** that one pages through Stripe and can take seconds, and a page-view chart has no business waiting on a payments API — this way a Stripe outage still leaves traffic working, and vice versa. It flushes the isolate's buffer before reading, so a refresh straight after a visit is not confusingly one view behind.
+
+`admin.html` renders four tiles, a two-series line chart, and bar-in-table rankings of top pages and top referrers, plus the daily table under `View as table`.
+
+**Unique visitors do not add up across days** — the same person on Monday and Tuesday is one visitor, not two — so a window's uniques come from `COUNT(DISTINCT vid)`, never from summing the series. This is the one arithmetic mistake the panel could make and still look plausible, and it has its own test.
+
+### Chart conventions
+
+`drawLineChart(cfg)` is one renderer for both cards: the sales chart and the traffic chart pass their own SVG/tooltip ids, rows, series and tooltip formatter. They were one copy-paste away from drifting into two different-looking charts on one page. Hover ids are namespaced per chart (`<svgId>-xhair`, `-hdot0`), which is what stops the two tooltips fighting.
+
+Traffic uses **blue `#2f8fd6` / orange `#d1791f`**, distinct from the sales card's green/amber because they are a distinct measure. The pair was chosen with the `dataviz` skill's validator against this panel's `#121b24` surface, not by eye: it passes the lightness band, chroma floor, CVD separation (worst adjacent ΔE 24.2 protan, 27.0 tritan), the normal-vision floor and contrast. Both cards carry a legend **and** direct end labels, so a series is never identified by colour alone. Re-run `node scripts/validate_palette.js "#2f8fd6,#d1791f" --mode dark --surface "#121b24"` from the skill directory if either colour changes.
+
+### Maintenance
+
+**`node tools/test-worker-traffic.mjs`** evaluates the real traffic section out of `_worker.js` against a stub D1 that records every statement. It covers the key normalisation, the bot list, everything that must NOT be counted, the DNT/GPC contract, cookie flags, conservation across the flush (however the buffer splits into batches, every view lands exactly once), the buffer cap under a dead database, the report's window arithmetic, and that the Worker and `admin.html` still agree on the endpoint and the series names. Run it after touching the counter, the endpoint, or the panel.
+
+## 15. August 2026: The Play-Caller Premium (the coaching column)
+
+A recurring column on what a head coach or coordinator is worth in fantasy dollars. Every entry has the same two halves, and the format is the point: **a coaching tendency with a track record long enough to be checkable, and the specific current-season player that tendency lands on.** A pattern with no named player is trivia; a named player with no pattern behind him is a hunch.
+
+The name is an auction name on purpose — the column measures what a play-caller adds to or subtracts from a price, and "premium" is the word the rest of the site already uses for that.
+
+### Where it lives
+
+- **`play-caller-premium.html`** (route `/play-caller-premium`) is the **source of truth**, same discipline as the insight drop pages. Entries are static HTML — no client-side rendering and no date gating, because entries are written on the day they publish rather than scheduled ahead. Newest first.
+- Each entry is one `<article class="call" id="call-YYYY-MM-DD-N">` carrying: a `.cmeta` row (chip + `.cpos` + `.cteam` + `.cdate`), an `<h2>` naming the **coach or the pattern**, two or three paragraphs of the tendency, a `<p class="who">` naming the players in `<b>` tags, and a `<p class="statline">`.
+- The chip is the verdict: `chip up` ("Pay the premium"), `chip down` ("Take the discount"), `chip split` ("Two-sided" — a scheme that lifts one position by taxing another).
+- **`p.statline` is deliberate markup, not decoration.** It is the same class the drop pages use, so `/it-league.js` finds it and translates each entry's percentage into the reader's own dollars (§9f). The column ships `<script src="/it-league.js" defer>` for exactly that.
+- The front page carries a **`#coaching` module** between Position Intel and Asset Allocation: the four newest entries as cards, each with the faces of the players it commits to.
+
+### The build path
+
+`node tools/build-front.mjs` extracts the column into `var COLUMN = [...]` in `front.html`, alongside STORIES/REPORTS/PLAYERS. The extractor reads each `<article class="call">` for its chip, position, team, date, headline, who-line and statline, and **takes the named players only from the `<b>` spans inside the who-line** — a name in the prose above it is context, not a call, and must not claim a photo. Player slugs resolve against `tools/nfl-headshots.json` and join the shared `PLAYERS` cast.
+
+Two things the extractor learned the hard way and now handles: the who-line is markup, so tags come out before the text goes in (otherwise the card prints `<b>Who it moves:</b>` literally), and `unesc` now decodes **numeric** entities as well as named ones, because the column writes non-breaking hyphens as `&#8209;` to keep names like "zone-tree" from breaking across lines.
+
+### The daily cadence
+
+A Claude Routine (`trig_015MJSf2RFwE89n8Hua3oSG8`, "Iron Tuna — Play-Caller Premium daily entries") fires **daily at 12:00 UTC** into a fresh session and adds 3–5 entries on a branch, with a hard stop after **2026-09-13**. Its prompt carries the entry template, the editorial rule, and one instruction that matters more than the rest:
+
+> **Ground every current-season claim in this repo.** The roster and coaching landscape here is the site's own and does not always match outside sources — read the insight pages, the camp reports and the `PROJECTIONS` block before naming anyone. Historical tendencies (real NFL coaching records) are fine from general knowledge and are the backbone of the column.
+
+It pushes a branch and never to main. **The Routine stores no MCP connectors**, so its sessions may lack GitHub tools; the prompt therefore treats the pushed branch as the deliverable and the PR as best-effort. To change the cadence, edit the Routine; to stop it, delete it (`trig_015MJSf2RFwE89n8Hua3oSG8`).
+
+### Writing conventions
+
+- The headline names the **coach**, not the player. That is what makes it a column rather than another player blurb.
+- Two-sided entries read "Up — **Player** … Down — **Player** …" (capitalised, em-dashed), because the who-line is also the front-page card's blurb and a card that opens mid-sentence in lower case reads like a bug.
+- State the risk in the entry rather than in a footnote — the zone-tree entry says out loud that the same tree invented the committee.
+- The percentage is the desk's estimate of the gap versus market price, not a stat projection, and the page's method box says so.
