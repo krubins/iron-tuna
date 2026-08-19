@@ -352,3 +352,60 @@ Cost: ~4-6 ms per model build, ~23 ms for a full 12-team board recompute.
 `buildModel`'s arguments on `window.__ITDBG`), serve it, and compare against an
 independently written knapsack in the page. The starved-budget case ($12 for 9
 slots) must still render 9/9 slots with `feasible: false`.
+
+---
+
+## 15. August 2026: the front page is analysis-led
+
+`front.html` was restyled (dark editorial, teal/gold accents, Bebas display type) and
+now **leads with computed analysis instead of a rotating insight**. The insights lead,
+Top Headlines rail, Position Intel modules and the Camp desk all survive unchanged
+below the fold, and `tools/build-front.mjs` still owns `var STORIES` / `var REPORTS`
+exactly as before.
+
+**Every number on the page comes from `var ANALYSIS = {...};`**, rebuilt by
+`node tools/build-front-analysis.mjs`. Run it whenever projections change (right after
+`merge-projections.mjs`). It drives headless Chromium against a local copy of the app
+and reads the app's *own* valuation pipeline and exact lineup solver, because
+re-implementing the scoring in Node would drift from what users see. Needs
+`npm i -D playwright` plus, on a box with no CDN egress, `npm i -D react react-dom`
+(both gitignored; nothing ships). Sanity checks abort the write on an empty or
+out-of-budget solve. `--dry-run` prints the JSON instead of writing.
+
+The four stories, all real:
+- **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
+  solver, with the per-position spend bar. Currently $192 for 125.4 pts/gm, 77% of it
+  on running backs.
+- **"The cliffs"** — the largest points-per-game drop between neighbouring players at
+  each position.
+- **"Why the money goes to running back"** — points between the position leader and
+  the replacement-level starter in a 12-team league. RB 10.0, DEF 0.8. This is the
+  reason the optimum looks the way it does.
+- **"What the FLEX is worth"** — re-solves with the FLEX removed (+12.4 pts/gm).
+
+### What is deliberately NOT on the page
+
+Two requested desks — "what consensus rankings are getting wrong" and "where Vegas
+odds differ from projections" — are **not built, on purpose**, because the data does
+not exist in this product:
+
+- **There is no consensus ADP.** `adpRedraft` is null for all 408 players, so
+  `attachProvisionalAdp` synthesises a rank from Iron Tuna's own `auctionValue`.
+- **There is no market price.** `calculateMarketValues` assigns prices from the
+  hardcoded `LEAGUE_MARKET_CURVE` indexed by Iron Tuna's own points rank.
+
+So "surplus", "Bargain +$X" and "Overpay -$X" measure this model against a fixed
+curve, **not against any market**. Writing a consensus or odds story from what is in
+the repo would be comparing the model to itself. §14's ADP relabelling fixed the
+user-facing half of this; the pricing copy is still worth an honest pass.
+
+When a real feed exists, fill the `edge` block described at the bottom of
+`build-front-analysis.mjs` (the script preserves it across rebuilds) and the desk
+un-hides itself. Absent that block the section stays `hidden` — no filler ships.
+
+### Player photos
+
+The hero renders photo slots at `/players/<slug>.jpg`, falling back to a
+position-tinted initials badge when the file is missing (the `<img>` removes itself
+on error). See `players/README.md` for the slug rule, sizing and the licensing
+constraint. `players/README.md` is in `.assetsignore`; the images themselves are not.

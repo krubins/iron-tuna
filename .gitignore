@@ -5,3 +5,5 @@ package.json
 package-lock.json
 scratch-*
 .dev.vars
+index.test.html
+.front-analysis-probe.html

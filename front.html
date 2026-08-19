@@ -3,160 +3,236 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d0d0d">
-<title>Iron Tuna: Fantasy Football Auction News, Intel & Draft Tools</title>
-<meta name="description" content="The fantasy football auction front page: position-by-position intel, asset-allocation strategy, training camp and preseason updates, and the tools to win your auction — custom values, a live auction manager, and an AI Value Coach.">
+<meta name="theme-color" content="#0b0d10">
+<title>Iron Tuna: Fantasy Football Auction News, Intel &amp; Draft Tools</title>
+<meta name="description" content="The fantasy football auction front page: what the optimal $200 roster actually looks like, where every position falls off a cliff, position-by-position intel, camp and preseason updates, and the tools to win your auction.">
 <link rel="canonical" href="https://irontuna.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Iron Tuna">
-<meta property="og:title" content="Iron Tuna: Fantasy Football Auction News & Intel">
-<meta property="og:description" content="Position-by-position auction intel, asset-allocation strategy, and camp/preseason updates — plus custom auction values and a live AI draft assistant.">
+<meta property="og:title" content="Iron Tuna: Fantasy Football Auction News &amp; Intel">
+<meta property="og:description" content="The best team $200 can buy, where each position falls off a cliff, and the camp news that moves auction prices — plus custom auction values and a live AI draft assistant.">
 <meta property="og:url" content="https://irontuna.com/">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--red:#cf0a0a;--red-dark:#a30808;--ink:#101317;--ink-2:#3c434b;--ink-3:#6b737c;--line:#e2e5e9;--bg:#f4f5f6;--card:#ffffff;--mast:#101114;--gold:#f5b800;--teal:#2dd4a3}
+:root{
+  --bg:#0b0d10; --bg-2:#111419; --card:#141820; --card-2:#191e27;
+  --line:#232935; --line-2:#2f3644;
+  --ink:#f2f5f8; --ink-2:#aeb8c4; --ink-3:#78828f;
+  --teal:#2dd4a3; --gold:#f5b800; --red:#ff4d4d; --blue:#5aa9ff; --purple:#b07cff;
+  --mast:#08090b;
+  --qb:#f5b800; --rb:#2dd4a3; --wr:#5aa9ff; --te:#b07cff; --k:#78828f; --def:#78828f;
+  --shadow:0 10px 40px rgba(0,0,0,.45);
+  --font-display:'Bebas Neue','Impact',sans-serif;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
-img{max-width:100%}
-.wrap{max-width:1260px;margin:0 auto;padding:0 18px}
+img{max-width:100%;display:block}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px}
 
 /* ── masthead ── */
-.mast{background:var(--mast);border-bottom:3px solid var(--red)}
-.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;height:64px}
-.mast-brand{display:inline-flex;align-items:center;flex:0 0 auto}
-.mast-logo{height:40px;width:auto;display:block}
-.mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
-.mast-nav a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
-.mast-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.mast-nav a.cta{background:var(--red);color:#fff;margin-left:6px}
-.mast-nav a.cta:hover{background:var(--red-dark)}
-.mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px}
-.mast-nav a.cta-gold:hover{filter:brightness(1.07)}
+.mast{background:var(--mast);border-bottom:3px solid var(--teal);position:sticky;top:0;z-index:50}
+.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;height:74px}
+.mast-brand{display:block;flex-shrink:0}
+.mast-logo{height:44px;width:auto}
+.mast-nav{display:flex;align-items:center;gap:22px;font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.mast-nav a{color:var(--ink-2);transition:color .15s}
+.mast-nav a:hover{color:var(--ink)}
+.cta,.cta-gold{padding:9px 16px;border-radius:6px;font-weight:800;letter-spacing:.05em}
+.cta{background:var(--teal);color:#06251c}
+.cta:hover{background:#38e6b3;color:#06251c}
+.cta-gold{background:transparent;color:var(--gold);border:1px solid rgba(245,184,0,.5)}
+.cta-gold:hover{background:rgba(245,184,0,.12);color:var(--gold)}
+.ribbon{background:var(--bg-2);border-bottom:1px solid var(--line);font-size:13px}
+.ribbon .wrap{display:flex;align-items:center;gap:20px;height:44px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.ribbon .wrap::-webkit-scrollbar{display:none}
+.ribbon a{color:var(--ink-2);font-weight:600}
+.ribbon a:hover{color:var(--teal)}
+.ribbon .rb-dim{color:var(--ink-3)}
+.rb-spacer{flex:1}
 
-/* ── section ribbon (in-page nav) ── */
-.ribbon{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;box-shadow:0 1px 4px rgba(16,19,23,.06)}
-.ribbon .wrap{display:flex;align-items:center;gap:4px;height:44px;overflow-x:auto}
-.ribbon a{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 11px;border-bottom:3px solid transparent;white-space:nowrap}
-.ribbon a:hover{color:var(--ink);border-bottom-color:var(--red)}
-.ribbon .rb-spacer{flex:1}
-.ribbon a.rb-dim{color:var(--ink-3);font-weight:700}
-
-/* ── section headers ── */
-.sec-head{display:flex;align-items:baseline;gap:14px;margin:34px 0 14px;border-bottom:2px solid var(--ink);padding-bottom:8px;position:relative}
-.sec-head::after{content:"";position:absolute;left:0;bottom:-2px;width:64px;height:2px;background:var(--red)}
-.sec-head h2{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:30px;letter-spacing:.05em;line-height:1}
-.sec-head .sec-more{margin-left:auto;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red)}
-.sec-head .sec-more:hover{color:var(--red-dark)}
-.sec-sub{font-size:13.5px;color:var(--ink-3);margin:-6px 0 14px}
+/* ── section furniture ── */
+main{padding-bottom:64px}
+.sec{margin-top:52px}
+.sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:2px solid var(--line);padding-bottom:10px;margin-bottom:22px}
+.sec-head h2{font-family:var(--font-display);font-size:32px;letter-spacing:.03em;font-weight:400;line-height:1}
+.sec-head .sh-note{font-size:13.5px;color:var(--ink-3)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+.eyebrow::before{content:'';width:22px;height:2px;background:var(--teal)}
 
 /* ── hero ── */
-.hero{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:18px;margin-top:20px;align-items:start}
-.lead{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;position:relative}
-.lead-body{padding:26px 28px 20px;display:flex;flex-direction:column;gap:12px;min-height:0}
-.lead-kicker{display:flex;gap:8px;align-items:center}
-.badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:3px}
-.badge-pos{background:var(--red);color:#fff}
-.badge-under{background:#e7f6ef;color:#0b7a43;border:1px solid #bfe6d2}
-.badge-over{background:#fbeaea;color:#b02020;border:1px solid #f0c8c8}
-.badge-fair{background:#eef1f4;color:#4a5560;border:1px solid #d8dee5}
-.lead h1{font-size:clamp(26px,3.3vw,40px);line-height:1.08;font-weight:800;letter-spacing:-.01em}
-.lead h1 a:hover{color:var(--red)}
-.lead-play{font-size:16.5px;color:var(--ink-2);max-width:640px}
-.lead-play b{color:var(--ink)}
-.lead-stat{font-size:13px;color:var(--ink-3);font-weight:600}
-.lead-stat b{color:#8a6a00}
-.lead-foot{display:flex;align-items:center;gap:14px}
-.lead-also{margin-top:auto;border-top:1px solid var(--line);padding-top:12px}
-.lead-also .la-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:6px}
-.lead-also ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 18px}
-.lead-also a{font-size:13px;font-weight:600;color:var(--ink-2);display:block;padding:3px 0}
-.lead-also a:hover{color:var(--red)}
-.lead-also a.on{color:var(--red);font-weight:800}
-.lead-link{color:var(--red);font-weight:800;font-size:14px;letter-spacing:.02em}
-.lead-link:hover{color:var(--red-dark)}
-.lead-date{font-size:12.5px;color:var(--ink-3)}
-.lead-ctrls{display:flex;align-items:center;gap:10px;padding:12px 28px;border-top:1px solid var(--line);background:#fafbfc}
-.lead-dots{display:flex;gap:7px}
-.lead-dot{width:9px;height:9px;border-radius:50%;background:#cdd3d9;border:none;cursor:pointer;padding:0}
-.lead-dot.on{background:var(--red)}
-.lead-arrows{margin-left:auto;display:flex;gap:6px}
-.lead-arrow{border:1px solid var(--line);background:#fff;border-radius:4px;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--ink-2);line-height:1}
-.lead-arrow:hover{border-color:var(--red);color:var(--red)}
-.rail{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
-.rail h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:21px;letter-spacing:.06em;border-bottom:2px solid var(--ink);padding-bottom:7px;margin-bottom:4px;position:relative}
-.rail h3::after{content:"";position:absolute;left:0;bottom:-2px;width:44px;height:2px;background:var(--red)}
-.rail ul{list-style:none}
-.rail li{border-bottom:1px solid var(--line);padding:10px 0}
+.hero{margin-top:34px;display:grid;grid-template-columns:1.35fr .95fr;gap:28px;align-items:start}
+.hero-main{background:linear-gradient(165deg,#161b24 0%,#0f1319 70%);border:1px solid var(--line);border-radius:16px;padding:30px 32px 26px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.hero-main::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--teal),var(--gold))}
+.hero h1{font-family:var(--font-display);font-size:clamp(38px,4.6vw,62px);line-height:.96;letter-spacing:.01em;font-weight:400;margin:14px 0 12px}
+.hero h1 em{font-style:normal;color:var(--teal)}
+.hero-dek{font-size:17px;color:var(--ink-2);max-width:62ch;line-height:1.6}
+.hero-dek b{color:var(--ink)}
+.hero-meta{margin-top:16px;font-size:12.5px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:14px}
+
+/* roster strip */
+.roster{margin-top:22px;display:grid;grid-template-columns:repeat(9,1fr);gap:8px}
+.rs{background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:10px 8px;text-align:center;min-width:0}
+.rs-slot{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase}
+.rs-name{font-size:11.5px;font-weight:700;margin:5px 0 2px;line-height:1.25;overflow-wrap:normal;word-break:keep-all;hyphens:none}
+.rs-team{font-size:10.5px;color:var(--ink-3);font-weight:600}
+.rs-price{font-family:var(--font-display);font-size:22px;letter-spacing:.02em;margin-top:6px;line-height:1}
+.rs-ppg{font-size:10.5px;color:var(--ink-3)}
+.rs[data-pos=QB] .rs-price{color:var(--qb)} .rs[data-pos=RB] .rs-price{color:var(--rb)}
+.rs[data-pos=WR] .rs-price{color:var(--wr)} .rs[data-pos=TE] .rs-price{color:var(--te)}
+.rs[data-pos=K] .rs-price,.rs[data-pos=DEF] .rs-price{color:var(--ink-2)}
+
+/* spend bar */
+.spend{margin-top:20px}
+.spend-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.spend-seg{height:100%}
+.spend-key{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--ink-2)}
+.spend-key i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+
+/* hero aside */
+.hero-side{display:flex;flex-direction:column;gap:16px}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.mini h3{font-family:var(--font-display);font-size:21px;letter-spacing:.03em;font-weight:400;margin-bottom:4px}
+.mini p{font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.mini .big{font-family:var(--font-display);font-size:46px;line-height:1;color:var(--teal);letter-spacing:.02em}
+.mini .big.gold{color:var(--gold)}
+.mini .unit{font-size:13px;color:var(--ink-3);font-weight:600;margin-left:6px}
+
+/* player photo slot: initials until a real image is dropped in */
+.pfp{position:relative;width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;display:grid;place-items:center;background:var(--card-2);border:2px solid var(--line-2)}
+.pfp span{font-family:var(--font-display);font-size:21px;letter-spacing:.02em;color:var(--ink-3)}
+.pfp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pfp[data-pos=QB]{border-color:var(--qb)} .pfp[data-pos=RB]{border-color:var(--rb)}
+.pfp[data-pos=WR]{border-color:var(--wr)} .pfp[data-pos=TE]{border-color:var(--te)}
+.pfp.lg{width:74px;height:74px}.pfp.lg span{font-size:27px}
+
+/* ── analysis cards ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.card h3{font-family:var(--font-display);font-size:25px;letter-spacing:.03em;font-weight:400;line-height:1.06}
+.card p{font-size:14px;color:var(--ink-2);line-height:1.6}
+.card p b{color:var(--ink)}
+.cliff{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.cliff:first-of-type{border-top:0}
+.cliff-pos{font-family:var(--font-display);font-size:23px;width:40px;letter-spacing:.03em}
+.cliff-pos[data-pos=QB]{color:var(--qb)}.cliff-pos[data-pos=RB]{color:var(--rb)}
+.cliff-pos[data-pos=WR]{color:var(--wr)}.cliff-pos[data-pos=TE]{color:var(--te)}
+.cliff-body{flex:1;min-width:0;font-size:13px;line-height:1.45}
+.cliff-body b{color:var(--ink)}
+.cliff-drop{font-family:var(--font-display);font-size:23px;color:var(--red);letter-spacing:.02em;white-space:nowrap}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar-row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;font-size:12.5px}
+.bar-pos{font-weight:800;letter-spacing:.07em;color:var(--ink-2)}
+.bar-track{display:block;background:var(--bg-2);border-radius:5px;height:11px;overflow:hidden;border:1px solid var(--line)}
+.bar-fill{display:block;height:100%;border-radius:4px;min-width:2px}
+.bar-val{font-family:var(--font-display);font-size:18px;letter-spacing:.02em;color:var(--ink)}
+.foot-note{font-size:12px;color:var(--ink-3);line-height:1.5;margin-top:2px}
+
+/* ── insights lead (rotating) ── */
+.lead-wrap{display:grid;grid-template-columns:1.5fr 1fr;gap:26px;align-items:start}
+.lead{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 28px;position:relative}
+.badge{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;padding:4px 9px;border-radius:4px;margin-right:7px}
+.badge-pos{background:rgba(45,212,163,.16);color:var(--teal)}
+.badge-under{background:rgba(45,212,163,.16);color:var(--teal)}
+.badge-over{background:rgba(255,77,77,.16);color:var(--red)}
+.badge-fair{background:rgba(174,184,196,.14);color:var(--ink-2)}
+.lead h2{font-family:var(--font-display);font-size:clamp(26px,2.6vw,36px);line-height:1.04;letter-spacing:.02em;font-weight:400;margin:12px 0 10px}
+.lead h2 a:hover{color:var(--teal)}
+.lead p{font-size:14.5px;color:var(--ink-2);margin-bottom:7px}
+.lead-link{display:inline-block;margin-top:12px;font-weight:800;font-size:13px;letter-spacing:.05em;color:var(--teal)}
+.lead-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.lead-date{font-size:12px;color:var(--ink-3)}
+.lead-nav{display:flex;align-items:center;gap:8px}
+.lead-nav button{background:var(--card-2);border:1px solid var(--line-2);color:var(--ink-2);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:14px;line-height:1}
+.lead-nav button:hover{border-color:var(--teal);color:var(--teal)}
+.lead-dot{width:7px;height:7px;padding:0;border-radius:50%;background:var(--line-2);border:0;cursor:pointer}
+.lead-dot.on{background:var(--teal)}
+#leadDots{display:flex;gap:6px;margin-right:6px}
+.lead-also{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.la-label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.lead-also ul{list-style:none;margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.lead-also a{font-size:13.5px;color:var(--ink-2);line-height:1.4}
+.lead-also a.on{color:var(--teal);font-weight:600}
+.lead-also a:hover{color:var(--ink)}
+.rail{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.rail h3{font-family:var(--font-display);font-size:22px;letter-spacing:.03em;font-weight:400;padding-bottom:10px;border-bottom:2px solid var(--teal);margin-bottom:12px}
+.rail ul{list-style:none;display:flex;flex-direction:column}
+.rail li{padding:11px 0;border-bottom:1px solid var(--line)}
 .rail li:last-child{border-bottom:0}
-.rail a.hl{font-size:14px;font-weight:700;line-height:1.35;display:block}
-.rail a.hl:hover{color:var(--red)}
-.rail .hl-meta{font-size:11.5px;color:var(--ink-3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.hl{font-size:14px;font-weight:600;line-height:1.4}
+.hl:hover{color:var(--teal)}
+.hl-meta{font-size:11.5px;color:var(--ink-3);margin-top:4px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 
-/* ── story grid modules ── */
-.pos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
-.pos-mod{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px}
-.pos-mod h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:23px;letter-spacing:.06em;display:flex;align-items:center;gap:9px;border-bottom:2px solid var(--ink);padding-bottom:7px;position:relative}
-.pos-mod h3::after{content:"";position:absolute;left:0;bottom:-2px;width:38px;height:2px;background:var(--red)}
-.pos-count{font-family:'Inter',sans-serif;font-size:11px;font-weight:800;color:#fff;background:var(--ink);border-radius:10px;padding:2px 8px;letter-spacing:.05em}
-.pos-mod ul{list-style:none}
-.pos-mod li{border-bottom:1px solid var(--line);padding:10px 0}
-.pos-mod li:last-child{border-bottom:0;padding-bottom:4px}
-.st-title{font-size:14px;font-weight:700;line-height:1.35;display:block}
-.st-title:hover{color:var(--red)}
-.st-meta{display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap}
-.st-view{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:1.5px 7px;border-radius:3px}
-.st-date{font-size:11.5px;color:var(--ink-3)}
-.pos-mod .mod-more{display:inline-block;margin-top:10px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--red)}
+/* ── position modules ── */
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.pos-mod{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.pos-mod h3{font-family:var(--font-display);font-size:23px;letter-spacing:.03em;font-weight:400;display:flex;align-items:center;gap:9px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.pos-count{font-family:Inter,sans-serif;font-size:11px;font-weight:800;background:var(--card-2);color:var(--ink-3);padding:3px 8px;border-radius:20px;letter-spacing:.05em}
+.pos-mod ul{list-style:none;display:flex;flex-direction:column}
+.pos-mod li{padding:10px 0;border-bottom:1px solid var(--line)}
+.pos-mod li:last-child{border-bottom:0}
+.st-title{font-size:13.5px;font-weight:600;line-height:1.42}
+.st-title:hover{color:var(--teal)}
+.st-meta{margin-top:5px;display:flex;align-items:center;gap:8px}
+.st-view{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 7px;border-radius:3px}
+.st-date{font-size:11px;color:var(--ink-3)}
+.mod-more{display:inline-block;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--teal);letter-spacing:.04em}
 
-/* ── allocation ── */
-.alloc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
-.alloc-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:8px}
-.alloc-card h3{font-size:17px;font-weight:800;line-height:1.25}
-.alloc-card h3 a:hover{color:var(--red)}
-.alloc-card p{font-size:13.5px;color:var(--ink-2)}
-.alloc-card .go{margin-top:auto;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--red)}
-
-/* ── camp ── */
-.camp-note{font-size:13px;color:var(--ink-3);margin:-6px 0 14px}
-.camp-note b{color:var(--ink-2)}
-.camp-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
-.camp-feat{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:22px 24px;display:flex;flex-direction:column;gap:10px}
-.camp-feat h3{font-size:22px;font-weight:800;line-height:1.2}
-.camp-feat h3 a:hover{color:var(--red)}
-.camp-feat p{font-size:14.5px;color:var(--ink-2)}
-.camp-list{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 20px;max-height:340px;overflow-y:auto}
-.camp-list li{list-style:none;border-bottom:1px solid var(--line);padding:9px 0;display:flex;gap:10px;align-items:baseline}
+/* ── allocation + camp ── */
+.alloc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.alloc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.alloc h3{font-family:var(--font-display);font-size:21px;letter-spacing:.03em;font-weight:400;margin-bottom:6px}
+.alloc h3 a:hover{color:var(--teal)}
+.alloc p{font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.camp{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;align-items:start}
+.camp-feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px}
+.camp-feat h3{font-family:var(--font-display);font-size:28px;letter-spacing:.02em;font-weight:400;line-height:1.08;margin:10px 0 8px}
+.camp-feat h3 a:hover{color:var(--teal)}
+.camp-feat p{font-size:14px;color:var(--ink-2);line-height:1.6}
+.camp-list{list-style:none;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 20px}
+.camp-list li{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px;align-items:baseline}
 .camp-list li:last-child{border-bottom:0}
-.camp-list .cd{font-size:11.5px;font-weight:800;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;flex:0 0 58px}
-.camp-list a{font-size:13.5px;font-weight:700}
-.camp-list a:hover{color:var(--red)}
+.cd{font-size:11px;font-weight:800;color:var(--ink-3);letter-spacing:.05em;white-space:nowrap;min-width:44px}
+.camp-list a{line-height:1.4}
+.camp-list a:hover{color:var(--teal)}
 
 /* ── tools band ── */
-.tools-band{background:var(--mast);border-radius:6px;margin:38px 0 0;padding:26px 28px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
-.tools-band .tb-text{color:#cfd4da;font-size:14.5px;max-width:520px}
-.tools-band .tb-text b{color:#fff}
-.tools-band .tb-ctas{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
-.tb-btn{display:inline-block;font-size:13.5px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:11px 22px}
-.tb-btn.gold{background:var(--gold);color:#1a1205}
-.tb-btn.red{background:var(--red);color:#fff}
-.tb-btn:hover{filter:brightness(1.07)}
+.tools-band{margin-top:52px;background:linear-gradient(120deg,#12242c,#171a20 60%);border:1px solid var(--line-2);border-radius:16px;padding:26px 30px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px}
+.tb-text{font-size:15.5px;color:var(--ink-2);max-width:66ch;line-height:1.6}
+.tb-text b{color:var(--ink)}
+.tb-ctas{display:flex;gap:12px;flex-wrap:wrap}
+.tb-btn{padding:12px 20px;border-radius:8px;font-weight:800;font-size:14px;letter-spacing:.03em}
+.tb-btn.gold{background:var(--gold);color:#231a00}
+.tb-btn.red{background:var(--teal);color:#06251c}
 
 /* ── footer ── */
-.foot{margin-top:40px;background:#fff;border-top:1px solid var(--line)}
-.foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 18px 34px;font-size:13px;color:var(--ink-3)}
-.foot a:hover{color:var(--red)}
-.foot .fm{margin-left:auto}
+.foot{margin-top:56px;border-top:1px solid var(--line);background:var(--mast)}
+.foot .wrap{display:flex;flex-wrap:wrap;gap:20px;padding-top:26px;padding-bottom:26px;font-size:13px;color:var(--ink-3)}
+.foot a{color:var(--ink-3)}
+.foot a:hover{color:var(--teal)}
+.foot-legal{width:100%;font-size:11.5px;color:#5a626d;line-height:1.6}
 
-@media(max-width:900px){
+@media (max-width:1080px){
   .hero{grid-template-columns:1fr}
-  .camp-grid{grid-template-columns:1fr}
-  .mast .wrap{height:auto;flex-wrap:wrap;padding-top:8px;padding-bottom:8px;justify-content:center}
-  .lead-body{min-height:0;padding:20px}
-  .lead-ctrls{padding:10px 20px}
+  .lead-wrap{grid-template-columns:1fr}
+  .camp{grid-template-columns:1fr}
+  .roster{grid-template-columns:repeat(5,1fr)}
+}
+@media (max-width:640px){
+  .mast .wrap{height:60px;gap:10px;flex-wrap:nowrap}
+  .mast-brand{min-width:0}
+  .mast-logo{height:28px}
+  .mast-nav{gap:8px;font-size:11px;min-width:0}
+  .mast-nav a:not(.cta):not(.cta-gold){display:none}
+  .mast-nav .cta-gold{display:none}
+  .cta{padding:7px 11px;font-size:11.5px;white-space:nowrap}
+  .hero-main{padding:22px 18px}
+  .roster{grid-template-columns:repeat(3,1fr)}
+  .sec-head{flex-wrap:wrap;gap:6px}
+  .sec-head h2{font-size:26px}
 }
 </style>
 </head>
@@ -164,7 +240,7 @@ img{max-width:100%}
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.png" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="mast-nav">
-    <a href="#qb">QB</a><a href="#rb">RB</a><a href="#wr">WR</a><a href="#te">TE</a><a href="#market">Market</a>
+    <a href="#optimal">The Build</a><a href="#cliffs">Cliffs</a><a href="#intel">Intel</a>
     <a href="#allocation">Allocation</a><a href="#camp">Camp</a>
     <a class="cta-gold" href="/auctiondraft?screen=cheat">Cheat Sheet</a>
     <a class="cta" href="/auctiondraft?screen=board">Auction Manager</a>
@@ -178,57 +254,96 @@ img{max-width:100%}
   <span class="rb-spacer"></span>
   <a class="rb-dim" href="/snakedraft">Snake Draft</a>
   <a class="rb-dim" href="/bestball">Best Ball</a>
-  <a class="rb-dim" href="/hub" title="The classic Iron Tuna home page">Classic Home</a>
-  <a class="rb-dim" href="/auctiondraft?signin=1">Sign In</a>
 </div></div>
 
 <main class="wrap">
-  <div class="hero">
-    <div class="lead" id="lead">
-      <div class="lead-body">
-        <div class="lead-kicker" id="leadKicker"></div>
-        <h1 id="leadTitle"></h1>
-        <p class="lead-play" id="leadPlay"></p>
-        <p class="lead-stat" id="leadStat"></p>
-        <div class="lead-foot"><a class="lead-link" id="leadLink" href="#">Full story &rarr;</a><span class="lead-date" id="leadDate"></span></div>
-        <div class="lead-also" id="leadAlso"></div>
+
+  <!-- ─────────── lead analysis: the optimal roster ─────────── -->
+  <section class="hero" id="optimal">
+    <div class="hero-main">
+      <span class="eyebrow">The Build &middot; solved, not estimated</span>
+      <h1>The best team <em>$200</em> can buy</h1>
+      <p class="hero-dek" id="heroDek"></p>
+      <div class="roster" id="rosterStrip"></div>
+      <div class="spend">
+        <div class="spend-bar" id="spendBar"></div>
+        <div class="spend-key" id="spendKey"></div>
       </div>
-      <div class="lead-ctrls">
-        <div class="lead-dots" id="leadDots"></div>
-        <div class="lead-arrows">
-          <button class="lead-arrow" id="leadPrev" aria-label="Previous story">&#8249;</button>
-          <button class="lead-arrow" id="leadNext" aria-label="Next story">&#8250;</button>
-        </div>
-      </div>
+      <div class="hero-meta" id="heroMeta"></div>
     </div>
-    <aside class="rail">
-      <h3>Top Headlines</h3>
-      <ul id="railList"></ul>
-    </aside>
-  </div>
+    <aside class="hero-side" id="heroSide"></aside>
+  </section>
 
-  <div class="sec-head" id="positions"><h2>Position Intel</h2><a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
-  <p class="sec-sub">Every story is a stat-backed call from the 2026 research set, read through an auction lens. New drops land through Labor Day.</p>
-  <div class="pos-grid" id="posGrid"></div>
+  <!-- ─────────── tier cliffs ─────────── -->
+  <section class="sec" id="cliffs">
+    <div class="sec-head">
+      <h2>Where the board breaks</h2>
+      <span class="sh-note">The single biggest points-per-game drop between two neighbouring players at each position.</span>
+    </div>
+    <div class="cards" id="cliffCards"></div>
+  </section>
 
-  <div class="sec-head" id="allocation"><h2>Asset Allocation</h2><a class="sec-more" href="/guides">All guides &rarr;</a></div>
-  <p class="sec-sub">How to spend the $200: budget shape, nomination tactics, and the endgame.</p>
-  <div class="alloc-grid">
-    <div class="alloc-card"><h3><a href="/auction-budget-allocation">How to Budget Your Auction</a></h3><p>Stars-and-scrubs vs balanced, a workable position split, and why a real bench reserve matters.</p><a class="go" href="/auction-budget-allocation">Read the playbook &rarr;</a></div>
-    <div class="alloc-card"><h3><a href="/auction-nomination-strategy">Nomination Strategy</a></h3><p>Nominate to win: drain rival budgets, price-enforce the studs, and steal your targets cheap.</p><a class="go" href="/auction-nomination-strategy">Read the playbook &rarr;</a></div>
-    <div class="alloc-card"><h3><a href="/dollar-endgame-handcuffs">The $1 Endgame</a></h3><p>Handcuffs and the split-backfield lottery: win the late auction one dollar at a time.</p><a class="go" href="/dollar-endgame-handcuffs">Read the playbook &rarr;</a></div>
-    <div class="alloc-card"><h3><a href="/auctiondraft">Budget Planner</a></h3><p>The live tool: a budget-aware planner that finds the dollar allocation producing your highest-scoring lineup.</p><a class="go" href="/auctiondraft">Open the planner &rarr;</a></div>
-  </div>
+  <!-- ─────────── odds / consensus desks: render only when real data exists ─────────── -->
+  <section class="sec" id="edge" hidden>
+    <div class="sec-head"><h2 id="edgeTitle"></h2><span class="sh-note" id="edgeNote"></span></div>
+    <div class="cards" id="edgeCards"></div>
+  </section>
 
-  <div class="sec-head" id="camp"><h2>Training Camp &amp; Preseason</h2></div>
-  <p class="camp-note" id="campNote"></p>
-  <div class="camp-grid">
-    <div class="camp-feat" id="campFeat"></div>
-    <ul class="camp-list" id="campList"></ul>
-  </div>
+  <!-- ─────────── insights ─────────── -->
+  <section class="sec" id="intel">
+    <div class="sec-head">
+      <h2>The Intel Desk</h2>
+      <span class="sh-note">Priced calls from the 2026 research set, newest drop first.</span>
+    </div>
+    <div class="lead-wrap">
+      <article class="lead" id="lead">
+        <div id="leadKicker"></div>
+        <h2 id="leadTitle"></h2>
+        <p id="leadPlay"></p>
+        <p id="leadStat"></p>
+        <a class="lead-link" id="leadLink" href="/auction-insights">Read the full call &rarr;</a>
+        <div class="lead-also" id="leadAlso"></div>
+        <div class="lead-foot">
+          <span class="lead-date" id="leadDate"></span>
+          <span class="lead-nav"><span id="leadDots"></span>
+            <button id="leadPrev" aria-label="Previous story">&#8249;</button>
+            <button id="leadNext" aria-label="Next story">&#8250;</button>
+          </span>
+        </div>
+      </article>
+      <aside class="rail"><h3>Top Headlines</h3><ul id="railList"></ul></aside>
+    </div>
+    <div class="pos-grid" id="posGrid" style="margin-top:22px"></div>
+  </section>
+
+  <!-- ─────────── allocation ─────────── -->
+  <section class="sec" id="allocation">
+    <div class="sec-head">
+      <h2>Asset Allocation</h2>
+      <span class="sh-note">How to spread $200 across a roster, and what the last dollar is really worth.</span>
+    </div>
+    <div class="alloc-grid">
+      <div class="alloc"><h3><a href="/auction-budget-allocation">Budget Allocation</a></h3><p>How much of your $200 belongs in each roster slot, and the spend shapes that actually win auctions.</p></div>
+      <div class="alloc"><h3><a href="/auction-nomination-strategy">Nomination Strategy</a></h3><p>Who to throw out early, when to bleed the rich teams, and how to steer the room away from your targets.</p></div>
+      <div class="alloc"><h3><a href="/dollar-endgame-handcuffs">The $1 Endgame</a></h3><p>The last six roster spots decide more seasons than the first two. How to win the dollar-player phase.</p></div>
+      <div class="alloc"><h3><a href="/auctiondraft?screen=board">The Live Planner</a></h3><p>Your budget, your scoring, every opponent's remaining money, and the exact lineup your dollars still buy.</p></div>
+    </div>
+  </section>
+
+  <!-- ─────────── camp desk ─────────── -->
+  <section class="sec" id="camp">
+    <div class="sec-head">
+      <h2>Camp &amp; Preseason</h2>
+      <span class="sh-note" id="campNote"></span>
+    </div>
+    <div class="camp">
+      <article class="camp-feat" id="campFeat"></article>
+      <ul class="camp-list" id="campList"></ul>
+    </div>
+  </section>
 
   <div class="tools-band">
-    <span class="tb-text"><b>Draft night is the deadline.</b> Free expert values in 60 seconds — or unlock your league&rsquo;s full custom values, the live Auction Manager, and the AI Value Coach for a one-time $9.99.</span>
+    <span class="tb-text"><b>Draft night is the deadline.</b> Free expert values in 60 seconds &mdash; or unlock your league&rsquo;s full custom values, the live Auction Manager, and the AI Value Coach for a one-time $9.99.</span>
     <span class="tb-ctas">
       <a class="tb-btn gold" href="/auctiondraft?screen=cheat">Build my free cheat sheet</a>
       <a class="tb-btn red" href="/auctiondraft?screen=board">Open the Auction Manager</a>
@@ -237,13 +352,13 @@ img{max-width:100%}
 </main>
 
 <footer class="foot"><div class="wrap">
-  <a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
-  <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+  <a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#4d545d">Admin</a>
+  <span class="foot-legal">Projections and dollar values are Iron Tuna&rsquo;s own model, built from our projection set and a standard 12-team, $200, full-PPR league. They are not average draft position and not a survey of any market. Change your league settings in the app and every number on this page&rsquo;s tools recalculates.</span>
 </div></footer>
-
 <script>
 var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a top-tier fantasy QB","pos":"QB","view":"Overpriced","viewCls":"over","play":"Only buy if he falls into the Herbert tier.","stat":"-4% to -7% versus an elite-QB price","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-1"},{"title":"Miami is the most fragile fantasy ecosystem in football","pos":"Market","view":"Overpriced","viewCls":"over","play":"Treat Miami outside Achane as a mostly avoid situation in redraft.","stat":"-10% to -15% team passing expectation versus league median","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-2"},{"title":"Bijan Robinson is still a smash talent, but his market no longer leaves room for hidden upside","pos":"RB","view":"Overpriced","viewCls":"over","play":"Excellent pick, not an exploitable inefficiency.","stat":"-1% to +4% versus price","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-3"},{"title":"Jaylen Waddle is a major fantasy winner from moving to Denver","pos":"WR","view":"Underpriced","viewCls":"under","play":"Strong upside WR2 target.","stat":"+12% to +18% versus price if the market is still anchored to damaged Miami context","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-4"},{"title":"Trey McBride is one of the few expensive tight ends still likely to return value","pos":"TE","view":"Underpriced","viewCls":"under","play":"Pay up if you want a weekly structural edge.","stat":"+5% to +10% versus price because the role is truly elite","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-5"},{"title":"Drake Maye is the best elite-QB value","pos":"QB","view":"Underpriced","viewCls":"under","play":"Aggressively target in round structures where he goes after Allen/Lamar/Hurts.","stat":"+6% to +10% versus current price","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-1"},{"title":"New England became a classic year-three quarterback breakout setup in one offseason","pos":"Market","view":"Underpriced","viewCls":"under","play":"The Patriots are one of the best stackable offenses in fantasy.","stat":"+5% to +8% team-pass expectation relative to market conservatism","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-2"},{"title":"De’Von Achane is being supported almost entirely by talent rather than environment","pos":"RB","view":"Overpriced","viewCls":"over","play":"Draft for ceiling, but understand the offense can collapse around him.","stat":"-4% to -8% versus if he were in the 2025 Miami environment","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-3"},{"title":"CeeDee Lamb remains elite but is less likely to monopolize the offense with George Pickens still there","pos":"WR","view":"Near fair value","viewCls":"fair","play":"Near market, not a screaming value.","stat":"slightly more efficiency, slightly less pure volume","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-4"},{"title":"Isaiah Likely is the best late-round TE target","pos":"TE","view":"Underpriced","viewCls":"under","play":"One of the best cheap TE targets in the player pool.","stat":"+12% to +18% versus late-round cost","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-5"},{"title":"Josh Allen remains the safest overall QB1, but not the best pure value","pos":"QB","view":"Underpriced","viewCls":"under","play":"Draft him if you want floor dominance, not because he is discounted.","stat":"+0% to +4% versus price","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-1"},{"title":"Arizona is the clearest macro fade because the offense got worse and the schedule got harder","pos":"Market","view":"Overpriced","viewCls":"over","play":"Draft Trey McBride because he can beat team weakness, but haircut the rest.","stat":"-5% to -10% to broad Cardinals scoring environment","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-2"},{"title":"Jahmyr Gibbs is appropriately expensive","pos":"RB","view":"Overpriced","viewCls":"over","play":"Pay up if you want stability, but do not expect a big discount.","stat":"-1% to +3% versus price","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-3"},{"title":"Puka Nacua is expensive and still deserves it","pos":"WR","view":"","viewCls":"","play":"No need to galaxy-brain fade.","stat":"0% to +5% versus market","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-4"},{"title":"Tyler Warren is one of the best breakout TE values","pos":"TE","view":"Underpriced","viewCls":"under","play":"Priority target if you miss McBride/Bowers.","stat":"+10% to +14% versus price","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-5"},{"title":"Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye","pos":"QB","view":"Near fair value","viewCls":"fair","play":"Draft, but prefer him only if he slips.","stat":"-2% to -5% versus market if drafted as a clear top-two QB","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-1"},{"title":"James Cook is one of the best prices on the board","pos":"RB","view":"Underpriced","viewCls":"under","play":"Aggressively target in round-two or round-three builds.","stat":"+8% to +12% versus price","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-2"},{"title":"Ashton Jeanty has one of the widest and most attractive rookie ranges in years","pos":"RB","view":"Overpriced","viewCls":"over","play":"Clear target, but avoid overleveraging at ceiling price.","stat":"+10% to +18% if he takes more of the Raiders’ high-value touches than projected","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-3"},{"title":"DJ Moore is a big winner in Buffalo","pos":"WR","view":"Underpriced","viewCls":"under","play":"One of my favorite WR targets outside the top tier.","stat":"+10% to +14% versus price if health holds","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-4"},{"title":"Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling","pos":"WR","view":"Underpriced","viewCls":"under","play":"Great anchor in full PPR, less urgent in standard.","stat":"fair to slightly positive at price","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-5"},{"title":"The 2026 PUP return-window change slightly increases stash value","pos":"Market","view":"Underpriced","viewCls":"under","play":"Be more aggressive with shallow-bench IR/PUP specs.","stat":"+5% to +10% roster utility for early-season stashes","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-1"},{"title":"Detroit’s offense gets the single cleanest schedule signal in the league","pos":"Market","view":"Underpriced","viewCls":"under","play":"Do not fade Gibbs, Amon-Ra, or Jameson on “too expensive” schedule arguments.","stat":"+2% to +4% to Lions pass-catcher and RB expectation versus neutral schedule","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-2"},{"title":"The Rams’ late-season schedule is a hidden playoff risk","pos":"Market","view":"Overpriced","viewCls":"over","play":"Prefer Puka and Stafford more than ancillary Rams in managed leagues.","stat":"-1.0 to -1.8 fantasy points per game in playoff weeks for volatile Rams pieces","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-3"},{"title":"Trevor Lawrence is still one of the cleanest bounce-forward bets","pos":"QB","view":"Underpriced","viewCls":"under","play":"Target as a post-elite QB with top-five upside.","stat":"+5% to +9% versus current draft cost if the volume stays high","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-4"},{"title":"Arizona’s quarterback downgrade actually strengthens McBride’s target-floor case","pos":"TE","view":"Overpriced","viewCls":"over","play":"Best in full PPR.","stat":"catch floor intact, TD ceiling somewhat capped","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-5"},{"title":"Cleveland’s team environment should improve more than the public thinks","pos":"Market","view":"Underpriced","viewCls":"under","play":"Target Browns as a secondary breakout offense, especially cheaper pieces.","stat":"+6% to +9% offense-level efficiency versus 2025","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-1"},{"title":"New York Giants volume is likely to shift from three-WR spread to heavier TE/RB personnel","pos":"Market","view":"Underpriced","viewCls":"under","play":"Upweight Isaiah Likely and backs, slightly downweight secondary Giants WRs.","stat":"WR target concentration drops slightly; TE and RB route value rises","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-2"},{"title":"Allen’s path to another QB1 finish now runs more through efficiency than raw rushing expansion","pos":"QB","view":"","viewCls":"","play":"Rank him first, but do not expect a major rushing spike.","stat":"his median is intact, but ceiling is more +3 passing TDs than +100 rushing yards","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-3"},{"title":"Tennessee’s offense should throw deeper in 2026","pos":"Market","view":"Underpriced","viewCls":"under","play":"Favor Titans WR spike-week bets over “safe floor” builds.","stat":"+0.8 to +1.5 aDOT-related boom weeks for Titans WRs, with added volatility","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-4"},{"title":"Klint Kubiak’s arrival is mildly positive for Bowers because the Raiders need easy middle-of-field offense","pos":"TE","view":"Underpriced","viewCls":"under","play":"Slight upgrade versus static-rank assumptions.","stat":"","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-5"},{"title":"Buffalo combines elite QB play, top-tier line play, and a major WR upgrade","pos":"Market","view":"Underpriced","viewCls":"under","play":"Be willing to stack Bills more aggressively than market norms.","stat":"+4% to +6% passing efficiency spillover across the offense","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-1"},{"title":"Maye’s 2025 efficiency profile was not fluky","pos":"QB","view":"","viewCls":"","play":"Use him as your preferred premium QB spend after Allen.","stat":"another 300-plus fantasy-point season is the base case","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-2"},{"title":"Denver has one of the cleanest offensive-line and schedule combinations for fantasy","pos":"Market","view":"Near fair value","viewCls":"fair","play":"Lean into Denver receivers and ancillary backs at fair prices.","stat":"+3% to +6% to Bo Nix and Broncos skill-player efficiency","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-3"},{"title":"Kyren’s hard schedule amplifies the risk of smaller volume","pos":"RB","view":"Overpriced","viewCls":"over","play":"Take Kyren less in managed leagues than in best ball.","stat":"-0.5 FPPG or so from environment","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-4"},{"title":"Loveland’s biggest hidden drag is schedule irregularity, not target competition","pos":"TE","view":"Underpriced","viewCls":"under","play":"Slightly better in best ball than managed redraft.","stat":"","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-5"},{"title":"The Jets’ schedule opens softer than the market is pricing","pos":"Market","view":"Underpriced","viewCls":"under","play":"Front-load Jets in best-ball and early-season DFS.","stat":"front-half offensive boost, especially for startable Jets in September","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-1"},{"title":"Daniels benefits from Washington’s offensive-line investment in Laremy Tunsil","pos":"QB","view":"Overpriced","viewCls":"over","play":"Maintain high upside exposure, especially stacked with Terry or Okonkwo.","stat":"+0.3 to +0.7 YPA and better sack avoidance","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-2"},{"title":"Philadelphia’s passing tree got narrower after the A.J. Brown trade, but the schedule got friendlier","pos":"Market","view":"Underpriced","viewCls":"under","play":"Treat Eagles receivers as role-up bets, not offense-up bets.","stat":"DeVonta Smith and Dallas Goedert gain target share, but overall passing efficiency modestly falls","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-3"},{"title":"Dallas’ passing efficiency should keep Javonte’s touchdown odds healthy","pos":"RB","view":"Near fair value","viewCls":"fair","play":"Neutral to slightly positive at fair mid-round price.","stat":"modest TD expectation upside despite hard schedule","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-4"},{"title":"Drake London is one of the best WR values on the board","pos":"WR","view":"Underpriced","viewCls":"under","play":"Strong target in round-two builds.","stat":"+8% to +12% versus price","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-5"},{"title":"Chicago’s 2026 schedule creates unusual weekly-prep volatility","pos":"Market","view":"Overpriced","viewCls":"over","play":"Draft Bears talent, but expect more week-to-week variance than rankings imply.","stat":"small downgrade to fragile rookies and secondary pieces, little effect on stars","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-1"},{"title":"Hurts’ favorable schedule prevents a stronger fade","pos":"QB","view":"Near fair value","viewCls":"fair","play":"Treat Hurts as appropriately priced, not undervalued.","stat":"schedule gives back roughly half the passing downgrade","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-2"},{"title":"Dallas Goedert is a direct beneficiary of the A.J. Brown trade","pos":"TE","view":"Underpriced","viewCls":"under","play":"Strong mid-round TE target in full PPR.","stat":"+8% to +12% versus prior target baselines","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-3"},{"title":"Blake Corum is the most important handcuff-plus back in fantasy","pos":"RB","view":"Underpriced","viewCls":"under","play":"Priority target wherever Kyren is expensive.","stat":"+15% to +25% versus late-round price if workload even partially equalizes","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-4"},{"title":"Rome Odunze is one of the best breakout WR bets in fantasy","pos":"WR","view":"Underpriced","viewCls":"under","play":"Priority target in the WR2/WR3 range.","stat":"+12% to +18% versus price","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-5"},{"title":"Green Bay’s late-season home weather is a real hidden edge","pos":"Market","view":"Overpriced","viewCls":"over","play":"Bump Lambeau-based Packers in fantasy playoff tiebreakers.","stat":"modest passing downgrade for visiting warm-weather teams and a slight run-game boost for Green Bay","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-1"},{"title":"Purdy’s weapon room is stronger but target competition is real","pos":"QB","view":"Underpriced","viewCls":"under","play":"Buy Purdy more than individual non-Evans ancillary receivers.","stat":"higher efficiency, slightly lower concentration","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-2"},{"title":"Harold Fannin Jr. is exactly the sort of second-wave tight end to buy in deeper leagues","pos":"TE","view":"Underpriced","viewCls":"under","play":"","stat":"","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-3"},{"title":"Kenneth Walker is one of the biggest team-change winners in fantasy","pos":"RB","view":"Underpriced","viewCls":"under","play":"Strong target if the market has not fully internalized the landing spot.","stat":"+10% to +15% versus old-team expectation","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-4"},{"title":"Romeo Doubs’ signing matters because it raises New England’s pass-game floor, not because it crushes A.J. Brown","pos":"WR","view":"Underpriced","viewCls":"under","play":"Stack Maye/Brown freely.","stat":"offense-wide efficiency positive, small target-share negative to secondary Patriots","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-5"},{"title":"The anytime onside-kick declaration rule marginally helps trailing pass volume","pos":"Market","view":"","viewCls":"","play":"Ignore in projections, but it slightly raises spike-week tail outcomes.","stat":"tiny league-wide effect, biggest for elite QBs in negative script","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-1"},{"title":"Justin Herbert is the best midrange QB value","pos":"QB","view":"Underpriced","viewCls":"under","play":"Target as the ideal balance of floor and discount.","stat":"+8% to +12% versus market","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-2"},{"title":"Kraft gets a slight late-season bump from Green Bay weather context","pos":"TE","view":"Underpriced","viewCls":"under","play":"Subtle playoff tiebreaker upgrade.","stat":"more red-zone and short-area emphasis late in the year","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-3"},{"title":"Baltimore’s loss of Ricard, Likely, and Linderbaum is the first meaningful structural hit to Henry’s fantasy value in a while","pos":"RB","view":"Overpriced","viewCls":"over","play":"Take him, but downgrade slightly against younger elites.","stat":"-2% to -5% rushing efficiency and short-yardage conversion risk","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-4"},{"title":"Tetairoa McMillan remains a good player in a less obvious team context","pos":"WR","view":"Near fair value","viewCls":"fair","play":"Take when he falls; do not force.","stat":"fair price with moderate upside","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-5"},{"title":"The Ravens lost hidden support structure on offense","pos":"Market","view":"","viewCls":"","play":"Still draft stars, but do not overproject Ravens role players.","stat":"slight efficiency drag on Lamar/Henry/Andrews relative to 2025 peak usage","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-1"},{"title":"Matthew Stafford is expensive for a non-rushing QB, but the case is real","pos":"QB","view":"Underpriced","viewCls":"under","play":"Fine in best ball, slightly less appealing in managed leagues because of the closing schedule.","stat":"+0% to +4% versus price in season-long, but lower playoff comfort","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-2"},{"title":"Mark Andrews remains touchdown-reliant","pos":"TE","view":"Near fair value","viewCls":"fair","play":"Better in TE-premium and TD-heavy formats than standard PPR.","stat":"fair in standard, slightly weak in full PPR","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-3"},{"title":"Barkley’s target environment can improve post-A.J. Brown","pos":"RB","view":"Near fair value","viewCls":"fair","play":"Neutral overall, but less exciting than his name value suggests.","stat":"small reception boost, modest touchdown-rate decline","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-4"},{"title":"Deebo Samuel in Washington is still a scheme-created weekly flex, not a true target king","pos":"WR","view":"Underpriced","viewCls":"under","play":"Better in best ball.","stat":"boom/bust flex rather than dependable WR2","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-5"},{"title":"The 49ers became more top-heavy at WR","pos":"Market","view":"Underpriced","viewCls":"under","play":"Prefer best-ball over managed redraft for secondary 49ers pass-catchers.","stat":"more efficient passing, less certainty for individual target-share monsters outside maybe Evans in…","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-1"},{"title":"Jordan Love is quietly viable because the Packers’ late-season conditions favor their offense","pos":"QB","view":"Near fair value","viewCls":"fair","play":"Acceptable late-round tournament QB.","stat":"small playoff boost","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-2"},{"title":"Likely’s outlook is stronger in full PPR than standard because his edge comes from route volume and target design, not guaranteed touchdowns","pos":"TE","view":"Underpriced","viewCls":"under","play":"Bump in full PPR.","stat":"","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-3"},{"title":"David Montgomery is vulnerable to subtle erosion","pos":"RB","view":"Overpriced","viewCls":"over","play":"Fade slightly unless he falls.","stat":"-4% to -8% versus price if drafters assume unchanged efficiency","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-4"},{"title":"Buffalo’s WR room is now good enough that Allen stacks should be diversified, not concentrated only on one pass-catcher","pos":"WR","view":"","viewCls":"","play":"Mix DJ Moore and Dalton Kincaid/Dawson Knox around Allen exposures.","stat":"flatter weekly distribution","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-5"},{"title":"Kansas City is no longer a pure pass funnel","pos":"Market","view":"","viewCls":"","play":"Boost efficiency pieces, slightly lower assumed volume for pass-catchers.","stat":"more QB rushing and more efficient early-down rushing than recent KC teams, with a small cap on raw…","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-1"},{"title":"Cam Ward is interesting mainly because Brian Daboll should unlock more deep attempts","pos":"QB","view":"Underpriced","viewCls":"under","play":"Superflex stash, not standard redraft starter.","stat":"+8% to +12% versus last year, still volatile","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-2"},{"title":"T.J. Hockenson remains a risky rebound candidate","pos":"TE","view":"Overpriced","viewCls":"over","play":"Avoid as a primary tight end in shallow leagues.","stat":"below-market confidence until health and role stabilize","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-3"},{"title":"Offensive-line dispersion matters more this year because so many star skill players changed teams","pos":"Market","view":"Near fair value","viewCls":"fair","play":"","stat":"widen YPC/YPA expectations more aggressively than usual by line quality","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-4"},{"title":"Justin Fields in Kansas City is more interesting for real football than traditional redraft unless he actually starts","pos":"QB","view":"","viewCls":"","play":"Ignore in shallow redraft, monitor in superflex and deep best ball.","stat":"situational rushing splash only, role unspecified","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-5"}];
-var REPORTS = [{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc":"Auction Watch for July 22, 2026: Zach Charbonnet's ACL timeline and Jadarian Price's opportunity, Sam LaPorta's return, Garrett Wilson's value ADP, DK Metcalf's target risk, Jeremiyah Love and Emmett Johnson as rookie RB plays.","url":"/auction-watch-2026-07-22"},{"date":"2026-07-21","title":"Auction Watch: July 21, 2026","desc":"Auction Watch for July 21, 2026: Zach Charbonnet's ACL timeline and Jadarian Price's opportunity, Sam LaPorta's return, Garrett Wilson's value ADP, DK Metcalf's target risk, Jeremiyah Love and Emmett Johnson as rookie RB plays.","url":"/auction-watch-2026-07-21"},{"date":"2026-07-20","title":"Auction Watch: July 20, 2026","desc":"Auction Watch for July 20, 2026: Adonai Mitchell's ADP surge, Malik Nabers on PUP, Quinshon Judkins as a cheap RB2, Stefon Diggs unsigned, Alvin Kamara's restructure, and Cam Skattebo's rehab.","url":"/auction-watch-2026-07-20"},{"date":"2026-07-15","title":"Auction Watch: July 15, 2026","desc":"Auction Watch for July 15, 2026: A.J. Brown's WR1 price in New England, Drake Maye's QB1 case, Brandon Aiyuk's reserve-list fade, and Malik Nabers opening Giants camp on PUP.","url":"/auction-watch-2026-07-15"},{"date":"2026-07-12","title":"Auction Watch: July 12, 2026","desc":"Auction Watch for July 12, 2026: A.J. Brown's top-16 ADP in New England, Jeremiyah Love's record rookie deal in Arizona, Adonai Mitchell's camp-driven rise with the Jets, Rachaad White's PPR role in Washington, and Denver's three-back committee.","url":"/auction-watch-2026-07-12"},{"date":"2026-07-11","title":"Auction Watch: July 11, 2026","desc":"Auction Watch for July 11, 2026: A.J. Brown's trade to New England, George Kittle's Achilles recovery, Jacksonville's crowded backfield, Cam Skattebo's injury discount, Rachaad White's role in Washington, and Adonai Mitchell's slide to WR3.","url":"/auction-watch-2026-07-11"},{"date":"2026-07-09","title":"Auction Watch: July 9, 2026","desc":"Auction Watch for July 9, 2026: Rashee Rice trending toward a full camp, Adonai Mitchell's ADP climb, Alec Pierce's camp doubt, Malik Nabers still behind schedule, and Chris Olave clearing his blood thinners.","url":"/auction-watch-2026-07-09"},{"date":"2026-07-05","title":"Auction Watch: July 5, 2026","desc":"Auction Watch for July 5, 2026: bid modestly on Rachaad White in the Commanders committee, fade Malik Nabers at his current price, buy Chris Olave after his medical clearance, wait on Patrick Mahomes, and pay up for Jaxon Smith-Njigba.","url":"/auction-watch-2026-07-05"},{"date":"2026-07-04","title":"Auction Watch: July 4, 2026","desc":"Auction Watch for July 4, 2026: buy Luther Burden III with 166 Bears targets vacated, pay up for Emeka Egbuka as the Bucs WR1, grab Josh Downs at a discount after the Pittman trade, and bid on Jonathon Brooks before his price climbs.","url":"/auction-watch-2026-07-04"},{"date":"2026-07-03","title":"Auction Watch: July 3, 2026","desc":"Auction Watch for July 3, 2026: fade Kaleb Johnson after the Rico Dowdle signing, buy Dowdle at his RB3 price, hold off on Zach Charbonnet, stash Tank Dell for a dollar, and pay up for a healthy Garrett Wilson.","url":"/auction-watch-2026-07-03"},{"date":"2026-07-02","title":"Auction Watch: July 2, 2026","desc":"Auction Watch for July 2, 2026: buy Jonathon Brooks before his price climbs, pay PPR money for Rachaad White in Washington, discount Malik Nabers on Week 1 doubt, wait out Alvin Kamara, and cap bids on Bucky Irving.","url":"/auction-watch-2026-07-02"},{"date":"2026-07-01","title":"Auction Watch: July 1, 2026","desc":"Auction Watch for July 1, 2026: temper bids on Travis Etienne in New Orleans, grab Alvin Kamara late, pay committee prices for the Steelers backfield, stash Jonathon Brooks in Carolina, and budget premium money for Drake Maye.","url":"/auction-watch-2026-07-01"},{"date":"2026-06-29","title":"Auction Watch: June 29, 2026","desc":"Auction Watch for June 29, 2026: take Jahmyr Gibbs at the 1.01 after the Montgomery trade, trust A.J. Brown as a low end WR1 in New England, pay up for DeVonta Smith as the Eagles WR1, target Bhayshul Tuten in Jacksonville, buy Omarion Hampton as the Chargers lead back, and treat Rachaad White as a committee dart in Washington.","url":"/auction-watch-2026-06-29"},{"date":"2026-06-28","title":"Auction Watch: June 28, 2026","desc":"Auction Watch for June 28, 2026: pay up for DeVonta Smith as the Eagles WR1 after the A.J. Brown trade, discount Malik Nabers after knee surgery, target Jahmyr Gibbs as Detroit's feature back under Drew Petzing, navigate Washington's Croskey-Merritt and Rachaad White committee, and grab Jonathon Brooks as a cheap Carolina dart.","url":"/auction-watch-2026-06-28"},{"date":"2026-06-26","title":"Auction Watch: June 26, 2026","desc":"Auction Watch for June 26, 2026: target Josh Downs as Indianapolis reshapes its receiver room, Rachaad White settling in with Jayden Daniels, George Pickens off holdout watch, Matthew Golden inheriting Romeo Doubs targets, Ashton Jeanty as a Raiders workhorse, and Jonathon Brooks as a cheap Carolina dart.","url":"/auction-watch-2026-06-26"},{"date":"2026-06-25","title":"Auction Watch: June 25, 2026","desc":"Auction Watch for June 25, 2026: pay up for Chase Brown in Cincinnati, Travis Etienne leading New Orleans, DeVonta Smith as the new Eagles WR1 after the A.J. Brown trade, fading DK Metcalf in Pittsburgh, Rachaad White as a cheap PPR dart behind Jacory Croskey-Merritt, and injury risk on Alec Pierce.","url":"/auction-watch-2026-06-25"},{"date":"2026-06-24","title":"Auction Watch: June 24, 2026","desc":"Auction Watch for June 24, 2026: Emeka Egbuka's WR1 path in Tampa Bay, Bhayshul Tuten's committee risk in Jacksonville, fading Oronde Gadsden after the David Njoku signing, waiting on Aaron Rodgers, Greg Dulcich as a late tight end dart, and Jonathon Brooks as a cheap RB3.","url":"/auction-watch-2026-06-24"},{"date":"2026-06-23","title":"Auction Watch: June 23, 2026","desc":"Auction Watch for June 23, 2026: A.J. Brown's trade to New England, why to wait on Aaron Rodgers in Pittsburgh, Kenneth Walker III as Kansas City's lead back, Bhayshul Tuten atop Jacksonville's backfield, and Josh Downs' volume in Indianapolis.","url":"/auction-watch-2026-06-23"},{"date":"2026-06-22","title":"Auction Watch: June 22, 2026","desc":"Auction Watch for June 22, 2026: Bucky Irving's shoulder recovery and Kenneth Gainwell, Emeka Egbuka as the new Bucs WR1, Alec Pierce ascending in Indianapolis, Rachaad White's rising value in Washington, and a cheap Jonathon Brooks dart.","url":"/auction-watch-2026-06-22"},{"date":"2026-06-21","title":"Auction Watch: June 21, 2026","desc":"Auction Watch for June 21, 2026: Kenneth Walker's clear path in Kansas City, rookie Jeremiyah Love leading Arizona, fading James Conner, Rashee Rice's six-game suspension, Zach Charbonnet's ACL recovery, and a cheap Jonathon Brooks dart.","url":"/auction-watch-2026-06-21"},{"date":"2026-06-19","title":"Auction Watch: June 19, 2026","desc":"Auction Watch for June 19, 2026: A.J. Brown to New England, DeVonta Smith's new alpha role, Tucker Kraft's PUP timeline, Patrick Mahomes on track, and a split-backfield lottery play.","url":"/auction-watch-2026-06-19"}];
+var REPORTS = [{"date":"2026-07-26","title":"Auction Watch: July 26, 2026","desc":"Auction Watch for July 26, 2026: Drake Maye's rising price after the A.J. Brown trade, Malik Nabers' PUP-avoiding but risky rehab, Jonathon Brooks as an RB value, unsigned Stefon Diggs, and Alvin Kamara's restructured Saints deal.","url":"/auction-watch-2026-07-26"},{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc":"Auction Watch for July 22, 2026: Zach Charbonnet's ACL timeline and Jadarian Price's opportunity, Sam LaPorta's return, Garrett Wilson's value ADP, DK Metcalf's target risk, Jeremiyah Love and Emmett Johnson as rookie RB plays.","url":"/auction-watch-2026-07-22"},{"date":"2026-07-21","title":"Auction Watch: July 21, 2026","desc":"Auction Watch for July 21, 2026: Zach Charbonnet's ACL timeline and Jadarian Price's opportunity, Sam LaPorta's return, Garrett Wilson's value ADP, DK Metcalf's target risk, Jeremiyah Love and Emmett Johnson as rookie RB plays.","url":"/auction-watch-2026-07-21"},{"date":"2026-07-20","title":"Auction Watch: July 20, 2026","desc":"Auction Watch for July 20, 2026: Adonai Mitchell's ADP surge, Malik Nabers on PUP, Quinshon Judkins as a cheap RB2, Stefon Diggs unsigned, Alvin Kamara's restructure, and Cam Skattebo's rehab.","url":"/auction-watch-2026-07-20"},{"date":"2026-07-15","title":"Auction Watch: July 15, 2026","desc":"Auction Watch for July 15, 2026: A.J. Brown's WR1 price in New England, Drake Maye's QB1 case, Brandon Aiyuk's reserve-list fade, and Malik Nabers opening Giants camp on PUP.","url":"/auction-watch-2026-07-15"},{"date":"2026-07-12","title":"Auction Watch: July 12, 2026","desc":"Auction Watch for July 12, 2026: A.J. Brown's top-16 ADP in New England, Jeremiyah Love's record rookie deal in Arizona, Adonai Mitchell's camp-driven rise with the Jets, Rachaad White's PPR role in Washington, and Denver's three-back committee.","url":"/auction-watch-2026-07-12"},{"date":"2026-07-11","title":"Auction Watch: July 11, 2026","desc":"Auction Watch for July 11, 2026: A.J. Brown's trade to New England, George Kittle's Achilles recovery, Jacksonville's crowded backfield, Cam Skattebo's injury discount, Rachaad White's role in Washington, and Adonai Mitchell's slide to WR3.","url":"/auction-watch-2026-07-11"},{"date":"2026-07-09","title":"Auction Watch: July 9, 2026","desc":"Auction Watch for July 9, 2026: Rashee Rice trending toward a full camp, Adonai Mitchell's ADP climb, Alec Pierce's camp doubt, Malik Nabers still behind schedule, and Chris Olave clearing his blood thinners.","url":"/auction-watch-2026-07-09"},{"date":"2026-07-05","title":"Auction Watch: July 5, 2026","desc":"Auction Watch for July 5, 2026: bid modestly on Rachaad White in the Commanders committee, fade Malik Nabers at his current price, buy Chris Olave after his medical clearance, wait on Patrick Mahomes, and pay up for Jaxon Smith-Njigba.","url":"/auction-watch-2026-07-05"},{"date":"2026-07-04","title":"Auction Watch: July 4, 2026","desc":"Auction Watch for July 4, 2026: buy Luther Burden III with 166 Bears targets vacated, pay up for Emeka Egbuka as the Bucs WR1, grab Josh Downs at a discount after the Pittman trade, and bid on Jonathon Brooks before his price climbs.","url":"/auction-watch-2026-07-04"},{"date":"2026-07-03","title":"Auction Watch: July 3, 2026","desc":"Auction Watch for July 3, 2026: fade Kaleb Johnson after the Rico Dowdle signing, buy Dowdle at his RB3 price, hold off on Zach Charbonnet, stash Tank Dell for a dollar, and pay up for a healthy Garrett Wilson.","url":"/auction-watch-2026-07-03"},{"date":"2026-07-02","title":"Auction Watch: July 2, 2026","desc":"Auction Watch for July 2, 2026: buy Jonathon Brooks before his price climbs, pay PPR money for Rachaad White in Washington, discount Malik Nabers on Week 1 doubt, wait out Alvin Kamara, and cap bids on Bucky Irving.","url":"/auction-watch-2026-07-02"},{"date":"2026-07-01","title":"Auction Watch: July 1, 2026","desc":"Auction Watch for July 1, 2026: temper bids on Travis Etienne in New Orleans, grab Alvin Kamara late, pay committee prices for the Steelers backfield, stash Jonathon Brooks in Carolina, and budget premium money for Drake Maye.","url":"/auction-watch-2026-07-01"},{"date":"2026-06-29","title":"Auction Watch: June 29, 2026","desc":"Auction Watch for June 29, 2026: take Jahmyr Gibbs at the 1.01 after the Montgomery trade, trust A.J. Brown as a low end WR1 in New England, pay up for DeVonta Smith as the Eagles WR1, target Bhayshul Tuten in Jacksonville, buy Omarion Hampton as the Chargers lead back, and treat Rachaad White as a committee dart in Washington.","url":"/auction-watch-2026-06-29"},{"date":"2026-06-28","title":"Auction Watch: June 28, 2026","desc":"Auction Watch for June 28, 2026: pay up for DeVonta Smith as the Eagles WR1 after the A.J. Brown trade, discount Malik Nabers after knee surgery, target Jahmyr Gibbs as Detroit's feature back under Drew Petzing, navigate Washington's Croskey-Merritt and Rachaad White committee, and grab Jonathon Brooks as a cheap Carolina dart.","url":"/auction-watch-2026-06-28"},{"date":"2026-06-26","title":"Auction Watch: June 26, 2026","desc":"Auction Watch for June 26, 2026: target Josh Downs as Indianapolis reshapes its receiver room, Rachaad White settling in with Jayden Daniels, George Pickens off holdout watch, Matthew Golden inheriting Romeo Doubs targets, Ashton Jeanty as a Raiders workhorse, and Jonathon Brooks as a cheap Carolina dart.","url":"/auction-watch-2026-06-26"},{"date":"2026-06-25","title":"Auction Watch: June 25, 2026","desc":"Auction Watch for June 25, 2026: pay up for Chase Brown in Cincinnati, Travis Etienne leading New Orleans, DeVonta Smith as the new Eagles WR1 after the A.J. Brown trade, fading DK Metcalf in Pittsburgh, Rachaad White as a cheap PPR dart behind Jacory Croskey-Merritt, and injury risk on Alec Pierce.","url":"/auction-watch-2026-06-25"},{"date":"2026-06-24","title":"Auction Watch: June 24, 2026","desc":"Auction Watch for June 24, 2026: Emeka Egbuka's WR1 path in Tampa Bay, Bhayshul Tuten's committee risk in Jacksonville, fading Oronde Gadsden after the David Njoku signing, waiting on Aaron Rodgers, Greg Dulcich as a late tight end dart, and Jonathon Brooks as a cheap RB3.","url":"/auction-watch-2026-06-24"},{"date":"2026-06-23","title":"Auction Watch: June 23, 2026","desc":"Auction Watch for June 23, 2026: A.J. Brown's trade to New England, why to wait on Aaron Rodgers in Pittsburgh, Kenneth Walker III as Kansas City's lead back, Bhayshul Tuten atop Jacksonville's backfield, and Josh Downs' volume in Indianapolis.","url":"/auction-watch-2026-06-23"},{"date":"2026-06-22","title":"Auction Watch: June 22, 2026","desc":"Auction Watch for June 22, 2026: Bucky Irving's shoulder recovery and Kenneth Gainwell, Emeka Egbuka as the new Bucs WR1, Alec Pierce ascending in Indianapolis, Rachaad White's rising value in Washington, and a cheap Jonathon Brooks dart.","url":"/auction-watch-2026-06-22"},{"date":"2026-06-21","title":"Auction Watch: June 21, 2026","desc":"Auction Watch for June 21, 2026: Kenneth Walker's clear path in Kansas City, rookie Jeremiyah Love leading Arizona, fading James Conner, Rashee Rice's six-game suspension, Zach Charbonnet's ACL recovery, and a cheap Jonathon Brooks dart.","url":"/auction-watch-2026-06-21"},{"date":"2026-06-19","title":"Auction Watch: June 19, 2026","desc":"Auction Watch for June 19, 2026: A.J. Brown to New England, DeVonta Smith's new alpha role, Tucker Kraft's PUP timeline, Patrick Mahomes on track, and a split-backfield lottery play.","url":"/auction-watch-2026-06-19"}];
+var ANALYSIS = {"generatedFrom":"index.html valuation engine, default 12-team $200 auction","teams":12,"budget":200,"games":17,"lineup":[{"slot":"QB","name":"Dak Prescott","pos":"QB","team":"DAL","price":5,"ppg":17.3},{"slot":"RB1","name":"Jahmyr Gibbs","pos":"RB","team":"DET","price":70,"ppg":20.7},{"slot":"RB2","name":"Christian McCaffrey","pos":"RB","team":"SF","price":64,"ppg":20.3},{"slot":"WR1","name":"Chris Olave","pos":"WR","team":"NO","price":18,"ppg":13.1},{"slot":"WR2","name":"George Pickens","pos":"WR","team":"DAL","price":16,"ppg":12.9},{"slot":"TE","name":"Tucker Kraft","pos":"TE","team":"GB","price":3,"ppg":10.3},{"slot":"K","name":"Nick Folk","pos":"K","team":"ATL","price":2,"ppg":7.5},{"slot":"DEF","name":"Pittsburgh Steelers","pos":"DEF","team":"PIT","price":1,"ppg":9.6},{"slot":"FLEX","name":"Cam Skattebo","pos":"RB","team":"NYG","price":13,"ppg":13.7}],"spend":192,"ppg":125.4,"posCost":[{"pos":"RB","dollars":147,"share":77,"n":3},{"pos":"WR","dollars":34,"share":18,"n":2},{"pos":"QB","dollars":5,"share":3,"n":1},{"pos":"TE","dollars":3,"share":2,"n":1},{"pos":"K","dollars":2,"share":1,"n":1},{"pos":"DEF","dollars":1,"share":1,"n":1}],"cliffs":[{"pos":"RB","rank":3,"gap":2.3,"above":"Bijan Robinson","aboveTeam":"ATL","abovePpg":19.5,"abovePrice":61,"below":"Jonathan Taylor","belowTeam":"IND","belowPpg":17.2,"belowPrice":54},{"pos":"TE","rank":2,"gap":2,"above":"Brock Bowers","aboveTeam":"LV","abovePpg":14.2,"abovePrice":47,"below":"Colston Loveland","belowTeam":"CHI","belowPpg":12.2,"belowPrice":33},{"pos":"QB","rank":1,"gap":1.9,"above":"Josh Allen","aboveTeam":"BUF","abovePpg":21,"abovePrice":69,"below":"Jalen Hurts","belowTeam":"PHI","belowPpg":19.1,"belowPrice":61},{"pos":"WR","rank":4,"gap":1.4,"above":"Amon-Ra St. Brown","aboveTeam":"DET","abovePpg":17.6,"abovePrice":62,"below":"CeeDee Lamb","belowTeam":"DAL","belowPpg":16.1,"belowPrice":56}],"repl":[{"pos":"RB","starters":28,"replName":"Tony Pollard","replPpg":10.7,"topName":"Jahmyr Gibbs","topPpg":20.7,"edge":10},{"pos":"WR","starters":28,"replName":"Marvin Harrison Jr.","replPpg":11.2,"topName":"Puka Nacua","topPpg":18.9,"edge":7.7},{"pos":"TE","starters":16,"replName":"T.J. Hockenson","replPpg":9.4,"topName":"Trey McBride","topPpg":14.5,"edge":5.2},{"pos":"QB","starters":12,"replName":"Trevor Lawrence","replPpg":17.4,"topName":"Josh Allen","topPpg":21,"edge":3.6},{"pos":"K","starters":12,"replName":"Chase McLaughlin","replPpg":6.2,"topName":"Nick Folk","topPpg":7.5,"edge":1.3},{"pos":"DEF","starters":12,"replName":"Philadelphia Eagles","replPpg":8.9,"topName":"Chicago Bears","topPpg":9.7,"edge":0.8}],"flexWorth":12.4,"noFlexPpg":113,"playerCount":408};
 (function(){
   function unlocked(d){
     if (d === '2026-07-04') return true;
@@ -254,14 +369,149 @@ var REPORTS = [{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc
   function fmtDate(d){ var p = d.split('-'); return MONTHS[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; }
   function fmtShort(d){ var p = d.split('-'); return MONTHS[+p[1]-1].slice(0,3) + ' ' + (+p[2]); }
   function viewCls(s){ return s.viewCls === 'under' ? 'badge-under' : s.viewCls === 'over' ? 'badge-over' : 'badge-fair'; }
-  function esc(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+  function esc(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+  function slug(n){ return String(n).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+  // The roster strip columns are narrow, so long names get an initial.
+  function shortName(n, pos){
+    var w = String(n).split(/\s+/).filter(Boolean);
+    if (pos === 'DEF') return w[w.length-1];
+    if (w.length < 2 || n.length <= 12) return n;
+    return w[0][0] + '. ' + w.slice(1).join(' ');
+  }
+  function initials(n){
+    var w = String(n).split(/\s+/).filter(Boolean);
+    return ((w[0]||'')[0] || '') + ((w[w.length-1]||'')[0] || '');
+  }
+  // Photo slot. Drops in /players/<slug>.jpg when the file exists; until then the
+  // initials badge stands in, so a missing image never reads as broken.
+  function pfp(name, pos, big){
+    return '<span class="pfp' + (big ? ' lg' : '') + '" data-pos="' + esc(pos) + '" aria-hidden="true">' +
+      '<span>' + esc(initials(name)) + '</span>' +
+      '<img src="/players/' + slug(name) + '.jpg" alt="" loading="lazy" onerror="this.remove()">' +
+    '</span>';
+  }
+  var POS_COLOR = { QB:'var(--qb)', RB:'var(--rb)', WR:'var(--wr)', TE:'var(--te)', K:'var(--k)', DEF:'var(--def)' };
 
+  // ══════════════════════ the optimal roster ══════════════════════
+  var A = typeof ANALYSIS === 'object' && ANALYSIS ? ANALYSIS : null;
+  if (A && A.lineup && A.lineup.length) {
+    var rbSpend = (A.posCost.filter(function(x){ return x.pos === 'RB'; })[0] || {});
+    var top = A.lineup.slice().sort(function(a,b){ return b.price - a.price; });
+    document.getElementById('heroDek').innerHTML =
+      'Every legal combination of ' + A.playerCount + ' players was solved against a $' + A.budget + ' budget in a ' +
+      A.teams + '-team league. Nothing here is a rule of thumb: this is the highest-scoring starting lineup the money can buy, at <b>' +
+      A.ppg + ' points a game</b> for <b>$' + A.spend + '</b>. It puts <b>' + (rbSpend.share || 0) +
+      '% of the budget on running backs</b> and fills quarterback, tight end, kicker and defence for <b>$' +
+      (A.lineup.filter(function(l){ return ['QB','TE','K','DEF'].indexOf(l.pos) >= 0; }).reduce(function(a,l){ return a + l.price; }, 0)) +
+      ' combined</b>.';
+
+    document.getElementById('rosterStrip').innerHTML = A.lineup.map(function(l){
+      return '<div class="rs" data-pos="' + esc(l.pos) + '">' +
+        '<div class="rs-slot">' + esc(l.slot) + '</div>' +
+        '<div class="rs-name">' + esc(shortName(l.name, l.pos)) + '</div>' +
+        '<div class="rs-team">' + esc(l.team) + '</div>' +
+        '<div class="rs-price">$' + l.price + '</div>' +
+        '<div class="rs-ppg">' + l.ppg + ' pts/gm</div>' +
+      '</div>';
+    }).join('');
+
+    document.getElementById('spendBar').innerHTML = A.posCost.map(function(c){
+      return '<span class="spend-seg" style="width:' + (c.dollars / A.spend * 100) + '%;background:' + (POS_COLOR[c.pos] || 'var(--ink-3)') + '"></span>';
+    }).join('');
+    document.getElementById('spendKey').innerHTML = A.posCost.map(function(c){
+      return '<span><i style="background:' + (POS_COLOR[c.pos] || 'var(--ink-3)') + '"></i>' + esc(c.pos) + ' $' + c.dollars + ' &middot; ' + c.share + '%</span>';
+    }).join('');
+    document.getElementById('heroMeta').innerHTML =
+      '<span>' + A.playerCount + ' players considered</span>' +
+      '<span>' + A.teams + '-team &middot; $' + A.budget + ' &middot; full PPR</span>' +
+      '<span>Bench held at minimum bid</span>';
+
+    // side panels: the two priciest buys, then the FLEX finding
+    var side = '';
+    var blurbs = [
+      'The single biggest cheque the build writes, and it still clears: no other dollar in the pool returns as much.',
+      'The second anchor. Two backs take ' + (rbSpend.share || 0) + '% of the budget between them, and the model does not blink.'
+    ];
+    top.slice(0, 2).forEach(function(l, i){
+      side += '<div class="mini" style="display:flex;gap:14px;align-items:center">' + pfp(l.name, l.pos, true) +
+        '<div><h3 style="margin:0">' + esc(l.name) + '</h3>' +
+        '<p style="margin-top:2px">' + esc(l.pos) + ' &middot; ' + esc(l.team) + ' &middot; <b style="color:' + (POS_COLOR[l.pos]||'') + '">$' + l.price + '</b> &middot; ' + l.ppg + ' pts/gm<br>' +
+        esc(blurbs[i] || '') + '</p></div></div>';
+    });
+    side += '<div class="mini"><h3>What the FLEX is worth</h3>' +
+      '<div class="big">+' + A.flexWorth.toFixed(1) + '<span class="unit">pts / game</span></div>' +
+      '<p>Removing the FLEX slot and re-solving drops the optimal lineup from ' + A.ppg + ' to ' + A.noFlexPpg +
+      ' points a game. That one slot is the difference a whole draft strategy is usually built around.</p></div>';
+    document.getElementById('heroSide').innerHTML = side;
+
+    // ── tier cliffs + replacement level ──
+    var cc = '';
+    cc += '<div class="card"><h3>The cliffs</h3>' +
+      '<p>Where the drop from one player to the next is steepest &mdash; the last seat in the room worth paying up for.</p>' +
+      A.cliffs.map(function(c){
+        return '<div class="cliff">' +
+          '<span class="cliff-pos" data-pos="' + esc(c.pos) + '">' + esc(c.pos) + '</span>' +
+          '<span class="cliff-body">After <b>' + esc(c.above) + '</b> at ' + esc(c.pos) + esc(String(c.rank)) +
+          ' ($' + c.abovePrice + ', ' + c.abovePpg + ')<br><span style="color:var(--ink-3)">next up: ' + esc(c.below) + ' &middot; ' + c.belowPpg + ' pts/gm</span></span>' +
+          '<span class="cliff-drop">&minus;' + c.gap.toFixed(1) + '</span>' +
+        '</div>';
+      }).join('') +
+      '<p class="foot-note">Points per game at standard full-PPR scoring. Ranks are within position.</p></div>';
+
+    var maxEdge = Math.max.apply(null, A.repl.map(function(r){ return r.edge; }));
+    cc += '<div class="card"><h3>Why the money goes to running back</h3>' +
+      '<p>Value is the gap between the best starter and the <b>last</b> starter your league will roster. Where that gap is small, paying up buys nothing.</p>' +
+      '<div class="bars">' + A.repl.map(function(r){
+        return '<div class="bar-row">' +
+          '<span class="bar-pos">' + esc(r.pos) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="width:' + (r.edge / maxEdge * 100) + '%;background:' + (POS_COLOR[r.pos] || 'var(--ink-3)') + '"></span></span>' +
+          '<span class="bar-val">' + r.edge + '</span>' +
+        '</div>';
+      }).join('') + '</div>' +
+      '<p class="foot-note">Points per game between the top player and the ' + A.repl[0].starters +
+      'th-rostered back &mdash; the replacement line in a ' + A.teams + '-team league. Elite defence beats a waiver defence by ' +
+      A.repl[A.repl.length-1].edge + ' a game, which is why the build spends $1 there.</p></div>';
+
+    cc += '<div class="card"><h3>The shape of a winning $200</h3>' +
+      '<p>The optimum is not balanced. It buys <b>' + (rbSpend.n || 0) + ' running backs for $' + (rbSpend.dollars || 0) +
+      '</b> and refuses to pay retail anywhere the replacement line is close behind.</p>' +
+      '<div class="bars">' + A.posCost.map(function(c){
+        return '<div class="bar-row">' +
+          '<span class="bar-pos">' + esc(c.pos) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="width:' + c.share + '%;background:' + (POS_COLOR[c.pos] || 'var(--ink-3)') + '"></span></span>' +
+          '<span class="bar-val">$' + c.dollars + '</span>' +
+        '</div>';
+      }).join('') + '</div>' +
+      '<p class="foot-note">Your league is not this league. Set your scoring and roster in the app and the whole solution moves.</p>' +
+      '<a class="mod-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>';
+    document.getElementById('cliffCards').innerHTML = cc;
+  }
+
+  // ══════════════════════ odds / consensus desks ══════════════════════
+  // These render only when real third-party data is present in ANALYSIS. There is
+  // deliberately no fallback copy: an empty desk stays hidden rather than shipping
+  // an invented number. See tools/build-front-analysis.mjs for the data contract.
+  if (A && A.edge && A.edge.cards && A.edge.cards.length) {
+    document.getElementById('edgeTitle').textContent = A.edge.title || 'Where we disagree';
+    document.getElementById('edgeNote').textContent = A.edge.note || '';
+    document.getElementById('edgeCards').innerHTML = A.edge.cards.map(function(c){
+      return '<div class="card"><h3>' + esc(c.heading) + '</h3><p>' + esc(c.body) + '</p>' +
+        (c.rows || []).map(function(r){
+          return '<div class="cliff"><span class="cliff-pos" data-pos="' + esc(r.pos || '') + '">' + esc(r.pos || '') + '</span>' +
+            '<span class="cliff-body"><b>' + esc(r.name) + '</b><br><span style="color:var(--ink-3)">' + esc(r.detail) + '</span></span>' +
+            '<span class="cliff-drop">' + esc(r.delta) + '</span></div>';
+        }).join('') +
+        (c.source ? '<p class="foot-note">Source: ' + esc(c.source) + '</p>' : '') + '</div>';
+    }).join('');
+    document.getElementById('edge').hidden = false;
+  }
+
+  // ══════════════════════ insights ══════════════════════
   var live = STORIES.filter(function(s){ return unlocked(s.date); });
   live.sort(function(a,b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
   var latestDate = live.length ? live[0].date : null;
   var leadPool = live.filter(function(s){ return s.date === latestDate; });
 
-  // ── rotating lead ──
   var li = 0, timer = null;
   function renderLead(){
     if (!leadPool.length) return;
@@ -274,12 +524,11 @@ var REPORTS = [{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc
     document.getElementById('leadStat').innerHTML = s.stat ? 'Projected effect: <b>' + esc(s.stat) + '</b>' : '';
     document.getElementById('leadLink').setAttribute('href', s.url);
     document.getElementById('leadDate').textContent = fmtDate(s.date) + ' drop · story ' + ((li % leadPool.length) + 1) + ' of ' + leadPool.length;
-    var also = document.getElementById('leadAlso');
     var ah = '<span class="la-label">Also in this drop</span><ul>';
     leadPool.forEach(function(o, i){
       ah += '<li><a class="' + (i === li % leadPool.length ? 'on' : '') + '" href="' + o.url + '">' + esc(o.title) + '</a></li>';
     });
-    also.innerHTML = ah + '</ul>';
+    document.getElementById('leadAlso').innerHTML = ah + '</ul>';
     var dots = document.getElementById('leadDots');
     dots.innerHTML = '';
     leadPool.forEach(function(_, i){
@@ -298,7 +547,6 @@ var REPORTS = [{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc
   leadEl.addEventListener('mouseleave', restart);
   renderLead(); restart();
 
-  // ── top headlines rail: newest stories beyond the lead drop + latest camp report ──
   var rail = document.getElementById('railList');
   var railItems = [];
   if (REPORTS.length) railItems.push({ title: REPORTS[0].title, url: REPORTS[0].url, meta: 'Camp report · ' + fmtShort(REPORTS[0].date) });
@@ -311,7 +559,6 @@ var REPORTS = [{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc
     rail.appendChild(el);
   });
 
-  // ── position modules ──
   var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
   var grid = document.getElementById('posGrid');
   ORDER.forEach(function(pair){
@@ -331,12 +578,11 @@ var REPORTS = [{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc
     grid.appendChild(mod);
   });
 
-  // ── camp & preseason desk ──
   if (REPORTS.length) {
     var f = REPORTS[0];
-    document.getElementById('campNote').innerHTML = 'Verified, auction-relevant signals from camps and preseason games. This desk updates as news breaks — <b>latest report: ' + fmtDate(f.date) + '</b>.';
+    document.getElementById('campNote').innerHTML = 'Verified, auction-relevant signals from camps and preseason games. Latest report: <b>' + fmtDate(f.date) + '</b>.';
     document.getElementById('campFeat').innerHTML =
-      '<span><span class="badge badge-pos">Latest report</span></span>' +
+      '<span class="badge badge-pos">Latest report</span>' +
       '<h3><a href="' + f.url + '">' + esc(f.title) + '</a></h3>' +
       '<p>' + esc(f.desc) + '</p>' +
       '<a class="lead-link" href="' + f.url + '">Read the report &rarr;</a>';
