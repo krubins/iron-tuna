@@ -10,6 +10,26 @@
 
   gtag('config', 'AW-18397866361');
 </script>
+<!-- Event snippet for Purchase conversion page
+In your html page, add the snippet and call gtag_report_conversion when someone clicks on the chosen link or button. -->
+<script>
+function gtag_report_conversion(url) {
+  var callback = function () {
+    if (typeof(url) != 'undefined') {
+      window.location = url;
+    }
+  };
+  gtag('event', 'conversion', {
+      'send_to': 'AW-18397866361/PIr0COO29uMcEPnS5MRE',
+      'value': 1.0,
+      'currency': 'USD',
+      'transaction_id': '',
+      'event_callback': callback
+      // 'new_customer': true /* calculate dynamically, populate with true/false */,
+  });
+  return false;
+}
+</script>
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -20189,6 +20209,9 @@ function App() {
   const [upgradeReason, setUpgradeReason] = useState('');
   async function openCheckout(tier) {
     if (!tier) return;
+    // Google Ads purchase-conversion: fire on the click that starts checkout, before the
+    // async Stripe redirect below (no url arg — this function handles its own navigation).
+    try { gtag_report_conversion(); } catch (e) {}
     const fmt = tier.format || config.format || 'auction';
     ITAnalytics.track('checkout_open', {
       item: tier.id,
