@@ -238,6 +238,16 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   var body = document.getElementById('vault-body');
   var VIEW = {"Underpriced": ["v-under","UNDERPRICED"], "Overpriced or discount required": ["v-over","OVERPRICED"], "Price-sensitive / near fair value": ["v-fair","NEAR FAIR VALUE"], "Format-dependent / monitor price": ["v-dep","FORMAT-DEPENDENT"]};
   function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  // A percentage is the same number for everybody; what it is WORTH depends on
+  // the reader's own budget and scoring. When they have a league saved, say the
+  // effect in their dollars (or their draft slots) instead of leaving them to
+  // do the arithmetic against a league that is not theirs.
+  function tailored(it){
+    var L = window.ITLeague;
+    if (!L || !L.has) return '';
+    var line = L.tailor(it.effect, it.players || it.title, it.section);
+    return line ? '<p class="it-yours"><b>Your league:</b> ' + esc(line) + '</p>' : '';
+  }
   function render(list){
     document.getElementById('vault-gate').style.display = 'none';
     var h = '<div class="eyebrow">Vault open — 30 insights</div>';
@@ -245,6 +255,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
       var v = VIEW[it.view] || ['v-dep', esc(it.view)];
       h += '<article class="ins"><div><span class="badge ' + v[0] + '">' + v[1] + '</span><span class="badge plain">' + esc(it.section) + '</span><span class="badge plain">Confidence: ' + esc(it.conf) + '</span></div>'
         + '<h2>' + esc(it.title) + '</h2>' + String(it.body || it.core).split('\n\n').map(function(par){ return '<p>' + esc(par) + '</p>'; }).join('') + (it.effect ? '<p class="effect">Projected effect: ' + esc(it.effect) + '</p>' : '')
+        + tailored(it)
         + '<div class="fmt"><b>Auction:</b> ' + esc(it.auctionPositioning) + '. <i>' + esc(it.auctionAction) + '</i></div>'
         + '<div class="fmt"><b>Snake:</b> ' + esc(it.snakePositioning) + '. <i>' + esc(it.snakeAction) + '</i></div>'
         + '<div class="fmt"><b>Best Ball:</b> ' + esc(it.bestballPositioning) + '. <i>' + esc(it.bestballAction) + '</i></div></article>';
@@ -271,5 +282,6 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <footer class="site"><div class="wrap">
   <p>Iron Tuna builds custom draft values for your exact league — auction, snake, and best ball — then runs live on draft night. Values are projections, not guarantees. <a href="https://irontuna.com/">Build your free sheet</a> &middot; <a href="/insights">Insights</a> &middot; <a href="/guides">Guides</a> &middot; <a href="/creators">Creators &amp; affiliates</a> &middot; <a href="/support">Support</a></p>
 </div></footer>
+<script src="/it-league.js"></script>
 </body>
 </html>
