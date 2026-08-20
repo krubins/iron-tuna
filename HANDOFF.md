@@ -557,3 +557,153 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 - **`?screen=cheat` now opens the cheat sheet.** It previously fell through to the board,
   which would have put the free "Build my free cheat sheet" CTA on `front.html` behind
   the paywall. `?screen=board` still opens the board (now locked for free users).
+
+---
+
+## 14. August 2026: the Ideal Team is now solved exactly
+
+Filling the open starter slots is a **multiple-choice knapsack** (one distinct
+player per slot, maximise projected points, total price inside a dollar budget).
+It used to be approximated by a greedy points-per-dollar hill climb in
+`buildOptimalPlan`. Two defects came out of that, both measured against an
+independent exact solver over the real projections:
+
+- **The Ideal Team left roughly a fifth of the budget unspent** — every one of 27
+  scenarios (budgets 100/200/300 x 0/1/2 FLEX x 0/40/90 players gone). It spent
+  $153 of $193 at default settings because `extraBench` (`allocation * 0.35 * R`)
+  was withheld even for a model documented as "the single highest-scoring
+  starting lineup you can afford". Cost: **+30 to +117 points, typically ~5
+  points a game**.
+- **The greedy climb was beaten at its own budget in 9 of 27 scenarios** (up to
+  +7.5 points), mostly mid-draft — precisely when the planner matters.
+
+What changed:
+
+- **`bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap)`** (just above
+  `buildOptimalPlan`) solves it exactly: an "exactly k players" knapsack per
+  position, a max-plus combine across positions, maximised over every way of
+  handing the FLEX slots to the positions they accept. Slots are grouped by
+  eligibility signature, so it generalises to any roster/flex shape in
+  `config.roster` / `config.flex`. Full player pools, no pruning — it is exact,
+  not heuristic. Reconstruction hands the best players to the dedicated slots
+  first (best RBs in RB1/RB2, the next one into FLEX).
+- `buildOptimalPlan` keeps every budget rule it had (`reserveBench`,
+  `extraBench`, overrides, forced picks, `perCap`) and only swaps the solver, so
+  the nine shape models still mean what they meant — they are just optimal
+  within their own constraints now. A 12th `opts` argument carries
+  `{ noCap: true }`.
+- **`buildModel('ideal', ...)`** no longer returns the best of the nine shape
+  presets. It calls `buildOptimalPlan` directly with `noBench` and `noCap`, so it
+  spends everything down to a $1 bench. Locked targets and what-if anchors are
+  still honoured as constraints; if it somehow returns nothing the old
+  best-of-presets path is the fallback.
+- **Opponent projections use the same full-budget optimum** (the `t.isMine`
+  ternary in the team-cards memo). The column promises "each team optimally fills
+  its remaining starters within budget", and before this my team was optimised
+  differently from everyone else's — on an empty board it read My Team 125.4
+  pts/gm against 120.4 for all eleven opponents. All twelve now read 125.4.
+- The Ideal model's tooltip and note say it ignores the concentration/bench
+  sliders, since those shape the other models.
+
+Cost: ~4-6 ms per model build, ~23 ms for a full 12-team board recompute.
+
+**Verifying a change here:** `bestStarterSet` is pure, so instrument a copy of
+`index.html` (append `window.__ITFN = { ... }` inside the module script, stash
+`buildModel`'s arguments on `window.__ITDBG`), serve it, and compare against an
+independently written knapsack in the page. The starved-budget case ($12 for 9
+slots) must still render 9/9 slots with `feasible: false`.
+
+---
+
+## 15. August 2026: "The Build" desk on the front page
+
+`front.html` keeps the design and running order it already had (news lead with player
+photos, Top Headlines, Vegas vs. Consensus, Position Intel, Asset Allocation, Camp).
+Added between **Vegas vs. Consensus** and **Position Intel** is a **The Build** desk,
+and the Camp section gained a weekly preseason rail (below).
+
+This section was originally written against a full dark-theme rewrite of the front
+page. That rewrite was dropped in the merge: `main` had meanwhile shipped the photo
+band, the Vegas column and per-reader pricing, all of which are better than what it
+would have replaced. Only the computed modules were carried across, restyled to the
+light palette. `tools/build-front.mjs` still owns `STORIES` / `REPORTS` / `PLAYERS`
+and now `PRESEASON` too.
+
+**Every number in The Build comes from `var ANALYSIS = {...};`**, rebuilt by
+`node tools/build-front-analysis.mjs`. Run it whenever projections change (right after
+`merge-projections.mjs`). It drives headless Chromium against a local copy of the app
+and reads the app's *own* valuation pipeline and exact lineup solver, because
+re-implementing the scoring in Node would drift from what users see. Needs
+`npm i -D playwright` plus, on a box with no CDN egress, `npm i -D react react-dom`
+(both gitignored; nothing ships). Sanity checks abort the write on an empty or
+out-of-budget solve. `--dry-run` prints the JSON instead of writing.
+
+The Build desk, all computed:
+- **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
+  solver, with the per-position spend bar. Currently $192 for 125.4 pts/gm, 77% of it
+  on running backs.
+- **"The cliffs"** — the largest points-per-game drop between neighbouring players at
+  each position.
+- **"Why the money goes to running back"** — points between the position leader and
+  the replacement-level starter in a 12-team league. RB 10.0, DEF 0.8. This is the
+  reason the optimum looks the way it does.
+- **"What the FLEX is worth"** — re-solves with the FLEX removed (+12.4 pts/gm).
+
+### On consensus and market language
+
+`main` shipped a **Vegas vs. Consensus** desk, so the odds story that this work could
+not build now exists and is priced off real lines. Two caveats from digging through the
+value pipeline still stand and are worth an honest pass:
+
+- **There is no consensus ADP in the player model.** `adpRedraft` is null for all 408
+  players, so `attachProvisionalAdp` synthesises a rank from Iron Tuna's own
+  `auctionValue`. §14 relabelled the user-facing column ("IT Rank") so it no longer
+  claims to be average draft position, but anything that calls that number "consensus"
+  is comparing the model to itself.
+- **`calculateMarketValues` is a curve, not a market.** It assigns prices from the
+  hardcoded `LEAGUE_MARKET_CURVE` indexed by our own points rank. So the in-app
+  "surplus", "Bargain +$X" and "Overpay -$X" chips measure this model against a fixed
+  curve. That is separate from the front page's Vegas column, which uses real lines.
+
+`build-front-analysis.mjs` still carries an `edge` block contract (documented at the
+bottom of the file, preserved across rebuilds) for feeding a third-party desk from
+`ANALYSIS`. It is unused now that the Vegas column exists; keep it or delete it, but do
+not fill it with anything that is not sourced.
+
+### Weekly preseason takeaways
+
+The Camp &amp; Preseason section leads with a **per-week takeaways rail**: one card per
+`preseason-week-N.html` page, newest week first, showing the headline, the description
+and up to four of the article's takeaway headings.
+
+- **Authoring template:** `tools/templates/preseason-week.html` — the auction-watch
+  chrome with `{{WEEK}}`, `{{HEADLINE}}`, `{{DESCRIPTION}}`, `{{LEDE}}`,
+  `{{TAKEAWAY_TITLE}}`, `{{TAKEAWAY_BODY}}` tokens. Save as `preseason-week-N.html`
+  (N is the preseason week number, no date in the filename) and it is served at
+  `/preseason-week-N` with no worker change — Pages resolves it like the
+  auction-watch pages.
+- **Wiring it up:** `node tools/build-front.mjs` scrapes the new page into
+  `var PRESEASON` alongside STORIES/REPORTS. It strips HTML comments before reading
+  the takeaway headings, so the template's own instructional comment is not scraped.
+  Add the URL to `sitemap.xml` the same way auction-watch pages are listed.
+- **Empty state:** with no pages, the rail shows one honest line saying takeaways
+  publish after each slate. It never invents a week or a date.
+- **Who writes them:** the same scheduled Claude Routine that runs the camp desk
+  (§12), on the morning after each preseason slate, under the same guardrails — skip
+  on no network or no verified games, no em dashes in authored copy. Every claim has
+  to come from a game that was actually played (snap counts, series with the ones,
+  target share, goal-line work, injury exits) and has to land on what it does to the
+  auction price, including when it does not move the price at all.
+
+**None are written yet.** They could not be authored from the session that built this
+rail: reporting on games requires game data, and the network policy in that
+environment blocks every sports source. The rail, the template, the build step and the
+empty state are all in place and tested against fixtures; the articles need a run with
+network access.
+
+### Player photos
+
+Handled by `main`'s pipeline, not by this work: `tools/build-headshots.mjs` +
+`tools/nfl-headshots.json` resolve the players a story names and the lead renders their
+photos. An earlier `/players/<slug>.jpg` drop-in scheme from this branch was removed in
+the merge as redundant.
