@@ -80,10 +80,11 @@ async function open(store) {
   return { page, ctx };
 }
 const read = page => page.evaluate(() => ({
-  shown: !document.getElementById('posFmt').hidden,
+  shown: document.getElementById('posFmt').getClientRects().length > 0,
   on: [...document.querySelectorAll('#posFmt button')].filter(b => b.classList.contains('on')).map(b => b.dataset.fmt).join(),
   sub: document.getElementById('posSub').textContent,
   lines: [...document.querySelectorAll('#posGrid .it-yours')].map(e => e.textContent),
+  labels: [...new Set([...document.querySelectorAll('#posGrid .it-yours b')].map(e => e.textContent.replace(/:$/, '')))],
   lead: (document.getElementById('leadYours') || {}).textContent || ''
 }));
 
@@ -129,16 +130,26 @@ console.log('\nan auction league');
   await ctx.close();
 }
 
-// ── 3. no league, no switch ────────────────────────────────────────────────
-// A control that changes nothing on screen is worse than no control: there is
-// no tailored line to re-word until the reader has a board of their own.
+// ── 3. no league: both readings, on the site's own board ───────────────────
+// These are the readers least able to translate a bare percentage themselves,
+// so they get the most of it — dollars, the share of a budget, and the draft
+// slots — off the site's default board, labelled as the site's, never as theirs.
+// No switch: with both readings in the line there is nothing to switch between.
 console.log('\na reader who has never opened the app');
 {
   const { page, ctx } = await open({});
   const s = await read(page);
   ok('the switch stays out of the way', s.shown === false);
-  ok('no league is invented for them', s.lines.length === 0 && s.lead === '');
   ok('the shipped standfirst stands', /New drops land through Labor Day\.$/.test(s.sub.trim()), s.sub);
+  ok('the calls are translated anyway', s.lines.length > 0, `${s.lines.length} lines`);
+  ok('and never as the reader\u2019s own league',
+     s.labels.length === 1 && s.labels[0] === 'Default league', s.labels.join());
+  ok('every line names the league it is speaking for',
+     s.lines.every(l => /in a 12-team, \$200 league/.test(l)), s.lines[0]);
+  ok('every line carries dollars, a budget share AND slots',
+     s.lines.every(l => /\$\d/.test(l) && /% of a budget|under 1% of a budget/.test(l) &&
+                        /draft slot|endgame/.test(l)), s.lines[0]);
+  ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
 }
 

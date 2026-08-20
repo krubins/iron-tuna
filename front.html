@@ -68,6 +68,7 @@ img{max-width:100%}
 .sec-head h2{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:30px;letter-spacing:.05em;line-height:1}
 .sec-head .sec-more{margin-left:auto;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red)}
 .sec-head .sec-more:hover{color:var(--red-dark)}
+.fmt-switch[hidden]{display:none}
 .fmt-switch{margin-left:auto;display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--card)}
 .fmt-switch button{font:inherit;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);background:none;border:0;padding:5px 12px;cursor:pointer;line-height:1.5}
 .fmt-switch button+button{border-left:1px solid var(--line)}
@@ -581,7 +582,9 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
     // budget and scoring. When their board can answer that, say it in dollars.
     var yours = document.getElementById('leadYours');
     var mine = (L && s.stat) ? L.tailor(s.stat, s.title, s.pos, readFmt) : '';
-    yours.innerHTML = mine ? '<b>Your league:</b> ' + esc(mine) : '';
+    // "Your league" on the site's own default numbers would be the one lie this
+    // whole mechanism exists to avoid, so the library names the label.
+    yours.innerHTML = mine ? '<b>' + L.tailorLabel() + ':</b> ' + esc(mine) : '';
     yours.hidden = !mine;
     renderArt(s);
     document.getElementById('leadLink').setAttribute('href', s.url);
@@ -917,6 +920,7 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
   var grid = document.getElementById('posGrid');
   function renderPositions(){
     grid.innerHTML = '';
+    var yourLbl = (L && L.tailorLabel) ? L.tailorLabel() : 'Your league';
     ORDER.forEach(function(pair){
       var pos = pair[0], id = pair[1];
       var list = live.filter(function(s){ return s.pos === pos; });
@@ -929,7 +933,7 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
         h += '<li><a class="st-title" href="' + s.url + '">' + esc(s.title) + '</a>' +
           '<div class="st-meta">' + (s.view ? '<span class="st-view ' + viewCls(s) + '">' + esc(s.view) + '</span>' : '') +
           '<span class="st-date">' + fmtShort(s.date) + '</span></div>' +
-          (mine ? '<div class="it-yours"><b>Your league:</b> ' + esc(mine) + '</div>' : '') + '</li>';
+          (mine ? '<div class="it-yours"><b>' + yourLbl + ':</b> ' + esc(mine) + '</div>' : '') + '</li>';
       });
       h += '</ul><a class="mod-more" href="/auction-insights">More ' + (pos === 'Market' ? 'market' : pos) + ' intel &rarr;</a>';
       mod.innerHTML = h;

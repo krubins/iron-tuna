@@ -17,6 +17,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import * as board from './build-default-board.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -310,6 +311,102 @@ console.log('\nthe reading format');
      /worth about \$5–\$10 more in a 10-team, \$300 auction\.$/.test(dollars), dollars);
 }
 
+// ── 6c. the site's own board, for a reader who has not got one ─────────────
+// A reader with no saved league used to get nothing at all — the group least
+// able to translate "+12% to +18% versus price" themselves. They now get the
+// site's own numbers, all three readings of them, and a label that never
+// pretends the league is theirs.
+console.log('\nthe default board');
+{
+  const { L } = load({});
+  const board = L.defaultBoard();
+  ok('the board ships with the library', board.length > 300, `${board.length} players`);
+  ok('it is skill positions only',
+     board.every(p => ['QB', 'RB', 'WR', 'TE'].includes(p.pos)));
+  ok('every row carries points and a price',
+     board.every(p => p.pts > 0 && p.v >= 1));
+  ok('the priciest player is priced off the top of the curve',
+     Math.max(...board.map(p => p.v)) === Math.round(Math.max(...Object.values(L.defaults.curve).map(c => c[0])) *
+       (L.defaults.teams * L.defaults.budget / L.defaults.curveBudget)));
+
+  const someone = board.find(p => p.pos === 'WR' && p.v > 20);
+  const line = L.tailor('+10% to +20% versus price', someone.n, 'WR');
+  ok('a reader with no league still gets a real number', !!line, line);
+  ok('it is the site\u2019s league, and says so', /in a 12-team, \$200 league/.test(line), line);
+  ok('it prices the call in dollars', /\$\d+/.test(line), line);
+  ok('it gives the share of a budget, which is true at any budget',
+     /% of a budget|under 1% of a budget/.test(line), line);
+  ok('and the draft-slot move beside it', /draft slot|endgame/.test(line), line);
+  ok('the label never calls it theirs', L.tailorLabel() === 'Default league');
+  ok('a qualitative call is still never given a number',
+     L.tailor('slight efficiency drag on the offense', someone.n, 'WR') === '');
+  ok('a player the board does not know is still never invented',
+     L.tailor('+10% to +20% versus price', 'Nobody At All Here', 'WR') === '');
+  ok('no board of the reader\u2019s own is claimed to exist',
+     L.has === false && L.hasBoard === false && L.rankOf('WR', 200) === null);
+
+  // The reader's own board still outranks the site's, in both directions.
+  const own = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'auction',
+      players: [{ n: someone.n, pos: 'WR', v: 99, pts: 400 }, { n: 'Filler Wideout', pos: 'WR', v: 5, pts: 100 }] })
+  }).L;
+  ok('a saved board wins over the site\u2019s', /is \$99 on your sheet/.test(own.tailor('+10% versus price', someone.n, 'WR')));
+  ok('and is labelled as theirs', own.tailorLabel() === 'Your league');
+}
+
+// ── 6d. a draft slot is a pick, not a points gap ───────────────────────────
+// THE BUG: slots were counted by walking every player of ANY position whose raw
+// points fell between the old and new totals. Raw fantasy points do not compare
+// across positions — a 300-point QB and a 300-point WR are not adjacent picks —
+// so a routine +15% on a wide receiver was reported as a 25-slot move, most of
+// it quarterbacks he would never be drafted against.
+console.log('\ndraft slots');
+{
+  // normName() strips digits, so "W6 Wideout" and "W7 Wideout" are the SAME key.
+  // Fixture names have to differ in letters or the board collapses to one row.
+  const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  const nm = i => LETTERS[i % 26].toUpperCase() + LETTERS[Math.floor(i / 26)] + 'x';
+
+  // Two positions whose POINTS overlap and whose VALUES do not, exactly as real
+  // projections behave: quarterbacks outscore receivers and cost less.
+  const players = [];
+  for (let i = 0; i < 12; i++) players.push({ n: nm(i) + ' Passer', pos: 'QB', v: 40 - i * 3, pts: 290 - i * 2 });
+  for (let i = 0; i < 12; i++) players.push({ n: nm(i) + ' Catcher', pos: 'WR', v: 60 - i * 4, pts: 300 - i * 4 });
+  const { L } = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'snake' } }),
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'snake', players })
+  });
+  const wr = L.findPlayer(nm(6) + ' Catcher', 'WR');
+  ok('the fixture board did not collapse on itself', wr && wr.pts === 276, wr && String(wr.pts));
+
+  const moved = L.slotsMoved(wr, 0.04);
+  // What the old maths counted: every player anywhere with points in the band.
+  const np = wr.pts * 1.04;
+  const naive = players.filter(q => q.n !== wr.n && q.pts > wr.pts && q.pts <= np).length;
+  ok('a receiver moves past receivers, not past quarterbacks',
+     moved > 0 && moved < naive, `now ${moved}, cross-position count ${naive}`);
+  ok('a move that passes nobody at his position is no move', L.slotsMoved(wr, 0.001) === 0);
+  ok('a downgrade moves the other way', L.slotsMoved(wr, -0.05) > 0);
+  const line = L.tailor('+4% versus price', nm(6) + ' Catcher', 'WR');
+  ok('and the copy quotes that number', /up \d+ slots? /.test(line), line);
+  ok('a range that starts at nothing is a ceiling, not a range',
+     / slots at most/.test(L.tailor('0% to +4% versus price', nm(6) + ' Catcher', 'WR')),
+     L.tailor('0% to +4% versus price', nm(6) + ' Catcher', 'WR'));
+
+  // The $1-$2 tail is not an order, so a distance measured inside it is noise:
+  // fifty players tie on price and the gap between two of them is a tie-break.
+  const deep = [];
+  for (let i = 0; i < 40; i++) deep.push({ n: nm(i) + ' Runner', pos: 'RB', v: i < 3 ? 30 - i * 5 : 1, pts: 200 - i * 2 });
+  const tail = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'snake' } }),
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'snake', players: deep })
+  }).L;
+  const endgame = tail.tailor('+20% versus late-round price', nm(30) + ' Runner', 'RB');
+  ok('a $1 dart is not quoted a precise slot count', !/\d+ slots/.test(endgame), endgame);
+  ok('it is called what it is', /endgame/.test(endgame), endgame);
+}
+
 // ── 7. the declarative rewrites ────────────────────────────────────────────
 console.log('\ndeclarative markup');
 {
@@ -371,6 +468,14 @@ console.log('\nwire contract');
   ok('both front-page renders read through the lens',
      (front.match(/L\.tailor\(s\.stat, s\.title, s\.pos, readFmt\)/g) || []).length === 2);
   ok('the switch writes the reader’s choice back to the library', /L\.setReadingFormat\(/.test(front));
+  ok('the front page labels the line from the library', /L\.tailorLabel\(\)/.test(front));
+
+  // The default board is generated, and a generated block left behind is a
+  // reader being quoted last month's projections. Regenerate it here and
+  // compare: a forgotten `node tools/build-default-board.mjs` fails this.
+  ok('the default board is in sync with the worker\u2019s projections',
+     lib.includes(board.block(board.boardLines(board.projections(worker), board.loadLibrary(lib)))),
+     'run: node tools/build-default-board.mjs');
 }
 
 // ── 9. end to end: the shipped stat lines reproduce the printed numbers ────
