@@ -111,6 +111,7 @@ Set these in the **Cloudflare dashboard → the `iron-tuna` project → Settings
 | `LLM_ENDPOINT` | No | No | Override for an OpenAI-compatible endpoint. |
 | `TURNSTILE_SECRET` | No | Yes | If set, `/api/coach` requires a Cloudflare Turnstile token. |
 | `RATE_KV` | No | n/a (binding) | Optional KV namespace binding for per-IP rate limiting on the coach route. |
+| `ODDS_API_KEY` | No | Yes | The Odds API key. **Optional upgrade only** — the Vegas blend runs without it on the free nflverse provider (§9b). Setting it adds per-player props on top. |
 
 No `.env` file is used in production; everything is configured in Cloudflare. For local `wrangler dev`, export `LLM_API_KEY` in your shell or use a `.dev.vars` file (git-ignored).
 
@@ -154,7 +155,7 @@ A scheduled Claude session runs daily to refresh player projections:
 
 1. The agent fetches season-long projections from **ESPN, SportsLine, and NFL.com** and verifies each source's projections were published within the **preceding 7 days** (stale or undated sources are excluded).
 2. Fresh sources are written to `tools/sources/<source>.json` (schema documented at the top of `tools/merge-projections.mjs`).
-3. `node tools/merge-projections.mjs` merges them: multi-source stats are **averaged**, players are matched by normalized name+position against the existing `PROJECTIONS` roster (no adds/removes), and hard sanity checks abort on any anomaly (count change, NaN, implausible leaders, <25 matches, worker parse failure). Zero fresh sources → exit 2, no changes.
+3. `node tools/merge-projections.mjs` merges them: multi-source stats are a **weighted average** (see §9a — Vegas defaults to weight 3, every projection feed to 1), players are matched by normalized name+position against the existing `PROJECTIONS` roster (no adds/removes), and hard sanity checks abort on any anomaly (count change, NaN, implausible leaders, <25 matches, worker parse failure). Zero fresh sources → exit 2, no changes.
 **League tailoring:** the app persists a compact sheet snapshot to localStorage (`iron_tuna_values_v1`: name/pos/$value/points + teams/budget/format) whenever `baseValued` recomputes. `/my-insights` reads it and translates each premium insight's percentage effect into the buyer's units — auction: dollars against the player's sheet price; snake/best ball: draft slots (and rounds) by re-ranking the snapshot. No snapshot → generic percentages plus a set-up-your-league hint.
 
 4. On success it bumps `PROJ_VERSION` in `index.html` (date-stamped). Users with saved state re-baseline on next load; users who **reordered rankings** get an in-app prompt — "Use updated rankings" (clears `rankOrder`) or "Keep my reorder" (overlay persists on the new numbers).
@@ -163,6 +164,190 @@ A scheduled Claude session runs daily to refresh player projections:
 Fail-safe: if fetching is blocked (environment network policy) or all sources are stale, the day is skipped with no repo changes. `tools/` is in `.assetsignore` so it never serves publicly.
 
 ---
+
+## 9a. Vegas-weighted projections (added August 2026)
+
+Default projections are meant to follow the **betting market** first and the consensus projection feeds second. The betting market is the sharpest public forecast available: it is priced with real money, it moves on news within minutes, and season-long totals already price in injury/availability risk (the book pays on yards actually accumulated — so **do not haircut a Vegas number again for games missed**).
+
+**Pipeline:** raw book lines → `tools/vegas-to-projections.mjs` → `tools/sources/vegas.json` → `tools/merge-projections.mjs` → `PROJECTIONS` in `_worker.js`.
+
+1. Drop one JSON file per sportsbook into `tools/odds/` (gitignored). Shape is documented at the top of `tools/vegas-to-projections.mjs`; a committed sample lives in `tools/odds.example/`. Season-long markets recognised: `passYd passTD passInt rushYd rushTD recYd recTD rec scrimmageTD`.
+2. `node tools/vegas-to-projections.mjs` converts them. Two corrections turn a posted total into a projection:
+   - **De-vig.** Both sides carry juice, so raw implied probabilities sum to >1. Each side's American price is converted to a probability and the pair normalised to sum to 1, leaving the market's honest `P(over)`.
+   - **Median → mean.** The line sits near the market's *median*; fantasy scoring needs the *mean*. Modelling a season total as roughly normal, `E[X] = line + σ·Φ⁻¹(P(over))`, with σ a per-market coefficient of variation × the line. At a balanced price the mean *is* the line, so the correction only bites when a book prices one side hard — which keeps the result robust to σ being somewhat off.
+   
+   Multiple books are de-vigged and converted **first**, then averaged, so a book with wide juice can't drag the consensus. A combined `scrimmageTD` market is split into `rushTD`/`recTD` using the player's *current* projected ratio rather than an invented split.
+3. `node tools/merge-projections.mjs` blends by **weight**, not evenly. `DEFAULT_WEIGHTS = { vegas: 3 }`, everything else 1 — so with one projection feed a merged stat lands **75% of the way from the projection to the Vegas number**. Override per source with `SOURCE_WEIGHT_<NAME>` (e.g. `SOURCE_WEIGHT_VEGAS=5`, or `=1` to restore a plain mean).
+
+**Coverage is per stat, not per player.** Only the sources that actually carry a stat appear in its average, so a stat no book prices (`passInt`, kicker and DEF lines, deep bench players) keeps its existing projection-feed blend untouched. That is deliberate, but it means a player can end up with Vegas yardage next to projection-fed TDs — worth remembering when a line looks internally odd.
+
+`node tools/test-vegas.mjs` covers the de-vig/probit/mean math, the TD split, and an end-to-end weighted merge against a scratch copy of the worker. Run it after touching either tool.
+
+This offline path is the manual fallback. The **live** path is §9b, and it is the one that runs in production.
+
+## 9b. Worker-side odds refresh (added August 2026)
+
+The site pulls its own odds. The daily-update sandbox blocks every sportsbook host, but the Worker runs on Cloudflare's edge where outbound `fetch` is unrestricted, so the pull lives in `_worker.js`, not in `tools/`.
+
+**Shape:** a `0 11 * * *` cron calls `runOddsRefresh(env)` → provider fetch → convert → match against `PROJECTIONS` → store the overlay in D1 (`odds_overlay`, created lazily on `LEADS_DB`). `/api/projections` calls `projectionsPayload(env)`, which reads that one cached row and serves `blendProjections(overlay)` at 3:1. **Requests never touch a data provider** — only the cron does.
+
+### Providers
+
+Providers run in priority order and their overlays are **merged, earlier wins per player+stat** — so a real player prop is never overwritten by the coarser team-wide inference behind it.
+
+| Provider | Needs | What it gives |
+|---|---|---|
+| `the-odds-api` | `ODDS_API_KEY` (paid tier) | Per-player season props. Optional upgrade. |
+| **`nflverse`** | **nothing** | **Game lines → team scoring environment. This is the one that actually runs.** |
+
+**nflverse is free, keyless, and CC BY 4.0** (attribution only — credited in the `front.html` footer; keep that credit if you keep the data). It is fetched from a GitHub release asset, so no sportsbook ToS is involved: DraftKings' internal JSON is keyless too but their terms prohibit automated access, which is why it is not used here.
+
+### Turning game lines into stat adjustments
+
+`games.csv` carries a spread and a total per game, not player props. The pair implies each side's expected points — `home = total/2 + spread/2`, `away = total/2 - spread/2` — which is the scoring environment every skill player on that roster inherits.
+
+Two things keep that honest:
+
+- **No double counting.** The committed projections already have an opinion about which offenses are good, so scaling by raw Vegas points would apply that opinion twice. Both sides are reduced to a league-relative index and the factor is the **ratio of the two**: when Vegas and the projections agree on a team's standing the factor is exactly 1.0 and nothing moves. Only genuine disagreement changes a number.
+- **Same units on both sides — points, not touchdowns.** Team offensive points are `(passTD + rushTD) * 6 + xpMade + fgMade * 3`; `recTD` is excluded because a receiving touchdown *is* the quarterback's passing touchdown. Comparing a touchdown index against Vegas points systematically over-corrects, since weak offenses take a larger share of their points from field goals: on the real 2026 lines that mismatch stretched the factor range to 0.57 and pushed Miami to 1.33, versus 0.40 and 1.15 once both sides are points.
+
+The factor hits touchdowns at full strength and yardage damped (`TEAMENV_YARD_EXP = 0.5`), because yards track scoring environment far less tightly than touchdowns do — a judgement call, not a fit. Receptions, interceptions and fumbles are left alone. Every factor is clamped to `TEAMENV_CLAMP` (0.85–1.18) so a bad pull cannot rewrite a roster, and a team with fewer than `TEAMENV_MIN_GAMES` priced games is skipped entirely.
+
+**Known limitation:** this is a team-wide signal, so it moves every player on a roster in the same direction. It cannot tell you that one receiver specifically is being underrated — that needs player props, i.e. `ODDS_API_KEY`. Free season-long *player* props do not appear to exist.
+
+### Fail-safe by construction
+
+Every step may fail and the endpoint falls back to the committed `PROJECTIONS`. A provider error, an unparseable response, a name matching no player or two players, a line outside the plausibility band (`ODDS_BANDS`), fewer than `ODDS_MIN_MATCHED` (25) players matched, or an overlay older than 14 days all mean *no overlay is written or used*, never *bad numbers are served*. A thin pull leaves the previous good overlay in place.
+
+### Inspecting and testing
+
+`GET /api/admin/odds-status?key=$LEADS_EXPORT_KEY` reports which providers are configured, the cached overlay's age and match count, and whether the site is serving blended or committed numbers. `&refresh=1` runs the pull immediately; `&sample=1` shows before/after stat lines for the first dozen changed players.
+
+`node tools/test-worker-odds.mjs` lifts the Vegas section out of `_worker.js`, runs it against stub *and* real projections, asserts the worker's odds math still agrees with `tools/vegas-to-projections.mjs` (they are hand-synced — there is no build step), and **pulls the live nflverse file** so the provider is exercised against real data. `node tools/test-vegas.mjs` covers the offline path. Run both after touching either.
+
+**One decimal everywhere.** Expected touchdowns are expectations, not counts — `28.5` is a more honest projection than `28`, and `merge-projections.mjs` already keeps a decimal for these stats. Forcing integers silently erased small adjustments (a 1.18 factor on a 1-TD player rounds straight back to 1).
+
+## 9c. "Vegas vs. Rankings & ADP" column (added August 2026)
+
+A recurring front-page column at `#vegas`, between Position Intel and Asset Allocation. **Thesis:** a sportsbook has money at risk on every number it prints, so its lines are priced off repeatable trends and statistical modelling and corrected in public the moment they are wrong; a ranking carries no such penalty, and anyone with a TikTok account and a hunch can publish a top 200 and never revisit it. Where a priced market and an unpriced list disagree, the column shows the disagreement — it never asserts the book is right.
+
+**The point of the section is what the site does differently:** Iron Tuna's shipped values are already blended toward the market (§9b), and almost no ranking or ADP list is. So a case is not "the odds versus Iron Tuna" — it is *the consensus versus Iron Tuna*, with the odds as the reason they differ.
+
+Left panel is evergreen (the thesis plus four rules for turning odds into an edge). Right panel is the **case**, and it rotates every six hours.
+
+### The cases are computed, not written
+
+`GET /api/vegas-column` (public, read-only, 15-minute isolate cache) reads the same D1 overlay the projections blend uses and calls `buildVegasColumn()`, which:
+
+1. scores every QB/RB/WR/TE on **three** boards — `consensus` (committed `PROJECTIONS`, odds-blind: what a normal ranking or ADP list is built on), `ironTuna` (the same projections blended at `VEGAS_WEIGHT`, i.e. exactly what the site ships and the reader can look up), and `market` (the odds alone, undiluted);
+2. ranks each position under all three and prices the consensus and Iron Tuna ranks through the same curve the client uses. **The headline gap is consensus → Iron Tuna**, because that is the number a reader can act on; the raw market rank is quoted in the evidence line as the underlying signal, never as the price;
+3. drops anything under the noise floors (`COLUMN_MIN_RANK_GAP` 2 slots, `COLUMN_MIN_PRICE_GAP` $2) or outside the draftable curve, sorts by dollar gap, and returns the top `COLUMN_MAX_ITEMS` (12).
+
+Players the market never priced are **not** items but still occupy slots on all three boards — when the odds push one player up, someone else goes down, and hiding that would overstate the gap for whoever moved.
+
+### Agreement cases are a fallback
+
+When conflicts do not fill the twelve slots, up to `COLUMN_MAX_AGREE` (3) **agreement** cases fill the remainder: players the market genuinely priced (`moved` non-empty) that landed on the *same* slot as the consensus, inside `COLUMN_AGREE_MAX_RANK` (24) so it is a player people actually draft — "the odds agree the WR61 is the WR61" says nothing. They are sorted by price, expensive end first, carry `kind: 'agree'`, and the card states plainly that this is confirmation rather than an edge. They never displace a conflict and never lead. Right now the real board produces a full twelve conflicts, so none appear; expect them later in the season as the projections and the market converge.
+
+**Nothing on this section is hand-authored copy.** It cannot go stale while the lines move and it cannot claim a disagreement the data does not contain. When there is no usable overlay the card says exactly that instead of inventing a case.
+
+### Two honesty constraints that are load-bearing
+
+- **Game lines are not player props.** The free `nflverse` provider prices *games*; real player props need `ODDS_API_KEY`. The response carries `basis: 'gamelines' | 'props'` and the card's footer states which, plus "team-level signal — it prices the offense, not the individual target share". Presenting a team-wide inference as a prop would be the exact sloppiness the column exists to call out.
+- **Team rank alone misleads.** The team-environment factor is a *ratio* of Vegas's league-relative standing to the projections', so a top-five offense can still be a downgrade if the consensus already has it top three. Every item therefore carries **both** `teamRank` (odds) and `teamRankConsensus` (from `_colTeamProjRank()`), and the card always states the pair. Brock Purdy is the live example: San Francisco is 4th in implied points and still a fade, because the consensus has them 3rd.
+
+### The response is versioned, and that is not optional
+
+`/api/vegas-column` is cached publicly for 15 minutes. The first contract change shipped without a version and readers saw **"QBundefined"** and **"pass TD NaN"** for a quarter of an hour: new HTML met an old cached payload whose fields had been renamed, and the fields that happened to keep their names (`rankMarket`, `priceDelta`) rendered fine, which is what made it look like a data bug rather than a cache-skew one.
+
+Two mechanisms now prevent it, and **both** are needed:
+- `COLUMN_CONTRACT` is echoed in the response and requested by the client as `?v=N`, so a page and a payload of different vintages can never meet — the cached copies are keyed apart, in the isolate (`_COLUMN_KEY`) and at the edge (distinct URL).
+- The client drops any payload whose `contract` is not its own, and drops any individual item missing a field it prints (`VS_REQUIRED` / `vsUsable`). An unrecognised shape renders the empty state.
+
+**Bump `COLUMN_CONTRACT` and `VS_CONTRACT` together on any change to the item shape.** `node render-check` (scratch harness) has a `stale` mode that replays the exact production failure. `node tools/test-it-league.mjs` asserts the two numbers match, so a one-sided bump fails a test instead of a reader's page. **Contract 3** added `statsConsensus` / `statsIronTuna` / `statsMarket` to every item — see §9f.
+
+### Cadence
+
+Six-hour wall-clock slots (00/06/12/18 UTC), same mechanism and the same phase shift as the front-page lead — six-hour slots divide evenly into the day, so without `+ floor(slot / n)` a reader who always checks at the same hour would be stuck on a fraction of the cases forever. Arrows and dots browse by hand and **pin** the rotation. `oddsCtxWrite()` stores the implied points per team as row 2 of `odds_overlay` on each refresh (no migration: same table, same lifecycle).
+
+**This column does not post to X or Threads.** It refreshes on the site every six hours; the social rotation is still the three weekday slots in §10, untouched.
+
+### Maintenance
+
+`_colBlendStats` is **hand-synced with `blendProjections`** — if the blend weight or shape changes, the column stops quoting the number the cheat sheet shows. `COLUMN_SCORING`, `COLUMN_CURVE`, `COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET` and `_colScore` are **hand-synced with `index.html`** (`DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET`, `scoreSkillPlayer`) — there is no build step. `_colTeamProjRank()` is hand-synced with `buildTeamEnvOverlay`'s points model. **`node tools/test-worker-column.mjs` lifts both copies out of their real files and fails loudly on drift**, runs the client's own `scoreSkillPlayer` head-to-head against the worker's port over every real player, and finishes against the live nflverse pull. Run it after touching scoring, the curve, or the odds section.
+
+## 9d. The You column and the optimiser window (fixed August 2026)
+
+`You` (max bid) comes from `personalValue`, built in `_basePersonalized` in `index.html`. Personal value is `switchPrice()` — how many starter points a player actually adds to *your* lineup — and that is a plan rebuild per player, so it is only run for a `relevant` set: plan targets, your stars, and **the top 20 at each position**.
+
+**The bug:** everyone below that window fell straight back to `auctionValue`, which is the VALUE column. So `You` decayed all the way down the board and then **jumped back up at rank 21**, and the sheet priced WR21 above WR16 for no reason other than being outside the window. A cutoff in an internal optimisation was visible in a published price.
+
+**The fix:** the window's own discount is carried past its edge. Per position, the median `personalValue / auctionValue` ratio over the cheapest five players the optimiser *did* price sets the slope for everyone below, and nobody outside the window may exceed the cheapest player inside it (`_edge[pos].cap`) — so the seam can never step up. The median rather than the single last player, so one odd line cannot set the slope for a whole tail.
+
+**What is NOT a bug, and should not be "fixed" by flattening it:**
+- **The steep decline inside the window.** `switchPrice` is a *marginal* value: once your starters are covered by better players, the next one at that position genuinely adds almost nothing, so RB17 → RB20 falling $11 → $2 is the model working. Change it by changing allocation/strategy, not by smoothing the output.
+- **The flat tail.** Below the window everyone sits at or under the cheapest in-window price, which is often the min bid. That is the same statement: they are worth a dollar to *you*, whatever their VALUE says.
+- **Small inversions inside the window.** `switchPrice` can rate a lower-VALUE player $1 higher because he fits the lineup better (currently Higgins $17 over Pickens $16 at WR16/17). That is real signal, not an artifact.
+
+`node tools/test-you-column.mjs` drives the real app in Chromium and asserts PROJ and VALUE never rise down the board, that `You` does not jump at the rank-20 seam, and that nobody outside the window is priced at full VALUE. **It fails on the pre-fix code** — verified by reverting. It needs `playwright-core`, `react` and `react-dom` resolvable plus a Chromium binary, and skips cleanly when they are absent.
+
+## 9f. The reader's own league, on every page that prints a number (added August 2026)
+
+A story that quotes a price or a points total is quoting a *league*. Left alone, every one of them quoted the site's default — 12 teams, $200, full PPR — which is the wrong league for most readers: a $300 budget re-prices the entire board, half-PPR or six-point passing TDs re-order it. `/it-league.js` is the one place that knows what the reader actually plays, and the news pages read their numbers through it.
+
+### Where the league comes from
+
+Two keys, both written by the draft app on the same origin, neither of them new:
+
+- `iron_tuna_draft_state_v2` → `config`: teams, budget, format and the full custom scoring. The authority.
+- `iron_tuna_values_v1`: a snapshot of the reader's own board — every player's value and projected points **at those settings**. This is what makes a *rank* personal. Without it the library can still re-score and re-price; it just cannot re-rank, and it says so rather than guessing.
+
+**With no saved league every accessor reports "no league" and every page prints exactly what it printed before.** A reader who has never opened the app must not be shown numbers dressed up as theirs. A saved league that matches the site defaults in every respect is likewise left alone (`custom === false`): a "Your league" badge on identical numbers only teaches people to ignore the badge.
+
+`custom` splits into `customScoring` (the scoring fields differ) and `customLeague` (teams or budget differ), because a story can honour one without the other — points move with scoring, prices move with the budget.
+
+### What each page does with it
+
+- **`/` (front.html), the Vegas column.** `myCase()` re-reads the whole card: points re-scored from the shipped stat lines, prices off the market curve at the reader's `teams × budget`, ranks off their own board. The kicker gains a **Your league** badge and the basis line names the league and the scoring. A reader with no league keeps the old card plus one line inviting them to set one.
+- **`/` story cards and the lead.** `ITLeague.tailor()` turns an editorial `+12% to +18% versus price` into the reader's own dollars (or, in a snake/best-ball league, draft slots).
+- **Insight drop pages** (`auction|snake|bestball-insights-YYYY-MM-DD.html`). The library's own `tailorStatlines()` pass finds every `p.statline`, reads the call's `<h2>` for a player it recognises, and appends one `.it-yours` line. Pages opt in with nothing but the `<script src="/it-league.js" defer>` tag.
+- **`/my-insights` and `/insights-vault`.** Both now call `ITLeague.tailor()` instead of carrying their own copy of the maths — `my-insights.html` had a duplicate, which is exactly how two pages start quoting different dollars for the same call.
+- **`/auction-budget-allocation`.** Declarative only: `data-it-money="200"`, `data-it-teams="12"` and `data-it-pct="38-42"` restate the sentence in the reader's league and print what each allocation band actually buys.
+
+### Money has two scales, and mixing them is the easy mistake
+
+`price(pos, rank)` scales the curve by **`teams × budget`** — more teams means more money chasing the same players, which is what the app's `calculateMarketValues` does. `money(n)` scales editorial prose by **budget alone**, because "how to spend the $200" is about one manager's wallet and a 10-team league does not shrink it. Both are asserted in the tests.
+
+### Why the API ships stat lines
+
+Points are a pure function of a stat line and a scoring system, so shipping the line lets a **publicly cached** payload produce a **private** answer — the worker never learns anything about the reader. That is why contract 3 added `statsConsensus`, `statsIronTuna` and `statsMarket` to each column item rather than adding a per-league endpoint.
+
+Ranks are the exception: they need the whole pool, which only the reader's saved board has. When the board is missing the site's ranks stand and only the money moves. When it is present, the player's own row calibrates the scale (the board carries the app's season normalisation and any per-player shaping baked into its points), and the identical adjustment is applied to both boards, so the gap between them stays exactly what the odds put there.
+
+### Maintenance
+
+`it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library.
+
+## 9e. Comping access from a URL (added August 2026)
+
+Two admin routes hand out and pull paid access for one address, behind the same `LEADS_EXPORT_KEY` gate as every other admin route:
+
+```
+GET /api/admin/grant?key=<LEADS_EXPORT_KEY>&email=<address>
+GET /api/admin/revoke?key=<LEADS_EXPORT_KEY>&email=<address>
+```
+
+The alternative was `wrangler d1 execute --remote` with a hand-written INSERT, which cannot be run from a phone and is the wrong shape for something done repeatedly. GET, matching `/api/admin/x-post-now` and `/api/admin/x-delete`, so it works from a browser address bar. Both directions are reversible — grant is undone by revoke, revoke by grant (they sign in again) — so neither carries a confirmation step that would defeat the point.
+
+**After a grant, the person signs in at `/auctiondraft?signin=1`** with that address; the response hands back that URL so it can be pasted straight into a message. **Order matters:** `/api/auth/request` only sends a magic link to an address that is *already* entitled, and returns `ok:true` either way, so an early sign-in attempt looks like a silently broken login rather than a missing grant.
+
+Details worth knowing:
+- The address is lowercased before the write, because `isEntitled` looks it up as it appears in the session and every path that creates one lowercases it. A mixed-case row would never match.
+- `revoke` delegates to `revokeEntitlement()` rather than re-implementing its deletes, so the definition of "revoked" stays in one place — it clears the entitlement **and every session**, since leaving a session behind signs nobody out.
+- `changed` distinguishes a real change from a no-op, so a double-tap on a phone reads honestly.
+- **The comped-in-code trap:** `COMPED_EMAILS` (module scope in `_worker.js`) always has access, so a `revoke` on one of those addresses looks like it worked and does nothing. The response says `STILL HAS ACCESS` and names the fix. That list is for **owner access only** — to comp anyone else use `grant`, because a third party's address does not belong in a source file and git history keeps it forever.
+
+`node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
 
 ## 10. X (Twitter) auto-post (added July 2026)
 
@@ -259,11 +444,86 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   and everything else (app routes, static pages) is unchanged. Snake and best ball
   remain fully live — linked from the front page's secondary nav.
 - **Layout** (ESPN-inspired): black masthead with the fish + Bebas silver wordmark and
-  red accent bar; rotating lead story (auto-advances every 7s, the latest unlocked
-  insights drop); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
+  red accent bar; **deep-dive lead** (see below); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
   Market); **Asset Allocation** module (budget, nominations, $1 endgame guides + the
   in-app planner); **Training Camp & Preseason** desk (the auction-watch pages,
   newest featured).
+- **Top Headlines is one merged, strictly newest-first feed.** Camp reports and insight
+  calls are sorted together by date rather than pinning the newest camp report to slot 0,
+  which used to let a July camp report outrank an August drop. `RAIL_MIN_TOP_DAY` keeps the
+  newest day from appearing as a lone headline. The rail also excludes whatever is in the
+  lead pool, so it never repeats the lead. *(If the rail ever looks stale, the cause is
+  usually a new page added without re-running `build-front.mjs` — that is exactly how it
+  got stuck showing July 22.)*
+> **Routing note (merge of PR #39 and #40):** both branches fixed `?screen=cheat`
+> landing on the draft board. PR #40's fix sent phones to `'tiers'`, which was right
+> against the *old* mobile tab bar where `'tiers'` was the tab labelled "Cheat". PR #39
+> relabels those tabs (`'prep'` = **Cheat**, `'tiers'` = **Tiers**), so the merged
+> behaviour routes `?screen=cheat` to `'prep'` on every device. Leaving `'tiers'` in
+> would have dropped phone traffic on a tab labelled "Tiers" showing the VORP tier view
+> instead of the cheat sheet. Settings-exit routing for free users follows the same
+> target. The paywalled board is unaffected: `?screen=cheat` is never locked,
+> `?screen=board` still is.
+
+- **The lead is a three-hour deep dive.** It is reserved for calls that go **beyond a
+  single player** — coaching, offensive line, schedule, weather, rule changes — the
+  read that earns a top click rather than one more player take. Those are tagged
+  `deep: 1` at build time from the insight pages' own **`Market`** position label, so
+  the classification is the site's existing editorial call and does not drift as copy
+  changes; single-player QB/RB/WR/TE calls are never eligible. Each also gets a `topic`
+  desk label (SCHEDULE / OFFENSIVE LINE / COACHING / WEATHER / RULE CHANGE / TEAM
+  TREND) matched from the **title first**, body only as a fallback, so a passing
+  mention deep in a paragraph cannot relabel a story.
+  - **Cadence:** the slot is derived from the wall clock rather than a carousel timer
+    — so every visitor sees the *same* lead — and it turns over every **three hours**,
+    at 00/03/06/09/12/15/18/21 UTC. The pool is the 8 most recent unlocked deep dives
+    (`LEAD_WINDOW`), so a full pass takes a day.
+  - **Why the index is not plain `slot % pool`:** at a full `LEAD_WINDOW` of 8 the pool
+    divides evenly into the 8 slots a day, which would pin each story to a fixed time
+    of day forever — a reader who always checks at 4pm would see the same deep dive
+    every single visit. `slotIndex()` therefore adds `floor(slot / pool)`, advancing one
+    extra step per completed pass, so the phase rotates daily and a fixed-hour reader
+    works through the whole pool over `pool` days. The shift is skipped when the pool
+    has 2 or fewer stories, where it would land on the same story twice in a row
+    instead of moving on. **Keep this in mind before changing `SLOT_MS` or
+    `LEAD_WINDOW`:** any cadence that divides evenly into 24h reintroduces the
+    time-of-day lock without it.
+  - Arrows and dots still browse by hand; doing so **pins** the lead (hides the
+    countdown and stops the auto-rollover) so a reader's choice is never yanked away.
+    A tab left open rolls to the next deep dive when the boundary passes.
+  - The Top Headlines rail excludes whatever is in the lead pool, so it no longer
+    repeats the lead now that the pool spans dates.
+  - If no deep dive has unlocked yet it falls back to the latest drop's calls, so the
+    lead is never empty on a fresh season.
+- **Vegas vs. Rankings & ADP** (`#vegas`, between Position Intel and Asset Allocation) is
+  the one section on the page whose content is **computed rather than authored** — its
+  cases come from `/api/vegas-column`, not from `STORIES`, so `build-front.mjs` does not
+  touch it and it never needs a copy refresh. Full contract in **§9c**.
+- **The lead carries artwork** (`#leadArt`), an inline SVG plate in the featured team's
+  colours. **No club logo, wordmark or player likeness is reproduced** — none of that is
+  ours to publish. What is used is a team's colours (a fact, not a creative work) plus the
+  abbreviation, drawn as original geometry. `TEAM_ART` in `front.html` holds the palette;
+  `inkOn()` picks the type colour from the background's luminance, because white on
+  Pittsburgh's yellow is unreadable.
+  - The team comes from `story.team`, set by `build-front.mjs` from **the headline only**.
+    The body fallback that works for topics is too loose here: "Offensive-line dispersion
+    matters more this year" is a league-wide piece that cites Buffalo in paragraph three,
+    and body matching handed it Buffalo's colours. League-wide stories get the neutral
+    plate — currently 17 of 20 deep dives name a team, and the 3 that don't are the two
+    rule-change pieces and the dispersion one, correctly.
+- **Odds impact on every player row** (`vegasRankEl` / `vegasRankShifts` in `index.html`,
+  wired into **`Cheatsheet`** and **`PlayersRail`** — the cheat sheet and the auction
+  manager). The old `vegasFlagEl` "V" badge only said *that* the odds mattered, and only on
+  hover; the chip says **how far they moved the player on the board** (`▲3` / `▼2`), which
+  is the sentence a drafter actually needs. Both boards are ranked over the **same pool**,
+  because a rank is relative — ranking only the priced players would invent shifts that
+  never happened. Memoised per component; silent unless the rank moved or the points delta
+  clears `VEGAS_FLAG_MIN_PTS`. Covered by `node tools/test-vegas-rank-chip.mjs`.
+- **Every number on the page reads through the reader's own league** (`/it-league.js`,
+  §9f). The Vegas card's points, prices and ranks, the lead's and the story cards'
+  "Projected effect" lines, and the Asset Allocation blurb's `$200` all restate
+  themselves for a reader with a saved league, and are left exactly as authored for
+  one without.
 - **Data pipeline:** `node tools/build-front.mjs` re-extracts the embedded
   `var STORIES` / `var REPORTS` arrays in `front.html` from the
   `auction-insights-*.html` and `auction-watch-*.html` pages (joined to
@@ -355,15 +615,21 @@ slots) must still render 9/9 slots with `feasible: false`.
 
 ---
 
-## 15. August 2026: the front page is analysis-led
+## 15. August 2026: "The Build" desk on the front page
 
-`front.html` was restyled (dark editorial, teal/gold accents, Bebas display type) and
-now **leads with computed analysis instead of a rotating insight**. The insights lead,
-Top Headlines rail, Position Intel modules and the Camp desk all survive unchanged
-below the fold, and `tools/build-front.mjs` still owns `var STORIES` / `var REPORTS`
-exactly as before.
+`front.html` keeps the design and running order it already had (news lead with player
+photos, Top Headlines, Vegas vs. Consensus, Position Intel, Asset Allocation, Camp).
+Added between **Vegas vs. Consensus** and **Position Intel** is a **The Build** desk,
+and the Camp section gained a weekly preseason rail (below).
 
-**Every number on the page comes from `var ANALYSIS = {...};`**, rebuilt by
+This section was originally written against a full dark-theme rewrite of the front
+page. That rewrite was dropped in the merge: `main` had meanwhile shipped the photo
+band, the Vegas column and per-reader pricing, all of which are better than what it
+would have replaced. Only the computed modules were carried across, restyled to the
+light palette. `tools/build-front.mjs` still owns `STORIES` / `REPORTS` / `PLAYERS`
+and now `PRESEASON` too.
+
+**Every number in The Build comes from `var ANALYSIS = {...};`**, rebuilt by
 `node tools/build-front-analysis.mjs`. Run it whenever projections change (right after
 `merge-projections.mjs`). It drives headless Chromium against a local copy of the app
 and reads the app's *own* valuation pipeline and exact lineup solver, because
@@ -372,7 +638,7 @@ re-implementing the scoring in Node would drift from what users see. Needs
 (both gitignored; nothing ships). Sanity checks abort the write on an empty or
 out-of-budget solve. `--dry-run` prints the JSON instead of writing.
 
-The four stories, all real:
+The Build desk, all computed:
 - **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
   solver, with the per-position spend bar. Currently $192 for 125.4 pts/gm, 77% of it
   on running backs.
@@ -383,25 +649,26 @@ The four stories, all real:
   reason the optimum looks the way it does.
 - **"What the FLEX is worth"** — re-solves with the FLEX removed (+12.4 pts/gm).
 
-### What is deliberately NOT on the page
+### On consensus and market language
 
-Two requested desks — "what consensus rankings are getting wrong" and "where Vegas
-odds differ from projections" — are **not built, on purpose**, because the data does
-not exist in this product:
+`main` shipped a **Vegas vs. Consensus** desk, so the odds story that this work could
+not build now exists and is priced off real lines. Two caveats from digging through the
+value pipeline still stand and are worth an honest pass:
 
-- **There is no consensus ADP.** `adpRedraft` is null for all 408 players, so
-  `attachProvisionalAdp` synthesises a rank from Iron Tuna's own `auctionValue`.
-- **There is no market price.** `calculateMarketValues` assigns prices from the
-  hardcoded `LEAGUE_MARKET_CURVE` indexed by Iron Tuna's own points rank.
+- **There is no consensus ADP in the player model.** `adpRedraft` is null for all 408
+  players, so `attachProvisionalAdp` synthesises a rank from Iron Tuna's own
+  `auctionValue`. §14 relabelled the user-facing column ("IT Rank") so it no longer
+  claims to be average draft position, but anything that calls that number "consensus"
+  is comparing the model to itself.
+- **`calculateMarketValues` is a curve, not a market.** It assigns prices from the
+  hardcoded `LEAGUE_MARKET_CURVE` indexed by our own points rank. So the in-app
+  "surplus", "Bargain +$X" and "Overpay -$X" chips measure this model against a fixed
+  curve. That is separate from the front page's Vegas column, which uses real lines.
 
-So "surplus", "Bargain +$X" and "Overpay -$X" measure this model against a fixed
-curve, **not against any market**. Writing a consensus or odds story from what is in
-the repo would be comparing the model to itself. §14's ADP relabelling fixed the
-user-facing half of this; the pricing copy is still worth an honest pass.
-
-When a real feed exists, fill the `edge` block described at the bottom of
-`build-front-analysis.mjs` (the script preserves it across rebuilds) and the desk
-un-hides itself. Absent that block the section stays `hidden` — no filler ships.
+`build-front-analysis.mjs` still carries an `edge` block contract (documented at the
+bottom of the file, preserved across rebuilds) for feeding a third-party desk from
+`ANALYSIS`. It is unused now that the Vegas column exists; keep it or delete it, but do
+not fill it with anything that is not sourced.
 
 ### Weekly preseason takeaways
 
@@ -436,7 +703,7 @@ network access.
 
 ### Player photos
 
-The hero renders photo slots at `/players/<slug>.jpg`, falling back to a
-position-tinted initials badge when the file is missing (the `<img>` removes itself
-on error). See `players/README.md` for the slug rule, sizing and the licensing
-constraint. `players/README.md` is in `.assetsignore`; the images themselves are not.
+Handled by `main`'s pipeline, not by this work: `tools/build-headshots.mjs` +
+`tools/nfl-headshots.json` resolve the players a story names and the lead renders their
+photos. An earlier `/players/<slug>.jpg` drop-in scheme from this branch was removed in
+the merge as redundant.

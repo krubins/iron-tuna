@@ -5,5 +5,18 @@ package.json
 package-lock.json
 scratch-*
 .dev.vars
+# wrangler's local state (miniflare's D1 sqlite, caches) — created by
+# `wrangler dev --local` and `d1 execute --local`, never deployed.
+.wrangler/
+
+# Raw sportsbook pulls and the merged source files they produce. These are
+# inputs to tools/vegas-to-projections.mjs + tools/merge-projections.mjs; the
+# committed artifact is the updated PROJECTIONS block in _worker.js, not the
+# scratch data. tools/odds.example/ IS committed as schema documentation.
+tools/odds/
+tools/sources/
+
+# Instrumented copies of index.html written by tools/build-front-analysis.mjs
+# and by hand while debugging the planner. Never deployed.
 index.test.html
 .front-analysis-probe.html
