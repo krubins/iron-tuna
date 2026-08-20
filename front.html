@@ -265,6 +265,7 @@ img{max-width:100%}
 /* ── weekly preseason takeaways ── */
 .week-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(262px,1fr));gap:14px;margin-bottom:16px}
 .week{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:7px}
+.week-line{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--ink-3);text-transform:uppercase}
 .week-tag{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:13px;letter-spacing:.11em;color:var(--teal)}
 .week h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:21px;letter-spacing:.03em;line-height:1.1}
 .week h3 a:hover{color:var(--red)}
@@ -1164,21 +1165,26 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
         '<a class="go" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>';
   }
 
-  // ══════════════════ weekly preseason takeaways ══════════════════
-  // One card per preseason-week-N.html page. Weeks that have not been written are
-  // not invented here: the strip shows only what has actually published.
+  // ══════════════════ preseason takeaways ══════════════════
+  // One card per preseason article, newest first: one per game for 2026. Games that
+  // have not been written are not invented here: the strip shows only what has
+  // actually published.
   var strip = document.getElementById('weekStrip');
   if (strip) {
     if (typeof PRESEASON !== 'undefined' && PRESEASON.length) {
       strip.innerHTML = PRESEASON.map(function(w, i){
-        return '<article class="week"><span class="week-tag">Week ' + esc(String(w.week)) + (i === 0 ? ' &middot; latest' : '') + '</span>' +
+        // The tag is the article's own label ("Preseason Week 1", "Hall of Fame Game"):
+        // one card per game, and not every preseason game belongs to a numbered week.
+        var tag = w.label || (w.week ? 'Week ' + w.week : 'Preseason');
+        return '<article class="week"><span class="week-tag">' + esc(tag) + (i === 0 ? ' &middot; latest' : '') + '</span>' +
           '<h3><a href="' + w.url + '">' + esc(w.headline || w.title) + '</a></h3>' +
+          (w.gameline ? '<p class="week-line">' + esc(w.gameline) + '</p>' : '') +
           (w.desc ? '<p>' + esc(w.desc) + '</p>' : '') +
           ((w.takeaways && w.takeaways.length) ? '<ul>' + w.takeaways.slice(0, 4).map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '') +
-          '<a class="go" href="' + w.url + '">Read the Week ' + esc(String(w.week)) + ' takeaways &rarr;</a></article>';
+          '<a class="go" href="' + w.url + '">Read the takeaways &rarr;</a></article>';
       }).join('');
     } else {
-      strip.innerHTML = '<div class="week-empty">Weekly preseason takeaways publish the morning after each slate: ' +
+      strip.innerHTML = '<div class="week-empty">Preseason takeaways publish game by game, the morning after each slate: ' +
         'who actually worked with the ones, which snap counts changed, and what it moves on the auction board. Nothing here yet for 2026.</div>';
     }
   }

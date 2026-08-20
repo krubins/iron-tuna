@@ -705,18 +705,34 @@ bottom of the file, preserved across rebuilds) for feeding a third-party desk fr
 `ANALYSIS`. It is unused now that the Vegas column exists; keep it or delete it, but do
 not fill it with anything that is not sourced.
 
-### Weekly preseason takeaways
+### Preseason takeaways
 
-The Camp &amp; Preseason section leads with a **per-week takeaways rail**: one card per
-`preseason-week-N.html` page, newest week first, showing the headline, the description
-and up to four of the article's takeaway headings.
+The Camp &amp; Preseason section leads with a **takeaways rail**: one card per
+preseason article, newest first, showing the tag, the headline, the score-and-venue
+line, the description and up to four of the article's takeaway headings.
 
-- **Authoring template:** `tools/templates/preseason-week.html` — the auction-watch
-  chrome with `{{WEEK}}`, `{{HEADLINE}}`, `{{DESCRIPTION}}`, `{{LEDE}}`,
-  `{{TAKEAWAY_TITLE}}`, `{{TAKEAWAY_BODY}}` tokens. Save as `preseason-week-N.html`
-  (N is the preseason week number, no date in the filename) and it is served at
-  `/preseason-week-N` with no worker change — Pages resolves it like the
-  auction-watch pages.
+**One article per game, not per week.** The rail originally took one page per week
+(`preseason-week-N.html`). That shape cannot carry a per-game desk: sixteen Week 1
+games do not share a page, and the Hall of Fame Game has no week number at all. The
+scraper now reads both shapes and per-game is the 2026 default.
+
+- **Authoring template:** `tools/templates/preseason-game.html` — the same
+  auction-watch chrome as the weekly template, with `{{LABEL}}`, `{{SCORELINE}}`,
+  `{{HEADLINE}}`, `{{DESCRIPTION}}`, `{{DATE}}`, `{{DATE_LONG}}`, `{{VENUE}}`,
+  `{{SLUG}}`, `{{LEDE}}`, `{{TAKEAWAY_TITLE}}`, `{{TAKEAWAY_BODY}}` tokens. Save as
+  `preseason-YYYY-MM-DD-away-home.html` (kickoff date, then the two team slugs, away
+  first) and it is served at `/preseason-YYYY-MM-DD-away-home` with no worker change —
+  Pages resolves it like the auction-watch pages, whose date-in-filename convention
+  this follows.
+- **The tag is the page's own words.** `{{LABEL}}` renders into the article's eyebrow
+  and is scraped from there: "Preseason Week 1", "Hall of Fame Game". It is not parsed
+  out of the filename, because not every preseason game belongs to a numbered week.
+  `{{SCORELINE}}` is the final, winner first ("Panthers 33, Cardinals 30"); it leads
+  the `<title>` and the `<h1>`, and the scraper strips it back off to recover the
+  headline on its own.
+- **The weekly shape still reads.** `preseason-week-N.html` pages scrape as before and
+  fall back to a "Week N" tag, so nothing already published would break. None were ever
+  written, so there is nothing to migrate.
 - **Wiring it up:** `node tools/build-front.mjs` scrapes the new page into
   `var PRESEASON` alongside STORIES/REPORTS. It strips HTML comments before reading
   the takeaway headings, so the template's own instructional comment is not scraped.
@@ -731,10 +747,21 @@ and up to four of the article's takeaway headings.
   auction price, including when it does not move the price at all.
 
 **None are written yet.** They could not be authored from the session that built this
-rail: reporting on games requires game data, and the network policy in that
-environment blocks every sports source. The rail, the template, the build step and the
-empty state are all in place and tested against fixtures; the articles need a run with
-network access.
+rail, nor from the later session that converted it to one article per game: reporting
+on games requires game data, and the network policy in both environments blocked every
+sports source (`site.api.espn.com`, `www.nfl.com`, `www.espn.com` and
+`www.cbssports.com` all answered 403 at the egress proxy). The rail, both templates,
+the build step and the empty state are in place and tested against fixtures; the
+articles need a session whose environment allowlists `site.api.espn.com`.
+
+**Sourcing rule for whoever writes them.** Every score, stat line and player name comes
+from the live ESPN scoreboard endpoint
+(`site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=YYYYMMDD`, one day
+at a time — the `week=` parameter truncates and returns stale zeroed scores), parsed as
+JSON with `curl` and `jq` rather than summarised through a model. Box scores come from
+the sibling `.../summary?event={id}` endpoint. Both are keyless. Snap counts are in
+neither: those come from nflverse. A stat that cannot be verified is left out rather
+than guessed at.
 
 ### Player photos
 

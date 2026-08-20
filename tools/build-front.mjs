@@ -14,8 +14,10 @@
 //               the players it names, and the lead renders their photos. A team
 //               story that names nobody carries `tm` instead — the club whose
 //               headline player stands in, which the band prints as its label.
-//   PRESEASON<- every preseason-week-N.html page (headline, description, the
-//               takeaway headings), newest week first — the weekly takeaways rail
+//   PRESEASON<- every preseason article (headline, description, score/venue line,
+//               the takeaway headings), newest first — the preseason takeaways rail.
+//               One page per game (preseason-YYYY-MM-DD-away-home.html); the older
+//               one-page-per-week shape (preseason-week-N.html) still reads.
 //
 // Run after adding a new insights drop page or a new auction-watch (camp/preseason)
 // page:  node tools/build-front.mjs
@@ -384,29 +386,48 @@ for (const f of files.filter(f => /^auction-watch-\d{4}-\d{2}-\d{2}\.html$/.test
   reports.push({ date, title, desc: d ? norm(d[1]) : '', url: '/' + f.replace('.html', '') });
 }
 
-// PRESEASON <- every preseason-week-N.html page: the takeaways article for one week
-// of preseason games. Sorted by week number so the newest week leads the desk.
+// PRESEASON <- the preseason takeaways rail. Two page shapes feed it:
+//   preseason-YYYY-MM-DD-away-home.html   one article per game (the 2026 shape)
+//   preseason-week-N.html                 one article per week (the original shape)
+// Per-game pages carry the date in the filename the way the auction-watch pages do,
+// so a slate sorts chronologically and the Hall of Fame Game needs no week number.
+// The rail's tag comes from the page's own eyebrow ("Preseason Week 1", "Hall of Fame
+// Game"), not from the filename, because not every preseason game belongs to a week.
+const PRESEASON_GAME = /^preseason-(\d{4}-\d{2}-\d{2})-([a-z0-9-]+)\.html$/;
+const PRESEASON_WEEK = /^preseason-week-(\d+)\.html$/;
 const preseason = [];
-for (const f of files.filter(f => /^preseason-week-\d+\.html$/.test(f))) {
-  const week = +f.match(/preseason-week-(\d+)/)[1];
+for (const f of files.filter(f => PRESEASON_GAME.test(f) || PRESEASON_WEEK.test(f))) {
+  const game = f.match(PRESEASON_GAME);
+  const week = game ? null : +f.match(PRESEASON_WEEK)[1];
+  const date = game ? game[1] : '';
   const s = read(f);
   const rawTitle = norm(s.match(/<title>([\s\S]*?)<\/title>/)[1].split('|')[0]);
-  // "Preseason Week 2: the headline" -> headline on its own, week already known
-  const headline = norm(rawTitle.replace(/^Preseason Week\s*\d+\s*[:\u2014-]\s*/i, ''));
+  // "Preseason Week 2: the headline" / "Bengals 16, Lions 14: the headline"
+  // -> headline on its own, the label already carried separately
+  const headline = norm(rawTitle.replace(/^[^:]*:\s*/, '')) || rawTitle;
   const d = s.match(/<meta name="description" content="([^"]*)"/);
-  // Each takeaway is an h2 inside <main>, minus the two closing CTA bands.
   // Comments are stripped first: the authoring template explains the structure in a
-  // comment that mentions the tags, and those must not be scraped as takeaways.
+  // comment that mentions the tags, and those must not be scraped.
   const main = s.slice(s.indexOf('<main'), s.indexOf('<div class="cta-band"')).replace(/<!--[\s\S]*?-->/g, '');
+  // The eyebrow is the rail's tag. Weekly pages predate it, so they fall back to the
+  // week number in their filename rather than being skipped.
+  const eb = main.match(/<div class="eyebrow">([\s\S]*?)<\/div>/);
+  const label = (eb && norm(eb[1]) !== 'Preseason Takeaways' ? norm(eb[1]) : '') || (week ? 'Week ' + week : '');
+  // The score-and-venue line, printed under the headline on the page and on the card.
+  const gl = main.match(/<p class="gameline">([\s\S]*?)<\/p>/);
+  // Each takeaway is an h2 inside <main>, minus the two closing CTA bands.
   const takeaways = [...main.matchAll(/<h2>([\s\S]*?)<\/h2>/g)].map(m => norm(m[1]));
   preseason.push({
-    week, headline, title: rawTitle,
+    week, label, date, headline, title: rawTitle,
     desc: d ? norm(d[1]) : '',
+    gameline: gl ? norm(gl[1]) : '',
     takeaways,
     url: '/' + f.replace('.html', ''),
   });
 }
-preseason.sort((a, b) => b.week - a.week);
+// Newest game first. Dated per-game pages sort by date; undated weekly pages sort by
+// week and sit behind them, so the two shapes can coexist without interleaving badly.
+preseason.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.week || 0) - (a.week || 0));
 
 let front = read('front.html');
 const before = front;
@@ -419,4 +440,4 @@ if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var 
   process.exit(1);
 }
 fs.writeFileSync(path.join(root, 'front.html'), front);
-console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
+console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${preseason.length} preseason articles${front === before ? ' (no change)' : ''}`);
