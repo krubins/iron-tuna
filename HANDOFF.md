@@ -676,13 +676,56 @@ out-of-budget solve. `--dry-run` prints the JSON instead of writing.
 The Build desk, all computed:
 - **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
   solver, with the per-position spend bar. Currently $192 for 125.4 pts/gm, 77% of it
-  on running backs.
+  on running backs. **The $200 is an input box** — see below.
 - **"The cliffs"** — the largest points-per-game drop between neighbouring players at
   each position.
 - **"Why the money goes to running back"** — points between the position leader and
   the replacement-level starter in a 12-team league. RB 10.0, DEF 0.8. This is the
   reason the optimum looks the way it does.
 - **"What the FLEX is worth"** — re-solves with the FLEX removed (+12.4 pts/gm).
+
+### The budget box
+
+The `$200` in that headline is an `<input>`: the reader sets the cap and the whole desk
+re-solves against it — prices, roster, spend split, cliff prices, FLEX worth. A control
+that only repainted the headline over a roster still priced for $200 would be a lie, so
+nothing on the page is left at the old budget.
+
+Two things make that honest rather than decorative:
+
+- **A board is not a rescale of another board.** It is tempting to scale the shipped
+  $200 prices, because `renormalizeToBudget` spreads the cap over one league-wide
+  factor. But `calculateMarketValues` rounds every price to whole dollars *before* that,
+  and `applyPredictability` floors at the minimum bid, so a $50 board bunches at $1 and a
+  $500 board does not — the shape moves, not just the total. Measured, rescaling the $200
+  board was out by 13% on a $50 cap. So `build-front-analysis.mjs` runs the app's real
+  valuation pipeline **once per budget** and ships a solved board for each: `ANALYSIS.pool`
+  carries one real price per candidate per budget, and `ANALYSIS.budgets` lists them.
+- **The box snaps to those budgets.** $25 to $500 in $25 steps, typed numbers snapped to
+  the nearest. Nothing between two solved boards is ever shown, and nothing is
+  interpolated.
+
+Only players who can *win* a slot are shipped (104 of 407, ~10KB). If `kMax` players at a
+position each cost no more and score at least as much as player X, any lineup using X has
+a spare one of them to swap in for free — so X can never be needed. That trim provably
+cannot change the answer; it is taken per budget and unioned, so a player who only earns
+his place on a $500 board is still there. Ties are broken by projection, the order the
+app's own planner walks its pool in.
+
+`front.html` then re-solves in the browser with the same multiple-choice knapsack the app
+runs (`bestStarterSet`): one exactly-k table per position, combined across positions,
+maximised over every way of handing the FLEX out. Two things it does *not* copy from the
+app: its DP rows stay exact-cost (the app's "at most b dollars" smoothing rewrites the
+trail the rebuild walks back along, which can hand one player two slots), and it
+maximises full-precision projections while printing the rounded ones, because rosters
+that tie at one decimal need not tie underneath.
+
+**`node tools/test-build-budget.mjs`** is what keeps this true. It boots the real app,
+re-prices the board with the real pipeline and solves with the real planner at **every one
+of the 20 budgets**, then drives the front page's box to each and demands an exact match:
+same roster, same prices, same points, same cliff prices. 175 assertions. Run it after
+touching the solver, the pool, the valuation pipeline or the box. It skips cleanly without
+playwright or a Chromium binary.
 
 ### On consensus and market language
 
