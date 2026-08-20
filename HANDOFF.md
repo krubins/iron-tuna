@@ -365,6 +365,22 @@ Details worth knowing:
 
 `node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
 
+## 9h. What a quarterback costs (re-cut August 2026)
+
+`LEAGUE_MARKET_CURVE.QB` was drawn from historical auction spending, and it was too rich for a 1-QB room. It put QB1 level with RB1 (both about $40 on a $120-a-team board) and kept quarterbacks in double digits down to QB9.
+
+**Why that was wrong:** the position is flat. On the current projections QB1 to QB9 is about three points a game — Allen 21.0, Nix 18.0 — so a room that only has to start one stops paying up almost immediately. Historical spend is a record of scarcity that no longer exists; the number of startable quarterbacks is what sets the price, and there are more of them than the old curve assumed.
+
+**The re-cut**, stated on the same $120-a-team board the owner reads: QB1 lands high-20s (Allen $29, was $40), QB6 is the last double-digit quarterback ($11), and QB7 down is single digits (Purdy $8, Nix $5, was $10 on a clean board and $23 on a stale-anchored one — see §9e). Everything else on the board rises about 7%: the QB dollars have to go somewhere, and they go to the 144 rostered skill players, which is what the room actually does.
+
+    QB: [28, 23, 19, 16, 13, 11, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1]   // was [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2]
+
+**Superflex and 2-QB keep the old curve.** The whole argument above is a 1-QB argument; with two QB slots to fill, 24+ quarterbacks get rostered and the position genuinely is scarce. The historical curve is preserved verbatim as `SUPERFLEX_QB_CURVE` and `calculateMarketValues` picks it whenever `qbIsPremium(config)` — QB in the flex, or two QB starters. So the cut can never make a superflex board cheaper at the position. `SUPERFLEX_QB_CURVE` is declared **above** `const LEAGUE_MARKET_CURVE` on purpose: the drift checks in `test-worker-column.mjs` and `test-it-league.mjs` read the first `QB: [...]` *after* that marker, and the worker and the library both price the site's default 1-QB league.
+
+Still open, and pre-existing: `Proj` is the only QB number that reacts to superflex through a separate curve. `it-league.js` prices the news pages off the 1-QB curve whatever league the reader has saved, and the superflex curve itself is still a 1-QB shape (QB1 below RB1), which is too cheap for a real superflex room. VALUE and You *do* re-price properly, through the replacement level. If superflex pricing gets a proper pass, that is the thing to fix.
+
+`node tools/test-qb-curve.mjs` states the shape against RB1 rather than in dollars, so it holds at any league size: QB1 at most three quarters of RB1, QB7 under a quarter of RB1, the QB1→QB7 drop steeper than RB1→RB7, and superflex strictly more expensive than 1-QB at both QB1 and QB7. **It fails on the pre-cut curve** — verified by reverting. Remember the two mirrors: `COLUMN_CURVE` in `_worker.js` and `CURVE` in `it-league.js` both carry the 1-QB QB row, and `test-worker-column.mjs` / `test-it-league.mjs` fail loudly if they drift.
+
 ## 10. X (Twitter) auto-post (added July 2026)
 
 Posts to **@irontunafantasy** every **weekday, staggered across three slots** (13:00 / 16:00 / 19:00 UTC = 9am / noon / 3pm EDT) so the day's threads hit different audience windows instead of one same-minute botlike burst: the **auction insight thread at 13:00**, the **snake insight thread at 16:00**, and the **day's bonus post at 19:00** — Monday a poll, Tuesday+Thursday snake-draft "survival odds" feature promos, Wednesday alternating auction money-allocation strategy and Value Coach promos, and Friday (much lower volume, by design, best ball is a separate niche format) best-ball insights and ceiling/stack/championship-week feature promos. Runs via three Cloudflare Worker **Cron Triggers** (one per slot, dispatched on `event.cron` in `scheduled()`), no external scheduler needed.
