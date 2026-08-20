@@ -21,6 +21,11 @@
  * reader who has never opened the app must never be shown numbers dressed up
  * as theirs.
  *
+ * It also owns the READING FORMAT — whether a tailored line is written in
+ * auction dollars or in snake draft slots. The saved league decides it, auction
+ * is the default where nothing is saved, and a page that offers a switch writes
+ * the reader's choice back here so it holds on every other page they open.
+ *
  * HAND-SYNCED with index.html: SCORING_DEFAULTS mirrors DEFAULT_LEAGUE_CONFIG.
  * scoring, CURVE mirrors LEAGUE_MARKET_CURVE, CURVE_BUDGET mirrors
  * LEAGUE_CURVE_BUDGET, and score() mirrors scoreSkillPlayer/yardageScore/
@@ -52,6 +57,26 @@
   };
   var MIN_BID = 1;
   var FORMAT_WORD = { auction: 'auction', snake: 'snake draft', bestball: 'best ball' };
+
+  // ── the reading format ────────────────────────────────────────────────────
+  // Every tailored line has to commit to a draft type before it can say
+  // anything useful: an auction reader wants dollars off their own sheet, a
+  // snake reader wants draft slots. The league the app saved answers that by
+  // itself — a reader who set up an auction is given auction advice without
+  // ever asking, and one who set up a snake gets slots. With no saved league
+  // the answer is AUCTION: this is an auction site and its copy is written that
+  // way, so an unset reader is never shown draft-slot advice by accident.
+  //
+  // A reader can disagree with either. The choice a switch writes here outranks
+  // the saved league and is remembered across pages, because someone who drafts
+  // both ways off one board should not have to re-pick on every visit.
+  var READING_KEY = 'iron_tuna_reading_format_v1';
+  // Two lenses, not three: best ball IS a draft, so it reads in slots. label()
+  // still names the league honestly underneath — "your 12-team best ball".
+  function normFormat(f) {
+    return f === 'auction' ? 'auction' : (f === 'snake' || f === 'bestball') ? 'snake' : null;
+  }
+  var readingChoice = null;
 
   function readJSON(key) {
     try { return JSON.parse(root.localStorage.getItem(key) || 'null'); } catch (e) { return null; }
@@ -104,6 +129,27 @@
   }
   var customLeague = !!cfg && (cfg.teams !== DEFAULT_TEAMS || cfg.budget !== DEFAULT_BUDGET);
   var custom = customScoring || customLeague;
+
+  // The lens every tailored line is written through. Reader's own switch first,
+  // then the league they saved, then auction. Reading it costs nothing, so a
+  // page that offers the switch can ask on every render.
+  try { readingChoice = normFormat(root.localStorage.getItem(READING_KEY)); } catch (e) { readingChoice = null; }
+  function readingFormat() {
+    return readingChoice || (cfg && normFormat(cfg.format)) || 'auction';
+  }
+  // Returns the format now in force, so a caller can re-render from the answer
+  // instead of guessing whether an unrecognised value was taken.
+  function setReadingFormat(f) {
+    var v = normFormat(f);
+    if (!v) return readingFormat();
+    readingChoice = v;
+    try { root.localStorage.setItem(READING_KEY, v); } catch (e) {}
+    return v;
+  }
+  // True when the saved league itself answers the question — the switch starts
+  // on the reader's own format rather than on the site default, and a page can
+  // say so instead of implying they picked it.
+  function formatFromLeague() { return !readingChoice && !!cfg && !!normFormat(cfg.format); }
 
   // ── scoring: a faithful port of the client's scoreSkillPlayer ─────────────
   function yardageScore(yards, perPoint, threshold, bonuses) {
@@ -250,10 +296,20 @@
   }
 
   // ── copy helpers ──────────────────────────────────────────────────────────
-  function label() {
+  // The league in words. `fmtOverride` is the lens the caller is reading
+  // through, and when it disagrees with the league the reader actually saved the
+  // sentence stops calling it theirs: "worth $4 more in A 10-team, $300 auction"
+  // is a true thing to say to a snake-league reader who asked for the auction
+  // read — "in YOUR 10-team auction" is not, because they never said that.
+  function label(fmtOverride) {
     if (!cfg) return '';
-    return 'your ' + cfg.teams + '-team' +
-      (cfg.format === 'auction' ? ', $' + cfg.budget + ' auction' : ' ' + (FORMAT_WORD[cfg.format] || 'league'));
+    var f = fmtOverride || cfg.format;
+    // Compared through normFormat so best ball read as a snake is still the
+    // reader's own league, and still named best ball.
+    var mine = normFormat(f) === normFormat(cfg.format);
+    var own = mine ? 'your ' : 'a ';
+    if (normFormat(f) === 'auction') return own + cfg.teams + '-team, $' + cfg.budget + ' auction';
+    return own + cfg.teams + '-team ' + (FORMAT_WORD[mine ? cfg.format : f] || 'league');
   }
   function scoringLabel() {
     if (!cfg) return '';
@@ -274,9 +330,9 @@
   }
   // The whole point of the file, in one sentence of copy: what this call is
   // worth on the reader's own sheet, in their dollars or their draft slots.
-  // formatOverride lets a page that offers a format switcher (my-insights) ask
-  // for the same call read as an auction, a snake draft or best ball without
-  // touching the reader's saved league.
+  // formatOverride lets a page that offers a format switcher (my-insights, and
+  // the front page's Position Intel) ask for the same call read as an auction, a
+  // snake draft or best ball without touching the reader's saved league.
   function tailor(effect, name, position, formatOverride) {
     if (!cfg || !snap) return '';
     var r = pctRange(effect);
@@ -297,16 +353,16 @@
       if (d2 < d1) { var t = d1; d1 = d2; d2 = t; }
       var rng = d1 === d2 ? ('$' + d2) : ('$' + d1 + '–$' + d2);
       return p.n + ' is $' + v + ' on your sheet — ' +
-        (up ? 'worth about ' + rng + ' more in ' + label() + '.' : 'trim about ' + rng + ' off in ' + label() + '.');
+        (up ? 'worth about ' + rng + ' more in ' + label(fmt) + '.' : 'trim about ' + rng + ' off in ' + label(fmt) + '.');
     }
     var s1 = slotsMoved(p, lo), s2 = slotsMoved(p, hi);
     var a = Math.min(s1, s2), b = Math.max(s1, s2);
-    if (b === 0) return 'In ' + label() + ' the shift is less than one draft slot — treat it as a hold.';
+    if (b === 0) return 'In ' + label(fmt) + ' the shift is less than one draft slot — treat it as a hold.';
     var rounds = b / cfg.teams;
     var rt = rounds >= 0.9 ? ' (about ' + (Math.round(rounds * 10) / 10) + (rounds >= 1.5 ? ' rounds' : ' round') + ')'
            : rounds >= 0.45 ? ' (about half a round)' : '';
-    return 'Move ' + p.n + (up ? ' up ' : ' down ') + (a === b ? b : a + '–' + b) + ' slots' + rt +
-      ' in ' + label() + '.';
+    return 'Move ' + p.n + (up ? ' up ' : ' down ') + (a === b ? b : a + '–' + b) +
+      (a === b && b === 1 ? ' slot' : ' slots') + rt + ' in ' + label(fmt) + '.';
   }
 
   // One stylesheet for the "Your league:" line, injected rather than copied into
@@ -384,7 +440,7 @@
       var h = host && host.querySelector ? host.querySelector('h2') : null;
       var posEl = call && call.querySelector ? call.querySelector('.cpos') : null;
       var pos = posEl ? (posEl.textContent || '').trim() : '';
-      var line = tailor(el.textContent, h ? h.textContent : '', pos);
+      var line = tailor(el.textContent, h ? h.textContent : '', pos, readingFormat());
       if (!line) return;
       var d = doc.createElement('p');
       d.className = 'it-yours';
@@ -415,6 +471,9 @@
     slotsMoved: slotsMoved,
     pctRange: pctRange,
     tailor: tailor,
+    readingFormat: readingFormat,
+    setReadingFormat: setReadingFormat,
+    formatFromLeague: formatFromLeague,
     label: label,
     scoringLabel: scoringLabel,
     ensureStyle: ensureStyle,

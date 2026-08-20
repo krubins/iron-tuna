@@ -68,6 +68,13 @@ img{max-width:100%}
 .sec-head h2{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:30px;letter-spacing:.05em;line-height:1}
 .sec-head .sec-more{margin-left:auto;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red)}
 .sec-head .sec-more:hover{color:var(--red-dark)}
+.fmt-switch{margin-left:auto;display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--card)}
+.fmt-switch button{font:inherit;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);background:none;border:0;padding:5px 12px;cursor:pointer;line-height:1.5}
+.fmt-switch button+button{border-left:1px solid var(--line)}
+.fmt-switch button:hover:not(.on){color:var(--red)}
+.fmt-switch button.on{background:var(--ink);color:#fff}
+.sec-head .fmt-switch+.sec-more{margin-left:14px}
+@media(max-width:560px){.sec-head{flex-wrap:wrap}.fmt-switch{margin:2px 0 4px;order:3;width:100%}.fmt-switch button{flex:1}.sec-head .fmt-switch+.sec-more{margin-left:auto}}
 .sec-sub{font-size:13.5px;color:var(--ink-3);margin:-6px 0 14px}
 
 /* ── hero ── */
@@ -311,8 +318,13 @@ img{max-width:100%}
     <div class="vs-case" id="vsCase"><p class="vs-empty">Loading the current case&hellip;</p></div>
   </div>
 
-  <div class="sec-head" id="positions"><h2>Position Intel</h2><a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
-  <p class="sec-sub">Every story is a stat-backed call from the 2026 research set, read through an auction lens. New drops land through Labor Day.</p>
+  <div class="sec-head" id="positions"><h2>Position Intel</h2>
+    <div class="fmt-switch" id="posFmt" role="group" aria-label="Read these calls as an auction or a snake draft" hidden>
+      <button type="button" data-fmt="auction">Auction</button>
+      <button type="button" data-fmt="snake">Snake</button>
+    </div>
+    <a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
+  <p class="sec-sub" id="posSub">Every story is a stat-backed call from the 2026 research set, read through an auction lens. New drops land through Labor Day.</p>
   <div class="pos-grid" id="posGrid"></div>
 
   <div class="sec-head" id="allocation"><h2>Asset Allocation</h2><a class="sec-more" href="/guides">All guides &rarr;</a></div>
@@ -364,6 +376,15 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
   function fmtShort(d){ var p = d.split('-'); return MONTHS[+p[1]-1].slice(0,3) + ' ' + (+p[2]); }
   function viewCls(s){ return s.viewCls === 'under' ? 'badge-under' : s.viewCls === 'over' ? 'badge-over' : 'badge-fair'; }
   function esc(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+  // ── the reading lens ──
+  // Every "Your league" line on this page has to commit to a draft type: an
+  // auction reader wants the call in dollars off their own sheet, a snake reader
+  // wants it in draft slots. it-league.js holds the answer — their saved league,
+  // or auction where they have never said — and the Position Intel switch below
+  // writes any change back there, so the lead and the modules never disagree.
+  var L = window.ITLeague || null;
+  var readFmt = (L && L.readingFormat) ? L.readingFormat() : 'auction';
 
   var live = STORIES.filter(function(s){ return unlocked(s.date); });
   live.sort(function(a,b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
@@ -559,7 +580,7 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
     // "+12% to +18% versus price" is worth depends entirely on the reader's own
     // budget and scoring. When their board can answer that, say it in dollars.
     var yours = document.getElementById('leadYours');
-    var mine = (window.ITLeague && s.stat) ? ITLeague.tailor(s.stat, s.title, s.pos) : '';
+    var mine = (L && s.stat) ? L.tailor(s.stat, s.title, s.pos, readFmt) : '';
     yours.innerHTML = mine ? '<b>Your league:</b> ' + esc(mine) : '';
     yours.hidden = !mine;
     renderArt(s);
@@ -894,24 +915,68 @@ var REPORTS = [{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","de
   // ── position modules ──
   var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
   var grid = document.getElementById('posGrid');
-  ORDER.forEach(function(pair){
-    var pos = pair[0], id = pair[1];
-    var list = live.filter(function(s){ return s.pos === pos; });
-    if (!list.length) return;
-    var mod = document.createElement('div');
-    mod.className = 'pos-mod'; mod.id = id;
-    var h = '<h3>' + (pos === 'Market' ? 'Market &amp; League-Wide' : pos) + ' <span class="pos-count">' + list.length + '</span></h3><ul>';
-    list.slice(0, 6).forEach(function(s){
-      var mine = (window.ITLeague && s.stat) ? ITLeague.tailor(s.stat, s.title, s.pos) : '';
-      h += '<li><a class="st-title" href="' + s.url + '">' + esc(s.title) + '</a>' +
-        '<div class="st-meta">' + (s.view ? '<span class="st-view ' + viewCls(s) + '">' + esc(s.view) + '</span>' : '') +
-        '<span class="st-date">' + fmtShort(s.date) + '</span></div>' +
-        (mine ? '<div class="it-yours"><b>Your league:</b> ' + esc(mine) + '</div>' : '') + '</li>';
+  function renderPositions(){
+    grid.innerHTML = '';
+    ORDER.forEach(function(pair){
+      var pos = pair[0], id = pair[1];
+      var list = live.filter(function(s){ return s.pos === pos; });
+      if (!list.length) return;
+      var mod = document.createElement('div');
+      mod.className = 'pos-mod'; mod.id = id;
+      var h = '<h3>' + (pos === 'Market' ? 'Market &amp; League-Wide' : pos) + ' <span class="pos-count">' + list.length + '</span></h3><ul>';
+      list.slice(0, 6).forEach(function(s){
+        var mine = (L && s.stat) ? L.tailor(s.stat, s.title, s.pos, readFmt) : '';
+        h += '<li><a class="st-title" href="' + s.url + '">' + esc(s.title) + '</a>' +
+          '<div class="st-meta">' + (s.view ? '<span class="st-view ' + viewCls(s) + '">' + esc(s.view) + '</span>' : '') +
+          '<span class="st-date">' + fmtShort(s.date) + '</span></div>' +
+          (mine ? '<div class="it-yours"><b>Your league:</b> ' + esc(mine) + '</div>' : '') + '</li>';
+      });
+      h += '</ul><a class="mod-more" href="/auction-insights">More ' + (pos === 'Market' ? 'market' : pos) + ' intel &rarr;</a>';
+      mod.innerHTML = h;
+      grid.appendChild(mod);
     });
-    h += '</ul><a class="mod-more" href="/auction-insights">More ' + (pos === 'Market' ? 'market' : pos) + ' intel &rarr;</a>';
-    mod.innerHTML = h;
-    grid.appendChild(mod);
-  });
+  }
+  renderPositions();
+
+  // ── the auction / snake switch ──
+  // It only appears for a reader whose saved board can actually answer in both
+  // currencies. With no league there is no tailored line to re-word, and a
+  // control that changes nothing on screen is worse than no control at all.
+  var posFmt = document.getElementById('posFmt');
+  var posSub = document.getElementById('posSub');
+  var SUB_TAIL = ' New drops land through Labor Day.';
+  var SUB = {
+    auction: 'Every story is a stat-backed call from the 2026 research set, read through an auction lens \u2014 each one priced in the dollars on your own sheet.',
+    snake: 'Every story is a stat-backed call from the 2026 research set, read as a snake draft \u2014 each one measured in slots on your own board.'
+  };
+  function paintFmt(){
+    Array.prototype.forEach.call(posFmt.querySelectorAll('button'), function(b){
+      var on = b.getAttribute('data-fmt') === readFmt;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    posSub.textContent = SUB[readFmt] + SUB_TAIL;
+    // Why it is sitting where it is. A reader who never touched this switch and
+    // finds it on Snake is owed the reason — it came from the league they saved,
+    // not from a guess.
+    posFmt.title = (L.formatFromLeague && L.formatFromLeague())
+      ? 'Set from the league you saved \u2014 switch it if you are drafting the other way'
+      : 'How these calls are read on your board';
+  }
+  if (posFmt && posSub && L && L.has && L.hasBoard && L.setReadingFormat) {
+    posFmt.hidden = false;
+    paintFmt();
+    posFmt.addEventListener('click', function(ev){
+      var b = ev.target.closest ? ev.target.closest('button[data-fmt]') : null;
+      if (!b) return;
+      var next = L.setReadingFormat(b.getAttribute('data-fmt'));
+      if (next === readFmt) return;
+      readFmt = next;
+      paintFmt();
+      renderPositions();
+      renderLead();     // the lead quotes the same calls; it moves with them
+    });
+  }
 
   // ── camp & preseason desk ──
   if (REPORTS.length) {

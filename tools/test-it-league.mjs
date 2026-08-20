@@ -57,7 +57,13 @@ function makeWindow(store) {
     addEventListener() {},
     _nodes: nodes
   };
-  return { localStorage: { getItem: k => (k in store ? store[k] : null) }, document: doc };
+  return {
+    localStorage: {
+      getItem: k => (k in store ? store[k] : null),
+      setItem: (k, v) => { store[k] = String(v); }
+    },
+    document: doc
+  };
 }
 function load(store) {
   const w = makeWindow(store);
@@ -236,8 +242,72 @@ console.log('\nthe reader’s own board');
   }).L;
   const moved = snake.tailor('-40% versus price', 'Alpha Wideout', 'WR');
   ok('a snake reader is told slots, not dollars', /Move Alpha Wideout down \d+ slots/.test(moved), moved);
+  const one = snake.tailor('-8% versus price', 'Alpha Wideout', 'WR');
+  ok('one slot is a slot, not "1 slots"', / up 1 slot | down 1 slot /.test(one), one);
   ok('a format override re-reads the same call',
      /\$/.test(snake.tailor('+10% to +20% versus price', 'Bravo Wideout', 'WR', 'auction')));
+}
+
+// ── 6b. the reading format: which currency a tailored line is written in ───
+// A call is worth dollars to an auction reader and draft slots to a snake one,
+// and the page must never guess. The saved league answers it; auction is the
+// answer when nothing is saved; and the reader's own switch outranks both and
+// survives to the next page they open.
+console.log('\nthe reading format');
+{
+  const board = {
+    ts: 1, teams: 10, budget: 300, format: 'auction',
+    players: [
+      { n: 'Alpha Wideout', pos: 'WR', v: 60, pts: 300 },
+      { n: 'Bravo Wideout', pos: 'WR', v: 48, pts: 280 },
+      { n: 'Charlie Wideout', pos: 'WR', v: 30, pts: 260 }
+    ]
+  };
+  const boardJSON = JSON.stringify(board);
+  const league = (format, teams = 10, budget = 300) =>
+    JSON.stringify({ config: { teams, budget, format } });
+
+  ok('no saved league reads as an auction', load({}).L.readingFormat() === 'auction');
+  ok('a saved auction reads as an auction',
+     load({ iron_tuna_draft_state_v2: league('auction') }).L.readingFormat() === 'auction');
+  ok('a saved snake reads as a snake',
+     load({ iron_tuna_draft_state_v2: league('snake') }).L.readingFormat() === 'snake');
+  ok('best ball is a draft, so it reads in slots',
+     load({ iron_tuna_draft_state_v2: league('bestball') }).L.readingFormat() === 'snake');
+  ok('the league is what set it, not the reader',
+     load({ iron_tuna_draft_state_v2: league('snake') }).L.formatFromLeague() === true &&
+     load({}).L.formatFromLeague() === false);
+
+  // The switch: a snake league, read as an auction because the reader said so.
+  const store = { iron_tuna_draft_state_v2: league('snake'), iron_tuna_values_v1: boardJSON };
+  const { L } = load(store);
+  ok('the switch starts on the saved league', L.readingFormat() === 'snake');
+  ok('the switch reports the format it took', L.setReadingFormat('auction') === 'auction');
+  ok('the reader’s choice outranks the saved league', L.readingFormat() === 'auction');
+  ok('a tailored line follows the switch',
+     /\$/.test(L.tailor('+10% to +20% versus price', 'Bravo Wideout', 'WR', L.readingFormat())));
+  ok('an unrecognised format is refused rather than taken',
+     L.setReadingFormat('cricket') === 'auction' && L.readingFormat() === 'auction');
+  ok('the choice is written where the next page will find it',
+     store.iron_tuna_reading_format_v1 === 'auction');
+  ok('the next page opens on that choice, not on the saved league',
+     load(store).L.readingFormat() === 'auction');
+  ok('a reader-set format is not reported as the league’s',
+     load(store).L.formatFromLeague() === false);
+  ok('switching back leaves the saved league free to speak again',
+     (() => { const n = load(store); n.L.setReadingFormat('snake'); return n.L.readingFormat() === 'snake'; })());
+
+  // A lens the reader borrowed is never described as the league they play in.
+  const borrowed = load(store).L;
+  ok('the reader’s own league is called theirs',
+     borrowed.label() === 'your 10-team snake draft', borrowed.label());
+  ok('a borrowed lens is never called their league',
+     borrowed.label('auction') === 'a 10-team, $300 auction', borrowed.label('auction'));
+  ok('best ball read as a draft is still their own best ball',
+     load({ iron_tuna_draft_state_v2: league('bestball') }).L.label('snake') === 'your 10-team best ball');
+  const dollars = borrowed.tailor('+10% to +20% versus price', 'Bravo Wideout', 'WR', 'auction');
+  ok('a snake league asked for the auction read gets honest dollars',
+     /worth about \$5–\$10 more in a 10-team, \$300 auction\.$/.test(dollars), dollars);
 }
 
 // ── 7. the declarative rewrites ────────────────────────────────────────────
@@ -291,6 +361,16 @@ console.log('\nwire contract');
      ['front.html', 'my-insights.html', 'insights-vault.html', 'auction-insights-2026-08-27.html',
       'snake-insights-2026-09-03.html', 'bestball-insights-2026-07-04.html', 'auction-budget-allocation.html']
        .every(f => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('/it-league.js')));
+
+  // The reading lens, at the two places on the front page that quote a call.
+  // The lead and the Position Intel modules print the SAME stories: if one of
+  // them stops passing the lens it silently falls back to the saved league, and
+  // the page contradicts itself a screen apart. tools/test-position-lens.mjs
+  // drives the switch in a browser; this only guards the argument.
+  ok('the front page offers the lens switch', /id="posFmt"/.test(front) && /data-fmt="snake"/.test(front));
+  ok('both front-page renders read through the lens',
+     (front.match(/L\.tailor\(s\.stat, s\.title, s\.pos, readFmt\)/g) || []).length === 2);
+  ok('the switch writes the reader’s choice back to the library', /L\.setReadingFormat\(/.test(front));
 }
 
 // ── 9. end to end: the shipped stat lines reproduce the printed numbers ────
