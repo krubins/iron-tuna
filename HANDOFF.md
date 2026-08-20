@@ -698,7 +698,44 @@ value pipeline still stand and are worth an honest pass:
 - **`calculateMarketValues` is a curve, not a market.** It assigns prices from the
   hardcoded `LEAGUE_MARKET_CURVE` indexed by our own points rank. So the in-app
   "surplus", "Bargain +$X" and "Overpay -$X" chips measure this model against a fixed
-  curve. That is separate from the front page's Vegas column, which uses real lines.
+  curve. That is separate from the front page's Vegas column, which uses real lines. The
+  curve is also **static**: the weekly projection run rewrites `PROJECTIONS`, which is
+  points, so new projections only change *who* occupies a slot. `marketAnchors` then
+  pins a player to the slot they were first ranked into, so an existing player's Proj
+  never moves at all. A wrong curve number stays wrong until somebody edits the array.
+
+### August 2026: the QB curve was roughly double its own VALUE
+
+Reported as "the projected QB dollars are too high, and with this many good QBs nobody
+will bid that much." The reader was right, and the app's own second column already said
+so. Measured on the real cheat sheet, top 14 at each position:
+
+| | PROJ ÷ VALUE, before | after |
+|---|---|---|
+| **QB** | **2.13×** | **1.17×** |
+| RB | 0.91× | 1.03× |
+| WR | 0.94× | 1.06× |
+| TE | 0.96× | 0.96× |
+
+Every other position was already calibrated; QB alone asked more than double what the
+VORP engine said the player was worth. The cause is structural: the curve has no
+replacement level in it, so it cannot know that QB is deep. QB12 is a startable
+quarterback for a couple of dollars, which makes an elite QB's true edge small — `VALUE`
+computes that, the curve just asserted "the top QB slot is worth 39 units."
+
+**The fix** scaled `LEAGUE_MARKET_CURVE.QB` by **0.55** and returned the freed money to
+the RB and WR curves (+12% each — the two positions the app priced *below* its own
+VALUE), keeping the curve's total intact so nothing else went systematically cheap. In a
+12-team $120 league the consensus QB1 went from **$41 to $22** against a VALUE of $25.
+
+Change it in **three** hand-synced places or the tests fail: `LEAGUE_MARKET_CURVE`
+(index.html), `CURVE` (it-league.js), `COLUMN_CURVE` (_worker.js).
+
+**Still open:** against `/auction-budget-allocation`'s own recommended split, the curve
+now runs QB 9.6% (guide 10–14%), RB 35.4% (38–42%), WR 37.1% (28–32%), TE 10.3% (8–10%).
+QB is close enough; RB and WR are the other way round from what the guide advises. The
+VORP engine and the guide disagree about the RB/WR balance, and which one is right has
+not been settled — do not "fix" one to match the other without deciding that first.
 
 `build-front-analysis.mjs` still carries an `edge` block contract (documented at the
 bottom of the file, preserved across rebuilds) for feeding a third-party desk from

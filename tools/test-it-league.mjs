@@ -151,7 +151,8 @@ console.log('\nno league saved');
   ok('tailors nothing', L.tailor('+10% to +20% versus price', 'Somebody Real', 'WR') === '');
   ok('leaves editorial dollars alone', L.money(200) === 200);
   ok('still scores at the site defaults', Math.abs(L.score(DEFAULT_STATS, 'QB') - (4200 / 25 + 30 * 4 - 10 * 2 + 40 + 24 - 4)) < 1e-9);
-  ok('prices at the default league', L.price('RB', 0) === Math.round(43 * (12 * 200 / 1440)));
+  ok('prices at the default league',
+     L.price('RB', 0) === Math.round(L.defaults.curve.RB[0] * (12 * 200 / 1440)));
 }
 
 // ── 4. the reader's scoring moves the points ───────────────────────────────
@@ -179,7 +180,8 @@ console.log('\ncustom budget');
   const { L } = load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 300, format: 'auction' } }) });
   ok('a different budget is a custom league', L.customLeague === true && L.custom === true);
   ok('scoring is untouched', L.customScoring === false);
-  ok('the top RB costs 1.5x the default league', L.price('RB', 0) === Math.round(43 * (12 * 300 / 1440)));
+  ok('the top RB costs 1.5x the default league',
+     L.price('RB', 0) === Math.round(L.defaults.curve.RB[0] * (12 * 300 / 1440)));
   ok('editorial dollars follow the budget, not the pool', L.money(200) === 300 && L.money(40) === 60);
   ok('the league label carries the budget', L.label() === 'your 12-team, $300 auction', L.label());
 
