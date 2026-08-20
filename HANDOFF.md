@@ -318,17 +318,51 @@ Two keys, both written by the draft app on the same origin, neither of them new:
 - `iron_tuna_draft_state_v2` → `config`: teams, budget, format and the full custom scoring. The authority.
 - `iron_tuna_values_v1`: a snapshot of the reader's own board — every player's value and projected points **at those settings**. This is what makes a *rank* personal. Without it the library can still re-score and re-price; it just cannot re-rank, and it says so rather than guessing.
 
-**With no saved league every accessor reports "no league" and every page prints exactly what it printed before.** A reader who has never opened the app must not be shown numbers dressed up as theirs. A saved league that matches the site defaults in every respect is likewise left alone (`custom === false`): a "Your league" badge on identical numbers only teaches people to ignore the badge.
+**With no saved league every accessor that speaks for the reader still reports "no league"** — `has`, `hasBoard`, `rankOf`, `findPlayer`. A reader who has never opened the app must not be shown numbers dressed up as theirs. A saved league that matches the site defaults in every respect is likewise left alone (`custom === false`): a "Your league" badge on identical numbers only teaches people to ignore the badge.
+
+What that reader *is* shown is the **site's own board** — see "The default board" below. Labelled as the site's, never as theirs.
 
 `custom` splits into `customScoring` (the scoring fields differ) and `customLeague` (teams or budget differ), because a story can honour one without the other — points move with scoring, prices move with the budget.
 
 ### What each page does with it
 
 - **`/` (front.html), the Vegas column.** `myCase()` re-reads the whole card: points re-scored from the shipped stat lines, prices off the market curve at the reader's `teams × budget`, ranks off their own board. The kicker gains a **Your league** badge and the basis line names the league and the scoring. A reader with no league keeps the old card plus one line inviting them to set one.
-- **`/` story cards and the lead.** `ITLeague.tailor()` turns an editorial `+12% to +18% versus price` into the reader's own dollars (or, in a snake/best-ball league, draft slots).
+- **`/` story cards and the lead.** `ITLeague.tailor()` turns an editorial `+12% to +18% versus price` into the reader's own dollars (or, in a snake/best-ball league, draft slots) — through the reading lens below, which the Position Intel switch controls.
 - **Insight drop pages** (`auction|snake|bestball-insights-YYYY-MM-DD.html`). The library's own `tailorStatlines()` pass finds every `p.statline`, reads the call's `<h2>` for a player it recognises, and appends one `.it-yours` line. Pages opt in with nothing but the `<script src="/it-league.js" defer>` tag.
 - **`/my-insights` and `/insights-vault`.** Both now call `ITLeague.tailor()` instead of carrying their own copy of the maths — `my-insights.html` had a duplicate, which is exactly how two pages start quoting different dollars for the same call.
 - **`/auction-budget-allocation`.** Declarative only: `data-it-money="200"`, `data-it-teams="12"` and `data-it-pct="38-42"` restate the sentence in the reader's league and print what each allocation band actually buys.
+
+### The default board, for a reader who has not got one
+
+`it-league.js` carries a generated block, `DEFAULT_BOARD_RAW` — one `name|POS|points` line per skill player, scored at `SCORING_DEFAULTS` from the same `PROJECTIONS` the worker serves, ~8KB on one line (the same convention as `front.html`'s generated `STORIES`). Prices are **not** stored: the library reads the market curve at each player's positional rank, scaled to 12 × $200, which is the app's own `calculateMarketValues` recipe. Players the projections do not score (a free agent with an empty stat line, a backup under the passing-yard threshold) are dropped — they cannot be moved up or down anything.
+
+Regenerate with **`node tools/build-default-board.mjs`** after `merge-projections.mjs` changes the worker's `PROJECTIONS`. `tools/test-it-league.mjs` regenerates the block and compares, so a forgotten run fails a test instead of quoting a reader last month's projections.
+
+**A reader with no saved league gets all three readings in one line**, because there is no way to know which they came for and guessing one would be worse than printing both:
+
+> **Default league:** Drake London prices at $40 in a 12-team, $200 league — worth about $3–$5, 2% of a budget, or 6–10 draft slots (about half a round).
+
+The percentage is the durable half: a dollar figure is only true at $200, but "2% of a budget" is true in every auction league there is. It is computed from the raw share rather than the rounded dollars, so the two cannot disagree at a rounding boundary. `ITLeague.tailorLabel()` returns `Your league` or `Default league` — a page must never hard-code the first, which is the one lie this whole mechanism exists to avoid.
+
+### A draft slot is a pick, not a points gap
+
+`slotsMoved()` used to count every player of **any** position whose raw points fell between the old and new totals. Raw fantasy points do not compare across positions — a 300-point QB and a 300-point WR are not adjacent picks — so a routine +15% on a receiver was reported as a **25-slot move**, most of it quarterbacks he would never be drafted against. It now finds the player at his **own** position he leapfrogs (points compare fine inside a position) and measures the distance to that player on the **value-ordered** board, which is the real draft order.
+
+Below roughly the last 1.5% of a budget the board stops being an order at all — fifty players tie at $1–$2, and the gap between two of them is an artefact of the tie-break. Moves in and out of that tier are described (`a slide into $1–$3 endgame territory`) rather than counted, because a slot count there would be precision the number does not have.
+
+### The reading lens: dollars or draft slots
+
+Every tailored line has to commit to a draft type before it can say anything useful, and the page must never guess. `ITLeague.readingFormat()` answers it in one order, always:
+
+1. the reader's own switch, if they have thrown one (`iron_tuna_reading_format_v1`);
+2. the format on their saved league — an auction league gets dollars, a snake or best-ball league gets slots, without anyone being asked;
+3. **auction**, where nothing is saved. This is an auction site and its copy is written that way, so an unset reader is never shown draft-slot advice by accident.
+
+`setReadingFormat()` writes the choice back, so it holds on **every** page the library runs on — Position Intel, the front-page lead, and `tailorStatlines()` on the drop pages. Two lenses, not three: best ball *is* a draft, so it reads in slots, and `label()` still names the league honestly underneath ("your 12-team best ball").
+
+**A borrowed lens is never called their league.** `label(fmt)` says "your 10-team snake draft" when the lens matches what they saved and "**a** 10-team, $300 auction" when it does not — a snake-league reader who asked for the auction read is owed a true sentence, not a flattering one.
+
+The switch itself lives in the Position Intel section header (`#posFmt` in `front.html`) and **only appears for a reader with a saved league and a board**: with no board there is no tailored line to re-word, and a control that changes nothing on screen is worse than no control. Clicking it re-renders the modules *and* the lead together — they quote the same stories, and a page that contradicts itself one screen apart is worse than one that never personalised at all. `node tools/test-position-lens.mjs` drives that switch in Chromium (skips cleanly without playwright-core or a Chromium binary); `tools/test-it-league.mjs` covers the ordering, the copy and the front page's two `tailor()` call sites.
 
 ### Money has two scales, and mixing them is the easy mistake
 
@@ -342,7 +376,7 @@ Ranks are the exception: they need the whole pool, which only the reader's saved
 
 ### Maintenance
 
-`it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library.
+`it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library. **`node tools/test-position-lens.mjs`** covers the reading-lens switch and the default-board line end to end in a real browser. **`node tools/build-default-board.mjs`** regenerates the default board.
 
 ## 9g. Comping access from a URL (added August 2026)
 
@@ -490,7 +524,8 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   remain fully live — linked from the front page's secondary nav.
 - **Layout** (ESPN-inspired): black masthead with the fish + Bebas silver wordmark and
   red accent bar; **deep-dive lead** (see below); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
-  Market); **Asset Allocation** module (budget, nominations, $1 endgame guides + the
+  Market) with an **Auction / Snake** reading-lens switch in the section header (§9f);
+  **Asset Allocation** module (budget, nominations, $1 endgame guides + the
   in-app planner); **Training Camp & Preseason** desk (the auction-watch pages,
   newest featured).
 - **Top Headlines is one merged, strictly newest-first feed.** Camp reports and insight
