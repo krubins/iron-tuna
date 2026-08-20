@@ -403,6 +403,37 @@ When a real feed exists, fill the `edge` block described at the bottom of
 `build-front-analysis.mjs` (the script preserves it across rebuilds) and the desk
 un-hides itself. Absent that block the section stays `hidden` — no filler ships.
 
+### Weekly preseason takeaways
+
+The Camp &amp; Preseason section leads with a **per-week takeaways rail**: one card per
+`preseason-week-N.html` page, newest week first, showing the headline, the description
+and up to four of the article's takeaway headings.
+
+- **Authoring template:** `tools/templates/preseason-week.html` — the auction-watch
+  chrome with `{{WEEK}}`, `{{HEADLINE}}`, `{{DESCRIPTION}}`, `{{LEDE}}`,
+  `{{TAKEAWAY_TITLE}}`, `{{TAKEAWAY_BODY}}` tokens. Save as `preseason-week-N.html`
+  (N is the preseason week number, no date in the filename) and it is served at
+  `/preseason-week-N` with no worker change — Pages resolves it like the
+  auction-watch pages.
+- **Wiring it up:** `node tools/build-front.mjs` scrapes the new page into
+  `var PRESEASON` alongside STORIES/REPORTS. It strips HTML comments before reading
+  the takeaway headings, so the template's own instructional comment is not scraped.
+  Add the URL to `sitemap.xml` the same way auction-watch pages are listed.
+- **Empty state:** with no pages, the rail shows one honest line saying takeaways
+  publish after each slate. It never invents a week or a date.
+- **Who writes them:** the same scheduled Claude Routine that runs the camp desk
+  (§12), on the morning after each preseason slate, under the same guardrails — skip
+  on no network or no verified games, no em dashes in authored copy. Every claim has
+  to come from a game that was actually played (snap counts, series with the ones,
+  target share, goal-line work, injury exits) and has to land on what it does to the
+  auction price, including when it does not move the price at all.
+
+**None are written yet.** They could not be authored from the session that built this
+rail: reporting on games requires game data, and the network policy in that
+environment blocks every sports source. The rail, the template, the build step and the
+empty state are all in place and tested against fixtures; the articles need a run with
+network access.
+
 ### Player photos
 
 The hero renders photo slots at `/players/<slug>.jpg`, falling back to a
