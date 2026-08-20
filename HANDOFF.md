@@ -707,3 +707,50 @@ Handled by `main`'s pipeline, not by this work: `tools/build-headshots.mjs` +
 `tools/nfl-headshots.json` resolve the players a story names and the lead renders their
 photos. An earlier `/players/<slug>.jpg` drop-in scheme from this branch was removed in
 the merge as redundant.
+
+---
+
+## 16. August 2026: the cheat sheet's Ideal Team and the board's projected best team are one roster
+
+The cheat sheet's **Draft Models** panel and the auction board's **My Team** card are
+supposed to show the same roster: the cheat sheet names the players, the board shows
+the same names in roster slots. They had drifted.
+
+`buildModel` is pure, so two screens can only disagree by being called with different
+arguments — and they were. Every surface passed the model key, my team, the pool, the
+config, the drafted set, the role overrides and the starred favourites. Only some of
+them passed the last two inputs, both of which reshape my roster:
+
+- **What-if anchors** (`whatIfAnchors`, "What if you win these players at these
+  prices?"). The cheat sheet's panel honoured them; the board's team card, the board's
+  target-buys pane and the board's model tabs never received them. Pin *Bijan Robinson
+  at $61* and the cheat sheet rebuilt its Ideal Team around him (125.3 pts/gm, Bijan +
+  McCaffrey + Chase Brown + Goedert) while the board still showed the un-anchored
+  lineup (125.4, Gibbs + McCaffrey + Skattebo + Kraft). Same label, two rosters.
+- **The AI-built Custom anchors** (`customForcedIds`, from "build me a model"). Only
+  `modelFitIds` — the boxes drawn on the cheat sheet's player rows — passed them, so
+  the boxed players and the "Target players by position" chips right above them
+  disagreed, and the board ignored the custom build entirely.
+
+Both are now threaded everywhere a model is rendered: `TeamsBoard`, `CheatHeader`,
+`HeaderModelTabs`, `ModelsPanel`, the board's target-buys pane and `modelFitIds` all
+call `buildModel(key, myTeam, players, config, draftedIds, roleOverrides, targets,
+customForced, whatIfAnchors)`, with those two added to the memo dependency lists.
+
+The **Custom** model also gained a row in every model picker once it has anchors. It
+was already in `TeamsBoard`'s `MODEL_LABELS`, so selecting it left the cheat sheet's
+picker reading "Choose a model…" over a custom build and the board's pane labelling it
+the raw key, `custom`.
+
+**Verifying a change here:** `node tools/test-model-inputs.mjs`. It parses every
+`buildModel(` call out of `index.html`, checks each passes all nine arguments with the
+favourites/custom/what-if trio in the last three, checks the App hands those props to
+`TeamsBoard` and `HeaderModelTabs`, and keeps a roll call of the surfaces that render a
+model — **a new caller this test has never seen fails it**, because a screen nobody
+reviewed is a screen that can drift again. Nothing at runtime can catch this: the two
+screens never see each other.
+
+End to end, the two screens were also diffed in a real browser (same harness as
+`tools/build-front-analysis.mjs`: serve the repo, drive headless Chromium, read the
+rendered cheat sheet chips against the board card's row titles) on an empty board, at
+40 players gone, and with a what-if anchor pinned. All three now agree exactly.

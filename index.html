@@ -8318,6 +8318,8 @@ function TeamsBoard({
   slotOrder,
   onReorderSlot,
   onViewCard,
+  customForced,
+  whatIfAnchors,
   showPredicted = true
 }) {
   const MODEL_LABELS = {
@@ -8412,7 +8414,11 @@ function TeamsBoard({
       };
       const ro = t.isMine ? roleOverrides : {};
       const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, undefined, { noCap: true });
+      // My team's card has to read exactly like the cheat sheet's model panel, so it is
+      // built from the same inputs: the model key, locked favourites, any AI-built custom
+      // anchors, and any what-if picks the user has pinned. Dropping the last two here is
+      // what used to make the board's Ideal Team disagree with the cheat sheet's.
+      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets, customForced, whatIfAnchors) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, undefined, { noCap: true });
       const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
       let _snakePlanT = null;
       const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; _snakePlanT = buildSnakePlan(t, players, _tcS, di); return _snakePlanT.projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
@@ -8431,7 +8437,7 @@ function TeamsBoard({
       });
     });
     return m;
-  }, [teams, players, config, draftedIds, roleOverrides, model, targets, slotOrder]);
+  }, [teams, players, config, draftedIds, roleOverrides, model, targets, slotOrder, customForced, whatIfAnchors]);
   const teamGrades = useMemo(() => {
     let maxS = 0,
       maxB = 0;
@@ -10617,7 +10623,9 @@ function CheatHeader({
   const [adv, setAdv] = useState(() => { try { return localStorage.getItem('it_cheat_adv') === '1'; } catch (e) { return false; } });
   function toggleAdv() { setAdv(v => { const n = !v; try { localStorage.setItem('it_cheat_adv', n ? '1' : '0'); } catch (e) {} return n; }); }
   const [customDesc, setCustomDesc] = useState('');
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
+  // The AI-built "Custom" model is only a model once it has anchors, but while it is one
+  // it needs a row here too, or the picker reads "Choose a model…" over a custom build.
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']].concat(customForced && customForced.size > 0 ? [['custom', 'Custom']] : []);
   const [wiOpen, setWiOpen] = useState(false);
   const [wiNames, setWiNames] = useState(['', '', '']);
   const [wiShowRow, setWiShowRow] = useState(-1);
@@ -10663,19 +10671,19 @@ function CheatHeader({
     const m = {};
     models.forEach(([k]) => {
       try {
-        const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? activeAnchors : undefined);
+        const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, wiActive ? activeAnchors : undefined);
         m[k] = pl ? pl.starterPoints : null;
       } catch (e) {
         m[k] = null;
       }
     });
     return m;
-  }, [myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  }, [myTeam, players, config, draftedIds, roleOverrides, targets, customForced, wiActive, anchorsKey]);
   const modelAlloc = useMemo(() => {
     if (!myTeam) return null;
     let plan;
     try {
-      plan = buildModel(model || 'ideal', myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? activeAnchors : undefined);
+      plan = buildModel(model || 'ideal', myTeam, players, config, draftedIds, roleOverrides, targets, customForced, wiActive ? activeAnchors : undefined);
     } catch (e) {
       return null;
     }
@@ -10701,11 +10709,11 @@ function CheatHeader({
       dollars: Math.round(byPos[p]),
       pct: Math.round(byPos[p] / total * 100)
     }));
-  }, [myTeam, model, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  }, [myTeam, model, players, config, draftedIds, roleOverrides, targets, customForced, wiActive, anchorsKey]);
   const modelTargets = useMemo(() => {
     if (!myTeam) return null;
     let plan;
-    try { plan = buildModel(model || 'ideal', myTeam, players, config, draftedIds, roleOverrides, targets, undefined, wiActive ? activeAnchors : undefined); }
+    try { plan = buildModel(model || 'ideal', myTeam, players, config, draftedIds, roleOverrides, targets, customForced, wiActive ? activeAnchors : undefined); }
     catch (e) { return null; }
     if (!plan) return null;
     const pmap = {};
@@ -10722,17 +10730,17 @@ function CheatHeader({
       if (pl) (byPos[b.position] = byPos[b.position] || []).push({ name: pl.name, price: b.price != null ? Math.round(b.price) : null });
     });
     return ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => (byPos[p] || []).length > 0).map(p => ({ pos: p, players: byPos[p] }));
-  }, [myTeam, model, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  }, [myTeam, model, players, config, draftedIds, roleOverrides, targets, customForced, wiActive, anchorsKey]);
   const wiModelKey = model || 'ideal';
   const wiModelLabel = (models.find(mm => mm[0] === wiModelKey) || ['ideal', 'Ideal Team'])[1];
   const wiPlan = useMemo(() => {
     if (!myTeam || !wiActive) return null;
     try {
-      return buildModel(wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, undefined, activeAnchors);
+      return buildModel(wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, activeAnchors);
     } catch (e) {
       return null;
     }
-  }, [wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, wiActive, anchorsKey]);
+  }, [wiModelKey, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, wiActive, anchorsKey]);
   const dyn = useMemo(() => buildCoachInsights({
     evalPlayers: players,
     myTeam,
@@ -19934,24 +19942,26 @@ function ModelsPanel({
   targets,
   mode,
   teams,
-  marketState
+  marketState,
+  customForced,
+  whatIfAnchors
 }) {
   const shownKey = model || 'ideal';
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
-  const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']].concat(customForced && customForced.size > 0 ? [['custom', 'Custom']] : []);
+  const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfAnchors) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfAnchors]);
   const modelPts = useMemo(() => {
     if (!myTeam) return {};
     const m = {};
     models.forEach(([k]) => {
       try {
-        const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets);
+        const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfAnchors);
         m[k] = pl ? pl.starterPoints : null;
       } catch (e) {
         m[k] = null;
       }
     });
     return m;
-  }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
+  }, [myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfAnchors]);
   const isBoard = mode === 'board';
   const isNonAuction = !!(config.format && config.format !== 'auction');
   const [npQ, setNpQ] = useState('');
@@ -20144,23 +20154,25 @@ function HeaderModelTabs({
   seasonGames,
   model,
   onSelectModel,
-  targets
+  targets,
+  customForced,
+  whatIfAnchors
 }) {
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
+  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']].concat(customForced && customForced.size > 0 ? [['custom', 'Custom']] : []);
   const games = seasonGames || 17;
   const modelPts = useMemo(() => {
     if (!myTeam) return {};
     const m = {};
     models.forEach(([k]) => {
       try {
-        const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets);
+        const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfAnchors);
         m[k] = pl ? pl.starterPoints : null;
       } catch (e) {
         m[k] = null;
       }
     });
     return m;
-  }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
+  }, [myTeam, players, config, draftedIds, roleOverrides, targets, customForced, whatIfAnchors]);
   if (!myTeam) return null;
   return React.createElement("div", {
     className: "header-models",
@@ -22204,7 +22216,7 @@ function App() {
       focusPlayer: null,
       onCollapse: null
     }))), (view === 'board' && myTeam) && (function () {
-      var MODELS = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
+      var MODELS = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']].concat([['custom', 'Custom']]);
       var key = draftModel || 'ideal';
       var lbl = (MODELS.find(function (m) { return m[0] === key; }) || [key, key])[1];
       if (!boardModelsOpen) return React.createElement("div", { className: "board-models-2pane bm2-min no-print" }, React.createElement("button", {
@@ -22213,7 +22225,7 @@ function App() {
         title: "Show the draft models and this model's " + (config.format === 'snake' ? "ideal picks by round" : "target buys")
       }, "📐 Draft Models · " + lbl + " ▸"));
       var plan = null;
-      try { plan = buildModel(key, myTeam, personalizedPlayers, config, draftedIds, roleOverrides, targets); } catch (e) {}
+      try { plan = buildModel(key, myTeam, personalizedPlayers, config, draftedIds, roleOverrides, targets, customForcedIds, whatIfAnchors); } catch (e) {}
       var pmap = {}; (personalizedPlayers || []).forEach(function (p) { pmap[p.id] = p; });
       var isSnake = config.format === 'snake';
       var games = SEASON_GAMES || 17;
@@ -22241,7 +22253,7 @@ function App() {
         className: "panel-toggle bm2-hide",
         onClick: function () { setBoardModelsOpen(false); },
         title: "Minimize the draft models"
-      }, "📐 Draft Models ▾"), React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
+      }, "📐 Draft Models ▾"), React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets, customForced: customForcedIds, whatIfAnchors: whatIfAnchors })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
     })(), React.createElement("div", {
       className: "board-layout board-norail"
     }, React.createElement(TeamsBoard, {
@@ -22264,6 +22276,8 @@ function App() {
       onSelectModel: setDraftModel,
       targets: targets,
       onToggleTarget: handleToggleTarget,
+      customForced: customForcedIds,
+      whatIfAnchors: whatIfAnchors,
       slotOrder: slotOrder,
       onReorderSlot: handleReorderSlot,
       onViewCard: pid => {
