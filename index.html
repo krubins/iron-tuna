@@ -321,6 +321,24 @@ input:focus, select:focus { border-color: var(--accent); }
   .snake-rail-dock { display: block; position: fixed; left: 12px; top: 92px; width: 366px; max-height: calc(100vh - 110px); z-index: 60; }
   .snake-rail-dock .players-rail { width: 100%; max-width: 366px; max-height: calc(100vh - 110px); overflow-y: auto; }
 }
+/* Phones: the rail cannot be a fixed 366px sidebar, but it is the only place the
+   board offers a player card or an "up for bid" button. Hiding it left the mobile
+   board with no way to open a player or assign one, so run it inline instead. */
+@media (max-width: 760px) {
+  .snake-rail-dock { display: block; position: static; width: auto; max-height: none; margin: 4px 0 14px; z-index: auto; }
+  .snake-rail-dock .players-rail { width: 100%; max-width: none; position: static; max-height: 62vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  /* ...and put it first. In source order it sits behind the coachmark, the log-a-pick
+     bar, the sliders and the Value Coach, which on a phone lands it below the fold. */
+  .board-main .main-content { display: flex; flex-direction: column; }
+  .board-main .main-content > .snake-rail-dock { order: -1; }
+  /* Trim the header so the first player is on the first screen rather than under
+     a legend, two filter rows and a drag hint that touch cannot act on anyway. */
+  .snake-rail-dock .players-rail { padding: 8px; }
+  .snake-rail-dock .rail-draghint { display: none; }
+  .snake-rail-dock .rail-legend { margin-bottom: 4px; }
+  .snake-rail-dock .rail-head { margin-bottom: 4px; }
+  .snake-rail-dock .rail-pills { margin-bottom: 4px; }
+}
 .mtab-bar { display: none; }
 .mobile-coach-view { padding: 8px 10px 0; }
 .mobile-coach-view .coach.embed { min-height: 60vh; box-shadow: 0 8px 28px rgba(0,0,0,0.4); }
@@ -15486,6 +15504,7 @@ function PlayersRail({
     onClick: () => onResetRanks && onResetRanks(),
     title: "Undo your rankings and go back to Iron Tuna's default order, rebuilt from the most recent projections"
   }, "↺ Undo my rankings")), React.createElement("div", {
+    className: "rail-draghint",
     style: {
       fontSize: 10,
       color: 'var(--text-muted)',
