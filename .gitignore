@@ -15,3 +15,8 @@ scratch-*
 # scratch data. tools/odds.example/ IS committed as schema documentation.
 tools/odds/
 tools/sources/
+
+# Instrumented copies of index.html written by tools/build-front-analysis.mjs
+# and by hand while debugging the planner. Never deployed.
+index.test.html
+.front-analysis-probe.html
