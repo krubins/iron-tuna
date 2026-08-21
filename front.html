@@ -319,7 +319,8 @@ img{max-width:100%}
 .bar-fill{display:block;height:100%;border-radius:4px;min-width:2px}
 .bar-val{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:17px;letter-spacing:.02em}
 .bnote{font-size:11.5px;color:var(--ink-3);line-height:1.5;margin-top:10px}
-.bcard .go{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:700;color:var(--red);letter-spacing:.04em}
+.bcard .go,.build-main .go{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:700;color:var(--red);letter-spacing:.04em}
+.build-main .bnote{margin-top:6px}
 
 /* ── weekly preseason takeaways ── */
 .week-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(262px,1fr));gap:14px;margin-bottom:16px}
@@ -453,6 +454,7 @@ img{max-width:100%}
       <div class="spend-bar" id="spendBar"></div>
       <div class="spend-key" id="spendKey"></div>
       <div class="build-meta" id="buildMeta"></div>
+      <p class="bnote" id="buildCustomNote"></p>
     </div>
     <aside class="build-side" id="buildSide"></aside>
   </div>
@@ -1422,6 +1424,11 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
       '<span>' + A.playerCount + ' players considered</span><span>' + A.teams + '-team &middot; ' + fmtMoney(A.budget) +
       (myBudget != null ? ' (your budget)' : '') +
       ' &middot; full PPR</span><span>Bench held at minimum bid</span>';
+    document.getElementById('buildCustomNote').innerHTML =
+      (myBudget != null
+        ? 'Dollars rescaled to your ' + fmtMoney(A.budget) + ' budget. Team count, scoring and the exact roster are still the site default &mdash; the true optimum for your league can differ. '
+        : 'Your league is not this league. Set your scoring and roster and the whole solution moves. ') +
+      '<a class="go" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a>';
 
     var top2 = A.lineup.slice().sort(function(a, b){ return b.price - a.price; }).slice(0, 2);
     var blurb = [
@@ -1463,11 +1470,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
           return '<div class="bar-row"><span class="bar-pos">' + esc(c.pos) + '</span>' +
             '<span class="bar-track"><span class="bar-fill" style="width:' + c.share + '%;background:' + (POS_INK[c.pos] || '#8b939c') + '"></span></span>' +
             '<span class="bar-val">' + fmtMoney(c.dollars) + '</span></div>';
-        }).join('') + '</div>' +
-        (myBudget != null
-          ? '<p class="bnote">Dollars rescaled to your ' + fmtMoney(A.budget) + ' budget. Team count, scoring and the exact roster are still the site default &mdash; the true optimum for your league can differ.</p>'
-          : '<p class="bnote">Your league is not this league. Set your scoring and roster and the whole solution moves.</p>') +
-        '<a class="go" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>';
+        }).join('') + '</div></div>';
   }
 
   // ══════════════════ weekly preseason takeaways ══════════════════
