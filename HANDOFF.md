@@ -1187,7 +1187,7 @@ have published, listed on `/analyst-desk` by headline, and quietly carried no
 cards and no line in the record table. **When a change adds a column the desk
 must fill, the prompt edit is part of that change, not a follow-up.**
 
-The three edits, as they now stand:
+The four edits, as they now stand:
 
 1. In the ROTATE THE DESK block, `DESKS` becomes seven entries and the modulus
    moves with it:
@@ -1230,10 +1230,59 @@ The three edits, as they now stand:
    wrong costs the cards and the record row while the entry still lists, so the
    run has no visible failure to notice — the reason it needs saying at all. The
    prompt also tells the run to `ALTER TABLE lead_story ADD COLUMN calls TEXT`
-   itself if the `INSERT` comes back `no such column`, which happens only if
-   nobody has loaded `/analyst-desk` since deploy. Its self-check fetches
-   `/api/analyst-column` and confirms the entry arrived with its calls, not just
-   its headline.
+   itself if the `INSERT` comes back `no such column`. Its self-check runs
+   through the **D1 connector**, not a WebFetch to the site — see "What the
+   first runs taught" below for why that matters.
+
+4. **"Spread the calls across analysts"** (added after the first entry). At
+   least three different analysts per entry and no single analyst more than half
+   the calls; search per analyst rather than mining one risers-and-fallers
+   roundup; check the running record and prefer whoever the column is thin on.
+   It carries a roster to draw from, names Berry and Clay as the two the site
+   most wants represented, and asks the report to name any analyst it tried to
+   source and could not.
+
+   **The escape hatch is the load-bearing half and it overrides the quota.** If
+   only two analysts can be sourced, the entry has two; if one, it writes fewer
+   calls and says so. A spread target on a desk that cannot always reach half
+   its sources is exactly the instruction that manufactures attributions, so the
+   prompt says outright that three well-sourced calls across three analysts beat
+   eight from one column, and both beat one invented one. Never loosen that
+   sentence to make the quota bite harder.
+
+   One mechanical rule rides along: spell each analyst's name identically every
+   time, because `analystScoreboard()` groups by name and "Matt Berry" would
+   split Berry into two rows.
+
+#### What the first runs taught, 2026-08-21
+
+Three findings from firing the desk by hand, all of which outlived the test:
+
+- **A `fire_trigger` `text` override loses to the prompt.** Firing with an
+  appended message saying "write for the `analyst` desk, ignore the clock" produced
+  a `player` story: the prompt's own "ROTATE THE DESK — this is required, not a
+  preference" won. To force a desk, edit the prompt itself, fire, and restore it
+  immediately. The pin was live for 73 seconds and the restore is the step you
+  cannot forget, or the next cron writes the pinned desk too.
+- **The Routine has no pre-approved tool list**, unlike the other three. Its
+  self-check `WebFetch` to irontuna.com sat in `REQUIRES_ACTION` waiting for a
+  human who was never going to come, *after* the story had already published. So
+  every scheduled run had been quietly skipping its own verification. The
+  self-check now goes through D1, and the prompt says never to end a run parked
+  on a permission request. Giving the Routine an `allowed_tools` preset would fix
+  the underlying cause.
+- **The desk skewed to one writer.** The first entry took six of eight calls
+  from a single CBS column, because one aggregated risers-and-fallers piece is
+  the cheapest thing to find. Hence edit 4 above. Judge the skew off the record
+  table on `/analyst-desk`, which is exactly what it is for.
+
+The first entry is worth reading as the reference for what this desk should
+sound like: `analyst-desk-august-moves-2026-08-21-20`. Its lead argues that the
+odds had *already* paid Kyler Murray 32.1 points for winning the Vikings job on
+Aug 11, so an Aug 17 upgrade on that news double-counts it, and he still lands
+3.9 points short of the QB14 cutoff. That is the shape to aim for: the analyst's
+claim, the board's number, and a reason they differ that a reader cannot get
+from either side alone.
 
 ### Tests
 
