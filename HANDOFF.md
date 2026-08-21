@@ -1263,20 +1263,41 @@ rather than asserting it away, so a regression that makes it worse still fails.
 ### What this moved that is not in the table
 
 `switchPrice()` — the YOU value on every player row — is a binary search over
-`buildOptimalPlan`, so the reserve fix moved it too. A higher, honest bench
-reserve leaves the starters a lower ceiling, so YOU values come out slightly
-lower than before. That lands on the board's colouring, which PR #66 had just
-changed to grade `Proj` against **YOU** rather than against Value: a lower YOU
-means marginally more rows read red. The two changes were written independently,
-hours apart, and neither anticipated the other. If the board's colour balance
-looks off, this is the first place to look.
+`buildOptimalPlan`, so the reserve fix moved it too, and PR #66 had just changed
+the board's colouring to grade `Proj` against **YOU** rather than against Value.
+The two changes were written independently, hours apart, and neither anticipated
+the other, so the shift was measured rather than argued about. Over the top 120
+priced players, comparing YOU before and after:
 
-`switchReserve` is **retired**. It selected the better of two bench reserves for
-the YOU-value and opponent paths; the real reserve is now unconditional, so the
-flag has nothing left to switch. It stays in the signature only to hold its
-position — five call sites still pass a value in that slot, and dropping it would
-shift `opts` one place left and take `noCap` with it. Remove it only together
-with all five.
+| | |
+|---|---|
+| median change | **$0** |
+| mean change | **-$0.20** |
+| range | -$5 to +$4 |
+| rows whose colour flipped | 11 of 120 |
+| RED before → after | **72 → 69** |
+
+**It is a non-event, and it goes the opposite way to the obvious guess.** A
+higher reserve lowers the ceiling the search runs against, so the intuition is
+that YOU drops and more rows turn red. In practice the reserve also frees the
+starter solve from stranding money, the two effects very nearly cancel, and the
+red count went *down* by three. No retuning is called for. Do not re-derive this
+from first principles — the first-principles answer is wrong.
+
+What that measurement did surface, and what is worth a look on its own terms: of
+the 76 players the optimiser priced on a fresh board, **72 came back RED and not
+one came back GREEN**, both before and after. Under the pre-#66 rule the same
+board produced a mix. That is #66's rule meeting an empty roster, not anything
+section 19 did, and it is the opposite of what that PR set out to achieve.
+(Caveat on the number: this counted raw `switchPrice`, while the app runs a
+tail-extrapolation pass afterwards that gives a `personalValue` to players the
+optimiser never priced. The 76 are exact; the other 44 are not covered.)
+
+`switchReserve` is **gone**, along with the five call sites that passed it. It
+selected the better of two bench reserves for the YOU-value and opponent paths,
+and the real reserve is now unconditional, so it had nothing left to switch.
+Removing it shifted `opts` into position 11 at three call sites — if `noCap` ever
+appears to stop working, check that first.
 
 ### Verifying a change here
 

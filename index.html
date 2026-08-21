@@ -8517,7 +8517,7 @@ function TeamsBoard({
       };
       const ro = t.isMine ? roleOverrides : {};
       const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, undefined, { noCap: true });
+      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, { noCap: true });
       const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
       let _snakePlanT = null;
       const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; _snakePlanT = buildSnakePlan(t, players, _tcS, di); return _snakePlanT.projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
@@ -14794,15 +14794,12 @@ function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
   walkGroups(0);
   return best;
 }
-// `switchReserve` is RETIRED and no longer read. It used to select a better bench
-// reserve (`skillBench * 2 + kdBench * minBid`) for the YOU-value and opponent
-// paths, because the default `remainingBench * minBid` was too low. Section 19
-// made the real, floor-aware reserve unconditional, so that branch is now what
-// every caller gets and the flag has nothing left to switch. The parameter stays
-// in the signature only to hold its position: five call sites still pass a value
-// in this slot, and removing it would silently shift `opts` one place left and
-// take `noCap` with it.
-function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, switchReserve, opts) {
+// A `switchReserve` flag used to sit between `noBench` and `opts`. It selected a
+// better bench reserve for the YOU-value and opponent paths because the default
+// `remainingBench * minBid` was too low; section 19 made the real, floor-aware
+// reserve unconditional, so it had nothing left to switch and is gone along with
+// all five call sites that passed it.
+function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, opts) {
   opts = opts || {};
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
@@ -15155,7 +15152,7 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
   const ptsAt = P => {
     const pl = buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true, {
       [player.id]: P
-    }, true, true);
+    }, true);
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   if (ptsAt(minBid) <= baselinePoints + 1e-6) return null;
@@ -20238,7 +20235,7 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
         (fpIdeal = fpIdeal || {})[a.id] = Math.max(1, a.price || 1);
       }
     });
-    const best = buildOptimalPlan(myTeam, players, config, di, undefined, locked, roleOverrides, true, fpIdeal, true, undefined, {
+    const best = buildOptimalPlan(myTeam, players, config, di, undefined, locked, roleOverrides, true, fpIdeal, true, {
       noCap: true
     });
     if (best) return best;
@@ -21339,7 +21336,7 @@ function App() {
     const maxBid = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
     const basePlan = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true);
     const baselinePoints = basePlan ? basePlan.starterPoints : 0;
-    const switchBaseline = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, true, true);
+    const switchBaseline = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, true);
     const switchBasePts = switchBaseline ? switchBaseline.starterPoints : baselinePoints;
     const planTargetIds = new Set();
     (basePlan && basePlan.remainingStarterSlots || []).forEach(s => {
