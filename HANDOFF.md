@@ -1287,12 +1287,70 @@ Aug 11, so an Aug 17 upgrade on that news double-counts it, and he still lands
 claim, the board's number, and a reason they differ that a reader cannot get
 from either side alone.
 
+#### The entries have to be readable, 2026-08-21
+
+The sourcing rules above are about whether an entry is *true*. They say nothing
+about whether it can be followed, and the first entries showed that is a
+separate failure with its own repeat offenders. The complaint, in the form it
+arrived — a reader's compression of one entry's Eisenberg calls, not a quote
+from it:
+
+> Against an odds payload nine hours old, only Pierce's line sits meaningfully
+> below the consensus sheet, and the gap is $0.51. Iron Tuna max bids: Rashee
+> Rice $38, Olave $24, McLaurin $16, Dak Prescott $2 against Hayden Winks' 68th
+> overall.
+
+Everything in it is sourced and computed. It is still close to unreadable, for
+three reasons that are worth naming because each one recurs:
+
+- **Internal vocabulary reaching the reader.** "Odds payload" is the name of a
+  thing in this codebase, not a noun a reader owns. Its age is a real caveat —
+  a blend built on a stale snapshot has not seen the news the analyst is
+  reacting to — but the sentence has to say *that*, not name the object.
+- **A gap called meaningful that is not.** $0.51 on a $200 board is a rounding
+  difference. Describing it as sitting "meaningfully below" consensus and then
+  printing the number one clause later tells the reader the desk is not reading
+  its own arithmetic. The threshold is behavioural: a gap counts when it moves
+  a player across a tier or changes what is affordable after him.
+- **Two units set against each other with no conversion.** Four max bids
+  "against" one analyst's 68th overall compares dollars to a rank, and three of
+  the four players are not the one being ranked. A rank only becomes a
+  disagreement once it is put on a board — 68th overall is a sixth-round pick
+  in a twelve-team league — and the comparison has to be one player at a time.
+
+The page side of this is done. The "How to read this" box on `/analyst-desk`
+now defines each of these for a reader who meets them mid-entry: ranks versus
+dollars and how to convert, the sub-dollar-gap noise floor, and what the odds
+timestamp is doing in the sentence. The call cards also label the `why` line off
+the stored `stance` ("Why we agree" / "Why we differ" / "Where we split")
+instead of leaving it as a floating italic under four cards from four analysts.
+`tools/test-analyst-column.mjs` pins all five claims, so a future rewrite of
+that box cannot quietly drop the vocabulary the entries are written in.
+
+**The prompt side is not applied.** It cannot be done from this repo: the
+Routine's prompt is not stored here and no API reads it back, so the only way to
+edit it is to open the Routine and hand-edit the brief — a blind
+`update_trigger` would overwrite the other four edits above. The desk brief
+needs a fifth item, and it is a writing rule, not a sourcing one:
+
+5. **Write it so a reader can follow it.** No internal vocabulary in the prose —
+   no "payload", no field names, no "the blend"; if the age of the odds snapshot
+   matters, say what it means for the argument. Never call a gap meaningful
+   without checking it: under about a dollar on a $200 board is noise and the
+   entry should say the two sides agree. Compare like with like, one player at a
+   time — a rank is not a price until it has been converted to the pick it lands
+   on and read off the board, and a sentence that lists four players' max bids
+   against one analyst's rank of a fifth is comparing nothing. Every dollar
+   figure in a sentence belongs to the player that sentence is about.
+
+
 ### Tests
 
-`node tools/test-analyst-column.mjs` (59 assertions) covers the standing column:
+`node tools/test-analyst-column.mjs` (64 assertions) covers the standing column:
 the two query shapes, every malformed `calls` a run could store, the record
 tally, and the page's own contract (indexable, in the sitemap, escapes what the
-desk wrote, and degrades to standing copy when the API is dead).
+desk wrote, degrades to standing copy when the API is dead, and still carries
+the reader vocabulary the entries are written in).
 
 `node tools/test-lead-story.mjs` (58 assertions, no network, no browser). It
 evaluates the real section out of `_worker.js` rather than a copy, and most of it

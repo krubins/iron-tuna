@@ -106,6 +106,7 @@ footer.site a{color:var(--muted)}
 .calls .side{display:block;color:var(--sec);font-size:14.5px;margin:3px 0}
 .calls .side b{color:var(--muted);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;display:inline-block;min-width:74px}
 .calls .why{color:var(--sec);font-size:14px;font-style:italic;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+.calls .why b{color:var(--muted);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-style:normal;display:inline-block;margin-right:8px}
 .more{font-size:14px;margin:12px 0 0}
 .state{color:var(--muted);margin:26px 0}
 @media(max-width:640px){.calls .stance{margin-left:0}.calls .side b{min-width:0;margin-right:6px}}
@@ -130,8 +131,11 @@ footer.site a{color:var(--muted)}
 
 <div class="note">
   <p><b>How to read this.</b> An analyst being above consensus is not the same as being above us. Iron Tuna&rsquo;s shipped values are already blended toward the sportsbook lines, so on plenty of players we are the ones off consensus. &ldquo;Above consensus&rdquo; here always means above the projection set the site treats as the baseline, not above our price.</p>
+  <p><b>Ranks and dollars are different units.</b> Analysts publish ranks; we publish prices. Neither can disagree with the other until one is converted into the other. So put the rank on a board: 68th overall is a sixth-round pick in a 12-team league, and what our sheet charges for the players going around that pick is the number the rank is actually arguing with. A rank and a price that look nothing alike are often agreeing.</p>
+  <p><b>A dollar is noise.</b> On a $200 board, a gap of a dollar or less between our price and the consensus sheet is a rounding difference, not a disagreement. A gap only counts here when it changes what you would do &mdash; it moves a player across a tier, or it changes who you can still afford afterwards. If an entry hands you a gap under a dollar, read it as the two sides agreeing.</p>
   <p><b>Where their numbers come from.</b> One specific, dated position per analyst, quoted only as far as the argument needs and cited on the story it appears in. We do not reproduce anyone&rsquo;s ranking set, and we never state an analyst&rsquo;s position from memory. If the desk cannot source a position on a given run, it writes nothing rather than paraphrasing one.</p>
-  <p><b>Dollar figures are max bids</b> in a 12-team, $200, half-PPR auction, not price predictions. Set your own scoring and roster and the whole board re-prices to your league.</p>
+  <p><b>Dollar figures are max bids</b> in a 12-team, $200, half-PPR auction, not price predictions. They are the most we would pay, not a guess at what the room will pay. Set your own scoring and roster and the whole board re-prices to your league.</p>
+  <p><b>When an entry dates the odds.</b> Our prices are blended toward sportsbook win totals and player props, so entries say how old that odds snapshot was when the piece was written. It is a freshness note and nothing more: a few hours old is normal, and it only matters when a line moved on the same news the analyst was reacting to.</p>
 </div>
 
 <div id="scoreboardWrap" hidden>
@@ -141,6 +145,7 @@ footer.site a{color:var(--muted)}
 </div>
 
 <div class="eyebrow">The calls</div>
+<p>Newest first. Under each headline, one card per analyst per player: the position they published, the price our board carries, and which way we came down. The headline links to the full piece, where the analyst&rsquo;s position is cited.</p>
 <div id="entries"><p class="state">Loading the column&hellip;</p></div>
 
 <div class="cta-band">
@@ -173,6 +178,7 @@ footer.site a{color:var(--muted)}
     document.getElementById('entries').innerHTML =
       '<p class="state">' + esc(msg) + '</p>';
   }
+  var WHY_LABEL = { agree: 'Why we agree', disagree: 'Why we differ', partial: 'Where we split' };
   function callHtml(c){
     var who = esc(c.analyst) + (c.outlet ? ' <span style="color:var(--muted);font-weight:400">' + esc(c.outlet) + '</span>' : '');
     var plr = esc(c.player) + (c.pos || c.team
@@ -184,7 +190,10 @@ footer.site a{color:var(--muted)}
     h += '</div>';
     if (c.their) h += '<span class="side"><b>They say</b>' + esc(c.their) + '</span>';
     if (c.ours)  h += '<span class="side"><b>We say</b>' + esc(c.ours) + '</span>';
-    if (c.why)   h += '<p class="why">' + esc(c.why) + '</p>';
+    // The why line used to float on its own, which read as a stray sentence
+    // when four cards from four analysts sit under one entry. Say whose
+    // reasoning it is, off the verdict the run already stored.
+    if (c.why)   h += '<p class="why"><b>' + esc(WHY_LABEL[c.stance] || 'Our read') + '</b>' + esc(c.why) + '</p>';
     return h + '</li>';
   }
   function entryHtml(e){

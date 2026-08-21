@@ -252,6 +252,22 @@ console.log('\nthe page itself');
   ok('the reader is told analyst-above-consensus is not analyst-above-us',
      page.includes('is not the same as being above us'));
   ok('dollar figures are labelled max bids', page.includes('max bids'));
+  // The three that make an entry followable. Every one of them exists because
+  // a published piece was hard to read without it: a rank set against a price
+  // with no conversion between them, a $0.51 gap described as meaningful, and
+  // the age of an odds snapshot quoted at a reader who has no idea why it is
+  // in the sentence. The desk writes the entries; this box has to carry the
+  // vocabulary they are written in.
+  ok('ranks are converted before they can disagree with a price',
+     page.includes('Ranks and dollars are different units'));
+  ok('a sub-dollar gap is named as noise, not a disagreement',
+     page.includes('A dollar is noise') && page.includes('rounding difference'));
+  ok('the odds stamp is explained as freshness',
+     page.includes('freshness note'));
+  ok('the why line says whose reasoning it is',
+     page.includes('Why we differ') && page.includes('WHY_LABEL'));
+  ok('the card layout is explained before the cards',
+     page.includes('one card per analyst per player'));
   ok('the front page and the lead both link here',
      fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8').includes('/analyst-desk'));
 }
