@@ -1293,6 +1293,49 @@ section 19 did, and it is the opposite of what that PR set out to achieve.
 tail-extrapolation pass afterwards that gives a `personalValue` to players the
 optimiser never priced. The 76 are exact; the other 44 are not covered.)
 
+### Why no row came back green, and what replaced the rule
+
+That observation was right and it is worse than "72 of 76". Counting the app's
+own `personalValue` — the tail extrapolation included, so all 407 undrafted
+players on a fresh 12-team $200 board — **not one of the 345 skill players had
+YOU above Proj.** The only 20 rows that did were kickers and defenses, which are
+excluded from the `switchPrice` path by name and fall back to VALUE.
+
+It is structural, not a tuning problem. `switchPrice` binary-searches the price
+at which forcing a player into the plan stops beating a baseline plan that could
+*already buy him at market*, so the search can never return more than his market
+price: at best it equals it (McCaffrey, $71 against $71, the plan already wanted
+him), and for everyone the plan does not want it lands below. The market is
+pricing twelve rosters and you only fill one, so YOU sits under Proj by a
+systematic margin — median YOU/Proj about **0.79** among the priced players, and
+it varies by position (QB **0.53** in a 1-QB room, RB 0.83, WR 0.77, TE 0.75).
+A rule of the form "YOU beats Proj = good buy" is dead on arrival.
+
+So the board no longer grades a row against its own price. `goingRate()` takes
+the median YOU-per-dollar-of-Proj across the players the optimiser actually
+priced (`worthPrice != null` — the extrapolated tail would only measure the
+extrapolation), and a name is green when more of his asking price lands in your
+starting lineup than that rate returns, red when less. Half the board falls
+either side of a median by construction, so green exists. On the fresh board:
+
+| | green | neutral | red |
+|---|---|---|---|
+| whole board | 33 | 166 | 33 |
+| priced ≥ $8 | 21 | 29 | 23 |
+| RB / WR / TE / QB (≥ $8) | 10 / 8 / 2 / 1 | 6 / 18 / 3 / 2 | 7 / 4 / 5 / 7 |
+
+Gibbs — the row that started this, $77 Proj against a $61 going rate and a $74
+YOU — is now solidly green, and the QB column is mostly red, which is the right
+read in a room that starts one. `costColor()` takes an optional saturation
+scale so the same dollar gap reads the same at any budget; it was fixed at $10,
+which tinted a $120 league nearly twice as hard as a $200 one.
+
+Two verdicts that tested `you >= proj` (`coachEvalReply`'s bottom line and
+`nominationInsight`'s tone) were unreachable for the same reason and now test
+against the going rate. `nameTitle` — the sentence explaining the colour — was
+computed and never rendered, so hovering a name reported only the bye week; it
+is now the name's tooltip.
+
 `switchReserve` is **gone**, along with the five call sites that passed it. It
 selected the better of two bench reserves for the YOU-value and opponent paths,
 and the real reserve is now unconditional, so it had nothing left to switch.

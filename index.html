@@ -8377,11 +8377,43 @@ function SettingsModal({
     }
   }, "Save Settings"))));
 }
-function costColor(price, value) {
+// THE GOING RATE. YOU is a marginal price — the most a player can cost before
+// the same dollars score more somewhere else — so it sits BELOW the market price
+// for nearly everyone: the room prices twelve rosters, you only fill one. On a
+// fresh 12-team $200 board not one of the 345 skill players had YOU above Proj,
+// so any rule of the form "YOU beats Proj = good buy" is dead on arrival and can
+// only ever paint red (HANDOFF section 19 recorded the same count independently).
+//
+// The board is the reference instead: the median YOU per dollar of Proj among
+// the players the optimiser actually priced. Beating that rate means more of his
+// asking price lands in your starting lineup than the typical player's does,
+// which is exactly what paying up for an elite starter buys you. Half the board
+// falls either side of the median by construction, so a good buy can exist.
+//
+// Only optimiser-priced players (worthPrice != null) vote. Everyone else carries
+// a tail extrapolation of those same numbers, so including them would measure
+// the extrapolation rather than the board. Returns null when too few priced
+// players remain to establish a rate.
+function goingRate(players, draftedIds) {
+  const rs = [];
+  (players || []).forEach(p => {
+    if (p.worthPrice == null || (draftedIds && draftedIds.has(p.id))) return;
+    const c = p.marketValue != null ? p.marketValue : p.auctionValue;
+    if (c > 0 && p.personalValue != null) rs.push(p.personalValue / c);
+  });
+  rs.sort((a, b) => a - b);
+  return rs.length >= 3 ? rs[Math.floor(rs.length / 2)] : null;
+}
+// What a player at this price is typically worth to your lineup.
+function goingRatePar(price, rate, minBid) {
+  if (rate == null || !(price > 0)) return null;
+  return Math.max(minBid || 1, Math.round(rate * price));
+}
+function costColor(price, value, scale) {
   if (value == null) return undefined;
   const d = price - value;
   if (d === 0) return 'var(--text-primary)';
-  const t = Math.min(1, Math.abs(d) / 10);
+  const t = Math.min(1, Math.abs(d) / Math.max(1, scale || 10));
   const neutral = [245, 247, 250];
   const target = d > 0 ? [239, 68, 68] : [45, 212, 163];
   const mix = neutral.map((n, i) => Math.round(n + (target[i] - n) * t));
@@ -11541,6 +11573,12 @@ function Cheatsheet({
   const hlSet = cheatHighlights(byPos, highlight);
   const stratKey = highlight && highlight !== 'targets' ? highlight : null;
   const minBid = config && config.valuation && config.valuation.minBid || 1;
+  // Rows are graded against the board's going rate, not against their own price
+  // — see goingRate() for why YOU under Proj cannot mean "overpriced".
+  const _youRate = React.useMemo(() => goingRate(players, draftedIds), [players, draftedIds]);
+  // The tint saturates a fixed number of dollars from par, scaled to the league:
+  // $10 on a $200 budget, $6 on a $120 one, so the same gap reads the same way.
+  const _tintScale = Math.max(3, Math.round((config.budget || 200) * 0.05));
   const [showCols, setShowCols] = useState({
     proj: true,
     value: true,
@@ -11834,7 +11872,7 @@ function Cheatsheet({
     onClick: () => setHighlight(null)
   }, "clear")), ((config.format || 'auction') === 'snake' ? React.createElement("div", { className: "cheat-whb no-print" }, React.createElement("div", { className: "cheat-whb-h" }, "Will he be available?"), React.createElement("div", { className: "cheat-whb-sub" }, "Odds a player lasts to your next pick \u2014 from the live board, ADP, and position runs."), React.createElement("div", { className: "cheat-whb-in" }, React.createElement("div", { className: "whb-ac" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQ, onChange: e => { setWhbQ(e.target.value); setWhbShow(true); }, onFocus: () => setWhbShow(true), onBlur: () => setTimeout(() => setWhbShow(false), 170) }), (whbShow && (whbQ || "").trim()) ? React.createElement("div", { className: "whb-ac-list" }, (players || []).filter(function (p) { return p.name && p.name.toLowerCase().indexOf((whbQ || "").toLowerCase().trim()) >= 0; }).slice(0, 6).map(function (p) { return React.createElement("div", { key: p.id, className: "whb-ac-item", onMouseDown: function () { setWhbQ(p.name); setWhbShow(false); } }, p.name, React.createElement("span", { className: "whb-ac-pos" }, " " + p.position)); })) : null), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbR, onChange: e => setWhbR(e.target.value) })), whbResultCheat ? (whbResultCheat.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResultCheat.err) : whbResultCheat.drafted ? React.createElement("div", { className: "whb-res" }, whbResultCheat.player.name + " is already off the board.") : whbResultCheat.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResultCheat.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResultCheat.odds + "%"), " chance " + whbResultCheat.player.name + " (ADP " + (whbResultCheat.player.adp != null ? Math.round(whbResultCheat.player.adp) : "?") + ") is still there at your round " + whbResultCheat.round + " pick (overall #" + whbResultCheat.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Enter a player and a round.")) : null), ((config.format || 'auction') === 'snake' && !introDismissed ? React.createElement("div", { className: "cheat-intro no-print" }, React.createElement("span", { className: "ci-new" }, "NEW"), React.createElement("span", { className: "ci-body" }, "The ", React.createElement("b", { style: { color: '#34c759' } }, "Rank"), " number is tinted: ", React.createElement("b", { style: { color: '#34c759' } }, "green = a value"), " at his slot, ", React.createElement("b", { style: { color: '#e0a83c' } }, "amber = going early"), ". Tier breaks show as a line."), React.createElement("button", { className: "ci-x", onClick: () => { try { localStorage.setItem('it_snake_cheat_intro', '1'); } catch (e) {} setIntroDismissed(true); } }, "Got it \u00d7")) : null), ((config.format || 'auction') === 'snake' && _recPick ? React.createElement("div", { className: "cheat-recpick no-print" }, React.createElement("span", { className: "crp-tag" }, "YOUR PICK " + _recPick.label), React.createElement("span", { className: "crp-body" }, "Best on the board: ", React.createElement("b", null, _recPick.name), " ", React.createElement("em", null, _recPick.pos), " \u00b7 ", _recPick.av, "% he returns to you")) : null), ((config.format || 'auction') === 'snake' && _needs ? React.createElement("div", { className: "cheat-needs no-print" }, React.createElement("span", { className: "cn-label" }, "Your starters"), _needs.map(n => React.createElement("span", { key: n.pos, className: "cn-slot" + (n.met ? " met" : " open") }, n.pos, " ", n.have, "/", n.need, n.met ? " \u2713" : ""))) : null), React.createElement("div", {
     className: "cheat-legend no-print"
-  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = a value at his ADP"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = going early"), ".")) : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = falls to you (value)"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = goes early"), ".")) : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "Name colour"), ": ", React.createElement("span", { style: { color: '#2dd4a3', fontWeight: 700 } }, "green = Proj under YOU"), " (worth the ask, elite players included), ", React.createElement("span", { style: { color: '#ef4444', fontWeight: 700 } }, "red = Proj above YOU"), ". All dollar values are scaled to a ", React.createElement("b", null, "$", config.budget || 200, " budget"), " per team (", config.teams, " teams). Change it under Your League and every price recalculates."))), React.createElement("div", {
+  }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = a value at his ADP"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = going early"), ".")) : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = falls to you (value)"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = goes early"), ".")) : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "Name colour"), ": ", React.createElement("span", { style: { color: '#2dd4a3', fontWeight: 700 } }, "green = more of his price lands in your lineup"), " than the board's going rate for a player that expensive, ", React.createElement("span", { style: { color: '#ef4444', fontWeight: 700 } }, "red = less"), ". Paying up for an elite starter reads green here; YOU sits under Proj for almost everyone, so the comparison is with the rest of the board. All dollar values are scaled to a ", React.createElement("b", null, "$", config.budget || 200, " budget"), " per team (", config.teams, " teams). Change it under Your League and every price recalculates."))), React.createElement("div", {
     className: "cheat-print-head only-print"
   }, React.createElement("div", {
     className: "cph-title"
@@ -11939,7 +11977,6 @@ function Cheatsheet({
         youDir = you > youBase ? 'up' : you < youBase ? 'down' : 'flat';
       }
     }
-    const tgap = you - cost;
     const softSched = scheduleSoftness(p.team, p.position);
     const toughSched = (showCols.tough13 || showCols.tough1517) ? toughSchedule(p.team, p.position) : null;
     const volFlag = showCols.volume ? volumeFlag(p, players) : null;
@@ -11947,15 +11984,15 @@ function Cheatsheet({
     const ageF = showCols.age ? ageFlag(p) : null;
     let sign, nameColor, nameTitle;
     {
-      // Price the name against YOU, not Value. Value is what a player is worth
-      // in a vacuum; YOU is what his points are worth to your starting lineup
-      // given your roster and budget. Elite players routinely cost more than
-      // Value and are still the right buy, so grading them against Value alone
-      // paints every star red and steers you into a deep roster of average
-      // starters. tgap = YOU - Proj: positive means he is still worth the ask.
-      sign = Math.abs(tgap) <= 1 ? 'neutral' : tgap > 0 ? 'under' : 'over';
-      nameColor = costColor(cost, you);
-      nameTitle = sign === 'under' ? `Good buy: the $${cost} price is about $${tgap} under the $${you} he is worth to your lineup.` : sign === 'over' ? `Overpay: the $${cost} price is about $${cost - you} above the $${you} he is worth to your lineup.` : `Priced about at what he is worth to you ($${you}).`;
+      // Grade him against par, not against his own price (see _youPar above):
+      // how much of a $cost asking price the board typically returns as lineup
+      // value, and how much of it he returns. Beating par is the elite-player
+      // case the raw Proj-vs-YOU rule could never express.
+      const par = goingRatePar(cost, _youRate, minBid);
+      const edge = par == null ? 0 : you - par;
+      sign = Math.abs(edge) <= 1 ? 'neutral' : edge > 0 ? 'under' : 'over';
+      nameColor = par == null ? 'var(--text-primary)' : costColor(par, you, _tintScale);
+      nameTitle = sign === 'under' ? `Good buy: a $${cost} player is typically worth $${par} to your lineup. He is worth $${you}, $${edge} more.` : sign === 'over' ? `Overpay: a $${cost} player is typically worth $${par} to your lineup. He is worth $${you}, $${-edge} less.` : `Priced about at the going rate: a $${cost} player is typically worth $${par} to your lineup, and he is worth $${you}.`;
       if (p.fit === 'target') nameTitle += ' Your plan also targets him for an open starting slot.';
     }
     let _verdict = null, _tb = null, _adpColor = null, _adpDir = null;
@@ -12011,7 +12048,9 @@ function Cheatsheet({
       style: {
         color: nameColor
       },
-      title: byeOf(p.team) ? `Bye week ${byeOf(p.team)}` : 'Bye week: TBD'
+      // nameTitle explains the colour and was computed but never rendered, so a
+      // hover on a red name only ever reported the bye week.
+      title: nameTitle + (byeOf(p.team) ? ` \u00b7 Bye week ${byeOf(p.team)}` : ' \u00b7 Bye week: TBD')
     }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
       className: "cheat-hctag",
       title: `Handcuff to ${handcuffMap.get(p.id)}`
@@ -17718,7 +17757,9 @@ function coachEvalReply(p, players, myTeam, teams, config, draftedIds, games) {
   if (comp) L.push(`Competition: ${comp.level}, ${comp.canAfford} rival${comp.canAfford !== 1 ? 's' : ''} can afford him${comp.maxRival > 0 ? ` (top max $${comp.maxRival})` : ''}.`);
   L.push(`Risk: ${rsk}.`);
   const cap = Math.min(you, maxBid);
-  if (you >= proj) L.push(`Bottom line: a strong fit, bid with confidence up to ~$${cap}.`);else L.push(`Bottom line: fair value to you is ~$${you}; let someone else overpay above that.`);
+  // Against the going rate, not against Proj: `you >= proj` was unreachable.
+  const _par = goingRatePar(proj, goingRate(players, draftedIds), minBid);
+  if (_par != null && you - _par > 1) L.push(`Bottom line: a strong fit — a $${proj} player is typically worth $${_par} to your lineup and he is worth $${you}. Bid with confidence up to ~$${cap}.`);else L.push(`Bottom line: fair value to you is ~$${you}; let someone else overpay above that.`);
   return L.join(' ');
 }
 function coachCompare(q, ctx) {
@@ -18294,9 +18335,10 @@ function nominationInsight(player, players, myTeam, teams, plan, config, drafted
     const comp = opponentCompetition(player, teams, myTeam, config);
     parts.push(`${comp.canAfford} rival${comp.canAfford !== 1 ? 's' : ''} can afford him${comp.maxRival > 0 ? ` (top max $${comp.maxRival})` : ''}.`);
   }
+  const _par = goingRatePar(proj, goingRate(players, di), config && config.valuation && config.valuation.minBid || 1);
   return {
     text: parts.join(' '),
-    tone: you >= proj ? 'good' : 'info'
+    tone: _par != null && you - _par > 1 ? 'good' : 'info'
   };
 }
 function coachStrategy(q, ctx) {
@@ -18413,6 +18455,8 @@ function buildCoachContext(q, ctx) {
   const byPos = {};
   (evalPlayers || []).filter(p => !di.has(p.id)).forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.values(byPos).forEach(a => a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0)));
+  // The same going rate the cheat sheet colours against.
+  const _rate = goingRate(evalPlayers, di);
   const slim = p => ({
     name: p.name,
     pos: p.position,
@@ -18425,8 +18469,9 @@ function buildCoachContext(q, ctx) {
     risk: riskLabel(riskScore(p)),
     flag: (() => {
       const _mine = p.personalValue != null ? p.personalValue : p.auctionValue;
-      if (p.marketValue == null || _mine == null) return 'fair';
-      return p.marketValue - _mine > 1 ? 'RED, overpay, Proj above You' : _mine - p.marketValue > 1 ? 'GREEN, value, Proj below You' : 'fair';
+      const par = goingRatePar(p.marketValue, _rate, 1);
+      if (_mine == null || par == null) return 'fair';
+      return _mine - par > 1 ? 'GREEN, beats the going rate, worth $' + (_mine - par) + ' more to your lineup than a typical $' + p.marketValue + ' player' : par - _mine > 1 ? 'RED, below the going rate, worth $' + (par - _mine) + ' less to your lineup than a typical $' + p.marketValue + ' player' : 'fair';
     })()
   });
   const top = {};
@@ -18504,7 +18549,7 @@ function buildCoachContext(q, ctx) {
     } : null,
     topAvailableByPosition: top,
     playersInQuestion: named,
-    legend: 'Proj = likely market/auction price. Value = VBD worth in a vacuum. You = the most THIS manager should personally pay given roster, budget, and live market. On the draft board and cheat sheet a player name is colored RED when Proj is above You (the ask beats what he is worth to this roster) and GREEN when Proj is below You (a buy). The per-player flag field encodes this color. If asked why a player is red or green, explain it from his Proj-vs-You gap, not his Proj-vs-Value gap; never claim it is another tool doing the coloring, you ARE the tool. A player whose Proj sits above Value can still be GREEN: elite players often cost more than Value and are still the right buy, because their points land in the starting lineup and a dollars-per-player discipline that never pays up leaves a deep roster of average starters.'
+    legend: 'Proj = likely market/auction price. Value = VBD worth in a vacuum. You = the most THIS manager should personally pay given roster, budget, and live market. You is a marginal price and sits BELOW Proj for nearly every player (the market prices twelve rosters, this manager fills one), so it is never read as "cheaper than Proj = bargain". On the draft board and cheat sheet a name is colored against the GOING RATE instead: par is the median You-per-dollar-of-Proj across the board, GREEN means more of his asking price lands in this lineup than a typical player at that price returns, RED means less. The per-player flag field carries that verdict and the dollar edge. If asked why a player is red or green, explain it as beating or missing the going rate for his price, never as a Proj-vs-Value or Proj-vs-You gap; never claim it is another tool doing the coloring, you ARE the tool. Paying above Value for an elite starter is often correct and shows GREEN when his You holds up: his points land in the starting lineup, and a dollars-per-player discipline that never pays up leaves a deep roster of average starters.'
   };
 }
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
@@ -18515,7 +18560,7 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _nowD = new Date();
   const _seasonYr = _nowD.getMonth() < 2 ? _nowD.getFullYear() - 1 : _nowD.getFullYear();
   const _seasonCtx = " SEASON CONTEXT, critical: today is " + _nowD.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + " and this draft is for the " + _seasonYr + " NFL season. The " + (_seasonYr - 1) + " season is LAST season, already finished; label any " + (_seasonYr - 1) + " stats as last season's. All projections in the data below are " + _seasonYr + " season projections. Rosters, coaches, and depth charts may have changed since " + (_seasonYr - 1) + ": trust the team assignments and numbers in the provided data over your memory, and if you are unsure whether an offseason move happened, say so instead of asserting last season's situation as current."
-  const sys = _coachId + _seasonCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. On the draft board and cheat sheet a player name shows RED when his Proj is above his You (the ask beats what he is worth to this roster) and GREEN when Proj is below You (worth buying at that price); each player flag field encodes this, so answer any red/green question from his Proj-vs-You gap, not his Proj-vs-Value gap. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a player priced above his Value can still be GREEN and still be the right buy. Elite players routinely cost more than true Value because their points-per-game edge over a replacement at their position is bigger than what the same dollars would buy you elsewhere, and that is exactly why a player's 'You' (personal max / switch price) sits above his Value. Paying up toward 'You' is correct when he maximizes your team's points-per-game, even above true value, so never argue against a buy on dollars-per-player grounds alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  const sys = _coachId + _seasonCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching staffs and tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager should pay given roster/budget/market. You is a marginal price: it sits BELOW Proj for nearly every player, because the market prices twelve rosters and this manager only fills one. So You under Proj is normal and means nothing on its own — never call a player overpriced just because Proj is above You. On the draft board and cheat sheet a name is colored against the GOING RATE: GREEN when more of his asking price lands in this lineup than a typical player at that price returns, RED when less. Each player flag field carries that verdict and the dollar edge, so answer any red/green question that way. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a player priced above his Value can still be GREEN and still be the right buy. Elite starters routinely cost more than true Value, and paying up is correct when his points land in the starting lineup, so never argue against a buy on dollars-per-player grounds alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, and if you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).filter(m => m.text && m.text !== '…' && m.text !== '(no response)' && !m.intro).slice(-6).map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
     content: m.text
