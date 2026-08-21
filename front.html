@@ -115,6 +115,7 @@ img{max-width:100%}
 .lead-link:hover{color:var(--red-dark)}
 .lead-date{font-size:12.5px;color:var(--ink-3)}
 .lead-ctrls{display:flex;align-items:center;gap:10px;padding:12px 28px;border-top:1px solid var(--line);background:#fafbfc}
+.lead-ctrls[hidden]{display:none}
 .lead-dots{display:flex;gap:7px}
 .lead-dot{width:9px;height:9px;border-radius:50%;background:#cdd3d9;border:none;cursor:pointer;padding:0}
 .lead-dot.on{background:var(--red)}
@@ -410,7 +411,7 @@ img{max-width:100%}
         <div class="lead-foot"><a class="lead-link" id="leadLink" href="#">Full story &rarr;</a><span class="lead-date" id="leadDate"></span></div>
         <div class="lead-also" id="leadAlso"></div>
       </div>
-      <div class="lead-ctrls">
+      <div class="lead-ctrls" id="leadCtrls">
         <div class="lead-dots" id="leadDots"></div>
         <div class="lead-arrows">
           <button class="lead-arrow" id="leadPrev" aria-label="Previous story">&#8249;</button>
@@ -775,6 +776,93 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   document.getElementById('leadPrev').onclick = function(){ li = (li - 1 + leadPool.length) % leadPool.length; pinned = true; renderLead(); };
   document.getElementById('leadNext').onclick = function(){ li = (li + 1) % leadPool.length; pinned = true; renderLead(); };
   renderLead(); startTick();
+
+  // ── the generated lead ─────────────────────────────────────────────────────
+  // Everything above is the fallback. The real lead is written fresh every three
+  // hours by a scheduled run that rebuilds the auction off the current
+  // projection set and the current sportsbook lines, stores it in D1, and it
+  // arrives here through /api/lead-story.
+  //
+  // Why it replaces the rotation rather than joining it: the rotation's whole
+  // job was to make a fixed pool of dated drop pages feel like it was moving.
+  // Once there is a genuinely new story every three hours there is nothing to
+  // paper over, and cycling a fresh story back through week-old ones is exactly
+  // the staleness this replaced. So the newest generated insight IS the lead,
+  // the older ones become links under it, and the dated deep dives stay only as
+  // the safety net for a run that has not landed yet.
+  //
+  // It is rendered client-side and additively: if the fetch fails, the API is
+  // down, or no run has published, the page keeps the deep-dive lead it already
+  // painted above. The front page is never blank because the desk had a bad day.
+  function paintGeneratedLead(d){
+    if (!d || !d.ok || !d.story || !d.story.slug) return;
+    var s = d.story;
+    if (tick) { clearInterval(tick); tick = null; }
+    pinned = true;                        // the wall-clock rotation is off now
+
+    // The art plate reads its strap off `topic`; for a generated story that is
+    // the desk it was written for.
+    s.topic = s.label || 'Insight';
+    renderCast(s);
+    document.getElementById('leadKicker').innerHTML =
+      '<span class="badge badge-deep">Insight</span>' +
+      '<span class="badge badge-pos">' + esc(s.label || 'Insight') + '</span>';
+    document.getElementById('leadTitle').innerHTML =
+      '<a href="' + esc(s.url) + '">' + esc(s.title) + '</a>';
+    // The dek IS the finding, in the desk's own words. It is not a "play" line
+    // in the drop pages' sense, so it is not labelled as one.
+    document.getElementById('leadPlay').innerHTML = esc(s.dek || '');
+    document.getElementById('leadStat').innerHTML = '';
+    // Nothing to re-price: the story already quotes real dollars off the live
+    // board, and the tailoring library re-words percentages, not conclusions.
+    var yours = document.getElementById('leadYours');
+    yours.innerHTML = ''; yours.hidden = true;
+    renderArt(s);
+    document.getElementById('leadLink').setAttribute('href', s.url);
+    document.getElementById('leadDate').textContent =
+      leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextSlot());
+
+    var also = document.getElementById('leadAlso');
+    var recent = (d.recent || []).filter(function(x){ return x.slug; }).slice(0, 4);
+    if (recent.length) {
+      var ah = '<span class="la-label">Recent insights</span><ul>';
+      recent.forEach(function(o){
+        ah += '<li><a href="' + esc(o.url) + '">' + esc(o.title) + '</a></li>';
+      });
+      also.innerHTML = ah + '</ul>';
+    } else { also.innerHTML = ''; }
+
+    // No dots and no arrows: there is one current story, and a control that
+    // walks backwards through retired ones is how this got stale in the first
+    // place. The archive is the list above, as links.
+    var ctrls = document.getElementById('leadCtrls');
+    if (ctrls) ctrls.hidden = true;
+
+    // Keep the countdown honest on a tab left open, and pick up the next run
+    // when the three-hour boundary passes.
+    tick = setInterval(function(){
+      var left = msToNextSlot();
+      document.getElementById('leadDate').textContent =
+        leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(left);
+      // A run publishes a few minutes past the boundary, so look again once the
+      // new slot has had time to land rather than the instant it opens.
+      if (left > SLOT_MS - 360000) loadGeneratedLead();
+    }, 30000);
+  }
+  function leadStamp(ms){
+    var d = new Date(+ms || 0);
+    if (!ms || isNaN(d.getTime())) return 'Latest insight';
+    var h = d.getUTCHours();
+    return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate()
+      + ' · ' + (h < 10 ? '0' + h : h) + ':00 UTC';
+  }
+  function loadGeneratedLead(){
+    fetch('/api/lead-story')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(paintGeneratedLead)
+      .catch(function(){});
+  }
+  loadGeneratedLead();
 
 
   // ── Vegas vs. Rankings & ADP ───────────────────────────────────────────────

@@ -1926,6 +1926,94 @@ let _ODDS_KICK_AT = 0;
 let _COLUMN_CACHE = null;
 let _COLUMN_AT = 0;
 let _COLUMN_KEY = '';
+let _LEAD_CACHE = null;
+let _LEAD_AT = 0;
+
+// ── the generated lead story ──────────────────────────────────────────────
+// A scheduled Claude Routine writes one fresh, data-driven insight into the D1
+// `lead_story` table every three hours and it becomes the front page's lead.
+// Two flags gate it, and they mean different things:
+//   verified = 1  the run could trace every number in the body to something it
+//                 pulled that run. A row that fails this never reaches a reader.
+//   published = 1 this is the CURRENT lead. The run sets it on its own row and
+//                 clears it on every other, so exactly one row is ever live.
+// Older verified rows keep verified = 1 with published = 0, which is what makes
+// the "Recent insights" list: vetted, no longer the lead. Unpublishing a bad row
+// therefore pulls it off the lead without also pulling the whole archive.
+//
+// The categories the Routine rotates through. The site names them here rather
+// than trusting whatever string the run stored, so a typo in a generated row
+// cannot invent a new desk on the front page.
+const LEAD_CATEGORIES = {
+  player:     'Player Insight',
+  playcaller: 'Play-Caller Premium',
+  vegas:      'Vegas vs. Consensus',
+  preseason:  'Preseason',
+  injury:     'Injury Report',
+  market:     'Market & Roster Build'
+};
+const LEAD_RECENT = 5;
+
+async function leadStoryPayload(env) {
+  const now = Date.now();
+  if (_LEAD_CACHE && now - _LEAD_AT < 120000) return _LEAD_CACHE;
+  let out = { ok: false, story: null, recent: [] };
+  try {
+    if (env.LEADS_DB) {
+      const cur = await env.LEADS_DB.prepare(
+        'SELECT slug, title, dek, category, players, created_at FROM lead_story'
+        + ' WHERE verified = 1 AND published = 1 ORDER BY created_at DESC LIMIT 1').first();
+      if (cur) {
+        // A slug the run never set would produce /lead/null, so a row without one
+        // is treated as no lead at all and the page keeps its own rotation.
+        if (cur.slug) {
+          const recent = await env.LEADS_DB.prepare(
+            'SELECT slug, title, category, players, created_at FROM lead_story'
+            + ' WHERE verified = 1 AND slug IS NOT NULL AND slug <> ?'
+            + ' ORDER BY created_at DESC LIMIT ?').bind(cur.slug, LEAD_RECENT).all();
+          out = {
+            ok: true,
+            story: leadRow(cur),
+            recent: ((recent && recent.results) || []).map(leadRow)
+          };
+        }
+      }
+    }
+  } catch (e) { out = { ok: false, story: null, recent: [], error: 'unavailable' }; }
+  _LEAD_CACHE = out; _LEAD_AT = now;
+  return out;
+}
+// One row, trimmed to what a card needs. `body_html` is deliberately absent:
+// the front page never renders it, and shipping ~30 KB of article to every
+// visitor to show a headline is the kind of thing nobody notices until it is
+// on the critical path of the whole site.
+function leadRow(r) {
+  const key = String(r.category || '').toLowerCase();
+  // The run names the players its story commits to, so the front page can put
+  // their faces on the lead the same way an authored story does. Slugged here
+  // with the same rule tools/build-front.mjs uses, so "Kenneth Walker III" and
+  // "kenneth-walker-iii" both land on the same photo.
+  let ppl = [];
+  try {
+    const raw = JSON.parse(r.players || '[]');
+    if (Array.isArray(raw)) ppl = raw.map(leadSlug).filter(Boolean).slice(0, 4);
+  } catch (e) { ppl = []; }
+  return {
+    slug: r.slug,
+    title: r.title,
+    dek: r.dek || '',
+    category: LEAD_CATEGORIES[key] ? key : null,
+    label: LEAD_CATEGORIES[key] || 'Insight',
+    ppl,
+    createdAt: r.created_at,
+    url: '/lead/' + r.slug
+  };
+}
+function leadSlug(n) {
+  return String(n || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
@@ -1993,6 +2081,44 @@ export default {
       if (out.contract == null) out.contract = COLUMN_CONTRACT;
       _COLUMN_CACHE = out; _COLUMN_AT = now; _COLUMN_KEY = ck;
       return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
+    }
+    // The front page's lead, and the archive behind it. Two minutes of cache:
+    // the story only turns over every three hours, but a stale lead for two
+    // minutes after a run publishes is the whole cost of not hitting D1 on
+    // every page view.
+    if (url.pathname === '/api/lead-story') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      const out = await leadStoryPayload(env);
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=120' });
+    }
+    // The full article, by slug. Kept separate from /api/lead-story so the front
+    // page never pays for a body it does not show.
+    if (url.pathname === '/api/lead-story/body') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      const want = (url.searchParams.get('slug') || '').trim();
+      try {
+        if (!env.LEADS_DB) return json({ ok: false, error: 'unavailable' }, 200, c);
+        // No slug means "whatever is the lead right now", which is what /lead
+        // without a slug asks for.
+        const row = want
+          ? await env.LEADS_DB.prepare(
+              'SELECT slug, title, dek, category, players, body_html, method, sources, created_at'
+              + ' FROM lead_story WHERE slug = ? AND verified = 1').bind(want).first()
+          : await env.LEADS_DB.prepare(
+              'SELECT slug, title, dek, category, players, body_html, method, sources, created_at'
+              + ' FROM lead_story WHERE verified = 1 AND published = 1'
+              + ' ORDER BY created_at DESC LIMIT 1').first();
+        if (!row) return json({ ok: false, error: 'not_found' }, 404, c);
+        let sources = [];
+        try { sources = JSON.parse(row.sources || '[]'); } catch (e) { sources = []; }
+        return json({
+          ok: true,
+          story: { ...leadRow(row), body: row.body_html || '', method: row.method || '',
+                   sources: Array.isArray(sources) ? sources : [] }
+        }, 200, { ...c, 'cache-control': 'public, max-age=120' });
+      } catch (e) { return json({ ok: false, error: 'unavailable' }, 200, c); }
     }
     if (url.pathname === '/api/insights') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
@@ -2660,6 +2786,10 @@ export default {
     // The SPA format routes (and /hub) all rewrite to "/" so the asset layer serves index.html.
     try {
       if (url.pathname === '/') __assetReq = new Request(new URL('/front.html', url).toString(), request);
+      // /lead and /lead/<slug> both serve the one article shell; it reads the
+      // slug back off the path and fetches its own body. The stories turn over
+      // every three hours, so they are rendered rather than built as pages.
+      else if (/^\/lead(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/lead.html', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
     } catch (e) {}
     const resp = await env.ASSETS.fetch(__assetReq);

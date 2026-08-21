@@ -500,6 +500,13 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 > target. The paywalled board is unaffected: `?screen=cheat` is never locked,
 > `?screen=board` still is.
 
+> **Superseded, August 2026 — read §17 first.** The lead is now a *generated*
+> insight, written fresh every three hours by a scheduled run and served out of
+> D1. Everything in this bullet still ships and still runs, but only as the
+> **fallback** the page paints before the API answers. The dated deep-dive
+> rotation is what a reader sees when a run has not published, not what they
+> normally see.
+
 - **The lead is a three-hour deep dive.** It is reserved for calls that go **beyond a
   single player** — coaching, offensive line, schedule, weather, rule changes — the
   read that earns a top click rather than one more player take. Those are tagged
@@ -790,3 +797,119 @@ It pushes a branch and never to main. **The Routine stores no MCP connectors**, 
 - Two-sided entries read "Up — **Player** … Down — **Player** …" (capitalised, em-dashed), because the who-line is also the front-page card's blurb and a card that opens mid-sentence in lower case reads like a bug.
 - State the risk in the entry rather than in a footnote — the zone-tree entry says out loud that the same tree invented the committee.
 - The percentage is the desk's estimate of the gap versus market price, not a stat projection, and the page's method box says so.
+
+---
+
+## 17. August 2026: the lead is a generated insight, not a rotation
+
+The front page's lead used to rotate a fixed pool of eight dated deep dives on a
+three-hour wall clock (§12). That mechanism was doing its job and the job was the
+problem: with no new material, the best it could do was re-present July and
+August drop pages as though they were news. What a reader saw was the same
+stories cycling.
+
+A scheduled Claude Routine, **"Iron Tuna — lead story refresh (every 3h)"**
+(cron `58 */3 * * *`), already existed and was already working — rebuilding the
+auction from the current projection set and the current sportsbook lines and
+writing a genuinely new, fully sourced insight into D1 every three hours. **Nothing
+on the site read the table.** Seventeen finished stories had accumulated,
+unreachable. This section is the pipe that was missing.
+
+### The data
+
+`lead_story` on D1 `iron-tuna-leads` (`75f7c43a-69cc-48eb-aa78-6ecfd91af2fb`).
+The Routine owns the writes; the site only reads.
+
+| column | meaning |
+|---|---|
+| `slug` | `short-topic-YYYY-MM-DD-HH`; the URL is `/lead/<slug>` |
+| `title`, `dek` | the headline and the finding. Both go on the front-page lead |
+| `body_html` | the article, an HTML fragment. Never sent to the front page |
+| `method`, `sources` | the receipts. `sources` is a JSON array of `{type,name,detail}` |
+| `category` | which desk it was written for (added Aug 2026) |
+| `players` | JSON array of the players it commits to (added Aug 2026) |
+| `verified` | the run could trace every number to something it pulled that run |
+| `published` | **this is the current lead.** Exactly one row at a time |
+
+`verified` and `published` are deliberately two flags, not one:
+
+- `verified = 0` is the run failing its own gate. Such a row never reaches a
+  reader by any route. The Routine is told publishing nothing is an acceptable
+  outcome, and it has used that.
+- `published = 0` on a verified row means "was the lead, is not now". Those rows
+  are the **Recent insights** list. So unpublishing a bad story pulls it off the
+  lead without also erasing the archive.
+
+### The routes (`_worker.js`)
+
+- **`GET /api/lead-story`** — what the front page reads: the current lead plus
+  the previous `LEAD_RECENT` (5) verified stories. Memoised for two minutes per
+  isolate. **`body_html` is deliberately not in this payload** — shipping ~13 KB
+  of article to every visitor to render a headline puts the whole site's front
+  door on the critical path of a story nobody has clicked yet.
+- **`GET /api/lead-story/body?slug=…`** — one full story. No slug means "the
+  current lead", which is what `/lead` asks for.
+- **`/lead` and `/lead/<slug>`** rewrite to the `lead.html` asset. The path
+  pattern is `^\/lead(\/[A-Za-z0-9._-]*)?\/?$` — it is also what keeps a
+  crafted path out of the asset layer, so widen it carefully.
+
+`LEAD_CATEGORIES` in the worker is the **only** place a desk name is defined.
+A row whose `category` is a string nobody defined falls back to the neutral
+"Insight" label rather than inventing a new desk on the front page, so a typo in
+a generated row cannot reach the masthead.
+
+### The front page
+
+`paintGeneratedLead()` in `front.html` runs **after** `renderLead()` has already
+painted the dated rotation, and it is purely additive. If the fetch fails, the
+API is down, no run has published, or the published row has no slug, the reader
+keeps the deep-dive lead that is already on screen. **The front page is never
+blank because the desk had a bad day** — that is the property to preserve in any
+change here.
+
+When a generated story does arrive it replaces the lead outright, and the dots
+and arrows are hidden (`#leadCtrls`). That is the point rather than an oversight:
+the carousel existed to make a static pool feel like it was moving, and cycling a
+fresh story back through week-old ones would rebuild the exact staleness this
+replaced. The archive is links under the lead, never a rotation the lead walks
+into. `.lead-ctrls[hidden]{display:none}` is load-bearing: the class sets
+`display:flex`, which beats the `hidden` attribute on its own.
+
+The lead's photo band works off `players`, slugged with the same rule
+`tools/build-front.mjs` uses, so "Kenneth Walker III" and `kenneth-walker-iii`
+both find the same headshot. **Known limitation:** the band can only show players
+already in `front.html`'s `PLAYERS` cast, which is built from the authored drop
+pages. A generated story naming four players may show two faces. It never shows a
+wrong face, and the "In this story" label does not claim to be exhaustive.
+
+### The article page
+
+`lead.html`, one shell for every story, rendered client-side from
+`/api/lead-story/body`. The stories are replaced every three hours, so the page
+is `noindex,follow`: a search result pointing at one points at something already
+gone. Tables in the stored body get an `overflow-x` wrapper added **at render
+time**, not in the stored copy, so the authoring contract stays "write a table"
+and every past story gains the fix. The sources list is collapsed by default —
+on these runs it can run longer than the story it backs.
+
+### Category rotation
+
+The Routine walks a fixed six-desk cycle keyed off the slot number, so topics
+rotate rather than drifting back to whatever the model finds easiest:
+
+`player` → `playcaller` → `vegas` → `preseason` → `injury` → `market`
+
+Deterministic on the clock, not on the model's mood. A run whose desk has no
+verifiable material that day advances to the next desk and says so in its report
+rather than publishing a thin piece to fill the slot.
+
+### Tests
+
+`node tools/test-lead-story.mjs` (44 assertions, no network, no browser). It
+evaluates the real section out of `_worker.js` rather than a copy, and most of it
+is failure modes: no row, an unverified row, a row with no slug, an undefined
+category, malformed JSON in a column, D1 throwing on `prepare`, D1 rejecting
+mid-query, no database bound. **Every one must come back as "no story" rather
+than as an exception**, because an exception here is a blank hero on the front
+door. It also pins the route pattern against traversal and checks that the front
+page still paints its own lead first.
