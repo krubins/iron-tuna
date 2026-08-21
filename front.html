@@ -123,18 +123,32 @@ img{max-width:100%}
 .lead-arrow{border:1px solid var(--line);background:#fff;border-radius:4px;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--ink-2);line-height:1}
 .lead-arrow:hover{border-color:var(--red);color:var(--red)}
 
-/* ── lead photo band: the faces the lead story actually names ── */
-.lead-media{position:relative;display:flex;align-items:flex-end;gap:20px;padding:30px 28px 16px;background:radial-gradient(120% 150% at 8% 0%,#1c2731 0%,#0e1418 62%);border-bottom:3px solid var(--red);overflow:hidden}
+/* ── lead photo band: the faces the lead story actually names ──────────────
+   These were circles, which is the one shape that fights the source material:
+   a cutout headshot cropped to a disc loses the shoulders, loses the jersey,
+   and turns a news photo into a contacts-list avatar. The band now runs them
+   as portrait plates — a rectangle the photo actually fills, standing on the
+   club's colour, with the name set underneath the way a caption sits under a
+   picture in print. Same photos, same fallback, no circles anywhere. */
+.lead-media{position:relative;display:flex;align-items:flex-end;gap:20px;padding:32px 28px 18px;background:radial-gradient(120% 150% at 8% 0%,#1c2731 0%,#0e1418 62%);border-bottom:3px solid var(--red);overflow:hidden}
 .lead-media[hidden]{display:none}
-.lm-label{position:absolute;top:11px;left:28px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8794a0}
-.lm-cast{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
-.lm-face{display:flex;align-items:center;gap:11px;min-width:0}
-.lm-disc{position:relative;flex:0 0 auto;width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:#232f39;border:2px solid rgba(255,255,255,.22);overflow:hidden}
-.lm-disc>*{grid-area:1/1}
-.lm-disc img{width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block}
-.lm-init{font-size:19px;font-weight:800;letter-spacing:.02em;color:#cfd7de}
-.lm-meta{min-width:0}
-.lm-meta b{display:block;color:#fff;font-size:15px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
+.lm-label{position:absolute;z-index:1;top:11px;left:28px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8794a0}
+.lm-cast{position:relative;z-index:1;display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
+/* One face in the band used to leave most of it empty. The club's own letters,
+   set big and nearly out of the ink, fill that space the way a sports page
+   fills it — behind the photos, never in front of a name. */
+.lm-mark{position:absolute;right:22px;bottom:-18px;z-index:0;font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:106px;line-height:1;letter-spacing:.03em;pointer-events:none;user-select:none}
+.lm-face{display:flex;flex-direction:column;align-items:flex-start;min-width:0;max-width:168px}
+/* The plate. `--tc` is the club colour the JS hands it; the wash is the same
+   colour at low alpha so a transparent-background cutout has something to sit
+   against instead of a grey hole. */
+.lm-shot{position:relative;flex:0 0 auto;width:104px;height:116px;border-radius:5px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(168deg,var(--tc-wash,rgba(255,255,255,.10)) 0%,#1b242d 78%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 8px 18px rgba(0,0,0,.34)}
+.lm-shot>*{grid-area:1/1}
+.lm-shot img{width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block}
+.lm-shot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--tc,rgba(255,255,255,.28))}
+.lm-init{font-size:24px;font-weight:800;letter-spacing:.02em;color:#cfd7de}
+.lm-meta{min-width:0;margin-top:10px}
+.lm-meta b{display:block;color:#fff;font-size:14.5px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
 .lm-meta span{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#93a1ad}
 .rail{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
 .rail h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:21px;letter-spacing:.06em;border-bottom:2px solid var(--ink);padding-bottom:7px;margin-bottom:4px;position:relative}
@@ -164,8 +178,9 @@ img{max-width:100%}
 /* the lead story in each module */
 .pm-lead{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding-bottom:14px}
 .pm-lead:hover .pm-title{color:var(--red)}
-.pm-lead .lm-disc{width:64px;height:64px;border-color:rgba(16,19,23,.16)}
-.pm-lead .lm-init{font-size:17px}
+.pm-lead .lm-shot{width:58px;height:68px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(16,19,23,.16)}
+.pm-lead .lm-shot::after{height:2px}
+.pm-lead .lm-init{font-size:16px}
 .pm-kick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
 .pm-title{display:block;font-size:17px;font-weight:800;line-height:1.24;letter-spacing:-.01em}
 .pm-play{display:block;margin-top:6px;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
@@ -179,8 +194,9 @@ img{max-width:100%}
 .pos-mod.wide .pm-rest li:nth-last-child(2){border-bottom:0}
 .pm-rest a{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:center;padding:10px 0}
 .pm-rest a:hover .pm-row-title{color:var(--red)}
-.pm-rest .lm-disc{width:36px;height:36px;border-width:1.5px;border-color:rgba(16,19,23,.14)}
-.pm-rest .lm-init{font-size:12px}
+.pm-rest .lm-shot{width:34px;height:40px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(16,19,23,.14)}
+.pm-rest .lm-shot::after{height:2px}
+.pm-rest .lm-init{font-size:11px}
 .pm-row-title{display:block;font-size:13.5px;font-weight:700;line-height:1.32}
 .pm-row-meta{display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap}
 .st-view{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:1.5px 7px;border-radius:3px}
@@ -208,8 +224,9 @@ img{max-width:100%}
 .pcp-title{font-size:15.5px;font-weight:800;line-height:1.3;letter-spacing:-.01em}
 .pcp-card a:hover .pcp-title{color:var(--red)}
 .pcp-faces{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.pcp-faces .lm-disc{width:40px;height:40px;border-width:1.5px;border-color:rgba(16,19,23,.14)}
-.pcp-faces .lm-init{font-size:13px}
+.pcp-faces .lm-shot{width:38px;height:44px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(16,19,23,.14)}
+.pcp-faces .lm-shot::after{height:2px}
+.pcp-faces .lm-init{font-size:12px}
 .pcp-who{font-size:13px;line-height:1.45;color:var(--ink-2)}
 .pcp-who b{color:var(--ink)}
 .pcp-stat{font-size:12px;color:var(--ink-3);margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
@@ -361,7 +378,13 @@ img{max-width:100%}
   .lead-media{padding:26px 20px 14px;gap:14px}
   .lm-label{left:20px}
   .lm-cast{gap:14px}
-  .lm-disc{width:56px;height:56px}
+  .lm-face{max-width:120px}
+  /* No empty band to fill at this width, and the letters would sit under a
+     name rather than behind it. */
+  .lm-mark{display:none}
+  .lm-shot{width:80px;height:92px}
+  .lm-init{font-size:19px}
+  .lm-meta{margin-top:8px}
   .lm-meta b{font-size:13px}
   .lm-meta span{font-size:10px;letter-spacing:.07em}
 }
@@ -401,6 +424,7 @@ img{max-width:100%}
     <div class="lead" id="lead">
       <div class="lead-media" id="leadMedia" hidden>
         <span class="lm-label" id="leadMediaLabel">In this story</span>
+        <span class="lm-mark" id="leadMediaMark" aria-hidden="true"></span>
         <div class="lm-cast" id="leadCast"></div>
       </div>
       <div class="lead-body">
@@ -656,14 +680,14 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   //
   // Photos are hot-linked, tried in order: ESPN's cutout first because it is the
   // tighter crop, then the NFL's own headshot. If both miss — a rookie whose
-  // photo has not posted, or a blocker eating the request — the disc falls back
+  // photo has not posted, or a blocker eating the request — the plate falls back
   // to initials, so a dead image never leaves a hole in the front page.
-  // The ring reads the club palette the plate above already defines, rather
+  // The club colour reads the palette the plate above already defines, rather
   // than carrying a second copy of it. Whichever of the two club colours holds
   // more light wins, because a near-black primary (Chicago's navy,
   // Jacksonville's black) is invisible on this band; when both are that dark
-  // the disc keeps its default rim.
-  function ringFor(t){
+  // the photo plate keeps its default trim.
+  function clubTone(t){
     var a = TEAM_ART[t];
     if (!a) return '';
     var best = lum(a[1]) >= lum(a[2]) ? a[1] : a[2];
@@ -673,37 +697,49 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     var parts = n.replace(/\s+(?:Jr\.?|Sr\.?|I{2,3}|IV|V)$/i, '').trim().split(/\s+/);
     return ((parts[0] || '')[0] || '') + ((parts[parts.length - 1] || '')[0] || '');
   }
-  // The photo disc, on its own, because the lead band and the position modules
-  // both want one and only the lead band wants a name beside it.
-  function discEl(p){
-    var disc = document.createElement('span'); disc.className = 'lm-disc';
-    var ring = ringFor(p.t);
-    if (ring) disc.style.borderColor = ring;
+  // The club colour again, this time at low alpha, so the plate behind a
+  // transparent cutout is tinted rather than a flat grey rectangle.
+  function tint(hex, a){
+    var c = hex.replace('#', '');
+    return 'rgba(' + parseInt(c.slice(0, 2), 16) + ',' + parseInt(c.slice(2, 4), 16) + ','
+      + parseInt(c.slice(4, 6), 16) + ',' + a + ')';
+  }
+  // The photo plate, on its own, because the lead band and the position modules
+  // both want one and only the lead band wants a name under it. A rectangle,
+  // not a disc: these are head-and-shoulders cutouts, and a circle crops away
+  // the half of each one that carries the jersey.
+  function shotEl(p){
+    var shot = document.createElement('span'); shot.className = 'lm-shot';
+    var clr = clubTone(p.t);
+    if (clr){
+      shot.style.setProperty('--tc', clr);
+      shot.style.setProperty('--tc-wash', tint(clr, 0.42));
+    }
     var ini = document.createElement('span'); ini.className = 'lm-init';
     ini.textContent = initials(p.n).toUpperCase();
-    disc.appendChild(ini);
+    shot.appendChild(ini);
     var srcs = [];
     if (p.e) srcs.push('https://a.espncdn.com/i/headshots/nfl/players/full/' + p.e + '.png');
     if (p.h) srcs.push(p.h);
     if (srcs.length){
       var img = document.createElement('img'), at = 0;
-      img.alt = '';                      // the name sits right beside it
+      img.alt = '';                      // the name is written out alongside it
       img.decoding = 'async';
       img.referrerPolicy = 'no-referrer';
       img.onerror = function(){ if (++at < srcs.length) img.src = srcs[at]; else img.remove(); };
       img.src = srcs[0];
-      disc.appendChild(img);
+      shot.appendChild(img);
     }
-    return disc;
+    return shot;
   }
   function faceEl(p){
     var face = document.createElement('div'); face.className = 'lm-face';
-    var disc = discEl(p);
+    var shot = shotEl(p);
     var meta = document.createElement('span'); meta.className = 'lm-meta';
     var nm = document.createElement('b'); nm.textContent = p.n;
     var sub = document.createElement('span'); sub.textContent = p.p + (p.t ? ' · ' + p.t : '');
     meta.appendChild(nm); meta.appendChild(sub);
-    face.appendChild(disc); face.appendChild(meta);
+    face.appendChild(shot); face.appendChild(meta);
     return face;
   }
   function renderCast(s){
@@ -725,6 +761,21 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     // about him. The club's full name comes from the plate's own palette.
     var stand = s.tm && TEAM_ART[s.tm];
     document.getElementById('leadMediaLabel').textContent = stand ? stand[0] : 'In this story';
+    // The club behind the band is the story's own when it named one, otherwise
+    // the one most of its faces play for — a trade story naming one Patriot and
+    // two Eagles is an Eagles picture, not a Patriots one. It is texture either
+    // way: it never carries information the copy does not.
+    var tally = {}, club = s.tm || '';
+    if (!club) keys.forEach(function(k){
+      var t = (PLAYERS[k] || sent[k] || {}).t;
+      if (!t) return;
+      tally[t] = (tally[t] || 0) + 1;
+      if (!club || tally[t] > tally[club]) club = t;
+    });
+    var mark = document.getElementById('leadMediaMark');
+    var clubClr = clubTone(club);
+    mark.textContent = TEAM_ART[club] ? club : '';
+    mark.style.color = clubClr ? tint(clubClr, 0.12) : 'rgba(255,255,255,.05)';
     band.hidden = false;
   }
 
@@ -1181,11 +1232,11 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   var grid = document.getElementById('posGrid');
 
   // The face for a story: its first named player who has a photo. A story that
-  // named nobody (a rule change) gets no disc rather than a stand-in, and the
-  // row simply closes the gap — an empty circle is worse than no circle.
-  function storyDisc(s){
+  // named nobody (a rule change) gets no plate rather than a stand-in, and the
+  // row simply closes the gap — an empty frame is worse than no frame.
+  function storyShot(s){
     var keys = (s.ppl || []).filter(function(k){ return PLAYERS[k]; });
-    return keys.length ? discEl(PLAYERS[keys[0]]) : null;
+    return keys.length ? shotEl(PLAYERS[keys[0]]) : null;
   }
   function el(tag, cls, txt){
     var e = document.createElement(tag);
@@ -1223,7 +1274,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
       var s = list[0];
       var lead = el('a', 'pm-lead');
       lead.href = s.url;
-      var d = storyDisc(s);
+      var d = storyShot(s);
       if (d) lead.appendChild(d);
       var body = el('span', 'pm-lead-body');
       var kick = el('span', 'pm-kick');
@@ -1269,7 +1320,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
           var li = document.createElement('li');
           var a = el('a', null);
           a.href = st.url;
-          var rd = storyDisc(st);
+          var rd = storyShot(st);
           if (rd) a.appendChild(rd);
           else a.style.gridTemplateColumns = '1fr';
           var rb = el('span', 'pm-row-body');
@@ -1355,7 +1406,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
       var faces = (c.ppl || []).filter(function(k){ return PLAYERS[k]; });
       if (faces.length) {
         var row = el('div', 'pcp-faces');
-        faces.slice(0, 3).forEach(function(k){ row.appendChild(discEl(PLAYERS[k])); });
+        faces.slice(0, 3).forEach(function(k){ row.appendChild(shotEl(PLAYERS[k])); });
         card.appendChild(row);
       }
 
