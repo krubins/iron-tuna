@@ -147,6 +147,16 @@ jobs:
       - name: The generated lead story and its admin desk
         run: node tools/test-lead-story.mjs
 
+      # The worker rewrites a few routes onto other assets ("/" -> front.html,
+      # /lead/<slug> -> lead.html). Cloudflare's default html_handling answers a
+      # ".html" request with a redirect to the extensionless path, so a rewrite
+      # aimed at "<name>.html" hands the browser a redirect instead of the page —
+      # and on /lead that redirect points back at /lead, which is an infinite loop
+      # (ERR_TOO_MANY_REDIRECTS, shipped 2026-08-21). Nothing in the worker source
+      # shows it; it takes the assets layer's rules to see it.
+      - name: Route rewrites resolve without redirecting or looping
+        run: node tools/test-asset-routing.mjs
+
       - name: The standing analyst column
         run: node tools/test-analyst-column.mjs
 

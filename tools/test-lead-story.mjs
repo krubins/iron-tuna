@@ -165,7 +165,13 @@ console.log('\nthe routes');
   // /lead is the current story, /lead/<slug> one from the archive. The pattern
   // is also the only thing standing between a crafted path and the asset layer.
   const re = /^\/lead(\/[A-Za-z0-9._-]*)?\/?$/;
-  ok('the rewrite is in the worker', src.includes("new URL('/lead.html', url)"));
+  // The target is '/lead', NOT '/lead.html'. The assets layer's default
+  // html_handling ("auto-trailing-slash") answers /lead.html with a 307 to /lead
+  // — the very path this pattern fires on — so a ".html" target is an infinite
+  // redirect, which is what /lead served on the day it shipped. This assertion
+  // used to pin the broken form. tools/test-asset-routing.mjs covers the class.
+  ok('the rewrite is in the worker', src.includes("new URL('/lead', url)"));
+  ok('the rewrite target is extensionless', !src.includes("new URL('/lead.html', url)"));
   ok('/lead resolves', re.test('/lead'));
   ok('/lead/ resolves', re.test('/lead/'));
   ok('/lead/<slug> resolves', re.test('/lead/rb-repricing-max-bids-2026-08-19'));

@@ -921,6 +921,25 @@ The Routine owns the writes; the site only reads.
 - **`/lead` and `/lead/<slug>`** rewrite to the `lead.html` asset. The path
   pattern is `^\/lead(\/[A-Za-z0-9._-]*)?\/?$` — it is also what keeps a
   crafted path out of the asset layer, so widen it carefully.
+  **The rewrite target is `/lead`, not `/lead.html`** — see the box below, which
+  is not a style note.
+
+> **Never rewrite a route onto a `<name>.html` path.** `wrangler.jsonc` sets no
+> `html_handling`, so the assets layer runs Cloudflare's default,
+> **`auto-trailing-slash`**: it answers a request for `/lead.html` with a **307 to
+> `/lead`**, and `/faq.html` with a 307 to `/faq`. So a rewrite that asks the
+> assets layer for `/lead.html` hands the browser a redirect instead of a page —
+> and the redirect points at `/lead`, which is the very path the rewrite fires on.
+> Worker rewrites, assets 307 back, browser asks again: **ERR_TOO_MANY_REDIRECTS**,
+> which is what `/lead` did from the moment it shipped (2026-08-21) until it was
+> fixed the same day. `/` had the quieter half of the same bug — rewritten to
+> `/front.html`, it bounced every visitor off the canonical URL to `/front`.
+> The extensionless path is what the assets layer serves **200** from, so
+> `/` → `/front`, `/lead*` → `/lead`, SPA routes → `/`. None of this is visible in
+> the worker's own source, which is why **`node tools/test-asset-routing.mjs`**
+> exists: it lifts the real rewrite block out of `_worker.js`, models the assets
+> layer against the real files on disk, follows the redirects the way a browser
+> would, and fails on a target that redirects or a route that cycles. It runs in CI.
 
 `LEAD_CATEGORIES` in the worker is the **only** place a desk name is defined.
 A row whose `category` is a string nobody defined falls back to the neutral

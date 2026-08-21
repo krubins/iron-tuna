@@ -3148,12 +3148,20 @@ export default {
     let __assetReq = request;
     // "/" serves the news-style front page (front.html); the classic SPA hub moved to /hub.
     // The SPA format routes (and /hub) all rewrite to "/" so the asset layer serves index.html.
+    //
+    // Rewrite to the EXTENSIONLESS path, never to "<name>.html". The assets layer runs
+    // Cloudflare's default html_handling ("auto-trailing-slash"), which answers /front.html
+    // with a 307 to /front and /lead.html with a 307 to /lead — so rewriting to a .html path
+    // hands the browser a redirect instead of the page. On "/" that cost a wasted hop and
+    // moved the reader off the canonical URL; on /lead it was an infinite loop, because the
+    // redirect target is the very path this rewrite fires on (ERR_TOO_MANY_REDIRECTS).
+    // The extensionless form is what the assets layer serves 200 from, so it never bounces.
     try {
-      if (url.pathname === '/') __assetReq = new Request(new URL('/front.html', url).toString(), request);
+      if (url.pathname === '/') __assetReq = new Request(new URL('/front', url).toString(), request);
       // /lead and /lead/<slug> both serve the one article shell; it reads the
       // slug back off the path and fetches its own body. The stories turn over
       // every three hours, so they are rendered rather than built as pages.
-      else if (/^\/lead(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/lead.html', url).toString(), request);
+      else if (/^\/lead(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/lead', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
     } catch (e) {}
     const resp = await env.ASSETS.fetch(__assetReq);
