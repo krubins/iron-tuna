@@ -9,6 +9,7 @@
   gtag('js', new Date());
 
   gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
 </script>
 <!-- Event snippet for Purchase conversion page.
 The live conversion fires in the app on the server-verified Stripe success return
@@ -20942,6 +20943,21 @@ function App() {
                 'value': 9.99,
                 'currency': 'USD',
                 'transaction_id': sp.get('cs')
+              });
+            } catch (e) {}
+            // The same event for GA4. Ads and Analytics are two destinations on
+            // one gtag.js, but they do NOT share events: without this, GA4 sees
+            // the buyer's session as ordinary traffic and reports zero revenue,
+            // so no channel or landing page can ever be shown to have paid off.
+            // Same checkout-session id as transaction_id, so GA4 dedupes a
+            // revisited success URL exactly as Ads does.
+            try {
+              gtag('event', 'purchase', {
+                'send_to': 'G-KLBZBZSJ25',
+                'transaction_id': sp.get('cs'),
+                'value': 9.99,
+                'currency': 'USD',
+                'items': [{ 'item_id': 'auction_bundle', 'item_name': 'Iron Tuna season pass', 'price': 9.99, 'quantity': 1 }]
               });
             } catch (e) {}
             setPostBuyOpen(true);

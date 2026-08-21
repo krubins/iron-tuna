@@ -1,41 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://irontuna.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>https://irontuna.com/hub</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://irontuna.com/auctiondraft</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://irontuna.com/snakedraft</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://irontuna.com/bestball</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://irontuna.com/faq</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://irontuna.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://irontuna.com/fantasy-football-auction-values</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/auction-draft-assistant</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/salary-cap-draft-tool</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/custom-auction-values</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/superflex-auction-values</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/creators</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://irontuna.com/</loc><lastmod>2026-08-21</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://irontuna.com/hub</loc><lastmod>2026-08-21</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://irontuna.com/auctiondraft</loc><lastmod>2026-08-21</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://irontuna.com/snakedraft</loc><lastmod>2026-08-21</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://irontuna.com/bestball</loc><lastmod>2026-08-21</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://irontuna.com/faq</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/terms</loc><lastmod>2026-08-19</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://irontuna.com/fantasy-football-auction-values</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/auction-draft-assistant</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/salary-cap-draft-tool</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/custom-auction-values</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/superflex-auction-values</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/creators</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
 
-  <url><loc>https://irontuna.com/guides</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://irontuna.com/snake-draft-strategy</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/best-ball-draft-strategy</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://irontuna.com/best-ball-stacking-guide</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://irontuna.com/auction-draft-strategy</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://irontuna.com/auction-nomination-strategy</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://irontuna.com/auction-budget-allocation</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://irontuna.com/dollar-endgame-handcuffs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-19</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://irontuna.com/support</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-21</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-22</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-23</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-06-24</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-25</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-26</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-28</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-06-29</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-07-01</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-07-02</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-03</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/guides</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/snake-draft-strategy</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/best-ball-draft-strategy</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://irontuna.com/best-ball-stacking-guide</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/auction-draft-strategy</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/auction-nomination-strategy</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/auction-budget-allocation</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/dollar-endgame-handcuffs</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-19</loc><lastmod>2026-06-19</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/privacy</loc><lastmod>2026-08-19</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://irontuna.com/support</loc><lastmod>2026-08-19</lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-21</loc><lastmod>2026-06-21</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-22</loc><lastmod>2026-06-22</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-23</loc><lastmod>2026-06-23</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-06-24</loc><lastmod>2026-06-24</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-25</loc><lastmod>2026-06-25</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-26</loc><lastmod>2026-06-26</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-28</loc><lastmod>2026-06-28</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-06-29</loc><lastmod>2026-06-29</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-07-01</loc><lastmod>2026-07-01</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-07-02</loc><lastmod>2026-07-02</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-03</loc><lastmod>2026-07-03</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://irontuna.com/insights</loc><lastmod>2026-07-04</lastmod></url>
   <url><loc>https://irontuna.com/insights-vault</loc><lastmod>2026-07-04</lastmod></url>
   <url><loc>https://irontuna.com/play-caller-premium</loc><lastmod>2026-08-19</lastmod></url>
@@ -85,16 +85,16 @@
   <url><loc>https://irontuna.com/auction-insights-2026-09-03</loc><lastmod>2026-09-03</lastmod></url>
   <url><loc>https://irontuna.com/snake-insights-2026-09-03</loc><lastmod>2026-09-03</lastmod></url>
   <url><loc>https://irontuna.com/bestball-insights-2026-09-03</loc><lastmod>2026-09-03</lastmod></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-04</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-05</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-09</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-11</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-12</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-15</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-20</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-21</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-22</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-<url><loc>https://irontuna.com/auction-watch-2026-07-26</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-08-18</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://irontuna.com/auction-watch-2026-08-21</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-04</loc><lastmod>2026-07-04</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-05</loc><lastmod>2026-07-05</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-09</loc><lastmod>2026-07-09</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-11</loc><lastmod>2026-07-11</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-12</loc><lastmod>2026-07-12</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-15</loc><lastmod>2026-07-15</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-20</loc><lastmod>2026-07-20</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-21</loc><lastmod>2026-07-21</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-22</loc><lastmod>2026-07-22</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+<url><loc>https://irontuna.com/auction-watch-2026-07-26</loc><lastmod>2026-07-26</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-08-18</loc><lastmod>2026-08-18</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://irontuna.com/auction-watch-2026-08-21</loc><lastmod>2026-08-21</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
 </urlset>
