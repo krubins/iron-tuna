@@ -3141,15 +3141,60 @@ function applyPriceOverrides(players, overrides, draftedIds, config) {
   });
 }
 const LEAGUE_CURVE_BUDGET = 1440;
+// What the room pays for a QB when starting one is optional. This is the curve the
+// historical auction data drew, and it is kept ONLY for QB-premium leagues: with two
+// QB slots to fill, 24+ quarterbacks get rostered and the position really is scarce.
+// It sits above LEAGUE_MARKET_CURVE deliberately — tools/test-worker-column.mjs and
+// tools/test-it-league.mjs read the first `QB: [...]` after `const LEAGUE_MARKET_CURVE`
+// to check the worker's and the library's mirrors, and those two price the site's
+// default 1-QB league.
+const SUPERFLEX_QB_CURVE = [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2];
+// The premium curve is OPT-IN: a league is priced as 1-QB unless it says otherwise.
+// "Otherwise" means a QB can actually fill a second STARTING slot — superflex (QB in
+// the flex, and a flex slot to put him in) or straight 2-QB. Only the QB-format
+// control and a league import that finds a SUPER_FLEX slot produce either shape.
+//
+// The flex slot has to be counted, not just listed. `calculateReplacementLevels`
+// hands out `flex.count * teams` flex slots, so QB listed as eligible with a flex
+// count of zero gets no share of them and VALUE prices that league as 1-QB. Reading
+// the eligibility list alone put PROJ on the premium curve for the same league —
+// Allen $68 against a VALUE built for a $49 board — so the two columns described
+// different leagues. A saved state can hold that shape, and so can setting superflex
+// and then stepping the flex count down to zero.
+function qbIsPremium(config) {
+  if (!config) return false;
+  const flex = config.flex;
+  const flexQb = !!(flex && (flex.count || 0) > 0 && Array.isArray(flex.eligible) && flex.eligible.includes('QB'));
+  const starters = (config.roster && config.roster.QB && config.roster.QB.starters) || 0;
+  return flexQb || starters >= 2;
+}
 const LEAGUE_MARKET_CURVE = {
-  QB: [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2],
+  QB: [25, 20, 17, 14, 11, 10, 7, 5, 4, 4, 3, 3, 2, 2, 1, 1],
   RB: [43, 40, 38, 33, 30, 28, 25, 23, 22, 20, 19, 18, 15, 12, 11, 9, 8, 8, 7, 6, 6, 6, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   WR: [42, 40, 36, 35, 31, 28, 24, 24, 17, 16, 15, 14, 12, 12, 10, 9, 9, 9, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   TE: [32, 28, 20, 14, 11, 9, 7, 6, 5, 5, 3, 2, 2, 2, 1, 1],
   K: [2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 };
-function calculateMarketValues(players, config, anchors) {
+// The curve slot each player is priced from: his rank on the UNCUSTOMIZED
+// projections, before drag-to-rerank is applied. A user's own reorder is his
+// opinion of a player, not the room's, so it must never move what the room is
+// expected to pay — but a projection update must, or Proj ends up pinned to a
+// ranking the board no longer has and the price column climbs as you read DOWN
+// the sheet. Pass the map built here as `marketOrder`; leave it out and prices
+// fall back to live rank, which is what /api/vegas-column and it-league.js do.
+function marketCurveOrder(players) {
+  const byPos = {};
+  players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  const out = {};
+  Object.values(byPos).forEach(list => {
+    list.slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).forEach((p, i) => {
+      out[p.id] = i;
+    });
+  });
+  return out;
+}
+function calculateMarketValues(players, config, marketOrder) {
   const minBid = config.valuation.minBid;
   const scale = totalLeagueBudget(config) / LEAGUE_CURVE_BUDGET;
   const byPos = {};
@@ -3157,14 +3202,16 @@ function calculateMarketValues(players, config, anchors) {
   Object.keys(byPos).forEach(pos => byPos[pos].sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)));
   const priceById = new Map();
   Object.entries(byPos).forEach(([pos, list]) => {
-    const curve = LEAGUE_MARKET_CURVE[pos] || [];
-    // Anchored players keep their original curve slot, so the market price (Proj) does
-    // not drift when projection updates or reorders shuffle the ranking. Projection
-    // changes flow into Value / You / PPG and the ORDER of the sheet, not into what the
-    // room is expected to pay. Unanchored (newly added) players price off their live rank.
-    list.forEach((p, i) => {
-      const slot = anchors && anchors[p.id] != null ? anchors[p.id] : i;
-      const base = slot < curve.length ? curve[slot] : minBid;
+    const curve = (pos === 'QB' && qbIsPremium(config)) ? SUPERFLEX_QB_CURVE : (LEAGUE_MARKET_CURVE[pos] || []);
+    // Slots are handed out in ORDER, never read as an index. Reading `marketOrder[id]`
+    // as the slot lets a player it does not name — anyone whose id changed with a team
+    // move — fall back to a live rank an ordered player already holds: two players share
+    // one price and another price disappears from the curve. Sorting by the hint and then
+    // walking the curve keeps the mapping a bijection: one player per slot, no gaps.
+    const hint = new Map();
+    list.forEach((p, i) => hint.set(p.id, marketOrder && marketOrder[p.id] != null ? marketOrder[p.id] : i));
+    list.slice().sort((a, b) => (hint.get(a.id) - hint.get(b.id)) || ((b.projectedPoints || 0) - (a.projectedPoints || 0))).forEach((p, i) => {
+      const base = i < curve.length ? curve[i] : minBid;
       priceById.set(p.id, Math.max(minBid, Math.round(base * scale)));
     });
   });
@@ -3173,7 +3220,7 @@ function calculateMarketValues(players, config, anchors) {
     marketValue: priceById.get(p.id) ?? minBid
   }));
 }
-function buildValuations(players, config, marketAnchors) {
+function buildValuations(players, config, marketOrder) {
   const byPos = {};
   players.forEach(p => {
     byPos[p.position] = byPos[p.position] || [];
@@ -3182,7 +3229,7 @@ function buildValuations(players, config, marketAnchors) {
   const replacement = calculateReplacementLevels(byPos, config);
   const withVorp = calculateVORP(players, replacement);
   const withValues = calculateAuctionValues(withVorp, config);
-  const withMarket = calculateMarketValues(withValues, config, marketAnchors);
+  const withMarket = calculateMarketValues(withValues, config, marketOrder);
   return {
     players: withMarket,
     replacement
@@ -20889,9 +20936,6 @@ function App() {
     return initialState?.rankOrder && Object.keys(initialState.rankOrder).length > 0 ? 'custom' : 'updates';
   });
   useEffect(() => { try { localStorage.setItem('it_rank_mode', rankMode); } catch (e) {} }, [rankMode]);
-  // Market-curve slot per player, frozen at first pricing so Proj stays stable across
-  // projection updates. Cleared by Reset Cheat Sheet to re-derive from current data.
-  const [marketAnchors, setMarketAnchors] = useState(initialState?.marketAnchors || null);
   const [projUpdateAsk, setProjUpdateAsk] = useState(() => {
     try { const m = localStorage.getItem('it_rank_mode'); if (m === 'custom' || m === 'updates') return false; } catch (e) {} // the toggle already answers this
     return !!(initialState && initialState.players && initialState.players.length && initialState.projVersion && initialState.projVersion !== PROJ_VERSION && initialState.rankOrder && Object.keys(initialState.rankOrder).length > 0);
@@ -20988,22 +21032,14 @@ function App() {
       ...p,
       projectedPoints: scorePlayer(p, config)
     })), config);
+    // Market order comes off `scored` — the projections BEFORE the user's drag-to-rerank
+    // — so a reorder still never bakes into Proj, while a projection update, a scoring
+    // change or an imported CSV re-prices the board instead of leaving Proj pinned to a
+    // ranking that no longer exists.
+    const marketOrder = marketCurveOrder(scored);
     const ranked = applyCustomRanks(scored, rankMode === 'custom' ? rankOrder : {});
-    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config, marketAnchors).players, config), config), config);
-  }, [players, config, rankOrder, rankMode, marketAnchors]);
-  useEffect(() => {
-    // Seed the market anchors once, from the UNCUSTOMIZED projection ordering (no rank
-    // reorders applied), so a user's own reorder never bakes into the market prices;
-    // afterward Proj is pinned to those slots until the user resets the cheat sheet.
-    if (marketAnchors || !players || !players.length) return;
-    const byPos = {};
-    players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
-    const a = {};
-    Object.values(byPos).forEach(list => {
-      list.slice().sort((x, y) => scorePlayer(y, config) - scorePlayer(x, config)).forEach((p, i) => { a[p.id] = i; });
-    });
-    setMarketAnchors(a);
-  }, [players, config, marketAnchors]);
+    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(buildValuations(ranked, config, marketOrder).players, config), config), config);
+  }, [players, config, rankOrder, rankMode]);
   useEffect(() => {
     try {
       if (!baseValued || !baseValued.length) return;
@@ -21205,11 +21241,10 @@ function App() {
         rankOrder,
         roleOverrides,
         valueAdjust,
-        priceOverrides,
-        marketAnchors
+        priceOverrides
       }));
     } catch (e) {}
-  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides, marketAnchors]);
+  }, [config, players, teams, draftHistory, pointsMode, dataInfo, starred, customOrder, targets, rankOrder, roleOverrides, valueAdjust, priceOverrides]);
   useEffect(() => {
     function onStorage(e) {
       if (e.key !== STORAGE_KEY || !e.newValue) return;
@@ -21474,7 +21509,6 @@ function App() {
       setRankOrder({});
       setPriceOverrides({});
       setCustomOrder([]);
-      setMarketAnchors(null);
       setProjUpdateAsk(false);
       // Rankings revert to the system's CURRENT projections, not the user-modified pool:
       // `players` accumulates CSV imports, per-player stat edits, and added players, and

@@ -291,6 +291,22 @@ Six-hour wall-clock slots (00/06/12/18 UTC), same mechanism and the same phase s
 
 `node tools/test-you-column.mjs` drives the real app in Chromium and asserts PROJ and VALUE never rise down the board, that `You` does not jump at the rank-20 seam, and that nobody outside the window is priced at full VALUE. **It fails on the pre-fix code** — verified by reverting. It needs `playwright-core`, `react` and `react-dom` resolvable plus a Chromium binary, and skips cleanly when they are absent.
 
+## 9e. The PROJ column and the frozen curve slots (fixed August 2026)
+
+`Proj` (likely price) is `marketValue`, built by `calculateMarketValues` in `index.html`: it reads a player's rank at his position and hands him that slot of the hardcoded `LEAGUE_MARKET_CURVE`, scaled to the league's budget. It is a curve, not a market (see the two caveats at the end of §15) — so the one thing it has to get right is the *order*.
+
+**The bug:** the slot was frozen. A `marketAnchors` map was seeded the first time a profile priced the board and then persisted with the draft state forever, and `calculateMarketValues` read `anchors[p.id]` as the slot. Nothing ever invalidated it. So when the projection pool was refreshed — a `PROJ_VERSION` bump, a CSV import, a scoring change — the board re-ordered and the prices did not, and Proj was pinned to a ranking that no longer existed. Read down the cheat sheet and the price column *climbed*: RB11 at $26 above RB10 at $15, McBride above Bowers at TE, Hurts above Burrow at QB. Worse, a player the map did not name — anyone whose id changed with a team move, since ids are `Name-POS-TEAM` — fell back to his live rank and landed on a slot an anchored player already held, so two players shared one price and another price vanished from the curve.
+
+It did not stop at the price column. `buildOptimalPlan` prices every candidate off `marketValue`, so the plan spent its budget against the stale curve and handed the distortion straight back out as `You` — which is why the sheet also showed You climbing at RB13 → RB16 while VALUE, the one dollar column that never touches `marketValue`, stayed clean.
+
+The anchor existed for one legitimate reason, stated in its own comment: a user's drag-to-rerank is his opinion of a player, not the room's, so it must not move what the room is expected to pay. That is real, and it survives the fix — but it never needed a frozen map, only the *uncustomized* ordering.
+
+**The fix:** `marketCurveOrder(scored)` derives the slots in `baseValued` from the projections **before** `applyCustomRanks`, every render. A reorder still never bakes into Proj; a projection update now re-prices the board instead of leaving it stale. `marketAnchors` is gone from the state, the persisted payload and Reset Cheat Sheet. `calculateMarketValues` also hands slots out **in order** rather than reading the map as an index, so an id it does not name can no longer collide with one it does — the mapping is a bijection, one player per slot, no gaps. This also puts the app back in agreement with `/api/vegas-column` and `it-league.js`, which have always priced off live rank.
+
+`node tools/test-market-anchors.mjs` drives the real app in Chromium across a projection update: it loads a fresh profile on one pool, stamps the saved state with an older `projVersion`, serves a refreshed pool, and asserts PROJ, VALUE and You never rise down the board — then reloads with the same pool and no saved state and asserts **the returning user's prices match the new user's row for row**. That last check is the invariant the anchor broke. **It fails on the pre-fix code** — verified by reverting. Same dependencies and the same clean skip as `test-you-column.mjs`.
+
+`tools/test-you-column.mjs` could never have caught this: it only ever loads a fresh profile, where the anchors were seeded from the very pool being shown. Anything that depends on saved state needs a test that *has* saved state.
+
 ## 9f. The reader's own league, on every page that prints a number (added August 2026)
 
 A story that quotes a price or a points total is quoting a *league*. Left alone, every one of them quoted the site's default — 12 teams, $200, full PPR — which is the wrong league for most readers: a $300 budget re-prices the entire board, half-PPR or six-point passing TDs re-order it. `/it-league.js` is the one place that knows what the reader actually plays, and the news pages read their numbers through it.
@@ -362,7 +378,7 @@ Ranks are the exception: they need the whole pool, which only the reader's saved
 
 `it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library. **`node tools/test-position-lens.mjs`** covers the reading-lens switch and the default-board line end to end in a real browser. **`node tools/build-default-board.mjs`** regenerates the default board.
 
-## 9e. Comping access from a URL (added August 2026)
+## 9g. Comping access from a URL (added August 2026)
 
 Two admin routes hand out and pull paid access for one address, behind the same `LEADS_EXPORT_KEY` gate as every other admin route:
 
@@ -382,6 +398,39 @@ Details worth knowing:
 - **The comped-in-code trap:** `COMPED_EMAILS` (module scope in `_worker.js`) always has access, so a `revoke` on one of those addresses looks like it worked and does nothing. The response says `STILL HAS ACCESS` and names the fix. That list is for **owner access only** — to comp anyone else use `grant`, because a third party's address does not belong in a source file and git history keeps it forever.
 
 `node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
+
+## 9h. What a quarterback costs (re-cut August 2026)
+
+`LEAGUE_MARKET_CURVE.QB` was drawn from historical auction spending, and it was too rich for a 1-QB room. It put QB1 level with RB1 (both about $40 on a $120-a-team board) and kept quarterbacks in double digits down to QB9.
+
+**Why that was wrong:** the position is flat. On the current projections QB1 to QB9 is about three points a game — Allen 21.0, Nix 18.0 — so a room that only has to start one stops paying up almost immediately. Historical spend is a record of scarcity that no longer exists; the number of startable quarterbacks is what sets the price, and there are more of them than the old curve assumed.
+
+**The re-cut**, stated on the same $120-a-team board the owner reads: QB1 lands high-20s (Allen $29, was $40), QB6 is the last double-digit quarterback ($12), and QB7 down is single digits (was $10 on a clean board and $23 on a stale-anchored one — see §9e). Everything else on the board rises a little: the QB dollars have to go somewhere, and they go to the 144 rostered skill players, which is what the room actually does.
+
+The curve is not the price. `renormalizeToBudget` scales `marketValue` so the rostered players' prices spend the whole pool, which is why cutting the QB row needs no compensating rise anywhere else — the redistribution is automatic, and it is why a $25 curve slot prints as $29 on a $120 board. It is also why the cut has to be calibrated against what comes OUT of the app rather than against the array: the first draft of this curve was written to land Allen at $29 and, once renormalised, printed $32.
+
+**Calibrated against VALUE, the app's own second opinion.** VALUE is VORP-based and never touches `marketValue`, so the ratio between the two columns says whether the curve is asking a sane premium. Over the top 14 at each position, before this PR and after:
+
+| | before | after |
+|---|---|---|
+| QB | 2.13x | **1.19x** |
+| RB | 0.91x | 1.01x |
+| WR | 0.94x | 1.04x |
+| TE | 0.96x | 1.06x |
+
+QB was asking more than double what the position was worth while every other position sat within a few points of parity. 1.19x is a real premium — rooms do overpay for quarterbacks — rather than a defect.
+
+    QB: [25, 20, 17, 14, 11, 10, 7, 5, 4, 4, 3, 3, 2, 2, 1, 1]   // was [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2]
+
+**The premium curve is opt-in; 1-QB is the default and the fallback.** `qbIsPremium(config)` is true only when a QB can fill a second *starting* slot: QB in the flex **with a flex slot to put him in**, or two QB starters. Nothing infers it — the only things that produce either shape are the QB-format control (1 QB / 2 QB / Superflex) and a league import that finds a `SUPER_FLEX` slot. `DEFAULT_LEAGUE_CONFIG` and `BESTBALL_FLEX` both ship `eligible: ["RB", "WR", "TE"]` with one QB starter, so an untouched league is priced 1-QB.
+
+Counting the flex slot rather than reading the eligibility list matters. `calculateReplacementLevels` hands out `flex.count * teams` flex slots, so a league with QB listed as eligible and a flex count of zero gets no share of them and VALUE prices it as 1-QB. Reading the list alone put PROJ on the premium curve for that same league — Allen $68 against a VALUE built for a $49 board — so the two columns described different leagues. A saved state can hold that shape, and so can setting superflex and then stepping the flex count down to zero.
+
+**Superflex and 2-QB keep the old curve.** The whole argument above is a 1-QB argument; with two QB slots to fill, 24+ quarterbacks get rostered and the position genuinely is scarce. The historical curve is preserved verbatim as `SUPERFLEX_QB_CURVE` and `calculateMarketValues` picks it whenever `qbIsPremium(config)` — QB in the flex, or two QB starters. So the cut can never make a superflex board cheaper at the position. `SUPERFLEX_QB_CURVE` is declared **above** `const LEAGUE_MARKET_CURVE` on purpose: the drift checks in `test-worker-column.mjs` and `test-it-league.mjs` read the first `QB: [...]` *after* that marker, and the worker and the library both price the site's default 1-QB league.
+
+Still open, and pre-existing: `Proj` is the only QB number that reacts to superflex through a separate curve. `it-league.js` prices the news pages off the 1-QB curve whatever league the reader has saved, and the superflex curve itself is still a 1-QB shape (QB1 below RB1), which is too cheap for a real superflex room. VALUE and You *do* re-price properly, through the replacement level. If superflex pricing gets a proper pass, that is the thing to fix.
+
+`node tools/test-qb-curve.mjs` walks five league shapes — default, explicit 1-QB, superflex, 2-QB, and QB-eligible-with-no-flex-slot — each from a **cleared profile**, because the mutations otherwise stack and every board after the first describes a league no scenario asked for. It asserts the two 1-QB-equivalent leagues price QBs *identically to the untouched default*, not merely cheaply, and that both real two-QB-slot leagues cost more at QB1 and QB7. It also states the 1-QB shape against RB1 rather than in dollars, so that part holds at any league size: QB1 at most three quarters of RB1, QB7 under a quarter of RB1, the QB1→QB7 drop steeper than RB1→RB7, and superflex strictly more expensive than 1-QB at both QB1 and QB7. **It fails on the pre-cut curve** — verified by reverting. Remember the two mirrors: `COLUMN_CURVE` in `_worker.js` and `CURVE` in `it-league.js` both carry the 1-QB QB row, and `test-worker-column.mjs` / `test-it-league.mjs` fail loudly if they drift.
 
 ## 10. X (Twitter) auto-post (added July 2026)
 
