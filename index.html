@@ -14526,18 +14526,28 @@ function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
   });
 
   // "exactly k from this position, cost <= b" with enough breadcrumbs to
-  // rebuild the roster afterwards
+  // rebuild the roster afterwards.
+  //
+  // The breadcrumb is a LINK, not a coordinate. A (k, b) cell used to store
+  // "which player, and which cell did I come from", and the walk back re-read
+  // those tables once every player had been folded in. But a later player
+  // overwrites the cell the walk lands on, so the roster it rebuilt was not the
+  // roster the cell was priced from: at k >= 3 the descent could pick the SAME
+  // player again, and the planner handed one man two slots — George Pickens at
+  // $10 in both WR2 and FLEX. Each improvement now records {player, rest of the
+  // roster} into an arena, so a cell owns its whole chain and nothing written
+  // afterwards can bend it.
   const tables = {};
   Object.keys(maxK).forEach(pos => {
     const kmax = maxK[pos];
     const pool = (byPos[pos] || []).filter(p => !used.has(p.id));
     const dp = [];
-    const who = [];
-    const back = [];
+    const node = [];
+    const linkPlayer = [];
+    const linkPrev = [];
     for (let k = 0; k <= kmax; k++) {
       dp.push(new Float64Array(B + 1).fill(NEG));
-      who.push(new Int32Array(B + 1).fill(-1));
-      back.push(new Int32Array(B + 1).fill(-1));
+      node.push(new Int32Array(B + 1).fill(-1));
     }
     dp[0].fill(0);
     for (let i = 0; i < pool.length; i++) {
@@ -14546,13 +14556,15 @@ function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
       const pt = pool[i].projectedPoints || 0;
       for (let k = kmax; k >= 1; k--) {
         const prev = dp[k - 1], curr = dp[k];
+        const prevNode = node[k - 1], currNode = node[k];
         for (let b = B; b >= pr; b--) {
           const base = prev[b - pr];
           if (base === NEG) continue;
           if (base + pt > curr[b]) {
             curr[b] = base + pt;
-            who[k][b] = i;
-            back[k][b] = b - pr;
+            linkPlayer.push(i);
+            linkPrev.push(prevNode[b - pr]);
+            currNode[b] = linkPlayer.length - 1;
           }
         }
       }
@@ -14561,23 +14573,21 @@ function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
     // as "best with at most b dollars"
     for (let k = 1; k <= kmax; k++) {
       const row = dp[k];
-      const w = who[k], bk = back[k];
+      const nrow = node[k];
       for (let b = 1; b <= B; b++) {
-        if (row[b - 1] > row[b]) { row[b] = row[b - 1]; w[b] = w[b - 1]; bk[b] = bk[b - 1]; }
+        if (row[b - 1] > row[b]) { row[b] = row[b - 1]; nrow[b] = nrow[b - 1]; }
       }
     }
-    tables[pos] = { dp: dp, who: who, back: back, pool: pool };
+    tables[pos] = { dp: dp, node: node, linkPlayer: linkPlayer, linkPrev: linkPrev, pool: pool };
   });
 
   function chosen(pos, k, b) {
     const t = tables[pos];
     const out = [];
-    while (k > 0) {
-      const i = t.who[k][b];
-      if (i < 0) break;
-      out.push(t.pool[i]);
-      b = t.back[k][b];
-      k--;
+    let link = t.node[k][b];
+    while (link >= 0) {
+      out.push(t.pool[t.linkPlayer[link]]);
+      link = t.linkPrev[link];
     }
     return out;
   }
@@ -14622,6 +14632,7 @@ function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
         rem -= sp;
       }
       const picks = {};
+      const taken = new Set();
       let cost = 0;
       let ok = true;
       // dedicated slots draw first so the best players land in named slots
@@ -14634,8 +14645,11 @@ function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
             const list = byPosPicks[pos] || [];
             const pl = list.shift();
             if (!pl) { ok = false; return; }
+            // one man, one slot — a set that repeats anybody is not a roster
+            if (taken.has(pl.id)) { ok = false; return; }
             const slot = g.slots.find(sl => picks[sl.label] === undefined);
             if (!slot) { ok = false; return; }
+            taken.add(pl.id);
             picks[slot.label] = pl;
             cost += priceOf(pl);
           }
