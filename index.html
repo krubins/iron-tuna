@@ -1480,6 +1480,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .assumptions-panel label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .assumptions-panel input, .assumptions-panel select { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); padding: 5px 8px; font-size: 14px; }
 .assumptions-panel input[type=number] { width: 64px; }
+.cheat-assume { display: flex; align-items: baseline; gap: 8px 14px; flex-wrap: wrap; background: var(--bg-panel); border: 1px solid var(--border-strong); border-left: 3px solid var(--gold-text); border-radius: var(--radius-md); padding: 9px 14px; margin-bottom: 12px; font-size: 14px; color: var(--text-secondary); font-family: var(--font-mono); }
+.cheat-assume .ca-fmt { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.cheat-assume .ca-item { white-space: nowrap; }
+.cheat-assume .ca-item b { color: var(--text-primary); font-weight: 700; }
+.cheat-assume .ca-item + .ca-item::before { content: "\00b7"; color: var(--text-muted); margin-right: 14px; }
+.cheat-assume .ca-note { flex-basis: 100%; font-size: 12px; color: var(--text-muted); font-family: var(--font-body); }
 .coach-ai-pill { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-muted); cursor: pointer; margin-right: 8px; }
 .coach-ai-pill.on { background: rgba(45,212,163,0.15); color: var(--positive); border-color: var(--positive); }
 .coach-ai { padding: 14px; overflow-y: auto; flex: 1; }
@@ -11449,6 +11455,13 @@ function Cheatsheet({
     day: 'numeric',
     year: 'numeric'
   });
+  const _assumeIsAuction = (config && config.format || 'auction') === 'auction';
+  const _assumeStarters = (() => {
+    if (!config || !config.roster) return '';
+    const parts = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => config.roster[p] && config.roster[p].starters > 0).map(p => `${config.roster[p].starters}${p}`);
+    if (config.flex && config.flex.count) parts.push(`${config.flex.count}FLEX`);
+    return parts.join(' ');
+  })();
   function startDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
     if (e.pointerType === 'touch') return;
@@ -11594,7 +11607,24 @@ function Cheatsheet({
   }
   return React.createElement("div", {
     className: "cheatsheet"
-  }, React.createElement(CheatHeader, {
+  }, React.createElement("div", {
+    className: "cheat-assume no-print"
+  }, React.createElement("span", {
+    className: "ca-fmt",
+    style: { color: fmtMeta(config).color }
+  }, fmtMeta(config).label), React.createElement("span", {
+    className: "ca-item"
+  }, React.createElement("b", null, config.teams), " teams"), React.createElement("span", {
+    className: "ca-item"
+  }, React.createElement("b", null, pprLabel)), _assumeIsAuction ? React.createElement("span", {
+    className: "ca-item"
+  }, React.createElement("b", null, "$", config.budget), " budget") : React.createElement("span", {
+    className: "ca-item"
+  }, "Pick ", React.createElement("b", null, "#", _fmtSlot)), _assumeStarters ? React.createElement("span", {
+    className: "ca-item"
+  }, "Starters ", React.createElement("b", null, _assumeStarters)) : null, React.createElement("span", {
+    className: "ca-note"
+  }, "Every number on this sheet assumes these settings. Adjust them under League Settings.")), React.createElement(CheatHeader, {
     myTeam: myTeam,
     players: players,
     config: config,
@@ -11641,7 +11671,7 @@ function Cheatsheet({
     className: "cph-logo"
   }), React.createElement("span", null, fmtMeta(config).label, " Cheat Sheet")), React.createElement("div", {
     className: "cph-sub"
-  }, config.teams, " teams · $", config.budget, " budget · ", pprLabel, highlight ? ` · ${STRAT[highlight].label} model` : '', " · generated ", dateStr), React.createElement("div", {
+  }, config.teams, " teams · ", _assumeIsAuction ? `$${config.budget} budget · ` : '', pprLabel, _assumeStarters ? ` · starters ${_assumeStarters}` : '', highlight ? ` · ${STRAT[highlight].label} model` : '', " · generated ", dateStr), React.createElement("div", {
     className: "cph-legend"
   }, React.createElement("span", {
     className: "cph-key"
@@ -11671,7 +11701,7 @@ function Cheatsheet({
     className: "cheat-onepage-brand"
   }, React.createElement("div", {
     className: "cob-sub"
-  }, fmtMeta(config).label, " Cheat Sheet · ", config.teams, " teams · $", config.budget, " budget · ", pprLabel, " · ", dateStr), React.createElement("div", {
+  }, fmtMeta(config).label, " Cheat Sheet · ", config.teams, " teams · ", _assumeIsAuction ? `$${config.budget} budget · ` : '', pprLabel, " · ", dateStr), React.createElement("div", {
     className: "cob-chip"
   }, React.createElement("img", {
     src: "/tuna.png",
@@ -11897,7 +11927,7 @@ function Cheatsheet({
     }, bestballStackBoost(p, _fmtMyRoster, 1) > 0 ? '\u2605' : '\u2014') : null));
   })))))), React.createElement("div", {
     className: "cheat-print-foot"
-  }, "IRON TUNA · Auction Cheat Sheet · ", config.teams, "-team · $", config.budget, " budget · ", pprLabel, " · ", dateStr));
+  }, "IRON TUNA · ", fmtMeta(config).label, " Cheat Sheet · ", config.teams, "-team · ", _assumeIsAuction ? `$${config.budget} budget · ` : '', pprLabel, " · ", dateStr));
 }
 function mockStarterPts(roster, config, games) {
   const by = {};
