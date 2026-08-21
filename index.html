@@ -3143,11 +3143,22 @@ const LEAGUE_CURVE_BUDGET = 1440;
 // to check the worker's and the library's mirrors, and those two price the site's
 // default 1-QB league.
 const SUPERFLEX_QB_CURVE = [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2];
-// True when a QB can fill more than one starting slot — superflex (QB in the flex) or
-// straight 2-QB. Both make quarterbacks a scarce commodity instead of a spare part.
+// The premium curve is OPT-IN: a league is priced as 1-QB unless it says otherwise.
+// "Otherwise" means a QB can actually fill a second STARTING slot — superflex (QB in
+// the flex, and a flex slot to put him in) or straight 2-QB. Only the QB-format
+// control and a league import that finds a SUPER_FLEX slot produce either shape.
+//
+// The flex slot has to be counted, not just listed. `calculateReplacementLevels`
+// hands out `flex.count * teams` flex slots, so QB listed as eligible with a flex
+// count of zero gets no share of them and VALUE prices that league as 1-QB. Reading
+// the eligibility list alone put PROJ on the premium curve for the same league —
+// Allen $68 against a VALUE built for a $49 board — so the two columns described
+// different leagues. A saved state can hold that shape, and so can setting superflex
+// and then stepping the flex count down to zero.
 function qbIsPremium(config) {
   if (!config) return false;
-  const flexQb = !!(config.flex && config.flex.eligible && config.flex.eligible.includes('QB'));
+  const flex = config.flex;
+  const flexQb = !!(flex && (flex.count || 0) > 0 && Array.isArray(flex.eligible) && flex.eligible.includes('QB'));
   const starters = (config.roster && config.roster.QB && config.roster.QB.starters) || 0;
   return flexQb || starters >= 2;
 }
