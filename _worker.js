@@ -1950,7 +1950,11 @@ const LEAD_CATEGORIES = {
   vegas:      'Vegas vs. Consensus',
   preseason:  'Preseason',
   injury:     'Injury Report',
-  market:     'Market & Roster Build'
+  market:     'Market & Roster Build',
+  // The analyst desk names other people's calls, so its label has to say whose
+  // board is whose. "Analysts" alone would read as if the site were quoting
+  // itself.
+  analyst:    'Analysts vs. Iron Tuna'
 };
 const LEAD_RECENT = 5;
 
