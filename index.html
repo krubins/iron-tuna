@@ -14669,6 +14669,14 @@ function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
   walkGroups(0);
   return best;
 }
+// `switchReserve` is RETIRED and no longer read. It used to select a better bench
+// reserve (`skillBench * 2 + kdBench * minBid`) for the YOU-value and opponent
+// paths, because the default `remainingBench * minBid` was too low. Section 19
+// made the real, floor-aware reserve unconditional, so that branch is now what
+// every caller gets and the flag has nothing left to switch. The parameter stays
+// in the signature only to hold its position: five call sites still pass a value
+// in this slot, and removing it would silently shift `opts` one place left and
+// take `noCap` with it.
 function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, switchReserve, opts) {
   opts = opts || {};
   overrides = overrides || {};

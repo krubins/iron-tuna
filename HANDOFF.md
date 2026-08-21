@@ -1230,6 +1230,24 @@ at *every* setting, the default included, where it ran to $30. Handing the
 leftover back needs the starter solve to run a second time. The test bounds it
 rather than asserting it away, so a regression that makes it worse still fails.
 
+### What this moved that is not in the table
+
+`switchPrice()` — the YOU value on every player row — is a binary search over
+`buildOptimalPlan`, so the reserve fix moved it too. A higher, honest bench
+reserve leaves the starters a lower ceiling, so YOU values come out slightly
+lower than before. That lands on the board's colouring, which PR #66 had just
+changed to grade `Proj` against **YOU** rather than against Value: a lower YOU
+means marginally more rows read red. The two changes were written independently,
+hours apart, and neither anticipated the other. If the board's colour balance
+looks off, this is the first place to look.
+
+`switchReserve` is **retired**. It selected the better of two bench reserves for
+the YOU-value and opponent paths; the real reserve is now unconditional, so the
+flag has nothing left to switch. It stays in the signature only to hold its
+position — five call sites still pass a value in that slot, and dropping it would
+shift `opts` one place left and take `noCap` with it. Remove it only together
+with all five.
+
 ### Verifying a change here
 
 `node tools/test-planner-budget.mjs [--report]` sweeps all nine shape models
