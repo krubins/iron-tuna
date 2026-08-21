@@ -816,13 +816,15 @@ the merge as redundant.
 
 A recurring column on what a head coach or coordinator is worth in fantasy dollars. Every entry has the same two halves, and the format is the point: **a coaching tendency with a track record long enough to be checkable, and the specific current-season player that tendency lands on.** A pattern with no named player is trivia; a named player with no pattern behind him is a hunch.
 
-The name is an auction name on purpose — the column measures what a play-caller adds to or subtracts from a price, and "premium" is the word the rest of the site already uses for that.
+The name is an auction name on purpose — the column measures what a play-caller adds to or subtracts from a price.
+
+**"Premium" is the column's name and nothing else.** It was originally the verdict vocabulary too ("Pay the premium" / "Take the discount"), and that read as jargon: everywhere else on this site "premium" means *the paid tier* — Premium Insights, the premium set, Unlock Premium Insights — so a chip reading "Pay the premium" looked like it was describing the product, not the price. The verdicts are now the same three words the drop pages already use, **Underpriced / Overpriced / Two-sided**, and the page's method box spells out what each one means. Do not reintroduce a price word that collides with the paywall word.
 
 ### Where it lives
 
 - **`play-caller-premium.html`** (route `/play-caller-premium`) is the **source of truth**, same discipline as the insight drop pages. Entries are static HTML — no client-side rendering and no date gating, because entries are written on the day they publish rather than scheduled ahead. Newest first.
 - Each entry is one `<article class="call" id="call-YYYY-MM-DD-N">` carrying: a `.cmeta` row (chip + `.cpos` + `.cteam` + `.cdate`), an `<h2>` naming the **coach or the pattern**, two or three paragraphs of the tendency, a `<p class="who">` naming the players in `<b>` tags, and a `<p class="statline">`.
-- The chip is the verdict: `chip up` ("Pay the premium"), `chip down` ("Take the discount"), `chip split` ("Two-sided" — a scheme that lifts one position by taxing another).
+- The chip is the verdict: `chip up` ("Underpriced"), `chip down` ("Overpriced"), `chip split` ("Two-sided" — a scheme that lifts one position by taxing another). The class names still read up/down/split because they carry the colour; only the words changed.
 - **`p.statline` is deliberate markup, not decoration.** It is the same class the drop pages use, so `/it-league.js` finds it and translates each entry's percentage into the reader's own dollars (§9f). The column ships `<script src="/it-league.js" defer>` for exactly that.
 - The front page carries a **`#coaching` module** between Position Intel and Asset Allocation: the four newest entries as cards, each with the faces of the players it commits to.
 
@@ -923,6 +925,16 @@ fresh story back through week-old ones would rebuild the exact staleness this
 replaced. The archive is links under the lead, never a rotation the lead walks
 into. `.lead-ctrls[hidden]{display:none}` is load-bearing: the class sets
 `display:flex`, which beats the `hidden` attribute on its own.
+
+**The timestamp is the reader's clock, not the desk's.** `leadStamp()` in
+`front.html` and `stamp()` in `lead.html` both print the story's `created_at` in
+the visitor's own time zone, named — "Aug 21 · 8:58 AM CDT" — via
+`toLocaleTimeString`, with a plain 12-hour local fallback if `Intl` is missing.
+They used to print `HH:00 UTC`, which is the desk's cron clock and a puzzle for
+everyone else: the audience is American fantasy managers, and a stamp they have
+to convert answers nothing. The run publishes at :58, so the old version was also
+truncating to the wrong hour. Keep both files in step — the same story shows both
+stamps as a reader moves from the front page to `/lead`.
 
 The lead's photo band works off `players`, slugged with the same rule
 `tools/build-front.mjs` uses, so "Kenneth Walker III" and `kenneth-walker-iii`
