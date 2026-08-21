@@ -141,6 +141,9 @@ jobs:
       - name: The standing analyst column
         run: node tools/test-analyst-column.mjs
 
+      - name: What the board grades a player name against
+        run: node tools/test-board-colour.mjs
+
       - name: Vegas column (worker)
         run: node tools/test-worker-column.mjs
 
