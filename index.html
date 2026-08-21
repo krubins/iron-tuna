@@ -2214,6 +2214,11 @@ const {
   useRef,
   Fragment
 } = React;
+// Share of a player's market-priced stats that comes from the sportsbook line
+// rather than the committed projection. 0.75 is what /api/projections already
+// ships (the worker blends 3 : 1), so it is both the default and the value the
+// Draft Models projections/odds slider resets to. See applyVegasWeight.
+const VEGAS_DEFAULT_W = 0.75;
 const DEFAULT_LEAGUE_CONFIG = {
   name: "My League",
   format: "auction",
@@ -2390,7 +2395,8 @@ const DEFAULT_LEAGUE_CONFIG = {
     inflationFactor: 1.0
   },
   strategy: {
-    allocation: 0.55
+    allocation: 0.55,
+    vegasWeight: VEGAS_DEFAULT_W
   }
 };
 const CORE_ROSTER_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
@@ -2836,6 +2842,52 @@ function vegasFlagEl(player, config) {
   const vi = vegasImpact(player, config);
   if (!vegasSignificant(vi)) return null;
   return React.createElement("span", { className: "vegas-flag" + (vi.delta < 0 ? " down" : ""), title: vegasTitle(vi), "aria-label": "Ranking significantly impacted by Vegas odds" }, "V");
+}
+// ── Reader-set projections/odds blend ───────────────────────────────────────
+// /api/projections ships projectedStats ALREADY blended at VEGAS_DEFAULT_W
+// toward the market (the worker blends at VEGAS_WEIGHT 3 : 1 committed, which
+// is the same 0.75). The Draft Models slider lets the reader re-cut that blend
+// anywhere from "ignore the odds" to "follow the book".
+//
+// The re-cut is derived from the two ENDPOINTS carried in
+// vegas[k] = [committed, marketImplied, blended], never from the shipped
+// blended number — that third value is itself a point on this line, so blending
+// off it would compound the default weighting instead of replacing it. The
+// triple's third slot is rewritten to the new blend so the V flag, the rank
+// chip and their tooltips keep describing the board the reader is looking at.
+//
+// Stats the book does not price are untouched, which is exactly the promise the
+// slider makes: it only decides who wins WHERE THE TWO DISAGREE.
+function vegasWeightOf(config) {
+  const w = config && config.strategy ? config.strategy.vegasWeight : null;
+  return typeof w === 'number' && isFinite(w) ? Math.min(1, Math.max(0, w)) : VEGAS_DEFAULT_W;
+}
+function applyVegasWeight(players, w) {
+  if (!players || !players.length || Math.abs(w - VEGAS_DEFAULT_W) < 1e-9) return players;
+  return players.map(p => {
+    const vg = p && p.vegas;
+    if (!vg || !p.projectedStats) return p;
+    const stats = { ...p.projectedStats };
+    const next = {};
+    let touched = false;
+    for (const k in vg) {
+      const a = vg[k];
+      // typeof, not Number(): Number(null) is 0, and a null endpoint would
+      // silently zero out a real projection instead of being left alone.
+      const usable = Array.isArray(a) && a.length >= 3 && k in stats
+        && typeof a[0] === 'number' && isFinite(a[0])
+        && typeof a[1] === 'number' && isFinite(a[1]);
+      if (!usable) { next[k] = a; continue; }
+      const base = a[0], mkt = a[1];
+      // Same rounding the worker's _oddsRound applies, so w = VEGAS_DEFAULT_W
+      // reproduces the shipped numbers exactly rather than off by a decimal.
+      const blended = Math.round((base + (mkt - base) * w) * 10) / 10;
+      stats[k] = blended;
+      next[k] = [a[0], a[1], blended];
+      touched = true;
+    }
+    return touched ? { ...p, projectedStats: stats, vegas: next } : p;
+  });
 }
 function scorePlayer(player, config) {
   if (player.projectedPointsOverride != null) return player.projectedPointsOverride;
@@ -10680,6 +10732,10 @@ function CheatHeader({
   const anchorIds = new Set(activeAnchors.map(a => String(a.id)));
   const anchorsKey = JSON.stringify(activeAnchors.map(a => [a.id, a.price]));
   const wiPool = useMemo(() => (players || []).filter(p => !(draftedIds && draftedIds.has(p.id))).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)), [players, draftedIds]);
+  // The projections/odds slider is only shown when the board actually carries
+  // sportsbook lines. With no odds in the pool it would move nothing, and an
+  // inert control reads as a broken one.
+  const hasVegasOdds = useMemo(() => (players || []).some(p => p && p.vegas), [players]);
   const wiPriceOf = pl => pl.marketValue != null ? pl.marketValue : pl.auctionValue != null ? pl.auctionValue : 1;
   function setAnchorAt(i, id, price) {
     const next = [0, 1, 2].map(j => j === i ? id ? {
@@ -10944,6 +11000,75 @@ function CheatHeader({
         whiteSpace: 'nowrap'
       }
     }, "~", React.createElement("b", null, Math.round(alloc * 35), "%"), " held for bench depth"));
+  })(), onUpdateStrategy && hasVegasOdds && (() => {
+    const w = vegasWeightOf(config);
+    const pct = Math.round(w * 100);
+    const edge = {
+      fontSize: 11,
+      color: 'var(--text-muted)'
+    };
+    return React.createElement("div", {
+      className: "ch-depth",
+      style: {
+        flexBasis: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 4
+      },
+      onPointerDown: e => e.stopPropagation()
+    }, React.createElement("span", {
+      style: {
+        fontFamily: 'var(--font-body)',
+        fontWeight: 700,
+        fontSize: 12,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: 'var(--text-secondary)',
+        whiteSpace: 'nowrap'
+      }
+    }, "Projections vs Vegas"), React.createElement("span", {
+      style: edge
+    }, "Projections"), React.createElement("input", {
+      type: "range",
+      min: "0",
+      max: "1",
+      step: "0.01",
+      style: {
+        flex: '0 1 220px',
+        accentColor: 'var(--gold-text)'
+      },
+      value: w,
+      onChange: e => onUpdateStrategy({
+        vegasWeight: parseFloat(e.target.value)
+      }),
+      "aria-label": "How much sportsbook odds count against our projections, from projections only to Vegas only",
+      title: "Where our projections and the sportsbook lines disagree, how much of the difference to give the book. Left: ignore the odds. Right: follow them. Default 75%, which is how the board ships. Stats no book prices are unaffected either way."
+    }), React.createElement("span", {
+      style: edge
+    }, "Vegas"), React.createElement("span", {
+      style: {
+        fontSize: 11.5,
+        color: 'var(--text-muted)',
+        whiteSpace: 'nowrap'
+      }
+    }, pct === 0 ? "Odds ignored \u2014 projections only" : pct === 100 ? "Vegas lines only where a book prices the stat" : React.createElement(React.Fragment, null, React.createElement("b", null, pct, "%"), " Vegas / ", 100 - pct, "% projections where they disagree")), Math.abs(w - VEGAS_DEFAULT_W) > 0.005 && React.createElement("button", {
+      onClick: () => onUpdateStrategy({
+        vegasWeight: VEGAS_DEFAULT_W
+      }),
+      style: {
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        fontFamily: 'inherit',
+        fontSize: 11,
+        color: 'var(--gold-text)',
+        textDecoration: 'underline',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap'
+      },
+      title: "Back to the default " + Math.round(VEGAS_DEFAULT_W * 100) + "% blend"
+    }, "reset"));
   })(), myTeam && model && config && config.format !== 'snake' && modelTargets && modelTargets.length > 0 && React.createElement("div", {
     style: {
       flexBasis: '100%',
@@ -21028,7 +21153,11 @@ function App() {
     }
   }, [teams]);
   const baseValued = useMemo(() => {
-    const scored = normalizeToLastYear(players.map(p => ({
+    // The projections/odds blend is re-cut BEFORE anything is scored, so the
+    // slider moves points, ranks, tiers, values and every draft model together
+    // rather than only the number in the Proj column.
+    const source = applyVegasWeight(players, vegasWeightOf(config));
+    const scored = normalizeToLastYear(source.map(p => ({
       ...p,
       projectedPoints: scorePlayer(p, config)
     })), config);
@@ -21636,10 +21765,24 @@ function App() {
     }
   }
   function handlePlayerEdit(playerId, newStats) {
-    setPlayers(prev => prev.map(p => p.id === playerId ? {
-      ...p,
-      projectedStats: newStats
-    } : p));
+    setPlayers(prev => prev.map(p => {
+      if (p.id !== playerId) return p;
+      // A hand-entered stat is the reader's own number, not a blend of ours and
+      // the book's — drop its odds triple so the projections/odds slider cannot
+      // overwrite the edit the next time it moves.
+      let vegas = p.vegas || null;
+      if (vegas) {
+        const prevStats = p.projectedStats || {};
+        const kept = {};
+        for (const k in vegas) if (!(k in newStats) || newStats[k] === prevStats[k]) kept[k] = vegas[k];
+        vegas = Object.keys(kept).length ? kept : null;
+      }
+      return {
+        ...p,
+        projectedStats: newStats,
+        vegas
+      };
+    }));
   }
   function handleRenameTeam(teamId, name) {
     setTeams(prev => prev.map(t => t.id === teamId ? {

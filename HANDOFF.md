@@ -432,6 +432,24 @@ Still open, and pre-existing: `Proj` is the only QB number that reacts to superf
 
 `node tools/test-qb-curve.mjs` walks five league shapes — default, explicit 1-QB, superflex, 2-QB, and QB-eligible-with-no-flex-slot — each from a **cleared profile**, because the mutations otherwise stack and every board after the first describes a league no scenario asked for. It asserts the two 1-QB-equivalent leagues price QBs *identically to the untouched default*, not merely cheaply, and that both real two-QB-slot leagues cost more at QB1 and QB7. It also states the 1-QB shape against RB1 rather than in dollars, so that part holds at any league size: QB1 at most three quarters of RB1, QB7 under a quarter of RB1, the QB1→QB7 drop steeper than RB1→RB7, and superflex strictly more expensive than 1-QB at both QB1 and QB7. **It fails on the pre-cut curve** — verified by reverting. Remember the two mirrors: `COLUMN_CURVE` in `_worker.js` and `CURVE` in `it-league.js` both carry the 1-QB QB row, and `test-worker-column.mjs` / `test-it-league.mjs` fail loudly if they drift.
 
+## 9i. The reader's own projections/odds blend (added August 2026)
+
+The board is shipped **75% of the way toward the sportsbook** (§9a, §9b) — that is our editorial call, and it is not every reader's. Some trust the consensus feeds and want the odds out of it; some want the book and nothing else. The **Projections vs Vegas** slider in the Draft Models panel (`CheatHeader` in `index.html`, directly under Starters vs Depth) hands that call to the reader, anywhere from "ignore the odds" to "follow the book".
+
+**It re-cuts a blend the server already made, from the endpoints — never from the shipped number.** `blendProjections` ships `projectedStats` already blended and `vegas[k] = [committed, marketImplied, blended]`. That third value is itself a point on the line between the first two, so blending *off* it would compound the default weighting instead of replacing it. `applyVegasWeight(players, w)` interpolates between slots 0 and 1, rewrites slot 2 to the new blend (so the `V` flag, the `▲3` rank chip and their tooltips keep describing the board on screen), and rounds exactly the way the worker's `_oddsRound` does — so `w = VEGAS_DEFAULT_W` reproduces the shipped numbers to the digit rather than off by a decimal. `VEGAS_DEFAULT_W` is `0.75`, declared above `DEFAULT_LEAGUE_CONFIG` because the config's `strategy.vegasWeight` default references it; `tools/test-vegas-weight.mjs` fails if it ever drifts from the worker's `VEGAS_WEIGHT`.
+
+**It is applied before anything is scored** — in `baseValued`, ahead of `scorePlayer`, so one drag moves points, ranks, tiers, VALUE, You and every draft model together. Wiring it any later would move the `Proj` column and leave the rest of the board describing a projection nobody is looking at.
+
+Three properties the control promises and the tests hold it to:
+
+- **Only where they disagree.** Stats no book prices are passed through, and a player the book never priced is returned as the *same object*, so downstream memos stay valid. On screen he can still shift a hair, because `normalizeToLastYear` rescales the whole pool — that ripple is bounded in the browser test, not asserted away.
+- **A hand-entered stat wins.** `handlePlayerEdit` drops the odds triple for any stat the reader typed over, so the slider cannot overwrite an edit the next time it moves.
+- **It is undoable.** The `reset` link (shown only off-default) restores the shipped board exactly, not approximately.
+
+Hidden entirely when no player in the pool carries odds — an inert control reads as a broken one.
+
+`node tools/test-vegas-weight.mjs` pins the math, the clamping, the hostile inputs and the wiring (37 assertions, no browser). `node tools/test-vegas-slider.mjs` drives the real app in Chromium: it stubs an overlay, opens the panel, drags to both ends and back, and asserts Proj, position rank, the `V` flag and the readout all follow — and that reset lands back on the exact numbers it started from. Same playwright-core/react/Chromium dependencies and the same clean skip as `test-you-column.mjs`.
+
 ## 10. X (Twitter) auto-post (added July 2026)
 
 Posts to **@irontunafantasy** every **weekday, staggered across three slots** (13:00 / 16:00 / 19:00 UTC = 9am / noon / 3pm EDT) so the day's threads hit different audience windows instead of one same-minute botlike burst: the **auction insight thread at 13:00**, the **snake insight thread at 16:00**, and the **day's bonus post at 19:00** — Monday a poll, Tuesday+Thursday snake-draft "survival odds" feature promos, Wednesday alternating auction money-allocation strategy and Value Coach promos, and Friday (much lower volume, by design, best ball is a separate niche format) best-ball insights and ceiling/stack/championship-week feature promos. Runs via three Cloudflare Worker **Cron Triggers** (one per slot, dispatched on `event.cron` in `scheduled()`), no external scheduler needed.
