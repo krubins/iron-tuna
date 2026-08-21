@@ -170,6 +170,43 @@
   // say so instead of implying they picked it.
   function formatFromLeague() { return !readingChoice && !!cfg && !!normFormat(cfg.format); }
 
+  // ── the edition ───────────────────────────────────────────────────────────
+  // The reading format above answers one question: dollars or draft slots. The
+  // EDITION answers a different one — WHICH OF THE THREE DRAFTS the reader came
+  // for. Best ball is its own edition (its own insight pages, its own guides,
+  // its own room in the app) even though it reads in slots exactly like a snake
+  // draft, so the two cannot share one value: normFormat() folds best ball into
+  // snake, and a page that switched on that alone would send a best ball reader
+  // to the snake edition of every story.
+  //
+  // Setting the edition also sets the reading format, so a reader who picks
+  // Best Ball on the front page's ribbon is never left reading auction dollars
+  // underneath. The reverse is deliberately NOT true: the edition is the
+  // coarser choice, and it is the one the reader makes by hand.
+  var EDITION_KEY = 'iron_tuna_edition_v1';
+  function normEdition(f) {
+    return (f === 'auction' || f === 'snake' || f === 'bestball') ? f : null;
+  }
+  var editionChoice = null;
+  try { editionChoice = normEdition(root.localStorage.getItem(EDITION_KEY)); } catch (e) { editionChoice = null; }
+  // Same precedence as readingFormat(): the reader's own switch, then the league
+  // they saved, then auction — this is an auction site and its copy is written
+  // that way, so an unset reader is never dropped into another edition.
+  function edition() {
+    return editionChoice || (cfg && normEdition(cfg.format)) || 'auction';
+  }
+  function setEdition(f) {
+    var v = normEdition(f);
+    if (!v) return edition();
+    editionChoice = v;
+    try { root.localStorage.setItem(EDITION_KEY, v); } catch (e) {}
+    setReadingFormat(v);          // best ball reads in slots; normFormat folds it
+    return v;
+  }
+  // True when nobody has picked and the edition came from the league they saved,
+  // so a page can say where it got the answer instead of implying they chose it.
+  function editionFromLeague() { return !editionChoice && !!cfg && !!normEdition(cfg.format); }
+
   // ── scoring: a faithful port of the client's scoreSkillPlayer ─────────────
   function yardageScore(yards, perPoint, threshold, bonuses) {
     if (yards < threshold) return 0;
@@ -662,6 +699,9 @@
     readingFormat: readingFormat,
     setReadingFormat: setReadingFormat,
     formatFromLeague: formatFromLeague,
+    edition: edition,
+    setEdition: setEdition,
+    editionFromLeague: editionFromLeague,
     label: label,
     scoringLabel: scoringLabel,
     ensureStyle: ensureStyle,

@@ -298,6 +298,32 @@ console.log('\nthe reading format');
   ok('switching back leaves the saved league free to speak again',
      (() => { const n = load(store); n.L.setReadingFormat('snake'); return n.L.readingFormat() === 'snake'; })());
 
+  // ── the edition ──
+  // Three values where the lens has two, because best ball has its own pages
+  // and its own room even though it reads in slots. Setting it must carry the
+  // lens with it, or the ribbon says Best Ball while the copy quotes dollars.
+  ok('no saved league opens on the auction edition', load({}).L.edition() === 'auction');
+  ok('a saved best ball league opens on best ball',
+     load({ iron_tuna_draft_state_v2: league('bestball') }).L.edition() === 'bestball');
+  ok('and it is the league that set it, not the reader',
+     load({ iron_tuna_draft_state_v2: league('bestball') }).L.editionFromLeague() === true &&
+     load({}).L.editionFromLeague() === false);
+  {
+    const s2 = { iron_tuna_draft_state_v2: league('auction'), iron_tuna_values_v1: boardJSON };
+    const n = load(s2).L;
+    ok('the edition reports the value it took', n.setEdition('bestball') === 'bestball');
+    ok('and best ball reads in slots underneath', n.readingFormat() === 'snake');
+    ok('a tailored line follows the edition',
+       !/\$\d/.test(n.tailor('+10% to +20% versus price', 'Bravo Wideout', 'WR', n.readingFormat())));
+    ok('an unrecognised edition is refused rather than taken',
+       n.setEdition('kickball') === 'bestball' && n.edition() === 'bestball');
+    ok('the choice is written where the next page will find it',
+       s2.iron_tuna_edition_v1 === 'bestball');
+    ok('the next page opens on that edition', load(s2).L.edition() === 'bestball');
+    ok('and a reader-set edition is not reported as the league’s',
+       load(s2).L.editionFromLeague() === false);
+  }
+
   // A lens the reader borrowed is never described as the league they play in.
   const borrowed = load(store).L;
   ok('the reader’s own league is called theirs',
@@ -464,10 +490,16 @@ console.log('\nwire contract');
   // them stops passing the lens it silently falls back to the saved league, and
   // the page contradicts itself a screen apart. tools/test-position-lens.mjs
   // drives the switch in a browser; this only guards the argument.
-  ok('the front page offers the lens switch', /id="posFmt"/.test(front) && /data-fmt="snake"/.test(front));
+  ok('the front page offers the edition switch',
+     /id="edSwitch"/.test(front) && ['auction', 'snake', 'bestball'].every(f => front.includes('data-ed="' + f + '"')));
   ok('both front-page renders read through the lens',
      (front.match(/L\.tailor\(s\.stat, s\.title, s\.pos, readFmt\)/g) || []).length === 2);
-  ok('the switch writes the reader’s choice back to the library', /L\.setReadingFormat\(/.test(front));
+  // The edition is the coarser choice and it owns the lens: setEdition writes
+  // the reading format too, so best ball (which has no lens of its own) reads
+  // in slots rather than being left on auction dollars.
+  ok('the switch writes the reader’s choice back to the library', /L\.setEdition\(/.test(front));
+  ok('and setting an edition sets the lens under it',
+     /function setEdition[\s\S]{0,400}setReadingFormat\(v\)/.test(fs.readFileSync(path.join(ROOT, 'it-league.js'), 'utf8')));
   ok('the front page labels the line from the library', /L\.tailorLabel\(\)/.test(front));
 
   // The default board is generated, and a generated block left behind is a
