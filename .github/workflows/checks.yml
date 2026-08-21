@@ -116,6 +116,15 @@ jobs:
           fi
           echo "front.html is up to date"
 
+      # The scrolling cheat-sheet insights are hand-written prose with no build
+      # step, so nothing used to notice when a note outlived the roster it
+      # described — by August 2026 eight of the eleven backfield notes named
+      # players who had changed teams or left the board, and one still called a
+      # second-year back a rookie. This holds that prose to the same player pool
+      # the boards price from.
+      - name: Insight prose against the player pool
+        run: node tools/test-insights.mjs
+
       # The odds math is duplicated between _worker.js and tools/ because there is
       # no bundler; test-worker-odds.mjs lifts the worker's copy out of the source
       # and asserts the two still agree, so drift fails here instead of quietly
