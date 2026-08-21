@@ -15276,9 +15276,27 @@ function PlayersRail({
   }, [focusPlayer]);
   function startRankDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
-    if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
     if (e.target.closest && e.target.closest('.rr-name')) return;
+    if (e.pointerType === 'touch') {
+      // Drag-to-rank stays mouse-only: on touch it would fight the scroller.
+      // But the mouse path is also what opens the player card (pointerup with no
+      // movement, below), so bailing outright left tapping a row doing nothing at
+      // all on a phone or tablet. Watch for a tap and open the card.
+      const sx = e.clientX,
+        sy = e.clientY;
+      const onTap = ev => {
+        document.removeEventListener('pointerup', onTap);
+        document.removeEventListener('pointercancel', onTap);
+        if (ev.type !== 'pointerup') return;
+        if (Math.abs(ev.clientY - sy) > 8 || Math.abs(ev.clientX - sx) > 8) return;
+        const pl = (players || []).find(x => x.id === id);
+        if (pl) setQuick(pl);
+      };
+      document.addEventListener('pointerup', onTap);
+      document.addEventListener('pointercancel', onTap);
+      return;
+    }
     const info = rowRefs.current[id];
     if (!info || !info.el) return;
     e.preventDefault();
