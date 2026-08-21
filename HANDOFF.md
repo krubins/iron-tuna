@@ -1059,6 +1059,71 @@ continues the thread rather than restarting it — revisiting a call when news h
 moved it, and not re-litigating the same analyst-player pairing while nothing has
 changed.
 
+#### The standing column: `/analyst-desk`
+
+The lead rotation is ephemeral by design. `/lead` is `noindex` and its story is
+replaced every three hours, so on its own the analyst desk would have been a
+column whose back catalogue existed only as five "Recent insights" links. The
+standing page is where it accumulates.
+
+`analyst-desk.html`, served at `/analyst-desk` (Pages resolves the extensionless
+path; no worker route needed). It is **indexed**, which is the deliberate
+opposite of `lead.html` — that page is `noindex` because a search result would
+point at a story already replaced, while this URL is stable and only grows. The
+page is client-rendered from `/api/analyst-column`, so what a crawler actually
+sees is the standing copy above the entries: what the column is, how to read it,
+and the sourcing rules. That is the evergreen half, and it is the half worth
+ranking. **If you ever need the entries themselves indexed, that is a
+server-render, not a robots-tag change.**
+
+`GET /api/analyst-column` returns every verified `category = 'analyst'` row,
+newest first, capped at `ANALYST_MAX` (60), memoised two minutes per isolate the
+same way the lead is. It deliberately does **not** select `body_html`: the page
+links to `/lead/<slug>` for the article, and shipping sixty stories to render a
+list of headlines is the same mistake `/api/lead-story` was written to avoid.
+The admin route's cache-bust clears `_ANALYST_CACHE` alongside `_LEAD_CACHE`,
+because `&promote=` sets `verified = 1` and that is exactly what admits a row to
+this column.
+
+**The `calls` column.** The prose lives in `body_html`; `calls` is the
+structured summary the page lays out as cards and tallies into the record:
+
+```json
+[{"analyst":"Mike Clay","outlet":"ESPN","player":"Kenneth Walker III",
+  "pos":"RB","team":"KC","their":"RB7, a round above the sheet",
+  "ours":"$24 max bid, RB14","stance":"disagree",
+  "why":"The odds do not back the workload the ranking implies"}]
+```
+
+It was added after `lead_story` already existed and arrives the way the
+analytics tables do: **lazily, once per isolate, with nothing to run by hand.**
+`ALTER TABLE ADD COLUMN` has no `IF NOT EXISTS` in SQLite, so the
+duplicate-column error on every run after the first *is* the success case and is
+swallowed on purpose. If the DDL never lands at all — a binding without write
+access, a D1 that refuses it — the payload re-asks for the shape that has always
+existed and the column publishes without its call cards. `tools/test-analyst-column.mjs`
+covers both states.
+
+Everything about `calls` is optional and defensive, because an autonomous run
+writes it and no schema enforces it at write time: malformed JSON, an object
+where a list belongs, junk entries, forty calls in one row, a verdict word
+nobody defined. A call with no `analyst` or no `player` is dropped outright,
+which is the desk's own rule made structural — this column may not show a take
+with nobody attached to it. `ANALYST_STANCES` owns the verdict vocabulary the
+way `LEAD_CATEGORIES` owns the desk names: an unrecognised `stance` still
+renders its call, it just carries no chip and scores in no column.
+
+**The record table** is computed in the worker (`analystScoreboard`), not the
+page, because it is arithmetic over rows the payload already holds and two
+implementations of one tally is one too many. It groups case-insensitively, so
+"mike clay" and "Mike Clay" are one row.
+
+One editorial note that is load-bearing enough to live in the page copy: **an
+analyst being above consensus is not the same as being above us.** Iron Tuna's
+shipped values are blended toward the book, so the site is itself off consensus
+on plenty of players. The page says so in its "How to read this" box, and the
+desk brief pins the same definition.
+
 #### Turning it on
 
 The desk is defined in the worker and covered by tests, but the Routine
@@ -1104,7 +1169,17 @@ prompt:
    > written from memory, because an unsourced claim here puts words in a real
    > person's mouth.
 
+3. On an `analyst` run, also fill the `calls` column (JSON, one object per call)
+   so the story lands on `/analyst-desk` as cards and in the record table, not
+   only as a headline. The shape is above; `stance` must be exactly `agree`,
+   `disagree` or `partial`. Getting it wrong costs the cards, never the entry.
+
 ### Tests
+
+`node tools/test-analyst-column.mjs` (59 assertions) covers the standing column:
+the two query shapes, every malformed `calls` a run could store, the record
+tally, and the page's own contract (indexable, in the sitemap, escapes what the
+desk wrote, and degrades to standing copy when the API is dead).
 
 `node tools/test-lead-story.mjs` (58 assertions, no network, no browser). It
 evaluates the real section out of `_worker.js` rather than a copy, and most of it
