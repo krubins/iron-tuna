@@ -1380,40 +1380,47 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     var rb = A.posCost.filter(function(x){ return x.pos === 'RB'; })[0] || {};
     var cheapSide = A.lineup.filter(function(l){ return ['QB','TE','K','DEF'].indexOf(l.pos) >= 0; })
       .reduce(function(a, l){ return a + l.price; }, 0);
-    // The solved roster is always the site's own default league (see the
-    // comment at the top of this section). The headline is the one place that
-    // can honestly speak to the reader's own league without re-solving: if
-    // they have already told us their budget (it-league.js, saved via the
-    // free cheat sheet), show it; otherwise say so rather than pretend the
-    // $200 shown is theirs.
+    // The solved roster is always the site's own default $200/12-team league
+    // (see the comment at the top of this section) — there is no client-side
+    // solver here to re-run it at the reader's own numbers. What CAN be done
+    // honestly is what it-league.js's money() is built for: every dollar this
+    // module prints is a dollar out of that same $200 solve, so it restates
+    // 1:1 at the reader's own budget (money() scales by budget alone, the
+    // same rule the rest of the site uses for a manager's-own-wallet figure).
+    // Team count, scoring and the exact roster stay the site default — a
+    // true re-solve for THOSE needs the live board, so every place that
+    // states them keeps saying "12-team" rather than imply they moved too.
     var buildL = window.ITLeague || null;
     var buildHead = document.getElementById('buildHeadline');
-    if (buildL && buildL.has) {
-      document.getElementById('buildBudget').textContent = '$' + (buildL.config && buildL.config.budget ? buildL.config.budget : A.budget);
+    var myBudget = (buildL && buildL.has) ? buildL.money(A.budget) : null;
+    function fmtMoney(dollars) { return '$' + (myBudget != null ? buildL.money(dollars) : dollars); }
+    if (myBudget != null) {
+      document.getElementById('buildBudget').textContent = '$' + myBudget;
     } else if (buildHead) {
       buildHead.textContent = 'Upgrade for the best team for your league.';
     }
     document.getElementById('buildDek').innerHTML =
       'Solved across ' + A.playerCount + ' players for a ' + A.teams + '-team league: <b>' + A.ppg +
-      ' points a game</b> for <b>$' + A.spend + '</b>. It puts <b>' + (rb.share || 0) +
-      '% of the budget on running backs</b> and fills quarterback, tight end, kicker and defence for <b>$' +
-      cheapSide + ' combined</b>.';
+      ' points a game</b> for <b>' + fmtMoney(A.spend) + '</b>. It puts <b>' + (rb.share || 0) +
+      '% of the budget on running backs</b> and fills quarterback, tight end, kicker and defence for <b>' +
+      fmtMoney(cheapSide) + ' combined</b>.';
     document.getElementById('rosterStrip').innerHTML = A.lineup.map(function(l){
       return '<div class="rs" data-pos="' + esc(l.pos) + '">' +
         '<div class="rs-slot">' + esc(l.slot) + '</div>' +
         '<div class="rs-name">' + esc(shortName(l.name, l.pos)) + '</div>' +
         '<div class="rs-team">' + esc(l.team) + '</div>' +
-        '<div class="rs-price">$' + l.price + '</div>' +
+        '<div class="rs-price">' + fmtMoney(l.price) + '</div>' +
         '<div class="rs-ppg">' + l.ppg + ' pts/gm</div></div>';
     }).join('');
     document.getElementById('spendBar').innerHTML = A.posCost.map(function(c){
       return '<span class="spend-seg" style="width:' + (c.dollars / A.spend * 100) + '%;background:' + (POS_INK[c.pos] || '#8b939c') + '"></span>';
     }).join('');
     document.getElementById('spendKey').innerHTML = A.posCost.map(function(c){
-      return '<span><i style="background:' + (POS_INK[c.pos] || '#8b939c') + '"></i>' + esc(c.pos) + ' $' + c.dollars + ' &middot; ' + c.share + '%</span>';
+      return '<span><i style="background:' + (POS_INK[c.pos] || '#8b939c') + '"></i>' + esc(c.pos) + ' ' + fmtMoney(c.dollars) + ' &middot; ' + c.share + '%</span>';
     }).join('');
     document.getElementById('buildMeta').innerHTML =
-      '<span>' + A.playerCount + ' players considered</span><span>' + A.teams + '-team &middot; $' + A.budget +
+      '<span>' + A.playerCount + ' players considered</span><span>' + A.teams + '-team &middot; ' + fmtMoney(A.budget) +
+      (myBudget != null ? ' (your budget)' : '') +
       ' &middot; full PPR</span><span>Bench held at minimum bid</span>';
 
     var top2 = A.lineup.slice().sort(function(a, b){ return b.price - a.price; }).slice(0, 2);
@@ -1423,8 +1430,8 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     ];
     document.getElementById('buildSide').innerHTML =
       top2.map(function(l, i){
-        return '<div class="bmini"><h4>' + esc(l.name) + '</h4><p><b style="color:' + (POS_INK[l.pos] || '') + '">$' +
-          l.price + '</b> &middot; ' + esc(l.pos) + ' ' + esc(l.team) + ' &middot; ' + l.ppg + ' pts/gm<br>' + esc(blurb[i]) + '</p></div>';
+        return '<div class="bmini"><h4>' + esc(l.name) + '</h4><p><b style="color:' + (POS_INK[l.pos] || '') + '">' +
+          fmtMoney(l.price) + '</b> &middot; ' + esc(l.pos) + ' ' + esc(l.team) + ' &middot; ' + l.ppg + ' pts/gm<br>' + esc(blurb[i]) + '</p></div>';
       }).join('') +
       '<div class="bmini"><h4>What the FLEX is worth</h4><div class="big">+' + A.flexWorth.toFixed(1) +
       '<span class="unit">pts / game</span></div><p>Drop the FLEX and re-solve and the lineup falls from ' +
@@ -1435,7 +1442,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
       '<div class="bcard"><h4>The cliffs</h4><p>Where the drop from one player to the next is steepest: the last seat worth paying up for.</p>' +
         A.cliffs.map(function(c){
           return '<div class="cliff"><span class="cliff-pos" data-pos="' + esc(c.pos) + '">' + esc(c.pos) + '</span>' +
-            '<span class="cliff-body">After <b>' + esc(c.above) + '</b> at ' + esc(c.pos) + c.rank + ' ($' + c.abovePrice + ')<br>next up: ' +
+            '<span class="cliff-body">After <b>' + esc(c.above) + '</b> at ' + esc(c.pos) + c.rank + ' (' + fmtMoney(c.abovePrice) + ')<br>next up: ' +
             esc(c.below) + ' &middot; ' + c.belowPpg + ' pts/gm</span>' +
             '<span class="cliff-drop">&minus;' + c.gap.toFixed(1) + '</span></div>';
         }).join('') +
@@ -1449,15 +1456,17 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
         }).join('') + '</div>' +
         '<p class="bnote">Top player to replacement-level starter, in a ' + A.teams + '-team league. An elite defence beats a waiver defence by ' +
         A.repl[A.repl.length - 1].edge + ' a game, which is why the build spends $1 there.</p></div>' +
-      '<div class="bcard"><h4>The shape of a winning $' + A.budget + '</h4>' +
-        '<p>The optimum is not balanced. It buys <b>' + (rb.n || 0) + ' running backs for $' + (rb.dollars || 0) +
+      '<div class="bcard"><h4>The shape of a winning ' + fmtMoney(A.budget) + '</h4>' +
+        '<p>The optimum is not balanced. It buys <b>' + (rb.n || 0) + ' running backs for ' + fmtMoney(rb.dollars || 0) +
         '</b> and refuses to pay retail anywhere the replacement line sits close behind.</p>' +
         '<div class="bars">' + A.posCost.map(function(c){
           return '<div class="bar-row"><span class="bar-pos">' + esc(c.pos) + '</span>' +
             '<span class="bar-track"><span class="bar-fill" style="width:' + c.share + '%;background:' + (POS_INK[c.pos] || '#8b939c') + '"></span></span>' +
-            '<span class="bar-val">$' + c.dollars + '</span></div>';
+            '<span class="bar-val">' + fmtMoney(c.dollars) + '</span></div>';
         }).join('') + '</div>' +
-        '<p class="bnote">Your league is not this league. Set your scoring and roster and the whole solution moves.</p>' +
+        (myBudget != null
+          ? '<p class="bnote">Dollars rescaled to your ' + fmtMoney(A.budget) + ' budget. Team count, scoring and the exact roster are still the site default &mdash; the true optimum for your league can differ.</p>'
+          : '<p class="bnote">Your league is not this league. Set your scoring and roster and the whole solution moves.</p>') +
         '<a class="go" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>';
   }
 
