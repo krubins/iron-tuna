@@ -2018,6 +2018,137 @@ function leadSlug(n) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
+// ── The Analyst Desk ───────────────────────────────────────────────────────
+// The `analyst` desk's stories are the one kind the three-hour rotation should
+// not throw away. A piece arguing that a named analyst is a round high on a
+// back is still worth reading a month later, and the column only means
+// anything if the calls accumulate: the reader wants to see who the desk has
+// disagreed with and how often, not one story at a time. So the lead rotation
+// retires these rows the way it retires every other desk's, and this route
+// keeps them.
+//
+// `calls` is the structured half of an analyst story: who said what, what the
+// site says instead, and whether the desk agreed. It is deliberately OPTIONAL.
+// Rows written before the column existed, and any run that stored nothing
+// parseable, still appear here with their headline and dek. The scorecard just
+// has less to count. Nothing on this page may depend on a run having filled in
+// a field correctly.
+let _ANALYST_CACHE = null;
+let _ANALYST_AT = 0;
+const ANALYST_MAX = 60;        // entries the column will list at once
+const ANALYST_CALLS_MAX = 8;   // calls read out of any one row
+// The site owns this vocabulary, the same way LEAD_CATEGORIES owns the desk
+// names. A run that stores some other word does not get to invent a fourth
+// verdict on the page: the call still lists, it just scores nowhere.
+const ANALYST_STANCES = { agree: 'We agree', disagree: 'We disagree', partial: 'Partly' };
+
+function analystCalls(raw) {
+  let arr = [];
+  try { arr = JSON.parse(raw || '[]'); } catch (e) { return []; }
+  if (!Array.isArray(arr)) return [];
+  const str = (v) => (typeof v === 'string' ? v.trim() : '');
+  return arr.slice(0, ANALYST_CALLS_MAX).map(c => {
+    if (!c || typeof c !== 'object') return null;
+    const analyst = str(c.analyst);
+    const player = str(c.player);
+    // Without both of these there is no call to render: an unattributed take,
+    // or an attribution with nobody it is about, is exactly what this desk is
+    // not allowed to publish.
+    if (!analyst || !player) return null;
+    const stance = str(c.stance).toLowerCase();
+    return {
+      analyst,
+      outlet: str(c.outlet),
+      player,
+      pos: str(c.pos).toUpperCase(),
+      team: str(c.team).toUpperCase(),
+      their: str(c.their),
+      ours: str(c.ours),
+      stance: ANALYST_STANCES[stance] ? stance : null,
+      stanceLabel: ANALYST_STANCES[stance] || null,
+      why: str(c.why)
+    };
+  }).filter(Boolean);
+}
+
+// One row per analyst the column has ever taken a position on, so a reader can
+// see the record at a glance instead of reading twenty entries to find it.
+// Counted here rather than in the page because it is arithmetic over the same
+// rows the payload already holds, and two implementations of a tally is one
+// too many.
+function analystScoreboard(entries) {
+  const by = new Map();
+  for (const e of entries) {
+    for (const c of e.calls) {
+      const key = c.analyst.toLowerCase();
+      let rec = by.get(key);
+      if (!rec) { rec = { analyst: c.analyst, outlet: c.outlet, agree: 0, disagree: 0, partial: 0, total: 0 }; by.set(key, rec); }
+      if (!rec.outlet && c.outlet) rec.outlet = c.outlet;
+      rec.total++;
+      if (c.stance) rec[c.stance]++;
+    }
+  }
+  return [...by.values()].sort((a, b) => b.total - a.total || a.analyst.localeCompare(b.analyst));
+}
+
+// `calls` was added after `lead_story` already existed, so it arrives the same
+// way the analytics tables do (see ANALYTICS_DDL): lazily, once per isolate,
+// with nothing to run by hand and no migration step to remember. ALTER TABLE
+// ADD COLUMN has no IF NOT EXISTS in SQLite, so the duplicate-column error on
+// every run after the first IS the success case and is swallowed on purpose.
+let __analystCallsReady = false;
+async function analystCallsReady(env) {
+  if (__analystCallsReady) return;
+  __analystCallsReady = true;
+  try { await env.LEADS_DB.prepare('ALTER TABLE lead_story ADD COLUMN calls TEXT').run(); } catch (e) {}
+}
+
+async function analystColumnPayload(env) {
+  const now = Date.now();
+  if (_ANALYST_CACHE && now - _ANALYST_AT < 120000) return _ANALYST_CACHE;
+  let out = { ok: false, entries: [], scoreboard: [] };
+  try {
+    if (env.LEADS_DB) {
+      await analystCallsReady(env);
+      const WHERE = " WHERE verified = 1 AND category = 'analyst' AND slug IS NOT NULL"
+        + ' ORDER BY created_at DESC LIMIT ?';
+      let res;
+      try {
+        res = await env.LEADS_DB.prepare(
+          'SELECT slug, title, dek, category, players, calls, created_at FROM lead_story'
+          + WHERE).bind(ANALYST_MAX).all();
+      } catch (e) {
+        // The DDL above did not land - a binding without write access, or a D1
+        // that refused it. The column is still worth publishing without its
+        // call cards, so ask again for the shape that has always existed rather
+        // than showing the reader an empty page.
+        res = await env.LEADS_DB.prepare(
+          'SELECT slug, title, dek, category, players, created_at FROM lead_story'
+          + WHERE).bind(ANALYST_MAX).all();
+      }
+      const rows = (res && res.results) || [];
+      const entries = rows.map(r => {
+        // leadRow does not police the slug, its caller does, and here the check
+        // matters twice over: a row with no slug has no URL, and `slug IS NOT
+        // NULL` in SQL still lets an empty string through. An entry the reader
+        // cannot open is worse than one that is simply absent.
+        if (!r.slug || !r.title) return null;
+        const base = leadRow(r);
+        return { slug: base.slug, title: base.title, dek: base.dek, url: base.url,
+                 createdAt: base.createdAt, ppl: base.ppl, calls: analystCalls(r.calls) };
+      }).filter(Boolean);
+      out = { ok: entries.length > 0, entries, scoreboard: analystScoreboard(entries) };
+    }
+  } catch (e) {
+    // Same contract as the lead: an empty column is a quiet page, an exception
+    // is a broken one.
+    out = { ok: false, entries: [], scoreboard: [] };
+  }
+  _ANALYST_CACHE = out;
+  _ANALYST_AT = now;
+  return out;
+}
+
 async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
@@ -2215,6 +2346,16 @@ export default {
                    sources: Array.isArray(sources) ? sources : [] }
         }, 200, { ...c, 'cache-control': 'public, max-age=120' });
       } catch (e) { return json({ ok: false, error: 'unavailable' }, 200, c); }
+    }
+    // The standing analyst column. Same two-minute memo as the lead: the desk
+    // adds an entry about once a day, so a page that is two minutes behind it
+    // is indistinguishable from a live one, and D1 is not asked again for every
+    // reader.
+    if (url.pathname === '/api/analyst-column') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      const out = await analystColumnPayload(env);
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=120' });
     }
     if (url.pathname === '/api/insights') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
@@ -2620,8 +2761,10 @@ export default {
         }
       } catch (e) { return json({ ok: false, error: 'write_failed', detail: String(e && e.message || e) }, 500, c); }
       // Any write invalidates the two-minute memo, or the response below would
-      // report the state we just left.
-      if (did) { _LEAD_CACHE = null; _LEAD_AT = 0; }
+      // report the state we just left. The analyst column is memoised off the
+      // same table and `promote` sets verified = 1, which is exactly what puts
+      // a row into that column, so its memo goes with it.
+      if (did) { _LEAD_CACHE = null; _LEAD_AT = 0; _ANALYST_CACHE = null; _ANALYST_AT = 0; }
       const rows = await env.LEADS_DB.prepare(
         'SELECT id, slug, title, category, players, verified, published, created_at'
         + ' FROM lead_story ORDER BY created_at DESC LIMIT 15').all();
