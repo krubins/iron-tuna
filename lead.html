@@ -145,12 +145,21 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
   var m = location.pathname.match(/^\/lead\/([A-Za-z0-9._-]+)\/?$/);
   var slug = m ? m[1] : '';
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  // Reader's own clock, named, rather than the desk's UTC one - see the same
+  // note on front.html's leadStamp().
+  function localClock(d){
+    try {
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    } catch (e) {
+      var h = d.getHours(), m = d.getMinutes();
+      return ((h % 12) || 12) + ':' + (m < 10 ? '0' + m : m) + (h < 12 ? ' AM' : ' PM');
+    }
+  }
   function stamp(ms){
     var d = new Date(+ms || 0);
     if (!ms || isNaN(d.getTime())) return '';
-    var h = d.getUTCHours();
-    return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear()
-      + ' \u00b7 ' + (h < 10 ? '0' + h : h) + ':00 UTC';
+    return MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear()
+      + ' \u00b7 ' + localClock(d);
   }
   function fail(msg){
     document.getElementById('title').textContent = msg;
