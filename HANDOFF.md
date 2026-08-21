@@ -1124,15 +1124,25 @@ shipped values are blended toward the book, so the site is itself off consensus
 on plenty of players. The page says so in its "How to read this" box, and the
 desk brief pins the same definition.
 
-#### Turning it on
+#### The Routine side, which is already on
 
-The desk is defined in the worker and covered by tests, but the Routine
-(`trig_011LYewcPUQikF8izFsN2LAr`, "Iron Tuna — lead story refresh (every 3h)") is
-what actually writes a story, and its desk list lives in its prompt. **Flip it
-after this is on `main` and deployed, not before** — a run that stores
+**Done, 2026-08-21.** The Routine (`trig_011LYewcPUQikF8izFsN2LAr`, "Iron Tuna —
+lead story refresh (every 3h)") runs all seven desks and writes `calls`. What
+follows is the record of what its prompt now says, because the prompt is not in
+this repo and nothing else here would tell you.
+
+The ordering rule still matters if this is ever redone: **flip the Routine only
+after the worker side is on `main` and deployed.** A run that stores
 `category = 'analyst'` against a worker that has never heard of the desk still
-publishes, but it publishes under the fallback "Insight" badge. Two edits to the
-prompt:
+publishes, but it publishes under the fallback "Insight" badge. The same trap
+has a second door now — the prompt was flipped to seven desks a few hours
+*before* the standing column existed, so its `INSERT` did not name `calls` and
+its analyst brief never mentioned it. Nothing would have failed: the story would
+have published, listed on `/analyst-desk` by headline, and quietly carried no
+cards and no line in the record table. **When a change adds a column the desk
+must fill, the prompt edit is part of that change, not a follow-up.**
+
+The three edits, as they now stand:
 
 1. In the ROTATE THE DESK block, `DESKS` becomes seven entries and the modulus
    moves with it:
@@ -1169,10 +1179,16 @@ prompt:
    > written from memory, because an unsourced claim here puts words in a real
    > person's mouth.
 
-3. On an `analyst` run, also fill the `calls` column (JSON, one object per call)
-   so the story lands on `/analyst-desk` as cards and in the record table, not
-   only as a headline. The shape is above; `stance` must be exactly `agree`,
-   `disagree` or `partial`. Getting it wrong costs the cards, never the entry.
+3. A dedicated section on the `calls` column, and an `INSERT` that names it as
+   `?9`. `stance` must be exactly `agree`, `disagree` or `partial`; `analyst`
+   and `player` are both required. The section says out loud that getting this
+   wrong costs the cards and the record row while the entry still lists, so the
+   run has no visible failure to notice — the reason it needs saying at all. The
+   prompt also tells the run to `ALTER TABLE lead_story ADD COLUMN calls TEXT`
+   itself if the `INSERT` comes back `no such column`, which happens only if
+   nobody has loaded `/analyst-desk` since deploy. Its self-check fetches
+   `/api/analyst-column` and confirms the entry arrived with its calls, not just
+   its headline.
 
 ### Tests
 
