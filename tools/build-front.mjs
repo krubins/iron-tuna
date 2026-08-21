@@ -470,6 +470,43 @@ front = front.replace(/var STORIES = \[[\s\S]*?\];\n/, 'var STORIES = ' + JSON.s
 front = front.replace(/var PLAYERS = \{[\s\S]*?\};\n/, 'var PLAYERS = ' + JSON.stringify(Object.fromEntries(cast)) + ';\n');
 front = front.replace(/var REPORTS = \[[\s\S]*?\];\n/, 'var REPORTS = ' + JSON.stringify(reports) + ';\n');
 front = front.replace(/var COLUMN = \[[\s\S]*?\];\n/, 'var COLUMN = ' + JSON.stringify(column) + ';\n');
+
+// ── static camp desk, for crawlers that never run the script ────────────────
+// The camp desk used to be built entirely on the client out of REPORTS, which
+// left every auction-watch page with no <a href> pointing at it anywhere in the
+// served HTML — reachable only from sitemap.xml. Googlebot renders JS on a
+// second pass, but Bing and the AI answer-engine crawlers robots.txt explicitly
+// welcomes (GPTBot, PerplexityBot, ClaudeBot) generally do not, so the whole
+// camp desk was invisible to them.
+//
+// So the same markup the client would produce is written into the page at build
+// time. The client render replaces campNote/campFeat and clears campList before
+// refilling it, so what a reader sees is unchanged and the two cannot drift.
+const escText = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
+const fmtDate = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1]} ${+p[2]}, ${p[0]}`; };
+const fmtShort = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1].slice(0, 3)} ${+p[2]}`; };
+
+if (reports.length) {
+  const f = reports[0];
+  const note = 'Verified, auction-relevant signals from camps and preseason games. '
+    + `This desk updates as news breaks — <b>latest report: ${fmtDate(f.date)}</b>.`;
+  const feat = '<span><span class="badge badge-pos">Latest report</span></span>'
+    + `<h3><a href="${f.url}">${escText(f.title)}</a></h3>`
+    + `<p>${escText(f.desc)}</p>`
+    + `<a class="lead-link" href="${f.url}">Read the report &rarr;</a>`;
+  const list = reports.slice(1)
+    .map(r => `<li><span class="cd">${fmtShort(r.date)}</span><a href="${r.url}">${escText(r.title)}</a></li>`)
+    .join('');
+  front = front.replace(/<p class="camp-note" id="campNote">[\s\S]*?<\/p>/, `<p class="camp-note" id="campNote">${note}</p>`);
+  front = front.replace(/<div class="camp-feat" id="campFeat">[\s\S]*?<\/div>/, `<div class="camp-feat" id="campFeat">${feat}</div>`);
+  front = front.replace(/<ul class="camp-list" id="campList">[\s\S]*?<\/ul>/, `<ul class="camp-list" id="campList">${list}</ul>`);
+  if (!front.includes(`<ul class="camp-list" id="campList">${list}</ul>`)) {
+    console.error('ABORT: could not write the static camp desk into front.html');
+    process.exit(1);
+  }
+}
 front = front.replace(/var PRESEASON = \[[\s\S]*?\];\n/, 'var PRESEASON = ' + JSON.stringify(preseason) + ';\n');
 if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
   console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PRESEASON declarations in front.html');
