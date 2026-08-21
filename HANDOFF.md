@@ -972,18 +972,111 @@ left.
 
 ### Category rotation
 
-The Routine walks a fixed six-desk cycle keyed off the slot number, so topics
+The Routine walks a fixed seven-desk cycle keyed off the slot number, so topics
 rotate rather than drifting back to whatever the model finds easiest:
 
-`player` → `playcaller` → `vegas` → `preseason` → `injury` → `market`
+`player` → `playcaller` → `vegas` → `preseason` → `injury` → `market` → `analyst`
 
 Deterministic on the clock, not on the model's mood. A run whose desk has no
 verifiable material that day advances to the next desk and says so in its report
 rather than publishing a thin piece to fill the slot.
 
+The cycle length lives in the Routine's prompt (`slot % 7`), not in the worker.
+`LEAD_CATEGORIES` only decides what a desk is *called*, so the two can be changed
+in either order without breaking a reader: a desk the worker does not know falls
+back to the neutral "Insight" label and the story still publishes. Changing the
+modulus reshuffles which clock slot lands on which desk. That is fine — nothing
+downstream assumes a desk keeps its hour — but it does mean the first cycle after
+a change is not a continuation of the last one.
+
+### The analyst desk (added August 2026)
+
+`analyst`, labelled **Analysts vs. Iron Tuna**. Where the most-followed fantasy
+analysts sit above or below the consensus sheet, where that lands next to Iron
+Tuna's own price, and — the part that makes it a column rather than an aggregator
+— why the desk agrees or disagrees. Matthew Berry (Fantasy Life), Mike Clay
+(ESPN), and anyone else whose public position on a player can be quoted and dated.
+
+**The sourcing constraint is the whole design of this desk, so it is written down
+here rather than only in the prompt.** The Routine cannot read these analysts'
+boards directly: `fantasylife.com` and `espn.com` are both blocked by the egress
+proxy, the same wall the camp desk hit (§12), and the paid ranking sets behind
+them are not ours to republish in bulk regardless. So the desk works the way a
+column does, not the way a scraper does:
+
+- **The analyst's side is a quote.** One specific, attributed, dated position
+  — a rank, a round, a stated take — sourced from WebSearch result content
+  attributed to a reputable outlet, which is the same verification standard the
+  camp desk already publishes on. Never a reconstructed ranking list, never a
+  position remembered from training data, and never more of anyone's ranking set
+  than the argument actually needs.
+- **Iron Tuna's side is computed.** The dollar figure, the positional rank, and
+  the gap all come off the site's own board that run, the same way every other
+  desk builds its numbers. This is what keeps the piece checkable: only one of
+  the two sides is a claim about what somebody said, and that side carries a
+  citation.
+- **"Above consensus" has a fixed meaning here:** above the committed
+  `PROJECTIONS` set, which is the odds-blind average the site already treats as
+  the consensus baseline (§9c). It is not "above Iron Tuna" — Iron Tuna's
+  shipped values are blended toward the market and are themselves off consensus,
+  which is frequently the actual story.
+- **The agree/disagree call is mandatory and must be a call.** A run that lists
+  three analysts and declines to say who is right has written an aggregator post,
+  which is the failure mode this desk is most prone to.
+
+It is a *running* story: each run reads the prior `category = 'analyst'` rows and
+continues the thread rather than restarting it — revisiting a call when news has
+moved it, and not re-litigating the same analyst-player pairing while nothing has
+changed.
+
+#### Turning it on
+
+The desk is defined in the worker and covered by tests, but the Routine
+(`trig_011LYewcPUQikF8izFsN2LAr`, "Iron Tuna — lead story refresh (every 3h)") is
+what actually writes a story, and its desk list lives in its prompt. **Flip it
+after this is on `main` and deployed, not before** — a run that stores
+`category = 'analyst'` against a worker that has never heard of the desk still
+publishes, but it publishes under the fallback "Insight" badge. Two edits to the
+prompt:
+
+1. In the ROTATE THE DESK block, `DESKS` becomes seven entries and the modulus
+   moves with it:
+
+   ```
+   DESKS = [player, playcaller, vegas, preseason, injury, market, analyst]
+   ```
+   `desk = DESKS[slot % 7]`, and the allowed `category` values gain `analyst`.
+
+2. Add the desk to the list of what each desk means:
+
+   > **analyst** — where the most-followed fantasy analysts sit versus the
+   > consensus sheet, and where that lands next to Iron Tuna's price. Name them:
+   > Matthew Berry (Fantasy Life), Mike Clay (ESPN), and others whose public
+   > position on a player you can quote and date. **You cannot read their boards
+   > directly — fantasylife.com and espn.com are blocked by the egress proxy —
+   > and their paid ranking sets are not ours to republish anyway.** So take the
+   > analyst's side from WebSearch result content attributed to a reputable
+   > outlet, one specific dated position per analyst (a rank, a round, a stated
+   > take), quoted only as far as the argument needs. Never reconstruct a
+   > ranking list, and never state an analyst's position from memory. Compute
+   > Iron Tuna's side off the board this run, as every other desk does. "Above
+   > consensus" means above the committed `PROJECTIONS` baseline, not above Iron
+   > Tuna, whose shipped values are already blended toward the market. Then make
+   > the call: say whether the desk agrees or disagrees with each analyst and
+   > why, in the site's own terms — usage, play-caller history, the odds, the
+   > replacement level. A run that lists three takes without picking a side has
+   > written an aggregator post and failed. Read the prior `analyst` rows
+   > (`SELECT slug,title,dek,players FROM lead_story WHERE category = 'analyst'
+   > ORDER BY created_at DESC LIMIT 6`) and continue that thread: revisit a call
+   > news has moved, and do not re-run the same analyst-player pairing while
+   > nothing has changed. If you cannot verify a single dated position this run,
+   > skip to the next desk and say so — this desk in particular must never be
+   > written from memory, because an unsourced claim here puts words in a real
+   > person's mouth.
+
 ### Tests
 
-`node tools/test-lead-story.mjs` (44 assertions, no network, no browser). It
+`node tools/test-lead-story.mjs` (58 assertions, no network, no browser). It
 evaluates the real section out of `_worker.js` rather than a copy, and most of it
 is failure modes: no row, an unverified row, a row with no slug, an undefined
 category, malformed JSON in a column, D1 throwing on `prepare`, D1 rejecting
