@@ -193,5 +193,46 @@ for (const name of ['superflex', '2QB']) {
      rows[6].proj >= 0.25 * rbOf(name)[0].proj, `QB7 $${rows[6].proj} vs RB1 $${rbOf(name)[0].proj}`);
 }
 
+// A superflex room starts ~2 QBs a team, so the position is genuinely scarce and the
+// board has to read like one: the best QB is the most expensive player on it, and the
+// curve stays priced all the way down to the last starter instead of falling off a
+// cliff at the end of a 16-entry row built for a 1-QB league.
+console.log('\nsuperflex prices the position like the scarce commodity it is');
+{
+  const q = qbOf('superflex'), r = rbOf('superflex'), w = (boards['superflex'].WR || []);
+  ok('superflex QB1 is the most expensive player on the board',
+     q[0].proj > r[0].proj && q[0].proj > w[0].proj, `QB1 $${q[0].proj} vs RB1 $${r[0].proj}, WR1 $${w[0].proj}`);
+  ok('the superflex QB curve never rises', q.every((x, i) => !i || x.proj <= q[i - 1].proj),
+     q.filter((x, i) => i && x.proj > q[i - 1].proj).map(x => x.name).join(', '));
+  // 24 starting QBs in a 12-team superflex. The old row ran out at 16 and dumped
+  // everyone after it on the min bid, which priced a starter like a handcuff.
+  const floor = q[q.length - 1].proj;
+  ok('QB24 is still priced as a starter, not at the floor',
+     q.length >= 24 && q[23].proj > floor, `QB24 $${q[23] && q[23].proj} vs floor $${floor}`);
+  ok('superflex QB24 costs more than the 1-QB board pays for QB24',
+     q.length >= 24 && qb.length >= 24 && q[23].proj > qb[23].proj,
+     `$${q[23] && q[23].proj} vs $${qb[23] && qb[23].proj}`);
+  // VALUE already carries the superflex scarcity through the replacement level, so the
+  // curve only has to add the room's premium ON TOP — and that premium should be the
+  // one the 1-QB board carries, not a bigger one invented for the format.
+  //
+  // Measured as QB's OWN PROJ/VALUE, not as QB's ratio relative to RB/WR/TE. The
+  // relative version looks like the more robust metric and is not: superflex moves a
+  // quarter of the pool onto quarterbacks, so every other position's PROJ/VALUE drops
+  // with it and the relative figure swings on the reallocation rather than on the
+  // premium. QB against its own VALUE holds still across formats.
+  const mean = (rows, k) => rows.slice(0, 14).reduce((s, x) => s + (x[k] || 0), 0) / 14;
+  const ratio = (b, pos) => mean(b[pos] || [], 'proj') / mean(b[pos] || [], 'value');
+  const one = ratio(boards['default'], 'QB'), sf = ratio(boards['superflex'], 'QB');
+  ok('superflex asks the same premium over VALUE that the 1-QB board asks',
+     Math.abs(sf - one) <= 0.10, `superflex ${sf.toFixed(2)}x vs 1-QB ${one.toFixed(2)}x`);
+  // The room overpays for the position, but it cannot overpay by a landslide: what the
+  // curve asks for the 24 starting QBs, against what VALUE says they are worth.
+  const share = (b, k) => (b.QB || []).slice(0, 24).reduce((s, x) => s + (x[k] || 0), 0);
+  const prem = share(boards['superflex'], 'proj') / share(boards['superflex'], 'value');
+  ok('the 24 starting QBs cost a premium over their VALUE, not a multiple',
+     prem > 1.05 && prem < 1.35, `$${share(boards['superflex'], 'proj')} asked vs $${share(boards['superflex'], 'value')} worth (${prem.toFixed(2)}x)`);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

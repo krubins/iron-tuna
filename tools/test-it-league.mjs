@@ -88,6 +88,18 @@ console.log('\nhand-sync with index.html');
     ok(`scoring.${k} matches the client`, num(k) === L.defaults.scoring[k],
        `library ${L.defaults.scoring[k]} vs client ${num(k)}`);
   }
+  // The superflex QB row is a third hand-synced copy with no build step, same as the
+  // rest of this block. Lift both and compare, or a reader who plays superflex gets
+  // one set of QB prices in the app and another on the news pages.
+  {
+    const lift = src => {
+      const m = src.match(/SUPERFLEX_QB_CURVE\s*=\s*\[([^\]]*)\]/);
+      return m ? m[1].split(',').map(x => parseInt(x.trim(), 10)) : null;
+    };
+    const a = lift(client), b = lift(fs.readFileSync(path.join(ROOT, 'it-league.js'), 'utf8'));
+    ok('the superflex QB curve matches the client', !!a && !!b && JSON.stringify(a) === JSON.stringify(b),
+       `library ${JSON.stringify(b)} vs client ${JSON.stringify(a)}`);
+  }
   const curveSeg = client.slice(client.indexOf('const LEAGUE_MARKET_CURVE'), client.indexOf('function calculateMarketValues'));
   for (const pos of Object.keys(L.defaults.curve)) {
     const m = curveSeg.match(new RegExp('\\b' + pos + ':\\s*\\[([^\\]]*)\\]'));

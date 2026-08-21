@@ -62,6 +62,10 @@
     K: [2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   };
+  // The QB row above prices a 1-QB room. A league that starts two quarterbacks is a
+  // different market and gets the client's SUPERFLEX_QB_CURVE — mirrored here like
+  // everything else, and applied only when the reader's saved league says so.
+  var SUPERFLEX_QB_CURVE = [52, 39, 37, 34, 30, 29, 28, 27, 26, 23, 22, 21, 19, 17, 16, 16, 16, 13, 11, 9, 9, 5, 4, 3, 1, 1, 1, 1, 1, 1, 1, 1];
   var MIN_BID = 1;
   var FORMAT_WORD = { auction: 'auction', snake: 'snake draft', bestball: 'best ball' };
 
@@ -125,6 +129,12 @@
       teams: Math.max(2, Math.round(num(raw && raw.teams, num(snap && snap.teams, DEFAULT_TEAMS)))),
       budget: Math.max(1, Math.round(num(raw && raw.budget, num(snap && snap.budget, DEFAULT_BUDGET)))),
       format: (raw && raw.format) || (snap && snap.format) || 'auction',
+      // Opt-in, exactly as in the client's qbIsPremium: a QB has to be able to fill a
+      // second STARTING slot. The flex slot is counted, not just listed — QB named as
+      // eligible with a flex count of zero has nowhere to start and is a 1-QB league.
+      qbPremium: !!(raw && (
+        ((raw.flex && (raw.flex.count || 0) > 0 && Array.isArray(raw.flex.eligible) && raw.flex.eligible.indexOf('QB') >= 0))
+        || ((raw.roster && raw.roster.QB && raw.roster.QB.starters) || 0) >= 2)),
       scoring: scoring
     };
   }
@@ -213,7 +223,7 @@
   // calculateMarketValues, so a price quoted in a story is a price they can go
   // and find on their own sheet.
   function price(position, rankIndex) {
-    var curve = CURVE[position] || [];
+    var curve = (position === 'QB' && cfg && cfg.qbPremium) ? SUPERFLEX_QB_CURVE : (CURVE[position] || []);
     var scale = (cfg ? cfg.teams * cfg.budget : DEFAULT_TEAMS * DEFAULT_BUDGET) / CURVE_BUDGET;
     var base = rankIndex < curve.length ? curve[rankIndex] : MIN_BID;
     return Math.max(MIN_BID, Math.round(base * scale));
