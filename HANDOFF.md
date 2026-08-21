@@ -941,6 +941,35 @@ time**, not in the stored copy, so the authoring contract stays "write a table"
 and every past story gains the fix. The sources list is collapsed by default —
 on these runs it can run longer than the story it backs.
 
+### Running the desk by hand
+
+`GET /api/admin/lead?key=<LEADS_EXPORT_KEY>` lists the last 15 rows with a
+`state` on each (`LIVE`, `archive`, `held (failed its own gate)`,
+`unusable (no slug)`) and reports the live story by reading it back through
+`leadStoryPayload()` — the same function the site uses, so the response cannot
+disagree with the page.
+
+- `&promote=<id>` makes that row the lead. It sets `verified = 1` too, so it
+  can rescue a story the run held back; the response says `overrodeGate: true`
+  when it did, because overriding the run's own gate should never be silent.
+  A row with no slug is refused: it has no URL, so promoting it would look like
+  it worked and change nothing.
+- `&pull=<id>` unpublishes that row **and promotes the next-newest verified
+  story in the same D1 batch**.
+
+That pairing is the whole reason the route exists. Unpublishing the lead does
+**not** promote the previous story — `leadStoryPayload()` asks for
+`published = 1` specifically — so `UPDATE lead_story SET published = 0` on its
+own drops the front page back to the dated deep-dive rotation. That is exactly
+the staleness the generated lead replaced, reintroduced by a half-finished edit
+in the D1 console. Both operations therefore go through `LEADS_DB.batch()` as
+one transaction, and `pull` chooses its replacement *before* the unpublish, so
+there is no window with no lead. If there genuinely is no replacement the
+response says so rather than leaving it to be discovered on the site.
+
+Any write clears `_LEAD_CACHE`, or the response would report the state it just
+left.
+
 ### Category rotation
 
 The Routine walks a fixed six-desk cycle keyed off the slot number, so topics

@@ -2476,6 +2476,80 @@ export default {
         signIn: revoking ? undefined : 'https://irontuna.com/auctiondraft?signin=1'
       }, 200, c);
     }
+    // ── the lead desk, from a URL ───────────────────────────────────────────
+    // Promoting or pulling a generated lead story used to mean two SQL
+    // statements in the Cloudflare console, and the second one was easy to
+    // forget: unpublishing the lead does NOT promote the previous story, so
+    // running only `SET published=0` silently drops the front page back to the
+    // dated deep-dive rotation. That is the exact staleness the generated lead
+    // replaced, reintroduced by a half-finished edit. So both operations are
+    // one D1 batch here, and neither can leave the site with nothing published
+    // unless there is genuinely nothing left to publish.
+    if (url.pathname === '/api/admin/lead') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      const idOf = (p) => { const v = url.searchParams.get(p); return v && /^\d+$/.test(v) ? +v : null; };
+      const promote = idOf('promote'), pull = idOf('pull');
+      if (url.searchParams.get('promote') && promote === null) return json({ ok: false, error: 'bad_id' }, 400, c);
+      if (url.searchParams.get('pull') && pull === null) return json({ ok: false, error: 'bad_id' }, 400, c);
+      if (promote !== null && pull !== null) return json({ ok: false, error: 'pick_one' }, 400, c);
+      let did = null;
+      try {
+        if (promote !== null) {
+          const row = await env.LEADS_DB.prepare('SELECT id, slug, verified FROM lead_story WHERE id = ?').bind(promote).first();
+          if (!row) return json({ ok: false, error: 'not_found' }, 404, c);
+          // A story with no slug has no URL, so the site treats it as no lead at
+          // all. Promoting one would look like it worked and change nothing.
+          if (!row.slug) return json({ ok: false, error: 'no_slug' }, 409, c);
+          // Promoting a held row is an override of the run's own verification
+          // gate, so it is stated in the response rather than done silently.
+          await env.LEADS_DB.batch([
+            env.LEADS_DB.prepare('UPDATE lead_story SET verified = 1, published = 1 WHERE id = ?').bind(promote),
+            env.LEADS_DB.prepare('UPDATE lead_story SET published = 0 WHERE id <> ?').bind(promote)
+          ]);
+          did = { action: 'promote', id: promote, overrodeGate: !row.verified };
+        } else if (pull !== null) {
+          // Find the replacement BEFORE unpublishing, and do both in one batch,
+          // so there is no window where the front page has no lead.
+          const next = await env.LEADS_DB.prepare(
+            'SELECT id FROM lead_story WHERE verified = 1 AND slug IS NOT NULL AND id <> ?'
+            + ' ORDER BY created_at DESC LIMIT 1').bind(pull).first();
+          const stmts = [env.LEADS_DB.prepare('UPDATE lead_story SET published = 0 WHERE id = ?').bind(pull)];
+          if (next) stmts.push(env.LEADS_DB.prepare('UPDATE lead_story SET published = 1 WHERE id = ?').bind(next.id));
+          await env.LEADS_DB.batch(stmts);
+          did = { action: 'pull', id: pull, promoted: next ? next.id : null,
+                  note: next ? null : 'nothing left to publish: the front page is on its dated deep-dive fallback' };
+        }
+      } catch (e) { return json({ ok: false, error: 'write_failed', detail: String(e && e.message || e) }, 500, c); }
+      // Any write invalidates the two-minute memo, or the response below would
+      // report the state we just left.
+      if (did) { _LEAD_CACHE = null; _LEAD_AT = 0; }
+      const rows = await env.LEADS_DB.prepare(
+        'SELECT id, slug, title, category, players, verified, published, created_at'
+        + ' FROM lead_story ORDER BY created_at DESC LIMIT 15').all();
+      const list = ((rows && rows.results) || []).map(r => ({
+        id: r.id, slug: r.slug, title: r.title,
+        category: r.category || null,
+        label: LEAD_CATEGORIES[String(r.category || '').toLowerCase()] || 'Insight',
+        faces: (() => { try { const p = JSON.parse(r.players || '[]'); return Array.isArray(p) ? p.length : 0; } catch (e) { return 0; } })(),
+        verified: !!r.verified, published: !!r.published,
+        createdAt: r.created_at,
+        url: r.slug ? '/lead/' + r.slug : null,
+        // Why this row is or is not on the site, so the answer does not have to
+        // be reconstructed from the flags every time.
+        state: !r.verified ? 'held (failed its own gate)'
+             : !r.slug ? 'unusable (no slug)'
+             : r.published ? 'LIVE' : 'archive'
+      }));
+      // Read back through the same function the site uses, so this reports what
+      // a reader would actually get rather than what the flags imply.
+      const live = await leadStoryPayload(env);
+      return json({ ok: true, did,
+                    live: live.story ? { slug: live.story.slug, label: live.story.label, url: live.story.url } : null,
+                    onSite: live.ok, stories: list }, 200, c);
+    }
     if (url.pathname === '/api/admin/odds-status') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);

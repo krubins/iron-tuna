@@ -198,5 +198,50 @@ console.log('\nthe article page');
   ok('an unreachable desk still says something', page.includes('function fail('));
 }
 
+console.log('\nthe admin desk');
+{
+  // /api/admin/lead exists to make one specific mistake impossible. Unpublishing
+  // the lead does NOT promote the previous story, so "SET published=0" on its own
+  // drops the front page back to the dated rotation. The route must therefore
+  // never issue that statement alone when there is a replacement available.
+  const route = src.slice(src.indexOf("url.pathname === '/api/admin/lead'"),
+                          src.indexOf("url.pathname === '/api/admin/odds-status'"));
+  ok('the route is behind the same admin key as every other admin route',
+     /adminOk\(env, url\.searchParams\.get\('key'\)/.test(route));
+  ok('an id that is not a number is refused', /\/\^\\d\+\$\/\.test\(v\)/.test(route));
+  ok('promote and pull cannot be asked for at once', route.includes("'pick_one'"));
+
+  // The two statements of each operation go to D1.batch, which runs them as one
+  // transaction. Two awaited prepare().run() calls would reopen the window.
+  ok('promote is one batch, not two writes',
+     /promote[\s\S]{0,900}LEADS_DB\.batch\(\[[\s\S]{0,400}SET verified = 1, published = 1[\s\S]{0,300}SET published = 0 WHERE id <> \?/.test(route));
+  ok('pull is one batch, not two writes',
+     /pull[\s\S]{0,900}LEADS_DB\.batch\(stmts\)/.test(route));
+
+  // The whole point: the replacement is chosen BEFORE the unpublish, and both
+  // land together.
+  const pullBlock = route.slice(route.indexOf('} else if (pull !== null) {'), route.indexOf('} catch (e)'));
+  ok('pull finds its replacement before unpublishing anything',
+     pullBlock.indexOf('ORDER BY created_at DESC LIMIT 1') < pullBlock.indexOf('SET published = 0 WHERE id = ?'));
+  ok('the replacement must itself be verified and have a slug',
+     /WHERE verified = 1 AND slug IS NOT NULL AND id <> \?/.test(pullBlock));
+  ok('pulling the last story says so rather than failing silently',
+     pullBlock.includes('nothing left to publish'));
+
+  // A story with no slug renders /lead/null, so promoting one would look like it
+  // worked and change nothing on the page.
+  ok('a story with no slug cannot be promoted', route.includes("'no_slug'"));
+  // Promoting a held row overrides the run's own verification gate. Allowed, but
+  // never silent.
+  ok('overriding the verification gate is reported', route.includes('overrodeGate'));
+  ok('a write busts the two-minute memo', /_LEAD_CACHE = null;\s*_LEAD_AT = 0;/.test(route));
+  ok('the listing says why each row is or is not on the site',
+     route.includes("'held (failed its own gate)'") && route.includes("'unusable (no slug)'")
+     && route.includes("'LIVE'") && route.includes("'archive'"));
+  // Reporting the flags would let the response disagree with the page.
+  ok('it reports the live story by reading it back the way the site does',
+     route.includes('await leadStoryPayload(env)'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
