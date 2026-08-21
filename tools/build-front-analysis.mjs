@@ -85,7 +85,13 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(PORT, '127.0.0.1', r));
 
-const browser = await chromium.launch();
+// Honour CHROMIUM_PATH like tools/test-position-lens.mjs does, so this runs on a
+// box whose Chromium came from somewhere other than `npx playwright install`
+// (a preinstalled browser, a different Playwright build number).
+const CHROME = process.env.CHROMIUM_PATH
+  || ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].find(p => fs.existsSync(p))
+  || null;
+const browser = await chromium.launch(CHROME ? { executablePath: CHROME } : {});
 const page = await browser.newPage();
 // index.html pulls React from unpkg. Serve a local copy when one is installed, so
 // this works on a machine (or CI box) with no egress to the CDN.

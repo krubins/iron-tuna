@@ -742,7 +742,7 @@ out-of-budget solve. `--dry-run` prints the JSON instead of writing.
 
 The Build desk, all computed:
 - **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
-  solver, with the per-position spend bar. Currently $192 for 125.4 pts/gm, 77% of it
+  solver, with the per-position spend bar. Currently $183 for 122.1 pts/gm, most of it
   on running backs.
 - **"The cliffs"** — the largest points-per-game drop between neighbouring players at
   each position.
@@ -1070,3 +1070,91 @@ drives the real `_worker.js` over an in-memory SQLite standing in for D1, so the
 SQL is actually executed rather than described. Beyond the never-break-the-page
 cases above, it pins who gets counted, that one person on one day is one visitor,
 that no row contains an IP or user-agent, and that the admin read stays gated.
+
+---
+
+## 19. August 2026: the planner spends the budget it is given
+
+Section 14 solved the Ideal Team's *starter selection* exactly. It did not fix
+what the planner handed that solver to spend, and three faults in the budget
+arithmetic were still live on `main`. Measured on the real board with
+`node tools/test-planner-budget.mjs`, at the default 12-team $200 auction:
+
+| model | before | after |
+|---|---|---|
+| ideal | $207 billed on a $200 board, 2097 pts | $200, 2075 |
+| balanced | $9 unspent, 1895 | $0, **1990** |
+| heroRB | $28 unspent, 2001 | $0, **2048** |
+| robustRB | $22 unspent, 1942 | $0, **2070** |
+| robustWR | $12 unspent, 1834 | $0, **1975** |
+| zeroRB | $30 unspent, 1969 | $0, **2015** |
+| heroWR | $30 unspent, 1994 | $0, **2036** |
+| eliteTE | $21 unspent, 1898 | $0, **1984** |
+| heroQB | $29 unspent, 1994 | $0, **2052** |
+
+`ideal` going **down** is the correction, not a regression: it was billing $207
+against a $200 budget and reporting `feasible: true`, so its old 2097 was bought
+with money the roster did not have.
+
+### The three faults
+
+1. **The Starters-vs-Depth knob withheld money the bench could not spend.**
+   `extraBench` used the raw `alloc * 0.35` — about 19% of the budget at the
+   default — while `backupCap` is sized from `depthBase = max(0, alloc - 0.55)
+   /0.45 * 6`, which is **exactly 0 at that same default**. The two halves were
+   written against different assumptions and never reconciled, so roughly $30 of
+   a $200 board was taken off the starters and handed to a bench structurally
+   capped near the minimum bid. Every withheld dollar scored zero, because
+   `starterPoints` — the number the models are ranked and displayed by — counts
+   starters only. Both halves now key off the same midpoint.
+
+2. **`reserveBench` assumed $1 bench seats that mostly do not exist.** The bench
+   is billed at `max(position floor, price)` and the floors are QB $2 and RB $4,
+   so a 7-seat bench that reserved $7 went on to bill $14. It is now costed the
+   way it will be charged, from the cheapest player still available at each bench
+   position. The composition is estimated from the roster shape (the starters do
+   not exist yet) and trimmed **most expensive first**: a model that forces
+   starters can push a seat onto a dearer position, and guessing low there bills
+   past the budget with no cheaper body left to downgrade to.
+
+3. **The bench budgeted at one price and billed at another.** It compared raw
+   `priceOf` while reporting `max(floor, priceOf)`, so a plan could bill more
+   than `benchBudget` and still report `feasible: true`. `benchPrice()` is now
+   the single definition, used by the budget check, the upgrade loop and the
+   billing alike.
+
+A final downgrade pass makes overspend **structurally impossible** rather than
+merely unlikely: if the bench still bills over, it sheds the dollar that costs
+the fewest points until it fits. A plan a drafter cannot execute is worse than a
+bench point.
+
+### The one known residual
+
+Away from the default allocation, `extraBench` can still withhold more than
+`backupCap` lets the bench absorb, so up to $19 goes unspent at the far Depth
+end of the knob. That is the tail of fault 1: the same money used to go unspent
+at *every* setting, the default included, where it ran to $30. Handing the
+leftover back needs the starter solve to run a second time. The test bounds it
+rather than asserting it away, so a regression that makes it worse still fails.
+
+### Verifying a change here
+
+`node tools/test-planner-budget.mjs [--report]` sweeps all nine shape models
+across both strategy knobs and asserts no overspend anywhere and nothing
+stranded on the default board. It drives real Chromium against an instrumented
+copy of the app for the same reason `build-front-analysis.mjs` does: the planner
+has no module boundary and depends on the whole valuation pipeline ahead of it,
+so anything reimplemented in Node measures a copy rather than what ships. It
+self-skips without playwright and a browser, which is why CI does not run it.
+
+**It sweeps only the app's own budget on purpose.** Player prices arrive from
+the valuation pipeline already renormalised to it, so overriding `cfg.budget`
+alone plans a $300 draft with $200-scale prices and reports a shortfall no
+reader could ever see. An earlier version of this test did exactly that and
+produced a page of impressive, meaningless failures.
+
+**Re-run `node tools/build-front-analysis.mjs` after any change here.** The front
+page's "The Build" desk is computed from the Ideal Team, so a planner change
+that is not followed by a rebuild leaves the site quoting a lineup the app no
+longer produces. That is what this change did to it: $192/125.4 became
+$183/122.1.
