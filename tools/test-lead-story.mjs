@@ -38,7 +38,7 @@ const section = src.slice(s0, src.indexOf(END, e0) + END.length);
 
 const mk = () => new Function(`
   ${section}
-  return { leadStoryPayload, leadRow, leadSlug, LEAD_CATEGORIES, LEAD_RECENT };
+  return { leadStoryPayload, leadRow, leadSlug, LEAD_CATEGORIES, LEAD_RECENT, LEAD_FACES };
 `)();
 
 // ── a D1 stand-in ──────────────────────────────────────────────────────────
@@ -131,6 +131,37 @@ console.log('\nthe faces the story commits to');
   ok('malformed players JSON is empty, not fatal', Array.isArray(junk.ppl) && junk.ppl.length === 0);
 }
 
+console.log('\nthe faces that travel with the story');
+{
+  const w = mk();
+  // front.html's own PLAYERS cast only covers players the AUTHORED drop pages
+  // name. A generated run can name anybody on the board, and did: a four-player
+  // story rendered one photo because three of its names had never appeared in a
+  // drop page. The worker ships the faces so the page never has to have heard of
+  // the player.
+  ok('the worker carries a face map', Object.keys(w.LEAD_FACES).length > 200,
+     String(Object.keys(w.LEAD_FACES).length));
+  const jj = w.LEAD_FACES['justin-jefferson'];
+  ok('including players no drop page ever wrote about', !!jj, 'justin-jefferson missing');
+  ok('a face carries what the page needs to draw it',
+     !!jj && jj.n && jj.t && jj.p && jj.h, JSON.stringify(jj));
+  // discEl() tries the ESPN id before the nfl.com URL, so a fallback face is
+  // only identical to a local one if the id travels too.
+  ok('and the ESPN id discEl prefers', !!jj && !!jj.e);
+
+  const r = w.leadRow(ROW({ players: JSON.stringify(['Justin Jefferson', 'Jordan Addison']) }));
+  ok('the story ships a face for each name it commits to', r.cast.length === 2);
+  ok('the face is keyed by the same slug the page looks up',
+     r.cast[0].k === 'justin-jefferson' && r.cast[0].k === r.ppl[0]);
+  // A name the map has never heard of must drop out rather than render an empty
+  // disc next to a real one.
+  const unknown = w.leadRow(ROW({ players: JSON.stringify(['Justin Jefferson', 'Nobody At All']) }));
+  ok('a name with no face is left out, not left blank',
+     unknown.ppl.length === 2 && unknown.cast.length === 1);
+  const none = w.leadRow(ROW({ players: null }));
+  ok('a story naming nobody ships no faces', Array.isArray(none.cast) && none.cast.length === 0);
+}
+
 console.log('\nevery way the desk can have a bad day');
 {
   // Each of these must come back as "no story" so the page keeps the lead it
@@ -192,6 +223,10 @@ console.log('\nthe front page keeps its own lead as the floor');
   ok('a payload with no story paints nothing',
      /function paintGeneratedLead\(d\)\{?\s*\n\s*if \(!d \|\| !d\.ok \|\| !d\.story \|\| !d\.story\.slug\) return;/.test(front));
   ok('the generated lead retires the rotation controls', front.includes("getElementById('leadCtrls')"));
+  ok('the photo band falls back to the faces the story brought',
+     /PLAYERS\[k\] \|\| sent\[k\]/.test(front));
+  ok('...and still prefers the page\u2019s own cast when it has one',
+     front.indexOf('PLAYERS[k] || sent[k]') > 0 && !/sent\[k\] \|\| PLAYERS\[k\]/.test(front));
   ok('the controls row can actually be hidden', front.includes('.lead-ctrls[hidden]{display:none}'));
   ok('the countdown still names the three-hour cadence', front.includes('next insight in '));
   ok('the archive is links, never a carousel the lead cycles into',

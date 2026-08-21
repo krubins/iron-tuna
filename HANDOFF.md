@@ -975,10 +975,36 @@ stamps as a reader moves from the front page to `/lead`.
 
 The lead's photo band works off `players`, slugged with the same rule
 `tools/build-front.mjs` uses, so "Kenneth Walker III" and `kenneth-walker-iii`
-both find the same headshot. **Known limitation:** the band can only show players
-already in `front.html`'s `PLAYERS` cast, which is built from the authored drop
-pages. A generated story naming four players may show two faces. It never shows a
-wrong face, and the "In this story" label does not claim to be exhaustive.
+both find the same headshot.
+
+**The faces travel with the story.** `front.html`'s own `PLAYERS` cast is built
+from the players the *authored* drop pages name — 72 of them — which is the right
+cast for those stories and the wrong one here, because a run can name anybody on
+the board. It named Justin Jefferson, one of the best-known receivers in the
+league, and the front page had no photo of him: a four-player story rendered one
+face. So `/api/lead-story` ships the faces it needs alongside the names, out of
+`LEAD_FACES` in the worker, and `renderCast()` prefers the page's own entry and
+falls back to the one that arrived.
+
+`LEAD_FACES` is in `_worker.js` rather than in `front.html` deliberately. Widening
+the page's cast would have cost every visitor about 39 KB on a 150 KB page to
+carry photos all but four of them will not see. The worker is never downloaded by
+a browser, so the map is free there and only the handful of URLs a story actually
+uses travel in the payload.
+
+- Rebuilt by **`node tools/build-worker-faces.mjs`** from `tools/nfl-headshots.json`,
+  scoped to the `PROJECTIONS` pool — the desk is required to ground every named
+  player there, so it is exactly the set a story can name. 335 of the 407 pool
+  players have a headshot; the other 72 simply do not appear in the release.
+- **Run it after `merge-projections.mjs` or `build-headshots.mjs`.** A projections
+  update that adds or moves a player leaves the map stale, and the symptom is a
+  missing or wrongly-captioned face — quiet enough to ship. CI rebuilds it and
+  fails on any diff, the same gate `front.html` has.
+- The **team comes from `PROJECTIONS`, not from the headshot release**, which is a
+  season-start snapshot that goes stale on every trade. A face captioned with the
+  wrong club is worse than no face.
+- The ESPN id travels too, because `discEl()` tries it before the nfl.com URL, so
+  a fallback face is identical to one served from the page's own cast.
 
 ### The article page
 
