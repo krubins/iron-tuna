@@ -36,7 +36,12 @@ const unesc = t => t
   .replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"')
   .replace(/&mdash;/g, '—').replace(/&ndash;/g, '–').replace(/&middot;/g, '·')
   .replace(/&rsquo;/g, '’').replace(/&lsquo;/g, '‘')
-  .replace(/&rdquo;/g, '”').replace(/&ldquo;/g, '“');
+  .replace(/&rdquo;/g, '”').replace(/&ldquo;/g, '“')
+  // Numeric entities too — the coaching column writes non-breaking hyphens as
+  // &#8209; so a name like "zone-tree" cannot break across lines, and those must
+  // not survive into the JSON as literal "&#8209;".
+  .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)));
 const norm = t => unesc(t).replace(/\s+/g, ' ').trim();
 
 const pool = JSON.parse(read('tools/x-posts/insights_pool.json'));
@@ -384,6 +389,57 @@ for (const f of files.filter(f => /^auction-watch-\d{4}-\d{2}-\d{2}\.html$/.test
   reports.push({ date, title, desc: d ? norm(d[1]) : '', url: '/' + f.replace('.html', '') });
 }
 
+// ── the coaching column ────────────────────────────────────────────────────
+// play-caller-premium.html is the source of truth, exactly as the drop pages
+// are for STORIES: each <article class="call"> yields its chip, position, team,
+// date, headline, and the named players out of its "Who it moves" line. Adding
+// entries to the column therefore updates the front page by re-running this
+// script, with no second copy of the copy to keep in sync.
+// Cap on a word boundary, never mid-word, and only add an ellipsis when
+// something was actually dropped.
+const clip = (t, n) => {
+  if (t.length <= n) return t;
+  const cut = t.slice(0, n);
+  return cut.slice(0, Math.max(cut.lastIndexOf(' '), 0)).replace(/[,;:.\s]+$/, '') + '…';
+};
+
+const column = [];
+{
+  const src = read('play-caller-premium.html');
+  const re = /<article class="call" id="([^"]+)">([\s\S]*?)<\/article>/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const [id, block] = [m[1], m[2]];
+    const chip = (block.match(/<span class="chip ([a-z]+)">([^<]*)<\/span>/) || []);
+    const pos = norm((block.match(/<span class="cpos">([^<]*)<\/span>/) || [])[1] || '');
+    const team = norm((block.match(/<span class="cteam">([^<]*)<\/span>/) || [])[1] || '');
+    const title = norm((block.match(/<h2>([\s\S]*?)<\/h2>/) || [])[1] || '');
+    // Tags out before entities in: the line is written with <b> around every
+    // player it names, and the card wants the sentence, not the markup. Only the
+    // first sentence rides along — the card is a doorway, not the entry.
+    const whoRaw = norm(((block.match(/<p class="who">([\s\S]*?)<\/p>/) || [])[1] || '')
+      .replace(/<[^>]*>/g, ''));
+    const who = clip(whoRaw.replace(/^Who it moves:\s*/i, ''), 165);
+    const stat = norm(((block.match(/<p class="statline">([\s\S]*?)<\/p>/) || [])[1] || '')
+      .replace(/<[^>]*>/g, '')).replace(/^Projected effect:\s*/i, '');
+    if (!title) continue;
+    // The named players are the <b> spans inside the "Who it moves" line, which
+    // is the only place the column commits to a player — a name in the prose
+    // above it is context, not a call, and must not claim a photo.
+    const named = [...(((block.match(/<p class="who">([\s\S]*?)<\/p>/) || [])[1]) || '')
+      .matchAll(/<b>([^<]+)<\/b>/g)].map(x => norm(x[1])).filter(n => !/^Who it moves/i.test(n));
+    const keys = named.map(n => slug(n)).filter(k => bySlug.has(k));
+    enlist(keys);
+    column.push({
+      id, title, pos, team,
+      date: (id.match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '',
+      side: chip[1] || '', label: norm(chip[2] || ''),
+      who, stat, url: '/play-caller-premium#' + id,
+      ppl: keys
+    });
+  }
+  column.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
 // PRESEASON <- every preseason-week-N.html page: the takeaways article for one week
 // of preseason games. Sorted by week number so the newest week leads the desk.
 const preseason = [];
@@ -413,9 +469,10 @@ const before = front;
 front = front.replace(/var STORIES = \[[\s\S]*?\];\n/, 'var STORIES = ' + JSON.stringify(stories) + ';\n');
 front = front.replace(/var PLAYERS = \{[\s\S]*?\};\n/, 'var PLAYERS = ' + JSON.stringify(Object.fromEntries(cast)) + ';\n');
 front = front.replace(/var REPORTS = \[[\s\S]*?\];\n/, 'var REPORTS = ' + JSON.stringify(reports) + ';\n');
+front = front.replace(/var COLUMN = \[[\s\S]*?\];\n/, 'var COLUMN = ' + JSON.stringify(column) + ';\n');
 front = front.replace(/var PRESEASON = \[[\s\S]*?\];\n/, 'var PRESEASON = ' + JSON.stringify(preseason) + ';\n');
-if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var PRESEASON = \[/.test(front)) {
-  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/PRESEASON declarations in front.html');
+if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
+  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PRESEASON declarations in front.html');
   process.exit(1);
 }
 fs.writeFileSync(path.join(root, 'front.html'), front);
