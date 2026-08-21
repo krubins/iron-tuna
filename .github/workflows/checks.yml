@@ -116,6 +116,29 @@ jobs:
           fi
           echo "front.html is up to date"
 
+      # The scrolling cheat-sheet insights are hand-written prose with no build
+      # step, so nothing used to notice when a note outlived the roster it
+      # described — by August 2026 eight of the eleven backfield notes named
+      # players who had changed teams or left the board, and one still called a
+      # second-year back a rookie. This holds that prose to the same player pool
+      # the boards price from.
+      - name: Insight prose against the player pool
+        run: node tools/test-insights.mjs
+
+      # LEAD_FACES in _worker.js is generated from tools/nfl-headshots.json and the
+      # PROJECTIONS pool. A projections update that adds or moves a player leaves
+      # it stale, and the symptom is a missing or wrongly-captioned face on the
+      # front page's lead — quiet enough to ship. Rebuilding here must be a no-op.
+      - name: _worker.js lead faces are rebuilt from their sources
+        run: |
+          node tools/build-worker-faces.mjs
+          if ! git diff --quiet -- _worker.js; then
+            echo "::error file=_worker.js::LEAD_FACES is stale — run 'node tools/build-worker-faces.mjs' and commit the result"
+            git --no-pager diff --stat -- _worker.js
+            exit 1
+          fi
+          echo "LEAD_FACES is up to date"
+
       # The odds math is duplicated between _worker.js and tools/ because there is
       # no bundler; test-worker-odds.mjs lifts the worker's copy out of the source
       # and asserts the two still agree, so drift fails here instead of quietly
@@ -140,6 +163,9 @@ jobs:
 
       - name: The standing analyst column
         run: node tools/test-analyst-column.mjs
+
+      - name: What the board grades a player name against
+        run: node tools/test-board-colour.mjs
 
       - name: Vegas column (worker)
         run: node tools/test-worker-column.mjs

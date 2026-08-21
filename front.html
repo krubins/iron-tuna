@@ -708,10 +708,18 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   }
   function renderCast(s){
     var band = document.getElementById('leadMedia'), cast = document.getElementById('leadCast');
-    var keys = (s.ppl || []).filter(function(k){ return PLAYERS[k]; });
+    // PLAYERS is this page's own cast, built from the players the AUTHORED drop
+    // pages name. A generated lead can name anybody on the board, so it also
+    // ships the faces it needs (`s.cast`, from LEAD_FACES in the worker). Prefer
+    // the local entry, fall back to the one that travelled with the story: a
+    // four-player story used to render one photo because three of its names had
+    // never appeared in a drop page.
+    var sent = {};
+    (s.cast || []).forEach(function(f){ if (f && f.k) sent[f.k] = f; });
+    var keys = (s.ppl || []).filter(function(k){ return PLAYERS[k] || sent[k]; });
     cast.innerHTML = '';
     if (!keys.length){ band.hidden = true; return; }
-    keys.forEach(function(k){ cast.appendChild(faceEl(PLAYERS[k])); });
+    keys.forEach(function(k){ cast.appendChild(faceEl(PLAYERS[k] || sent[k])); });
     // `tm` means the story named nobody and this is that club's headline player,
     // so the band is labelled with the team instead of claiming the story is
     // about him. The club's full name comes from the plate's own palette.

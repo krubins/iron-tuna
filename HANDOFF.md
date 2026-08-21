@@ -956,10 +956,36 @@ stamps as a reader moves from the front page to `/lead`.
 
 The lead's photo band works off `players`, slugged with the same rule
 `tools/build-front.mjs` uses, so "Kenneth Walker III" and `kenneth-walker-iii`
-both find the same headshot. **Known limitation:** the band can only show players
-already in `front.html`'s `PLAYERS` cast, which is built from the authored drop
-pages. A generated story naming four players may show two faces. It never shows a
-wrong face, and the "In this story" label does not claim to be exhaustive.
+both find the same headshot.
+
+**The faces travel with the story.** `front.html`'s own `PLAYERS` cast is built
+from the players the *authored* drop pages name — 72 of them — which is the right
+cast for those stories and the wrong one here, because a run can name anybody on
+the board. It named Justin Jefferson, one of the best-known receivers in the
+league, and the front page had no photo of him: a four-player story rendered one
+face. So `/api/lead-story` ships the faces it needs alongside the names, out of
+`LEAD_FACES` in the worker, and `renderCast()` prefers the page's own entry and
+falls back to the one that arrived.
+
+`LEAD_FACES` is in `_worker.js` rather than in `front.html` deliberately. Widening
+the page's cast would have cost every visitor about 39 KB on a 150 KB page to
+carry photos all but four of them will not see. The worker is never downloaded by
+a browser, so the map is free there and only the handful of URLs a story actually
+uses travel in the payload.
+
+- Rebuilt by **`node tools/build-worker-faces.mjs`** from `tools/nfl-headshots.json`,
+  scoped to the `PROJECTIONS` pool — the desk is required to ground every named
+  player there, so it is exactly the set a story can name. 335 of the 407 pool
+  players have a headshot; the other 72 simply do not appear in the release.
+- **Run it after `merge-projections.mjs` or `build-headshots.mjs`.** A projections
+  update that adds or moves a player leaves the map stale, and the symptom is a
+  missing or wrongly-captioned face — quiet enough to ship. CI rebuilds it and
+  fails on any diff, the same gate `front.html` has.
+- The **team comes from `PROJECTIONS`, not from the headshot release**, which is a
+  season-start snapshot that goes stale on every trade. A face captioned with the
+  wrong club is worse than no face.
+- The ESPN id travels too, because `discEl()` tries it before the nfl.com URL, so
+  a fallback face is identical to one served from the page's own cast.
 
 ### The article page
 
@@ -1460,3 +1486,79 @@ page's "The Build" desk is computed from the Ideal Team, so a planner change
 that is not followed by a rebuild leaves the site quoting a lineup the app no
 longer produces. That is what this change did to it: $192/125.4 became
 $183/122.1.
+
+---
+
+## 20. August 2026: what the board grades a player name against
+
+The name on the cheat sheet and the draft board is coloured by comparing **Proj**
+(the likely market price) against what the player is worth. Which number stands
+for "worth" has now been wrong twice, so the history is the documentation.
+
+### Where it landed
+
+`boardValue(p, value, config)` — **Value, plus a scarcity premium.** On a fresh
+default board that renders 37 red, 58 green, 137 neutral out of 232.
+
+The premium is added in exactly two cases, and it takes the larger rather than
+stacking them, because they are two readings of the same scarcity:
+
+1. **The plan needs him and his replacement is overpriced.** `planPremium`, built
+   in `_basePersonalized` where the optimal plan and the pool both exist. If you
+   skip a player the plan puts in an open starting slot, you take the next man at
+   his position the plan has not already claimed, and you pay that man's asking
+   price. So you should pay above Value for the one you want by as much as the
+   market is overcharging for the one you would settle for: `repAsk - repVal`,
+   capped at 10% of the budget. It is an indifference argument and needs no tuned
+   constant. When replacements are fairly priced there is nothing to pay up for,
+   and the premium is correctly zero.
+2. **He stands alone above a real positional cliff.** `scarcityPremium(fl,
+   budget)`, from the existing `scarcityFlags` cliff detector, capped at 15%.
+   This applies whether or not this particular plan claims him.
+
+On the live board six players earn one and five are lifted out of red: Josh Allen,
+Gibbs, Nacua, McBride, Bowers.
+
+### The two things that were wrong
+
+**Value alone** paints a star red for costing more than his vacuum price even
+when he is the one player holding your starting lineup together. That is what the
+premium fixes.
+
+**Grading against YOU (`personalValue`) is the trap.** PR #66 tried it, on the
+stated premise that "for positions with scarcity, YOU will often exceed Value".
+**That premise is false and the code cannot work.** YOU is `switchPrice`, an
+*indifference* price — the most you can pay before the player stops improving
+your lineup — so it is structurally at or below Value. Measured on a fresh board:
+
+| YOU vs Value | rows |
+|---|---|
+| YOU > Value | **3 of 232**, by at most $1 |
+| YOU < Value | 81, down to -$15 |
+| YOU = Value | 148 (the null-`personalValue` fallback) |
+
+Grading against it can therefore only ever paint **more** red, never less. It did:
+red 42 → 89, green 53 → 11. A variant grading against `max(Value, YOU)` returns
+the pre-#66 numbers exactly, because YOU never meaningfully exceeds Value.
+
+**Do not reach for YOU again.** It is a bidding ceiling, not a grade. If you want
+a "worth to me" number that can legitimately exceed Value, it needs a different
+computation, not a different comparison — which is what the plan premium above is.
+
+### Keep these three in step
+
+The colour, the CSV/AI `flag` field, and the coach's legend all describe the same
+rule, and a reader who gets two different answers to "why is he red" has found a
+bug. All three now route through `boardValue`. `tools/test-board-colour.mjs`
+(23 assertions, no browser, runs in CI) pins the premium's shape and guards
+against the YOU comparison coming back.
+
+### A related fix
+
+`nameTitle` — the sentence explaining why a name is the colour it is — was
+computed in three places and **rendered in none**. Every explanation of red and
+green had been invisible for as long as it has existed. It is now the name's
+`title`, with the bye week appended behind it, so hovering Josh Allen reads:
+"Good buy: the $49 price is about $19 under the $68 he is worth on your board.
+That includes a $26 scarcity premium: he stands above a 33-point drop at QB.
+Bye week 7."
