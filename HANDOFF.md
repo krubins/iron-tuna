@@ -913,3 +913,82 @@ mid-query, no database bound. **Every one must come back as "no story" rather
 than as an exception**, because an exception here is a blank hero on the front
 door. It also pins the route pattern against traversal and checks that the front
 page still paints its own lead first.
+
+## 18. August 2026: traffic numbers on /admin
+
+`/admin` used to answer "how much money" and had nothing to say about "how many
+people". It does now: a **Traffic** section above Sales & referrals with page
+views, visitors, top pages, where arrivals came from, and the site's named click
+events, over a 7 / 30 / 90-day window.
+
+### Counting happens in the Worker, not in a script tag
+
+`logPageView()` runs inside `fetch()` on any successful HTML response. That was
+the deciding constraint: the site is ~100 static `.html` files plus the SPA, and
+a beacon would have meant editing every one of them and re-editing each new
+insight page forever. `run_worker_first` means every request already passes
+through `_worker.js`, so counting there covers the whole site at once, keeps
+counting for readers who block scripts, and cannot be missed off a new page.
+
+The insert is wrapped in `ctx.waitUntil()`, so it never sits between the reader
+and their HTML, and every path through it swallows its own errors. **A counter
+that can break a page view is worse than no counter** — `tools/test-analytics.mjs`
+spends a third of its assertions on exactly that (D1 throwing, D1 missing, D1
+rejecting mid-query: the page still serves, intact, every time).
+
+Not counted, because none of them are a person reading the site: bots and AI
+crawlers (`BOT_RE`), prefetch/prerender hits, framed loads, `/admin*` itself, and
+anything that is not a 200 HTML GET.
+
+### A "visitor" is a day, not a person
+
+`visitorHash()` is `SHA-256(day + LEADS_EXPORT_KEY + IP + user-agent)`, truncated.
+No cookie, no stored IP, no stored user-agent — the raw values never reach D1,
+and the salt rotates at UTC midnight so yesterday's hashes cannot be matched to
+today's. That is the same shape Plausible and Fathom use, and it keeps the
+`privacy.html` promise intact.
+
+The cost is real and worth stating plainly: **over a multi-day window, someone
+who comes back on three days counts as three visitors.** The admin page says so
+under the tile rather than implying otherwise. If true multi-day uniques ever
+matter more than the privacy property, the salt is the one line to change — and
+the honesty note under the tile has to change with it.
+
+### What is stored
+
+Two D1 tables, created lazily on first use (`ANALYTICS_DDL`, cached per isolate,
+with a one-at-a-time fallback for D1 versions that refuse DDL inside a batch) —
+so there is no migration step to remember and nothing to run by hand:
+
+- `page_views` — `ts, day, path, visitor, source, country`. `source` is
+  `utm_source` if present, else the referring host minus `www.`, else empty for
+  direct. Self-referrals are dropped so the list is arrivals, not internal hops.
+- `site_events` — `ts, day, event, uid, path, props`, fed by `/api/track`.
+
+`/api/track` already existed and already had ~40 call sites in `index.html`
+(`nav_click`, `paywall_viewed`, the `coach_*` family). It forwarded to
+`ANALYTICS_WEBHOOK` if that was set and otherwise **dropped everything on the
+floor** — the events were being collected and discarded. It now also writes to
+D1, rate-limited per IP, and the webhook forward is unchanged for anyone relying
+on it. The dead `window.posthog` branch in `index.html` is still dead; PostHog
+has never been loaded on the site.
+
+The daily 11:00 cron prunes both tables to 180 days (`pruneAnalytics`), so this
+cannot grow without bound.
+
+### Reading it back
+
+`GET /api/admin/traffic?key=<LEADS_EXPORT_KEY>&days=<1-90>` — same key gate as
+the other admin routes. It is deliberately **separate** from
+`/api/admin/dashboard`: that one pages through Stripe and can be slow or
+misconfigured, and the traffic numbers should not wait on money numbers to
+render. `admin.html` fetches both independently and the chart is now one
+`lineChart()` used by both sections.
+
+### Tests
+
+`node tools/test-analytics.mjs` (38 assertions, no network, no browser). It
+drives the real `_worker.js` over an in-memory SQLite standing in for D1, so the
+SQL is actually executed rather than described. Beyond the never-break-the-page
+cases above, it pins who gets counted, that one person on one day is one visitor,
+that no row contains an IP or user-agent, and that the admin read stays gated.
