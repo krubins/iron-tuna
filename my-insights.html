@@ -268,7 +268,11 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   var SNAP = (L && L.hasBoard && L.has) ? L.config : null;
   function tailoredLine(it){
     if (!SNAP) return '';
-    var line = L.tailor(it.effect, it.players || it.title, it.section, fmtSel);
+    // The format filter above picks the lens while it is set to one format. On
+    // "All formats" there is no lens to take from it, so the reader's own —
+    // their switch, then their saved league, then auction — decides, exactly as
+    // it does on the front page.
+    var line = L.tailor(it.effect, it.players || it.title, it.section, fmtSel || L.readingFormat());
     return line ? '<div class="tailored"><b>Your league:</b> ' + esc(line) + '</div>' : '';
   }
   function fmtRow(it, key){

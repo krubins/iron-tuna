@@ -245,7 +245,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   function tailored(it){
     var L = window.ITLeague;
     if (!L || !L.has) return '';
-    var line = L.tailor(it.effect, it.players || it.title, it.section);
+    var line = L.tailor(it.effect, it.players || it.title, it.section, L.readingFormat());
     return line ? '<p class="it-yours"><b>Your league:</b> ' + esc(line) + '</p>' : '';
   }
   function render(list){

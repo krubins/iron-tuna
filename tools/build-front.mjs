@@ -14,6 +14,8 @@
 //               the players it names, and the lead renders their photos. A team
 //               story that names nobody carries `tm` instead — the club whose
 //               headline player stands in, which the band prints as its label.
+//   PRESEASON<- every preseason-week-N.html page (headline, description, the
+//               takeaway headings), newest week first — the weekly takeaways rail
 //
 // Run after adding a new insights drop page or a new auction-watch (camp/preseason)
 // page:  node tools/build-front.mjs
@@ -438,6 +440,29 @@ const column = [];
   }
   column.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
+// PRESEASON <- every preseason-week-N.html page: the takeaways article for one week
+// of preseason games. Sorted by week number so the newest week leads the desk.
+const preseason = [];
+for (const f of files.filter(f => /^preseason-week-\d+\.html$/.test(f))) {
+  const week = +f.match(/preseason-week-(\d+)/)[1];
+  const s = read(f);
+  const rawTitle = norm(s.match(/<title>([\s\S]*?)<\/title>/)[1].split('|')[0]);
+  // "Preseason Week 2: the headline" -> headline on its own, week already known
+  const headline = norm(rawTitle.replace(/^Preseason Week\s*\d+\s*[:\u2014-]\s*/i, ''));
+  const d = s.match(/<meta name="description" content="([^"]*)"/);
+  // Each takeaway is an h2 inside <main>, minus the two closing CTA bands.
+  // Comments are stripped first: the authoring template explains the structure in a
+  // comment that mentions the tags, and those must not be scraped as takeaways.
+  const main = s.slice(s.indexOf('<main'), s.indexOf('<div class="cta-band"')).replace(/<!--[\s\S]*?-->/g, '');
+  const takeaways = [...main.matchAll(/<h2>([\s\S]*?)<\/h2>/g)].map(m => norm(m[1]));
+  preseason.push({
+    week, headline, title: rawTitle,
+    desc: d ? norm(d[1]) : '',
+    takeaways,
+    url: '/' + f.replace('.html', ''),
+  });
+}
+preseason.sort((a, b) => b.week - a.week);
 
 let front = read('front.html');
 const before = front;
@@ -445,9 +470,10 @@ front = front.replace(/var STORIES = \[[\s\S]*?\];\n/, 'var STORIES = ' + JSON.s
 front = front.replace(/var PLAYERS = \{[\s\S]*?\};\n/, 'var PLAYERS = ' + JSON.stringify(Object.fromEntries(cast)) + ';\n');
 front = front.replace(/var REPORTS = \[[\s\S]*?\];\n/, 'var REPORTS = ' + JSON.stringify(reports) + ';\n');
 front = front.replace(/var COLUMN = \[[\s\S]*?\];\n/, 'var COLUMN = ' + JSON.stringify(column) + ';\n');
-if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front)) {
-  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN declarations in front.html');
+front = front.replace(/var PRESEASON = \[[\s\S]*?\];\n/, 'var PRESEASON = ' + JSON.stringify(preseason) + ';\n');
+if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
+  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PRESEASON declarations in front.html');
   process.exit(1);
 }
 fs.writeFileSync(path.join(root, 'front.html'), front);
-console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos${front === before ? ' (no change)' : ''}`);
+console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);

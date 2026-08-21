@@ -302,17 +302,51 @@ Two keys, both written by the draft app on the same origin, neither of them new:
 - `iron_tuna_draft_state_v2` → `config`: teams, budget, format and the full custom scoring. The authority.
 - `iron_tuna_values_v1`: a snapshot of the reader's own board — every player's value and projected points **at those settings**. This is what makes a *rank* personal. Without it the library can still re-score and re-price; it just cannot re-rank, and it says so rather than guessing.
 
-**With no saved league every accessor reports "no league" and every page prints exactly what it printed before.** A reader who has never opened the app must not be shown numbers dressed up as theirs. A saved league that matches the site defaults in every respect is likewise left alone (`custom === false`): a "Your league" badge on identical numbers only teaches people to ignore the badge.
+**With no saved league every accessor that speaks for the reader still reports "no league"** — `has`, `hasBoard`, `rankOf`, `findPlayer`. A reader who has never opened the app must not be shown numbers dressed up as theirs. A saved league that matches the site defaults in every respect is likewise left alone (`custom === false`): a "Your league" badge on identical numbers only teaches people to ignore the badge.
+
+What that reader *is* shown is the **site's own board** — see "The default board" below. Labelled as the site's, never as theirs.
 
 `custom` splits into `customScoring` (the scoring fields differ) and `customLeague` (teams or budget differ), because a story can honour one without the other — points move with scoring, prices move with the budget.
 
 ### What each page does with it
 
 - **`/` (front.html), the Vegas column.** `myCase()` re-reads the whole card: points re-scored from the shipped stat lines, prices off the market curve at the reader's `teams × budget`, ranks off their own board. The kicker gains a **Your league** badge and the basis line names the league and the scoring. A reader with no league keeps the old card plus one line inviting them to set one.
-- **`/` story cards and the lead.** `ITLeague.tailor()` turns an editorial `+12% to +18% versus price` into the reader's own dollars (or, in a snake/best-ball league, draft slots).
+- **`/` story cards and the lead.** `ITLeague.tailor()` turns an editorial `+12% to +18% versus price` into the reader's own dollars (or, in a snake/best-ball league, draft slots) — through the reading lens below, which the Position Intel switch controls.
 - **Insight drop pages** (`auction|snake|bestball-insights-YYYY-MM-DD.html`). The library's own `tailorStatlines()` pass finds every `p.statline`, reads the call's `<h2>` for a player it recognises, and appends one `.it-yours` line. Pages opt in with nothing but the `<script src="/it-league.js" defer>` tag.
 - **`/my-insights` and `/insights-vault`.** Both now call `ITLeague.tailor()` instead of carrying their own copy of the maths — `my-insights.html` had a duplicate, which is exactly how two pages start quoting different dollars for the same call.
 - **`/auction-budget-allocation`.** Declarative only: `data-it-money="200"`, `data-it-teams="12"` and `data-it-pct="38-42"` restate the sentence in the reader's league and print what each allocation band actually buys.
+
+### The default board, for a reader who has not got one
+
+`it-league.js` carries a generated block, `DEFAULT_BOARD_RAW` — one `name|POS|points` line per skill player, scored at `SCORING_DEFAULTS` from the same `PROJECTIONS` the worker serves, ~8KB on one line (the same convention as `front.html`'s generated `STORIES`). Prices are **not** stored: the library reads the market curve at each player's positional rank, scaled to 12 × $200, which is the app's own `calculateMarketValues` recipe. Players the projections do not score (a free agent with an empty stat line, a backup under the passing-yard threshold) are dropped — they cannot be moved up or down anything.
+
+Regenerate with **`node tools/build-default-board.mjs`** after `merge-projections.mjs` changes the worker's `PROJECTIONS`. `tools/test-it-league.mjs` regenerates the block and compares, so a forgotten run fails a test instead of quoting a reader last month's projections.
+
+**A reader with no saved league gets all three readings in one line**, because there is no way to know which they came for and guessing one would be worse than printing both:
+
+> **Default league:** Drake London prices at $40 in a 12-team, $200 league — worth about $3–$5, 2% of a budget, or 6–10 draft slots (about half a round).
+
+The percentage is the durable half: a dollar figure is only true at $200, but "2% of a budget" is true in every auction league there is. It is computed from the raw share rather than the rounded dollars, so the two cannot disagree at a rounding boundary. `ITLeague.tailorLabel()` returns `Your league` or `Default league` — a page must never hard-code the first, which is the one lie this whole mechanism exists to avoid.
+
+### A draft slot is a pick, not a points gap
+
+`slotsMoved()` used to count every player of **any** position whose raw points fell between the old and new totals. Raw fantasy points do not compare across positions — a 300-point QB and a 300-point WR are not adjacent picks — so a routine +15% on a receiver was reported as a **25-slot move**, most of it quarterbacks he would never be drafted against. It now finds the player at his **own** position he leapfrogs (points compare fine inside a position) and measures the distance to that player on the **value-ordered** board, which is the real draft order.
+
+Below roughly the last 1.5% of a budget the board stops being an order at all — fifty players tie at $1–$2, and the gap between two of them is an artefact of the tie-break. Moves in and out of that tier are described (`a slide into $1–$3 endgame territory`) rather than counted, because a slot count there would be precision the number does not have.
+
+### The reading lens: dollars or draft slots
+
+Every tailored line has to commit to a draft type before it can say anything useful, and the page must never guess. `ITLeague.readingFormat()` answers it in one order, always:
+
+1. the reader's own switch, if they have thrown one (`iron_tuna_reading_format_v1`);
+2. the format on their saved league — an auction league gets dollars, a snake or best-ball league gets slots, without anyone being asked;
+3. **auction**, where nothing is saved. This is an auction site and its copy is written that way, so an unset reader is never shown draft-slot advice by accident.
+
+`setReadingFormat()` writes the choice back, so it holds on **every** page the library runs on — Position Intel, the front-page lead, and `tailorStatlines()` on the drop pages. Two lenses, not three: best ball *is* a draft, so it reads in slots, and `label()` still names the league honestly underneath ("your 12-team best ball").
+
+**A borrowed lens is never called their league.** `label(fmt)` says "your 10-team snake draft" when the lens matches what they saved and "**a** 10-team, $300 auction" when it does not — a snake-league reader who asked for the auction read is owed a true sentence, not a flattering one.
+
+The switch itself lives in the Position Intel section header (`#posFmt` in `front.html`) and **only appears for a reader with a saved league and a board**: with no board there is no tailored line to re-word, and a control that changes nothing on screen is worse than no control. Clicking it re-renders the modules *and* the lead together — they quote the same stories, and a page that contradicts itself one screen apart is worse than one that never personalised at all. `node tools/test-position-lens.mjs` drives that switch in Chromium (skips cleanly without playwright-core or a Chromium binary); `tools/test-it-league.mjs` covers the ordering, the copy and the front page's two `tailor()` call sites.
 
 ### Money has two scales, and mixing them is the easy mistake
 
@@ -326,7 +360,7 @@ Ranks are the exception: they need the whole pool, which only the reader's saved
 
 ### Maintenance
 
-`it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library.
+`it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library. **`node tools/test-position-lens.mjs`** covers the reading-lens switch and the default-board line end to end in a real browser. **`node tools/build-default-board.mjs`** regenerates the default board.
 
 ## 9e. Comping access from a URL (added August 2026)
 
@@ -445,7 +479,8 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   remain fully live — linked from the front page's secondary nav.
 - **Layout** (ESPN-inspired): black masthead with the fish + Bebas silver wordmark and
   red accent bar; **deep-dive lead** (see below); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
-  Market); **Asset Allocation** module (budget, nominations, $1 endgame guides + the
+  Market) with an **Auction / Snake** reading-lens switch in the section header (§9f);
+  **Asset Allocation** module (budget, nominations, $1 endgame guides + the
   in-app planner); **Training Camp & Preseason** desk (the auction-watch pages,
   newest featured).
 - **Top Headlines is one merged, strictly newest-first feed.** Camp reports and insight
@@ -569,59 +604,159 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   which would have put the free "Build my free cheat sheet" CTA on `front.html` behind
   the paywall. `?screen=board` still opens the board (now locked for free users).
 
-## 14. August 2026: first-party traffic on /admin
+---
 
-Cloudflare's own analytics live in a dashboard nothing in this repo can reach, and the site had no server-side record of a visit at all — `/admin` could show revenue and leads but not whether anybody had turned up. The Worker now counts page views into the same D1 the rest of the admin data comes from.
+## 14. August 2026: the Ideal Team is now solved exactly
 
-### What is counted
+Filling the open starter slots is a **multiple-choice knapsack** (one distinct
+player per slot, maximise projected points, total price inside a dollar budget).
+It used to be approximated by a greedy points-per-dollar hill climb in
+`buildOptimalPlan`. Two defects came out of that, both measured against an
+independent exact solver over the real projections:
 
-`trafficRecord()` runs on the two HTML exits of the asset handler, so the rule is simply "if a reader got a page, it counts":
+- **The Ideal Team left roughly a fifth of the budget unspent** — every one of 27
+  scenarios (budgets 100/200/300 x 0/1/2 FLEX x 0/40/90 players gone). It spent
+  $153 of $193 at default settings because `extraBench` (`allocation * 0.35 * R`)
+  was withheld even for a model documented as "the single highest-scoring
+  starting lineup you can afford". Cost: **+30 to +117 points, typically ~5
+  points a game**.
+- **The greedy climb was beaten at its own budget in 9 of 27 scenarios** (up to
+  +7.5 points), mostly mid-draft — precisely when the planner matters.
 
-- **GET requests that return HTML.** An image, a script, `/api/*` — none of those are page views, and counting them would inflate every number on the panel.
-- **Not obvious robots.** UA match (`TRAFFIC_BOT`). A crawler is traffic but it is not a reader, and mixing the two makes the figure useless for deciding anything. A blank UA counts as a robot.
-- **Not `/admin`.** That is the owner reading their own dashboard.
+What changed:
 
-The SPA routes (`/auctiondraft`, `/snakedraft`, `/bestball`, `/hub`) rewrite to `index.html` at the asset layer but keep their own `url.pathname`, so they appear as themselves in the breakdown rather than all collapsing into `/`.
+- **`bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap)`** (just above
+  `buildOptimalPlan`) solves it exactly: an "exactly k players" knapsack per
+  position, a max-plus combine across positions, maximised over every way of
+  handing the FLEX slots to the positions they accept. Slots are grouped by
+  eligibility signature, so it generalises to any roster/flex shape in
+  `config.roster` / `config.flex`. Full player pools, no pruning — it is exact,
+  not heuristic. Reconstruction hands the best players to the dedicated slots
+  first (best RBs in RB1/RB2, the next one into FLEX).
+- `buildOptimalPlan` keeps every budget rule it had (`reserveBench`,
+  `extraBench`, overrides, forced picks, `perCap`) and only swaps the solver, so
+  the nine shape models still mean what they meant — they are just optimal
+  within their own constraints now. A 12th `opts` argument carries
+  `{ noCap: true }`.
+- **`buildModel('ideal', ...)`** no longer returns the best of the nine shape
+  presets. It calls `buildOptimalPlan` directly with `noBench` and `noCap`, so it
+  spends everything down to a $1 bench. Locked targets and what-if anchors are
+  still honoured as constraints; if it somehow returns nothing the old
+  best-of-presets path is the fallback.
+- **Opponent projections use the same full-budget optimum** (the `t.isMine`
+  ternary in the team-cards memo). The column promises "each team optimally fills
+  its remaining starters within budget", and before this my team was optimised
+  differently from everyone else's — on an empty board it read My Team 125.4
+  pts/gm against 120.4 for all eleven opponents. All twelve now read 125.4.
+- The Ideal model's tooltip and note say it ignores the concentration/bench
+  sliders, since those shape the other models.
 
-### Keys, and why they are narrow
+Cost: ~4-6 ms per model build, ~23 ms for a full 12-team board recompute.
 
-`trafficPath()` strips the query string and fragment, drops a trailing slash and lower-cases. A query string carries campaign junk and occasionally an email address; none of it belongs in a table keyed by page. `trafficReferrer()` keeps only the **host**, and maps our own domain to `direct` — a click from one Iron Tuna page to another is not a referral, and letting it through would make irontuna.com the top referrer to itself forever.
+**Verifying a change here:** `bestStarterSet` is pure, so instrument a copy of
+`index.html` (append `window.__ITFN = { ... }` inside the module script, stash
+`buildModel`'s arguments on `window.__ITDBG`), serve it, and compare against an
+independently written knapsack in the page. The starved-budget case ($12 for 9
+slots) must still render 9/9 slots with `feasible: false`.
 
-### Visitors, and the privacy line
+---
 
-Unique visitors come from `it_v`, a random 32-hex first-party cookie (`HttpOnly; Secure; SameSite=Lax`, one year) holding nothing about the person — exactly the "random anonymous identifier" `privacy.html` already discloses, so **no policy change was needed**. A cookie value that does not match `/^[0-9a-f]{32}$/` is replaced rather than trusted.
+## 15. August 2026: "The Build" desk on the front page
 
-**A reader sending `DNT: 1` or `Sec-GPC: 1` is counted in the views and given no identifier at all.** Both halves are deliberate: drop the view and the site under-reports itself; keep the id and the header meant nothing. Those readers therefore appear in page views and never in the visitor numbers, and the panel's footnote says so.
+`front.html` keeps the design and running order it already had (news lead with player
+photos, Top Headlines, Vegas vs. Consensus, Position Intel, Asset Allocation, Camp).
+Added between **Vegas vs. Consensus** and **Position Intel** is a **The Build** desk,
+and the Camp section gained a weekly preseason rail (below).
 
-### Writes: buffered, looped, capped, upserted
+This section was originally written against a full dark-theme rewrite of the front
+page. That rewrite was dropped in the merge: `main` had meanwhile shipped the photo
+band, the Vegas column and per-reader pricing, all of which are better than what it
+would have replaced. Only the computed modules were carried across, restyled to the
+light palette. `tools/build-front.mjs` still owns `STORIES` / `REPORTS` / `PLAYERS`
+and now `PRESEASON` too.
 
-- Views queue in a module-level buffer and flush through `ctx.waitUntil` **on the same request**. Not a timer: a quiet site serves most page views from a fresh isolate that would be recycled long before any timer fired, so "flush every 30 seconds" silently loses almost everything at exactly the traffic level where every view matters.
-- The flush **drains in a loop**, because views queued by requests arriving mid-write have their own flush call turned into a no-op by the `_TRAFFIC_FLUSHING` guard. Without the loop they wait for some later request and are lost if the isolate dies first.
-- The buffer is **capped at 500**, dropping oldest-first. A failed write leaves its views queued for the next request to retry, which is right — but D1 down for an hour must not turn a page-view counter into a memory leak.
-- Every write is `INSERT … ON CONFLICT(day, key) DO UPDATE SET views = views + ?`, so a retried batch cannot double-count. `visitors.is_new` is set **only** by the INSERT half: a returning reader must never be able to flip an existing day's row back to "new".
-- **A failed write is a lost view, and that is the intended trade.** `trafficRecord` and `trafficFlush` both swallow everything; analytics must never break the page it is counting.
+**Every number in The Build comes from `var ANALYSIS = {...};`**, rebuilt by
+`node tools/build-front-analysis.mjs`. Run it whenever projections change (right after
+`merge-projections.mjs`). It drives headless Chromium against a local copy of the app
+and reads the app's *own* valuation pipeline and exact lineup solver, because
+re-implementing the scoring in Node would drift from what users see. Needs
+`npm i -D playwright` plus, on a box with no CDN egress, `npm i -D react react-dom`
+(both gitignored; nothing ships). Sanity checks abort the write on an empty or
+out-of-budget solve. `--dry-run` prints the JSON instead of writing.
 
-Three tables, created on first write (`trafficInit`, no migration step): `pageviews(day, path, views)`, `referrers(day, host, views)`, `visitors(day, vid, views, is_new)`. Only `visitors` grows with people rather than with days, so it is the only one pruned — 120 days, once a day.
+The Build desk, all computed:
+- **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
+  solver, with the per-position spend bar. Currently $192 for 125.4 pts/gm, 77% of it
+  on running backs.
+- **"The cliffs"** — the largest points-per-game drop between neighbouring players at
+  each position.
+- **"Why the money goes to running back"** — points between the position leader and
+  the replacement-level starter in a 12-team league. RB 10.0, DEF 0.8. This is the
+  reason the optimum looks the way it does.
+- **"What the FLEX is worth"** — re-solves with the FLEX removed (+12.4 pts/gm).
 
-### The panel
+### On consensus and market language
 
-`GET /api/admin/traffic?key=…&days=30`, behind the same `LEADS_EXPORT_KEY` gate as every other admin route. **Its own endpoint, not another field on `/api/admin/dashboard`:** that one pages through Stripe and can take seconds, and a page-view chart has no business waiting on a payments API — this way a Stripe outage still leaves traffic working, and vice versa. It flushes the isolate's buffer before reading, so a refresh straight after a visit is not confusingly one view behind.
+`main` shipped a **Vegas vs. Consensus** desk, so the odds story that this work could
+not build now exists and is priced off real lines. Two caveats from digging through the
+value pipeline still stand and are worth an honest pass:
 
-`admin.html` renders four tiles, a two-series line chart, and bar-in-table rankings of top pages and top referrers, plus the daily table under `View as table`.
+- **There is no consensus ADP in the player model.** `adpRedraft` is null for all 408
+  players, so `attachProvisionalAdp` synthesises a rank from Iron Tuna's own
+  `auctionValue`. §14 relabelled the user-facing column ("IT Rank") so it no longer
+  claims to be average draft position, but anything that calls that number "consensus"
+  is comparing the model to itself.
+- **`calculateMarketValues` is a curve, not a market.** It assigns prices from the
+  hardcoded `LEAGUE_MARKET_CURVE` indexed by our own points rank. So the in-app
+  "surplus", "Bargain +$X" and "Overpay -$X" chips measure this model against a fixed
+  curve. That is separate from the front page's Vegas column, which uses real lines.
 
-**Unique visitors do not add up across days** — the same person on Monday and Tuesday is one visitor, not two — so a window's uniques come from `COUNT(DISTINCT vid)`, never from summing the series. This is the one arithmetic mistake the panel could make and still look plausible, and it has its own test.
+`build-front-analysis.mjs` still carries an `edge` block contract (documented at the
+bottom of the file, preserved across rebuilds) for feeding a third-party desk from
+`ANALYSIS`. It is unused now that the Vegas column exists; keep it or delete it, but do
+not fill it with anything that is not sourced.
 
-### Chart conventions
+### Weekly preseason takeaways
 
-`drawLineChart(cfg)` is one renderer for both cards: the sales chart and the traffic chart pass their own SVG/tooltip ids, rows, series and tooltip formatter. They were one copy-paste away from drifting into two different-looking charts on one page. Hover ids are namespaced per chart (`<svgId>-xhair`, `-hdot0`), which is what stops the two tooltips fighting.
+The Camp &amp; Preseason section leads with a **per-week takeaways rail**: one card per
+`preseason-week-N.html` page, newest week first, showing the headline, the description
+and up to four of the article's takeaway headings.
 
-Traffic uses **blue `#2f8fd6` / orange `#d1791f`**, distinct from the sales card's green/amber because they are a distinct measure. The pair was chosen with the `dataviz` skill's validator against this panel's `#121b24` surface, not by eye: it passes the lightness band, chroma floor, CVD separation (worst adjacent ΔE 24.2 protan, 27.0 tritan), the normal-vision floor and contrast. Both cards carry a legend **and** direct end labels, so a series is never identified by colour alone. Re-run `node scripts/validate_palette.js "#2f8fd6,#d1791f" --mode dark --surface "#121b24"` from the skill directory if either colour changes.
+- **Authoring template:** `tools/templates/preseason-week.html` — the auction-watch
+  chrome with `{{WEEK}}`, `{{HEADLINE}}`, `{{DESCRIPTION}}`, `{{LEDE}}`,
+  `{{TAKEAWAY_TITLE}}`, `{{TAKEAWAY_BODY}}` tokens. Save as `preseason-week-N.html`
+  (N is the preseason week number, no date in the filename) and it is served at
+  `/preseason-week-N` with no worker change — Pages resolves it like the
+  auction-watch pages.
+- **Wiring it up:** `node tools/build-front.mjs` scrapes the new page into
+  `var PRESEASON` alongside STORIES/REPORTS. It strips HTML comments before reading
+  the takeaway headings, so the template's own instructional comment is not scraped.
+  Add the URL to `sitemap.xml` the same way auction-watch pages are listed.
+- **Empty state:** with no pages, the rail shows one honest line saying takeaways
+  publish after each slate. It never invents a week or a date.
+- **Who writes them:** the same scheduled Claude Routine that runs the camp desk
+  (§12), on the morning after each preseason slate, under the same guardrails — skip
+  on no network or no verified games, no em dashes in authored copy. Every claim has
+  to come from a game that was actually played (snap counts, series with the ones,
+  target share, goal-line work, injury exits) and has to land on what it does to the
+  auction price, including when it does not move the price at all.
 
-### Maintenance
+**None are written yet.** They could not be authored from the session that built this
+rail: reporting on games requires game data, and the network policy in that
+environment blocks every sports source. The rail, the template, the build step and the
+empty state are all in place and tested against fixtures; the articles need a run with
+network access.
 
-**`node tools/test-worker-traffic.mjs`** evaluates the real traffic section out of `_worker.js` against a stub D1 that records every statement. It covers the key normalisation, the bot list, everything that must NOT be counted, the DNT/GPC contract, cookie flags, conservation across the flush (however the buffer splits into batches, every view lands exactly once), the buffer cap under a dead database, the report's window arithmetic, and that the Worker and `admin.html` still agree on the endpoint and the series names. Run it after touching the counter, the endpoint, or the panel.
+### Player photos
 
-## 15. August 2026: The Play-Caller Premium (the coaching column)
+Handled by `main`'s pipeline, not by this work: `tools/build-headshots.mjs` +
+`tools/nfl-headshots.json` resolve the players a story names and the lead renders their
+photos. An earlier `/players/<slug>.jpg` drop-in scheme from this branch was removed in
+the merge as redundant.
+
+---
+
+## 16. August 2026: The Play-Caller Premium (the coaching column)
 
 A recurring column on what a head coach or coordinator is worth in fantasy dollars. Every entry has the same two halves, and the format is the point: **a coaching tendency with a track record long enough to be checkable, and the specific current-season player that tendency lands on.** A pattern with no named player is trivia; a named player with no pattern behind him is a hunch.
 

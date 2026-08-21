@@ -1480,6 +1480,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .assumptions-panel label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .assumptions-panel input, .assumptions-panel select { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); padding: 5px 8px; font-size: 14px; }
 .assumptions-panel input[type=number] { width: 64px; }
+.cheat-assume { display: flex; align-items: baseline; gap: 8px 14px; flex-wrap: wrap; background: var(--bg-panel); border: 1px solid var(--border-strong); border-left: 3px solid var(--gold-text); border-radius: var(--radius-md); padding: 9px 14px; margin-bottom: 12px; font-size: 14px; color: var(--text-secondary); font-family: var(--font-mono); }
+.cheat-assume .ca-fmt { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.cheat-assume .ca-item { white-space: nowrap; }
+.cheat-assume .ca-item b { color: var(--text-primary); font-weight: 700; }
+.cheat-assume .ca-item + .ca-item::before { content: "\00b7"; color: var(--text-muted); margin-right: 14px; }
+.cheat-assume .ca-note { flex-basis: 100%; font-size: 12px; color: var(--text-muted); font-family: var(--font-body); }
 .coach-ai-pill { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text-muted); cursor: pointer; margin-right: 8px; }
 .coach-ai-pill.on { background: rgba(45,212,163,0.15); color: var(--positive); border-color: var(--positive); }
 .coach-ai { padding: 14px; overflow-y: auto; flex: 1; }
@@ -2412,7 +2418,7 @@ const FORMATS = {
   },
   snake: {
     label: 'Snake',
-    columns: [['adp', 'ADP', 'Average draft position, the overall pick where this player typically goes.'], ['survives', 'Available', 'Percent chance this player is still available to you after your next pick.'], ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.']],
+    columns: [['adp', 'IT Rank', 'Iron Tuna\u2019s own overall rank for this player, not a market average draft position.'], ['survives', 'Available', 'Percent chance this player is still available to you after your next pick.'], ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.']],
     valuePlayers: (players, config, draftedIds) => {
       const drafted = draftedIds || new Set();
       const score = p => p.vorp != null ? p.vorp : p.auctionValue != null ? p.auctionValue : p.projectedPoints || 0;
@@ -2449,7 +2455,7 @@ const FORMATS = {
   },
   bestball: {
     label: 'Best Ball',
-    columns: [['adp', 'ADP', 'Best-ball average draft position (Underdog/Drafters-style, QBs and upside go earlier).'], ['ceiling', 'Ceiling', 'Upside-weighted projection per game. Best ball auto-starts your best weekly scores, so ceiling beats floor.'], ['stack', 'Stack', 'Marked when drafting him stacks with a QB or pass-catcher you already roster (correlation).'], ['survives', 'Survives%', "Estimated chance he's still on the board at your next pick."]],
+    columns: [['adp', 'IT Rank', 'Iron Tuna\u2019s own best-ball rank (QBs and upside move up), not a market average draft position.'], ['ceiling', 'Ceiling', 'Upside-weighted projection per game. Best ball auto-starts your best weekly scores, so ceiling beats floor.'], ['stack', 'Stack', 'Marked when drafting him stacks with a QB or pass-catcher you already roster (correlation).'], ['survives', 'Survives%', "Estimated chance he's still on the board at your next pick."]],
     valuePlayers: (players, config, draftedIds) => {
       const drafted = draftedIds || new Set();
       const withCeil = players.map(p => ({
@@ -5723,7 +5729,7 @@ function LandingSplash({
     snake: {
       name: 'Snake',
       color: '#46a6ff',
-      cols: ['ADP', 'Best', 'Surv%'],
+      cols: ['Rank', 'Best', 'Surv%'],
       liveCol: 2,
       note: 'Survival odds shift as the board comes off ahead of you.',
       rows: [["Ja'Marr Chase", 'WR', ['3', '#5', '21%']], ['Bijan Robinson', 'RB', ['4', '#3', '12%']], ['Jahmyr Gibbs', 'RB', ['6', '#4', '34%']], ['Josh Allen', 'QB', ['17', '#22', '88%']]]
@@ -5731,7 +5737,7 @@ function LandingSplash({
     bestball: {
       name: 'Best Ball',
       color: '#a78bfa',
-      cols: ['ADP', 'Ceil', 'Stack'],
+      cols: ['Rank', 'Ceil', 'Stack'],
       liveCol: 1,
       note: 'Ceiling-weighted, with QB-to-receiver stacks auto-flagged.',
       rows: [['Josh Allen', 'QB', ['1', '25.8', 'STK']], ["Ja'Marr Chase", 'WR', ['3', '21.4', 'STK']], ['Bijan Robinson', 'RB', ['5', '19.9', '-']], ['Brock Bowers', 'TE', ['24', '17.6', '-']]]
@@ -6877,7 +6883,7 @@ function QuickDraftModal({
   })();
   const _researchEl = React.createElement(React.Fragment, null, React.createElement("div", {
     style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2, marginBottom: 14 }
-  }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Average draft position" }, "ADP ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs ADP" }, _adpGap > 0 ? "Value +" + _adpGap + " vs ADP" : "Reach " + _adpGap + " vs ADP"), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume"), _ol && React.createElement("span", { style: _chip(_ol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _ol.title }, _ol.t === 'OL+' ? "Good O-line" : "Bad O-line"), _age && React.createElement("span", { style: _chip('#ff6b6b'), title: _age.title }, _age.t), bye && React.createElement("span", { style: _chip(), title: "Bye week" }, "Bye " + bye)), _survRows && _survRows.length ? React.createElement("div", {
+  }, _isSnake && player.adp != null && React.createElement("span", { style: _chip(), title: "Iron Tuna overall rank" }, "Rank ", Math.round(player.adp)), _adpGap != null && Math.abs(_adpGap) >= 6 && React.createElement("span", { style: _chip(_adpGap > 0 ? '#46d39a' : '#ff6b6b'), title: "Projection rank vs Iron Tuna overall rank" }, _adpGap > 0 ? "Value +" + _adpGap : "Reach " + _adpGap), !_isSnake && _surplus != null && Math.abs(_surplus) >= 2 && React.createElement("span", { style: _chip(_surplus > 0 ? '#46d39a' : '#ff6b6b'), title: "Value minus likely market price" }, _surplus > 0 ? "Bargain +$" + _surplus : "Overpay -$" + -_surplus), player.scarce && React.createElement("span", { style: _chip('var(--gold-text)'), title: "Thin tier behind him" }, "Scarce tier"), _riskTxt && React.createElement("span", { style: _chip(_riskCol), title: "Week-to-week consistency" }, _riskTxt + " risk"), _role && React.createElement("span", { style: _chip(), title: "Depth-chart role" }, _role), _inj && React.createElement("span", { style: _chip('#ff6b6b'), title: "Injury / status" }, _inj), _soft && _soft.early && React.createElement("span", { style: _chip('#5aa9ff'), title: "Favorable matchups weeks 1-3" }, "Soft start"), _soft && _soft.late && React.createElement("span", { style: _chip('#b07cff'), title: "Favorable matchups weeks 15-17 (playoffs)" }, "Soft playoffs"), _tough && _tough.early && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 1-3" }, "Tough start"), _tough && _tough.late && React.createElement("span", { style: _chip('#ff6b6b'), title: "Tough defenses weeks 15-17 (playoffs)" }, "Tough playoffs"), _vol && React.createElement("span", { style: _chip(_vol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _vol.title }, _vol.t === 'BELL' ? "Workhorse" : _vol.t === 'RBBC' ? "Committee" : "High volume"), _ol && React.createElement("span", { style: _chip(_ol.tone === 'good' ? '#46d39a' : '#ff6b6b'), title: _ol.title }, _ol.t === 'OL+' ? "Good O-line" : "Bad O-line"), _age && React.createElement("span", { style: _chip('#ff6b6b'), title: _age.title }, _age.t), bye && React.createElement("span", { style: _chip(), title: "Bye week" }, "Bye " + bye)), _survRows && _survRows.length ? React.createElement("div", {
     style: { marginBottom: 14 }
   }, React.createElement("div", { style: { fontSize: 10.5, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 } }, "Will he be there?"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, _survRows.map(rw => React.createElement("span", { key: rw.round, style: _chip(), title: rw.passed ? "Your round " + rw.round + " pick has already passed" : "Chance he lasts to your round " + rw.round + " pick" }, "R" + rw.round + " ", React.createElement("b", { style: { color: rw.passed ? 'var(--text-faint)' : (rw.s >= 70 ? '#46d39a' : rw.s >= 40 ? '#f0b24b' : '#ff6b6b') } }, rw.passed ? "—" : rw.s + "%"))))) : null);
   const _tmAb = (player.team || '').toUpperCase().replace(/[^A-Z]/g, '');
@@ -8412,7 +8418,7 @@ function TeamsBoard({
       };
       const ro = t.isMine ? roleOverrides : {};
       const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true);
+      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, undefined, { noCap: true });
       const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
       let _snakePlanT = null;
       const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; _snakePlanT = buildSnakePlan(t, players, _tcS, di); return _snakePlanT.projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
@@ -10369,7 +10375,7 @@ const PERF_NOTES = {
   }]
 };
 const MODEL_DESC = {
-  ideal: 'Ideal Team: the single highest-scoring starting lineup you can afford with your remaining budget.',
+  ideal: 'Ideal Team: the single highest-scoring starting lineup your remaining budget can buy, solved exactly. It spends everything down to a $1 bench, so the sliders below shape the other models, not this one.',
   balanced: 'Balanced: an even build anchored by one stud RB and one stud WR, with no position neglected.',
   targets: 'Favorites: builds your roster around the players you have starred, then fills the rest optimally.',
   heroRB: 'Hero RB: pay up for one elite running back, take value at RB2, and load up at the other spots.',
@@ -11449,6 +11455,13 @@ function Cheatsheet({
     day: 'numeric',
     year: 'numeric'
   });
+  const _assumeIsAuction = (config && config.format || 'auction') === 'auction';
+  const _assumeStarters = (() => {
+    if (!config || !config.roster) return '';
+    const parts = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(p => config.roster[p] && config.roster[p].starters > 0).map(p => `${config.roster[p].starters}${p}`);
+    if (config.flex && config.flex.count) parts.push(`${config.flex.count}FLEX`);
+    return parts.join(' ');
+  })();
   function startDrag(e, id, pos) {
     if (e.button !== undefined && e.button !== 0) return;
     if (e.pointerType === 'touch') return;
@@ -11594,7 +11607,24 @@ function Cheatsheet({
   }
   return React.createElement("div", {
     className: "cheatsheet"
-  }, React.createElement(CheatHeader, {
+  }, React.createElement("div", {
+    className: "cheat-assume no-print"
+  }, React.createElement("span", {
+    className: "ca-fmt",
+    style: { color: fmtMeta(config).color }
+  }, fmtMeta(config).label), React.createElement("span", {
+    className: "ca-item"
+  }, React.createElement("b", null, config.teams), " teams"), React.createElement("span", {
+    className: "ca-item"
+  }, React.createElement("b", null, pprLabel)), _assumeIsAuction ? React.createElement("span", {
+    className: "ca-item"
+  }, React.createElement("b", null, "$", config.budget), " budget") : React.createElement("span", {
+    className: "ca-item"
+  }, "Pick ", React.createElement("b", null, "#", _fmtSlot)), _assumeStarters ? React.createElement("span", {
+    className: "ca-item"
+  }, "Starters ", React.createElement("b", null, _assumeStarters)) : null, React.createElement("span", {
+    className: "ca-note"
+  }, "Every number on this sheet assumes these settings. Adjust them under League Settings.")), React.createElement(CheatHeader, {
     myTeam: myTeam,
     players: players,
     config: config,
@@ -11630,7 +11660,7 @@ function Cheatsheet({
   }, STRAT[highlight].desc, React.createElement("button", {
     className: "hl-clear",
     onClick: () => setHighlight(null)
-  }, "clear")), ((config.format || 'auction') === 'snake' ? React.createElement("div", { className: "cheat-whb no-print" }, React.createElement("div", { className: "cheat-whb-h" }, "Will he be available?"), React.createElement("div", { className: "cheat-whb-sub" }, "Odds a player lasts to your next pick \u2014 from the live board, ADP, and position runs."), React.createElement("div", { className: "cheat-whb-in" }, React.createElement("div", { className: "whb-ac" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQ, onChange: e => { setWhbQ(e.target.value); setWhbShow(true); }, onFocus: () => setWhbShow(true), onBlur: () => setTimeout(() => setWhbShow(false), 170) }), (whbShow && (whbQ || "").trim()) ? React.createElement("div", { className: "whb-ac-list" }, (players || []).filter(function (p) { return p.name && p.name.toLowerCase().indexOf((whbQ || "").toLowerCase().trim()) >= 0; }).slice(0, 6).map(function (p) { return React.createElement("div", { key: p.id, className: "whb-ac-item", onMouseDown: function () { setWhbQ(p.name); setWhbShow(false); } }, p.name, React.createElement("span", { className: "whb-ac-pos" }, " " + p.position)); })) : null), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbR, onChange: e => setWhbR(e.target.value) })), whbResultCheat ? (whbResultCheat.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResultCheat.err) : whbResultCheat.drafted ? React.createElement("div", { className: "whb-res" }, whbResultCheat.player.name + " is already off the board.") : whbResultCheat.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResultCheat.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResultCheat.odds + "%"), " chance " + whbResultCheat.player.name + " (ADP " + (whbResultCheat.player.adp != null ? Math.round(whbResultCheat.player.adp) : "?") + ") is still there at your round " + whbResultCheat.round + " pick (overall #" + whbResultCheat.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Enter a player and a round.")) : null), ((config.format || 'auction') === 'snake' && !introDismissed ? React.createElement("div", { className: "cheat-intro no-print" }, React.createElement("span", { className: "ci-new" }, "NEW"), React.createElement("span", { className: "ci-body" }, "The ", React.createElement("b", { style: { color: '#34c759' } }, "ADP"), " number is tinted: ", React.createElement("b", { style: { color: '#34c759' } }, "green = a value"), " at his slot, ", React.createElement("b", { style: { color: '#e0a83c' } }, "amber = going early"), ". Tier breaks show as a line."), React.createElement("button", { className: "ci-x", onClick: () => { try { localStorage.setItem('it_snake_cheat_intro', '1'); } catch (e) {} setIntroDismissed(true); } }, "Got it \u00d7")) : null), ((config.format || 'auction') === 'snake' && _recPick ? React.createElement("div", { className: "cheat-recpick no-print" }, React.createElement("span", { className: "crp-tag" }, "YOUR PICK " + _recPick.label), React.createElement("span", { className: "crp-body" }, "Best on the board: ", React.createElement("b", null, _recPick.name), " ", React.createElement("em", null, _recPick.pos), " \u00b7 ", _recPick.av, "% he returns to you")) : null), ((config.format || 'auction') === 'snake' && _needs ? React.createElement("div", { className: "cheat-needs no-print" }, React.createElement("span", { className: "cn-label" }, "Your starters"), _needs.map(n => React.createElement("span", { key: n.pos, className: "cn-slot" + (n.met ? " met" : " open") }, n.pos, " ", n.have, "/", n.need, n.met ? " \u2713" : ""))) : null), React.createElement("div", {
+  }, "clear")), ((config.format || 'auction') === 'snake' ? React.createElement("div", { className: "cheat-whb no-print" }, React.createElement("div", { className: "cheat-whb-h" }, "Will he be available?"), React.createElement("div", { className: "cheat-whb-sub" }, "Odds a player lasts to your next pick \u2014 from the live board, ADP, and position runs."), React.createElement("div", { className: "cheat-whb-in" }, React.createElement("div", { className: "whb-ac" }, React.createElement("input", { className: "whb-in", placeholder: "Player name", value: whbQ, onChange: e => { setWhbQ(e.target.value); setWhbShow(true); }, onFocus: () => setWhbShow(true), onBlur: () => setTimeout(() => setWhbShow(false), 170) }), (whbShow && (whbQ || "").trim()) ? React.createElement("div", { className: "whb-ac-list" }, (players || []).filter(function (p) { return p.name && p.name.toLowerCase().indexOf((whbQ || "").toLowerCase().trim()) >= 0; }).slice(0, 6).map(function (p) { return React.createElement("div", { key: p.id, className: "whb-ac-item", onMouseDown: function () { setWhbQ(p.name); setWhbShow(false); } }, p.name, React.createElement("span", { className: "whb-ac-pos" }, " " + p.position)); })) : null), React.createElement("input", { className: "whb-in whb-round", type: "number", min: "1", placeholder: "Round", value: whbR, onChange: e => setWhbR(e.target.value) })), whbResultCheat ? (whbResultCheat.err ? React.createElement("div", { className: "whb-res whb-err" }, whbResultCheat.err) : whbResultCheat.drafted ? React.createElement("div", { className: "whb-res" }, whbResultCheat.player.name + " is already off the board.") : whbResultCheat.passed ? React.createElement("div", { className: "whb-res" }, "Your round " + whbResultCheat.round + " pick has already passed.") : React.createElement("div", { className: "whb-res" }, React.createElement("b", { className: "whb-odds" }, whbResultCheat.odds + "%"), " chance " + whbResultCheat.player.name + " (ADP " + (whbResultCheat.player.adp != null ? Math.round(whbResultCheat.player.adp) : "?") + ") is still there at your round " + whbResultCheat.round + " pick (overall #" + whbResultCheat.targetPick + ").")) : React.createElement("div", { className: "whb-res whb-hint" }, "Enter a player and a round.")) : null), ((config.format || 'auction') === 'snake' && !introDismissed ? React.createElement("div", { className: "cheat-intro no-print" }, React.createElement("span", { className: "ci-new" }, "NEW"), React.createElement("span", { className: "ci-body" }, "The ", React.createElement("b", { style: { color: '#34c759' } }, "Rank"), " number is tinted: ", React.createElement("b", { style: { color: '#34c759' } }, "green = a value"), " at his slot, ", React.createElement("b", { style: { color: '#e0a83c' } }, "amber = going early"), ". Tier breaks show as a line."), React.createElement("button", { className: "ci-x", onClick: () => { try { localStorage.setItem('it_snake_cheat_intro', '1'); } catch (e) {} setIntroDismissed(true); } }, "Got it \u00d7")) : null), ((config.format || 'auction') === 'snake' && _recPick ? React.createElement("div", { className: "cheat-recpick no-print" }, React.createElement("span", { className: "crp-tag" }, "YOUR PICK " + _recPick.label), React.createElement("span", { className: "crp-body" }, "Best on the board: ", React.createElement("b", null, _recPick.name), " ", React.createElement("em", null, _recPick.pos), " \u00b7 ", _recPick.av, "% he returns to you")) : null), ((config.format || 'auction') === 'snake' && _needs ? React.createElement("div", { className: "cheat-needs no-print" }, React.createElement("span", { className: "cn-label" }, "Your starters"), _needs.map(n => React.createElement("span", { key: n.pos, className: "cn-slot" + (n.met ? " met" : " open") }, n.pos, " ", n.have, "/", n.need, n.met ? " \u2713" : ""))) : null), React.createElement("div", {
     className: "cheat-legend no-print"
   }, (config.format || 'auction') === 'snake' ? React.createElement(React.Fragment, null, "Each column lists a position’s best players. ", React.createElement("b", null, "#"), " his rank at that position · ", React.createElement("b", null, "ADP"), " overall pick he usually goes · ", React.createElement("b", null, "AVAILABLE"), " chance he is still there after your next pick · ", React.createElement("b", null, "PPG"), " projected points per game", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = a value at his ADP"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = going early"), ".")) : config.format === 'bestball' ? React.createElement(React.Fragment, null, React.createElement("b", null, "ADP"), " best-ball draft slot · ", React.createElement("b", null, "CEILING"), " his upside per game · ", React.createElement("b", null, "STACK"), " ★ pairs a QB you roster · ", React.createElement("b", null, "SURVIVES%"), " odds he lasts to your next pick", React.createElement("span", { className: "cheat-heatleg" }, React.createElement("b", null, "ADP colour"), ": ", React.createElement("span", { style: { color: '#34c759', fontWeight: 700 } }, "green = falls to you (value)"), ", ", React.createElement("span", { style: { color: '#e0a83c', fontWeight: 700 } }, "amber = goes early"), ".")) : React.createElement(React.Fragment, null, React.createElement("b", null, "PROJ"), " likely auction price · ", React.createElement("b", null, "VALUE"), " true worth at your scoring · ", React.createElement("b", null, "YOU"), " the most you should pay, given your roster & budget", React.createElement("span", { className: "cheat-heatleg" }, "All dollar values are scaled to a ", React.createElement("b", null, "$", config.budget || 200, " budget"), " per team (", config.teams, " teams). Change it under Your League and every price recalculates."))), React.createElement("div", {
     className: "cheat-print-head only-print"
@@ -11641,7 +11671,7 @@ function Cheatsheet({
     className: "cph-logo"
   }), React.createElement("span", null, fmtMeta(config).label, " Cheat Sheet")), React.createElement("div", {
     className: "cph-sub"
-  }, config.teams, " teams · $", config.budget, " budget · ", pprLabel, highlight ? ` · ${STRAT[highlight].label} model` : '', " · generated ", dateStr), React.createElement("div", {
+  }, config.teams, " teams · ", _assumeIsAuction ? `$${config.budget} budget · ` : '', pprLabel, _assumeStarters ? ` · starters ${_assumeStarters}` : '', highlight ? ` · ${STRAT[highlight].label} model` : '', " · generated ", dateStr), React.createElement("div", {
     className: "cph-legend"
   }, React.createElement("span", {
     className: "cph-key"
@@ -11671,7 +11701,7 @@ function Cheatsheet({
     className: "cheat-onepage-brand"
   }, React.createElement("div", {
     className: "cob-sub"
-  }, fmtMeta(config).label, " Cheat Sheet · ", config.teams, " teams · $", config.budget, " budget · ", pprLabel, " · ", dateStr), React.createElement("div", {
+  }, fmtMeta(config).label, " Cheat Sheet · ", config.teams, " teams · ", _assumeIsAuction ? `$${config.budget} budget · ` : '', pprLabel, " · ", dateStr), React.createElement("div", {
     className: "cob-chip"
   }, React.createElement("img", {
     src: "/tuna.png",
@@ -11877,7 +11907,7 @@ function Cheatsheet({
       key: k,
       className: "cheat-ppg",
       style: _adpColor ? { color: _adpColor, fontWeight: 700 } : undefined,
-      title: _adpDir === 'value' ? "Value \u2014 his ADP runs later than his ranking, so he tends to fall to you" : _adpDir === 'reach' ? "Reach \u2014 his ADP runs ahead of his ranking, so he goes early" : "Average draft position"
+      title: _adpDir === 'value' ? "Value \u2014 his overall rank runs later than his positional ranking, so he tends to fall to you" : _adpDir === 'reach' ? "Reach \u2014 his overall rank runs ahead of his positional ranking, so he goes early" : "Iron Tuna overall rank"
     }, p.adp != null ? Math.round(p.adp) : '\u2014') : k === 'bestavail' ? React.createElement("span", {
       key: k,
       className: "cheat-ppg",
@@ -11897,7 +11927,7 @@ function Cheatsheet({
     }, bestballStackBoost(p, _fmtMyRoster, 1) > 0 ? '\u2605' : '\u2014') : null));
   })))))), React.createElement("div", {
     className: "cheat-print-foot"
-  }, "IRON TUNA · Auction Cheat Sheet · ", config.teams, "-team · $", config.budget, " budget · ", pprLabel, " · ", dateStr));
+  }, "IRON TUNA · ", fmtMeta(config).label, " Cheat Sheet · ", config.teams, "-team · ", _assumeIsAuction ? `$${config.budget} budget · ` : '', pprLabel, " · ", dateStr));
 }
 function mockStarterPts(roster, config, games) {
   const by = {};
@@ -14386,7 +14416,195 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   });
   return grid;
 }
-function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, switchReserve) {
+// Fill the open starter slots with the highest-scoring distinct set of players a
+// dollar budget can buy. This is a multiple-choice knapsack, so it is solved
+// exactly: one "exactly k players" knapsack per position, then a max-plus
+// combine across positions, maximised over every way of handing the FLEX slots
+// out to the positions they accept. The greedy points-per-dollar climb this
+// replaced stranded budget and could be beaten outright once part of the board
+// was gone.
+//
+// freeSlots: [{ label, eligible:[pos] }]  byPos: { pos: [players sorted] }
+// used: Set of ids already committed  cap: max price for any one player
+// Returns { picks: { label: player }, cost } or null when nothing fits.
+function bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap) {
+  if (!freeSlots.length) return { picks: {}, cost: 0 };
+  const B = Math.max(0, Math.floor(budget));
+  const NEG = -Infinity;
+
+  // slots that accept the same positions are interchangeable
+  const groups = [];
+  const gIndex = new Map();
+  freeSlots.forEach(s => {
+    const sig = s.eligible.slice().sort().join('|');
+    let g = gIndex.get(sig);
+    if (!g) {
+      g = { sig: sig, eligible: s.eligible.slice(), slots: [] };
+      gIndex.set(sig, g);
+      groups.push(g);
+    }
+    g.slots.push(s);
+  });
+
+  // every way to satisfy a group from the positions it accepts
+  const perGroup = groups.map(g => {
+    const outs = [];
+    const walk = (i, left, acc) => {
+      if (i === g.eligible.length) {
+        if (left === 0) outs.push(acc.slice());
+        return;
+      }
+      for (let n = 0; n <= left; n++) {
+        acc[i] = n;
+        walk(i + 1, left - n, acc);
+      }
+    };
+    walk(0, g.slots.length, []);
+    return outs;
+  });
+
+  // how many players any one position might have to supply
+  const maxK = {};
+  groups.forEach((g, gi) => {
+    g.eligible.forEach((pos, pi) => {
+      let m = 0;
+      perGroup[gi].forEach(d => { if (d[pi] > m) m = d[pi]; });
+      maxK[pos] = (maxK[pos] || 0) + m;
+    });
+  });
+
+  // "exactly k from this position, cost <= b" with enough breadcrumbs to
+  // rebuild the roster afterwards
+  const tables = {};
+  Object.keys(maxK).forEach(pos => {
+    const kmax = maxK[pos];
+    const pool = (byPos[pos] || []).filter(p => !used.has(p.id));
+    const dp = [];
+    const who = [];
+    const back = [];
+    for (let k = 0; k <= kmax; k++) {
+      dp.push(new Float64Array(B + 1).fill(NEG));
+      who.push(new Int32Array(B + 1).fill(-1));
+      back.push(new Int32Array(B + 1).fill(-1));
+    }
+    dp[0].fill(0);
+    for (let i = 0; i < pool.length; i++) {
+      const pr = priceOf(pool[i]);
+      if (pr > B || pr > cap) continue;
+      const pt = pool[i].projectedPoints || 0;
+      for (let k = kmax; k >= 1; k--) {
+        const prev = dp[k - 1], curr = dp[k];
+        for (let b = B; b >= pr; b--) {
+          const base = prev[b - pr];
+          if (base === NEG) continue;
+          if (base + pt > curr[b]) {
+            curr[b] = base + pt;
+            who[k][b] = i;
+            back[k][b] = b - pr;
+          }
+        }
+      }
+    }
+    // make each row monotone in budget so the combine can read dp[k][b]
+    // as "best with at most b dollars"
+    for (let k = 1; k <= kmax; k++) {
+      const row = dp[k];
+      const w = who[k], bk = back[k];
+      for (let b = 1; b <= B; b++) {
+        if (row[b - 1] > row[b]) { row[b] = row[b - 1]; w[b] = w[b - 1]; bk[b] = bk[b - 1]; }
+      }
+    }
+    tables[pos] = { dp: dp, who: who, back: back, pool: pool };
+  });
+
+  function chosen(pos, k, b) {
+    const t = tables[pos];
+    const out = [];
+    while (k > 0) {
+      const i = t.who[k][b];
+      if (i < 0) break;
+      out.push(t.pool[i]);
+      b = t.back[k][b];
+      k--;
+    }
+    return out;
+  }
+
+  // walk every combination of group distributions
+  let best = null;
+  const counts = {};
+  const walkGroups = gi => {
+    if (gi === groups.length) {
+      const positions = Object.keys(counts).filter(pos => counts[pos] > 0);
+      if (positions.some(pos => !tables[pos] || tables[pos].dp[counts[pos]] === undefined)) return;
+      let curr = new Float64Array(B + 1).fill(NEG);
+      curr[0] = 0;
+      const splits = [];
+      for (const pos of positions) {
+        const row = tables[pos].dp[counts[pos]];
+        const next = new Float64Array(B + 1).fill(NEG);
+        const take = new Int32Array(B + 1).fill(-1);
+        for (let b = 0; b <= B; b++) {
+          if (curr[b] === NEG) continue;
+          const had = curr[b];
+          for (let sp = 0; b + sp <= B; sp++) {
+            const v = row[sp];
+            if (v === NEG) continue;
+            if (had + v > next[b + sp]) { next[b + sp] = had + v; take[b + sp] = sp; }
+          }
+        }
+        splits.push({ pos: pos, take: take });
+        curr = next;
+      }
+      let bb = -1, bv = NEG;
+      for (let b = 0; b <= B; b++) if (curr[b] > bv) { bv = curr[b]; bb = b; }
+      if (bb < 0 || bv === NEG) return;
+      if (best && bv <= best.pts) return;
+      // rebuild: pull each position's players, then hand them to the slots
+      const byPosPicks = {};
+      let rem = bb;
+      for (let i = splits.length - 1; i >= 0; i--) {
+        const sp = splits[i].take[rem];
+        byPosPicks[splits[i].pos] = chosen(splits[i].pos, counts[splits[i].pos], sp)
+          .sort((a, b2) => (b2.projectedPoints || 0) - (a.projectedPoints || 0));
+        rem -= sp;
+      }
+      const picks = {};
+      let cost = 0;
+      let ok = true;
+      // dedicated slots draw first so the best players land in named slots
+      const order = groups.map((g, gi2) => gi2).sort((a, b2) => groups[a].eligible.length - groups[b2].eligible.length);
+      for (const gi2 of order) {
+        const g = groups[gi2];
+        const dist = g.__dist;
+        g.eligible.forEach((pos, pi) => {
+          for (let n = 0; n < dist[pi]; n++) {
+            const list = byPosPicks[pos] || [];
+            const pl = list.shift();
+            if (!pl) { ok = false; return; }
+            const slot = g.slots.find(sl => picks[sl.label] === undefined);
+            if (!slot) { ok = false; return; }
+            picks[slot.label] = pl;
+            cost += priceOf(pl);
+          }
+        });
+      }
+      if (!ok || Object.keys(picks).length !== freeSlots.length) return;
+      best = { picks: picks, cost: cost, pts: bv };
+      return;
+    }
+    for (const dist of perGroup[gi]) {
+      groups[gi].__dist = dist;
+      groups[gi].eligible.forEach((pos, pi) => { counts[pos] = (counts[pos] || 0) + dist[pi]; });
+      walkGroups(gi + 1);
+      groups[gi].eligible.forEach((pos, pi) => { counts[pos] -= dist[pi]; });
+    }
+  };
+  walkGroups(0);
+  return best;
+}
+function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced, roleOverrides, applyFloors, forcedPrices, noBench, switchReserve, opts) {
+  opts = opts || {};
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
   const R = myTeam.budgetRemaining;
@@ -14478,49 +14696,29 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   const benchShare = alloc * 0.35;
   const extraBench = noBench ? 0 : Math.round(benchShare * R);
   const conc = config.strategy?.concentration ?? 0.5;
-  const perCap = 0.30 + conc * 0.55;
+  const perCap = opts.noCap ? Infinity : 0.30 + conc * 0.55;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);
   let budgetForStarters = Math.max(freeSlots.length * minBid, R - reserveBench - overrideCost - forcedCost - extraBench);
-  freeSlots.forEach(s => {
-    const c = cheapestFor(s.eligible);
-    if (c) {
-      used.add(c.id);
-      plan[s.label] = c;
-    }
-  });
-  let spent = freeSlots.reduce((sum, s) => sum + (plan[s.label] ? priceOf(plan[s.label]) : 0), 0);
-  let guard = 0;
-  while (guard++ < 3000) {
-    let bestMove = null;
+  const priceCap = perCap === Infinity ? Infinity : perCap * budgetForStarters + 0.001;
+  const bestSet = bestStarterSet(freeSlots, byPos, used, priceOf, budgetForStarters, priceCap);
+  if (bestSet) {
     freeSlots.forEach(s => {
-      const cur = plan[s.label];
-      const curPts = cur ? cur.projectedPoints : 0;
-      const curPrice = cur ? priceOf(cur) : 0;
-      s.eligible.forEach(pos => (byPos[pos] || []).forEach(c => {
-        if (used.has(c.id)) return;
-        const gain = c.projectedPoints - curPts;
-        if (gain <= 0) return;
-        if (spent - curPrice + priceOf(c) > budgetForStarters + 0.001) return;
-        if (perCap < 0.999 && priceOf(c) > perCap * budgetForStarters + 0.001) return;
-        const dCost = priceOf(c) - curPrice;
-        const eff = dCost <= 0 ? Infinity : gain / dCost;
-        if (!bestMove || eff > bestMove.eff || eff === bestMove.eff && gain > bestMove.gain) {
-          bestMove = {
-            slot: s,
-            cand: c,
-            eff,
-            gain,
-            dCost,
-            curId: cur ? cur.id : null
-          };
-        }
-      }));
+      const pl = bestSet.picks[s.label];
+      if (pl) {
+        used.add(pl.id);
+        plan[s.label] = pl;
+      }
     });
-    if (!bestMove) break;
-    if (bestMove.curId) used.delete(bestMove.curId);
-    used.add(bestMove.cand.id);
-    spent += bestMove.dCost;
-    plan[bestMove.slot.label] = bestMove.cand;
+  } else {
+    // Budget cannot cover even the cheapest legal set: show the cheapest one so
+    // the planner still renders, and let feasible:false flag the shortfall.
+    freeSlots.forEach(s => {
+      const c = cheapestFor(s.eligible);
+      if (c) {
+        used.add(c.id);
+        plan[s.label] = c;
+      }
+    });
   }
   const plannedStarterCost = remainingStarterSlots.reduce((sum, s) => sum + (fixed[s.label] != null ? fixed[s.label] : plan[s.label] ? priceOf(plan[s.label]) : 0), 0);
   const benchTargets = [];
@@ -15286,7 +15484,7 @@ function PlayersRail({
       letterSpacing: '0.04em',
       lineHeight: 1.5
     }
-  }, (config && config.format === 'snake') ? "● = lock player into your ideal team · ADP = avg draft position · Pts = proj points/game · Pos = positional rank" : ["● = force into lineup · ", React.createElement("b", { key: 'lp' }, "Proj"), " = likely market price · ", React.createElement("b", { key: 'lv' }, "Val"), " = VBD value · ", React.createElement("b", { key: 'ly', style: { color: 'var(--gold-text)' } }, "You"), " = your max bid"]), React.createElement("div", {
+  }, (config && config.format === 'snake') ? "● = lock player into your ideal team · Rank = Iron Tuna overall rank · Pts = proj points/game · Pos = positional rank" : ["● = force into lineup · ", React.createElement("b", { key: 'lp' }, "Proj"), " = likely market price · ", React.createElement("b", { key: 'lv' }, "Val"), " = VBD value · ", React.createElement("b", { key: 'ly', style: { color: 'var(--gold-text)' } }, "You"), " = your max bid"]), React.createElement("div", {
     className: "rail-controls"
   }, React.createElement("input", {
     type: "search",
@@ -15421,7 +15619,7 @@ function PlayersRail({
         style: { cursor: 'pointer' }
       }, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name), React.createElement("span", {
         className: "rr-c",
-        title: (config && config.format !== 'auction') ? "ADP (average draft position)" : "Proj, likely market/auction price"
+        title: (config && config.format !== 'auction') ? "Iron Tuna overall rank" : "Proj, likely market/auction price"
       }, (config && config.format !== 'auction') ? (p.adp != null ? Math.round(p.adp) : '\u2014') : ('$' + projVal)), React.createElement("span", {
         className: "rr-c",
         title: (config && config.format === 'bestball') ? "Ceiling, per game (upside-weighted)" : (config && config.format === 'snake') ? "Projected points per game" : "Value, VBD fair value"
@@ -19611,7 +19809,7 @@ function OnboardingChecklist({
 const MODEL_FOCUS = {
   ideal: {
     focus: [],
-    note: 'Balanced build, takes the best value at every position; no single spot is forced.'
+    note: 'The provably best starting lineup your budget can buy: every legal combination is solved, not approximated. It plays for maximum starter points and leaves the bench at minimum bid, so pick one of the shape models below if you want depth held back.'
   },
   targets: {
     focus: [],
@@ -19727,10 +19925,30 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
     return plan;
   }
   if (key === 'ideal') {
+    // "The single highest-scoring starting lineup you can afford" is a plain
+    // optimisation, so solve it directly instead of taking the best of the
+    // shape presets. The presets each hold money back for bench depth, which
+    // left roughly a fifth of the budget unspent and cost ~5 points a game.
+    // Players the user has locked stay locked; nothing else is constrained.
+    const locked = new Set();
+    (targets || new Set()).forEach(id => {
+      if (!di.has(id)) locked.add(id);
+    });
+    let fpIdeal;
+    (whatIfAnchors || []).forEach(a => {
+      if (a && a.id != null && a.id !== '' && !di.has(a.id)) {
+        locked.add(a.id);
+        (fpIdeal = fpIdeal || {})[a.id] = Math.max(1, a.price || 1);
+      }
+    });
+    const best = buildOptimalPlan(myTeam, players, config, di, undefined, locked, roleOverrides, true, fpIdeal, true, undefined, {
+      noCap: true
+    });
+    if (best) return best;
     const cands = ['none', 'balanced', 'heroRB', 'heroWR', 'heroQB', 'zeroRB', 'robustRB', 'robustWR', 'eliteTE'].map(planFor).filter(Boolean);
     const feas = cands.filter(p => p.feasible);
     const pool = feas.length ? feas : cands;
-    return pool.reduce((best, p) => !best || (p.starterPoints || 0) > (best.starterPoints || 0) ? p : best, null);
+    return pool.reduce((bestSoFar, p) => !bestSoFar || (p.starterPoints || 0) > (bestSoFar.starterPoints || 0) ? p : bestSoFar, null);
   }
   return planFor(key);
 }
