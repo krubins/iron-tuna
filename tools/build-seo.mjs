@@ -105,17 +105,39 @@ function decode(s) {
     .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&nbsp;/g, ' ');
 }
 
-// git dates for the evergreen pages. If git is unavailable (a bare deploy
-// checkout, say) the dates are simply omitted rather than invented — a wrong
-// dateModified is a worse signal to a crawler than a missing one.
-function gitDates(file) {
+// git dates for the evergreen pages. If git cannot answer, the dates are never
+// invented — a wrong dateModified is a worse signal to a crawler than a missing
+// one, and whatever is already committed is kept instead of being overwritten
+// with a guess.
+//
+// A SHALLOW clone is the case that matters: `actions/checkout` fetches depth 1 by
+// default, so every file's history collapses to the single checkout commit and
+// every guide would appear to have been written today. That is not a missing
+// answer, it is a confidently wrong one, so it is detected up front and treated
+// as "no history" rather than trusted.
+const GIT_OPTS = { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] };
+const HAS_HISTORY = (() => {
   try {
-    const opts = { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] };
-    const all = execFileSync('git', ['log', '--follow', '--format=%ad', '--date=short', '--', file], opts)
+    return execFileSync('git', ['rev-parse', '--is-shallow-repository'], GIT_OPTS).trim() === 'false';
+  } catch (e) { return false; }
+})();
+
+function gitDates(file) {
+  if (!HAS_HISTORY) return null;
+  try {
+    const all = execFileSync('git', ['log', '--follow', '--format=%ad', '--date=short', '--', file], GIT_OPTS)
       .trim().split('\n').filter(Boolean);
     if (!all.length) return null;
     return { published: all[all.length - 1], modified: all[0] };
   } catch (e) { return null; }
+}
+
+// What this tool wrote last time, so a run without git history can carry the
+// previously computed dates forward instead of dropping them.
+function priorGraph(html) {
+  const m = html.match(/<script type="application\/ld\+json" data-seo="build-seo">([\s\S]*?)<\/script>/);
+  if (!m) return null;
+  try { return JSON.parse(m[1])['@graph']; } catch (e) { return null; }
 }
 
 // ── 1. the Google tag ────────────────────────────────────────────────────────
@@ -195,7 +217,11 @@ function buildGraph(file, html) {
   }
 
   if (GUIDES.includes(file)) {
-    const d = gitDates(file);
+    let d = gitDates(file);
+    if (!d) {
+      const prior = (priorGraph(html) || []).find((n) => n['@type'] === 'Article');
+      if (prior && prior.datePublished) d = { published: prior.datePublished, modified: prior.dateModified };
+    }
     return [
       {
         '@type': 'Article',

@@ -116,6 +116,27 @@ jobs:
           fi
           echo "front.html is up to date"
 
+      # Google Analytics collects NOTHING from a page that does not configure the
+      # GA4 destination, and the failure is silent: the page renders, the Ads tag
+      # keeps converting, and the only symptom is a property that says "no data
+      # received". A page added without running build-seo.mjs also gets no Article
+      # JSON-LD, no sitemap lastmod, and — for a camp report — no static link from
+      # the front page, leaving it reachable only from sitemap.xml. Same contract
+      # as the front.html step above: rebuilding here must produce no diff.
+      #
+      # build-seo.mjs reads `git log` for the guides' dates, and this checkout is
+      # shallow, so it detects that and carries the committed dates forward rather
+      # than dating every guide to the checkout commit. No fetch-depth needed.
+      - name: The discovery layer is rebuilt from the pages that exist
+        run: |
+          if ! node tools/build-seo.mjs --check; then
+            echo "::error::the discovery layer is stale — run 'node tools/build-seo.mjs' and commit the result"
+            exit 1
+          fi
+
+      - name: Analytics tagging, structured data and crawlability
+        run: node tools/test-seo.mjs
+
       # The scrolling cheat-sheet insights are hand-written prose with no build
       # step, so nothing used to notice when a note outlived the roster it
       # described — by August 2026 eight of the eleven backfield notes named
