@@ -2040,6 +2040,98 @@ async function projectionsPayload(env, ctx) {
   return _PROJ_ENC;
 }
 
+// ── traffic analytics ────────────────────────────────────────────────────────
+// Pageviews are counted here in the worker rather than by a script tag, because
+// every request already passes through it (run_worker_first) — that covers all
+// ~100 static pages at once and keeps counting when a visitor blocks scripts.
+// A "visitor" is a salted hash of IP + user-agent that rotates daily: no cookie,
+// nothing that outlives the day, and nothing that can be walked back to a person.
+// The flip side is that a multi-day window counts a returning visitor once per
+// day they came back; the admin page says so rather than pretending otherwise.
+const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|embedly|quora|pinterest|whatsapp|telegram|discord|slack|preview|monitor|uptime|curl|wget|python-requests|headless|lighthouse|pagespeed|gtmetrix|ahrefs|semrush|mj12|dotbot|petalbot|yandex|baidu|applebot|gptbot|claudebot|ccbot|perplexity|bytespider|scrapy|okhttp|axios|node-fetch/i;
+const ANALYTICS_DDL = [
+  'CREATE TABLE IF NOT EXISTS page_views (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, path TEXT NOT NULL, visitor TEXT NOT NULL, source TEXT, country TEXT)',
+  'CREATE INDEX IF NOT EXISTS idx_pv_ts ON page_views(ts)',
+  'CREATE INDEX IF NOT EXISTS idx_pv_day ON page_views(day)',
+  'CREATE TABLE IF NOT EXISTS site_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, event TEXT NOT NULL, uid TEXT, path TEXT, props TEXT)',
+  'CREATE INDEX IF NOT EXISTS idx_ev_ts ON site_events(ts)',
+  'CREATE INDEX IF NOT EXISTS idx_ev_name ON site_events(event, ts)',
+];
+// Cached per isolate, so the DDL costs one batch on cold start and nothing after.
+let __analyticsReady = false;
+async function analyticsReady(env) {
+  if (__analyticsReady) return true;
+  if (!env.LEADS_DB) return false;
+  try {
+    await env.LEADS_DB.batch(ANALYTICS_DDL.map(s => env.LEADS_DB.prepare(s)));
+  } catch (e) {
+    // Some D1 versions refuse DDL inside a batch's transaction; one at a time
+    // still gets there, and a hard failure just means no analytics this request.
+    try { for (const s of ANALYTICS_DDL) await env.LEADS_DB.prepare(s).run(); } catch (e2) { return false; }
+  }
+  __analyticsReady = true;
+  return true;
+}
+const utcDay = ts => new Date(ts).toISOString().slice(0, 10);
+async function visitorHash(env, request, day) {
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const ua = request.headers.get('user-agent') || '';
+  const salt = env.LEADS_EXPORT_KEY || 'iron-tuna';
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(day + '|' + salt + '|' + ip + '|' + ua));
+  return [...new Uint8Array(buf)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+// Where the visit came from: an explicit utm_source wins, then the referring
+// host, then "" which the admin page reads as direct. Self-referrals (clicking
+// between our own pages) are dropped so the list is arrivals, not internal hops.
+function trafficSource(request, url) {
+  try {
+    const utm = (url.searchParams.get('utm_source') || '').trim();
+    if (utm) return utm.toLowerCase().slice(0, 60);
+    const r = request.headers.get('referer') || '';
+    if (!r) return '';
+    const h = new URL(r).hostname.replace(/^www\./, '');
+    return h === url.hostname.replace(/^www\./, '') ? '' : h.slice(0, 80);
+  } catch (e) { return ''; }
+}
+async function logPageView(env, request, url) {
+  try {
+    const ua = request.headers.get('user-agent') || '';
+    if (!ua || BOT_RE.test(ua)) return;
+    // Prefetch/prerender and framed loads aren't someone looking at the page.
+    const purpose = request.headers.get('sec-purpose') || request.headers.get('purpose') || '';
+    if (/prefetch|prerender/i.test(purpose)) return;
+    if ((request.headers.get('sec-fetch-dest') || '') === 'iframe') return;
+    const path = (url.pathname.replace(/\/+$/, '') || '/').slice(0, 160);
+    if (path.startsWith('/admin')) return; // don't count yourself checking the numbers
+    if (!(await analyticsReady(env))) return;
+    const ts = Date.now(), day = utcDay(ts);
+    await env.LEADS_DB.prepare('INSERT INTO page_views (ts, day, path, visitor, source, country) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(ts, day, path, await visitorHash(env, request, day), trafficSource(request, url), (request.cf && request.cf.country) || '').run();
+  } catch (e) {}
+}
+async function logSiteEvent(env, request, raw) {
+  try {
+    const ua = request.headers.get('user-agent') || '';
+    if (!ua || BOT_RE.test(ua)) return;
+    let b = {}; try { b = JSON.parse(raw || '{}'); } catch (e) { return; }
+    const name = String(b.event || '').replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 60);
+    if (!name) return;
+    if (!(await analyticsReady(env))) return;
+    const props = b.props && typeof b.props === 'object' ? b.props : {};
+    const ts = Date.now();
+    await env.LEADS_DB.prepare('INSERT INTO site_events (ts, day, event, uid, path, props) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(ts, utcDay(ts), name, String(b.uid || '').slice(0, 48), String(props.path || props.page || '').slice(0, 160), JSON.stringify(props).slice(0, 600)).run();
+  } catch (e) {}
+}
+// Keep the tables from growing forever; called from the daily cron.
+async function pruneAnalytics(env, keepDays) {
+  if (!(await analyticsReady(env))) return { pruned: false };
+  const cutoff = Date.now() - keepDays * 86400000;
+  const a = await env.LEADS_DB.prepare('DELETE FROM page_views WHERE ts < ?').bind(cutoff).run();
+  const b = await env.LEADS_DB.prepare('DELETE FROM site_events WHERE ts < ?').bind(cutoff).run();
+  return { pruned: true, keepDays, pageViews: (a.meta && a.meta.changes) || 0, events: (b.meta && b.meta.changes) || 0 };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -2715,11 +2807,62 @@ export default {
         return json(out, 200, c);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
     }
+    if (url.pathname === '/api/admin/traffic') {
+      // Traffic overview powering the Traffic section of /admin: pageviews and
+      // daily-unique visitors, top pages, where arrivals came from, and the named
+      // click events the site fires. Separate from /api/admin/dashboard so it
+      // still loads when the Stripe pull there is slow or misconfigured.
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
+      if (!(await analyticsReady(env))) return json({ ok: false, error: 'no_tables' }, 500, c);
+      const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
+      const db = env.LEADS_DB;
+      try {
+        const now = Date.now();
+        const since = now - days * 86400000;
+        const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { return []; } };
+        const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { return {}; } };
+        const win = sql => 'SELECT COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ?' + (sql || '');
+        const todayStart = Date.parse(utcDay(now) + 'T00:00:00Z');
+
+        const out = { ok: true, generatedAt: now, days };
+        out.totals = {
+          today: await one(win(), todayStart),
+          d7: await one(win(), now - 7 * 86400000),
+          window: await one(win(), since),
+          activeNow: ((await one('SELECT COUNT(DISTINCT visitor) AS n FROM page_views WHERE ts >= ?', now - 1800000)).n) || 0,
+        };
+        // Daily grid, zero-filled so the chart has a point for every day even
+        // before there is traffic on it.
+        const daily = {};
+        for (let i = days - 1; i >= 0; i--) { const d = utcDay(now - i * 86400000); daily[d] = { date: d, views: 0, visitors: 0 }; }
+        (await rows('SELECT day, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ? GROUP BY day', since))
+          .forEach(r => { if (daily[r.day]) daily[r.day] = { date: r.day, views: r.views || 0, visitors: r.visitors || 0 }; });
+        out.daily = Object.keys(daily).sort().map(k => daily[k]);
+
+        out.topPages = (await rows('SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ? GROUP BY path ORDER BY views DESC LIMIT 25', since))
+          .map(r => ({ path: r.path, views: r.views || 0, visitors: r.visitors || 0 }));
+        out.sources = (await rows("SELECT source, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ? GROUP BY source ORDER BY views DESC LIMIT 20", since))
+          .map(r => ({ source: r.source || '', views: r.views || 0, visitors: r.visitors || 0 }));
+        out.countries = (await rows("SELECT country, COUNT(*) AS views FROM page_views WHERE ts >= ? AND country != '' GROUP BY country ORDER BY views DESC LIMIT 12", since))
+          .map(r => ({ country: r.country, views: r.views || 0 }));
+        out.events = (await rows('SELECT event, COUNT(*) AS n, COUNT(DISTINCT uid) AS people FROM site_events WHERE ts >= ? GROUP BY event ORDER BY n DESC LIMIT 40', since))
+          .map(r => ({ event: r.event, count: r.n || 0, people: r.people || 0 }));
+        const first = await one('SELECT MIN(ts) AS t FROM page_views');
+        out.collectingSince = first.t || null;
+        return json(out, 200, c);
+      } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
+    }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       if (request.method !== 'POST') return new Response(null, { status: 204, headers: c });
-      if (env.ANALYTICS_WEBHOOK) { try { const b = await request.text(); await fetch(env.ANALYTICS_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: b }); } catch (e) {} }
+      if (await rl(env, request, 'track', 400, 600)) return new Response(null, { status: 204, headers: c });
+      let __evt = ''; try { __evt = (await request.text()).slice(0, 4000); } catch (e) {}
+      if (env.ANALYTICS_WEBHOOK) { try { await fetch(env.ANALYTICS_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: __evt }); } catch (e) {} }
+      ctx.waitUntil(logSiteEvent(env, request, __evt));
       return new Response(null, { status: 204, headers: c });
     }
     if (url.pathname === '/api/checkout') {
@@ -2868,6 +3011,9 @@ export default {
     } catch (e) {}
     const resp = await env.ASSETS.fetch(__assetReq);
     const ct = resp.headers.get('content-type') || '';
+    // Count the view off the response path — a slow or failed D1 write must never
+    // hold up the page. Only real, successful HTML loads count.
+    if (resp.ok && ct.includes('text/html') && request.method === 'GET') ctx.waitUntil(logPageView(env, request, url));
     if (ct.includes('text/html')) {
       // Per-route SEO/AEO meta for the SPA format routes (they're all served from the
       // single index.html, which carries auction-focused meta). /auctiondraft + / keep
@@ -2932,6 +3078,9 @@ export default {
       ctx.waitUntil(runOddsRefresh(env)
         .then(r => console.log('odds refresh:', JSON.stringify(r)))
         .catch(e => console.error('odds refresh failed:', e && e.message)));
+      ctx.waitUntil(pruneAnalytics(env, 180)
+        .then(r => console.log('analytics prune:', JSON.stringify(r)))
+        .catch(e => console.error('analytics prune failed:', e && e.message)));
       return;
     }
     const slots = slotsByCron[event.cron];
