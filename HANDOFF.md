@@ -432,6 +432,24 @@ Still open, and pre-existing: `Proj` is the only QB number that reacts to superf
 
 `node tools/test-qb-curve.mjs` walks five league shapes — default, explicit 1-QB, superflex, 2-QB, and QB-eligible-with-no-flex-slot — each from a **cleared profile**, because the mutations otherwise stack and every board after the first describes a league no scenario asked for. It asserts the two 1-QB-equivalent leagues price QBs *identically to the untouched default*, not merely cheaply, and that both real two-QB-slot leagues cost more at QB1 and QB7. It also states the 1-QB shape against RB1 rather than in dollars, so that part holds at any league size: QB1 at most three quarters of RB1, QB7 under a quarter of RB1, the QB1→QB7 drop steeper than RB1→RB7, and superflex strictly more expensive than 1-QB at both QB1 and QB7. **It fails on the pre-cut curve** — verified by reverting. Remember the two mirrors: `COLUMN_CURVE` in `_worker.js` and `CURVE` in `it-league.js` both carry the 1-QB QB row, and `test-worker-column.mjs` / `test-it-league.mjs` fail loudly if they drift.
 
+## 9i. The reader's own projections/odds blend (added August 2026)
+
+The board is shipped **75% of the way toward the sportsbook** (§9a, §9b) — that is our editorial call, and it is not every reader's. Some trust the consensus feeds and want the odds out of it; some want the book and nothing else. The **Projections vs Vegas** slider in the Draft Models panel (`CheatHeader` in `index.html`, directly under Starters vs Depth) hands that call to the reader, anywhere from "ignore the odds" to "follow the book".
+
+**It re-cuts a blend the server already made, from the endpoints — never from the shipped number.** `blendProjections` ships `projectedStats` already blended and `vegas[k] = [committed, marketImplied, blended]`. That third value is itself a point on the line between the first two, so blending *off* it would compound the default weighting instead of replacing it. `applyVegasWeight(players, w)` interpolates between slots 0 and 1, rewrites slot 2 to the new blend (so the `V` flag, the `▲3` rank chip and their tooltips keep describing the board on screen), and rounds exactly the way the worker's `_oddsRound` does — so `w = VEGAS_DEFAULT_W` reproduces the shipped numbers to the digit rather than off by a decimal. `VEGAS_DEFAULT_W` is `0.75`, declared above `DEFAULT_LEAGUE_CONFIG` because the config's `strategy.vegasWeight` default references it; `tools/test-vegas-weight.mjs` fails if it ever drifts from the worker's `VEGAS_WEIGHT`.
+
+**It is applied before anything is scored** — in `baseValued`, ahead of `scorePlayer`, so one drag moves points, ranks, tiers, VALUE, You and every draft model together. Wiring it any later would move the `Proj` column and leave the rest of the board describing a projection nobody is looking at.
+
+Three properties the control promises and the tests hold it to:
+
+- **Only where they disagree.** Stats no book prices are passed through, and a player the book never priced is returned as the *same object*, so downstream memos stay valid. On screen he can still shift a hair, because `normalizeToLastYear` rescales the whole pool — that ripple is bounded in the browser test, not asserted away.
+- **A hand-entered stat wins.** `handlePlayerEdit` drops the odds triple for any stat the reader typed over, so the slider cannot overwrite an edit the next time it moves.
+- **It is undoable.** The `reset` link (shown only off-default) restores the shipped board exactly, not approximately.
+
+Hidden entirely when no player in the pool carries odds — an inert control reads as a broken one.
+
+`node tools/test-vegas-weight.mjs` pins the math, the clamping, the hostile inputs and the wiring (37 assertions, no browser). `node tools/test-vegas-slider.mjs` drives the real app in Chromium: it stubs an overlay, opens the panel, drags to both ends and back, and asserts Proj, position rank, the `V` flag and the readout all follow — and that reset lands back on the exact numbers it started from. Same playwright-core/react/Chromium dependencies and the same clean skip as `test-you-column.mjs`.
+
 ## 10. X (Twitter) auto-post (added July 2026)
 
 Posts to **@irontunafantasy** every **weekday, staggered across three slots** (13:00 / 16:00 / 19:00 UTC = 9am / noon / 3pm EDT) so the day's threads hit different audience windows instead of one same-minute botlike burst: the **auction insight thread at 13:00**, the **snake insight thread at 16:00**, and the **day's bonus post at 19:00** — Monday a poll, Tuesday+Thursday snake-draft "survival odds" feature promos, Wednesday alternating auction money-allocation strategy and Value Coach promos, and Friday (much lower volume, by design, best ball is a separate niche format) best-ball insights and ceiling/stack/championship-week feature promos. Runs via three Cloudflare Worker **Cron Triggers** (one per slot, dispatched on `event.cron` in `scheduled()`), no external scheduler needed.
@@ -1041,15 +1059,90 @@ continues the thread rather than restarting it — revisiting a call when news h
 moved it, and not re-litigating the same analyst-player pairing while nothing has
 changed.
 
-#### Turning it on
+#### The standing column: `/analyst-desk`
 
-The desk is defined in the worker and covered by tests, but the Routine
-(`trig_011LYewcPUQikF8izFsN2LAr`, "Iron Tuna — lead story refresh (every 3h)") is
-what actually writes a story, and its desk list lives in its prompt. **Flip it
-after this is on `main` and deployed, not before** — a run that stores
+The lead rotation is ephemeral by design. `/lead` is `noindex` and its story is
+replaced every three hours, so on its own the analyst desk would have been a
+column whose back catalogue existed only as five "Recent insights" links. The
+standing page is where it accumulates.
+
+`analyst-desk.html`, served at `/analyst-desk` (Pages resolves the extensionless
+path; no worker route needed). It is **indexed**, which is the deliberate
+opposite of `lead.html` — that page is `noindex` because a search result would
+point at a story already replaced, while this URL is stable and only grows. The
+page is client-rendered from `/api/analyst-column`, so what a crawler actually
+sees is the standing copy above the entries: what the column is, how to read it,
+and the sourcing rules. That is the evergreen half, and it is the half worth
+ranking. **If you ever need the entries themselves indexed, that is a
+server-render, not a robots-tag change.**
+
+`GET /api/analyst-column` returns every verified `category = 'analyst'` row,
+newest first, capped at `ANALYST_MAX` (60), memoised two minutes per isolate the
+same way the lead is. It deliberately does **not** select `body_html`: the page
+links to `/lead/<slug>` for the article, and shipping sixty stories to render a
+list of headlines is the same mistake `/api/lead-story` was written to avoid.
+The admin route's cache-bust clears `_ANALYST_CACHE` alongside `_LEAD_CACHE`,
+because `&promote=` sets `verified = 1` and that is exactly what admits a row to
+this column.
+
+**The `calls` column.** The prose lives in `body_html`; `calls` is the
+structured summary the page lays out as cards and tallies into the record:
+
+```json
+[{"analyst":"Mike Clay","outlet":"ESPN","player":"Kenneth Walker III",
+  "pos":"RB","team":"KC","their":"RB7, a round above the sheet",
+  "ours":"$24 max bid, RB14","stance":"disagree",
+  "why":"The odds do not back the workload the ranking implies"}]
+```
+
+It was added after `lead_story` already existed and arrives the way the
+analytics tables do: **lazily, once per isolate, with nothing to run by hand.**
+`ALTER TABLE ADD COLUMN` has no `IF NOT EXISTS` in SQLite, so the
+duplicate-column error on every run after the first *is* the success case and is
+swallowed on purpose. If the DDL never lands at all — a binding without write
+access, a D1 that refuses it — the payload re-asks for the shape that has always
+existed and the column publishes without its call cards. `tools/test-analyst-column.mjs`
+covers both states.
+
+Everything about `calls` is optional and defensive, because an autonomous run
+writes it and no schema enforces it at write time: malformed JSON, an object
+where a list belongs, junk entries, forty calls in one row, a verdict word
+nobody defined. A call with no `analyst` or no `player` is dropped outright,
+which is the desk's own rule made structural — this column may not show a take
+with nobody attached to it. `ANALYST_STANCES` owns the verdict vocabulary the
+way `LEAD_CATEGORIES` owns the desk names: an unrecognised `stance` still
+renders its call, it just carries no chip and scores in no column.
+
+**The record table** is computed in the worker (`analystScoreboard`), not the
+page, because it is arithmetic over rows the payload already holds and two
+implementations of one tally is one too many. It groups case-insensitively, so
+"mike clay" and "Mike Clay" are one row.
+
+One editorial note that is load-bearing enough to live in the page copy: **an
+analyst being above consensus is not the same as being above us.** Iron Tuna's
+shipped values are blended toward the book, so the site is itself off consensus
+on plenty of players. The page says so in its "How to read this" box, and the
+desk brief pins the same definition.
+
+#### The Routine side, which is already on
+
+**Done, 2026-08-21.** The Routine (`trig_011LYewcPUQikF8izFsN2LAr`, "Iron Tuna —
+lead story refresh (every 3h)") runs all seven desks and writes `calls`. What
+follows is the record of what its prompt now says, because the prompt is not in
+this repo and nothing else here would tell you.
+
+The ordering rule still matters if this is ever redone: **flip the Routine only
+after the worker side is on `main` and deployed.** A run that stores
 `category = 'analyst'` against a worker that has never heard of the desk still
-publishes, but it publishes under the fallback "Insight" badge. Two edits to the
-prompt:
+publishes, but it publishes under the fallback "Insight" badge. The same trap
+has a second door now — the prompt was flipped to seven desks a few hours
+*before* the standing column existed, so its `INSERT` did not name `calls` and
+its analyst brief never mentioned it. Nothing would have failed: the story would
+have published, listed on `/analyst-desk` by headline, and quietly carried no
+cards and no line in the record table. **When a change adds a column the desk
+must fill, the prompt edit is part of that change, not a follow-up.**
+
+The three edits, as they now stand:
 
 1. In the ROTATE THE DESK block, `DESKS` becomes seven entries and the modulus
    moves with it:
@@ -1086,7 +1179,23 @@ prompt:
    > written from memory, because an unsourced claim here puts words in a real
    > person's mouth.
 
+3. A dedicated section on the `calls` column, and an `INSERT` that names it as
+   `?9`. `stance` must be exactly `agree`, `disagree` or `partial`; `analyst`
+   and `player` are both required. The section says out loud that getting this
+   wrong costs the cards and the record row while the entry still lists, so the
+   run has no visible failure to notice — the reason it needs saying at all. The
+   prompt also tells the run to `ALTER TABLE lead_story ADD COLUMN calls TEXT`
+   itself if the `INSERT` comes back `no such column`, which happens only if
+   nobody has loaded `/analyst-desk` since deploy. Its self-check fetches
+   `/api/analyst-column` and confirms the entry arrived with its calls, not just
+   its headline.
+
 ### Tests
+
+`node tools/test-analyst-column.mjs` (59 assertions) covers the standing column:
+the two query shapes, every malformed `calls` a run could store, the record
+tally, and the page's own contract (indexable, in the sitemap, escapes what the
+desk wrote, and degrades to standing copy when the API is dead).
 
 `node tools/test-lead-story.mjs` (58 assertions, no network, no browser). It
 evaluates the real section out of `_worker.js` rather than a copy, and most of it
@@ -1245,20 +1354,41 @@ rather than asserting it away, so a regression that makes it worse still fails.
 ### What this moved that is not in the table
 
 `switchPrice()` — the YOU value on every player row — is a binary search over
-`buildOptimalPlan`, so the reserve fix moved it too. A higher, honest bench
-reserve leaves the starters a lower ceiling, so YOU values come out slightly
-lower than before. That lands on the board's colouring, which PR #66 had just
-changed to grade `Proj` against **YOU** rather than against Value: a lower YOU
-means marginally more rows read red. The two changes were written independently,
-hours apart, and neither anticipated the other. If the board's colour balance
-looks off, this is the first place to look.
+`buildOptimalPlan`, so the reserve fix moved it too, and PR #66 had just changed
+the board's colouring to grade `Proj` against **YOU** rather than against Value.
+The two changes were written independently, hours apart, and neither anticipated
+the other, so the shift was measured rather than argued about. Over the top 120
+priced players, comparing YOU before and after:
 
-`switchReserve` is **retired**. It selected the better of two bench reserves for
-the YOU-value and opponent paths; the real reserve is now unconditional, so the
-flag has nothing left to switch. It stays in the signature only to hold its
-position — five call sites still pass a value in that slot, and dropping it would
-shift `opts` one place left and take `noCap` with it. Remove it only together
-with all five.
+| | |
+|---|---|
+| median change | **$0** |
+| mean change | **-$0.20** |
+| range | -$5 to +$4 |
+| rows whose colour flipped | 11 of 120 |
+| RED before → after | **72 → 69** |
+
+**It is a non-event, and it goes the opposite way to the obvious guess.** A
+higher reserve lowers the ceiling the search runs against, so the intuition is
+that YOU drops and more rows turn red. In practice the reserve also frees the
+starter solve from stranding money, the two effects very nearly cancel, and the
+red count went *down* by three. No retuning is called for. Do not re-derive this
+from first principles — the first-principles answer is wrong.
+
+What that measurement did surface, and what is worth a look on its own terms: of
+the 76 players the optimiser priced on a fresh board, **72 came back RED and not
+one came back GREEN**, both before and after. Under the pre-#66 rule the same
+board produced a mix. That is #66's rule meeting an empty roster, not anything
+section 19 did, and it is the opposite of what that PR set out to achieve.
+(Caveat on the number: this counted raw `switchPrice`, while the app runs a
+tail-extrapolation pass afterwards that gives a `personalValue` to players the
+optimiser never priced. The 76 are exact; the other 44 are not covered.)
+
+`switchReserve` is **gone**, along with the five call sites that passed it. It
+selected the better of two bench reserves for the YOU-value and opponent paths,
+and the real reserve is now unconditional, so it had nothing left to switch.
+Removing it shifted `opts` into position 11 at three call sites — if `noCap` ever
+appears to stop working, check that first.
 
 ### Verifying a change here
 
