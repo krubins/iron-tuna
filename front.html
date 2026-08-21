@@ -447,7 +447,7 @@ img{max-width:100%}
   <p class="sec-sub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
   <div class="build-wrap">
     <div class="build-main">
-      <h3>The best team <em id="buildBudget">$200</em> can buy</h3>
+      <h3 id="buildHeadline">The best team <em id="buildBudget">$200</em> can buy</h3>
       <p class="build-dek" id="buildDek"></p>
       <div class="roster" id="rosterStrip"></div>
       <div class="spend-bar" id="spendBar"></div>
@@ -1380,7 +1380,19 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     var rb = A.posCost.filter(function(x){ return x.pos === 'RB'; })[0] || {};
     var cheapSide = A.lineup.filter(function(l){ return ['QB','TE','K','DEF'].indexOf(l.pos) >= 0; })
       .reduce(function(a, l){ return a + l.price; }, 0);
-    document.getElementById('buildBudget').textContent = '$' + A.budget;
+    // The solved roster is always the site's own default league (see the
+    // comment at the top of this section). The headline is the one place that
+    // can honestly speak to the reader's own league without re-solving: if
+    // they have already told us their budget (it-league.js, saved via the
+    // free cheat sheet), show it; otherwise say so rather than pretend the
+    // $200 shown is theirs.
+    var buildL = window.ITLeague || null;
+    var buildHead = document.getElementById('buildHeadline');
+    if (buildL && buildL.has) {
+      document.getElementById('buildBudget').textContent = '$' + (buildL.config && buildL.config.budget ? buildL.config.budget : A.budget);
+    } else if (buildHead) {
+      buildHead.textContent = 'Upgrade for the best team for your league.';
+    }
     document.getElementById('buildDek').innerHTML =
       'Solved across ' + A.playerCount + ' players for a ' + A.teams + '-team league: <b>' + A.ppg +
       ' points a game</b> for <b>$' + A.spend + '</b>. It puts <b>' + (rb.share || 0) +
