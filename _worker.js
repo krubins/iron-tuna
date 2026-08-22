@@ -41,6 +41,26 @@ async function rl(env, request, bucket, max, ttlSec) {
     return false;
   } catch (e) { return false; }
 }
+// ── the post-draft section, and the one switch that opens it ────────────────
+// The in-season tools are built and deployed but not open: it is draft season,
+// and every one of them needs a played week before it has anything to say. Until
+// POST_DRAFT_OPEN is "1" in the Cloudflare vars, every route in POST_DRAFT_PAGES
+// serves /post-draft (the waiting-list gate) instead of itself.
+//
+// This is enforced HERE rather than in the page, because a client-side lock on a
+// static asset is a suggestion: the HTML ships to the browser either way and
+// anyone can read it. The worker never hands over the page at all.
+//
+// The escape hatch is `?preview=<LEADS_EXPORT_KEY>` — the same owner secret the
+// leads export and the odds status route already use. It sets a short-lived
+// cookie so the owner can click around the section instead of re-appending the
+// key to every URL.
+const POST_DRAFT_PAGES = new Set(['/faab']);
+function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
+function postDraftPreview(env, url, request) {
+  if (adminOk(env, url.searchParams.get('preview'))) return true;
+  try { return adminOk(env, parseCookie(request.headers.get('Cookie'))['it_pd_preview']); } catch (e) { return false; }
+}
 function adminOk(env, key) { return !!env.LEADS_EXPORT_KEY && timingSafeEq(String(key || ''), env.LEADS_EXPORT_KEY); }
 const json = (obj, status, c) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', ...SEC, ...c } });
 
@@ -2352,6 +2372,18 @@ async function pruneAnalytics(env, keepDays) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // ?preview=<LEADS_EXPORT_KEY> on a closed in-season route: park the key in a
+    // cookie and bounce to the clean URL, so the owner can walk the section
+    // without re-appending the secret and without it ending up in a shared link
+    // or a Referer header on the very next click.
+    if (url.searchParams.has('preview') && adminOk(env, url.searchParams.get('preview'))) {
+      const dest = new URL(url.toString());
+      dest.searchParams.delete('preview');
+      return new Response(null, { status: 302, headers: {
+        'Location': dest.pathname + (dest.search || ''),
+        'Set-Cookie': 'it_pd_preview=' + encodeURIComponent(env.LEADS_EXPORT_KEY) + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (12 * 3600)
+      } });
+    }
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
@@ -2478,6 +2510,72 @@ export default {
       }
       await saveContact(env, { email: email, phone: '', source: 'insights-vault', type: 'lead', ref: '', path: '/insights-vault' });
       return json({ ok: true, insights: INSIGHTS_VAULT }, 200, c);
+    }
+    // ── the post-draft waiting list ────────────────────────────────────────────
+    // Everything under /post-draft is built but not open (POST_DRAFT_OPEN below).
+    // The gate trades an email for notice-plus-free-access when it does open,
+    // which is the same bargain /insights-vault strikes and reuses its plumbing:
+    // one contacts row, the optional lead webhook, and the existing unsubscribe
+    // path. Nothing here grants access — there is nothing to grant yet — so it
+    // deliberately does NOT set an entitlement or a cookie.
+    if (url.pathname === '/api/post-draft-notify') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      if (await rl(env, request, 'postdraft', 30, 600)) return json({ ok: false, error: 'rate' }, 429, c);
+      let body = {}; try { body = await request.json(); } catch (e) {}
+      const email = (body.email || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid' }, 400, c);
+      // `tool` records WHICH locked page they came from, so the launch email can
+      // lead with the thing they actually wanted rather than a generic list.
+      const tool = String(body.tool || 'post-draft').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 24) || 'post-draft';
+      if (env.LEAD_WEBHOOK) {
+        try { await fetch(env.LEAD_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, source: 'post-draft:' + tool, type: 'lead', ts: Date.now() }) }); } catch (e) {}
+      }
+      await saveContact(env, { email: email, phone: '', source: 'post-draft:' + tool, type: 'lead', ref: '', path: '/' + tool });
+      return json({ ok: true, open: POST_DRAFT_OPEN(env) }, 200, c);
+    }
+    // ── the FAAB advisor's player index ───────────────────────────────────────
+    // Sleeper's rosters and transactions reference player_id, so the advisor has
+    // to resolve ids to names before it can price anything. The only file that
+    // maps them is /v1/players/nfl, which is ~5MB — far too much to hand a phone
+    // on a Tuesday morning. The worker takes that hit once every six hours at the
+    // edge and ships a trimmed index instead: fantasy position, on a roster,
+    // active, four fields each.
+    //
+    // Note this is keyed by ID where /api/live is keyed by NAME. They answer
+    // different questions (who is this id / is this named player hurt) and the
+    // callers are unrelated, so they are two caches rather than one union.
+    if (url.pathname === '/api/faab/players') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      try {
+        const cache = caches.default;
+        const key = new Request(url.origin + '/api/faab/players?v=1');
+        const hit = await cache.match(key);
+        if (hit) { const r = new Response(hit.body, hit); for (const [k, v] of Object.entries(c)) r.headers.set(k, v); return r; }
+        const up = await fetch('https://api.sleeper.app/v1/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } });
+        if (!up.ok) return json({ updated: Date.now(), players: {} }, 200, c);
+        const all = await up.json();
+        const FANT = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+        const out = {};
+        for (const id in all) {
+          const p = all[id];
+          if (!p || !FANT.has(p.position)) continue;
+          // A team defence has no name fields; its id IS the team abbreviation.
+          const name = p.position === 'DEF'
+            ? ((p.team || id) + ' DEF')
+            : (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim());
+          if (!name || !p.team) continue;
+          out[id] = [name, p.position, p.team, p.injury_status || ''];
+        }
+        const body = JSON.stringify({ updated: Date.now(), players: out });
+        const store = new Response(body, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=21600' } });
+        await cache.put(key, store.clone());
+        const r = new Response(body, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=21600' } });
+        for (const [k, v] of Object.entries(c)) r.headers.set(k, v);
+        return r;
+      } catch (e) { return json({ updated: Date.now(), players: {}, error: String(e).slice(0, 80) }, 200, c); }
     }
     if (url.pathname === '/api/live') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -3383,6 +3481,13 @@ export default {
       // every three hours, so they are rendered rather than built as pages.
       else if (/^\/lead(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/lead', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
+      // The in-season tools are deployed but closed (see POST_DRAFT_PAGES above).
+      // A closed route serves the waiting-list gate rather than redirecting to it,
+      // so the reader keeps the URL they clicked and the page they were promised
+      // is the one that opens there later.
+      else if (POST_DRAFT_PAGES.has(url.pathname.replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request)) {
+        __assetReq = new Request(new URL('/post-draft', url).toString(), request);
+      }
     } catch (e) {}
     const resp = await env.ASSETS.fetch(__assetReq);
     const ct = resp.headers.get('content-type') || '';

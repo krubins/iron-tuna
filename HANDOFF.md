@@ -2507,3 +2507,145 @@ and the site-wide footer boilerplate.
 `tools/test-position-lens.mjs` and `tools/test-it-league.mjs` were updated to
 the two-edition switch, and both now assert the *absence* of a best ball surface
 rather than the presence of one.
+
+---
+
+## 28. August 2026: the post-draft section, and the FAAB Advisor
+
+**The brief.** A pre-draft / post-draft split like DraftSharks'. Sleeper only.
+Everything post-draft free except the Value Coach. Build the FAAB Advisor. Ship
+the whole section **locked**, behind "coming soon, leave your email for notice
+and free access".
+
+### 28a. Why FAAB is the right post-draft flagship
+
+Every other in-season tool ranks waiver adds. A ranking tells you who to want;
+in a FAAB league what you *pay* is the entire decision, and a dollar under the
+winner buys nothing at all. FAAB is a blind auction run weekly against the same
+room you drafted against — which makes it the one in-season problem this site is
+already built to solve, and the reason the section leads with it rather than with
+start/sit.
+
+### 28b. The model, and the mistake it went through
+
+`/faab` reads the reader's Sleeper league in the browser (rosters, users, league
+settings, the transaction log) and prices the free-agent pool through
+**`it-league.js`** — `defaultBoard()` for the pool, `price(pos, rank)` for the
+reader's own budget, their saved sheet where they have one. **No valuation code
+is duplicated into the page**, deliberately: a second copy of `scorePlayer` in a
+second file is the drift that §9c already has a test to catch.
+
+Four numbers, in order:
+
+| | |
+|---|---|
+| `ros` | board value × (weeks left / 17) — rest-of-season, in **draft** dollars |
+| `vadd` | `ros` minus the weakest player that roster would actually start at the position (slot counts read from the league's own `roster_positions`, flex included), floored at 20% of `ros` so a bench-only add is not worth literally nothing |
+| `surplus` | `vadd` minus the **(adds+1)-th best** `vadd` on the wire for that roster |
+| `share` | `surplus` ÷ the sum of surpluses — multiplied by a budget to get a bid |
+
+**The surplus line is the whole model, and the first cut got it wrong twice.**
+
+1. **First cut: no baseline at all** (`surplus = vadd`). Every free agent got a
+   share of the budget proportional to his absolute value. On a real week-5 wire
+   — a long flat tail where the board prices everyone at the minimum bid — that
+   produced *forty identical rows*: `$2` value, `$11` going rate, `$2` max, over
+   and over. It is a ranking with dollar signs on it, which is the exact thing
+   the page exists not to be.
+2. **Second cut: baseline = the single best alternative.** Correct in spirit,
+   far too harsh: only one free agent per roster can be better than every other,
+   so exactly one row survived.
+3. **Shipped: baseline = the first add you would not otherwise have made.** Over
+   the remaining weeks a manager makes roughly `adds = weeksLeft × 0.7` claims
+   anyway, so the ones they would make regardless are not what winning *this*
+   claim buys. The replacement is the (adds+1)-th best on the wire. This is
+   value-over-replacement — the same idea the draft board is built on, with the
+   replacement drawn off the wire instead of the draft pool.
+
+Ten interchangeable handcuffs all sit at replacement, so all ten are worth about
+a dollar however good they look on a list. **A flat wire correctly produces an
+empty table and the line "save the budget", which is advice no other tool gives.**
+
+**Going rate is computed one rival at a time**, not from a curve: their remaining
+FAAB (`settings.waiver_budget_used`, which Sleeper publishes for every roster),
+their hole at that position, their alternatives. A leaguemate with $0 left is not
+competition however badly they need a running back, and the page names who the
+real threat is. This is the one genuinely novel thing on the page.
+
+**Two currencies, said out loud.** `ros` is draft dollars; going rate and max bid
+are FAAB dollars. They are not the same scale — a $100 FAAB budget buys a handful
+of claims where a $200 draft budget buys a roster — so a going rate *above* the
+rest-of-season figure is normal. The column headers carry the unit and the method
+note explains it; without that it reads as an arithmetic bug.
+
+### 28c. The lock is in the worker, not the page
+
+`POST_DRAFT_PAGES` (currently `/faab`) serves **`/post-draft` in place of
+itself** unless `POST_DRAFT_OPEN` is `"1"` in the Cloudflare vars.
+
+- **In the worker on purpose.** A static asset locked by its own JavaScript is a
+  suggestion — the HTML ships to the browser either way and anyone can read it.
+  The worker never hands the page over.
+- **Serves, does not redirect.** The reader keeps the URL they clicked, so the
+  page that opens there later is the one they were promised, and the gate records
+  *which* tool they wanted (`location.pathname` → the `tool` field on the lead).
+- **Owner preview:** `?preview=<LEADS_EXPORT_KEY>` parks the key in a 12-hour
+  `HttpOnly` cookie and bounces to the clean URL, so the secret does not end up in
+  a shared link or the next request's `Referer`.
+- **To open the section:** set `POST_DRAFT_OPEN=1`, add `/faab` to `sitemap.xml`,
+  and mail the list. Nothing else.
+
+`POST /api/post-draft-notify` reuses the `/insights-vault` plumbing exactly — one
+`contacts` row (`source: 'post-draft:<tool>'`), the optional `LEAD_WEBHOOK`, the
+existing unsubscribe path. It grants nothing, because there is nothing to grant
+yet: no entitlement, no cookie.
+
+### 28d. The front page says which half of the season it is
+
+Two labelled shelves: **Before the draft** (the six auction tools) and **After
+the draft** (three locked cards → `/post-draft`). The masthead carries an
+`In-Season` link with a `Soon` chip.
+
+**A trap that was already in the masthead CSS and is now fixed:** the row's
+tightening rules were inside `@media(max-width:1100px)`, but `.wrap` is capped at
+`max-width:1260px` — so the masthead's content box is the same width at 1360px and
+at 2560px. A row that does not fit in 1260 never fits, and a max-width media query
+only hides the wrap *below* the breakpoint while leaving every wider screen on two
+ragged rows. Those declarations are unconditional now. **Do not put them back
+behind a max-width query.**
+
+### 28e. Tests
+
+`node tools/test-faab.mjs` (playwright-core + Chromium; skips cleanly without
+them) serves the real page against a stubbed 12-team league built to have known
+answers, and asserts: no max bid above the money actually left, rest-of-season
+discounted for weeks played and never rising down the board, a $0 rival never
+named as the competition, no going rate above the richest rival's budget, a
+"Bid $n" always affordable and above the going rate, a "Let it go" never a player
+the reader could have won, and a non-FAAB league unselectable.
+
+**Two of those assertions exist because the model shipped wrong in this session
+and every bound check passed on the broken output** — identical numbers are
+trivially within bounds and trivially monotonic. So: *the model tells the pool
+apart*, and a second fixture league whose wire is genuinely flat, where the only
+correct answer is an empty table. Verified by reverting: the no-baseline model
+fails the flat-wire case with exactly the `$2 / $3 / $2` rows it originally
+shipped. `IT_SHOT=/tmp/faab.png node tools/test-faab.mjs` writes a rendered copy,
+because the numbers can all be right while the table is unreadable.
+
+`tools/test-asset-routing.mjs` covers the gate in both states and reads
+`POST_DRAFT_PAGES` out of the worker so a page added to the section cannot be
+left ungated. **It previously passed while testing nothing**: the lifted rewrite
+block's own `catch (e) {}` swallowed the `ReferenceError` from the three
+gate symbols the harness did not define. They are supplied now.
+`tools/test-seo.mjs` reads the same set and exempts gated routes from the
+sitemap-coverage check, because while the gate is closed a sitemap entry for
+`/faab` would hand a crawler the gate page's body under a second URL.
+
+### 28f. What is not built
+
+Start/Sit and Roster Audit are named on the gate page and have no code. Start/Sit
+needs **weekly** projections and the site has only season-long ones; the intended
+path is season ÷ games × the per-game Vegas scoring environment the worker already
+computes (§9b), not a bought feed. Neither has a route, so neither is in
+`POST_DRAFT_PAGES`.

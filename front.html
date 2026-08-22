@@ -440,16 +440,18 @@ img{max-width:100%}
    out of reach. Tightening the links buys those pixels back rather than
    spending a scroll on them: the row fits down to 1087px. */
 @media(max-width:1240px){.ribbon a{padding:12px 7px}.ribbon .wrap{gap:2px}.ribbon .ed-switch a{padding:6px 9px}}
-/* Sign In moved up into the masthead out of the ribbon, and between the phone
-   layout below and the full desktop that extra link is what tips the row onto a
-   second line. Tighter links across both navs keep it to one. */
-@media(max-width:1100px){
-  .mast-jump a,.mast-nav a{padding:8px 7px;letter-spacing:.06em}
-  .mast-jump a{font-size:11.5px;padding-left:6px;padding-right:6px}
-  .mast-nav a.mast-signin{font-size:11.5px;margin-left:4px}
-  .mast .wrap{gap:10px}
-  .mast-logo{height:32px}
-}
+/* The masthead row, tightened — and NOT behind a media query, which is the trap
+   this rule was in. `.wrap` is capped at max-width:1260px, so the masthead's
+   content box is the same width at 1360px and at 2560px: a row that does not fit
+   in 1260 never fits, and a `@media(max-width:N)` that tightens it only hides the
+   wrap below N while leaving every wide screen broken. It read as fixed on the
+   laptop it was checked on and was still two ragged rows on a desktop.
+   These are the compact values applied at every width. */
+.mast-jump a,.mast-nav a{padding:8px 7px;letter-spacing:.06em}
+.mast-jump a{font-size:11.5px;padding-left:6px;padding-right:6px}
+.mast-nav a.mast-signin{font-size:11.5px;margin-left:4px}
+.mast .wrap{gap:10px}
+.mast-logo{height:32px}
 @media(max-width:900px){
   .hero{grid-template-columns:1fr}
   .camp-grid{grid-template-columns:1fr}
@@ -637,6 +639,25 @@ img{max-width:100%}
 @media(max-width:760px){
   .mast-nav a.cta,.mast-nav a.cta-gold{letter-spacing:.02em;padding:11px 6px}
 }
+
+/* ── the two shelves: before the draft, and after it ──────────────────────
+   The site is an auction site on both sides of draft night, and saying so is
+   what the eyebrows are for. The post-draft shelf is deliberately quieter: it
+   is real work, but it is not what a reader in August came for. */
+.shelf-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);margin-top:34px;display:flex;align-items:center;gap:10px}
+.shelf-eyebrow.post{color:var(--ink-3)}
+.shelf-eyebrow .soon{font-size:10px;letter-spacing:.1em;padding:2px 8px;border-radius:3px;background:#fdf4e2;color:var(--gold-ink);border:1px solid #f0e0b0}
+.shelf-eyebrow + .tools-head{margin-top:6px}
+.tools-grid.post .tool{background:#fbfcfc}
+.tool.locked{position:relative}
+.tool.locked .ti{background:var(--bg);border-color:var(--line);color:var(--ink-3)}
+.tool.locked h3::after{content:"\00a0\1F512";font-size:11px;opacity:.45}
+.tool.locked:hover{border-color:var(--ink-3);box-shadow:0 6px 18px rgba(15,23,25,.07)}
+.tool.locked:hover h3{color:var(--ink)}
+/* The in-season link in the masthead: present, findable, and honest that it is
+   not open yet. */
+.mast-jump a.mj-soon{display:inline-flex;align-items:center;gap:6px}
+.mast-jump a.mj-soon span{font-size:9px;letter-spacing:.1em;padding:1px 5px;border-radius:3px;background:var(--gold);color:#231700;font-weight:800}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Iron Tuna","url":"https://irontuna.com/","description":"The fantasy site built for auction drafts. Custom dollar values for your exact league, a live Auction Manager for draft night, an AI Value Coach, and auction intel updated daily.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna builds custom fantasy football auction, snake and best ball values for your exact league settings, with a live AI Value Coach for draft day.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
@@ -645,7 +666,7 @@ img{max-width:100%}
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="mast-jump" aria-label="Sections of the site">
-    <a href="/fantasy-football-auction-values">Auction Values</a><a href="/guides">Strategy</a><a href="/auction-insights">Insights</a><a href="/analyst-desk">Columns</a><a href="/faq">FAQ</a>
+    <a href="/fantasy-football-auction-values">Auction Values</a><a href="/guides">Strategy</a><a href="/auction-insights">Insights</a><a href="/analyst-desk">Columns</a><a class="mj-soon" href="/post-draft">In-Season<span>Soon</span></a>
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
@@ -699,6 +720,7 @@ img{max-width:100%}
 </div></div>
 
 <main class="wrap">
+  <div class="shelf-eyebrow">Before the draft</div>
   <h2 class="tools-head">Your auction, priced</h2>
   <p class="tools-sub">Six tools, all of them built for one draft format. Start with the free sheet.</p>
   <div class="tools-grid">
@@ -708,6 +730,15 @@ img{max-width:100%}
   <a class="tool" href="/superflex-auction-values"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4.2"/><circle cx="16" cy="16" r="4.2"/><path d="M12.6 5.4h4v4"/></svg></span><span class="tt"><h3>Superflex &amp; 2QB Values</h3><p>A second quarterback re-prices the whole board. These values already know that.</p></span></a>
   <a class="tool" href="/salary-cap-draft-tool"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M16.5 7.2C15.6 6 14 5.3 12 5.3c-2.5 0-4.2 1.2-4.2 3s1.6 2.6 4.2 3.1c2.9.6 4.6 1.4 4.6 3.4 0 2-1.9 3.2-4.6 3.2-2.2 0-3.9-.8-4.8-2.1"/></svg></span><span class="tt"><h3>Salary Cap &amp; Keepers</h3><p>Keeper inflation, cap holds and multi-year money, folded into the same sheet.</p></span></a>
   <a class="tool" href="/guides"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/></svg></span><span class="tt"><h3>Auction Strategy Library</h3><p>Budget shape, nomination tactics and the $1 endgame &mdash; the playbooks behind the numbers.</p></span></a>
+  </div>
+
+  <div class="shelf-eyebrow post">After the draft<span class="soon">Coming soon</span></div>
+  <h2 class="tools-head">The season is still an auction</h2>
+  <p class="tools-sub">FAAB is a blind auction run every week against the same room. These price it. Free when they open &mdash; leave an email and we will tell you.</p>
+  <div class="tools-grid post">
+    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M16.5 7.2C15.6 6 14 5.3 12 5.3c-2.5 0-4.2 1.2-4.2 3s1.6 2.6 4.2 3.1c2.9.6 4.6 1.4 4.6 3.4 0 2-1.9 3.2-4.6 3.2-2.2 0-3.9-.8-4.8-2.1"/></svg></span><span class="tt"><h3>FAAB Advisor</h3><p>The going rate, what he is worth, and your max bid &mdash; read off your league&rsquo;s own rosters and every rival&rsquo;s remaining budget.</p></span></a>
+    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg></span><span class="tt"><h3>Start / Sit</h3><p>Your lineup scored against your league&rsquo;s own settings, with the week priced off the betting market.</p></span></a>
+    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></span><span class="tt"><h3>Roster Audit</h3><p>What each player cost you at the auction against what he has actually returned.</p></span></a>
   </div>
 
   <div class="sec-head" id="today"><h2>The Auction Desk</h2><a class="sec-more" href="/auction-insights">Every insight &rarr;</a></div>
