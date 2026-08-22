@@ -75,14 +75,24 @@ img{max-width:100%}
 .sec-head h2{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:30px;letter-spacing:.05em;line-height:1}
 .sec-head .sec-more{margin-left:auto;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
 .sec-head .sec-more:hover{color:var(--brand-dark)}
-.fmt-switch[hidden]{display:none}
-.fmt-switch{margin-left:auto;display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--card)}
-.fmt-switch button{font:inherit;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);background:none;border:0;padding:5px 12px;cursor:pointer;line-height:1.5}
-.fmt-switch button+button{border-left:1px solid var(--line)}
-.fmt-switch button:hover:not(.on){color:var(--brand)}
-.fmt-switch button.on{background:var(--ink);color:#fff}
-.sec-head .fmt-switch+.sec-more{margin-left:14px}
-@media(max-width:560px){.sec-head{flex-wrap:wrap}.fmt-switch{margin:2px 0 4px;order:3;width:100%}.fmt-switch button{flex:1}.sec-head .fmt-switch+.sec-more{margin-left:auto}}
+@media(max-width:560px){.sec-head{flex-wrap:wrap}}
+/* ── the edition switch ──
+   Auction Draft / Snake Draft / Best Ball, in the ribbon: the one control that
+   decides which edition of the site's insight the whole page is delivered in.
+   It replaced a section-level Auction/Snake lens switch that only appeared for
+   readers with a saved board — two controls that could disagree about the same
+   question is a worse answer than one that cannot. */
+.ed-tag{display:inline-block;margin-left:9px;padding:2px 7px;border:1px solid var(--line);border-radius:3px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);vertical-align:middle}
+.ed-tag[hidden]{display:none}
+.ed-switch{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--card);margin:0 8px;flex:0 0 auto}
+.ribbon .ed-switch a{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:6px 12px;border-bottom:0;line-height:1.5}
+.ribbon .ed-switch a+a{border-left:1px solid var(--line)}
+.ribbon .ed-switch a:hover{color:var(--brand);border-bottom-color:transparent}
+.ribbon .ed-switch a.on{background:var(--ink);color:#fff}
+/* The ribbon scrolls sideways on a phone, and the edition switch is the one
+   control on it that has to be reachable without scrolling — so on a narrow
+   screen it leads the ribbon instead of sitting past the fold. */
+@media(max-width:700px){.ribbon .ed-switch{order:-1;margin:0 8px 0 0}.ribbon .ed-switch a{padding:6px 9px;font-size:10.5px;letter-spacing:.04em}}
 .sec-sub{font-size:13.5px;color:var(--ink-3);margin:-6px 0 14px}
 
 /* ── hero ── */
@@ -400,7 +410,7 @@ img{max-width:100%}
     <a href="#qb">QB</a><a href="#rb">RB</a><a href="#wr">WR</a><a href="#te">TE</a><a href="#market">Market</a>
     <a href="#allocation">Allocation</a><a href="#camp">Camp</a>
     <a class="cta-gold" href="/auctiondraft?screen=cheat">Cheat Sheet</a>
-    <a class="cta" href="/auctiondraft?screen=board">Auction Manager</a>
+    <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
   </nav>
 </div></header>
 <div class="dominant" role="doc-subtitle"><div class="wrap">
@@ -416,8 +426,11 @@ img{max-width:100%}
   <a href="/insights-vault">Insight Vault</a>
   <a href="/faq">FAQ</a>
   <span class="rb-spacer"></span>
-  <a class="rb-dim" href="/snakedraft">Snake Draft</a>
-  <a class="rb-dim" href="/bestball">Best Ball</a>
+  <span class="ed-switch" id="edSwitch" role="group" aria-label="Choose your draft format">
+    <a href="/?fmt=auction" data-ed="auction">Auction Draft</a>
+    <a href="/?fmt=snake" data-ed="snake">Snake Draft</a>
+    <a href="/?fmt=bestball" data-ed="bestball">Best Ball</a>
+  </span>
   <a class="rb-dim" href="/hub" title="The classic Iron Tuna home page">Classic Home</a>
   <a class="rb-dim" href="/auctiondraft?signin=1">Sign In</a>
 </div></div>
@@ -472,8 +485,8 @@ img{max-width:100%}
     <div class="vs-case" id="vsCase"><p class="vs-empty">Loading the current case&hellip;</p></div>
   </div>
 
-  <div class="sec-head" id="build"><h2>The Build</h2><a class="sec-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>
-  <p class="sec-sub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
+  <div class="sec-head" id="build"><h2>The Build<span class="ed-tag" id="buildTag" hidden></span></h2><a class="sec-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>
+  <p class="sec-sub" id="buildSub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
   <div class="build-wrap">
     <div class="build-main">
       <h3 id="buildHeadline">The best team <em id="buildBudget">$200</em> can buy</h3>
@@ -489,10 +502,6 @@ img{max-width:100%}
   <div class="build-cards" id="buildCards"></div>
 
   <div class="sec-head" id="positions"><h2>Position Intel</h2>
-    <div class="fmt-switch" id="posFmt" role="group" aria-label="Read these calls as an auction or a snake draft" hidden>
-      <button type="button" data-fmt="auction">Auction</button>
-      <button type="button" data-fmt="snake">Snake</button>
-    </div>
     <a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
   <p class="sec-sub" id="posSub">Every story is a stat-backed call from the 2026 research set, read through an auction lens. New drops land through Labor Day.</p>
   <div class="pos-grid" id="posGrid"></div>
@@ -501,9 +510,9 @@ img{max-width:100%}
   <p class="sec-sub">A coach is worth real money. The habits that have repeated for decades &mdash; the zone scheme&rsquo;s running backs, Andy Reid&rsquo;s lead back, Todd Monken&rsquo;s tight ends &mdash; and the exact player each one moves this season. New entries daily through kickoff.</p>
   <div class="pcp-grid" id="pcpGrid"></div>
 
-  <div class="sec-head" id="allocation"><h2>Asset Allocation</h2><a class="sec-more" href="/guides">All guides &rarr;</a></div>
-  <p class="sec-sub">How to spend the <span data-it-money="200">$200</span>: budget shape, nomination tactics, and the endgame.</p>
-  <div class="alloc-grid">
+  <div class="sec-head" id="allocation"><h2 id="allocHead">Asset Allocation</h2><a class="sec-more" href="/guides">All guides &rarr;</a></div>
+  <p class="sec-sub" id="allocSub">How to spend the <span data-it-money="200">$200</span>: budget shape, nomination tactics, and the endgame.</p>
+  <div class="alloc-grid" id="allocGrid">
     <div class="alloc-card"><h3><a href="/auction-budget-allocation">How to Budget Your Auction</a></h3><p>Stars-and-scrubs vs balanced, a workable position split, and why a real bench reserve matters.</p><a class="go" href="/auction-budget-allocation">Read the playbook &rarr;</a></div>
     <div class="alloc-card"><h3><a href="/auction-nomination-strategy">Nomination Strategy</a></h3><p>Nominate to win: drain rival budgets, price-enforce the studs, and steal your targets cheap.</p><a class="go" href="/auction-nomination-strategy">Read the playbook &rarr;</a></div>
     <div class="alloc-card"><h3><a href="/dollar-endgame-handcuffs">The $1 Endgame</a></h3><p>Handcuffs and the split-backfield lottery: win the late auction one dollar at a time.</p><a class="go" href="/dollar-endgame-handcuffs">Read the playbook &rarr;</a></div>
@@ -519,10 +528,10 @@ img{max-width:100%}
   </div>
 
   <div class="tools-band">
-    <span class="tb-text"><b>Draft night is the deadline.</b> Free expert values in 60 seconds — or unlock your league&rsquo;s full custom values, the live Auction Manager, and the AI Value Coach for a one-time $9.99.</span>
+    <span class="tb-text" id="tbText"><b>Draft night is the deadline.</b> Free expert values in 60 seconds — or unlock your league&rsquo;s full custom values, the live Auction Manager, and the AI Value Coach for a one-time $9.99.</span>
     <span class="tb-ctas">
       <a class="tb-btn gold" href="/auctiondraft?screen=cheat">Build my free cheat sheet</a>
-      <a class="tb-btn brand" href="/auctiondraft?screen=board">Open the Auction Manager</a>
+      <a class="tb-btn brand" id="tbMgr" href="/auctiondraft?screen=board">Open the Auction Manager</a>
     </span>
   </div>
 </main>
@@ -559,10 +568,176 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   // Every "Your league" line on this page has to commit to a draft type: an
   // auction reader wants the call in dollars off their own sheet, a snake reader
   // wants it in draft slots. it-league.js holds the answer — their saved league,
-  // or auction where they have never said — and the Position Intel switch below
-  // writes any change back there, so the lead and the modules never disagree.
+  // or auction where they have never said — and the ribbon's edition switch
+  // below writes any change back there, so the lead and the modules never
+  // disagree.
   var L = window.ITLeague || null;
-  var readFmt = (L && L.readingFormat) ? L.readingFormat() : 'auction';
+
+  // ── the edition ────────────────────────────────────────────────────────────
+  // Auction Draft / Snake Draft / Best Ball, in the ribbon, is the one control
+  // that says which draft this page is written for. It replaced a pair of links
+  // straight into the app's snake and best ball rooms: a reader who came for a
+  // snake draft was sent out of the front page entirely rather than being shown
+  // the front page they came for.
+  //
+  // Every call is already published in all three editions — the drop pages are
+  // built as auction-insights-DATE, snake-insights-DATE and
+  // bestball-insights-DATE off the same research set — so switching is a
+  // RE-POINT, not a re-fetch. The call, the position, the verdict chip and the
+  // measured effect are the same in all three; what differs is the play the
+  // reader is told to make with it, which is what the edition's own page says.
+  // That is why STORIES stays one array: tripling it would put two copies of
+  // every headline on the wire to change a link.
+  //
+  // What does NOT move with the edition, deliberately:
+  //   - the camp desk's reports. There is one camp desk (auction-watch-*), and
+  //     its pages are titled the way they are published. Only the standing note
+  //     above them stops saying "auction" to a reader who is not in it.
+  //   - the auction guides (/auction-budget-allocation, nomination, the $1
+  //     endgame). There is no snake edition of a nomination playbook, so the
+  //     Asset Allocation module swaps in the guides that DO exist per format
+  //     rather than rewriting a link into a 404.
+  //   - The Build, which is an exact dollar solve. It carries a tag saying so
+  //     outside the auction edition instead of implying the numbers are slots.
+  var ED = {
+    auction: {
+      label: 'Auction Draft',
+      prefix: 'auction',                 // <prefix>-insights[-DATE]
+      app: '/auctiondraft',              // the room in the app
+      mgr: 'Auction Manager',
+      posSub: 'Every story is a stat-backed call from the 2026 research set, read as an auction — each one priced in dollars.',
+      camp: 'Verified, auction-relevant signals from camps and preseason games.'
+    },
+    snake: {
+      label: 'Snake Draft',
+      prefix: 'snake',
+      app: '/snakedraft',
+      mgr: 'Draft Room',
+      posSub: 'Every story is a stat-backed call from the 2026 research set, read as a snake draft — each one measured in rounds and picks.',
+      camp: 'Verified, draft-relevant signals from camps and preseason games.',
+      allocHead: 'Draft Strategy',
+      allocSub: 'How to use every pick: slot shape, tier cliffs, and the rounds that decide your roster.',
+      alloc: [
+        ['/snake-draft-strategy', 'Snake Draft Strategy', 'Where your slot really helps you, which tier cliffs to draft ahead of, and the rounds that decide the roster.', 'Read the playbook'],
+        ['/snakedraft', 'The Draft Room', 'The live tool: rankings that re-sort to your roster after every pick, with the odds each target lasts to your next turn.', 'Open the draft room']
+      ]
+    },
+    bestball: {
+      label: 'Best Ball',
+      prefix: 'bestball',
+      app: '/bestball',
+      mgr: 'Best Ball Room',
+      posSub: 'Every story is a stat-backed call from the 2026 research set, read as best ball — each one measured in ceiling, stacks and playoff weeks.',
+      camp: 'Verified, draft-relevant signals from camps and preseason games.',
+      allocHead: 'Best Ball Strategy',
+      allocSub: 'Ceiling, stacks and the championship weeks: how a best ball roster is actually built.',
+      alloc: [
+        ['/best-ball-draft-strategy', 'Best Ball Draft Strategy', 'Draft for weekly ceiling rather than a lineup you never set, and the roster shape that pays for it.', 'Read the playbook'],
+        ['/best-ball-stacking-guide', 'Best Ball Stacking Guide', 'Which offenses are worth stacking, how deep to go, and the correlation that actually wins tournaments.', 'Read the playbook'],
+        ['/bestball', 'The Best Ball Room', 'The live tool: ceiling-weighted values, stack alerts the moment a teammate goes, and championship-week edges.', 'Open the best ball room']
+      ]
+    }
+  };
+
+  // Precedence, highest first: an explicit ?fmt= on the URL (so a shared link
+  // opens in the edition it was shared from), then the reader's saved choice or
+  // league via it-league.js, then auction. A ?fmt= is written through
+  // setEdition, so following one link is remembered like a click on the switch.
+  var edQuery = (function () {
+    var m = /[?&]fmt=([a-z]+)/.exec(location.search || '');
+    return m && ED[m[1]] ? m[1] : null;
+  })();
+  var edKey = edQuery || (L && L.edition ? L.edition() : null) || 'auction';
+  if (!ED[edKey]) edKey = 'auction';
+  if (edQuery && L && L.setEdition) L.setEdition(edQuery);
+  var readFmt = (L && L.readingFormat) ? L.readingFormat() : (edKey === 'auction' ? 'auction' : 'snake');
+
+  // ── re-pointing the links ──────────────────────────────────────────────────
+  // Two families of URL have a twin in every edition, and ONLY those two are
+  // rewritten: the app's room, and the dated insight drops. The lookaheads are
+  // what keep everything else out — /auction-watch-2026-08-21,
+  // /auction-budget-allocation and /auction-draft-strategy have no snake or
+  // best ball twin at all, so a looser pattern here does not re-point them, it
+  // 404s them.
+  var ED_APP = /^\/auctiondraft(?=$|[?#\/])/;
+  var ED_INS = /^\/auction-insights(?=$|-\d|[?#\/])/;
+  function edUrl(u) {
+    if (!u) return u;
+    var e = ED[edKey];
+    if (ED_APP.test(u)) return e.app + u.slice('/auctiondraft'.length);
+    if (ED_INS.test(u)) return '/' + e.prefix + '-insights' + u.slice('/auction-insights'.length);
+    return u;
+  }
+  // Sweeping the rendered DOM rather than threading the edition through every
+  // renderer: the page paints from six independent places (the lead, the rail,
+  // the position modules, the coaching column, the Vegas case, the camp desk),
+  // three of them from async fetches that land whenever they land. A sweep
+  // cannot miss one of those the way a hand-edited renderer can. Each anchor
+  // remembers the href it was BORN with, so switching edition twice is not
+  // rewriting a rewrite.
+  function edSweep() {
+    var as = document.getElementsByTagName('a');
+    for (var i = 0; i < as.length; i++) {
+      var a = as[i];
+      if (a.__ed0 === undefined) a.__ed0 = a.getAttribute('href') || '';
+      if (a.__ed0 && (ED_APP.test(a.__ed0) || ED_INS.test(a.__ed0))) a.setAttribute('href', edUrl(a.__ed0));
+    }
+  }
+  var edSweepQueued = false;
+  function edSweepSoon() {
+    if (edSweepQueued) return;
+    edSweepQueued = true;
+    setTimeout(function () { edSweepQueued = false; edSweep(); }, 0);
+  }
+  // childList only: the sweep writes attributes, so it cannot retrigger itself.
+  try {
+    if (window.MutationObserver) new MutationObserver(edSweepSoon).observe(document.body, { childList: true, subtree: true });
+  } catch (e) {}
+
+  // Anything that has to be re-worded when the edition changes registers here.
+  // A block that paints on a timer or a fetch can push its own painter as it
+  // defines it, so ordering inside this file stops being load-bearing.
+  var edPainters = [];
+  function paintEdSwitch() {
+    var sw = document.getElementById('edSwitch');
+    if (!sw) return;
+    var as = sw.getElementsByTagName('a');
+    for (var i = 0; i < as.length; i++) {
+      var on = as[i].getAttribute('data-ed') === edKey;
+      as[i].className = on ? 'on' : '';
+      if (on) as[i].setAttribute('aria-current', 'true'); else as[i].removeAttribute('aria-current');
+    }
+    sw.title = (L && L.editionFromLeague && L.editionFromLeague())
+      ? 'Set from the league you saved — switch it if you are drafting another way'
+      : 'Every story on this page, in the draft you are actually playing';
+  }
+  function applyEdition() {
+    paintEdSwitch();
+    readFmt = (L && L.readingFormat) ? L.readingFormat() : (edKey === 'auction' ? 'auction' : 'snake');
+    for (var i = 0; i < edPainters.length; i++) { try { edPainters[i](); } catch (e) {} }
+    edSweep();
+  }
+  var edSwitchEl = document.getElementById('edSwitch');
+  if (edSwitchEl) edSwitchEl.addEventListener('click', function (ev) {
+    var a = ev.target.closest ? ev.target.closest('a[data-ed]') : null;
+    if (!a) return;
+    var next = a.getAttribute('data-ed');
+    if (!ED[next]) return;                       // let an unknown value navigate
+    // A reader opening an edition in a new tab means it: leave the modified
+    // click to the browser, which is what the real hrefs are there for.
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button) return;
+    ev.preventDefault();                         // no reload: the data is already here
+    if (next === edKey) return;
+    edKey = (L && L.setEdition) ? L.setEdition(next) : next;
+    applyEdition();
+    // Keep the URL honest so the choice survives a refresh and can be shared,
+    // without pushing a history entry per click — the back button belongs to the
+    // reader's last PAGE, not to their last format.
+    try {
+      if (history.replaceState) history.replaceState(null, '', edKey === 'auction' ? '/' : '/?fmt=' + edKey);
+    } catch (e) {}
+    try { if (typeof gtag === 'function') gtag('event', 'edition_switch', { edition: edKey }); } catch (e) {}
+  });
 
   var live = STORIES.filter(function(s){ return unlocked(s.date); });
   live.sort(function(a,b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
@@ -824,6 +999,13 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
       dots.appendChild(b);
     });
   }
+  // The generated lead below replaces the dated rotation outright. Re-rendering
+  // that rotation on an edition switch would quietly undo it and put a
+  // week-old deep dive back on the front page, so a switch repaints whichever
+  // lead is actually on screen.
+  var genLead = null;
+  function repaintLead(){ if (genLead) paintGeneratedLead(genLead); else renderLead(); }
+
   // No carousel timer. This only refreshes the countdown and rolls the lead
   // over when the three-hour boundary passes on a tab left open — and it stands
   // down entirely once the reader has browsed by hand, so their choice is
@@ -861,6 +1043,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   // painted above. The front page is never blank because the desk had a bad day.
   function paintGeneratedLead(d){
     if (!d || !d.ok || !d.story || !d.story.slug) return;
+    genLead = d;
     var s = d.story;
     if (tick) { clearInterval(tick); tick = null; }
     pinned = true;                        // the wall-clock rotation is off now
@@ -1350,45 +1533,74 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   }
   renderPositions();
 
-  // ── the auction / snake switch ──
-  // It only appears for a reader whose saved board can actually answer in both
-  // currencies. With no league there is no tailored line to re-word, and a
-  // control that changes nothing on screen is worse than no control at all.
-  var posFmt = document.getElementById('posFmt');
+  // ── what the edition re-words ──────────────────────────────────────────────
+  // The switch lives in the ribbon (see the edition block at the top of this
+  // file); this is the copy on the page that has to move with it. Everything
+  // authored is captured as it shipped and restored for the auction edition,
+  // so the auction page a crawler sees and the auction page a reader switches
+  // back to are the same page.
   var posSub = document.getElementById('posSub');
   var SUB_TAIL = ' New drops land through Labor Day.';
-  var SUB = {
-    auction: 'Every story is a stat-backed call from the 2026 research set, read through an auction lens \u2014 each one priced in the dollars on your own sheet.',
-    snake: 'Every story is a stat-backed call from the 2026 research set, read as a snake draft \u2014 each one measured in slots on your own board.'
+  var navMgr = document.getElementById('navMgr');
+  var tbMgr = document.getElementById('tbMgr');
+  var tbText = document.getElementById('tbText');
+  var allocHead = document.getElementById('allocHead');
+  var allocSub = document.getElementById('allocSub');
+  var allocGrid = document.getElementById('allocGrid');
+  var buildTag = document.getElementById('buildTag');
+  var buildSub = document.getElementById('buildSub');
+  var AUTHORED = {
+    tbText: tbText ? tbText.innerHTML : '',
+    allocHead: allocHead ? allocHead.textContent : '',
+    allocSub: allocSub ? allocSub.innerHTML : '',
+    allocGrid: allocGrid ? allocGrid.innerHTML : '',
+    buildSub: buildSub ? buildSub.textContent : ''
   };
-  function paintFmt(){
-    Array.prototype.forEach.call(posFmt.querySelectorAll('button'), function(b){
-      var on = b.getAttribute('data-fmt') === readFmt;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
-    posSub.textContent = SUB[readFmt] + SUB_TAIL;
-    // Why it is sitting where it is. A reader who never touched this switch and
-    // finds it on Snake is owed the reason — it came from the league they saved,
-    // not from a guess.
-    posFmt.title = (L.formatFromLeague && L.formatFromLeague())
-      ? 'Set from the league you saved \u2014 switch it if you are drafting the other way'
-      : 'How these calls are read on your board';
+  function allocCard(row) {
+    return '<div class="alloc-card"><h3><a href="' + row[0] + '">' + esc(row[1]) + '</a></h3><p>' +
+           esc(row[2]) + '</p><a class="go" href="' + row[0] + '">' + esc(row[3]) + ' &rarr;</a></div>';
   }
-  if (posFmt && posSub && L && L.has && L.hasBoard && L.setReadingFormat) {
-    posFmt.hidden = false;
-    paintFmt();
-    posFmt.addEventListener('click', function(ev){
-      var b = ev.target.closest ? ev.target.closest('button[data-fmt]') : null;
-      if (!b) return;
-      var next = L.setReadingFormat(b.getAttribute('data-fmt'));
-      if (next === readFmt) return;
-      readFmt = next;
-      paintFmt();
-      renderPositions();
-      renderLead();     // the lead quotes the same calls; it moves with them
-    });
-  }
+  edPainters.push(function () {
+    var e = ED[edKey];
+    if (posSub) posSub.textContent = e.posSub + SUB_TAIL;
+    if (navMgr) navMgr.textContent = e.mgr;
+    if (tbMgr) tbMgr.textContent = 'Open the ' + (edKey === 'auction' ? 'Auction Manager' : e.mgr);
+    // The band's pitch names the room it sells, so it cannot keep saying
+    // "Auction Manager" to a reader who is drafting best ball.
+    if (tbText) {
+      tbText.innerHTML = edKey === 'auction' ? AUTHORED.tbText
+        : '<b>Draft night is the deadline.</b> Free expert values in 60 seconds — or unlock your league’s full custom values, the live ' +
+          esc(e.mgr) + ', and the AI Value Coach for a one-time $9.99.';
+    }
+    // Asset Allocation is auction vocabulary. The other editions get the guides
+    // that exist for them rather than a renamed budget playbook.
+    if (allocHead) allocHead.textContent = e.allocHead || AUTHORED.allocHead;
+    if (allocSub) {
+      if (e.allocSub) allocSub.textContent = e.allocSub;
+      else {
+        allocSub.innerHTML = AUTHORED.allocSub;
+        // The restored markup carries data-it-money again, so it has to be
+        // re-read at the reader's own budget — it-league.js's own pass is long
+        // since done by the time anyone touches the switch.
+        if (L && L.applyMarkup) L.applyMarkup(allocSub);
+      }
+    }
+    if (allocGrid) allocGrid.innerHTML = e.alloc ? e.alloc.map(allocCard).join('') : AUTHORED.allocGrid;
+    // The Build is an exact solve in dollars and cannot be restated in picks.
+    // Outside the auction edition it says which currency it is in rather than
+    // letting a snake reader assume the numbers are theirs.
+    if (buildTag) {
+      buildTag.textContent = 'Auction solve';
+      buildTag.hidden = edKey === 'auction';
+    }
+    if (buildSub) {
+      buildSub.textContent = edKey === 'auction' ? AUTHORED.buildSub
+        : AUTHORED.buildSub + ' It is solved in dollars, because an exact solve needs a currency — your ' +
+          e.label.toLowerCase() + ' board runs the same valuations live.';
+    }
+    renderPositions();
+    repaintLead();     // the lead quotes the same calls; it moves with them
+  });
 
   // ── the coaching column ────────────────────────────────────────────────
   // Newest first, four on the front page, each carrying the faces of the
@@ -1425,9 +1637,19 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   })();
 
   // ── camp & preseason desk ──
+  // One desk serves every edition — there is a single run of auction-watch
+  // pages, and their titles are how they were published, so only the standing
+  // note above them changes. Calling a camp report "auction-relevant" to a
+  // reader who told the ribbon they are drafting best ball is the whole
+  // complaint this switch exists to answer.
   if (REPORTS.length) {
     var f = REPORTS[0];
-    document.getElementById('campNote').innerHTML = 'Verified, auction-relevant signals from camps and preseason games. This desk updates as news breaks — <b>latest report: ' + fmtDate(f.date) + '</b>.';
+    var campNoteEl = document.getElementById('campNote');
+    function paintCampNote(){
+      campNoteEl.innerHTML = ED[edKey].camp + ' This desk updates as news breaks — <b>latest report: ' + fmtDate(f.date) + '</b>.';
+    }
+    paintCampNote();
+    edPainters.push(paintCampNote);
     document.getElementById('campFeat').innerHTML =
       '<span><span class="badge badge-pos">Latest report</span></span>' +
       '<h3><a href="' + f.url + '">' + esc(f.title) + '</a></h3>' +
@@ -1565,9 +1787,14 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
       }).join('');
     } else {
       strip.innerHTML = '<div class="week-empty">Weekly preseason takeaways publish the morning after each slate: ' +
-        'who actually worked with the ones, which snap counts changed, and what it moves on the auction board. Nothing here yet for 2026.</div>';
+        'who actually worked with the ones, which snap counts changed, and what it moves on your board. Nothing here yet for 2026.</div>';
     }
   }
+
+  // Last, once every block above has registered its painter: put the whole page
+  // into the reader's edition. On auction this repaints what is already there,
+  // which is the cheapest way to be sure the two paths agree.
+  applyEdition();
 
 })();
 </script>

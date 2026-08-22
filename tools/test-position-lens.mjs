@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Regression test for the Position Intel reading lens on the front page.
+// Regression test for the front page's EDITION switch and the reading lens
+// underneath it.
 //   node tools/test-position-lens.mjs
 //
 // THE BUG THIS EXISTS FOR: every "Your league" line under a story has to commit
@@ -7,13 +8,18 @@
 // league. A reader whose app is set up for a snake draft got the whole of an
 // AUCTION site's front page written in draft slots, with no way to say
 // otherwise — and no reader who had never opened the app got anything at all.
-// The lens is now a switch: it starts on their league, defaults to auction, and
-// whatever they pick is remembered on every page it-league.js runs on.
+//
+// The control that answers it is now the ribbon's Auction Draft / Snake Draft /
+// Best Ball switch, which every reader gets: it re-points every story to that
+// edition's drop page, re-words the copy that names a format, and sets the
+// reading lens underneath (best ball reads in slots, like a snake draft). It
+// replaced a Position Intel Auction/Snake switch that only appeared for readers
+// with a saved board.
 //
 // The maths and the copy are covered by tools/test-it-league.mjs against a stub
-// DOM. What only a browser can prove is the WIRING: that the switch appears for
-// the right readers, that clicking it re-renders the modules AND the lead
-// together, and that the choice survives a reload.
+// DOM. What only a browser can prove is the WIRING: that one click moves the
+// modules, the lead, the links and the copy together, and that the choice
+// survives a reload.
 //
 // Needs playwright-core plus a Chromium binary (preinstalled at /opt/pw-browsers
 // in Claude Code remote sessions, else set CHROMIUM_PATH). Skips cleanly rather
@@ -80,15 +86,30 @@ async function open(store) {
   return { page, ctx };
 }
 const read = page => page.evaluate(() => ({
-  shown: document.getElementById('posFmt').getClientRects().length > 0,
-  on: [...document.querySelectorAll('#posFmt button')].filter(b => b.classList.contains('on')).map(b => b.dataset.fmt).join(),
+  shown: document.getElementById('edSwitch').getClientRects().length > 0,
+  on: [...document.querySelectorAll('#edSwitch a')].filter(a => a.classList.contains('on')).map(a => a.dataset.ed).join(),
   sub: document.getElementById('posSub').textContent,
   lines: [...document.querySelectorAll('#posGrid .it-yours')].map(e => e.textContent),
   labels: [...new Set([...document.querySelectorAll('#posGrid .it-yours b')].map(e => e.textContent.replace(/:$/, '')))],
-  lead: (document.getElementById('leadYours') || {}).textContent || ''
+  lead: (document.getElementById('leadYours') || {}).textContent || '',
+  // Every link on the page that has a per-edition twin, and the copy that names
+  // a format. One click has to move all of it, or the reader is left on a page
+  // that half agrees with them.
+  drops: [...new Set([...document.querySelectorAll('#posGrid a, #railList a, #leadTitle a')]
+            .map(a => (a.getAttribute('href') || '').split('-insights')[0])
+            .filter(h => /^\/(auction|snake|bestball)$/.test(h)))],
+  app: [...new Set([...document.querySelectorAll('a')]
+            .map(a => a.getAttribute('href') || '')
+            .filter(h => /^\/(auctiondraft|snakedraft|bestball)(\?|$)/.test(h))
+            .map(h => h.split('?')[0]))],
+  mgr: document.getElementById('navMgr').textContent,
+  allocHead: document.getElementById('allocHead').textContent,
+  camp: document.getElementById('campNote').textContent,
+  buildTag: document.getElementById('buildTag').hidden ? '' : document.getElementById('buildTag').textContent
 }));
+const pick = (page, ed) => page.click('#edSwitch a[data-ed="' + ed + '"]');
 
-// ── 1. a snake league opens in slots, and can be read as an auction ────────
+// ── 1. a snake league opens in the snake edition, and can be read as an auction
 console.log('\na snake league on an auction front page');
 {
   const store = { iron_tuna_draft_state_v2: league('snake'), iron_tuna_values_v1: JSON.stringify(BOARD) };
@@ -96,22 +117,25 @@ console.log('\na snake league on an auction front page');
   const before = await read(page);
   ok('the switch is offered', before.shown === true);
   ok('it opens on the league they saved', before.on === 'snake');
+  ok('every story points at the snake edition', before.drops.join() === '/snake', before.drops.join());
   ok('the stories are written in draft slots',
      before.lines.length > 0 && before.lines.every(l => /slot/.test(l)) && !before.lines.some(l => /\$/.test(l)),
      before.lines[0]);
-  ok('the standfirst says which lens it is', /slots on your own board/.test(before.sub), before.sub);
+  ok('the standfirst says which edition it is', /snake draft/.test(before.sub), before.sub);
 
-  await page.click('#posFmt button[data-fmt="auction"]');
+  await pick(page, 'auction');
   const after = await read(page);
   ok('one click re-prices every story', after.on === 'auction' && after.lines.every(l => /\$/.test(l)), after.lines[0]);
+  ok('and re-points every story with it', after.drops.join() === '/auction', after.drops.join());
   ok('the same number of stories survives the switch', after.lines.length === before.lines.length);
   ok('a borrowed lens does not claim to be their league',
      after.lines.every(l => !/your \d+-team snake/.test(l)), after.lines[0]);
-  ok('the standfirst follows the switch', /dollars on your own sheet/.test(after.sub), after.sub);
+  ok('the standfirst follows the switch', /as an auction/.test(after.sub), after.sub);
 
   await page.reload({ waitUntil: 'load' });
   const back = await read(page);
-  ok('the choice survives a reload', back.on === 'auction' && back.lines.every(l => /\$/.test(l)));
+  ok('the choice survives a reload',
+     back.on === 'auction' && back.drops.join() === '/auction' && back.lines.every(l => /\$/.test(l)));
   ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
 }
@@ -139,8 +163,9 @@ console.log('\na reader who has never opened the app');
 {
   const { page, ctx } = await open({});
   const s = await read(page);
-  ok('the switch stays out of the way', s.shown === false);
-  ok('the shipped standfirst stands', /New drops land through Labor Day\.$/.test(s.sub.trim()), s.sub);
+  ok('the switch is offered anyway', s.shown === true);
+  ok('and it opens on the site\u2019s own edition', s.on === 'auction');
+  ok('the standfirst still ends where it shipped', /New drops land through Labor Day\.$/.test(s.sub.trim()), s.sub);
   ok('the calls are translated anyway', s.lines.length > 0, `${s.lines.length} lines`);
   ok('and never as the reader\u2019s own league',
      s.labels.length === 1 && s.labels[0] === 'Default league', s.labels.join());
@@ -181,10 +206,109 @@ console.log('\nthe lead and the modules agree');
   if (!lead) { console.log('  ..   no deep dive on this board tailors — lead check skipped'); }
   else {
     ok('the lead is priced in dollars to start', /\$/.test(lead), lead);
-    await page.click('#posFmt button[data-fmt="snake"]');
+    await pick(page, 'snake');
     const moved = await leadAt();
     ok('the lead follows the same switch as the modules', /slot|hold/.test(moved) && !/\$\d/.test(moved), moved);
   }
+  await ctx.close();
+}
+
+// ── 5. the whole page moves, not just the tailored lines ──────────────────
+// The complaint that put this switch in the ribbon was that a reader who came
+// for another draft was still handed the auction site. So the test is not "the
+// switch has three buttons": it is that ONE click moves the drop links, the
+// app links, the button that names the room, the guides module and the camp
+// desk's standing note together.
+console.log('\nthe whole page follows the edition');
+{
+  const { page, ctx } = await open({});
+  const a = await read(page);
+  ok('auction opens on the auction room', a.app.join() === '/auctiondraft', a.app.join());
+  ok('and names it', a.mgr === 'Auction Manager', a.mgr);
+  ok('the auction keeps its allocation guides', a.allocHead === 'Asset Allocation', a.allocHead);
+  ok('and The Build needs no tag to say which currency it is in', a.buildTag === '', a.buildTag);
+
+  await pick(page, 'bestball');
+  const b = await read(page);
+  ok('best ball re-points every story', b.drops.join() === '/bestball', b.drops.join());
+  ok('every app link lands in the best ball room', b.app.join() === '/bestball', b.app.join());
+  ok('the room is named honestly', b.mgr === 'Best Ball Room', b.mgr);
+  ok('the guides are the ones best ball actually has',
+     b.allocHead === 'Best Ball Strategy' &&
+     (await page.$$eval('#allocGrid a', as => as.every(x => /best-ball|bestball/.test(x.getAttribute('href'))))),
+     b.allocHead);
+  ok('The Build says the dollars are the auction solve', b.buildTag === 'Auction solve', b.buildTag);
+  ok('the camp desk stops calling itself auction-only', !/auction-relevant/.test(b.camp), b.camp);
+  // The rewrite covers exactly two families of URL. Anything else that starts
+  // "/auction-" has no twin in another edition, so it must survive untouched —
+  // and no link may be invented: every /bestball* href has to be a page that
+  // exists (the room, the drop pages, the two best ball guides).
+  ok('the camp reports keep the URLs they were published at',
+     await page.$$eval('a', as => as.some(x => /^\/auction-watch-/.test(x.getAttribute('href') || ''))));
+  ok('and no link is invented for a page that does not exist',
+     await page.$$eval('a', as => as.map(x => x.getAttribute('href') || '')
+       .filter(h => h.indexOf('/bestball') === 0)
+       .every(h => h === '/bestball' || /^\/bestball(\?|#|\/)/.test(h) || /^\/bestball-insights(-\d{4}-\d{2}-\d{2})?([?#]|$)/.test(h))));
+
+  await pick(page, 'auction');
+  const back = await read(page);
+  ok('switching back restores the page as authored',
+     back.drops.join() === '/auction' && back.app.join() === '/auctiondraft' &&
+     back.mgr === 'Auction Manager' && back.allocHead === 'Asset Allocation' &&
+     /auction-relevant/.test(back.camp) && back.buildTag === '');
+  ok('and the authored guides come back whole',
+     await page.$$eval('#allocGrid .alloc-card', c => c.length === 4));
+  ok('nothing on the page threw', errors.length === 0, errors[0]);
+  await ctx.close();
+}
+
+// ── 6. the generated lead survives a switch ───────────────────────────────
+// The desk's three-hourly story REPLACES the dated rotation (HANDOFF §17). A
+// switch that re-ran the dated renderer would silently undo that and put a
+// week-old deep dive back on the front page — which is what the old lens
+// switch did. The lead here is stubbed, because what is under test is the
+// wiring, not the desk.
+console.log('\na generated lead and a switch');
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  page.on('pageerror', e => errors.push(e.message));
+  await page.route('**/api/lead-story', r => r.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true,
+      story: {
+        slug: 'a-test-story-2026-08-21-12', title: 'The desk published this one',
+        dek: 'And it is the lead until the next run.', category: null, label: 'Insight',
+        ppl: [], cast: [], createdAt: Date.now(), url: '/lead/a-test-story-2026-08-21-12'
+      },
+      recent: []
+    })
+  }));
+  await page.goto(BASE, { waitUntil: 'load' });
+  const title = () => page.textContent('#leadTitle');
+  await page.waitForFunction(() => /desk published/.test(document.getElementById('leadTitle').textContent));
+  ok('the generated story is the lead', /desk published/.test(await title()));
+  await pick(page, 'snake');
+  ok('and a switch leaves it there', /desk published/.test(await title()), await title());
+  ok('the modules moved underneath it anyway', (await read(page)).drops.join() === '/snake');
+  ok('nothing on the page threw', errors.length === 0, errors[0]);
+  await ctx.close();
+}
+
+// ── 7. a shared link opens in the edition it was shared from ───────────────
+console.log('\na ?fmt= link');
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(BASE + '?fmt=snake', { waitUntil: 'load' });
+  const s = await read(page);
+  ok('it opens on the edition in the URL', s.on === 'snake' && s.drops.join() === '/snake', s.on);
+  await page.reload({ waitUntil: 'load' });
+  ok('and following one is remembered like a click', (await read(page)).on === 'snake');
+  ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
 }
 
