@@ -582,6 +582,167 @@
   // one lie this whole file exists to avoid.
   function tailorLabel() { return (cfg && snap) ? 'Your league' : 'Default league'; }
 
+
+  // ── the desk's dollars, in the reader's league ────────────────────────────
+  // The generated lead (front.html, /lead) is written by a scheduled run at ONE
+  // league: 12 teams, $200, the site's own default scoring. It quotes real
+  // dollars in its headline and dek — "bid $32, not the sheet's $26" — and every
+  // one of them is wrong for a reader who plays $300, or 10 teams, or half PPR.
+  // The story cannot know who is reading it. This does.
+  //
+  // Two different corrections, and the difference matters:
+  //   * A dollar attached to a NAMED PLAYER is re-anchored on that player's own
+  //     price on the reader's board. That board was priced at their scoring, so
+  //     this carries scoring, budget and league size at once — a full-PPR back
+  //     and a standard-scoring back are not the same player, and no amount of
+  //     budget scaling would say so.
+  //   * A dollar attached to nobody (a pool, a tier, a gap) is scaled by the
+  //     money in the room, (teams x budget), which is what every price on an
+  //     auction board scales by.
+  // Nothing is invented: with no saved league this returns null and the copy
+  // ships exactly as the desk wrote it, labelled as the desk's own league.
+  function boardRatio(name) {
+    var site = defaultBoard();
+    var sp = findPlayer(name, null, site);
+    var mp = mine ? findPlayer(name, null, mine) : null;
+    if (!sp || !mp) return 0;
+    var a = sp.v || 0, b = mp.v || 0;
+    if (a < 1 || b < 1) return 0;
+    return b / a;
+  }
+  // The money in the room, relative to the room the desk writes for.
+  function leagueScale() {
+    return cfg ? (cfg.teams * cfg.budget) / (DEFAULT_TEAMS * DEFAULT_BUDGET) : 1;
+  }
+  function reEscape(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  // Every place a story's named players are mentioned, with the ratio each one's
+  // dollars move by. Surnames count as mentions — a dek names a player once in
+  // full and then calls him "Henry" — but only when exactly one player in the
+  // story carries that surname, because "Williams" against two Williamses would
+  // price one of them off the other's board slot.
+  // Names the copy uses that the story never listed. `players` carries at most
+  // the four the story commits to, and a dek routinely prices a fifth in
+  // passing ("...Garrett Wilson at $26 and DeVonta Smith at $26"). Left
+  // undiscovered, that fifth player's dollars get attributed to the name before
+  // him, which prices one player off another's board slot. Cheap to avoid: pull
+  // the capitalised two- and three-word runs out of the copy and keep the ones
+  // the reader's own board can name.
+  function scanNames(text) {
+    var re = /\b[A-Z][A-Za-z'\u2019.\-]+(?:\s+[A-Z][A-Za-z'\u2019.\-]+){1,2}/g;
+    var out = [], seen = {}, m;
+    while ((m = re.exec(String(text)))) {
+      var words = m[0].split(/\s+/);
+      for (var take = words.length; take >= 2; take--) {
+        var cand = words.slice(0, take).join(' ');
+        if (seen[cand]) break;
+        if (mine && mine.byName[normName(cand)]) { seen[cand] = 1; out.push(cand); break; }
+      }
+    }
+    return out;
+  }
+  function mentions(text, names) {
+    var hay = String(text).toLowerCase(), out = [], surnames = {};
+    var all = (names || []).slice();
+    scanNames(text).forEach(function (n) {
+      var dup = all.some(function (x) { return normName(x) === normName(n); });
+      if (!dup) all.push(n);
+    });
+    names = all;
+    (names || []).forEach(function (n) {
+      var k = lastNameKey(n);
+      if (k) surnames[k] = (surnames[k] || 0) + 1;
+    });
+    (names || []).forEach(function (n) {
+      var r = boardRatio(n);
+      if (!r) return;
+      var full = String(n || '').trim();
+      if (!full) return;
+      var forms = [full];
+      var k = lastNameKey(full);
+      // Suffix off first: the last word of "Kenneth Walker III" is not his name.
+      var bare = full.replace(/\s+(jr|sr|ii|iii|iv|v)\.?$/i, '').replace(/[.,]/g, ' ').trim().split(/\s+/);
+      if (k && surnames[k] === 1 && bare.length > 1) forms.push(bare[bare.length - 1]);
+      forms.forEach(function (f) {
+        var re = new RegExp('\\b' + reEscape(f.toLowerCase()) + '\\b', 'g'), m;
+        while ((m = re.exec(hay))) out.push({ at: m.index, ratio: r, who: full });
+      });
+    });
+    return out.sort(function (a, b) { return a.at - b.at; });
+  }
+  // Where the sentence holding `at` begins, so a dollar figure is only ever
+  // attributed to a player named in its own sentence. "Cap Drake London at $29,
+  // Garrett Wilson at $26" has to give each figure to the player beside it, and
+  // a name three sentences up is not that.
+  function sentenceStart(text, at) {
+    var cut = text.slice(0, at), m = cut.lastIndexOf('. ');
+    var q = Math.max(cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+    return Math.max(0, Math.max(m, q) + 2);
+  }
+  function sentenceEnd(text, at) {
+    var m = text.slice(at).search(/[.!?](\s|$)/);
+    return m < 0 ? text.length : at + m;
+  }
+  // Restate one piece of the desk's copy — a headline, a dek, a whole article —
+  // in the reader's money. Returns null when there is nothing to say: no saved
+  // league, no dollars in the copy, or a reader whose league prices the story
+  // the same way the desk already did.
+  function repriceCopy(text, names) {
+    if (!cfg || !text) return null;
+    var src = String(text);
+    if (!/\$\s?\d/.test(src)) return null;
+    var anchors = mentions(src, names);
+    var scale = leagueScale();
+    var out = '', last = 0, changed = 0, anchored = 0;
+    var re = /\$\s?(\d{1,4})\b/g, m;
+    while ((m = re.exec(src))) {
+      var n = parseInt(m[1], 10);
+      var ratio = 0;
+      if (anchors.length) {
+        var lo = sentenceStart(src, m.index), hi = sentenceEnd(src, m.index), i;
+        // The player named before the figure owns it; a figure that opens its
+        // own sentence ("$32 is the bid on Flowers") falls forward to the next
+        // name in the same sentence.
+        for (i = anchors.length - 1; i >= 0; i--) {
+          if (anchors[i].at < m.index && anchors[i].at >= lo) { ratio = anchors[i].ratio; break; }
+        }
+        if (!ratio) {
+          for (i = 0; i < anchors.length; i++) {
+            if (anchors[i].at > m.index && anchors[i].at <= hi) { ratio = anchors[i].ratio; break; }
+          }
+        }
+        if (ratio) anchored++;
+      }
+      if (!ratio) ratio = scale;
+      var v = Math.max(MIN_BID, Math.round(n * ratio));
+      out += src.slice(last, m.index) + '$' + v;
+      last = m.index + m[0].length;
+      if (v !== n) changed++;
+    }
+    out += src.slice(last);
+    if (!changed) return null;
+    return { text: out, changed: changed, anchored: anchored, source: src };
+  }
+  // What league the dollars a reader is looking at belong to, said out loud.
+  // The generated lead quotes prices with no percentage in sight, so tailor()'s
+  // machinery has nothing to translate; what a reader needs instead is to know
+  // whose league the number is for — which is the complaint that started this:
+  // the front page was quoting $26 to a reader whose own sheet says $39.
+  //
+  // `restated` is whether repriceCopy() actually moved the numbers, because
+  // "priced for your league" over untouched default figures would be the same
+  // lie in the other direction.
+  function pricingNote(restated) {
+    if (!cfg) {
+      return 'These are ' + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET
+        + ' full-PPR dollars. Set up your league and every price here is restated in your money.';
+    }
+    if (restated) {
+      return 'Restated for ' + label('auction') + (snap ? ', ' + scoringLabel() : '')
+        + '. The desk writes at ' + DEFAULT_TEAMS + ' teams, $' + DEFAULT_BUDGET + ', full PPR.';
+    }
+    return 'Your ' + cfg.teams + '-team, $' + cfg.budget + ' league prices this the same way the desk does.';
+  }
+
   // One stylesheet for the "Your league:" line, injected rather than copied into
   // forty pages' <style> blocks. It has to sit on the light front page and the
   // dark drop pages alike, so it borrows the reader's text colour and paints
@@ -695,6 +856,9 @@
     pctRange: pctRange,
     tailor: tailor,
     tailorLabel: tailorLabel,
+    repriceCopy: repriceCopy,
+    pricingNote: pricingNote,
+    leagueScale: leagueScale,
     defaultBoard: function () { return defaultBoard().players; },
     readingFormat: readingFormat,
     setReadingFormat: setReadingFormat,

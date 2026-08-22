@@ -627,5 +627,95 @@ console.log('\nfront.html myCase');
   ok('a stat-line-less item is refused', withLeague({ name: 'Case Wideout', position: 'WR' }) === null);
 }
 
+// ── 11. the generated lead's dollars, restated for the reader ──────────────
+// The desk writes one league's prices into its headline ("bid $32, not the
+// sheet's $26") and the front page used to print them at everybody. These are
+// the rules that stop that being either wrong or invented.
+console.log('\nthe desk\u2019s dollars in the reader\u2019s league');
+{
+  // Real names, because the anchor is the gap between the SITE's board and the
+  // reader's, and the site's board only knows real players.
+  const site = load({}).L.defaultBoard();
+  const priceOf = n => (site.find(p => p.n === n) || {}).v || 0;
+  const readerBoard = {
+    ts: 1, teams: 10, budget: 300, format: 'auction',
+    players: [
+      { n: 'Zay Flowers', pos: 'WR', v: priceOf('Zay Flowers') * 2, pts: 260 },
+      { n: 'Derrick Henry', pos: 'RB', v: priceOf('Derrick Henry'), pts: 250 },
+      { n: 'DeVonta Smith', pos: 'WR', v: 1, pts: 120 }
+    ]
+  };
+  const store = {
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 10, budget: 300, format: 'auction' } }),
+    iron_tuna_values_v1: JSON.stringify(readerBoard)
+  };
+  const { L } = load(store);
+  const names = ['Zay Flowers', 'Derrick Henry'];
+
+  ok('a reader with no league saved is never shown numbers dressed up as theirs',
+     load({}).L.repriceCopy("bid $32, not the sheet's $26", names) === null);
+  ok('copy with no dollars in it is left alone',
+     L.repriceCopy('Flowers moves to WR9 on the top-ranked offense', names) === null);
+
+  const t = L.repriceCopy("Zay Flowers moves to WR9: bid $32, not the sheet's $26.", names);
+  ok('a named player\u2019s dollars are re-anchored on his price on the reader\u2019s board',
+     t && t.text === "Zay Flowers moves to WR9: bid $64, not the sheet's $52.", t && t.text);
+  ok('the ranks are left alone, because nothing here can recompute them',
+     t && /WR9/.test(t.text));
+
+  // A dek names a player once in full and then by surname. "Flowers' line" has
+  // to price off Flowers, not off whoever was named before him.
+  const sur = L.repriceCopy('Zay Flowers is up. The odds add 68 yards to Flowers and $10 with them.', names);
+  ok('a surname carries the same anchor as the full name', sur && /\$20/.test(sur.text), sur && sur.text);
+
+  // Only four players travel with a story, and a dek routinely prices a fifth.
+  const scan = L.repriceCopy('Cap Derrick Henry at $30 and DeVonta Smith at $26.', names);
+  ok('a player the story never listed still prices off his own board slot',
+     scan && /DeVonta Smith at \$1\b/.test(scan.text), scan && scan.text);
+
+  // Money attached to nobody is a pool, a tier or a gap, and those scale with
+  // the money in the room rather than with any one player.
+  ok('the league scale is the money in the room', Math.abs(L.leagueScale() - (10 * 300) / (12 * 200)) < 1e-9);
+  const pool = L.repriceCopy('The odds add $12 to the quarterback pool.', names);
+  ok('an unattributed figure scales by teams x budget',
+     pool && pool.text === 'The odds add $15 to the quarterback pool.', pool && pool.text);
+
+  // $1 is the floor of an auction board; nothing may be restated to $0.
+  const floor = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 8, budget: 25, format: 'auction' } })
+  }).L.repriceCopy('A $2 flier.', []);
+  ok('no price is ever restated below the $1 minimum bid', floor && /\$1\b/.test(floor.text), floor && floor.text);
+
+  // A reader playing the league the desk writes for is told so, rather than
+  // being shown a "restated" badge over numbers nothing happened to.
+  const same = load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }) }).L;
+  ok('a reader on the desk\u2019s own league has nothing restated', same.repriceCopy('bid $32', []) === null);
+  ok('and is told that rather than left guessing', /the same way the desk does/.test(same.pricingNote(false)));
+
+  ok('the note names the reader\u2019s league and their scoring', /your 10-team, \$300 auction/.test(L.pricingNote(true))
+     && /PPR|standard/.test(L.pricingNote(true)), L.pricingNote(true));
+  ok('the note names the desk\u2019s league too, so the reader can tell them apart',
+     /12 teams, \$200, full PPR/.test(L.pricingNote(true)));
+  ok('a reader with no league is told whose dollars these are, and how to change it',
+     /12-team, \$200 full-PPR/.test(load({}).L.pricingNote(false))
+     && /Set up your league/.test(load({}).L.pricingNote(false)));
+}
+
+// ── 12. the pages that print the desk's dollars all go through it ──────────
+console.log('\nthe front page and /lead restate before they paint');
+{
+  const paint = front.slice(front.indexOf('function paintGeneratedLead'), front.indexOf('function leadStamp'));
+  ok('the front-page lead restates the headline', /repriceCopy\(s\.title/.test(paint));
+  ok('and the dek with it', /repriceCopy\(s\.dek/.test(paint));
+  ok('and says whose league the numbers are', /pricingNote\(/.test(paint));
+  ok('the old "nothing to re-price" branch is gone',
+     !/Nothing to re-price/.test(front));
+
+  const page = fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8');
+  ok('/lead loads the library at all', page.includes('src="/it-league.js"'));
+  ok('/lead restates the article body, not just the headline', /rp\(s\.body/.test(page));
+  ok('/lead says whose league the numbers are', /pricingNote\(/.test(page));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
