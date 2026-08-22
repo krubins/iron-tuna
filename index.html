@@ -2902,6 +2902,53 @@ function applyVegasWeight(players, w) {
     return touched ? { ...p, projectedStats: stats, vegas: next } : p;
   });
 }
+// A saved board is pinned to the pool it was saved from: while its projVersion
+// still matches, the app never re-fetches. That is right for the projections,
+// which only move on a version bump, and wrong for the ODDS, which the Worker
+// refreshes daily and which are simply absent from any pool fetched in a window
+// where the overlay was missing (a failed cron, or the self-heal running behind
+// the response it could not delay). Such a reader is stuck with an odds-free
+// board until the next version bump: no V flags, no rank chips, and no
+// Projections vs Vegas slider, which hides itself when nothing carries odds.
+//
+// So when the saved pool carries no odds at all, the baseline is re-fetched and
+// the triples are grafted back on, stat by stat. Only a stat still sitting on
+// the COMMITTED endpoint is moved — that one is the site's own number and the
+// odds are entitled to it. Anything else is the reader's (a hand edit, a CSV
+// import, a live-data load) and is left exactly where it is, which is the same
+// promise handlePlayerEdit makes in the other direction.
+function graftVegasOdds(players, baseline) {
+  if (!players || !players.length || !baseline || !baseline.length) return players;
+  const key = p => _liveNorm(p && p.name) + '|' + (p && p.position);
+  const priced = new Map();
+  for (const b of baseline) if (b && b.vegas && b.name) priced.set(key(b), b);
+  if (!priced.size) return players;
+  let grafted = 0;
+  const out = players.map(p => {
+    const b = p && p.name && p.projectedStats && priced.get(key(p));
+    if (!b) return p;
+    const stats = { ...p.projectedStats };
+    const vg = {};
+    let touched = false;
+    for (const k in b.vegas) {
+      const a = b.vegas[k];
+      // Same shape check applyVegasWeight makes: a malformed triple is carried
+      // across untouched rather than trusted with a projection.
+      const usable = Array.isArray(a) && a.length >= 3 && k in stats
+        && typeof a[0] === 'number' && isFinite(a[0])
+        && typeof a[2] === 'number' && isFinite(a[2]);
+      if (!usable) continue;
+      if (stats[k] !== a[0]) continue;          // the reader's number, not ours
+      stats[k] = a[2];
+      vg[k] = [a[0], a[1], a[2]];
+      touched = true;
+    }
+    if (!touched) return p;
+    grafted++;
+    return { ...p, projectedStats: stats, vegas: vg };
+  });
+  return grafted ? out : players;
+}
 function scorePlayer(player, config) {
   if (player.projectedPointsOverride != null) return player.projectedPointsOverride;
   const {
@@ -21225,12 +21272,28 @@ function App() {
   const playersVersionRef = useRef(initialState?.players && initialState.players.length ? (initialState.projVersion || null) : PROJ_VERSION);
   useEffect(() => {
     const savedFresh = initialState?.players && initialState.players.length && initialState.projVersion === PROJ_VERSION;
-    if (savedFresh) return;
+    // A saved pool at the current version is otherwise never re-fetched, so a
+    // board that was seeded while the Worker had no odds overlay stays odds-free
+    // forever — and the Projections vs Vegas slider, which hides itself when
+    // nothing carries odds, never comes back. When the saved pool is current but
+    // carries no triples at all, the baseline is still fetched, and only the odds
+    // are grafted on: the projections, the reader's edits and dataInfo are left
+    // exactly as they were. A pool the reader replaced themselves (a CSV import,
+    // a live-data load) is not the site's board and is left alone entirely.
+    const savedSource = initialState?.dataInfo && initialState.dataInfo.source;
+    const oddsOnly = savedFresh
+      && (!savedSource || savedSource === 'Projections 2026')
+      && !initialState.players.some(p => p && p.vegas);
+    if (savedFresh && !oddsOnly) return;
     let cancelled = false;
     (async () => {
       try {
         const data = await fetchBaselineProjections();
-        if (!cancelled && data && data.length) {
+        if (!cancelled && data && data.length && oddsOnly) {
+          const baseline = buildInitialPlayers(data);
+          setPlayers(prev => graftVegasOdds(prev, baseline));
+          setProjLoadFailed(false);
+        } else if (!cancelled && data && data.length) {
           let players0 = buildInitialPlayers(data);
           if (liveStatusRef.current) players0 = applyLiveStatus(players0, liveStatusRef.current);
           setPlayers(players0);
@@ -21243,10 +21306,12 @@ function App() {
             when: Date.now()
           });
         } else if (!cancelled && !(data && data.length)) {
-          setProjLoadFailed(true);
+          // The saved board is current and usable; only the odds are missing, so
+          // a failed fetch is nothing the reader needs to see.
+          if (!oddsOnly) setProjLoadFailed(true);
         }
       } catch (e) {
-        if (!cancelled) setProjLoadFailed(true);
+        if (!cancelled && !oddsOnly) setProjLoadFailed(true);
       }
     })();
     return () => {
