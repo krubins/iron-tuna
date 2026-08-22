@@ -2137,3 +2137,83 @@ Mutation-test it, the way it was built: reintroduce `var(--red)` in `front.html`
 rule for `var(--never-defined,#333)` (nothing may fail — a fallback is not a
 bug). If a change makes any of those three behave differently, the check has
 stopped doing its job.
+
+---
+
+## 26. August 2026: the front-page nav fits the page it is on
+
+**The complaint.** "Fix the nav crowding."
+
+**What was actually wrong,** measured rather than eyeballed: the ribbon's
+content was **1391px inside a 1260px `.wrap`**. That is not a narrow-window
+problem — it overflowed by 131px at *every* desktop width, 1600px included.
+The two links on the far right, `Classic Home` and `Sign In`, were clipped for
+every reader who ever loaded the page. `.ribbon .wrap` has `overflow-x:auto`,
+so they were technically reachable by scrolling a row that gave no sign it
+could scroll.
+
+`Sign In` being the permanently invisible one is the part that mattered: it
+was the only sign-in entry point on the page.
+
+### What changed
+
+1. **`Classic Home` left the ribbon.** It was already in the footer (a second
+   copy bought nothing), so removing it costs no reachability.
+2. **`Sign In` moved up into `.mast-nav`**, next to Cheat Sheet and Auction
+   Manager. It is a thing you *do*, not a place on the page, so it belongs
+   with the account buttons rather than among the section anchors. `.mast-signin`
+   is dimmer than a CTA and set slightly apart, so it does not read as a third
+   button.
+3. **The ribbon tightens below 1240px** (`@media(max-width:1240px)`: link
+   padding 11→7px, wrap gap 4→2px, switcher padding 12→9px). Those pixels are
+   what keep the **edition switcher** — a control, not a link — on screen. The
+   row now fits down to **1087px**; below that it scrolls, which is correct on
+   a phone.
+4. **The scroll finally announces itself.** `.ribbon.is-scrollable::after`
+   paints a 44px white fade at the right edge; the class is toggled from script
+   on scroll and resize when `scrollWidth - clientWidth - scrollLeft > 4`, so
+   the cue appears only when there is more to the right and clears at the end
+   of the scroll.
+
+### Two traps in here, both hit while building it
+
+- **`.ribbon` is `position:sticky`.** The first draft added
+  `.ribbon{position:relative}` further down the sheet to anchor the fade —
+  which *overrides* `sticky` and silently un-sticks the nav. Sticky already
+  establishes a containing block for an absolutely positioned descendant, so
+  the extra rule was both unnecessary and destructive. Do not add it back.
+- **The fade is on `.ribbon`, but the content is in `.wrap`.** `.ribbon` is
+  viewport-wide and `.wrap` is a centred 1260px box, so a plain `right:0` puts
+  the fade in the margin instead of at the edge of the clipped content. It is
+  anchored with `right:max(0px,calc((100% - 1260px)/2))`. If `.wrap`'s
+  max-width ever changes, that number has to change with it.
+
+### The masthead bug this surfaced
+
+`.mast .wrap` was `height:64px` while `.mast-nav` is `flex-wrap:wrap`. On a
+narrow laptop the nav wrapped to a second row that **spilled out of the black
+band and sat on top of the ribbon**. This was already true on `main` between
+about 901px and 1000px — adding `Sign In` only widened the band that hit it.
+
+Fixed at the root: `min-height:64px` plus 6px of vertical padding, so the band
+grows to hold whatever it is given instead of overflowing. Above the wrap point
+it renders pixel-identically to the old fixed height (the 40px logo plus 12px
+padding is well under 64). The `@media(max-width:900px)` rule that used to say
+`height:auto` no longer needs to.
+
+`.mast-nav` also tightens below 1100px, which keeps it to one row down to about
+980px — better than the fixed-height version managed.
+
+### Verifying a change here
+
+Measure it; do not look at it. A Playwright pass over
+`[1600,1440,1280,1100,1000,960,900,768,600,380]` reading, for the ribbon,
+`wrap.scrollWidth - wrap.clientWidth` and which children fall outside
+`wrap.getBoundingClientRect()`, and for the masthead, the number of distinct
+`top` values among `.mast-nav`'s children and whether the nav's bottom falls
+below `.mast .wrap`'s. The contract:
+
+- **1088px and up:** ribbon overflow 0, nothing clipped, no fade.
+- **Below 1088px:** overflow is expected and the fade must be present.
+- **Every width:** the masthead nav must never extend past the bottom of
+  `.mast .wrap`, and `document.documentElement` must not scroll horizontally.

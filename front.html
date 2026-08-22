@@ -37,13 +37,24 @@ img{max-width:100%}
 
 /* ── masthead ── */
 .mast{background:var(--mast);border-bottom:3px solid var(--brand)}
-.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;height:64px}
+/* min-height, not height: the nav is a row of links whose width depends on
+   the reader's viewport, and on a narrow laptop it wraps. A fixed height
+   let the second row spill out of the black band and sit on top of the
+   ribbon; this lets the band grow to hold whatever it is given.
+   Above the wrap point it is pixel-identical to a fixed 64px. */
+.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:64px;padding-top:6px;padding-bottom:6px}
 .mast-brand{display:inline-flex;align-items:center;flex:0 0 auto}
 .mast-logo{height:40px;width:auto;display:block}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
 .mast-nav a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
 .mast-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
 .mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px}
+/* Sign In sits with the account buttons rather than in the section ribbon: it
+   is a thing you DO, not a place on the page, and in the ribbon it fell past
+   the right edge at every desktop width. Dimmer and set slightly apart so it
+   reads as account rather than as another section anchor. */
+.mast-nav a.mast-signin{color:#9aa3ac;margin-left:10px}
+.mast-nav a.mast-signin:hover{color:#fff}
 .mast-nav a.cta:hover{background:var(--brand-dark)}
 .mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px}
 .mast-nav a.cta-gold:hover{filter:brightness(1.07)}
@@ -67,6 +78,14 @@ img{max-width:100%}
 .ribbon a{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 11px;border-bottom:3px solid transparent;white-space:nowrap}
 .ribbon a:hover{color:var(--ink);border-bottom-color:var(--brand)}
 .ribbon .rb-spacer{flex:1}
+/* The ribbon scrolls sideways when it does not fit, which is the right
+   behaviour on a phone and invisible on a desktop: content simply looked
+   truncated with nothing to say it could move. `is-scrollable` is set from
+   script when there is more to the right, and cleared at the end of the
+   scroll, so the fade only appears when it means something. */
+.ribbon .wrap{scrollbar-width:none}
+.ribbon .wrap::-webkit-scrollbar{display:none}
+.ribbon.is-scrollable::after{content:"";position:absolute;top:0;right:max(0px,calc((100% - 1260px)/2));width:44px;height:calc(100% - 1px);pointer-events:none;background:linear-gradient(to right,rgba(255,255,255,0),#fff 78%)}
 .ribbon a.rb-dim{color:var(--ink-3);font-weight:700}
 
 /* ── section headers ── */
@@ -413,10 +432,19 @@ img{max-width:100%}
 .foot a:hover{color:var(--brand)}
 .foot .fm{margin-left:auto}
 
+/* Between the widest phone and the full desktop the ribbon is a handful of
+   pixels too wide, which pushes the edition switcher — a control, not a link —
+   out of reach. Tightening the links buys those pixels back rather than
+   spending a scroll on them: the row fits down to 1087px. */
+@media(max-width:1240px){.ribbon a{padding:12px 7px}.ribbon .wrap{gap:2px}.ribbon .ed-switch a{padding:6px 9px}}
+/* Sign In moved up into the masthead out of the ribbon, and on a narrow laptop
+   that extra link is what tips the nav onto a second row. Tighter links keep it
+   to the one row it took before. */
+@media(max-width:1100px){.mast-nav a{padding:8px 7px;letter-spacing:.06em}}
 @media(max-width:900px){
   .hero{grid-template-columns:1fr}
   .camp-grid{grid-template-columns:1fr}
-  .mast .wrap{height:auto;flex-wrap:wrap;padding-top:8px;padding-bottom:8px;justify-content:center}
+  .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;justify-content:center}
   .lead-body{min-height:0;padding:20px}
   .lead-ctrls{padding:10px 20px}
   .lead-media{padding:26px 20px 14px;gap:14px}
@@ -442,6 +470,7 @@ img{max-width:100%}
   <nav class="mast-nav">
     <a href="#qb">QB</a><a href="#rb">RB</a><a href="#wr">WR</a><a href="#te">TE</a><a href="#market">Market</a>
     <a href="#allocation">Allocation</a><a href="#camp">Camp</a>
+    <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
     <a class="cta-gold" href="/auctiondraft?screen=cheat">Cheat Sheet</a>
     <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
   </nav>
@@ -465,8 +494,6 @@ img{max-width:100%}
     <a href="/?fmt=snake" data-ed="snake">Snake Draft</a>
     <a href="/?fmt=bestball" data-ed="bestball">Best Ball</a>
   </span>
-  <a class="rb-dim" href="/hub" title="The classic Iron Tuna home page">Classic Home</a>
-  <a class="rb-dim" href="/auctiondraft?signin=1">Sign In</a>
 </div></div>
 
 <main class="wrap">
@@ -1961,6 +1988,24 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       strip.innerHTML = '<div class="week-empty">Weekly preseason takeaways publish the morning after each slate: ' +
         'who actually worked with the ones, which snap counts changed, and what it moves on your board. Nothing here yet for 2026.</div>';
     }
+  }
+
+  // ══════════════════ ribbon overflow affordance ══════════════════
+  // The section ribbon scrolls sideways when its links do not fit. That is
+  // fine on a phone and was invisible on a desktop: the last link was simply
+  // clipped, with nothing to say the row could move. Paint the fade only when
+  // there is more to the right, and drop it at the end of the scroll, so the
+  // cue always means something.
+  var ribbon = document.querySelector('.ribbon');
+  var ribWrap = ribbon && ribbon.querySelector('.wrap');
+  if (ribWrap) {
+    var syncRibbon = function(){
+      var more = ribWrap.scrollWidth - ribWrap.clientWidth - ribWrap.scrollLeft;
+      ribbon.classList.toggle('is-scrollable', more > 4);
+    };
+    ribWrap.addEventListener('scroll', syncRibbon, { passive: true });
+    window.addEventListener('resize', syncRibbon);
+    syncRibbon();
   }
 
   // Last, once every block above has registered its painter: put the whole page
