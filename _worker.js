@@ -2422,10 +2422,23 @@ export default {
         if (!row) return json({ ok: false, error: 'not_found' }, 404, c);
         let sources = [];
         try { sources = JSON.parse(row.sources || '[]'); } catch (e) { sources = []; }
+        // The analyst desk's structured calls ride along so the story page can
+        // lay them out under the article. Fetched as a SEPARATE query, wrapped
+        // in its own try: `calls` is a late addition to the table, and a story
+        // page that 500s because one optional column is missing would be a far
+        // worse bug than a story page with no cards.
+        let calls = [];
+        if (String(row.category || '').toLowerCase() === 'analyst') {
+          try {
+            const cr = await env.LEADS_DB.prepare(
+              'SELECT calls FROM lead_story WHERE slug = ?').bind(row.slug).first();
+            calls = analystCalls(cr && cr.calls);
+          } catch (e) { calls = []; }
+        }
         return json({
           ok: true,
           story: { ...leadRow(row), body: row.body_html || '', method: row.method || '',
-                   sources: Array.isArray(sources) ? sources : [] }
+                   sources: Array.isArray(sources) ? sources : [], calls }
         }, 200, { ...c, 'cache-control': 'public, max-age=120' });
       } catch (e) { return json({ ok: false, error: 'unavailable' }, 200, c); }
     }

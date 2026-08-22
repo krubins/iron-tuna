@@ -1333,6 +1333,35 @@ The four edits, as they now stand:
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
 
+#### The reading view, and the column as an index (2026-08-22)
+
+The first cut of `/analyst-desk` laid every entry out in full, call cards and
+all. With two entries that was already one long scroll of stacked stories, and it
+read as a feed rather than a column. The split now is:
+
+- **`/lead/<slug>` is the story.** One piece, on its own, on a **white page in
+  near-black type** — a reading view, deliberately unlike the dark chrome the
+  rest of the site uses. Under the article it carries that story's own call
+  cards, then the method box and sources, then **Continue reading**: the other
+  stories, as links, for anyone who wants to keep going.
+- **`/analyst-desk` is the index.** The standing copy, the record table, and one
+  compact item per entry: kicker, date, headline, dek, and a summary line naming
+  the analysts it argues with. No call cards. Every item links to its story.
+
+The white page is `lead.html`'s own `:root`, so it applies to **every** lead
+story, not only analyst ones. Three things had to change beyond swapping the
+background: `--teal` darkens from `#2dd4a3` (about 1.9:1 on white, unreadable) to
+`#0d7a5f`, `--danger` likewise, and the wordmark's metal gradient is inverted to
+dark stops or the logo disappears. `tools/test-analyst-column.mjs` pins all
+three, because "make it light" is the kind of change a later edit reverts by
+copying a palette from another page.
+
+`calls` reaches the story page through `/api/lead-story/body` as a **separate
+query in its own `try`**, run only when the row's category is `analyst`. It is
+not folded into the main SELECT on purpose: `calls` is a late addition to the
+table, and an article page that 500s because one optional column is missing
+would be far worse than an article page with no cards.
+
 #### One story per run
 
 The desk's prompt opens with this rule and the Insert section repeats it,
