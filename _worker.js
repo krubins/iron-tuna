@@ -95,6 +95,30 @@ async function sendLoginEmail(env, email, link) {
   const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to unlock your purchase on this device:</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
   try { await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: from, to: email, subject: 'Your Iron Tuna sign-in link', html: html }) }); } catch (e) {}
 }
+// The comp email is deliberately not sendLoginEmail. That one says "unlock your
+// purchase", which is the wrong sentence for someone who never bought anything,
+// and it swallows every failure — fine for a self-serve login that answers
+// ok:true either way, useless for an admin who needs to know whether the thing
+// they just sent actually left the building. So this one reports what happened.
+async function sendCompEmail(env, email, link, days) {
+  if (!env.RESEND_API_KEY) return { sent: false, error: 'RESEND_API_KEY is not set' };
+  const from = env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
+  const life = days === 1 ? '24 hours' : days + ' days';
+  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">You have free access to Iron Tuna</h2><p>Someone at Iron Tuna comped you the full bundle — every draft tool, board and premium insight, no payment needed.</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Open Iron Tuna</a></p><p style="color:#667;font-size:13px">This link works once and expires in ' + life + '. After that you can get back in any time at <a href="https://irontuna.com/auctiondraft?signin=1">irontuna.com/auctiondraft</a> with this address — the access itself does not expire.</p></div>';
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ from: from, to: email, subject: 'Your free access to Iron Tuna', html: html })
+    });
+    if (!r.ok) {
+      let detail = '';
+      try { const j = await r.json(); detail = (j && (j.message || j.error || j.name)) || ''; } catch (e) {}
+      return { sent: false, error: 'Resend returned ' + r.status + (detail ? ': ' + detail : '') };
+    }
+    return { sent: true, error: null };
+  } catch (e) { return { sent: false, error: (e && e.message) || 'network error' }; }
+}
 
 // ── projections data kept server-side (not shipped in the client HTML) ──
 const IT_KEY = 'IT_pk_7c1a93f0';
@@ -2733,6 +2757,79 @@ export default {
             : (hadRow ? 'Already had access; row refreshed.' : 'Access granted.'),
         sessionsCleared,
         signIn: revoking ? undefined : 'https://irontuna.com/auctiondraft?signin=1'
+      }, 200, c);
+    }
+    // Comp an address AND send it the link that turns access on, in one request.
+    // /api/admin/grant leaves a second step to a human — tell the person to go to
+    // /auctiondraft?signin=1 and ask for a link — and that step is exactly where
+    // the flow breaks: /api/auth/request answers ok:true whether or not it sent
+    // anything, so a typo'd address, an unentitled one and a working one all look
+    // identical from the outside. Here the grant lands first, then this route
+    // mints the magic link itself and says plainly whether the send succeeded.
+    //
+    // The link is returned either way, so it can be pasted into a DM when email
+    // is not the channel (send=0) or when Resend refuses. Same LEADS_EXPORT_KEY
+    // gate and same GET shape as every other admin route, so it still works from
+    // a phone's address bar; /admin drives it from a form.
+    if (url.pathname === '/api/admin/comp') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const email = String(url.searchParams.get('email') || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
+      // Without AUTH_SECRET there is no signed link to send, and granting alone
+      // would report success for a request that cannot do what it says.
+      if (!env.AUTH_SECRET) return json({ ok: false, error: 'no_auth_secret', note: 'AUTH_SECRET is not set, so no sign-in link can be signed. Set it, or use /api/admin/grant and have them sign in themselves.' }, 500, c);
+      const rawDays = url.searchParams.get('days');
+      const days = (rawDays === null || rawDays === '') ? 14 : Number(rawDays);
+      if (!Number.isInteger(days) || days < 1 || days > 90) return json({ ok: false, error: 'bad_days', note: 'days must be a whole number from 1 to 90.' }, 400, c);
+      const comped = COMPED_EMAILS.includes(email);
+      if (!env.LEADS_DB && !comped) return json({ ok: false, error: 'no_db' }, 500, c);
+
+      let hadRow = false;
+      if (env.LEADS_DB) { try { hadRow = !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) {} }
+      await grantEntitlement(env, email);
+      // grantEntitlement swallows its own errors, so the write is confirmed by
+      // reading access back rather than by assuming it took. Sending a link to
+      // an address that is not entitled would sign them in to the free site.
+      if (!(await isEntitled(env, email))) return json({ ok: false, error: 'grant_failed', note: 'The entitlement did not stick, so no link was sent.' }, 500, c);
+
+      const nonce = crypto.randomUUID();
+      const ttlSec = days * 86400;
+      // /api/auth/verify only enforces single use when RATE_KV is bound, and it
+      // is the same env — so when it IS bound this put has to succeed, or the
+      // link is dead on arrival ("already used") instead of merely unguarded.
+      if (env.RATE_KV) {
+        try { await env.RATE_KV.put('mln:' + nonce, '1', { expirationTtl: ttlSec }); }
+        catch (e) { return json({ ok: false, error: 'link_store_failed', note: 'Access was granted, but the one-time link could not be registered, so nothing was sent. Retry, or send them to /auctiondraft?signin=1.' }, 500, c); }
+      }
+      const expires = Date.now() + ttlSec * 1000;
+      const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', exp: expires });
+      const link = url.origin + '/api/auth/verify?token=' + encodeURIComponent(token);
+
+      const send = url.searchParams.get('send') !== '0';
+      let sent = false, emailError = null;
+      if (send) { const r = await sendCompEmail(env, email, link, days); sent = r.sent; emailError = r.error; }
+
+      return json({
+        ok: true,
+        email,
+        entitled: true,
+        changed: !hadRow,
+        sent,
+        emailError,
+        link,
+        expiresAt: new Date(expires).toISOString(),
+        days,
+        // Say what actually happened, including the two cases that read as
+        // success and are not: nothing was sent, or the send was refused.
+        note: (comped ? 'This address is comped in code (COMPED_EMAILS), so it already had access. ' : hadRow ? 'This address already had access; the row was refreshed. ' : 'Access granted. ') +
+          (!send
+            ? 'Nothing was emailed — copy the link and send it yourself.'
+            : sent
+              ? 'The link is on its way to ' + email + '.'
+              : 'The email did NOT send (' + (emailError || 'unknown error') + ') — copy the link and send it yourself.'),
+        signIn: 'https://irontuna.com/auctiondraft?signin=1'
       }, 200, c);
     }
     // ── the lead desk, from a URL ───────────────────────────────────────────

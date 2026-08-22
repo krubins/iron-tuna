@@ -66,6 +66,20 @@ jobs:
             console.log("analyst-desk.html PARSE OK (" + blocks.length + " blocks)");
           '
 
+      # /admin is the only page with a form that calls an API, and it is
+      # hand-written like the rest — a syntax error there breaks the dashboard
+      # and the comp-access form with it, silently, since nobody browses it.
+      - name: Parse the admin.html scripts
+        run: |
+          node -e '
+            const fs = require("fs");
+            const h = fs.readFileSync("admin.html", "utf8");
+            const blocks = [...h.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+            if (!blocks.length) { console.error("no <script> blocks found"); process.exit(1); }
+            blocks.forEach(b => new Function(b[1]));
+            console.log("admin.html PARSE OK (" + blocks.length + " blocks)");
+          '
+
       - name: Parse wrangler.jsonc
         run: |
           node -e '
@@ -234,6 +248,14 @@ jobs:
 
       - name: Admin grant and revoke
         run: node tools/test-admin-grant.mjs
+
+      # /api/admin/comp grants access and then puts a working sign-in link in
+      # someone's inbox, so its failure modes are the ones that look like
+      # success: a link mailed to an address the grant never reached, an email
+      # Resend refused while the response still said ok. This follows the link
+      # it emits all the way through /api/auth/verify to /api/auth/me.
+      - name: Comping access and mailing the link
+        run: node tools/test-admin-comp.mjs
 
       # NOT run here: tools/test-position-lens.mjs and tools/test-you-column.mjs.
       # Both drive real Chromium and self-skip without playwright-core plus a
