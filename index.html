@@ -82,27 +82,27 @@ function gtag_report_conversion(url) {
 @media (max-width: 1040px) { .hub-seal { display: none; } .hub-hero-row { gap: 0; } }
 
 :root {
-  --bg-base: #0a0e14;
-  --bg-panel: #11161e;
-  --bg-elev: #1a212c;
+  --bg-base: #0b1117;
+  --bg-panel: #121b24;
+  --bg-elev: #16212c;
   --bg-hover: #232c39;
-  --border-subtle: #1f2731;
-  --border-strong: #2d3845;
+  --border-subtle: #22303b;
+  --border-strong: #2c3b48;
   --border-accent: #3d4a5c;
-  --text-primary: #f5f7fa;
-  --text-secondary: #a4adba;
-  --text-muted: #8b96a6;
+  --text-primary: #e8eef2;
+  --text-secondary: #b6c2cc;
+  --text-muted: #8595a1;
   --text-faint: #808a99;
-  --accent: #4169e1;
-  --accent-soft: #4169e115;
+  --accent: #4c7dff;
+  --accent-soft: #4c7dff15;
   --accent-text: #8ba6ff;
   --value: #ff3838;
   --value-text: #ff5a5a;
   --gold: #f5b800;
   --gold-soft: #f5b80015;
   --gold-text: #ffcb33;
-  --positive: #22d3ee;
-  --positive-soft: #22d3ee15;
+  --positive: #2dd4a3;
+  --positive-soft: #2dd4a315;
   --warning: #f59e0b;
   --danger: #ef4444;
   --pos-qb: #d946ef;
@@ -198,8 +198,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .position-tag.DEF { background: rgba(168, 85, 247, 0.15); color: var(--pos-def); }
 .player-name { font-weight: 500; color: var(--text-primary); }
 .player-row-action { display: flex; gap: 6px; justify-content: flex-end; }
-.btn-draft { padding: 4px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--accent); color: white; border-radius: var(--radius-sm); font-weight: 600; transition: background 0.15s ease; }
-.btn-draft:hover { background: #3a5fd0; }
+.btn-draft { padding: 4px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--accent); color: var(--bg-base); border-radius: var(--radius-sm); font-weight: 600; transition: background 0.15s ease; }
+.btn-draft:hover { background: #6f97ff; }
 .btn-secondary { padding: 4px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--bg-elev); color: var(--text-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border-strong); }
 .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
 .sidebar-section { padding: 14px 14px; border-bottom: 1px solid var(--border-subtle); }
@@ -231,8 +231,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .bid-number-cell.fair .val { color: var(--text-primary); }
 .bid-actions { display: flex; gap: 8px; margin-top: 12px; }
 .bid-actions button { flex: 1; padding: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; border-radius: var(--radius-sm); }
-.btn-won { background: var(--accent); color: white; }
-.btn-won:hover { background: #3a5fd0; }
+.btn-won { background: var(--accent); color: var(--bg-base); }
+.btn-won:hover { background: #6f97ff; }
 .btn-pass { background: var(--bg-base); color: var(--text-secondary); border: 1px solid var(--border-strong); }
 .btn-pass:hover { color: var(--text-primary); }
 .bid-input { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
@@ -407,7 +407,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .sidebar-tab { flex: 1; padding: 10px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; color: var(--text-muted); border-bottom: 2px solid transparent; transition: color 0.15s ease, border-color 0.15s ease; position: relative; }
 .sidebar-tab:hover { color: var(--text-secondary); }
 .sidebar-tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
-.sidebar-tab .badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: var(--accent); color: white; font-size: 10px; border-radius: 8px; font-weight: 600; }
+.sidebar-tab .badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: var(--accent); color: var(--bg-base); font-size: 10px; border-radius: 8px; font-weight: 600; }
 .heat-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 16px; padding: 8px; background: var(--bg-base); border-radius: var(--radius-sm); }
 .heat-cell { text-align: center; padding: 8px 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: var(--bg-elev); transition: background 0.2s ease, border-color 0.2s ease; }
 .heat-cell.heat-hot { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.4); }
@@ -597,7 +597,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .rr-move:active { cursor: grabbing; }
 .rr-move button { padding: 0 4px; font-size: 9px; line-height: 1.25; background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-secondary); border-radius: 2px; }
 .undo-pick { width: 16px; height: 16px; border-radius: 50%; background: var(--bg-base); border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 13px; line-height: 1; padding: 0; }
-.undo-pick:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.undo-pick:hover { background: var(--accent); color: var(--bg-base); border-color: var(--accent); }
 .tc-header { display: flex; align-items: center; gap: 6px; }
 .drag-handle { cursor: grab; color: var(--text-faint); font-size: 14px; user-select: none; flex: 0 0 auto; }
 .drag-handle:active { cursor: grabbing; }

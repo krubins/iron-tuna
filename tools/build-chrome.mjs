@@ -212,7 +212,9 @@ const OWNED = [
   /:root\{--bg:#0b1117[^}]*\}\n?/g,
   /\*\{box-sizing:border-box\}\n?/g,
   /html\{scroll-behavior:smooth\}\n?/g,
-  /body\{margin:0;background:radial-gradient\(1200px 600px at 50% -10%[^}]*\}\n?/g,
+  [/body\{margin:0;background:radial-gradient\(1200px 600px at 50% -10%[^}]*\}\n?/g, ''],
+  [/body\{margin:0;overflow-x:hidden;background:radial-gradient\(1200px 600px at 50% -10%[^}]*\}\n?/g,
+   'body{overflow-x:hidden}\n'],
   /a\{color:var\(--teal\);text-decoration:none\}\n?/g,
   /a:hover\{text-decoration:underline\}\n?/g,
   /\.wrap\{max-width:820px;margin:0 auto;padding:0 20px\}\n?/g,
@@ -242,7 +244,12 @@ function stripOwned(html) {
   const i = html.indexOf('<style>'), j = html.indexOf('</style>');
   if (i === -1 || j === -1) return html;
   let css = html.slice(i + 7, j);
-  for (const re of OWNED) css = css.replace(re, '');
+  // An entry is either a regex to delete outright, or a [regex, replacement]
+  // pair where part of the rule has to survive (overflow-x:hidden below).
+  for (const entry of OWNED) {
+    const [re, replacement] = Array.isArray(entry) ? entry : [entry, ''];
+    css = css.replace(re, replacement);
+  }
   return html.slice(0, i + 7) + css + html.slice(j);
 }
 
