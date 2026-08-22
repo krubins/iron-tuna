@@ -38,7 +38,8 @@ const section = src.slice(s0, src.indexOf(END, e0) + END.length);
 
 const mk = () => new Function(`
   ${section}
-  return { leadStoryPayload, leadRow, leadSlug, LEAD_CATEGORIES, LEAD_RECENT, LEAD_FACES, leadSlot, LEAD_SLOT_MS };
+  return { leadStoryPayload, leadRow, leadSlug, LEAD_CATEGORIES, LEAD_RECENT, LEAD_FACES, leadSlot, LEAD_SLOT_MS,
+           leadClock, etClock, etOffsetHours, LEAD_TZ };
 `)();
 
 // ── a D1 stand-in ──────────────────────────────────────────────────────────
@@ -403,6 +404,71 @@ console.log('\nthe admin desk');
   // cached answer.
   ok('it never asks more often than the two-minute server memo',
      /lastLook >= 120000/.test(paint));
+}
+
+// ── the desk's clock, in a clock a reader keeps ────────────────────────────
+// The runs are scheduled in UTC and wrote it into the copy: "today's 11:00 UTC
+// odds refresh". The audience is American fantasy managers, none of whom keep a
+// UTC clock, so the payload converts every clock time to Eastern on the way
+// out. A wrong hour here would be worse than the UTC it replaced, so both the
+// Intl path and the hand-rolled fallback are checked, and against each other.
+console.log('\nUTC never reaches a reader');
+{
+  const m = mk();
+  const AUG = Date.UTC(2026, 7, 22, 12, 58);      // EDT, UTC-4
+  const JAN = Date.UTC(2026, 0, 15, 12, 0);       // EST, UTC-5
+
+  ok('the odds refresh is stated in Eastern, not UTC',
+     m.leadClock("Today's 11:00 UTC odds refresh ranks Baltimore first.", AUG)
+     === "Today's 7:00 AM ET odds refresh ranks Baltimore first.",
+     m.leadClock("Today's 11:00 UTC odds refresh ranks Baltimore first.", AUG));
+  ok('winter is an hour further back, because the offset is not a constant',
+     m.leadClock('pulled at 11:00 UTC', JAN) === 'pulled at 6:00 AM ET',
+     m.leadClock('pulled at 11:00 UTC', JAN));
+  ok('an evening run reads as the evening', m.leadClock('the 21:58 UTC run', AUG) === 'the 5:58 PM ET run');
+  ok('a time written without minutes keeps its shape',
+     m.leadClock('the 11 UTC refresh', AUG) === 'the 7 AM ET refresh', m.leadClock('the 11 UTC refresh', AUG));
+  ok('a 12-hour source time converts from the right hour',
+     m.leadClock('3:30 p.m. UTC', AUG) === '11:30 AM ET', m.leadClock('3:30 p.m. UTC', AUG));
+  ok('GMT is the same clock under another name', m.leadClock('11:00 GMT', AUG) === '7:00 AM ET');
+  ok('an overnight time that lands on the previous Eastern day says so',
+     /9:00 PM ET \(the previous day\)/.test(m.leadClock('pulled at 01:00 UTC', AUG)),
+     m.leadClock('pulled at 01:00 UTC', AUG));
+  ok('copy with no clock in it is returned untouched',
+     m.leadClock('Bid $32, not the sheet\u2019s $26.', AUG) === 'Bid $32, not the sheet\u2019s $26.');
+  ok('a nonsense hour is left alone rather than converted into a lie',
+     m.leadClock('99:00 UTC', AUG) === '99:00 UTC');
+  ok('the word UTC does not survive a conversion', !/UTC/.test(m.leadClock('11:00 UTC', AUG)));
+
+  // The fallback exists for a runtime with no time-zone data. It has to agree
+  // with Intl on every day of the year, or it is a bug waiting for an outage.
+  let drift = 0, driftAt = '';
+  for (let d = 0; d < 365; d++) {
+    const at = Date.UTC(2026, 0, 1, 16, 0) + d * 86400000;
+    const intl = new Date(at).toLocaleString('en-US', { timeZone: m.LEAD_TZ, hour12: false, hour: '2-digit' });
+    const want = (24 + parseInt(intl, 10) - new Date(at).getUTCHours()) % 24 - 24;
+    if (want !== m.etOffsetHours(at)) { drift++; driftAt = new Date(at).toISOString(); }
+  }
+  ok('the no-Intl fallback agrees with Intl on every day of the year', drift === 0, `${drift} days, first ${driftAt}`);
+
+  // The conversion has to happen in the payload, not in one page, or the front
+  // page and /lead start telling a reader different times for one story.
+  const row = m.leadRow({ slug: 's', title: 'Written at 11:00 UTC', dek: 'Refreshed 11:00 UTC',
+                          category: 'player', players: '["Zay Flowers","Derrick Henry"]', created_at: AUG });
+  ok('the headline is converted in the payload', row.title === 'Written at 7:00 AM ET', row.title);
+  ok('so is the dek', row.dek === 'Refreshed 7:00 AM ET', row.dek);
+  ok('the article body and its method line are converted too',
+     src.includes('body: leadClock(row.body_html') && src.includes('method: leadClock(row.method'));
+
+  // The names ride along unslugged so the pages can price the story in the
+  // reader's league: the slug finds a photograph, the name finds a board row.
+  ok('the players travel as names as well as slugs',
+     JSON.stringify(row.names) === JSON.stringify(['Zay Flowers', 'Derrick Henry']), JSON.stringify(row.names));
+  ok('and the slugs are still what the photo cast is keyed by',
+     JSON.stringify(row.ppl) === JSON.stringify(['zay-flowers', 'derrick-henry']));
+  const junk = m.leadRow({ slug: 's', title: 't', category: 'player', players: '{"not":"an array"}', created_at: AUG });
+  ok('malformed players still yields no names rather than an exception',
+     Array.isArray(junk.names) && junk.names.length === 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

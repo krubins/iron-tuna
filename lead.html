@@ -151,6 +151,9 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
 <div class="meta-row" id="metaRow" hidden><span class="cat" id="cat">Insight</span><span class="stamp" id="stamp"></span></div>
 <h1 id="title">Loading the latest insight&hellip;</h1>
 <p class="lede" id="dek"></p>
+<!-- Whose dollars the article is quoting. Painted by the script below out of
+     it-league.js, hidden until there is something true to say. -->
+<p class="it-yours" id="yours" hidden></p>
 <div class="cta-row"><a class="btn" href="/auctiondraft?screen=cheat">Build My Free Auction Sheet</a><a class="btn alt" href="/">The front page</a></div>
 
 <div class="body" id="body"></div>
@@ -216,6 +219,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
   </div>
   <!--/chrome:foot-->
 </div></footer>
+<script src="/it-league.js"></script>
 <script>
 (function(){
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
@@ -252,9 +256,34 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
     .then(function(d){
       if (!d || !d.ok || !d.story) return fail('That insight is not on the board right now.');
       var s = d.story;
-      document.title = s.title + ' | Iron Tuna';
-      document.getElementById('title').textContent = s.title;
-      document.getElementById('dek').textContent = s.dek || '';
+      // The desk prices every story in one league — 12 teams, $200, the site's
+      // own scoring — and this page is read by people who play none of those
+      // things. Every dollar in the headline, the dek and the article itself is
+      // restated in the reader's own money before it is painted, anchored on
+      // what the named players cost on THEIR board. With no saved league
+      // nothing is rewritten and the note below says whose numbers these are,
+      // which is the honest version of the same answer.
+      var L = window.ITLeague || null;
+      var names = (s.names && s.names.length) ? s.names
+                : (s.cast || []).map(function(c){ return c.n; });
+      var rp = function(t){ var r = L ? L.repriceCopy(t, names) : null; return r ? r.text : t; };
+      var restated = false;
+      if (L) {
+        var probe = L.repriceCopy(s.title, names) || L.repriceCopy(s.dek || '', names)
+                 || L.repriceCopy(s.body || '', names);
+        restated = !!probe;
+      }
+      document.title = rp(s.title) + ' | Iron Tuna';
+      document.getElementById('title').textContent = rp(s.title);
+      document.getElementById('dek').textContent = rp(s.dek || '');
+      var yours = document.getElementById('yours');
+      var note = L ? L.pricingNote(restated) : '';
+      if (note) {
+        if (L.ensureStyle) L.ensureStyle();
+        yours.innerHTML = '<b>' + (L.has ? 'Your league' : 'Default league') + ':</b> ' + esc(note)
+          + (L.has ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
+        yours.hidden = false;
+      }
       document.getElementById('cat').textContent = s.label || 'Insight';
       document.getElementById('stamp').textContent = stamp(s.createdAt);
       document.getElementById('metaRow').hidden = false;
@@ -263,7 +292,10 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
       // around them here rather than in the stored copy, so the authoring
       // contract stays "write a table" and every past story gains the fix too.
       var host = document.getElementById('body');
-      host.innerHTML = s.body || '';
+      // The article's own tables carry the bid list, so they are restated too —
+      // a headline in the reader's money over a table in somebody else's would
+      // be worse than leaving both alone.
+      host.innerHTML = rp(s.body || '');
       Array.prototype.forEach.call(host.querySelectorAll('table'), function(t){
         var w = document.createElement('div');
         w.className = 'tw';
@@ -313,8 +345,12 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
     if (d && d.recent) all = all.concat(d.recent);
     var list = all.filter(function(x){ return x.slug !== slug; }).slice(0, 6);
     if (!list.length) return;
+    // Same restatement as the article above: an archive of headlines quoting a
+    // league nobody in the room plays is how this started.
+    var LR = window.ITLeague || null;
     document.getElementById('recent').innerHTML = list.map(function(x){
-      return '<li><a href="' + esc(x.url) + '">' + esc(x.title) + '</a>'
+      var rr = LR ? LR.repriceCopy(x.title, x.names || (x.cast || []).map(function(c){ return c.n; })) : null;
+      return '<li><a href="' + esc(x.url) + '">' + esc(rr ? rr.text : x.title) + '</a>'
         + '<span class="rmeta">' + esc(x.label || 'Insight') + ' \u00b7 ' + esc(stamp(x.createdAt)) + '</span></li>';
     }).join('');
   }).catch(function(){});

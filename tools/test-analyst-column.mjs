@@ -31,8 +31,12 @@ const sitemap = fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8');
 
 // ── lift the two sections the column needs out of the worker ───────────────
 // leadRow/leadSlug come from the lead-story section; the column reuses them
-// rather than carrying a second copy of the same row shaping.
-const leadStart = src.indexOf('function leadRow(r) {');
+// rather than carrying a second copy of the same row shaping. The lift starts
+// at LEAD_TZ rather than at leadRow because leadRow calls leadClock, which
+// converts the desk's UTC times to Eastern: lifting the function without its
+// dependency made every entry come back empty through the payload's own catch,
+// which is exactly the shape of failure this file exists to notice.
+const leadStart = src.indexOf('const LEAD_TZ =');
 const leadEnd = src.indexOf('\n}\n', src.indexOf('function leadSlug'));
 const leadBits = src.slice(leadStart, leadEnd + 3);
 const catStart = src.indexOf('const LEAD_CATEGORIES = {');
@@ -109,6 +113,16 @@ console.log('\nthe payload the column reads');
   const out = await w.analystColumnPayload(d.env);
   ok('both entries come back', out.ok === true && out.entries.length === 2);
   ok('each entry carries the URL of its full story', out.entries[0].url === '/lead/newest');
+  // The column shares the lead's row shaping, so it shares the clock: an entry
+  // here may not say UTC when the same story on /lead says ET.
+  {
+    const utc = db([ROW({ slug: 'clock', title: 'Pulled at 11:00 UTC',
+                          created_at: Date.UTC(2026, 7, 22, 12, 58) })]);
+    const w2 = mk();
+    const one = await w2.analystColumnPayload(utc.env);
+    ok('the column states the desk\u2019s clock in Eastern too',
+       one.entries[0].title === 'Pulled at 7:00 AM ET', one.entries[0] && one.entries[0].title);
+  }
   ok('the column asks only for analyst rows',
      d.ran.some(s => s.includes("category = 'analyst'")));
   ok('an unverified row can never reach the column',
@@ -290,7 +304,7 @@ console.log('\nthe story page a reader actually lands on');
   ok('more stories sit below the article', lead.includes('Continue reading'));
   // The body route carries them. Fetched separately and in its own try, so a
   // missing column cannot take the article page down with it.
-  ok('the body route ships calls', /story: \{ \.\.\.leadRow\(row\)[\s\S]{0,160}calls \}/.test(src));
+  ok('the body route ships calls', /story: \{ \.\.\.leadRow\(row\)[\s\S]{0,500}calls \}/.test(src));
   ok('a missing calls column cannot break the article',
      /catch \(e\) \{ calls = \[\]; \}/.test(src));
 }

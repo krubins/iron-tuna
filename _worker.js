@@ -2055,6 +2055,88 @@ async function leadStoryPayload(env) {
   _LEAD_CACHE = out; _LEAD_AT = now;
   return out;
 }
+// ── the desk's clock, in a clock a reader keeps ────────────────────────────
+// The runs are scheduled in UTC and they write in UTC, so stories say things
+// like "today's 11:00 UTC odds refresh". Nobody drafting reads a UTC clock.
+// This site's readers are American fantasy managers whose kickoffs, waivers and
+// league deadlines are all quoted in Eastern, so every clock time in a story is
+// converted on the way out — once, here, so the front page, /lead, the analyst
+// column and the admin desk cannot disagree about what time something happened.
+//
+// It is a filter over stored copy, not a substitute for writing it correctly:
+// the Routine's prompt now tells the desk to write ET in the first place (see
+// tools/lead-story-routine-prompt.md). This is what fixes the rows already in
+// the table, and the safety net if a run reverts to habit.
+//
+// The reader's OWN zone is what the timestamp under the headline uses
+// (front.html's leadStamp), and this deliberately does not: the payload is
+// memoised for two minutes and served to everybody, so it gets one zone, and ET
+// is the one the sport itself runs on.
+const LEAD_TZ = 'America/New_York';
+// Second Sunday in March to the first Sunday in November, the US rule since
+// 2007. Only used if Intl has no time-zone data, which Workers does have; a
+// wrong hour here would be worse than the UTC it replaced, so both paths are
+// exercised by tools/test-lead-story.mjs.
+function etOffsetHours(ms) {
+  const d = new Date(ms);
+  const y = d.getUTCFullYear();
+  const nth = (month, dow, n) => {
+    const first = new Date(Date.UTC(y, month, 1));
+    const shift = (dow - first.getUTCDay() + 7) % 7;
+    return Date.UTC(y, month, 1 + shift + (n - 1) * 7, 7);   // 2am ET = 07:00 UTC
+  };
+  const start = nth(2, 0, 2), end = nth(10, 0, 1);
+  return ms >= start && ms < end ? -4 : -5;
+}
+function etClock(ms) {
+  try {
+    const f = new Intl.DateTimeFormat('en-US', {
+      timeZone: LEAD_TZ, hour: 'numeric', minute: '2-digit', hour12: true,
+      year: 'numeric', month: 'numeric', day: 'numeric'
+    }).formatToParts(new Date(ms));
+    const get = t => (f.find(p => p.type === t) || {}).value || '';
+    const h = parseInt(get('hour'), 10), min = parseInt(get('minute'), 10);
+    if (!isFinite(h) || !isFinite(min)) throw new Error('no parts');
+    return { h, min, ampm: (get('dayPeriod') || 'AM').toUpperCase(),
+             day: `${get('year')}-${get('month')}-${get('day')}` };
+  } catch (e) {
+    const d = new Date(ms + etOffsetHours(ms) * 3600000);
+    const h24 = d.getUTCHours();
+    return { h: (h24 % 12) || 12, min: d.getUTCMinutes(), ampm: h24 < 12 ? 'AM' : 'PM',
+             day: `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}` };
+  }
+}
+// "11:00 UTC" -> "7:00 AM ET". The date the story was written anchors the
+// conversion, because the offset is -4 or -5 depending on the season and there
+// is nothing else in the sentence to date it by.
+//
+// An overnight time can land on the previous Eastern day (01:00 UTC is 9:00 PM
+// the evening before), and prose around it — "today's 01:00 run" — would then
+// read a day wrong. Those say so rather than quietly shifting.
+const LEAD_UTC_RE = /\b(\d{1,2})(?::(\d{2}))?\s*(?:(a\.?m\.?|p\.?m\.?)\s*)?(?:UTC|GMT)\b/gi;
+function leadClock(text, whenMs) {
+  const src = String(text == null ? '' : text);
+  if (!src || !/\b(?:UTC|GMT)\b/i.test(src)) return src;
+  const base = new Date(+whenMs || Date.now());
+  const y = base.getUTCFullYear(), mo = base.getUTCMonth(), da = base.getUTCDate();
+  return src.replace(LEAD_UTC_RE, (whole, hh, mm, ap) => {
+    let h = parseInt(hh, 10);
+    if (!isFinite(h) || h > 24) return whole;
+    const half = String(ap || '').toLowerCase().replace(/\./g, '');
+    if (half === 'pm' && h < 12) h += 12;
+    if (half === 'am' && h === 12) h = 0;
+    if (h > 23) return whole;
+    const min = mm == null ? 0 : parseInt(mm, 10);
+    if (!isFinite(min) || min > 59) return whole;
+    const at = Date.UTC(y, mo, da, h, min);
+    const et = etClock(at);
+    // A time written without minutes keeps its shape: "11 UTC" reads "7 AM ET",
+    // not "7:00 AM ET".
+    const clock = (mm == null && et.min === 0) ? `${et.h}` : `${et.h}:${String(et.min).padStart(2, '0')}`;
+    const shifted = et.day !== `${y}-${mo + 1}-${da}`;
+    return `${clock} ${et.ampm} ET${shifted ? ' (the previous day)' : ''}`;
+  });
+}
 // One row, trimmed to what a card needs. `body_html` is deliberately absent:
 // the front page never renders it, and shipping ~30 KB of article to every
 // visitor to show a headline is the kind of thing nobody notices until it is
@@ -2065,11 +2147,19 @@ function leadRow(r) {
   // their faces on the lead the same way an authored story does. Slugged here
   // with the same rule tools/build-front.mjs uses, so "Kenneth Walker III" and
   // "kenneth-walker-iii" both land on the same photo.
-  let ppl = [];
+  let ppl = [], names = [];
   try {
     const raw = JSON.parse(r.players || '[]');
-    if (Array.isArray(raw)) ppl = raw.map(leadSlug).filter(Boolean).slice(0, 4);
-  } catch (e) { ppl = []; }
+    if (Array.isArray(raw)) {
+      ppl = raw.map(leadSlug).filter(Boolean).slice(0, 4);
+      // The names travel unslugged as well as slugged. The slugs are for
+      // photographs; these are for pricing — it-league.js re-anchors every
+      // dollar in the copy on the named player's price on the READER's board,
+      // and it needs the name the way the story wrote it to find him. A photo
+      // is not required for that, so this is not the `cast` list.
+      names = raw.map(n => (typeof n === 'string' ? n.trim() : '')).filter(Boolean).slice(0, 4);
+    }
+  } catch (e) { ppl = []; names = []; }
   // The faces themselves ride along, because front.html's own cast only covers
   // the players the authored drop pages name and a run can name anybody on the
   // board. The page prefers its own entry when it has one and falls back to
@@ -2080,11 +2170,13 @@ function leadRow(r) {
   }).filter(Boolean);
   return {
     slug: r.slug,
-    title: r.title,
-    dek: r.dek || '',
+    // Clock times come out in Eastern, whatever the run wrote them in.
+    title: leadClock(r.title, r.created_at),
+    dek: leadClock(r.dek || '', r.created_at),
     category: LEAD_CATEGORIES[key] ? key : null,
     label: LEAD_CATEGORIES[key] || 'Insight',
     ppl,
+    names,
     cast,
     createdAt: r.created_at,
     url: '/lead/' + r.slug
@@ -2469,8 +2561,11 @@ export default {
         }
         return json({
           ok: true,
-          story: { ...leadRow(row), body: row.body_html || '', method: row.method || '',
-                   sources: Array.isArray(sources) ? sources : [], calls }
+          story: { ...leadRow(row), body: leadClock(row.body_html || '', row.created_at),
+                   method: leadClock(row.method || '', row.created_at),
+                   sources: (Array.isArray(sources) ? sources : []).map(x => (x && typeof x === 'object'
+                     ? { ...x, detail: leadClock(x.detail || '', row.created_at) } : x)),
+                   calls }
         }, 200, { ...c, 'cache-control': 'public, max-age=120' });
       } catch (e) { return json({ ok: false, error: 'unavailable' }, 200, c); }
     }
