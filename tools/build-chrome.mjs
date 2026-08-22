@@ -33,6 +33,15 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = process.argv.includes('--check');
 const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
 
+// The three READING pages. tools/test-reading-view.mjs states the rule they
+// exist under: the app, the front page and the guides are one zone; the
+// standing analyst column, the standing play-caller column and the article page
+// every generated story lands on are a white reading zone. They are pages you
+// read rather than use, and an eleven-item nav belongs on neither. They keep
+// their own short header and take the shared footer, so every destination is
+// still one scroll away.
+const NAV_EXCLUDE = new Set(['lead.html', 'analyst-desk.html', 'play-caller-premium.html']);
+
 // ── the canonical link set ───────────────────────────────────────────────────
 // One place to change what the site links to. `app` is filled in per page so a
 // best-ball guide sends you to the best-ball board, not the auction one.
@@ -122,18 +131,20 @@ function navHtml(file) {
     const cls = l.cta ? ' class="cta"' : '';
     return `<a${cls} href="${href}"${cur}${extra}>${esc(l.label)}</a>`;
   };
-  const items = NAV.map((l) => {
+  const cta = NAV.find((l) => l.cta);
+  const items = NAV.filter((l) => !l.cta).map((l) => {
     if (!l.children) return '      ' + link(l);
     const kids = l.children.map((k) => link(k)).join('');
     return `      <span class="nav-dd">${link(l)}<span class="nav-dd-menu">${kids}</span></span>`;
   }).join('\n');
   return [
-    '    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">',
-    '      <span class="nav-toggle-bars"><span></span></span>Menu',
-    '    </button>',
     '    <nav class="nav" id="sitenav" aria-label="Main">',
     items,
     '    </nav>',
+    '    ' + link(cta),
+    '    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">',
+    '      <span class="nav-toggle-bars"><span></span></span>Menu',
+    '    </button>',
   ].join('\n');
 }
 
@@ -198,11 +209,22 @@ function putFoot(html, file) {
 // Link the shared stylesheet, immediately before the page's own <style> so the
 // page keeps the last word on anything it still declares itself.
 const CSS_LINK = '<link rel="stylesheet" href="/site.css">';
+const GSTATIC = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
 function putCss(html) {
-  if (html.includes(CSS_LINK)) return html;
-  const i = html.indexOf('<style>');
-  if (i === -1) return html;
-  return html.slice(0, i) + CSS_LINK + '\n' + html.slice(i);
+  let next = html;
+  if (!next.includes(CSS_LINK)) {
+    const i = next.indexOf('<style>');
+    if (i === -1) return html;
+    next = next.slice(0, i) + CSS_LINK + '\n' + next.slice(i);
+  }
+  // fonts.gstatic.com is where the font FILES come from; preconnecting only to
+  // fonts.googleapis.com warms the wrong handshake. Owned here so a new page
+  // cannot ship without it.
+  if (!next.includes('fonts.gstatic.com')) {
+    next = next.replace('<link rel="preconnect" href="https://fonts.googleapis.com">',
+      '<link rel="preconnect" href="https://fonts.googleapis.com">' + GSTATIC);
+  }
+  return next;
 }
 
 // Remove the rules site.css now owns from the page's inline <style>. Anything
@@ -314,10 +336,21 @@ for (const f of pages) {
   let next = before;
   next = putCss(next);
   next = putSkip(next);
-  next = putNav(next, f);
+  if (!NAV_EXCLUDE.has(f)) {
+    next = putNav(next, f);
+    next = stripOwned(next);
+    next = putNavJs(next);
+  } else {
+    // A reading page keeps its own palette and header, but not its own
+    // TYPEFACE: leaving these three on -apple-system while the other 91 render
+    // in Inter reintroduces, on the three pages a reader spends longest on, the
+    // exact split this branch set out to remove. Only the font stack is
+    // rewritten; the white palette that test-reading-view.mjs owns is untouched.
+    next = next.replace(
+      /(body\{[^}]*?font-family:)-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif/,
+      '$1var(--font-body)');
+  }
   next = putFoot(next, f);
-  next = stripOwned(next);
-  next = putNavJs(next);
   if (next !== before) {
     changed.push(f);
     if (!CHECK) fs.writeFileSync(path.join(ROOT, f), next);

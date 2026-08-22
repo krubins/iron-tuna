@@ -30,10 +30,15 @@ const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 // Same exclusions as the generator, and for the same reasons.
 const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
-const pages = fs.readdirSync(ROOT)
+// The reading pages take the footer and the stylesheet but keep their own short
+// header — see the NAV_EXCLUDE note in build-chrome.mjs. `pages` is what the nav
+// assertions run over; `allPages` is everything the footer must reach.
+const NAV_EXCLUDE = new Set(['lead.html', 'analyst-desk.html', 'play-caller-premium.html']);
+const allPages = fs.readdirSync(ROOT)
   .filter((f) => f.endsWith('.html') && !EXCLUDE.has(f))
   .filter((f) => read(f).includes('<header class="site">'))
   .sort();
+const pages = allPages.filter((f) => !NAV_EXCLUDE.has(f));
 
 const header = (h) => (h.match(/<header class="site">[\s\S]*?<\/header>/) || [''])[0];
 const footer = (h) => (h.match(/<footer class="site">[\s\S]*?<\/footer>/) || [''])[0];
@@ -42,8 +47,8 @@ const hrefs = (frag) => [...frag.matchAll(/<a[^>]*href="([^"]*)"/g)].map((m) => 
 console.log('\nthe chrome is generated, not hand-written');
 {
   const noNav = pages.filter((f) => !read(f).includes('<!--chrome:nav-->'));
-  const noFoot = pages.filter((f) => !read(f).includes('<!--chrome:foot-->'));
-  const noCss = pages.filter((f) => !read(f).includes('href="/site.css"'));
+  const noFoot = allPages.filter((f) => !read(f).includes('<!--chrome:foot-->'));
+  const noCss = allPages.filter((f) => !read(f).includes('href="/site.css"'));
   ok('there are content pages to check', pages.length > 50, String(pages.length));
   ok('every page carries the generated nav', noNav.length === 0, noNav.join(', '));
   ok('every page carries the generated footer', noFoot.length === 0, noFoot.join(', '));
@@ -61,10 +66,11 @@ console.log('\nevery destination is reachable from every page');
     '/play-caller-premium', '/insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];
   for (const f of pages) {
-    const src = read(f);
-    const nav = hrefs(header(src));
-    const foot = hrefs(footer(src));
+    const nav = hrefs(header(read(f)));
     for (const m of MUST_NAV) if (!nav.includes(m)) badNav.push(`${f}: ${m}`);
+  }
+  for (const f of allPages) {
+    const foot = hrefs(footer(read(f)));
     for (const m of MUST_FOOT) if (!foot.includes(m)) badFoot.push(`${f}: ${m}`);
   }
   ok('the nav reaches every section from every page', badNav.length === 0, badNav.slice(0, 6).join('; '));
@@ -112,6 +118,20 @@ console.log('\nthe mobile nav is a real disclosure, not an unmarked scroll');
   ok('every page has a skip link', noSkip.length === 0, noSkip.slice(0, 4).join(', '));
 }
 
+console.log('\nthe reading pages are excluded from the nav on purpose');
+{
+  // They are pages you read rather than use, and main's test-reading-view.mjs
+  // owns their palette. What must still hold is that opting out of the NAV does
+  // not opt them out of the SITE: the footer sitemap is how a reader gets
+  // anywhere from them, so it has to be there.
+  const missing = [...NAV_EXCLUDE].filter((f) => !fs.existsSync(path.join(ROOT, f)));
+  ok('every excluded page still exists', missing.length === 0, missing.join(', '));
+  const noFoot = [...NAV_EXCLUDE].filter((f) => !read(f).includes('<!--chrome:foot-->'));
+  const gotNav = [...NAV_EXCLUDE].filter((f) => read(f).includes('<!--chrome:nav-->'));
+  ok('a reading page still carries the shared footer', noFoot.length === 0, noFoot.join(', '));
+  ok('a reading page does not carry the eleven-item nav', gotNav.length === 0, gotNav.join(', '));
+}
+
 console.log('\nthe page you are on is marked');
 {
   // Pages that ARE a nav destination should mark themselves current. Dated
@@ -140,17 +160,13 @@ console.log('\nthe chrome elements are actually closed');
   ok('every header, nav, footer and main is closed', bad.length === 0, bad.slice(0, 6).join('; '));
 }
 
-console.log('\nthe site is one theme, not three');
+console.log('\nthe visual zones are the ones the site says it has');
 {
-  // front.html was the only light page on the site: a white body against the
-  // dark content pages and the dark app. Converting it meant remapping ~60
-  // literals, and the bulk pass got seven of them wrong in the same way —
-  // light greys that were TEXT on the dark masthead were read as hairlines and
-  // darkened, dropping the masthead nav to 1.58:1. Assert the surfaces so a
-  // future edit cannot quietly reintroduce a light page.
-  const front = read('front.html');
-  const root = (front.match(/:root\{([^}]*)\}/) || [, ''])[1];
-  const tok = (n) => (root.match(new RegExp('--' + n + ':(#[0-9a-fA-F]{3,6})')) || [])[1] || '';
+  // Three zones, deliberately: the content pages and the app are dark, the three
+  // reading pages are white (main's tools/test-reading-view.mjs owns those), and
+  // front.html is light. This asserts only the boundary this suite is
+  // responsible for — that the CONTENT pages stay dark, so a page cannot drift
+  // into a fourth zone unnoticed.
   const lum = (h) => {
     h = h.replace('#', '');
     if (h.length === 3) h = h.split('').map((c) => c + c).join('');
@@ -158,18 +174,17 @@ console.log('\nthe site is one theme, not three');
       .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
   };
-  for (const [name, wantDark] of [['bg', true], ['card', true], ['mast', true], ['ink', false], ['ink-2', false]]) {
-    const v = tok(name);
-    const isDark = v && lum(v) < 0.2;
-    ok(`front.html --${name} is a ${wantDark ? 'dark surface' : 'light text colour'} (${v})`,
-      Boolean(v) && isDark === wantDark, v || 'token missing');
-  }
-  // The position colours are drawn from JS onto those dark cards, so they live
-  // outside the stylesheet and the CSS pass could not reach them. WR was 3.09:1
-  // and TE 2.75:1 until they were lifted.
-  const posInk = (front.match(/var POS_INK = \{([^}]*)\}/) || [, ''])[1];
-  const dim = [...posInk.matchAll(/#[0-9a-fA-F]{6}/g)].map((m) => m[0]).filter((h) => lum(h) < 0.18);
-  ok('every POS_INK colour is light enough for a dark card', dim.length === 0, dim.join(', '));
+  // The content pages take their palette from site.css, so there is one value to
+  // check rather than ninety-one.
+  const shared = read('site.css');
+  const bg = (shared.match(/--bg:\s*(#[0-9a-fA-F]{3,6})/) || [])[1] || '';
+  ok(`site.css --bg is a dark surface (${bg})`, Boolean(bg) && lum(bg) < 0.2, bg || 'token missing');
+  // And no content page may redefine it back to something light.
+  const light = pages.filter((f) => {
+    const m = read(f).match(/:root\{[^}]*--bg:\s*(#[0-9a-fA-F]{3,6})/);
+    return m && lum(m[1]) > 0.2;
+  });
+  ok('no content page overrides the palette back to light', light.length === 0, light.slice(0, 4).join(', '));
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

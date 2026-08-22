@@ -95,6 +95,30 @@ async function sendLoginEmail(env, email, link) {
   const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">Sign in to Iron Tuna</h2><p>Tap to unlock your purchase on this device:</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Sign in to Iron Tuna</a></p><p style="color:#667;font-size:13px">This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p></div>';
   try { await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ from: from, to: email, subject: 'Your Iron Tuna sign-in link', html: html }) }); } catch (e) {}
 }
+// The comp email is deliberately not sendLoginEmail. That one says "unlock your
+// purchase", which is the wrong sentence for someone who never bought anything,
+// and it swallows every failure — fine for a self-serve login that answers
+// ok:true either way, useless for an admin who needs to know whether the thing
+// they just sent actually left the building. So this one reports what happened.
+async function sendCompEmail(env, email, link, days) {
+  if (!env.RESEND_API_KEY) return { sent: false, error: 'RESEND_API_KEY is not set' };
+  const from = env.EMAIL_FROM || 'Iron Tuna <login@irontuna.com>';
+  const life = days === 1 ? '24 hours' : days + ' days';
+  const html = '<div style="font-family:system-ui,Arial;max-width:480px"><h2 style="color:#0b1117">You have free access to Iron Tuna</h2><p>Someone at Iron Tuna comped you the full bundle — every draft tool, board and premium insight, no payment needed.</p><p><a href="' + link + '" style="background:#e3b53a;color:#1a1205;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Open Iron Tuna</a></p><p style="color:#667;font-size:13px">This link works once and expires in ' + life + '. After that you can get back in any time at <a href="https://irontuna.com/auctiondraft?signin=1">irontuna.com/auctiondraft</a> with this address — the access itself does not expire.</p></div>';
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ from: from, to: email, subject: 'Your free access to Iron Tuna', html: html })
+    });
+    if (!r.ok) {
+      let detail = '';
+      try { const j = await r.json(); detail = (j && (j.message || j.error || j.name)) || ''; } catch (e) {}
+      return { sent: false, error: 'Resend returned ' + r.status + (detail ? ': ' + detail : '') };
+    }
+    return { sent: true, error: null };
+  } catch (e) { return { sent: false, error: (e && e.message) || 'network error' }; }
+}
 
 // ── projections data kept server-side (not shipped in the client HTML) ──
 const IT_KEY = 'IT_pk_7c1a93f0';
@@ -1958,6 +1982,17 @@ const LEAD_CATEGORIES = {
 };
 const LEAD_RECENT = 5;
 
+// The desk's three-hour slot, derived from a timestamp the same way the run
+// derives its own: floor(epoch_seconds / 10800). One slot should hold exactly
+// one story. On 2026-08-21 slot 165494 held four, twenty minutes apart, because
+// the Routine was fired by hand several times while another desk was being
+// tested. Nothing broke — each new row retires the last, so the site was never
+// wrong — but three finished stories were published and buried within minutes,
+// and a reader watching the front page saw the lead change four times in the
+// space of one slot. Surfacing the slot is what makes that visible at all.
+const LEAD_SLOT_MS = 10800000;
+const leadSlot = ms => Math.floor((+ms || 0) / LEAD_SLOT_MS);
+
 // Headshots for the players a GENERATED lead story names, keyed by the same
 // slug tools/build-front.mjs uses. Rebuilt by tools/build-worker-faces.mjs from
 // tools/nfl-headshots.json, scoped to the PROJECTIONS pool.
@@ -2203,16 +2238,29 @@ async function projectionsPayload(env, ctx) {
 // ~100 static pages at once and keeps counting when a visitor blocks scripts.
 // A "visitor" is a salted hash of IP + user-agent that rotates daily: no cookie,
 // nothing that outlives the day, and nothing that can be walked back to a person.
-// The flip side is that a multi-day window counts a returning visitor once per
-// day they came back; the admin page says so rather than pretending otherwise.
+// So the honest unit here is the UNIQUE DAILY USER: distinct visitors within one
+// UTC day. Summed over a window that is user-days, not people, and the admin page
+// says so rather than pretending otherwise.
+//
+// Rows carry an `internal` flag for the operator's own browsing, which would
+// otherwise dominate a small site's numbers. They are recorded, not dropped, so
+// the exclusion is reversible and its size is visible on /admin.
 const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|embedly|quora|pinterest|whatsapp|telegram|discord|slack|preview|monitor|uptime|curl|wget|python-requests|headless|lighthouse|pagespeed|gtmetrix|ahrefs|semrush|mj12|dotbot|petalbot|yandex|baidu|applebot|gptbot|claudebot|ccbot|perplexity|bytespider|scrapy|okhttp|axios|node-fetch/i;
 const ANALYTICS_DDL = [
-  'CREATE TABLE IF NOT EXISTS page_views (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, path TEXT NOT NULL, visitor TEXT NOT NULL, source TEXT, country TEXT)',
+  'CREATE TABLE IF NOT EXISTS page_views (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, path TEXT NOT NULL, visitor TEXT NOT NULL, source TEXT, country TEXT, internal INTEGER NOT NULL DEFAULT 0)',
   'CREATE INDEX IF NOT EXISTS idx_pv_ts ON page_views(ts)',
   'CREATE INDEX IF NOT EXISTS idx_pv_day ON page_views(day)',
-  'CREATE TABLE IF NOT EXISTS site_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, event TEXT NOT NULL, uid TEXT, path TEXT, props TEXT)',
+  'CREATE TABLE IF NOT EXISTS site_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, event TEXT NOT NULL, uid TEXT, path TEXT, props TEXT, internal INTEGER NOT NULL DEFAULT 0)',
   'CREATE INDEX IF NOT EXISTS idx_ev_ts ON site_events(ts)',
   'CREATE INDEX IF NOT EXISTS idx_ev_name ON site_events(event, ts)',
+];
+// Columns added after the tables were first deployed. ADD COLUMN is the only
+// migration shape this repo uses (see x_posts.est_cost): each runs on its own and
+// throws a harmless "duplicate column" once it has already been applied, so the
+// live tables catch up without a step anyone has to remember to run.
+const ANALYTICS_MIGRATIONS = [
+  'ALTER TABLE page_views ADD COLUMN internal INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE site_events ADD COLUMN internal INTEGER NOT NULL DEFAULT 0',
 ];
 // Cached per isolate, so the DDL costs one batch on cold start and nothing after.
 let __analyticsReady = false;
@@ -2226,9 +2274,21 @@ async function analyticsReady(env) {
     // still gets there, and a hard failure just means no analytics this request.
     try { for (const s of ANALYTICS_DDL) await env.LEADS_DB.prepare(s).run(); } catch (e2) { return false; }
   }
+  // Never batched: a migration that has already been applied throws, and one
+  // throw inside a batch would take the others down with it.
+  for (const s of ANALYTICS_MIGRATIONS) { try { await env.LEADS_DB.prepare(s).run(); } catch (e) {} }
   __analyticsReady = true;
   return true;
 }
+// The operator reading their own dashboard is not an audience. There is no stable
+// id to keep a list of — a visitor hash is minted fresh every UTC day — so the
+// browser carries the mark instead: unlocking /admin sets it_owner=1, and the
+// "count my visits" toggle there sets it_owner=0, which is remembered so opening
+// the dashboard again does not silently re-flag the browser.
+const OWNER_COOKIE = 'it_owner';
+function ownerFlag(request) { try { return parseCookie(request.headers.get('cookie') || '')[OWNER_COOKIE] || ''; } catch (e) { return ''; } }
+const isOwnerVisit = request => ownerFlag(request) === '1';
+const ownerCookie = on => OWNER_COOKIE + '=' + (on ? '1' : '0') + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (2 * 365 * 24 * 3600);
 const utcDay = ts => new Date(ts).toISOString().slice(0, 10);
 async function visitorHash(env, request, day) {
   const ip = request.headers.get('cf-connecting-ip') || '';
@@ -2262,8 +2322,8 @@ async function logPageView(env, request, url) {
     if (path.startsWith('/admin')) return; // don't count yourself checking the numbers
     if (!(await analyticsReady(env))) return;
     const ts = Date.now(), day = utcDay(ts);
-    await env.LEADS_DB.prepare('INSERT INTO page_views (ts, day, path, visitor, source, country) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(ts, day, path, await visitorHash(env, request, day), trafficSource(request, url), (request.cf && request.cf.country) || '').run();
+    await env.LEADS_DB.prepare('INSERT INTO page_views (ts, day, path, visitor, source, country, internal) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(ts, day, path, await visitorHash(env, request, day), trafficSource(request, url), (request.cf && request.cf.country) || '', isOwnerVisit(request) ? 1 : 0).run();
   } catch (e) {}
 }
 async function logSiteEvent(env, request, raw) {
@@ -2276,8 +2336,8 @@ async function logSiteEvent(env, request, raw) {
     if (!(await analyticsReady(env))) return;
     const props = b.props && typeof b.props === 'object' ? b.props : {};
     const ts = Date.now();
-    await env.LEADS_DB.prepare('INSERT INTO site_events (ts, day, event, uid, path, props) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(ts, utcDay(ts), name, String(b.uid || '').slice(0, 48), String(props.path || props.page || '').slice(0, 160), JSON.stringify(props).slice(0, 600)).run();
+    await env.LEADS_DB.prepare('INSERT INTO site_events (ts, day, event, uid, path, props, internal) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(ts, utcDay(ts), name, String(b.uid || '').slice(0, 48), String(props.path || props.page || '').slice(0, 160), JSON.stringify(props).slice(0, 600), isOwnerVisit(request) ? 1 : 0).run();
   } catch (e) {}
 }
 // Keep the tables from growing forever; called from the daily cron.
@@ -2362,10 +2422,23 @@ export default {
         if (!row) return json({ ok: false, error: 'not_found' }, 404, c);
         let sources = [];
         try { sources = JSON.parse(row.sources || '[]'); } catch (e) { sources = []; }
+        // The analyst desk's structured calls ride along so the story page can
+        // lay them out under the article. Fetched as a SEPARATE query, wrapped
+        // in its own try: `calls` is a late addition to the table, and a story
+        // page that 500s because one optional column is missing would be a far
+        // worse bug than a story page with no cards.
+        let calls = [];
+        if (String(row.category || '').toLowerCase() === 'analyst') {
+          try {
+            const cr = await env.LEADS_DB.prepare(
+              'SELECT calls FROM lead_story WHERE slug = ?').bind(row.slug).first();
+            calls = analystCalls(cr && cr.calls);
+          } catch (e) { calls = []; }
+        }
         return json({
           ok: true,
           story: { ...leadRow(row), body: row.body_html || '', method: row.method || '',
-                   sources: Array.isArray(sources) ? sources : [] }
+                   sources: Array.isArray(sources) ? sources : [], calls }
         }, 200, { ...c, 'cache-control': 'public, max-age=120' });
       } catch (e) { return json({ ok: false, error: 'unavailable' }, 200, c); }
     }
@@ -2735,6 +2808,79 @@ export default {
         signIn: revoking ? undefined : 'https://irontuna.com/auctiondraft?signin=1'
       }, 200, c);
     }
+    // Comp an address AND send it the link that turns access on, in one request.
+    // /api/admin/grant leaves a second step to a human — tell the person to go to
+    // /auctiondraft?signin=1 and ask for a link — and that step is exactly where
+    // the flow breaks: /api/auth/request answers ok:true whether or not it sent
+    // anything, so a typo'd address, an unentitled one and a working one all look
+    // identical from the outside. Here the grant lands first, then this route
+    // mints the magic link itself and says plainly whether the send succeeded.
+    //
+    // The link is returned either way, so it can be pasted into a DM when email
+    // is not the channel (send=0) or when Resend refuses. Same LEADS_EXPORT_KEY
+    // gate and same GET shape as every other admin route, so it still works from
+    // a phone's address bar; /admin drives it from a form.
+    if (url.pathname === '/api/admin/comp') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const email = String(url.searchParams.get('email') || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
+      // Without AUTH_SECRET there is no signed link to send, and granting alone
+      // would report success for a request that cannot do what it says.
+      if (!env.AUTH_SECRET) return json({ ok: false, error: 'no_auth_secret', note: 'AUTH_SECRET is not set, so no sign-in link can be signed. Set it, or use /api/admin/grant and have them sign in themselves.' }, 500, c);
+      const rawDays = url.searchParams.get('days');
+      const days = (rawDays === null || rawDays === '') ? 14 : Number(rawDays);
+      if (!Number.isInteger(days) || days < 1 || days > 90) return json({ ok: false, error: 'bad_days', note: 'days must be a whole number from 1 to 90.' }, 400, c);
+      const comped = COMPED_EMAILS.includes(email);
+      if (!env.LEADS_DB && !comped) return json({ ok: false, error: 'no_db' }, 500, c);
+
+      let hadRow = false;
+      if (env.LEADS_DB) { try { hadRow = !!(await env.LEADS_DB.prepare('SELECT 1 FROM entitlements WHERE email=?').bind(email).first()); } catch (e) {} }
+      await grantEntitlement(env, email);
+      // grantEntitlement swallows its own errors, so the write is confirmed by
+      // reading access back rather than by assuming it took. Sending a link to
+      // an address that is not entitled would sign them in to the free site.
+      if (!(await isEntitled(env, email))) return json({ ok: false, error: 'grant_failed', note: 'The entitlement did not stick, so no link was sent.' }, 500, c);
+
+      const nonce = crypto.randomUUID();
+      const ttlSec = days * 86400;
+      // /api/auth/verify only enforces single use when RATE_KV is bound, and it
+      // is the same env — so when it IS bound this put has to succeed, or the
+      // link is dead on arrival ("already used") instead of merely unguarded.
+      if (env.RATE_KV) {
+        try { await env.RATE_KV.put('mln:' + nonce, '1', { expirationTtl: ttlSec }); }
+        catch (e) { return json({ ok: false, error: 'link_store_failed', note: 'Access was granted, but the one-time link could not be registered, so nothing was sent. Retry, or send them to /auctiondraft?signin=1.' }, 500, c); }
+      }
+      const expires = Date.now() + ttlSec * 1000;
+      const token = await makeToken(env.AUTH_SECRET, { e: email, n: nonce, t: 'magic', exp: expires });
+      const link = url.origin + '/api/auth/verify?token=' + encodeURIComponent(token);
+
+      const send = url.searchParams.get('send') !== '0';
+      let sent = false, emailError = null;
+      if (send) { const r = await sendCompEmail(env, email, link, days); sent = r.sent; emailError = r.error; }
+
+      return json({
+        ok: true,
+        email,
+        entitled: true,
+        changed: !hadRow,
+        sent,
+        emailError,
+        link,
+        expiresAt: new Date(expires).toISOString(),
+        days,
+        // Say what actually happened, including the two cases that read as
+        // success and are not: nothing was sent, or the send was refused.
+        note: (comped ? 'This address is comped in code (COMPED_EMAILS), so it already had access. ' : hadRow ? 'This address already had access; the row was refreshed. ' : 'Access granted. ') +
+          (!send
+            ? 'Nothing was emailed — copy the link and send it yourself.'
+            : sent
+              ? 'The link is on its way to ' + email + '.'
+              : 'The email did NOT send (' + (emailError || 'unknown error') + ') — copy the link and send it yourself.'),
+        signIn: 'https://irontuna.com/auctiondraft?signin=1'
+      }, 200, c);
+    }
     // ── the lead desk, from a URL ───────────────────────────────────────────
     // Promoting or pulling a generated lead story used to mean two SQL
     // statements in the Cloudflare console, and the second one was easy to
@@ -2796,6 +2942,7 @@ export default {
         label: LEAD_CATEGORIES[String(r.category || '').toLowerCase()] || 'Insight',
         faces: (() => { try { const p = JSON.parse(r.players || '[]'); return Array.isArray(p) ? p.length : 0; } catch (e) { return 0; } })(),
         verified: !!r.verified, published: !!r.published,
+        slot: leadSlot(r.created_at),
         createdAt: r.created_at,
         url: r.slug ? '/lead/' + r.slug : null,
         // Why this row is or is not on the site, so the answer does not have to
@@ -2807,9 +2954,19 @@ export default {
       // Read back through the same function the site uses, so this reports what
       // a reader would actually get rather than what the flags imply.
       const live = await leadStoryPayload(env);
+      // Slots holding more than one story. A run fired by hand lands in the same
+      // slot as the scheduled one and buries it; this is how you see that it
+      // happened rather than inferring it from timestamps.
+      const bySlot = {};
+      list.forEach(r => { (bySlot[r.slot] = bySlot[r.slot] || []).push(r.id); });
+      const doubled = Object.entries(bySlot).filter(([, ids]) => ids.length > 1)
+        .map(([slot, ids]) => ({ slot: +slot, ids, count: ids.length }));
       return json({ ok: true, did,
                     live: live.story ? { slug: live.story.slug, label: live.story.label, url: live.story.url } : null,
-                    onSite: live.ok, stories: list }, 200, c);
+                    onSite: live.ok,
+                    currentSlot: leadSlot(Date.now()),
+                    doubledSlots: doubled,
+                    stories: list }, 200, c);
     }
     if (url.pathname === '/api/admin/odds-status') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -2976,9 +3133,18 @@ export default {
         return json(out, 200, c);
       } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
     }
+    if (url.pathname === '/api/admin/exclude-me') {
+      // Flag this browser as the operator's, or hand it back to the numbers.
+      // GET so it works from an address bar, matching the other admin routes.
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const on = url.searchParams.get('on') !== '0';
+      return json({ ok: true, excluded: on }, 200, { ...c, 'Set-Cookie': ownerCookie(on) });
+    }
     if (url.pathname === '/api/admin/traffic') {
-      // Traffic overview powering the Traffic section of /admin: pageviews and
-      // daily-unique visitors, top pages, where arrivals came from, and the named
+      // Traffic overview powering the Traffic section of /admin: unique daily
+      // users, pageviews, top pages, where arrivals came from, and the named
       // click events the site fires. Separate from /api/admin/dashboard so it
       // still loads when the Stripe pull there is slow or misconfigured.
       const c = corsHeaders(request.headers.get('Origin'));
@@ -2987,42 +3153,74 @@ export default {
       if (!env.LEADS_DB) return json({ ok: false, error: 'no_db' }, 500, c);
       if (!(await analyticsReady(env))) return json({ ok: false, error: 'no_tables' }, 500, c);
       const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
+      // Reaching this route at all means someone holding the admin key is
+      // browsing, so flag their browser unless they have already said otherwise.
+      // &includeMe=1 shows the unfiltered numbers without changing the flag.
+      const flag = ownerFlag(request);
+      const includeMe = url.searchParams.get('includeMe') === '1';
+      const head = flag ? c : { ...c, 'Set-Cookie': ownerCookie(true) };
       const db = env.LEADS_DB;
       try {
         const now = Date.now();
         const since = now - days * 86400000;
         const rows = async (sql, ...bind) => { try { return ((await db.prepare(sql).bind(...bind).all()).results) || []; } catch (e) { return []; } };
         const one = async (sql, ...bind) => { try { return (await db.prepare(sql).bind(...bind).first()) || {}; } catch (e) { return {}; } };
-        const win = sql => 'SELECT COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ?' + (sql || '');
-        const todayStart = Date.parse(utcDay(now) + 'T00:00:00Z');
+        // Every read below is filtered the same way, so no table on the page can
+        // disagree with another about who counts.
+        const mine = includeMe ? '' : ' AND internal = 0';
+        const win = () => 'SELECT COUNT(*) AS views, COUNT(DISTINCT visitor) AS userDays FROM page_views WHERE ts >= ?' + mine;
 
-        const out = { ok: true, generatedAt: now, days };
+        const out = { ok: true, generatedAt: now, days, includeMe };
         out.totals = {
-          today: await one(win(), todayStart),
-          d7: await one(win(), now - 7 * 86400000),
           window: await one(win(), since),
-          activeNow: ((await one('SELECT COUNT(DISTINCT visitor) AS n FROM page_views WHERE ts >= ?', now - 1800000)).n) || 0,
+          activeNow: ((await one('SELECT COUNT(DISTINCT visitor) AS n FROM page_views WHERE ts >= ?' + mine, now - 1800000)).n) || 0,
         };
         // Daily grid, zero-filled so the chart has a point for every day even
         // before there is traffic on it.
         const daily = {};
-        for (let i = days - 1; i >= 0; i--) { const d = utcDay(now - i * 86400000); daily[d] = { date: d, views: 0, visitors: 0 }; }
-        (await rows('SELECT day, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ? GROUP BY day', since))
-          .forEach(r => { if (daily[r.day]) daily[r.day] = { date: r.day, views: r.views || 0, visitors: r.visitors || 0 }; });
+        for (let i = days - 1; i >= 0; i--) { const d = utcDay(now - i * 86400000); daily[d] = { date: d, views: 0, users: 0 }; }
+        (await rows('SELECT day, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY day', since))
+          .forEach(r => { if (daily[r.day]) daily[r.day] = { date: r.day, views: r.views || 0, users: r.users || 0 }; });
         out.daily = Object.keys(daily).sort().map(k => daily[k]);
 
-        out.topPages = (await rows('SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ? GROUP BY path ORDER BY views DESC LIMIT 25', since))
-          .map(r => ({ path: r.path, views: r.views || 0, visitors: r.visitors || 0 }));
-        out.sources = (await rows("SELECT source, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM page_views WHERE ts >= ? GROUP BY source ORDER BY views DESC LIMIT 20", since))
-          .map(r => ({ source: r.source || '', views: r.views || 0, visitors: r.visitors || 0 }));
-        out.countries = (await rows("SELECT country, COUNT(*) AS views FROM page_views WHERE ts >= ? AND country != '' GROUP BY country ORDER BY views DESC LIMIT 12", since))
+        // The headline numbers, read off the daily grid rather than re-queried,
+        // so the tiles and the chart can never tell different stories.
+        //
+        // A visitor id embeds the UTC day it was minted, so DISTINCT over a
+        // multi-day window is exactly the sum of each day's uniques: user-days,
+        // not unique people. Only the per-day figure is a true unique-user count,
+        // which is why it leads and the window total is named for what it is.
+        const series = out.daily;
+        const userDays = series.reduce((s, r) => s + r.users, 0);
+        let best = { date: null, users: 0 };
+        series.forEach(r => { if (r.users > best.users) best = { date: r.date, users: r.users }; });
+        out.uniqueUsers = {
+          today: (series[series.length - 1] || {}).users || 0,
+          yesterday: series.length > 1 ? (series[series.length - 2].users || 0) : null,
+          avgPerDay: series.length ? userDays / series.length : 0,
+          best: best,
+          userDays: userDays,
+        };
+
+        out.topPages = (await rows('SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY path ORDER BY views DESC LIMIT 25', since))
+          .map(r => ({ path: r.path, views: r.views || 0, users: r.users || 0 }));
+        out.sources = (await rows('SELECT source, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY source ORDER BY views DESC LIMIT 20', since))
+          .map(r => ({ source: r.source || '', views: r.views || 0, users: r.users || 0 }));
+        out.countries = (await rows("SELECT country, COUNT(*) AS views FROM page_views WHERE ts >= ? AND country != ''" + mine + ' GROUP BY country ORDER BY views DESC LIMIT 12', since))
           .map(r => ({ country: r.country, views: r.views || 0 }));
-        out.events = (await rows('SELECT event, COUNT(*) AS n, COUNT(DISTINCT uid) AS people FROM site_events WHERE ts >= ? GROUP BY event ORDER BY n DESC LIMIT 40', since))
+        out.events = (await rows('SELECT event, COUNT(*) AS n, COUNT(DISTINCT uid) AS people FROM site_events WHERE ts >= ?' + mine + ' GROUP BY event ORDER BY n DESC LIMIT 40', since))
           .map(r => ({ event: r.event, count: r.n || 0, people: r.people || 0 }));
+
+        // What the filter is holding back, so "my visits are excluded" is a number
+        // on the page and not something the operator has to take on trust.
+        const mineOnly = await one('SELECT COUNT(*) AS views, COUNT(DISTINCT visitor) AS userDays FROM page_views WHERE ts >= ? AND internal = 1', since);
+        out.excluded = { views: mineOnly.views || 0, userDays: mineOnly.userDays || 0 };
+        out.you = { excluded: flag !== '0' };
+
         const first = await one('SELECT MIN(ts) AS t FROM page_views');
         out.collectingSince = first.t || null;
-        return json(out, 200, c);
-      } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, c); }
+        return json(out, 200, head);
+      } catch (e) { return json({ ok: false, error: 'server', detail: String(e).slice(0, 200) }, 500, head); }
     }
     if (url.pathname === '/api/track') {
       const c = corsHeaders(request.headers.get('Origin'));

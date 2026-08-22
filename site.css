@@ -137,12 +137,13 @@ header.site .brand-logo { height: 26px }
 .nav a:hover { color: var(--text); background: rgba(255, 255, 255, .05); text-decoration: none }
 /* The page you are on, so the nav answers "where am I". */
 .nav a[aria-current="page"] { color: var(--teal); background: rgba(45, 212, 163, .10) }
-.nav a.cta {
+header.site > .wrap > a.cta {
   color: var(--teal); border: 1px solid var(--teal); border-radius: 9px;
   padding: var(--space-2) var(--space-3); background: rgba(45, 212, 163, .12);
-  margin-left: var(--space-2);
+  font-size: var(--fs-2xs); letter-spacing: .06em; text-transform: uppercase;
+  white-space: nowrap; margin-left: auto; flex: 0 0 auto;
 }
-.nav a.cta:hover { background: rgba(45, 212, 163, .2); color: var(--text) }
+header.site > .wrap > a.cta:hover { background: rgba(45, 212, 163, .2); color: var(--text); text-decoration: none }
 
 /* ── nav dropdown ───────────────────────────────────────────────────────── */
 .nav-dd { position: relative; display: inline-block }
@@ -170,7 +171,16 @@ header.site .brand-logo { height: 26px }
 @media (max-width: 860px) {
   /* The canonical nav carries more destinations than fit on a phone. Rather
      than let them overflow into an unmarked horizontal scroll, they collapse
-     into a real disclosure menu. */
+     into a real disclosure menu.
+     This keeps the outcome main's cee7d10 was after — the header is always one
+     line and about 52px, and the CTA never scrolls out of reach — but reaches
+     it with a disclosure button instead of a scrolling link strip. A strip
+     works for the three links that nav used to hold; at eleven it hides most
+     of them behind a scroll with no affordance, which is the problem the
+     canonical nav exists to fix. */
+  header.site .wrap { flex-wrap: nowrap; height: auto; min-height: 52px; gap: 10px; padding-top: 7px; padding-bottom: 7px }
+  header.site .brand { flex: 0 0 auto }
+  header.site .brand-logo { height: 20px }
   .nav-toggle {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     min-height: 44px; min-width: 44px; padding: 0 var(--space-3);
@@ -187,16 +197,17 @@ header.site .brand-logo { height: 26px }
   .nav-toggle-bars::after { top: 8px }
 
   .nav {
-    position: absolute; top: var(--header-h); left: 0; right: 0;
+    position: absolute; top: 100%; left: 0; right: 0;
     display: none; flex-direction: column; align-items: stretch; justify-content: flex-start;
     background: var(--panel); border-bottom: 1px solid var(--line);
     padding: var(--space-2) var(--space-3) var(--space-4);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, .55); max-height: calc(100vh - var(--header-h));
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .55); max-height: calc(100vh - 52px);
     overflow-y: auto; gap: 0;
   }
+  header.site { position: sticky }
   header.site[data-nav-open="1"] .nav { display: flex }
   .nav a { font-size: var(--fs-sm); padding: var(--space-3) var(--space-4); min-height: 44px; display: flex; align-items: center }
-  .nav a.cta { margin: var(--space-2) var(--space-4) 0; justify-content: center }
+  header.site > .wrap > a.cta { padding: var(--space-2) 11px; min-height: 38px; display: inline-flex; align-items: center }
   /* Flattened: a hover dropdown is unusable on touch, so the children are
      simply listed under an inline heading. */
   .nav-dd { display: block }

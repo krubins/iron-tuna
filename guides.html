@@ -26,7 +26,14 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/site.css">
 <style>
-@media(max-width:640px){}
+/* Mobile masthead. The links used to wrap into two and three ragged rows that
+   grew the sticky header to a third of the screen; now they are one line that
+   scrolls sideways under a pinned CTA, so the header is always 52px and the
+   button never scrolls out of reach. The link before the CTA points at the
+   same URL as the CTA on every page that has one, so it is the one that gives
+   way for the width. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 .lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
@@ -53,11 +60,6 @@ td.you{color:var(--gold);font-weight:700}
 .related a:hover{border-color:var(--teal);color:var(--text);text-decoration:none}
 @media(max-width:640px){.grid{grid-template-columns:1fr}}
 
-
-/* The dropdown is centred on its trigger, which sits ~53px from the left edge on a
-   phone — centring pushed the menu to left:-13px, off the screen. Below 560px anchor
-   it to the trigger instead and cap it to the viewport. */
-@media (max-width:560px){}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"CollectionPage","name":"Fantasy Football Draft Strategy Guides: Auction, Snake & Best Ball (2026)","description":"Free fantasy football draft strategy guides for auction, snake, and best ball: draft strategy, nomination tactics, budget allocation, tier cliffs, stacking, and championship weeks.","url":"https://irontuna.com/guides","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"hasPart":[{"@type":"Article","headline":"Fantasy Football Snake Draft Strategy: A Complete Guide (2026)","url":"https://irontuna.com/snake-draft-strategy"},{"@type":"Article","headline":"Best Ball Draft Strategy: How to Win in 2026","url":"https://irontuna.com/best-ball-draft-strategy"},{"@type":"Article","headline":"Best Ball Stacking Guide: Correlation That Wins (2026)","url":"https://irontuna.com/best-ball-stacking-guide"},{"@type":"Article","headline":"Fantasy Football Auction Draft Strategy: A Complete Guide (2026)","url":"https://irontuna.com/auction-draft-strategy"},{"@type":"Article","headline":"Auction Nomination Strategy: How to Nominate to Win (2026)","url":"https://irontuna.com/auction-nomination-strategy"},{"@type":"Article","headline":"How to Budget a Fantasy Auction: Allocation by Position (2026)","url":"https://irontuna.com/auction-budget-allocation"},{"@type":"Article","headline":"The $1 Endgame: Handcuffs and Split-Backfield Lotteries (2026)","url":"https://irontuna.com/dollar-endgame-handcuffs"}]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"Guides"}]}]}</script>
@@ -67,9 +69,6 @@ td.you{color:var(--gold);font-weight:700}
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <!--chrome:nav-->
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
-      <span class="nav-toggle-bars"><span></span></span>Menu
-    </button>
     <nav class="nav" id="sitenav" aria-label="Main">
       <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
@@ -77,8 +76,11 @@ td.you{color:var(--gold);font-weight:700}
       <a href="/analyst-desk">Analyst Desk</a>
       <a href="/faq">FAQ</a>
       <a href="https://irontuna.com/">Draft Day Mode</a>
-      <a class="cta" href="https://irontuna.com/">Free sheet</a>
     </nav>
+    <a class="cta" href="https://irontuna.com/">Free sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">

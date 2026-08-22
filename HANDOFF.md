@@ -378,7 +378,7 @@ Ranks are the exception: they need the whole pool, which only the reader's saved
 
 `it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library. **`node tools/test-position-lens.mjs`** covers the reading-lens switch and the default-board line end to end in a real browser. **`node tools/build-default-board.mjs`** regenerates the default board.
 
-## 9g. Comping access from a URL (added August 2026)
+## 9g. Comping access from a URL, and from /admin (added August 2026)
 
 Two admin routes hand out and pull paid access for one address, behind the same `LEADS_EXPORT_KEY` gate as every other admin route:
 
@@ -398,6 +398,26 @@ Details worth knowing:
 - **The comped-in-code trap:** `COMPED_EMAILS` (module scope in `_worker.js`) always has access, so a `revoke` on one of those addresses looks like it worked and does nothing. The response says `STILL HAS ACCESS` and names the fix. That list is for **owner access only** — to comp anyone else use `grant`, because a third party's address does not belong in a source file and git history keeps it forever.
 
 `node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
+
+### Grant *and* send the link, in one step
+
+`grant` leaves the second half of the job to a human: tell the person to go to `/auctiondraft?signin=1` and ask for a link. That step is where the flow breaks, because `/api/auth/request` answers `ok:true` whether or not it sent anything — a typo'd address, an address that was never granted and a working one all look identical from the outside. So there is a route that does both:
+
+```
+GET /api/admin/comp?key=<LEADS_EXPORT_KEY>&email=<address>[&days=14][&send=0]
+```
+
+It grants, mints the magic link itself, emails it, and reports **what actually happened**: `sent`, `emailError`, `changed`, `expiresAt`, and the `link` itself. **/admin drives this from a form** — the "Free access" card at the top of the dashboard — which is the intended way to use it; the GET shape is kept so it still works from a phone's address bar.
+
+- **The link is always returned**, sent or not, so a refused email never leaves you with nothing to pass on. `send=0` grants and hands back the link without emailing, for pasting into a DM.
+- **Access is granted first, then the link is minted** — the same ordering constraint as above, enforced in one request instead of trusted to whoever is doing it.
+- **The grant is confirmed by reading access back**, not assumed: `grantEntitlement()` swallows its own errors, and mailing a sign-in link to an address that is not entitled would sign someone in to the free site.
+- **A failed send is not a failed grant.** Resend refusing the message (unverified domain, no `RESEND_API_KEY`) still leaves the access in place; the response says `sent:false` with the reason, and `/admin` colours that result as a failure rather than a success.
+- **The nonce write is not best-effort.** `/api/auth/verify` only enforces single use when `RATE_KV` is bound, and it is the same env — so if that `put` fails while KV *is* bound, the link would arrive already "used". The route refuses (`link_store_failed`) and sends nothing rather than mailing a dead link.
+- **`days`** (1–90, default 14) sets how long the link stays good. It is the *link* that expires, not the access — after that they sign in normally at `/auctiondraft?signin=1`, and the comp email says so.
+- The email is deliberately **not** `sendLoginEmail`. That one says "unlock your purchase", which is the wrong sentence for someone who never bought anything, and it swallows every failure.
+
+`node tools/test-admin-comp.mjs` covers the gate, the validation, the mail-shim assertions, every "looks like success and is not" case above — and follows the link the route emits all the way through `/api/auth/verify` to `/api/auth/me`, because a link that does not actually sign anyone in is the whole failure this route exists to prevent. It also asserts `admin.html` still sends the parameters the route reads, since the page is hand-written and a renamed parameter would only show up as a form that silently 400s. Both this and the grant suite run in CI, along with a parse check on `admin.html`'s scripts.
 
 ## 9h. What a quarterback costs (re-cut August 2026)
 
@@ -1022,6 +1042,59 @@ time**, not in the stored copy, so the authoring contract stays "write a table"
 and every past story gains the fix. The sources list is collapsed by default —
 on these runs it can run longer than the story it backs.
 
+### One slot, one story
+
+The desk publishes on a three-hour clock and each run retires the one before it,
+so a slot should hold exactly one story. On 2026-08-21 slot 165494 held **four**,
+twenty minutes apart: the Routine was fired by hand repeatedly while the analyst
+desk was being tested. Nothing broke — the newest published row always wins, so
+the site was never wrong — but three finished stories were published and buried
+within minutes of each other, and anyone watching the front page saw the lead
+change four times inside one slot.
+
+**The guard is a D1 trigger, not a line in the Routine's prompt.**
+
+```sql
+CREATE TRIGGER lead_story_one_per_slot
+BEFORE INSERT ON lead_story FOR EACH ROW
+WHEN NEW.published = 1 AND EXISTS (
+  SELECT 1 FROM lead_story
+   WHERE published = 1 AND verified = 1
+     AND created_at/10800000 = NEW.created_at/10800000)
+BEGIN SELECT RAISE(ABORT, 'lead_story: this three-hour slot already has a published story. …'); END;
+```
+
+It lives in the database on purpose. The prompt is edited by several sessions
+independently — it was pinned to one desk and restored 73 seconds later on the
+same day — so a rule written there can be lost by the next person who rewrites
+it, and nobody would notice until the churn came back. A trigger cannot be
+clobbered by a prompt edit, fires whoever does the INSERT, and fails **loudly**
+rather than silently demoting a row.
+
+Why the `WHEN` clause is shaped the way it is:
+
+- **It only bites on `published = 1`.** A run that held itself back (`verified=0`,
+  `published=0`) is never blocked, which matters because that is the honest
+  outcome the desk is told to prefer over publishing something thin.
+- **It compares slots, not timestamps.** The normal flow inserts while the
+  *previous* story is still published — the retiring `UPDATE` runs after — and
+  that row is three hours back, in a different slot, so an ordinary run passes.
+- **It requires `verified = 1` on the incumbent.** An unverified row sitting in
+  the slot does not block a good story from taking it.
+
+Two escape hatches, both verified against a scratch table before this went on:
+
+1. **Stage it.** Insert with `published=0`, then `&promote=<id>` on the admin
+   route. The guard does not fire, and promoting is one batch.
+2. **Replace it.** `&pull=<id>` the story you want gone, then re-run. The pulled
+   row is `published=0`, so the slot is free and the new insert lands normally.
+
+So a deliberate re-run still works; only an accidental one is stopped.
+
+`/api/admin/lead` reports `slot` on every row, `currentSlot`, and `doubledSlots`
+naming any slot holding more than one story, so a past collision is visible
+rather than something you infer from timestamps.
+
 ### Running the desk by hand
 
 `GET /api/admin/lead?key=<LEADS_EXPORT_KEY>` lists the last 15 rows with a
@@ -1155,6 +1228,13 @@ access, a D1 that refuses it — the payload re-asks for the shape that has alwa
 existed and the column publishes without its call cards. `tools/test-analyst-column.mjs`
 covers both states.
 
+Not every analyst story has calls to store. A piece about analyst **track
+records** rather than about a player's price has no "they say $X, we say $Y" to
+score, so `calls` is legitimately NULL and the entry lists on the column by
+headline alone, feeding nothing into the record table. That is correct rather
+than a gap, and the prompt says so explicitly, because the alternative is a run
+manufacturing player calls to fill a field.
+
 Everything about `calls` is optional and defensive, because an autonomous run
 writes it and no schema enforces it at write time: malformed JSON, an object
 where a list belongs, junk entries, forty calls in one row, a verdict word
@@ -1260,6 +1340,93 @@ The four edits, as they now stand:
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
 
+#### The headline check (2026-08-22)
+
+The prompt ends with four mechanical checks to run on the exact title string
+immediately before the INSERT, not while drafting: count the characters (under
+110), search for an em dash, confirm one sentence, and confirm it states the
+finding.
+
+All four were already stated elsewhere in the prompt as prose. A headline still
+shipped at **114 characters with an em dash, leading with the setup** — three
+violations in one line. Rules a run reads once at the top and then has to
+remember while composing are not the same as a checklist it runs against the
+finished string, which is why this is a separate step at the end rather than
+another sentence in the style section.
+
+The fourth check is the one that needs a test rather than a rule, because
+"leads with the finding" is a judgement: **would this headline read exactly the
+same if the analysis had come out the other way?** If yes, it is the setup. The
+prompt carries the real example. "Five seasons produced five different winners,
+which is what luck looks like" was the null result the piece started from;
+"Kevin English has beaten the field average ten years running" was what it
+arrived at. Both were true of the same story.
+
+The self-check query now selects `length(title) AS tlen` so the run sees the
+count in its own verification step, and the report-back asks for the headline
+with its character count.
+
+#### The reading view, and the column as an index (2026-08-22)
+
+The first cut of `/analyst-desk` laid every entry out in full, call cards and
+all. With two entries that was already one long scroll of stacked stories, and it
+read as a feed rather than a column. The split now is:
+
+- **`/lead/<slug>` is the story.** One piece, on its own, on a **white page in
+  near-black type** — a reading view, deliberately unlike the dark chrome the
+  rest of the site uses. Under the article it carries that story's own call
+  cards, then the method box and sources, then **Continue reading**: the other
+  stories, as links, for anyone who wants to keep going.
+- **`/analyst-desk` is the index.** The standing copy, the record table, and one
+  compact item per entry: kicker, date, headline, dek, and a summary line naming
+  the analysts it argues with. No call cards. Every item links to its story.
+
+The white page is `lead.html`'s own `:root`, so it applies to **every** lead
+story, not only analyst ones. Three things had to change beyond swapping the
+background: `--teal` darkens from `#2dd4a3` (about 1.9:1 on white, unreadable) to
+`#0d7a5f`, `--danger` likewise, and the wordmark's metal gradient is inverted to
+dark stops or the logo disappears. `tools/test-analyst-column.mjs` pins all
+three, because "make it light" is the kind of change a later edit reverts by
+copying a palette from another page.
+
+`calls` reaches the story page through `/api/lead-story/body` as a **separate
+query in its own `try`**, run only when the row's category is `analyst`. It is
+not folded into the main SELECT on purpose: `calls` is a late addition to the
+table, and an article page that 500s because one optional column is missing
+would be far worse than an article page with no cards.
+
+#### One story per run
+
+The desk's prompt opens with this rule and the Insert section repeats it,
+because it was learned the expensive way. On 2026-08-21 a single run inserted
+**two** analyst stories seven minutes apart (ids 21 and 22). The second retired
+the first, and because the run never re-read what it had just published, the two
+scored the *same* analyst position on the *same* player in opposite directions:
+Eisenberg on Chris Olave, agree in one and disagree in the other, off identical
+numbers ($24, WR17). Both went live on the standing column and sat there
+contradicting each other.
+
+The disagreement was not about the player at all. It was about whether $24 at
+WR17 is a late-second buy or a fourth-round one — a round-to-dollar conversion
+the desk had never pinned down. The prompt now asks any run that converts rounds
+to dollars to state the conversion in its method line, so the next one can match
+it.
+
+Two guards followed: a run that has inserted is finished writing, and the
+self-check is explicitly read-only, since "verify your work" is the natural place
+for a model to notice something it would rather have written differently and fix
+it by publishing again. **A second insert is not a correction; it is a second
+published story.**
+
+Entry 22 was retracted on 2026-08-22 by setting `verified = 0`. Note that
+`published = 0` was *not* enough and the admin route's `&pull=` would not have
+worked: the row was already unpublished, and what kept it on `/analyst-desk` is
+that the column selects on `verified = 1` alone. **`verified` is the flag that
+governs the standing column; `published` only governs the front-page lead.**
+It slightly overloads `verified`, whose documented meaning is "the run failed its
+own gate" rather than "a human retracted this", but it is the only lever that
+removes a row from the column while keeping it in the table.
+
 #### What the first runs taught, 2026-08-21
 
 Three findings from firing the desk by hand, all of which outlived the test:
@@ -1281,6 +1448,13 @@ Three findings from firing the desk by hand, all of which outlived the test:
   from a single CBS column, because one aggregated risers-and-fallers piece is
   the cheapest thing to find. Hence edit 4 above. Judge the skew off the record
   table on `/analyst-desk`, which is exactly what it is for.
+- **A scheduled slot can produce nothing at all.** The 21:58 UTC run on
+  2026-08-21 wrote no row, not even a held `verified = 0` one, while every other
+  slot that night walked the cycle correctly. A missing story is invisible from
+  the site (the previous lead simply stays up) and invisible in D1 (there is no
+  row to find). The only way to notice is a gap in the `created_at` sequence
+  against the 3-hour cadence, so check for that rather than assuming every slot
+  produced something.
 
 The first entry is worth reading as the reference for what this desk should
 sound like: `analyst-desk-august-moves-2026-08-21-20`. Its lead argues that the
@@ -1306,12 +1480,42 @@ than as an exception**, because an exception here is a blank hero on the front
 door. It also pins the route pattern against traversal and checks that the front
 page still paints its own lead first.
 
+### The countdown has to know the cron, not the clock
+
+Found on 2026-08-22 by rendering the real front page against the live D1 row:
+the lead read **"next insight in 37m"** when the next story was 95 minutes away.
+It said something wrong like that in **every slot it has ever rendered**.
+
+The cause is that a slot and a run are not the same instant. Slots are three
+hours from the epoch, so they turn over at 00/03/06/09/12/15/18/21 UTC — but the
+Routine's cron is `58 */3 * * *`, so a run **fires 58 minutes into the slot** and
+takes about eight more to write and verify. `msToNextSlot()` counts down to the
+boundary, which is right for the deep-dive rotation that genuinely turns over
+there, and about an hour early for the generated lead. The lead now uses its own
+`msToNextLead()`, built from `LEAD_CRON_MS` and `LEAD_WRITE_MS`.
+
+The same mistake had a second, quieter half. The open-tab refresh looked for a
+new story in the six minutes **after** the boundary — an hour before the run
+fires — so it always found the same story and then waited three hours to look
+again. An open tab could sit two hours stale. It now asks the question that
+actually decides it: *is the story on screen from an older slot than the one we
+are in?*, the same `Math.floor(ms / SLOT_MS)` the worker and the admin desk use.
+That is immune to a run being early, late, or held back, where any fixed window
+is not. It is capped at 20 looks so a run that publishes nothing — an outcome the
+desk is explicitly allowed to choose — cannot leave every open tab polling for
+the rest of the slot.
+
+**If the cron ever changes, `LEAD_CRON_MS` changes with it.** `test-lead-story`
+asserts the page's value is 58 and pins the arithmetic against slot 165501, but
+nothing can read the Routine's schedule from inside this repo, so that assertion
+is a reminder rather than a real check.
+
 ## 18. August 2026: traffic numbers on /admin
 
 `/admin` used to answer "how much money" and had nothing to say about "how many
-people". It does now: a **Traffic** section above Sales & referrals with page
-views, visitors, top pages, where arrivals came from, and the site's named click
-events, over a 7 / 30 / 90-day window.
+people". It does now: a **Traffic** section above Sales & referrals leading with
+**unique daily users**, plus page views, top pages, where arrivals came from, and
+the site's named click events, over a 7 / 30 / 90-day window.
 
 ### Counting happens in the Worker, not in a script tag
 
@@ -1332,7 +1536,7 @@ Not counted, because none of them are a person reading the site: bots and AI
 crawlers (`BOT_RE`), prefetch/prerender hits, framed loads, `/admin*` itself, and
 anything that is not a 200 HTML GET.
 
-### A "visitor" is a day, not a person
+### A "visitor" is a day, not a person — so the unit is the unique DAILY user
 
 `visitorHash()` is `SHA-256(day + LEADS_EXPORT_KEY + IP + user-agent)`, truncated.
 No cookie, no stored IP, no stored user-agent — the raw values never reach D1,
@@ -1340,11 +1544,50 @@ and the salt rotates at UTC midnight so yesterday's hashes cannot be matched to
 today's. That is the same shape Plausible and Fathom use, and it keeps the
 `privacy.html` promise intact.
 
-The cost is real and worth stating plainly: **over a multi-day window, someone
-who comes back on three days counts as three visitors.** The admin page says so
-under the tile rather than implying otherwise. If true multi-day uniques ever
-matter more than the privacy property, the salt is the one line to change — and
-the honesty note under the tile has to change with it.
+That rotation decides what can honestly be reported. Within one UTC day the hash
+is stable, so **distinct visitors on a single day is a true unique-user count** —
+which is why it is the headline tile and the leading chart series. Across a
+window it is not: the day is baked into the hash, so `COUNT(DISTINCT visitor)`
+over 30 days is exactly the sum of each day's uniques. **Someone who comes back on
+three days is three user-days, not one returning person.** The wide number is
+therefore labelled `userDays` in the payload and "User-days" on the tile, rather
+than being passed off as an audience size.
+
+The summary tiles (today, average/day, best day, user-days) are computed in the
+worker **off the daily grid**, not re-queried, so the tiles and the chart cannot
+tell different stories.
+
+If true multi-day uniques ever matter more than the privacy property, the salt is
+the one line to change — and every "user-days" label has to change with it.
+
+### The operator's own browsing is flagged, not counted
+
+On a site this size the person reading the dashboard was a large share of what
+the dashboard reported. `/admin*` was already skipped, but browsing the actual
+site was not.
+
+Rows now carry `internal`, and every read in `/api/admin/traffic` filters
+`internal = 0` — totals, the daily grid, top pages, sources, countries and the
+`site_events` clicks alike, so no table on the page can disagree with another
+about who counts. Rows are **recorded and filtered, never dropped**: the
+exclusion is reversible, `&includeMe=1` shows the unfiltered numbers, and
+`out.excluded` puts the size of what was held back on the page instead of asking
+the operator to take it on trust.
+
+The mark is a cookie, because there is nothing stable to keep a list of — a
+visitor id is minted fresh every UTC day and is meant to be unmatchable. It is
+tri-state on purpose:
+
+- absent → reaching `/api/admin/traffic` with a valid key sets `it_owner=1`.
+  Unlocking `/admin` is enough; there is no step to remember.
+- `1` → excluded. The dashboard does not re-issue the cookie.
+- `0` → counted like anyone else, set by the "Count my visits" button
+  (`GET /api/admin/exclude-me?key=…&on=0`). **This has to stick**, or opening the
+  dashboard would silently undo the operator's choice — hence `0` rather than
+  clearing the cookie.
+
+`HttpOnly; Secure; SameSite=Lax`, two years. It is per browser: the note under
+the tiles says so, and the fix for a second device is to open `/admin` there.
 
 ### What is stored
 
@@ -1352,10 +1595,17 @@ Two D1 tables, created lazily on first use (`ANALYTICS_DDL`, cached per isolate,
 with a one-at-a-time fallback for D1 versions that refuse DDL inside a batch) —
 so there is no migration step to remember and nothing to run by hand:
 
-- `page_views` — `ts, day, path, visitor, source, country`. `source` is
+- `page_views` — `ts, day, path, visitor, source, country, internal`. `source` is
   `utm_source` if present, else the referring host minus `www.`, else empty for
   direct. Self-referrals are dropped so the list is arrivals, not internal hops.
-- `site_events` — `ts, day, event, uid, path, props`, fed by `/api/track`.
+- `site_events` — `ts, day, event, uid, path, props, internal`, fed by `/api/track`.
+
+`internal` was added after both tables were live, so it also appears in
+`ANALYTICS_MIGRATIONS` — `ALTER TABLE … ADD COLUMN`, the same shape as
+`x_posts.est_cost`. Those run one at a time and never in a batch: an already
+applied migration throws "duplicate column", and inside a batch that one throw
+would take the others with it. Existing rows default to `0`, i.e. counted, which
+is the right way to be wrong about traffic recorded before the flag existed.
 
 `/api/track` already existed and already had ~40 call sites in `index.html`
 (`nav_click`, `paywall_viewed`, the `coach_*` family). It forwarded to
@@ -1371,7 +1621,10 @@ cannot grow without bound.
 ### Reading it back
 
 `GET /api/admin/traffic?key=<LEADS_EXPORT_KEY>&days=<1-90>` — same key gate as
-the other admin routes. It is deliberately **separate** from
+the other admin routes. `&includeMe=1` drops the `internal = 0` filter for one
+read without touching the flag. `GET /api/admin/exclude-me?key=…&on=0|1` moves
+the flag; GET so it works from an address bar, matching `/api/admin/grant`. It is
+deliberately **separate** from
 `/api/admin/dashboard`: that one pages through Stripe and can be slow or
 misconfigured, and the traffic numbers should not wait on money numbers to
 render. `admin.html` fetches both independently and the chart is now one
@@ -1379,11 +1632,25 @@ render. `admin.html` fetches both independently and the chart is now one
 
 ### Tests
 
-`node tools/test-analytics.mjs` (38 assertions, no network, no browser). It
-drives the real `_worker.js` over an in-memory SQLite standing in for D1, so the
-SQL is actually executed rather than described. Beyond the never-break-the-page
-cases above, it pins who gets counted, that one person on one day is one visitor,
-that no row contains an IP or user-agent, and that the admin read stays gated.
+`node tools/test-analytics.mjs` (78 assertions, no network, no browser), wired
+into `.github/workflows/checks.yml` — it existed from the start but was
+honour-system until Aug 2026. It drives the real `_worker.js` over an in-memory
+SQLite standing in for D1, so the SQL is actually executed rather than described.
+Beyond the never-break-the-page cases above, it pins who gets counted, that one
+person on one day is one unique user, that no row contains an IP or user-agent,
+and that the admin read stays gated.
+
+The unique-user and exclusion sections seed SQLite directly, because the worker
+can only ever write "now" and the whole question is what happens across days.
+Two of them are worth knowing about before editing:
+
+- the flag lifecycle is tested end to end, including that `it_owner=0` survives
+  a dashboard load — the one bug that would quietly re-exclude a browser the
+  operator had deliberately opted back in.
+- the migration section re-imports `_worker.js` under a query string to get a
+  fresh `__analyticsReady` cache, then drives it against a table built without
+  `internal`. That is the only way to exercise the path a live D1 actually takes;
+  a second plain import would find the cache already warm and skip it.
 
 ---
 
@@ -2021,3 +2288,110 @@ Mutation-test it, the way it was built: reintroduce `var(--red)` in `front.html`
 rule for `var(--never-defined,#333)` (nothing may fail — a fallback is not a
 bug). If a change makes any of those three behave differently, the check has
 stopped doing its job.
+
+---
+
+## 26. August 2026: the front-page nav fits the page it is on
+
+**The complaint.** "Fix the nav crowding."
+
+**What was actually wrong,** measured rather than eyeballed: the ribbon's
+content was **1391px inside a 1260px `.wrap`**. That is not a narrow-window
+problem — it overflowed by 131px at *every* desktop width, 1600px included.
+The two links on the far right, `Classic Home` and `Sign In`, were clipped for
+every reader who ever loaded the page. `.ribbon .wrap` has `overflow-x:auto`,
+so they were technically reachable by scrolling a row that gave no sign it
+could scroll.
+
+`Sign In` being the permanently invisible one is the part that mattered: it
+was the only sign-in entry point on the page.
+
+### What changed
+
+1. **`Classic Home` left the ribbon.** It was already in the footer (a second
+   copy bought nothing), so removing it costs no reachability.
+2. **`Sign In` moved up into `.mast-nav`**, next to Cheat Sheet and Auction
+   Manager. It is a thing you *do*, not a place on the page, so it belongs
+   with the account buttons rather than among the section anchors. `.mast-signin`
+   is dimmer than a CTA and set slightly apart, so it does not read as a third
+   button.
+3. **The ribbon tightens below 1240px** (`@media(max-width:1240px)`: link
+   padding 11→7px, wrap gap 4→2px, switcher padding 12→9px). Those pixels are
+   what keep the **edition switcher** — a control, not a link — on screen. The
+   row now fits down to **1087px**; below that it scrolls, which is correct on
+   a phone.
+4. **The scroll finally announces itself.** A fade paints at the right edge of
+   the scroller, gated on `.ribbon.is-scrollable` — toggled from script on
+   scroll and resize when `scrollWidth - clientWidth - scrollLeft > 4` — so the
+   cue appears only when there is more to the right and clears at the end of
+   the scroll.
+
+### Where the fade lives, and two traps it hit
+
+The fade is a **sticky pseudo-element inside the scroller**
+(`.ribbon.is-scrollable .wrap::after`, `flex:0 0 30px` cancelled by
+`margin-left:-30px`) — the mobile pass's implementation with this section's
+gating class added to it. Two earlier drafts were worse, and both failure modes
+are easy to walk back into:
+
+- **Do not put the fade on `.ribbon` and add `position:relative` to anchor it.**
+  `.ribbon` is `position:sticky`; a later `position:relative` *overrides* that
+  and silently un-sticks the nav. (Sticky already establishes a containing block
+  for an absolutely positioned descendant, so the rule was destructive *and*
+  unnecessary.)
+- **Do not anchor it with `right:0` on `.ribbon` either.** `.ribbon` is
+  viewport-wide while `.wrap` is a centred 1260px box, so `right:0` puts the
+  fade out in the margin rather than at the edge of the clipped content. It
+  needs `calc()` against `.wrap`'s max-width, and then that number has to track
+  any later change to it. Inside the scroller, the right edge is free.
+
+The gating is the half that has to survive: an ungated fade washes out the last
+tab of a row that fits, which on a desktop is **every** row.
+
+### The masthead bug this surfaced
+
+`.mast .wrap` was `height:64px` while `.mast-nav` is `flex-wrap:wrap`. On a
+narrow laptop the nav wrapped to a second row that **spilled out of the black
+band and sat on top of the ribbon**. This was already true on `main` between
+about 901px and 1000px — adding `Sign In` only widened the band that hit it.
+
+Fixed at the root: `min-height:64px` plus 6px of vertical padding, so the band
+grows to hold whatever it is given instead of overflowing. Above the wrap point
+it renders pixel-identically to the old fixed height (the 40px logo plus 12px
+padding is well under 64). The `@media(max-width:900px)` rule that used to say
+`height:auto` no longer needs to.
+
+Both navs also tighten below 1100px, between the phone layout and the desktop —
+smaller wordmark, smaller jump labels, a smaller wrap gap. That is not cosmetic:
+adding Sign In cost the masthead about 111px of headroom and moved its wrap
+point from **901px up to 1012px**, which would have put a wrapped masthead in
+front of every narrow laptop. The tightening puts it back at **908px**,
+effectively at the 900px breakpoint where the layout changes anyway. If another
+link is ever added up here, re-measure that number before shipping it.
+
+**The masthead was restructured underneath this** by the mobile pass that landed
+alongside it (PR #83): the seven section anchors moved out of `.mast-nav` into a
+separate `.mast-jump` nav, and `@media(max-width:760px)` gives the phone a
+two-row masthead — wordmark plus sideways-scrolling jumps on top, the two
+actions full-width underneath. Sign In sits in `.mast-nav` with the actions but
+at `flex:0 0 auto` rather than an equal third: it is a text link, not a button,
+and an equal third would say otherwise.
+
+### Verifying a change here
+
+Measure it; do not look at it. A Playwright pass over
+`[1600,1440,1280,1100,1000,960,900,768,600,380]` reading, for the ribbon,
+`wrap.scrollWidth - wrap.clientWidth` and which children fall outside
+`wrap.getBoundingClientRect()`, and for the masthead, the number of distinct
+`top` values among `.mast-nav`'s children and whether the nav's bottom falls
+below `.mast .wrap`'s. The contract:
+
+- **1089px and up:** ribbon overflow 0, nothing clipped, no fade.
+- **Below 1089px:** overflow is expected and the fade must be present.
+- **Every width:** neither nav may extend past the bottom of `.mast .wrap`, and
+  `document.documentElement` must not scroll horizontally.
+
+Counting *rows* is not a usable signal any more — `.mast-brand`, `.mast-jump`
+and `.mast-nav` are different heights and vertically centred, so their `top`
+values differ on a single row. Use `.mast .wrap`'s height (64px = one row) or
+the nav's bottom against the wrap's.

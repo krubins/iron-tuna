@@ -25,9 +25,9 @@
 <meta property="og:url" content="https://irontuna.com/">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#4c7dff;--brand-dark:#6f97ff;--value-red:#ef5b5b;--ink:#e8eef2;--ink-2:#b6c2cc;--ink-3:#8595a1;--line:#22303b;--bg:#0b1117;--card:#121b24;--mast:#0e1620;--elev:#16212c;--gold:#f5b800;--teal:#2dd4a3}
+:root{--brand:#1f49c7;--brand-dark:#193a9f;--value-red:#cf0a0a;--ink:#101317;--ink-2:#3c434b;--ink-3:#6b737c;--line:#e2e5e9;--bg:#f4f5f6;--card:#ffffff;--mast:#101114;--gold:#f5b800;--teal:#2dd4a3}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
@@ -37,22 +37,36 @@ img{max-width:100%}
 
 /* ── masthead ── */
 .mast{background:var(--mast);border-bottom:3px solid var(--brand)}
-.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;height:64px}
+/* min-height, not height: the nav is a row of links whose width depends on
+   the reader's viewport, and on a narrow laptop it wraps. A fixed height
+   let the second row spill out of the black band and sit on top of the
+   ribbon; this lets the band grow to hold whatever it is given.
+   Above the wrap point it is pixel-identical to a fixed 64px. */
+.mast .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:64px;padding-top:6px;padding-bottom:6px}
 .mast-brand{display:inline-flex;align-items:center;flex:0 0 auto}
 .mast-logo{height:40px;width:auto;display:block}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
-.mast-nav a{color:var(--ink-2);font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
+.mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-left:auto}
+.mast-jump a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
+.mast-jump a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.mast-nav a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
 .mast-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.mast-nav a.cta{background:var(--brand);color:var(--bg);margin-left:6px}
+.mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px}
+/* Sign In sits with the account buttons rather than in the section ribbon: it
+   is a thing you DO, not a place on the page, and in the ribbon it fell past
+   the right edge at every desktop width. Dimmer and set slightly apart so it
+   reads as account rather than as another section anchor. */
+.mast-nav a.mast-signin{color:#9aa3ac;margin-left:10px}
+.mast-nav a.mast-signin:hover{color:#fff}
 .mast-nav a.cta:hover{background:var(--brand-dark)}
 .mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px}
 .mast-nav a.cta-gold:hover{filter:brightness(1.07)}
 
 /* ── dominance banner ── */
-.dominant{background:linear-gradient(90deg,var(--brand-dark) 0%,var(--brand) 18%,var(--brand) 82%,var(--brand-dark) 100%);color:var(--bg)}
+.dominant{background:linear-gradient(90deg,var(--brand-dark) 0%,var(--brand) 18%,var(--brand) 82%,var(--brand-dark) 100%);color:#fff}
 .dominant .wrap{display:flex;align-items:center;justify-content:center;gap:16px;padding:7px 18px}
-.dominant-text{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(19px,2.6vw,26px);letter-spacing:.14em;line-height:1;text-transform:uppercase;text-shadow:none;white-space:nowrap}
-.dominant-rule{flex:0 1 140px;height:1px;background:rgba(11,17,23,.45)}
+.dominant-text{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(19px,2.6vw,26px);letter-spacing:.14em;line-height:1;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.25);white-space:nowrap}
+.dominant-rule{flex:0 1 140px;height:1px;background:rgba(255,255,255,.45)}
 /* The banner set its own width at 390px and pushed the whole document into a
    horizontal scroll: clamp() min was 19px with .14em of tracking on a line
    that has to fit 'The Most Data Driven Fantasy Site'. Tighten the tracking
@@ -62,24 +76,9 @@ img{max-width:100%}
 @media(max-width:400px){.dominant-rule{display:none}.dominant .wrap{padding-left:12px;padding-right:12px}}
 
 /* ── section ribbon (in-page nav) ── */
-.ribbon{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;box-shadow:0 1px 4px rgba(16,19,23,.06)}
-.ribbon .wrap{display:flex;align-items:center;gap:4px;height:44px;overflow-x:auto;position:relative;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
-.ribbon .wrap::-webkit-scrollbar{display:none}
-
-/* A flex scroll container drops its trailing padding, which was clipping the last
-   link ("Sign In") against the right edge at 1440px. A flex spacer restores it. */
-.ribbon .wrap::after{content:"";flex:0 0 18px;height:1px}
-/* Without an affordance the eight links past the fold are simply invisible on a
-   phone. These fades show which way there is more to scroll, and are toggled by
-   the ribbon script below. */
-.ribbon{position:sticky;top:0;z-index:40}
-.ribbon .rb-fade{position:absolute;top:0;bottom:0;width:44px;pointer-events:none;z-index:2;opacity:0;transition:opacity .18s ease}
-.ribbon .rb-fade-r{right:0;background:linear-gradient(to right,rgba(18,27,36,0) 0%,var(--card) 78%)}
-.ribbon .rb-fade-l{left:0;background:linear-gradient(to left,rgba(18,27,36,0) 0%,var(--card) 78%)}
-.ribbon[data-more-r="1"] .rb-fade-r{opacity:1}
-.ribbon[data-more-l="1"] .rb-fade-l{opacity:1}
-@media (prefers-reduced-motion:reduce){.ribbon .rb-fade{transition:none}}
-.ribbon a{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 11px;border-bottom:3px solid transparent;white-space:nowrap}
+.ribbon{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;box-shadow:0 1px 4px rgba(16,19,23,.06)}
+.ribbon .wrap{display:flex;align-items:center;gap:4px;height:44px;overflow-x:auto}
+.ribbon a{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 11px;border-bottom:3px solid transparent;white-space:nowrap}
 .ribbon a:hover{color:var(--ink);border-bottom-color:var(--brand)}
 .ribbon .rb-spacer{flex:1}
 .ribbon a.rb-dim{color:var(--ink-3);font-weight:700}
@@ -88,7 +87,7 @@ img{max-width:100%}
 .sec-head{display:flex;align-items:baseline;gap:14px;margin:34px 0 14px;border-bottom:2px solid var(--ink);padding-bottom:8px;position:relative}
 .sec-head::after{content:"";position:absolute;left:0;bottom:-2px;width:64px;height:2px;background:var(--brand)}
 .sec-head h2{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:30px;letter-spacing:.05em;line-height:1}
-.sec-head .sec-more{margin-left:auto;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
+.sec-head .sec-more{margin-left:auto;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
 .sec-head .sec-more:hover{color:var(--brand-dark)}
 @media(max-width:560px){.sec-head{flex-wrap:wrap}}
 /* ── the edition switch ──
@@ -97,18 +96,18 @@ img{max-width:100%}
    It replaced a section-level Auction/Snake lens switch that only appeared for
    readers with a saved board — two controls that could disagree about the same
    question is a worse answer than one that cannot. */
-.ed-tag{display:inline-block;margin-left:9px;padding:2px 7px;border:1px solid var(--line);border-radius:3px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);vertical-align:middle}
+.ed-tag{display:inline-block;margin-left:9px;padding:2px 7px;border:1px solid var(--line);border-radius:3px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);vertical-align:middle}
 .ed-tag[hidden]{display:none}
 .ed-switch{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--card);margin:0 8px;flex:0 0 auto}
-.ribbon .ed-switch a{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:6px 12px;border-bottom:0;line-height:1.5}
+.ribbon .ed-switch a{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:6px 12px;border-bottom:0;line-height:1.5}
 .ribbon .ed-switch a+a{border-left:1px solid var(--line)}
 .ribbon .ed-switch a:hover{color:var(--brand);border-bottom-color:transparent}
-.ribbon .ed-switch a.on{background:var(--ink);color:var(--bg)}
+.ribbon .ed-switch a.on{background:var(--ink);color:#fff}
 /* The ribbon scrolls sideways on a phone, and the edition switch is the one
    control on it that has to be reachable without scrolling — so on a narrow
    screen it leads the ribbon instead of sitting past the fold. */
-@media(max-width:700px){.ribbon .ed-switch{order:-1;margin:0 8px 0 0}.ribbon .ed-switch a{padding:6px 9px;font-size:11px;letter-spacing:.04em}}
-.sec-sub{font-size:14px;color:var(--ink-3);margin:-6px 0 14px}
+@media(max-width:700px){.ribbon .ed-switch{order:-1;margin:0 8px 0 0}.ribbon .ed-switch a{padding:6px 9px;font-size:10.5px;letter-spacing:.04em}}
+.sec-sub{font-size:13.5px;color:var(--ink-3);margin:-6px 0 14px}
 
 /* ── hero ── */
 .hero{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:18px;margin-top:20px;align-items:start}
@@ -116,18 +115,18 @@ img{max-width:100%}
 .lead-body{padding:26px 28px 20px;display:flex;flex-direction:column;gap:12px;min-height:0}
 .lead-kicker{display:flex;gap:8px;align-items:center}
 .badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:3px}
-.badge-pos{background:var(--brand);color:var(--bg)}
+.badge-pos{background:var(--brand);color:#fff}
 .badge-deep{background:#12181f;color:#f5c542;border:1px solid #3a4550}
-.badge-under{background:rgba(45,212,163,.14);color:#2dd4a3;border:1px solid rgba(45,212,163,.35)}
-.badge-over{background:rgba(239,91,91,.14);color:#ff8b8b;border:1px solid rgba(239,91,91,.35)}
-.badge-fair{background:rgba(182,194,204,.12);color:#b6c2cc;border:1px solid var(--line2, #2c3b48)}
+.badge-under{background:#e7f6ef;color:#0b7a43;border:1px solid #bfe6d2}
+.badge-over{background:#fbeaea;color:#b02020;border:1px solid #f0c8c8}
+.badge-fair{background:#eef1f4;color:#4a5560;border:1px solid #d8dee5}
 .badge-yours{background:#0d2b22;color:var(--teal);border:1px solid #1d5344}
 .lead h1{font-size:clamp(26px,3.3vw,40px);line-height:1.08;font-weight:800;letter-spacing:-.01em}
 .lead h1 a:hover{color:var(--brand)}
-.lead-play{font-size:16px;color:var(--ink-2);max-width:640px}
+.lead-play{font-size:16.5px;color:var(--ink-2);max-width:640px}
 .lead-play b{color:var(--ink)}
 .lead-stat{font-size:13px;color:var(--ink-3);font-weight:600}
-.lead-stat b{color:#f5b800}
+.lead-stat b{color:#8a6a00}
 .lead-art{margin:2px 0 2px;border-radius:5px;overflow:hidden;line-height:0}
 .lead-art svg{display:block;width:100%;height:auto}
 .lead-foot{display:flex;align-items:center;gap:14px}
@@ -139,14 +138,14 @@ img{max-width:100%}
 .lead-also a.on{color:var(--brand);font-weight:800}
 .lead-link{color:var(--brand);font-weight:800;font-size:14px;letter-spacing:.02em}
 .lead-link:hover{color:var(--brand-dark)}
-.lead-date{font-size:13px;color:var(--ink-3)}
-.lead-ctrls{display:flex;align-items:center;gap:10px;padding:12px 28px;border-top:1px solid var(--line);background:var(--elev)}
+.lead-date{font-size:12.5px;color:var(--ink-3)}
+.lead-ctrls{display:flex;align-items:center;gap:10px;padding:12px 28px;border-top:1px solid var(--line);background:#fafbfc}
 .lead-ctrls[hidden]{display:none}
 .lead-dots{display:flex;gap:7px}
-.lead-dot{width:9px;height:9px;border-radius:50%;background:var(--ink-3);border:none;cursor:pointer;padding:0}
+.lead-dot{width:9px;height:9px;border-radius:50%;background:#cdd3d9;border:none;cursor:pointer;padding:0}
 .lead-dot.on{background:var(--brand)}
 .lead-arrows{margin-left:auto;display:flex;gap:6px}
-.lead-arrow{border:1px solid var(--line);background:var(--card);border-radius:4px;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--ink-2);line-height:1}
+.lead-arrow{border:1px solid var(--line);background:#fff;border-radius:4px;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--ink-2);line-height:1}
 .lead-arrow:hover{border-color:var(--brand);color:var(--brand)}
 
 /* ── lead photo band: the faces the lead story actually names ──────────────
@@ -158,7 +157,7 @@ img{max-width:100%}
    picture in print. Same photos, same fallback, no circles anywhere. */
 .lead-media{position:relative;display:flex;align-items:flex-end;gap:20px;padding:32px 28px 18px;background:radial-gradient(120% 150% at 8% 0%,#1c2731 0%,#0e1418 62%);border-bottom:3px solid var(--brand);overflow:hidden}
 .lead-media[hidden]{display:none}
-.lm-label{position:absolute;z-index:1;top:11px;left:28px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8595a1}
+.lm-label{position:absolute;z-index:1;top:11px;left:28px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8794a0}
 .lm-cast{position:relative;z-index:1;display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
 /* One face in the band used to leave most of it empty. The club's own letters,
    set big and nearly out of the ink, fill that space the way a sports page
@@ -172,10 +171,10 @@ img{max-width:100%}
 .lm-shot>*{grid-area:1/1}
 .lm-shot img{width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block}
 .lm-shot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--tc,rgba(255,255,255,.28))}
-.lm-init{font-size:24px;font-weight:800;letter-spacing:.02em;color:var(--ink-2)}
+.lm-init{font-size:24px;font-weight:800;letter-spacing:.02em;color:#cfd7de}
 .lm-meta{min-width:0;margin-top:10px}
-.lm-meta b{display:block;color:#fff;font-size:14px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
-.lm-meta span{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8595a1}
+.lm-meta b{display:block;color:#fff;font-size:14.5px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
+.lm-meta span{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#93a1ad}
 .rail{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
 .rail h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:21px;letter-spacing:.06em;border-bottom:2px solid var(--ink);padding-bottom:7px;margin-bottom:4px;position:relative}
 .rail h3::after{content:"";position:absolute;left:0;bottom:-2px;width:44px;height:2px;background:var(--brand)}
@@ -184,7 +183,7 @@ img{max-width:100%}
 .rail li:last-child{border-bottom:0}
 .rail a.hl{font-size:14px;font-weight:700;line-height:1.35;display:block}
 .rail a.hl:hover{color:var(--brand)}
-.rail .hl-meta{font-size:12px;color:var(--ink-3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.rail .hl-meta{font-size:11.5px;color:var(--ink-3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 
 /* ── story grid modules ──────────────────────────────────────────────────
    Five positions used to sit in five narrow auto-fit columns, which at any
@@ -199,7 +198,7 @@ img{max-width:100%}
 .pm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:8px;position:relative;margin-bottom:14px}
 .pm-head::after{content:"";position:absolute;left:0;bottom:-2px;width:44px;height:2px;background:var(--brand)}
 .pos-mod h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:25px;letter-spacing:.06em;display:flex;align-items:center;gap:10px;line-height:1}
-.pos-count{font-family:'Inter',sans-serif;font-size:11px;font-weight:800;color:var(--bg);background:var(--ink);border-radius:10px;padding:2px 8px;letter-spacing:.05em}
+.pos-count{font-family:'Inter',sans-serif;font-size:11px;font-weight:800;color:#fff;background:var(--ink);border-radius:10px;padding:2px 8px;letter-spacing:.05em}
 
 /* the lead story in each module */
 .pm-lead{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding-bottom:14px}
@@ -209,7 +208,7 @@ img{max-width:100%}
 .pm-lead .lm-init{font-size:16px}
 .pm-kick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
 .pm-title{display:block;font-size:17px;font-weight:800;line-height:1.24;letter-spacing:-.01em}
-.pm-play{display:block;margin-top:6px;font-size:14px;line-height:1.45;color:var(--ink-2)}
+.pm-play{display:block;margin-top:6px;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
 .pm-play b{color:var(--ink)}
 
 /* the follow-ups */
@@ -223,14 +222,20 @@ img{max-width:100%}
 .pm-rest .lm-shot{width:34px;height:40px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(16,19,23,.14)}
 .pm-rest .lm-shot::after{height:2px}
 .pm-rest .lm-init{font-size:11px}
-.pm-row-title{display:block;font-size:14px;font-weight:700;line-height:1.32}
+.pm-row-title{display:block;font-size:13.5px;font-weight:700;line-height:1.32}
 .pm-row-meta{display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap}
-.st-view{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:1.5px 7px;border-radius:3px}
-.st-date{font-size:12px;color:var(--ink-3)}
-.pos-mod .mod-more{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);white-space:nowrap}
+.st-view{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:1.5px 7px;border-radius:3px}
+.st-date{font-size:11.5px;color:var(--ink-3)}
+.pos-mod .mod-more{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);white-space:nowrap}
 .pos-mod .mod-more:hover{text-decoration:underline}
 .pos-mod .it-yours{margin:0 0 14px}
-@media(max-width:900px){.pos-grid{grid-template-columns:1fr}.pos-mod.wide .pm-rest{grid-template-columns:1fr}.pos-mod.wide .pm-rest li:nth-last-child(2){border-bottom:1px solid var(--line)}}
+/* `min-width:auto` on a grid item let the module set its own width from the
+   'More <position> intel' link, which pushed the whole document 4px wider than
+   a 360px phone and left every screen with a sideways wobble. */
+@media(max-width:900px){.pos-grid{grid-template-columns:minmax(0,1fr)}.pos-mod{min-width:0}.pos-mod.wide .pm-rest{grid-template-columns:1fr}.pos-mod.wide .pm-rest li:nth-last-child(2){border-bottom:1px solid var(--line)}}
+/* On the narrowest phones still in use the module head cannot hold both the
+   position and 'More <position> intel' on one line — let it take two. */
+@media(max-width:400px){.pm-head{flex-wrap:wrap;gap:2px 10px}.pos-mod .mod-more{white-space:normal}}
 
 /* ── The Pick ─────────────────────────────────────────────────────────── */
 /* One story a day, so the band leads with today's in full and keeps the two
@@ -240,26 +245,26 @@ img{max-width:100%}
 @media(max-width:900px){.pick-band{grid-template-columns:1fr}}
 .pk-lead{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:8px;padding:20px 22px 18px;display:flex;flex-direction:column;gap:11px}
 .pk-kick{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.pk-theme{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 8px;border-radius:3px;background:rgba(245,184,0,.14);color:#f5b800;border:1px solid rgba(245,184,0,.35)}
+.pk-theme{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 8px;border-radius:3px;background:#fdf5e0;color:#8a6a00;border:1px solid #f0e0b0}
 .pk-lead h3{font-size:clamp(20px,2.4vw,26px);font-weight:800;line-height:1.22;letter-spacing:-.015em}
 .pk-lead h3 a:hover{color:var(--brand)}
-.pk-dek{font-size:14px;line-height:1.5;color:var(--ink-2)}
+.pk-dek{font-size:14.5px;line-height:1.5;color:var(--ink-2)}
 .pk-faces{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pk-faces .lm-shot{width:42px;height:50px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(16,19,23,.14)}
 .pk-faces .lm-shot::after{height:2px}
 .pk-faces .lm-init{font-size:13px}
-.pk-who{font-size:14px;line-height:1.5;color:var(--ink-2);border-left:3px solid var(--gold);padding-left:12px}
+.pk-who{font-size:13.5px;line-height:1.5;color:var(--ink-2);border-left:3px solid var(--gold);padding-left:12px}
 .pk-who b{color:var(--ink)}
 .pk-stat{font-size:12px;color:var(--ink-3);margin-top:auto;padding-top:9px;border-top:1px solid var(--line)}
 .pk-back{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:6px 16px 10px}
-.pk-back h4{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);padding:10px 0 8px;border-bottom:1px solid var(--line)}
+.pk-back h4{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);padding:10px 0 8px;border-bottom:1px solid var(--line)}
 .pk-back ul{list-style:none}
 .pk-back li{padding:11px 0;border-bottom:1px solid var(--line)}
 .pk-back li:last-child{border-bottom:0}
 .pk-back .pk-theme{margin-bottom:5px;display:inline-block}
 .pk-back a{display:block;font-size:14px;font-weight:700;line-height:1.34}
 .pk-back a:hover{color:var(--brand)}
-.pk-back .pk-when{font-size:12px;color:var(--ink-3);margin-top:4px}
+.pk-back .pk-when{font-size:11.5px;color:var(--ink-3);margin-top:4px}
 
 /* ── the coaching column ──────────────────────────────────────────────── */
 /* Four across, so the four cards the front page shows are one clean row
@@ -268,15 +273,15 @@ img{max-width:100%}
 @media(max-width:1080px){.pcp-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:620px){.pcp-grid{grid-template-columns:1fr}}
 .pcp-card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px 14px;display:flex;flex-direction:column;gap:9px;border-top:3px solid var(--ink)}
-.pcp-card.up{border-top-color:#2dd4a3}
+.pcp-card.up{border-top-color:#0b7a43}
 .pcp-card.split{border-top-color:var(--gold)}
-.pcp-card.down{border-top-color:#ff8b8b}
+.pcp-card.down{border-top-color:#b02020}
 .pcp-kick{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.pcp-side{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:1.5px 7px;border-radius:3px;background:rgba(182,194,204,.12);color:#b6c2cc;border:1px solid var(--line2, #2c3b48)}
-.pcp-side.up{background:rgba(45,212,163,.14);color:#2dd4a3;border-color:rgba(45,212,163,.35)}
-.pcp-side.split{background:rgba(245,184,0,.14);color:#f5b800;border-color:rgba(245,184,0,.35)}
-.pcp-side.down{background:rgba(239,91,91,.14);color:#ff8b8b;border-color:rgba(239,91,91,.35)}
-.pcp-title{font-size:16px;font-weight:800;line-height:1.3;letter-spacing:-.01em}
+.pcp-side{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:1.5px 7px;border-radius:3px;background:#eef1f4;color:#4a5560;border:1px solid #d8dee5}
+.pcp-side.up{background:#e7f6ef;color:#0b7a43;border-color:#bfe6d2}
+.pcp-side.split{background:#fdf5e0;color:#8a6a00;border-color:#f0e0b0}
+.pcp-side.down{background:#fbeaea;color:#b02020;border-color:#f0c8c8}
+.pcp-title{font-size:15.5px;font-weight:800;line-height:1.3;letter-spacing:-.01em}
 .pcp-card a:hover .pcp-title{color:var(--brand)}
 .pcp-faces{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pcp-faces .lm-shot{width:38px;height:44px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(16,19,23,.14)}
@@ -291,18 +296,18 @@ img{max-width:100%}
 .alloc-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:6px;padding:18px 20px;display:flex;flex-direction:column;gap:8px}
 .alloc-card h3{font-size:17px;font-weight:800;line-height:1.25}
 .alloc-card h3 a:hover{color:var(--brand)}
-.alloc-card p{font-size:14px;color:var(--ink-2)}
-.alloc-card .go{margin-top:auto;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--brand)}
+.alloc-card p{font-size:13.5px;color:var(--ink-2)}
+.alloc-card .go{margin-top:auto;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--brand)}
 
 /* ── vegas vs. rankings ── */
 .vs-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
 @media(max-width:860px){.vs-wrap{grid-template-columns:1fr}}
-.vs-thesis{background:var(--mast);color:#e8eef2;border-radius:6px;padding:18px 20px}
+.vs-thesis{background:var(--mast);color:#e8ebee;border-radius:6px;padding:18px 20px}
 .vs-thesis h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:22px;letter-spacing:.05em;color:#fff}
-.vs-thesis p{font-size:14px;line-height:1.55;color:var(--ink-2);margin-top:8px}
+.vs-thesis p{font-size:13.5px;line-height:1.55;color:#c2c8cf;margin-top:8px}
 .vs-thesis b{color:#fff}
 .vs-thesis ol{margin:12px 0 0 18px;padding:0}
-.vs-thesis li{font-size:13px;line-height:1.5;color:var(--ink-2);margin-bottom:7px}
+.vs-thesis li{font-size:13px;line-height:1.5;color:#c2c8cf;margin-bottom:7px}
 .vs-thesis li b{color:var(--teal)}
 .vs-case{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px 12px;min-height:220px}
 .vs-kick{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
@@ -310,22 +315,22 @@ img{max-width:100%}
 .vs-case h3 .vs-vs{color:var(--ink-3);font-weight:700}
 .vs-board{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:13px 0 0}
 .vs-col{border:1px solid var(--line);border-radius:5px;padding:9px 11px}
-.vs-col.odds{border-color:rgba(45,212,163,.35);background:rgba(45,212,163,.08)}
-.vs-col h4{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.vs-col.odds{border-color:#bfe6d2;background:#f4fbf7}
+.vs-col h4{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
 .vs-col .vs-rank{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:27px;letter-spacing:.03em;line-height:1.1;margin-top:3px}
-.vs-col .vs-money{font-size:13px;color:var(--ink-2);font-weight:700}
-.vs-ev{font-size:13px;color:var(--ink-2);line-height:1.5;margin-top:11px;border-top:1px solid var(--line);padding-top:9px}
+.vs-col .vs-money{font-size:12.5px;color:var(--ink-2);font-weight:700}
+.vs-ev{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:11px;border-top:1px solid var(--line);padding-top:9px}
 .vs-ev b{color:var(--ink)}
-.vs-basis{font-size:12px;color:var(--ink-3);margin-top:7px;line-height:1.45}
-.vs-yours-cta{font-size:12px;color:var(--ink-2);margin-top:8px;line-height:1.45;background:var(--elev);border:1px dashed var(--line);border-radius:5px;padding:8px 10px}
+.vs-basis{font-size:11.5px;color:var(--ink-3);margin-top:7px;line-height:1.45}
+.vs-yours-cta{font-size:12px;color:var(--ink-2);margin-top:8px;line-height:1.45;background:#f7f9fa;border:1px dashed var(--line);border-radius:5px;padding:8px 10px}
 .vs-yours-cta a{color:var(--brand);font-weight:700;text-decoration:underline}
 .vs-foot{display:flex;align-items:center;gap:10px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
-.vs-when{font-size:12px;color:var(--ink-3)}
+.vs-when{font-size:11.5px;color:var(--ink-3)}
 .vs-arrows{margin-left:auto;display:flex;gap:6px}
-.vs-arrow{width:26px;height:26px;border:1px solid var(--line);background:var(--card);border-radius:4px;cursor:pointer;font-size:15px;line-height:1;color:var(--ink-2)}
+.vs-arrow{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:4px;cursor:pointer;font-size:15px;line-height:1;color:var(--ink-2)}
 .vs-arrow:hover{border-color:var(--ink-3);color:var(--ink)}
 .vs-dots{display:flex;gap:5px;flex-wrap:wrap}
-.vs-dot{width:7px;height:7px;padding:0;border-radius:50%;border:0;background:var(--ink-3);cursor:pointer}
+.vs-dot{width:7px;height:7px;padding:0;border-radius:50%;border:0;background:#d3d8de;cursor:pointer}
 .vs-dot.on{background:var(--brand)}
 .vs-empty{font-size:13px;color:var(--ink-3);line-height:1.55;padding:14px 0}
 /* ── camp ── */
@@ -335,12 +340,12 @@ img{max-width:100%}
 .camp-feat{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:22px 24px;display:flex;flex-direction:column;gap:10px}
 .camp-feat h3{font-size:22px;font-weight:800;line-height:1.2}
 .camp-feat h3 a:hover{color:var(--brand)}
-.camp-feat p{font-size:14px;color:var(--ink-2)}
+.camp-feat p{font-size:14.5px;color:var(--ink-2)}
 .camp-list{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 20px;max-height:340px;overflow-y:auto}
 .camp-list li{list-style:none;border-bottom:1px solid var(--line);padding:9px 0;display:flex;gap:10px;align-items:baseline}
 .camp-list li:last-child{border-bottom:0}
-.camp-list .cd{font-size:12px;font-weight:800;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;flex:0 0 58px}
-.camp-list a{font-size:14px;font-weight:700}
+.camp-list .cd{font-size:11.5px;font-weight:800;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;flex:0 0 58px}
+.camp-list a{font-size:13.5px;font-weight:700}
 .camp-list a:hover{color:var(--brand)}
 
 /* ── tools band ── */
@@ -351,29 +356,29 @@ img{max-width:100%}
 .build-main h3 em{font-style:normal;color:var(--brand)}
 .build-dek{font-size:14px;color:var(--ink-2);line-height:1.6;margin-top:8px}
 .build-dek b{color:var(--ink)}
-.build-meta{font-size:12px;color:var(--ink-3);margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;letter-spacing:.03em;text-transform:uppercase;font-weight:700}
+.build-meta{font-size:11.5px;color:var(--ink-3);margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;letter-spacing:.03em;text-transform:uppercase;font-weight:700}
 .roster{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px;margin-top:16px}
-.rs{border:1px solid var(--line);border-radius:5px;padding:8px 5px;text-align:center;min-width:0;background:var(--elev)}
-.rs-slot{font-size:11px;font-weight:800;letter-spacing:.09em;color:var(--ink-3)}
+.rs{border:1px solid var(--line);border-radius:5px;padding:8px 5px;text-align:center;min-width:0;background:#fbfcfd}
+.rs-slot{font-size:9.5px;font-weight:800;letter-spacing:.09em;color:var(--ink-3)}
 .rs-name{font-size:11px;font-weight:700;margin:4px 0 1px;line-height:1.22;overflow-wrap:normal;word-break:keep-all;hyphens:none}
-.rs-team{font-size:11px;color:var(--ink-3);font-weight:700}
+.rs-team{font-size:9.5px;color:var(--ink-3);font-weight:700}
 .rs-price{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:20px;letter-spacing:.02em;margin-top:5px;line-height:1}
-.rs-ppg{font-size:11px;color:var(--ink-3)}
-.rs[data-pos=QB] .rs-price{color:#f5b800}.rs[data-pos=RB] .rs-price{color:#2dd4a3}
-.rs[data-pos=WR] .rs-price{color:#5b9bff}.rs[data-pos=TE] .rs-price{color:#a78bfa}
+.rs-ppg{font-size:9.5px;color:var(--ink-3)}
+.rs[data-pos=QB] .rs-price{color:#a8760a}.rs[data-pos=RB] .rs-price{color:#0b8f6a}
+.rs[data-pos=WR] .rs-price{color:#1f66c2}.rs[data-pos=TE] .rs-price{color:#6f45c4}
 .rs[data-pos=K] .rs-price,.rs[data-pos=DEF] .rs-price{color:var(--ink-3)}
-.bench-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:var(--ink-2)}
+.bench-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;color:var(--ink-2)}
 .bench-tag{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:15px;letter-spacing:.06em;color:var(--ink-3);margin-right:2px}
-.bench-p{border:1px solid var(--line);border-radius:4px;padding:2px 7px;background:var(--elev);font-weight:700;white-space:nowrap}
-.bench-p i{font-style:normal;font-weight:800;font-size:11px;letter-spacing:.06em;color:var(--ink-3);margin-left:5px}
+.bench-p{border:1px solid var(--line);border-radius:4px;padding:2px 7px;background:#fbfcfd;font-weight:700;white-space:nowrap}
+.bench-p i{font-style:normal;font-weight:800;font-size:9.5px;letter-spacing:.06em;color:var(--ink-3);margin-left:5px}
 .spend-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin-top:16px}
 .spend-seg{display:block;height:100%}
-.spend-key{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:var(--ink-2);font-weight:600}
+.spend-key{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:11.5px;color:var(--ink-2);font-weight:600}
 .spend-key i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
 .build-side{display:flex;flex-direction:column;gap:12px}
 .bmini{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px}
 .bmini h4{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:20px;letter-spacing:.04em}
-.bmini p{font-size:13px;color:var(--ink-2);line-height:1.55;margin-top:4px}
+.bmini p{font-size:12.5px;color:var(--ink-2);line-height:1.55;margin-top:4px}
 .bmini .big{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:40px;line-height:1;color:var(--teal);letter-spacing:.02em}
 .bmini .unit{font-size:12px;color:var(--ink-3);font-weight:700;margin-left:5px}
 .build-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:16px}
@@ -383,19 +388,19 @@ img{max-width:100%}
 .bcard>p b{color:var(--ink)}
 .cliff{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
 .cliff-pos{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:20px;width:34px;letter-spacing:.03em}
-.cliff-pos[data-pos=QB]{color:#f5b800}.cliff-pos[data-pos=RB]{color:#2dd4a3}
-.cliff-pos[data-pos=WR]{color:#5b9bff}.cliff-pos[data-pos=TE]{color:#a78bfa}
-.cliff-body{flex:1;min-width:0;font-size:13px;line-height:1.4;color:var(--ink-2)}
+.cliff-pos[data-pos=QB]{color:#a8760a}.cliff-pos[data-pos=RB]{color:#0b8f6a}
+.cliff-pos[data-pos=WR]{color:#1f66c2}.cliff-pos[data-pos=TE]{color:#6f45c4}
+.cliff-body{flex:1;min-width:0;font-size:12.5px;line-height:1.4;color:var(--ink-2)}
 .cliff-body b{color:var(--ink)}
 .cliff-drop{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:20px;color:var(--value-red);letter-spacing:.02em;white-space:nowrap}
 .bars{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .bar-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:9px;font-size:12px}
 .bar-pos{font-weight:800;letter-spacing:.06em;color:var(--ink-2)}
-.bar-track{display:block;background:var(--elev);border-radius:5px;height:10px;overflow:hidden;border:1px solid var(--line)}
+.bar-track{display:block;background:#eef0f3;border-radius:5px;height:10px;overflow:hidden;border:1px solid var(--line)}
 .bar-fill{display:block;height:100%;border-radius:4px;min-width:2px}
 .bar-val{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:17px;letter-spacing:.02em}
-.bnote{font-size:12px;color:var(--ink-3);line-height:1.5;margin-top:10px}
-.bcard .go,.build-main .go{display:inline-block;margin-top:10px;font-size:13px;font-weight:700;color:var(--brand);letter-spacing:.04em}
+.bnote{font-size:11.5px;color:var(--ink-3);line-height:1.5;margin-top:10px}
+.bcard .go,.build-main .go{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:700;color:var(--brand);letter-spacing:.04em}
 .build-main .bnote{margin-top:6px}
 
 /* ── weekly preseason takeaways ── */
@@ -404,7 +409,7 @@ img{max-width:100%}
 .week-tag{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:13px;letter-spacing:.11em;color:var(--teal)}
 .week h3{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:21px;letter-spacing:.03em;line-height:1.1}
 .week h3 a:hover{color:var(--brand)}
-.week p{font-size:13px;color:var(--ink-2);line-height:1.5}
+.week p{font-size:12.5px;color:var(--ink-2);line-height:1.5}
 .week ul{list-style:none;display:flex;flex-direction:column;gap:5px;margin-top:2px}
 .week li{font-size:12px;color:var(--ink-2);padding-left:13px;position:relative;line-height:1.42}
 .week li::before{content:'';position:absolute;left:0;top:6px;width:4px;height:4px;border-radius:50%;background:var(--teal)}
@@ -414,24 +419,41 @@ img{max-width:100%}
 @media (max-width:900px){.build-wrap{grid-template-columns:1fr}.roster{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media (max-width:560px){.roster{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .tools-band{background:var(--mast);border-radius:6px;margin:38px 0 0;padding:26px 28px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
-.tools-band .tb-text{color:var(--ink-2);font-size:14px;max-width:520px}
+.tools-band .tb-text{color:#cfd4da;font-size:14.5px;max-width:520px}
 .tools-band .tb-text b{color:#fff}
 .tools-band .tb-ctas{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
-.tb-btn{display:inline-block;font-size:14px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:11px 22px}
+.tb-btn{display:inline-block;font-size:13.5px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:11px 22px}
 .tb-btn.gold{background:var(--gold);color:#1a1205}
-.tb-btn.brand{background:var(--brand);color:var(--bg)}
+.tb-btn.brand{background:var(--brand);color:#fff}
 .tb-btn:hover{filter:brightness(1.07)}
 
 /* ── footer ── */
-.foot{margin-top:40px;background:var(--card);border-top:1px solid var(--line)}
+.foot{margin-top:40px;background:#fff;border-top:1px solid var(--line)}
 .foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 18px 34px;font-size:13px;color:var(--ink-3)}
 .foot a:hover{color:var(--brand)}
 .foot .fm{margin-left:auto}
 
+/* Between the widest phone and the full desktop the ribbon is a handful of
+   pixels too wide, which pushes the edition switcher — a control, not a link —
+   out of reach. Tightening the links buys those pixels back rather than
+   spending a scroll on them: the row fits down to 1087px. */
+@media(max-width:1240px){.ribbon a{padding:12px 7px}.ribbon .wrap{gap:2px}.ribbon .ed-switch a{padding:6px 9px}}
+/* Sign In moved up into the masthead out of the ribbon, and between the phone
+   layout below and the full desktop that extra link is what tips the row onto a
+   second line. Tighter links across both navs keep it to one. */
+@media(max-width:1100px){
+  .mast-jump a,.mast-nav a{padding:8px 7px;letter-spacing:.06em}
+  .mast-jump a{font-size:11.5px;padding-left:6px;padding-right:6px}
+  .mast-nav a.mast-signin{font-size:11.5px;margin-left:4px}
+  .mast .wrap{gap:10px}
+  .mast-logo{height:32px}
+}
 @media(max-width:900px){
   .hero{grid-template-columns:1fr}
   .camp-grid{grid-template-columns:1fr}
-  .mast .wrap{height:auto;flex-wrap:wrap;padding-top:8px;padding-bottom:8px;justify-content:center}
+  /* No `height:auto` needed: the base rule is min-height, so the band already
+     grows to hold a wrapped nav at every width. */
+  .mast .wrap{flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px}
   .lead-body{min-height:0;padding:20px}
   .lead-ctrls{padding:10px 20px}
   .lead-media{padding:26px 20px 14px;gap:14px}
@@ -448,39 +470,81 @@ img{max-width:100%}
   .lm-meta span{font-size:10px;letter-spacing:.07em}
 }
 
-/* Visible keyboard focus (WCAG 2.4.7). Gold, matching the rest of the site now
-   that this page is dark too. */
-a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
+/* ── the masthead on a phone ──────────────────────────────────────────────
+   Nine links in a centred wrapping row came out as three ragged lines of
+   different lengths — the single choppiest thing on the page. They are the
+   same nine links here, but each on the line that suits it: the wordmark and
+   the section jumps share one row (the jumps scroll sideways rather than
+   wrap), and the two actions become a full-width pair underneath, which also
+   makes them thumb-sized instead of 30px pills. */
+@media(max-width:760px){
+  .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
+  .mast-logo{height:26px}
+  /* Row one: wordmark, then the seven section jumps on ONE line that scrolls
+     sideways — never a second and third wrapped line. */
+  .mast-jump{flex:1 1 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:6px}
+  .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(16,17,20,0),var(--mast))}
+  .mast-jump::-webkit-scrollbar{display:none}
+  .mast-jump a{flex:0 0 auto;font-size:11.5px;padding:8px 8px;letter-spacing:.07em}
+  /* Row two: the two actions, equal and full width, at a size a thumb can hit. */
+  .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
+  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;font-size:12.5px;letter-spacing:.04em;padding:11px 8px;border-radius:6px}
+  /* Sign In rides along on that row at its own width — it is a text link, not a
+     third button, and giving it an equal third would say otherwise. */
+  .mast-nav a.mast-signin{flex:0 0 auto;margin-left:0;padding-left:2px;padding-right:8px}
+}
+@media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:11px;padding:8px 6px} }
 
-/* .pos-mod is a grid item, so its default min-width:auto lets an unbreakable child
-   (the nowrap "More <pos> intel" link) set the track's min-content width. At 360px
-   that pushed the card to 346px inside a 324px column and gave the whole page a
-   horizontal scrollbar. min-width:0 lets the card shrink to its column. */
-@media(max-width:420px){.pos-mod{min-width:0}.pos-mod h3{min-width:0;flex-wrap:wrap}.pos-mod .mod-more{white-space:normal}}
+/* A sticky ribbon that covers the heading you just jumped to is worse than no
+   jump at all. */
+.pos-mod,.sec-head,.pick-band{scroll-margin-top:56px}
 
-/* The ribbon's ten destinations measured 1413px against a .wrap capped at
-   1260px, so it scrolled at EVERY desktop width — 1920px included — and the
-   last item was cut mid-word. Tightening the items alone lands at exactly
-   1260, which is a knife-edge that a different font metric would push back
-   over. So above the phone breakpoint it wraps to a second line instead of
-   scrolling: it fits on one line as tightened, and if it ever does not, it
-   wraps rather than hiding a destination. The scroll and its fades stay for
-   narrow screens, where a two-line nav would eat the viewport. */
-@media(min-width:861px){
-  .ribbon .wrap{flex-wrap:wrap;height:auto;min-height:44px;overflow-x:visible;row-gap:0}
-  .ribbon .wrap::after{display:none}
-  .ribbon .rb-fade{display:none}
-  .ribbon a{padding:11px 7px;font-size:12px;letter-spacing:.04em}
-  .ribbon .ed-switch a{padding:6px 7px;font-size:10px}
-  /* .rb-spacer is flex:1. In a wrapping container that grows to eat all the
-     remaining space on row one, which pushed the format switch and the last
-     two links onto row two no matter how much the items were tightened. */
-  .ribbon .rb-spacer{flex:0 0 14px}
+/* The ribbon is a sideways scroller on a phone, so say so: kill the scrollbar
+   the platform may or may not draw, and fade the right edge instead of
+   guillotining the last tab mid-word. */
+.ribbon .wrap{scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.ribbon .wrap::-webkit-scrollbar{display:none}
+.ribbon a,.ribbon .ed-switch{scroll-snap-align:start}
+/* The fade is a sticky pseudo-element inside the scroller rather than a mask on
+   the bar, because the bar is also `position:sticky` and masking it repaints the
+   whole thing on every scroll frame. Being inside the scroller also puts it at
+   the right edge of the CONTENT for free, which a pseudo-element on the
+   viewport-wide `.ribbon` would need `calc()` against `.wrap`'s max-width to
+   manage.
+   It is gated on `is-scrollable` — set from script whenever there is more to
+   the right, cleared at the end of the scroll — so it never washes out the last
+   tab of a row that fits, which on a desktop is every row. */
+.ribbon.is-scrollable .wrap::after{content:"";flex:0 0 30px;align-self:stretch;position:sticky;right:0;margin-left:-30px;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,0),var(--card))}
+
+/* ── section headers on a phone ──
+   `margin-left:auto` threw the "all guides" link to the far right of its own
+   second line, so the header read as two unrelated fragments. Left-align it
+   under the heading it belongs to. */
+@media(max-width:560px){
+  .sec-head{gap:4px 12px;align-items:flex-end}
+  .sec-head h2{flex:1 1 100%}
+  .sec-head .sec-more{margin-left:0;font-size:11.5px}
 }
 
-/* Footer sitemap. front.html keeps its own stylesheet rather than linking
-   site.css, so the columns are styled here to match the rest of the site —
-   without this the <h2> column labels render as 19.5px document headings. */
+/* A 40px plate vertically centred against a four-line block floats in the
+   middle of the text on a narrow column. Line it up with the headline. */
+@media(max-width:900px){
+  .pm-rest a{align-items:start}
+  .pm-rest .lm-shot{margin-top:2px}
+}
+
+/* Two pills of different widths, left-aligned under a paragraph, is the same
+   raggedness as the masthead. Full width, stacked, equal. */
+@media(max-width:560px){
+  .tools-band{padding:20px 18px;gap:16px}
+  .tools-band .tb-ctas{margin-left:0;width:100%;gap:9px}
+  .tb-btn{flex:1 1 100%;text-align:center;padding:13px 18px;font-size:14px}
+  .foot .wrap{gap:10px 16px;padding-bottom:28px}
+  .foot .fm{margin-left:0;flex:1 1 100%;line-height:1.5}
+}
+
+/* Footer sitemap. Light, to match this page. .foot .wrap is a flex row, so it
+   has to become a block or the grid collapses into the left half. */
 .foot .wrap{display:block;padding:20px 18px 28px}
 .foot .foot-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:24px;padding:26px 0 20px}
 .foot .foot-col h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin:0 0 12px;font-weight:700;font-family:'Inter',sans-serif}
@@ -497,9 +561,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 <body>
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <nav class="mast-jump" aria-label="Jump to a section">
+    <a href="#qb">QB</a><a href="#rb">RB</a><a href="#wr">WR</a><a href="#te">TE</a><a href="#market">Market</a><a href="#allocation">Allocation</a><a href="#camp">Camp</a>
+  </nav>
   <nav class="mast-nav">
-    <a href="#qb">QB</a><a href="#rb">RB</a><a href="#wr">WR</a><a href="#te">TE</a><a href="#market">Market</a>
-    <a href="#allocation">Allocation</a><a href="#camp">Camp</a>
+    <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
     <a class="cta-gold" href="/auctiondraft?screen=cheat">Cheat Sheet</a>
     <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
   </nav>
@@ -509,7 +575,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   <span class="dominant-text">The Most Data Driven Fantasy Site</span>
   <span class="dominant-rule"></span>
 </div></div>
-<div class="ribbon"><span class="rb-fade rb-fade-l" aria-hidden="true"></span><span class="rb-fade rb-fade-r" aria-hidden="true"></span><div class="wrap">
+<div class="ribbon"><div class="wrap">
   <a href="/the-pick">The Pick</a>
   <a href="/insights">Insights</a>
   <a href="/play-caller-premium">Play-Caller Premium</a>
@@ -523,8 +589,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <a href="/?fmt=snake" data-ed="snake">Snake Draft</a>
     <a href="/?fmt=bestball" data-ed="bestball">Best Ball</a>
   </span>
-  <a class="rb-dim" href="/hub" title="The classic Iron Tuna home page">Classic Home</a>
-  <a class="rb-dim" href="/auctiondraft?signin=1">Sign In</a>
 </div></div>
 
 <main class="wrap">
@@ -674,13 +738,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 // Player headshots for the stories below, keyed by the slug each story's `ppl`
 // list references. Built from the nflverse players release — see
 // tools/build-headshots.mjs.
-var PLAYERS = {"patrick-mahomes":{"n":"Patrick Mahomes","t":"KC","p":"QB","e":"3139477","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/wdckwtob1lybvkmxnf7p"},"malik-willis":{"n":"Malik Willis","t":"MIA","p":"QB","e":"4242512","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/txvgdbwbryzyyqq6gfet"},"tyreek-hill":{"n":"Tyreek Hill","t":"MIA","p":"WR","e":"3116406","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gg73gnfivrn80oyqwazl"},"jaylen-waddle":{"n":"Jaylen Waddle","t":"DEN","p":"WR","e":"4372016","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gkh7m1jedon9mwn5jlf1"},"bijan-robinson":{"n":"Bijan Robinson","t":"ATL","p":"RB","e":"4430807","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/esii5yb8yn9edboi4mlq"},"bo-nix":{"n":"Bo Nix","t":"DEN","p":"QB","e":"4426338","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/zvo9xatffmqn9lnukpgk"},"trey-mcbride":{"n":"Trey McBride","t":"ARI","p":"TE","e":"4361307","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/psasp10nn5pcvkli9kil"},"drake-maye":{"n":"Drake Maye","t":"NE","p":"QB","e":"4431452","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/s1nmoon2xnrc3bnyulv4"},"a-j-brown":{"n":"A.J. Brown","t":"NE","p":"WR","e":"4047646","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/qfhvjyssf0lwsh0kienp"},"romeo-doubs":{"n":"Romeo Doubs","t":"NE","p":"WR","e":"4361432","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/yxvzijmgwyyigljxfmyb"},"george-pickens":{"n":"George Pickens","t":"DAL","p":"WR","e":"4426354","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/cbpyykoguf7rsxezqzvk"},"ceedee-lamb":{"n":"CeeDee Lamb","t":"DAL","p":"WR","e":"4241389","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mbblzwtynxr15ovzkevi"},"isaiah-likely":{"n":"Isaiah Likely","t":"NYG","p":"TE","e":"4361050","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/b1pahldt9ixp9lssxi2d"},"josh-allen":{"n":"Josh Allen","t":"BUF","p":"QB","e":"3918298","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mjwbioajzldkq1vzoz2d"},"kyler-murray":{"n":"Kyler Murray","t":"MIN","p":"QB","e":"3917315","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/btfruyf33adgnjzpcuen"},"jacoby-brissett":{"n":"Jacoby Brissett","t":"ARI","p":"QB","e":"2578570","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/qjswiunczrn5xmdiqhlz"},"jahmyr-gibbs":{"n":"Jahmyr Gibbs","t":"DET","p":"RB","e":"4429795","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/cursejnmmp1i9hnxihkj"},"puka-nacua":{"n":"Puka Nacua","t":"LAR","p":"WR","e":"4426515","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ipy6qw7hdygdfc8k86ba"},"tyler-warren":{"n":"Tyler Warren","t":"IND","p":"TE","e":"4431459","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/f1mfwwrr3qvnxuiackgq"},"lamar-jackson":{"n":"Lamar Jackson","t":"BAL","p":"QB","e":"3916387","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/eno6s5qzl9grbfbfwhoa"},"james-cook":{"n":"James Cook","t":"BUF","p":"RB","e":"4379399","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/anjbznqb9i21wzcgrtbs"},"ashton-jeanty":{"n":"Ashton Jeanty","t":"LV","p":"RB","e":"4890973","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/syspis1mntov9kgspb7r"},"dj-moore":{"n":"DJ Moore","t":"BUF","p":"WR","e":"3915416","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/lsavpxtqoqu25emwcnvy"},"jaxon-smith-njigba":{"n":"Jaxon Smith-Njigba","t":"SEA","p":"WR","e":"4430878","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/yx1xjrupbqdknnjaq4a6"},"amon-ra-st-brown":{"n":"Amon-Ra St. Brown","t":"DET","p":"WR","e":"4374302","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/fd8nwhm6pvxfyzphzl6i"},"jameson-williams":{"n":"Jameson Williams","t":"DET","p":"WR","e":"4426388","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/byiptqggtglvy5qrw5wp"},"matthew-stafford":{"n":"Matthew Stafford","t":"LAR","p":"QB","e":"12483","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/jwpkjfrkzufdyh8u1mg7"},"trevor-lawrence":{"n":"Trevor Lawrence","t":"JAX","p":"QB","e":"4360310","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/k9uzdernqkx7oquy7dkg"},"quinshon-judkins":{"n":"Quinshon Judkins","t":"CLE","p":"RB","e":"4685702","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ojtce2im0wp2ltyel0vc"},"patrick-ricard":{"n":"Patrick Ricard","t":"NYG","p":"RB","e":"2975417","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/nm7ezh46zd5bdxaxz6a9"},"cam-ward":{"n":"Cam Ward","t":"TEN","p":"QB","e":"4688380","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/l7switu6stlwd2irm8yo"},"brock-bowers":{"n":"Brock Bowers","t":"LV","p":"TE","e":"4432665","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/waorceny0ggpaeckaol8"},"kyren-williams":{"n":"Kyren Williams","t":"LAR","p":"RB","e":"4430737","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xti3pek6rmojqchakxpy"},"colston-loveland":{"n":"Colston Loveland","t":"CHI","p":"TE","e":"4723086","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/cnxiyi76jeahgx94nh6d"},"breece-hall":{"n":"Breece Hall","t":"NYJ","p":"RB","e":"4427366","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/i01xtqbfajfq68lb6orh"},"jayden-daniels":{"n":"Jayden Daniels","t":"WAS","p":"QB","e":"4426348","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gfz8k5onuqjrche9ogqc"},"chig-okonkwo":{"n":"Chig Okonkwo","t":"WAS","p":"TE","e":"4360635","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/pzcez6pi9tpdqkmjjnzk"},"terry-mclaurin":{"n":"Terry McLaurin","t":"WAS","p":"WR","e":"3121422","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/tmfl2zruajmkrtcg4zxp"},"devonta-smith":{"n":"DeVonta Smith","t":"PHI","p":"WR","e":"4241478","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/k724kq3hyv7jc0y9s03x"},"dallas-goedert":{"n":"Dallas Goedert","t":"PHI","p":"TE","e":"3121023","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/bafepstxu7vvxb9v5vua"},"javonte-williams":{"n":"Javonte Williams","t":"DAL","p":"RB","e":"4361579","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xvwroirev2kie6oiphtz"},"drake-london":{"n":"Drake London","t":"ATL","p":"WR","e":"4426502","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mcllowcfrmmdeo4zy3g1"},"caleb-williams":{"n":"Caleb Williams","t":"CHI","p":"QB","e":"4431611","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/h4qs11kutwiw7whekmyt"},"jalen-hurts":{"n":"Jalen Hurts","t":"PHI","p":"QB","e":"4040715","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xow5yvxjeqa6witmofmp"},"blake-corum":{"n":"Blake Corum","t":"LAR","p":"RB","e":"4429096","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/axzqbqjkrbwfzodwwakq"},"rome-odunze":{"n":"Rome Odunze","t":"CHI","p":"WR","e":"4431299","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/niewdl2p2325kpohbw9v"},"josh-jacobs":{"n":"Josh Jacobs","t":"GB","p":"RB","e":"4047365","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/uceokxeo0uqrqms3e3vl"},"mike-evans":{"n":"Mike Evans","t":"SF","p":"WR","e":"16737","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/zc4ujpmndyxrbiyyjomz"},"christian-kirk":{"n":"Christian Kirk","t":"SF","p":"WR","e":"3895856","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ffp75mtwnqgrv0qz0txz"},"harold-fannin-jr":{"n":"Harold Fannin Jr.","t":"CLE","p":"TE","e":"5083076","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/fxublmpnxx9uggsddwik"},"kenneth-walker-iii":{"n":"Kenneth Walker III","t":"KC","p":"RB","e":"4567048","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/vk6nruaqdewdglofcwwg"},"justin-herbert":{"n":"Justin Herbert","t":"LAC","p":"QB","e":"4038941","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/jnkspnntgebegzp4ghve"},"tucker-kraft":{"n":"Tucker Kraft","t":"GB","p":"TE","e":"4572680","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/n6vu44jbq31rydoaadaq"},"derrick-henry":{"n":"Derrick Henry","t":"BAL","p":"RB","e":"3043078","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/tm79x0iknqg6hms3ypyt"},"tetairoa-mcmillan":{"n":"Tetairoa McMillan","t":"CAR","p":"WR","e":"4685472","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gilgvjemumd6kpc9eiku"},"mark-andrews":{"n":"Mark Andrews","t":"BAL","p":"TE","e":"3116365","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/u4xzz7tclch0tpzm9hhz"},"deebo-samuel-sr":{"n":"Deebo Samuel Sr.","t":"SF","p":"WR","e":"3126486","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ntgyhqg6hq7fanhhsqiw"},"jordan-love":{"n":"Jordan Love","t":"GB","p":"QB","e":"4036378","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/thz8stjkbjwddxqnozi5"},"david-montgomery":{"n":"David Montgomery","t":"HOU","p":"RB","e":"4035538","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/csz0c9roa4pqsccothxg"},"dalton-kincaid":{"n":"Dalton Kincaid","t":"BUF","p":"TE","e":"4385690","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/z7k857flehljboaixj8m"},"dawson-knox":{"n":"Dawson Knox","t":"BUF","p":"TE","e":"3930086","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/k8bi9ppahwfmoxs8ij4w"},"justin-fields":{"n":"Justin Fields","t":"KC","p":"QB","e":"4362887","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/npjrombgxkc5vjkctcgy"},"travis-kelce":{"n":"Travis Kelce","t":"KC","p":"TE","e":"15847","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/dpxovcfku6ud2aohgf6a"},"t-j-hockenson":{"n":"T.J. Hockenson","t":"MIN","p":"TE","e":"4036133","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/rs8o65x0u0n9xzde0fd6"},"jaxson-dart":{"n":"Jaxson Dart","t":"NYG","p":"QB","e":"4689114","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/n6uymxssgiicjmxkzxoc"},"jaylen-warren":{"n":"Jaylen Warren","t":"PIT","p":"RB","e":"4569987","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/dkiteytgnxar1mpaxcxv"},"rico-dowdle":{"n":"Rico Dowdle","t":"PIT","p":"RB","e":"4038815","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mx2bxccuzmdvzbksypws"},"bryce-young":{"n":"Bryce Young","t":"CAR","p":"QB","e":"4685720","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/vcvhmxvxw2a3armle0af"},"darius-slayton":{"n":"Darius Slayton","t":"NYG","p":"WR","e":"3916945","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/otksyfjll5waf0vsczeu"},"darnell-mooney":{"n":"Darnell Mooney","t":"NYG","p":"WR","e":"4040655","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/eaejonwaflt9drrs9ika"},"malik-nabers":{"n":"Malik Nabers","t":"NYG","p":"WR","e":"4595348","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/w3edoyyuomqlovvp9ixc"},"emeka-egbuka":{"n":"Emeka Egbuka","t":"TB","p":"WR","e":"4567750","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/z224kbzs62rjuykc0vha"},"daniel-jones":{"n":"Daniel Jones","t":"IND","p":"QB","e":"3917792","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ohvvctuykzwrpqer7xgl"},"jeremiyah-love":{"n":"Jeremiyah Love","t":"ARI","p":"RB","e":"4870808","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/b12gtjsylmql5v7iyyla"}};
+var PLAYERS = {"patrick-mahomes":{"n":"Patrick Mahomes","t":"KC","p":"QB","e":"3139477","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/wdckwtob1lybvkmxnf7p"},"malik-willis":{"n":"Malik Willis","t":"MIA","p":"QB","e":"4242512","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/txvgdbwbryzyyqq6gfet"},"tyreek-hill":{"n":"Tyreek Hill","t":"MIA","p":"WR","e":"3116406","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gg73gnfivrn80oyqwazl"},"jaylen-waddle":{"n":"Jaylen Waddle","t":"DEN","p":"WR","e":"4372016","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gkh7m1jedon9mwn5jlf1"},"bijan-robinson":{"n":"Bijan Robinson","t":"ATL","p":"RB","e":"4430807","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/esii5yb8yn9edboi4mlq"},"bo-nix":{"n":"Bo Nix","t":"DEN","p":"QB","e":"4426338","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/zvo9xatffmqn9lnukpgk"},"trey-mcbride":{"n":"Trey McBride","t":"ARI","p":"TE","e":"4361307","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/psasp10nn5pcvkli9kil"},"drake-maye":{"n":"Drake Maye","t":"NE","p":"QB","e":"4431452","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/s1nmoon2xnrc3bnyulv4"},"a-j-brown":{"n":"A.J. Brown","t":"NE","p":"WR","e":"4047646","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/qfhvjyssf0lwsh0kienp"},"romeo-doubs":{"n":"Romeo Doubs","t":"NE","p":"WR","e":"4361432","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/yxvzijmgwyyigljxfmyb"},"george-pickens":{"n":"George Pickens","t":"DAL","p":"WR","e":"4426354","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/cbpyykoguf7rsxezqzvk"},"ceedee-lamb":{"n":"CeeDee Lamb","t":"DAL","p":"WR","e":"4241389","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mbblzwtynxr15ovzkevi"},"isaiah-likely":{"n":"Isaiah Likely","t":"NYG","p":"TE","e":"4361050","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/b1pahldt9ixp9lssxi2d"},"josh-allen":{"n":"Josh Allen","t":"BUF","p":"QB","e":"3918298","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mjwbioajzldkq1vzoz2d"},"kyler-murray":{"n":"Kyler Murray","t":"MIN","p":"QB","e":"3917315","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/btfruyf33adgnjzpcuen"},"jacoby-brissett":{"n":"Jacoby Brissett","t":"ARI","p":"QB","e":"2578570","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/qjswiunczrn5xmdiqhlz"},"jahmyr-gibbs":{"n":"Jahmyr Gibbs","t":"DET","p":"RB","e":"4429795","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/cursejnmmp1i9hnxihkj"},"puka-nacua":{"n":"Puka Nacua","t":"LAR","p":"WR","e":"4426515","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ipy6qw7hdygdfc8k86ba"},"tyler-warren":{"n":"Tyler Warren","t":"IND","p":"TE","e":"4431459","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/f1mfwwrr3qvnxuiackgq"},"lamar-jackson":{"n":"Lamar Jackson","t":"BAL","p":"QB","e":"3916387","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/eno6s5qzl9grbfbfwhoa"},"james-cook":{"n":"James Cook","t":"BUF","p":"RB","e":"4379399","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/anjbznqb9i21wzcgrtbs"},"ashton-jeanty":{"n":"Ashton Jeanty","t":"LV","p":"RB","e":"4890973","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/syspis1mntov9kgspb7r"},"dj-moore":{"n":"DJ Moore","t":"BUF","p":"WR","e":"3915416","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/lsavpxtqoqu25emwcnvy"},"jaxon-smith-njigba":{"n":"Jaxon Smith-Njigba","t":"SEA","p":"WR","e":"4430878","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/yx1xjrupbqdknnjaq4a6"},"amon-ra-st-brown":{"n":"Amon-Ra St. Brown","t":"DET","p":"WR","e":"4374302","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/fd8nwhm6pvxfyzphzl6i"},"jameson-williams":{"n":"Jameson Williams","t":"DET","p":"WR","e":"4426388","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/byiptqggtglvy5qrw5wp"},"matthew-stafford":{"n":"Matthew Stafford","t":"LAR","p":"QB","e":"12483","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/jwpkjfrkzufdyh8u1mg7"},"trevor-lawrence":{"n":"Trevor Lawrence","t":"JAX","p":"QB","e":"4360310","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/k9uzdernqkx7oquy7dkg"},"quinshon-judkins":{"n":"Quinshon Judkins","t":"CLE","p":"RB","e":"4685702","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ojtce2im0wp2ltyel0vc"},"patrick-ricard":{"n":"Patrick Ricard","t":"NYG","p":"RB","e":"2975417","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/nm7ezh46zd5bdxaxz6a9"},"cam-ward":{"n":"Cam Ward","t":"TEN","p":"QB","e":"4688380","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/l7switu6stlwd2irm8yo"},"brock-bowers":{"n":"Brock Bowers","t":"LV","p":"TE","e":"4432665","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/waorceny0ggpaeckaol8"},"kyren-williams":{"n":"Kyren Williams","t":"LAR","p":"RB","e":"4430737","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xti3pek6rmojqchakxpy"},"colston-loveland":{"n":"Colston Loveland","t":"CHI","p":"TE","e":"4723086","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/cnxiyi76jeahgx94nh6d"},"breece-hall":{"n":"Breece Hall","t":"NYJ","p":"RB","e":"4427366","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/i01xtqbfajfq68lb6orh"},"jayden-daniels":{"n":"Jayden Daniels","t":"WAS","p":"QB","e":"4426348","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gfz8k5onuqjrche9ogqc"},"chig-okonkwo":{"n":"Chig Okonkwo","t":"WAS","p":"TE","e":"4360635","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/pzcez6pi9tpdqkmjjnzk"},"terry-mclaurin":{"n":"Terry McLaurin","t":"WAS","p":"WR","e":"3121422","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/tmfl2zruajmkrtcg4zxp"},"devonta-smith":{"n":"DeVonta Smith","t":"PHI","p":"WR","e":"4241478","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/k724kq3hyv7jc0y9s03x"},"dallas-goedert":{"n":"Dallas Goedert","t":"PHI","p":"TE","e":"3121023","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/bafepstxu7vvxb9v5vua"},"javonte-williams":{"n":"Javonte Williams","t":"DAL","p":"RB","e":"4361579","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xvwroirev2kie6oiphtz"},"drake-london":{"n":"Drake London","t":"ATL","p":"WR","e":"4426502","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mcllowcfrmmdeo4zy3g1"},"caleb-williams":{"n":"Caleb Williams","t":"CHI","p":"QB","e":"4431611","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/h4qs11kutwiw7whekmyt"},"jalen-hurts":{"n":"Jalen Hurts","t":"PHI","p":"QB","e":"4040715","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/xow5yvxjeqa6witmofmp"},"blake-corum":{"n":"Blake Corum","t":"LAR","p":"RB","e":"4429096","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/axzqbqjkrbwfzodwwakq"},"rome-odunze":{"n":"Rome Odunze","t":"CHI","p":"WR","e":"4431299","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/niewdl2p2325kpohbw9v"},"josh-jacobs":{"n":"Josh Jacobs","t":"GB","p":"RB","e":"4047365","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/uceokxeo0uqrqms3e3vl"},"mike-evans":{"n":"Mike Evans","t":"SF","p":"WR","e":"16737","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/zc4ujpmndyxrbiyyjomz"},"christian-kirk":{"n":"Christian Kirk","t":"SF","p":"WR","e":"3895856","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ffp75mtwnqgrv0qz0txz"},"harold-fannin-jr":{"n":"Harold Fannin Jr.","t":"CLE","p":"TE","e":"5083076","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/fxublmpnxx9uggsddwik"},"kenneth-walker-iii":{"n":"Kenneth Walker III","t":"KC","p":"RB","e":"4567048","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/vk6nruaqdewdglofcwwg"},"justin-herbert":{"n":"Justin Herbert","t":"LAC","p":"QB","e":"4038941","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/jnkspnntgebegzp4ghve"},"tucker-kraft":{"n":"Tucker Kraft","t":"GB","p":"TE","e":"4572680","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/n6vu44jbq31rydoaadaq"},"derrick-henry":{"n":"Derrick Henry","t":"BAL","p":"RB","e":"3043078","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/tm79x0iknqg6hms3ypyt"},"tetairoa-mcmillan":{"n":"Tetairoa McMillan","t":"CAR","p":"WR","e":"4685472","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/gilgvjemumd6kpc9eiku"},"mark-andrews":{"n":"Mark Andrews","t":"BAL","p":"TE","e":"3116365","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/u4xzz7tclch0tpzm9hhz"},"deebo-samuel-sr":{"n":"Deebo Samuel Sr.","t":"SF","p":"WR","e":"3126486","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ntgyhqg6hq7fanhhsqiw"},"jordan-love":{"n":"Jordan Love","t":"GB","p":"QB","e":"4036378","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/thz8stjkbjwddxqnozi5"},"david-montgomery":{"n":"David Montgomery","t":"HOU","p":"RB","e":"4035538","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/csz0c9roa4pqsccothxg"},"dalton-kincaid":{"n":"Dalton Kincaid","t":"BUF","p":"TE","e":"4385690","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/z7k857flehljboaixj8m"},"dawson-knox":{"n":"Dawson Knox","t":"BUF","p":"TE","e":"3930086","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/k8bi9ppahwfmoxs8ij4w"},"justin-fields":{"n":"Justin Fields","t":"KC","p":"QB","e":"4362887","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/npjrombgxkc5vjkctcgy"},"travis-kelce":{"n":"Travis Kelce","t":"KC","p":"TE","e":"15847","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/dpxovcfku6ud2aohgf6a"},"t-j-hockenson":{"n":"T.J. Hockenson","t":"MIN","p":"TE","e":"4036133","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/rs8o65x0u0n9xzde0fd6"},"jaxson-dart":{"n":"Jaxson Dart","t":"NYG","p":"QB","e":"4689114","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/n6uymxssgiicjmxkzxoc"},"daniel-jones":{"n":"Daniel Jones","t":"IND","p":"QB","e":"3917792","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ohvvctuykzwrpqer7xgl"},"isiah-pacheco":{"n":"Isiah Pacheco","t":"DET","p":"RB","e":"4361529","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/hkqb4imkum3vxxkwuetl"},"jaylen-warren":{"n":"Jaylen Warren","t":"PIT","p":"RB","e":"4569987","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/dkiteytgnxar1mpaxcxv"},"rico-dowdle":{"n":"Rico Dowdle","t":"PIT","p":"RB","e":"4038815","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/mx2bxccuzmdvzbksypws"},"bryce-young":{"n":"Bryce Young","t":"CAR","p":"QB","e":"4685720","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/vcvhmxvxw2a3armle0af"},"darius-slayton":{"n":"Darius Slayton","t":"NYG","p":"WR","e":"3916945","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/otksyfjll5waf0vsczeu"},"darnell-mooney":{"n":"Darnell Mooney","t":"NYG","p":"WR","e":"4040655","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/eaejonwaflt9drrs9ika"},"malik-nabers":{"n":"Malik Nabers","t":"NYG","p":"WR","e":"4595348","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/w3edoyyuomqlovvp9ixc"},"emeka-egbuka":{"n":"Emeka Egbuka","t":"TB","p":"WR","e":"4567750","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/z224kbzs62rjuykc0vha"},"jeremiyah-love":{"n":"Jeremiyah Love","t":"ARI","p":"RB","e":"4870808","h":"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/b12gtjsylmql5v7iyyla"}};
 var PRESEASON = [];
 var PICKS = [{"id":"pick-2026-08-21","theme":"positional scarcity","title":"Twelve quarterbacks, 1.9 points a game, and the most expensive haircut in your auction","dek":"The drop from the best quarterback to the fourth‑best is bigger than the drop from the fourth‑best to the sixteenth. Price the position accordingly.","pos":"QB","team":"NYG","date":"2026-08-21","who":"Jaxson Dart (NYG, QB), as your only quarterback, at a price that leaves your running back money alone. If the room also lets Daniel Jones (IND, QB) go for a dollar, take him as the bye‑week…","stat":"+12% to +20% above his current price","url":"/the-pick#pick-2026-08-21","ppl":["jaxson-dart","daniel-jones"]},{"id":"pick-2026-08-20","theme":"scoring settings","title":"Your league’s scoring setting moves Derrick Henry eight spots, and half your room has not opened that page since 2019","dek":"The same projections produce a different board depending on what a catch is worth. Nobody prices for it, which is where the money is.","pos":"RB","team":"BAL","date":"2026-08-20","who":"Derrick Henry (BAL, RB) in any league that is not full PPR — a top‑five back at his scoring setting, priced by a room that is still reading a PPR ranking list. In full PPR, flip the entry…","stat":"+15% to +22% above his price in standard and half-PPR scoring","url":"/the-pick#pick-2026-08-20","ppl":["derrick-henry","jeremiyah-love"]},{"id":"pick-2026-08-19","theme":"tier cliffs","title":"Tight end is two players and a group chat","dek":"The one‑player gap between TE2 and TE3 is bigger than the nine‑player gap between TE3 and TE12. There are exactly two ways to play that, and the middle is not one of them.","pos":"TE","team":"GB","date":"2026-08-19","who":"Tucker Kraft (GB, TE) as the last tight end you would ever have to draft — TE12 by projection, roughly a point a week behind the position’s entire middle class, at a fraction of the price…","stat":"+10% to +16% above his price","url":"/the-pick#pick-2026-08-19","ppl":["tucker-kraft","trey-mcbride","brock-bowers"]}];
 var ANALYSIS = {"generatedFrom":"index.html valuation engine, default 12-team $200 auction","teams":12,"budget":200,"games":17,"lineup":[{"slot":"QB","name":"Bo Nix","pos":"QB","team":"DEN","price":8,"ppg":18},{"slot":"RB1","name":"Christian McCaffrey","pos":"RB","team":"SF","price":71,"ppg":20.3},{"slot":"RB2","name":"Chase Brown","pos":"RB","team":"CIN","price":21,"ppg":14.4},{"slot":"WR1","name":"Garrett Wilson","pos":"WR","team":"NYJ","price":33,"ppg":14.2},{"slot":"WR2","name":"Chris Olave","pos":"WR","team":"NO","price":20,"ppg":13.1},{"slot":"TE","name":"George Kittle","pos":"TE","team":"SF","price":13,"ppg":11.3},{"slot":"K","name":"Nick Folk","pos":"K","team":"ATL","price":2,"ppg":7.5},{"slot":"DEF","name":"Pittsburgh Steelers","pos":"DEF","team":"PIT","price":1,"ppg":9.6},{"slot":"FLEX","name":"Cam Skattebo","pos":"RB","team":"NYG","price":14,"ppg":13.7}],"spend":183,"ppg":122.1,"posCost":[{"pos":"RB","dollars":106,"n":3,"share":53},{"pos":"WR","dollars":53,"n":2,"share":27},{"pos":"TE","dollars":13,"n":1,"share":7},{"pos":"QB","dollars":8,"n":1,"share":4},{"pos":"K","dollars":2,"n":1,"share":1},{"pos":"DEF","dollars":1,"n":1,"share":0}],"cliffs":[{"pos":"RB","rank":3,"gap":2.3,"above":"Bijan Robinson","aboveTeam":"ATL","abovePpg":19.5,"abovePrice":68,"below":"Jonathan Taylor","belowTeam":"IND","belowPpg":17.2,"belowPrice":59},{"pos":"TE","rank":2,"gap":2,"above":"Brock Bowers","aboveTeam":"LV","abovePpg":14.2,"abovePrice":52,"below":"Colston Loveland","belowTeam":"CHI","belowPpg":12.2,"belowPrice":37},{"pos":"QB","rank":1,"gap":1.9,"above":"Josh Allen","aboveTeam":"BUF","abovePpg":21,"abovePrice":49,"below":"Jalen Hurts","belowTeam":"PHI","belowPpg":19.1,"belowPrice":38},{"pos":"WR","rank":4,"gap":1.4,"above":"Amon-Ra St. Brown","aboveTeam":"DET","abovePpg":17.6,"abovePrice":69,"below":"CeeDee Lamb","belowTeam":"DAL","belowPpg":16.1,"belowPrice":62}],"repl":[{"pos":"RB","starters":28,"replName":"Tony Pollard","replPpg":10.7,"topName":"Jahmyr Gibbs","topPpg":20.7,"edge":10},{"pos":"WR","starters":28,"replName":"Marvin Harrison Jr.","replPpg":11.2,"topName":"Puka Nacua","topPpg":18.9,"edge":7.7},{"pos":"TE","starters":16,"replName":"T.J. Hockenson","replPpg":9.4,"topName":"Trey McBride","topPpg":14.5,"edge":5.2},{"pos":"QB","starters":12,"replName":"Trevor Lawrence","replPpg":17.4,"topName":"Josh Allen","topPpg":21,"edge":3.6},{"pos":"K","starters":12,"replName":"Chase McLaughlin","replPpg":6.2,"topName":"Nick Folk","topPpg":7.5,"edge":1.3},{"pos":"DEF","starters":12,"replName":"Philadelphia Eagles","replPpg":8.9,"topName":"Chicago Bears","topPpg":9.7,"edge":0.8}],"bench":{"seats":7,"cost":17,"players":[{"name":"Rachaad White","pos":"RB","team":"WAS","price":4,"ppg":9.7},{"name":"Jordyn Tyson","pos":"WR","team":"NO","price":3,"ppg":10.4},{"name":"Travis Hunter","pos":"WR","team":"JAX","price":3,"ppg":10.4},{"name":"Tucker Kraft","pos":"TE","team":"GB","price":3,"ppg":10.3},{"name":"Caleb Williams","pos":"QB","team":"CHI","price":2,"ppg":16.8},{"name":"Buffalo Bills","pos":"DEF","team":"BUF","price":1,"ppg":9.6},{"name":"Cameron Dicker","pos":"K","team":"LAC","price":1,"ppg":6.8}],"share":8},"total":200,"unspent":0,"flexWorth":12.2,"noFlexPpg":109.9,"playerCount":407};
 var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a top-tier fantasy QB","pos":"QB","view":"Overpriced","viewCls":"over","play":"Only buy if he falls into the Herbert tier.","stat":"-4% to -7% versus an elite-QB price","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-1","ppl":["patrick-mahomes"]},{"title":"Miami is the most fragile fantasy ecosystem in football","pos":"Market","view":"Overpriced","viewCls":"over","play":"Treat Miami outside Achane as a mostly avoid situation in redraft.","stat":"-10% to -15% team passing expectation versus league median","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-2","deep":1,"topic":"Weather","team":"MIA","ppl":["malik-willis","tyreek-hill","jaylen-waddle"]},{"title":"Bijan Robinson is still a smash talent, but his market no longer leaves room for hidden upside","pos":"RB","view":"Overpriced","viewCls":"over","play":"Excellent pick, not an exploitable inefficiency.","stat":"-1% to +4% versus price","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-3","ppl":["bijan-robinson"]},{"title":"Jaylen Waddle is a major fantasy winner from moving to Denver","pos":"WR","view":"Underpriced","viewCls":"under","play":"Strong upside WR2 target.","stat":"+12% to +18% versus price if the market is still anchored to damaged Miami context","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-4","team":"DEN","ppl":["jaylen-waddle","bo-nix"]},{"title":"Trey McBride is one of the few expensive tight ends still likely to return value","pos":"TE","view":"Underpriced","viewCls":"under","play":"Pay up if you want a weekly structural edge.","stat":"+5% to +10% versus price because the role is truly elite","date":"2026-07-04","url":"/auction-insights-2026-07-04#call-5","ppl":["trey-mcbride"]},{"title":"Drake Maye is the best elite-QB value","pos":"QB","view":"Underpriced","viewCls":"under","play":"Aggressively target in round structures where he goes after Allen/Lamar/Hurts.","stat":"+6% to +10% versus current price","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-1","ppl":["drake-maye","a-j-brown","romeo-doubs"]},{"title":"New England became a classic year-three quarterback breakout setup in one offseason","pos":"Market","view":"Underpriced","viewCls":"under","play":"The Patriots are one of the best stackable offenses in fantasy.","stat":"+5% to +8% team-pass expectation relative to market conservatism","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-2","deep":1,"topic":"Coaching","team":"NE","ppl":["a-j-brown","romeo-doubs"]},{"title":"De’Von Achane is being supported almost entirely by talent rather than environment","pos":"RB","view":"Overpriced","viewCls":"over","play":"Draft for ceiling, but understand the offense can collapse around him.","stat":"-4% to -8% versus if he were in the 2025 Miami environment","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-3","ppl":["tyreek-hill","jaylen-waddle","malik-willis"]},{"title":"CeeDee Lamb remains elite but is less likely to monopolize the offense with George Pickens still there","pos":"WR","view":"Near fair value","viewCls":"fair","play":"Near market, not a screaming value.","stat":"slightly more efficiency, slightly less pure volume","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-4","ppl":["george-pickens","ceedee-lamb"]},{"title":"Isaiah Likely is the best late-round TE target","pos":"TE","view":"Underpriced","viewCls":"under","play":"One of the best cheap TE targets in the player pool.","stat":"+12% to +18% versus late-round cost","date":"2026-07-09","url":"/auction-insights-2026-07-09#call-5","ppl":["isaiah-likely"]},{"title":"Josh Allen remains the safest overall QB1, but not the best pure value","pos":"QB","view":"Underpriced","viewCls":"under","play":"Draft him if you want floor dominance, not because he is discounted.","stat":"+0% to +4% versus price","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-1","ppl":["josh-allen"]},{"title":"Arizona is the clearest macro fade because the offense got worse and the schedule got harder","pos":"Market","view":"Overpriced","viewCls":"over","play":"Draft Trey McBride because he can beat team weakness, but haircut the rest.","stat":"-5% to -10% to broad Cardinals scoring environment","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-2","deep":1,"topic":"Schedule","team":"ARI","ppl":["trey-mcbride","kyler-murray","jacoby-brissett"]},{"title":"Jahmyr Gibbs is appropriately expensive","pos":"RB","view":"Overpriced","viewCls":"over","play":"Pay up if you want stability, but do not expect a big discount.","stat":"-1% to +3% versus price","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-3","ppl":["jahmyr-gibbs"]},{"title":"Puka Nacua is expensive and still deserves it","pos":"WR","view":"","viewCls":"","play":"No need to galaxy-brain fade.","stat":"0% to +5% versus market","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-4","ppl":["puka-nacua"]},{"title":"Tyler Warren is one of the best breakout TE values","pos":"TE","view":"Underpriced","viewCls":"under","play":"Priority target if you miss McBride/Bowers.","stat":"+10% to +14% versus price","date":"2026-07-16","url":"/auction-insights-2026-07-16#call-5","ppl":["tyler-warren"]},{"title":"Lamar Jackson’s market still prices old rushing certainty, but the current projection is more fragile than Allen/Maye","pos":"QB","view":"Near fair value","viewCls":"fair","play":"Draft, but prefer him only if he slips.","stat":"-2% to -5% versus market if drafted as a clear top-two QB","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-1","ppl":["lamar-jackson"]},{"title":"James Cook is one of the best prices on the board","pos":"RB","view":"Underpriced","viewCls":"under","play":"Aggressively target in round-two or round-three builds.","stat":"+8% to +12% versus price","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-2","ppl":["james-cook"]},{"title":"Ashton Jeanty has one of the widest and most attractive ranges at running back","pos":"RB","view":"Overpriced","viewCls":"over","play":"Clear target, but avoid overleveraging at ceiling price.","stat":"+10% to +18% if he takes more of the Raiders’ high-value touches than projected","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-3","ppl":["ashton-jeanty"]},{"title":"DJ Moore is a big winner in Buffalo","pos":"WR","view":"Underpriced","viewCls":"under","play":"One of my favorite WR targets outside the top tier.","stat":"+10% to +14% versus price if health holds","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-4","team":"BUF","ppl":["dj-moore","josh-allen"]},{"title":"Jaxon Smith-Njigba is the safest WR in the pool, not necessarily the highest ceiling","pos":"WR","view":"Underpriced","viewCls":"under","play":"Great anchor in full PPR, less urgent in standard.","stat":"fair to slightly positive at price","date":"2026-07-23","url":"/auction-insights-2026-07-23#call-5","ppl":["jaxon-smith-njigba"]},{"title":"The 2026 PUP return-window change slightly increases stash value","pos":"Market","view":"Underpriced","viewCls":"under","play":"Be more aggressive with shallow-bench IR/PUP specs.","stat":"+5% to +10% roster utility for early-season stashes","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-1","deep":1,"topic":"Rule change"},{"title":"Detroit’s offense gets the single cleanest schedule signal in the league","pos":"Market","view":"Underpriced","viewCls":"under","play":"Do not fade Gibbs, Amon-Ra, or Jameson on “too expensive” schedule arguments.","stat":"+2% to +4% to Lions pass-catcher and RB expectation versus neutral schedule","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-2","deep":1,"topic":"Schedule","team":"DET","ppl":["jahmyr-gibbs","amon-ra-st-brown","jameson-williams"]},{"title":"The Rams’ late-season schedule is a hidden playoff risk","pos":"Market","view":"Overpriced","viewCls":"over","play":"Prefer Puka and Stafford more than ancillary Rams in managed leagues.","stat":"-1.0 to -1.8 fantasy points per game in playoff weeks for volatile Rams pieces","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-3","deep":1,"topic":"Schedule","team":"LAR","ppl":["puka-nacua","matthew-stafford"]},{"title":"Trevor Lawrence is still one of the cleanest bounce-forward bets","pos":"QB","view":"Underpriced","viewCls":"under","play":"Target as a post-elite QB with top-five upside.","stat":"+5% to +9% versus current draft cost if the volume stays high","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-4","ppl":["trevor-lawrence"]},{"title":"Arizona’s quarterback downgrade actually strengthens McBride’s target-floor case","pos":"TE","view":"Overpriced","viewCls":"over","play":"Best in full PPR.","stat":"catch floor intact, TD ceiling somewhat capped","date":"2026-07-30","url":"/auction-insights-2026-07-30#call-5","team":"ARI","ppl":["jacoby-brissett"]},{"title":"Cleveland’s team environment should improve more than the public thinks","pos":"Market","view":"Underpriced","viewCls":"under","play":"Target Browns as a secondary breakout offense, especially cheaper pieces.","stat":"+6% to +9% offense-level efficiency versus 2025","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-1","deep":1,"topic":"Offensive line","team":"CLE","ppl":["quinshon-judkins"],"tm":"CLE"},{"title":"New York Giants volume is likely to shift from three-WR spread to heavier TE/RB personnel","pos":"Market","view":"Underpriced","viewCls":"under","play":"Upweight Isaiah Likely and backs, slightly downweight secondary Giants WRs.","stat":"WR target concentration drops slightly; TE and RB route value rises","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-2","deep":1,"topic":"Coaching","team":"NYG","ppl":["isaiah-likely","patrick-ricard"]},{"title":"Allen’s path to another QB1 finish now runs more through efficiency than raw rushing expansion","pos":"QB","view":"","viewCls":"","play":"Rank him first, but do not expect a major rushing spike.","stat":"his median is intact, but ceiling is more +3 passing TDs than +100 rushing yards","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-3","ppl":["josh-allen"]},{"title":"Tennessee’s offense should throw deeper in 2026","pos":"Market","view":"Underpriced","viewCls":"under","play":"Favor Titans WR spike-week bets over “safe floor” builds.","stat":"+0.8 to +1.5 aDOT-related boom weeks for Titans WRs, with added volatility","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-4","deep":1,"topic":"Team trend","team":"TEN","ppl":["cam-ward"]},{"title":"Klint Kubiak’s arrival is mildly positive for Bowers because the Raiders need easy middle-of-field offense","pos":"TE","view":"Underpriced","viewCls":"under","play":"Slight upgrade versus static-rank assumptions.","stat":"","date":"2026-08-06","url":"/auction-insights-2026-08-06#call-5","team":"LV","ppl":["brock-bowers"]},{"title":"Buffalo combines elite QB play, top-tier line play, and a major WR upgrade","pos":"Market","view":"Underpriced","viewCls":"under","play":"Be willing to stack Bills more aggressively than market norms.","stat":"+4% to +6% passing efficiency spillover across the offense","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-1","deep":1,"topic":"Offensive line","team":"BUF","ppl":["josh-allen","dj-moore"]},{"title":"Maye’s 2025 efficiency profile was not fluky","pos":"QB","view":"","viewCls":"","play":"Use him as your preferred premium QB spend after Allen.","stat":"another 300-plus fantasy-point season is the base case","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-2","ppl":["drake-maye"]},{"title":"Denver has one of the cleanest offensive-line and schedule combinations for fantasy","pos":"Market","view":"Near fair value","viewCls":"fair","play":"Lean into Denver receivers and ancillary backs at fair prices.","stat":"+3% to +6% to Bo Nix and Broncos skill-player efficiency","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-3","deep":1,"topic":"Offensive line","team":"DEN","ppl":["bo-nix"]},{"title":"Kyren’s hard schedule amplifies the risk of smaller volume","pos":"RB","view":"Overpriced","viewCls":"over","play":"Take Kyren less in managed leagues than in best ball.","stat":"-0.5 FPPG or so from environment","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-4","ppl":["kyren-williams"]},{"title":"Loveland’s biggest hidden drag is schedule irregularity, not target competition","pos":"TE","view":"Underpriced","viewCls":"under","play":"Slightly better in best ball than managed redraft.","stat":"","date":"2026-08-10","url":"/auction-insights-2026-08-10#call-5","ppl":["colston-loveland"]},{"title":"The Jets’ schedule opens softer than the market is pricing","pos":"Market","view":"Underpriced","viewCls":"under","play":"Front-load Jets in best-ball and early-season DFS.","stat":"front-half offensive boost, especially for startable Jets in September","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-1","deep":1,"topic":"Schedule","team":"NYJ","ppl":["breece-hall"],"tm":"NYJ"},{"title":"The Tunsil protection case for Daniels is on hold","pos":"QB","view":"Overpriced","viewCls":"over","play":"Maintain high upside exposure, especially stacked with Terry or Okonkwo.","stat":"protection upside withdrawn until Tunsil returns; rushing floor unchanged","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-2","ppl":["jayden-daniels","chig-okonkwo","terry-mclaurin"]},{"title":"Philadelphia’s passing tree got narrower after the A.J. Brown trade, but the schedule got friendlier","pos":"Market","view":"Underpriced","viewCls":"under","play":"Treat Eagles receivers as role-up bets, not offense-up bets.","stat":"DeVonta Smith and Dallas Goedert gain target share, but overall passing efficiency modestly falls","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-3","deep":1,"topic":"Schedule","team":"PHI","ppl":["a-j-brown","devonta-smith","dallas-goedert"]},{"title":"Dallas’ passing efficiency should keep Javonte’s touchdown odds healthy","pos":"RB","view":"Near fair value","viewCls":"fair","play":"Neutral to slightly positive at fair mid-round price.","stat":"modest TD expectation upside despite hard schedule","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-4","team":"DAL","ppl":["javonte-williams","ceedee-lamb","george-pickens"]},{"title":"Drake London is one of the best WR values on the board","pos":"WR","view":"Underpriced","viewCls":"under","play":"Strong target in round-two builds.","stat":"+8% to +12% versus price","date":"2026-08-13","url":"/auction-insights-2026-08-13#call-5","ppl":["drake-london"]},{"title":"Chicago’s 2026 schedule creates unusual weekly-prep volatility","pos":"Market","view":"Overpriced","viewCls":"over","play":"Draft Bears talent, but expect more week-to-week variance than rankings imply.","stat":"small downgrade to fragile rookies and secondary pieces, little effect on stars","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-1","deep":1,"topic":"Schedule","team":"CHI","ppl":["caleb-williams"],"tm":"CHI"},{"title":"Hurts’ favorable schedule prevents a stronger fade","pos":"QB","view":"Near fair value","viewCls":"fair","play":"Treat Hurts as appropriately priced, not undervalued.","stat":"schedule gives back roughly half the passing downgrade","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-2","ppl":["jalen-hurts"]},{"title":"Dallas Goedert is a direct beneficiary of the A.J. Brown trade","pos":"TE","view":"Underpriced","viewCls":"under","play":"Strong mid-round TE target in full PPR.","stat":"+8% to +12% versus prior target baselines","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-3","team":"DAL","ppl":["a-j-brown","dallas-goedert"]},{"title":"Blake Corum is the most important handcuff-plus back in fantasy","pos":"RB","view":"Underpriced","viewCls":"under","play":"Priority target wherever Kyren is expensive.","stat":"+15% to +25% versus late-round price if workload even partially equalizes","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-4","ppl":["blake-corum"]},{"title":"Rome Odunze is one of the best breakout WR bets in fantasy","pos":"WR","view":"Underpriced","viewCls":"under","play":"Priority target in the WR2/WR3 range.","stat":"+12% to +18% versus price","date":"2026-08-17","url":"/auction-insights-2026-08-17#call-5","ppl":["rome-odunze","dj-moore"]},{"title":"Green Bay’s late-season home weather is a real hidden edge","pos":"Market","view":"Overpriced","viewCls":"over","play":"Bump Lambeau-based Packers in fantasy playoff tiebreakers.","stat":"modest passing downgrade for visiting warm-weather teams and a slight run-game boost for Green Bay","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-1","deep":1,"topic":"Weather","team":"GB","ppl":["josh-jacobs"],"tm":"GB"},{"title":"Purdy’s weapon room is stronger but target competition is real","pos":"QB","view":"Underpriced","viewCls":"under","play":"Buy Purdy more than individual non-Evans ancillary receivers.","stat":"higher efficiency, slightly lower concentration","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-2","ppl":["mike-evans","christian-kirk"]},{"title":"Harold Fannin Jr. is exactly the sort of second-wave tight end to buy in deeper leagues","pos":"TE","view":"Underpriced","viewCls":"under","play":"","stat":"","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-3","ppl":["harold-fannin-jr"]},{"title":"Kenneth Walker is one of the biggest team-change winners in fantasy","pos":"RB","view":"Underpriced","viewCls":"under","play":"Strong target if the market has not fully internalized the landing spot.","stat":"+10% to +15% versus old-team expectation","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-4","ppl":["kenneth-walker-iii"]},{"title":"Romeo Doubs’ signing matters because it raises New England’s pass-game floor, not because it crushes A.J. Brown","pos":"WR","view":"Underpriced","viewCls":"under","play":"Stack Maye/Brown freely.","stat":"offense-wide efficiency positive, small target-share negative to secondary Patriots","date":"2026-08-20","url":"/auction-insights-2026-08-20#call-5","team":"NE","ppl":["romeo-doubs","a-j-brown"]},{"title":"The anytime onside-kick declaration rule marginally helps trailing pass volume","pos":"Market","view":"","viewCls":"","play":"Ignore in projections, but it slightly raises spike-week tail outcomes.","stat":"tiny league-wide effect, biggest for elite QBs in negative script","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-1","deep":1,"topic":"Rule change"},{"title":"Justin Herbert is the best midrange QB value","pos":"QB","view":"Underpriced","viewCls":"under","play":"Target as the ideal balance of floor and discount.","stat":"+8% to +12% versus market","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-2","ppl":["justin-herbert"]},{"title":"Kraft gets a slight late-season bump from Green Bay weather context","pos":"TE","view":"Underpriced","viewCls":"under","play":"Subtle playoff tiebreaker upgrade.","stat":"more red-zone and short-area emphasis late in the year","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-3","team":"GB","ppl":["tucker-kraft"]},{"title":"Baltimore’s loss of Ricard, Likely, and Linderbaum is the first meaningful structural hit to Henry’s fantasy value in a while","pos":"RB","view":"Overpriced","viewCls":"over","play":"Take him, but downgrade slightly against younger elites.","stat":"-2% to -5% rushing efficiency and short-yardage conversion risk","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-4","team":"BAL","ppl":["derrick-henry"]},{"title":"Tetairoa McMillan remains a good player in a less obvious team context","pos":"WR","view":"Near fair value","viewCls":"fair","play":"Take when he falls; do not force.","stat":"fair price with moderate upside","date":"2026-08-24","url":"/auction-insights-2026-08-24#call-5","ppl":["tetairoa-mcmillan"]},{"title":"The Ravens lost hidden support structure on offense","pos":"Market","view":"","viewCls":"","play":"Still draft stars, but do not overproject Ravens role players.","stat":"slight efficiency drag on Lamar/Henry/Andrews relative to 2025 peak usage","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-1","deep":1,"topic":"Offensive line","team":"BAL","ppl":["patrick-ricard","isaiah-likely"]},{"title":"Matthew Stafford is expensive for a non-rushing QB, but the case is real","pos":"QB","view":"Underpriced","viewCls":"under","play":"Fine in best ball, slightly less appealing in managed leagues because of the closing schedule.","stat":"+0% to +4% versus price in season-long, but lower playoff comfort","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-2","ppl":["matthew-stafford"]},{"title":"Mark Andrews remains touchdown-reliant","pos":"TE","view":"Near fair value","viewCls":"fair","play":"Better in TE-premium and TD-heavy formats than standard PPR.","stat":"fair in standard, slightly weak in full PPR","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-3","ppl":["mark-andrews"]},{"title":"Barkley’s target environment can improve post-A.J. Brown","pos":"RB","view":"Near fair value","viewCls":"fair","play":"Neutral overall, but less exciting than his name value suggests.","stat":"small reception boost, modest touchdown-rate decline","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-4","ppl":["a-j-brown"]},{"title":"Deebo Samuel in San Francisco is still a scheme-created weekly flex, not a true target king","pos":"WR","view":"Underpriced","viewCls":"under","play":"Better in best ball.","stat":"boom/bust flex rather than dependable WR2","date":"2026-08-27","url":"/auction-insights-2026-08-27#call-5","team":"SF","ppl":["deebo-samuel-sr","mike-evans","christian-kirk"]},{"title":"The 49ers became more top-heavy at WR","pos":"Market","view":"Underpriced","viewCls":"under","play":"Prefer best-ball over managed redraft for secondary 49ers pass-catchers.","stat":"more efficient passing, less certainty for individual target-share monsters outside maybe Evans in…","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-1","deep":1,"topic":"Team trend","team":"SF","ppl":["mike-evans","christian-kirk"]},{"title":"Jordan Love is quietly viable because the Packers’ late-season conditions favor their offense","pos":"QB","view":"Near fair value","viewCls":"fair","play":"Acceptable late-round tournament QB.","stat":"small playoff boost","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-2","team":"GB","ppl":["jordan-love"]},{"title":"Likely’s outlook is stronger in full PPR than standard because his edge comes from route volume and target design, not guaranteed touchdowns","pos":"TE","view":"Underpriced","viewCls":"under","play":"Bump in full PPR.","stat":"","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-3","ppl":["isaiah-likely"]},{"title":"David Montgomery is vulnerable to subtle erosion","pos":"RB","view":"Overpriced","viewCls":"over","play":"Fade slightly unless he falls.","stat":"-4% to -8% versus price if drafters assume unchanged efficiency","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-4","ppl":["david-montgomery"]},{"title":"Buffalo’s WR room is now good enough that Allen stacks should be diversified, not concentrated only on one pass-catcher","pos":"WR","view":"","viewCls":"","play":"Mix DJ Moore and Dalton Kincaid/Dawson Knox around Allen exposures.","stat":"flatter weekly distribution","date":"2026-08-31","url":"/auction-insights-2026-08-31#call-5","team":"BUF","ppl":["dj-moore","dalton-kincaid","dawson-knox"]},{"title":"Kansas City is no longer a pure pass funnel","pos":"Market","view":"","viewCls":"","play":"Boost efficiency pieces, slightly lower assumed volume for pass-catchers.","stat":"more QB rushing and more efficient early-down rushing than recent KC teams, with a small cap on raw…","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-1","deep":1,"topic":"Team trend","team":"KC","ppl":["justin-fields","kenneth-walker-iii","travis-kelce"]},{"title":"Cam Ward is interesting mainly because Brian Daboll should unlock more deep attempts","pos":"QB","view":"Underpriced","viewCls":"under","play":"Superflex stash, not standard redraft starter.","stat":"+8% to +12% versus last year, still volatile","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-2","ppl":["cam-ward"]},{"title":"T.J. Hockenson remains a risky rebound candidate","pos":"TE","view":"Overpriced","viewCls":"over","play":"Avoid as a primary tight end in shallow leagues.","stat":"below-market confidence until health and role stabilize","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-3","ppl":["t-j-hockenson"]},{"title":"Offensive-line dispersion matters more this year because so many star skill players changed teams","pos":"Market","view":"Near fair value","viewCls":"fair","play":"","stat":"widen YPC/YPA expectations more aggressively than usual by line quality","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-4","deep":1,"topic":"Offensive line","ppl":["drake-maye","justin-herbert","jaxson-dart"]},{"title":"Justin Fields in Kansas City is more interesting for real football than traditional redraft unless he actually starts","pos":"QB","view":"","viewCls":"","play":"Ignore in shallow redraft, monitor in superflex and deep best ball.","stat":"situational rushing splash only, role unspecified","date":"2026-09-03","url":"/auction-insights-2026-09-03#call-5","team":"KC","ppl":["justin-fields"]}];
 var REPORTS = [{"date":"2026-08-21","title":"Auction Watch: August 21, 2026","desc":"Verified, auction-relevant player signals from August 21: Alvin Kamara out at least a month with an MCL sprain, Burden out for the preseason, Love's high ankle sprain, LaPorta's hip clouding Week 1, plus preseason usage reads on Woody Marks, David Montgomery, and Chase Brown.","url":"/auction-watch-2026-08-21"},{"date":"2026-08-18","title":"Auction Watch: August 18, 2026","desc":"Verified, auction-relevant player signals from August 18: Pearsall out for the year, Kittle still on PUP, Pacheco’s MCL, Mahomes on track, and preseason usage reads on Robinson, McLaurin, McConkey, and Pierce.","url":"/auction-watch-2026-08-18"},{"date":"2026-07-26","title":"Auction Watch: July 26, 2026","desc":"Auction Watch for July 26, 2026: Drake Maye's rising price after the A.J. Brown trade, Malik Nabers' PUP-avoiding but risky rehab, Jonathon Brooks as an RB value, Stefon Diggs' free-agent wait (since signed by Washington), and Alvin Kamara's restructured Saints deal.","url":"/auction-watch-2026-07-26"},{"date":"2026-07-22","title":"Auction Watch: July 22, 2026","desc":"Auction Watch for July 22, 2026: Zach Charbonnet's ACL timeline and Jadarian Price's opportunity, Sam LaPorta's return, Garrett Wilson's value ADP, DK Metcalf's target risk, Jeremiyah Love and Emmett Johnson as rookie RB plays.","url":"/auction-watch-2026-07-22"},{"date":"2026-07-21","title":"Auction Watch: July 21, 2026","desc":"Auction Watch for July 21, 2026: Zach Charbonnet's ACL timeline and Jadarian Price's opportunity, Sam LaPorta's return, Garrett Wilson's value ADP, DK Metcalf's target risk, Jeremiyah Love and Emmett Johnson as rookie RB plays.","url":"/auction-watch-2026-07-21"},{"date":"2026-07-20","title":"Auction Watch: July 20, 2026","desc":"Auction Watch for July 20, 2026: Adonai Mitchell's ADP surge, Malik Nabers on PUP, Quinshon Judkins as a cheap RB2, Stefon Diggs' free-agent wait (since signed by Washington), Alvin Kamara's restructure, and Cam Skattebo's rehab.","url":"/auction-watch-2026-07-20"},{"date":"2026-07-15","title":"Auction Watch: July 15, 2026","desc":"Auction Watch for July 15, 2026: A.J. Brown's WR1 price in New England, Drake Maye's QB1 case, Brandon Aiyuk's reserve-list fade, and Malik Nabers opening Giants camp on PUP.","url":"/auction-watch-2026-07-15"},{"date":"2026-07-12","title":"Auction Watch: July 12, 2026","desc":"Auction Watch for July 12, 2026: A.J. Brown's top-16 ADP in New England, Jeremiyah Love's record rookie deal in Arizona, Adonai Mitchell's camp-driven rise with the Jets, Rachaad White's PPR role in Washington, and Denver's three-back committee.","url":"/auction-watch-2026-07-12"},{"date":"2026-07-11","title":"Auction Watch: July 11, 2026","desc":"Auction Watch for July 11, 2026: A.J. Brown's trade to New England, George Kittle's Achilles recovery, Jacksonville's crowded backfield, Cam Skattebo's injury discount, Rachaad White's role in Washington, and Adonai Mitchell's slide to WR3.","url":"/auction-watch-2026-07-11"},{"date":"2026-07-09","title":"Auction Watch: July 9, 2026","desc":"Auction Watch for July 9, 2026: Rashee Rice trending toward a full camp, Adonai Mitchell's ADP climb, Alec Pierce's camp doubt, Malik Nabers still behind schedule, and Chris Olave clearing his blood thinners.","url":"/auction-watch-2026-07-09"},{"date":"2026-07-05","title":"Auction Watch: July 5, 2026","desc":"Auction Watch for July 5, 2026: bid modestly on Rachaad White in the Commanders committee, fade Malik Nabers at his current price, buy Chris Olave after his medical clearance, wait on Patrick Mahomes, and pay up for Jaxon Smith-Njigba.","url":"/auction-watch-2026-07-05"},{"date":"2026-07-04","title":"Auction Watch: July 4, 2026","desc":"Auction Watch for July 4, 2026: buy Luther Burden III with 166 Bears targets vacated, pay up for Emeka Egbuka as the Bucs WR1, grab Josh Downs at a discount after the Pittman trade, and bid on Jonathon Brooks before his price climbs.","url":"/auction-watch-2026-07-04"},{"date":"2026-07-03","title":"Auction Watch: July 3, 2026","desc":"Auction Watch for July 3, 2026: fade Kaleb Johnson after the Rico Dowdle signing, buy Dowdle at his RB3 price, hold off on Zach Charbonnet, stash Tank Dell for a dollar, and pay up for a healthy Garrett Wilson.","url":"/auction-watch-2026-07-03"},{"date":"2026-07-02","title":"Auction Watch: July 2, 2026","desc":"Auction Watch for July 2, 2026: buy Jonathon Brooks before his price climbs, pay PPR money for Rachaad White in Washington, discount Malik Nabers on Week 1 doubt, wait out Alvin Kamara, and cap bids on Bucky Irving.","url":"/auction-watch-2026-07-02"},{"date":"2026-07-01","title":"Auction Watch: July 1, 2026","desc":"Auction Watch for July 1, 2026: temper bids on Travis Etienne in New Orleans, grab Alvin Kamara late, pay committee prices for the Steelers backfield, stash Jonathon Brooks in Carolina, and budget premium money for Drake Maye.","url":"/auction-watch-2026-07-01"},{"date":"2026-06-29","title":"Auction Watch: June 29, 2026","desc":"Auction Watch for June 29, 2026: take Jahmyr Gibbs at the 1.01 after the Montgomery trade, trust A.J. Brown as a low end WR1 in New England, pay up for DeVonta Smith as the Eagles WR1, target Bhayshul Tuten in Jacksonville, buy Omarion Hampton as the Chargers lead back, and treat Rachaad White as a committee dart in Washington.","url":"/auction-watch-2026-06-29"},{"date":"2026-06-28","title":"Auction Watch: June 28, 2026","desc":"Auction Watch for June 28, 2026: pay up for DeVonta Smith as the Eagles WR1 after the A.J. Brown trade, discount Malik Nabers after knee surgery, target Jahmyr Gibbs as Detroit's feature back under Drew Petzing, navigate Washington's Croskey-Merritt and Rachaad White committee, and grab Jonathon Brooks as a cheap Carolina dart.","url":"/auction-watch-2026-06-28"},{"date":"2026-06-26","title":"Auction Watch: June 26, 2026","desc":"Auction Watch for June 26, 2026: target Josh Downs as Indianapolis reshapes its receiver room, Rachaad White settling in with Jayden Daniels, George Pickens off holdout watch, Matthew Golden inheriting Romeo Doubs targets, Ashton Jeanty as a Raiders workhorse, and Jonathon Brooks as a cheap Carolina dart.","url":"/auction-watch-2026-06-26"},{"date":"2026-06-25","title":"Auction Watch: June 25, 2026","desc":"Auction Watch for June 25, 2026: pay up for Chase Brown in Cincinnati, Travis Etienne leading New Orleans, DeVonta Smith as the new Eagles WR1 after the A.J. Brown trade, fading DK Metcalf in Pittsburgh, Rachaad White as a cheap PPR dart behind Jacory Croskey-Merritt, and injury risk on Alec Pierce.","url":"/auction-watch-2026-06-25"},{"date":"2026-06-24","title":"Auction Watch: June 24, 2026","desc":"Auction Watch for June 24, 2026: Emeka Egbuka's WR1 path in Tampa Bay, Bhayshul Tuten's committee risk in Jacksonville, fading Oronde Gadsden after the David Njoku signing, waiting on Aaron Rodgers, Greg Dulcich as a late tight end dart, and Jonathon Brooks as a cheap RB3.","url":"/auction-watch-2026-06-24"},{"date":"2026-06-23","title":"Auction Watch: June 23, 2026","desc":"Auction Watch for June 23, 2026: A.J. Brown's trade to New England, why to wait on Aaron Rodgers in Pittsburgh, Kenneth Walker III as Kansas City's lead back, Bhayshul Tuten atop Jacksonville's backfield, and Josh Downs' volume in Indianapolis.","url":"/auction-watch-2026-06-23"},{"date":"2026-06-22","title":"Auction Watch: June 22, 2026","desc":"Auction Watch for June 22, 2026: Bucky Irving's shoulder recovery and Kenneth Gainwell, Emeka Egbuka as the new Bucs WR1, Alec Pierce ascending in Indianapolis, Rachaad White's rising value in Washington, and a cheap Jonathon Brooks dart.","url":"/auction-watch-2026-06-22"},{"date":"2026-06-21","title":"Auction Watch: June 21, 2026","desc":"Auction Watch for June 21, 2026: Kenneth Walker's clear path in Kansas City, rookie Jeremiyah Love leading Arizona, fading James Conner, Rashee Rice's six-game suspension, Zach Charbonnet's ACL recovery, and a cheap Jonathon Brooks dart.","url":"/auction-watch-2026-06-21"},{"date":"2026-06-19","title":"Auction Watch: June 19, 2026","desc":"Auction Watch for June 19, 2026: A.J. Brown to New England, DeVonta Smith's new alpha role, Tucker Kraft's PUP timeline, Patrick Mahomes on track, and a split-backfield lottery play.","url":"/auction-watch-2026-06-19"}];
-var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J. Brown into a target monster once, on a worse offense than this one","pos":"WR","team":"NE","date":"2026-08-20","side":"up","label":"Underpriced","who":"A.J. Brown (NE, WR). The room is still pricing him off a down finish in Philadelphia. It has not priced in the coach who already made him the focal point once.","stat":"+8% to +14% above his current price","url":"/play-caller-premium#call-2026-08-20-1","ppl":["a-j-brown"]},{"id":"call-2026-08-20-2","title":"Mike McCarthy has not built a workhorse backfield in almost two decades, and Pittsburgh is about to prove it again","pos":"RB","team":"PIT","date":"2026-08-20","side":"down","label":"Overpriced","who":"Jaylen Warren (PIT, RB) and Rico Dowdle (PIT, RB). Neither is priced like a committee back yet, and both should be. Warren catches passes, which makes him the safer…","stat":"-8% to -14% below a workhorse price, for both backs","url":"/play-caller-premium#call-2026-08-20-2","ppl":["jaylen-warren","rico-dowdle"]},{"id":"call-2026-08-20-3","title":"Dave Canales has rebuilt one quarterback’s career already, and Bryce Young is the second","pos":"QB","team":"CAR","date":"2026-08-20","side":"up","label":"Underpriced","who":"Bryce Young (CAR, QB). He is still priced like a former bust, not like a passer whose own coach has already rebuilt a career from worse.","stat":"+10% to +16% above his price","url":"/play-caller-premium#call-2026-08-20-3","ppl":["bryce-young"]},{"id":"call-2026-08-20-4","title":"Liam Coen’s one year calling plays gave Baker Mayfield the best season of his career — now he has Trevor Lawrence","pos":"QB","team":"JAX","date":"2026-08-20","side":"up","label":"Underpriced","who":"Trevor Lawrence (JAX, QB). The market remembers four up‑and‑down years under three different play‑callers. It has not yet priced in the coach who just did this…","stat":"+8% to +13% above his price","url":"/play-caller-premium#call-2026-08-20-4","ppl":["trevor-lawrence"]},{"id":"call-2026-08-19-1","title":"The zone‑scheme coaching tree has been making running backs for thirty years, and Klint Kubiak just brought it to Las Vegas","pos":"RB","team":"LV","date":"2026-08-19","side":"up","label":"Underpriced","who":"Ashton Jeanty (LV, RB). The usual knock on a back in this scheme is that anyone could do the job. Jeanty flips that: a real first‑round talent inside the system…","stat":"+6% to +10% above his price, with committee risk as the stated downside","url":"/play-caller-premium#call-2026-08-19-1","ppl":["ashton-jeanty"]},{"id":"call-2026-08-19-2","title":"Andy Reid’s lead back keeps finishing better than his price, and this year that back is Kenneth Walker","pos":"RB","team":"KC","date":"2026-08-19","side":"up","label":"Underpriced","who":"Kenneth Walker III (KC, RB). He was already one of the biggest winners of any team change on the board. The coach is the second half of that argument, and the room…","stat":"+10% to +15% above his price","url":"/play-caller-premium#call-2026-08-19-2","ppl":["kenneth-walker-iii"]},{"id":"call-2026-08-19-3","title":"Todd Monken feeds the tight end everywhere he goes, and Cleveland just hired him","pos":"TE","team":"CLE","date":"2026-08-19","side":"up","label":"Underpriced","who":"Harold Fannin Jr. (CLE, TE). A projection of about 78 catches and 816 yards is No. 1 receiver treatment, not leftover tight‑end scraps. He is priced like the scraps.","stat":"+12% to +18% above his price","url":"/play-caller-premium#call-2026-08-19-3","ppl":["harold-fannin-jr"]},{"id":"call-2026-08-19-4","title":"John Harbaugh and Matt Nagy will play heavy in New York, and that costs the wide receivers targets","pos":"TE / WR","team":"NYG","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Isaiah Likely (NYG, TE), who lands in exactly the role his new coaches like to use. Down — the second‑tier receivers, Darius Slayton and Darnell Mooney, who…","stat":"+8% to +12% for the tight end, -10% to -15% for the second-tier receivers","url":"/play-caller-premium#call-2026-08-19-4","ppl":["isaiah-likely","darius-slayton","darnell-mooney","malik-nabers"]},{"id":"call-2026-08-19-5","title":"Some play-callers answer every coverage by throwing to the same man — and San Francisco is built that way now","pos":"WR","team":"SF","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Mike Evans (SF, WR), the man they throw to. Down — everyone behind him. The other 49ers receivers are best‑ball dart throws, not weekly starters, and how…","stat":"+5% to +9% for the No. 1 receiver; treat the No. 2 and No. 3 as format calls, not bargains","url":"/play-caller-premium#call-2026-08-19-5","ppl":["mike-evans"]},{"id":"call-2026-08-19-6","title":"Drew Petzing throws to his running backs, and Detroit handed him the best one in football","pos":"RB","team":"DET","date":"2026-08-19","side":"up","label":"Underpriced","who":"Jahmyr Gibbs (DET, RB). Watch your format here. This edge comes from catches, so it is worth much more in full PPR than in standard, and more again in leagues that…","stat":"+4% to +8% above his price in full PPR","url":"/play-caller-premium#call-2026-08-19-6","ppl":["jahmyr-gibbs"]},{"id":"call-2026-08-19-7","title":"The best proof a coach matters is what happens after he leaves — Ben Johnson shows both halves","pos":"WR / RB","team":"TB","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Emeka Egbuka (TB, WR), the most likely player to soak up the work Evans left behind. Buy him at a mid‑tier receiver price and plan for boom‑or‑bust weeks…","stat":"+6% to +10% for the receiver, -4% to -8% for the back","url":"/play-caller-premium#call-2026-08-19-7","ppl":["emeka-egbuka","david-montgomery"]}];
+var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliott for four years, then turned Saquon Barkley into a 2,000‑yard back — now he calls the Saints’ plays","pos":"RB","team":"NO","date":"2026-08-22","side":"up","label":"Underpriced","who":"Travis Etienne Jr. (NO, RB). The room is still pricing him for the committee that resumes the day Kamara is healthy. Moore’s track record says the back who takes…","stat":"+8% to +13% above his committee price","url":"/play-caller-premium#call-2026-08-22-1","ppl":[]},{"id":"call-2026-08-22-2","title":"Shane Steichen’s offense manufactures quarterback rushing touchdowns, and Daniel Jones is the newest one to get them","pos":"QB","team":"IND","date":"2026-08-22","side":"up","label":"Underpriced","who":"Daniel Jones (IND, QB). The market is still pricing him off his passing line, the same way it always has. Steichen’s system adds rushing touchdowns to that price…","stat":"+9% to +14% above a passing‑only price","url":"/play-caller-premium#call-2026-08-22-2","ppl":["daniel-jones"]},{"id":"call-2026-08-22-3","title":"Defensive head coaches play it safe on offense, and Aaron Glenn’s Jets already look the part","pos":"RB","team":"NYJ","date":"2026-08-22","side":"up","label":"Underpriced","who":"Breece Hall (NYJ, RB). He is priced like a complementary back in an offense that still throws plenty. A staff built to shorten games leans on its lead back more…","stat":"+6% to +10% above his price","url":"/play-caller-premium#call-2026-08-22-3","ppl":["breece-hall"]},{"id":"call-2026-08-22-4","title":"Dan Campbell never stopped daring it on fourth down, and that always creates a market for a short‑yardage back","pos":"RB","team":"DET","date":"2026-08-22","side":"up","label":"Underpriced","who":"Isiah Pacheco (DET, RB). He is priced as pure injury insurance. Campbell’s fourth‑down aggressiveness turns him into a real source of rushing touchdowns even with…","stat":"+10% to +18% above a handcuff‑only price, most of it in touchdowns rather than yards","url":"/play-caller-premium#call-2026-08-22-4","ppl":["isiah-pacheco"]},{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J. Brown into a target monster once, on a worse offense than this one","pos":"WR","team":"NE","date":"2026-08-20","side":"up","label":"Underpriced","who":"A.J. Brown (NE, WR). The room is still pricing him off a down finish in Philadelphia. It has not priced in the coach who already made him the focal point once.","stat":"+8% to +14% above his current price","url":"/play-caller-premium#call-2026-08-20-1","ppl":["a-j-brown"]},{"id":"call-2026-08-20-2","title":"Mike McCarthy has not built a workhorse backfield in almost two decades, and Pittsburgh is about to prove it again","pos":"RB","team":"PIT","date":"2026-08-20","side":"down","label":"Overpriced","who":"Jaylen Warren (PIT, RB) and Rico Dowdle (PIT, RB). Neither is priced like a committee back yet, and both should be. Warren catches passes, which makes him the safer…","stat":"-8% to -14% below a workhorse price, for both backs","url":"/play-caller-premium#call-2026-08-20-2","ppl":["jaylen-warren","rico-dowdle"]},{"id":"call-2026-08-20-3","title":"Dave Canales has rebuilt one quarterback’s career already, and Bryce Young is the second","pos":"QB","team":"CAR","date":"2026-08-20","side":"up","label":"Underpriced","who":"Bryce Young (CAR, QB). He is still priced like a former bust, not like a passer whose own coach has already rebuilt a career from worse.","stat":"+10% to +16% above his price","url":"/play-caller-premium#call-2026-08-20-3","ppl":["bryce-young"]},{"id":"call-2026-08-20-4","title":"Liam Coen’s one year calling plays gave Baker Mayfield the best season of his career — now he has Trevor Lawrence","pos":"QB","team":"JAX","date":"2026-08-20","side":"up","label":"Underpriced","who":"Trevor Lawrence (JAX, QB). The market remembers four up‑and‑down years under three different play‑callers. It has not yet priced in the coach who just did this…","stat":"+8% to +13% above his price","url":"/play-caller-premium#call-2026-08-20-4","ppl":["trevor-lawrence"]},{"id":"call-2026-08-19-1","title":"The zone‑scheme coaching tree has been making running backs for thirty years, and Klint Kubiak just brought it to Las Vegas","pos":"RB","team":"LV","date":"2026-08-19","side":"up","label":"Underpriced","who":"Ashton Jeanty (LV, RB). The usual knock on a back in this scheme is that anyone could do the job. Jeanty flips that: a real first‑round talent inside the system…","stat":"+6% to +10% above his price, with committee risk as the stated downside","url":"/play-caller-premium#call-2026-08-19-1","ppl":["ashton-jeanty"]},{"id":"call-2026-08-19-2","title":"Andy Reid’s lead back keeps finishing better than his price, and this year that back is Kenneth Walker","pos":"RB","team":"KC","date":"2026-08-19","side":"up","label":"Underpriced","who":"Kenneth Walker III (KC, RB). He was already one of the biggest winners of any team change on the board. The coach is the second half of that argument, and the room…","stat":"+10% to +15% above his price","url":"/play-caller-premium#call-2026-08-19-2","ppl":["kenneth-walker-iii"]},{"id":"call-2026-08-19-3","title":"Todd Monken feeds the tight end everywhere he goes, and Cleveland just hired him","pos":"TE","team":"CLE","date":"2026-08-19","side":"up","label":"Underpriced","who":"Harold Fannin Jr. (CLE, TE). A projection of about 78 catches and 816 yards is No. 1 receiver treatment, not leftover tight‑end scraps. He is priced like the scraps.","stat":"+12% to +18% above his price","url":"/play-caller-premium#call-2026-08-19-3","ppl":["harold-fannin-jr"]},{"id":"call-2026-08-19-4","title":"John Harbaugh and Matt Nagy will play heavy in New York, and that costs the wide receivers targets","pos":"TE / WR","team":"NYG","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Isaiah Likely (NYG, TE), who lands in exactly the role his new coaches like to use. Down — the second‑tier receivers, Darius Slayton and Darnell Mooney, who…","stat":"+8% to +12% for the tight end, -10% to -15% for the second-tier receivers","url":"/play-caller-premium#call-2026-08-19-4","ppl":["isaiah-likely","darius-slayton","darnell-mooney","malik-nabers"]},{"id":"call-2026-08-19-5","title":"Some play-callers answer every coverage by throwing to the same man — and San Francisco is built that way now","pos":"WR","team":"SF","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Mike Evans (SF, WR), the man they throw to. Down — everyone behind him. The other 49ers receivers are best‑ball dart throws, not weekly starters, and how…","stat":"+5% to +9% for the No. 1 receiver; treat the No. 2 and No. 3 as format calls, not bargains","url":"/play-caller-premium#call-2026-08-19-5","ppl":["mike-evans"]},{"id":"call-2026-08-19-6","title":"Drew Petzing throws to his running backs, and Detroit handed him the best one in football","pos":"RB","team":"DET","date":"2026-08-19","side":"up","label":"Underpriced","who":"Jahmyr Gibbs (DET, RB). Watch your format here. This edge comes from catches, so it is worth much more in full PPR than in standard, and more again in leagues that…","stat":"+4% to +8% above his price in full PPR","url":"/play-caller-premium#call-2026-08-19-6","ppl":["jahmyr-gibbs"]},{"id":"call-2026-08-19-7","title":"The best proof a coach matters is what happens after he leaves — Ben Johnson shows both halves","pos":"WR / RB","team":"TB","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Emeka Egbuka (TB, WR), the most likely player to soak up the work Evans left behind. Buy him at a mid‑tier receiver price and plan for boom‑or‑bust weeks…","stat":"+6% to +10% for the receiver, -4% to -8% for the back","url":"/play-caller-premium#call-2026-08-19-7","ppl":["emeka-egbuka","david-montgomery"]}];
 (function(){
   function unlocked(d){
     if (d === '2026-07-04') return true;
@@ -908,6 +972,23 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     return (((slot + shift) % n) + n) % n;            // guard a negative clock
   }
   function msToNextSlot(){ return SLOT_MS - (Date.now() % SLOT_MS); }
+  // The GENERATED lead does not arrive when the slot opens. Its Routine runs on
+  // `58 */3 * * *`, so the run STARTS 58 minutes into the slot and takes about
+  // eight more to write and verify a story. Counting down to the slot boundary
+  // told a reader "next insight in 37m" when the story was an hour and a half
+  // away, every slot, for as long as the countdown has existed.
+  //
+  // Only the countdown TEXT depends on these being right. Whether the page goes
+  // looking for a new story is decided by comparing slots (below), so a run that
+  // is early, late, or held back entirely cannot make the page wrong.
+  var LEAD_CRON_MS = 58 * 60 * 1000;   // `58 */3 * * *`: when the run fires
+  var LEAD_WRITE_MS = 8 * 60 * 1000;   // and roughly how long it takes to land
+  function leadSlotOf(ms){ return Math.floor((+ms || 0) / SLOT_MS); }
+  function leadDueAt(now){ return leadSlotOf(now) * SLOT_MS + LEAD_CRON_MS + LEAD_WRITE_MS; }
+  function msToNextLead(){
+    var now = Date.now(), due = leadDueAt(now);
+    return (due > now ? due : due + SLOT_MS) - now;
+  }
   function fmtCountdown(ms){
     var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
     return h > 0 ? h + 'h ' + m + 'm' : m + 'm';
@@ -963,7 +1044,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     if (s && s.ppl && s.ppl.length) { host.innerHTML = ''; return; }
     var t = s && s.team && TEAM_ART[s.team];
     var name = t ? t[0] : 'League-wide';
-    var bg = t ? t[1] : '#0e1620';
+    var bg = t ? t[1] : '#101114';
     var accent = t ? t[2] : '#2dd4a3';
     var mark = t ? s.team : 'NFL';
     var ink = inkOn(bg);
@@ -1200,7 +1281,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     renderArt(s);
     document.getElementById('leadLink').setAttribute('href', s.url);
     document.getElementById('leadDate').textContent =
-      leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextSlot());
+      leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextLead());
 
     var also = document.getElementById('leadAlso');
     var recent = (d.recent || []).filter(function(x){ return x.slug; }).slice(0, 4);
@@ -1219,14 +1300,25 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     if (ctrls) ctrls.hidden = true;
 
     // Keep the countdown honest on a tab left open, and pick up the next run
-    // when the three-hour boundary passes.
+    // once it has actually published.
+    //
+    // The old version looked in the six minutes AFTER the slot boundary, which
+    // is an hour before the run fires: it always found the same story, then
+    // waited three hours to look again, so an open tab could sit two hours
+    // stale. Ask the question that actually decides it instead — is the story
+    // on screen from an older slot than the one we are in? — which is the same
+    // slot arithmetic the worker and the admin desk use.
+    //
+    // Bounded on purpose. A run is allowed to publish nothing when it has
+    // nothing worth publishing, and that must not leave every open tab polling
+    // every thirty seconds for the rest of the slot.
+    var looks = 0;
     tick = setInterval(function(){
-      var left = msToNextSlot();
+      var now = Date.now();
       document.getElementById('leadDate').textContent =
-        leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(left);
-      // A run publishes a few minutes past the boundary, so look again once the
-      // new slot has had time to land rather than the instant it opens.
-      if (left > SLOT_MS - 360000) loadGeneratedLead();
+        leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextLead());
+      var stale = leadSlotOf(s.createdAt) < leadSlotOf(now);
+      if (stale && now >= leadDueAt(now) && looks < 20) { looks++; loadGeneratedLead(); }
     }, 30000);
   }
   // The desk publishes on a UTC clock, but nobody drafting reads one. Stamp the
@@ -1871,7 +1963,7 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   // ══════════════════ The Build: the solved roster ══════════════════
   // Every number here comes from tools/build-front-analysis.mjs, which reads the
   // app's own valuation engine and exact lineup solver. Nothing is hand-written.
-  var POS_INK = { QB:'#f5b800', RB:'#2dd4a3', WR:'#5b9bff', TE:'#a78bfa', K:'#aab4bf', DEF:'#aab4bf' };
+  var POS_INK = { QB:'#a8760a', RB:'#0b8f6a', WR:'#1f66c2', TE:'#6f45c4', K:'#8b939c', DEF:'#8b939c' };
   var BENCH_INK = '#c5ccd4';
   function shortName(n, pos){
     var w = String(n).split(/\s+/).filter(Boolean);
@@ -2052,32 +2144,29 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
     }
   }
 
+  // ══════════════════ ribbon overflow affordance ══════════════════
+  // The section ribbon scrolls sideways when its links do not fit. That is
+  // fine on a phone and was invisible on a desktop: the last link was simply
+  // clipped, with nothing to say the row could move. Paint the fade only when
+  // there is more to the right, and drop it at the end of the scroll, so the
+  // cue always means something.
+  var ribbon = document.querySelector('.ribbon');
+  var ribWrap = ribbon && ribbon.querySelector('.wrap');
+  if (ribWrap) {
+    var syncRibbon = function(){
+      var more = ribWrap.scrollWidth - ribWrap.clientWidth - ribWrap.scrollLeft;
+      ribbon.classList.toggle('is-scrollable', more > 4);
+    };
+    ribWrap.addEventListener('scroll', syncRibbon, { passive: true });
+    window.addEventListener('resize', syncRibbon);
+    syncRibbon();
+  }
+
   // Last, once every block above has registered its painter: put the whole page
   // into the reader's edition. On auction this repaints what is already there,
   // which is the cheapest way to be sure the two paths agree.
   applyEdition();
 
-})();
-</script>
-<script>
-/* Ribbon scroll affordance: flag which directions still have content so the edge
-   fades can show. Runs on load, scroll and resize; passive listeners so it never
-   blocks the scroll itself. */
-(function(){
-  var rib=document.querySelector('.ribbon'); if(!rib) return;
-  var w=rib.querySelector('.wrap'); if(!w) return;
-  function sync(){
-    var max=w.scrollWidth-w.clientWidth;
-    rib.setAttribute('data-more-l', w.scrollLeft>2 ? '1' : '0');
-    rib.setAttribute('data-more-r', max>2 && w.scrollLeft<max-2 ? '1' : '0');
-  }
-  w.addEventListener('scroll',sync,{passive:true});
-  addEventListener('resize',sync,{passive:true});
-  sync();
-  /* Keyboard focus inside a scroller must bring the focused link into view. */
-  w.addEventListener('focusin',function(e){
-    if(e.target&&e.target.scrollIntoView) e.target.scrollIntoView({block:'nearest',inline:'nearest'});
-  });
 })();
 </script>
 </body>

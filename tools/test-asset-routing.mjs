@@ -134,6 +134,30 @@ console.log('\nthe shared stylesheet and the logo are served as-is');
   }
 }
 
+// Every local asset a page points at is actually on disk.
+console.log('\nno page references an asset that does not exist');
+{
+  // Renaming tuna.png to tuna.webp and deleting the original left 91 pages
+  // pointing at a file that was no longer there, and nothing noticed: the pages
+  // rendered, every route resolved, every suite passed, and the only symptom was
+  // a broken-image glyph where the logo goes. It came back a second time when a
+  // merge took the other side of those 91 files. A missing asset is cheap to
+  // assert and invisible to every other check here.
+  const pages = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html'));
+  const missing = new Map();
+  for (const p of pages) {
+    const html = fs.readFileSync(path.join(ROOT, p), 'utf8');
+    for (const m of html.matchAll(/(?:href|src)="(\/[^"?#]+\.(?:png|jpe?g|webp|avif|svg|css|js|ico|woff2?))"/g)) {
+      const rel = m[1].replace(/^\//, '');
+      if (fs.existsSync(path.join(ROOT, rel))) continue;
+      if (!missing.has(m[1])) missing.set(m[1], []);
+      missing.get(m[1]).push(p);
+    }
+  }
+  const report = [...missing].map(([a, ps]) => `${a} (${ps.length} page(s), e.g. ${ps[0]})`);
+  ok('every local asset a page points at exists on disk', missing.size === 0, report.join('; '));
+}
+
 // The bug as it shipped, so this test is known to be able to see it.
 console.log('\nthe model reproduces the bug it was written for');
 {

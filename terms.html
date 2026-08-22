@@ -17,10 +17,17 @@
 <title>Terms of Service | Iron Tuna</title>
 <meta name="description" content="Iron Tuna Terms of Service."/>
 <link rel="canonical" href="https://irontuna.com/terms"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/site.css">
 <style>
-@media(max-width:640px){}
+/* Mobile masthead. The links used to wrap into two and three ragged rows that
+   grew the sticky header to a third of the screen; now they are one line that
+   scrolls sideways under a pinned CTA, so the header is always 52px and the
+   button never scrolls out of reach. The link before the CTA points at the
+   same URL as the CTA on every page that has one, so it is the one that gives
+   way for the width. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .brand-fish{height:36px;width:auto;display:block}
 .brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#cdd8de}
 h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
@@ -37,9 +44,6 @@ footer a{color:var(--sec);margin-right:16px}
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.webp" alt=""/><span class="brand-word">IRON TUNA</span></a>
   <!--chrome:nav-->
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
-      <span class="nav-toggle-bars"><span></span></span>Menu
-    </button>
     <nav class="nav" id="sitenav" aria-label="Main">
       <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
@@ -47,8 +51,11 @@ footer a{color:var(--sec);margin-right:16px}
       <a href="/analyst-desk">Analyst Desk</a>
       <a href="/faq">FAQ</a>
       <a href="https://irontuna.com/">Draft Day Mode</a>
-      <a class="cta" href="https://irontuna.com/">Free sheet</a>
     </nav>
+    <a class="cta" href="https://irontuna.com/">Free sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
     <!--/chrome:nav-->
 </div></header>
 

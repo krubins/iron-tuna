@@ -27,7 +27,14 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is the best best-ball draft strategy?","acceptedAnswer":{"@type":"Answer","text":"Draft for ceiling rather than floor, because best ball auto-starts your highest weekly scores and spike weeks win. Stack your quarterback with his pass-catchers so good games compound, build a deep bench at the volatile positions, take quarterbacks and tight ends later in volume, and weight your roster toward players with favorable championship-week (Weeks 15-17) schedules."}},{"@type":"Question","name":"How many of each position should you draft in best ball?","acceptedAnswer":{"@type":"Answer","text":"A common 18-20 round build is roughly 5-7 wide receivers, 5-6 running backs, 2-3 quarterbacks, and 2-3 tight ends, tilted toward receiver and running back where weekly spikes and injuries create the most upside. Take quarterbacks and tight ends in volume late rather than spending early picks on them in one-QB formats."}},{"@type":"Question","name":"Should you stack in best ball?","acceptedAnswer":{"@type":"Answer","text":"Yes. Stacking a quarterback with one or two of his own pass-catchers is the single biggest edge in best ball. When that offense has a big game, two or three of your players spike in the same week, which is exactly the correlated ceiling that wins best ball matchups and tournaments."}}]}</script>
 <link rel="stylesheet" href="/site.css">
 <style>
-@media(max-width:640px){}
+/* Mobile masthead. The links used to wrap into two and three ragged rows that
+   grew the sticky header to a third of the screen; now they are one line that
+   scrolls sideways under a pinned CTA, so the header is always 52px and the
+   button never scrolls out of reach. The link before the CTA points at the
+   same URL as the CTA on every page that has one, so it is the one that gives
+   way for the width. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 .lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
@@ -53,9 +60,6 @@ p{color:var(--sec);margin:0 0 16px}
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><b style="color:var(--teal)">IRON</b> TUNA</a>
   <!--chrome:nav-->
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
-      <span class="nav-toggle-bars"><span></span></span>Menu
-    </button>
     <nav class="nav" id="sitenav" aria-label="Main">
       <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
@@ -63,8 +67,11 @@ p{color:var(--sec);margin:0 0 16px}
       <a href="/analyst-desk">Analyst Desk</a>
       <a href="/faq">FAQ</a>
       <a href="https://irontuna.com/bestball">Draft Day Mode</a>
-      <a class="cta" href="https://irontuna.com/bestball">Free sheet</a>
     </nav>
+    <a class="cta" href="https://irontuna.com/bestball">Free sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">

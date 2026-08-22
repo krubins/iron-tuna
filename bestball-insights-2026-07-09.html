@@ -27,7 +27,14 @@
 <link rel="stylesheet" href="/site.css">
 <style>
 body{overflow-x:hidden}
-@media(max-width:640px){}
+/* Mobile masthead. The links used to wrap into two and three ragged rows that
+   grew the sticky header to a third of the screen; now they are one line that
+   scrolls sideways under a pinned CTA, so the header is always 52px and the
+   button never scrolls out of reach. The link before the CTA points at the
+   same URL as the CTA on every page that has one, so it is the one that gives
+   way for the width. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 .lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
@@ -190,15 +197,6 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 .effect{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;color:var(--gold);margin:10px 0 12px}
 .fmt{font-size:14.5px;color:var(--sec);padding:9px 12px;border-left:3px solid var(--teal);background:var(--elev);border-radius:0 8px 8px 0;margin:7px 0}
 .fmt b{color:var(--text);letter-spacing:.04em}
-
-/* Visible keyboard focus (WCAG 2.4.7). Gold reads >=9:1 on every surface in this palette.
-   Listed per element so this beats the `outline:none` in the input rules above. */
-a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
-
-/* The dropdown is centred on its trigger, which sits ~53px from the left edge on a
-   phone — centring pushed the menu to left:-13px, off the screen. Below 560px anchor
-   it to the trigger instead and cap it to the viewport. */
-@media (max-width:560px){.nav-dd .nav-dd-menu{left:0;transform:none;max-width:calc(100vw - 48px)}}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"Article","headline":"Best Ball Insights: July 9, 2026","description":"Best Ball Insights for July 9, 2026: Drake Maye is the best elite-QB value; New England became a classic year-three quarterback breakout; De’Von Achane is being supported almost entirely by talent r…","url":"https://irontuna.com/bestball-insights-2026-07-09","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/bestball-insights-2026-07-09"},"image":"https://irontuna.com/og.png","datePublished":"2026-07-09","dateModified":"2026-07-09","articleSection":"Insights","inLanguage":"en-US","isAccessibleForFree":true,"author":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"Insights","item":"https://irontuna.com/insights"},{"@type":"ListItem","position":3,"name":"Best Ball Insights: July 9, 2026"}]}]}</script>
@@ -208,9 +206,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <!--chrome:nav-->
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
-      <span class="nav-toggle-bars"><span></span></span>Menu
-    </button>
     <nav class="nav" id="sitenav" aria-label="Main">
       <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights" aria-current="page">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
@@ -218,8 +213,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       <a href="/analyst-desk">Analyst Desk</a>
       <a href="/faq">FAQ</a>
       <a href="https://irontuna.com/bestball">Draft Day Mode</a>
-      <a class="cta" href="https://irontuna.com/bestball">Free sheet</a>
     </nav>
+    <a class="cta" href="https://irontuna.com/bestball">Free sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
     <!--/chrome:nav-->
 </div></header>
 

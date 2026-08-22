@@ -27,7 +27,14 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is the best snake draft strategy?","acceptedAnswer":{"@type":"Answer","text":"Draft by value over replacement, not by name. Think in tiers and take the last good player before a tier cliff, use ADP to judge whether a player will survive to your next pick (so you do not reach for someone who would be there anyway), and stay flexible on position until late, when you draft for need."}},{"@type":"Question","name":"When should I draft a quarterback in a snake draft?","acceptedAnswer":{"@type":"Answer","text":"In standard one-QB leagues, wait. The drop-off from the QB1 to the QB12 is small, so you gain more by loading up on running backs and receivers early and taking a quarterback in the middle rounds. In Superflex or two-QB leagues, quarterbacks are scarce and should go much earlier."}},{"@type":"Question","name":"What is a tier cliff?","acceptedAnswer":{"@type":"Answer","text":"A tier cliff is the steep drop in value between one group of players and the next. The gap between the last startable running back in a tier and the first one in the tier below is far bigger than the one-spot gap in raw rank, so drafting the last player before a cliff is worth reaching slightly, while a player at the top of a deep tier can wait."}}]}</script>
 <link rel="stylesheet" href="/site.css">
 <style>
-@media(max-width:640px){}
+/* Mobile masthead. The links used to wrap into two and three ragged rows that
+   grew the sticky header to a third of the screen; now they are one line that
+   scrolls sideways under a pinned CTA, so the header is always 52px and the
+   button never scrolls out of reach. The link before the CTA points at the
+   same URL as the CTA on every page that has one, so it is the one that gives
+   way for the width. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 .lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
@@ -53,9 +60,6 @@ p{color:var(--sec);margin:0 0 16px}
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><b style="color:var(--teal)">IRON</b> TUNA</a>
   <!--chrome:nav-->
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
-      <span class="nav-toggle-bars"><span></span></span>Menu
-    </button>
     <nav class="nav" id="sitenav" aria-label="Main">
       <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
@@ -63,8 +67,11 @@ p{color:var(--sec);margin:0 0 16px}
       <a href="/analyst-desk">Analyst Desk</a>
       <a href="/faq">FAQ</a>
       <a href="https://irontuna.com/snakedraft">Draft Day Mode</a>
-      <a class="cta" href="https://irontuna.com/snakedraft">Free sheet</a>
     </nav>
+    <a class="cta" href="https://irontuna.com/snakedraft">Free sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">
