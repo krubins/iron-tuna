@@ -140,5 +140,37 @@ console.log('\nthe chrome elements are actually closed');
   ok('every header, nav, footer and main is closed', bad.length === 0, bad.slice(0, 6).join('; '));
 }
 
+console.log('\nthe site is one theme, not three');
+{
+  // front.html was the only light page on the site: a white body against the
+  // dark content pages and the dark app. Converting it meant remapping ~60
+  // literals, and the bulk pass got seven of them wrong in the same way —
+  // light greys that were TEXT on the dark masthead were read as hairlines and
+  // darkened, dropping the masthead nav to 1.58:1. Assert the surfaces so a
+  // future edit cannot quietly reintroduce a light page.
+  const front = read('front.html');
+  const root = (front.match(/:root\{([^}]*)\}/) || [, ''])[1];
+  const tok = (n) => (root.match(new RegExp('--' + n + ':(#[0-9a-fA-F]{3,6})')) || [])[1] || '';
+  const lum = (h) => {
+    h = h.replace('#', '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    const v = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+      .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  };
+  for (const [name, wantDark] of [['bg', true], ['card', true], ['mast', true], ['ink', false], ['ink-2', false]]) {
+    const v = tok(name);
+    const isDark = v && lum(v) < 0.2;
+    ok(`front.html --${name} is a ${wantDark ? 'dark surface' : 'light text colour'} (${v})`,
+      Boolean(v) && isDark === wantDark, v || 'token missing');
+  }
+  // The position colours are drawn from JS onto those dark cards, so they live
+  // outside the stylesheet and the CSS pass could not reach them. WR was 3.09:1
+  // and TE 2.75:1 until they were lifted.
+  const posInk = (front.match(/var POS_INK = \{([^}]*)\}/) || [, ''])[1];
+  const dim = [...posInk.matchAll(/#[0-9a-fA-F]{6}/g)].map((m) => m[0]).filter((h) => lum(h) < 0.18);
+  ok('every POS_INK colour is light enough for a dark card', dim.length === 0, dim.join(', '));
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
