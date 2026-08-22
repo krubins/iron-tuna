@@ -260,6 +260,17 @@ console.log('\nthe page itself');
   ok('the index does not lay out full call cards', !page.includes('function callHtml'));
   ok('each entry previews who it argues with instead', page.includes('ecalls'));
   ok('every entry links to its standalone story', page.includes('Read the full piece'));
+  // The index reads white like the story it links into. Both palettes are
+  // pinned here rather than in one place, because they live in two files and
+  // nothing but a test keeps them in step.
+  const iroot = (page.match(/:root\{[^}]*\}/) || [''])[0];
+  ok('the index is white too', /--bg:\s*#fff/i.test(iroot), iroot.slice(0, 90));
+  ok('the index accent is the white-safe teal', /--teal:\s*#0d7a5f/i.test(iroot));
+  // #f5b800 stays the button fill, but as a numeral on white it is unreadable,
+  // so the record table's Partly column uses an ink-weight gold instead.
+  ok('the Partly column is not button gold', page.includes('.n-partial{color:var(--goldink)'));
+  ok('no dark-theme accent survives in either page',
+     !page.includes('rgba(45,212,163') && !fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8').includes('rgba(45,212,163'));
 }
 
 console.log('\nthe story page a reader actually lands on');
