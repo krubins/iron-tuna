@@ -15,17 +15,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-<title>Auction Watch: July 1, 2026 | Iron Tuna</title>
-<meta name="description" content="Auction Watch for July 1, 2026: temper bids on Travis Etienne in New Orleans, grab Alvin Kamara late, pay committee prices for the Steelers backfield, stash Jonathon Brooks in Carolina, and budget premium money for Drake Maye.">
-<link rel="canonical" href="https://irontuna.com/auction-watch-2026-07-01">
-<meta property="og:title" content="Auction Watch: July 1, 2026 | Iron Tuna">
-<meta property="og:description" content="Auction Watch for July 1, 2026: temper bids on Travis Etienne in New Orleans, grab Alvin Kamara late, pay committee prices for the Steelers backfield, stash Jonathon Brooks in Carolina, and budget premium money for Drake Maye.">
-<meta property="og:type" content="article">
-<meta property="og:url" content="https://irontuna.com/auction-watch-2026-07-01">
+<title>Iron Tuna In-Season: The FAAB Advisor | Iron Tuna</title>
+<meta name="description" content="The auction does not end on draft night. Iron Tuna's in-season tools price every waiver claim in FAAB dollars: the going rate, what he is actually worth, and your max bid. Free. Leave your email for launch notice.">
+<link rel="canonical" href="https://irontuna.com/post-draft">
+<meta property="og:title" content="Iron Tuna In-Season: The FAAB Advisor">
+<meta property="og:description" content="FAAB is an auction. Iron Tuna prices every waiver claim in your league's dollars — going rate, true value, your max bid. Free when it opens.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/post-draft">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="robots" content="index,follow">
 <link rel="stylesheet" href="/site.css">
 <style>
+body{overflow-x:hidden}
 /* Mobile masthead. The links used to wrap into two and three ragged rows that
    grew the sticky header to a third of the screen; now they are one line that
    scrolls sideways under a pinned CTA, so the header is always 52px and the
@@ -60,11 +62,31 @@ td.you{color:var(--goldink);font-weight:700}
 .related a{background:var(--elev);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:14px;color:var(--sec)}
 .related a:hover{border-color:var(--teal);color:var(--text);text-decoration:none}
 @media(max-width:640px){.grid{grid-template-columns:1fr}}
+
+/* ── the in-season shelf ─────────────────────────────────────────────────── */
+.pd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px 0 8px}
+.pd-card{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:var(--panel);position:relative}
+.pd-card.lead{border-color:var(--teal);background:linear-gradient(180deg,rgba(14,124,99,.06),rgba(14,124,99,.015) 60%),var(--panel)}
+.pd-card h3{font-size:16.5px;margin:0 0 6px;letter-spacing:.01em}
+.pd-card p{font-size:13.5px;color:var(--sec);margin:0}
+.pd-tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;padding:2px 8px;border-radius:4px;background:var(--elev);color:var(--muted);border:1px solid var(--line);margin-bottom:9px}
+.pd-card.lead .pd-tag{background:rgba(14,124,99,.10);color:var(--teal);border-color:rgba(14,124,99,.30)}
+.pd-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0 10px}
+.pd-form .em{flex:1 1 260px;min-width:0;padding:13px 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--text);font-size:15px;font-family:inherit}
+.pd-form .em:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,99,.12)}
+.pd-note{font-size:13px;color:var(--muted);margin:0}
+.pd-note.err{color:var(--danger)}
+.pd-done{border:1px solid var(--teal);background:rgba(14,124,99,.07);border-radius:12px;padding:18px 20px}
+.pd-done h3{margin:0 0 6px;font-size:17px}
+.pd-done p{margin:0;font-size:14px;color:var(--sec)}
+.pd-when{font-size:13px;color:var(--muted);margin-top:6px}
+.pd-how{margin:26px 0 0;padding-left:0;list-style:none}
+.pd-how li{position:relative;padding-left:26px;margin-bottom:12px;font-size:14.5px;color:var(--sec);line-height:1.55}
+.pd-how li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:50%;background:var(--teal)}
+.pd-how b{color:var(--text)}
 </style>
-
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"Article","headline":"Auction Watch: July 1, 2026","description":"Auction Watch for July 1, 2026: temper bids on Travis Etienne in New Orleans, grab Alvin Kamara late, pay committee prices for the Steelers backfield, stash Jonathon Brooks in Carolina, and budget premium money for Drake Maye.","url":"https://irontuna.com/auction-watch-2026-07-01","mainEntityOfPage":{"@type":"WebPage","@id":"https://irontuna.com/auction-watch-2026-07-01"},"image":"https://irontuna.com/og.png","datePublished":"2026-07-01","dateModified":"2026-07-01","articleSection":"Camp Reports","inLanguage":"en-US","isAccessibleForFree":true,"author":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}},"publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Iron Tuna","item":"https://irontuna.com/"},{"@type":"ListItem","position":2,"name":"Camp Reports","item":"https://irontuna.com/#camp"},{"@type":"ListItem","position":3,"name":"Auction Watch: July 1, 2026"}]}]}</script>
 </head>
-
+<body>
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0e7c63" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
@@ -75,7 +97,7 @@ td.you{color:var(--goldink);font-weight:700}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/analyst-desk">Columns</a>
-      <a href="/post-draft">In-Season</a>
+      <a href="/post-draft" aria-current="page">In-Season</a>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
@@ -85,37 +107,54 @@ td.you{color:var(--goldink);font-weight:700}
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">
-<div class="eyebrow">Auction Watch</div>
-<h1>Auction Watch: July 1, 2026</h1>
-<p class="lede">Today's auction-relevant signals, each with the player named and what it means for your bids. Verified from reputable reporting; values are projections, not guarantees.</p>
-<div class="cta-row"><a class="btn" href="https://irontuna.com/">Build My Free Auction Sheet</a><a class="btn alt" href="/guides">All guides</a></div>
-<h2>Do not pay workhorse money for Travis Etienne</h2>
-<p>New Orleans handed Travis Etienne a lucrative four year deal in free agency, and drafters are paying a top 15 running back price. But Alvin Kamara remains on the roster, and head coach Kellen Moore says he can envision ways to use both backs. Until the workload split clears up, bid Etienne as a strong RB2 rather than a bell cow, and let someone else pay the full three down price.</p>
-<h2>Alvin Kamara is an endgame value</h2>
-<p>Kamara has slid several rounds in drafts since the Etienne signing, yet nothing suggests he is going away. He reported to OTAs, publicly welcomed the Etienne addition, and Moore plans to keep him in the rotation. A veteran pass catcher attached to a real role for a few dollars is exactly the kind of late buy that wins auctions. Target him in the endgame.</p>
-<h2>Pay committee prices in Pittsburgh</h2>
-<p>The Steelers signed Rico Dowdle away from Carolina, and the plan under Mike McCarthy is a true timeshare with Jaylen Warren: Dowdle leaning toward early down and goal line work, Warren handling passing downs, and the staff keeping two fresh backs on the field. Neither deserves lead back money, so bid both as mid priced flex options. Fade Kaleb Johnson entirely; he sits third on the depth chart after a quiet rookie year.</p>
-<h2>Jonathon Brooks is the cheap upside stash</h2>
-<p>Jonathon Brooks says he is fully cleared after his second ACL tear, and Rico Dowdle leaving Carolina opens the RB2 job behind Chuba Hubbard for Brooks and Trevor Etienne. Reports from offseason work have been encouraging. He is a one to three dollar stash whose price cannot fully reflect his upside if the knee holds, which makes him a classic post hype auction target.</p>
-<h2>Budget premium money for Drake Maye</h2>
-<p>Drake Maye led the NFL in completion rate and yards per attempt last season, and New England has now added A.J. Brown as his alpha target. Analysts call Maye a top five fantasy quarterback with elite upside heading into 2026. He will not come at a discount in auctions, so budget premium quarterback money if you want him rather than hoping he slips through the room.</p>
-<div class="cta-band"><h2>Price these moves into your board</h2><p>Build a free auction board calibrated to your exact league, then run it live on draft night with values that update as players come off the board.</p><a class="btn" href="https://irontuna.com/">Build My Free Auction Sheet</a></div>
-<div class="cta-band" id="it-insights-signup" style="margin-top:20px">
-<h2>Get these insights delivered</h2>
-<p>Fresh player signals every morning through draft season. Drop your email to get them in your inbox &mdash; add your cell number to also get the biggest moves by text.</p>
-<form id="itInsForm" onsubmit="return itInsSignup(event)" style="margin:0">
-<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-<input type="email" id="itInsEmail" required autocomplete="email" placeholder="you@email.com" style="flex:1 1 200px;min-width:0;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px">
-<input type="tel" id="itInsPhone" autocomplete="tel" placeholder="Cell phone (optional, for texts)" style="flex:1 1 200px;min-width:0;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px">
-<button type="submit" class="btn">Send me insights</button>
+<div class="art-head">
+<div class="eyebrow">After the draft</div>
+<h1 class="art-h1">Your season is still an auction</h1>
+<p class="lede">Every waiver claim in a FAAB league is a blind auction, run weekly, against the same twelve people you just drafted against. It is the one part of the fantasy season that is priced in dollars, and almost nobody prices it. That is what Iron Tuna is for.</p>
 </div>
-<p id="itInsMsg" role="status" style="margin:10px 0 0;font-size:14px;min-height:18px"></p>
-</form>
+
+<div class="card" id="pd-gate">
+  <p style="margin:0 0 4px;font-size:15px"><b>Coming soon.</b> Leave your email and we will tell you the day it opens &mdash; and it is free when it does.</p>
+  <div class="pd-form">
+    <input class="em" id="pd-email" type="email" placeholder="you@example.com" autocomplete="email" aria-label="Email address">
+    <button class="btn" id="pd-btn" type="button">Notify me &mdash; free access</button>
+  </div>
+  <p class="pd-note" id="pd-msg">No spam, no card. One email when it opens, then only during the season. Unsubscribe in one click.</p>
 </div>
-<script>
-function itInsSignup(e){e.preventDefault();var em=document.getElementById('itInsEmail').value.trim();var ph=document.getElementById('itInsPhone').value.trim();var m=document.getElementById('itInsMsg');if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){m.textContent='Please enter a valid email address.';m.style.color='#f87171';return false;}m.textContent='Signing you up…';m.style.color='var(--sec)';fetch('/api/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:em,phone:ph,source:'insights'})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){m.textContent=ph?'You’re in — insights by email, top moves by text.':'You’re in — insights are headed to your inbox.';m.style.color='var(--teal)';document.getElementById('itInsForm').reset();}else{m.textContent='Hmm, that didn’t go through. Please try again.';m.style.color='#f87171';}}).catch(function(){m.textContent='Network hiccup — please try again.';m.style.color='#f87171';});return false;}
-</script>
-<div class="eyebrow">More</div><div class="related"><a href="/guides">All guides</a><a href="/auction-draft-strategy">Auction draft strategy</a><a href="/dollar-endgame-handcuffs">The $1 endgame</a><a href="/fantasy-football-auction-values">All auction values</a></div>
+
+<h2>What opens</h2>
+<div class="pd-grid">
+  <div class="pd-card lead">
+    <span class="pd-tag">The flagship</span>
+    <h3>FAAB Advisor</h3>
+    <p>Three numbers on every free agent, the same three the cheat sheet gives you on draft night: the going rate, what he is actually worth to a roster, and <b>your</b> max bid given your holes and the budget you have left.</p>
+  </div>
+  <div class="pd-card">
+    <span class="pd-tag">Weekly</span>
+    <h3>Start / Sit</h3>
+    <p>Your lineup, scored against your league's own settings rather than a generic top 200 &mdash; with the week's scoring environment priced off the betting market, the way the draft values already are.</p>
+  </div>
+  <div class="pd-card">
+    <span class="pd-tag">Weekly</span>
+    <h3>Roster Audit</h3>
+    <p>What every player on your roster cost you at the auction, against what he has actually returned. The only honest way to find out whether your draft plan worked.</p>
+  </div>
+</div>
+
+<h2>Why FAAB first</h2>
+<p>Most in-season tools rank waiver adds. A ranking tells you who to want; it does not tell you what to pay, and in a FAAB league what you pay is the entire decision. Bid $1 under the winner and you get nothing at all. Bid 40% of your budget in Week 3 and you have handed the rest of the season away for one running back.</p>
+<ul class="pd-how">
+  <li><b>It reads your actual league.</b> Connect Sleeper and it knows who is rostered, who is free, what your starting lineup is missing, and exactly how much FAAB you and everyone else have left.</li>
+  <li><b>It prices in your league's dollars.</b> The same valuation engine behind your cheat sheet, run on the free-agent pool and scaled to the budget your league actually plays with &mdash; not a $100 default.</li>
+  <li><b>It reads the room, not a curve.</b> Every FAAB bid your league has already settled is public in the transaction log. What your leaguemates paid for the last four adds is a far better guide to the going rate than any national average.</li>
+  <li><b>It states its uncertainty.</b> A blind auction has no single right answer, so it gives you a range and says what it does not know, rather than a false-precision number.</li>
+</ul>
+
+<div class="cta-band">
+  <h2>Meanwhile, the draft is what matters</h2>
+  <p>Your auction is the biggest single decision of your fantasy season, and it is happening now. Build the sheet first.</p>
+  <div class="cta-row"><a class="btn" href="/auctiondraft?screen=cheat">Build My Free Auction Sheet</a><a class="btn alt" href="/guides">Auction strategy guides</a></div>
+</div>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -165,6 +204,59 @@ function itInsSignup(e){e.preventDefault();var em=document.getElementById('itIns
   </div>
   <!--/chrome:foot-->
 </div></footer>
+<script src="/it-league.js"></script>
+<script>
+(function () {
+  var KEY = 'it_pd_notified';
+  var gate = document.getElementById('pd-gate');
+  var msg = document.getElementById('pd-msg');
+  var btn = document.getElementById('pd-btn');
+  var input = document.getElementById('pd-email');
+  // Which locked page sent them here. The worker serves this gate in place of a
+  // closed tool WITHOUT redirecting, so location.pathname is still the tool the
+  // reader asked for — that is what gets recorded, so the launch email can lead
+  // with the thing they actually wanted.
+  var tool = (location.pathname.replace(/^\/+|\/+$/g, '') || 'post-draft');
+
+  function done(email) {
+    gate.innerHTML = '<div class="pd-done"><h3>You are on the list.</h3>'
+      + '<p>We will email <b>' + esc(email) + '</b> the day the in-season tools open, and your access is free.</p>'
+      + '<p class="pd-when">Nothing else until then.</p></div>';
+  }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+  try { var had = localStorage.getItem(KEY); if (had) done(had); } catch (e) {}
+
+  function submit() {
+    var email = (input.value || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      msg.textContent = 'That does not look like an email address.';
+      msg.className = 'pd-note err';
+      input.focus();
+      return;
+    }
+    btn.disabled = true;
+    msg.className = 'pd-note';
+    msg.textContent = 'Adding you\u2026';
+    fetch('/api/post-draft-notify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: email, tool: tool })
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) throw new Error((j && j.error) || 'failed');
+      try { localStorage.setItem(KEY, email); } catch (e) {}
+      try { if (typeof gtag === 'function') gtag('event', 'post_draft_notify', { tool: tool }); } catch (e) {}
+      done(email);
+    }).catch(function () {
+      btn.disabled = false;
+      msg.className = 'pd-note err';
+      msg.textContent = 'That did not go through. Try again in a moment.';
+    });
+  }
+  btn.addEventListener('click', submit);
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+})();
+</script>
 <!--chrome:navjs--><script>
 (function(){
   var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');

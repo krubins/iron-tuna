@@ -36,14 +36,30 @@ const s0 = src.indexOf(S);
 if (s0 < 0) { console.error('FAIL: could not locate the asset-rewrite block in _worker.js'); process.exit(1); }
 const block = src.slice(s0, src.indexOf(E, s0) + E.length);
 
+// The gated routes come out of the worker too, so adding a page to the section
+// without adding it here cannot leave it silently ungated.
+const pdLine = src.match(/const POST_DRAFT_PAGES = new Set\(\[([^\]]*)\]\)/);
+if (!pdLine) { console.error('FAIL: could not locate POST_DRAFT_PAGES in _worker.js'); process.exit(1); }
+const postDraftPages = pdLine[1].split(',').map(x => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+
 // The block builds `new Request(new URL(...).toString(), request)`. Only the URL is
 // read here, so a stub Request that keeps it is enough — and keeps this test honest
 // about evaluating the shipped source rather than a paraphrase of it.
-const rewrite = new Function('pathname', `
+// The block also reads the post-draft gate's three module-scope symbols. They
+// have to be supplied here or every ReferenceError they raise is swallowed by
+// the block's own `catch (e) {}` — which would leave this file silently passing
+// while testing nothing about the gate. `opts` drives the two states the gate
+// has: closed (the default, what a visitor gets) and open/preview.
+const rewrite = new Function('pathname', 'opts', `
   const ORIGIN = 'https://irontuna.com';
+  const o = opts || {};
   const url = new URL(ORIGIN + pathname);
-  const request = { url: url.toString() };
+  const request = { url: url.toString(), headers: { get: () => o.cookie || null } };
+  const env = {};
   function Request(u) { return { url: String(u) }; }
+  const POST_DRAFT_PAGES = new Set(${JSON.stringify([...postDraftPages])});
+  function POST_DRAFT_OPEN() { return !!o.open; }
+  function postDraftPreview() { return !!o.preview; }
   ${block}
   return new URL(__assetReq.url).pathname;
 `);
@@ -159,6 +175,37 @@ console.log('\nno page references an asset that does not exist');
 }
 
 // The bug as it shipped, so this test is known to be able to see it.
+console.log('\nthe post-draft section is closed by default');
+{
+  // The in-season tools are deployed but not open. The lock is here, in the
+  // worker, and not in the page: a static asset locked by its own JavaScript is
+  // a suggestion, because the HTML reaches the browser either way.
+  for (const route of postDraftPages) {
+    const closed = assetResolve(rewrite(route, {}));
+    ok(`${route} serves the waiting-list gate while closed`,
+       closed.status === 200 && closed.file === '/post-draft.html',
+       `${route} -> ${closed.file || closed.status}`);
+    // Serving it, not redirecting to it: the reader keeps the URL they clicked,
+    // so the page that opens there later is the one they were promised.
+    ok(`${route} keeps its own URL while closed`, rewrite(route, {}) !== route ? closed.status === 200 : true);
+    const open = assetResolve(rewrite(route, { open: true }));
+    ok(`${route} serves its own page once POST_DRAFT_OPEN is set`,
+       open.status === 200 && open.file === route + '.html',
+       `${route} -> ${open.file || open.status}`);
+    const prev = assetResolve(rewrite(route, { preview: true }));
+    ok(`${route} is reachable with the owner's preview key`,
+       prev.status === 200 && prev.file === route + '.html',
+       `${route} -> ${prev.file || prev.status}`);
+  }
+  // The gate page itself must never be gated, or the section is a closed loop.
+  const gate = assetResolve(rewrite('/post-draft', {}));
+  ok('/post-draft is always served', gate.status === 200 && gate.file === '/post-draft.html', String(gate.file));
+  // And the lock must not touch anything outside the section.
+  for (const r of ['/faq', '/guides', '/auction-insights', '/']) {
+    ok(`${r} is untouched by the gate`, rewrite(r, {}) === rewrite(r, { open: true }));
+  }
+}
+
 console.log('\nthe model reproduces the bug it was written for');
 {
   const buggy = new Function('pathname', `

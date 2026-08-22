@@ -46,46 +46,65 @@ const NAV_EXCLUDE = new Set(['lead.html', 'analyst-desk.html', 'play-caller-prem
 // One place to change what the site links to. `app` is filled in per page so a
 // best-ball guide sends you to the best-ball board, not the auction one.
 const APP = 'https://irontuna.com/';
-const APP_BY_FORMAT = { auction: APP, snake: APP + 'snakedraft', bestball: APP + 'bestball' };
+// Where a page's call to action sends the reader. Auction is the default and the
+// point of the site; a snake page keeps its own board, because snake is still a
+// supported format and handing a snake reader an auction sheet is no use to them.
+//
+// A best-ball page deliberately resolves to the AUCTION sheet rather than the
+// best-ball room: that line is retired (§27c), so there is no reason to keep
+// funnelling readers into it. The pages still serve, and their one button now
+// points at the thing the site actually sells.
+const APP_BY_FORMAT = {
+  auction: APP + 'auctiondraft?screen=cheat',
+  snake: APP + 'snakedraft',
+  bestball: APP + 'auctiondraft?screen=cheat',
+};
 
+// Auction first, and best ball is off every surface (§27c). The bestball-*
+// pages still SERVE at the URLs they were indexed at and stay in sitemap.xml —
+// they are simply no longer linked from anywhere, which is how a content line is
+// retired without breaking a URL or throwing away its ranking. Do not put them
+// back here without also putting them back in the sitemap and the front page.
 const NAV = [
+  { label: 'Auction Values', href: '/fantasy-football-auction-values' },
+  { label: 'Strategy', href: '/guides' },
   {
-    label: 'Insights', href: '/insights', children: [
+    label: 'Insights', href: '/auction-insights', children: [
       { label: 'Auction', href: '/auction-insights' },
       { label: 'Snake', href: '/snake-insights' },
-      { label: 'Best Ball', href: '/bestball-insights' },
       { label: 'Insight Vault', href: '/insights-vault' },
     ],
   },
   { label: 'The Pick', href: '/the-pick' },
-  { label: 'Guides', href: '/guides' },
-  { label: 'Analyst Desk', href: '/analyst-desk' },
+  { label: 'Columns', href: '/analyst-desk' },
+  { label: 'In-Season', href: '/post-draft' },
   { label: 'FAQ', href: '/faq' },
-  { label: 'Draft Day Mode', href: '{app}' },
-  { label: 'Free sheet', href: '{app}', cta: true },
+  { label: 'Free cheat sheet', href: '{app}', cta: true },
 ];
 
 const FOOT_COLS = [
   {
     h: 'Draft', links: [
-      { label: 'Draft Day Mode', href: '{app}' },
-      { label: 'Auction board', href: APP + 'auctiondraft' },
+      { label: 'Auction values', href: '/fantasy-football-auction-values' },
+      { label: 'Auction Manager', href: APP + 'auctiondraft?screen=board' },
+      { label: 'Superflex & 2QB', href: '/superflex-auction-values' },
+      { label: 'Salary cap & keepers', href: '/salary-cap-draft-tool' },
       { label: 'Snake board', href: APP + 'snakedraft' },
-      { label: 'Best ball board', href: APP + 'bestball' },
-      { label: 'Play-Caller Premium', href: '/play-caller-premium' },
     ],
   },
   {
     h: 'Read', links: [
-      { label: 'Insights', href: '/insights' },
+      { label: 'Auction insights', href: '/auction-insights' },
       { label: 'The Pick', href: '/the-pick' },
       { label: 'Guides', href: '/guides' },
       { label: 'Analyst Desk', href: '/analyst-desk' },
+      { label: 'Play-Caller Premium', href: '/play-caller-premium' },
       { label: 'Insight Vault', href: '/insights-vault' },
     ],
   },
   {
     h: 'Company', links: [
+      { label: 'In-Season (soon)', href: '/post-draft' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Support', href: '/support' },
       { label: 'Creators & affiliates', href: '/creators' },
@@ -231,11 +250,20 @@ function putCss(html) {
 // missed stays harmless — site.css is linked first, so a leftover inline copy
 // just re-states the same value — but leaving them in is how the drift started.
 const OWNED = [
+  // The dark root, and the light one that replaced it in the auction-first pass.
+  // Both spellings are matched because the repo has carried each in turn, and a
+  // page that kept an inline :root would silently override site.css — the link
+  // sits BEFORE the page's own <style>, so the inline copy wins. That is fine as
+  // a deliberate override (front.html does it) and a bug everywhere else.
   /:root\{--bg:#0b1117[^}]*\}\n?/g,
+  /:root\{--bg:#ffffff[^}]*\}\n?/g,
   /\*\{box-sizing:border-box\}\n?/g,
   /html\{scroll-behavior:smooth\}\n?/g,
   [/body\{margin:0;background:radial-gradient\(1200px 600px at 50% -10%[^}]*\}\n?/g, ''],
   [/body\{margin:0;overflow-x:hidden;background:radial-gradient\(1200px 600px at 50% -10%[^}]*\}\n?/g,
+   'body{overflow-x:hidden}\n'],
+  [/body\{margin:0;background:radial-gradient\(1200px 600px at 50% -10%,rgba\(14, ?124, ?99[^}]*\}\n?/g, ''],
+  [/body\{margin:0;overflow-x:hidden;background:radial-gradient\(1200px 600px at 50% -10%,rgba\(14, ?124, ?99[^}]*\}\n?/g,
    'body{overflow-x:hidden}\n'],
   /a\{color:var\(--teal\);text-decoration:none\}\n?/g,
   /a:hover\{text-decoration:underline\}\n?/g,

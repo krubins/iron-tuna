@@ -34,14 +34,15 @@
    way for the width. */
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
+.nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
 h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 .lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
 p{color:var(--sec);margin:0 0 16px}
 .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
-.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(245,184,0,.28)}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(191,145,0,.28)}
 .btn:hover{filter:brightness(1.06);text-decoration:none}
-.btn.alt{background:rgba(45,212,163,.14);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
+.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
 .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -52,8 +53,8 @@ ul.clean li:before{content:"";position:absolute;left:0;top:14px;width:10px;heigh
 table{width:100%;border-collapse:collapse;font-size:15px;margin:16px 0}
 th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
 th{color:var(--sec);font-size:14px}
-td.you{color:var(--gold);font-weight:700}
-.cta-band{background:linear-gradient(180deg,rgba(45,212,163,.07),rgba(45,212,163,.02));border:1px solid rgba(45,212,163,.3);border-radius:16px;padding:28px;text-align:center;margin:40px 0}
+td.you{color:var(--goldink);font-weight:700}
+.cta-band{background:linear-gradient(180deg,rgba(14,124,99,.07),rgba(14,124,99,.02));border:1px solid rgba(14,124,99,.3);border-radius:16px;padding:28px;text-align:center;margin:40px 0}
 .cta-band h2{margin-top:0}
 .related{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
 .related a{background:var(--elev);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:14px;color:var(--sec)}
@@ -66,17 +67,18 @@ td.you{color:var(--gold);font-weight:700}
 
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><div class="wrap">
-  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0e7c63" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
-      <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
-      <a href="/guides">Guides</a>
-      <a href="/analyst-desk">Analyst Desk</a>
+      <a href="/analyst-desk">Columns</a>
+      <a href="/post-draft">In-Season</a>
       <a href="/faq">FAQ</a>
-      <a href="https://irontuna.com/">Draft Day Mode</a>
     </nav>
-    <a class="cta" href="https://irontuna.com/">Free sheet</a>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
@@ -119,26 +121,28 @@ function itInsSignup(e){e.preventDefault();var em=document.getElementById('itIns
     <div class="foot-col">
      <h2>Draft</h2>
      <ul>
-      <li><a href="https://irontuna.com/">Draft Day Mode</a></li>
-      <li><a href="https://irontuna.com/auctiondraft">Auction board</a></li>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
       <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
-      <li><a href="https://irontuna.com/bestball">Best ball board</a></li>
-      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Read</h2>
      <ul>
-      <li><a href="/insights">Insights</a></li>
+      <li><a href="/auction-insights">Auction insights</a></li>
       <li><a href="/the-pick">The Pick</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/analyst-desk">Analyst Desk</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Company</h2>
      <ul>
+      <li><a href="/post-draft">In-Season (soon)</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -155,7 +159,7 @@ function itInsSignup(e){e.preventDefault();var em=document.getElementById('itIns
   <div class="foot-note">
    <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.</p>
    <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
-    <a href="https://irontuna.com/">Build your free sheet</a></p>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>

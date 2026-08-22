@@ -281,9 +281,12 @@ jobs:
       - name: Comping access and mailing the link
         run: node tools/test-admin-comp.mjs
 
-      # NOT run here: tools/test-position-lens.mjs and tools/test-you-column.mjs.
-      # Both drive real Chromium and self-skip without playwright-core plus a
+      # NOT run here: tools/test-position-lens.mjs, tools/test-you-column.mjs,
+      # tools/test-market-anchors.mjs, tools/test-vegas-slider.mjs,
+      # tools/test-qb-curve.mjs and tools/test-faab.mjs.
+      # All drive real Chromium and self-skip without playwright-core plus a
       # browser binary. Adding them without installing those would give a green
       # step that never actually ran, which is worse than not claiming coverage.
       # Run them locally (CHROMIUM_PATH=... node tools/test-position-lens.mjs)
-      # when touching the ribbon's edition switch, Position Intel or the lead.
+      # when touching the ribbon's edition switch, Position Intel, the lead, the
+      # cheat-sheet columns or the FAAB advisor's bid maths.

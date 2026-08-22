@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<title>FAAB Advisor: What to Bid on Every Waiver Claim | Iron Tuna</title>
+<meta name="description" content="FAAB is a blind auction. Iron Tuna prices every free agent in your league's dollars: the going rate, what he is worth to your roster, and your max bid \u2014 using your leaguemates' actual remaining budgets.">
+<link rel="canonical" href="https://irontuna.com/faab">
+<meta property="og:title" content="FAAB Advisor: What to Bid on Every Waiver Claim">
+<meta property="og:description" content="Connect Sleeper and get three numbers on every free agent: the going rate, what he is worth, and your max bid.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/faab">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<style>
+body{overflow-x:hidden}
+/* Mobile masthead. The links used to wrap into two and three ragged rows that
+   grew the sticky header to a third of the screen; now they are one line that
+   scrolls sideways under a pinned CTA, so the header is always 52px and the
+   button never scrolls out of reach. The link before the CTA points at the
+   same URL as the CTA on every page that has one, so it is the one that gives
+   way for the width. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
+.nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
+h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
+.lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
+p{color:var(--sec);margin:0 0 16px}
+.eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(191,145,0,.28)}
+.btn:hover{filter:brightness(1.06);text-decoration:none}
+.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
+.cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid .card{margin:0}
+ul.clean{list-style:none;padding:0;margin:14px 0}
+ul.clean li{padding:8px 0 8px 26px;position:relative;color:var(--sec)}
+ul.clean li:before{content:"";position:absolute;left:0;top:14px;width:10px;height:10px;border-radius:2px;background:var(--teal)}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:16px 0}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--sec);font-size:14px}
+td.you{color:var(--goldink);font-weight:700}
+.cta-band{background:linear-gradient(180deg,rgba(14,124,99,.07),rgba(14,124,99,.02));border:1px solid rgba(14,124,99,.3);border-radius:16px;padding:28px;text-align:center;margin:40px 0}
+.cta-band h2{margin-top:0}
+.related{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.related a{background:var(--elev);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:14px;color:var(--sec)}
+.related a:hover{border-color:var(--teal);color:var(--text);text-decoration:none}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+
+/* ── the FAAB advisor ─────────────────────────────────────────────────────── */
+.wrap.wide{max-width:1080px}
+.fa-step{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:var(--panel);margin:18px 0}
+.fa-step h3{margin:0 0 4px;font-size:16px}
+.fa-step p.sub{margin:0 0 12px;font-size:13.5px;color:var(--muted)}
+.fa-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.fa-row input{flex:1 1 240px;min-width:0;padding:12px 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--text);font-size:15px;font-family:inherit}
+.fa-row input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,99,.12)}
+.fa-pick{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.fa-pick button{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;cursor:pointer}
+.fa-pick button:hover{border-color:var(--teal);background:rgba(14,124,99,.05)}
+.fa-pick button b{display:block;font-size:14.5px}
+.fa-pick button span{font-size:12.5px;color:var(--muted)}
+.fa-err{color:var(--danger);font-size:13.5px;margin:8px 0 0}
+.fa-bar{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;padding:14px 18px;background:var(--panel);margin:18px 0 10px}
+.fa-bar .k{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);display:block}
+.fa-bar .v{font-size:19px;font-weight:700;line-height:1.2}
+.fa-bar .v.money{color:var(--teal)}
+.fa-bar .chg{margin-left:auto;font-size:12.5px}
+.fa-room{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:0 0 16px;font-size:14px;color:var(--sec);line-height:1.6}
+.fa-room b{color:var(--text)}
+.fa-rivals{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.fa-rival{font-size:12px;border:1px solid var(--line2);border-radius:999px;padding:3px 10px;background:#fff;white-space:nowrap}
+.fa-rival.broke{color:var(--muted);opacity:.65}
+.fa-rival i{font-style:normal;font-weight:700;color:var(--teal)}
+.fa-tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table.fa{width:100%;border-collapse:collapse;font-size:14px;min-width:660px}
+table.fa th,table.fa td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+table.fa th{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800;background:var(--panel)}
+table.fa th i{display:block;font-style:normal;font-weight:700;letter-spacing:.06em;color:var(--line2);margin-top:2px}
+table.fa tr:last-child td{border-bottom:0}
+table.fa td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.fa .nm{font-weight:700}
+table.fa .meta{font-size:11.5px;color:var(--muted);font-weight:400}
+table.fa .inj{color:var(--danger);font-size:11px;font-weight:800;letter-spacing:.05em;margin-left:6px}
+table.fa .mine{color:var(--teal);font-weight:800}
+.verd{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:4px;white-space:nowrap}
+.verd.bid{background:rgba(14,124,99,.12);color:var(--teal);border:1px solid rgba(14,124,99,.32)}
+.verd.stretch{background:#fdf4e2;color:var(--goldink);border:1px solid #f0e0b0}
+.verd.pass{background:var(--elev);color:var(--muted);border:1px solid var(--line2)}
+.fa-note{font-size:12.5px;color:var(--muted);margin:10px 0 0;line-height:1.6}
+.fa-obs{border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-top:18px;background:var(--panel)}
+.fa-obs h3{margin:0 0 8px;font-size:15px}
+.fa-obs ul{margin:0;padding-left:18px}
+.fa-obs li{font-size:13.5px;color:var(--sec);margin-bottom:5px}
+.method{border-top:1px solid var(--line);margin-top:30px;padding-top:16px}
+.method h3{font-size:15px;margin:0 0 8px}
+.method p{font-size:13px;color:var(--muted);line-height:1.65;margin:0 0 9px}
+.method b{color:var(--sec)}
+@media(max-width:560px){.fa-bar{gap:8px 16px}.fa-bar .v{font-size:16px}}
+</style></head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0e7c63" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/the-pick">The Pick</a>
+      <a href="/analyst-desk">Columns</a>
+      <a href="/post-draft">In-Season</a>
+      <a href="/faq">FAQ</a>
+    </nav>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div></header>
+<main id="main" class="wrap wide">
+<div class="art-head">
+<div class="eyebrow">In-season &middot; FAAB Advisor</div>
+<h1 class="art-h1">What to bid, and what it will take to win</h1>
+<p class="lede">A waiver claim in a FAAB league is a blind auction against the same people you drafted against. This prices the whole free-agent pool in your league&rsquo;s dollars, reads every rival&rsquo;s remaining budget, and tells you the number.</p>
+</div>
+
+<div id="fa-connect">
+  <div class="fa-step" id="step-user">
+    <h3>1. Connect your Sleeper account</h3>
+    <p class="sub">Your username only. Nothing is sent anywhere &mdash; the league is read straight from Sleeper&rsquo;s public API in your browser.</p>
+    <div class="fa-row">
+      <input id="fa-user" type="text" placeholder="sleeper username" autocomplete="username" spellcheck="false" aria-label="Sleeper username">
+      <button class="btn" id="fa-user-btn" type="button">Find my leagues</button>
+    </div>
+    <p class="fa-err" id="fa-user-err" hidden></p>
+  </div>
+  <div class="fa-step" id="step-league" hidden>
+    <h3>2. Pick the league</h3>
+    <p class="sub">FAAB leagues only &mdash; a league on waiver priority has no bid to advise.</p>
+    <div class="fa-pick" id="fa-leagues"></div>
+  </div>
+  <div class="fa-step" id="step-team" hidden>
+    <h3>3. Which team is yours?</h3>
+    <div class="fa-pick" id="fa-teams"></div>
+  </div>
+</div>
+
+<div id="fa-loading" hidden><p class="lede">Reading the league&hellip;</p></div>
+
+<div id="fa-advisor" hidden>
+  <div class="fa-bar" id="fa-bar"></div>
+  <div class="fa-room" id="fa-room"></div>
+  <div class="fa-tablewrap"><table class="fa"><thead><tr>
+    <th>Free agent</th><th class="num">Rest-of-season <i>draft $</i></th><th class="num">Going rate <i>FAAB $</i></th><th class="num">Your max <i>FAAB $</i></th><th>Call</th><th>Who you are bidding against</th>
+  </tr></thead><tbody id="fa-rows"></tbody></table></div>
+  <p class="fa-note" id="fa-note"></p>
+  <div class="fa-obs" id="fa-obs" hidden></div>
+  <div class="method">
+    <h3>How these numbers are made</h3>
+    <p><b>Rest-of-season</b> is the player&rsquo;s value on your own cheat sheet, scaled to the weeks that are left: auction dollars at your league&rsquo;s draft budget, not a generic $200. <b>The other two columns are FAAB dollars.</b> They are different currencies and deliberately not the same scale &mdash; a $100 FAAB budget buys a handful of claims, where a $200 draft budget buys a whole roster, so a going rate above the rest-of-season figure is normal rather than a mistake.</p>
+    <p><b>Your max</b> is not what he is worth. Over the weeks that are left you will make a handful of claims anyway, so the ones you would have made regardless are not what winning <em>this</em> one buys you. The baseline is the first free agent you would <em>not</em> otherwise have taken, and the surplus is the gap up to him &mdash; value over replacement, the same idea the draft board is built on, with the replacement drawn off the wire. Ten interchangeable handcuffs all sit at replacement and are worth about a dollar each however good they look on a ranking. One genuinely better player in a thin pool is worth real money. That surplus is then measured against the other claims the same budget still has to cover.</p>
+    <p><b>Going rate</b> is the highest bid any rival can rationally justify, computed one rival at a time: their remaining budget, their hole at that position, their alternatives. A leaguemate with $0 left is not competition no matter how badly they need a running back, and this is the only part of the fantasy season where you can see that in advance.</p>
+    <p><b>What it does not know.</b> FAAB is blind and people are not rational, so treat the going rate as the middle of a range, not a line. It does not read this week&rsquo;s matchups, injuries that broke in the last hour, or the fact that your leaguemate drafted the guy&rsquo;s teammate and is emotional about it. Kickers and defences are left out on purpose.</p>
+  </div>
+</div>
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>Draft</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/guides">Guides</a></li>
+      <li><a href="/analyst-desk">Analyst Desk</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/post-draft">In-Season (soon)</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-league.js"></script>
+<script>
+
+(function () {
+  'use strict';
+  var S = 'https://api.sleeper.app';
+  var KEY = 'it_faab_v1';
+  var FANTASY_END = 17;          // the last week most leagues actually play
+  var ADDS_PER_WEEK = 0.7;       // meaningful claims a manager makes per week
+  var BENCH_FLOOR = 0.2;         // a free agent who cracks nobody's lineup is still worth holding
+  var POS = { QB: 1, RB: 1, WR: 1, TE: 1 };   // the board carries these four; K/DEF are noise here
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function money(n) { return '$' + Math.max(0, Math.round(n)); }
+
+  function readState() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+  function writeState(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
+
+  function getJSON(path) {
+    return fetch(S + path).then(function (r) {
+      if (!r.ok) throw new Error(path + ' ' + r.status);
+      return r.json();
+    });
+  }
+
+  // ── the board ────────────────────────────────────────────────────────────
+  // it-league.js already owns the reader's league (teams, budget, scoring) and a
+  // priced default board. Pricing here rather than duplicating the valuation
+  // engine is deliberate: a second copy of scorePlayer in a second file is the
+  // drift this repo has been bitten by before. `price(pos, rank)` is the app's
+  // own curve at the reader's own budget, and the board is already sorted by
+  // points inside each position, so the array index IS the rank.
+  var L = window.ITLeague || null;
+  var byName = {};
+  function normName(s) {
+    return String(s || '').toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\.?$/g, '').replace(/[^a-z]/g, '');
+  }
+  function buildBoard() {
+    if (!L) return;
+    var players = L.defaultBoard() || [];
+    var buckets = {};
+    players.forEach(function (p) {
+      if (!POS[p.pos]) return;
+      (buckets[p.pos] = buckets[p.pos] || []).push(p);
+    });
+    Object.keys(buckets).forEach(function (pos) {
+      buckets[pos].sort(function (a, b) { return (b.pts || 0) - (a.pts || 0); });
+      buckets[pos].forEach(function (p, i) {
+        // The reader's own saved sheet wins where it has an opinion; the shared
+        // default board fills the rest of the pool, which is most of it — nobody
+        // saves a board 300 players deep.
+        var own = L.hasBoard ? L.findPlayer(p.n, p.pos) : null;
+        byName[normName(p.n)] = { n: p.n, pos: pos, rank: i + 1, v: (own && own.v) || L.price(pos, i) };
+      });
+    });
+  }
+  function lookup(name, pos) {
+    var hit = byName[normName(name)];
+    return (hit && (!pos || hit.pos === pos)) ? hit : null;
+  }
+
+  // ── step 1: the account ──────────────────────────────────────────────────
+  function fail(el, m) { el.textContent = m; el.hidden = false; }
+  function season() {
+    var d = new Date();
+    // The NFL season is labelled by the year it starts, so Jan–Jul belongs to
+    // the year before. Overwritten by /v1/state/nfl the moment that answers.
+    return d.getUTCMonth() < 7 ? d.getUTCFullYear() - 1 : d.getUTCFullYear();
+  }
+
+  function findLeagues(username) {
+    var err = $('fa-user-err');
+    err.hidden = true;
+    var btn = $('fa-user-btn');
+    btn.disabled = true;
+    var state = null;
+    getJSON('/v1/state/nfl').catch(function () { return null; }).then(function (st) {
+      state = st;
+      return getJSON('/v1/user/' + encodeURIComponent(username));
+    }).then(function (u) {
+      if (!u || !u.user_id) throw new Error('nouser');
+      var yr = (state && state.season) || season();
+      return getJSON('/v1/user/' + u.user_id + '/leagues/nfl/' + yr).then(function (lgs) {
+        return { user: u, leagues: lgs || [], state: state };
+      });
+    }).then(function (r) {
+      btn.disabled = false;
+      if (!r.leagues.length) { fail(err, 'No ' + ((r.state && r.state.season) || season()) + ' leagues on that account.'); return; }
+      showLeagues(r);
+    }).catch(function (e) {
+      btn.disabled = false;
+      fail(err, /nouser/.test(String(e)) ? 'No Sleeper account with that username.' : 'Sleeper did not answer. Try again in a moment.');
+    });
+  }
+
+  function showLeagues(r) {
+    var box = $('fa-leagues');
+    box.innerHTML = '';
+    r.leagues.forEach(function (lg) {
+      var st = lg.settings || {};
+      // waiver_type 2 is FAAB on Sleeper; a budget of 0 means there is nothing
+      // to bid even if the type says otherwise.
+      var faab = st.waiver_type === 2 && (st.waiver_budget || 0) > 0;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = '<b>' + esc(lg.name || 'League') + '</b><span>' + (lg.total_rosters || '?') + ' teams'
+        + (faab ? ' &middot; $' + st.waiver_budget + ' FAAB' : ' &middot; not a FAAB league')
+        + '</span>';
+      if (!faab) { b.disabled = true; b.style.opacity = '.55'; b.style.cursor = 'default'; }
+      else b.addEventListener('click', function () { pickLeague(r, lg); });
+      box.appendChild(b);
+    });
+    $('step-league').hidden = false;
+    $('step-league').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function pickLeague(r, lg) {
+    Promise.all([getJSON('/v1/league/' + lg.league_id + '/rosters'), getJSON('/v1/league/' + lg.league_id + '/users')])
+      .then(function (res) {
+        var rosters = res[0] || [], users = res[1] || [];
+        var byUser = {};
+        users.forEach(function (u) { byUser[u.user_id] = u; });
+        var box = $('fa-teams');
+        box.innerHTML = '';
+        rosters.forEach(function (ro) {
+          var u = byUser[ro.owner_id] || {};
+          var nm = (u.metadata && u.metadata.team_name) || u.display_name || ('Team ' + ro.roster_id);
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.innerHTML = '<b>' + esc(nm) + '</b><span>' + esc(u.display_name || '') + '</span>';
+          b.addEventListener('click', function () {
+            var st = { u: r.user.user_id, un: r.user.username || r.user.display_name, lg: lg.league_id, ro: ro.roster_id };
+            writeState(st);
+            boot(st);
+          });
+          box.appendChild(b);
+        });
+        $('step-team').hidden = false;
+        $('step-team').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }).catch(function () { fail($('fa-user-err'), 'Could not read that league from Sleeper.'); });
+  }
+
+  // ── the advisor ──────────────────────────────────────────────────────────
+  function boot(st) {
+    $('fa-connect').hidden = true;
+    $('fa-loading').hidden = false;
+    $('fa-advisor').hidden = true;
+    Promise.all([
+      getJSON('/v1/state/nfl').catch(function () { return { week: 1, season: season() }; }),
+      getJSON('/v1/league/' + st.lg),
+      getJSON('/v1/league/' + st.lg + '/rosters'),
+      getJSON('/v1/league/' + st.lg + '/users'),
+      fetch('/api/faab/players').then(function (r) { return r.json(); }).catch(function () { return { players: {} }; })
+    ]).then(function (res) {
+      render(st, res[0], res[1], res[2] || [], res[3] || [], (res[4] && res[4].players) || {});
+    }).catch(function () {
+      $('fa-loading').hidden = true;
+      $('fa-connect').hidden = false;
+      fail($('fa-user-err'), 'Could not read that league from Sleeper. It may have been deleted.');
+    });
+  }
+
+  function render(st, nfl, lg, rosters, users, pool) {
+    var week = Math.max(1, Math.min(FANTASY_END, (nfl && (nfl.display_week || nfl.week)) || 1));
+    var left = Math.max(1, FANTASY_END - week + 1);
+    var W = left / FANTASY_END;
+    var budget = ((lg.settings || {}).waiver_budget) || 100;
+    var byUser = {}; users.forEach(function (u) { byUser[u.user_id] = u; });
+
+    // Everyone who is rostered anywhere is not a free agent.
+    var taken = {};
+    rosters.forEach(function (ro) { (ro.players || []).forEach(function (id) { taken[id] = ro.roster_id; }); });
+
+    var mine = null;
+    rosters.forEach(function (ro) { if (ro.roster_id === st.ro) mine = ro; });
+    if (!mine) mine = rosters[0];
+
+    // ── what each roster would be starting, by position ──────────────────────
+    // The weakest player a roster would actually start at a position is the bar
+    // a free agent has to clear to be worth anything to THEM. Slot counts come
+    // from the league's own roster_positions, so a 3-WR league and a 2-WR league
+    // get different answers, as they should.
+    var slots = {};
+    (lg.roster_positions || []).forEach(function (p) { if (POS[p]) slots[p] = (slots[p] || 0) + 1; });
+    if (!Object.keys(slots).length) slots = { QB: 1, RB: 2, WR: 2, TE: 1 };
+    var flex = (lg.roster_positions || []).filter(function (p) { return p === 'FLEX' || p === 'WRRB_FLEX' || p === 'REC_FLEX' || p === 'SUPER_FLEX'; }).length;
+
+    function weakestStarter(ro, pos) {
+      var owned = (ro.players || []).map(function (id) {
+        var m = pool[id];
+        return m ? lookup(m[0], m[1]) : null;
+      }).filter(function (x) { return x && x.pos === pos; })
+        .sort(function (a, b) { return b.v - a.v; });
+      // A flex slot means one more of the best remaining RB/WR/TE starts, so the
+      // bar at those positions sits one player deeper than the named slots alone.
+      var n = (slots[pos] || 0) + ((pos === 'RB' || pos === 'WR' || pos === 'TE') ? flex : 0);
+      if (n <= 0) return 0;
+      // Fewer players than slots means the bar is the floor: anyone starts.
+      if (owned.length < n) return 0;
+      return owned[n - 1].v * W;
+    }
+
+    // ── the free-agent pool ──────────────────────────────────────────────────
+    var fas = [];
+    Object.keys(pool).forEach(function (id) {
+      if (taken[id]) return;
+      var m = pool[id];
+      var b = lookup(m[0], m[1]);
+      if (!b) return;
+      fas.push({ id: id, name: m[0], pos: m[1], team: m[2], inj: m[3], v: b.v, ros: b.v * W, rank: b.rank });
+    });
+    fas.sort(function (a, b) { return b.ros - a.ros; });
+    fas = fas.slice(0, 40);
+
+    // ── what a player is worth to one roster ─────────────────────────────────
+    // Memoised per roster and position: the bar is a property of the roster, not
+    // of the free agent, and the surplus pass below asks for it tens of thousands
+    // of times.
+    var barCache = {};
+    function bar(ro, pos) {
+      var k = ro.roster_id + ':' + pos;
+      if (barCache[k] === undefined) barCache[k] = weakestStarter(ro, pos);
+      return barCache[k];
+    }
+    function vadd(ro, fa) {
+      return Math.max(fa.ros - bar(ro, fa.pos), fa.ros * BENCH_FLOOR);
+    }
+
+    // ── surplus over replacement ─────────────────────────────────────────────
+    // What a claim is worth is NOT what the player is worth. Over the rest of the
+    // season you will make roughly `adds` claims anyway, so the ones you would
+    // have made regardless are not what winning THIS one buys you. The honest
+    // baseline is the first free agent you would NOT otherwise have taken — the
+    // (adds+1)-th best on your own roster's terms — and the surplus is the gap to
+    // him. It is value-over-replacement, the same idea the draft board is built
+    // on, with the replacement drawn from the wire instead of the draft pool.
+    //
+    // This is the difference between a bid advisor and a waiver-wire ranking. Ten
+    // interchangeable handcuffs all sit at replacement level, so all ten are worth
+    // about a dollar however good they look on a list; one genuinely better player
+    // in a thin pool is worth real money. When the whole wire is flat every surplus
+    // collapses to zero and the table says to keep the budget, which is correct
+    // and is the advice nobody else gives.
+    var adds = Math.max(1, Math.round(left * ADDS_PER_WEEK));
+    var replCache = {};
+    function replacement(ro) {
+      var k = ro.roster_id;
+      if (replCache[k] !== undefined) return replCache[k];
+      var vs = fas.map(function (f) { return vadd(ro, f); }).sort(function (a, b) { return b - a; });
+      return (replCache[k] = vs.length > adds ? vs[adds] : (vs.length ? vs[vs.length - 1] : 0));
+    }
+    function surplus(ro, fa) { return Math.max(0, vadd(ro, fa) - replacement(ro)); }
+
+    // ── the share model ──────────────────────────────────────────────────────
+    // A max bid is what the claim is worth against everything else the same money
+    // could buy before the season ends. Budget is season-long and does not renew,
+    // so a claim's share of it is its surplus over the surpluses of the other
+    // claims that budget still has to cover.
+    var shareCache = {};
+    function shareFor(ro, fa) {
+      var v = surplus(ro, fa);
+      if (v <= 0) return 0;
+      var k = ro.roster_id;
+      if (shareCache[k] === undefined) {
+        shareCache[k] = fas.reduce(function (a, f) { return a + surplus(ro, f); }, 0);
+      }
+      var tot = shareCache[k];
+      return tot > 0 ? v / tot : 0;
+    }
+
+    var myLeft = Math.max(0, budget - (((mine.settings || {}).waiver_budget_used) || 0));
+    var rivals = rosters.filter(function (ro) { return ro.roster_id !== mine.roster_id; }).map(function (ro) {
+      var u = byUser[ro.owner_id] || {};
+      return {
+        ro: ro,
+        name: (u.metadata && u.metadata.team_name) || u.display_name || ('Team ' + ro.roster_id),
+        left: Math.max(0, budget - (((ro.settings || {}).waiver_budget_used) || 0))
+      };
+    }).sort(function (a, b) { return b.left - a.left; });
+
+    // ── the bar ──────────────────────────────────────────────────────────────
+    var lgName = lg.name || 'Your league';
+    $('fa-bar').innerHTML =
+      '<span><span class="k">League</span><span class="v">' + esc(lgName) + '</span></span>'
+      + '<span><span class="k">Week</span><span class="v">' + week + ' <span style="font-size:13px;color:var(--muted);font-weight:400">of ' + FANTASY_END + '</span></span></span>'
+      + '<span><span class="k">Your FAAB left</span><span class="v money">' + money(myLeft) + '</span></span>'
+      + '<span><span class="k">Of</span><span class="v">' + money(budget) + '</span></span>'
+      + '<span class="chg"><a href="#" id="fa-reset">Change league</a></span>';
+    $('fa-reset').addEventListener('click', function (e) {
+      e.preventDefault();
+      try { localStorage.removeItem(KEY); } catch (err) {}
+      $('fa-advisor').hidden = true;
+      $('fa-connect').hidden = false;
+      $('step-league').hidden = true;
+      $('step-team').hidden = true;
+    });
+
+    // ── the room ─────────────────────────────────────────────────────────────
+    var solvent = rivals.filter(function (r) { return r.left > 0; });
+    var richer = rivals.filter(function (r) { return r.left > myLeft; });
+    $('fa-room').innerHTML =
+      '<b>The room.</b> ' + (solvent.length === 0
+        ? 'Nobody else has a dollar left. Every claim below is yours for the minimum bid.'
+        : richer.length === 0
+          ? 'You hold the largest budget in the league. Nobody can outbid you on anything, so bid what a player is worth to you and not a dollar more.'
+          : richer.length + ' team' + (richer.length === 1 ? '' : 's') + ' can outbid you outright, and ' + (rivals.length - solvent.length) + ' of ' + rivals.length + ' rivals cannot bid at all.')
+      + '<div class="fa-rivals">' + rivals.map(function (r) {
+          return '<span class="fa-rival' + (r.left > 0 ? '' : ' broke') + '">' + esc(r.name) + ' <i>' + money(r.left) + '</i></span>';
+        }).join('') + '</div>';
+
+    // ── the table ────────────────────────────────────────────────────────────
+    var rows = '';
+    var shown = 0;
+    fas.forEach(function (fa) {
+      var myShare = shareFor(mine, fa);
+      var myMax = Math.round(myLeft * myShare);
+      // The winning bid is the best any single rival can justify — computed one
+      // rival at a time, because a rival with money and no hole is not a threat
+      // and a rival with a hole and no money is not either.
+      var top = null;
+      rivals.forEach(function (r) {
+        if (r.left <= 0) return;
+        var bid = Math.round(r.left * shareFor(r.ro, fa));
+        if (!top || bid > top.bid) top = { name: r.name, bid: bid, left: r.left };
+      });
+      var going = top ? top.bid : 0;
+      if (myMax < 1 && going < 1) return;
+      shown++;
+      var call, cls;
+      if (myMax >= going + 1) { call = 'Bid ' + money(going + 1); cls = 'bid'; }
+      else if (myMax >= going * 0.8) { call = 'Stretch to ' + money(myMax); cls = 'stretch'; }
+      else { call = 'Let it go'; cls = 'pass'; }
+      rows += '<tr>'
+        + '<td><span class="nm">' + esc(fa.name) + '</span>'
+          + (fa.inj ? '<span class="inj">' + esc(fa.inj) + '</span>' : '')
+          + '<div class="meta">' + esc(fa.pos) + ' &middot; ' + esc(fa.team || 'FA') + ' &middot; ' + esc(fa.pos) + String(fa.rank) + ' on your board</div></td>'
+        + '<td class="num">' + money(fa.ros) + '</td>'
+        + '<td class="num">' + (going > 0 ? money(going) : '&mdash;') + '</td>'
+        + '<td class="num mine">' + money(myMax) + '</td>'
+        + '<td><span class="verd ' + cls + '">' + call + '</span></td>'
+        + '<td>' + (top && top.bid > 0 ? esc(top.name) + ' <span class="meta">(' + money(top.left) + ' left)</span>' : '<span class="meta">nobody with money</span>') + '</td>'
+        + '</tr>';
+    });
+    $('fa-rows').innerHTML = rows || '<tr><td colspan="6" style="color:var(--muted)">No free agent in this league is worth a bid right now. That is a real answer: save the budget.</td></tr>';
+    $('fa-note').innerHTML = shown + ' free agent' + (shown === 1 ? ' is' : 's are') + ' worth a bid in a ' + esc(String(lg.total_rosters || rosters.length))
+      + '-team league with ' + left + ' week' + (left === 1 ? '' : 's') + ' to play'
+      + (L && L.custom ? ' and your own saved scoring.' : '. Values come from the default board — <a href="/auctiondraft?screen=cheat">build your free sheet</a> and these re-price to your exact settings.');
+
+    // ── what the league has actually paid ────────────────────────────────────
+    // The single best guide to a room's going rate is what that room has already
+    // settled, and Sleeper publishes it. Read backwards from the current week so
+    // a quiet Tuesday still shows the last time money moved.
+    var obs = [];
+    var wk = week;
+    (function nextWeek() {
+      if (wk < 1 || obs.length >= 6) return done();
+      getJSON('/v1/league/' + st.lg + '/transactions/' + wk).then(function (tx) {
+        (tx || []).forEach(function (t) {
+          var bid = t && t.settings && t.settings.waiver_bid;
+          if (t.status !== 'complete' || !bid || !t.adds) return;
+          Object.keys(t.adds).forEach(function (id) {
+            var m = pool[id];
+            if (m && obs.length < 6) obs.push({ w: wk, bid: bid, name: m[0], pos: m[1] });
+          });
+        });
+        wk--; nextWeek();
+      }).catch(function () { wk--; nextWeek(); });
+    })();
+    function done() {
+      if (!obs.length) return;
+      obs.sort(function (a, b) { return b.bid - a.bid; });
+      $('fa-obs').innerHTML = '<h3>What this league has actually paid</h3><ul>'
+        + obs.map(function (o) { return '<li><b>' + money(o.bid) + '</b> on ' + esc(o.name) + ' (' + esc(o.pos) + ') in week ' + o.w + '</li>'; }).join('')
+        + '</ul>';
+      $('fa-obs').hidden = false;
+    }
+
+    $('fa-loading').hidden = true;
+    $('fa-advisor').hidden = false;
+    try { if (typeof gtag === 'function') gtag('event', 'faab_view', { teams: rosters.length }); } catch (e) {}
+  }
+
+  // ── go ───────────────────────────────────────────────────────────────────
+  buildBoard();
+  $('fa-user-btn').addEventListener('click', function () {
+    var v = ($('fa-user').value || '').trim();
+    if (v) findLeagues(v);
+  });
+  $('fa-user').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { var v = (e.target.value || '').trim(); if (v) findLeagues(v); }
+  });
+  var saved = readState();
+  if (saved && saved.lg && saved.ro) boot(saved);
+})();
+
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

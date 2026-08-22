@@ -59,11 +59,17 @@ console.log('\nevery destination is reachable from every page');
 {
   // The set a reader must be able to get to from anywhere. The app links are
   // absolute and format-dependent, so they are asserted separately below.
-  const MUST_NAV = ['/insights', '/auction-insights', '/snake-insights',
-    '/bestball-insights', '/insights-vault', '/the-pick', '/guides',
-    '/analyst-desk', '/faq'];
+  //
+  // /bestball-insights and the /insights hub came OFF this list in the
+  // auction-first pass (§27c). Best ball is retired from every surface and the
+  // hub was a format chooser for a site that now has one format; the auction
+  // edition is the destination. The pages still serve at their old URLs — see
+  // the sitemap assertions in tools/test-seo.mjs — they are simply not linked.
+  const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
+    '/snake-insights', '/insights-vault', '/the-pick', '/guides',
+    '/analyst-desk', '/post-draft', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
-    '/play-caller-premium', '/insights', '/guides', '/the-pick'];
+    '/play-caller-premium', '/auction-insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];
   for (const f of pages) {
     const nav = hrefs(header(read(f)));
@@ -97,11 +103,13 @@ console.log('\nthe call to action matches the page\'s format');
   const wrong = [];
   for (const f of pages) {
     const cta = (header(read(f)).match(/<a class="cta" href="([^"]*)"/) || [])[1] || '';
-    const want = /^(bestball-|best-ball-)/.test(f) ? 'bestball'
-      : /^snake-/.test(f) ? 'snakedraft' : null;
-    if (want && !cta.includes(want)) wrong.push(`${f}: cta=${cta} want ${want}`);
-    // An auction page must not send the reader to another format's board.
-    if (!want && (cta.includes('bestball') || cta.includes('snakedraft'))) wrong.push(`${f}: cta=${cta}`);
+    // Snake keeps its own board. Best ball no longer does: the line is retired,
+    // so its pages point at the auction sheet like everything else — that is the
+    // intended behaviour, not a leak, and it is asserted rather than tolerated.
+    const want = /^snake-/.test(f) ? 'snakedraft' : 'auctiondraft';
+    if (!cta.includes(want)) wrong.push(`${f}: cta=${cta} want ${want}`);
+    // No page may send the reader to the retired best-ball room.
+    if (cta.includes('/bestball')) wrong.push(`${f}: cta=${cta} still sells best ball`);
   }
   ok('a format page points at its own board', wrong.length === 0, wrong.slice(0, 6).join('; '));
 }
@@ -136,7 +144,10 @@ console.log('\nthe page you are on is marked');
 {
   // Pages that ARE a nav destination should mark themselves current. Dated
   // family members mark their section (auction-insights-2026-08-20 -> Insights).
-  const named = pages.filter((f) => /^(insights|guides|faq|the-pick|analyst-desk|insights-vault)\.html$/.test(f));
+  // insights.html is off this list: it was the three-format chooser, and a site
+  // with one format sends the reader to /auction-insights instead. The page
+  // still serves and stays in the sitemap; it is simply not a nav destination.
+  const named = pages.filter((f) => /^(guides|faq|the-pick|analyst-desk|insights-vault)\.html$/.test(f));
   const missing = named.filter((f) => !read(f).includes('aria-current="page"'));
   ok('a nav destination marks itself as current', missing.length === 0, missing.join(', '));
 }
@@ -175,16 +186,23 @@ console.log('\nthe visual zones are the ones the site says it has');
     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
   };
   // The content pages take their palette from site.css, so there is one value to
-  // check rather than ninety-one.
+  // check rather than ninety-one. It is LIGHT as of the auction-first pass — the
+  // site reads as one white surface and the only dark zones left are the draft
+  // app and the front page's masthead band.
   const shared = read('site.css');
   const bg = (shared.match(/--bg:\s*(#[0-9a-fA-F]{3,6})/) || [])[1] || '';
-  ok(`site.css --bg is a dark surface (${bg})`, Boolean(bg) && lum(bg) < 0.2, bg || 'token missing');
-  // And no content page may redefine it back to something light.
-  const light = pages.filter((f) => {
+  ok(`site.css --bg is a light surface (${bg})`, Boolean(bg) && lum(bg) > 0.8, bg || 'token missing');
+  // #2dd4a3 is about 1.9:1 on white, so the shared accent has to be the darker
+  // green or every link on the site fails contrast.
+  const teal = (shared.match(/--teal:\s*(#[0-9a-fA-F]{3,6})/) || [])[1] || '';
+  ok(`site.css uses the white-safe accent (${teal})`, teal.toLowerCase() === '#0e7c63', teal || 'token missing');
+  // And no content page may redefine the palette back to dark, which is how the
+  // inline-:root drift started in the first place.
+  const dark = pages.filter((f) => {
     const m = read(f).match(/:root\{[^}]*--bg:\s*(#[0-9a-fA-F]{3,6})/);
-    return m && lum(m[1]) > 0.2;
+    return m && lum(m[1]) < 0.8;
   });
-  ok('no content page overrides the palette back to light', light.length === 0, light.slice(0, 4).join(', '));
+  ok('no content page overrides the palette back to dark', dark.length === 0, dark.slice(0, 4).join(', '));
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

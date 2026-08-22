@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="/site.css">
 <style>
 .brand-fish{height:36px;width:auto;display:block}
-.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#cdd8de;position:relative;top:2px}
+.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#39454f;position:relative;top:2px}
 /* Mobile masthead. The links used to wrap into two and three ragged rows that
    grew the sticky header to a third of the screen; now they are one line that
    scrolls sideways under a pinned CTA, so the header is always 52px and the
@@ -43,7 +43,7 @@ h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 footer{border-top:1px solid var(--line);margin-top:42px;padding:24px 0;color:var(--muted);font-size:13px}
 footer a{color:var(--sec);margin-right:16px}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Iron Tuna work for auction, snake, and best ball drafts?","acceptedAnswer":{"@type":"Answer","text":"Yes, all three. Pick your format on the home page. Auction gives live max-bid math and budget tracking; snake gives a best-available board and survival odds for your next pick; best ball ranks by ceiling and flags your stacks the moment they go live."}},{"@type":"Question","name":"Do I need an account?","acceptedAnswer":{"@type":"Answer","text":"No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft day."}},{"@type":"Question","name":"Can I use my exact league scoring?","acceptedAnswer":{"@type":"Answer","text":"Yes — that is the heart of the $9.99 unlock. Set your scoring, roster slots, and league size, and every value recalculates to your exact settings, including superflex and 2-QB. The free board uses expert default scoring so you can try it first."}},{"@type":"Question","name":"How much does it cost?","acceptedAnswer":{"@type":"Answer","text":"The board with expert default values is free in every format. A one-time $9.99 unlocks your league's custom scoring and values, a reorderable board, the AI Value Coach, and the live Draft Day tools."}},{"@type":"Question","name":"Can I use it during the live draft?","acceptedAnswer":{"@type":"Answer","text":"Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft."}},{"@type":"Question","name":"What is Value Coach?","acceptedAnswer":{"@type":"Answer","text":"It advises you on every pick, reading your exact draft against your roster and your league to call the move that wins you the most points: who to target, what they are worth, and when to pivot. You can also ask it anything mid-draft."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is Iron Tuna only for auction drafts?","acceptedAnswer":{"@type":"Answer","text":"Yes, all three. Pick your format on the home page. Auction gives live max-bid math and budget tracking; snake gives a best-available board and survival odds for your next pick; best ball ranks by ceiling and flags your stacks the moment they go live."}},{"@type":"Question","name":"Do I need an account?","acceptedAnswer":{"@type":"Answer","text":"No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft day."}},{"@type":"Question","name":"Can I use my exact league scoring?","acceptedAnswer":{"@type":"Answer","text":"Yes — that is the heart of the $9.99 unlock. Set your scoring, roster slots, and league size, and every value recalculates to your exact settings, including superflex and 2-QB. The free board uses expert default scoring so you can try it first."}},{"@type":"Question","name":"How much does it cost?","acceptedAnswer":{"@type":"Answer","text":"The board with expert default values is free in every format. A one-time $9.99 unlocks your league's custom scoring and values, a reorderable board, the AI Value Coach, and the live Draft Day tools."}},{"@type":"Question","name":"Can I use it during the live draft?","acceptedAnswer":{"@type":"Answer","text":"Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft."}},{"@type":"Question","name":"What is Value Coach?","acceptedAnswer":{"@type":"Answer","text":"It advises you on every pick, reading your exact draft against your roster and your league to call the move that wins you the most points: who to target, what they are worth, and when to pivot. You can also ask it anything mid-draft."}}]}</script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -51,14 +51,15 @@ footer a{color:var(--sec);margin-right:16px}
   <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.webp" alt=""/><span class="brand-word">IRON TUNA</span></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
-      <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
-      <a href="/guides">Guides</a>
-      <a href="/analyst-desk">Analyst Desk</a>
+      <a href="/analyst-desk">Columns</a>
+      <a href="/post-draft">In-Season</a>
       <a href="/faq" aria-current="page">FAQ</a>
-      <a href="https://irontuna.com/">Draft Day Mode</a>
     </nav>
-    <a class="cta" href="https://irontuna.com/">Free sheet</a>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
@@ -67,12 +68,12 @@ footer a{color:var(--sec);margin-right:16px}
 
 <main id="main" class="wrap">
   <h1>Frequently asked questions</h1>
-  <p class="lead">Everything you need to know about Iron Tuna for auction, snake, and best ball drafts.</p>
+  <p class="lead">Everything you need to know about Iron Tuna, the fantasy football auction toolkit.</p>
 
   <div class="faq">
     <details open>
-      <summary>Does Iron Tuna work for auction, snake, and best ball drafts?</summary>
-      <p>Yes, all three. Pick your format on the home page. Auction gives live max-bid math and budget tracking; snake gives a best-available board and survival odds for your next pick; best ball ranks by ceiling and flags your stacks the moment they go live.</p>
+      <summary>Is Iron Tuna only for auction drafts?</summary>
+      <p>Auction is what it is built for, and it is the only thing on the site that gets the full treatment: live max-bid maths, budget tracking across every team in the room, and a price on every player for your exact settings. Snake is supported too &mdash; a best-available board with survival odds for your next pick &mdash; and you can switch to it from the ribbon on the home page.</p>
     </details>
     <details>
       <summary>Do I need an account?</summary>
@@ -105,26 +106,28 @@ footer a{color:var(--sec);margin-right:16px}
     <div class="foot-col">
      <h2>Draft</h2>
      <ul>
-      <li><a href="https://irontuna.com/">Draft Day Mode</a></li>
-      <li><a href="https://irontuna.com/auctiondraft">Auction board</a></li>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
       <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
-      <li><a href="https://irontuna.com/bestball">Best ball board</a></li>
-      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Read</h2>
      <ul>
-      <li><a href="/insights">Insights</a></li>
+      <li><a href="/auction-insights">Auction insights</a></li>
       <li><a href="/the-pick">The Pick</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/analyst-desk">Analyst Desk</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Company</h2>
      <ul>
+      <li><a href="/post-draft">In-Season (soon)</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -141,7 +144,7 @@ footer a{color:var(--sec);margin-right:16px}
   <div class="foot-note">
    <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.</p>
    <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
-    <a href="https://irontuna.com/">Build your free sheet</a></p>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>

@@ -186,7 +186,18 @@ console.log('\nsitemap.xml');
 
   // Every indexable page must be listed. index.html/front.html are the "/" and
   // SPA routes; the noindex screens are deliberately absent.
-  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'my-insights.html']);
+  //
+  // So are the in-season tools, and for a different reason: while POST_DRAFT_OPEN
+  // is unset the worker serves /post-draft AT their URLs, so a crawler that
+  // followed a sitemap entry for /faab would be handed the gate page's body under
+  // a second URL — the textbook way to create duplicate content. They are read
+  // out of _worker.js rather than hardcoded here, so opening the section (or
+  // adding a page to it) cannot silently leave this check wrong.
+  const gated = (fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8')
+    .match(/const POST_DRAFT_PAGES = new Set\(\[([^\]]*)\]\)/) || [, ''])[1]
+    .split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
+    .map((r) => r.replace(/^\//, '') + '.html');
+  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'my-insights.html', ...gated]);
   const locs = new Set(urls.map((u) => (u.match(/<loc>([^<]*)<\/loc>/) || [])[1]));
   const absent = pages.filter((f) => !NOT_LISTED.has(f) && !locs.has('https://irontuna.com/' + f.replace('.html', '')));
   ok('every indexable page is in the sitemap', absent.length === 0, absent.join(', '));

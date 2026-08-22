@@ -2432,7 +2432,269 @@ the nav's bottom against the wrap's.
 
 ---
 
-## 24. The shared chrome and `site.css`
+## 27. August 2026: the site says "auction" before it says anything else
+
+**The brief.** Lean into the auction. Keep small buttons for the snake draft,
+drop best ball entirely. Style the site the way DraftSharks styles theirs —
+same approach, different colours, less density. Keep what is good.
+
+The site had grown into a general fantasy football site that happened to be
+best at auctions. `/` opened on a news lead, the ribbon offered three formats as
+equals, the front page was light and every other content page was dark navy,
+and nothing above the fold said what the tool actually did.
+
+### 27a. The palette is now one palette
+
+| token | was | is |
+|---|---|---|
+| accent | `#1f49c7` royal blue (front) / `#2dd4a3` teal (dark pages) | **`#0e7c63`** — one green, contrast-safe on white |
+| money / CTA | `#f5b800` | **`#f2a900`** fill, **`#7a5300`** (`--goldink`) as *type* |
+| chrome | `#101114` | **`#0b1614`** (`--mast`) |
+| page | `#0b1117` dark on 91 pages | **`#ffffff`** everywhere |
+
+**Ninety-one content pages went from dark navy to white** in one scripted pass
+(`:root` swap + an rgba/hex substitution table + the wordmark gradient). They
+share eleven `<style>` blocks between them, which is why a mechanical
+conversion was safe; a representative of each was rendered in Chromium before
+it was committed.
+
+Three rules carry that conversion and are easy to get wrong again:
+
+- **`#2dd4a3` is ~1.9:1 on white.** The site accent had to darken; `--teal` is
+  `#0e7c63` on every page now, including the two that were already white.
+- **Gold is a fill, not an ink.** `background:var(--gold)` keeps the bright
+  amber (with `#1a1205` type on it); every `color:var(--gold)` was rewritten to
+  `color:var(--goldink)`. 282 declarations. Skipping this leaves unreadable
+  numerals in every price column on the site.
+- **The wordmark is a light-on-dark metal gradient** and vanishes on white. The
+  85 converted pages carry the inverted stops. `front.html` keeps the light
+  version, because its masthead is still black.
+
+`front.html` is deliberately **not** on the shared token set — it has its own
+(`--ink` / `--card` / `--brand` / `--mast`) and a black masthead band over a
+light page. `index.html` (the draft app) stays dark on purpose: it is a tool you
+work in on draft night, not a page you read. `admin.html` stays dark because no
+visitor sees it.
+
+**`node tools/test-reading-view.mjs` is what keeps this from drifting back.** It
+was rewritten from "two zones, three white pages" to the current contract, and
+it now *sweeps every HTML file in the repo*: white background, the one accent,
+no surviving `rgba(45,212,163…)`, no light-on-dark wordmark on a white page.
+Adding a page built from an old dark template fails it.
+
+**It earned its keep the same day.** The camp-desk Routine authored
+`auction-watch-2026-08-22.html` on `main` while this branch was open, off the
+pre-conversion template, and the merge brought a dark page into a light site.
+CI failed on exactly those four assertions and named the file. `tools/templates/
+preseason-week.html` was on the old palette too and is converted now — it is the
+only authoring template left in the repo, so a new page inherits the light one.
+If this recurs, the fix is the same scripted swap (`:root`, the rgba/hex table,
+the wordmark stops, the shared nav), not a hand edit.
+
+### 27b. The front page opens on the product, not on the news
+
+`/` now goes: black masthead → green claim strip ("The Fantasy Site Built For
+Auction Drafts") → **hero band** → in-page ribbon → **tool grid** → the news
+desk, unchanged.
+
+- **The hero** is copy left, product right: a real screenshot of the cheat
+  sheet (`auction-sheet.webp`, 73KB — cropped and re-encoded from the
+  committed `cheatsheet.png`, which was 687KB and unused). On a phone the
+  frame keeps the image at half size and shows the left of it, because a
+  1180px sheet scaled into a 390px column is a grey smear.
+- **The `.trio` strip under it spells out PROJ / VALUE / YOU.** Those three
+  columns are the entire differentiator — no ranking site has to answer any of
+  them — so they get the width of the page rather than a clause in a paragraph.
+- **The tool grid** is six auction tools, one row of three. The snake room is
+  not a tile; it is the small switch in the ribbon.
+- **The masthead nav is the site; the ribbon is the page.** Masthead: Auction
+  Values / Strategy / Insights / Columns / FAQ plus Sign In and two CTAs.
+  Ribbon: in-page anchors plus the edition switch. Two navs that both listed
+  destinations was the density complaint.
+- **Density inside the news desk:** Position Intel dropped from three
+  follow-ups per card to two (four on the double-width Market module). Five
+  stacks of four headlines was the block readers skimmed past.
+
+The lead, Top Headlines, The Pick, Vegas vs. Consensus, The Build, the
+Play-Caller column, Asset Allocation and the camp desk are all unchanged in
+behaviour — every id the painters write into survived the restructure.
+
+### 27c. Best ball is retired from the surface, not from the internet
+
+**Every place that sold best ball is gone:** the front page's edition switch
+(now Auction / Snake), `/hub`'s three mode cards (now two, auction first), the
+Insights dropdown in the app, the Draft Format select in League Settings, the
+`/insights` format chooser and its tabs, the guides page, the vault's per-format
+line, the cross-edition links on every auction and snake drop page, `llms.txt`,
+and the site-wide footer boilerplate.
+
+**What was deliberately left alone:**
+
+- **The pages themselves.** `bestball-insights*.html`, the two best-ball guides
+  and the `/bestball` route still serve, and they are still in `sitemap.xml`.
+  Nothing 404s and nothing loses its ranking; they are simply orphaned from
+  internal links. Deleting them and 301-ing to the auction editions is a
+  separate decision, and a lossy one.
+- **`it-league.js` still understands `'bestball'`.** A reader whose saved league
+  is best ball keeps their reading lens; the front page's
+  `if (!ED[edKey]) edKey = 'auction'` guard is what lands them on the auction
+  edition. That guard is now load-bearing — do not remove it.
+- **The League Settings select keeps a `bestball` option, conditionally.** It
+  renders only when `draft.format === 'bestball'` already. A React `<select>`
+  whose `value` is not among its options renders blank, which would have
+  stranded anyone mid-season in a best-ball league.
+- **`_worker.js`'s insight data** still carries `bestballPositioning` /
+  `bestballAction` per insight. Nothing renders them. Harmless, and removing
+  them means re-cutting the premium payload.
+
+`tools/test-position-lens.mjs` and `tools/test-it-league.mjs` were updated to
+the two-edition switch, and both now assert the *absence* of a best ball surface
+rather than the presence of one.
+
+---
+
+## 28. August 2026: the post-draft section, and the FAAB Advisor
+
+**The brief.** A pre-draft / post-draft split like DraftSharks'. Sleeper only.
+Everything post-draft free except the Value Coach. Build the FAAB Advisor. Ship
+the whole section **locked**, behind "coming soon, leave your email for notice
+and free access".
+
+### 28a. Why FAAB is the right post-draft flagship
+
+Every other in-season tool ranks waiver adds. A ranking tells you who to want;
+in a FAAB league what you *pay* is the entire decision, and a dollar under the
+winner buys nothing at all. FAAB is a blind auction run weekly against the same
+room you drafted against — which makes it the one in-season problem this site is
+already built to solve, and the reason the section leads with it rather than with
+start/sit.
+
+### 28b. The model, and the mistake it went through
+
+`/faab` reads the reader's Sleeper league in the browser (rosters, users, league
+settings, the transaction log) and prices the free-agent pool through
+**`it-league.js`** — `defaultBoard()` for the pool, `price(pos, rank)` for the
+reader's own budget, their saved sheet where they have one. **No valuation code
+is duplicated into the page**, deliberately: a second copy of `scorePlayer` in a
+second file is the drift that §9c already has a test to catch.
+
+Four numbers, in order:
+
+| | |
+|---|---|
+| `ros` | board value × (weeks left / 17) — rest-of-season, in **draft** dollars |
+| `vadd` | `ros` minus the weakest player that roster would actually start at the position (slot counts read from the league's own `roster_positions`, flex included), floored at 20% of `ros` so a bench-only add is not worth literally nothing |
+| `surplus` | `vadd` minus the **(adds+1)-th best** `vadd` on the wire for that roster |
+| `share` | `surplus` ÷ the sum of surpluses — multiplied by a budget to get a bid |
+
+**The surplus line is the whole model, and the first cut got it wrong twice.**
+
+1. **First cut: no baseline at all** (`surplus = vadd`). Every free agent got a
+   share of the budget proportional to his absolute value. On a real week-5 wire
+   — a long flat tail where the board prices everyone at the minimum bid — that
+   produced *forty identical rows*: `$2` value, `$11` going rate, `$2` max, over
+   and over. It is a ranking with dollar signs on it, which is the exact thing
+   the page exists not to be.
+2. **Second cut: baseline = the single best alternative.** Correct in spirit,
+   far too harsh: only one free agent per roster can be better than every other,
+   so exactly one row survived.
+3. **Shipped: baseline = the first add you would not otherwise have made.** Over
+   the remaining weeks a manager makes roughly `adds = weeksLeft × 0.7` claims
+   anyway, so the ones they would make regardless are not what winning *this*
+   claim buys. The replacement is the (adds+1)-th best on the wire. This is
+   value-over-replacement — the same idea the draft board is built on, with the
+   replacement drawn off the wire instead of the draft pool.
+
+Ten interchangeable handcuffs all sit at replacement, so all ten are worth about
+a dollar however good they look on a list. **A flat wire correctly produces an
+empty table and the line "save the budget", which is advice no other tool gives.**
+
+**Going rate is computed one rival at a time**, not from a curve: their remaining
+FAAB (`settings.waiver_budget_used`, which Sleeper publishes for every roster),
+their hole at that position, their alternatives. A leaguemate with $0 left is not
+competition however badly they need a running back, and the page names who the
+real threat is. This is the one genuinely novel thing on the page.
+
+**Two currencies, said out loud.** `ros` is draft dollars; going rate and max bid
+are FAAB dollars. They are not the same scale — a $100 FAAB budget buys a handful
+of claims where a $200 draft budget buys a roster — so a going rate *above* the
+rest-of-season figure is normal. The column headers carry the unit and the method
+note explains it; without that it reads as an arithmetic bug.
+
+### 28c. The lock is in the worker, not the page
+
+`POST_DRAFT_PAGES` (currently `/faab`) serves **`/post-draft` in place of
+itself** unless `POST_DRAFT_OPEN` is `"1"` in the Cloudflare vars.
+
+- **In the worker on purpose.** A static asset locked by its own JavaScript is a
+  suggestion — the HTML ships to the browser either way and anyone can read it.
+  The worker never hands the page over.
+- **Serves, does not redirect.** The reader keeps the URL they clicked, so the
+  page that opens there later is the one they were promised, and the gate records
+  *which* tool they wanted (`location.pathname` → the `tool` field on the lead).
+- **Owner preview:** `?preview=<LEADS_EXPORT_KEY>` parks the key in a 12-hour
+  `HttpOnly` cookie and bounces to the clean URL, so the secret does not end up in
+  a shared link or the next request's `Referer`.
+- **To open the section:** set `POST_DRAFT_OPEN=1`, add `/faab` to `sitemap.xml`,
+  and mail the list. Nothing else.
+
+`POST /api/post-draft-notify` reuses the `/insights-vault` plumbing exactly — one
+`contacts` row (`source: 'post-draft:<tool>'`), the optional `LEAD_WEBHOOK`, the
+existing unsubscribe path. It grants nothing, because there is nothing to grant
+yet: no entitlement, no cookie.
+
+### 28d. The front page says which half of the season it is
+
+Two labelled shelves: **Before the draft** (the six auction tools) and **After
+the draft** (three locked cards → `/post-draft`). The masthead carries an
+`In-Season` link with a `Soon` chip.
+
+**A trap that was already in the masthead CSS and is now fixed:** the row's
+tightening rules were inside `@media(max-width:1100px)`, but `.wrap` is capped at
+`max-width:1260px` — so the masthead's content box is the same width at 1360px and
+at 2560px. A row that does not fit in 1260 never fits, and a max-width media query
+only hides the wrap *below* the breakpoint while leaving every wider screen on two
+ragged rows. Those declarations are unconditional now. **Do not put them back
+behind a max-width query.**
+
+### 28e. Tests
+
+`node tools/test-faab.mjs` (playwright-core + Chromium; skips cleanly without
+them) serves the real page against a stubbed 12-team league built to have known
+answers, and asserts: no max bid above the money actually left, rest-of-season
+discounted for weeks played and never rising down the board, a $0 rival never
+named as the competition, no going rate above the richest rival's budget, a
+"Bid $n" always affordable and above the going rate, a "Let it go" never a player
+the reader could have won, and a non-FAAB league unselectable.
+
+**Two of those assertions exist because the model shipped wrong in this session
+and every bound check passed on the broken output** — identical numbers are
+trivially within bounds and trivially monotonic. So: *the model tells the pool
+apart*, and a second fixture league whose wire is genuinely flat, where the only
+correct answer is an empty table. Verified by reverting: the no-baseline model
+fails the flat-wire case with exactly the `$2 / $3 / $2` rows it originally
+shipped. `IT_SHOT=/tmp/faab.png node tools/test-faab.mjs` writes a rendered copy,
+because the numbers can all be right while the table is unreadable.
+
+`tools/test-asset-routing.mjs` covers the gate in both states and reads
+`POST_DRAFT_PAGES` out of the worker so a page added to the section cannot be
+left ungated. **It previously passed while testing nothing**: the lifted rewrite
+block's own `catch (e) {}` swallowed the `ReferenceError` from the three
+gate symbols the harness did not define. They are supplied now.
+`tools/test-seo.mjs` reads the same set and exempts gated routes from the
+sitemap-coverage check, because while the gate is closed a sitemap entry for
+`/faab` would hand a crawler the gate page's body under a second URL.
+
+### 28f. What is not built
+
+Start/Sit and Roster Audit are named on the gate page and have no code. Start/Sit
+needs **weekly** projections and the site has only season-long ones; the intended
+path is season ÷ games × the per-game Vegas scoring environment the worker already
+computes (§9b), not a bought feed. Neither has a route, so neither is in
+`POST_DRAFT_PAGES`.
+---
+
+## 29. The shared chrome and `site.css` (PR #85, merged August 2026)
 
 Until August 2026 every page carried its own copy of the header, the footer and
 the CSS that styles them. They drifted: **10 different nav link sets across 95
@@ -2484,3 +2746,70 @@ article inside a 1740px sticky header. `tools/test-asset-routing.mjs` asserts
 every local asset a page points at exists on disk, because renaming `tuna.png`
 to `tuna.webp` left 91 pages pointing at a deleted file twice — once on the
 rename and once when a merge took the other side — and nothing else noticed.
+
+---
+
+## 30. August 2026: how #88 and #85 were reconciled
+
+Two design passes ran at the same time on separate branches and both were right
+about something. **PR #85** (merged to `main` first) built the structure: one
+shared `site.css` owning the palette, and `tools/build-chrome.mjs` generating the
+header and footer from a single link set, killing 10 divergent nav sets and 13
+footers across 95 pages. **PR #88** built the direction: auction-first, best ball
+retired, and the whole site on one *light* surface.
+
+They collided in 98 files, because #85 centralised a **dark** palette while #88
+converted 91 pages to a light one inline.
+
+**The resolution was #88's direction on #85's structure**, which is strictly
+better than either branch shipped:
+
+- `site.css` keeps its job and changes its values. The palette is light there and
+  nowhere else, so the site's colour is now **one file**, not ninety-one.
+- `build-chrome.mjs` keeps its job and changes its link set: auction-first, no
+  best ball, `/post-draft` present, `/insights` (the three-format chooser)
+  dropped in favour of `/auction-insights`.
+- `OWNED` learned the light `:root` spelling as well as the dark one, so pages
+  that carried an inline palette from #88 were stripped of it. **This matters:
+  `site.css` is linked BEFORE each page's own `<style>`, so a leftover inline
+  `:root` silently wins** — which is precisely how the ninety-one divergent
+  copies happened the first time.
+- The CTA stays format-aware, with one deliberate exception: a best-ball page
+  resolves to the **auction** sheet, not the best-ball room. The line is retired;
+  its pages still serve, and their one button now points at what the site sells.
+
+### What taking "ours" on 97 files cost, and how it was caught
+
+Resolving every HTML conflict in #88's favour reverted two of #85's real fixes,
+and neither was obvious:
+
+- **`auction-watch-2026-07-05.html` lost its `</header>` again.** #85 had fixed a
+  page that nested its whole article inside a 1740px sticky blurred header. Taking
+  our side put the bug back. `tools/test-chrome.mjs` caught it on the unbalanced
+  tag count — that assertion exists because the HTML still parses and the page
+  still renders, so nothing else notices. The file was taken from `main` and
+  re-converted rather than hand-patched.
+- **94 pages pointed at a deleted `tuna.png`.** #85 renamed it to `tuna.webp`;
+  our side still referenced the old name, so every one of those pages had a broken
+  image twice over. `tools/test-asset-routing.mjs` asserts every local asset a page
+  points at exists on disk — added by #85 for this exact failure, and it earned it
+  within the hour.
+
+**The lesson for the next parallel pass:** `--ours` on a large conflict is not a
+resolution, it is a bet that the other side changed nothing you needed. Both
+things it cost here were caught by tests rather than by review.
+
+### Tests that changed with the contract
+
+`test-chrome.mjs` and `test-reading-view.mjs` both asserted the *old* shape and
+had to be re-pointed, not deleted:
+
+- The palette sweep no longer looks for a white `:root` in every page — it asserts
+  the opposite, that **no content page declares a palette at all** and every one
+  links the shared file, then checks `site.css` itself. The three reading pages
+  keep their own `:root` by design and are exempt, the same set `build-chrome.mjs`
+  excludes.
+- `site.css --bg` is asserted **light**, and `--teal` pinned to `#0e7c63`, because
+  `#2dd4a3` is about 1.9:1 on white.
+- The nav reachability set lost `/insights` and `/bestball-insights` and gained
+  `/fantasy-football-auction-values` and `/post-draft`.

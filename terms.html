@@ -29,7 +29,7 @@
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .brand-fish{height:36px;width:auto;display:block}
-.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#cdd8de}
+.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#39454f}
 h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 .lead{color:var(--muted);margin:0 0 26px;font-size:14px}
 .doc p{color:var(--sec);margin:0 0 16px}
@@ -45,14 +45,15 @@ footer a{color:var(--sec);margin-right:16px}
   <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.webp" alt=""/><span class="brand-word">IRON TUNA</span></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
-      <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
-      <a href="/guides">Guides</a>
-      <a href="/analyst-desk">Analyst Desk</a>
+      <a href="/analyst-desk">Columns</a>
+      <a href="/post-draft">In-Season</a>
       <a href="/faq">FAQ</a>
-      <a href="https://irontuna.com/">Draft Day Mode</a>
     </nav>
-    <a class="cta" href="https://irontuna.com/">Free sheet</a>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
@@ -80,26 +81,28 @@ footer a{color:var(--sec);margin-right:16px}
     <div class="foot-col">
      <h2>Draft</h2>
      <ul>
-      <li><a href="https://irontuna.com/">Draft Day Mode</a></li>
-      <li><a href="https://irontuna.com/auctiondraft">Auction board</a></li>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
       <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
-      <li><a href="https://irontuna.com/bestball">Best ball board</a></li>
-      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Read</h2>
      <ul>
-      <li><a href="/insights">Insights</a></li>
+      <li><a href="/auction-insights">Auction insights</a></li>
       <li><a href="/the-pick">The Pick</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/analyst-desk">Analyst Desk</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Company</h2>
      <ul>
+      <li><a href="/post-draft">In-Season (soon)</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -116,7 +119,7 @@ footer a{color:var(--sec);margin-right:16px}
   <div class="foot-note">
    <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.</p>
    <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
-    <a href="https://irontuna.com/">Build your free sheet</a></p>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>

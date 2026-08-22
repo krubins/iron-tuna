@@ -29,10 +29,10 @@
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .brand-fish{height:36px;width:auto;display:block}
-.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#cdd8de}
+.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#39454f}
 h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 .lead{color:var(--sec);margin:0 0 24px;font-size:16px}
-.card{border:1px solid var(--line);background:rgba(18,27,36,0.5);border-radius:12px;padding:16px 18px;margin:0 0 22px}
+.card{border:1px solid var(--line);background:rgba(240,244,246,0.5);border-radius:12px;padding:16px 18px;margin:0 0 22px}
 .card b{color:var(--text)}
 .faq{border-top:1px solid var(--line)}
 .faq details{border-bottom:1px solid var(--line);padding:16px 2px}
@@ -42,20 +42,20 @@ h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 .faq details[open] summary::before{content:"\2013"}
 .faq p{color:var(--sec);margin:10px 0 2px;padding-left:24px}
 .back{display:inline-block;margin:30px 0 10px;color:var(--sec)}
-form.contact{border:1px solid var(--line);background:rgba(18,27,36,0.5);border-radius:12px;padding:18px;margin:0 0 22px}
+form.contact{border:1px solid var(--line);background:rgba(240,244,246,0.5);border-radius:12px;padding:18px;margin:0 0 22px}
 form.contact .row{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 12px}
 form.contact .row > div{flex:1 1 200px}
 form.contact label{display:block;font-size:13px;color:var(--sec);margin:0 0 5px}
-form.contact input,form.contact textarea{width:100%;background:#0b1117;border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;font-size:15px;padding:10px 12px}
+form.contact input,form.contact textarea{width:100%;background:#ffffff;border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;font-size:15px;padding:10px 12px}
 form.contact textarea{resize:vertical;min-height:120px}
 form.contact input:focus,form.contact textarea:focus{outline:none;border-color:var(--teal)}
 form.contact .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-form.contact button{background:var(--teal);color:#04231a;border:0;border-radius:8px;font-weight:700;font-size:15px;padding:11px 20px;cursor:pointer}
+form.contact button{background:var(--teal);color:#e9f5f1;border:0;border-radius:8px;font-weight:700;font-size:15px;padding:11px 20px;cursor:pointer}
 form.contact button:disabled{opacity:.6;cursor:default}
 form.contact .note{color:var(--muted);font-size:13px;margin:10px 0 0}
 form.contact .msg{font-size:14px;margin:12px 0 0;min-height:18px}
 form.contact .msg.ok{color:var(--teal)}
-form.contact .msg.err{color:#f57272}
+form.contact .msg.err{color:#c0322f}
 footer{border-top:1px solid var(--line);margin-top:42px;padding:24px 0;color:var(--muted);font-size:13px}
 footer a{color:var(--sec);margin-right:16px}
 </style>
@@ -66,14 +66,15 @@ footer a{color:var(--sec);margin-right:16px}
   <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.webp" alt=""/><span class="brand-word">IRON TUNA</span></a>
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
-      <span class="nav-dd"><a href="/insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/bestball-insights">Best Ball</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
-      <a href="/guides">Guides</a>
-      <a href="/analyst-desk">Analyst Desk</a>
+      <a href="/analyst-desk">Columns</a>
+      <a href="/post-draft">In-Season</a>
       <a href="/faq">FAQ</a>
-      <a href="https://irontuna.com/">Draft Day Mode</a>
     </nav>
-    <a class="cta" href="https://irontuna.com/">Free sheet</a>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
@@ -141,26 +142,28 @@ footer a{color:var(--sec);margin-right:16px}
     <div class="foot-col">
      <h2>Draft</h2>
      <ul>
-      <li><a href="https://irontuna.com/">Draft Day Mode</a></li>
-      <li><a href="https://irontuna.com/auctiondraft">Auction board</a></li>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
       <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
-      <li><a href="https://irontuna.com/bestball">Best ball board</a></li>
-      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Read</h2>
      <ul>
-      <li><a href="/insights">Insights</a></li>
+      <li><a href="/auction-insights">Auction insights</a></li>
       <li><a href="/the-pick">The Pick</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/analyst-desk">Analyst Desk</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Company</h2>
      <ul>
+      <li><a href="/post-draft">In-Season (soon)</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -177,7 +180,7 @@ footer a{color:var(--sec);margin-right:16px}
   <div class="foot-note">
    <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.</p>
    <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
-    <a href="https://irontuna.com/">Build your free sheet</a></p>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>

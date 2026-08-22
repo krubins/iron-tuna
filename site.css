@@ -19,25 +19,35 @@
  */
 
 :root {
-  /* ── surfaces ─────────────────────────────────────────────────────────── */
-  --bg: #0b1117;
-  --panel: #121b24;
-  --elev: #16212c;
-  --line: #22303b;
-  --line2: #2c3b48;
+  /* ── surfaces ─────────────────────────────────────────────────────────────
+     Light, as of the auction-first pass. Every reading surface on the site is
+     white; the one dark zone left is the draft app (index.html), which is a tool
+     you work in on draft night rather than a page you read, and the black
+     masthead band on the front page. */
+  --bg: #ffffff;
+  --panel: #f7f9fa;
+  --elev: #eef2f5;
+  --line: #e3e8ec;
+  --line2: #ccd6dc;
 
   /* ── text ─────────────────────────────────────────────────────────────────
      Every value below clears WCAG AA (4.5:1) against --bg, --panel and --elev.
-     --muted is the floor: 5.64:1 on --panel. Do not darken it. */
-  --text: #e8eef2;
-  --sec: #b6c2cc;
-  --muted: #8595a1;
+     --muted is the floor: 5.1:1 on --panel. Do not lighten it. */
+  --text: #111820;
+  --sec: #39454f;
+  --muted: #6b7a85;
 
-  /* ── accents ──────────────────────────────────────────────────────────── */
-  --teal: #2dd4a3;
-  --gold: #f5b800;
-  --danger: #ef5b5b;
-  --brand: #4c7dff;
+  /* ── accents ──────────────────────────────────────────────────────────────
+     #2dd4a3 is about 1.9:1 on white and cannot be the accent here; --teal is the
+     white-safe green the whole site is drawn in.
+     GOLD IS A FILL, NOT AN INK. #f2a900 as a block with #231700 type on it is
+     fine; as type on white it is barely there, so anything that says a NUMBER or
+     a label in gold uses --goldink instead. */
+  --teal: #0e7c63;
+  --gold: #f2a900;
+  --goldink: #7a5300;
+  --danger: #c0322f;
+  --brand: #0e7c63;
 
   /* ── type ─────────────────────────────────────────────────────────────────
      A 1.25 scale off a 16px base. Before this, front.html alone computed 31
@@ -82,7 +92,7 @@ html { scroll-behavior: smooth }
 }
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 50% -10%, rgba(45, 212, 163, .06), transparent), var(--bg);
+  background: radial-gradient(1200px 600px at 50% -10%, rgba(14, 124, 99, .06), transparent), var(--bg);
   color: var(--text);
   /* Inter, so the content pages match front.html and the app instead of
      rendering in whatever UI font the OS happens to supply. */
@@ -115,7 +125,7 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
 /* ── header ─────────────────────────────────────────────────────────────── */
 header.site {
   position: sticky; top: 0; z-index: 30;
-  background: rgba(11, 17, 23, .85); backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, .92); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
 header.site .wrap {
@@ -134,16 +144,16 @@ header.site .brand-logo { height: 26px }
   text-transform: uppercase; white-space: nowrap;
   padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
 }
-.nav a:hover { color: var(--text); background: rgba(255, 255, 255, .05); text-decoration: none }
+.nav a:hover { color: var(--text); background: rgba(17, 24, 32, .05); text-decoration: none }
 /* The page you are on, so the nav answers "where am I". */
-.nav a[aria-current="page"] { color: var(--teal); background: rgba(45, 212, 163, .10) }
+.nav a[aria-current="page"] { color: var(--teal); background: rgba(14, 124, 99, .10) }
 header.site > .wrap > a.cta {
-  color: var(--teal); border: 1px solid var(--teal); border-radius: 9px;
-  padding: var(--space-2) var(--space-3); background: rgba(45, 212, 163, .12);
+  color: #231700; border: 1px solid var(--gold); border-radius: 9px; font-weight: 700;
+  padding: var(--space-2) var(--space-3); background: var(--gold);
   font-size: var(--fs-2xs); letter-spacing: .06em; text-transform: uppercase;
   white-space: nowrap; margin-left: auto; flex: 0 0 auto;
 }
-header.site > .wrap > a.cta:hover { background: rgba(45, 212, 163, .2); color: var(--text); text-decoration: none }
+header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: none }
 
 /* ── nav dropdown ───────────────────────────────────────────────────────── */
 .nav-dd { position: relative; display: inline-block }
@@ -152,9 +162,9 @@ header.site > .wrap > a.cta:hover { background: rgba(45, 212, 163, .2); color: v
   display: flex; flex-direction: column; visibility: hidden; opacity: 0;
   transition: opacity .12s ease, visibility 0s linear .3s;
   position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  background: var(--panel); border: 1px solid rgba(45, 212, 163, .4);
+  background: var(--panel); border: 1px solid rgba(14, 124, 99, .4);
   border-radius: var(--radius-md); padding: var(--space-2); z-index: 40; min-width: 180px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, .55), 0 0 16px rgba(45, 212, 163, .14);
+  box-shadow: 0 10px 26px rgba(17, 24, 32, .12), 0 0 16px rgba(14, 124, 99, .14);
 }
 /* Bridges the gap between trigger and menu so the pointer can cross it. */
 .nav-dd .nav-dd-menu::before { content: ""; position: absolute; top: -16px; left: -14px; right: -14px; height: 18px }
@@ -164,7 +174,7 @@ header.site > .wrap > a.cta:hover { background: rgba(45, 212, 163, .2); color: v
   border-radius: var(--radius-sm); text-transform: none; letter-spacing: .02em;
   font-size: var(--fs-sm); color: var(--sec);
 }
-.nav-dd .nav-dd-menu a:hover { background: rgba(45, 212, 163, .13); color: var(--text); text-decoration: none }
+.nav-dd .nav-dd-menu a:hover { background: rgba(14, 124, 99, .13); color: var(--text); text-decoration: none }
 
 /* ── mobile disclosure nav ───────────────────────────────────────────────── */
 .nav-toggle { display: none }
@@ -201,7 +211,7 @@ header.site > .wrap > a.cta:hover { background: rgba(45, 212, 163, .2); color: v
     display: none; flex-direction: column; align-items: stretch; justify-content: flex-start;
     background: var(--panel); border-bottom: 1px solid var(--line);
     padding: var(--space-2) var(--space-3) var(--space-4);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, .55); max-height: calc(100vh - 52px);
+    box-shadow: 0 18px 40px rgba(17, 24, 32, .12); max-height: calc(100vh - 52px);
     overflow-y: auto; gap: 0;
   }
   header.site { position: sticky }
