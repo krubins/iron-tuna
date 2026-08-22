@@ -86,18 +86,25 @@ console.log('\nthe rest of the site reads as the same surface');
   const pages = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html'));
   const skip = new Set([...DARK, 'admin.html', FRONT]);
   const content = pages.filter((f) => !skip.has(f));
-  const notLight = content.filter((f) => {
-    const root = (fs.readFileSync(path.join(ROOT, f), 'utf8').match(/:root\{[^}]*\}/) || [''])[0];
-    return !/--bg:\s*#fff/i.test(root);
-  });
   ok('there are content pages to sweep', content.length > 50, String(content.length));
-  ok('every content page is white', notLight.length === 0, notLight.slice(0, 5).join(', '));
-  const offAccent = content.filter((f) => {
-    const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
-    const root = (src.match(/:root\{[^}]*\}/) || [''])[0];
-    return !/--teal:\s*#0e7c63/i.test(root);
-  });
-  ok('and on the one accent', offAccent.length === 0, offAccent.slice(0, 5).join(', '));
+  // The palette moved OUT of the pages and into /site.css when the shared chrome
+  // landed (§29), so the sweep changed shape: a content page must now declare no
+  // palette of its own and link the one that does. An inline :root would win,
+  // because site.css is linked before the page's own <style> — which is exactly
+  // how ninety-one divergent copies happened the first time.
+  // PAGES (the three reading pages) are checked in full above and keep their own
+  // :root on purpose — they are excluded from the shared chrome for the same
+  // reason, so they are excluded here rather than being a standing failure.
+  const ownRoot = content.filter((f) => !PAGES.includes(f))
+    .filter((f) => /:root\s*\{/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
+  ok('no content page declares its own palette', ownRoot.length === 0, ownRoot.slice(0, 5).join(', '));
+  const noCss = content.filter((f) => !fs.readFileSync(path.join(ROOT, f), 'utf8').includes('href="/site.css"'));
+  ok('every content page links the shared one', noCss.length === 0, noCss.slice(0, 5).join(', '));
+  const shared = fs.readFileSync(path.join(ROOT, 'site.css'), 'utf8');
+  const sroot = (shared.match(/:root\s*\{[\s\S]*?\}/) || [''])[0];
+  ok('and the shared palette is white', /--bg:\s*#fff/i.test(sroot), sroot.slice(0, 120));
+  ok('on the one accent', /--teal:\s*#0e7c63/i.test(sroot), sroot.slice(0, 120));
+  ok('with gold defined as an ink as well as a fill', /--goldink:\s*#[0-9a-f]{6}/i.test(sroot));
   const darkLeft = content.filter((f) => /rgba\(45,\s*212,\s*163/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
   ok('no dark-theme accent survives anywhere', darkLeft.length === 0, darkLeft.slice(0, 5).join(', '));
   const oldMark = content.filter((f) => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('stop-color="#dde8ee"'));

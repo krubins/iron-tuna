@@ -680,11 +680,13 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   embed.
 - **Camp/preseason upkeep:** a scheduled Claude Routine ("Iron Tuna camp & preseason
   desk") researches verified camp/preseason news daily, authors a new
-  `auction-watch-YYYY-MM-DD.html` when there is real signal, runs `build-front.mjs`
-  **and `build-seo.mjs`** (§21 — the new page needs the Google tag, its Article
-  JSON-LD, a sitemap `lastmod`, and a static link from the camp desk; without the
-  second command it is published untagged and reachable only from the sitemap),
-  and pushes — same guardrails as the §9 projections routine (skip on no
+  `auction-watch-YYYY-MM-DD.html` when there is real signal, runs `build-front.mjs`,
+  **`build-seo.mjs`** (§21 — the new page needs the Google tag, its Article
+  JSON-LD, a sitemap `lastmod`, and a static link from the camp desk; without that
+  command it is published untagged and reachable only from the sitemap)
+  **and `build-chrome.mjs`** (§24 — without it the page ships with no nav, no
+  footer and no stylesheet link, and the `build-chrome.mjs --check` gate fails CI
+  on the next PR), and pushes — same guardrails as the §9 projections routine (skip on no
   network/no verified news; no em dashes in authored copy).
 
 ---
@@ -1900,7 +1902,7 @@ node tools/build-seo.mjs --check    # writes nothing, exits 1 if anything is sta
 node tools/test-seo.mjs             # 35 assertions over the result
 ```
 
-**Run `build-seo.mjs` whenever a page is added**, alongside `build-front.mjs`.
+**Run `build-seo.mjs` whenever a page is added**, alongside `build-front.mjs` and `build-chrome.mjs` (§24). All three are idempotent, all three are gated in CI, and a new page needs all three.
 Running it twice changes nothing; every edit it makes is idempotent, and the
 JSON-LD it owns is marked `data-seo="build-seo"` so it can rewrite its own output
 and will never touch the hand-written blocks in `index.html` or `faq.html`.
@@ -2690,3 +2692,124 @@ needs **weekly** projections and the site has only season-long ones; the intende
 path is season ÷ games × the per-game Vegas scoring environment the worker already
 computes (§9b), not a bought feed. Neither has a route, so neither is in
 `POST_DRAFT_PAGES`.
+---
+
+## 29. The shared chrome and `site.css` (PR #85, merged August 2026)
+
+Until August 2026 every page carried its own copy of the header, the footer and
+the CSS that styles them. They drifted: **10 different nav link sets across 95
+pages, and 13 different footers.** The cost was navigational rather than
+cosmetic — from `the-pick.html` a reader could not reach Insights, FAQ, Insight
+Vault, Play-Caller Premium or Analyst Desk at all, and no page on the site
+linked Privacy and Terms together.
+
+- **`site.css`** is the single source of truth for the palette, the type scale,
+  the base resets and all the chrome. Pages link it **before** their own
+  `<style>`, so a page still has the last word on anything it declares itself
+  and a rule left behind inline is inert rather than conflicting.
+- **`tools/build-chrome.mjs`** generates the header and footer from one link
+  set, between `<!--chrome:*-->` sentinels, so it replaces only its own output.
+  Idempotent, with a `--check` mode, exactly like `build-seo.mjs`.
+  ```bash
+  node tools/build-chrome.mjs           # writes
+  node tools/build-chrome.mjs --check   # writes nothing, exits 1 if stale
+  ```
+- **Run it whenever a page is added.** A page published without it has no nav,
+  no footer and no stylesheet, and the CI gate fails on the next PR. This is
+  what the camp/preseason Routine (§12) had to be taught.
+
+**Three visual zones, deliberately.** The content pages and the app are dark;
+`front.html` is light and owns its own stylesheet and three-row masthead; the
+three READING pages — `lead.html`, `analyst-desk.html`,
+`play-caller-premium.html` — are white, and `tools/test-reading-view.mjs` owns
+that palette. The reading pages are a `NAV_EXCLUDE` set in the generator: they
+take the footer and the stylesheet but keep their own short header, because an
+eleven-item nav does not belong on a page you read. They do take the shared
+**typeface** — leaving three pages on `-apple-system` while the other 91 render
+in Inter puts the split back on the pages a reader spends longest on.
+
+**Excluded entirely:** `index.html` (React renders its own header),
+`front.html` (its masthead is its own design; its ribbon and footer carry the
+same link set so nothing is unreachable) and `admin.html` (internal).
+
+**On mobile** the nav is a disclosure menu, not a scrolling strip. The strip
+that `cee7d10` shipped was right for the three links that nav then held; at
+eleven it hides most of them behind a scroll with no affordance. The header is
+still one line at 52px as that commit intended, and the CTA sits **outside**
+`<nav>` so it stays in the bar rather than collapsing into the menu.
+
+**Guards.** `tools/test-chrome.mjs` asserts the link set is complete, the CTA is
+format-correct, the disclosure nav is wired for assistive tech, and
+header/nav/footer/main are balanced — that last one because
+`auction-watch-2026-07-05.html` shipped with no `</header>` and nested its whole
+article inside a 1740px sticky header. `tools/test-asset-routing.mjs` asserts
+every local asset a page points at exists on disk, because renaming `tuna.png`
+to `tuna.webp` left 91 pages pointing at a deleted file twice — once on the
+rename and once when a merge took the other side — and nothing else noticed.
+
+---
+
+## 30. August 2026: how #88 and #85 were reconciled
+
+Two design passes ran at the same time on separate branches and both were right
+about something. **PR #85** (merged to `main` first) built the structure: one
+shared `site.css` owning the palette, and `tools/build-chrome.mjs` generating the
+header and footer from a single link set, killing 10 divergent nav sets and 13
+footers across 95 pages. **PR #88** built the direction: auction-first, best ball
+retired, and the whole site on one *light* surface.
+
+They collided in 98 files, because #85 centralised a **dark** palette while #88
+converted 91 pages to a light one inline.
+
+**The resolution was #88's direction on #85's structure**, which is strictly
+better than either branch shipped:
+
+- `site.css` keeps its job and changes its values. The palette is light there and
+  nowhere else, so the site's colour is now **one file**, not ninety-one.
+- `build-chrome.mjs` keeps its job and changes its link set: auction-first, no
+  best ball, `/post-draft` present, `/insights` (the three-format chooser)
+  dropped in favour of `/auction-insights`.
+- `OWNED` learned the light `:root` spelling as well as the dark one, so pages
+  that carried an inline palette from #88 were stripped of it. **This matters:
+  `site.css` is linked BEFORE each page's own `<style>`, so a leftover inline
+  `:root` silently wins** — which is precisely how the ninety-one divergent
+  copies happened the first time.
+- The CTA stays format-aware, with one deliberate exception: a best-ball page
+  resolves to the **auction** sheet, not the best-ball room. The line is retired;
+  its pages still serve, and their one button now points at what the site sells.
+
+### What taking "ours" on 97 files cost, and how it was caught
+
+Resolving every HTML conflict in #88's favour reverted two of #85's real fixes,
+and neither was obvious:
+
+- **`auction-watch-2026-07-05.html` lost its `</header>` again.** #85 had fixed a
+  page that nested its whole article inside a 1740px sticky blurred header. Taking
+  our side put the bug back. `tools/test-chrome.mjs` caught it on the unbalanced
+  tag count — that assertion exists because the HTML still parses and the page
+  still renders, so nothing else notices. The file was taken from `main` and
+  re-converted rather than hand-patched.
+- **94 pages pointed at a deleted `tuna.png`.** #85 renamed it to `tuna.webp`;
+  our side still referenced the old name, so every one of those pages had a broken
+  image twice over. `tools/test-asset-routing.mjs` asserts every local asset a page
+  points at exists on disk — added by #85 for this exact failure, and it earned it
+  within the hour.
+
+**The lesson for the next parallel pass:** `--ours` on a large conflict is not a
+resolution, it is a bet that the other side changed nothing you needed. Both
+things it cost here were caught by tests rather than by review.
+
+### Tests that changed with the contract
+
+`test-chrome.mjs` and `test-reading-view.mjs` both asserted the *old* shape and
+had to be re-pointed, not deleted:
+
+- The palette sweep no longer looks for a white `:root` in every page — it asserts
+  the opposite, that **no content page declares a palette at all** and every one
+  links the shared file, then checks `site.css` itself. The three reading pages
+  keep their own `:root` by design and are exempt, the same set `build-chrome.mjs`
+  excludes.
+- `site.css --bg` is asserted **light**, and `--teal` pinned to `#0e7c63`, because
+  `#2dd4a3` is about 1.9:1 on white.
+- The nav reachability set lost `/insights` and `/bestball-insights` and gained
+  `/fantasy-football-auction-values` and `/post-draft`.

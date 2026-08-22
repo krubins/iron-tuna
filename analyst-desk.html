@@ -14,7 +14,7 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>Analysts vs. Iron Tuna: Where the Big Fantasy Boards and Ours Disagree | Iron Tuna</title>
 <meta name="description" content="A running record of where the most-followed fantasy analysts sit against consensus, where Iron Tuna&#39;s own auction values land next to them, and why this desk agrees or disagrees. Every analyst position quoted, dated and sourced; every Iron Tuna number computed off the live board.">
 <link rel="canonical" href="https://irontuna.com/analyst-desk">
@@ -29,11 +29,12 @@
      gone. This URL is the opposite: it is stable, and it accumulates. The
      column's own entries are fetched at load, so what a crawler sees is the
      standing copy above them, which is the evergreen half anyway. -->
+<link rel="stylesheet" href="/site.css">
 <style>
 :root{--bg:#ffffff;--panel:#f7f9fa;--elev:#eef2f5;--line:#e3e8ec;--line2:#ccd6dc;--text:#111820;--sec:#39454f;--muted:#6b7a85;--teal:#0e7c63;--gold:#f2a900;--goldink:#7a5300;--danger:#c0322f}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,rgba(14,124,99,0.045),transparent),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,rgba(14,124,99,0.045),transparent),var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:var(--teal);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px}
@@ -114,8 +115,9 @@ footer.site a{color:var(--muted)}
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <header class="site"><div class="wrap">
-  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.png" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="nav">
     <a href="/fantasy-football-auction-values">Auction Values</a>
     <a href="/guides">Strategy</a>
@@ -125,7 +127,7 @@ footer.site a{color:var(--muted)}
   </nav>
 </div></header>
 
-<main class="wrap">
+<main id="main" class="wrap">
 <div class="eyebrow" style="margin-top:34px">The Analyst Desk</div>
 <h1>Analysts vs. Iron Tuna</h1>
 <p class="lede intro">Where the most-followed fantasy analysts sit against consensus, where our auction values land next to them, and why we agree or disagree. Their side is always a dated, sourced position. Our side is always computed off the live board.</p>
@@ -157,7 +159,52 @@ footer.site a{color:var(--muted)}
 </main>
 
 <footer class="site"><div class="wrap">
-  <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees. <a href="https://irontuna.com/">Build your free auction sheet</a> &middot; <a href="/guides">Auction guides</a> &middot; <a href="/creators">Creators &amp; affiliates</a></p>
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>Draft</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/guides">Guides</a></li>
+      <li><a href="/analyst-desk">Analyst Desk</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/post-draft">In-Season (soon)</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
 </div></footer>
 
 <script>

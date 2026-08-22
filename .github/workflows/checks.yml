@@ -161,6 +161,21 @@ jobs:
       - name: Analytics tagging, structured data and crawlability
         run: node tools/test-seo.mjs
 
+      # The nav and footer are generated from one link set in build-chrome.mjs.
+      # Hand-editing them in 94 files is how they drifted into 10 nav variants
+      # and 13 footer variants in the first place, leaving whole sections
+      # unreachable from some pages. Same contract as the two gates above:
+      # rebuilding here must produce no diff.
+      - name: The header and footer are rebuilt from the canonical link set
+        run: |
+          if ! node tools/build-chrome.mjs --check; then
+            echo "::error::the chrome is stale — run 'node tools/build-chrome.mjs' and commit the result"
+            exit 1
+          fi
+
+      - name: Every destination is reachable and the chrome is well-formed
+        run: node tools/test-chrome.mjs
+
       # The scrolling cheat-sheet insights are hand-written prose with no build
       # step, so nothing used to notice when a note outlived the roster it
       # described — by August 2026 eight of the eleven backfield notes named
@@ -266,9 +281,12 @@ jobs:
       - name: Comping access and mailing the link
         run: node tools/test-admin-comp.mjs
 
-      # NOT run here: tools/test-position-lens.mjs and tools/test-you-column.mjs.
-      # Both drive real Chromium and self-skip without playwright-core plus a
+      # NOT run here: tools/test-position-lens.mjs, tools/test-you-column.mjs,
+      # tools/test-market-anchors.mjs, tools/test-vegas-slider.mjs,
+      # tools/test-qb-curve.mjs and tools/test-faab.mjs.
+      # All drive real Chromium and self-skip without playwright-core plus a
       # browser binary. Adding them without installing those would give a green
       # step that never actually ran, which is worse than not claiming coverage.
       # Run them locally (CHROMIUM_PATH=... node tools/test-position-lens.mjs)
-      # when touching the ribbon's edition switch, Position Intel or the lead.
+      # when touching the ribbon's edition switch, Position Intel, the lead, the
+      # cheat-sheet columns or the FAAB advisor's bid maths.
