@@ -362,7 +362,7 @@ Every tailored line has to commit to a draft type before it can say anything use
 
 **A borrowed lens is never called their league.** `label(fmt)` says "your 10-team snake draft" when the lens matches what they saved and "**a** 10-team, $300 auction" when it does not — a snake-league reader who asked for the auction read is owed a true sentence, not a flattering one.
 
-The switch itself lives in the Position Intel section header (`#posFmt` in `front.html`) and **only appears for a reader with a saved league and a board**: with no board there is no tailored line to re-word, and a control that changes nothing on screen is worse than no control. Clicking it re-renders the modules *and* the lead together — they quote the same stories, and a page that contradicts itself one screen apart is worse than one that never personalised at all. `node tools/test-position-lens.mjs` drives that switch in Chromium (skips cleanly without playwright-core or a Chromium binary); `tools/test-it-league.mjs` covers the ordering, the copy and the front page's two `tailor()` call sites.
+**Superseded, August 2026 — see §22.** The lens no longer has a control of its own. The front page's ribbon carries an **edition** switch instead (Auction Draft / Snake Draft / Best Ball, `#edSwitch` in `front.html`), every reader gets it, and `setEdition()` sets the lens underneath — so the lens is now a consequence of the edition rather than a second question. The old `#posFmt` switch is gone: it only appeared for a reader with a saved board, and two controls that can disagree about the same question are worse than one that cannot. Everything above about `readingFormat()` still holds; only the control moved. `node tools/test-position-lens.mjs` drives the ribbon switch in Chromium (skips cleanly without playwright-core or a Chromium binary); `tools/test-it-league.mjs` covers the ordering, the copy and the front page's two `tailor()` call sites.
 
 ### Money has two scales, and mixing them is the easy mistake
 
@@ -543,10 +543,13 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 - **`front.html` is the site's front page.** The worker serves it at `/`; the classic
   SPA hub (HubLanding in `index.html`) moved to **`/hub`** ("Classic Home" in the nav)
   and everything else (app routes, static pages) is unchanged. Snake and best ball
-  remain fully live — linked from the front page's secondary nav.
+  remain fully live — and since August 2026 the ribbon's **edition switch** (§22)
+  delivers the whole front page in whichever of the three the reader picked,
+  rather than linking them out of it.
 - **Layout** (ESPN-inspired): black masthead with the fish + Bebas silver wordmark and
   red accent bar; **deep-dive lead** (see below); "Top Headlines" rail; **Position Intel** modules (QB / RB / WR / TE /
-  Market) with an **Auction / Snake** reading-lens switch in the section header (§9f);
+  Market) — the reading lens that used to have a switch here now follows the
+  ribbon's **edition** switch (§22);
   **Asset Allocation** module (budget, nominations, $1 endgame guides + the
   in-app planner); **Training Camp & Preseason** desk (the auction-watch pages,
   newest featured).
@@ -764,7 +767,7 @@ out-of-budget solve. `--dry-run` prints the JSON instead of writing.
 The Build desk, all computed:
 - **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
   solver, with the per-position spend bar. Currently $183 for 122.1 pts/gm, most of it
-  on running backs, plus the $17 bench that spends the rest of the board (§22).
+  on running backs, plus the $17 bench that spends the rest of the board (§23).
 - **"The cliffs"** — the largest points-per-game drop between neighbouring players at
   each position.
 - **"Why the money goes to running back"** — points between the position leader and
@@ -1652,7 +1655,115 @@ be committed.
 
 ---
 
-## 22. August 2026: The Build accounts for the whole budget
+## 22. August 2026: the edition switch (auction / snake / best ball) on the front page
+
+**The complaint:** the ribbon at `/` carried links called **Snake Draft** and
+**Best Ball**, and both of them left the front page — they went straight into the
+app's snake and best ball rooms. A reader who came for a snake draft was never
+shown a snake front page; they were shown the auction one and then thrown out of
+it. There was no Auction Draft button at all, because auction was the only thing
+the page could be.
+
+**What it is now:** those two links are a three-way switch — **Auction Draft /
+Snake Draft / Best Ball** — and it is the one control that says which draft the
+whole page is written for. Picking one delivers every piece of insight on the
+page in that edition.
+
+### Where the state lives
+
+`iron_tuna_edition_v1` in `localStorage`, through **`it-league.js`**:
+`edition()`, `setEdition()`, `editionFromLeague()`. Precedence is the same as
+the reading lens: an explicit `?fmt=` on the URL, then the reader's own choice,
+then the league they saved, then auction.
+
+The **edition and the reading lens are not the same value and this is not an
+oversight.** The lens (§9f) has two values because a tailored line is either
+dollars or draft slots; the edition has three because best ball has its own
+insight pages, its own guides and its own room in the app even though it reads
+in slots. `normFormat()` folds best ball into snake, so a page switching on the
+lens alone would send a best ball reader to the *snake* edition of every story.
+`setEdition()` therefore sets the lens underneath it; the reverse is deliberately
+not true, because the edition is the coarser choice and the one the reader makes
+by hand.
+
+**The Position Intel Auction/Snake switch is gone** (`#posFmt`). It only ever
+appeared for readers with a saved board, and two controls that can disagree
+about the same question are a worse answer than one that cannot.
+
+### Switching is a re-point, not a re-fetch
+
+Every call is already published in all three editions — `build-front.mjs` and the
+insight drops produce `auction-insights-DATE`, `snake-insights-DATE` and
+`bestball-insights-DATE` from one research set. Across formats the **title, the
+position, the verdict chip and the measured effect are identical**; what differs
+is the play line each edition's own page prints. So `var STORIES` stays **one**
+array and the switch rewrites links. Tripling the array would have put two more
+copies of all 70 headlines on the wire to change a URL — the same trade §17
+records for `LEAD_FACES`.
+
+`edUrl()` in `front.html` rewrites exactly **two** families:
+
+| from | to (snake / best ball) |
+|---|---|
+| `/auctiondraft…` | `/snakedraft…` / `/bestball…` |
+| `/auction-insights`, `/auction-insights-YYYY-MM-DD…` | `/snake-insights…` / `/bestball-insights…` |
+
+Nothing else. `/auction-watch-*`, `/auction-budget-allocation`,
+`/auction-nomination-strategy` and `/dollar-endgame-handcuffs` have **no twin in
+another edition**, and rewriting them would hand the reader a 404 — the
+lookaheads in `ED_APP` / `ED_INS` are what keeps `/auction-watch-` out.
+
+**The rewrite is a DOM sweep, not a change to each renderer.** The page paints
+from six independent places (lead, rail, position modules, coaching column,
+Vegas case, camp desk), three of them from fetches that land whenever they land.
+A `MutationObserver` (childList only — the sweep writes attributes, so it cannot
+retrigger itself) re-sweeps on any render. Every anchor remembers the href it
+was **born** with in `a.__ed0`, so switching twice is not rewriting a rewrite.
+
+### What else moves, and what deliberately does not
+
+Anything that has to be re-worded pushes a painter onto `edPainters`, and
+`applyEdition()` runs the lot; the authored markup is captured at load and
+**restored verbatim** for the auction edition, so the auction page a crawler sees
+and the auction page a reader switches back to are the same page.
+
+- **Moves:** the Position Intel standfirst, the masthead and tools-band buttons
+  that name the room, the Asset Allocation module (heading, blurb and cards — the
+  other editions get the guides that *exist* for them rather than a renamed
+  budget playbook), and the camp desk's standing note.
+- **Does not move:** the camp reports themselves. There is one camp desk and its
+  pages are titled the way they were published; only the note above them stops
+  saying "auction" to a reader who is not in one.
+- **Says which currency it is in:** **The Build** is an exact dollar solve and
+  cannot be restated in picks, so outside the auction edition it carries an
+  "Auction solve" tag rather than letting a snake reader assume the numbers are
+  theirs.
+
+### Two things that will bite a change here
+
+- **The generated lead must survive a switch.** §17's three-hourly story
+  *replaces* the dated rotation. Re-running `renderLead()` on a switch silently
+  undoes that and puts a week-old deep dive back on the front page — which is
+  exactly what the old lens switch did. `repaintLead()` repaints whichever lead
+  is actually on screen (`genLead` holds the last payload).
+- **`?fmt=` is not a new page.** The canonical stays `https://irontuna.com/`;
+  the switch uses `history.replaceState`, never `pushState`, because the back
+  button belongs to the reader's last *page*, not their last format.
+
+### Tests
+
+`node tools/test-position-lens.mjs` (needs playwright-core + Chromium; skips
+cleanly without them) drives the real switch in a browser: one click has to move
+the drop links, the app links, the button that names the room, the guides module
+and the camp note *together*; the auction page has to come back whole; no link
+may be invented for a page that does not exist; a `?fmt=` link opens and is
+remembered; and a stubbed generated lead has to still be the lead after a switch.
+`node tools/test-it-league.mjs` covers the storage API and guards the argument
+each renderer passes.
+
+---
+
+## 23. August 2026: The Build accounts for the whole budget
 
 ### The complaint
 
@@ -1714,3 +1825,4 @@ prints as **$0** in the roster strip and the spend key. That is `money()`'s
 rounding, it predates this change, and flooring the display at $1 would break
 the column sums this section exists to make true. Real leagues draft at $100 and
 up, where it does not arise.
+

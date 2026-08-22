@@ -6,7 +6,7 @@
 // — it buys the bench, which a legal roster has to fill and which is billed at
 // max(position floor, price), not at $1 — but the page never said so, and a
 // reader who subtracts is entitled to conclude the solve left value on the
-// board. See HANDOFF.md §22.
+// board. See HANDOFF.md §23.
 //
 // Two halves to this check:
 //   1. The shipped `var ANALYSIS` block balances. Plain node, always runs.
