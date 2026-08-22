@@ -56,11 +56,13 @@ const PUBLISHER = {
 
 // Evergreen strategy guides. datePublished/dateModified come from git so they
 // stay honest as the guides are revised.
+// The two best-ball guides came off this list with the auction-first pass: the
+// pages are still served at the URLs they were indexed at, but nothing on the
+// site links to them any more, so listing them in /guides' CollectionPage would
+// advertise a shelf the reader cannot see.
 const GUIDES = [
-  'snake-draft-strategy.html',
-  'best-ball-draft-strategy.html',
-  'best-ball-stacking-guide.html',
   'auction-draft-strategy.html',
+  'snake-draft-strategy.html',
   'auction-nomination-strategy.html',
   'auction-budget-allocation.html',
   'dollar-endgame-handcuffs.html',

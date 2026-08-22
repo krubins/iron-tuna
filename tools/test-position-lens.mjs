@@ -9,12 +9,13 @@
 // AUCTION site's front page written in draft slots, with no way to say
 // otherwise — and no reader who had never opened the app got anything at all.
 //
-// The control that answers it is now the ribbon's Auction Draft / Snake Draft /
-// Best Ball switch, which every reader gets: it re-points every story to that
-// edition's drop page, re-words the copy that names a format, and sets the
-// reading lens underneath (best ball reads in slots, like a snake draft). It
-// replaced a Position Intel Auction/Snake switch that only appeared for readers
-// with a saved board.
+// The control that answers it is the ribbon's Auction / Snake switch, which
+// every reader gets: it re-points every story to that edition's drop page,
+// re-words the copy that names a format, and sets the reading lens underneath.
+// It replaced a Position Intel Auction/Snake switch that only appeared for
+// readers with a saved board. Best ball was a third button here until the
+// auction-first pass of August 2026 took it off every surface; an edition the
+// switch does not offer falls back to auction, which is asserted below.
 //
 // The maths and the copy are covered by tools/test-it-league.mjs against a stub
 // DOM. What only a browser can prove is the WIRING: that one click moves the
@@ -97,10 +98,10 @@ const read = page => page.evaluate(() => ({
   // that half agrees with them.
   drops: [...new Set([...document.querySelectorAll('#posGrid a, #railList a, #leadTitle a')]
             .map(a => (a.getAttribute('href') || '').split('-insights')[0])
-            .filter(h => /^\/(auction|snake|bestball)$/.test(h)))],
+            .filter(h => /^\/(auction|snake)$/.test(h)))],
   app: [...new Set([...document.querySelectorAll('a')]
             .map(a => a.getAttribute('href') || '')
-            .filter(h => /^\/(auctiondraft|snakedraft|bestball)(\?|$)/.test(h))
+            .filter(h => /^\/(auctiondraft|snakedraft)(\?|$)/.test(h))
             .map(h => h.split('?')[0]))],
   mgr: document.getElementById('navMgr').textContent,
   allocHead: document.getElementById('allocHead').textContent,
@@ -216,7 +217,7 @@ console.log('\nthe lead and the modules agree');
 // ── 5. the whole page moves, not just the tailored lines ──────────────────
 // The complaint that put this switch in the ribbon was that a reader who came
 // for another draft was still handed the auction site. So the test is not "the
-// switch has three buttons": it is that ONE click moves the drop links, the
+// switch has two buttons": it is that ONE click moves the drop links, the
 // app links, the button that names the room, the guides module and the camp
 // desk's standing note together.
 console.log('\nthe whole page follows the edition');
@@ -228,27 +229,33 @@ console.log('\nthe whole page follows the edition');
   ok('the auction keeps its allocation guides', a.allocHead === 'Asset Allocation', a.allocHead);
   ok('and The Build needs no tag to say which currency it is in', a.buildTag === '', a.buildTag);
 
-  await pick(page, 'bestball');
+  // The switch offers exactly two editions now, and the site sells one of them.
+  ok('the switch offers auction and snake, and nothing else',
+     (await page.$$eval('#edSwitch a', as => as.map(x => x.dataset.ed).join())) === 'auction,snake');
+  ok('nothing on the page still sells a best ball room',
+     await page.$$eval('a', as => as.every(x => !/^\/bestball/.test(x.getAttribute('href') || ''))));
+
+  await pick(page, 'snake');
   const b = await read(page);
-  ok('best ball re-points every story', b.drops.join() === '/bestball', b.drops.join());
-  ok('every app link lands in the best ball room', b.app.join() === '/bestball', b.app.join());
-  ok('the room is named honestly', b.mgr === 'Best Ball Room', b.mgr);
-  ok('the guides are the ones best ball actually has',
-     b.allocHead === 'Best Ball Strategy' &&
-     (await page.$$eval('#allocGrid a', as => as.every(x => /best-ball|bestball/.test(x.getAttribute('href'))))),
+  ok('snake re-points every story', b.drops.join() === '/snake', b.drops.join());
+  ok('every app link lands in the draft room', b.app.join() === '/snakedraft', b.app.join());
+  ok('the room is named honestly', b.mgr === 'Draft Room', b.mgr);
+  ok('the guides are the ones snake actually has',
+     b.allocHead === 'Draft Strategy' &&
+     (await page.$$eval('#allocGrid a', as => as.every(x => /snake/.test(x.getAttribute('href'))))),
      b.allocHead);
   ok('The Build says the dollars are the auction solve', b.buildTag === 'Auction solve', b.buildTag);
   ok('the camp desk stops calling itself auction-only', !/auction-relevant/.test(b.camp), b.camp);
   // The rewrite covers exactly two families of URL. Anything else that starts
-  // "/auction-" has no twin in another edition, so it must survive untouched —
-  // and no link may be invented: every /bestball* href has to be a page that
-  // exists (the room, the drop pages, the two best ball guides).
+  // "/auction-" has no twin in the other edition, so it must survive untouched —
+  // and no link may be invented: every /snake* href has to be a page that
+  // exists (the room, the drop pages, the snake strategy guide).
   ok('the camp reports keep the URLs they were published at',
      await page.$$eval('a', as => as.some(x => /^\/auction-watch-/.test(x.getAttribute('href') || ''))));
   ok('and no link is invented for a page that does not exist',
      await page.$$eval('a', as => as.map(x => x.getAttribute('href') || '')
-       .filter(h => h.indexOf('/bestball') === 0)
-       .every(h => h === '/bestball' || /^\/bestball(\?|#|\/)/.test(h) || /^\/bestball-insights(-\d{4}-\d{2}-\d{2})?([?#]|$)/.test(h))));
+       .filter(h => h.indexOf('/snake') === 0)
+       .every(h => h === '/snakedraft' || /^\/snakedraft(\?|#|\/)/.test(h) || /^\/snake-draft-strategy$/.test(h) || /^\/snake-insights(-\d{4}-\d{2}-\d{2})?([?#]|$)/.test(h))));
 
   await pick(page, 'auction');
   const back = await read(page);

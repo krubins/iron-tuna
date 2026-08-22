@@ -1,45 +1,50 @@
 # Iron Tuna
 
-> Iron Tuna is a free fantasy football draft assistant for all three major draft formats — auction, snake, and best ball. It builds rankings and values calibrated to your exact league settings and scoring, and runs a live AI "Value Coach" that tells you who to draft and how much to pay while you draft. Auction is its flagship (three personalized values per player plus a budget-aware lineup planner); it also has a dedicated snake-draft assistant and a best-ball draft tool.
+> Iron Tuna is a fantasy football **auction draft** site. Where every other fantasy tool publishes a ranking, Iron Tuna publishes dollars: it prices all 500+ players for your exact league — your teams, your budget, your roster slots, your scoring — and gives three numbers on every player instead of one. It runs a live Auction Manager on draft night and an AI "Value Coach" that answers "do I go to $41 here?" against the roster you have already bought. A snake-draft assistant is also available for readers who play that format, but the auction is what the site is built for.
+
+## The three numbers (this is the whole idea)
+- **Proj** — the going rate: what the room is likely to pay, on the price curve your league's budget actually produces.
+- **Value** — what he is worth: his projected points converted to dollars against a replacement-level starter. The honest price, whatever the room does.
+- **You** — your max bid: what one more dollar buys *your* lineup, given the players you have already won and the money left in your pocket.
+
+A ranking cannot answer any of those questions, which is why an auction drafter armed with one is guessing.
 
 ## What it does
-- Free draft boards with expert values for every player, for auction, snake, and best ball — no signup.
-- A one-time $9.99 unlock rebuilds every value and ranking for YOUR league's exact custom scoring, lets you reorder the board, and includes the live draft-day tools.
-- A live AI Value Coach that answers questions and gives team-specific advice from planning through draft night, so your values and rankings never go stale.
-- Tiered cheat sheets, plus unlimited mock drafts/auctions.
+- Free auction values for every player, calibrated to your league — no signup.
+- A one-time $9.99 unlock rebuilds every value for your league's exact custom scoring, lets you reorder the board, and includes the live draft-day tools.
+- A live AI Value Coach that answers questions and gives team-specific advice from planning through draft night.
+- Tiered cheat sheets, a budget-aware lineup planner, and unlimited mock auctions.
+- Values are blended with the betting market (game lines via nflverse) and refreshed daily, so a price moves when the market moves rather than when a ranker gets round to it.
 
-## Auction draft tool (flagship) — https://irontuna.com/auctiondraft
-- Three numbers per player: Proj (likely auction price), Value (true VBD worth), and You (your personal max bid given roster, budget, and the live market).
-- A budget-aware optimal-lineup planner that finds the strategy and dollar allocation producing your highest-scoring starting lineup.
-- Live prices that adjust to the room, an always-on AI navigator that says who to bid on and how high, and proactive insight on emerging bidding trends.
-- Supports salary-cap, Superflex, and 2-QB auction formats.
+## Auction draft tool (the flagship) — https://irontuna.com/auctiondraft
+- The three numbers above, on every row of the cheat sheet.
+- A budget-aware optimal-lineup planner that solves, exactly, the highest-scoring starting lineup your budget can buy.
+- Live prices that adjust to the room as money leaves it, plus proactive reads on emerging bidding trends.
+- Supports salary-cap, keeper, Superflex and 2-QB auction formats.
 
 ## Snake draft tool — https://irontuna.com/snakedraft
 - Custom rankings for your exact scoring, with ADP, tier-cliff alerts, and survival odds (the chance each player lasts to your next pick).
-- The AI Value Coach tells you who to draft on the clock based on your roster needs and what is likely to be gone by your next pick.
-
-## Best ball draft tool — https://irontuna.com/bestball
-- Ceiling-weighted values (best ball auto-starts your highest weekly scores, so upside beats floor).
-- Live stack alerts that light up the moment you draft a QB or pass-catcher, surfacing his correlated teammates.
-- Championship-week (Weeks 15-17) schedule edges, tuned to your exact roster. Built for Underdog-style best ball.
+- The AI Value Coach tells you who to draft on the clock based on your roster needs and what is likely to be gone by your next turn.
 
 ## Key facts
-- Price: Free to start (expert default values and rankings). One optional one-time upgrade ($9.99) unlocks your league's custom scoring (values rebuilt for your exact rules), reordering your board, the live in-draft tools, and the Value Coach.
-- No account or password sharing required; enter or paste your league settings. Purchasers can restore access on another device with a one-tap email magic link (no password).
+- Price: free to start (expert default values). One optional one-time upgrade ($9.99) unlocks your league's custom scoring, board reordering, the live in-draft tools, and the Value Coach.
+- No account or password sharing required; enter or paste your league settings. Purchasers can restore access on another device with a one-tap email magic link.
 - Runs entirely in the browser and keeps working on draft night even if Wi-Fi drops.
-- Best for: fantasy football auction, snake, and best ball drafts (any league settings).
+- Best for: fantasy football **auction** drafts of any settings; snake drafts are supported too.
 
 ## FAQ
-- Is it free? Yes — the draft board with expert default values is free, no signup. The one-time $9.99 upgrade rebuilds every value for your league's exact custom scoring and adds board reordering, the live draft tools, and the Value Coach.
-- Which draft formats does it support? All three: auction, snake, and best ball. Each value and ranking recalibrates to your exact settings.
-- Does it work for any league? Yes — including salary-cap, Superflex, and 2-QB formats, and any custom scoring.
-- How is it different? Most tools give one generic ranking; Iron Tuna calibrates to your league and adds a real-time AI Value Coach that advises you pick by pick.
+- Is it free? Yes — the auction board with expert default values is free, no signup. The one-time $9.99 upgrade rebuilds every value for your league's exact custom scoring and adds board reordering, the live draft tools, and the Value Coach.
+- Is it only for auctions? Auction is what it is built for and the only format that gets max-bid maths and room-wide budget tracking. Snake is supported; you can switch to it from the ribbon on the home page.
+- Does it work for any league? Yes — including salary-cap, keeper, Superflex and 2-QB formats, and any custom scoring.
+- How is it different? Most tools give one generic ranking. Iron Tuna gives three dollar figures per player, calibrated to your league, blended with the betting market, plus a real-time AI Value Coach that advises you bid by bid.
 
 ## Links
 - Home: https://irontuna.com/
 - Auction draft tool: https://irontuna.com/auctiondraft
+- Auction values explained: https://irontuna.com/fantasy-football-auction-values
+- Superflex & 2QB auction values: https://irontuna.com/superflex-auction-values
+- Salary cap & keeper auctions: https://irontuna.com/salary-cap-draft-tool
+- Auction strategy guides: https://irontuna.com/guides
 - Snake draft tool: https://irontuna.com/snakedraft
-- Best ball draft tool: https://irontuna.com/bestball
-- Guides: https://irontuna.com/guides
 - FAQ: https://irontuna.com/faq
-- [2026 Insight Drops](https://irontuna.com/insights): free stat-based 2026 insights released through Labor Day; 150 premium insights tailored to the user's league ship with the Draft Day unlock.
+- [2026 Auction Insights](https://irontuna.com/auction-insights): free stat-based 2026 insights released through Labor Day; 150 premium insights tailored to the user's league ship with the Draft Day unlock.

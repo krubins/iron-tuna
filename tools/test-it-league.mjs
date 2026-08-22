@@ -490,8 +490,13 @@ console.log('\nwire contract');
   // them stops passing the lens it silently falls back to the saved league, and
   // the page contradicts itself a screen apart. tools/test-position-lens.mjs
   // drives the switch in a browser; this only guards the argument.
+  // Two editions on the switch, not three: the auction-first pass took best
+  // ball off every surface that sold it. The library still understands the
+  // value (a reader with a saved best ball league keeps their lens), the front
+  // page simply no longer offers it and falls back to auction.
   ok('the front page offers the edition switch',
-     /id="edSwitch"/.test(front) && ['auction', 'snake', 'bestball'].every(f => front.includes('data-ed="' + f + '"')));
+     /id="edSwitch"/.test(front) && ['auction', 'snake'].every(f => front.includes('data-ed="' + f + '"')));
+  ok('and does not sell best ball on it', !front.includes('data-ed="bestball"'));
   ok('both front-page renders read through the lens',
      (front.match(/L\.tailor\(s\.stat, s\.title, s\.pos, readFmt\)/g) || []).length === 2);
   // The edition is the coarser choice and it owns the lens: setEdition writes

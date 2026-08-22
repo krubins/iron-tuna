@@ -265,7 +265,7 @@ console.log('\nthe page itself');
   // nothing but a test keeps them in step.
   const iroot = (page.match(/:root\{[^}]*\}/) || [''])[0];
   ok('the index is white too', /--bg:\s*#fff/i.test(iroot), iroot.slice(0, 90));
-  ok('the index accent is the white-safe teal', /--teal:\s*#0d7a5f/i.test(iroot));
+  ok('the index accent is the white-safe teal', /--teal:\s*#0e7c63/i.test(iroot));
   // #f5b800 stays the button fill, but as a numeral on white it is unreadable,
   // so the record table's Partly column uses an ink-weight gold instead.
   ok('the Partly column is not button gold', page.includes('.n-partial{color:var(--goldink)'));
@@ -276,7 +276,8 @@ console.log('\nthe page itself');
 console.log('\nthe story page a reader actually lands on');
 {
   const lead = fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8');
-  // A reading view, deliberately unlike the rest of the site's dark chrome.
+  // The whole site is one white surface now (the auction-first pass took the
+  // last dark content pages light); this page was the first one that was.
   const root = (lead.match(/:root\{[^}]*\}/) || [''])[0];
   ok('the story page is white', /--bg:\s*#fff/i.test(root), root.slice(0, 90));
   ok('its type is near-black, not near-white', /--text:\s*#1[0-9a-f]{5}/i.test(root), root.slice(0, 90));

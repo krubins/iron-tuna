@@ -2399,3 +2399,115 @@ Counting *rows* is not a usable signal any more — `.mast-brand`, `.mast-jump`
 and `.mast-nav` are different heights and vertically centred, so their `top`
 values differ on a single row. Use `.mast .wrap`'s height (64px = one row) or
 the nav's bottom against the wrap's.
+
+---
+
+## 27. August 2026: the site says "auction" before it says anything else
+
+**The brief.** Lean into the auction. Keep small buttons for the snake draft,
+drop best ball entirely. Style the site the way DraftSharks styles theirs —
+same approach, different colours, less density. Keep what is good.
+
+The site had grown into a general fantasy football site that happened to be
+best at auctions. `/` opened on a news lead, the ribbon offered three formats as
+equals, the front page was light and every other content page was dark navy,
+and nothing above the fold said what the tool actually did.
+
+### 27a. The palette is now one palette
+
+| token | was | is |
+|---|---|---|
+| accent | `#1f49c7` royal blue (front) / `#2dd4a3` teal (dark pages) | **`#0e7c63`** — one green, contrast-safe on white |
+| money / CTA | `#f5b800` | **`#f2a900`** fill, **`#7a5300`** (`--goldink`) as *type* |
+| chrome | `#101114` | **`#0b1614`** (`--mast`) |
+| page | `#0b1117` dark on 91 pages | **`#ffffff`** everywhere |
+
+**Ninety-one content pages went from dark navy to white** in one scripted pass
+(`:root` swap + an rgba/hex substitution table + the wordmark gradient). They
+share eleven `<style>` blocks between them, which is why a mechanical
+conversion was safe; a representative of each was rendered in Chromium before
+it was committed.
+
+Three rules carry that conversion and are easy to get wrong again:
+
+- **`#2dd4a3` is ~1.9:1 on white.** The site accent had to darken; `--teal` is
+  `#0e7c63` on every page now, including the two that were already white.
+- **Gold is a fill, not an ink.** `background:var(--gold)` keeps the bright
+  amber (with `#1a1205` type on it); every `color:var(--gold)` was rewritten to
+  `color:var(--goldink)`. 282 declarations. Skipping this leaves unreadable
+  numerals in every price column on the site.
+- **The wordmark is a light-on-dark metal gradient** and vanishes on white. The
+  85 converted pages carry the inverted stops. `front.html` keeps the light
+  version, because its masthead is still black.
+
+`front.html` is deliberately **not** on the shared token set — it has its own
+(`--ink` / `--card` / `--brand` / `--mast`) and a black masthead band over a
+light page. `index.html` (the draft app) stays dark on purpose: it is a tool you
+work in on draft night, not a page you read. `admin.html` stays dark because no
+visitor sees it.
+
+**`node tools/test-reading-view.mjs` is what keeps this from drifting back.** It
+was rewritten from "two zones, three white pages" to the current contract, and
+it now *sweeps every HTML file in the repo*: white background, the one accent,
+no surviving `rgba(45,212,163…)`, no light-on-dark wordmark on a white page.
+Adding a page built from an old dark template fails it.
+
+### 27b. The front page opens on the product, not on the news
+
+`/` now goes: black masthead → green claim strip ("The Fantasy Site Built For
+Auction Drafts") → **hero band** → in-page ribbon → **tool grid** → the news
+desk, unchanged.
+
+- **The hero** is copy left, product right: a real screenshot of the cheat
+  sheet (`auction-sheet.webp`, 73KB — cropped and re-encoded from the
+  committed `cheatsheet.png`, which was 687KB and unused). On a phone the
+  frame keeps the image at half size and shows the left of it, because a
+  1180px sheet scaled into a 390px column is a grey smear.
+- **The `.trio` strip under it spells out PROJ / VALUE / YOU.** Those three
+  columns are the entire differentiator — no ranking site has to answer any of
+  them — so they get the width of the page rather than a clause in a paragraph.
+- **The tool grid** is six auction tools, one row of three. The snake room is
+  not a tile; it is the small switch in the ribbon.
+- **The masthead nav is the site; the ribbon is the page.** Masthead: Auction
+  Values / Strategy / Insights / Columns / FAQ plus Sign In and two CTAs.
+  Ribbon: in-page anchors plus the edition switch. Two navs that both listed
+  destinations was the density complaint.
+- **Density inside the news desk:** Position Intel dropped from three
+  follow-ups per card to two (four on the double-width Market module). Five
+  stacks of four headlines was the block readers skimmed past.
+
+The lead, Top Headlines, The Pick, Vegas vs. Consensus, The Build, the
+Play-Caller column, Asset Allocation and the camp desk are all unchanged in
+behaviour — every id the painters write into survived the restructure.
+
+### 27c. Best ball is retired from the surface, not from the internet
+
+**Every place that sold best ball is gone:** the front page's edition switch
+(now Auction / Snake), `/hub`'s three mode cards (now two, auction first), the
+Insights dropdown in the app, the Draft Format select in League Settings, the
+`/insights` format chooser and its tabs, the guides page, the vault's per-format
+line, the cross-edition links on every auction and snake drop page, `llms.txt`,
+and the site-wide footer boilerplate.
+
+**What was deliberately left alone:**
+
+- **The pages themselves.** `bestball-insights*.html`, the two best-ball guides
+  and the `/bestball` route still serve, and they are still in `sitemap.xml`.
+  Nothing 404s and nothing loses its ranking; they are simply orphaned from
+  internal links. Deleting them and 301-ing to the auction editions is a
+  separate decision, and a lossy one.
+- **`it-league.js` still understands `'bestball'`.** A reader whose saved league
+  is best ball keeps their reading lens; the front page's
+  `if (!ED[edKey]) edKey = 'auction'` guard is what lands them on the auction
+  edition. That guard is now load-bearing — do not remove it.
+- **The League Settings select keeps a `bestball` option, conditionally.** It
+  renders only when `draft.format === 'bestball'` already. A React `<select>`
+  whose `value` is not among its options renders blank, which would have
+  stranded anyone mid-season in a best-ball league.
+- **`_worker.js`'s insight data** still carries `bestballPositioning` /
+  `bestballAction` per insight. Nothing renders them. Harmless, and removing
+  them means re-cutting the premium payload.
+
+`tools/test-position-lens.mjs` and `tools/test-it-league.mjs` were updated to
+the two-edition switch, and both now assert the *absence* of a best ball surface
+rather than the presence of one.
