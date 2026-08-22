@@ -2480,6 +2480,15 @@ it now *sweeps every HTML file in the repo*: white background, the one accent,
 no surviving `rgba(45,212,163…)`, no light-on-dark wordmark on a white page.
 Adding a page built from an old dark template fails it.
 
+**It earned its keep the same day.** The camp-desk Routine authored
+`auction-watch-2026-08-22.html` on `main` while this branch was open, off the
+pre-conversion template, and the merge brought a dark page into a light site.
+CI failed on exactly those four assertions and named the file. `tools/templates/
+preseason-week.html` was on the old palette too and is converted now — it is the
+only authoring template left in the repo, so a new page inherits the light one.
+If this recurs, the fix is the same scripted swap (`:root`, the rgba/hex table,
+the wordmark stops, the shared nav), not a hand edit.
+
 ### 27b. The front page opens on the product, not on the news
 
 `/` now goes: black masthead → green claim strip ("The Fantasy Site Built For
