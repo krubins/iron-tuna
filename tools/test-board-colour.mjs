@@ -37,12 +37,12 @@ const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
 // ── lift the two pure functions out of the app ─────────────────────────────
 const START = 'function scarcityPremium(fl, budget) {';
-const END = 'function costColor(price, value) {';
+const END = 'function TeamsBoard({';
 const a = src.indexOf(START), b = src.indexOf(END, a);
 if (a < 0 || b < 0) { console.error('FAIL: could not locate the grading helpers in index.html'); process.exit(1); }
-const { scarcityPremium, boardValue } = new Function(`
+const { scarcityPremium, boardValue, boardGrade, boardGradeColor } = new Function(`
   ${src.slice(a, b)}
-  return { scarcityPremium, boardValue };
+  return { scarcityPremium, boardValue, boardGrade, boardGradeColor };
 `)();
 
 const CFG = { budget: 200 };
@@ -96,12 +96,13 @@ console.log('\nthe rule the renderer and the export both follow');
 {
   // Regression guards for PR #66's mistake. `you` must not be what the name is
   // graded against, in either place.
-  ok('the name is coloured against the graded value', src.includes('nameColor = costColor(cost, graded)'));
+  ok('the name is coloured through boardGrade', src.includes('nameColor = boardGradeColor(grade, cost)'));
   ok('the name is NOT coloured against YOU', !src.includes('nameColor = costColor(cost, you)'));
-  ok('the graded value comes from boardValue', src.includes('const graded = boardValue(p, value, config)'));
+  ok('the name is NOT coloured against the ceiling', !src.includes('nameColor = costColor(cost, graded)'));
+  ok('the grade comes from boardGrade', src.includes('const grade = boardGrade(p, value, cost, config)'));
   // The CSV/AI flag and the on-screen colour must agree, or a reader gets two
   // different answers to "why is he red".
-  ok('the export grades with the same function', src.includes('const _b = boardValue(p, p.auctionValue, config)'));
+  ok('the export grades with the same function', src.includes('const _b = boardGrade(p, p.auctionValue, p.marketValue, config)'));
   ok('the export no longer talks about You', !/Proj (above|below) You/.test(src));
   // The premium's own definition, in the memo that has the plan and the pool.
   ok('the plan premium is capped at 10% of the budget',
@@ -113,6 +114,55 @@ console.log('\nthe rule the renderer and the export both follow');
   // The coach must describe the rule the board actually uses.
   ok('the AI legend describes Proj against Value', /explain it from his Proj against Value/.test(src));
   ok('the AI is told YOU is a ceiling, not a grade', /indifference/.test(src));
+}
+
+// ── what the row is allowed to CLAIM ───────────────────────────────────────
+// Reported from a real 10-team $150 board: Josh Allen showed a $31 Proj against
+// a printed $27 Value and came out GREEN, with hover text citing "the $38 he is
+// worth on your board" — a number in no column of that row. The premium is not
+// the problem; quoting it as his worth, and letting it paint green over two
+// visible numbers that say "slightly over", is.
+console.log('\nthe premium can cancel red, never manufacture green');
+{
+  // The reported row, to the dollar: Value 27, Proj 31, an 11-dollar cliff premium.
+  const allen = { planTarget: false, planPrem: null, scarce: { count: 1, gapPts: 33 } };
+  const prem = scarcityPremium(allen.scarce, 150);
+  const g = boardGrade(allen, 27, 31, { budget: 150 });
+  ok('the ceiling is still Value plus the premium', g.ceiling === 27 + prem, `${g.ceiling}`);
+  ok('a price ABOVE the printed Value is never green', g.sign !== 'under', g.sign);
+  ok('...and the premium keeps it out of red too', g.sign === 'neutral', g.sign);
+  ok('a neutral name takes no tint', boardGradeColor(g, 31) === 'var(--text-primary)');
+
+  // Green still means exactly what the two printed columns show.
+  const cheap = boardGrade(allen, 27, 18, { budget: 150 });
+  ok('Proj below Value is green', cheap.sign === 'under');
+  ok('green is measured off Value, not off the ceiling',
+     boardGradeColor(cheap, 18) === boardGradeColor({ ...cheap, ceiling: cheap.value, premium: 0 }, 18));
+
+  // Past the ceiling the premium has nothing left to give.
+  const dear = boardGrade(allen, 27, 27 + prem + 6, { budget: 150 });
+  ok('a price past the ceiling is red', dear.sign === 'over');
+
+  // A player with no premium grades on Value alone, unchanged.
+  const plainP = { planTarget: false, scarce: null, planPrem: null };
+  ok('no premium, no band', boardGrade(plainP, 40, 45, CFG).sign === 'over');
+  ok('no premium, still green below Value', boardGrade(plainP, 40, 30, CFG).sign === 'under');
+  ok('a dollar either way is noise', boardGrade(plainP, 40, 41, CFG).sign === 'neutral');
+  ok('a null Value cannot be graded', boardGrade(plainP, null, 10, CFG).sign === 'neutral');
+}
+
+console.log('\nwhat the hover text is allowed to say');
+{
+  ok('it quotes the Value the row prints',
+     /Good buy: the \$\$\{cost\} price is about \$\$\{tgap\} under his \$\$\{value\} Value/.test(src));
+  // The comment above boardGrade quotes the old wording on purpose, so match the
+  // template that would actually render rather than the prose describing it.
+  ok('it no longer asserts a worth the row does not show',
+     !/\$\{graded\} he is worth on your board/.test(src) && !/what he is worth on your board \(/.test(src));
+  ok('the ceiling is named as Value plus a premium, not as his worth',
+     /Your board would go to \$\$\{graded\} for him: the \$\$\{value\} Value plus a \$\$\{_prem\} scarcity premium/.test(src));
+  ok('the premium is visible in the row, not only on hover',
+     /className: "cheat-prem"/.test(src));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

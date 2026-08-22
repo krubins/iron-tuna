@@ -1027,6 +1027,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-tier-top.cheat-cliff[data-tierband]::before { color:#f87171; }
 .cheat-team { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 .cheat-val { font-family: var(--font-mono); color: var(--text-secondary); font-size: 12px; text-align: right; min-width: 20px; }
+.cheat-prem { font-family: var(--font-mono); color: var(--gold-text); font-size: 9px; margin-left: 2px; vertical-align: 1px; }
 .cheat-cost { font-family: var(--font-mono); color: var(--text-secondary); font-size: 12px; text-align: right; min-width: 20px; }
 .cheat-col-lbl { cursor: help; white-space: nowrap; text-decoration: underline dotted; text-decoration-color: var(--text-faint); text-underline-offset: 2px; }
 .cheat-col-lbl:hover { color: var(--text-secondary); text-decoration-color: var(--positive); }
@@ -1086,6 +1087,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-team { color: #8a8a8a !important; font-size: 7.5px; }
   .cheat-cost { color: #6a6a6a !important; font-size: 8px; }
   .cheat-val { color: #111 !important; font-size: 8.5px; font-weight: 700; }
+  .cheat-prem { color: #7a5c00 !important; font-size: 7px; font-weight: 700; }
   .cheat-you { color: #111 !important; font-size: 8.5px; font-weight: 700; }
   .cheat-ppg { color: #1a4a7a !important; font-size: 8.5px; font-weight: 700; }
   .cheat-you.cy-up { color: #0a7a3f !important; } .cheat-you.cy-down { color: #6a6a6a !important; font-weight: 400; }
@@ -8431,6 +8433,38 @@ function boardValue(p, value, config) {
   if (p.scarce) v = Math.max(v, value + scarcityPremium(p.scarce, (config && config.budget) || 200));
   return v;
 }
+// How a price is GRADED, in the terms the sheet actually prints.
+//
+// boardValue() answers a different question: how far up this board would go for
+// him, Value plus a premium. That ceiling is a real number and worth saying —
+// but it is not on the sheet. The row prints Proj, Value, You and PPG, and
+// nothing else. Grading the name against the ceiling therefore painted rows
+// green whose two visible numbers said the opposite: on a 10-team $150 board
+// Josh Allen came out GREEN at a $31 Proj against a $27 Value, and the hover
+// text explained it with "the $38 he is worth on your board" — a figure that
+// appears in no column of the row it is describing. To the person reading it
+// that is not a subtle modelling choice, it is the sheet contradicting itself.
+//
+// So the DIRECTION now comes from Value, the number in the row: green means
+// Proj is below Value, and you can see both halves of that. The premium keeps
+// its actual job — stopping a player your lineup needs from reading as a trap
+// for costing a little over his vacuum price — but it does that by CANCELLING
+// red, never by manufacturing green. A price between Value and the ceiling is
+// neutral: no colour, and the hover text names the ceiling and where it came
+// from instead of asserting it as his worth.
+function boardGrade(p, value, cost, config) {
+  const ceiling = boardValue(p, value, config);
+  if (value == null || cost == null) return { value, ceiling, premium: 0, sign: 'neutral' };
+  const premium = Math.max(0, (ceiling == null ? value : ceiling) - value);
+  const sign = Math.abs(cost - value) <= 1 ? 'neutral' : cost < value ? 'under' : cost <= value + premium ? 'neutral' : 'over';
+  return { value, ceiling: value + premium, premium, sign };
+}
+// Green is measured off Value, red off the ceiling, and the band between them
+// gets no colour at all — so the tint always has a printed number behind it.
+function boardGradeColor(g, cost) {
+  if (!g || g.value == null) return undefined;
+  return g.sign === 'under' ? costColor(cost, g.value) : g.sign === 'over' ? costColor(cost, g.ceiling) : 'var(--text-primary)';
+}
 function costColor(price, value) {
   if (value == null) return undefined;
   const d = price - value;
@@ -12005,10 +12039,11 @@ function Cheatsheet({
         youDir = you > youBase ? 'up' : you < youBase ? 'down' : 'flat';
       }
     }
-    // What the name is graded against: Value, plus the cliff premium when the
-    // plan actually needs him (see boardValue).
-    const graded = boardValue(p, value, config);
-    const tgap = graded - cost;
+    // What the name is graded against: Value, the number this row prints. The
+    // premium rides along as a ceiling (see boardGrade), not as his worth.
+    const grade = boardGrade(p, value, cost, config);
+    const graded = grade.ceiling;
+    const tgap = value - cost;
     const softSched = scheduleSoftness(p.team, p.position);
     const toughSched = (showCols.tough13 || showCols.tough1517) ? toughSchedule(p.team, p.position) : null;
     const volFlag = showCols.volume ? volumeFlag(p, players) : null;
@@ -12023,17 +12058,20 @@ function Cheatsheet({
       // it worse, because YOU is an indifference price that sits at or below
       // Value (see boardValue). tgap = what he is worth here minus Proj:
       // positive means he is still worth the ask.
-      const _prem = graded - value;
-      sign = Math.abs(tgap) <= 1 ? 'neutral' : tgap > 0 ? 'under' : 'over';
-      nameColor = costColor(cost, graded);
+      const _prem = grade.premium;
+      sign = grade.sign;
+      nameColor = boardGradeColor(grade, cost);
       let _why = '';
       if (_prem > 0) {
         const _pp = p.planPrem;
         _why = _pp && value + _pp.prem >= graded
-          ? ` That includes a $${_prem} scarcity premium: your plan needs him in a starting slot, and the next ${pos} you would settle for, ${_pp.repName}, is going for $${_pp.repAsk} against a $${_pp.repVal} value.`
-          : ` That includes a $${_prem} scarcity premium: he stands above a ${Math.round((p.scarce && p.scarce.gapPts) || 0)}-point drop at ${pos}.`;
+          ? `your plan needs him in a starting slot, and the next ${pos} you would settle for, ${_pp.repName}, is going for $${_pp.repAsk} against a $${_pp.repVal} value`
+          : `he stands above a ${Math.round((p.scarce && p.scarce.gapPts) || 0)}-point drop at ${pos}`;
       }
-      nameTitle = (sign === 'under' ? `Good buy: the $${cost} price is about $${tgap} under the $${graded} he is worth on your board.` : sign === 'over' ? `Overpay: the $${cost} price is about $${cost - graded} above the $${graded} he is worth on your board.` : `Priced about at what he is worth on your board ($${graded}).`) + _why;
+      // Every dollar figure quoted here is either printed in this row or built
+      // in the same sentence out of one that is. A bare "$38 he is worth", with
+      // no column showing 38, is what made this read as a bug.
+      nameTitle = (sign === 'under' ? `Good buy: the $${cost} price is about $${tgap} under his $${value} Value.` : sign === 'over' ? `Overpay: the $${cost} price is $${cost - value} above his $${value} Value.` : cost > value ? `Priced $${cost - value} over his $${value} Value \u2014 close enough that the premium below still covers it.` : `Priced about at his $${value} Value.`) + (_prem > 0 ? ` Your board would go to $${graded} for him: the $${value} Value plus a $${_prem} scarcity premium, because ${_why}.` : '');
       if (p.fit === 'target') nameTitle += ' Your plan also targets him for an open starting slot.';
     }
     let _verdict = null, _tb = null, _adpColor = null, _adpDir = null;
@@ -12153,8 +12191,11 @@ function Cheatsheet({
     }, "$", cost) : k === 'value' ? React.createElement("span", {
       key: k,
       className: "cheat-val",
-      title: "Value (VBD)"
-    }, "$", value) : k === 'you' ? React.createElement("span", {
+      title: grade.premium > 0 ? `Value (VBD) $${value}. Your board would go to $${grade.ceiling} for him \u2014 see the name for why.` : "Value (VBD)"
+    }, "$", value, grade.premium > 0 ? React.createElement("span", {
+      className: "cheat-prem",
+      title: `$${grade.premium} scarcity premium on top of his $${value} Value`
+    }, "+$", grade.premium) : null) : k === 'you' ? React.createElement("span", {
       key: k,
       className: `cheat-you cy-${youDir}`,
       title: "Your max bid"
@@ -18508,9 +18549,9 @@ function buildCoachContext(q, ctx) {
     flag: (() => {
       // The same number the board colours the name with, so the export and the
       // screen can never disagree about why a player is red.
-      const _b = boardValue(p, p.auctionValue, config);
-      if (p.marketValue == null || _b == null) return 'fair';
-      return p.marketValue - _b > 1 ? 'RED, overpay, Proj above Value' : _b - p.marketValue > 1 ? 'GREEN, value, Proj below Value' : 'fair';
+      const _b = boardGrade(p, p.auctionValue, p.marketValue, config);
+      if (p.marketValue == null || p.auctionValue == null) return 'fair';
+      return _b.sign === 'over' ? 'RED, overpay, Proj above Value' : _b.sign === 'under' ? 'GREEN, value, Proj below Value' : 'fair';
     })()
   });
   const top = {};

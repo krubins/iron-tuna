@@ -1811,19 +1811,65 @@ computation, not a different comparison — which is what the plan premium above
 
 The colour, the CSV/AI `flag` field, and the coach's legend all describe the same
 rule, and a reader who gets two different answers to "why is he red" has found a
-bug. All three now route through `boardValue`. `tools/test-board-colour.mjs`
-(23 assertions, no browser, runs in CI) pins the premium's shape and guards
-against the YOU comparison coming back.
+bug. All three route through `boardGrade`, which wraps `boardValue`.
+`tools/test-board-colour.mjs` (39 assertions, no browser, runs in CI) pins the
+premium's shape, pins what the hover text may claim, and guards against the YOU
+comparison coming back.
 
 ### A related fix
 
 `nameTitle` — the sentence explaining why a name is the colour it is — was
 computed in three places and **rendered in none**. Every explanation of red and
 green had been invisible for as long as it has existed. It is now the name's
-`title`, with the bye week appended behind it, so hovering Josh Allen reads:
-"Good buy: the $49 price is about $19 under the $68 he is worth on your board.
-That includes a $26 scarcity premium: he stands above a 33-point drop at QB.
-Bye week 7."
+`title`, with the bye week appended behind it.
+
+### The third thing that was wrong: grading against a number the row does not show
+
+Making `nameTitle` visible is what exposed this, and it was reported from a real
+10-team $150 board within days: Josh Allen showed **Proj $31 against a printed
+Value of $28**, came out **green**, and the hover text explained it with "the $48
+he is worth on your board" — a figure that appears in **no column of that row**.
+
+The premium was not the problem. Quoting the ceiling as *his worth*, and letting
+it paint green over two visible numbers that plainly say "a few dollars over",
+was. The sheet prints Proj, Value, You and PPG and nothing else, so a grade the
+reader cannot reconstruct from those reads as the sheet contradicting itself —
+which is exactly how it was reported.
+
+`boardGrade(p, value, cost, config)` splits the two jobs `boardValue` was doing:
+
+- **Direction comes from Value**, the number in the row. Green means Proj is
+  below Value and both halves are on screen.
+- **The premium can cancel red, never manufacture green.** A price between Value
+  and the ceiling is neutral — no tint. Past the ceiling it is red, as before.
+- **The ceiling is still said out loud**, as arithmetic on printed numbers
+  ("Your board would go to $48 for him: the $28 Value plus a $20 scarcity
+  premium, because …"), never asserted as his worth.
+- **The premium is visible in the row**, as a `+$20` chip on the Value cell, so a
+  cancelled red does not depend on hovering to be explainable.
+
+Measured over the 152 rows the default sheet renders, this moves **five** of
+them and no others — precisely the five §20 lists above as lifted out of red by a
+premium (Allen, Gibbs, McCaffrey, McBride, Bowers), each green → neutral. Red is
+unchanged at 37; green goes 58 → 53. Nobody who was red stops being red.
+
+### Still open: Proj and Value can describe different rankings
+
+`applyCustomRanks` does not merely reorder players — it **re-deals
+`projectedPoints` between them**, so a drag-to-rerank moves Value, You, PPG and
+the row order onto the new ladder. `marketCurveOrder` deliberately keeps Proj on
+the *uncustomized* ladder (§ the commit "Stop pinning Proj to a ranking the board
+no longer has"), which is right about the room but leaves the row internally
+inconsistent: after one rerank at QB the sheet reads Lamar $32 / Allen $49 / Hurts
+$38 top-to-bottom, so the price column stops descending. A custom price does the
+same thing by a different route, since `applyPriceOverrides` redistributes by
+headroom rather than by rank.
+
+Neither is what the August 2026 report was about — that board had neither — and
+both are behind deliberate, documented decisions, so neither was changed here.
+Measured with the harness in that investigation: a fresh board, a board sorted by
+You, and a mid-draft board all keep Proj descending; one rerank breaks it by up to
+$35 and one custom price by up to $8.
 
 ---
 
