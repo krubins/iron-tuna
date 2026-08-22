@@ -83,7 +83,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "analyst-desk.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "analyst-desk.html", "the-pick.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -194,6 +194,15 @@ jobs:
 
       - name: The standing analyst column
         run: node tools/test-analyst-column.mjs
+
+      # The Pick is written a story a day by a Routine, in prose, with tables of
+      # projection numbers in it. Nothing about prose stops it naming a player
+      # who left the board, putting him on last year's club, or printing a point
+      # total the projection set does not contain — and all three read as
+      # confident advice. This holds the column to the same pool the boards price
+      # from, and to the markup /it-league.js needs to translate it.
+      - name: The Pick, against the player pool it prices from
+        run: node tools/test-the-pick.mjs
 
       - name: What the board grades a player name against
         run: node tools/test-board-colour.mjs

@@ -440,6 +440,49 @@ const column = [];
   }
   column.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
+
+// ── The Pick ───────────────────────────────────────────────────────────────
+// the-pick.html is the source of truth, same discipline as the coaching column
+// above: one themed story a day, and the front page quotes it rather than
+// keeping a second copy of the copy. What the card needs that the coaching card
+// does not is the THEME — the whole conceit of this column is that each entry
+// argues one idea, so the theme is the kicker and the headline is the payoff.
+const picks = [];
+{
+  const src = read('the-pick.html');
+  const re = /<article class="call pick" id="([^"]+)">([\s\S]*?)<\/article>/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const [id, block] = [m[1], m[2]];
+    // The chip carries "Theme: tier cliffs". The card prints the theme alone —
+    // it already sits under a heading that says what column this is.
+    const theme = norm((block.match(/<span class="chip theme">([^<]*)<\/span>/) || [])[1] || '')
+      .replace(/^Theme:\s*/i, '');
+    const pos = norm((block.match(/<span class="cpos">([^<]*)<\/span>/) || [])[1] || '');
+    const team = norm((block.match(/<span class="cteam">([^<]*)<\/span>/) || [])[1] || '');
+    const title = norm((block.match(/<h2>([\s\S]*?)<\/h2>/) || [])[1] || '');
+    const dek = norm(((block.match(/<p class="dek">([\s\S]*?)<\/p>/) || [])[1] || '').replace(/<[^>]*>/g, ''));
+    const whoHtml = ((block.match(/<p class="who">([\s\S]*?)<\/p>/) || [])[1] || '');
+    const who = clip(norm(whoHtml.replace(/<[^>]*>/g, '')).replace(/^The Pick:\s*/i, ''), 190);
+    const stat = norm(((block.match(/<p class="statline">([\s\S]*?)<\/p>/) || [])[1] || '')
+      .replace(/<[^>]*>/g, '')).replace(/^Projected effect:\s*/i, '');
+    if (!title) continue;
+    // Same rule as the coaching column: only the <b> spans inside the pick line
+    // are a commitment, and the "The Pick:" label is a label, not a player.
+    const named = [...whoHtml.matchAll(/<b>([^<]+)<\/b>/g)]
+      .map(x => norm(x[1])).filter(n => !/^The Pick/i.test(n));
+    const keys = named.map(n => slug(n)).filter(k => bySlug.has(k));
+    enlist(keys);
+    picks.push({
+      id, theme, title, dek, pos, team,
+      date: (id.match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '',
+      who, stat, url: '/the-pick#' + id,
+      ppl: keys,
+    });
+  }
+  picks.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
 // PRESEASON <- every preseason-week-N.html page: the takeaways article for one week
 // of preseason games. Sorted by week number so the newest week leads the desk.
 const preseason = [];
@@ -470,6 +513,7 @@ front = front.replace(/var STORIES = \[[\s\S]*?\];\n/, 'var STORIES = ' + JSON.s
 front = front.replace(/var PLAYERS = \{[\s\S]*?\};\n/, 'var PLAYERS = ' + JSON.stringify(Object.fromEntries(cast)) + ';\n');
 front = front.replace(/var REPORTS = \[[\s\S]*?\];\n/, 'var REPORTS = ' + JSON.stringify(reports) + ';\n');
 front = front.replace(/var COLUMN = \[[\s\S]*?\];\n/, 'var COLUMN = ' + JSON.stringify(column) + ';\n');
+front = front.replace(/var PICKS = \[[\s\S]*?\];\n/, 'var PICKS = ' + JSON.stringify(picks) + ';\n');
 
 // ── static camp desk, for crawlers that never run the script ────────────────
 // The camp desk used to be built entirely on the client out of REPORTS, which
@@ -508,9 +552,9 @@ if (reports.length) {
   }
 }
 front = front.replace(/var PRESEASON = \[[\s\S]*?\];\n/, 'var PRESEASON = ' + JSON.stringify(preseason) + ';\n');
-if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
-  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PRESEASON declarations in front.html');
+if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PICKS = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
+  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PICKS/PRESEASON declarations in front.html');
   process.exit(1);
 }
 fs.writeFileSync(path.join(root, 'front.html'), front);
-console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
+console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${picks.length} picks, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
