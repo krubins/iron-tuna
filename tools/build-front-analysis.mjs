@@ -3,6 +3,11 @@
 // front page's lead story ("The best team $200 can buy"), the tier-cliff cards, the
 // replacement-level bars and the FLEX finding.
 //
+// It carries BOTH halves of the roster: the starting lineup (`spend`) and the bench
+// the solver fills with what is left (`bench`). `spend + bench.cost` is `total`, and
+// `unspent` is what the budget has left over — normally $0, and a sanity check below
+// refuses to publish a solve where it is not.
+//
 //   node tools/build-front-analysis.mjs [--dry-run]
 //
 // WHY IT DRIVES A BROWSER
@@ -134,6 +139,25 @@ const data = await page.evaluate(() => {
   const spendByPos = {};
   lineup.forEach(x => { spendByPos[x.pos] = (spendByPos[x.pos] || 0) + x.price; });
 
+  // ── the other half of the ledger ────────────────────────────────────────────
+  // The starters cost `spend`, not `budget`: the solver holds the rest back for
+  // the bench and then spends it, because a legal roster has to fill every seat.
+  // Publishing `spend` alone read as "and the difference goes unspent", which is
+  // the one thing this solve never does. Carry the bench the planner actually
+  // buys, at the price it will actually be billed (position floors included, the
+  // same `benchTargets` the app's own planner hands the drafter), so the page can
+  // account for every dollar of the budget.
+  const pById = new Map(players.map(p => [p.id, p]));
+  const benchPlayers = (plan.benchTargets || []).map(b => {
+    const pl = pById.get(b.playerId);
+    return { name: pl ? pl.name : String(b.playerId), pos: b.position, team: pl ? pl.team : '',
+      price: b.price, ppg: pl ? +((pl.projectedPoints || 0) / G).toFixed(1) : 0 };
+  }).sort((a, b) => b.price - a.price || b.ppg - a.ppg);
+  const benchCost = benchPlayers.reduce((a, x) => a + x.price, 0);
+  const bench = { seats: plan.remainingBench, cost: benchCost, players: benchPlayers };
+  const total = spend + benchCost;
+  const unspent = cfg.budget - total;
+
   const cliffs = ['QB', 'RB', 'WR', 'TE'].map(pos => {
     const list = byPos[pos].slice(0, pos === 'QB' || pos === 'TE' ? 18 : 36);
     let best = null;
@@ -160,13 +184,27 @@ const data = await page.evaluate(() => {
   const planNoFlex = F.buildModel('ideal', d.myTeam, players, noFlex, d.draftedIds, d.roleOverrides, d.targets);
   const nfPpg = +(planNoFlex.slots.filter(s => s.isStarter && s.player).reduce((a, s) => a + s.player.projectedPoints, 0) / G).toFixed(1);
 
+  // Shares are of the WHOLE budget, and the bench is one of the rows. They used
+  // to be shares of the starter spend, which meant the bar and its key added up
+  // to $183 while the page around them quoted $200 — the missing ~9% read as
+  // money the solve never got round to spending. Largest-remainder rounding, so
+  // the printed percentages add to exactly 100 rather than to 102.
   const posCost = Object.entries(spendByPos).map(([pos, dollars]) => ({
-    pos, dollars, share: Math.round(dollars / spend * 100), n: lineup.filter(x => x.pos === pos).length
+    pos, dollars, n: lineup.filter(x => x.pos === pos).length
   })).sort((a, b) => b.dollars - a.dollars);
+  {
+    const exact = posCost.map(c => c.dollars).concat([benchCost]).map(dv => dv / cfg.budget * 100);
+    const pct = exact.map(Math.floor);
+    const short = Math.round(exact.reduce((a, b) => a + b, 0)) - pct.reduce((a, b) => a + b, 0);
+    exact.map((v, i) => [v - pct[i], i]).sort((a, b) => b[0] - a[0])
+      .slice(0, Math.max(0, short)).forEach(([, i]) => pct[i]++);
+    posCost.forEach((c, i) => { c.share = pct[i]; });
+    bench.share = pct[pct.length - 1];
+  }
 
   return { generatedFrom: 'index.html valuation engine, default 12-team $200 auction',
     teams: cfg.teams, budget: cfg.budget, games: G,
-    lineup, spend, ppg, posCost, cliffs, repl,
+    lineup, spend, ppg, posCost, cliffs, repl, bench, total, unspent,
     flexWorth: +(ppg - nfPpg).toFixed(1), noFlexPpg: nfPpg, playerCount: players.length };
 });
 
@@ -181,6 +219,12 @@ if (!(data.spend > 0) || data.spend > data.budget) problems.push('spend outside 
 if (!(data.ppg > 0)) problems.push('no projected points');
 if (!data.cliffs.length || data.cliffs.some(c => !(c.gap >= 0))) problems.push('bad cliffs');
 if (!data.repl.length) problems.push('no replacement levels');
+// The whole point of the bench ledger: the page states a budget, so the page has
+// to account for it. A solve that bills past the budget is unexecutable, and one
+// that leaves money behind is one the reader is right to distrust.
+if (!data.bench || !(data.bench.cost >= 0) || !data.bench.players.length) problems.push('no bench ledger');
+if (data.total > data.budget) problems.push('starters plus bench exceed the budget');
+if (data.unspent > 0) problems.push(`$${data.unspent} of the $${data.budget} left unspent`);
 if (data.playerCount < 200) problems.push('player pool looks truncated');
 if (problems.length) {
   console.error('refusing to write, sanity checks failed: ' + problems.join('; '));
@@ -213,7 +257,7 @@ if (!LINE.test(front)) {
 const next = front.replace(LINE, 'var ANALYSIS = ' + JSON.stringify(data) + ';');
 fs.writeFileSync(FRONT, next);
 if (next === front) console.log('(numbers unchanged)');
-console.log(`front.html: $${data.spend} lineup at ${data.ppg} pts/gm, ${data.cliffs.length} cliffs, FLEX worth ${data.flexWorth}`);
+console.log(`front.html: $${data.spend} lineup at ${data.ppg} pts/gm + $${data.bench.cost} across ${data.bench.seats} bench seats = $${data.total} of $${data.budget}, ${data.cliffs.length} cliffs, FLEX worth ${data.flexWorth}`);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THE `edge` CONTRACT — for the "what consensus is getting wrong" / "where Vegas

@@ -214,6 +214,15 @@ jobs:
       - name: The Pick, against the player pool it prices from
         run: node tools/test-the-pick.mjs
 
+      # The Build desk states a budget, so it has to account for that budget.
+      # It once published the starters ($183) under a headline quoting the whole
+      # board ($200) and never mentioned the bench that spends the difference,
+      # which reads as a solve leaving value behind (HANDOFF.md §24). This holds
+      # the shipped ANALYSIS block and the render to that ledger. Its rendered
+      # sweep needs Chromium and self-skips here; the numbers half is plain node.
+      - name: The Build accounts for the whole budget
+        run: node tools/test-build-desk.mjs
+
       - name: What the board grades a player name against
         run: node tools/test-board-colour.mjs
 
