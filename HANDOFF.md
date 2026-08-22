@@ -1228,6 +1228,13 @@ access, a D1 that refuses it — the payload re-asks for the shape that has alwa
 existed and the column publishes without its call cards. `tools/test-analyst-column.mjs`
 covers both states.
 
+Not every analyst story has calls to store. A piece about analyst **track
+records** rather than about a player's price has no "they say $X, we say $Y" to
+score, so `calls` is legitimately NULL and the entry lists on the column by
+headline alone, feeding nothing into the record table. That is correct rather
+than a gap, and the prompt says so explicitly, because the alternative is a run
+manufacturing player calls to fill a field.
+
 Everything about `calls` is optional and defensive, because an autonomous run
 writes it and no schema enforces it at write time: malformed JSON, an object
 where a list belongs, junk entries, forty calls in one row, a verdict word
@@ -1332,6 +1339,32 @@ The four edits, as they now stand:
    One mechanical rule rides along: spell each analyst's name identically every
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
+
+#### The headline check (2026-08-22)
+
+The prompt ends with four mechanical checks to run on the exact title string
+immediately before the INSERT, not while drafting: count the characters (under
+110), search for an em dash, confirm one sentence, and confirm it states the
+finding.
+
+All four were already stated elsewhere in the prompt as prose. A headline still
+shipped at **114 characters with an em dash, leading with the setup** — three
+violations in one line. Rules a run reads once at the top and then has to
+remember while composing are not the same as a checklist it runs against the
+finished string, which is why this is a separate step at the end rather than
+another sentence in the style section.
+
+The fourth check is the one that needs a test rather than a rule, because
+"leads with the finding" is a judgement: **would this headline read exactly the
+same if the analysis had come out the other way?** If yes, it is the setup. The
+prompt carries the real example. "Five seasons produced five different winners,
+which is what luck looks like" was the null result the piece started from;
+"Kevin English has beaten the field average ten years running" was what it
+arrived at. Both were true of the same story.
+
+The self-check query now selects `length(title) AS tlen` so the run sees the
+count in its own verification step, and the report-back asks for the headline
+with its character count.
 
 #### The reading view, and the column as an index (2026-08-22)
 
