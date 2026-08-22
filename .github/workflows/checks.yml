@@ -97,7 +97,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "analyst-desk.html", "the-pick.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "analyst-desk.html", "the-pick.html", "play-caller-premium.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -218,6 +218,9 @@ jobs:
 
       - name: The standing analyst column
         run: node tools/test-analyst-column.mjs
+
+      - name: The reading view's palette, across all three pages
+        run: node tools/test-reading-view.mjs
 
       # The Pick is written a story a day by a Routine, in prose, with tables of
       # projection numbers in it. Nothing about prose stops it naming a player
