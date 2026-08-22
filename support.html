@@ -19,14 +19,14 @@
 <link rel="canonical" href="https://irontuna.com/support"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
 <style>
-:root{--bg:#0b1117;--panel:#121b24;--line:#22303b;--text:#e8eef2;--sec:#b6c2cc;--muted:#8595a1;--teal:#2dd4a3;--gold:#f5b800}
+:root{--bg:#ffffff;--panel:#f7f9fa;--line:#e3e8ec;--text:#111820;--sec:#39454f;--muted:#6b7a85;--teal:#0e7c63;--gold:#f2a900;--goldink:#7a5300}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,rgba(45,212,163,0.06),transparent),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,rgba(14,124,99,0.06),transparent),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:var(--teal);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px}
-header.site{position:sticky;top:0;z-index:10;background:rgba(11,17,23,0.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.site{position:sticky;top:0;z-index:10;background:rgba(255,255,255,0.92);backdrop-filter:blur(8px);border-bottom:2px solid var(--teal)}
 header.site .wrap{max-width:1080px;display:flex;align-items:center;justify-content:space-between;height:56px}
 /* Mobile masthead. The links used to wrap into two and three ragged rows that
    grew the sticky header to a third of the screen; now they are one line that
@@ -40,15 +40,15 @@ header.site .brand-logo{height:20px}
 header.site .nav{flex:0 1 auto;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;gap:13px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 header.site .nav::-webkit-scrollbar{display:none}
 header.site .nav a{font-size:11.5px;margin-left:0;white-space:nowrap;letter-spacing:.04em;padding:7px 0}
-header.site .nav a.cta{position:sticky;right:0;padding:7px 11px;background:#0f2828;box-shadow:-7px 0 0 0 var(--bg),-20px 0 16px -6px var(--bg)}
+header.site .nav a.cta{position:sticky;right:0;padding:7px 11px;box-shadow:-7px 0 0 0 var(--bg),-20px 0 16px -6px var(--bg)}
 header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .brand{display:flex;align-items:center;gap:9px;text-decoration:none}
 .brand-fish{height:36px;width:auto;display:block}
-.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#cdd8de}
+.brand-word{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;letter-spacing:.13em;font-size:27px;line-height:1;color:#39454f}
 .nav a{margin-left:18px;color:var(--sec);font-size:14px}
 h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 .lead{color:var(--sec);margin:0 0 24px;font-size:16px}
-.card{border:1px solid var(--line);background:rgba(18,27,36,0.5);border-radius:12px;padding:16px 18px;margin:0 0 22px}
+.card{border:1px solid var(--line);background:rgba(240,244,246,0.5);border-radius:12px;padding:16px 18px;margin:0 0 22px}
 .card b{color:var(--text)}
 .faq{border-top:1px solid var(--line)}
 .faq details{border-bottom:1px solid var(--line);padding:16px 2px}
@@ -58,20 +58,20 @@ h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 .faq details[open] summary::before{content:"\2013"}
 .faq p{color:var(--sec);margin:10px 0 2px;padding-left:24px}
 .back{display:inline-block;margin:30px 0 10px;color:var(--sec)}
-form.contact{border:1px solid var(--line);background:rgba(18,27,36,0.5);border-radius:12px;padding:18px;margin:0 0 22px}
+form.contact{border:1px solid var(--line);background:rgba(240,244,246,0.5);border-radius:12px;padding:18px;margin:0 0 22px}
 form.contact .row{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 12px}
 form.contact .row > div{flex:1 1 200px}
 form.contact label{display:block;font-size:13px;color:var(--sec);margin:0 0 5px}
-form.contact input,form.contact textarea{width:100%;background:#0b1117;border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;font-size:15px;padding:10px 12px}
+form.contact input,form.contact textarea{width:100%;background:#ffffff;border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;font-size:15px;padding:10px 12px}
 form.contact textarea{resize:vertical;min-height:120px}
 form.contact input:focus,form.contact textarea:focus{outline:none;border-color:var(--teal)}
 form.contact .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-form.contact button{background:var(--teal);color:#04231a;border:0;border-radius:8px;font-weight:700;font-size:15px;padding:11px 20px;cursor:pointer}
+form.contact button{background:var(--teal);color:#e9f5f1;border:0;border-radius:8px;font-weight:700;font-size:15px;padding:11px 20px;cursor:pointer}
 form.contact button:disabled{opacity:.6;cursor:default}
 form.contact .note{color:var(--muted);font-size:13px;margin:10px 0 0}
 form.contact .msg{font-size:14px;margin:12px 0 0;min-height:18px}
 form.contact .msg.ok{color:var(--teal)}
-form.contact .msg.err{color:#f57272}
+form.contact .msg.err{color:#c0322f}
 footer{border-top:1px solid var(--line);margin-top:42px;padding:24px 0;color:var(--muted);font-size:13px}
 footer a{color:var(--sec);margin-right:16px}
 </style>
@@ -79,7 +79,7 @@ footer a{color:var(--sec);margin-right:16px}
 <body>
 <header class="site"><div class="wrap">
   <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.png" alt=""/><span class="brand-word">IRON TUNA</span></a>
-  <nav class="nav"><a href="/">Home</a><a href="/insights">Insights</a><a href="/guides">Guides</a><a href="/faq">FAQ</a><a href="/privacy">Privacy</a></nav>
+  <nav class="nav"><a href="/">Home</a><a href="/fantasy-football-auction-values">Auction Values</a><a href="/guides">Strategy</a><a href="/auction-insights">Insights</a><a class="cta" href="/auctiondraft?screen=cheat">Free cheat sheet</a></nav>
 </div></header>
 
 <main class="wrap">
