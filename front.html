@@ -41,6 +41,9 @@ img{max-width:100%}
 .mast-brand{display:inline-flex;align-items:center;flex:0 0 auto}
 .mast-logo{height:40px;width:auto;display:block}
 .mast-nav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+.mast-jump{display:flex;align-items:center;gap:2px;min-width:0;margin-left:auto}
+.mast-jump a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
+.mast-jump a:hover{color:#fff;background:rgba(255,255,255,.08)}
 .mast-nav a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
 .mast-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
 .mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px}
@@ -215,7 +218,13 @@ img{max-width:100%}
 .pos-mod .mod-more{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);white-space:nowrap}
 .pos-mod .mod-more:hover{text-decoration:underline}
 .pos-mod .it-yours{margin:0 0 14px}
-@media(max-width:900px){.pos-grid{grid-template-columns:1fr}.pos-mod.wide .pm-rest{grid-template-columns:1fr}.pos-mod.wide .pm-rest li:nth-last-child(2){border-bottom:1px solid var(--line)}}
+/* `min-width:auto` on a grid item let the module set its own width from the
+   'More <position> intel' link, which pushed the whole document 4px wider than
+   a 360px phone and left every screen with a sideways wobble. */
+@media(max-width:900px){.pos-grid{grid-template-columns:minmax(0,1fr)}.pos-mod{min-width:0}.pos-mod.wide .pm-rest{grid-template-columns:1fr}.pos-mod.wide .pm-rest li:nth-last-child(2){border-bottom:1px solid var(--line)}}
+/* On the narrowest phones still in use the module head cannot hold both the
+   position and 'More <position> intel' on one line — let it take two. */
+@media(max-width:400px){.pm-head{flex-wrap:wrap;gap:2px 10px}.pos-mod .mod-more{white-space:normal}}
 
 /* ── The Pick ─────────────────────────────────────────────────────────── */
 /* One story a day, so the band leads with today's in full and keeps the two
@@ -416,7 +425,7 @@ img{max-width:100%}
 @media(max-width:900px){
   .hero{grid-template-columns:1fr}
   .camp-grid{grid-template-columns:1fr}
-  .mast .wrap{height:auto;flex-wrap:wrap;padding-top:8px;padding-bottom:8px;justify-content:center}
+  .mast .wrap{height:auto;flex-wrap:wrap;padding-top:8px;padding-bottom:8px;row-gap:6px}
   .lead-body{min-height:0;padding:20px}
   .lead-ctrls{padding:10px 20px}
   .lead-media{padding:26px 20px 14px;gap:14px}
@@ -432,6 +441,70 @@ img{max-width:100%}
   .lm-meta b{font-size:13px}
   .lm-meta span{font-size:10px;letter-spacing:.07em}
 }
+
+/* ── the masthead on a phone ──────────────────────────────────────────────
+   Nine links in a centred wrapping row came out as three ragged lines of
+   different lengths — the single choppiest thing on the page. They are the
+   same nine links here, but each on the line that suits it: the wordmark and
+   the section jumps share one row (the jumps scroll sideways rather than
+   wrap), and the two actions become a full-width pair underneath, which also
+   makes them thumb-sized instead of 30px pills. */
+@media(max-width:760px){
+  .mast .wrap{padding:9px 14px 10px;row-gap:9px;column-gap:10px;align-items:center}
+  .mast-logo{height:26px}
+  /* Row one: wordmark, then the seven section jumps on ONE line that scrolls
+     sideways — never a second and third wrapped line. */
+  .mast-jump{flex:1 1 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-left:6px}
+  .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(16,17,20,0),var(--mast))}
+  .mast-jump::-webkit-scrollbar{display:none}
+  .mast-jump a{flex:0 0 auto;font-size:11.5px;padding:8px 8px;letter-spacing:.07em}
+  /* Row two: the two actions, equal and full width, at a size a thumb can hit. */
+  .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
+  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;font-size:12.5px;letter-spacing:.04em;padding:11px 8px;border-radius:6px}
+}
+@media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:11px;padding:8px 6px} }
+
+/* A sticky ribbon that covers the heading you just jumped to is worse than no
+   jump at all. */
+.pos-mod,.sec-head,.pick-band{scroll-margin-top:56px}
+
+/* The ribbon is a sideways scroller on a phone, so say so: kill the scrollbar
+   the platform may or may not draw, and fade the right edge instead of
+   guillotining the last tab mid-word. */
+.ribbon .wrap{scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.ribbon .wrap::-webkit-scrollbar{display:none}
+.ribbon a,.ribbon .ed-switch{scroll-snap-align:start}
+/* The fade is a sticky pseudo-element inside the scroller rather than a mask on
+   the bar, because the bar is also `position:sticky` and masking it repaints the
+   whole thing on every scroll frame. */
+.ribbon .wrap::after{content:"";flex:0 0 30px;align-self:stretch;position:sticky;right:0;margin-left:-30px;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,0),var(--card))}
+
+/* ── section headers on a phone ──
+   `margin-left:auto` threw the "all guides" link to the far right of its own
+   second line, so the header read as two unrelated fragments. Left-align it
+   under the heading it belongs to. */
+@media(max-width:560px){
+  .sec-head{gap:4px 12px;align-items:flex-end}
+  .sec-head h2{flex:1 1 100%}
+  .sec-head .sec-more{margin-left:0;font-size:11.5px}
+}
+
+/* A 40px plate vertically centred against a four-line block floats in the
+   middle of the text on a narrow column. Line it up with the headline. */
+@media(max-width:900px){
+  .pm-rest a{align-items:start}
+  .pm-rest .lm-shot{margin-top:2px}
+}
+
+/* Two pills of different widths, left-aligned under a paragraph, is the same
+   raggedness as the masthead. Full width, stacked, equal. */
+@media(max-width:560px){
+  .tools-band{padding:20px 18px;gap:16px}
+  .tools-band .tb-ctas{margin-left:0;width:100%;gap:9px}
+  .tb-btn{flex:1 1 100%;text-align:center;padding:13px 18px;font-size:14px}
+  .foot .wrap{gap:10px 16px;padding-bottom:28px}
+  .foot .fm{margin-left:0;flex:1 1 100%;line-height:1.5}
+}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Iron Tuna","url":"https://irontuna.com/","description":"The fantasy football auction front page: position-by-position intel, asset-allocation strategy, training camp and preseason updates, and the tools to win your auction — custom values, a live auction manager, and an AI Value Coach.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna builds custom fantasy football auction, snake and best ball values for your exact league settings, with a live AI Value Coach for draft day.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
@@ -439,9 +512,10 @@ img{max-width:100%}
 <body>
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <nav class="mast-jump" aria-label="Jump to a section">
+    <a href="#qb">QB</a><a href="#rb">RB</a><a href="#wr">WR</a><a href="#te">TE</a><a href="#market">Market</a><a href="#allocation">Allocation</a><a href="#camp">Camp</a>
+  </nav>
   <nav class="mast-nav">
-    <a href="#qb">QB</a><a href="#rb">RB</a><a href="#wr">WR</a><a href="#te">TE</a><a href="#market">Market</a>
-    <a href="#allocation">Allocation</a><a href="#camp">Camp</a>
     <a class="cta-gold" href="/auctiondraft?screen=cheat">Cheat Sheet</a>
     <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
   </nav>
