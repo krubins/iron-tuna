@@ -1333,6 +1333,38 @@ The four edits, as they now stand:
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
 
+#### One story per run
+
+The desk's prompt opens with this rule and the Insert section repeats it,
+because it was learned the expensive way. On 2026-08-21 a single run inserted
+**two** analyst stories seven minutes apart (ids 21 and 22). The second retired
+the first, and because the run never re-read what it had just published, the two
+scored the *same* analyst position on the *same* player in opposite directions:
+Eisenberg on Chris Olave, agree in one and disagree in the other, off identical
+numbers ($24, WR17). Both went live on the standing column and sat there
+contradicting each other.
+
+The disagreement was not about the player at all. It was about whether $24 at
+WR17 is a late-second buy or a fourth-round one — a round-to-dollar conversion
+the desk had never pinned down. The prompt now asks any run that converts rounds
+to dollars to state the conversion in its method line, so the next one can match
+it.
+
+Two guards followed: a run that has inserted is finished writing, and the
+self-check is explicitly read-only, since "verify your work" is the natural place
+for a model to notice something it would rather have written differently and fix
+it by publishing again. **A second insert is not a correction; it is a second
+published story.**
+
+Entry 22 was retracted on 2026-08-22 by setting `verified = 0`. Note that
+`published = 0` was *not* enough and the admin route's `&pull=` would not have
+worked: the row was already unpublished, and what kept it on `/analyst-desk` is
+that the column selects on `verified = 1` alone. **`verified` is the flag that
+governs the standing column; `published` only governs the front-page lead.**
+It slightly overloads `verified`, whose documented meaning is "the run failed its
+own gate" rather than "a human retracted this", but it is the only lever that
+removes a row from the column while keeping it in the table.
+
 #### What the first runs taught, 2026-08-21
 
 Three findings from firing the desk by hand, all of which outlived the test:
@@ -1354,6 +1386,13 @@ Three findings from firing the desk by hand, all of which outlived the test:
   from a single CBS column, because one aggregated risers-and-fallers piece is
   the cheapest thing to find. Hence edit 4 above. Judge the skew off the record
   table on `/analyst-desk`, which is exactly what it is for.
+- **A scheduled slot can produce nothing at all.** The 21:58 UTC run on
+  2026-08-21 wrote no row, not even a held `verified = 0` one, while every other
+  slot that night walked the cycle correctly. A missing story is invisible from
+  the site (the previous lead simply stays up) and invisible in D1 (there is no
+  row to find). The only way to notice is a gap in the `created_at` sequence
+  against the 3-hour cadence, so check for that rather than assuming every slot
+  produced something.
 
 The first entry is worth reading as the reference for what this desk should
 sound like: `analyst-desk-august-moves-2026-08-21-20`. Its lead argues that the
