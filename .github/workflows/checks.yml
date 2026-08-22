@@ -221,4 +221,4 @@ jobs:
       # browser binary. Adding them without installing those would give a green
       # step that never actually ran, which is worse than not claiming coverage.
       # Run them locally (CHROMIUM_PATH=... node tools/test-position-lens.mjs)
-      # when touching Position Intel or the lead.
+      # when touching the ribbon's edition switch, Position Intel or the lead.
