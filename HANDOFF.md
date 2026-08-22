@@ -1877,3 +1877,74 @@ To change the cadence or the themes, edit the Routine; to stop it, delete it
 Routine — the column is about how to spend money on a fantasy roster, which
 outlives draft season, and the prompt's theme list carries in-season ideas as
 well as draft-day ones.
+
+---
+
+## 24. August 2026: every `var(--token)` has to resolve
+
+**The bug that bought this check.** The royal-blue re-skin (§22's sibling, PR
+#74) renamed `--red` to `--brand` and `--value-red`. The Pick's front-page band
+was on a branch at the time and still said `color: var(--red)`. The two changes
+touched **different lines of `front.html`**, so git merged them with no conflict,
+and both CI suites went green on the merge commit that shipped it.
+
+Nothing here could have caught it, and the reason is worth stating: an undefined
+custom property is **not a parse error**. It is
+[invalid at computed-value time](https://drafts.csswg.org/css-variables/#invalid-variables)
+— the declaration is discarded and the property inherits instead. The
+script-parse steps only read `<script>`; the rebuild gates only compare generated
+output; every other suite is JavaScript. **`tools/test-css-tokens.mjs` is the
+only thing in this repo that reads CSS.**
+
+The symptom was one module on the front page that did not light up on hover.
+That is exactly the size of defect that survives review, ships, and is never
+reported.
+
+### What it checks
+
+Every `var(--x)` **without a fallback**, across all 97 pages, resolves to a
+`--x:` somewhere the page can see: its own markup (stylesheet, `style=""`
+attribute, or a quoted key in a React style object, which is how this app would
+set one at render time), or a same-origin stylesheet it links.
+
+`var(--x, …)` **with** a fallback is always fine. That is the language's own way
+of saying "this may not be set", and it is how a component-scoped value is meant
+to be written.
+
+This is a spelling check, not a cascade simulation. It cannot tell you a token is
+the *wrong* colour, only that it is nobody's colour at all — modelling which
+selector is in scope for which element is a browser's job. The narrowness is the
+point: the failure it does catch is invisible in review and is now impossible to
+merge.
+
+A second block asserts `front.html` still declares its palette on `:root`, so a
+re-skin that drops a token has to come here and see which modules it is about to
+break, and names `--red` directly to keep the story attached to the check.
+
+`RUNTIME` in the file is an escape hatch for tokens set from JavaScript that no
+static read can see. **It is empty**, and every entry would need a reason and a
+file. It is a place for facts about the code, not a place to silence a finding.
+
+### What it found on its first run
+
+Two older ones, both in `index.html`, both pre-dating The Pick:
+
+- **`.cheat-whb-h`** — a *rendered* element — asked for `var(--text)`, which has
+  never existed in that file's palette (it has `--text-primary`,
+  `--text-secondary`, `--text-muted`, `--text-faint`). A heading sitting above a
+  `--text-muted` subtitle was silently inheriting its colour. Fixed to
+  `--text-primary`.
+- **`.lp-mode-*`** asked for `--mode-accent`, a value the card is meant to set on
+  itself. `.lp-mode-dot` already spelled the fallback and the other seven usages
+  did not, so they were being discarded rather than falling back. They now match
+  the rule that was already right. (Those rules are for a superseded component —
+  `.lp-modes` renders `ip-card` now — but nothing was deleted: following the
+  file's own convention is a smaller change than deciding a component is dead.)
+
+### Verifying a change here
+
+Mutation-test it, the way it was built: reintroduce `var(--red)` in `front.html`
+(two checks must fail), rename `--gold` on `:root` (two must fail), and swap a
+rule for `var(--never-defined,#333)` (nothing may fail — a fallback is not a
+bug). If a change makes any of those three behave differently, the check has
+stopped doing its job.

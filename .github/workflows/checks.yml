@@ -102,6 +102,16 @@ jobs:
             console.log("no stray control bytes");
           '
 
+      # The re-skin that renamed --red to --brand landed while The Pick was on a
+      # branch, and the two changes touched different lines of front.html — so git
+      # merged them with no conflict and every check above stayed green while
+      # shipping `color: var(--red)` against a property that no longer existed. An
+      # undefined custom property is not a parse error; the declaration is just
+      # thrown away. Nothing else in this repo reads CSS, so nothing else can see
+      # it. It found two older ones in index.html on its first run.
+      - name: Every var(--token) resolves to a definition
+        run: node tools/test-css-tokens.mjs
+
       # front.html embeds STORIES/REPORTS extracted from the drop and auction-watch
       # pages. Adding a page without re-running build-front.mjs leaves that array
       # stale — which is exactly how Top Headlines got stuck showing an old camp
