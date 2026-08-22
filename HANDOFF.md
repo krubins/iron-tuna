@@ -2000,12 +2000,19 @@ Two older ones, both in `index.html`, both pre-dating The Pick:
   `--text-secondary`, `--text-muted`, `--text-faint`). A heading sitting above a
   `--text-muted` subtitle was silently inheriting its colour. Fixed to
   `--text-primary`.
-- **`.lp-mode-*`** asked for `--mode-accent`, a value the card is meant to set on
-  itself. `.lp-mode-dot` already spelled the fallback and the other seven usages
-  did not, so they were being discarded rather than falling back. They now match
-  the rule that was already right. (Those rules are for a superseded component —
-  `.lp-modes` renders `ip-card` now — but nothing was deleted: following the
-  file's own convention is a smaller change than deciding a component is dead.)
+- **`.lp-mode-*`** asked for `--mode-accent`, a value the card was meant to set
+  on itself. `.lp-mode-dot` already spelled the fallback and the other eight
+  usages did not, so they were being discarded rather than falling back.
+  Chasing that down established the rules were dead: they styled a landing-page
+  card component that no longer renders — the `lp-modes` **section** is still
+  there, but it renders `ip-card` children now — so **the whole component was
+  deleted**, thirteen rules plus its entry in a shared media query. The section
+  class itself had no rule of its own, so nothing rendered changed; a render of
+  the file before and after is byte-identical.
+
+  The token check is what surfaced it. It cannot tell dead CSS from live CSS —
+  it only noticed a name nothing defined, and the answer to "who was supposed to
+  define this?" turned out to be "a component that left".
 
 ### Verifying a change here
 
