@@ -1022,6 +1022,59 @@ time**, not in the stored copy, so the authoring contract stays "write a table"
 and every past story gains the fix. The sources list is collapsed by default —
 on these runs it can run longer than the story it backs.
 
+### One slot, one story
+
+The desk publishes on a three-hour clock and each run retires the one before it,
+so a slot should hold exactly one story. On 2026-08-21 slot 165494 held **four**,
+twenty minutes apart: the Routine was fired by hand repeatedly while the analyst
+desk was being tested. Nothing broke — the newest published row always wins, so
+the site was never wrong — but three finished stories were published and buried
+within minutes of each other, and anyone watching the front page saw the lead
+change four times inside one slot.
+
+**The guard is a D1 trigger, not a line in the Routine's prompt.**
+
+```sql
+CREATE TRIGGER lead_story_one_per_slot
+BEFORE INSERT ON lead_story FOR EACH ROW
+WHEN NEW.published = 1 AND EXISTS (
+  SELECT 1 FROM lead_story
+   WHERE published = 1 AND verified = 1
+     AND created_at/10800000 = NEW.created_at/10800000)
+BEGIN SELECT RAISE(ABORT, 'lead_story: this three-hour slot already has a published story. …'); END;
+```
+
+It lives in the database on purpose. The prompt is edited by several sessions
+independently — it was pinned to one desk and restored 73 seconds later on the
+same day — so a rule written there can be lost by the next person who rewrites
+it, and nobody would notice until the churn came back. A trigger cannot be
+clobbered by a prompt edit, fires whoever does the INSERT, and fails **loudly**
+rather than silently demoting a row.
+
+Why the `WHEN` clause is shaped the way it is:
+
+- **It only bites on `published = 1`.** A run that held itself back (`verified=0`,
+  `published=0`) is never blocked, which matters because that is the honest
+  outcome the desk is told to prefer over publishing something thin.
+- **It compares slots, not timestamps.** The normal flow inserts while the
+  *previous* story is still published — the retiring `UPDATE` runs after — and
+  that row is three hours back, in a different slot, so an ordinary run passes.
+- **It requires `verified = 1` on the incumbent.** An unverified row sitting in
+  the slot does not block a good story from taking it.
+
+Two escape hatches, both verified against a scratch table before this went on:
+
+1. **Stage it.** Insert with `published=0`, then `&promote=<id>` on the admin
+   route. The guard does not fire, and promoting is one batch.
+2. **Replace it.** `&pull=<id>` the story you want gone, then re-run. The pulled
+   row is `published=0`, so the slot is free and the new insert lands normally.
+
+So a deliberate re-run still works; only an accidental one is stopped.
+
+`/api/admin/lead` reports `slot` on every row, `currentSlot`, and `doubledSlots`
+naming any slot holding more than one story, so a past collision is visible
+rather than something you infer from timestamps.
+
 ### Running the desk by hand
 
 `GET /api/admin/lead?key=<LEADS_EXPORT_KEY>` lists the last 15 rows with a

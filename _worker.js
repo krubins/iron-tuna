@@ -1958,6 +1958,17 @@ const LEAD_CATEGORIES = {
 };
 const LEAD_RECENT = 5;
 
+// The desk's three-hour slot, derived from a timestamp the same way the run
+// derives its own: floor(epoch_seconds / 10800). One slot should hold exactly
+// one story. On 2026-08-21 slot 165494 held four, twenty minutes apart, because
+// the Routine was fired by hand several times while another desk was being
+// tested. Nothing broke — each new row retires the last, so the site was never
+// wrong — but three finished stories were published and buried within minutes,
+// and a reader watching the front page saw the lead change four times in the
+// space of one slot. Surfacing the slot is what makes that visible at all.
+const LEAD_SLOT_MS = 10800000;
+const leadSlot = ms => Math.floor((+ms || 0) / LEAD_SLOT_MS);
+
 // Headshots for the players a GENERATED lead story names, keyed by the same
 // slug tools/build-front.mjs uses. Rebuilt by tools/build-worker-faces.mjs from
 // tools/nfl-headshots.json, scoped to the PROJECTIONS pool.
@@ -2796,6 +2807,7 @@ export default {
         label: LEAD_CATEGORIES[String(r.category || '').toLowerCase()] || 'Insight',
         faces: (() => { try { const p = JSON.parse(r.players || '[]'); return Array.isArray(p) ? p.length : 0; } catch (e) { return 0; } })(),
         verified: !!r.verified, published: !!r.published,
+        slot: leadSlot(r.created_at),
         createdAt: r.created_at,
         url: r.slug ? '/lead/' + r.slug : null,
         // Why this row is or is not on the site, so the answer does not have to
@@ -2807,9 +2819,19 @@ export default {
       // Read back through the same function the site uses, so this reports what
       // a reader would actually get rather than what the flags imply.
       const live = await leadStoryPayload(env);
+      // Slots holding more than one story. A run fired by hand lands in the same
+      // slot as the scheduled one and buries it; this is how you see that it
+      // happened rather than inferring it from timestamps.
+      const bySlot = {};
+      list.forEach(r => { (bySlot[r.slot] = bySlot[r.slot] || []).push(r.id); });
+      const doubled = Object.entries(bySlot).filter(([, ids]) => ids.length > 1)
+        .map(([slot, ids]) => ({ slot: +slot, ids, count: ids.length }));
       return json({ ok: true, did,
                     live: live.story ? { slug: live.story.slug, label: live.story.label, url: live.story.url } : null,
-                    onSite: live.ok, stories: list }, 200, c);
+                    onSite: live.ok,
+                    currentSlot: leadSlot(Date.now()),
+                    doubledSlots: doubled,
+                    stories: list }, 200, c);
     }
     if (url.pathname === '/api/admin/odds-status') {
       const c = corsHeaders(request.headers.get('Origin'));

@@ -38,7 +38,7 @@ const section = src.slice(s0, src.indexOf(END, e0) + END.length);
 
 const mk = () => new Function(`
   ${section}
-  return { leadStoryPayload, leadRow, leadSlug, LEAD_CATEGORIES, LEAD_RECENT, LEAD_FACES };
+  return { leadStoryPayload, leadRow, leadSlug, LEAD_CATEGORIES, LEAD_RECENT, LEAD_FACES, leadSlot, LEAD_SLOT_MS };
 `)();
 
 // ── a D1 stand-in ──────────────────────────────────────────────────────────
@@ -243,6 +243,34 @@ console.log('\nthe article page');
   ok('a wide bid table scrolls on its own', page.includes(".className = 'tw'"));
   ok('the sources list is collapsed by default', page.includes('<details class="srcs">'));
   ok('an unreachable desk still says something', page.includes('function fail('));
+}
+
+console.log('\none slot, one story');
+{
+  const w = mk();
+  // The desk publishes on a three-hour clock. The run derives its desk from
+  // floor(epoch_seconds / 10800); this derives the same slot from a row's
+  // created_at, so a story can be placed in the slot it belongs to.
+  ok('a slot is three hours', w.LEAD_SLOT_MS === 10800000);
+  ok('the slot matches the run\u2019s own arithmetic',
+     w.leadSlot(Date.parse('2026-08-22T04:20:54Z')) === Math.floor(Date.parse('2026-08-22T04:20:54Z') / 1000 / 10800));
+  // The four rows of 2026-08-21 slot 165494, the collision this exists to make
+  // visible: 19:19, 19:56, 20:09 and 20:16 all land in one slot.
+  const four = ['2026-08-21T19:19:22Z', '2026-08-21T19:56:43Z', '2026-08-21T20:09:45Z', '2026-08-21T20:16:01Z']
+    .map(t => w.leadSlot(Date.parse(t)));
+  ok('the real collision lands in one slot',
+     new Set(four).size === 1 && four[0] === 165494, four.join());
+  // ...and the runs either side of it do not, or the guard would fire on every
+  // ordinary night.
+  ok('consecutive scheduled runs do not collide',
+     w.leadSlot(Date.parse('2026-08-22T01:14:13Z')) !== w.leadSlot(Date.parse('2026-08-22T04:20:54Z')));
+  ok('a missing timestamp does not throw', w.leadSlot(null) === 0 && w.leadSlot(undefined) === 0);
+
+  const route = src.slice(src.indexOf("url.pathname === '/api/admin/lead'"),
+                          src.indexOf("url.pathname === '/api/admin/odds-status'"));
+  ok('the admin desk stamps each story with its slot', /slot: leadSlot\(r\.created_at\)/.test(route));
+  ok('...and names the slots holding more than one', /doubledSlots/.test(route));
+  ok('...and says which slot is open now', /currentSlot: leadSlot\(Date\.now\(\)\)/.test(route));
 }
 
 console.log('\nthe admin desk');
