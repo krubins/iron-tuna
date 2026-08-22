@@ -120,6 +120,20 @@ for (const [route, file] of ROUTES) {
      r.loop ? 'looped' : 'ended at ' + r.trail[r.trail.length - 1]);
 }
 
+// The shared stylesheet. Every content page links /site.css, so if the rewrite
+// block ever swallowed it — or the assets layer answered a redirect for it —
+// the whole site would render unstyled while every HTML route still passed.
+console.log('\nthe shared stylesheet and the logo are served as-is');
+{
+  for (const asset of ['/site.css', '/tuna.webp', '/og.png']) {
+    const target = rewrite(asset);
+    ok(`${asset} is not rewritten`, target === asset, `got ${target}`);
+    const r = browse(asset);
+    ok(`${asset} is served without a redirect`, !r.loop && r.hops === 0 && r.status === 200,
+       r.loop ? 'looped' : `status ${r.status} after ${r.hops} redirect(s)`);
+  }
+}
+
 // The bug as it shipped, so this test is known to be able to see it.
 console.log('\nthe model reproduces the bug it was written for');
 {
