@@ -30,27 +30,41 @@
      column's own entries are fetched at load, so what a crawler sees is the
      standing copy above them, which is the evergreen half anyway. -->
 <style>
-:root{--bg:#0b1117;--panel:#121b24;--elev:#16212c;--line:#22303b;--line2:#2c3b48;--text:#e8eef2;--sec:#b6c2cc;--muted:#8595a1;--teal:#2dd4a3;--gold:#f5b800;--danger:#ef5b5b}
+:root{--bg:#ffffff;--panel:#f7f9fa;--elev:#eef2f5;--line:#e3e8ec;--line2:#ccd6dc;--text:#111820;--sec:#39454f;--muted:#6b7a85;--teal:#0d7a5f;--gold:#f5b800;--danger:#c0322f;--goldink:#8a6500}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,rgba(45,212,163,0.06),transparent),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,rgba(13,122,95,0.045),transparent),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:var(--teal);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px}
-header.site{position:sticky;top:0;z-index:10;background:rgba(11,17,23,0.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-header.site .wrap{max-width:1080px;display:flex;align-items:center;justify-content:space-between;height:56px}@media(max-width:640px){header.site .wrap{flex-wrap:wrap;height:auto;padding-top:8px;padding-bottom:8px;row-gap:4px}header.site .brand-logo{height:22px}header.site .nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;row-gap:4px}header.site .nav a{font-size:11px;margin-left:10px;white-space:nowrap;letter-spacing:.04em}}
+header.site{position:sticky;top:0;z-index:10;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.site .wrap{max-width:1080px;display:flex;align-items:center;justify-content:space-between;height:56px}
+/* Mobile masthead. The links used to wrap into two and three ragged rows that
+   grew the sticky header to a third of the screen; now they are one line that
+   scrolls sideways under a pinned CTA, so the header is always 52px and the
+   button never scrolls out of reach. The link before the CTA points at the
+   same URL as the CTA on every page that has one, so it is the one that gives
+   way for the width. */
+@media(max-width:640px){header.site .wrap{flex-wrap:nowrap;height:auto;min-height:52px;padding-top:7px;padding-bottom:7px;gap:10px}
+header.site .brand{flex:0 0 auto}
+header.site .brand-logo{height:20px}
+header.site .nav{flex:0 1 auto;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;gap:13px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+header.site .nav::-webkit-scrollbar{display:none}
+header.site .nav a{font-size:11.5px;margin-left:0;white-space:nowrap;letter-spacing:.04em;padding:7px 0}
+header.site .nav a.cta{position:sticky;right:0;padding:7px 11px;background:#0f2828;box-shadow:-7px 0 0 0 var(--bg),-20px 0 16px -6px var(--bg)}
+header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .brand{font-weight:800;letter-spacing:.14em;font-size:16px;color:var(--text)}
 .brand b{color:var(--teal)}
 .nav a{color:var(--sec);font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-left:16px}
-.nav a.cta{color:var(--teal);border:1px solid var(--teal);border-radius:9px;padding:6px 12px;background:rgba(45,212,163,.12)}
+.nav a.cta{color:var(--teal);border:1px solid var(--teal);border-radius:9px;padding:6px 12px;background:rgba(13,122,95,.09)}
 h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 .lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
 p{color:var(--sec);margin:0 0 16px}
 .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
-.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(245,184,0,.28)}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:14px 28px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 6px 18px rgba(191,145,0,.28)}
 .btn:hover{filter:brightness(1.06);text-decoration:none}
-.btn.alt{background:rgba(45,212,163,.14);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
+.btn.alt{background:rgba(13,122,95,.09);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
 .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -62,7 +76,7 @@ table{width:100%;border-collapse:collapse;font-size:15px;margin:16px 0}
 th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
 th{color:var(--sec);font-size:14px}
 td.you{color:var(--gold);font-weight:700}
-.cta-band{background:linear-gradient(180deg,rgba(45,212,163,.07),rgba(45,212,163,.02));border:1px solid rgba(45,212,163,.3);border-radius:16px;padding:28px;text-align:center;margin:40px 0}
+.cta-band{background:linear-gradient(180deg,rgba(13,122,95,.06),rgba(13,122,95,.015));border:1px solid rgba(13,122,95,.22);border-radius:16px;padding:28px;text-align:center;margin:40px 0}
 .cta-band h2{margin-top:0}
 .related{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
 .related a{background:var(--elev);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:14px;color:var(--sec)}
@@ -86,34 +100,22 @@ footer.site a{color:var(--muted)}
 .board .out{display:block;color:var(--muted);font-size:12px;font-weight:400;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
 .n-agree{color:var(--teal);font-weight:700}
 .n-disagree{color:var(--danger);font-weight:700}
-.n-partial{color:var(--gold);font-weight:700}
+.n-partial{color:var(--goldink);font-weight:700}
 .entry{border-top:1px solid var(--line);padding:26px 0 6px}
 .entry:first-of-type{border-top:0}
 .entry h2{margin:8px 0 10px;font-size:clamp(20px,2.6vw,26px)}
 .entry h2 a{color:var(--text)}
 .entry h2 a:hover{color:var(--teal);text-decoration:none}
 .emeta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.emeta .cat{background:rgba(45,212,163,.14);color:var(--teal);border:1px solid rgba(45,212,163,.42);border-radius:4px;padding:3px 9px}
-.calls{list-style:none;padding:0;margin:14px 0 0}
-.calls li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin-bottom:10px}
-.calls .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:8px}
-.calls .who{color:var(--text);font-weight:700}
-.calls .plr{color:var(--teal);font-weight:700}
-.calls .stance{border-radius:4px;padding:2px 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-left:auto}
-.calls .stance.agree{background:rgba(45,212,163,.14);color:var(--teal);border:1px solid rgba(45,212,163,.42)}
-.calls .stance.disagree{background:rgba(239,91,91,.12);color:var(--danger);border:1px solid rgba(239,91,91,.4)}
-.calls .stance.partial{background:rgba(245,184,0,.12);color:var(--gold);border:1px solid rgba(245,184,0,.4)}
-.calls .side{display:block;color:var(--sec);font-size:14.5px;margin:3px 0}
-.calls .side b{color:var(--muted);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;display:inline-block;min-width:74px}
-.calls .why{color:var(--sec);font-size:14px;font-style:italic;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+.emeta .cat{background:rgba(13,122,95,.10);color:var(--teal);border:1px solid rgba(13,122,95,.34);border-radius:4px;padding:3px 9px}
+.ecalls{color:var(--muted);font-size:13px;margin:10px 0 0}
 .more{font-size:14px;margin:12px 0 0}
 .state{color:var(--muted);margin:26px 0}
-@media(max-width:640px){.calls .stance{margin-left:0}.calls .side b{min-width:0;margin-right:6px}}
 </style>
 </head>
 <body>
 <header class="site"><div class="wrap">
-  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.png" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><image href="/tuna.png" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="nav">
     <a href="/guides">Guides</a>
     <a href="https://irontuna.com/">Draft Day Mode</a>
@@ -140,7 +142,7 @@ footer.site a{color:var(--muted)}
   <table class="board"><thead><tr><th>Analyst</th><th>Agree</th><th>Differ</th><th>Partly</th></tr></thead><tbody id="scoreboard"></tbody></table>
 </div>
 
-<div class="eyebrow">The calls</div>
+<div class="eyebrow">The entries</div>
 <div id="entries"><p class="state">Loading the column&hellip;</p></div>
 
 <div class="cta-band">
@@ -173,28 +175,23 @@ footer.site a{color:var(--muted)}
     document.getElementById('entries').innerHTML =
       '<p class="state">' + esc(msg) + '</p>';
   }
-  function callHtml(c){
-    var who = esc(c.analyst) + (c.outlet ? ' <span style="color:var(--muted);font-weight:400">' + esc(c.outlet) + '</span>' : '');
-    var plr = esc(c.player) + (c.pos || c.team
-      ? ' <span style="color:var(--muted);font-weight:400">' + esc([c.pos, c.team].filter(Boolean).join(' ')) + '</span>' : '');
-    var h = '<li><div class="chead"><span class="who">' + who + '</span><span class="plr">' + plr + '</span>';
-    // stance is null when the run stored a word the site does not define. The
-    // call still belongs on the page; it just carries no verdict chip.
-    if (c.stance && c.stanceLabel) h += '<span class="stance ' + esc(c.stance) + '">' + esc(c.stanceLabel) + '</span>';
-    h += '</div>';
-    if (c.their) h += '<span class="side"><b>They say</b>' + esc(c.their) + '</span>';
-    if (c.ours)  h += '<span class="side"><b>We say</b>' + esc(c.ours) + '</span>';
-    if (c.why)   h += '<p class="why">' + esc(c.why) + '</p>';
-    return h + '</li>';
-  }
+  // This page is an INDEX, not a reader. Laying every entry out in full made it
+  // one long scroll of stacked stories; the story itself lives at /lead/<slug>,
+  // on a white page, on its own. So each entry here is a headline, a dek, and
+  // enough of a summary line to decide whether to open it.
   function entryHtml(e){
+    var n = (e.calls || []).length;
+    // Who the entry argues with is the useful preview on this page: it is what
+    // distinguishes one entry from another at a glance.
+    var who = [];
+    (e.calls || []).forEach(function(c){ if (who.indexOf(c.analyst) < 0) who.push(c.analyst); });
     var h = '<article class="entry"><div class="emeta"><span class="cat">Analysts vs. Iron Tuna</span><span>' + esc(stamp(e.createdAt)) + '</span></div>'
       + '<h2><a href="' + esc(e.url) + '">' + esc(e.title) + '</a></h2>';
     if (e.dek) h += '<p>' + esc(e.dek) + '</p>';
-    // An entry from before the column existed, or one whose run stored nothing
-    // parseable, has no calls to lay out. It still lists: the headline and the
-    // dek are the story, the cards are the summary of it.
-    if (e.calls && e.calls.length) h += '<ul class="calls">' + e.calls.map(callHtml).join('') + '</ul>';
+    if (n) {
+      h += '<p class="ecalls">' + n + (n === 1 ? ' call' : ' calls') + ' &middot; '
+         + who.map(esc).join(', ') + '</p>';
+    }
     return h + '<p class="more"><a href="' + esc(e.url) + '">Read the full piece &rarr;</a></p></article>';
   }
   fetch('/api/analyst-column')

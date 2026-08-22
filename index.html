@@ -1453,7 +1453,19 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ai-section { width: 100%; max-width: 720px; margin: 16px auto 30px; text-align: left; }
 .lp-ai-body { font-size: 15.5px; line-height: 1.65; color: var(--text-secondary); margin: 0; }
 .lp-ai-body b { color: var(--gold-text); }
-@media (max-width: 680px) { .lp-ribbon { flex-direction: column; gap: 8px; } .lp-ribbon-links { justify-content: center; } }
+/* Stacking the ribbon put a 104px sticky bar on top of a 844px phone screen, and
+   the links wrapped inside it into two centred lines of different lengths. One
+   line that scrolls sideways costs 46px and reads as a bar rather than a pile;
+   Sign in stays pinned to the right so the CTA is never the thing that scrolls
+   out of reach. */
+@media (max-width: 680px) {
+  .lp-ribbon { flex-direction: row; align-items: center; gap: 8px; padding: 7px 14px; }
+  .lp-ribbon-spacer { display: none; }
+  .lp-ribbon-links { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; justify-content: flex-start; gap: 2px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .lp-ribbon-links::-webkit-scrollbar { display: none; }
+  .lp-ribbon-links button { flex: 0 0 auto; font-size: 12px; padding: 8px 9px; }
+  .lp-ribbon-cta { position: sticky; right: 0; flex: 0 0 auto; padding: 7px 12px !important; background: #102e2c !important; box-shadow: -8px 0 0 0 #0b1117, -22px 0 16px -7px #0b1117 !important; }
+}
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
 .league-toggle { background: var(--bg-panel); border: 1px solid var(--border-subtle); color: var(--text-secondary); border-radius: var(--radius-md); padding: 6px 14px; margin-bottom: 16px; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
 .league-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); }
@@ -1723,7 +1735,12 @@ input:focus, select:focus { border-color: var(--accent); }
   .main { padding-left: 0 !important; padding-right: 0 !important; }
   .main-content { padding-top: 0 !important; padding-left: 8px !important; padding-right: 8px !important; overflow-x: hidden !important; overscroll-behavior-x: none; touch-action: pan-y; }
   html, body { overscroll-behavior-x: none; touch-action: pan-y; }
-  .cheat-row, .cheat-col-labels { padding-left: 6px; padding-right: 6px; }
+  /* The drag grip is absolutely positioned over the right 40px of every row, so
+     the row has to keep that much clear or the grip lands on top of the YOU and
+     PPG numbers — which is exactly what a flat `padding-right: 6px` here did to
+     the 42px gutter set for it up in the 760px block. The label row takes the
+     same gutter so the headings stay over their own columns. */
+  .cheat-row, .cheat-col-labels { padding-left: 6px; padding-right: 42px; }
   .ch-models input[type=range], .strategy-bar input[type=range] { max-width: 100%; }
   .strategy-bar { flex-wrap: wrap; }
   .summarize-btn, .taunt-btn { margin-left: 0; }
@@ -2085,6 +2102,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .it-tagline-gap { margin-top: 34px; }
 .it-tagline-lockup { margin-top: -30px; font-family: var(--font-display); font-size: 19px; letter-spacing: 0.18em; text-transform: uppercase; color: #9fe1cb; text-align: center; animation: taglineReveal 1.4s ease-out 0.8s backwards; }
 @media (max-width: 768px) { .it-tagline-lockup { margin-top: -24px; font-size: 14px; padding: 0 16px; } }
+/* Wide tracking on a 390px screen leaves one word alone on the last line —
+   "BAIT." and "ROOM." both landed that way. Balance the lines instead. */
+@media (max-width: 768px) {
+  .it-tagline-lockup, .it-tagline0, .it-tagline2, .landing-tagline { text-wrap: balance; }
+  .it-tagline0, .it-tagline2 { letter-spacing: 0.05em; }
+}
 /* Format-color inlay on each plaque's engraved divider */
 .ip-snake .ip-head { border-bottom-color: rgba(14, 116, 144, 0.75); }
 .ip-auction .ip-head { border-bottom-color: rgba(169, 118, 10, 0.8); }
@@ -19876,7 +19899,7 @@ function UpgradeModal({
     className: "upg-body"
   }, body), React.createElement("ul", {
     style: { listStyle: 'none', padding: 0, margin: '2px 0 12px', display: 'grid', gap: 7 }
-  }, bullets.map((b, i) => React.createElement("li", { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.4 } }, React.createElement("span", { style: { color: 'var(--positive)', fontWeight: 700, flexShrink: 0 } }, "✓"), b))), React.createElement("p", {
+  }, bullets.map((b, i) => React.createElement("li", { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', textAlign: 'left', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.4 } }, React.createElement("span", { style: { color: 'var(--positive)', fontWeight: 700, flexShrink: 0 } }, "✓"), b))), React.createElement("p", {
     style: { fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 12px', lineHeight: 1.45 }
   }, "You've already seen your real values free — this unlocks the live edge. One-time ", React.createElement("b", { style: { color: 'var(--text-secondary)' } }, priceLabel), " for the whole season, no subscription."), React.createElement("button", {
     className: "btn-draft upg-cta",

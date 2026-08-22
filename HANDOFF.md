@@ -378,7 +378,7 @@ Ranks are the exception: they need the whole pool, which only the reader's saved
 
 `it-league.js` carries a **hand-synced** copy of `DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET` and `scoreSkillPlayer` — same arrangement, and same risk, as `_worker.js`'s column copies. There is no build step. **`node tools/test-it-league.mjs`** lifts all three copies out of their real files, runs the client's own `scoreSkillPlayer` head-to-head against the library over every real projection, rebuilds a real column with the real worker and asserts the library reproduces its printed points and prices *to the digit* at the site defaults, and runs `front.html`'s own `myCase` as shipped. Run it after touching scoring, the curve, the column's item shape, or the library. **`node tools/test-position-lens.mjs`** covers the reading-lens switch and the default-board line end to end in a real browser. **`node tools/build-default-board.mjs`** regenerates the default board.
 
-## 9g. Comping access from a URL (added August 2026)
+## 9g. Comping access from a URL, and from /admin (added August 2026)
 
 Two admin routes hand out and pull paid access for one address, behind the same `LEADS_EXPORT_KEY` gate as every other admin route:
 
@@ -398,6 +398,26 @@ Details worth knowing:
 - **The comped-in-code trap:** `COMPED_EMAILS` (module scope in `_worker.js`) always has access, so a `revoke` on one of those addresses looks like it worked and does nothing. The response says `STILL HAS ACCESS` and names the fix. That list is for **owner access only** — to comp anyone else use `grant`, because a third party's address does not belong in a source file and git history keeps it forever.
 
 `node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
+
+### Grant *and* send the link, in one step
+
+`grant` leaves the second half of the job to a human: tell the person to go to `/auctiondraft?signin=1` and ask for a link. That step is where the flow breaks, because `/api/auth/request` answers `ok:true` whether or not it sent anything — a typo'd address, an address that was never granted and a working one all look identical from the outside. So there is a route that does both:
+
+```
+GET /api/admin/comp?key=<LEADS_EXPORT_KEY>&email=<address>[&days=14][&send=0]
+```
+
+It grants, mints the magic link itself, emails it, and reports **what actually happened**: `sent`, `emailError`, `changed`, `expiresAt`, and the `link` itself. **/admin drives this from a form** — the "Free access" card at the top of the dashboard — which is the intended way to use it; the GET shape is kept so it still works from a phone's address bar.
+
+- **The link is always returned**, sent or not, so a refused email never leaves you with nothing to pass on. `send=0` grants and hands back the link without emailing, for pasting into a DM.
+- **Access is granted first, then the link is minted** — the same ordering constraint as above, enforced in one request instead of trusted to whoever is doing it.
+- **The grant is confirmed by reading access back**, not assumed: `grantEntitlement()` swallows its own errors, and mailing a sign-in link to an address that is not entitled would sign someone in to the free site.
+- **A failed send is not a failed grant.** Resend refusing the message (unverified domain, no `RESEND_API_KEY`) still leaves the access in place; the response says `sent:false` with the reason, and `/admin` colours that result as a failure rather than a success.
+- **The nonce write is not best-effort.** `/api/auth/verify` only enforces single use when `RATE_KV` is bound, and it is the same env — so if that `put` fails while KV *is* bound, the link would arrive already "used". The route refuses (`link_store_failed`) and sends nothing rather than mailing a dead link.
+- **`days`** (1–90, default 14) sets how long the link stays good. It is the *link* that expires, not the access — after that they sign in normally at `/auctiondraft?signin=1`, and the comp email says so.
+- The email is deliberately **not** `sendLoginEmail`. That one says "unlock your purchase", which is the wrong sentence for someone who never bought anything, and it swallows every failure.
+
+`node tools/test-admin-comp.mjs` covers the gate, the validation, the mail-shim assertions, every "looks like success and is not" case above — and follows the link the route emits all the way through `/api/auth/verify` to `/api/auth/me`, because a link that does not actually sign anyone in is the whole failure this route exists to prevent. It also asserts `admin.html` still sends the parameters the route reads, since the page is hand-written and a renamed parameter would only show up as a form that silently 400s. Both this and the grant suite run in CI, along with a parse check on `admin.html`'s scripts.
 
 ## 9h. What a quarterback costs (re-cut August 2026)
 
@@ -1313,6 +1333,67 @@ The four edits, as they now stand:
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
 
+#### The reading view, and the column as an index (2026-08-22)
+
+The first cut of `/analyst-desk` laid every entry out in full, call cards and
+all. With two entries that was already one long scroll of stacked stories, and it
+read as a feed rather than a column. The split now is:
+
+- **`/lead/<slug>` is the story.** One piece, on its own, on a **white page in
+  near-black type** — a reading view, deliberately unlike the dark chrome the
+  rest of the site uses. Under the article it carries that story's own call
+  cards, then the method box and sources, then **Continue reading**: the other
+  stories, as links, for anyone who wants to keep going.
+- **`/analyst-desk` is the index.** The standing copy, the record table, and one
+  compact item per entry: kicker, date, headline, dek, and a summary line naming
+  the analysts it argues with. No call cards. Every item links to its story.
+
+The white page is `lead.html`'s own `:root`, so it applies to **every** lead
+story, not only analyst ones. Three things had to change beyond swapping the
+background: `--teal` darkens from `#2dd4a3` (about 1.9:1 on white, unreadable) to
+`#0d7a5f`, `--danger` likewise, and the wordmark's metal gradient is inverted to
+dark stops or the logo disappears. `tools/test-analyst-column.mjs` pins all
+three, because "make it light" is the kind of change a later edit reverts by
+copying a palette from another page.
+
+`calls` reaches the story page through `/api/lead-story/body` as a **separate
+query in its own `try`**, run only when the row's category is `analyst`. It is
+not folded into the main SELECT on purpose: `calls` is a late addition to the
+table, and an article page that 500s because one optional column is missing
+would be far worse than an article page with no cards.
+
+#### One story per run
+
+The desk's prompt opens with this rule and the Insert section repeats it,
+because it was learned the expensive way. On 2026-08-21 a single run inserted
+**two** analyst stories seven minutes apart (ids 21 and 22). The second retired
+the first, and because the run never re-read what it had just published, the two
+scored the *same* analyst position on the *same* player in opposite directions:
+Eisenberg on Chris Olave, agree in one and disagree in the other, off identical
+numbers ($24, WR17). Both went live on the standing column and sat there
+contradicting each other.
+
+The disagreement was not about the player at all. It was about whether $24 at
+WR17 is a late-second buy or a fourth-round one — a round-to-dollar conversion
+the desk had never pinned down. The prompt now asks any run that converts rounds
+to dollars to state the conversion in its method line, so the next one can match
+it.
+
+Two guards followed: a run that has inserted is finished writing, and the
+self-check is explicitly read-only, since "verify your work" is the natural place
+for a model to notice something it would rather have written differently and fix
+it by publishing again. **A second insert is not a correction; it is a second
+published story.**
+
+Entry 22 was retracted on 2026-08-22 by setting `verified = 0`. Note that
+`published = 0` was *not* enough and the admin route's `&pull=` would not have
+worked: the row was already unpublished, and what kept it on `/analyst-desk` is
+that the column selects on `verified = 1` alone. **`verified` is the flag that
+governs the standing column; `published` only governs the front-page lead.**
+It slightly overloads `verified`, whose documented meaning is "the run failed its
+own gate" rather than "a human retracted this", but it is the only lever that
+removes a row from the column while keeping it in the table.
+
 #### What the first runs taught, 2026-08-21
 
 Three findings from firing the desk by hand, all of which outlived the test:
@@ -1334,6 +1415,13 @@ Three findings from firing the desk by hand, all of which outlived the test:
   from a single CBS column, because one aggregated risers-and-fallers piece is
   the cheapest thing to find. Hence edit 4 above. Judge the skew off the record
   table on `/analyst-desk`, which is exactly what it is for.
+- **A scheduled slot can produce nothing at all.** The 21:58 UTC run on
+  2026-08-21 wrote no row, not even a held `verified = 0` one, while every other
+  slot that night walked the cycle correctly. A missing story is invisible from
+  the site (the previous lead simply stays up) and invisible in D1 (there is no
+  row to find). The only way to notice is a gap in the `created_at` sequence
+  against the 3-hour cadence, so check for that rather than assuming every slot
+  produced something.
 
 The first entry is worth reading as the reference for what this desk should
 sound like: `analyst-desk-august-moves-2026-08-21-20`. Its lead argues that the
@@ -2169,24 +2257,33 @@ was the only sign-in entry point on the page.
    what keep the **edition switcher** — a control, not a link — on screen. The
    row now fits down to **1087px**; below that it scrolls, which is correct on
    a phone.
-4. **The scroll finally announces itself.** `.ribbon.is-scrollable::after`
-   paints a 44px white fade at the right edge; the class is toggled from script
-   on scroll and resize when `scrollWidth - clientWidth - scrollLeft > 4`, so
-   the cue appears only when there is more to the right and clears at the end
-   of the scroll.
+4. **The scroll finally announces itself.** A fade paints at the right edge of
+   the scroller, gated on `.ribbon.is-scrollable` — toggled from script on
+   scroll and resize when `scrollWidth - clientWidth - scrollLeft > 4` — so the
+   cue appears only when there is more to the right and clears at the end of
+   the scroll.
 
-### Two traps in here, both hit while building it
+### Where the fade lives, and two traps it hit
 
-- **`.ribbon` is `position:sticky`.** The first draft added
-  `.ribbon{position:relative}` further down the sheet to anchor the fade —
-  which *overrides* `sticky` and silently un-sticks the nav. Sticky already
-  establishes a containing block for an absolutely positioned descendant, so
-  the extra rule was both unnecessary and destructive. Do not add it back.
-- **The fade is on `.ribbon`, but the content is in `.wrap`.** `.ribbon` is
-  viewport-wide and `.wrap` is a centred 1260px box, so a plain `right:0` puts
-  the fade in the margin instead of at the edge of the clipped content. It is
-  anchored with `right:max(0px,calc((100% - 1260px)/2))`. If `.wrap`'s
-  max-width ever changes, that number has to change with it.
+The fade is a **sticky pseudo-element inside the scroller**
+(`.ribbon.is-scrollable .wrap::after`, `flex:0 0 30px` cancelled by
+`margin-left:-30px`) — the mobile pass's implementation with this section's
+gating class added to it. Two earlier drafts were worse, and both failure modes
+are easy to walk back into:
+
+- **Do not put the fade on `.ribbon` and add `position:relative` to anchor it.**
+  `.ribbon` is `position:sticky`; a later `position:relative` *overrides* that
+  and silently un-sticks the nav. (Sticky already establishes a containing block
+  for an absolutely positioned descendant, so the rule was destructive *and*
+  unnecessary.)
+- **Do not anchor it with `right:0` on `.ribbon` either.** `.ribbon` is
+  viewport-wide while `.wrap` is a centred 1260px box, so `right:0` puts the
+  fade out in the margin rather than at the edge of the clipped content. It
+  needs `calc()` against `.wrap`'s max-width, and then that number has to track
+  any later change to it. Inside the scroller, the right edge is free.
+
+The gating is the half that has to survive: an ungated fade washes out the last
+tab of a row that fits, which on a desktop is **every** row.
 
 ### The masthead bug this surfaced
 
@@ -2201,8 +2298,21 @@ it renders pixel-identically to the old fixed height (the 40px logo plus 12px
 padding is well under 64). The `@media(max-width:900px)` rule that used to say
 `height:auto` no longer needs to.
 
-`.mast-nav` also tightens below 1100px, which keeps it to one row down to about
-980px — better than the fixed-height version managed.
+Both navs also tighten below 1100px, between the phone layout and the desktop —
+smaller wordmark, smaller jump labels, a smaller wrap gap. That is not cosmetic:
+adding Sign In cost the masthead about 111px of headroom and moved its wrap
+point from **901px up to 1012px**, which would have put a wrapped masthead in
+front of every narrow laptop. The tightening puts it back at **908px**,
+effectively at the 900px breakpoint where the layout changes anyway. If another
+link is ever added up here, re-measure that number before shipping it.
+
+**The masthead was restructured underneath this** by the mobile pass that landed
+alongside it (PR #83): the seven section anchors moved out of `.mast-nav` into a
+separate `.mast-jump` nav, and `@media(max-width:760px)` gives the phone a
+two-row masthead — wordmark plus sideways-scrolling jumps on top, the two
+actions full-width underneath. Sign In sits in `.mast-nav` with the actions but
+at `flex:0 0 auto` rather than an equal third: it is a text link, not a button,
+and an equal third would say otherwise.
 
 ### Verifying a change here
 
@@ -2213,7 +2323,12 @@ Measure it; do not look at it. A Playwright pass over
 `top` values among `.mast-nav`'s children and whether the nav's bottom falls
 below `.mast .wrap`'s. The contract:
 
-- **1088px and up:** ribbon overflow 0, nothing clipped, no fade.
-- **Below 1088px:** overflow is expected and the fade must be present.
-- **Every width:** the masthead nav must never extend past the bottom of
-  `.mast .wrap`, and `document.documentElement` must not scroll horizontally.
+- **1089px and up:** ribbon overflow 0, nothing clipped, no fade.
+- **Below 1089px:** overflow is expected and the fade must be present.
+- **Every width:** neither nav may extend past the bottom of `.mast .wrap`, and
+  `document.documentElement` must not scroll horizontally.
+
+Counting *rows* is not a usable signal any more — `.mast-brand`, `.mast-jump`
+and `.mast-nav` are different heights and vertically centred, so their `top`
+values differ on a single row. Use `.mast .wrap`'s height (64px = one row) or
+the nav's bottom against the wrap's.

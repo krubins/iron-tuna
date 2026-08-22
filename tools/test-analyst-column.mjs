@@ -254,6 +254,44 @@ console.log('\nthe page itself');
   ok('dollar figures are labelled max bids', page.includes('max bids'));
   ok('the front page and the lead both link here',
      fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8').includes('/analyst-desk'));
+  // This page is an index. Laying every entry out in full turned it into one
+  // long scroll of stacked stories, which is the thing it was changed away
+  // from: the story belongs on its own page, not inline among five others.
+  ok('the index does not lay out full call cards', !page.includes('function callHtml'));
+  ok('each entry previews who it argues with instead', page.includes('ecalls'));
+  ok('every entry links to its standalone story', page.includes('Read the full piece'));
+  // The index reads white like the story it links into. Both palettes are
+  // pinned here rather than in one place, because they live in two files and
+  // nothing but a test keeps them in step.
+  const iroot = (page.match(/:root\{[^}]*\}/) || [''])[0];
+  ok('the index is white too', /--bg:\s*#fff/i.test(iroot), iroot.slice(0, 90));
+  ok('the index accent is the white-safe teal', /--teal:\s*#0d7a5f/i.test(iroot));
+  // #f5b800 stays the button fill, but as a numeral on white it is unreadable,
+  // so the record table's Partly column uses an ink-weight gold instead.
+  ok('the Partly column is not button gold', page.includes('.n-partial{color:var(--goldink)'));
+  ok('no dark-theme accent survives in either page',
+     !page.includes('rgba(45,212,163') && !fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8').includes('rgba(45,212,163'));
+}
+
+console.log('\nthe story page a reader actually lands on');
+{
+  const lead = fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8');
+  // A reading view, deliberately unlike the rest of the site's dark chrome.
+  const root = (lead.match(/:root\{[^}]*\}/) || [''])[0];
+  ok('the story page is white', /--bg:\s*#fff/i.test(root), root.slice(0, 90));
+  ok('its type is near-black, not near-white', /--text:\s*#1[0-9a-f]{5}/i.test(root), root.slice(0, 90));
+  // #2dd4a3 on white is about 1.9:1. The reading view needs its own teal.
+  ok('the accent is darkened for a white background', !/--teal:\s*#2dd4a3/i.test(root));
+  ok('the wordmark is not still light-on-dark metal', !lead.includes('stop-color="#dde8ee"'));
+  ok('the story renders its own calls', lead.includes("getElementById('calls')"));
+  ok('the calls are escaped like everything else the desk wrote',
+     /esc\(c\.analyst\)/.test(lead) && /esc\(c\.why\)/.test(lead));
+  ok('more stories sit below the article', lead.includes('Continue reading'));
+  // The body route carries them. Fetched separately and in its own try, so a
+  // missing column cannot take the article page down with it.
+  ok('the body route ships calls', /story: \{ \.\.\.leadRow\(row\)[\s\S]{0,160}calls \}/.test(src));
+  ok('a missing calls column cannot break the article',
+     /catch \(e\) \{ calls = \[\]; \}/.test(src));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
