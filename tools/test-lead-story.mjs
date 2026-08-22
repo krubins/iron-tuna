@@ -318,5 +318,67 @@ console.log('\nthe admin desk');
      route.includes('await leadStoryPayload(env)'));
 }
 
+// ── the countdown points at when a story actually lands ─────────────────────
+// The desk's Routine is `58 */3 * * *`. The countdown used to target the SLOT
+// BOUNDARY, so it told a reader "next insight in 37m" when the run had not even
+// fired yet and the story was ~95 minutes away. It was wrong by the cron offset
+// in every slot, and an open tab looked for the new story an hour before it
+// existed and then gave up for three hours.
+{
+  const SLOT_MS = 3 * 60 * 60 * 1000;
+  // Pull the real constants out of front.html rather than restating them, so
+  // this fails if someone edits the page and not the cron (or the reverse).
+  const cron = Number((front.match(/var LEAD_CRON_MS = (\d+) \* 60 \* 1000/) || [])[1]);
+  const write = Number((front.match(/var LEAD_WRITE_MS = (\d+) \* 60 \* 1000/) || [])[1]);
+  ok('the page knows the run fires at :58, matching the `58 */3 * * *` cron', cron === 58);
+  ok('and allows the run time to write before promising a story', write > 0 && write <= 20);
+
+  // Reimplement exactly what the page computes, then check it against the clock.
+  const slotOf = ms => Math.floor(ms / SLOT_MS);
+  const dueAt = now => slotOf(now) * SLOT_MS + (cron + write) * 60000;
+  const toNext = now => { const d = dueAt(now); return (d > now ? d : d + SLOT_MS) - now; };
+
+  const slotStart = 165501 * SLOT_MS;               // 2026-08-22 15:00:00 UTC
+  const min = n => slotStart + n * 60000;
+  ok('at the slot boundary the countdown is the full cron offset, not zero',
+     Math.round(toNext(slotStart) / 60000) === cron + write);
+  // The bug, stated as a number: at 14:23 the old code said 37m.
+  ok('37 minutes before the boundary it does NOT claim a story in 37 minutes',
+     Math.round(toNext(slotStart - 37 * 60000) / 60000) === 37 + cron + write);
+  // One minute after the story is due, the next one is a full slot away less
+  // that minute: 180 - 1 = 179, NOT 180 - (cron + write) - 1.
+  ok('once the story has landed the countdown rolls to the next slot',
+     Math.round(toNext(min(cron + write + 1)) / 60000) === 179);
+  ok('the countdown is never negative and never exceeds one slot', [
+       slotStart - 1, slotStart, min(1), min(cron), min(cron + write), min(179),
+     ].every(t => { const v = toNext(t); return v > 0 && v <= SLOT_MS; }));
+
+  // The refetch is decided by SLOT comparison, not by a window after the
+  // boundary, so an early, late or held-back run cannot strand an open tab.
+  const stale = (storyMs, now) => slotOf(storyMs) < slotOf(now) && now >= dueAt(now);
+  const prev = (165500 * SLOT_MS) + 116 * 60000;    // the 13:56 story, slot 165500
+  ok('a tab does not go looking before the run has fired',
+     !stale(prev, min(cron - 5)));
+  ok('it looks once the story is due and it is holding an older slot',
+     stale(prev, min(cron + write)));
+  ok('and stops as soon as it is holding this slot\'s story',
+     !stale(min(cron), min(cron + write + 30)));
+  // The old code looked in the six minutes after the boundary. State plainly
+  // that that window is before the story exists, so nothing is found there.
+  ok('the six minutes after the boundary — where the old code looked — is too early',
+     [1, 2, 3, 4, 5, 6].every(m => !stale(prev, min(m))));
+
+  // Guard the regression directly: the lead stamp must not use the deep-dive
+  // rotation's boundary countdown.
+  const paint = front.slice(front.indexOf('function paintGeneratedLead'),
+                            front.indexOf('function leadStamp'));
+  ok('the generated lead does not count down to the slot boundary',
+     !paint.includes('msToNextSlot()'));
+  ok('it counts down to the next expected publish instead',
+     (paint.match(/msToNextLead\(\)/g) || []).length >= 2);
+  ok('the polling loop is bounded so a held-back run cannot poll forever',
+     /looks < \d+/.test(paint));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

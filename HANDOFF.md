@@ -1447,6 +1447,36 @@ than as an exception**, because an exception here is a blank hero on the front
 door. It also pins the route pattern against traversal and checks that the front
 page still paints its own lead first.
 
+### The countdown has to know the cron, not the clock
+
+Found on 2026-08-22 by rendering the real front page against the live D1 row:
+the lead read **"next insight in 37m"** when the next story was 95 minutes away.
+It said something wrong like that in **every slot it has ever rendered**.
+
+The cause is that a slot and a run are not the same instant. Slots are three
+hours from the epoch, so they turn over at 00/03/06/09/12/15/18/21 UTC — but the
+Routine's cron is `58 */3 * * *`, so a run **fires 58 minutes into the slot** and
+takes about eight more to write and verify. `msToNextSlot()` counts down to the
+boundary, which is right for the deep-dive rotation that genuinely turns over
+there, and about an hour early for the generated lead. The lead now uses its own
+`msToNextLead()`, built from `LEAD_CRON_MS` and `LEAD_WRITE_MS`.
+
+The same mistake had a second, quieter half. The open-tab refresh looked for a
+new story in the six minutes **after** the boundary — an hour before the run
+fires — so it always found the same story and then waited three hours to look
+again. An open tab could sit two hours stale. It now asks the question that
+actually decides it: *is the story on screen from an older slot than the one we
+are in?*, the same `Math.floor(ms / SLOT_MS)` the worker and the admin desk use.
+That is immune to a run being early, late, or held back, where any fixed window
+is not. It is capped at 20 looks so a run that publishes nothing — an outcome the
+desk is explicitly allowed to choose — cannot leave every open tab polling for
+the rest of the slot.
+
+**If the cron ever changes, `LEAD_CRON_MS` changes with it.** `test-lead-story`
+asserts the page's value is 58 and pins the arithmetic against slot 165501, but
+nothing can read the Routine's schedule from inside this repo, so that assertion
+is a reminder rather than a real check.
+
 ## 18. August 2026: traffic numbers on /admin
 
 `/admin` used to answer "how much money" and had nothing to say about "how many

@@ -929,6 +929,23 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     return (((slot + shift) % n) + n) % n;            // guard a negative clock
   }
   function msToNextSlot(){ return SLOT_MS - (Date.now() % SLOT_MS); }
+  // The GENERATED lead does not arrive when the slot opens. Its Routine runs on
+  // `58 */3 * * *`, so the run STARTS 58 minutes into the slot and takes about
+  // eight more to write and verify a story. Counting down to the slot boundary
+  // told a reader "next insight in 37m" when the story was an hour and a half
+  // away, every slot, for as long as the countdown has existed.
+  //
+  // Only the countdown TEXT depends on these being right. Whether the page goes
+  // looking for a new story is decided by comparing slots (below), so a run that
+  // is early, late, or held back entirely cannot make the page wrong.
+  var LEAD_CRON_MS = 58 * 60 * 1000;   // `58 */3 * * *`: when the run fires
+  var LEAD_WRITE_MS = 8 * 60 * 1000;   // and roughly how long it takes to land
+  function leadSlotOf(ms){ return Math.floor((+ms || 0) / SLOT_MS); }
+  function leadDueAt(now){ return leadSlotOf(now) * SLOT_MS + LEAD_CRON_MS + LEAD_WRITE_MS; }
+  function msToNextLead(){
+    var now = Date.now(), due = leadDueAt(now);
+    return (due > now ? due : due + SLOT_MS) - now;
+  }
   function fmtCountdown(ms){
     var h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
     return h > 0 ? h + 'h ' + m + 'm' : m + 'm';
@@ -1221,7 +1238,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     renderArt(s);
     document.getElementById('leadLink').setAttribute('href', s.url);
     document.getElementById('leadDate').textContent =
-      leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextSlot());
+      leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextLead());
 
     var also = document.getElementById('leadAlso');
     var recent = (d.recent || []).filter(function(x){ return x.slug; }).slice(0, 4);
@@ -1240,14 +1257,25 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     if (ctrls) ctrls.hidden = true;
 
     // Keep the countdown honest on a tab left open, and pick up the next run
-    // when the three-hour boundary passes.
+    // once it has actually published.
+    //
+    // The old version looked in the six minutes AFTER the slot boundary, which
+    // is an hour before the run fires: it always found the same story, then
+    // waited three hours to look again, so an open tab could sit two hours
+    // stale. Ask the question that actually decides it instead — is the story
+    // on screen from an older slot than the one we are in? — which is the same
+    // slot arithmetic the worker and the admin desk use.
+    //
+    // Bounded on purpose. A run is allowed to publish nothing when it has
+    // nothing worth publishing, and that must not leave every open tab polling
+    // every thirty seconds for the rest of the slot.
+    var looks = 0;
     tick = setInterval(function(){
-      var left = msToNextSlot();
+      var now = Date.now();
       document.getElementById('leadDate').textContent =
-        leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(left);
-      // A run publishes a few minutes past the boundary, so look again once the
-      // new slot has had time to land rather than the instant it opens.
-      if (left > SLOT_MS - 360000) loadGeneratedLead();
+        leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextLead());
+      var stale = leadSlotOf(s.createdAt) < leadSlotOf(now);
+      if (stale && now >= leadDueAt(now) && looks < 20) { looks++; loadGeneratedLead(); }
     }, 30000);
   }
   // The desk publishes on a UTC clock, but nobody drafting reads one. Stamp the
