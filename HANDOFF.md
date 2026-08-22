@@ -2199,105 +2199,95 @@ stopped doing its job.
 
 ---
 
-## 26. August 2026: the analyst desk's first retrospective
+## 26. August 2026: a retrospective the desk tried, published and pulled
 
-A reader question the column had never answered: not "where does this analyst
-sit against our board today", which is the desk's normal shape (§17), but
-**"whose advice has actually been right, measured, over several seasons?"**
-Entry `analyst-accuracy-five-years-2026-08-22-13` (id 28) is that piece, and it
-is a different animal from every other row in `lead_story` — a retrospective
-audit rather than a same-day scoring — so what it had to do differently is
-written down here.
+On 2026-08-22 the analyst desk was pointed at a question it had never answered:
+not "where does this analyst sit against our board today", which is its normal
+shape (§17), but **"whose advice has actually been right, measured, across
+several seasons?"** A story was written, published as id 28
+(`analyst-accuracy-five-years-2026-08-22-13`), and **retracted the same hour on
+an editorial call** — the finding did not clear the bar for a lead.
 
-### What it can and cannot source, which decided the whole piece
+Nothing here argues with that call. What follows is the part worth keeping: why
+the piece could not be what it wanted to be, and the mechanics that were
+exercised getting it up and down again.
 
-The desk's standing sourcing wall (§17) bites harder on a retrospective than on
-a daily. FantasyPros runs the industry's only public accuracy contest — every
-expert's **final** preseason board, frozen before the first game, scored against
-end-of-season results — and that is exactly the dataset this story wants.
-**`fantasypros.com` is blocked by the egress proxy**, alongside `espn.com` and
-`fantasylife.com`. So is essentially the entire open web from this container:
-`web.archive.org`, `pro-football-reference.com`, every major outlet, and Reddit
-were all probed and all refused at CONNECT. GitHub is reachable but scoped to
-this repo.
+### The egress wall is much wider than §17 says
 
-That left **WebSearch result content** as the only channel, which is the same
-standard the camp and analyst desks already publish on. It yields the year-end
-recap articles — winners, field sizes, podium places, methodology — and **not**
-the 200-plus-row leaderboards. The consequence is structural and the story says
-so in its own copy rather than only here: **Iron Tuna did not do the scoring.**
-Every accuracy figure is FantasyPros' measurement, reported; only the
-probability work on top of it is ours. A future run with a reachable
-`fantasypros.com` could do the real version of this piece and should.
+§17 records that `fantasypros.com`, `espn.com` and `fantasylife.com` are blocked
+by the egress proxy. That understates it. Probed from this container on
+2026-08-22, **every one of these refused at CONNECT** (gateway 403):
 
-**Do not let a later edit quietly upgrade "FantasyPros measured this" into "we
-measured this."** That sentence is the difference between a sourced column and
-a fabricated one, and this desk in particular cannot afford the second.
+`web.archive.org`, `archive.org`, `pro-football-reference.com`,
+`www.cbssports.com`, `sports.yahoo.com`, `www.nbcsports.com`, `www.si.com`,
+`draftsharks.com`, `4for4.com`, `api.sleeper.app`, `fantasydata.com`,
+`en.wikipedia.org`, `www.reddit.com`, `medium.com`, `substack.com`,
+`duckduckgo.com`, `news.google.com`, `r.jina.ai`.
 
-### The finding, and why it needed arithmetic
+**GitHub is reachable but scoped to this repo** — `api.github.com` answers 403
+with "GitHub access to this repository is not enabled for this session" for
+anything else, so public data repos (nflverse and friends) are not a way around
+this without `add_repo`.
 
-Five seasons, 2021-2025, produced five different winners out of fields of 212 to
-246 — Muzio, Waziak, Dell, English, Miller, none of them a household name. The
-obvious column writes itself there and would have been **wrong**: under a null
-model where every analyst is equally skilled, five distinct winners is a
-**95.7%** outcome. "Nobody repeats" is what luck looks like, so the annual title
-is close to information-free, and a story that stopped at the table would have
-sold a noise statistic as a scandal.
+The practical consequence, and the reason this is worth a section: **WebSearch
+result content is the only research channel this desk has.** That is fine for
+the daily desks, which quote one dated position at a time. It is a hard ceiling
+on anything retrospective. A story that wants to *score* analysts needs their
+historical ranking sets and the end-of-season results, and neither is reachable;
+what WebSearch returns is year-end recap prose — winners, field sizes,
+methodology — not leaderboards. So a piece built this way can only ever
+**report somebody else's measurement**, and must say so in its own copy.
 
-The signal is in repeat performance instead, and the same null model prices it:
-beating the field average ten years running (Kevin English) is **1 in 1,024**,
-and four outright No. 1 finishes (Sean Koerner) is 1 in 600,259 even granting a
-twenty-year career. So the piece lands on: **forecasting skill is real and
-measurable, but it lives in the multi-year record, not in any season's trophy.**
+**Do not let a future run blur that line.** "FantasyPros measured this" is a
+sourced column; "we measured this" would be a fabricated one, and this desk
+cannot afford the second (§17). If the proxy ever opens, the real version of
+this piece — our own scoring, our own numbers — becomes possible, and that is
+the version worth writing.
 
-### `tools/analyst-accuracy.mjs`
+### Publishing into an occupied slot, and taking it back out
 
-Every number the story prints is reproducible from the repo:
+Both halves of this are documented in §17 but neither had been exercised
+end-to-end until now, so here is what actually worked.
 
+**Up.** The incumbent lead held the same three-hour slot, so a direct
+`published = 1` insert would have hit `lead_story_one_per_slot`. The staging
+hatch: insert `published = 0`, then one statement promoting the new row and
+retiring the old one together —
+
+```sql
+UPDATE lead_story
+   SET published = CASE WHEN id = :new THEN 1 ELSE 0 END
+ WHERE published = 1 OR id = :new;
 ```
-node tools/analyst-accuracy.mjs
+
+**Down.** Retraction needs **both** flags, and this is the trap. `published = 0`
+alone pulls a story off the front page and **leaves it on `/analyst-desk`**,
+because the standing column selects on `verified = 1` alone. It also drops the
+front page back to the dated rotation unless something else is promoted in the
+same breath. So the retraction that restores the previous state exactly is one
+statement:
+
+```sql
+UPDATE lead_story
+   SET verified  = CASE WHEN id = :bad THEN 0 ELSE verified END,
+       published = CASE WHEN id = :bad THEN 0
+                        WHEN id = :prev THEN 1 ELSE published END
+ WHERE id IN (:bad, :prev);
 ```
 
-It holds the sourced record as data, recomputes the four null models, and
-computes the board side — positional ranks and projected points for the six
-players in the 2025 winner's documented read — off the committed `PROJECTIONS`
-set in the site's default full-PPR scoring, **odds-blind**. It exits non-zero if
-a named player is not in the pool, which is the desk's grounding rule made
-mechanical.
+Verify with a single read afterwards — one row at `published = 1`, the retracted
+id at `verified = 0`, and the analyst column back to its prior count. A slot that
+held a published story twice will show up under `doubledSlots` on
+`/api/admin/lead` afterwards; that is the diagnostic working, not a collision.
 
-Its `score()` mirrors `_colScore()` and its `SCORING` mirrors `COLUMN_SCORING`
-in `_worker.js`. **Those are hand-synced, exactly like the §9c copies** — change
-one, change this. It is not in CI: it asserts against a published story rather
-than against the live site, and a projections update legitimately moves the
-board numbers out from under it. Treat a diff as expected drift, not a failure.
+### If this is ever attempted again
 
-### Two mechanics worth keeping
+Two things would have to change first, or the same story comes back:
 
-- **It has no `calls`.** `calls` is `analyst + player + stance` and the worker
-  drops any entry missing either (§17), so a retrospective with no player-level
-  positions to score has nothing valid to put there. `calls` is `NULL` on
-  purpose: the entry lists on `/analyst-desk`, links to its article, and adds no
-  row to the record table, which is correct — **it does not score anybody
-  against our board.** Do not manufacture calls to make the cards appear.
-- **It was published through the staging hatch.** The incumbent lead (id 27) was
-  in the same three-hour slot, so `lead_story_one_per_slot` would have aborted a
-  direct `published = 1` insert. The documented escape (§17) was used: insert
-  `published = 0`, then one atomic `UPDATE ... SET published = CASE WHEN id = 28
-  THEN 1 ELSE 0 END` that promoted the new row and retired the old one with no
-  window holding zero or two leads. `/api/admin/lead` will therefore report slot
-  165500 under `doubledSlots` — that is the diagnostic working as designed, not
-  a collision.
-
-### The cadence problem this exposed, unfixed
-
-The lead rotates every three hours and the cron retired this story roughly an
-hour after it went up. That is correct for a desk whose stories are same-day
-auction reads and **wrong for a researched retrospective**, which does not go
-stale on a three-hour clock. The story survives at `/analyst-desk` and at its
-own `/lead/<slug>` URL, but `/lead` is `noindex` (§17) and the standing column
-lists it by headline only, so the piece has no durable, indexable home.
-
-If this kind of entry is worth repeating, the fix is a **pinned** or
-long-lived lead slot, or server-rendering the analyst column's entries so a
-retrospective can be crawled. Both are real changes, neither was in scope here,
-and a `robots` tweak is explicitly not the answer (§17).
+1. **Reachable source data**, per the wall above. Without it the piece is an
+   aggregation of someone else's grades, which is what it was.
+2. **Somewhere durable to put it.** The lead rotates every three hours and
+   `/lead` is `noindex`, so a researched retrospective is retired by the cron
+   within the hour and never indexed. `/analyst-desk` keeps it, but lists it by
+   headline only and is client-rendered. A pinned lead slot or a server-rendered
+   analyst column would be the fix; a `robots` change explicitly would not (§17).
