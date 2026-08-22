@@ -83,38 +83,38 @@
     {
       "pos": "RB",
       "dollars": 106,
-      "share": 58,
-      "n": 3
+      "n": 3,
+      "share": 53
     },
     {
       "pos": "WR",
       "dollars": 53,
-      "share": 29,
-      "n": 2
+      "n": 2,
+      "share": 27
     },
     {
       "pos": "TE",
       "dollars": 13,
-      "share": 7,
-      "n": 1
+      "n": 1,
+      "share": 7
     },
     {
       "pos": "QB",
       "dollars": 8,
-      "share": 4,
-      "n": 1
+      "n": 1,
+      "share": 4
     },
     {
       "pos": "K",
       "dollars": 2,
-      "share": 1,
-      "n": 1
+      "n": 1,
+      "share": 1
     },
     {
       "pos": "DEF",
       "dollars": 1,
-      "share": 1,
-      "n": 1
+      "n": 1,
+      "share": 0
     }
   ],
   "cliffs": [
@@ -227,6 +227,64 @@
       "edge": 0.8
     }
   ],
+  "bench": {
+    "seats": 7,
+    "cost": 17,
+    "players": [
+      {
+        "name": "Rachaad White",
+        "pos": "RB",
+        "team": "WAS",
+        "price": 4,
+        "ppg": 9.7
+      },
+      {
+        "name": "Jordyn Tyson",
+        "pos": "WR",
+        "team": "NO",
+        "price": 3,
+        "ppg": 10.4
+      },
+      {
+        "name": "Travis Hunter",
+        "pos": "WR",
+        "team": "JAX",
+        "price": 3,
+        "ppg": 10.4
+      },
+      {
+        "name": "Tucker Kraft",
+        "pos": "TE",
+        "team": "GB",
+        "price": 3,
+        "ppg": 10.3
+      },
+      {
+        "name": "Caleb Williams",
+        "pos": "QB",
+        "team": "CHI",
+        "price": 2,
+        "ppg": 16.8
+      },
+      {
+        "name": "Buffalo Bills",
+        "pos": "DEF",
+        "team": "BUF",
+        "price": 1,
+        "ppg": 9.6
+      },
+      {
+        "name": "Cameron Dicker",
+        "pos": "K",
+        "team": "LAC",
+        "price": 1,
+        "ppg": 6.8
+      }
+    ],
+    "share": 8
+  },
+  "total": 200,
+  "unspent": 0,
   "flexWorth": 12.2,
   "noFlexPpg": 109.9,
   "playerCount": 407

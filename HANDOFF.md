@@ -767,7 +767,7 @@ out-of-budget solve. `--dry-run` prints the JSON instead of writing.
 The Build desk, all computed:
 - **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
   solver, with the per-position spend bar. Currently $183 for 122.1 pts/gm, most of it
-  on running backs.
+  on running backs, plus the $17 bench that spends the rest of the board (§24).
 - **"The cliffs"** — the largest points-per-game drop between neighbouring players at
   each position.
 - **"Why the money goes to running back"** — points between the position leader and
@@ -1877,3 +1877,69 @@ To change the cadence or the themes, edit the Routine; to stop it, delete it
 Routine — the column is about how to spend money on a fantasy roster, which
 outlives draft season, and the prompt's theme list carries in-season ideas as
 well as draft-day ones.
+
+---
+
+## 24. August 2026: The Build accounts for the whole budget
+
+### The complaint
+
+The desk read *"122.1 points a game for $110"* under a headline that said
+*"The best team $120 can buy"*. A reader does that subtraction: $10 is missing,
+so the solve must be leaving value on the board.
+
+It was not. **§19's planner spends the budget twice over** — `spend` buys the
+starting lineup, and the rest buys the bench, because a legal roster has to fill
+every seat and the bench is billed at `max(position floor, price)`, not at $1.
+On the default board that is $183 of starters and $17 across 7 bench seats:
+$200 exactly, nothing stranded. `tools/test-planner-budget.mjs` has asserted
+that for every shape model since §19.
+
+The desk was simply publishing one half of a two-half ledger, and the missing
+half was the half that made the arithmetic work. The fix is not to the solver.
+
+### What changed
+
+`tools/build-front-analysis.mjs` now carries both halves into `var ANALYSIS`:
+
+- `bench: { seats, cost, share, players[] }` — the bench the planner actually
+  buys, at the price it will actually be billed. The players come from the
+  planner's own `benchTargets`, the same list the app hands a drafter.
+- `total` (`spend + bench.cost`) and `unspent` (`budget - total`).
+- **`posCost[].share` is now a share of the whole budget, not of the starter
+  spend**, and the bench is one of the rows. Largest-remainder rounding, so the
+  printed percentages add to exactly 100 rather than to 102. RB reads 53%, not
+  58% — the old number was a true share of the wrong denominator.
+
+A sanity check refuses to write a solve where `unspent > 0` or `total > budget`,
+so the page can only ever state a budget it can account for, and
+`tools/test-build-desk.mjs` (in CI) holds the shipped `ANALYSIS` and the render
+to the same contract.
+
+`front.html` renders the second half: the dek names the bench dollars and the
+seat count, a named bench strip sits under the starters, the spend bar and its
+key span the full budget with a bench segment, the meta line reads
+`$110 starters + $10 bench = $120`, and "The shape of a winning $120" carries a
+BENCH bar.
+
+### The one trap in the render
+
+Do **not** print the bench as `fmtMoney(bench.cost)`. `it-league.js`'s `money()`
+rounds every call independently, so on a $100 board `money(183) + money(17)` is
+$92 + $9 = **$101** — a page about a budget that adds up, that does not add up.
+The bench is derived by subtraction instead (`budgetShown - startersShown`),
+which cannot lose or invent a dollar. `tools/test-build-desk.mjs` asserts it,
+and with playwright installed it renders the real page at $50/$100/$120/$200/
+$300 and checks that every one of them balances on screen.
+
+Per-player bench prices are deliberately not printed for the same reason: seven
+independent rescales would not sum to the one bench total the key states.
+
+### Known, untouched
+
+At very small budgets (a $50 auction) `money(1)` rounds to 0, so a $1 defence
+prints as **$0** in the roster strip and the spend key. That is `money()`'s
+rounding, it predates this change, and flooring the display at $1 would break
+the column sums this section exists to make true. Real leagues draft at $100 and
+up, where it does not arise.
+
