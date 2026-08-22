@@ -1448,6 +1448,31 @@ run grades itself against.
 The rewrite in the prompt is the test of whether the rules cost anything: it
 loses the shorthand and keeps 23.5%, 3.6%, $83, and where the money goes.
 
+Writing that rewrite found two rules the best version could not satisfy, so
+both were relaxed rather than left as a standard the site's own copy fails:
+the dek is **3 or 4 short sentences** (2 was not enough room for four price
+calls at 25 words a sentence), and the three-figure limit **exempts a plain
+list of player-and-price pairs**, which is the one place a reader wants four
+numbers in a row.
+
+**Row 31 was rewritten in place** rather than left to age out on the next
+three-hour slot, since it was the live lead. `title` and `dek` only, through
+bound parameters on the D1 connector; `body_html`, `method`, `sources`,
+`players` and both flags untouched, and no new row, so `/lead/<slug>` and the
+Recent insights list are unaffected. What it was:
+
+> The book raises the running back floor 9% and guts the cheap tier: Dobbins
+> to $12, McMillan up to $33
+
+and what it is:
+
+> Cheap running backs got 9% better today, so mid-priced backs are worth less:
+> Dobbins to $12, McMillan to $33
+
+Every figure in the story survived the rewrite. This is the only lead story
+row a human path has ever edited after publication; the Routine owns the
+writes, and an in-place edit is a one-off, not a second channel.
+
 #### The reading view, and the column as an index (2026-08-22)
 
 The first cut of `/analyst-desk` laid every entry out in full, call cards and
