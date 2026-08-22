@@ -191,6 +191,48 @@ ok('reset restores his place in the column', backAgain.hero.rank === base.hero.r
 ok('the reset link hides again at the default', await page.evaluate(() =>
   ![...document.querySelectorAll('.ch-models button')].some(x => x.innerText.trim() === 'reset')));
 
+// ── The returning reader ───────────────────────────────────────────────────
+// A board saved while the Worker had no overlay carries no odds triples, and a
+// saved board at the current projVersion is otherwise never re-fetched: without
+// the graft that reader loses the V flags and the slider for good. Seed exactly
+// that state, reload, and the control has to come back on its own.
+const STORAGE_KEY = html.match(/const STORAGE_KEY = '([^']+)'/)[1];
+const PROJ_VERSION = html.match(/const PROJ_VERSION = '([^']+)'/)[1];
+const savedPool = pool.map(p => ({
+  id: `${p.name}-${p.position}-${p.team}`.replace(/\s+/g, '_'),
+  name: p.name, position: p.position, team: p.team,
+  // The committed endpoints, i.e. the odds-free pool the Worker falls back to.
+  projectedStats: p.vegas
+    ? Object.fromEntries(Object.entries(p.projectedStats).map(([k, v]) => [k, p.vegas[k] ? p.vegas[k][0] : v]))
+    : p.projectedStats,
+  projectedPoints: 0, auctionValue: 0, inflatedValue: 0, vorp: 0, replacement: 0
+}));
+const page2 = await browser.newPage({ viewport: { width: 1600, height: 1400 } });
+await page2.route('**/unpkg.com/**', r => r.fulfill({
+  status: 200, contentType: 'application/javascript',
+  body: fs.readFileSync(/react-dom/.test(r.request().url()) ? reactDomPath : reactPath, 'utf8')
+}));
+await page2.route('**/cdnjs.cloudflare.com/**', r => r.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+await page2.addInitScript(({ key, state }) => {
+  try { localStorage.setItem(key, JSON.stringify(state)); localStorage.setItem('it_cheat_adv', '1'); } catch (e) {}
+}, { key: STORAGE_KEY, state: { players: savedPool, projVersion: PROJ_VERSION, dataInfo: { source: 'Projections 2026' } } });
+await page2.goto(`http://localhost:${server.address().port}/auctiondraft?screen=cheat`, { waitUntil: 'domcontentloaded' });
+await page2.waitForTimeout(6000);
+
+const healed = await page2.evaluate(({ sel, hero }) => {
+  const el = document.querySelector(sel);
+  let flagged = null;
+  for (const col of document.querySelectorAll('.cheat-col')) {
+    const row = [...col.querySelectorAll('.cheat-row')]
+      .find(r => (r.children[3] || {}).innerText && r.children[3].innerText.includes(hero));
+    if (row) { flagged = /^V/.test(row.children[3].innerText.trim()); break; }
+  }
+  return { exists: !!el, value: el ? parseFloat(el.value) : null, flagged };
+}, { sel: SEL, hero: HERO.name });
+ok('a saved board with no odds gets the slider back', healed.exists);
+ok('it comes back at the shipped weight', healed.value === DEFAULT_W, String(healed.value));
+ok('the V flag comes back with it', healed.flagged === true);
+
 await browser.close(); server.close();
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
