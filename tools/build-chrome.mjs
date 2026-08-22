@@ -313,6 +313,15 @@ function putNavJs(html) {
 // It needs something to skip TO, and no page had an id on its <main>, so the
 // target is added here as well — a skip link pointing at nothing is worse than
 // no skip link, because it reads as working to an audit and does nothing.
+// The wordmark lives in the header SVG, which makes it chrome. It is rewritten
+// here because the pages the daily camp Routine authors are copied from older
+// pages that still say tuna.png — a file that no longer exists — so every new
+// page would otherwise ship with a broken-image glyph where the logo goes until
+// someone noticed. Cheaper to heal on every run than to chase.
+function putLogo(html) {
+  return html.replace(/\/tuna\.png/g, '/tuna.webp');
+}
+
 function putSkip(html) {
   let next = html;
   if (!next.includes('class="skip-link"')) {
@@ -335,6 +344,7 @@ for (const f of pages) {
   if (!before.includes('<header class="site">')) continue;
   let next = before;
   next = putCss(next);
+  next = putLogo(next);
   next = putSkip(next);
   if (!NAV_EXCLUDE.has(f)) {
     next = putNav(next, f);
