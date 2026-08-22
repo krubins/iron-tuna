@@ -1403,6 +1403,51 @@ The self-check query now selects `length(title) AS tlen` so the run sees the
 count in its own verification step, and the report-back asks for the headline
 with its character count.
 
+#### The plain-language check (2026-08-22)
+
+The vegas desk shipped this dek, and it is what the front page printed under a
+headline reading "The book raises the running back floor 9% and guts the cheap
+tier":
+
+> Rebuild the auction board on today's odds refresh and replacement-level
+> running back jumps from 126.20 half-PPR points to 137.66, a 9.1% lift that
+> strips 23.5% off the RB25 to RB42 tier while the top six backs lose only 3.6%.
+
+Every number in it is right, it leads with the finding, it carries named players
+and dollar figures, and it passes all four headline checks. It is still close to
+unreadable, because **the run wrote in the vocabulary it had just been thinking
+in**: replacement level, a lift, a tier that gets stripped, dollars that land on
+a position. Forty-five words and five figures in the opening sentence, and the
+sentence starts on the run's own process ("Rebuild the auction board...") rather
+than on anything a drafter does.
+
+The prompt's style section said "plain, direct, confident sentences", which the
+copy above satisfies on its own terms. So the fix is the same shape as the
+headline check: mechanical tests on the finished string, not an adjective the
+run grades itself against.
+
+- **The style section** now sets three rules that hold for `title`, `dek` and
+  `body_html` alike: one idea per sentence and none over 25 words; at most three
+  figures in a sentence, because a fourth means it is carrying two findings;
+  never open on the process. It also names the shorthand — replacement level,
+  lift, strips, lands on, a bare tier — and requires the move be described
+  instead. And every price is written as an instruction: "do not pay more than
+  $12 for J.K. Dobbins", not "fade J.K. Dobbins to $12".
+- **A fifth headline check** covers vocabulary, because the shipped headline
+  stacked three pieces of shorthand in one line: "the book" (the sportsbook),
+  "the floor" (replacement level) and "the cheap tier" (RB25 to RB42).
+- **A dek checklist** now sits beside the headline one, run on the exact string
+  immediately before the INSERT: leads with the finding, longest sentence under
+  25 words, no more than three figures in a sentence, no unexplained shorthand,
+  every price an instruction. It carries the dek above as the worked failure and
+  a rewrite that keeps every actionable number.
+- **The report-back** asks for the dek's longest sentence in words, the same way
+  it already asks for the headline's character count. A run that has to state
+  the number tends to have counted it.
+
+The rewrite in the prompt is the test of whether the rules cost anything: it
+loses the shorthand and keeps 23.5%, 3.6%, $83, and where the money goes.
+
 #### The reading view, and the column as an index (2026-08-22)
 
 The first cut of `/analyst-desk` laid every entry out in full, call cards and
