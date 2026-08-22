@@ -5397,6 +5397,31 @@ function LogoMark({
   tagline = false,
   wavy = false
 }) {
+  // The masthead lockup, shared with every static page: a blue pennant with
+  // IRON reversed out of it, its right edge cut into a tuna's forked tail, then
+  // TUNA on the ground. One optical size, one weight, one colour — the letters
+  // no longer swell and shrink across the word, and the chrome gradient is
+  // gone. textLength pins each word's width so the mark holds its proportions
+  // whether Bebas Neue has loaded or Impact is standing in for it.
+  // The stacked `tagline` lockup on /hub is a different, much larger animal and
+  // keeps its own artwork below.
+  if (!tagline) return React.createElement("svg", {
+    className: className,
+    viewBox: "0 0 272 56",
+    style: { height, width: 'auto', display: 'block' },
+    xmlns: "http://www.w3.org/2000/svg",
+    role: "img",
+    "aria-label": "Iron Tuna"
+  }, React.createElement("path", {
+    d: "M0 0h140l-18 28 18 28H0z",
+    fill: "#1f49c7"
+  }), React.createElement("text", {
+    x: 14, y: 41.5, fontFamily: "'Bebas Neue','Impact',sans-serif", fontSize: 45,
+    fill: "#ffffff", textLength: 98, lengthAdjust: "spacing"
+  }, "IRON"), React.createElement("text", {
+    x: 148, y: 41.5, fontFamily: "'Bebas Neue','Impact',sans-serif", fontSize: 45,
+    fill: "#ffffff", textLength: 122, lengthAdjust: "spacing"
+  }, "TUNA"));
   const LETTER = 'url(#wordMetal)';
   const word = ['I', 'R', 'O', 'N', 'T', 'U', 'N', 'A'].map(ch => ({
     ch,
