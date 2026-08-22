@@ -331,7 +331,15 @@ console.log('\nthe admin desk');
   const cron = Number((front.match(/var LEAD_CRON_MS = (\d+) \* 60 \* 1000/) || [])[1]);
   const write = Number((front.match(/var LEAD_WRITE_MS = (\d+) \* 60 \* 1000/) || [])[1]);
   ok('the page knows the run fires at :58, matching the `58 */3 * * *` cron', cron === 58);
-  ok('and allows the run time to write before promising a story', write > 0 && write <= 20);
+  // MEASURED from the nine scheduled runs on record, not guessed. The first
+  // version of this constant was 8 minutes, below every single observation, so
+  // the countdown promised a story before any run had ever delivered one.
+  const WRITES = [10, 11, 12, 13, 14, 16, 21, 22, 27];
+  ok('the write estimate is not below every run ever observed',
+     write >= WRITES[0]);
+  ok('and is not above every one either', write <= WRITES[WRITES.length - 1]);
+  ok('it sits at or near the median of what actually happened',
+     Math.abs(write - WRITES[(WRITES.length - 1) / 2 | 0]) <= 3);
 
   // Reimplement exactly what the page computes, then check it against the clock.
   const slotOf = ms => Math.floor(ms / SLOT_MS);
@@ -355,14 +363,25 @@ console.log('\nthe admin desk');
 
   // The refetch is decided by SLOT comparison, not by a window after the
   // boundary, so an early, late or held-back run cannot strand an open tab.
-  const stale = (storyMs, now) => slotOf(storyMs) < slotOf(now) && now >= dueAt(now);
+  // It is gated on the run having FIRED, not on the write estimate: the write
+  // time ranges 10-27 minutes and a story that lands early must not sit unseen
+  // waiting for the estimate to catch up.
+  const firedAt = now => slotOf(now) * SLOT_MS + cron * 60000;
+  const stale = (storyMs, now) => slotOf(storyMs) < slotOf(now) && now >= firedAt(now);
   const prev = (165500 * SLOT_MS) + 116 * 60000;    // the 13:56 story, slot 165500
   ok('a tab does not go looking before the run has fired',
      !stale(prev, min(cron - 5)));
-  ok('it looks once the story is due and it is holding an older slot',
-     stale(prev, min(cron + write)));
-  ok('and stops as soon as it is holding this slot\'s story',
+  ok('it looks as soon as the run has fired, not when the estimate says done',
+     stale(prev, min(cron + 1)));
+  ok('the fastest run on record is inside the looking window',
+     stale(prev, min(cron + WRITES[0])));
+  ok('so is the slowest, with 40 minutes of looks at two-minute spacing',
+     WRITES[WRITES.length - 1] <= 40 && stale(prev, min(cron + WRITES[WRITES.length - 1])));
+  ok('and it stops as soon as it is holding this slot\'s story',
      !stale(min(cron), min(cron + write + 30)));
+  // The real 15:58 run: fired 15:58, published 16:12 into slot 165501.
+  ok('the run this was built from would have been picked up',
+     stale(prev, (165501 * SLOT_MS) + 72 * 60000));
   // The old code looked in the six minutes after the boundary. State plainly
   // that that window is before the story exists, so nothing is found there.
   ok('the six minutes after the boundary — where the old code looked — is too early',
@@ -378,6 +397,12 @@ console.log('\nthe admin desk');
      (paint.match(/msToNextLead\(\)/g) || []).length >= 2);
   ok('the polling loop is bounded so a held-back run cannot poll forever',
      /looks < \d+/.test(paint));
+  ok('it looks from when the run fires, not from the write estimate',
+     paint.includes('leadFiredAt(now)') && !paint.includes('now >= leadDueAt(now)'));
+  // Asking faster than /api/lead-story's own memo can only return the same
+  // cached answer.
+  ok('it never asks more often than the two-minute server memo',
+     /lastLook >= 120000/.test(paint));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

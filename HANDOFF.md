@@ -1516,6 +1516,34 @@ asserts the page's value is 58 and pins the arithmetic against slot 165501, but
 nothing can read the Routine's schedule from inside this repo, so that assertion
 is a reminder rather than a real check.
 
+#### `LEAD_WRITE_MS` is measured, and the first value was guessed wrong
+
+The first cut of the fix above guessed **eight minutes** from firing to a
+published row. The 15:58 run then published at **16:12**, and pulling the whole
+table showed eight was below *every* observation. Across the nine scheduled runs
+on record the write took **10, 11, 12, 13, 14, 16, 21, 22 and 27 minutes** —
+median 14, mean 16.2. It is now 15. (The 58- and 71-minute offsets in the table
+are manual `fire_trigger` calls, not the cron; they are not evidence about the
+desk's speed and must be excluded when re-measuring.)
+
+Re-measure with:
+
+```sql
+SELECT id, category, datetime(created_at/1000,'unixepoch') AS created,
+       (created_at % 10800000)/60000 - 58 AS write_min
+FROM lead_story WHERE verified=1 ORDER BY created_at DESC LIMIT 12;
+```
+
+**The countdown estimate and the refresh trigger are deliberately different
+numbers**, and collapsing them back into one is the mistake to avoid. The
+countdown is shown to a person and may be a few minutes out either way. The
+refresh must NOT wait on it: it fires from `leadFiredAt` — the moment the run
+starts — because a story that lands in 10 minutes should not sit unseen for 5
+more while an estimate catches up. The looks are spaced at two minutes, matching
+`/api/lead-story`'s own memo (asking faster can only return the same cached
+answer), and capped at 20, which covers the 40 minutes after firing — past the
+27-minute worst case — and then stops.
+
 ## 18. August 2026: traffic numbers on /admin
 
 `/admin` used to answer "how much money" and had nothing to say about "how many
