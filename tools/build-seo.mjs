@@ -76,6 +76,19 @@ const TOOL_PAGES = {
   'superflex-auction-values.html': '/auctiondraft',
 };
 
+// Standing columns: one page that accumulates dated entries rather than one page
+// per entry. A Blog whose blogPost list is read back out of the page's own
+// articles, so the markup cannot claim an entry the page does not have — and so
+// a Routine that appends an entry without re-running this tool fails --check,
+// exactly as a new drop page does.
+const COLUMN_PAGES = {
+  'the-pick.html': {
+    section: 'The Pick',
+    // <article class="call pick" id="pick-YYYY-MM-DD"> ... <h2>headline</h2>
+    entry: /<article class="call pick" id="(pick-(\d{4}-\d{2}-\d{2})[^"]*)">[\s\S]*?<h2>([\s\S]*?)<\/h2>/g,
+  },
+};
+
 const DATED_ARTICLE = [
   { re: /^(?:auction|snake|bestball)-insights-(\d{4}-\d{2}-\d{2})\.html$/, section: 'Insights' },
   { re: /^auction-watch-(\d{4}-\d{2}-\d{2})\.html$/, section: 'Camp Reports' },
@@ -100,9 +113,21 @@ const desc = (h) => meta(h, /<meta\s+name="description"\s+content="([^"]*)"/i);
 const canon = (h) => meta(h, /<link\s+rel="canonical"\s+href="([^"]*)"/i);
 const ogImage = (h) => meta(h, /<meta\s+property="og:image"\s+content="([^"]*)"/i);
 
+// JSON-LD is JSON, not HTML, so an entity that survives into it is printed to a
+// crawler literally — a headline reading "tiers &mdash; and the player" is a
+// machine-readable claim that the page says that. The typographic entities the
+// pages actually author are decoded here, and numeric ones generically, because
+// the columns write non-breaking hyphens as &#8209; to keep names from breaking.
 function decode(s) {
-  return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&nbsp;/g, ' ');
+  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/gi, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&mdash;/g, '—').replace(/&ndash;/g, '–').replace(/&middot;/g, '·')
+    .replace(/&rsquo;/g, '’').replace(/&lsquo;/g, '‘')
+    .replace(/&rdquo;/g, '”').replace(/&ldquo;/g, '“')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    // &amp; last, so "&amp;mdash;" (an escaped entity in the copy) stays literal.
+    .replace(/&amp;/g, '&');
 }
 
 // git dates for the evergreen pages. If git cannot answer, the dates are never
@@ -213,6 +238,34 @@ function buildGraph(file, html) {
         { name: section, url: SITE + (section === 'Insights' ? '/insights' : '/#camp') },
         { name },
       ]),
+    ];
+  }
+
+  if (COLUMN_PAGES[file]) {
+    const { section, entry } = COLUMN_PAGES[file];
+    const posts = [...html.matchAll(entry)].map((m) => ({
+      '@type': 'BlogPosting',
+      headline: decode(m[3].replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim(),
+      url: url + '#' + m[1],
+      datePublished: m[2],
+      dateModified: m[2],
+      author: PUBLISHER,
+      publisher: PUBLISHER,
+    }));
+    return [
+      {
+        '@type': 'Blog',
+        name, description, url,
+        mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+        image,
+        articleSection: section,
+        inLanguage: 'en-US',
+        isAccessibleForFree: true,
+        author: PUBLISHER,
+        publisher: PUBLISHER,
+        ...(posts.length ? { blogPost: posts } : {}),
+      },
+      crumbs([{ name: 'Iron Tuna', url: SITE + '/' }, { name: section }]),
     ];
   }
 

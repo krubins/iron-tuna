@@ -1649,3 +1649,108 @@ tomorrow's drops today.
 **What is deliberately not in the repo:** Search Console verification, the GA4
 property's own configuration, and backlinks. Those are account-side and cannot
 be committed.
+
+---
+
+## 22. August 2026: The Pick (the daily themed story)
+
+One story a day at **`/the-pick`**. Where the Play-Caller Premium (§16) is a
+column *about coaches* and the generated lead (§17) is a run of the auction
+against the day's lines, The Pick is the site's **feature story**: one idea per
+entry, argued from the projection set, ending in a player you do something
+about.
+
+The format is the product, and it has three parts in this order:
+
+1. **A theme.** Positional scarcity, scoring settings, tier cliffs, the lies a
+   backfield tells. One idea per entry, stated in the chip, and never the same
+   theme two days running — a daily column's real failure mode is not being
+   wrong, it is repeating itself.
+2. **A table.** Numbers computed from `PROJECTIONS` in `_worker.js`, the same
+   pool every board on the site prices from, so a reader can check the argument
+   against their own sheet instead of taking the column's word for it.
+3. **A pick.** The named player, in `<b>` tags, with a percentage.
+
+The voice is the site's own: the data discipline of a projections-first analyst
+married to a sports columnist's comic register. It is allowed to be funny. It is
+not allowed to be funny *instead of* being useful — every entry ends in an
+instruction. **Nothing in the reader-facing copy names or imitates a real writer
+by name**, and the column is bylined to Iron Tuna like everything else here.
+
+### Where it lives
+
+- **`the-pick.html`** (route `/the-pick`) is the **source of truth**. Static
+  entries, newest first, no client rendering and no date gating — entries are
+  written on the day they publish.
+- Each entry is one `<article class="call pick" id="pick-YYYY-MM-DD">`. **The
+  `call` class is not decoration:** `/it-league.js` finds an entry with
+  `el.closest('.call')` and reads `.cpos` off it, so an entry that drops it keeps
+  its look and silently loses the reader's own dollar translation (§9f).
+- Inside: a `.cmeta` row (`<span class="chip theme">Theme: …</span>` + `.cpos` +
+  `.cteam` + `.cdate`), an `<h2>`, a `<p class="dek">`, the prose, one or more
+  `<div class="tbl"><table>…` blocks, a `<p class="who"><b>The Pick:</b> …</p>`
+  naming players in `<b>`, and a `<p class="statline">Projected effect: …%</p>`.
+- The front page carries a **`#thepick` band directly under the hero**: today's
+  entry in full — theme, headline, dek, faces, the pick line — with the two
+  behind it as an "Earlier picks" rail. A band with a *today* rather than four
+  equal cards, because that is what a daily column is.
+
+### The build path
+
+`node tools/build-front.mjs` extracts the column into `var PICKS = [...]` in
+`front.html` alongside STORIES/REPORTS/PLAYERS/COLUMN, taking the named players
+only from the `<b>` spans inside the pick line — a name in the prose above it is
+context, not a call, and must not claim a photo. `node tools/build-seo.mjs`
+writes a `Blog` block whose `blogPost` list is read back out of the page's own
+articles, so the structured data cannot claim an entry the page does not have.
+Both are enforced in CI by a rebuild that must produce no diff.
+
+`build-seo.mjs`'s `decode()` was extended at the same time to handle the
+typographic entities the pages actually author (`&mdash;`, `&rsquo;`, numeric
+entities). JSON-LD is JSON, not HTML: an entity that survives into it is printed
+to a crawler literally, so a description would have claimed the page says
+"theme &mdash; positional scarcity". Only this page's block changed.
+
+### The checks
+
+**`node tools/test-the-pick.mjs`** (in CI). The column is written in prose by a
+Routine, so it gets the same treatment §21's insight prose does — held to the
+player pool the boards price from:
+
+- every player the pick line commits to is in `PROJECTIONS`, and every
+  "Name (TEAM)" in the copy is on that team;
+- **a table column headed `Points` is recomputed from `PROJECTIONS` and must
+  match to a tenth.** This is the check that makes printing the tables worth
+  doing;
+- the statline quotes a percentage *and* one of its players is named in the
+  headline or the pick line — fail either and `/it-league.js` silently never
+  paints the "Your league" line;
+- `PICKS` in `front.html` quotes the page exactly, and `/the-pick` is linked
+  from the served HTML twice (the ribbon and the section head), because the
+  crawlers `robots.txt` invites do not run JavaScript.
+
+The name scan reads **one text node at a time**. Flattening an entry first lets
+a run of capitalised words cross a table-cell boundary, and a row then reads as
+a player called "PPR Standard Derrick Henry".
+
+### The daily cadence
+
+A Claude Routine (`trig_016JAiJJMZi2jtZDmZS1QPNK`, "Iron Tuna — The Pick (daily
+story)") fires **daily at 13:00 UTC** into a fresh session and adds exactly one entry on a branch. Its
+prompt carries the markup template, the theme rule, the voice, and the same
+grounding instruction the other desks run under:
+
+> **Ground every current-season claim in this repo.** The roster and coaching
+> landscape here is the site's own and does not always match outside sources.
+
+It pushes a branch and never to `main`. Like §16's Routine it **stores no MCP
+connectors**, so its sessions may lack GitHub tools; the pushed branch is the
+deliverable and the PR is best-effort. Publishing nothing is an acceptable
+outcome and the prompt says so — a day with no checkable argument is better
+served by silence than by a thin entry.
+
+To change the cadence or the themes, edit the Routine; to stop it, delete it
+(`trig_016JAiJJMZi2jtZDmZS1QPNK`). It has no hard stop date, unlike §16's
+Routine — the column is about how to spend money on a fantasy roster, which
+outlives draft season, and the prompt's theme list carries in-season ideas as
+well as draft-day ones.
