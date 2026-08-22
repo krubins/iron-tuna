@@ -17,7 +17,7 @@
 <title>FAQ | Iron Tuna</title>
 <meta name="description" content="Frequently asked questions about Iron Tuna: custom fantasy football auction values, snake draft rankings, best ball ceiling values, pricing, and the live AI Draft Day experience."/>
 <link rel="canonical" href="https://irontuna.com/faq"/>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#0b1117;--panel:#121b24;--line:#22303b;--text:#e8eef2;--sec:#b6c2cc;--muted:#8595a1;--teal:#2dd4a3;--gold:#f5b800}
 .brand{display:flex;align-items:center;gap:9px;text-decoration:none}
@@ -44,12 +44,16 @@ h1{font-size:clamp(28px,5vw,36px);margin:36px 0 6px;letter-spacing:.01em}
 .back{display:inline-block;margin:30px 0 10px;color:var(--sec)}
 footer{border-top:1px solid var(--line);margin-top:42px;padding:24px 0;color:var(--muted);font-size:13px}
 footer a{color:var(--sec);margin-right:16px}
+
+/* Visible keyboard focus (WCAG 2.4.7). Gold reads >=9:1 on every surface in this palette.
+   Listed per element so this beats the `outline:none` in the input rules above. */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Iron Tuna work for auction, snake, and best ball drafts?","acceptedAnswer":{"@type":"Answer","text":"Yes, all three. Pick your format on the home page. Auction gives live max-bid math and budget tracking; snake gives a best-available board and survival odds for your next pick; best ball ranks by ceiling and flags your stacks the moment they go live."}},{"@type":"Question","name":"Do I need an account?","acceptedAnswer":{"@type":"Answer","text":"No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft day."}},{"@type":"Question","name":"Can I use my exact league scoring?","acceptedAnswer":{"@type":"Answer","text":"Yes — that is the heart of the $9.99 unlock. Set your scoring, roster slots, and league size, and every value recalculates to your exact settings, including superflex and 2-QB. The free board uses expert default scoring so you can try it first."}},{"@type":"Question","name":"How much does it cost?","acceptedAnswer":{"@type":"Answer","text":"The board with expert default values is free in every format. A one-time $9.99 unlocks your league's custom scoring and values, a reorderable board, the AI Value Coach, and the live Draft Day tools."}},{"@type":"Question","name":"Can I use it during the live draft?","acceptedAnswer":{"@type":"Answer","text":"Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft."}},{"@type":"Question","name":"What is Value Coach?","acceptedAnswer":{"@type":"Answer","text":"It advises you on every pick, reading your exact draft against your roster and your league to call the move that wins you the most points: who to target, what they are worth, and when to pivot. You can also ask it anything mid-draft."}}]}</script>
 </head>
 <body>
 <header class="site"><div class="wrap">
-  <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.png" alt=""/><span class="brand-word">IRON TUNA</span></a>
+  <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.webp" alt=""/><span class="brand-word">IRON TUNA</span></a>
   <nav class="nav"><a href="/">Home</a><a href="/insights">Insights</a><a href="/guides">Guides</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
 </div></header>
 

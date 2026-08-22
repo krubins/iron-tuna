@@ -25,7 +25,7 @@
 <meta property="og:url" content="https://irontuna.com/">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--brand:#1f49c7;--brand-dark:#193a9f;--value-red:#cf0a0a;--ink:#101317;--ink-2:#3c434b;--ink-3:#6b737c;--line:#e2e5e9;--bg:#f4f5f6;--card:#ffffff;--mast:#101114;--gold:#f5b800;--teal:#2dd4a3}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -63,7 +63,21 @@ img{max-width:100%}
 
 /* ── section ribbon (in-page nav) ── */
 .ribbon{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;box-shadow:0 1px 4px rgba(16,19,23,.06)}
-.ribbon .wrap{display:flex;align-items:center;gap:4px;height:44px;overflow-x:auto}
+.ribbon .wrap{display:flex;align-items:center;gap:4px;height:44px;overflow-x:auto;position:relative;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.ribbon .wrap::-webkit-scrollbar{display:none}
+/* A flex scroll container drops its trailing padding, which was clipping the last
+   link ("Sign In") against the right edge at 1440px. A flex spacer restores it. */
+.ribbon .wrap::after{content:"";flex:0 0 18px;height:1px}
+/* Without an affordance the eight links past the fold are simply invisible on a
+   phone. These fades show which way there is more to scroll, and are toggled by
+   the ribbon script below. */
+.ribbon{position:sticky;top:0;z-index:40}
+.ribbon .rb-fade{position:absolute;top:0;bottom:0;width:44px;pointer-events:none;z-index:2;opacity:0;transition:opacity .18s ease}
+.ribbon .rb-fade-r{right:0;background:linear-gradient(to right,rgba(255,255,255,0) 0%,#fff 78%)}
+.ribbon .rb-fade-l{left:0;background:linear-gradient(to left,rgba(255,255,255,0) 0%,#fff 78%)}
+.ribbon[data-more-r="1"] .rb-fade-r{opacity:1}
+.ribbon[data-more-l="1"] .rb-fade-l{opacity:1}
+@media (prefers-reduced-motion:reduce){.ribbon .rb-fade{transition:none}}
 .ribbon a{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 11px;border-bottom:3px solid transparent;white-space:nowrap}
 .ribbon a:hover{color:var(--ink);border-bottom-color:var(--brand)}
 .ribbon .rb-spacer{flex:1}
@@ -432,6 +446,18 @@ img{max-width:100%}
   .lm-meta b{font-size:13px}
   .lm-meta span{font-size:10px;letter-spacing:.07em}
 }
+
+/* Visible keyboard focus (WCAG 2.4.7). This page has both a dark masthead and a light
+   body, and no single hue clears 3:1 on both, so the ring flips with the surface:
+   brand blue on the light body (7.4:1 on white), gold inside the masthead (10.6:1). */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:2px}
+.mast a:focus-visible,.mast button:focus-visible,.mast input:focus-visible,.mast select:focus-visible,.mast [tabindex]:focus-visible{outline-color:var(--gold)}
+
+/* .pos-mod is a grid item, so its default min-width:auto lets an unbreakable child
+   (the nowrap "More <pos> intel" link) set the track's min-content width. At 360px
+   that pushed the card to 346px inside a 324px column and gave the whole page a
+   horizontal scrollbar. min-width:0 lets the card shrink to its column. */
+@media(max-width:420px){.pos-mod{min-width:0}.pos-mod h3{min-width:0;flex-wrap:wrap}.pos-mod .mod-more{white-space:normal}}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Iron Tuna","url":"https://irontuna.com/","description":"The fantasy football auction front page: position-by-position intel, asset-allocation strategy, training camp and preseason updates, and the tools to win your auction — custom values, a live auction manager, and an AI Value Coach.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna builds custom fantasy football auction, snake and best ball values for your exact league settings, with a live AI Value Coach for draft day.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
@@ -451,7 +477,7 @@ img{max-width:100%}
   <span class="dominant-text">The Most Data Driven Fantasy Site</span>
   <span class="dominant-rule"></span>
 </div></div>
-<div class="ribbon"><div class="wrap">
+<div class="ribbon"><span class="rb-fade rb-fade-l" aria-hidden="true"></span><span class="rb-fade rb-fade-r" aria-hidden="true"></span><div class="wrap">
   <a href="/the-pick">The Pick</a>
   <a href="/auction-insights">Insights</a>
   <a href="/play-caller-premium">Play-Caller Premium</a>
@@ -1968,6 +1994,27 @@ var COLUMN = [{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J.
   // which is the cheapest way to be sure the two paths agree.
   applyEdition();
 
+})();
+</script>
+<script>
+/* Ribbon scroll affordance: flag which directions still have content so the edge
+   fades can show. Runs on load, scroll and resize; passive listeners so it never
+   blocks the scroll itself. */
+(function(){
+  var rib=document.querySelector('.ribbon'); if(!rib) return;
+  var w=rib.querySelector('.wrap'); if(!w) return;
+  function sync(){
+    var max=w.scrollWidth-w.clientWidth;
+    rib.setAttribute('data-more-l', w.scrollLeft>2 ? '1' : '0');
+    rib.setAttribute('data-more-r', max>2 && w.scrollLeft<max-2 ? '1' : '0');
+  }
+  w.addEventListener('scroll',sync,{passive:true});
+  addEventListener('resize',sync,{passive:true});
+  sync();
+  /* Keyboard focus inside a scroller must bring the focused link into view. */
+  w.addEventListener('focusin',function(e){
+    if(e.target&&e.target.scrollIntoView) e.target.scrollIntoView({block:'nearest',inline:'nearest'});
+  });
 })();
 </script>
 </body>

@@ -80,6 +80,10 @@ h1.sec{margin-top:34px;padding-top:26px;border-top:1px solid var(--line)}
 details.tbl{margin-top:12px}
 details.tbl summary{color:var(--muted);font-size:12.5px;cursor:pointer}
 footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:13px}
+
+/* Visible keyboard focus (WCAG 2.4.7). Gold reads >=9:1 on every surface in this palette.
+   Listed per element so this beats the `outline:none` in the input rules above. */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
 </style>
 </head>
 <body>

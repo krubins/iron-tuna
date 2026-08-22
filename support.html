@@ -17,7 +17,7 @@
 <title>Support | Iron Tuna</title>
 <meta name="description" content="Iron Tuna support: get help, pricing and refunds, how referrals work, and account questions."/>
 <link rel="canonical" href="https://irontuna.com/support"/>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#0b1117;--panel:#121b24;--line:#22303b;--text:#e8eef2;--sec:#b6c2cc;--muted:#8595a1;--teal:#2dd4a3;--gold:#f5b800}
 *{box-sizing:border-box}
@@ -60,11 +60,15 @@ form.contact .msg.ok{color:var(--teal)}
 form.contact .msg.err{color:#f57272}
 footer{border-top:1px solid var(--line);margin-top:42px;padding:24px 0;color:var(--muted);font-size:13px}
 footer a{color:var(--sec);margin-right:16px}
+
+/* Visible keyboard focus (WCAG 2.4.7). Gold reads >=9:1 on every surface in this palette.
+   Listed per element so this beats the `outline:none` in the input rules above. */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
 </style>
 </head>
 <body>
 <header class="site"><div class="wrap">
-  <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.png" alt=""/><span class="brand-word">IRON TUNA</span></a>
+  <a class="brand" href="/" aria-label="Iron Tuna home"><img class="brand-fish" src="/tuna.webp" alt=""/><span class="brand-word">IRON TUNA</span></a>
   <nav class="nav"><a href="/">Home</a><a href="/insights">Insights</a><a href="/guides">Guides</a><a href="/faq">FAQ</a><a href="/privacy">Privacy</a></nav>
 </div></header>
 

@@ -91,8 +91,8 @@ function gtag_report_conversion(url) {
   --border-accent: #3d4a5c;
   --text-primary: #f5f7fa;
   --text-secondary: #a4adba;
-  --text-muted: #6b7585;
-  --text-faint: #4a5260;
+  --text-muted: #8b96a6;
+  --text-faint: #808a99;
   --accent: #4169e1;
   --accent-soft: #4169e115;
   --accent-text: #8ba6ff;
@@ -199,7 +199,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .player-name { font-weight: 500; color: var(--text-primary); }
 .player-row-action { display: flex; gap: 6px; justify-content: flex-end; }
 .btn-draft { padding: 4px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--accent); color: white; border-radius: var(--radius-sm); font-weight: 600; transition: background 0.15s ease; }
-.btn-draft:hover { background: #5b7dea; }
+.btn-draft:hover { background: #3a5fd0; }
 .btn-secondary { padding: 4px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--bg-elev); color: var(--text-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border-strong); }
 .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
 .sidebar-section { padding: 14px 14px; border-bottom: 1px solid var(--border-subtle); }
@@ -232,7 +232,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .bid-actions { display: flex; gap: 8px; margin-top: 12px; }
 .bid-actions button { flex: 1; padding: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; border-radius: var(--radius-sm); }
 .btn-won { background: var(--accent); color: white; }
-.btn-won:hover { background: #5b7dea; }
+.btn-won:hover { background: #3a5fd0; }
 .btn-pass { background: var(--bg-base); color: var(--text-secondary); border: 1px solid var(--border-strong); }
 .btn-pass:hover { color: var(--text-primary); }
 .bid-input { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
@@ -509,8 +509,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .data-badge.baseline { color: var(--text-faint); }
 .splash { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: radial-gradient(ellipse at center, #0f1822 0%, #050810 70%, #000 100%); color: #f5f7fa; font-family: 'Bebas Neue', sans-serif; }
 .splash h1 { font-size: 49px; letter-spacing: 0.08em; margin-bottom: 12px; color: #9fe1cb; text-shadow: 0 0 24px rgba(45, 212, 163, 0.4); }
-.splash p { font-family: 'Inter', sans-serif; color: #6b7585; font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; }
-.splash-version { margin-top: 4px; color: #4a5260 !important; font-size: 11px !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; letter-spacing: 0.1em !important; text-transform: none !important; }
+.splash p { font-family: 'Inter', sans-serif; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; }
+.splash-version { margin-top: 4px; color: var(--text-faint) !important; font-size: 11px !important; font-family: 'JetBrains Mono', ui-monospace, monospace !important; letter-spacing: 0.1em !important; text-transform: none !important; }
 
 .plan-bar { height: 10px; border-radius: 5px; background: var(--bg-elev); overflow: hidden; display: flex; margin: 6px 0; }
 .plan-bar .seg-starters { background: var(--value); }
@@ -5510,7 +5510,7 @@ function LogoMark({
     floodColor: "#22d3ee",
     floodOpacity: "0.085"
   }))), React.createElement("image", {
-    href: "/tuna.png",
+    href: "/tuna.webp",
     filter: tagline ? 'url(#itTealHalo)' : undefined,
     x: fishX,
     y: fishY,
@@ -11919,7 +11919,7 @@ function Cheatsheet({
   }, fmtMeta(config).label, " Cheat Sheet · ", config.teams, " teams · ", _assumeIsAuction ? `$${config.budget} budget · ` : '', pprLabel, " · ", dateStr), React.createElement("div", {
     className: "cob-chip"
   }, React.createElement("img", {
-    src: "/tuna.png",
+    src: "/tuna.webp",
     alt: "Iron Tuna",
     className: "cob-fish"
   }), React.createElement("span", {

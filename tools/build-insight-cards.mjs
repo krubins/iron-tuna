@@ -19,7 +19,7 @@ import { chromium } from 'playwright-core';
 const ROOT = new URL('..', import.meta.url).pathname;
 const OUT_DIR = ROOT + 'social/cards/';
 const pool = JSON.parse(readFileSync(ROOT + 'tools/x-posts/insights_pool.json', 'utf8'));
-const logoData = 'data:image/png;base64,' + readFileSync(ROOT + 'tuna.png').toString('base64');
+const logoData = 'data:image/webp;base64,' + readFileSync(ROOT + 'tuna.webp').toString('base64');
 const force = process.argv.includes('--force');
 
 const FORMAT_LABEL = { auction: 'AUCTION INSIGHT', snake: 'SNAKE INSIGHT', bestball: 'BEST BALL INSIGHT' };
