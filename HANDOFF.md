@@ -680,11 +680,13 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   embed.
 - **Camp/preseason upkeep:** a scheduled Claude Routine ("Iron Tuna camp & preseason
   desk") researches verified camp/preseason news daily, authors a new
-  `auction-watch-YYYY-MM-DD.html` when there is real signal, runs `build-front.mjs`
-  **and `build-seo.mjs`** (§21 — the new page needs the Google tag, its Article
-  JSON-LD, a sitemap `lastmod`, and a static link from the camp desk; without the
-  second command it is published untagged and reachable only from the sitemap),
-  and pushes — same guardrails as the §9 projections routine (skip on no
+  `auction-watch-YYYY-MM-DD.html` when there is real signal, runs `build-front.mjs`,
+  **`build-seo.mjs`** (§21 — the new page needs the Google tag, its Article
+  JSON-LD, a sitemap `lastmod`, and a static link from the camp desk; without that
+  command it is published untagged and reachable only from the sitemap)
+  **and `build-chrome.mjs`** (§24 — without it the page ships with no nav, no
+  footer and no stylesheet link, and the `build-chrome.mjs --check` gate fails CI
+  on the next PR), and pushes — same guardrails as the §9 projections routine (skip on no
   network/no verified news; no em dashes in authored copy).
 
 ---
@@ -1900,7 +1902,7 @@ node tools/build-seo.mjs --check    # writes nothing, exits 1 if anything is sta
 node tools/test-seo.mjs             # 35 assertions over the result
 ```
 
-**Run `build-seo.mjs` whenever a page is added**, alongside `build-front.mjs`.
+**Run `build-seo.mjs` whenever a page is added**, alongside `build-front.mjs` and `build-chrome.mjs` (§24). All three are idempotent, all three are gated in CI, and a new page needs all three.
 Running it twice changes nothing; every edit it makes is idempotent, and the
 JSON-LD it owns is marked `data-seo="build-seo"` so it can rewrite its own output
 and will never touch the hand-written blocks in `index.html` or `faq.html`.
@@ -2427,3 +2429,58 @@ Counting *rows* is not a usable signal any more — `.mast-brand`, `.mast-jump`
 and `.mast-nav` are different heights and vertically centred, so their `top`
 values differ on a single row. Use `.mast .wrap`'s height (64px = one row) or
 the nav's bottom against the wrap's.
+
+---
+
+## 24. The shared chrome and `site.css`
+
+Until August 2026 every page carried its own copy of the header, the footer and
+the CSS that styles them. They drifted: **10 different nav link sets across 95
+pages, and 13 different footers.** The cost was navigational rather than
+cosmetic — from `the-pick.html` a reader could not reach Insights, FAQ, Insight
+Vault, Play-Caller Premium or Analyst Desk at all, and no page on the site
+linked Privacy and Terms together.
+
+- **`site.css`** is the single source of truth for the palette, the type scale,
+  the base resets and all the chrome. Pages link it **before** their own
+  `<style>`, so a page still has the last word on anything it declares itself
+  and a rule left behind inline is inert rather than conflicting.
+- **`tools/build-chrome.mjs`** generates the header and footer from one link
+  set, between `<!--chrome:*-->` sentinels, so it replaces only its own output.
+  Idempotent, with a `--check` mode, exactly like `build-seo.mjs`.
+  ```bash
+  node tools/build-chrome.mjs           # writes
+  node tools/build-chrome.mjs --check   # writes nothing, exits 1 if stale
+  ```
+- **Run it whenever a page is added.** A page published without it has no nav,
+  no footer and no stylesheet, and the CI gate fails on the next PR. This is
+  what the camp/preseason Routine (§12) had to be taught.
+
+**Three visual zones, deliberately.** The content pages and the app are dark;
+`front.html` is light and owns its own stylesheet and three-row masthead; the
+three READING pages — `lead.html`, `analyst-desk.html`,
+`play-caller-premium.html` — are white, and `tools/test-reading-view.mjs` owns
+that palette. The reading pages are a `NAV_EXCLUDE` set in the generator: they
+take the footer and the stylesheet but keep their own short header, because an
+eleven-item nav does not belong on a page you read. They do take the shared
+**typeface** — leaving three pages on `-apple-system` while the other 91 render
+in Inter puts the split back on the pages a reader spends longest on.
+
+**Excluded entirely:** `index.html` (React renders its own header),
+`front.html` (its masthead is its own design; its ribbon and footer carry the
+same link set so nothing is unreachable) and `admin.html` (internal).
+
+**On mobile** the nav is a disclosure menu, not a scrolling strip. The strip
+that `cee7d10` shipped was right for the three links that nav then held; at
+eleven it hides most of them behind a scroll with no affordance. The header is
+still one line at 52px as that commit intended, and the CTA sits **outside**
+`<nav>` so it stays in the bar rather than collapsing into the menu.
+
+**Guards.** `tools/test-chrome.mjs` asserts the link set is complete, the CTA is
+format-correct, the disclosure nav is wired for assistive tech, and
+header/nav/footer/main are balanced — that last one because
+`auction-watch-2026-07-05.html` shipped with no `</header>` and nested its whole
+article inside a 1740px sticky header. `tools/test-asset-routing.mjs` asserts
+every local asset a page points at exists on disk, because renaming `tuna.png`
+to `tuna.webp` left 91 pages pointing at a deleted file twice — once on the
+rename and once when a merge took the other side — and nothing else noticed.

@@ -542,6 +542,18 @@ img{max-width:100%}
   .foot .wrap{gap:10px 16px;padding-bottom:28px}
   .foot .fm{margin-left:0;flex:1 1 100%;line-height:1.5}
 }
+
+/* Footer sitemap. Light, to match this page. .foot .wrap is a flex row, so it
+   has to become a block or the grid collapses into the left half. */
+.foot .wrap{display:block;padding:20px 18px 28px}
+.foot .foot-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:24px;padding:26px 0 20px}
+.foot .foot-col h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin:0 0 12px;font-weight:700;font-family:'Inter',sans-serif}
+.foot .foot-col ul{list-style:none;margin:0;padding:0}
+.foot .foot-col li{margin-bottom:8px}
+.foot .foot-col a{font-size:13px;color:var(--ink-3);font-weight:400;letter-spacing:0}
+.foot .foot-col a:hover{color:var(--ink);text-decoration:underline}
+.foot .fm{display:block;border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--ink-3)}
+@media(max-width:560px){.foot .foot-cols{grid-template-columns:repeat(2,1fr);gap:18px}}
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Iron Tuna","url":"https://irontuna.com/","description":"The fantasy football auction front page: position-by-position intel, asset-allocation strategy, training camp and preseason updates, and the tools to win your auction — custom values, a live auction manager, and an AI Value Coach.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna builds custom fantasy football auction, snake and best ball values for your exact league settings, with a live AI Value Coach for draft day.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
@@ -565,7 +577,7 @@ img{max-width:100%}
 </div></div>
 <div class="ribbon"><div class="wrap">
   <a href="/the-pick">The Pick</a>
-  <a href="/auction-insights">Insights</a>
+  <a href="/insights">Insights</a>
   <a href="/play-caller-premium">Play-Caller Premium</a>
   <a href="/analyst-desk">Analyst Desk</a>
   <a href="/guides">Guides</a>
@@ -686,7 +698,38 @@ img{max-width:100%}
 </main>
 
 <footer class="foot"><div class="wrap">
-  <a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
+  <div class="foot-cols">
+   <div class="foot-col"><h2>Draft</h2><ul>
+    <li><a href="https://irontuna.com/">Draft Day Mode</a></li>
+    <li><a href="https://irontuna.com/auctiondraft">Auction board</a></li>
+    <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+    <li><a href="https://irontuna.com/bestball">Best ball board</a></li>
+    <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+   </ul></div>
+   <div class="foot-col"><h2>Read</h2><ul>
+    <li><a href="/insights">Insights</a></li>
+    <li><a href="/auction-insights">Auction</a></li>
+    <li><a href="/snake-insights">Snake</a></li>
+    <li><a href="/bestball-insights">Best Ball</a></li>
+    <li><a href="/insights-vault">Insight Vault</a></li>
+   </ul></div>
+   <div class="foot-col"><h2>More</h2><ul>
+    <li><a href="/the-pick">The Pick</a></li>
+    <li><a href="/guides">Guides</a></li>
+    <li><a href="/analyst-desk">Analyst Desk</a></li>
+    <li><a href="/hub">Classic Home</a></li>
+   </ul></div>
+   <div class="foot-col"><h2>Company</h2><ul>
+    <li><a href="/faq">FAQ</a></li>
+    <li><a href="/support">Support</a></li>
+    <li><a href="/creators">Creators &amp; affiliates</a></li>
+   </ul></div>
+   <div class="foot-col"><h2>Legal</h2><ul>
+    <li><a href="/privacy">Privacy</a></li>
+    <li><a href="/terms">Terms</a></li>
+    <li><a href="/admin">Admin</a></li>
+   </ul></div>
+  </div>
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; Player photos &copy; NFL/ESPN</span>
 </div></footer>
 
