@@ -36,9 +36,11 @@ const api = new Function(`
   const VEGAS_DEFAULT_W = ${DEFAULT_W};
   ${grab('vegasWeightOf')}
   ${grab('applyVegasWeight')}
-  return { vegasWeightOf, applyVegasWeight, VEGAS_DEFAULT_W };
+  ${grab('_liveNorm')}
+  ${grab('graftVegasOdds')}
+  return { vegasWeightOf, applyVegasWeight, graftVegasOdds, VEGAS_DEFAULT_W };
 `)();
-const { vegasWeightOf, applyVegasWeight } = api;
+const { vegasWeightOf, applyVegasWeight, graftVegasOdds } = api;
 
 // ── The default matches the worker ─────────────────────────────────────────
 // _worker.js blends at VEGAS_WEIGHT : 1, so the client default has to be
@@ -141,6 +143,83 @@ ok('the slider writes strategy.vegasWeight', /vegasWeight: parseFloat\(e\.target
 ok('the slider is hidden when the board carries no odds', /onUpdateStrategy && hasVegasOdds/.test(src));
 ok('a hand-edited stat drops out of the blend',
    /A hand-entered stat is the reader's own number/.test(src));
+
+// ── graftVegasOdds: the odds reach a board that was saved without them ─────
+// A pool saved while the Worker had no overlay is pinned at the current
+// projVersion and never re-fetched, so it carries no triples — and the slider,
+// which hides itself when nothing carries odds, never appears. The graft puts
+// the odds back without touching anything the reader owns.
+const savedNoOdds = () => [{
+  id: 'a', name: 'A. Back', position: 'RB', team: 'AAA',
+  projectedStats: { rushYd: 1000, rushTD: 8, recYd: 400, rec: 45 }
+}, {
+  id: 'b', name: 'B. Wideout', position: 'WR', team: 'BBB',
+  projectedStats: { recYd: 900, rec: 70, recTD: 6 }
+}];
+const shipped = () => [{
+  id: 'a', name: 'A. Back', position: 'RB', team: 'AAA',
+  projectedStats: { rushYd: blend(1000, 1200, DEFAULT_W), rushTD: 8, recYd: 400, rec: 45 },
+  vegas: { rushYd: [1000, 1200, blend(1000, 1200, DEFAULT_W)] }
+}, {
+  id: 'b', name: 'B. Wideout', position: 'WR', team: 'BBB',
+  projectedStats: { recYd: 900, rec: 70, recTD: 6 }
+}];
+
+const healed = graftVegasOdds(savedNoOdds(), shipped());
+ok('the graft puts the triple back', !!(healed[0].vegas && healed[0].vegas.rushYd));
+ok('the graft lands on the shipped blend', healed[0].projectedStats.rushYd === blend(1000, 1200, DEFAULT_W));
+ok('the graft carries both endpoints, so the slider can re-cut it',
+   healed[0].vegas.rushYd[0] === 1000 && healed[0].vegas.rushYd[1] === 1200);
+ok('the grafted board can then be dragged to the book',
+   applyVegasWeight(healed, 1)[0].projectedStats.rushYd === 1200);
+ok('the graft leaves unpriced stats alone',
+   healed[0].projectedStats.rushTD === 8 && healed[0].projectedStats.recYd === 400);
+ok('a player the book never priced comes back as the same object', healed[1] === savedNoOdds()[1] || !healed[1].vegas);
+ok('the graft does not mutate the saved pool', savedNoOdds()[0].projectedStats.rushYd === 1000);
+
+// The reader's own number outranks the odds — the same promise handlePlayerEdit
+// makes in the other direction. A stat that no longer sits on the committed
+// endpoint was typed over (or imported), and the graft must not overwrite it.
+const edited = savedNoOdds();
+edited[0].projectedStats.rushYd = 1150;
+const afterEdit = graftVegasOdds(edited, shipped());
+ok('a hand-edited stat is not overwritten', afterEdit[0].projectedStats.rushYd === 1150);
+ok('a hand-edited stat gets no triple, so the slider cannot claim it later',
+   !(afterEdit[0].vegas && afterEdit[0].vegas.rushYd));
+
+// Matching is by normalised name + position, so a live-status team change or a
+// punctuation difference in a saved name does not lose the odds.
+const renamed = savedNoOdds();
+renamed[0].name = "A Back";
+renamed[0].team = 'ZZZ';
+ok('punctuation and a team change still match',
+   !!graftVegasOdds(renamed, shipped())[0].vegas);
+const wrongPos = savedNoOdds();
+wrongPos[0].position = 'WR';
+ok('a different position does not match', !graftVegasOdds(wrongPos, shipped())[0].vegas);
+
+// Nothing to graft is a no-op, identity included: the effect runs on every load
+// for a reader whose board legitimately has no odds, and must not churn state.
+ok('a baseline with no odds returns the same array',
+   (() => { const p = savedNoOdds(); return graftVegasOdds(p, savedNoOdds()) === p; })());
+ok('no matching player returns the same array',
+   (() => { const p = savedNoOdds(); return graftVegasOdds(p, [{ name: 'Nobody', position: 'TE', projectedStats: {}, vegas: { recYd: [1, 2, 1.8] } }]) === p; })());
+ok('an empty pool survives the graft', graftVegasOdds([], shipped()).length === 0);
+ok('a null pool survives the graft', graftVegasOdds(null, shipped()) === null);
+ok('a null baseline survives the graft',
+   (() => { const p = savedNoOdds(); return graftVegasOdds(p, null) === p; })());
+ok('a malformed triple is skipped rather than trusted',
+   !graftVegasOdds(savedNoOdds(), [{ name: 'A. Back', position: 'RB', projectedStats: {}, vegas: { rushYd: [null, 1200, 1150] } }])[0].vegas);
+
+// ── Wiring: the heal is actually reachable ─────────────────────────────────
+ok('a current saved pool with no odds still fetches the baseline',
+   /!initialState\.players\.some\(p => p && p\.vegas\)/.test(src));
+ok('the odds-only path grafts instead of re-baselining',
+   /setPlayers\(prev => graftVegasOdds\(prev, baseline\)\)/.test(src));
+ok('an imported or live-loaded pool is left alone',
+   /savedSource === 'Projections 2026'/.test(src));
+ok('a failed odds-only fetch does not raise the projections error',
+   /if \(!oddsOnly\) setProjLoadFailed\(true\);/.test(src));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
