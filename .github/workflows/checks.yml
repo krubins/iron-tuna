@@ -249,6 +249,12 @@ jobs:
       - name: Admin grant and revoke
         run: node tools/test-admin-grant.mjs
 
+      # The counter that must never cost a page view, and the numbers on /admin
+      # that must never overstate the site. Written in Aug 2026 but never wired
+      # up here, so it was only ever run by hand.
+      - name: Traffic analytics
+        run: node tools/test-analytics.mjs
+
       # /api/admin/comp grants access and then puts a working sign-in link in
       # someone's inbox, so its failure modes are the ones that look like
       # success: a link mailed to an address the grant never reached, an email

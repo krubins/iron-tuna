@@ -1042,6 +1042,59 @@ time**, not in the stored copy, so the authoring contract stays "write a table"
 and every past story gains the fix. The sources list is collapsed by default —
 on these runs it can run longer than the story it backs.
 
+### One slot, one story
+
+The desk publishes on a three-hour clock and each run retires the one before it,
+so a slot should hold exactly one story. On 2026-08-21 slot 165494 held **four**,
+twenty minutes apart: the Routine was fired by hand repeatedly while the analyst
+desk was being tested. Nothing broke — the newest published row always wins, so
+the site was never wrong — but three finished stories were published and buried
+within minutes of each other, and anyone watching the front page saw the lead
+change four times inside one slot.
+
+**The guard is a D1 trigger, not a line in the Routine's prompt.**
+
+```sql
+CREATE TRIGGER lead_story_one_per_slot
+BEFORE INSERT ON lead_story FOR EACH ROW
+WHEN NEW.published = 1 AND EXISTS (
+  SELECT 1 FROM lead_story
+   WHERE published = 1 AND verified = 1
+     AND created_at/10800000 = NEW.created_at/10800000)
+BEGIN SELECT RAISE(ABORT, 'lead_story: this three-hour slot already has a published story. …'); END;
+```
+
+It lives in the database on purpose. The prompt is edited by several sessions
+independently — it was pinned to one desk and restored 73 seconds later on the
+same day — so a rule written there can be lost by the next person who rewrites
+it, and nobody would notice until the churn came back. A trigger cannot be
+clobbered by a prompt edit, fires whoever does the INSERT, and fails **loudly**
+rather than silently demoting a row.
+
+Why the `WHEN` clause is shaped the way it is:
+
+- **It only bites on `published = 1`.** A run that held itself back (`verified=0`,
+  `published=0`) is never blocked, which matters because that is the honest
+  outcome the desk is told to prefer over publishing something thin.
+- **It compares slots, not timestamps.** The normal flow inserts while the
+  *previous* story is still published — the retiring `UPDATE` runs after — and
+  that row is three hours back, in a different slot, so an ordinary run passes.
+- **It requires `verified = 1` on the incumbent.** An unverified row sitting in
+  the slot does not block a good story from taking it.
+
+Two escape hatches, both verified against a scratch table before this went on:
+
+1. **Stage it.** Insert with `published=0`, then `&promote=<id>` on the admin
+   route. The guard does not fire, and promoting is one batch.
+2. **Replace it.** `&pull=<id>` the story you want gone, then re-run. The pulled
+   row is `published=0`, so the slot is free and the new insert lands normally.
+
+So a deliberate re-run still works; only an accidental one is stopped.
+
+`/api/admin/lead` reports `slot` on every row, `currentSlot`, and `doubledSlots`
+naming any slot holding more than one story, so a past collision is visible
+rather than something you infer from timestamps.
+
 ### Running the desk by hand
 
 `GET /api/admin/lead?key=<LEADS_EXPORT_KEY>` lists the last 15 rows with a
@@ -1329,9 +1382,9 @@ page still paints its own lead first.
 ## 18. August 2026: traffic numbers on /admin
 
 `/admin` used to answer "how much money" and had nothing to say about "how many
-people". It does now: a **Traffic** section above Sales & referrals with page
-views, visitors, top pages, where arrivals came from, and the site's named click
-events, over a 7 / 30 / 90-day window.
+people". It does now: a **Traffic** section above Sales & referrals leading with
+**unique daily users**, plus page views, top pages, where arrivals came from, and
+the site's named click events, over a 7 / 30 / 90-day window.
 
 ### Counting happens in the Worker, not in a script tag
 
@@ -1352,7 +1405,7 @@ Not counted, because none of them are a person reading the site: bots and AI
 crawlers (`BOT_RE`), prefetch/prerender hits, framed loads, `/admin*` itself, and
 anything that is not a 200 HTML GET.
 
-### A "visitor" is a day, not a person
+### A "visitor" is a day, not a person — so the unit is the unique DAILY user
 
 `visitorHash()` is `SHA-256(day + LEADS_EXPORT_KEY + IP + user-agent)`, truncated.
 No cookie, no stored IP, no stored user-agent — the raw values never reach D1,
@@ -1360,11 +1413,50 @@ and the salt rotates at UTC midnight so yesterday's hashes cannot be matched to
 today's. That is the same shape Plausible and Fathom use, and it keeps the
 `privacy.html` promise intact.
 
-The cost is real and worth stating plainly: **over a multi-day window, someone
-who comes back on three days counts as three visitors.** The admin page says so
-under the tile rather than implying otherwise. If true multi-day uniques ever
-matter more than the privacy property, the salt is the one line to change — and
-the honesty note under the tile has to change with it.
+That rotation decides what can honestly be reported. Within one UTC day the hash
+is stable, so **distinct visitors on a single day is a true unique-user count** —
+which is why it is the headline tile and the leading chart series. Across a
+window it is not: the day is baked into the hash, so `COUNT(DISTINCT visitor)`
+over 30 days is exactly the sum of each day's uniques. **Someone who comes back on
+three days is three user-days, not one returning person.** The wide number is
+therefore labelled `userDays` in the payload and "User-days" on the tile, rather
+than being passed off as an audience size.
+
+The summary tiles (today, average/day, best day, user-days) are computed in the
+worker **off the daily grid**, not re-queried, so the tiles and the chart cannot
+tell different stories.
+
+If true multi-day uniques ever matter more than the privacy property, the salt is
+the one line to change — and every "user-days" label has to change with it.
+
+### The operator's own browsing is flagged, not counted
+
+On a site this size the person reading the dashboard was a large share of what
+the dashboard reported. `/admin*` was already skipped, but browsing the actual
+site was not.
+
+Rows now carry `internal`, and every read in `/api/admin/traffic` filters
+`internal = 0` — totals, the daily grid, top pages, sources, countries and the
+`site_events` clicks alike, so no table on the page can disagree with another
+about who counts. Rows are **recorded and filtered, never dropped**: the
+exclusion is reversible, `&includeMe=1` shows the unfiltered numbers, and
+`out.excluded` puts the size of what was held back on the page instead of asking
+the operator to take it on trust.
+
+The mark is a cookie, because there is nothing stable to keep a list of — a
+visitor id is minted fresh every UTC day and is meant to be unmatchable. It is
+tri-state on purpose:
+
+- absent → reaching `/api/admin/traffic` with a valid key sets `it_owner=1`.
+  Unlocking `/admin` is enough; there is no step to remember.
+- `1` → excluded. The dashboard does not re-issue the cookie.
+- `0` → counted like anyone else, set by the "Count my visits" button
+  (`GET /api/admin/exclude-me?key=…&on=0`). **This has to stick**, or opening the
+  dashboard would silently undo the operator's choice — hence `0` rather than
+  clearing the cookie.
+
+`HttpOnly; Secure; SameSite=Lax`, two years. It is per browser: the note under
+the tiles says so, and the fix for a second device is to open `/admin` there.
 
 ### What is stored
 
@@ -1372,10 +1464,17 @@ Two D1 tables, created lazily on first use (`ANALYTICS_DDL`, cached per isolate,
 with a one-at-a-time fallback for D1 versions that refuse DDL inside a batch) —
 so there is no migration step to remember and nothing to run by hand:
 
-- `page_views` — `ts, day, path, visitor, source, country`. `source` is
+- `page_views` — `ts, day, path, visitor, source, country, internal`. `source` is
   `utm_source` if present, else the referring host minus `www.`, else empty for
   direct. Self-referrals are dropped so the list is arrivals, not internal hops.
-- `site_events` — `ts, day, event, uid, path, props`, fed by `/api/track`.
+- `site_events` — `ts, day, event, uid, path, props, internal`, fed by `/api/track`.
+
+`internal` was added after both tables were live, so it also appears in
+`ANALYTICS_MIGRATIONS` — `ALTER TABLE … ADD COLUMN`, the same shape as
+`x_posts.est_cost`. Those run one at a time and never in a batch: an already
+applied migration throws "duplicate column", and inside a batch that one throw
+would take the others with it. Existing rows default to `0`, i.e. counted, which
+is the right way to be wrong about traffic recorded before the flag existed.
 
 `/api/track` already existed and already had ~40 call sites in `index.html`
 (`nav_click`, `paywall_viewed`, the `coach_*` family). It forwarded to
@@ -1391,7 +1490,10 @@ cannot grow without bound.
 ### Reading it back
 
 `GET /api/admin/traffic?key=<LEADS_EXPORT_KEY>&days=<1-90>` — same key gate as
-the other admin routes. It is deliberately **separate** from
+the other admin routes. `&includeMe=1` drops the `internal = 0` filter for one
+read without touching the flag. `GET /api/admin/exclude-me?key=…&on=0|1` moves
+the flag; GET so it works from an address bar, matching `/api/admin/grant`. It is
+deliberately **separate** from
 `/api/admin/dashboard`: that one pages through Stripe and can be slow or
 misconfigured, and the traffic numbers should not wait on money numbers to
 render. `admin.html` fetches both independently and the chart is now one
@@ -1399,11 +1501,25 @@ render. `admin.html` fetches both independently and the chart is now one
 
 ### Tests
 
-`node tools/test-analytics.mjs` (38 assertions, no network, no browser). It
-drives the real `_worker.js` over an in-memory SQLite standing in for D1, so the
-SQL is actually executed rather than described. Beyond the never-break-the-page
-cases above, it pins who gets counted, that one person on one day is one visitor,
-that no row contains an IP or user-agent, and that the admin read stays gated.
+`node tools/test-analytics.mjs` (78 assertions, no network, no browser), wired
+into `.github/workflows/checks.yml` — it existed from the start but was
+honour-system until Aug 2026. It drives the real `_worker.js` over an in-memory
+SQLite standing in for D1, so the SQL is actually executed rather than described.
+Beyond the never-break-the-page cases above, it pins who gets counted, that one
+person on one day is one unique user, that no row contains an IP or user-agent,
+and that the admin read stays gated.
+
+The unique-user and exclusion sections seed SQLite directly, because the worker
+can only ever write "now" and the whole question is what happens across days.
+Two of them are worth knowing about before editing:
+
+- the flag lifecycle is tested end to end, including that `it_owner=0` survives
+  a dashboard load — the one bug that would quietly re-exclude a browser the
+  operator had deliberately opted back in.
+- the migration section re-imports `_worker.js` under a query string to get a
+  fresh `__analyticsReady` cache, then drives it against a table built without
+  `internal`. That is the only way to exercise the path a live D1 actually takes;
+  a second plain import would find the cache already warm and skip it.
 
 ---
 

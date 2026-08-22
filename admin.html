@@ -153,21 +153,24 @@ footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);f
     <button class="btn" data-range="7" type="button">7 days</button>
     <button class="btn primary" data-range="30" type="button">30 days</button>
     <button class="btn" data-range="90" type="button">90 days</button>
+    <button class="btn" id="meBtn" type="button" style="margin-left:auto" hidden></button>
   </div>
 
   <div class="tiles" id="trafTiles"></div>
+  <p class="note" id="meNote" style="margin:-4px 0 18px"></p>
 
   <div class="card">
-    <h2>Views &amp; visitors per day</h2>
+    <h2>Unique users per day</h2>
     <div class="legend">
+      <span class="key"><span class="swatch" style="background:var(--series-visitors)"></span>Unique users</span>
       <span class="key"><span class="swatch" style="background:var(--series-views)"></span>Page views</span>
-      <span class="key"><span class="swatch" style="background:var(--series-visitors)"></span>Visitors</span>
     </div>
     <div id="trafChartbox">
-      <svg id="trafChart" viewBox="0 0 760 250" role="img" aria-label="Page views and visitors per day"></svg>
+      <svg id="trafChart" viewBox="0 0 760 250" role="img" aria-label="Unique users and page views per day"></svg>
       <div id="trafTip"></div>
     </div>
     <details class="tbl"><summary>View as table</summary><div class="tblwrap"><table id="trafDailyTbl"></table></div></details>
+    <div class="note">A user is one browser on one UTC day, identified by a hash that is thrown away at midnight. That makes the daily figure a true unique count, and means someone who comes back on three days is three user-days over the window, not one returning person.</div>
   </div>
 
   <div class="grid2">
@@ -176,7 +179,7 @@ footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);f
       <div class="tblwrap"><table id="pagesTbl"></table></div>
     </div>
     <div class="card">
-      <h2>Where visitors came from</h2>
+      <h2>Where users came from</h2>
       <div class="tblwrap"><table id="srcTbl"></table></div>
       <div class="chips" id="ctryChips" style="margin:14px 0 0"></div>
     </div>
@@ -419,6 +422,7 @@ footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);f
 
   // ── traffic ──
   var trafDays = 30;
+  var meExcluded = true;   // what the server last said about this browser
   function loadTraffic(){
     var key = getKey();
     if (!key) return;
@@ -440,51 +444,69 @@ footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);f
   }
 
   function renderTraffic(d){
-    var t = d.totals || {}, w = t.window || {}, today = t.today || {}, d7 = t.d7 || {};
-    var views = w.views || 0, visitors = w.visitors || 0;
-    var perDay = d.days ? views / d.days : 0;
-    var perVisitor = visitors ? views / visitors : 0;
+    var t = d.totals || {}, w = t.window || {}, u = d.uniqueUsers || {};
+    var views = w.views || 0, userDays = u.userDays || 0;
+    var perUser = userDays ? views / userDays : 0;
 
     $('trafMeta').textContent = 'Last ' + d.days + ' days · generated ' + new Date(d.generatedAt || Date.now()).toLocaleString() +
-      (d.collectingSince ? ' · collecting since ' + new Date(d.collectingSince).toLocaleDateString() : '');
+      (d.collectingSince ? ' · collecting since ' + new Date(d.collectingSince).toLocaleDateString() : '') +
+      (d.includeMe ? ' · including your own visits' : '');
+
+    // Today's headline is a real unique count, so it leads. Everything wider than
+    // a day is user-days and is labelled that way rather than passed off as people.
+    var avg = u.avgPerDay || 0;
+    var vs = u.yesterday == null ? 'first day in the window'
+      : u.today === u.yesterday ? 'level with yesterday'
+      : (u.today > u.yesterday ? '+' : '−') + num(Math.abs(u.today - u.yesterday)) + ' vs. yesterday';
+    var best = u.best || {};
 
     $('trafTiles').innerHTML =
-      tile('Page views', num(views), 'last ' + d.days + ' days', true) +
-      tile('Visitors', num(visitors), Math.round(perDay).toLocaleString('en-US') + ' views/day avg') +
-      tile('Today', num(today.views), num(today.visitors) + ' visitor' + (today.visitors === 1 ? '' : 's')) +
-      tile('Last 7 days', num(d7.views), num(d7.visitors) + ' visitors') +
-      tile('Pages per visitor', perVisitor ? perVisitor.toFixed(1) : '0', 'in the window') +
+      tile('Unique users today', num(u.today), vs, true) +
+      tile('Unique users/day', avg ? avg.toFixed(1) : '0', 'average over ' + d.days + ' days') +
+      tile('Best day', num(best.users), best.date ? best.date : 'nothing recorded yet') +
+      tile('User-days', num(userDays), 'daily uniques added up, not people') +
+      tile('Page views', num(views), (perUser ? perUser.toFixed(1) : '0') + ' per user-day') +
       tile('Active now', num(t.activeNow), 'last 30 minutes');
+
+    var ex = d.excluded || {};
+    var you = (d.you || {}).excluded;
+    meExcluded = you;
+    $('meBtn').hidden = false;
+    $('meBtn').textContent = you ? 'Count my visits' : 'Stop counting my visits';
+    $('meNote').textContent = you
+      ? 'Your own visits are kept out of these numbers' + (ex.views ? ' — ' + num(ex.views) + ' page view' + (ex.views === 1 ? '' : 's') + ' held back in this window.' : '.') +
+        ' They are still recorded; add ?includeMe=1 to the traffic API to see them. The mark lives in this browser, so flag any other one you browse from by opening /admin there.'
+      : 'This browser now counts as an ordinary user: visits from here will show up in these numbers from the next page view on. Visits already recorded as yours stay held back.';
 
     var daily = d.daily || [];
     lineChart({
       svg: 'trafChart', box: 'trafChartbox', tip: 'trafTip', data: daily,
-      series: [{ key: 'views', label: 'Views', color: '#3aa0d8' }, { key: 'visitors', label: 'Visitors', color: '#8b7bd8' }],
+      series: [{ key: 'users', label: 'Unique users', color: '#8b7bd8' }, { key: 'views', label: 'Views', color: '#3aa0d8' }],
       tipRows: function(r){
-        return '<div class="row"><span class="dot" style="background:#3aa0d8"></span>Page views <b>' + num(r.views) + '</b></div>' +
-               '<div class="row"><span class="dot" style="background:#8b7bd8"></span>Visitors <b>' + num(r.visitors) + '</b></div>';
+        return '<div class="row"><span class="dot" style="background:#8b7bd8"></span>Unique users <b>' + num(r.users) + '</b></div>' +
+               '<div class="row"><span class="dot" style="background:#3aa0d8"></span>Page views <b>' + num(r.views) + '</b></div>';
       }
     });
-    $('trafDailyTbl').innerHTML = '<tr><th>Date</th><th class="num">Page views</th><th class="num">Visitors</th></tr>' +
+    $('trafDailyTbl').innerHTML = '<tr><th>Date</th><th class="num">Unique users</th><th class="num">Page views</th></tr>' +
       daily.slice().reverse().map(function(r){
-        return '<tr><td>' + esc(r.date) + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.visitors) + '</td></tr>';
+        return '<tr><td>' + esc(r.date) + '</td><td class="num">' + num(r.users) + '</td><td class="num">' + num(r.views) + '</td></tr>';
       }).join('');
 
     // Top pages, with a proportional bar so the shape is readable at a glance.
     var pages = d.topPages || [];
     var pMax = pages.reduce(function(m, r){ return Math.max(m, r.views); }, 0) || 1;
     $('pagesTbl').innerHTML = !pages.length ? '<tr><td class="empty">No page views recorded yet.</td></tr>' :
-      '<tr><th>Page</th><th class="num">Views</th><th class="num">Visitors</th><th></th></tr>' +
+      '<tr><th>Page</th><th class="num">Views</th><th class="num">Users</th><th></th></tr>' +
       pages.map(function(r){
-        return '<tr><td>' + esc(r.path) + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.visitors) + '</td>' +
+        return '<tr><td>' + esc(r.path) + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.users) + '</td>' +
           '<td style="width:110px"><span class="bar" style="width:' + Math.round(r.views / pMax * 100) + '%"></span></td></tr>';
       }).join('');
 
     var srcs = d.sources || [];
     $('srcTbl').innerHTML = !srcs.length ? '<tr><td class="empty">Nothing recorded yet.</td></tr>' :
-      '<tr><th>Source</th><th class="num">Views</th><th class="num">Visitors</th></tr>' +
+      '<tr><th>Source</th><th class="num">Views</th><th class="num">Users</th></tr>' +
       srcs.map(function(r){
-        return '<tr><td>' + (r.source ? esc(r.source) : '<span style="color:var(--muted)">Direct / no referrer</span>') + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.visitors) + '</td></tr>';
+        return '<tr><td>' + (r.source ? esc(r.source) : '<span style="color:var(--muted)">Direct / no referrer</span>') + '</td><td class="num">' + num(r.views) + '</td><td class="num">' + num(r.users) + '</td></tr>';
       }).join('');
 
     var ctry = d.countries || [];
@@ -502,12 +524,24 @@ footer.site{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);f
   $('unlockBtn').addEventListener('click', function(){ var k = $('keyInput').value.trim(); if (!k) { $('gateErr').textContent = 'Enter the key.'; return; } setKey(k); load(); });
   $('keyInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('unlockBtn').click(); });
   $('reloadBtn').addEventListener('click', function(){ load(); loadTraffic(); });
-  Array.prototype.forEach.call(document.querySelectorAll('#ranges .btn'), function(b){
+  // [data-range], not .btn: the exclude-me button shares this row and is not a window.
+  Array.prototype.forEach.call(document.querySelectorAll('#ranges .btn[data-range]'), function(b){
     b.addEventListener('click', function(){
       trafDays = parseInt(b.getAttribute('data-range'), 10) || 30;
-      Array.prototype.forEach.call(document.querySelectorAll('#ranges .btn'), function(o){ o.classList.toggle('primary', o === b); });
+      Array.prototype.forEach.call(document.querySelectorAll('#ranges .btn[data-range]'), function(o){ o.classList.toggle('primary', o === b); });
       loadTraffic();
     });
+  });
+  // The flag is a cookie the worker owns, so the button asks the server to move
+  // it and then re-reads the numbers rather than guessing at the new state.
+  $('meBtn').addEventListener('click', function(){
+    var key = getKey(); if (!key) return;
+    var on = meExcluded ? '0' : '1';
+    $('meBtn').disabled = true;
+    fetch('/api/admin/exclude-me?on=' + on + '&key=' + encodeURIComponent(key))
+      .then(function(r){ return r.json(); })
+      .then(function(){ $('meBtn').disabled = false; loadTraffic(); })
+      .catch(function(){ $('meBtn').disabled = false; });
   });
   $('lockBtn').addEventListener('click', function(){ setKey(''); $('keyInput').value = ''; showGate(''); });
   $('csvBtn').addEventListener('click', function(){ var k = getKey(); if (k) window.open('/api/leads/export?key=' + encodeURIComponent(k), '_blank'); });
