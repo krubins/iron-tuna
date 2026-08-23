@@ -224,7 +224,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </div></header>
 
 <main id="main" class="wrap art">
-<div class="art-head">
+<div class="art-head" data-player-links>
 <div class="eyebrow">Best Ball Insights</div>
 <h1 class="art-h1">Best Ball Insights: August 24, 2026</h1>
 <div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>August 24, 2026<span class="dot">&middot;</span>5 calls, best ball edition</div>
@@ -242,7 +242,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: tiny league-wide effect, biggest for elite QBs in negative script</p>
 </div>
 </section>
-<section class="call" id="call-2">
+<section class="call" id="call-2" data-players="justin-herbert">
 <div class="call-side"><div class="cn">02</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">QB</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -252,7 +252,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: +8% to +12% versus market<span class="ebar" role="img" aria-label="effect +8% to +12% versus market"><i class="pos" style="width:37px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-3">
+<section class="call" id="call-3" data-players="tucker-kraft">
 <div class="call-side"><div class="cn">03</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">TE</span><span class="cconf">Low to Medium confidence</span></div></div>
 <div class="call-main">
@@ -262,7 +262,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: more red-zone and short-area emphasis late in the year</p>
 </div>
 </section>
-<section class="call" id="call-4">
+<section class="call" id="call-4" data-players="derrick-henry">
 <div class="call-side"><div class="cn">04</div>
 <div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">RB</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -272,7 +272,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: -2% to -5% rushing efficiency and short-yardage conversion risk<span class="ebar" role="img" aria-label="effect -2% to -5% rushing efficiency and short-yardage conversion risk"><i class="neg" style="width:19px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-5">
+<section class="call" id="call-5" data-players="tetairoa-mcmillan">
 <div class="call-side"><div class="cn">05</div>
 <div class="cmeta"><span class="chip fair">Near fair value</span><span class="cpos">WR</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -347,6 +347,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js" defer></script>
+<script src="/player-search.js" defer></script>
 <!--chrome:navjs--><script>
 (function(){
   var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');

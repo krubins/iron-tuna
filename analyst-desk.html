@@ -249,7 +249,20 @@ footer.site a{color:var(--muted)}
       if (!d || !d.entries || !d.entries.length) {
         return empty('The desk has not published an analyst piece yet. It writes one about once a day, and every entry lands here as it goes up.');
       }
-      document.getElementById('entries').innerHTML = d.entries.map(entryHtml).join('');
+      var host = document.getElementById('entries');
+      host.innerHTML = d.entries.map(entryHtml).join('');
+      // Each entry is one story, so the players its dek names link to their
+      // cards. The entry already says who it argues about — the analysts' own
+      // calls — so that list is the cast, and a short form in the dek resolves
+      // against it rather than against the whole league.
+      var PS = window.ITPlayerSearch;
+      if (PS) {
+        var arts = host.querySelectorAll('article.entry');
+        d.entries.forEach(function(e, i){
+          if (!arts[i]) return;
+          PS.linkPlayers(arts[i], { cast: (e.calls || []).map(function(c){ return c.player; }) });
+        });
+      }
       var sb = (d.scoreboard || []).filter(function(x){ return x.total > 0; });
       if (sb.length) {
         document.getElementById('scoreboard').innerHTML = sb.map(function(x){
@@ -265,6 +278,7 @@ footer.site a{color:var(--muted)}
     .catch(function(){ empty('The analyst desk is unreachable right now. The front page carries the rest of the board in the meantime.'); });
 })();
 </script>
+<script src="/player-search.js" defer></script>
 
 </body>
 </html>

@@ -425,6 +425,11 @@ var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a to
           li.appendChild(y);
         }
       }
+      // Every call is one story, so the other players it names link to their
+      // cards — and the man whose card this IS does not, because a link back to
+      // the page you are already on is a dead end. He stays in the call's cast
+      // either way, so a shared surname still cannot be read as somebody else.
+      if (S && S.linkPlayers) S.linkPlayers(li, { skip: p.k, cast: s.ppl || [] });
       list.appendChild(li);
     });
   }

@@ -224,7 +224,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </div></header>
 
 <main id="main" class="wrap art">
-<div class="art-head">
+<div class="art-head" data-player-links>
 <div class="eyebrow">Auction Insights</div>
 <h1 class="art-h1">Auction Insights: August 17, 2026</h1>
 <div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>August 17, 2026<span class="dot">&middot;</span>5 calls, auction edition</div>
@@ -242,7 +242,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: small downgrade to fragile rookies and secondary pieces, little effect on stars</p>
 </div>
 </section>
-<section class="call" id="call-2">
+<section class="call" id="call-2" data-players="jalen-hurts">
 <div class="call-side"><div class="cn">02</div>
 <div class="cmeta"><span class="chip fair">Near fair value</span><span class="cpos">QB</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -252,7 +252,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: schedule gives back roughly half the passing downgrade</p>
 </div>
 </section>
-<section class="call" id="call-3">
+<section class="call" id="call-3" data-players="a-j-brown dallas-goedert">
 <div class="call-side"><div class="cn">03</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">TE</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -262,7 +262,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: +8% to +12% versus prior target baselines<span class="ebar" role="img" aria-label="effect +8% to +12% versus prior target baselines"><i class="pos" style="width:37px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-4">
+<section class="call" id="call-4" data-players="blake-corum">
 <div class="call-side"><div class="cn">04</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">RB</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -272,7 +272,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: +15% to +25% versus late-round price if workload even partially equalizes<span class="ebar" role="img" aria-label="effect +15% to +25% versus late-round price if workload even partially equalizes"><i class="pos" style="width:45px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-5">
+<section class="call" id="call-5" data-players="rome-odunze dj-moore">
 <div class="call-side"><div class="cn">05</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">WR</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -347,6 +347,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js" defer></script>
+<script src="/player-search.js" defer></script>
 <!--chrome:navjs--><script>
 (function(){
   var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');

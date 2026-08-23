@@ -220,6 +220,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js"></script>
+<script src="/player-search.js" defer></script>
 <script>
 (function(){
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
@@ -321,6 +322,16 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
           ch += '</li>';
         });
         document.getElementById('calls').innerHTML = ch + '</ul>';
+      }
+      // Every player this story names, linked to his card. The headline, the
+      // dek, the body and the analyst calls go in as ONE story: the desk
+      // writes "Kyren" in the body after naming him in full in the headline,
+      // and reading the four boxes separately would lose him.
+      if (window.ITPlayerSearch) {
+        window.ITPlayerSearch.linkPlayers([
+          document.getElementById('title'), document.getElementById('dek'),
+          host, document.getElementById('calls')
+        ], { cast: names });
       }
       if (s.method) {
         document.getElementById('method').innerHTML =

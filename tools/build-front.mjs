@@ -16,7 +16,7 @@
 //               headline player stands in, which the band prints as its label.
 //   PRESEASON<- every preseason-week-N.html page (headline, description, the
 //               takeaway headings), newest week first — the weekly takeaways rail
-//// It also writes two files outside front.html, from the same pass:
+//// It also writes outside front.html, from the same pass:
 //   player-search.js  <- the lookup index behind the ribbon's search box and the
 //               player card: one line per player the app prices, "slug|Name|TEAM|
 //               POS|espnId|nflId". Identity only — no points and no prices, which
@@ -25,6 +25,15 @@
 //   player.html <- the same STORIES array, so a player card can list every call
 //               that names him without a second extraction that could disagree
 //               with the front page about what the desk said.
+//   the drop pages, and play-caller-premium.html
+//             <- `data-players` on every call, listing the players it NAMES.
+//               player-search.js links those names to their cards as the page
+//               is read, and a full name it can find on its own — but the desk
+//               writes "Kyren" without ever writing "Kyren Williams", and no
+//               client-side guess should be reading a bare word against four
+//               hundred players. So the answer computed here travels with the
+//               call, in all three editions, and it is the same `ppl` the front
+//               page draws its faces from.
 //
 // Run after adding a new insights drop page or a new auction-watch (camp/preseason)
 // page:  node tools/build-front.mjs
@@ -393,10 +402,14 @@ const findByShortName = (ab, title, body) => {
 };
 
 const stories = [];
+// date -> { "call-3": ["kyren-williams"] }, the players each call NAMES. Stamped
+// back onto the drop pages below so the page can link them without asking the
+// question a second time — see the write pass at the foot of this file.
+const callCast = new Map();
 for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.test(f)).sort()) {
   const date = f.match(/(\d{4}-\d{2}-\d{2})/)[1];
   const s = read(f);
-  for (const m of s.matchAll(/<section class="call" id="call-(\d+)">([\s\S]*?)<\/section>/g)) {
+  for (const m of s.matchAll(/<section class="call" id="call-(\d+)"[^>]*>([\s\S]*?)<\/section>/g)) {
     const blk = m[2];
     const title = norm(blk.match(/<h2>([\s\S]*?)<\/h2>/)[1]);
     const cpos = blk.match(/<span class="cpos">([\s\S]*?)<\/span>/);
@@ -427,6 +440,13 @@ for (const f of files.filter(f => /^auction-insights-\d{4}-\d{2}-\d{2}\.html$/.t
       }
     }
     enlist(ppl);
+    // A team's stand-in face is not somebody the call named, so he is not part
+    // of its cast: the drop page must never link a surname to a player the desk
+    // did not write about.
+    if (!teamLabel && ppl.length) {
+      if (!callCast.has(date)) callCast.set(date, new Map());
+      callCast.get(date).set('call-' + m[1], ppl);
+    }
     stories.push({
       title,
       pos,
@@ -470,7 +490,7 @@ const clip = (t, n) => {
 const column = [];
 {
   const src = read('play-caller-premium.html');
-  const re = /<article class="call" id="([^"]+)">([\s\S]*?)<\/article>/g;
+  const re = /<article class="call" id="([^"]+)"[^>]*>([\s\S]*?)<\/article>/g;
   let m;
   while ((m = re.exec(src))) {
     const [id, block] = [m[1], m[2]];
@@ -643,6 +663,61 @@ console.log(`front.html: ${stories.length} stories, ${reports.length} camp repor
   const changed = next !== src;
   if (changed) fs.writeFileSync(path.join(root, file), next);
   console.log(`${file}: ${searchRows.length} players${changed ? '' : ' (no change)'}`);
+}
+
+// ── the drop pages: who each call is about ─────────────────────────────────
+// player-search.js links the players a story names to their cards. A full name
+// it can find on its own; a short form it cannot — this drop page never writes
+// "Kyren Williams", only "Kyren", and reading a bare word against the whole
+// league is how a tight end called Likely turns every adverb into a link.
+//
+// So the answer travels with the call, as `data-players`, and it is the SAME
+// answer the front page and the player card use: the `ppl` computed above, by
+// the resolvers at the top of this file, against the club and the position the
+// call itself declares. One question, asked once.
+//
+// STAMPED IN ALL THREE EDITIONS. A drop is published as auction / snake /
+// bestball off one research set, and call-3 on a date is the same call in each,
+// so the cast read out of the auction edition is the cast of all three. The
+// insights index lifts these sections straight out of the drop page, which is
+// how the attribute reaches that page too.
+// A player the site does not price has no card to link to — the fullback the
+// Ravens story names, say. He still earns a photo on the front page, which is
+// why `ppl` keeps him; he just cannot be a link, so he is not stamped.
+const hasCard = k => seenSlug.has(k);
+{
+  const EDITIONS = ['auction', 'snake', 'bestball'];
+  let touched = 0, stamped = 0;
+  for (const [date, byId] of callCast) {
+    for (const ed of EDITIONS) {
+      const file = `${ed}-insights-${date}.html`;
+      if (!files.includes(file)) continue;
+      const src = read(file);
+      const next = src.replace(/<section class="call" id="(call-\d+)"[^>]*>/g, (whole, id) => {
+        const who = (byId.get(id) || []).filter(hasCard);
+        return who.length ? `<section class="call" id="${id}" data-players="${who.join(' ')}">` : `<section class="call" id="${id}">`;
+      });
+      if (next !== src) { fs.writeFileSync(path.join(root, file), next); touched++; }
+      stamped += [...next.matchAll(/data-players="/g)].length;
+    }
+  }
+  console.log(`drop pages: ${stamped} calls carry a cast${touched ? ` (${touched} files rewritten)` : ' (no change)'}`);
+}
+
+// ── play-caller-premium.html: who each column entry moves ──────────────────
+// Same attribute, same reason. The column commits to its players in the "Who it
+// moves" line and the extraction above already read them out of it.
+{
+  const file = 'play-caller-premium.html';
+  const src = read(file);
+  const byId = new Map(column.filter(c => c.ppl && c.ppl.length).map(c => [c.id, c.ppl]));
+  const next = src.replace(/<article class="call" id="([^"]+)"[^>]*>/g, (whole, id) => {
+    const who = (byId.get(id) || []).filter(hasCard);
+    return who.length ? `<article class="call" id="${id}" data-players="${who.join(' ')}">` : `<article class="call" id="${id}">`;
+  });
+  const changed = next !== src;
+  if (changed) fs.writeFileSync(path.join(root, file), next);
+  console.log(`${file}: ${byId.size} entries carry a cast${changed ? '' : ' (no change)'}`);
 }
 
 // ── player.html: the calls that name a player ──────────────────────────────

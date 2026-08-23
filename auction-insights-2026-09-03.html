@@ -224,7 +224,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </div></header>
 
 <main id="main" class="wrap art">
-<div class="art-head">
+<div class="art-head" data-player-links>
 <div class="eyebrow">Auction Insights</div>
 <h1 class="art-h1">Auction Insights: September 3, 2026</h1>
 <div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>September 3, 2026<span class="dot">&middot;</span>5 calls, auction edition</div>
@@ -232,7 +232,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="alsofmt">Also published in a <a href="/snake-insights-2026-09-03">snake draft</a> edition.</p>
 <div class="toc"><a href="#call-1"><span class="tdot "></span>Kansas City</a><a href="#call-2"><span class="tdot under"></span>Cam Ward</a><a href="#call-3"><span class="tdot over"></span>T.J. Hockenson</a><a href="#call-4"><span class="tdot fair"></span>Buffalo</a><a href="#call-5"><span class="tdot "></span>Justin Fields</a></div>
 </div>
-<section class="call" id="call-1">
+<section class="call" id="call-1" data-players="kenneth-walker-iii travis-kelce">
 <div class="call-side"><div class="cn">01</div>
 <div class="cmeta"><span class="chip ">Format-dependent</span><span class="cpos">Market</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -242,7 +242,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: more QB rushing and more efficient early-down rushing than recent KC teams, with a small cap on raw pass attempts</p>
 </div>
 </section>
-<section class="call" id="call-2">
+<section class="call" id="call-2" data-players="cam-ward">
 <div class="call-side"><div class="cn">02</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">QB</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -252,7 +252,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: +8% to +12% versus last year, still volatile<span class="ebar" role="img" aria-label="effect +8% to +12% versus last year, still volatile"><i class="pos" style="width:37px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-3">
+<section class="call" id="call-3" data-players="t-j-hockenson">
 <div class="call-side"><div class="cn">03</div>
 <div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">TE</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -262,7 +262,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: below-market confidence until health and role stabilize</p>
 </div>
 </section>
-<section class="call" id="call-4">
+<section class="call" id="call-4" data-players="drake-maye justin-herbert jaxson-dart">
 <div class="call-side"><div class="cn">04</div>
 <div class="cmeta"><span class="chip fair">Near fair value</span><span class="cpos">Market</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -347,6 +347,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js" defer></script>
+<script src="/player-search.js" defer></script>
 <!--chrome:navjs--><script>
 (function(){
   var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
