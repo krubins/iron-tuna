@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as board from './build-default-board.mjs';
+import { BLOCKS, cut } from './preview-copy.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -766,6 +767,26 @@ console.log('\nthe front page and /lead restate before they paint');
   ok('/lead loads the library at all', page.includes('src="/it-league.js"'));
   ok('/lead restates the article body, not just the headline', /rp\(s\.body/.test(page));
   ok('/lead says whose league the numbers are', /pricingNote\(/.test(page));
+}
+
+// ── 13. the preview tool still finds the copy it previews ──────────────────
+// tools/preview-copy.mjs renders these surfaces by lifting the pages' OWN
+// blocks, located by anchor text. An edit that moves an anchor does not break
+// the site — it breaks the preview, silently, right up until someone trusts a
+// half-rendered card. cut() throws on a missing anchor; this is what makes
+// that throw happen in CI rather than in front of a person reading copy.
+console.log('\nthe copy preview can still find every block it lifts');
+{
+  for (const [name, block] of Object.entries(BLOCKS)) {
+    let found = '';
+    try { found = cut(fs.readFileSync(path.join(ROOT, block.file), 'utf8'), block); }
+    catch (e) { found = ''; ok(`the ${name} block is still in ${block.file}`, false, e.message); }
+    if (found) {
+      ok(`the ${name} block is still in ${block.file}`, true);
+      ok(`and it is a block, not a stray line`, found.split('\n').length > 3,
+         `${found.split('\n').length} lines`);
+    }
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
