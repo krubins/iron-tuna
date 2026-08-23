@@ -16,6 +16,15 @@
 //               headline player stands in, which the band prints as its label.
 //   PRESEASON<- every preseason-week-N.html page (headline, description, the
 //               takeaway headings), newest week first — the weekly takeaways rail
+//// It also writes two files outside front.html, from the same pass:
+//   player-search.js  <- the lookup index behind the ribbon's search box and the
+//               player card: one line per player the app prices, "slug|Name|TEAM|
+//               POS|espnId|nflId". Identity only — no points and no prices, which
+//               /it-league.js already answers correctly for both a reader with a
+//               saved board and one without.
+//   player.html <- the same STORIES array, so a player card can list every call
+//               that names him without a second extraction that could disagree
+//               with the front page about what the desk said.
 //
 // Run after adding a new insights drop page or a new auction-watch (camp/preseason)
 // page:  node tools/build-front.mjs
@@ -239,6 +248,61 @@ for (const m of projBlock.matchAll(
   priced.push({ k: slug(name), n: name, pos, pts });
 }
 for (const list of depth.values()) list.sort((a, b) => b.pts - a.pts);
+
+// ── the player lookup index (player-search.js) ─────────────────────────────
+// Every player the app puts a price on, in the projections' own order, joined
+// to whichever headshot row shares his slug. Written as one delimited line each
+// rather than JSON: it is ~400 rows of five short fields, and the delimited
+// form is a third of the size for exactly the same data. The two headshot hosts
+// each key a player by one id, so only the ids travel and player-search.js
+// rebuilds the URLs.
+//
+// SCOPE IS THE WHOLE PRICED POOL, kickers and defences included. They carry no
+// editorial and no photo, and player-search.js sorts them below the skill
+// players for that reason — but a reader who types "Bates" and is told the
+// board has never heard of him has been told something untrue.
+//
+// THE SLUG IS THE HEADSHOT ROW'S, NOT THE PROJECTION NAME'S, wherever the two
+// can be joined. Every story already carries `ppl` — the headshot slugs of the
+// players it names — and a card keyed the other way could not find the calls
+// written about the player it is a card for. The projections and the nflverse
+// release do not always spell a man the same way ("Chigoziem Okonkwo" against
+// "Chig Okonkwo", "Deebo Samuel" against "Deebo Samuel Sr."), so an exact slug
+// match is tried first and a club-and-position match on the surname second —
+// narrow enough that it is one man or nobody, and an ambiguous surname resolves
+// to nothing rather than to the wrong face and the wrong article list.
+const NFL_SHOT = 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/';
+const lastName = (n) => slug(n.replace(SUFFIX, '').trim().split(/\s+/).pop());
+const byClub = new Map();                                // "TEAM|POS|lastname" -> rows
+for (const pl of headshots) {
+  const key = pl.t + '|' + pl.p + '|' + lastName(pl.n);
+  byClub.set(key, (byClub.get(key) || []).concat(pl));
+}
+const searchRows = [];
+const seenSlug = new Set();
+for (const m of projBlock.matchAll(
+  /\{\s*name:\s*"([^"]+)",\s*position:\s*"([^"]+)",\s*team:\s*"([^"]*)"/g)) {
+  const [, name, pos, rawTeam] = m;
+  const team = (rawTeam === 'JAC' ? 'JAX' : rawTeam) || 'FA';
+  let shot = bySlug.get(slug(name));
+  if (!shot) {
+    const near = byClub.get(team + '|' + pos + '|' + lastName(name)) || [];
+    if (near.length === 1) shot = near[0];
+  }
+  const k = shot ? shot.k : slug(name);
+  if (!k || seenSlug.has(k)) continue;                   // first spelling wins
+  seenSlug.add(k);
+  // A delimiter inside a field would silently split the row into nonsense, so
+  // it fails the build instead. Neither character occurs in an NFL name today.
+  for (const field of [name, team, pos]) {
+    if (/[|\n]/.test(field)) {
+      console.error(`ABORT: "${field}" contains the player-index delimiter`);
+      process.exit(1);
+    }
+  }
+  searchRows.push([k, name, team, pos, shot ? shot.e : '',
+                   shot ? String(shot.h).replace(NFL_SHOT, '') : ''].join('|'));
+}
 
 // Walk down the depth chart until someone has a photo, so a team whose leader
 // is too new for the headshot release still gets a face rather than none.
@@ -587,3 +651,43 @@ if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var 
 }
 fs.writeFileSync(path.join(root, 'front.html'), front);
 console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${picks.length} picks, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
+
+// ── player-search.js: the lookup index ─────────────────────────────────────
+// Replaced between the same sentinels tools/build-default-board.mjs uses in
+// /it-league.js, so this only ever rewrites its own block and the hand-written
+// widget around it is never touched.
+{
+  const file = 'player-search.js';
+  const src = read(file);
+  const START = '  // ── generated by tools/build-front.mjs — do not hand-edit ──\n';
+  const END = '  // ── end generated ──';
+  const i = src.indexOf(START), j = src.indexOf(END);
+  if (i < 0 || j < 0 || j < i) {
+    console.error(`ABORT: could not find the generated block in ${file}`);
+    process.exit(1);
+  }
+  const next = src.slice(0, i) + START
+    + '  var INDEX_RAW = ' + JSON.stringify(searchRows.join('\n')) + ';\n'
+    + src.slice(j);
+  const changed = next !== src;
+  if (changed) fs.writeFileSync(path.join(root, file), next);
+  console.log(`${file}: ${searchRows.length} players${changed ? '' : ' (no change)'}`);
+}
+
+// ── player.html: the calls that name a player ──────────────────────────────
+// The SAME `stories` array the front page just got. A card that listed calls
+// extracted a second time could disagree with the front page about what the
+// desk said, which is the one thing a player card must never do.
+{
+  const file = 'player.html';
+  const src = read(file);
+  if (!/^var STORIES = \[[\s\S]*?\];$/m.test(src)) {
+    console.error(`ABORT: could not find the STORIES declaration in ${file}`);
+    process.exit(1);
+  }
+  const next = src.replace(/^var STORIES = \[[\s\S]*?\];$/m,
+    () => 'var STORIES = ' + JSON.stringify(stories) + ';');
+  const changed = next !== src;
+  if (changed) fs.writeFileSync(path.join(root, file), next);
+  console.log(`${file}: ${stories.length} stories${changed ? '' : ' (no change)'}`);
+}

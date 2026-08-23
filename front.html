@@ -21,7 +21,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Iron Tuna">
 <meta property="og:title" content="Iron Tuna: Fantasy Football Auction Values &amp; Draft Tools">
-<meta property="og:description" content="Know what he is worth, what he will cost, and your max bid. Custom auction values for your exact league, plus a live Auction Manager and an AI Value Coach.">
+<meta property="og:description" content="Know what he is worth, what he will cost, and what you should bid. Custom auction values for your exact league, plus a live Auction Manager and an AI Value Coach.">
 <meta property="og:url" content="https://irontuna.com/">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -116,6 +116,38 @@ img{max-width:100%}
    control on it that has to be reachable without scrolling — so on a narrow
    screen it leads the ribbon instead of sitting past the fold. */
 @media(max-width:700px){.ribbon .ed-switch{order:-1;margin:0 8px 0 0}.ribbon .ed-switch a{padding:6px 9px;font-size:10.5px;letter-spacing:.04em}}
+
+/* ── player lookup, in the ribbon ── */
+/* The field is the one control on the page that is always on screen, so it is
+   drawn quietly: a hairline box that only takes the brand colour once it has
+   the reader's attention. */
+.rb-search{position:relative;display:flex;align-items:center;gap:6px;flex:0 0 auto;margin:0 8px 0 0;padding:0 9px;height:30px;border:1px solid var(--line);border-radius:4px;background:var(--card)}
+.rb-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 2px rgba(14,124,99,.14)}
+.rb-search-ico{width:14px;height:14px;flex:0 0 auto;color:var(--ink-3)}
+.rb-search:focus-within .rb-search-ico{color:var(--brand)}
+.rb-search input{width:168px;border:0;outline:0;background:none;font:inherit;font-size:13px;color:var(--ink);padding:0;line-height:1}
+.rb-search input::placeholder{color:var(--ink-3)}
+/* Safari draws its own clear button and magnifier inside a type=search. */
+.rb-search input::-webkit-search-decoration,.rb-search input::-webkit-search-cancel-button{-webkit-appearance:none}
+/* The suggestion menu is a child of <body> (see the markup note), so it is
+   positioned in viewport coordinates by the script. */
+.pl-menu{position:fixed;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 12px 30px rgba(16,19,23,.16);overflow:hidden;max-height:min(60vh,420px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pl-menu[hidden]{display:none}
+.pl-opt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-bottom:1px solid var(--line);background:none;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.pl-opt:last-child{border-bottom:0}
+.pl-opt:hover,.pl-opt.on{background:var(--brand-tint)}
+.pl-meta{min-width:0}
+.pl-opt b{display:block;font-weight:700;font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-opt b em{font-style:normal;background:rgba(242,169,0,.32);border-radius:2px}
+.pl-meta span{display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:1px}
+.pl-face{flex:0 0 auto;width:30px;height:30px;border-radius:3px;background:var(--bg);overflow:hidden;position:relative;display:grid;place-items:center}
+.pl-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.pl-face i{font-style:normal;font-size:11px;font-weight:800;color:var(--ink-3);letter-spacing:.02em}
+.pl-empty{padding:11px 13px;font-size:13px;color:var(--ink-3)}
+/* Same reasoning as the edition switch: on a phone the ribbon is a sideways
+   scroller, and a lookup you have to scroll to find is a lookup nobody uses.
+   It leads the row, ahead of the switch. */
+@media(max-width:700px){.rb-search{order:-2;height:28px;padding:0 7px;margin:0 6px 0 0}.rb-search input{width:104px;font-size:12.5px}.rb-search:focus-within input{width:150px}}
 .sec-sub{font-size:13.5px;color:var(--ink-3);margin:-6px 0 14px}
 
 /* ── hero ── */
@@ -702,7 +734,7 @@ img{max-width:100%}
   <div class="wrap hb-grid">
     <div class="hb-copy">
       <span class="hb-eyebrow">2026 Auction Season</span>
-      <h1>Know what he&rsquo;s <em>worth</em>. Know what he&rsquo;ll <em>cost</em>. Know your <em>max bid</em>.</h1>
+      <h1>Know what he&rsquo;s <em>worth</em>. Know what he&rsquo;ll <em>cost</em>. Know <em>what you should bid</em>.</h1>
       <p class="hb-dek">Every other site ranks players. An auction does not run on ranks &mdash; it runs on dollars. Iron Tuna prices all 500+ players for your teams, your budget and your scoring, and blends every number with the betting market.</p>
       <div class="hb-ctas">
         <a class="hb-btn gold" href="/auctiondraft?screen=cheat">Get my free auction values</a>
@@ -711,7 +743,7 @@ img{max-width:100%}
       <p class="hb-note">Free values in about a minute. Full custom pricing, the live Auction Manager and the AI Value Coach are a one-time <b>$9.99</b>.</p>
     </div>
     <figure class="hb-shot">
-      <img src="/auction-sheet.webp" width="1180" height="692" alt="The Iron Tuna auction cheat sheet: quarterbacks and running backs priced in dollars, with market price, true value and your max bid on every row. Names run green where the price sits under what he is worth and red where it sits above, and a V flags the players the betting market moved." fetchpriority="high" decoding="async">
+      <img src="/auction-sheet.webp" width="1180" height="692" alt="The Iron Tuna auction cheat sheet: quarterbacks and running backs priced in dollars, with market price, true value and what you should bid on every row. Names run green where the price sits under what he is worth and red where it sits above, and a V flags the players the betting market moved." fetchpriority="high" decoding="async">
       <figcaption class="hb-cap">The cheat sheet, priced for a 12-team $200 auction.</figcaption>
     </figure>
   </div>
@@ -721,7 +753,7 @@ img{max-width:100%}
   <div class="trio"><div class="wrap" tabindex="0" role="group" aria-label="The three numbers on every player">
     <div class="tr"><i>Proj</i><b>The going rate</b><span>What the room is likely to pay for him, on the curve your league&rsquo;s budget actually produces.</span></div>
     <div class="tr on"><i>Value</i><b>What he is worth</b><span>His points converted to dollars against a replacement starter &mdash; the honest price, whatever the room does.</span></div>
-    <div class="tr"><i>You</i><b>Your max bid</b><span>What one more dollar buys <em>your</em> lineup, given the roster you have already bought and the money still in your pocket.</span></div>
+    <div class="tr"><i>You</i><b>What you should bid</b><span>What one more dollar buys <em>your</em> lineup, given the roster you have already bought and the money still in your pocket.</span></div>
   </div></div>
 </section>
 
@@ -738,6 +770,18 @@ img{max-width:100%}
   <a href="#allocation">Allocation</a>
   <a href="#camp">Camp</a>
   <span class="rb-spacer"></span>
+  <!-- Player lookup. It lives in the ribbon because the ribbon is the one band
+       that stays on screen the whole way down the page, so "look a player up"
+       is always one keystroke away rather than a scroll back to the top. The
+       suggestion list is rendered into <body>, not in here: .ribbon .wrap is a
+       sideways scroller, and an absolutely positioned menu inside it would be
+       clipped at the band's 44px. -->
+  <form class="rb-search" id="rbSearch" role="search" autocomplete="off" action="/player" method="get">
+    <svg class="rb-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+    <input id="rbSearchInput" name="q" type="search" placeholder="Search a player" aria-label="Search for a player"
+           role="combobox" aria-expanded="false" aria-controls="rbSearchList" aria-autocomplete="list"
+           data-player-search="ribbon">
+  </form>
   <span class="ed-switch" id="edSwitch" role="group" aria-label="Choose your draft format">
     <a href="/?fmt=auction" data-ed="auction">Auction</a>
     <a href="/?fmt=snake" data-ed="snake">Snake</a>
@@ -877,6 +921,7 @@ img{max-width:100%}
 </div></footer>
 
 <script src="/it-league.js"></script>
+<script src="/player-search.js" defer></script>
 <script>
 // Player headshots for the stories below, keyed by the slug each story's `ppl`
 // list references. Built from the nflverse players release — see

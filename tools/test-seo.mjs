@@ -199,6 +199,10 @@ console.log('\nsitemap.xml');
   // Every indexable page must be listed. index.html/front.html are the "/" and
   // SPA routes; the noindex screens are deliberately absent.
   //
+  // player.html is out for the same reason lead.html is: it is a shell that
+  // answers at ~400 URLs (/player/<slug>) and assembles each card in the
+  // browser, so there is no fixed URL with content on it to rank.
+  //
   // So are the in-season tools, and for a different reason: while POST_DRAFT_OPEN
   // is unset the worker serves /post-draft AT their URLs, so a crawler that
   // followed a sitemap entry for /faab would be handed the gate page's body under
@@ -209,13 +213,13 @@ console.log('\nsitemap.xml');
     .match(/const POST_DRAFT_PAGES = new Set\(\[([^\]]*)\]\)/) || [, ''])[1]
     .split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
     .map((r) => r.replace(/^\//, '') + '.html');
-  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'my-insights.html', ...gated]);
+  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'player.html', 'my-insights.html', ...gated]);
   const locs = new Set(urls.map((u) => (u.match(/<loc>([^<]*)<\/loc>/) || [])[1]));
   const absent = pages.filter((f) => !NOT_LISTED.has(f) && !locs.has('https://irontuna.com/' + f.replace('.html', '')));
   ok('every indexable page is in the sitemap', absent.length === 0, absent.join(', '));
 
   // The pages left out on purpose are the ones that say noindex.
-  const shouldBeNoindex = ['admin.html', 'lead.html', 'my-insights.html'];
+  const shouldBeNoindex = ['admin.html', 'lead.html', 'player.html', 'my-insights.html'];
   const notNoindex = shouldBeNoindex.filter((f) => !/name="robots"[^>]*noindex/.test(read(f)));
   ok('the pages kept out of the sitemap are noindex', notNoindex.length === 0, notNoindex.join(', '));
 
