@@ -97,7 +97,7 @@ function synthBoard(teams, budget, format) {
   const site = libFor({}).defaultBoard();
   const k = (teams * budget) / (12 * 200);
   return JSON.stringify({
-    ts: 1, teams, budget, format,
+    ts: 1, sv: 2, teams, budget, format,
     players: site.map((p) => ({ n: p.n, pos: p.pos, pts: p.pts, v: Math.max(1, Math.round(p.v * k)) }))
   });
 }

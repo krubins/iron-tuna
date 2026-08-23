@@ -63,6 +63,17 @@
     DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   };
   var MIN_BID = 1;
+  // Mirrors VEGAS_DEFAULT_W in index.html: how far the board leans on the
+  // sportsbook where it and the projections disagree. Only used as the fallback
+  // when a reader's saved config does not name their own setting.
+  var VEGAS_DEFAULT_W = 0.75;
+  // The snapshot shape this library can read PRICES out of. Shape 1 stored the
+  // True Value column in `v`; shape 2 stores Market Price, which is the number
+  // printed on the reader's sheet and the one a story means. An older snapshot
+  // is still read for the league it names, never for a price, because a True
+  // Value read as a market price is the bug this constant exists to end. It
+  // heals itself the next time the reader opens the draft app.
+  var SNAP_SHAPE = 2;
   var FORMAT_WORD = { auction: 'auction', snake: 'snake draft', bestball: 'best ball' };
 
   // ── the site's own board, for a reader who has not got one ────────────────
@@ -125,7 +136,24 @@
       teams: Math.max(2, Math.round(num(raw && raw.teams, num(snap && snap.teams, DEFAULT_TEAMS)))),
       budget: Math.max(1, Math.round(num(raw && raw.budget, num(snap && snap.budget, DEFAULT_BUDGET)))),
       format: (raw && raw.format) || (snap && snap.format) || 'auction',
-      scoring: scoring
+      scoring: scoring,
+      // The Vegas slider. It was dropped here for months while sitting in the
+      // saved config the line above already reads, so every number this library
+      // quoted a reader was at a weighting they had not chosen. It only decides
+      // who wins where the odds and the projections disagree, which is exactly
+      // the disagreement a story is usually about.
+      //
+      // typeof, not num(): num(null, 0.75) is 0, because Number(null) is 0 and
+      // 0 is finite. A reader with no slider saved would have been read as one
+      // who had dragged it all the way off the sportsbook. Same trap the worker
+      // documents in applyVegasWeight, and the same guard, so the two files
+      // answer this question identically.
+      vegasWeight: (function () {
+        var w = raw && raw.strategy ? raw.strategy.vegasWeight
+              : (snap ? snap.vegasWeight : null);
+        return typeof w === 'number' && isFinite(w)
+          ? Math.min(1, Math.max(0, w)) : VEGAS_DEFAULT_W;
+      })()
     };
   }
 
@@ -299,6 +327,11 @@
     return { players: players, byName: byName, byLast: byLast, byPos: byPos };
   }
   var mine = snap ? makeIndex(snap.players) : null;
+  // Whether the reader's saved board may be read for PRICES. See SNAP_SHAPE:
+  // before shape 2 the stored `v` was the True Value column, and quoting it as
+  // the sheet's price is how a story ended up $12 above the reader's own row.
+  // The league it names is still honoured either way; only the dollars wait.
+  var minePrices = !!(snap && num(snap.sv, 1) >= SNAP_SHAPE);
 
   // The site's default board, parsed on first use — a reader who has their own
   // never pays for it. Prices come off the market curve at the site's default
@@ -306,6 +339,7 @@
   // position by points, read the curve slot, scale by teams x budget.
   var defIndex = null;
   function defaultBoard() {
+    if (served) return served;
     if (defIndex) return defIndex;
     var players = [];
     String(DEFAULT_BOARD_RAW).split('\n').forEach(function (line) {
@@ -323,6 +357,57 @@
     });
     return defIndex;
   }
+
+  // ── the site's board, as the site actually serves it ──────────────────────
+  // The block above is generated from the COMMITTED projections. The app is
+  // served those projections re-blended with today's odds, so the static copy
+  // is a different board from the cheat sheet the moment a line moves — which
+  // is how a story quoted "$47 on the consensus sheet" at a reader whose row
+  // said $25. `/api/board` is that same blended board, priced by the same
+  // curve, computed once in the worker and cached.
+  //
+  // Fetched, never required. The static block answers immediately and keeps
+  // answering if the request fails, is blocked, or the page is offline; the
+  // served board replaces it when it lands. `onBoard()` lets a page that has
+  // already painted repaint on the better answer instead of showing the
+  // fallback for the life of the visit.
+  var served = null, boardWaiters = [], boardTried = false;
+  function adoptBoard(payload) {
+    if (!payload || !payload.ok || !payload.players || !payload.players.length) return false;
+    var rows = [];
+    for (var i = 0; i < payload.players.length; i++) {
+      var p = payload.players[i];
+      if (!p || !p.n || !p.pos) continue;
+      var v = num(p.v, 0);
+      if (v < MIN_BID) continue;
+      rows.push({ n: p.n, pos: p.pos, pts: num(p.pts, 0), v: v });
+    }
+    if (!rows.length) return false;
+    // makeIndex sorts byPos on points, so the served prices are kept as sent
+    // rather than re-derived from a rank this file computed a second time.
+    served = makeIndex(rows);
+    return true;
+  }
+  function onBoard(cb) {
+    if (typeof cb !== 'function') return;
+    if (served || boardTried) { cb(!!served); return; }
+    boardWaiters.push(cb);
+  }
+  function settleBoard(ok) {
+    boardTried = true;
+    var list = boardWaiters; boardWaiters = [];
+    list.forEach(function (cb) { try { cb(ok); } catch (e) {} });
+  }
+  function loadBoard() {
+    if (typeof root.fetch !== 'function') { settleBoard(false); return; }
+    try {
+      root.fetch('/api/board', { credentials: 'omit' })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (d) { settleBoard(adoptBoard(d)); })
+        .catch(function () { settleBoard(false); });
+    } catch (e) { settleBoard(false); }
+  }
+  loadBoard();
 
   // Resolve a name field to a row on a board. The premium insight set stores
   // several names per call, semicolon-separated ("DJ Moore; Allen"), so each
@@ -610,6 +695,34 @@
   // there is nothing to call theirs, and the label says so.
   function tailorLabel() { return cfg ? 'Your league' : 'Default league'; }
 
+  // ── stories written before the scoring changed ────────────────────────────
+  // repriceCopy converts a price between LEAGUES. It cannot convert one between
+  // MODELS, and on 2026-08-23 the site changed model under the story writer's
+  // feet: receptions went from half a point to a full one.
+  //
+  // Story 29 is what that looked like on the front page. It priced Zay Flowers
+  // at $26 on its own half-PPR board and argued for $32. THIS board, at full
+  // PPR, prices him at $20 and a reader's board at $21, so repriceCopy
+  // multiplied by 21/20 and printed "bid $34, not the sheet's $27" above a
+  // cheat sheet reading $21. The ratio was applied correctly. The input was
+  // never on this board's scale, and nothing here checked that it was.
+  //
+  // The real fix is upstream and is being made there: a story's prices are
+  // computed with the SAME market curve this file prices the cheat sheet with,
+  // so a story's number for a player and the sheet's number for him track each
+  // other, and this ratio has two comparable sides to work with.
+  //
+  // Every story is still restated into the reader's league, because a price in
+  // a league nobody plays helps nobody. What this flag does is add one sentence
+  // to the note over the older ones: their scoring is not this board's, so they
+  // can disagree with the reader's cheat sheet for a reason the reader can now
+  // see rather than one they have to guess at.
+  var MODEL_EPOCH = Date.UTC(2026, 7, 23);
+  function staleModel(at) {
+    var t = num(at, 0);
+    return t > 0 && t < MODEL_EPOCH;
+  }
+
 
   // ── the desk's dollars, in the reader's league ────────────────────────────
   // The generated lead (front.html, /lead) is written by a scheduled run at ONE
@@ -629,7 +742,21 @@
   //     auction board scales by.
   // Nothing is invented: with no saved league this returns null and the copy
   // ships exactly as the desk wrote it, labelled as the desk's own league.
+  // Both sides of this ratio must be the SAME COLUMN of the same kind of board,
+  // or it is not a conversion at all. It used to divide the reader's True Value
+  // by the site's Market Price and multiply a story's dollars by the result,
+  // which is how "$38 for Derrick Henry" reached a reader whose own row said
+  // $23. Now both sides are Market Price: the reader's is copied off the sheet
+  // the app already built at their slider, scoring, budget and team count, and
+  // the site's is the same column on the site's own board.
+  //
+  // The consequence worth keeping in mind: a story's sheet figure lands on the
+  // reader's own number exactly, because siteFigure x (readerPrice / siteFigure)
+  // is readerPrice. That is the whole point — the number on the page and the
+  // number on their sheet are the same number, not two calculations that were
+  // supposed to agree.
   function boardRatio(name) {
+    if (!minePrices) return 0;
     var site = defaultBoard();
     var sp = findPlayer(name, null, site);
     var mp = mine ? findPlayer(name, null, mine) : null;
@@ -637,6 +764,14 @@
     var a = sp.v || 0, b = mp.v || 0;
     if (a < 1 || b < 1) return 0;
     return b / a;
+  }
+  // What the reader's own sheet prints for this player, or 0 when there is no
+  // sheet to read. Pulled, never recomputed: the app has already done this sum
+  // at their settings and a second attempt is only a second chance to disagree.
+  function sheetPrice(name) {
+    if (!minePrices || !mine) return 0;
+    var mp = findPlayer(name, null, mine);
+    return mp ? (mp.v || 0) : 0;
   }
   // The money in the room, relative to the room the desk writes for.
   function leagueScale() {
@@ -702,29 +837,79 @@
       if (k && surnames[k] === 1 && bare.length > 1) forms.push(bare[bare.length - 1]);
       forms.forEach(function (f) {
         var re = new RegExp('\\b' + reEscape(f.toLowerCase()) + '\\b', 'g'), m;
-        while ((m = re.exec(hay))) out.push({ at: m.index, ratio: r, who: full });
+        while ((m = re.exec(hay))) out.push({ at: m.index, end: m.index + f.length, ratio: r, who: full });
       });
     });
     return out.sort(function (a, b) { return a.at - b.at; });
+  }
+  // A period inside a name is not the end of a sentence. The desk writes "J.K.
+  // Dobbins", "A.J. Brown" and "Amon-Ra St. Brown", and a sentence cut inside a
+  // player's own name leaves his dollars with no name in front of them to own
+  // them: "Cap A.J. Brown at $25 and Chase Brown at $20" used to start its
+  // sentence at "Brown at $25", drop A.J. out of range, and hand his figure
+  // forward to the other Brown. Two tests for that, in this order:
+  //   * the mention spans themselves, which is exact and covers "St." and the
+  //     "Jr." that ends a name, for every player the copy actually names;
+  //   * a single letter before the dot, which catches an initial in a name
+  //     nobody's board can price. Deliberately not two letters: an English
+  //     sentence can end in "is." and would be swallowed whole.
+  function inName(spans, at) {
+    for (var i = 0; i < (spans || []).length; i++) {
+      if (at > spans[i].at && at < spans[i].end) return true;
+    }
+    return false;
+  }
+  function abbrevDot(text, at, spans) {
+    if (text.charAt(at) !== '.') return false;
+    return inName(spans, at) || /(^|[^A-Za-z])[A-Za-z]$/.test(text.slice(0, at));
   }
   // Where the sentence holding `at` begins, so a dollar figure is only ever
   // attributed to a player named in its own sentence. "Cap Drake London at $29,
   // Garrett Wilson at $26" has to give each figure to the player beside it, and
   // a name three sentences up is not that.
-  function sentenceStart(text, at) {
-    var cut = text.slice(0, at), m = cut.lastIndexOf('. ');
-    var q = Math.max(cut.lastIndexOf('! '), cut.lastIndexOf('? '));
-    return Math.max(0, Math.max(m, q) + 2);
+  function sentenceStart(text, at, spans) {
+    var re = /[.!?]\s+/g, start = 0, m;
+    while ((m = re.exec(text)) && m.index < at) {
+      if (abbrevDot(text, m.index, spans)) continue;
+      start = m.index + m[0].length;
+    }
+    return start;
   }
-  function sentenceEnd(text, at) {
-    var m = text.slice(at).search(/[.!?](\s|$)/);
-    return m < 0 ? text.length : at + m;
+  function sentenceEnd(text, at, spans) {
+    var re = /[.!?](\s|$)/g, m;
+    re.lastIndex = at;
+    while ((m = re.exec(text))) {
+      if (abbrevDot(text, m.index, spans)) continue;
+      return m.index;
+    }
+    return text.length;
   }
+  // A dollar figure is BOUND to a name when nothing but a linking word stands
+  // between the two, and that binding reads in both directions: "McMillan to
+  // $33" and "$33 on McMillan" are the same claim about the same player.
+  //
+  // The lead of 2026-08-23 is what it costs to understand only the first one.
+  // Its dek read "Cap J.K. Dobbins at $12 and Jadarian Price at $13; bid up to
+  // $33 on Tetairoa McMillan and $44 on Justin Jefferson", and because every
+  // figure was handed to the player named BEFORE it, McMillan's $33 was
+  // restated off Price's board slot as $7 and Jefferson's $44 off McMillan's as
+  // $48. The headline says the same thing name-first, so it restated McMillan
+  // correctly at $36. One story, one player, two prices, on the front page.
+  //
+  // "and" is deliberately not a linking word. "$33 on McMillan and $44 on
+  // Jefferson" is two bindings rather than one running on, and reading "and" as
+  // a link is the same off-by-one in a different coat.
+  var LINK_BACK = /^[\s,;:]*(?:up\s+to|at|to|for|of|near|around|about)?[\s,;:]*$/;
+  var LINK_FWD = /^[\s,;:]*(?:on|for|to|upon)\s+/;
+  // Two or more capitalised words: shaped like a person, whoever it turns out
+  // to be. Used only to tell "$33 on Tetairoa McMillan" from "$12 to the
+  // quarterback pool".
+  var NAME_RUN = /^[A-Z][A-Za-z'\u2019.\-]+(?:\s+[A-Z][A-Za-z'\u2019.\-]+)+/;
   // Restate one piece of the desk's copy — a headline, a dek, a whole article —
   // in the reader's money. Returns null when there is nothing to say: no saved
   // league, no dollars in the copy, or a reader whose league prices the story
   // the same way the desk already did.
-  function repriceCopy(text, names) {
+  function repriceCopy(text, names, at) {
     if (!cfg || !text) return null;
     var src = String(text);
     if (!/\$\s?\d/.test(src)) return null;
@@ -736,21 +921,52 @@
       var n = parseInt(m[1], 10);
       var ratio = 0;
       if (anchors.length) {
-        var lo = sentenceStart(src, m.index), hi = sentenceEnd(src, m.index), i;
-        // The player named before the figure owns it; a figure that opens its
-        // own sentence ("$32 is the bid on Flowers") falls forward to the next
-        // name in the same sentence.
+        var lo = sentenceStart(src, m.index, anchors), hi = sentenceEnd(src, m.index, anchors), i, a;
+        var after = m.index + m[0].length, fwd, at;
+        // 1. Bound backwards, and only to the NEAREST name before it, because
+        //    "Drake London at $29, Garrett Wilson at $26" gives each figure to
+        //    the player beside it and to no one further up the line.
         for (i = anchors.length - 1; i >= 0; i--) {
-          if (anchors[i].at < m.index && anchors[i].at >= lo) { ratio = anchors[i].ratio; break; }
+          a = anchors[i];
+          if (a.end <= m.index && a.at >= lo) {
+            if (LINK_BACK.test(src.slice(a.end, m.index))) ratio = a.ratio;
+            break;
+          }
+        }
+        // 2. Bound forwards: "bid up to $33 on Tetairoa McMillan". A figure
+        //    written price-first belongs to the name it points at, not to
+        //    whoever the sentence happened to mention before it.
+        if (!ratio) {
+          fwd = LINK_FWD.exec(src.slice(after, hi));
+          if (fwd) {
+            at = after + fwd[0].length;
+            for (i = 0; i < anchors.length; i++) {
+              if (anchors[i].at === at) { ratio = anchors[i].ratio; break; }
+            }
+            // Bound to somebody the reader's board cannot price. That figure is
+            // still his and nobody else's, so it scales with the money in the
+            // room rather than falling back onto the previous name's board
+            // slot, which is the misattribution this whole block exists to
+            // stop. -1 says "settled, unanchored" and reads as scale below.
+            if (!ratio && NAME_RUN.test(src.slice(at, hi))) ratio = -1;
+          }
+        }
+        // 3. Bound to nothing: the nearest name in its own sentence owns it,
+        //    the one before it first, then the one after ("$32 is the bid on
+        //    Flowers" opens its own sentence and falls forward).
+        if (!ratio) {
+          for (i = anchors.length - 1; i >= 0; i--) {
+            if (anchors[i].at < m.index && anchors[i].at >= lo) { ratio = anchors[i].ratio; break; }
+          }
         }
         if (!ratio) {
           for (i = 0; i < anchors.length; i++) {
             if (anchors[i].at > m.index && anchors[i].at <= hi) { ratio = anchors[i].ratio; break; }
           }
         }
-        if (ratio) anchored++;
+        if (ratio > 0) anchored++;
       }
-      if (!ratio) ratio = scale;
+      if (ratio <= 0) ratio = scale;
       var v = Math.max(MIN_BID, Math.round(n * ratio));
       out += src.slice(last, m.index) + '$' + v;
       last = m.index + m[0].length;
@@ -777,13 +993,24 @@
   // `restated` is whether repriceCopy() actually moved the numbers. It only
   // chooses the verb: "restated" is a claim that something happened, and over
   // untouched figures it would be a lie in the other direction.
-  function pricingNote(restated) {
-    if (!cfg) {
-      return 'These are ' + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET
-        + ' full-PPR dollars. Set up your league and every price here is restated in your money.';
+  function pricingNote(restated, at) {
+    // A reader with no league of their own is shown the site's default league,
+    // and it is named in full rather than called "the default": a reader cannot
+    // check a price against a league nobody has described to them.
+    var note = !cfg
+      ? 'These prices are for the site\u2019s default league: ' + DEFAULT_TEAMS + ' teams, $'
+        + DEFAULT_BUDGET + ', full PPR. Set up your own and every price here is restated in your money.'
+      : (restated ? 'Restated for ' : 'Priced for ')
+        + label('auction') + (snap ? ', ' + scoringLabel() : '') + '.';
+    // An older story was written when this site scored a catch at half a point.
+    // Its prices are still restated into the reader's league, but they came off
+    // a differently scored board, so they can sit above a cheat sheet that
+    // disagrees with them. Say that plainly instead of leaving them to wonder.
+    if (staleModel(at)) {
+      note += ' This story was written before the site changed its scoring on 23 August,'
+        + ' so its prices can differ from your cheat sheet.';
     }
-    return (restated ? 'Restated for ' : 'Priced for ')
-      + label('auction') + (snap ? ', ' + scoringLabel() : '') + '.';
+    return note;
   }
 
   // One stylesheet for the "Your league:" line, injected rather than copied into
@@ -899,6 +1126,11 @@
     pctRange: pctRange,
     tailor: tailor,
     tailorLabel: tailorLabel,
+    staleModel: staleModel,
+    sheetPrice: sheetPrice,
+    onBoard: onBoard,
+    boardIsServed: function () { return !!served; },
+    vegasWeight: function () { return cfg ? cfg.vegasWeight : VEGAS_DEFAULT_W; },
     repriceCopy: repriceCopy,
     pricingNote: pricingNote,
     leagueScale: leagueScale,

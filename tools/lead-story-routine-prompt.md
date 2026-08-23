@@ -44,8 +44,8 @@ Write for THAT desk this run. The point is that a reader checking twice a day ge
 - **vegas** — where the sportsbook and the consensus sheet disagree, and what to do about it.
 - **preseason** — what actually happened in preseason games and camp: snap counts, series with the ones, target share, goal-line work. Web-search to confirm; also read the newest `auction-watch-*.html` and `preseason-week-*.html`.
 - **injury** — a current injury or return-to-play situation and the exact price move it justifies, for the injured player AND for whoever absorbs the work. Every injury claim must be confirmed by web search this run and cited. Never assert an injury from memory.
-- **market** — structure: positional repricing, clustering, replacement level, roster construction, budget allocation.
-- **analyst** — where the most-followed fantasy analysts sit versus the consensus sheet, and where that lands next to Iron Tuna's price. **You cannot read their boards directly. fantasylife.com and espn.com are both blocked by the egress proxy, and their paid ranking sets are not ours to republish anyway.** So take the analyst's side from WebSearch result content attributed to a reputable outlet: one specific, dated position per analyst (a rank, a round, a stated take), quoted only as far as the argument needs. Secondary coverage of a blocked outlet is fine when it is reputable, dated and quotes a specific position; that is how Field Yates' ESPN top 160 reached the column. Never reconstruct a ranking list, never publish more of anyone's ranking set than the point requires, and never state an analyst's position from memory. Compute Iron Tuna's side off the board this run, as every other desk does, so only one of the two sides is a claim about what somebody said and that side carries a citation. "Above consensus" means above the committed `PROJECTIONS` baseline, not above Iron Tuna, whose shipped values are already blended toward the market. Then MAKE THE CALL: say whether the desk agrees or disagrees with each analyst and why, in the site's own terms (usage, play-caller history, the odds, replacement level). A run that lists three takes without picking a side has written an aggregator post and failed. This desk is a running story, so read the prior rows (`SELECT slug,title,dek,players,calls FROM lead_story WHERE category = 'analyst' AND verified = 1 ORDER BY created_at DESC LIMIT 6`) and continue that thread: revisit a call news has moved, and do not re-run the same analyst-player pairing while nothing has changed. **If you do revisit a pairing the column has already scored, you must either reach the same verdict or say explicitly what changed to move it. The record table is cumulative, so two entries scoring one pairing both ways makes the column look like it cannot keep its own story straight.** If you cannot verify a single dated position this run, skip to the next desk and say so. An unsourced claim on this desk puts words in a real person's mouth, so it is the one desk where publishing nothing is clearly better than publishing something thin. **Two required sections below govern this desk: "Spread the calls across analysts" and "The analyst desk's calls column." Read both before writing.**
+- **market** — structure: positional repricing, clustering, where a position's curve goes flat, roster construction, budget allocation.
+- **analyst** — where the most-followed fantasy analysts sit versus the consensus sheet, and where that lands next to Iron Tuna's price. **You cannot read their boards directly. fantasylife.com and espn.com are both blocked by the egress proxy, and their paid ranking sets are not ours to republish anyway.** So take the analyst's side from WebSearch result content attributed to a reputable outlet: one specific, dated position per analyst (a rank, a round, a stated take), quoted only as far as the argument needs. Secondary coverage of a blocked outlet is fine when it is reputable, dated and quotes a specific position; that is how Field Yates' ESPN top 160 reached the column. Never reconstruct a ranking list, never publish more of anyone's ranking set than the point requires, and never state an analyst's position from memory. Compute Iron Tuna's side off the board this run, as every other desk does, so only one of the two sides is a claim about what somebody said and that side carries a citation. "Above consensus" means above the committed `PROJECTIONS` baseline, not above Iron Tuna, whose shipped values are already blended toward the market. Then MAKE THE CALL: say whether the desk agrees or disagrees with each analyst and why, in the site's own terms (usage, play-caller history, the odds, where the position's curve goes flat). A run that lists three takes without picking a side has written an aggregator post and failed. This desk is a running story, so read the prior rows (`SELECT slug,title,dek,players,calls FROM lead_story WHERE category = 'analyst' AND verified = 1 ORDER BY created_at DESC LIMIT 6`) and continue that thread: revisit a call news has moved, and do not re-run the same analyst-player pairing while nothing has changed. **If you do revisit a pairing the column has already scored, you must either reach the same verdict or say explicitly what changed to move it. The record table is cumulative, so two entries scoring one pairing both ways makes the column look like it cannot keep its own story straight.** If you cannot verify a single dated position this run, skip to the next desk and say so. An unsourced claim on this desk puts words in a real person's mouth, so it is the one desk where publishing nothing is clearly better than publishing something thin. **Two required sections below govern this desk: "Spread the calls across analysts" and "The analyst desk's calls column." Read both before writing.**
 
 If your desk genuinely has no verifiable material this run (common for `injury` and `preseason` out of season), move to the NEXT desk in the list and say in your report which desk you skipped and why. Do not force a thin story to fill a slot, and do not silently fall back to `market` every time.
 
@@ -108,7 +108,40 @@ A story that says "Team X's offense is underpriced" and stops is a failed run. I
 
 **Full PPR, not half, as of 2026-08-22.** This model is the site's own default league (`DEFAULT_LEAGUE_CONFIG` in `index.html`, mirrored in `it-league.js`), and it was half PPR here while the site shipped full PPR everywhere else. That made every "the sheet says $26" in a story a number the reader's own cheat sheet disagreed with, for no reason either of them could see. Figures from before that date were written at half PPR and are not directly comparable for pass-catching backs and slot receivers; say so if you compare against one.
 
-Price pool QB 14, RB 42, WR 54, TE 14. Value over replacement, replacement = last player in each position pool, dollars distributed proportional to positive VORP with a $1 floor. Build market-side projections by overlaying the odds payload onto the baseline, replacing passing/rushing/receiving yards and TDs where a line exists and holding `rec` at baseline (the market does not price receptions). Scoring: passYd/25, passTD*4, passInt*-2, rushYd/10, rushTD*6, recYd/10, recTD*6, rec*1.0, fumLost*-2. If you deviate from this model, say so in the method line.
+Scoring: passYd/25, passTD*4, passInt*-2, rushYd/10, rushTD*6, recYd/10, recTD*6, rec*1.0, fumLost*-2.
+
+### PRICE OFF THE CHEAT SHEET'S OWN CURVE, NOT VALUE OVER REPLACEMENT
+
+**This changed on 2026-08-23 and it changes every dollar you print.** Until then this prompt told you to price by value over replacement. The site's cheat sheet does not price that way, so a story's number for a player and the sheet's number for the same player were two different answers to one question, and readers could see both at once. A reader wrote in: a story said bid $34 for Zay Flowers "not the sheet's $27" while the sheet on the same screen had him at $21.
+
+**The site's valuation is the only valuation.** Compute a price exactly the way `/it-league.js` computes the cheat sheet:
+
+1. Score every player in the projection set with the scoring above.
+2. Sort by points **within each position**, best first.
+3. That position rank IS the slot in the market curve. Read the curve value at that slot; past the end of the curve a player is $1.
+4. Multiply by `(teams x budget) / 1440` and round, with a $1 floor. At this model's 12 teams and $200 that multiplier is 1.6667.
+
+**Read the curve out of the repo this run — do not copy it from memory or from this prompt.** It is `CURVE` and `CURVE_BUDGET` in `it-league.js`, which mirror `LEAGUE_MARKET_CURVE` and `LEAGUE_CURVE_BUDGET` in `index.html`; `tools/test-it-league.mjs` fails the build if the two ever disagree, so either one is authoritative and neither can drift from the other. The static block inside `it-league.js` is a FALLBACK for readers whose browser cannot reach `/api/board`; it is generated from the committed projections and has not seen today's odds, so never verify a price against it.
+
+There is no priced-pool cutoff and no replacement level any more. The curve's own length is the pool: a position rank past the last slot is a $1 player, which is the same statement replacement level used to make and the one the reader's board already makes.
+
+**THERE IS ONE BOARD, AND THE ODDS ARE ALREADY IN IT.** This is the part that went wrong on 2026-08-23 even after the curve change, so read it twice.
+
+The projections the app is served are NOT the committed `PROJECTIONS` array. The Worker blends today's odds into them before it serves them (`blendProjections`), at `VEGAS_WEIGHT = 3`:
+
+    blended = (committed + 3 x market_implied) / 4
+
+per stat, only where a line exists, and `rec` is never touched because the betting market does not price catches. **That blended set is the cheat sheet.** Score it, rank within position, read the curve: those are the dollars on the reader's screen.
+
+So do not build a second, more aggressive board by replacing the stats outright. A run did exactly that and published "$38 for Derrick Henry" beside "$47 on the consensus sheet" for a back the reader's own sheet had at $25 and $38 respectively: the recommendation was right and the consensus figure was wrong, because the consensus figure came off the unblended committed array and nothing on the site prices players that way.
+
+**The easiest correct route: read `/api/board`.** It returns the site's own board at 12 teams and $200, built from the same blended pool, priced by the same curve, as `{n, pos, v, pts}` rows where `v` is the Market Price. That is the number the reader sees, pulled rather than recalculated, and it cannot drift from the sheet because it *is* the sheet. Use it for every "the consensus sheet says $X" in your story. If the request fails, do the blend above yourself and say in the method line that you computed it rather than reading it.
+
+What the odds move is then a RANK STORY, not a second price: "the odds have him RB8 rather than RB13" is the finding, and both dollar figures still come off the one board.
+
+**Check two of them against `/api/board` before you insert.** Take the consensus price you are about to print for a named player and confirm it equals that player's `v` in the `/api/board` response. Not the committed projections, not a board you built: the served one. If it does not match, your pricing is wrong and the story is wrong; fix it rather than publishing it. This check is the whole point of the section, and it is the check a run passed in the wrong direction on 2026-08-23 by verifying against `it-league.js`'s static block, which had not seen the odds. Name the endpoint you checked against in the method line so the next run can tell which board you meant.
+
+If you deviate from any of this, say so in the method line.
 
 ## Hard rules
 1. Never invent a number. Every figure must trace to data you queried this run or a page you fetched this run. If you cannot verify it, cut the sentence.
@@ -231,10 +264,30 @@ VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,<0 or 1>,<0 or 1>,
 
 **Run this INSERT once.** See "ONE STORY PER RUN" at the top.
 
-Then retire the prior story: `UPDATE lead_story SET published=0 WHERE id <> last_insert_rowid();` (run as a separate statement, and only if the new row published with `verified=1`). Slug format: short-topic-slug-YYYY-MM-DD-HH. `sources` is a JSON array of `{type,name,detail}`. Pass all text through bound parameters, never string concatenation.
+Slug format: short-topic-slug-YYYY-MM-DD-HH. `sources` is a JSON array of `{type,name,detail}`. Pass all text through bound parameters, never string concatenation.
+
+## RETIRE THE PRIOR STORY BY SLUG. NEVER USE `last_insert_rowid()`.
+Only if your new row went in with `verified=1` and `published=1`, unpublish everything else by binding the slug you just wrote:
+
+```sql
+UPDATE lead_story SET published = 0 WHERE slug <> ?1;
+```
+
+**Do not use `WHERE id <> last_insert_rowid()`, which is what this prompt said until 2026-08-23.** D1 gives every statement its own session, so in a separate statement `last_insert_rowid()` returns **0**. `id <> 0` matches every row in the table, so the retire unpublished the story the run had just published along with the entire archive, and the instruction to run it as a separate statement is exactly what made it fire wrong. Measured against the live database rather than inferred: a probe table returned `meta.last_row_id = 1` on the insert and `last_insert_rowid() = 0` in the following statement. The site ran with no generated lead at all for a day because of it, and nothing looked broken to a visitor, which is why it survived that long.
+
+If you would rather use an id, read it back first with `SELECT id FROM lead_story WHERE slug = ?1` and use that literal number. Never rely on a rowid carrying across statements.
 
 ## Check your own work, but do not hang on it
-Verify through the **Cloudflare D1 connector**, not the website: `SELECT id,slug,category,verified,published,length(title) AS tlen,calls IS NOT NULL AS has_calls FROM lead_story ORDER BY created_at DESC LIMIT 2`. Confirm your row is the desk you intended, `verified=1`, `published=1`, `tlen` under 90, and that the previous row is now `published=0`. On an analyst run, confirm `has_calls=1` unless you deliberately left it NULL for a track-record piece. **This check is read-only. If it shows something you wish you had written differently, report it; do not write another story.**
+Verify through the **Cloudflare D1 connector**, not the website:
+
+```sql
+SELECT id,slug,category,verified,published,length(title) AS tlen,
+       calls IS NOT NULL AS has_calls,
+       (SELECT COUNT(*) FROM lead_story WHERE published=1) AS published_rows
+FROM lead_story ORDER BY created_at DESC LIMIT 2;
+```
+
+Confirm your row is the desk you intended, `verified=1`, `published=1`, `tlen` under 90, that the previous row is now `published=0`, and that `published_rows` is exactly **1**. **If `published_rows` is 0, your retire statement hit your own row:** republish it with `UPDATE lead_story SET published = 1 WHERE slug = ?1` and say so in your report. That is a repair to the row you already wrote, not a second story. On an analyst run, confirm `has_calls=1` unless you deliberately left it NULL for a track-record piece. **This check is read-only. If it shows something you wish you had written differently, report it; do not write another story.**
 
 **Do not block on a WebFetch to irontuna.com.** This Routine has no pre-approved tool list, so a WebFetch can sit waiting on a permission prompt that nobody will answer, and a run on 2026-08-21 stalled there after it had already published. If you want the site check, attempt it once; if it is denied, blocked, or does not return promptly, fall back to the D1 query above and finish. Never end a run parked on a permission request.
 

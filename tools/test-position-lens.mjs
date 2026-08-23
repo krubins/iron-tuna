@@ -60,7 +60,7 @@ const BASE = `http://127.0.0.1:${server.address().port}/`;
 // A board wide enough that the front page's real stories find someone on it:
 // the lens is only visible where a call can actually be translated.
 const BOARD = {
-  ts: 1, teams: 10, budget: 300, format: 'snake',
+  ts: 1, sv: 2, teams: 10, budget: 300, format: 'snake',
   players: [
     { n: 'Drake London', pos: 'WR', v: 44, pts: 280 },
     { n: 'Rome Odunze', pos: 'WR', v: 30, pts: 250 },
