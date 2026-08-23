@@ -728,19 +728,24 @@
   // whose league the number is for — which is the complaint that started this:
   // the front page was quoting $26 to a reader whose own sheet says $39.
   //
-  // `restated` is whether repriceCopy() actually moved the numbers, because
-  // "priced for your league" over untouched default figures would be the same
-  // lie in the other direction.
+  // A reader who HAS saved a league is only ever told their own numbers. The
+  // note used to append "the desk writes at 12 teams, $200, full PPR", and that
+  // second league is what made the card unreadable: a reader on a $120 budget
+  // was handed one set of prices and, in the same breath, a budget those prices
+  // are not in, with nothing on screen priced at it. The desk's league is the
+  // machinery, not the reading — so it is named only to the reader who is
+  // actually being shown the desk's dollars, which is the reader with no league.
+  //
+  // `restated` is whether repriceCopy() actually moved the numbers. It only
+  // chooses the verb: "restated" is a claim that something happened, and over
+  // untouched figures it would be a lie in the other direction.
   function pricingNote(restated) {
     if (!cfg) {
       return 'These are ' + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET
         + ' full-PPR dollars. Set up your league and every price here is restated in your money.';
     }
-    if (restated) {
-      return 'Restated for ' + label('auction') + (snap ? ', ' + scoringLabel() : '')
-        + '. The desk writes at ' + DEFAULT_TEAMS + ' teams, $' + DEFAULT_BUDGET + ', full PPR.';
-    }
-    return 'Your ' + cfg.teams + '-team, $' + cfg.budget + ' league prices this the same way the desk does.';
+    return (restated ? 'Restated for ' : 'Priced for ')
+      + label('auction') + (snap ? ', ' + scoringLabel() : '') + '.';
   }
 
   // One stylesheet for the "Your league:" line, injected rather than copied into

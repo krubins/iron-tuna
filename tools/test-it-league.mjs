@@ -690,12 +690,17 @@ console.log('\nthe desk\u2019s dollars in the reader\u2019s league');
   // being shown a "restated" badge over numbers nothing happened to.
   const same = load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }) }).L;
   ok('a reader on the desk\u2019s own league has nothing restated', same.repriceCopy('bid $32', []) === null);
-  ok('and is told that rather than left guessing', /the same way the desk does/.test(same.pricingNote(false)));
+  ok('and is still told the prices are for their league, not that nothing happened',
+     /Priced for your 12-team, \$200 auction/.test(same.pricingNote(false)), same.pricingNote(false));
 
   ok('the note names the reader\u2019s league and their scoring', /your 10-team, \$300 auction/.test(L.pricingNote(true))
      && /PPR|standard/.test(L.pricingNote(true)), L.pricingNote(true));
-  ok('the note names the desk\u2019s league too, so the reader can tell them apart',
-     /12 teams, \$200, full PPR/.test(L.pricingNote(true)));
+  // The whole point of restating is that the reader never has to hold two
+  // leagues in their head. A reader with settings hears about theirs only.
+  ok('and never mentions the desk\u2019s league or its budget beside theirs',
+     !/desk/i.test(L.pricingNote(true)) && !/\$200/.test(L.pricingNote(true))
+     && !/desk/i.test(L.pricingNote(false)) && !/\$200/.test(L.pricingNote(false)),
+     L.pricingNote(true) + ' | ' + L.pricingNote(false));
   ok('a reader with no league is told whose dollars these are, and how to change it',
      /12-team, \$200 full-PPR/.test(load({}).L.pricingNote(false))
      && /Set up your league/.test(load({}).L.pricingNote(false)));
