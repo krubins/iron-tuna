@@ -3019,11 +3019,28 @@ body were rewritten in plain words with **every figure unchanged**: title to 82
 characters and to an instruction ("Cap J.K. Dobbins at $12 and bid Tetairoa
 McMillan to $33 as cheap backs get better"), "the book" to Vegas, "replacement
 level" to "the cheapest running back worth starting", "the RB25 to RB42 tier" to
-"backs ranked 25 to 42", UTC stamps to ET. Its `method` column is untouched and still reads in model
-vocabulary; that box is the receipts appendix, not front-page copy, and
-rewriting it by hand risks distorting the record it exists to preserve. If the
-desk should write that box in plain English too, the rule belongs in the prompt
-first, so the next run produces it rather than a later session editing it.
+"backs ranked 25 to 42", UTC stamps to ET.
+
+**Its method box was left in model vocabulary at first, then rewritten too**
+(2026-08-23, on request). The first pass stopped at the front-page copy on the
+reasoning that the method box is the receipts appendix and rewriting receipts by
+hand risks distorting the record they exist to preserve. That reasoning was
+about *care*, not about scope: the box is still something a reader who clicks in
+has to read, and it opened on `AUCTION MODEL`, `VORP`, `replacement points`,
+`Book set` and a UTC stamp. It now says "the cheapest player worth starting",
+"how many points each is worth above" it, "the Vegas board", and 7:00 AM ET.
+
+The care is in the checking rather than in leaving it alone. Every figure was
+re-asserted against the stored row after the rewrite: the two per-point rates,
+the four replacement scores on each board, all four running back group totals
+both before and after, the four position pools with their deltas, the payload
+character count and numeric checksum, the slot number, and the news dates. All
+present, none altered. The rewrite is prose only.
+
+**The desk now writes this box plainly on its own.** Story 32, the first run
+under the merged prompt, produced a method box with no banned word in it and
+"value over the last player inside each position's priced pool" where every
+earlier run wrote VORP. Story 31 is the last row that needed a human for this.
 
 ### Tests
 
