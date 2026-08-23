@@ -16,10 +16,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>FAAB Advisor: What to Bid on Every Waiver Claim | Iron Tuna</title>
-<meta name="description" content="FAAB is a blind auction. Iron Tuna prices every free agent in your league's dollars: the going rate, what he is worth to your roster, and your max bid \u2014 using your leaguemates' actual remaining budgets.">
+<meta name="description" content="FAAB is a blind auction. Iron Tuna prices every free agent in your league's dollars: the going rate, what he is worth to your roster, and what you should bid \u2014 using your leaguemates' actual remaining budgets.">
 <link rel="canonical" href="https://irontuna.com/faab">
 <meta property="og:title" content="FAAB Advisor: What to Bid on Every Waiver Claim">
-<meta property="og:description" content="Connect Sleeper and get three numbers on every free agent: the going rate, what he is worth, and your max bid.">
+<meta property="og:description" content="Connect Sleeper and get three numbers on every free agent: the going rate, what he is worth, and what you should bid.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://irontuna.com/faab">
 <meta property="og:image" content="https://irontuna.com/og.png">
@@ -167,14 +167,14 @@ table.fa .mine{color:var(--teal);font-weight:800}
   <div class="fa-bar" id="fa-bar"></div>
   <div class="fa-room" id="fa-room"></div>
   <div class="fa-tablewrap"><table class="fa"><thead><tr>
-    <th>Free agent</th><th class="num">Rest-of-season <i>draft $</i></th><th class="num">Going rate <i>FAAB $</i></th><th class="num">Your max <i>FAAB $</i></th><th>Call</th><th>Who you are bidding against</th>
+    <th>Free agent</th><th class="num">Rest-of-season <i>draft $</i></th><th class="num">Going rate <i>FAAB $</i></th><th class="num">What you should bid <i>FAAB $</i></th><th>Call</th><th>Who you are bidding against</th>
   </tr></thead><tbody id="fa-rows"></tbody></table></div>
   <p class="fa-note" id="fa-note"></p>
   <div class="fa-obs" id="fa-obs" hidden></div>
   <div class="method">
     <h3>How these numbers are made</h3>
     <p><b>Rest-of-season</b> is the player&rsquo;s value on your own cheat sheet, scaled to the weeks that are left: auction dollars at your league&rsquo;s draft budget, not a generic $200. <b>The other two columns are FAAB dollars.</b> They are different currencies and deliberately not the same scale &mdash; a $100 FAAB budget buys a handful of claims, where a $200 draft budget buys a whole roster, so a going rate above the rest-of-season figure is normal rather than a mistake.</p>
-    <p><b>Your max</b> is not what he is worth. Over the weeks that are left you will make a handful of claims anyway, so the ones you would have made regardless are not what winning <em>this</em> one buys you. The baseline is the first free agent you would <em>not</em> otherwise have taken, and the surplus is the gap up to him &mdash; value over replacement, the same idea the draft board is built on, with the replacement drawn off the wire. Ten interchangeable handcuffs all sit at replacement and are worth about a dollar each however good they look on a ranking. One genuinely better player in a thin pool is worth real money. That surplus is then measured against the other claims the same budget still has to cover.</p>
+    <p><b>What you should bid</b> is not what he is worth. Over the weeks that are left you will make a handful of claims anyway, so the ones you would have made regardless are not what winning <em>this</em> one buys you. The baseline is the first free agent you would <em>not</em> otherwise have taken, and the surplus is the gap up to him &mdash; value over replacement, the same idea the draft board is built on, with the replacement drawn off the wire. Ten interchangeable handcuffs all sit at replacement and are worth about a dollar each however good they look on a ranking. One genuinely better player in a thin pool is worth real money. That surplus is then measured against the other claims the same budget still has to cover.</p>
     <p><b>Going rate</b> is the highest bid any rival can rationally justify, computed one rival at a time: their remaining budget, their hole at that position, their alternatives. A leaguemate with $0 left is not competition no matter how badly they need a running back, and this is the only part of the fantasy season where you can see that in advance.</p>
     <p><b>What it does not know.</b> FAAB is blind and people are not rational, so treat the going rate as the middle of a range, not a line. It does not read this week&rsquo;s matchups, injuries that broke in the last hour, or the fact that your leaguemate drafted the guy&rsquo;s teammate and is emotional about it. Kickers and defences are left out on purpose.</p>
   </div>
@@ -222,7 +222,7 @@ table.fa .mine{color:var(--teal);font-weight:800}
     </div>
   </div>
   <div class="foot-note">
-   <p>Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.</p>
+   <p>Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.</p>
    <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
     <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
@@ -482,7 +482,7 @@ table.fa .mine{color:var(--teal);font-weight:800}
     function surplus(ro, fa) { return Math.max(0, vadd(ro, fa) - replacement(ro)); }
 
     // ── the share model ──────────────────────────────────────────────────────
-    // A max bid is what the claim is worth against everything else the same money
+    // What you should bid is what the claim is worth against everything else the same money
     // could buy before the season ends. Budget is season-long and does not renew,
     // so a claim's share of it is its surplus over the surpluses of the other
     // claims that budget still has to cover.
