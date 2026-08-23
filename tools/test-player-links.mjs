@@ -78,6 +78,11 @@ function makeDom() {
     get text() {
       return this.childNodes.map(c => (c.nodeType === 3 ? c.nodeValue : c.text)).join('');
     }
+    querySelectorAll(sel) {
+      const out = [];
+      (function walk(n) { n.childNodes.forEach(c => { if (c.nodeType === 1) { if (c.matches(sel)) out.push(c); walk(c); } }); })(this);
+      return out;
+    }
     // Every <a class="pl-mention"> under this element, in document order.
     get mentions() {
       const out = [];
@@ -154,19 +159,22 @@ console.log('\nfull names');
 }
 {
   // The desk varies a name's punctuation and nothing else, so the pattern does
-  // too: initials with or without stops, either apostrophe or none at all.
-  const w = load();
-  const b = block(w, 'call',
-    'A.J. Brown and AJ Brown are the same man.',
-    'De’Von Achane, De’Von Achane and DeVon Achane too.',
-    'T.J. Hockenson remains a risky rebound candidate.');
-  w.ITPlayerSearch.linkAllPlayers(w.document);
-  const s = slugs(b);
-  ok('both spellings of A.J. Brown link',
-     s.filter(k => k === 'a-j-brown').length === 2, s.join());
-  ok('every spelling of De’Von Achane links',
-     s.filter(k => k === 'de-von-achane').length === 3, s.join());
-  ok('T.J. Hockenson links', s.includes('t-j-hockenson'), s.join());
+  // too: initials with or without stops, either apostrophe or none at all. Each
+  // spelling gets its own story, because a story links a man once.
+  for (const [text, want] of [
+    ['A.J. Brown is a direct beneficiary.', 'a-j-brown'],
+    ['AJ Brown is a direct beneficiary.', 'a-j-brown'],
+    ['De’Von Achane is supported by talent.', 'de-von-achane'],
+    ["De'Von Achane is supported by talent.", 'de-von-achane'],
+    ['DeVon Achane is supported by talent.', 'de-von-achane'],
+    ['T.J. Hockenson remains a risky rebound candidate.', 't-j-hockenson'],
+    ['TJ Hockenson remains a risky rebound candidate.', 't-j-hockenson'],
+  ]) {
+    const w = load();
+    const b = block(w, 'call', text);
+    w.ITPlayerSearch.linkAllPlayers(w.document);
+    ok(`"${text.split(' ').slice(0, 2).join(' ')}" resolves`, slugs(b).join() === want, slugs(b).join());
+  }
 }
 {
   const w = load();
@@ -193,13 +201,14 @@ console.log('\nlinks inside links');
 // ── 3. the short forms the desk actually writes ────────────────────────────
 console.log('\nshort forms');
 {
+  // The short form resolves on its own once the block has named him — here in
+  // its own story, so the full name above is not the one taking the link.
   const w = load();
-  const b = block(w, 'call',
-    'Kyren Williams has a hard schedule.',
-    'Take Kyren less in managed leagues than in best ball.');
+  const b = block(w, 'call', 'Take Kyren less in managed leagues than in best ball.');
+  b.setAttribute('data-players', 'kyren-williams');
   w.ITPlayerSearch.linkAllPlayers(w.document);
-  ok('a first name the block has earned links',
-     slugs(b).join() === 'kyren-williams,kyren-williams', slugs(b).join());
+  ok('a first name the block has earned links', slugs(b).join() === 'kyren-williams', slugs(b).join());
+  ok('and the link is the short form as written', b.mentions[0].text === 'Kyren');
 }
 {
   const w = load();
@@ -230,29 +239,78 @@ console.log('\nordinary English words');
 {
   const w = load();
   const b = block(w, 'call',
-    'Isaiah Likely is the best late-round TE target.',
     'Likely, the Ravens will lean on him.',
     'The offense is likely to throw more.',
-    'Likely’s outlook is stronger in full PPR.');
+    'Isaiah Likely is the best late-round TE target.');
+  b.setAttribute('data-players', 'isaiah-likely');
   w.ITPlayerSearch.linkAllPlayers(w.document);
-  const s = slugs(b);
-  ok('the full name links', s[0] === 'isaiah-likely', s.join());
-  ok('the possessive links too', s.length === 2 && s[1] === 'isaiah-likely', s.join());
-  ok('a sentence that opens on the adverb is left alone',
-     b.childNodes[1].mentions.length === 0);
-  ok('lower case is prose, never a name', b.childNodes[2].mentions.length === 0);
+  ok('a sentence that opens on the adverb is left alone', b.childNodes[0].mentions.length === 0);
+  ok('lower case is prose, never a name', b.childNodes[1].mentions.length === 0);
+  ok('so the full name below is still the first mention',
+     slugs(b).join() === 'isaiah-likely' && b.mentions[0].text === 'Isaiah Likely', slugs(b).join());
 }
 {
   const w = load();
-  const b = block(w, 'call',
-    'Jordan Love is quietly viable.',
-    'The Packers still trust Love in December.');
+  const b = block(w, 'call', 'Likely’s outlook is stronger in full PPR.');
+  b.setAttribute('data-players', 'isaiah-likely');
   w.ITPlayerSearch.linkAllPlayers(w.document);
-  ok('the same word mid-sentence is the player',
-     slugs(b).join() === 'jordan-love,jordan-love', slugs(b).join());
+  ok('the possessive is the player, even opening a sentence',
+     slugs(b).join() === 'isaiah-likely', slugs(b).join());
+  ok('and the apostrophe is left outside the link', b.mentions[0].text === 'Likely');
+}
+{
+  const w = load();
+  const b = block(w, 'call', 'The Packers still trust Love in December.');
+  b.setAttribute('data-players', 'jordan-love');
+  w.ITPlayerSearch.linkAllPlayers(w.document);
+  ok('the same word mid-sentence is the player', slugs(b).join() === 'jordan-love', slugs(b).join());
 }
 
-// ── 5. what does and does not get read at all ──────────────────────────────
+// ── 5. one link per player per story ───────────────────────────────────────
+console.log('\none link per player');
+{
+  const w = load();
+  const b = block(w, 'call',
+    'Kyren Williams has a hard schedule.',
+    'Kyren loses the most in that environment.',
+    'Take Kyren less in managed leagues than in best ball.');
+  w.ITPlayerSearch.linkAllPlayers(w.document);
+  ok('a story links a man once, not once a sentence',
+     slugs(b).join() === 'kyren-williams', slugs(b).join());
+  ok('and it is the first mention that carries it',
+     b.childNodes[0].mentions.length === 1 && b.mentions[0].text === 'Kyren Williams');
+  ok('the other mentions are still there as text',
+     b.text.split('Kyren').length - 1 === 3, b.text);
+}
+{
+  // Two men in one story get one link each, not one link between them.
+  const w = load();
+  const b = block(w, 'call',
+    'DeVonta Smith and Dallas Goedert gain target share.',
+    'Smith is the safer bet; Goedert is the cheaper one.');
+  w.ITPlayerSearch.linkAllPlayers(w.document);
+  ok('every player named gets his own first mention',
+     slugs(b).join() === 'devonta-smith,dallas-goedert', slugs(b).join());
+}
+{
+  const w = load();
+  const one = block(w, 'call', 'Josh Allen remains the safest overall QB1.');
+  const two = block(w, 'call', 'Josh Allen is still the safest overall QB1.');
+  w.ITPlayerSearch.linkAllPlayers(w.document);
+  ok('the next story links him again — the cap is per story, not per page',
+     slugs(one).join() === 'josh-allen' && slugs(two).join() === 'josh-allen');
+}
+{
+  // Re-running must not promote the second mention to a first one.
+  const w = load();
+  const b = block(w, 'call', 'Josh Allen is safe. Josh Allen is expensive.');
+  w.ITPlayerSearch.linkAllPlayers(w.document);
+  w.ITPlayerSearch.linkAllPlayers(w.document);
+  w.ITPlayerSearch.linkPlayers(b);
+  ok('re-linking the same story adds nothing', slugs(b).join() === 'josh-allen', slugs(b).join());
+}
+
+// ── 6. what does and does not get read at all ──────────────────────────────
 console.log('\nscope');
 {
   const w = load();
@@ -294,7 +352,7 @@ console.log('\nscope');
   ok('but he still disambiguates the shared surname', b.text.includes('Williams is the one'));
 }
 
-// ── 6. a real call, straight out of a drop page ────────────────────────────
+// ── 7. a real call, straight out of a drop page ────────────────────────────
 console.log('\na published call');
 {
   // This call never writes "Kyren Williams" — only "Kyren" — which is exactly
@@ -316,12 +374,12 @@ console.log('\na published call');
   ok('the call reads as published (paragraphs found)', paras.length >= 3, String(paras.length));
   ok('the build stamped its cast on it', declared === 'kyren-williams', declared);
   ok('so the short form the desk actually wrote links',
-     s.filter(k => k === 'kyren-williams').length >= 2, s.join());
+     s.filter(k => k === 'kyren-williams').length === 1, s.join());
   ok('and it never writes the full name', !call.includes('Kyren Williams'));
   ok('every link points at a card', b.mentions.every(a => /^\/player\/[a-z0-9-]+$/.test(a.href)));
 }
 
-// ── 7. every page that carries a story loads the file ──────────────────────
+// ── 8. every page that carries a story loads the file ──────────────────────
 console.log('\nwiring');
 {
   const files = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'));

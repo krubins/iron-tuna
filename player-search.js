@@ -521,8 +521,15 @@
   // block's cast either way, so his surname still cannot be read as somebody
   // else's.
   //
+  // ONE LINK PER PLAYER PER STORY, on the first mention. A call about Kyren
+  // Williams names him six times, and six links to the same card is not
+  // navigation, it is a paragraph with a rash. The first time the reader meets
+  // the name is the moment the link is useful; after that he has already been
+  // offered the card and is trying to read a sentence.
+  //
   // Idempotent: a second run finds every name already inside an <a> and skips
-  // it, which is what lets the front page re-link the lead on every slide.
+  // it, and it counts the links already standing in the scope before it starts,
+  // so re-running cannot promote the second mention to a first one.
   function linkPlayers(scope, opts) {
     if (!scope) return 0;
     opts = opts || {};
@@ -571,6 +578,19 @@
       });
     }
 
+    // Who this story has already offered a card for — including on an earlier
+    // run over the same DOM, which is what keeps a repaint from linking the
+    // second mention as though it were the first.
+    var linked = {};
+    els.forEach(function (el) {
+      if (!el.querySelectorAll) return;
+      var done = el.querySelectorAll('.' + MENTION);
+      for (var i = 0; i < done.length; i++) {
+        var k = done[i].getAttribute && done[i].getAttribute('data-player');
+        if (k) linked[k] = 1;
+      }
+    });
+
     var made = 0;
     nodes.forEach(function (node, i) {
       var list = hits[i];
@@ -578,7 +598,7 @@
       var doc = node.ownerDocument || root.document;
       var text = node.nodeValue, frag = doc.createDocumentFragment(), at = 0, drew = 0;
       list.forEach(function (m) {
-        if (m.s < at || skip[m.p.k]) return;
+        if (m.s < at || skip[m.p.k] || linked[m.p.k]) return;
         if (m.s > at) frag.appendChild(doc.createTextNode(text.slice(at, m.s)));
         var a = doc.createElement('a');
         a.className = MENTION;
@@ -587,6 +607,7 @@
         a.title = 'Player card: ' + m.p.n;
         a.appendChild(doc.createTextNode(text.slice(m.s, m.e)));
         frag.appendChild(a);
+        linked[m.p.k] = 1;
         at = m.e;
         drew++;
       });

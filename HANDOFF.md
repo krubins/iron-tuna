@@ -3193,6 +3193,19 @@ read a bare word is against the players that same block has already committed
 to. Two calls on one page never share a cast: one call's "Allen" must not be
 read out of the other's.
 
+### One link per player per story
+
+A call about Kyren Williams names him six times. Six links to the same card is
+not navigation, it is a paragraph with a rash — so only the **first** mention of
+each player in a story becomes a link. The first time a reader meets the name is
+the moment the card is useful; after that they have already been offered it and
+are trying to read a sentence. Every later mention stays as plain text.
+
+The cap is **per story, not per page**: the next call links him again, because a
+reader who starts there has not been offered anything yet. And `linkPlayers`
+counts the links already standing in a scope before it starts, so re-running it
+over the same DOM cannot promote the second mention to a first one.
+
 ### The four rules that keep a link off an adverb
 
 1. **A name already inside a link is left alone.** Most story headlines ARE
@@ -3259,8 +3272,10 @@ already, so rule 1 leaves them alone — that is the correct outcome, not a gap.
 ### Tests
 
 - `tools/test-player-links.mjs` — the four rules above, each with the case that
-  would break it; the cast scoping, including that two calls on a page do not
-  share one; `skip`; idempotency; a real published call lifted out of
+  would break it; the one-link-per-story cap, that it is the FIRST mention that
+  carries the link, that two men in one story get one each, and that the next
+  story links the same man again; the cast scoping, including that two calls on
+  a page do not share one; `skip`; idempotency; a real published call out of
   `auction-insights-2026-08-10.html`, which is the one that never writes the
   full name; that every stamped slug is a player the index knows; and that every
   page carrying a `.call` or `.ins` actually loads `/player-search.js`.
