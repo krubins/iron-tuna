@@ -74,7 +74,7 @@ ANALYST RUNS ONLY. Leave `calls` NULL on every other desk.
 [{"analyst":"Mike Clay","outlet":"ESPN","player":"Kenneth Walker III",
   "pos":"RB","team":"KC","their":"RB7 in his August PPR board",
   "ours":"$24 max bid, RB14","stance":"disagree",
-  "why":"The book has Kansas City fifth in implied points but spreads the scoring."}]
+  "why":"Vegas has Kansas City fifth in implied points but spreads the scoring around."}]
 ```
 
 Rules, because the page cannot fix a bad one at read time:
@@ -99,7 +99,7 @@ This is the single most important requirement. Directional and team-level findin
 - A specific auction dollar figure (max bid) and/or a specific positional-rank or round move.
 - Both the current/consensus number and the number you are arguing for, so the delta is explicit.
 
-A story that says "Team X's offense is underpriced" and stops is a failed run. It has to say "Player Y, WR, Team X: sheet says $25, bid to $33, WR13 to WR8."
+A story that says "Team X's offense is underpriced" and stops is a failed run. It has to say "Player Y, WR, Team X: the consensus sheet says $25, bid up to $33, WR13 to WR8."
 
 **Position matters and the effect is usually not uniform.** The same team-level or market-level signal lands differently on QB, RB, WR and TE. Always break the finding out by position and say so explicitly when a signal that helps a team's quarterback does little for its running back. That asymmetry is often the most useful part of the story.
 
@@ -123,6 +123,41 @@ Set `verified=1` only if every number in the body traces to a source you pulled 
 
 ## Writing style
 Lead with the finding, not the setup. Plain, direct, confident sentences. No em dashes. No hedging filler. Short paragraphs.
+
+### WRITE IT FOR A TENTH GRADER
+This is the rule the site is judged on, because the headline and the dek are printed on the front page and most readers never get past them. **Aim at a tenth-grade reading level.** The test is not a score out of a formula. It is this: a smart sixteen-year-old who has played fantasy football for one season reads the line once, at full speed, on a phone, and knows what to do. If they would have to stop and work out what a word means, the line fails and you rewrite it.
+
+What that means in practice:
+
+- **One idea per sentence. No sentence over 25 words.** Find the longest sentence and count it. If it needs a comma to bolt a second finding on, it is two sentences.
+- **At most three figures in any one sentence.** A fourth figure means the sentence is carrying two findings, so split it. The one exception is a plain list of player-and-price pairs, which is the part the reader came for: "Do not pay more than $12 for J.K. Dobbins or $13 for Jadarian Price; bid up to $33 on Tetairoa McMillan and $44 on Justin Jefferson" carries four figures and reads fine.
+- **Never open on the process.** "Rebuild the auction board on today's odds refresh and ..." is what the run did. The reader came for what it found.
+- **A number only helps next to the thing it changes.** "Replacement-level running back jumps from 126.20 points to 137.66" is a fact about the model. "The cheapest running back worth starting is 9% better than yesterday, so the middle of the position is worth less" is the same fact about the reader's draft. Write the second one.
+- **Every dollar figure is an instruction.** "Fade J.K. Dobbins to $12" states a price and leaves the reader to work out what to do with it. "Do not pay more than $12 for J.K. Dobbins" is the instruction, and "bid up to $33 on Tetairoa McMillan" is the same rule in the other direction.
+
+### The words this desk may not use
+Every term below is in-house shorthand. It is clear to the model that wrote it and to nobody in the room. **Do not use the left column in the title, the dek, `body_html`, `method` or a `calls.why`.** Say the right column instead, and say it the first time, not the second.
+
+| Do not write | Write |
+|---|---|
+| the book, the books | Vegas, or the betting market, or the sportsbook odds |
+| the sheet | the consensus sheet (the ranking most sites publish) |
+| the floor, replacement level, replacement-level RB | the cheapest running back worth starting |
+| a bare tier, the cheap tier, the top tier | name the ranks: "backs ranked 25 to 42", "the top six backs" |
+| lift, strips, guts, lands on, moves off | plain verbs: gets better by, takes away, moves to |
+| VORP, value over replacement | what a player is worth above the cheapest starter |
+| fade | do not pay more than |
+| the room | the other managers in your draft |
+| chalk, ADP arb, leverage, spike week | say the thing itself, in words a stranger reads once |
+
+This is not an exclusive list. The test governs: if a phrase is one this desk says to itself, it is shorthand, and the plain version ships instead. The one exception is a term the story then defines in the same sentence, and you get one of those per story, not four.
+
+Two more that are not jargon but read like it:
+
+- **A percentage with no dollars attached.** "The tier loses 23.5% of its value" is arithmetic. "Backs ranked 25 to 42 lose about a quarter of their value, which is $4 to $6 off each of them" is the same fact a drafter can spend.
+- **A word borrowed from the model.** "Pool", "curve", "overlay", "baseline" and "delta" all mean something exact here and nothing at all on a phone.
+
+All of this governs `body_html` as much as the title and the dek. The story is where a reader who clicked in gets the reasoning, not where the shorthand is allowed back.
 
 ### Clock times are Eastern
 **Never print "UTC" or "GMT" in the title, dek, body, method or sources.** Nobody drafting keeps a UTC clock. The audience is American fantasy managers whose kickoffs, waiver deadlines and league nights are all quoted in Eastern, and a reader who has to convert an hour before they can judge whether your data is fresh will not convert it.
@@ -152,10 +187,10 @@ The title is rendered at display size on the front page and is the one line most
 
 **Every headline must carry all four of these. Check them one at a time on the exact string you are about to store, immediately before the INSERT, and rewrite until all four pass.**
 
-1. **A verb the reader can perform in the room.** Bid, cap, pay, pass, fade, wait, draft, target, nominate. Not "moves", "leads", "gains", "sits" - those are things that happened, and a reader cannot do them. The test: read the headline aloud and answer "so what do I do?" in five words. If you cannot, it is a summary and it fails.
+1. **A verb the reader can perform in the room.** Bid, cap, pay, pass, wait, draft, target, nominate. Not "fade", which is one of the banned words below; "pass on" and "cap" say it in plain English. Not "moves", "leads", "gains", "sits" - those are things that happened, and a reader cannot do them. The test: read the headline aloud and answer "so what do I do?" in five words. If you cannot, it is a summary and it fails.
 2. **A named player, first or nearly first.** A team, an offense, a coordinator or an analyst is never the subject of the headline, however good the story is - the player they move is. A market-structure piece may use a named position tier ("the top six tight ends") in place of a player, and must still name a player in the dek.
 3. **A number that is a price or a pick.** A max bid in dollars, or a round or positional rank. Give the number you are arguing for, and the number it replaces where both fit: "$32, not $26" beats "up 23%". Never a percentage on its own: a percentage is not a bid.
-4. **Words a stranger reads at full speed.** No desk shorthand. "the sheet" and "the book" are what we call things in here; write "the consensus sheet" and "Vegas" the first time. Never use a person's name without saying who they are - "ESPN's Field Yates", not "Field Yates" - and never a name at all unless it is an NFL player or an analyst with their outlet attached. If a reader has to already know something to parse the line, it is not a headline.
+4. **Words a stranger reads at full speed.** No desk shorthand, and nothing from the banned-words table in "The words this desk may not use" above. "the sheet" and "the book" are what we call things in here; write "the consensus sheet" and "Vegas" the first time. Read the finished line as a tenth grader would: one pass, at full speed, no stopping to decode a word. Never use a person's name without saying who they are - "ESPN's Field Yates", not "Field Yates" - and never a name at all unless it is an NFL player or an analyst with their outlet attached. If a reader has to already know something to parse the line, it is not a headline.
 
 **Then the mechanical checks, which have all failed at least once in production:**
 
@@ -166,7 +201,24 @@ The title is rendered at display size on the front page and is the one line most
 
 **And the finding test, which is what all of this is in service of.** Would this headline read exactly the same if the analysis had come out the other way? If yes, it is the setup, not the finding. "Five seasons produced five different winners, which is what luck looks like" describes the null result the piece starts from. "Kevin English has beaten the field average ten years running" is the finding - but it is still not a headline, because it names a stranger, states no price and asks the reader to do nothing. The version that ships is the one that says what to do about it.
 
-The `dek` carries the elaboration and the numbers, in 2 or 3 sentences. It opens with the finding too, because the front-page card shows title and dek together and a dek that opens on the setup undoes a headline that does not. Lead the dek with the player and the price, then the evidence - never with the data pull. "Baltimore is the book's top-ranked offense at 26.8 implied points" is a fact about a refresh; "Flowers is a $32 buy because Baltimore now prices as the league's best offense" is the same fact doing some work.
+## CHECK THE DEK BEFORE YOU INSERT
+The `dek` carries the elaboration and the numbers, in 2 or 3 short sentences, and the front-page card prints it directly under the title. It is the paragraph most readers judge the site on, so it gets its own checklist, run on the exact string immediately before the INSERT.
+
+1. **It leads with the finding**, like the headline, and with the player and the price rather than the data pull. "Baltimore is Vegas's top-ranked offense at 26.8 implied points" is a fact about a refresh; "Flowers is a $32 buy because Vegas now prices Baltimore as the league's best offense" is the same fact doing some work.
+2. **No sentence over 25 words.** Find the longest one and count it.
+3. **No more than three figures in any one sentence**, with the player-and-price list the one exception.
+4. **Nothing from the banned-words table**, and nothing else a stranger would have to stop and decode.
+5. **Every price reads as an instruction** a drafter can act on without translating it first.
+
+This dek shipped on 2026-08-22 and failed 2, 3 and 4 in its opening sentence:
+
+> Rebuild the auction board on today's odds refresh and replacement-level running back jumps from 126.20 half-PPR points to 137.66, a 9.1% lift that strips 23.5% off the RB25 to RB42 tier while the top six backs lose only 3.6%.
+
+Forty-five words, five figures, four pieces of shorthand, and it opens on the run's own process. The same finding, written for the reader:
+
+> Cheap running backs got better today, which makes the middle of the position worth less. Backs ranked 25 to 42 lose 23.5% of their value while the top six lose only 3.6%. The $83 that comes off running back moves to receivers and to the top six quarterbacks.
+
+Nothing was cut to get there except the shorthand. Every number a reader can act on survives.
 
 ## Insert
 ```sql
@@ -187,4 +239,4 @@ Verify through the **Cloudflare D1 connector**, not the website: `SELECT id,slug
 **Do not block on a WebFetch to irontuna.com.** This Routine has no pre-approved tool list, so a WebFetch can sit waiting on a permission prompt that nobody will answer, and a run on 2026-08-21 stalled there after it had already published. If you want the site check, attempt it once; if it is denied, blocked, or does not return promptly, fall back to the D1 query above and finish. Never end a run parked on a permission request.
 
 ## Report back
-Finish with a short summary: the desk you wrote for (and any desk you skipped, with the reason), the headline with its character count, whether it published or was held, the named players and dollar figures you landed on, and anything that blocked you. On an analyst run, list the analysts you quoted with a call count each, say how the verdicts broke down between agree, disagree and partial, and name any analyst you tried to source and could not.
+Finish with a short summary: the desk you wrote for (and any desk you skipped, with the reason), the headline with its character count, the dek's longest sentence in words, confirmation that title, dek and body carry nothing from the banned-words table, whether it published or was held, the named players and dollar figures you landed on, and anything that blocked you. On an analyst run, list the analysts you quoted with a call count each, say how the verdicts broke down between agree, disagree and partial, and name any analyst you tried to source and could not.
