@@ -3483,3 +3483,75 @@ scored on the reader's own board, and two point scales on one card is the §32
   answer, then prints the day's dateline as a reader would read it.
 - `tools/test-worker-column.mjs` and `tools/test-it-league.mjs` are unchanged
   and still pass — the column's payload shape did not move.
+
+---
+
+## 35. August 2026: three stories staged in the queue, and the report that backs them
+
+Three lead stories were written to order on 2026-08-23 and inserted with
+`verified=1, published=0`, which is the "stage it" path in §17 rather than a slot
+run. They sit in the queue until somebody promotes one with
+`/api/admin/lead?promote=<id>`. Nothing was retired to make room for them, and
+the trigger `lead_story_one_per_slot` never fires on an unpublished insert, so
+all three share one clock slot without colliding.
+
+| id | slug | desk | what it argues |
+|---|---|---|---|
+| 38 | `coach-changes-help-hurt-2026-08-23-20` | playcaller | the five players a 2026 staff change helps and the five it costs |
+| 39 | `rankings-vs-odds-widest-gaps-2026-08-23-20` | vegas | the five widest rankings-versus-odds gaps each way, in dollars |
+| 40 | `weekly-swing-steady-varied-2026-08-23-20` | market | the five steadiest week to week and the five most varied |
+
+A staged row that is `verified=1` is **not invisible**. `published=0` on a
+verified row is the *Recent insights* list under the front-page lead (§17), so
+these are reachable from the moment they land. They are simply not the lead.
+If that is not wanted, `verified=0` hides a row completely, but it also means
+"the run failed its own gate", which is a lie about these three.
+
+### `tools/board-report.mjs`
+
+The numbers in stories 39 and 40 are not hand-derived. `node tools/board-report.mjs`
+prints them, and it exists so the next desk run does not re-derive them either.
+
+It lifts the **real** Vegas section out of `_worker.js` with the same
+`new Function` harness `tools/test-worker-column.mjs` uses, so it runs
+`buildVegasBoard` itself rather than a copy: the report cannot drift from what
+`/api/vegas-column` and the player cards serve. Two markers are load-bearing,
+`// Vegas-weighted projections` and `export default {`, and the script exits
+non-zero with a named error if either moves or the projection parse comes back
+short.
+
+- **`--games <path>`** reads a local `games.csv` instead of fetching the
+  nflverse release, which is how it runs without network.
+- **`--json`** prints every row with its ranks, prices, team context and shape
+  figures, which is the form the stories were written from.
+- It rebuilds the odds side from today's game lines rather than reading
+  `odds_overlay` out of D1. Spot-checked against the stored row on 2026-08-23:
+  agreement within 0.3%, the difference being lines that moved between the
+  7:00 AM ET refresh and the run. **If a story needs to quote exactly what the
+  site is serving right now, read D1; if it needs to be reproducible from the
+  repository, use this.** Story 39 says which one it used.
+
+### The week-to-week model is this file's, and only this file's
+
+`PROJECTIONS` holds season totals and no game logs, so **week-to-week variance
+cannot be measured anywhere in this repository.** The `shape()` function derives
+it instead, and the derivation is written out in full in the comment above it:
+every scoring event is treated as a Poisson count over 17 games, so points of
+size `k` arriving `m` times a game contribute `k² · m` of variance, and the
+pieces sum. There are no fitted constants. There are two assumed league-level
+rates, 4.3 yards a carry and 11.5 yards a completion, used only to turn
+projected yardage back into a count of events.
+
+Two things follow, and both are in the story rather than buried here:
+
+1. **It is a floor, not a forecast.** It cannot see injuries, game script, or the
+   fact that a touchdown catch is also a catch. Real Sundays are wider.
+2. **The raw ranking is mostly a position ranking.** Backs collect hundreds of
+   small events and tight ends collect dozens, so a raw list puts five backs at
+   the steady end and tight ends at the other every time. That is why the report
+   also prints `spreadZ`, each player against the mean at *his own* position,
+   which is the comparison that is not knowable before you read the names.
+
+Do not promote this model into `_worker.js` or quote its decimals on a page. It
+is a desk instrument for ordering players, and the order is the only part of it
+that is robust.
