@@ -162,10 +162,20 @@
   // front page's ribbon, and `.ribbon .wrap` is a sideways scroller — an
   // absolutely positioned child of it is clipped to the band's 44px, which is
   // to say invisible.
+  //
+  // Returns a teardown function. The draft app (index.html) is React: it mounts
+  // this from an effect and has to be able to take it down again, and a menu
+  // parented to <body> does not disappear when React drops the input that owns
+  // it. Every listener is registered through `on()` below for the same reason.
   function mount(input, opts) {
-    if (!input || input.__plMounted) return;
+    if (!input || input.__plMounted) return function () {};
     input.__plMounted = true;
     opts = opts || {};
+    var bound = [];
+    function on(target, type, fn, capture) {
+      target.addEventListener(type, fn, capture);
+      bound.push([target, type, fn, capture]);
+    }
 
     var doc = root.document;
     var menu = doc.createElement('div');
@@ -285,10 +295,10 @@
       mark();
     }
 
-    input.addEventListener('input', render);
-    input.addEventListener('focus', function () { if (input.value) render(); });
-    input.addEventListener('blur', function () { root.setTimeout(close, 120); });
-    input.addEventListener('keydown', function (e) {
+    on(input, 'input', render);
+    on(input, 'focus', function () { if (input.value) render(); });
+    on(input, 'blur', function () { root.setTimeout(close, 120); });
+    on(input, 'keydown', function (e) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         if (!open) { render(); if (!hits.length) return; }
         e.preventDefault();
@@ -309,14 +319,25 @@
     });
     // The field lives in a <form> so Enter is meaningful without script; the
     // handler above answers first, and this stops a stray submit behind it.
-    if (input.form) input.form.addEventListener('submit', function (e) {
+    if (input.form) on(input.form, 'submit', function (e) {
       e.preventDefault();
       var pick = search(input.value, 1)[0];
       if (pick) go(pick);
     });
-    root.addEventListener('resize', function () { if (open) place(); });
+    on(root, 'resize', function () { if (open) place(); });
     // A sticky ribbon moves under the page, so the menu has to move with it.
-    root.addEventListener('scroll', function () { if (open) place(); }, true);
+    on(root, 'scroll', function () { if (open) place(); }, true);
+
+    return function () {
+      for (var i = 0; i < bound.length; i++) {
+        bound[i][0].removeEventListener(bound[i][1], bound[i][2], bound[i][3]);
+      }
+      bound = [];
+      if (menu.parentNode) menu.parentNode.removeChild(menu);
+      input.__plMounted = false;
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+    };
   }
 
   root.ITPlayerSearch = {

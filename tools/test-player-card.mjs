@@ -164,7 +164,44 @@ ok('the ribbon band is still a sideways scroller',
 ok('the menu is parented to <body> and positioned in viewport coordinates',
    /doc\.body\.appendChild\(menu\)/.test(search) && /\.pl-menu\{position:fixed/.test(front));
 ok('the menu follows the ribbon when the page scrolls',
-   /addEventListener\('scroll'[\s\S]{0,60}place\(\)/.test(search));
+   /on\(root, 'scroll'[\s\S]{0,60}place\(\)/.test(search));
+// The draft app is React and mounts the widget from an effect, so mount() has
+// to hand back a teardown — the menu lives on <body> and React will not clean
+// up something it never rendered.
+ok('mount() returns a teardown', /return function \(\) \{[\s\S]{0,400}removeChild\(menu\)/.test(search));
+
+console.log('\nthe draft app runs the same box in its dark ribbon');
+const app = read('index.html');
+ok('index.html loads the lookup', app.includes('src="/player-search.js"'));
+ok('the lookup is a plain script, not a module',
+   /<script src="\/player-search\.js"><\/script>/.test(app));
+ok('it is loaded before the app module',
+   app.indexOf('src="/player-search.js"') < app.indexOf('<script type="module">'));
+ok('the ribbon renders the shared widget', app.includes('function RibbonPlayerSearch'));
+// Both dark ribbons — the splash and the hub — or the box is only half added.
+ok('both dark ribbons carry it',
+   (app.match(/React\.createElement\(RibbonPlayerSearch,/g) || []).length === 2,
+   String((app.match(/React\.createElement\(RibbonPlayerSearch,/g) || []).length));
+ok('the app calls mount() and honours its teardown',
+   /return window\.ITPlayerSearch\.mount\(/.test(app));
+ok('the dark ribbon is still sticky', /\.lp-ribbon \{[^}]*position: sticky/.test(app));
+// The menu is parented to <body>, so it inherits nothing from .lp-ribbon and
+// needs its own dark rules on this page.
+ok('index.html styles the menu for its own palette', /\.pl-menu \{ position: fixed/.test(app));
+// The one number here that is not cosmetic. .landing-splash is the surface the
+// dark ribbon sits on; at the front page's z-index the menu paints underneath
+// it and is simply invisible. It must clear the splash and stay under a modal,
+// because a modal genuinely should cover the ribbon.
+{
+  const zOf = (re) => { const m = app.match(re); return m ? Number(m[1]) : null; };
+  const menuZ = zOf(/\.pl-menu \{[^}]*z-index: (\d+)/);
+  const splashZ = zOf(/\.landing-splash \{[^}]*z-index: (\d+)/);
+  const modalZ = zOf(/\.modal-bg \{[^}]*z-index: (\d+)/);
+  ok('the menu clears .landing-splash', menuZ > splashZ, `${menuZ} vs ${splashZ}`);
+  ok('the menu stays under a modal', menuZ < modalZ, `${menuZ} vs ${modalZ}`);
+}
+ok('the app implements no second lookup',
+   !/INDEX_RAW/.test(app));
 
 // ── the card lists what the desk actually said ─────────────────────────────
 console.log('\nthe calls on a card are the front page\'s own');
