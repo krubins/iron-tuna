@@ -118,7 +118,7 @@ const FOOT_COLS = [
   },
 ];
 
-const BLURB = 'Iron Tuna builds custom auction values, true player value, and your personal max bid for every player in your exact league, then updates your max live on draft night. Values are projections, not guarantees.';
+const BLURB = 'Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

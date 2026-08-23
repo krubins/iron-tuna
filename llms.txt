@@ -5,7 +5,7 @@
 ## The three numbers (this is the whole idea)
 - **Proj** — the going rate: what the room is likely to pay, on the price curve your league's budget actually produces.
 - **Value** — what he is worth: his projected points converted to dollars against a replacement-level starter. The honest price, whatever the room does.
-- **You** — your max bid: what one more dollar buys *your* lineup, given the players you have already won and the money left in your pocket.
+- **You** — what you should bid: what one more dollar buys *your* lineup, given the players you have already won and the money left in your pocket.
 
 A ranking cannot answer any of those questions, which is why an auction drafter armed with one is guessing.
 
