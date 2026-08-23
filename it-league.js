@@ -439,15 +439,24 @@
   // One copy of this: the reader's line and the default-league line print the
   // same phrase, and drifting apart is how two pages start disagreeing about the
   // same call.
-  function slotPhrase(p, target, a, b, teams, budget, word) {
+  //
+  // `scale` restates the two board prices into the same money as `budget`. The
+  // site's own board is priced at the desk's league and must stay that way —
+  // boardRatio() reads it — so a caller quoting it to a reader on another budget
+  // passes leagueScale() here rather than comparing $200 dollars against a $120
+  // endgame line, which is how a mid-round back gets called a dart throw.
+  function slotPhrase(p, target, a, b, teams, budget, word, scale) {
     if (!target || b === 0) return { text: '', endgame: false };
+    var k = scale || 1;
+    var pv = Math.max(MIN_BID, Math.round((p.v || 0) * k));
+    var tv = Math.max(MIN_BID, Math.round((target.v || 0) * k));
     var dart = dartLine(budget), tier = '$' + MIN_BID + '\u2013$' + dart;
-    var lo = Math.min(p.v || 0, target.v || 0), hi = Math.max(p.v || 0, target.v || 0);
+    var lo = Math.min(pv, tv), hi = Math.max(pv, tv);
     if (lo <= dart) {
       return {
         endgame: true,
         text: hi <= dart ? 'a shuffle inside the ' + tier + ' endgame'
-            : ((p.v || 0) <= dart ? 'a climb out of ' : 'a slide into ') + tier + ' endgame territory'
+            : (pv <= dart ? 'a climb out of ' : 'a slide into ') + tier + ' endgame territory'
       };
     }
     // A range that starts at nothing is not a range: the low end of the
@@ -495,27 +504,42 @@
     var s = String(effect || '').match(/([+-]\d+(?:\.\d+)?)\s*%/);
     return s ? [parseFloat(s[1]) / 100, parseFloat(s[1]) / 100] : null;
   }
-  // The same sentence for a reader with NO saved league. They are the readers
-  // least able to translate a bare percentage themselves, so they get the most
-  // of it: what the call is worth in dollars on the site's own board, what share
-  // of a manager's budget that is, AND the draft-slot move — because with no
-  // league saved there is no way to know which of the two they came for, and
-  // guessing one would be worse than printing both.
+  // The same sentence off the SITE's board — for a reader with no saved league,
+  // and for one who saved a league but has never built a board. They are the
+  // readers least able to translate a bare percentage themselves, so they get
+  // the most of it: what the call is worth in dollars, what share of a manager's
+  // budget that is, AND the draft-slot move — because there is no way to know
+  // which of the two they came for, and guessing one would be worse than
+  // printing both.
   //
-  // The percentage is the durable half: a dollar figure is only true at $200,
-  // but "4% of a budget" is true in every auction league there is, whatever the
-  // budget. It is computed from the raw share, not from the rounded dollars, so
-  // the two never disagree at the rounding boundary.
+  // Whose dollars those are is the whole question here. The board's own prices
+  // are the desk's, and they stay that way — boardRatio() reads the same rows.
+  // But a reader who HAS saved a league told us their budget and their league
+  // size, and that is the entire content of an auction price: the sentence is
+  // restated into their money by leagueScale() and names their league, exactly
+  // as the lead's prices are. Quoting them $200 dollars because their board is
+  // missing would be answering a question they already answered.
   //
-  // Every number here is the SITE's, and the copy says so. Nothing in this
-  // branch reads the reader's own board, because there isn't one.
+  // What it does NOT claim is their scoring. Without a saved board there are no
+  // stat lines to re-score, so the RANKS below are the site's, at the site's
+  // scoring — which is why the copy names the league (teams and budget) and
+  // never the rules. A reader with a board gets the real thing, in tailor().
+  //
+  // The percentage is the durable half: a dollar figure is only true at one
+  // budget, but "4% of a budget" is true in every auction league there is. It is
+  // computed from the raw share, not from the rounded dollars, so the two never
+  // disagree at the rounding boundary.
   function tailorDefault(r, name, position) {
     var b = defaultBoard();
     if (!b.players.length) return '';
     var p = playerInText(name, position, b) || findPlayer(name, position, b);
     if (!p) return '';
-    var v = p.v || 0;
-    if (v < 1) return '';
+    if ((p.v || 0) < 1) return '';
+    // The reader's money when they have said what it is, the desk's when they
+    // have not. k is 1 in the second case, so nothing here moves for them.
+    var k = leagueScale();
+    var teams = cfg ? cfg.teams : DEFAULT_TEAMS, budget = cfg ? cfg.budget : DEFAULT_BUDGET;
+    var v = deskPrice(p.v);
     var lo = Math.min(r[0], r[1]), hi = Math.max(r[0], r[1]);
     var up = (lo + hi) / 2 > 0;
     var d1 = Math.max(1, Math.round(Math.abs(lo) * v)), d2 = Math.max(1, Math.round(Math.abs(hi) * v));
@@ -525,7 +549,7 @@
     // Share of ONE manager's budget, which is what a reader spends. Sub-1%
     // rounds to "under 1%" rather than to a bare 0, which would read as "no
     // effect" when the dollars beside it plainly say otherwise.
-    var q1 = Math.abs(lo) * v / DEFAULT_BUDGET * 100, q2 = Math.abs(hi) * v / DEFAULT_BUDGET * 100;
+    var q1 = Math.abs(lo) * v / budget * 100, q2 = Math.abs(hi) * v / budget * 100;
     var qa = Math.round(Math.min(q1, q2)), qb = Math.round(Math.max(q1, q2));
     qa = Math.max(1, qa);
     var pct = qb < 1 ? 'under 1% of a budget'
@@ -535,9 +559,10 @@
     var m1 = slotMove(p, lo, b), m2 = slotMove(p, hi, b);
     var sa = Math.min(m1.slots, m2.slots), sb = Math.max(m1.slots, m2.slots);
     var far = m2.slots >= m1.slots ? m2.target : m1.target;
-    var slots = slotPhrase(p, far, sa, sb, DEFAULT_TEAMS, DEFAULT_BUDGET, 'draft slot').text ||
+    var slots = slotPhrase(p, far, sa, sb, teams, budget, 'draft slot', k).text ||
       'less than one draft slot';
-    return p.n + ' prices at $' + v + ' in a ' + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET + ' league \u2014 ' +
+    var where = cfg ? label('auction') : 'a ' + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET + ' league';
+    return p.n + ' prices at $' + v + ' in ' + where + ' \u2014 ' +
       (up ? 'worth about ' : 'trim about ') + rng + ', ' + pct + ', or ' + slots + '.';
   }
 
@@ -578,9 +603,12 @@
   }
 
   // Which of the two lines tailor() just handed back, so a page can label it
-  // truthfully. "Your league" on the site's own default numbers would be the
-  // one lie this whole file exists to avoid.
-  function tailorLabel() { return (cfg && snap) ? 'Your league' : 'Default league'; }
+  // truthfully. "Your league" over the desk's own dollars would be the one lie
+  // this whole file exists to avoid — but a reader with a saved league is no
+  // longer shown those: with or without a board of their own, the dollars in the
+  // line are at their budget and the copy names their league. Without a league
+  // there is nothing to call theirs, and the label says so.
+  function tailorLabel() { return cfg ? 'Your league' : 'Default league'; }
 
 
   // ── the desk's dollars, in the reader's league ────────────────────────────
@@ -613,6 +641,16 @@
   // The money in the room, relative to the room the desk writes for.
   function leagueScale() {
     return cfg ? (cfg.teams * cfg.budget) / (DEFAULT_TEAMS * DEFAULT_BUDGET) : 1;
+  }
+  // One price off the SITE's board, in the reader's money — the going rate that
+  // board quotes, at the budget they actually spend. The board itself is left at
+  // the desk's prices because boardRatio() reads it; this is the one place the
+  // conversion lives, so a tile and a sentence quoting the same row cannot
+  // disagree. Unchanged for a reader with no league, who is quoted the desk's.
+  function deskPrice(v) {
+    var n = num(v, 0);
+    if (n < 1) return 0;
+    return Math.max(MIN_BID, Math.round(n * leagueScale()));
   }
   function reEscape(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   // Every place a story's named players are mentioned, with the ratio each one's
@@ -728,19 +766,24 @@
   // whose league the number is for — which is the complaint that started this:
   // the front page was quoting $26 to a reader whose own sheet says $39.
   //
-  // `restated` is whether repriceCopy() actually moved the numbers, because
-  // "priced for your league" over untouched default figures would be the same
-  // lie in the other direction.
+  // A reader who HAS saved a league is only ever told their own numbers. The
+  // note used to append "the desk writes at 12 teams, $200, full PPR", and that
+  // second league is what made the card unreadable: a reader on a $120 budget
+  // was handed one set of prices and, in the same breath, a budget those prices
+  // are not in, with nothing on screen priced at it. The desk's league is the
+  // machinery, not the reading — so it is named only to the reader who is
+  // actually being shown the desk's dollars, which is the reader with no league.
+  //
+  // `restated` is whether repriceCopy() actually moved the numbers. It only
+  // chooses the verb: "restated" is a claim that something happened, and over
+  // untouched figures it would be a lie in the other direction.
   function pricingNote(restated) {
     if (!cfg) {
       return 'These are ' + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET
         + ' full-PPR dollars. Set up your league and every price here is restated in your money.';
     }
-    if (restated) {
-      return 'Restated for ' + label('auction') + (snap ? ', ' + scoringLabel() : '')
-        + '. The desk writes at ' + DEFAULT_TEAMS + ' teams, $' + DEFAULT_BUDGET + ', full PPR.';
-    }
-    return 'Your ' + cfg.teams + '-team, $' + cfg.budget + ' league prices this the same way the desk does.';
+    return (restated ? 'Restated for ' : 'Priced for ')
+      + label('auction') + (snap ? ', ' + scoringLabel() : '') + '.';
   }
 
   // One stylesheet for the "Your league:" line, injected rather than copied into
@@ -859,6 +902,7 @@
     repriceCopy: repriceCopy,
     pricingNote: pricingNote,
     leagueScale: leagueScale,
+    deskPrice: deskPrice,
     defaultBoard: function () { return defaultBoard().players; },
     readingFormat: readingFormat,
     setReadingFormat: setReadingFormat,

@@ -18,9 +18,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as board from './build-default-board.mjs';
+import { BLOCKS, cut } from './preview-copy.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
+// The "n% of a budget" reading out of a tailored line, for comparing two
+// leagues' slices of the same call.
+const pctOf = (line) => (String(line).match(/(\d+(?:\u2013\d+)?%|under 1%) of a budget/) || [])[1] || '';
 const ok = (name, cond, extra = '') => {
   if (cond) { pass++; console.log(`  ok   ${name}`); }
   else { fail++; console.log(`  FAIL ${name}${extra ? ' — ' + extra : ''}`); }
@@ -379,6 +383,49 @@ console.log('\nthe default board');
   }).L;
   ok('a saved board wins over the site\u2019s', /is \$99 on your sheet/.test(own.tailor('+10% versus price', someone.n, 'WR')));
   ok('and is labelled as theirs', own.tailorLabel() === 'Your league');
+
+  // A league saved but no board built — the app writes both, so this is the
+  // reader who set their league up and never opened the sheet. The site's board
+  // is all there is to rank him on, but the reader told us their budget, and a
+  // price is nothing but a budget: they are quoted in their own money, and never
+  // handed the desk's $200 they never asked about.
+  const halfPot = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 120, format: 'auction' } })
+  }).L;
+  const short = halfPot.tailor('+10% to +20% versus price', someone.n, 'WR');
+  ok('a reader with a league but no board is priced in their money',
+     new RegExp('prices at \\$' + Math.round(someone.v * 0.6) + ' in your 12-team, \\$120 auction').test(short), short);
+  ok('and is never shown the desk\u2019s league instead of their own',
+     !/\$200/.test(short) && !/12-team, \$200/.test(short), short);
+  ok('and the line is labelled as theirs, because it is',
+     halfPot.tailorLabel() === 'Your league');
+
+  // The share of a budget is a share of THEIR budget, against the prices THEIR
+  // room pays. Ten managers on $300 put less money in the room per wallet than
+  // twelve on $200, so the same call is a smaller slice of what they hold — and
+  // printing the desk's slice beside their dollars is the two-leagues confusion
+  // in one sentence.
+  const deep = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 10, budget: 300, format: 'auction' } })
+  }).L;
+  const rich = deep.tailor('+10% to +20% versus price', someone.n, 'WR');
+  ok('a deeper budget prices the same call higher',
+     new RegExp('prices at \\$' + Math.round(someone.v * (10 * 300) / (12 * 200)) +
+                ' in your 10-team, \\$300 auction').test(rich), rich);
+  ok('and the budget share is read against their budget, not the desk\u2019s',
+     pctOf(rich) !== '' && pctOf(rich) !== pctOf(line), pctOf(rich) + ' | ' + pctOf(line));
+
+  // The endgame tier is a share of a budget too. Comparing $200 board prices
+  // against a $120 dart line would call half the mid-round board a dart throw.
+  const cheap = board.filter(p => p.pos === 'WR').sort((a, b) => b.v - a.v)[14];
+  ok('the endgame line is drawn in the reader\u2019s money as well',
+     /endgame/.test(load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 12, format: 'auction' } }) })
+       .L.tailor('+10% to +20% versus price', cheap.n, 'WR')) === true);
+
+  // And the reader who saved nothing is still told, in as many words, that these
+  // are not their numbers.
+  ok('a reader with no league still gets the desk\u2019s league, named as the desk\u2019s',
+     /in a 12-team, \$200 league/.test(line) && L.tailorLabel() === 'Default league');
 }
 
 // ── 6d. a draft slot is a pick, not a points gap ───────────────────────────
@@ -690,12 +737,17 @@ console.log('\nthe desk\u2019s dollars in the reader\u2019s league');
   // being shown a "restated" badge over numbers nothing happened to.
   const same = load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }) }).L;
   ok('a reader on the desk\u2019s own league has nothing restated', same.repriceCopy('bid $32', []) === null);
-  ok('and is told that rather than left guessing', /the same way the desk does/.test(same.pricingNote(false)));
+  ok('and is still told the prices are for their league, not that nothing happened',
+     /Priced for your 12-team, \$200 auction/.test(same.pricingNote(false)), same.pricingNote(false));
 
   ok('the note names the reader\u2019s league and their scoring', /your 10-team, \$300 auction/.test(L.pricingNote(true))
      && /PPR|standard/.test(L.pricingNote(true)), L.pricingNote(true));
-  ok('the note names the desk\u2019s league too, so the reader can tell them apart',
-     /12 teams, \$200, full PPR/.test(L.pricingNote(true)));
+  // The whole point of restating is that the reader never has to hold two
+  // leagues in their head. A reader with settings hears about theirs only.
+  ok('and never mentions the desk\u2019s league or its budget beside theirs',
+     !/desk/i.test(L.pricingNote(true)) && !/\$200/.test(L.pricingNote(true))
+     && !/desk/i.test(L.pricingNote(false)) && !/\$200/.test(L.pricingNote(false)),
+     L.pricingNote(true) + ' | ' + L.pricingNote(false));
   ok('a reader with no league is told whose dollars these are, and how to change it',
      /12-team, \$200 full-PPR/.test(load({}).L.pricingNote(false))
      && /Set up your league/.test(load({}).L.pricingNote(false)));
@@ -715,6 +767,26 @@ console.log('\nthe front page and /lead restate before they paint');
   ok('/lead loads the library at all', page.includes('src="/it-league.js"'));
   ok('/lead restates the article body, not just the headline', /rp\(s\.body/.test(page));
   ok('/lead says whose league the numbers are', /pricingNote\(/.test(page));
+}
+
+// ── 13. the preview tool still finds the copy it previews ──────────────────
+// tools/preview-copy.mjs renders these surfaces by lifting the pages' OWN
+// blocks, located by anchor text. An edit that moves an anchor does not break
+// the site — it breaks the preview, silently, right up until someone trusts a
+// half-rendered card. cut() throws on a missing anchor; this is what makes
+// that throw happen in CI rather than in front of a person reading copy.
+console.log('\nthe copy preview can still find every block it lifts');
+{
+  for (const [name, block] of Object.entries(BLOCKS)) {
+    let found = '';
+    try { found = cut(fs.readFileSync(path.join(ROOT, block.file), 'utf8'), block); }
+    catch (e) { found = ''; ok(`the ${name} block is still in ${block.file}`, false, e.message); }
+    if (found) {
+      ok(`the ${name} block is still in ${block.file}`, true);
+      ok(`and it is a block, not a stray line`, found.split('\n').length > 3,
+         `${found.split('\n').length} lines`);
+    }
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

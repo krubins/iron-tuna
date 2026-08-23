@@ -137,6 +137,24 @@ ok('"Worth" is reached only on the reader\'s own board',
 ok('the card explains the difference in words',
    /what the room is likely to pay/.test(card) && /replacement starter/.test(card));
 
+// ── whose dollars the going rate is in ─────────────────────────────────────
+// The default board is priced at the desk's league. A reader who saved one told
+// us their budget, and a going rate is nothing but a budget — so the tile is
+// converted by the library's own deskPrice(), the same conversion the tailored
+// sentence under it uses, and it names the room those dollars are for instead
+// of the desk's $200.
+ok('the going rate is quoted through the library\'s conversion, not raw',
+   /numEl\('Going rate'[\s\S]{0,200}deskPrice\(r\.v\)/.test(card));
+ok('the tile names the reader\'s own room when they have one',
+   card.includes("L.config.teams + ' teams, $' + L.config.budget"));
+ok('and falls back to the desk\'s room for a reader with no league',
+   card.includes("'12 teams, $200'"));
+// Points are the shared projection at the site's rules. Only the reader's own
+// board carries the stat lines to re-score them, so only that board's line may
+// claim their scoring.
+ok('their scoring is claimed only when their own board answered',
+   /var scoring = found\.mine \?/.test(card));
+
 // ── the route ──────────────────────────────────────────────────────────────
 console.log('\n/player and /player/<slug> reach the card');
 ok('the worker rewrites the slug route onto the shell',
