@@ -875,7 +875,7 @@ img{max-width:100%}
   </div>
 
   <div class="sec-head" id="camp"><h2>Training Camp &amp; Preseason</h2></div>
-  <p class="camp-note" id="campNote">Verified, auction-relevant signals from camps and preseason games. This desk updates as news breaks — <b>latest report: August 22, 2026</b>.</p>
+  <p class="camp-note" id="campNote">Verified, auction-relevant signals from camps and preseason games. These reports update as news breaks — <b>latest report: August 22, 2026</b>.</p>
   <div class="week-strip" id="weekStrip"></div>
   <div class="camp-grid">
     <div class="camp-feat" id="campFeat"><span><span class="badge badge-pos">Latest report</span></span><h3><a href="/auction-watch-2026-08-22">Auction Watch: August 22, 2026</a></h3><p>Verified, auction-relevant player signals from August 22: Jayden Higgins' season-ending ACL tear and who it helps in Houston, Tre Tucker's clear WR1 role in Las Vegas, Trevor Etienne's growing passing-down role behind Jonathon Brooks, Erick All stepping into Cincinnati's tight end job, and Tyler Warren's minor groin injury.</p><a class="lead-link" href="/auction-watch-2026-08-22">Read the report &rarr;</a></div>
@@ -976,7 +976,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       mgr: 'Draft Room',
       posSub: 'Every story is a stat-backed call from the 2026 research set, read as a snake draft — each one measured in rounds and picks.',
       camp: 'Verified, draft-relevant signals from camps and preseason games.',
-      pick: 'One story a day, each one arguing a single idea \u2014 scarcity, scoring settings, tier cliffs \u2014 with the projection numbers that prove it and the player it tells you to draft. The entries are written from the auction desk; the argument travels, the dollars do not.',
+      pick: 'One story a day, each one arguing a single idea \u2014 scarcity, scoring settings, tier cliffs \u2014 with the projection numbers that prove it and the player it tells you to draft. The entries are written for one league, the site’s default; the argument travels, the dollars do not.',
       allocHead: 'Draft Strategy',
       allocSub: 'How to use every pick: slot shape, tier cliffs, and the rounds that decide your roster.',
       alloc: [
@@ -1476,10 +1476,8 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     var note = L ? L.pricingNote(!!(rt || rd), s.createdAt) : '';
     if (note) {
       if (L.ensureStyle) L.ensureStyle();
-      var stale = L.staleModel && L.staleModel(s.createdAt);
-      yours.innerHTML = '<b>' + esc(L.noteLabel ? L.noteLabel(s.createdAt)
-                                                : (L.has ? 'Your league' : 'Default league')) + ':</b> ' + esc(note)
-        + ((L.has || stale) ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
+      yours.innerHTML = '<b>' + (L.has ? 'Your league' : 'Default league') + ':</b> ' + esc(note)
+        + (L.has ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
     } else { yours.innerHTML = ''; }
     yours.hidden = !note;
     renderArt(s);
@@ -2161,7 +2159,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     var f = REPORTS[0];
     var campNoteEl = document.getElementById('campNote');
     function paintCampNote(){
-      campNoteEl.innerHTML = ED[edKey].camp + ' This desk updates as news breaks — <b>latest report: ' + fmtDate(f.date) + '</b>.';
+      campNoteEl.innerHTML = ED[edKey].camp + ' These reports update as news breaks — <b>latest report: ' + fmtDate(f.date) + '</b>.';
     }
     paintCampNote();
     edPainters.push(paintCampNote);

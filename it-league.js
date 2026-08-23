@@ -610,35 +610,33 @@
   // there is nothing to call theirs, and the label says so.
   function tailorLabel() { return cfg ? 'Your league' : 'Default league'; }
 
-  // ── which model the desk was writing at ───────────────────────────────────
+  // ── stories written before the scoring changed ────────────────────────────
   // repriceCopy converts a price between LEAGUES. It cannot convert one between
-  // MODELS, and on 2026-08-23 the site changed model under the desk's feet:
-  // receptions went from half a point to a full one. This board's dollars and
-  // the dollars in every story written before that are two different
-  // currencies, and no ratio of one board to another turns one into the other.
+  // MODELS, and on 2026-08-23 the site changed model under the story writer's
+  // feet: receptions went from half a point to a full one.
   //
   // Story 29 is what that looked like on the front page. It priced Zay Flowers
   // at $26 on its own half-PPR board and argued for $32. THIS board, at full
-  // PPR, prices him at $20, and a reader's board at $21 — so repriceCopy
+  // PPR, prices him at $20 and a reader's board at $21, so repriceCopy
   // multiplied by 21/20 and printed "bid $34, not the sheet's $27" above a
-  // cheat sheet that says $21. The ratio was applied correctly. The input was
+  // cheat sheet reading $21. The ratio was applied correctly. The input was
   // never on this board's scale, and nothing here checked that it was.
   //
-  // So a story from before the change is not restated at all. It ships in the
-  // desk's own words and figures and the note says which league AND which
-  // scoring those dollars are — the same answer this library already gives a
-  // reader with no league of their own: quote the desk, name the desk, invent
-  // nothing. The alternative is worse than doing nothing, because a number
-  // nudged 5% by an unrelated board reads as the reader's own and is not.
+  // The real fix is upstream and is being made there: a story's prices are
+  // computed with the SAME market curve this file prices the cheat sheet with,
+  // so a story's number for a player and the sheet's number for him track each
+  // other, and this ratio has two comparable sides to work with.
+  //
+  // Every story is still restated into the reader's league, because a price in
+  // a league nobody plays helps nobody. What this flag does is add one sentence
+  // to the note over the older ones: their scoring is not this board's, so they
+  // can disagree with the reader's cheat sheet for a reason the reader can now
+  // see rather than one they have to guess at.
   var MODEL_EPOCH = Date.UTC(2026, 7, 23);
   function staleModel(at) {
     var t = num(at, 0);
     return t > 0 && t < MODEL_EPOCH;
   }
-  // What to call the dollars a reader is looking at. A story from the old model
-  // is the desk's however much league the reader has saved, so it may not be
-  // labelled "Your league" over figures that are nothing of the kind.
-  function noteLabel(at) { return staleModel(at) ? 'The desk\u2019s league' : tailorLabel(); }
 
 
   // ── the desk's dollars, in the reader's league ────────────────────────────
@@ -806,8 +804,6 @@
   // the same way the desk already did.
   function repriceCopy(text, names, at) {
     if (!cfg || !text) return null;
-    // Written on a model this board cannot convert from. See staleModel().
-    if (staleModel(at)) return null;
     var src = String(text);
     if (!/\$\s?\d/.test(src)) return null;
     var anchors = mentions(src, names);
@@ -891,19 +887,23 @@
   // chooses the verb: "restated" is a claim that something happened, and over
   // untouched figures it would be a lie in the other direction.
   function pricingNote(restated, at) {
-    // Nothing was restated and nothing could have been: say which scoring these
-    // dollars are, not only which league, because that is the half that makes
-    // them disagree with the reader's own sheet.
+    // A reader with no league of their own is shown the site's default league,
+    // and it is named in full rather than called "the default": a reader cannot
+    // check a price against a league nobody has described to them.
+    var note = !cfg
+      ? 'These prices are for the site\u2019s default league: ' + DEFAULT_TEAMS + ' teams, $'
+        + DEFAULT_BUDGET + ', full PPR. Set up your own and every price here is restated in your money.'
+      : (restated ? 'Restated for ' : 'Priced for ')
+        + label('auction') + (snap ? ', ' + scoringLabel() : '') + '.';
+    // An older story was written when this site scored a catch at half a point.
+    // Its prices are still restated into the reader's league, but they came off
+    // a differently scored board, so they can sit above a cheat sheet that
+    // disagrees with them. Say that plainly instead of leaving them to wonder.
     if (staleModel(at)) {
-      return 'Written at half PPR, before the site moved to full PPR on 23 August. These stay the desk\u2019s own '
-        + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET + ' dollars: they do not convert to another league.';
+      note += ' This story was written before the site changed its scoring on 23 August,'
+        + ' so its prices can differ from your cheat sheet.';
     }
-    if (!cfg) {
-      return 'These are ' + DEFAULT_TEAMS + '-team, $' + DEFAULT_BUDGET
-        + ' full-PPR dollars. Set up your league and every price here is restated in your money.';
-    }
-    return (restated ? 'Restated for ' : 'Priced for ')
-      + label('auction') + (snap ? ', ' + scoringLabel() : '') + '.';
+    return note;
   }
 
   // One stylesheet for the "Your league:" line, injected rather than copied into
@@ -1019,7 +1019,6 @@
     pctRange: pctRange,
     tailor: tailor,
     tailorLabel: tailorLabel,
-    noteLabel: noteLabel,
     staleModel: staleModel,
     repriceCopy: repriceCopy,
     pricingNote: pricingNote,

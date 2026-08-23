@@ -250,7 +250,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
   function fail(msg){
     document.getElementById('title').textContent = msg;
     document.getElementById('dek').textContent =
-      'The desk publishes a new one every three hours. The front page carries the rest of the board in the meantime.';
+      'Iron Tuna publishes a new one every three hours. The front page carries the rest of the board in the meantime.';
   }
   fetch('/api/lead-story/body' + (slug ? '?slug=' + encodeURIComponent(slug) : ''))
     .then(function(r){ return r.json(); })
@@ -285,10 +285,8 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
       var note = L ? L.pricingNote(restated, s.createdAt) : '';
       if (note) {
         if (L.ensureStyle) L.ensureStyle();
-        var stale = L.staleModel && L.staleModel(s.createdAt);
-        yours.innerHTML = '<b>' + esc(L.noteLabel ? L.noteLabel(s.createdAt)
-                                                  : (L.has ? 'Your league' : 'Default league')) + ':</b> ' + esc(note)
-          + ((L.has || stale) ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
+        yours.innerHTML = '<b>' + (L.has ? 'Your league' : 'Default league') + ':</b> ' + esc(note)
+          + (L.has ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
         yours.hidden = false;
       }
       document.getElementById('cat').textContent = s.label || 'Insight';
@@ -354,7 +352,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
         document.getElementById('sources').innerHTML = h + '</ol></div></details>';
       }
     })
-    .catch(function(){ fail('The insight desk is unreachable right now.'); });
+    .catch(function(){ fail('Iron Tuna\u2019s insights are unreachable right now.'); });
 
   fetch('/api/lead-story').then(function(r){ return r.json(); }).then(function(d){
     var all = [];

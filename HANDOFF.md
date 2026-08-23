@@ -2959,189 +2959,68 @@ working as designed.
 Story 29 (`zay-flowers-wr9-odds-2026-08-22-16`) was written at **half PPR** —
 its own method line says `rec*0.5` — and priced by **value over replacement**
 with the odds overlaid. It put Flowers at $26 on the consensus baseline and
-argued for $32. This board is a different animal on both counts: `it-league.js`
-prices at **full PPR** off a **fixed rank curve** with no odds, which puts
-Flowers at $20, WR14. A reader's own board said $21. So `boardRatio` came out at
-21/20 and `repriceCopy` multiplied the desk's half-PPR figures by 1.05, printing
-**$34 and $27 above a cheat sheet that reads $21**, under a heading that said
-"Your league".
+argued for $32. `it-league.js` is a different animal on both counts: it prices
+at **full PPR** off a **fixed rank curve** with no odds, which puts Flowers at
+$20, WR14. A reader's own board said $21. So `boardRatio` came out at 21/20 and
+`repriceCopy` multiplied half-PPR figures by a full-PPR ratio, printing **$34
+and $27 above a cheat sheet that reads $21**, under a heading saying "Your
+league".
 
 Nothing misfired. The ratio was computed correctly and applied to the right
 player. The defect is one assumption nobody had written down:
 
-> **`repriceCopy` assumed a dollar written by the desk was a dollar on this
+> **`repriceCopy` assumed a dollar written by a story was a dollar on this
 > board.** `mine / site` converts a price between LEAGUES, inside one model. It
 > cannot convert one between MODELS, and it has no way to notice it is being
 > asked to.
 
-Two ways that assumption is false, and they are different sizes:
+**The fix is upstream, and it is the one the site's own rules already demanded.**
+There is supposed to be ONE valuation here: the player card carries none of its
+own, and `tools/test-player-card.mjs` fails the build if it grows one. The
+lead-story run was a second valuation that lived outside the browser, where that
+test could not see it. So the run now prices the way the cheat sheet prices:
+rank by points within position, read the market curve at that slot, scale by
+`(teams x budget) / 1440`, $1 floor. `tools/lead-story-routine-prompt.md` carries
+the recipe, tells the run to read `CURVE`/`CURVE_BUDGET` out of the repo rather
+than from memory, and makes it check two printed consensus prices against the
+cheat sheet before it inserts. Value over replacement is gone from the prompt,
+along with the priced-pool cutoff: the curve's own length is the pool, and a
+rank past its last slot is a $1 player. **The Routine holds the live copy — this
+change is not in effect until the same text is pushed to it with
+`update_trigger`.**
 
-- **Scoring drift, which is fixable and now fixed.** The site moved to full PPR
-  between story 31 (2026-08-22 22:13) and story 32 (2026-08-23 01:13). Every row
-  before that carries half-PPR dollars. `staleModel(createdAt)` refuses to
-  restate them at all: they ship in the desk's own figures, `noteLabel()` calls
-  them "The desk's league" rather than the reader's, and `pricingNote()` names
-  the **scoring** as well as the league, because scoring is the half that makes
-  them disagree with the reader's sheet. All four call sites — the front-page
-  lead, its "Recent insights" list, the `/lead` article and its archive — now
-  pass the story's own `createdAt`. Without that date the guard is dead code, so
-  block 12 asserts each one passes it.
-- **Model drift, which is still open.** Even at matched scoring the desk prices
-  by value over replacement with the odds overlaid, and this board prices off
-  the rank curve without them. Story 32 is full PPR and current, and it still
-  quotes Cam Skattebo's consensus price at $32 where this board says $13. The
-  site's own rule is **one valuation** — the player card carries none of its own
-  and `tools/test-player-card.mjs` fails the build if it grows one — and the
-  desk is a second valuation that lives outside the browser where that test
-  cannot see it. Deciding what to do about that is a product call, not a
-  refactor: either the desk prices off the shipped board, or the board ships the
-  desk's prices, or a story's dollars are labelled as a different valuation
-  wherever they are printed.
+Downstream, three rules, all of them decided by the site's owner after the
+report:
 
-The general lesson, which is the one worth carrying: **a conversion needs to
-know what it is converting from.** `repriceCopy` knew the reader's league and
-assumed the rest. `MODEL_EPOCH` is a date constant standing in for a fact the
-row should carry itself; if the desk ever changes model again, the durable fix
-is a `model` column on `lead_story` written by the run, not a second constant.
+- **Every story is restated into the reader's league**, old model or new. A
+  price in a league nobody plays helps nobody, so refusing to convert is not an
+  option: it leaves the reader doing the arithmetic the page exists to do.
+- **A reader with no league is shown the site's default, named in full** —
+  "the site's default league: 12 teams, $200, full PPR" — because "the default"
+  is not a league anybody can check a price against.
+- **Nothing a reader sees calls it "the desk."** It was in-house shorthand for
+  the scheduled run, it meant nothing to anybody outside this repo, and it was
+  on the front page, the `/lead` error state, the camp note and the pricing
+  note. All four now say what they mean.
 
-`tools/test-it-league.mjs` block 11c pins the refusal, the boundary date, the
-label, the note, and that a story with no date attached is still treated as
-current so nothing that used to be restated silently stopped being.
+`staleModel(createdAt)` survives, but only to LABEL: a story from before the
+scoring change is restated like any other and its note adds one plain sentence
+saying it was written before the site changed its scoring, so its prices can
+differ from the reader's cheat sheet. All four call sites — the front-page lead,
+its "Recent insights" list, the `/lead` article and its archive — pass the
+story's own `createdAt`, and block 12 asserts each one does, because without the
+date the flag is dead code and every story looks current.
 
-**What it does not do:** ranks. "WR12 to WR9" is left alone, because reproducing
-those two ranks would mean reproducing the desk's own before-and-after
-projections, which the page does not have. A rank is the one number on the card
-that is still the desk's league.
+**29 of the 30 verified rows predate the model change** and cannot be made to
+track the cheat sheet by any amount of arithmetic: their dollars came off a
+board that no longer exists. They are labelled, not corrected. Retiring them
+(`UPDATE lead_story SET verified = 0 WHERE created_at < 1787443200000`) is the
+only thing that makes them stop quoting prices the sheet disagrees with, and it
+is a data decision rather than a code one.
 
-**Nothing is invented.** With no saved league `repriceCopy` returns null and the
-copy ships exactly as written — and `pricingNote()` says so, with the way out:
-"These are 12-team, $200 full-PPR dollars. Set up your league…". A reader whose
-league happens to match the desk's is told *that*, rather than shown a "restated"
-badge over numbers nothing happened to. This is the same rule §9f is built on:
-"Your league" over the site's own defaults is the one lie the whole library
-exists to avoid.
-
-Wired into `paintGeneratedLead()` (front page lead, dek and the Recent insights
-list) and into `lead.html` (headline, dek, **the article body including its bid
-tables**, and the archive list). `/lead` had never loaded `it-league.js` at all;
-it does now.
-
-`names` is new in the `/api/lead-story` payload: the unslugged player names, next
-to the slugs the photo cast already used. A slug finds a photograph; a name finds
-a board row, and the two are not interchangeable.
-
-### 2. `leadClock()`: UTC never reaches a reader
-
-In `_worker.js`, applied in `leadRow()` to the title and dek and in the body
-route to `body_html`, `method` and each source's detail. One place, so the front
-page, `/lead`, the analyst column and `/admin` cannot disagree about what time
-something happened.
-
-- Converts `11:00 UTC`, `21:58 UTC`, `3:30 p.m. UTC`, `11 UTC` and the GMT
-  spellings to Eastern, labelled ET.
-- **DST is computed, not assumed.** 11:00 UTC is 7:00 AM ET in season and 6:00 AM
-  ET in winter. `Intl` with `America/New_York` does the work; `etOffsetHours()` is
-  a hand-rolled US-rule fallback for a runtime with no time-zone data, and
-  `tools/test-lead-story.mjs` checks it against `Intl` on all 365 days of the
-  year, because a wrong hour here would be worse than the UTC it replaced.
-- The story's own `created_at` anchors the conversion, since nothing in the
-  sentence dates it.
-- An overnight time can land on the previous Eastern day (01:00 UTC is 9:00 PM
-  the evening before). Those are marked "(the previous day)" rather than shifted
-  silently.
-
-ET rather than the reader's own zone, unlike the stamp under the headline: the
-payload is memoised for two minutes and served to everybody, so it gets one zone,
-and ET is the one the sport runs on.
-
-**This is a filter over stored copy, not the fix.** The fix is the desk not
-writing UTC, which is now in the prompt. The filter is what repairs the rows
-already in the table, and the net under a run that reverts to habit.
-
-### 3. The Routine's prompt is in the repo now
-
-**`tools/lead-story-routine-prompt.md`** is the canonical copy of the prompt run
-by `trig_011LYewcPUQikF8izFsN2LAr`. §17 records why that matters: the prompt is
-edited by several sessions independently, it was once pinned to one desk and
-restored 73 seconds later, and nothing showed what had changed or when. Edit the
-file, push the same text to the Routine with `update_trigger`, and the diff is in
-git either way. **The Routine still holds the live copy** — this file is not read
-by anything at runtime, so the two can drift if somebody edits one and not the
-other.
-
-What changed in it, 2026-08-22:
-
-- **The headline section was rewritten from four checks to eight.** A headline
-  must now carry a verb the reader can perform in the room (bid, cap, pass,
-  fade), a named player as the subject rather than a team or an analyst, a number
-  that is a price or a pick, and words a stranger reads at full speed — no "the
-  sheet", no "the book", no unattributed person's name. The length gate came
-  down from 110 characters to **90**: every over-long title was the same failure,
-  a second thought bolted onto a first. The self-check query asserts `tlen < 90`.
-- **"Clock times are Eastern."** Never print UTC or GMT in title, dek, body,
-  method or sources. Slugs keep the UTC hour; they are not prose.
-- **"Say whose league the dollars are."** The desk is told the site restates its
-  figures per reader, so it must keep each dollar next to the player it belongs
-  to, state the model league once, and never write "your league" — the page adds
-  that line itself, and only it knows whether the claim is true.
-- **The model moved from half PPR to full PPR.** This is a real change to every
-  future number. The desk was pricing at half PPR while `DEFAULT_LEAGUE_CONFIG`
-  and `it-league.js` both ship full PPR, so "the sheet says $26" was a sheet
-  nobody could open. Stories written before 2026-08-22 are not directly
-  comparable for pass-catching backs and slot receivers.
-
-#### Plain English, and the words the desk may not use (2026-08-23)
-
-The complaint that produced this was one line: *"People won't know what we mean
-by 'the book.'"* It was made about the front page, where the lead card had gone
-out reading **"The book raises the running back floor 9% and guts the cheap
-tier"** over a dek that opened *"Rebuild the auction board on today's odds
-refresh and replacement-level running back jumps from 126.20 half-PPR points to
-137.66, a 9.1% lift that strips 23.5% off the RB25 to RB42 tier..."*. Forty-five
-words, five figures, and four pieces of in-house shorthand in the first
-sentence, on the site's front door.
-
-The headline rules above had already banned "the book" **in the headline**. They
-had not banned it anywhere else, which is how it survived in the dek and right
-through the article. So the prompt now carries two things the headline section
-cannot do on its own:
-
-- **"WRITE IT FOR A TENTH GRADER."** A stated reading level, with the test
-  written as a person rather than a formula: a smart sixteen-year-old who has
-  played one season reads the line once, at full speed, on a phone, and knows
-  what to do. Under it, the four mechanical rules that were already learned the
-  hard way — one idea per sentence, no sentence over 25 words, at most three
-  figures in a sentence (the player-and-price list excepted), never open on the
-  run's own process — plus the one that fixes the 126.20-to-137.66 sentence: **a
-  number only helps next to the thing it changes.**
-- **A banned-words table.** `the book`, `the sheet`, `the floor`, `replacement
-  level`, a bare `tier`, `lift`, `strips`, `guts`, `VORP`, `fade`, `the room`,
-  `chalk`, `leverage`, `spike week`, each with the plain phrase that replaces it.
-  It governs **the title, the dek, `body_html`, `method` and any `calls.why`** —
-  the scope is the point, because the earlier rule reached only the title. The
-  dek gets its own five-point checklist run on the exact string before the
-  INSERT, the same shape as the headline checks, because a rule read once at the
-  top is not a rule checked against a finished string.
-
-The prompt's own examples were scrubbed to match: the `calls.why` sample said
-"The book has Kansas City fifth", the actionable-output example said "sheet says
-$25", and `fade` was on the list of approved headline verbs while the table bans
-it. A prompt that models the shorthand teaches it.
-
-**The live row was rewritten too.** Story 31 (`rb-replacement-floor-2026-08-22-22`)
-was the one on the front page when the complaint landed. Its title and dek had
-already been made plainer once that night, from the 101-character "The book
-raises the running back floor 9%..." to a 108-character summary, but the article
-underneath still ran on the shorthand from the first paragraph on. Title, dek and
-body were rewritten in plain words with **every figure unchanged**: title to 82
-characters and to an instruction ("Cap J.K. Dobbins at $12 and bid Tetairoa
-McMillan to $33 as cheap backs get better"), "the book" to Vegas, "replacement
-level" to "the cheapest running back worth starting", "the RB25 to RB42 tier" to
-"backs ranked 25 to 42", UTC stamps to ET. Its `method` column is untouched and still reads in model
-vocabulary; that box is the receipts appendix, not front-page copy, and
-rewriting it by hand risks distorting the record it exists to preserve. If the
-desk should write that box in plain English too, the rule belongs in the prompt
-first, so the next run produces it rather than a later session editing it.
+The general lesson, which is the one worth carrying: **a conversion has to know
+what it is converting from.** `repriceCopy` knew the reader's league and assumed
+the rest.
 
 ### Tests
 
@@ -3151,8 +3030,9 @@ first, so the next run produces it rather than a later session editing it.
   Block 11b covers which player a figure belongs to: price-first and name-first
   phrasing, `and` as a separator rather than a link, a name written with
   initials, and a figure bound to a player the reader's board cannot price.
-  Block 11c covers the story written on the old scoring model: refused rather
-  than restated, labelled as the desk's, and the boundary date itself.
+  Block 11c covers the story written before the scoring changed: restated like
+  any other, warned about in the note, the boundary date itself, and that no
+  reader-facing note says "the desk".
 - `tools/test-lead-story.mjs` — the clock conversions in both DST halves, the
   12-hour and no-minutes forms, the previous-day marker, the nonsense-hour
   refusal, the fallback-versus-`Intl` sweep, and `names` in the payload.
