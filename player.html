@@ -532,18 +532,31 @@ var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a to
       // set by tools/build-default-board.mjs, which stores points and lets
       // /it-league.js read the curve.) So the tile is labelled for whichever
       // board answered, and the line under it says the same thing in words.
+      // The site's board is priced at the desk's league, and a reader who saved
+      // one is quoted the same going rate in THEIR money — L.deskPrice() is the
+      // library's own conversion, the one the tailored lines use, so the tile
+      // and the sentence under it cannot disagree. No league saved, no change.
+      var room = (L && L.config) ? L.config.teams + ' teams, $' + L.config.budget : '12 teams, $200';
       nums.appendChild(found.mine
         ? numEl('Worth', '$' + Math.max(1, Math.round(r.v || 0)), 'true value at your settings', true)
-        : numEl('Going rate', '$' + Math.max(1, Math.round(r.v || 0)), 'likely price, 12 teams, $200', true));
+        : numEl('Going rate', '$' + Math.max(1, (L && L.deskPrice) ? L.deskPrice(r.v) : Math.round(r.v || 0)),
+                'likely price, ' + room, true));
       nums.appendChild(numEl('Board slot',
         rk.rank ? p.p + rk.rank : '—',
         rk.of ? 'of ' + rk.of + ' at the position' : 'on your board'));
       // label()/scoringLabel() both answer '' for a reader with no saved
       // league, which is the honest answer — so the site's own defaults are
       // named here instead of borrowing the reader's voice for them.
+      //
+      // Scoring is the one thing a saved league does NOT buy you here. The
+      // dollars follow a budget, so they are restated the moment a reader names
+      // one; the POINTS are the shared projection at the site's own rules, and
+      // re-scoring them needs the stat lines only their own board carries. So
+      // the line claims their scoring only when their board is what answered.
       var whose = (L && L.tailorLabel) ? L.tailorLabel() : 'Default league';
       var league = (L && L.label && L.label('auction')) || 'a 12-team, $200 auction';
-      var scoring = (L && L.scoringLabel && L.scoringLabel()) || 'expert default scoring';
+      var scoring = found.mine ? ((L && L.scoringLabel && L.scoringLabel()) || 'expert default scoring')
+                               : 'expert default scoring';
       basis.innerHTML = '<b>' + esc(whose) + '.</b> Priced for ' + esc(league) + ', at '
         + esc(scoring) + '. Points are the season projection the whole site is priced from. '
         + (found.mine
@@ -551,7 +564,10 @@ var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a to
               + 'what the room will pay for him.'
             : 'The dollar figure is what the room is likely to pay for him. What he is '
               + '<b>worth</b> against a replacement starter is a different number, and it '
-              + 'needs your league: build the sheet below and this card reprices itself.');
+              + ((L && L.has)
+                  ? 'needs your own board, scored at your rules: build the sheet below and this '
+                    + 'card reprices itself.'
+                  : 'needs your league: build the sheet below and this card reprices itself.'));
     } else {
       basis.textContent = 'Iron Tuna prices him on the board, but the shared library only '
         + 'carries points for quarterbacks, running backs, receivers and tight ends. Open the '
