@@ -264,10 +264,30 @@ VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,<0 or 1>,<0 or 1>,
 
 **Run this INSERT once.** See "ONE STORY PER RUN" at the top.
 
-Then retire the prior story: `UPDATE lead_story SET published=0 WHERE id <> last_insert_rowid();` (run as a separate statement, and only if the new row published with `verified=1`). Slug format: short-topic-slug-YYYY-MM-DD-HH. `sources` is a JSON array of `{type,name,detail}`. Pass all text through bound parameters, never string concatenation.
+Slug format: short-topic-slug-YYYY-MM-DD-HH. `sources` is a JSON array of `{type,name,detail}`. Pass all text through bound parameters, never string concatenation.
+
+## RETIRE THE PRIOR STORY BY SLUG. NEVER USE `last_insert_rowid()`.
+Only if your new row went in with `verified=1` and `published=1`, unpublish everything else by binding the slug you just wrote:
+
+```sql
+UPDATE lead_story SET published = 0 WHERE slug <> ?1;
+```
+
+**Do not use `WHERE id <> last_insert_rowid()`, which is what this prompt said until 2026-08-23.** D1 gives every statement its own session, so in a separate statement `last_insert_rowid()` returns **0**. `id <> 0` matches every row in the table, so the retire unpublished the story the run had just published along with the entire archive, and the instruction to run it as a separate statement is exactly what made it fire wrong. Measured against the live database rather than inferred: a probe table returned `meta.last_row_id = 1` on the insert and `last_insert_rowid() = 0` in the following statement. The site ran with no generated lead at all for a day because of it, and nothing looked broken to a visitor, which is why it survived that long.
+
+If you would rather use an id, read it back first with `SELECT id FROM lead_story WHERE slug = ?1` and use that literal number. Never rely on a rowid carrying across statements.
 
 ## Check your own work, but do not hang on it
-Verify through the **Cloudflare D1 connector**, not the website: `SELECT id,slug,category,verified,published,length(title) AS tlen,calls IS NOT NULL AS has_calls FROM lead_story ORDER BY created_at DESC LIMIT 2`. Confirm your row is the desk you intended, `verified=1`, `published=1`, `tlen` under 90, and that the previous row is now `published=0`. On an analyst run, confirm `has_calls=1` unless you deliberately left it NULL for a track-record piece. **This check is read-only. If it shows something you wish you had written differently, report it; do not write another story.**
+Verify through the **Cloudflare D1 connector**, not the website:
+
+```sql
+SELECT id,slug,category,verified,published,length(title) AS tlen,
+       calls IS NOT NULL AS has_calls,
+       (SELECT COUNT(*) FROM lead_story WHERE published=1) AS published_rows
+FROM lead_story ORDER BY created_at DESC LIMIT 2;
+```
+
+Confirm your row is the desk you intended, `verified=1`, `published=1`, `tlen` under 90, that the previous row is now `published=0`, and that `published_rows` is exactly **1**. **If `published_rows` is 0, your retire statement hit your own row:** republish it with `UPDATE lead_story SET published = 1 WHERE slug = ?1` and say so in your report. That is a repair to the row you already wrote, not a second story. On an analyst run, confirm `has_calls=1` unless you deliberately left it NULL for a track-record piece. **This check is read-only. If it shows something you wish you had written differently, report it; do not write another story.**
 
 **Do not block on a WebFetch to irontuna.com.** This Routine has no pre-approved tool list, so a WebFetch can sit waiting on a permission prompt that nobody will answer, and a run on 2026-08-21 stalled there after it had already published. If you want the site check, attempt it once; if it is denied, blocked, or does not return promptly, fall back to the D1 query above and finish. Never end a run parked on a permission request.
 

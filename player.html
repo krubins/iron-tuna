@@ -105,6 +105,14 @@
 .pc-odds b{color:var(--text)}
 .pc-odds p{margin:0 0 8px}
 .pc-odds p:last-child{margin:0}
+.pc-odds .pc-boards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+.pc-board{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);padding:9px 11px}
+.pc-board.odds{border-color:var(--teal);background:rgba(14,124,99,.06)}
+.pc-board h3{font-size:var(--fs-3xs);font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.pc-board .pc-slot{font-family:var(--font-display);font-size:27px;line-height:1.1;letter-spacing:.02em;margin-top:3px;color:var(--text)}
+.pc-board .pc-cost{font-size:var(--fs-2xs);color:var(--sec);font-weight:700}
+.pc-odds .pc-fine{font-size:var(--fs-2xs);color:var(--muted);line-height:1.45}
+@media(max-width:520px){.pc-odds .pc-boards{grid-template-columns:1fr}}
 
 /* ── the call to action ── */
 .pc-cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 6px}
@@ -161,8 +169,8 @@
     </div>
 
     <section class="pc-sec" id="pcOddsSec" hidden>
-      <h2>What the odds say</h2>
-      <p class="sub">Computed from the current sportsbook lines against the committed projections &mdash; not written, and never stale while the lines move.</p>
+      <h2 id="pcOddsHead">Consensus rankings vs. the odds</h2>
+      <p class="sub">Where a normal ranking puts him, and where he lands once the betting market is priced in. Computed from the day&rsquo;s lines against the committed projections &mdash; not written, and repulled every morning.</p>
       <div class="pc-odds" id="pcOdds"></div>
     </section>
 
@@ -200,6 +208,7 @@
      <ul>
       <li><a href="/auction-insights">Auction insights</a></li>
       <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/auction-watch">Auction Watch</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/analyst-desk">Analyst Desk</a></li>
       <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
@@ -435,49 +444,215 @@ var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a to
   }
 
   // ── the odds ──────────────────────────────────────────────────────────────
-  // /api/vegas-column is the public, read-only feed the front page's Vegas
-  // section runs on. It only carries the players the two boards disagree about
-  // most, so the section stays hidden for everybody else rather than inventing
-  // a line for a player the market never moved.
+  // Every card answers one question: how does a normal consensus ranking rate
+  // this man, and where does he land once the betting market is priced in?
+  //
+  // /api/player-odds re-ranks the WHOLE board off the daily odds pull and hands
+  // back one player's standing, so the answer exists for all four hundred and
+  // not only for the dozen the front page happens to be rotating. It is the
+  // same computation the front page's column reads, which is the point — a card
+  // and the column can never tell a reader two different stories about the same
+  // player.
+  //
+  // A player no book priced still gets an answer, and it is not "nothing": the
+  // players around him moved, so his own slot can move with them. Saying that
+  // out loud is more honest than a blank section, which reads as a bug.
+  var PC_ODDS_CONTRACT = 1;      // matches PODDS_CONTRACT in _worker.js
+  // An item missing a field this renderer prints is dropped rather than printed
+  // with holes in it — the response is publicly cached, so a payload of another
+  // vintage can reach this page. Nothing is better than "undefined".
+  var PC_ODDS_REQUIRED = ['name', 'position', 'rankConsensus', 'rankIronTuna', 'rankMarket',
+                          'priceConsensus', 'priceIronTuna'];
+  function pcOddsUsable(o) {
+    if (!o || typeof o !== 'object') return false;
+    for (var i = 0; i < PC_ODDS_REQUIRED.length; i++) {
+      var v = o[PC_ODDS_REQUIRED[i]];
+      if (v === undefined || v === null || (typeof v === 'number' && !isFinite(v))) return false;
+    }
+    return true;
+  }
+  var PC_STAT_LABELS = { passYd: 'pass yds', passTD: 'pass TD', passInt: 'INT', rushYd: 'rush yds',
+                         rushTD: 'rush TD', recYd: 'rec yds', recTD: 'rec TD', rec: 'receptions',
+                         scrimmageTD: 'scrimmage TD' };
+  function pcStat(k, v) { return /Yd$/.test(k) || k === 'rec' ? String(Math.round(v)) : String(Math.round(v * 10) / 10); }
+  // The board is priced in the desk's own league (12 teams, $200). A reader who
+  // has named one is quoted the same going rate in THEIR money, through the
+  // library's own conversion — the one the "Going rate" tile above already uses,
+  // so the two cannot disagree on the same page. Every dollar on this panel goes
+  // through here, including the gap, so the gap is always exactly the difference
+  // between the two prices printed above it.
+  function pcDollars(v) {
+    var L = window.ITLeague;
+    return Math.max(1, (L && L.deskPrice) ? L.deskPrice(v) : Math.round(v || 0));
+  }
+  function pcMoney(v) { return '$' + pcDollars(v); }
+  function pcMoneyRoom() {
+    var L = window.ITLeague;
+    return (L && L.config) ? L.config.teams + '-team, $' + L.config.budget : '12-team, $200';
+  }
+  var PC_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+                   'August', 'September', 'October', 'November', 'December'];
+  // UTC, because the pull runs once a day at a fixed UTC hour: a reader in
+  // Auckland must not be told the lines are a day newer than they are in
+  // Los Angeles.
+  function pcDay(ms) {
+    var d = new Date(ms);
+    if (!isFinite(d.getTime())) return '';
+    return d.getUTCDate() + ' ' + PC_MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+  }
+
+  function pcSay(box, html, cls) {
+    var el = doc.createElement('p');
+    if (cls) el.className = cls;
+    el.innerHTML = html;
+    box.appendChild(el);
+  }
+
   function renderOdds(p) {
-    fetch('/api/vegas-column', { headers: { accept: 'application/json' } })
+    var url = '/api/player-odds?v=' + PC_ODDS_CONTRACT
+            + '&name=' + encodeURIComponent(p.n) + '&pos=' + encodeURIComponent(p.p);
+    fetch(url, { headers: { accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (!d || !d.ok || !d.items || !d.items.length || !S) return;
-        var want = S.fold(p.n);
-        var it = null;
-        for (var i = 0; i < d.items.length; i++) {
-          if (d.items[i].position === p.p && S.fold(d.items[i].name) === want) { it = d.items[i]; break; }
-        }
-        if (!it) return;
+        // A payload from a different contract is not partially trusted, it is
+        // dropped: the section stays hidden rather than printing a shape this
+        // renderer does not recognise.
+        if (!d || !d.ok || d.contract !== PC_ODDS_CONTRACT) return;
         var box = doc.getElementById('pcOdds');
+        var sec = doc.getElementById('pcOddsSec');
         box.innerHTML = '';
-        var lead = doc.createElement('p');
-        var dir = it.rankDelta > 0 ? 'up' : it.rankDelta < 0 ? 'down' : 'level';
-        lead.innerHTML = dir === 'level'
-          ? 'The sportsbook lines and the consensus projections put him in the <b>same slot</b>: '
-            + '<b>' + p.p + it.rankIronTuna + '</b>, about <b>$' + it.priceIronTuna + '</b>.'
-          : 'The lines move him <b>' + Math.abs(it.rankDelta) + ' slot'
-            + (Math.abs(it.rankDelta) === 1 ? '' : 's') + ' ' + dir + '</b> the '
-            + p.p + ' board, from ' + p.p + it.rankConsensus + ' to <b>' + p.p + it.rankIronTuna
-            + '</b> &mdash; about <b>' + (it.priceDelta > 0 ? '+' : '') + '$' + Math.abs(it.priceDelta)
-            + '</b> on a $' + it.priceConsensus + ' price.';
-        box.appendChild(lead);
-        if (it.moved && it.moved.length) {
-          var LB = { passYd: 'pass yds', passTD: 'pass TD', passInt: 'INT', rushYd: 'rush yds',
-                     rushTD: 'rush TD', recYd: 'rec yds', recTD: 'rec TD', rec: 'receptions',
-                     scrimmageTD: 'scrimmage TD' };
-          var parts = it.moved.slice(0, 3).map(function (m) {
-            return (LB[m.stat] || m.stat) + ' ' + m.consensus + ' → ' + m.market;
-          });
-          var sub = doc.createElement('p');
-          sub.textContent = 'What moved: ' + parts.join('; ') + '.';
-          box.appendChild(sub);
+        doc.getElementById('pcOddsHead').textContent = 'The rankings vs. the odds on ' + p.n;
+
+        if (!d.player) {
+          // The one "no" worth printing. Kickers and defences are on this site's
+          // board and no book prices a season-long market for either that the
+          // site models, so the card says so instead of hiding a section the
+          // rest of the position group has.
+          if (d.reason !== 'unpriced_position') return;
+          pcSay(box, 'No sportsbook posts a season-long market for ' +
+            (p.p === 'K' ? 'kickers' : 'team defences') + ' that this site models, so there is ' +
+            'nothing here to hold a consensus ranking up against. The ' +
+            '<a href="/#vegas">odds column</a> covers quarterbacks, running backs, receivers and ' +
+            'tight ends, and the cheat sheet prices him the same way it always has.');
+          sec.hidden = false;
+          return;
         }
-        var more = doc.createElement('p');
-        more.innerHTML = '<a href="/#vegas">See the whole Vegas column &rarr;</a>';
-        box.appendChild(more);
-        doc.getElementById('pcOddsSec').hidden = false;
+        var it = d.player;
+        if (!pcOddsUsable(it)) return;
+
+        var pos = it.position;
+        var last = it.name.split(' ').slice(-1)[0];
+        var same = it.rankConsensus === it.rankIronTuna;
+
+        // The two boards, side by side. Ranks and dollars only: the points on
+        // this endpoint are scored at the site's own rules, and printing them
+        // beside a Projected tile built from the reader's own board would put
+        // two different point scales on one card.
+        var boards = doc.createElement('div');
+        boards.className = 'pc-boards';
+        boards.innerHTML =
+          '<div class="pc-board"><h3>Consensus rankings &amp; ADP</h3>' +
+          '<div class="pc-slot">' + esc(pos + it.rankConsensus) + '</div>' +
+          '<div class="pc-cost">' + pcMoney(it.priceConsensus) + '</div></div>' +
+          '<div class="pc-board odds"><h3>With the odds priced in</h3>' +
+          '<div class="pc-slot">' + esc(pos + it.rankIronTuna) + '</div>' +
+          '<div class="pc-cost">' + pcMoney(it.priceIronTuna) + '</div></div>';
+        box.appendChild(boards);
+
+        // The lead sentence, and there are four true ones depending on what the
+        // day's lines actually did to him. None of them is written in advance.
+        var moneyGap = Math.abs(pcDollars(it.priceIronTuna) - pcDollars(it.priceConsensus));
+        var dir = it.rankDelta > 0 ? 'up' : 'down';
+        if (same) {
+          pcSay(box, it.priced
+            ? 'The market <b>priced him and agreed</b>. The lines moved his own numbers and he ' +
+              'still lands on the slot the consensus rankings give him &mdash; <b>' + esc(pos + it.rankConsensus) +
+              '</b>, about <b>' + pcMoney(it.priceIronTuna) + '</b>. Confirmation rather than an edge, ' +
+              'but a price you can pay without wondering.'
+            : 'No book moved ' + esc(last) + '&rsquo;s own numbers this week, and nobody around him ' +
+              'moved far enough to shift his slot either. Both boards have him <b>' + esc(pos + it.rankConsensus) +
+              '</b> at about <b>' + pcMoney(it.priceConsensus) + '</b>.');
+        } else if (it.priced) {
+          pcSay(box, 'The lines move him <b>' + Math.abs(it.rankDelta) + ' slot' +
+            (Math.abs(it.rankDelta) === 1 ? '' : 's') + ' ' + dir + '</b> the ' + esc(pos) +
+            ' board &mdash; the consensus has him ' + esc(pos + it.rankConsensus) + ', the odds-adjusted ' +
+            'board has him <b>' + esc(pos + it.rankIronTuna) + '</b>. That is about <b>' +
+            (it.priceDelta > 0 ? '+' : '&minus;') + '$' + moneyGap + '</b> against a consensus price of ' +
+            pcMoney(it.priceConsensus) + ', in a ' + esc(pcMoneyRoom()) + ' room.');
+        } else {
+          // Nobody priced HIM — but a board is a queue, and the men around him
+          // moved. This is the single most common case on the site, and the one
+          // a twelve-case column could never answer.
+          pcSay(box, '<b>No book posted a line on ' + esc(last) + ' himself.</b> He still slides ' +
+            Math.abs(it.rankDelta) + ' slot' + (Math.abs(it.rankDelta) === 1 ? '' : 's') + ' ' + dir +
+            ' the ' + esc(pos) + ' board, from ' + esc(pos + it.rankConsensus) + ' to <b>' +
+            esc(pos + it.rankIronTuna) + '</b>, because the market moved the players around him. ' +
+            'Worth about ' + (it.priceDelta === 0 ? 'the same money' :
+              (it.priceDelta > 0 ? '+' : '&minus;') + '$' + moneyGap) + ' against his consensus price.');
+        }
+
+        // The market's own rank, undiluted by the blend. Quoted as the signal
+        // underneath the move, never as the price: what a reader can act on is
+        // the odds-adjusted board, which is what the site actually ships.
+        if (!same || it.priced) {
+          pcSay(box, 'On the lines alone, before they are blended with the projections, the market has '
+            + esc(last) + ' at <b>' + esc(pos + it.rankMarket) + '</b>.');
+        }
+
+        if (it.moved && it.moved.length) {
+          pcSay(box, 'What the lines moved: ' + it.moved.slice(0, 3).map(function (m) {
+            return esc((PC_STAT_LABELS[m.stat] || m.stat) + ' ' + pcStat(m.stat, m.consensus) +
+                       ' → ' + pcStat(m.stat, m.market));
+          }).join(' &middot; ') + '.');
+        }
+
+        // The money-line evidence. The team-environment signal is a RATIO, so an
+        // absolute rank alone would mislead: a top-five offense is still a
+        // downgrade if the consensus already has it top three.
+        if (it.teamImplied != null && it.teamRank != null && it.teamRankConsensus != null) {
+          var clubName = (CLUBS[it.team] && CLUBS[it.team][0]) || it.team;
+          pcSay(box, 'The line on ' + esc(clubName) + ' implies <b>' + it.teamImplied +
+            ' points a game</b> &mdash; ' + (
+              it.teamRank < it.teamRankConsensus
+                ? 'the market ranks that offense #' + it.teamRank + ', ahead of the #' +
+                  it.teamRankConsensus + ' the consensus projections give it.'
+              : it.teamRank > it.teamRankConsensus
+                ? 'the market ranks that offense #' + it.teamRank + ', behind the #' +
+                  it.teamRankConsensus + ' the consensus projections give it.'
+                : 'both boards rank that offense #' + it.teamRank + '.'));
+        }
+
+        // Where he sits in the day's queue. A dollar figure means nothing until
+        // you know whether it is the largest gap on the board or the fortieth,
+        // and the digest is counted off the same morning pull.
+        var g = d.digest;
+        if (it.queueRank && it.queueOf && it.meaningful) {
+          var place = it.queueRank === 1 ? 'largest'
+            : it.queueRank + (it.queueRank % 10 === 2 && it.queueRank !== 12 ? 'nd'
+                            : it.queueRank % 10 === 3 && it.queueRank !== 13 ? 'rd' : 'th') + '-largest';
+          pcSay(box, 'Today he is the <b>' + place + ' ' + (it.priceDelta > 0 ? 'raise' : 'fade') +
+            ' on the board</b> &mdash; one of ' + it.queueOf + ' the odds push ' +
+            (it.priceDelta > 0 ? 'up' : 'down') +
+            (g && g.moved ? ', out of ' + g.moved + ' players the two boards disagree on at all' : '') + '.');
+        } else if (g && isFinite(g.moved)) {
+          pcSay(box, 'For scale: the odds and the consensus rankings part company on <b>' + g.moved +
+            '</b> draftable players today. He is not one of them.');
+        }
+
+        // Never dress a game line up as a player prop. The free provider prices
+        // GAMES; player props need a paid key, and saying otherwise would be the
+        // exact sloppiness the odds column exists to call out.
+        var fine = d.basis === 'props'
+          ? 'Basis: player props, de-vigged to an expected season total.'
+          : 'Basis: money lines and game totals, converted to implied team points. Team-level ' +
+            'signal &mdash; it prices the offense, not the individual target share.';
+        fine += ' Ranks are at the site&rsquo;s default scoring; dollars are the going rate in a ' +
+                esc(pcMoneyRoom()) + ' room.';
+        if (d.asOf) fine += ' <b>Lines of ' + esc(pcDay(d.asOf)) + '</b>, repulled and recomputed every morning.';
+        fine += ' <a href="/#vegas">See the whole odds column &rarr;</a>';
+        pcSay(box, fine, 'pc-fine');
+
+        sec.hidden = false;
       })
       .catch(function () {});
   }
