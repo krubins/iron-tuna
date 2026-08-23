@@ -344,17 +344,6 @@ input:focus, select:focus { border-color: var(--accent); }
   /* On phones the BID / nominate flow can start from any tab (the in-flow card would land
      below the fold), so pin the nomination card above the bottom tab bar. */
   .snake-nom-card { position: fixed; left: 10px; right: 10px; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); z-index: 205; margin: 0; max-width: none; }
-  /* A fixed backdrop is sized to the *small* viewport on phones, but `vh` is the
-     *large* one — so an 88vh card is taller than the box it sits in and its footer
-     (Save Settings) lands under the browser chrome or the bottom tab bar with no
-     way to scroll to it. Pad the backdrop clear of the tab bar and cap the card at
-     100% of whatever is actually left. */
-  .modal-bg { padding: 10px 0 calc(70px + env(safe-area-inset-bottom, 0px)); }
-  .modal { max-height: 100%; }
-  /* Keep every modal's action buttons thumb-reachable while the card scrolls.
-     The negative bottom/margin cancels the modal's own padding so the row sits
-     flush on the card's bottom edge instead of floating 18px above it. */
-  .modal-actions, .qd-actions { position: sticky; bottom: -18px; margin-bottom: -18px; padding: 10px 0 18px; background: var(--bg-panel); z-index: 3; }
   @keyframes msheetup { from { transform: translateY(100%); } to { transform: translateY(0); } }
   @keyframes msheetfade { from { opacity: 0; } to { opacity: 1; } }
 }
@@ -1566,7 +1555,6 @@ input:focus, select:focus { border-color: var(--accent); }
   .bm-rounds3 { column-count: 1; }
   .filter-pill { font-size: 12px; padding: 6px 10px; }
   .modal { width: 96%; padding: 14px; border-radius: var(--radius-md); }
-  .modal-actions, .qd-actions { bottom: -14px; margin-bottom: -14px; padding-bottom: 14px; }
   .budget-stats, .bid-numbers { grid-template-columns: 1fr 1fr; }
   .team-card { padding: 10px 12px; }
   .assumptions-panel { flex-wrap: wrap; }
@@ -1583,6 +1571,43 @@ input:focus, select:focus { border-color: var(--accent); }
   .coach.dock .coach-input textarea { min-height: 56px; }
   .coach.dock .coach-insights { display: none; }
   .coach-col-resize { display: none; }
+}
+
+/* ============ Responsive: modal chrome on touch screens ============
+   These must stay *after* the base `.modal` / `.modal-close` rules and after the
+   768px and 600px blocks above — all of them set the same properties at the same
+   specificity, so source order is what decides the winner. */
+@media (max-width: 768px) {
+  /* Keep every modal's action buttons thumb-reachable while the card scrolls. The
+     negative bottom/margin cancels the 18px padding the 768px block gives `.modal`,
+     so the row sits flush on the card's bottom edge rather than 18px above it. */
+  .modal-actions, .qd-actions { position: sticky; bottom: -18px; margin-bottom: -18px; padding: 10px 0 18px; background: var(--bg-panel); z-index: 3; }
+  /* Same problem at the other end: the ✕ is absolutely positioned, so on a long
+     modal it scrolls away and the backdrop tap becomes the only way out. Sticky
+     needs it in flow, so float it right — but a plain float is an exclusion, and
+     a grid or flex child next to one gets narrowed by 42px. `margin-bottom` of
+     minus its own height collapses the float's margin box to zero height, so
+     nothing flows around it and it overlaps exactly the way `absolute` did; the
+     2px top/right offsets land it on the same pixel as `top:16px; right:16px`.
+     Once it detaches it sits over body text, so it needs an edge and a shadow to
+     read as a control rather than as a rendering artefact. */
+  .modal-close { position: sticky; float: right; top: 0; right: auto; margin: 2px 2px -32px 0; z-index: 4;
+    border: 1px solid var(--border-strong); box-shadow: 0 3px 12px rgba(0,0,0,0.6); }
+}
+/* Tied to the bottom tab bar, which only exists below 760px. A fixed backdrop is
+   sized to the *small* viewport on phones, but `vh` is the *large* one — so an
+   88vh card is taller than the box it sits in, and its footer (Save Settings)
+   lands under the browser chrome or the tab bar with no way to scroll to it. Pad
+   the backdrop clear of the tab bar and the home indicator, then cap the card at
+   100% of what's left — a percentage against the fixed backdrop, so it cannot
+   outgrow the box it lives in. */
+@media (max-width: 760px) {
+  .modal-bg { padding: 10px 0 calc(70px + env(safe-area-inset-bottom, 0px)); }
+  .modal { max-height: 100%; }
+}
+@media (max-width: 600px) {
+  /* .modal padding drops to 14px here, so the footer's bleed has to match it. */
+  .modal-actions, .qd-actions { bottom: -14px; margin-bottom: -14px; padding-bottom: 14px; }
 }
 .landing-page { background: radial-gradient(115% 460px at 50% 4%, rgba(20,184,166,0.18), transparent 62%), radial-gradient(135% 720px at 50% -8%, rgba(20,184,166,0.10), transparent 70%), radial-gradient(90% 540px at 50% 80%, rgba(20,184,166,0.15), transparent 64%), radial-gradient(120% 700px at 50% 116%, rgba(20,184,166,0.07), transparent 66%), linear-gradient(180deg, #0d0f12 0%, #0a0b0d 55%, #08090b 100%); }
 /* ============ Landing overhaul: reassurance, trust band, how-it-works ============ */
