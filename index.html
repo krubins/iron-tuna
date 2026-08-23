@@ -1585,13 +1585,15 @@ input:focus, select:focus { border-color: var(--accent); }
   /* Same problem at the other end: the ✕ is absolutely positioned, so on a long
      modal it scrolls away and the backdrop tap becomes the only way out. Sticky
      needs it in flow, so float it right — but a plain float is an exclusion, and
-     a grid or flex child next to one gets narrowed by 42px. `margin-bottom` of
-     minus its own height collapses the float's margin box to zero height, so
-     nothing flows around it and it overlaps exactly the way `absolute` did; the
-     2px top/right offsets land it on the same pixel as `top:16px; right:16px`.
-     Once it detaches it sits over body text, so it needs an edge and a shadow to
-     read as a control rather than as a rendering artefact. */
-  .modal-close { position: sticky; float: right; top: 0; right: auto; margin: 2px 2px -32px 0; z-index: 4;
+     things beside one move: a grid or flex sibling narrows by 42px, and a
+     centered first line (the 🎉 above "Draft Day Mode unlocked") slides left.
+     A `margin-bottom` of minus the full margin-box height — height plus the 2px
+     top offset — collapses the exclusion to nothing, so no sibling reflows and
+     the ✕ overlaps exactly the way `absolute` did, on the same pixel that
+     `top:16px; right:16px` put it. Once it detaches from the corner it sits over
+     body text, so it needs an edge and a shadow to read as a control rather than
+     as a rendering artefact. */
+  .modal-close { position: sticky; float: right; top: 0; right: auto; margin: 2px 2px -34px 0; z-index: 4;
     border: 1px solid var(--border-strong); box-shadow: 0 3px 12px rgba(0,0,0,0.6); }
 }
 /* Tied to the bottom tab bar, which only exists below 760px. A fixed backdrop is
@@ -1608,6 +1610,11 @@ input:focus, select:focus { border-color: var(--accent); }
 @media (max-width: 600px) {
   /* .modal padding drops to 14px here, so the footer's bleed has to match it. */
   .modal-actions, .qd-actions { bottom: -14px; margin-bottom: -14px; padding-bottom: 14px; }
+  /* 38px tap target, the same minimum this block already sets for the nav
+     buttons, pills and subtabs. It grows down and left from the corner it
+     already occupies, so the top-right anchor doesn't move; the negative bottom
+     margin tracks the new height (38 + 2) to keep the float's box zero-height. */
+  .modal-close { width: 38px; height: 38px; margin-bottom: -40px; font-size: 21px; }
 }
 .landing-page { background: radial-gradient(115% 460px at 50% 4%, rgba(20,184,166,0.18), transparent 62%), radial-gradient(135% 720px at 50% -8%, rgba(20,184,166,0.10), transparent 70%), radial-gradient(90% 540px at 50% 80%, rgba(20,184,166,0.15), transparent 64%), radial-gradient(120% 700px at 50% 116%, rgba(20,184,166,0.07), transparent 66%), linear-gradient(180deg, #0d0f12 0%, #0a0b0d 55%, #08090b 100%); }
 /* ============ Landing overhaul: reassurance, trust band, how-it-works ============ */
