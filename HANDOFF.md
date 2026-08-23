@@ -2882,13 +2882,73 @@ corrections on purpose:
 - **A dollar attached to nobody** — a pool, a tier, a gap — scales by
   `(teams x budget)`, which is what every price on an auction board scales by.
 
-Attribution is by sentence: the named player before the figure owns it, a figure
-that opens its own sentence falls forward to the next name in that sentence.
+Attribution is by **binding**, and this is the part that has been wrong in
+production. A figure is bound to a name when nothing but a linking word stands
+between the two, and that reads in both directions:
+
+1. **Backwards** — "Drake London at $29" — and only to the NEAREST name before
+   the figure, so "Cap Drake London at $29, Garrett Wilson at $26" gives each
+   figure to the player beside it.
+2. **Forwards** — "bid up to $33 on Tetairoa McMillan" — where the figure is
+   written price-first and points at the name that follows it.
+3. **Unbound** — the nearest name in the figure's own sentence, the one before
+   it first, then the one after ("$32 is the bid on Flowers" opens its own
+   sentence and falls forward).
+
 `scanNames()` also pulls capitalised runs out of the copy and keeps the ones the
 reader's board can name, because only four players travel with a story and a dek
 routinely prices a fifth ("...Garrett Wilson at $26 and DeVonta Smith at $26").
 Without that, the fifth player's dollars were priced off the fourth player's
 board slot.
+
+#### The off-by-one that put two prices on one player (2026-08-23)
+
+Only rule 1 existed. Every figure went to the name before it, whatever the
+sentence actually said, and story 31 shipped this on the front page:
+
+> **Cap J.K. Dobbins at $4 and bid Tetairoa McMillan to $36 as cheap backs get better**
+>
+> ... Cap J.K. Dobbins at $4 and Jadarian Price at $3; bid up to **$7** on
+> Tetairoa McMillan and $48 on Justin Jefferson.
+
+McMillan at $36 in the headline and $7 in the dek, four words apart. **The stored
+row was fine**: it says $33 for McMillan in both, and every figure in it is
+internally consistent. The split was made at read time, in the browser, and only
+for readers with a saved league — which is why it survived every check the desk
+runs on its own copy before the INSERT.
+
+The headline was right by luck. It writes the price name-first ("McMillan to
+$33"), so rule 1 found McMillan. The dek writes it price-first ("$33 on Tetairoa
+McMillan"), so rule 1 walked back past the semicolon to **Jadarian Price** and
+restated a $33 receiver off a $5 running back's board slot: $33 x 1/5 = $7.
+Jefferson's $44 then came off McMillan's slot at $48. Every price-first figure in
+the site's history was one player out.
+
+Three things to take from it, none of them specific to this file:
+
+- **A rule that is right on the copy in front of you is not a rule.** "The player
+  before it owns it" was tested against name-first copy only, and the prompt's
+  own worked example is price-first. Test the phrasing you did not write.
+- **`and` is not a linking word**, deliberately. "$33 on McMillan and $44 on
+  Jefferson" is two bindings, not one running on. Reading `and` as a link is the
+  same off-by-one in a different coat.
+- **A figure bound to a player the reader's board cannot price now scales with
+  the room**, rather than falling back onto the previous name. It is still his
+  figure; the fallback is what caused this.
+
+A second defect fell out of the same reading. `sentenceStart` cut on any `". "`,
+so **a period inside a name ended the sentence**: "Cap A.J. Brown at $25 and
+Chase Brown at $20" started its sentence at "Brown at $25", put A.J. out of his
+own reach, and handed his $25 to the other Brown. Both Browns are on the board,
+so neither gets a surname of his own to be found by, and the fifth-player scan
+could not save it. Sentence boundaries now skip a period that falls inside a
+name mention (exact, and it covers "St." and a trailing "Jr.") or that follows a
+single letter (an initial in a name nobody's board can price). Two letters was
+tempting and is wrong: an English sentence can end in "is."
+
+`tools/test-it-league.mjs` block 11b pins all of it, including the published
+title and dek as one case that asserts the two cannot disagree about one player.
+Five of its eight checks fail on the pre-fix library, verified by reverting.
 
 **What it does not do:** ranks. "WR12 to WR9" is left alone, because reproducing
 those two ranks would mean reproducing the desk's own before-and-after
@@ -3030,6 +3090,9 @@ first, so the next run produces it rather than a later session editing it.
 - `tools/test-it-league.mjs` — the anchoring rules, the surname case, the
   scanned fifth player, the `$1` floor, the no-league refusal, the note's
   wording, and that both pages actually call `repriceCopy` before painting.
+  Block 11b covers which player a figure belongs to: price-first and name-first
+  phrasing, `and` as a separator rather than a link, a name written with
+  initials, and a figure bound to a player the reader's board cannot price.
 - `tools/test-lead-story.mjs` — the clock conversions in both DST halves, the
   12-hour and no-minutes forms, the previous-day marker, the nonsense-hour
   refusal, the fallback-versus-`Intl` sweep, and `names` in the payload.

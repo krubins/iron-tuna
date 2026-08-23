@@ -702,24 +702,74 @@
       if (k && surnames[k] === 1 && bare.length > 1) forms.push(bare[bare.length - 1]);
       forms.forEach(function (f) {
         var re = new RegExp('\\b' + reEscape(f.toLowerCase()) + '\\b', 'g'), m;
-        while ((m = re.exec(hay))) out.push({ at: m.index, ratio: r, who: full });
+        while ((m = re.exec(hay))) out.push({ at: m.index, end: m.index + f.length, ratio: r, who: full });
       });
     });
     return out.sort(function (a, b) { return a.at - b.at; });
+  }
+  // A period inside a name is not the end of a sentence. The desk writes "J.K.
+  // Dobbins", "A.J. Brown" and "Amon-Ra St. Brown", and a sentence cut inside a
+  // player's own name leaves his dollars with no name in front of them to own
+  // them: "Cap A.J. Brown at $25 and Chase Brown at $20" used to start its
+  // sentence at "Brown at $25", drop A.J. out of range, and hand his figure
+  // forward to the other Brown. Two tests for that, in this order:
+  //   * the mention spans themselves, which is exact and covers "St." and the
+  //     "Jr." that ends a name, for every player the copy actually names;
+  //   * a single letter before the dot, which catches an initial in a name
+  //     nobody's board can price. Deliberately not two letters: an English
+  //     sentence can end in "is." and would be swallowed whole.
+  function inName(spans, at) {
+    for (var i = 0; i < (spans || []).length; i++) {
+      if (at > spans[i].at && at < spans[i].end) return true;
+    }
+    return false;
+  }
+  function abbrevDot(text, at, spans) {
+    if (text.charAt(at) !== '.') return false;
+    return inName(spans, at) || /(^|[^A-Za-z])[A-Za-z]$/.test(text.slice(0, at));
   }
   // Where the sentence holding `at` begins, so a dollar figure is only ever
   // attributed to a player named in its own sentence. "Cap Drake London at $29,
   // Garrett Wilson at $26" has to give each figure to the player beside it, and
   // a name three sentences up is not that.
-  function sentenceStart(text, at) {
-    var cut = text.slice(0, at), m = cut.lastIndexOf('. ');
-    var q = Math.max(cut.lastIndexOf('! '), cut.lastIndexOf('? '));
-    return Math.max(0, Math.max(m, q) + 2);
+  function sentenceStart(text, at, spans) {
+    var re = /[.!?]\s+/g, start = 0, m;
+    while ((m = re.exec(text)) && m.index < at) {
+      if (abbrevDot(text, m.index, spans)) continue;
+      start = m.index + m[0].length;
+    }
+    return start;
   }
-  function sentenceEnd(text, at) {
-    var m = text.slice(at).search(/[.!?](\s|$)/);
-    return m < 0 ? text.length : at + m;
+  function sentenceEnd(text, at, spans) {
+    var re = /[.!?](\s|$)/g, m;
+    re.lastIndex = at;
+    while ((m = re.exec(text))) {
+      if (abbrevDot(text, m.index, spans)) continue;
+      return m.index;
+    }
+    return text.length;
   }
+  // A dollar figure is BOUND to a name when nothing but a linking word stands
+  // between the two, and that binding reads in both directions: "McMillan to
+  // $33" and "$33 on McMillan" are the same claim about the same player.
+  //
+  // The lead of 2026-08-23 is what it costs to understand only the first one.
+  // Its dek read "Cap J.K. Dobbins at $12 and Jadarian Price at $13; bid up to
+  // $33 on Tetairoa McMillan and $44 on Justin Jefferson", and because every
+  // figure was handed to the player named BEFORE it, McMillan's $33 was
+  // restated off Price's board slot as $7 and Jefferson's $44 off McMillan's as
+  // $48. The headline says the same thing name-first, so it restated McMillan
+  // correctly at $36. One story, one player, two prices, on the front page.
+  //
+  // "and" is deliberately not a linking word. "$33 on McMillan and $44 on
+  // Jefferson" is two bindings rather than one running on, and reading "and" as
+  // a link is the same off-by-one in a different coat.
+  var LINK_BACK = /^[\s,;:]*(?:up\s+to|at|to|for|of|near|around|about)?[\s,;:]*$/;
+  var LINK_FWD = /^[\s,;:]*(?:on|for|to|upon)\s+/;
+  // Two or more capitalised words: shaped like a person, whoever it turns out
+  // to be. Used only to tell "$33 on Tetairoa McMillan" from "$12 to the
+  // quarterback pool".
+  var NAME_RUN = /^[A-Z][A-Za-z'\u2019.\-]+(?:\s+[A-Z][A-Za-z'\u2019.\-]+)+/;
   // Restate one piece of the desk's copy — a headline, a dek, a whole article —
   // in the reader's money. Returns null when there is nothing to say: no saved
   // league, no dollars in the copy, or a reader whose league prices the story
@@ -736,21 +786,52 @@
       var n = parseInt(m[1], 10);
       var ratio = 0;
       if (anchors.length) {
-        var lo = sentenceStart(src, m.index), hi = sentenceEnd(src, m.index), i;
-        // The player named before the figure owns it; a figure that opens its
-        // own sentence ("$32 is the bid on Flowers") falls forward to the next
-        // name in the same sentence.
+        var lo = sentenceStart(src, m.index, anchors), hi = sentenceEnd(src, m.index, anchors), i, a;
+        var after = m.index + m[0].length, fwd, at;
+        // 1. Bound backwards, and only to the NEAREST name before it, because
+        //    "Drake London at $29, Garrett Wilson at $26" gives each figure to
+        //    the player beside it and to no one further up the line.
         for (i = anchors.length - 1; i >= 0; i--) {
-          if (anchors[i].at < m.index && anchors[i].at >= lo) { ratio = anchors[i].ratio; break; }
+          a = anchors[i];
+          if (a.end <= m.index && a.at >= lo) {
+            if (LINK_BACK.test(src.slice(a.end, m.index))) ratio = a.ratio;
+            break;
+          }
+        }
+        // 2. Bound forwards: "bid up to $33 on Tetairoa McMillan". A figure
+        //    written price-first belongs to the name it points at, not to
+        //    whoever the sentence happened to mention before it.
+        if (!ratio) {
+          fwd = LINK_FWD.exec(src.slice(after, hi));
+          if (fwd) {
+            at = after + fwd[0].length;
+            for (i = 0; i < anchors.length; i++) {
+              if (anchors[i].at === at) { ratio = anchors[i].ratio; break; }
+            }
+            // Bound to somebody the reader's board cannot price. That figure is
+            // still his and nobody else's, so it scales with the money in the
+            // room rather than falling back onto the previous name's board
+            // slot, which is the misattribution this whole block exists to
+            // stop. -1 says "settled, unanchored" and reads as scale below.
+            if (!ratio && NAME_RUN.test(src.slice(at, hi))) ratio = -1;
+          }
+        }
+        // 3. Bound to nothing: the nearest name in its own sentence owns it,
+        //    the one before it first, then the one after ("$32 is the bid on
+        //    Flowers" opens its own sentence and falls forward).
+        if (!ratio) {
+          for (i = anchors.length - 1; i >= 0; i--) {
+            if (anchors[i].at < m.index && anchors[i].at >= lo) { ratio = anchors[i].ratio; break; }
+          }
         }
         if (!ratio) {
           for (i = 0; i < anchors.length; i++) {
             if (anchors[i].at > m.index && anchors[i].at <= hi) { ratio = anchors[i].ratio; break; }
           }
         }
-        if (ratio) anchored++;
+        if (ratio > 0) anchored++;
       }
-      if (!ratio) ratio = scale;
+      if (ratio <= 0) ratio = scale;
       var v = Math.max(MIN_BID, Math.round(n * ratio));
       out += src.slice(last, m.index) + '$' + v;
       last = m.index + m[0].length;

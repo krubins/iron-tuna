@@ -753,6 +753,71 @@ console.log('\nthe desk\u2019s dollars in the reader\u2019s league');
      && /Set up your league/.test(load({}).L.pricingNote(false)));
 }
 
+// ── 11b. which player a dollar figure belongs to ───────────────────────────
+// The lead of 2026-08-23 went out with McMillan at $36 in the headline and $7
+// in the dek, one player and two prices on the front page. Every figure in the
+// dek was written price-first ("$33 on Tetairoa McMillan") and every one of
+// them was handed to the player named BEFORE it, so McMillan was restated off
+// Price's board slot and Jefferson off McMillan's. The headline says the same
+// thing name-first, which is the only reason it was right.
+console.log('\na dollar figure belongs to the player it is bound to');
+{
+  const site = load({}).L.defaultBoard();
+  const priceOf = n => (site.find(p => p.n === n) || {}).v || 0;
+  // The desk's own league, so nothing here moves for budget reasons and the
+  // only thing under test is which player each figure was read against.
+  const store = (players, cfg = { teams: 12, budget: 200, format: 'auction' }) => ({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: cfg }),
+    iron_tuna_values_v1: JSON.stringify(Object.assign({ ts: 1, format: 'auction' }, cfg, { players }))
+  });
+  const cast = [
+    { n: 'J.K. Dobbins', pos: 'RB', v: 1, pts: 110 },
+    { n: 'Jadarian Price', pos: 'RB', v: 1, pts: 105 },
+    { n: 'Tetairoa McMillan', pos: 'WR', v: 22, pts: 200 },
+    { n: 'Justin Jefferson', pos: 'WR', v: 50, pts: 260 }
+  ];
+  const { L } = load(store(cast));
+  const names = ['J.K. Dobbins', 'Tetairoa McMillan', 'Jadarian Price', 'Justin Jefferson'];
+  const say = t => (L.repriceCopy(t, names) || {}).text || '';
+
+  const title = say('Cap J.K. Dobbins at $12 and bid Tetairoa McMillan to $33 as cheap backs get better');
+  const dek = say('Cap J.K. Dobbins at $12 and Jadarian Price at $13; bid up to $33 on Tetairoa McMillan and $44 on Justin Jefferson.');
+  ok('a figure written price-first goes to the player it points at, not the one before it',
+     /\$36 on Tetairoa McMillan/.test(dek), dek);
+  ok('the headline and the dek cannot disagree about one player’s price',
+     /McMillan to \$36/.test(title) && /\$36 on Tetairoa McMillan/.test(dek), title + ' || ' + dek);
+  ok('"and" joins two bindings rather than extending one',
+     /\$47 on Justin Jefferson/.test(dek), dek);
+  ok('a name-first figure still belongs to the name before it',
+     /Dobbins at \$4 and Jadarian Price at \$3/.test(dek), dek);
+
+  // "Cap Drake London at $29, Garrett Wilson at $26" is the case the backward
+  // rule exists for, and it has to keep winning over the forward one.
+  const pair = say('Cap Tetairoa McMillan at $33, Justin Jefferson at $44.');
+  ok('two named prices in one clause each keep their own player',
+     /McMillan at \$36, Justin Jefferson at \$47/.test(pair), pair);
+
+  // A period inside a name is not the end of a sentence. Both Browns are on the
+  // board, so neither gets a surname of his own to be found by, and the cut
+  // after "A.J." used to put A.J. out of his own sentence's reach.
+  const brown = load(store([
+    { n: 'A.J. Brown', pos: 'WR', v: priceOf('A.J. Brown') * 2, pts: 230 },
+    { n: 'Chase Brown', pos: 'RB', v: priceOf('Chase Brown'), pts: 210 }
+  ])).L.repriceCopy('Cap A.J. Brown at $25 and Chase Brown at $20.', ['A.J. Brown', 'Chase Brown']);
+  ok('a player written with initials is still named in his own sentence',
+     brown && /A\.J\. Brown at \$50 and Chase Brown at \$20/.test(brown.text),
+     brown ? brown.text : '(nothing restated at all)');
+
+  // The one case that must NOT fall back on the previous player: a figure bound
+  // to somebody this reader's board has never heard of. It is still his figure.
+  const off = load(store(cast, { teams: 10, budget: 300, format: 'auction' })).L
+    .repriceCopy('Cap J.K. Dobbins at $12 and bid up to $33 on Rome Odunze.', names);
+  ok('a figure bound to a player the board cannot price scales with the room instead',
+     off && /Odunze/.test(off.text) && /\$41 on Rome Odunze/.test(off.text), off && off.text);
+  ok('and the player it is not about keeps his own number',
+     off && /Dobbins at \$4\b/.test(off.text), off && off.text);
+}
+
 // ── 12. the pages that print the desk's dollars all go through it ──────────
 console.log('\nthe front page and /lead restate before they paint');
 {
