@@ -3369,6 +3369,14 @@ The digest is sorted with a name as the final tiebreak (`_colByRise` /
 `_colByFade`) so two reads of one overlay produce the identical dateline. A
 front-page paragraph that reshuffles on reload reads as noise, not as news.
 
+**It lives inside a section that can leave the page.** `setVegasVisible()`,
+added on main alongside this work, pulls the whole column — head, dek, thesis
+and its ribbon jump-link — when the odds feed has no case to make. The dateline
+is a sibling of `#vegasWrap`, not a child, so `renderDay()` gates on
+`vsItems.length` as well as the digest, and `renderCase()` runs first: a
+dateline left standing over nothing is the same floating-orphan problem that
+removal was for, one paragraph smaller.
+
 ### Contracts, and the cache that made them necessary
 
 `COLUMN_CONTRACT` went **3 → 4** with the digest, and `VS_CONTRACT` in

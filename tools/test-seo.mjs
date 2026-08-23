@@ -140,11 +140,23 @@ console.log('\nthe camp desk is crawlable without JavaScript');
   const reports = JSON.parse(front.match(/var REPORTS = (\[[\s\S]*?\]);\n/)[1]);
   ok('REPORTS is populated', reports.length > 0, String(reports.length));
 
-  const listed = [...front.matchAll(/href="(\/auction-watch-\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]);
-  const uniq = new Set(listed);
-  ok('every camp report is linked in the served HTML',
-    reports.every((r) => uniq.has(r.url)),
-    reports.filter((r) => !uniq.has(r.url)).map((r) => r.url).join(', '));
+  // The whole run lives at /auction-watch, in the served HTML rather than behind
+  // the script — the front page's desk carries only the latest few, so this is
+  // the page that has to be complete for a crawler that never runs JavaScript.
+  const archive = read('auction-watch.html');
+  const inArchive = new Set([...archive.matchAll(/href="(\/auction-watch-\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]));
+  ok('every camp report is linked in the served HTML of /auction-watch',
+    reports.every((r) => inArchive.has(r.url)),
+    reports.filter((r) => !inArchive.has(r.url)).map((r) => r.url).join(', '));
+
+  // And the front page deliberately does NOT carry them all any more. A desk that
+  // creeps back to printing the entire run is the regression this pins.
+  const onFront = new Set([...front.matchAll(/href="(\/auction-watch-\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]));
+  ok('the front page carries only the latest few reports, not the archive',
+    onFront.size <= 5 && onFront.size >= Math.min(2, reports.length), String(onFront.size));
+
+  // The link out is what makes the trimmed desk honest rather than a truncation.
+  ok('the camp desk links to the archive', /id="camp"[\s\S]{0,300}href="\/auction-watch"/.test(front));
 
   ok('the latest report is the featured one',
     new RegExp(`id="campFeat">[\\s\\S]{0,400}href="${reports[0].url}"`).test(front));

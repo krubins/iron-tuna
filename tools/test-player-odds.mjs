@@ -371,9 +371,9 @@ console.log('\nthe card renders every branch');
 // ── 6c. the front page's dateline, driven on a real digest ─────────────────
 // Same reasoning as the card: the dateline is a sentence assembled out of
 // counts, and the failure mode is a count that isn't there.
-function renderDateline(digest, asOf) {
+function renderDateline(digest, asOf, items) {
   const start = front.indexOf("  // ── the day's dateline");
-  const end = front.indexOf('  function renderCase() {');
+  const end = front.indexOf('  // The column\'s argument needs a case to make.');
   const blk = front.slice(start, end);
   const el = { hidden: true, innerHTML: '' };
   const document = { getElementById: id => (id === 'vsDay' ? el : null) };
@@ -387,8 +387,9 @@ function renderDateline(digest, asOf) {
   for (const m of artSeg.matchAll(/(\w+):\['([^']+)'/g)) TEAM_ART[m[1]] = [m[2]];
   const vsNum = n => (n > 0 ? '+' : '') + n;
   const vsMeta = { digest, asOf };
-  new Function('document', 'MONTHS', 'esc', 'TEAM_ART', 'vsNum', 'vsMeta',
-    `${blk}\n renderDay();`)(document, MONTHS, esc, TEAM_ART, vsNum, vsMeta);
+  const vsItems = items === undefined ? [{}] : items;
+  new Function('document', 'MONTHS', 'esc', 'TEAM_ART', 'vsNum', 'vsMeta', 'vsItems',
+    `${blk}\n renderDay();`)(document, MONTHS, esc, TEAM_ART, vsNum, vsMeta, vsItems);
   return el;
 }
 function TEAM_ART_NAME(t) {
@@ -423,6 +424,12 @@ console.log('\nthe front page dateline');
 
   const none = renderDateline(null, Date.UTC(2026, 7, 23, 11));
   ok('no digest means no dateline', none.hidden === true);
+
+  // The section itself leaves the page when the odds feed has no case to make,
+  // and the dateline is inside it — a paragraph left standing over nothing is
+  // the orphan that removal was for.
+  const orphan = renderDateline(g, Date.UTC(2026, 7, 23, 11), []);
+  ok('no case on the board means no dateline either', orphan.hidden === true);
 }
 
 // ── 7. end to end on the live nflverse lines ───────────────────────────────

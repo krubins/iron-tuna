@@ -96,6 +96,7 @@ const FOOT_COLS = [
     h: 'Read', links: [
       { label: 'Auction insights', href: '/auction-insights' },
       { label: 'The Pick', href: '/the-pick' },
+      { label: 'Auction Watch', href: '/auction-watch' },
       { label: 'Guides', href: '/guides' },
       { label: 'Analyst Desk', href: '/analyst-desk' },
       { label: 'Play-Caller Premium', href: '/play-caller-premium' },

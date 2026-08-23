@@ -29,6 +29,13 @@
 <style>
 :root{--brand:#0e7c63;--brand-dark:#0a6151;--brand-tint:#e9f5f1;--brand-line:#bfe3d8;--value-red:#c8322b;--ink:#0f1719;--ink-2:#3f4e58;--ink-3:#6d7c86;--line:#e1e7ea;--bg:#f4f7f7;--card:#ffffff;--mast:#0b1614;--gold:#f2a900;--gold-ink:#7a5300;--teal:#2dd4a3}
 *{box-sizing:border-box;margin:0;padding:0}
+/* The UA sheet's [hidden] is specificity (0,1,0) — the same as any class — and
+   loses to an author sheet at a tie, so `.vs-wrap{display:grid}` kept rendering
+   a section the script had hidden. This repo had already patched that one class
+   at a time (.ed-tag, .lead-ctrls, .lead-media below); this makes the attribute
+   mean what it says everywhere, including on the sections that hide themselves
+   when their feed has nothing to show. */
+[hidden]{display:none !important}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
@@ -145,6 +152,8 @@ img{max-width:100%}
 
 /* ── hero ── */
 .hero{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:18px;margin-top:20px;align-items:start}
+/* No rail to sit beside: the lead takes the row rather than leaving a hole. */
+.hero.solo{grid-template-columns:minmax(0,1fr)}
 .lead{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;position:relative}
 .lead-body{padding:26px 28px 20px;display:flex;flex-direction:column;gap:12px;min-height:0}
 .lead-kicker{display:flex;gap:8px;align-items:center}
@@ -303,8 +312,7 @@ img{max-width:100%}
 /* ── the coaching column ──────────────────────────────────────────────── */
 /* Four across, so the four cards the front page shows are one clean row
    rather than three and an orphan. */
-.pcp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-@media(max-width:1080px){.pcp-grid{grid-template-columns:repeat(2,1fr)}}
+.pcp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
 @media(max-width:620px){.pcp-grid{grid-template-columns:1fr}}
 .pcp-card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px 14px;display:flex;flex-direction:column;gap:9px;border-top:3px solid var(--ink)}
 .pcp-card.up{border-top-color:#0b7a43}
@@ -453,7 +461,6 @@ img{max-width:100%}
 .week li{font-size:12px;color:var(--ink-2);padding-left:13px;position:relative;line-height:1.42}
 .week li::before{content:'';position:absolute;left:0;top:6px;width:4px;height:4px;border-radius:50%;background:var(--brand)}
 .week .go{margin-top:auto;padding-top:4px;display:inline-block;font-size:12px;font-weight:700;color:var(--brand);letter-spacing:.04em}
-.week-empty{grid-column:1/-1;background:var(--card);border:1px dashed var(--line);border-radius:6px;padding:16px 18px;font-size:13px;color:var(--ink-2);line-height:1.55}
 
 @media (max-width:900px){.build-wrap{grid-template-columns:1fr}.roster{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media (max-width:560px){.roster{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -470,6 +477,11 @@ img{max-width:100%}
 .foot{margin-top:40px;background:#fff;border-top:1px solid var(--line)}
 .foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 18px 34px;font-size:13px;color:var(--ink-3)}
 .foot a:hover{color:var(--brand)}
+/* The tools row takes a line of its own above the secondary links: flex-basis
+   100% breaks it out of the footer's single wrapping row so it reads as a group
+   rather than seven more items in the legal-and-company run. */
+.foot-tools{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.foot-tools a{font-weight:700;color:var(--ink-2)}
 .foot .fm{margin-left:auto}
 
 /* Between the widest phone and the full desktop the ribbon is a handful of
@@ -626,9 +638,15 @@ img{max-width:100%}
 .tr span em{font-style:italic;color:#c3cfcb}
 @media(max-width:900px){
   .hero-band .hb-grid{grid-template-columns:1fr;gap:26px;padding-top:32px;padding-bottom:30px}
-  .trio .wrap{grid-template-columns:1fr}
-  .tr{border-left:0;border-top:1px solid rgba(255,255,255,.09);padding:16px 18px}
-  .tr:first-child{border-top:0}
+  /* The trio stacked to three full-width blocks here — 376px, a fifth of
+     everything above the first section, spent on three sentences. As a
+     snap-scrolling row it keeps all three intact at the height of one. The 82%
+     basis leaves the next card's edge showing, which is what tells a reader the
+     row moves; a full-width basis reads as a single static block and the other
+     two are never found. */
+  .trio .wrap{grid-template-columns:none;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .trio .wrap::-webkit-scrollbar{display:none}
+  .tr{flex:0 0 min(82%, 340px);scroll-snap-align:start;padding:16px 18px}
 }
 
 /* ── the tool grid ────────────────────────────────────────────────────────
@@ -734,7 +752,10 @@ img{max-width:100%}
       <figcaption class="hb-cap">The cheat sheet, priced for a 12-team $200 auction.</figcaption>
     </figure>
   </div>
-  <div class="trio"><div class="wrap">
+  <!-- Scrolls sideways under 900px (see .trio .wrap below), so the region is
+       focusable: a scroll container that only a pointer can move is unreachable
+       by keyboard. -->
+  <div class="trio"><div class="wrap" tabindex="0" role="group" aria-label="The three numbers on every player">
     <div class="tr"><i>Proj</i><b>The going rate</b><span>What the room is likely to pay for him, on the curve your league&rsquo;s budget actually produces.</span></div>
     <div class="tr on"><i>Value</i><b>What he is worth</b><span>His points converted to dollars against a replacement starter &mdash; the honest price, whatever the room does.</span></div>
     <div class="tr"><i>You</i><b>What you should bid</b><span>What one more dollar buys <em>your</em> lineup, given the roster you have already bought and the money still in your pocket.</span></div>
@@ -742,10 +763,14 @@ img{max-width:100%}
 </section>
 
 <div class="ribbon"><div class="wrap">
+  <!-- Ribbon order tracks the page order. The Build moved up because it is the
+       proof the rest of the page is arguing for — a solved roster with the money
+       on it — and it was sitting eight screens down on a phone behind two
+       sections of prose. -->
   <a href="#today">Today</a>
+  <a href="#build">The Build</a>
   <a href="#thepick">The Pick</a>
   <a href="#vegas">Vegas</a>
-  <a href="#build">The Build</a>
   <a href="#positions">Position Intel</a>
   <a href="#allocation">Allocation</a>
   <a href="#camp">Camp</a>
@@ -769,26 +794,14 @@ img{max-width:100%}
 </div></div>
 
 <main class="wrap">
-  <div class="shelf-eyebrow">Before the draft</div>
-  <h2 class="tools-head">Your auction, priced</h2>
-  <p class="tools-sub">Six tools, all of them built for one draft format. Start with the free sheet.</p>
-  <div class="tools-grid">
-  <a class="tool is-alt" href="/auctiondraft?screen=cheat"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg></span><span class="tt"><h3>Custom Auction Values</h3><p>All 500+ players priced in dollars for your teams, your budget and your scoring settings.</p></span></a>
-  <a class="tool" href="/auctiondraft?screen=board"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 4-7 5 9"/><path d="M3 21h18"/></svg></span><span class="tt"><h3>Live Auction Manager</h3><p>Track every dollar in the room as the bidding runs, and see what you should bid move with it.</p></span></a>
-  <a class="tool" href="/auction-draft-assistant"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 1 1-3.2-6.4"/><path d="M9.5 9a2.6 2.6 0 1 1 3.2 2.5c-.8.2-1.2.8-1.2 1.6"/><path d="M11.5 16.6h.01"/></svg></span><span class="tt"><h3>AI Value Coach</h3><p>Ask &ldquo;do I go to $41 here?&rdquo; and get an answer built on your roster and the money left.</p></span></a>
-  <a class="tool" href="/superflex-auction-values"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4.2"/><circle cx="16" cy="16" r="4.2"/><path d="M12.6 5.4h4v4"/></svg></span><span class="tt"><h3>Superflex &amp; 2QB Values</h3><p>A second quarterback re-prices the whole board. These values already know that.</p></span></a>
-  <a class="tool" href="/salary-cap-draft-tool"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M16.5 7.2C15.6 6 14 5.3 12 5.3c-2.5 0-4.2 1.2-4.2 3s1.6 2.6 4.2 3.1c2.9.6 4.6 1.4 4.6 3.4 0 2-1.9 3.2-4.6 3.2-2.2 0-3.9-.8-4.8-2.1"/></svg></span><span class="tt"><h3>Salary Cap &amp; Keepers</h3><p>Keeper inflation, cap holds and multi-year money, folded into the same sheet.</p></span></a>
-  <a class="tool" href="/guides"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/></svg></span><span class="tt"><h3>Auction Strategy Library</h3><p>Budget shape, nomination tactics and the $1 endgame &mdash; the playbooks behind the numbers.</p></span></a>
-  </div>
-
-  <div class="shelf-eyebrow post">After the draft<span class="soon">Coming soon</span></div>
-  <h2 class="tools-head">The season is still an auction</h2>
-  <p class="tools-sub">FAAB is a blind auction run every week against the same room. These price it. Free when they open &mdash; leave an email and we will tell you.</p>
-  <div class="tools-grid post">
-    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M16.5 7.2C15.6 6 14 5.3 12 5.3c-2.5 0-4.2 1.2-4.2 3s1.6 2.6 4.2 3.1c2.9.6 4.6 1.4 4.6 3.4 0 2-1.9 3.2-4.6 3.2-2.2 0-3.9-.8-4.8-2.1"/></svg></span><span class="tt"><h3>FAAB Advisor</h3><p>The going rate, what he is worth, and what you should bid &mdash; read off your league&rsquo;s own rosters and every rival&rsquo;s remaining budget.</p></span></a>
-    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg></span><span class="tt"><h3>Start / Sit</h3><p>Your lineup scored against your league&rsquo;s own settings, with the week priced off the betting market.</p></span></a>
-    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></span><span class="tt"><h3>Roster Audit</h3><p>What each player cost you at the auction against what he has actually returned.</p></span></a>
-  </div>
+  <!-- The two tool shelves that stood here — six "Before the draft" cards and
+       three "After the draft" cards, all three of those still Coming soon —
+       cost 1.6 screens before a reader reached a single piece of reporting, and
+       restated navigation the masthead, the hero buttons and the closing band
+       already carry. The products are what the hero sells and what the band
+       below closes on; the middle of the page is for the desk. Every
+       destination they held is still linked from the footer, so nothing on the
+       site lost its link from the homepage. -->
 
   <div class="sec-head" id="today"><h2>The Auction Desk</h2><a class="sec-more" href="/auction-insights">Every insight &rarr;</a></div>
   <div class="hero">
@@ -822,29 +835,6 @@ img{max-width:100%}
     </aside>
   </div>
 
-  <div class="sec-head" id="thepick"><h2>The Pick</h2><a class="sec-more" href="/the-pick">Every entry &rarr;</a></div>
-  <p class="sec-sub" id="pickSub">One story a day, each one arguing a single idea &mdash; scarcity, scoring settings, tier cliffs &mdash; with the projection numbers that prove it and the player it tells you to buy.</p>
-  <div class="pick-band" id="pickBand"></div>
-
-  <div class="sec-head" id="vegas"><h2>Vegas vs. Consensus</h2><a class="sec-more" href="/auctiondraft?screen=cheat">See it on your cheat sheet &rarr;</a></div>
-  <p class="sec-sub">Iron Tuna prices every player against the betting market. Almost nobody else does. These are the players where that changes the number &mdash; recomputed from the live lines, with a new case every six hours.</p>
-  <p class="vs-day" id="vsDay" hidden></p>
-  <div class="vs-wrap">
-    <div class="vs-thesis">
-      <h3>Why the odds get a vote</h3>
-      <p>A sportsbook posts a number with <b>its own money behind it</b>. Get it wrong and sharp bettors take the other side until it moves, so every line is priced off repeatable trends, statistical modelling, and injury and usage news the moment it lands &mdash; then corrected in public, continuously.</p>
-      <p>A ranking carries no such penalty. <b>Anyone with a TikTok account and a hunch can publish a top 200</b>, never revisit it, and pay nothing when it misses. That is not an argument that the book is always right. It is an argument that when a priced market and an unpriced list disagree, <b>the disagreement is worth a look</b>.</p>
-      <p><b>Iron Tuna&rsquo;s prices already carry the odds</b> &mdash; every value on your cheat sheet is blended toward the market. Almost no ranking or ADP list does that. So each case here is the gap between what the consensus is charging you and <b>what the lines say the player is worth</b>.</p>
-      <ol>
-        <li><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points per game &mdash; the scoring environment every skill player on that roster inherits.</li>
-        <li><b>Compare like with like.</b> The useful question is never &ldquo;is this team good?&rdquo; but whether the market ranks that offense <em>higher or lower than the consensus projections already do</em>.</li>
-        <li><b>Buy the gap, not the name.</b> The edge is the distance between a player&rsquo;s consensus price and the market-implied one &mdash; a cheap player the odds like is worth more than a stud everyone already agrees on.</li>
-        <li><b>Respect the clamp.</b> One weird line is noise. Treat a gap as a tiebreaker between players you already rate closely, not a reason to blow up your board.</li>
-      </ol>
-    </div>
-    <div class="vs-case" id="vsCase"><p class="vs-empty">Loading the current case&hellip;</p></div>
-  </div>
-
   <div class="sec-head" id="build"><h2>The Build<span class="ed-tag" id="buildTag" hidden></span></h2><a class="sec-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>
   <p class="sec-sub" id="buildSub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
   <div class="build-wrap">
@@ -861,6 +851,31 @@ img{max-width:100%}
     <aside class="build-side" id="buildSide"></aside>
   </div>
   <div class="build-cards" id="buildCards"></div>
+
+  <div class="sec-head" id="thepick"><h2>The Pick</h2><a class="sec-more" href="/the-pick">Every entry &rarr;</a></div>
+  <p class="sec-sub" id="pickSub">One story a day, each one arguing a single idea &mdash; scarcity, scoring settings, tier cliffs &mdash; with the projection numbers that prove it and the player it tells you to buy.</p>
+  <div class="pick-band" id="pickBand"></div>
+
+  <!-- Hidden until the odds feed actually has a case to make: see setVegasVisible(). -->
+  <div class="sec-head" id="vegas" hidden><h2>Vegas vs. Consensus</h2><a class="sec-more" href="/auctiondraft?screen=cheat">See it on your cheat sheet &rarr;</a></div>
+  <p class="sec-sub" id="vegasSub" hidden>Iron Tuna prices every player against the betting market. Almost nobody else does. These are the players where that changes the number &mdash; recomputed from the live lines, with a new case every six hours.</p>
+  <p class="vs-day" id="vsDay" hidden></p>
+  <div class="vs-wrap" id="vegasWrap" hidden>
+    <div class="vs-thesis">
+      <h3>Why the odds get a vote</h3>
+      <p>A sportsbook posts a number with <b>its own money behind it</b>. Get it wrong and sharp bettors take the other side until it moves, so every line is priced off repeatable trends, statistical modelling, and injury and usage news the moment it lands &mdash; then corrected in public, continuously.</p>
+      <p>A ranking carries no such penalty. <b>Anyone with a TikTok account and a hunch can publish a top 200</b>, never revisit it, and pay nothing when it misses. That is not an argument that the book is always right. It is an argument that when a priced market and an unpriced list disagree, <b>the disagreement is worth a look</b>.</p>
+      <p><b>Iron Tuna&rsquo;s prices already carry the odds</b> &mdash; every value on your cheat sheet is blended toward the market. Almost no ranking or ADP list does that. So each case here is the gap between what the consensus is charging you and <b>what the lines say the player is worth</b>.</p>
+      <ol>
+        <li><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points per game &mdash; the scoring environment every skill player on that roster inherits.</li>
+        <li><b>Compare like with like.</b> The useful question is never &ldquo;is this team good?&rdquo; but whether the market ranks that offense <em>higher or lower than the consensus projections already do</em>.</li>
+        <li><b>Buy the gap, not the name.</b> The edge is the distance between a player&rsquo;s consensus price and the market-implied one &mdash; a cheap player the odds like is worth more than a stud everyone already agrees on.</li>
+        <li><b>Respect the clamp.</b> One weird line is noise. Treat a gap as a tiebreaker between players you already rate closely, not a reason to blow up your board.</li>
+      </ol>
+    </div>
+    <div class="vs-case" id="vsCase"><p class="vs-empty">Loading the current case&hellip;</p></div>
+  </div>
+
 
   <div class="sec-head" id="positions"><h2>Position Intel</h2>
     <a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
@@ -880,12 +895,12 @@ img{max-width:100%}
     <div class="alloc-card"><h3><a href="/auctiondraft">Budget Planner</a></h3><p>The live tool: a budget-aware planner that finds the dollar allocation producing your highest-scoring lineup.</p><a class="go" href="/auctiondraft">Open the planner &rarr;</a></div>
   </div>
 
-  <div class="sec-head" id="camp"><h2>Training Camp &amp; Preseason</h2></div>
+  <div class="sec-head" id="camp"><h2>Training Camp &amp; Preseason</h2><a class="sec-more" href="/auction-watch">Every report &rarr;</a></div>
   <p class="camp-note" id="campNote">Verified, auction-relevant signals from camps and preseason games. This desk updates as news breaks — <b>latest report: August 22, 2026</b>.</p>
   <div class="week-strip" id="weekStrip"></div>
   <div class="camp-grid">
     <div class="camp-feat" id="campFeat"><span><span class="badge badge-pos">Latest report</span></span><h3><a href="/auction-watch-2026-08-22">Auction Watch: August 22, 2026</a></h3><p>Verified, auction-relevant player signals from August 22: Jayden Higgins' season-ending ACL tear and who it helps in Houston, Tre Tucker's clear WR1 role in Las Vegas, Trevor Etienne's growing passing-down role behind Jonathon Brooks, Erick All stepping into Cincinnati's tight end job, and Tyler Warren's minor groin injury.</p><a class="lead-link" href="/auction-watch-2026-08-22">Read the report &rarr;</a></div>
-    <ul class="camp-list" id="campList"><li><span class="cd">Aug 21</span><a href="/auction-watch-2026-08-21">Auction Watch: August 21, 2026</a></li><li><span class="cd">Aug 18</span><a href="/auction-watch-2026-08-18">Auction Watch: August 18, 2026</a></li><li><span class="cd">Jul 26</span><a href="/auction-watch-2026-07-26">Auction Watch: July 26, 2026</a></li><li><span class="cd">Jul 22</span><a href="/auction-watch-2026-07-22">Auction Watch: July 22, 2026</a></li><li><span class="cd">Jul 21</span><a href="/auction-watch-2026-07-21">Auction Watch: July 21, 2026</a></li><li><span class="cd">Jul 20</span><a href="/auction-watch-2026-07-20">Auction Watch: July 20, 2026</a></li><li><span class="cd">Jul 15</span><a href="/auction-watch-2026-07-15">Auction Watch: July 15, 2026</a></li><li><span class="cd">Jul 12</span><a href="/auction-watch-2026-07-12">Auction Watch: July 12, 2026</a></li><li><span class="cd">Jul 11</span><a href="/auction-watch-2026-07-11">Auction Watch: July 11, 2026</a></li><li><span class="cd">Jul 9</span><a href="/auction-watch-2026-07-09">Auction Watch: July 9, 2026</a></li><li><span class="cd">Jul 5</span><a href="/auction-watch-2026-07-05">Auction Watch: July 5, 2026</a></li><li><span class="cd">Jul 4</span><a href="/auction-watch-2026-07-04">Auction Watch: July 4, 2026</a></li><li><span class="cd">Jul 3</span><a href="/auction-watch-2026-07-03">Auction Watch: July 3, 2026</a></li><li><span class="cd">Jul 2</span><a href="/auction-watch-2026-07-02">Auction Watch: July 2, 2026</a></li><li><span class="cd">Jul 1</span><a href="/auction-watch-2026-07-01">Auction Watch: July 1, 2026</a></li><li><span class="cd">Jun 29</span><a href="/auction-watch-2026-06-29">Auction Watch: June 29, 2026</a></li><li><span class="cd">Jun 28</span><a href="/auction-watch-2026-06-28">Auction Watch: June 28, 2026</a></li><li><span class="cd">Jun 26</span><a href="/auction-watch-2026-06-26">Auction Watch: June 26, 2026</a></li><li><span class="cd">Jun 25</span><a href="/auction-watch-2026-06-25">Auction Watch: June 25, 2026</a></li><li><span class="cd">Jun 24</span><a href="/auction-watch-2026-06-24">Auction Watch: June 24, 2026</a></li><li><span class="cd">Jun 23</span><a href="/auction-watch-2026-06-23">Auction Watch: June 23, 2026</a></li><li><span class="cd">Jun 22</span><a href="/auction-watch-2026-06-22">Auction Watch: June 22, 2026</a></li><li><span class="cd">Jun 21</span><a href="/auction-watch-2026-06-21">Auction Watch: June 21, 2026</a></li><li><span class="cd">Jun 19</span><a href="/auction-watch-2026-06-19">Auction Watch: June 19, 2026</a></li></ul>
+    <ul class="camp-list" id="campList"><li><span class="cd">Aug 21</span><a href="/auction-watch-2026-08-21">Auction Watch: August 21, 2026</a></li><li><span class="cd">Aug 18</span><a href="/auction-watch-2026-08-18">Auction Watch: August 18, 2026</a></li><li><span class="cd">Jul 26</span><a href="/auction-watch-2026-07-26">Auction Watch: July 26, 2026</a></li><li><span class="cd">Jul 22</span><a href="/auction-watch-2026-07-22">Auction Watch: July 22, 2026</a></li></ul>
   </div>
 
   <div class="tools-band">
@@ -898,7 +913,16 @@ img{max-width:100%}
 </main>
 
 <footer class="foot"><div class="wrap">
-  <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
+  <!-- The tools row exists because the two card shelves above it do not any more.
+       Cutting nine cards from the reading flow is an editorial call; dropping the
+       homepage's only link to /auction-draft-assistant, /superflex-auction-values
+       and /salary-cap-draft-tool would have been an accidental SEO one, on the
+       highest-authority page on the site and on two pages the title tag targets
+       by name. The cards go, the links stay. -->
+  <nav class="foot-tools" aria-label="Tools">
+    <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/post-draft">In-Season</a>
+  </nav>
+  <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/auction-watch">Auction Watch</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a>
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; Player photos &copy; NFL/ESPN</span>
 </div></footer>
 
@@ -926,6 +950,26 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   function fmtShort(d){ var p = d.split('-'); return MONTHS[+p[1]-1].slice(0,3) + ' ' + (+p[2]); }
   function viewCls(s){ return s.viewCls === 'under' ? 'badge-under' : s.viewCls === 'over' ? 'badge-over' : 'badge-fair'; }
   function esc(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+  // ── a section with nothing in it is not a section ─────────────────────────
+  // Hiding a section means hiding its head, its dek, its body AND the ribbon
+  // jump-link that would otherwise scroll a reader down to nothing. That is the
+  // same move in three places on this page, so it lives here rather than three
+  // times over. Sections start hidden in the markup wherever their content is
+  // fetched or computed, so a dead one never flashes up before it is removed.
+  function setSectionVisible(ids, anchor, on){
+    ids.forEach(function(id){
+      var e = document.getElementById(id);
+      if (e) e.hidden = !on;
+    });
+    if (anchor) {
+      var jump = document.querySelector('.ribbon a[href="#' + anchor + '"]');
+      if (jump) jump.hidden = !on;
+    }
+    // The ribbon's overflow fade is measured, so it has to re-measure when a
+    // link joins or leaves the row. Hoisted var, assigned during init below.
+    if (typeof syncRibbon === 'function') syncRibbon();
+  }
 
   // ── the reading lens ──
   // Every "Your league" line on this page has to commit to a draft type: an
@@ -1105,7 +1149,12 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   // at 00/03/06/09/12/15/18/21 UTC. A reader who lands twice inside one slot
   // gets one consistent front page; a reader who comes back later gets a new one.
   var SLOT_MS = 3 * 60 * 60 * 1000;
-  var LEAD_WINDOW = 8;              // most recent N deep dives stay in rotation
+  // Five, not eight. Every `deep` story is a Market story, so the lead rotation
+  // and the Market module draw from one pool of fifteen and whatever the lead
+  // holds, the module cannot show. At eight the module was down to stories three
+  // weeks old while the lead sat on the newest eight. Five keeps the rotation
+  // varied and hands the module back the sixth, seventh and eighth newest.
+  var LEAD_WINDOW = 5;              // most recent N deep dives stay in rotation
   var deep = live.filter(function(s){ return s.deep; });
   // Fall back to the latest drop if no deep dive has unlocked yet, so the lead
   // is never empty on a fresh season.
@@ -1114,9 +1163,10 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
                             : live.filter(function(s){ return s.date === latestDate; });
 
   // A plain `slot % pool` would lock the rotation to the time of day whenever the
-  // pool divides evenly into the 8 slots a day (which it does at a full
-  // LEAD_WINDOW of 8): a reader who always checks at 4pm would see the same deep
-  // dive forever. Advancing one extra step per completed pass rotates the phase
+  // pool divides evenly into the 8 slots a day: a reader who always checks at 4pm
+  // would see the same deep dive forever. A full LEAD_WINDOW of 5 is not such a
+  // pool, but the smaller ones it passes through early in a season are — 1, 2 and
+  // 4 all divide 8 — so the correction still earns its place. Advancing one extra step per completed pass rotates the phase
   // daily, so a fixed-hour reader gets a different lead each day and works
   // through the whole pool. The shift is skipped for tiny pools, where it could
   // land on the same story twice in a row instead of moving on.
@@ -1381,7 +1431,14 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     document.getElementById('leadLink').setAttribute('href', s.url);
     document.getElementById('leadDate').textContent = fmtDate(s.date) + ' drop'
       + (isDeepLead && !pinned ? ' · next deep dive in ' + fmtCountdown(msToNextSlot()) : '');
+    // "More deep dives" over a pool of one is the lead's own headline printed a
+    // second time under the word "more", and the dots and arrows beside it are a
+    // carousel with nowhere to go. Both belong to a rotation, so both wait for
+    // one to exist.
     var also = document.getElementById('leadAlso');
+    var solo = leadPool.length < 2;
+    document.getElementById('leadCtrls').hidden = solo;
+    if (solo) { also.innerHTML = ''; return; }
     var ah = '<span class="la-label">' + (isDeepLead ? 'More deep dives' : 'Also in this drop') + '</span><ul>';
     leadPool.forEach(function(o, k){
       ah += '<li><a class="' + (k === i ? 'on' : '') + '" href="' + o.url + '">' + esc(o.title) + '</a></li>';
@@ -1675,6 +1732,11 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   function renderDay() {
     var host = document.getElementById('vsDay');
     if (!host) return;
+    // The dateline lives INSIDE a section that now leaves the page entirely when
+    // the odds feed has no case to make (setVegasVisible below). A dateline
+    // standing on its own with no column under it is the same floating-orphan
+    // problem, one paragraph smaller — so it goes when the section goes.
+    if (!vsItems.length) { host.hidden = true; return; }
     var g = vsMeta && vsMeta.digest;
     // No digest is not a small digest. An older cached payload, or no overlay
     // at all, gets no dateline rather than a sentence full of zeroes.
@@ -1723,16 +1785,22 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     host.hidden = false;
   }
 
+  // The column's argument needs a case to make. A 294-word methodology essay
+  // standing over "no case on the board right now" was the most expensive empty
+  // state on the page: a full screen of explanation with nothing to explain, and
+  // it rendered whenever the odds feed had no disagreement worth printing. The
+  // section now leaves the page entirely — head, dek, thesis and its ribbon
+  // jump-link with it — and returns the moment a case lands. It never invents
+  // one; the whole point of the column is that the numbers are earned.
+  function setVegasVisible(on) {
+    setSectionVisible(['vegas', 'vegasSub', 'vegasWrap'], 'vegas', on);
+  }
+
   function renderCase() {
     var host = document.getElementById('vsCase');
     if (!host) return;
-    if (!vsItems.length) {
-      // No overlay yet, or the pull is mid-refresh. Say so plainly rather than
-      // inventing a case — the column's whole argument is that numbers are earned.
-      host.innerHTML = '<p class="vs-empty">No case on the board right now. The odds feed refreshes daily; ' +
-        'when the market and the consensus rankings disagree by enough to matter, the next case appears here.</p>';
-      return;
-    }
+    if (!vsItems.length) { setVegasVisible(false); return; }
+    setVegasVisible(true);
     var i = ((vsIdx % vsItems.length) + vsItems.length) % vsItems.length;
     var it = vsItems[i];
     var my = myCase(it);
@@ -1886,29 +1954,66 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       vsItems = (d && d.contract === VS_CONTRACT) ? raw.filter(vsUsable) : [];
       vsMeta = d || null;
       vsIdx = vsSlotIndex(vsItems.length);
-      renderDay();
       renderCase();
+      renderDay();
       startCaseTick();
     })
     .catch(function () { vsItems = []; renderCase(); });
 
-  // ── top headlines rail: strictly newest-first across BOTH desks ───────────
-  // Camp reports and insight calls are merged into one feed and sorted by date,
-  // rather than pinning the newest camp report to the top: a July camp report
-  // must not outrank an August drop just because it came from the other desk.
-  // Dates are ISO (YYYY-MM-DD) so a plain string compare is a date compare.
+  // ── one story, one slot ───────────────────────────────────────────────────
+  // Every section below used to draw from `live` independently, so one call could
+  // land in the lead rotation, a position module AND the rail at once — 101 links
+  // in <main> resolving to 66 destinations, with the top story on the page
+  // reachable four separate ways before a reader had scrolled past it.
+  //
+  // The Market module was the worst of it, and structurally so: every `deep`
+  // story is a Market story, so the five cards it drew were a strict subset of
+  // the lead's eight. The section could not say anything the top of the page had
+  // not already said.
+  //
+  // Sections now claim their stories in reading order — the lead first, then the
+  // position modules, then the rail takes what is left. A section that comes up
+  // short carries fewer cards; nothing is padded with a repeat.
+  var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
+  var claimed = {};
+  leadPool.forEach(function(s){ claimed[s.url] = 1; });
+
+  // posAll keeps the FULL position count for the header badge. "QB 10" is a
+  // statement about the library behind the module, not about how many cards this
+  // particular module happened to draw, so it must not shrink as slots are taken.
+  var posAll = {}, posPick = {};
+  ORDER.forEach(function(pair){
+    var pos = pair[0];
+    var all = live.filter(function(s){ return s.pos === pos; });
+    posAll[pos] = all;
+    // Two per position, three on the double-width Market module — down from
+    // three and five. The library behind these keeps growing (50 live calls and
+    // counting) while the page's job does not: show the newest, say how many
+    // more there are, and send the reader to /auction-insights for the rest. The
+    // count badge beside each heading is what makes the trim honest — "QB 10"
+    // over two cards reads as a library, where ten cards read as a wall.
+    var pick = all.filter(function(s){ return !claimed[s.url]; })
+                  .slice(0, pos === 'Market' ? 3 : 2);
+    pick.forEach(function(s){ claimed[s.url] = 1; });
+    posPick[pos] = pick;
+  });
+
+  // ── top headlines rail: the newest calls no other section is showing ──────
+  // Sorted strictly newest-first. Dates are ISO (YYYY-MM-DD) so a plain string
+  // compare is a date compare.
+  //
+  // Camp reports are deliberately NOT merged in any more. The Training Camp desk
+  // at the foot of the page lists every one of them, so a report here was always
+  // a second copy of a row already on the page — and because they are the most
+  // frequent drop, the newest two or three took the rail slots that the insight
+  // headlines this rail exists to surface should have had.
   var RAIL_MAX = 9;          // rail slots
   var RAIL_MIN_TOP_DAY = 3;  // never show the newest day as a lone headline
-  var inLead = {};
-  leadPool.forEach(function(s){ inLead[s.url] = 1; });
 
   var railPool = [];
   live.forEach(function(s){
-    if (inLead[s.url]) return;                       // already the lead / in its rail
+    if (claimed[s.url]) return;                      // the lead or a position module has it
     railPool.push({ date: s.date, title: s.title, url: s.url, meta: s.pos + ' · ' + fmtShort(s.date) });
-  });
-  REPORTS.filter(function(r){ return unlocked(r.date); }).forEach(function(r){
-    railPool.push({ date: r.date, title: r.title, url: r.url, meta: 'Camp report · ' + fmtShort(r.date) });
   });
   railPool.sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
 
@@ -1925,13 +2030,24 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
 
   var rail = document.getElementById('railList');
   railItems.forEach(function(it){
+    claimed[it.url] = 1;                             // nothing further down repeats a headline
     var el = document.createElement('li');
     el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
     rail.appendChild(el);
   });
+  // Early in a season the lead rotation and the position modules can between
+  // them hold every story there is, leaving nothing for the rail. A "Top
+  // Headlines" box with no headlines under it is worse than no box, so the rail
+  // leaves and the lead takes the full width rather than sitting in two thirds
+  // of a two-column grid beside a hole.
+  if (!railItems.length) {
+    var railBox = document.querySelector('.rail');
+    if (railBox) railBox.hidden = true;
+    var heroBox = document.querySelector('.hero');
+    if (heroBox) heroBox.classList.add('solo');
+  }
 
   // ── position modules ──
-  var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
   var grid = document.getElementById('posGrid');
 
   // The face for a story: its first named player who has a photo. A story that
@@ -1959,7 +2075,10 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     var yourLbl = (L && L.tailorLabel) ? L.tailorLabel() : 'Your league';
     ORDER.forEach(function(pair){
       var pos = pair[0], id = pair[1];
-      var list = live.filter(function(s){ return s.pos === pos; });
+      // Selected once, up top, so the claim order holds and an edition switch
+      // repaints the same stories in the reader's format rather than reshuffling
+      // which stories the module is showing.
+      var all = posAll[pos] || [], list = posPick[pos] || [];
       if (!list.length) return;
       var mod = el('div', 'pos-mod' + (pos === 'Market' ? ' wide' : ''));
       mod.id = id;
@@ -1967,7 +2086,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       var head = el('div', 'pm-head');
       var h3 = el('h3');
       h3.appendChild(document.createTextNode(pos === 'Market' ? 'Market & League-Wide' : pos));
-      h3.appendChild(el('span', 'pos-count', String(list.length)));
+      h3.appendChild(el('span', 'pos-count', String(all.length)));
       var more = el('a', 'mod-more', 'More ' + (pos === 'Market' ? 'market' : pos) + ' intel \u2192');
       more.href = '/auction-insights';
       head.appendChild(h3); head.appendChild(more);
@@ -2016,10 +2135,12 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       if (claimed) mod.appendChild(claimed);
 
       // ── the follow-ups ──
-      // Two per card, four on the double-width Market module. Five stacks of
-      // four headlines was the densest block on the page and the one a reader
-      // skimmed past; the lead of each card is what the section is for.
-      var rest = list.slice(1, pos === 'Market' ? 5 : 3);
+      // Two per card, four on the double-width Market module — the widths are
+      // applied by the claim pass above, which already sliced each module to its
+      // budget. Five stacks of four headlines was the densest block on the page
+      // and the one a reader skimmed past; the lead of each card is what the
+      // section is for.
+      var rest = list.slice(1);
       if (rest.length) {
         var ul = el('ul', 'pm-rest');
         rest.forEach(function(st){
@@ -2050,6 +2171,11 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       }
       grid.appendChild(mod);
     });
+    // Same rule as the rail and the odds column: if every module came up empty
+    // because the lead already holds the whole library, the head and dek go with
+    // them rather than standing over an empty grid. Checked on every repaint, so
+    // an edition switch cannot leave a stale heading behind.
+    setSectionVisible(['positions', 'posSub', 'posGrid'], 'positions', grid.children.length > 0);
   }
   renderPositions();
 
@@ -2193,14 +2319,20 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   })();
 
   // ── the coaching column ────────────────────────────────────────────────
-  // Newest first, four on the front page, each carrying the faces of the
-  // players it actually commits to. The entries come out of
+  // Newest first, two on the front page, each carrying the faces of the
+  // players it actually commits to. Four cards in a four-up row was a full
+  // screen of the page spent on a standing column that publishes daily and has
+  // its own page; two make the argument and "The whole column" takes the reader
+  // to the other thirteen. The entries come out of
   // play-caller-premium.html at build time (tools/build-front.mjs), so the
   // column page stays the source of truth and this can never quote it wrongly.
   (function(){
     var host = document.getElementById('pcpGrid');
     if (!host || !COLUMN.length) return;
-    COLUMN.slice(0, 4).forEach(function(c){
+    // Keep this and the .pcp-grid column count in step, or the last row of the
+    // grid ends up half-empty.
+    var PCP_ON_FRONT = 2;
+    COLUMN.slice(0, PCP_ON_FRONT).forEach(function(c){
       var card = el('div', 'pcp-card' + (c.side ? ' ' + c.side : ''));
       var kick = el('div', 'pcp-kick');
       if (c.label) kick.appendChild(el('span', 'pcp-side' + (c.side ? ' ' + c.side : ''), c.label));
@@ -2250,7 +2382,11 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     // run JavaScript can still reach the camp reports. Clear it before rebuilding,
     // or the client render appends a second copy of every row.
     cl.innerHTML = '';
-    REPORTS.slice(1).forEach(function(r){
+    // Four, matching what build-front.mjs writes into the static list above. The
+    // full run lives at /auction-watch; printing all 25 here made the desk a
+    // directory listing of near-identical link text and the densest block on the
+    // page. Keep this number and CAMP_ON_FRONT in build-front.mjs in step.
+    REPORTS.slice(1, 5).forEach(function(r){
       var el = document.createElement('li');
       el.innerHTML = '<span class="cd">' + fmtShort(r.date) + '</span><a href="' + r.url + '">' + esc(r.title) + '</a>';
       cl.appendChild(el);
@@ -2427,6 +2563,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   var strip = document.getElementById('weekStrip');
   if (strip) {
     if (typeof PRESEASON !== 'undefined' && PRESEASON.length) {
+      strip.hidden = false;
       strip.innerHTML = PRESEASON.map(function(w, i){
         return '<article class="week"><span class="week-tag">Week ' + esc(String(w.week)) + (i === 0 ? ' &middot; latest' : '') + '</span>' +
           '<h3><a href="' + w.url + '">' + esc(w.headline || w.title) + '</a></h3>' +
@@ -2435,8 +2572,13 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
           '<a class="go" href="' + w.url + '">Read the Week ' + esc(String(w.week)) + ' takeaways &rarr;</a></article>';
       }).join('');
     } else {
-      strip.innerHTML = '<div class="week-empty">Weekly preseason takeaways publish the morning after each slate: ' +
-        'who actually worked with the ones, which snap counts changed, and what it moves on your board. Nothing here yet for 2026.</div>';
+      // Nothing published yet. A dashed box explaining what would be here if it
+      // existed is not a section — it is a promise taking up a slot, and it sat
+      // on the front page for the whole of a season in which no preseason week
+      // had been written. The strip is simply not on the page until a week's
+      // takeaways land; the Training Camp desk below it already carries the news.
+      strip.innerHTML = '';
+      strip.hidden = true;
     }
   }
 
