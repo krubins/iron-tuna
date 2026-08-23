@@ -206,7 +206,7 @@ The `dek` carries the elaboration and the numbers, in 2 or 3 short sentences, an
 
 1. **It leads with the finding**, like the headline, and with the player and the price rather than the data pull. "Baltimore is Vegas's top-ranked offense at 26.8 implied points" is a fact about a refresh; "Flowers is a $32 buy because Vegas now prices Baltimore as the league's best offense" is the same fact doing some work.
 2. **No sentence over 25 words.** Find the longest one and count it.
-3. **No more than three figures in any one sentence**, with the player-and-price list the one exception.
+3. **No more than three figures in any one sentence**, with the player-and-price list the one exception. A rank range reads as one figure, not two: "backs ranked 25 to 42" costs one.
 4. **Nothing from the banned-words table**, and nothing else a stranger would have to stop and decode.
 5. **Every price reads as an instruction** a drafter can act on without translating it first.
 
@@ -216,7 +216,7 @@ This dek shipped on 2026-08-22 and failed 2, 3 and 4 in its opening sentence:
 
 Forty-five words, five figures, four pieces of shorthand, and it opens on the run's own process. The same finding, written for the reader:
 
-> Cheap running backs got better today, which makes the middle of the position worth less. Backs ranked 25 to 42 lose 23.5% of their value while the top six lose only 3.6%. The $83 that comes off running back moves to receivers and to the top six quarterbacks.
+> Cheap running backs got better today, which makes the middle of the position worth less. Backs ranked 25 to 42 lose 23.5% of their value. The top six lose only 3.6%, and the $83 that comes off running back moves to receivers and quarterbacks.
 
 Nothing was cut to get there except the shorthand. Every number a reader can act on survives.
 
