@@ -199,7 +199,7 @@ console.log('\ncustom budget');
 console.log('\nthe reader’s own board');
 {
   const board = {
-    ts: 1, teams: 10, budget: 300, format: 'auction',
+    ts: 1, sv: 2, teams: 10, budget: 300, format: 'auction',
     players: [
       { n: 'Alpha Wideout', pos: 'WR', v: 60, pts: 300 },
       { n: 'Bravo Wideout', pos: 'WR', v: 48, pts: 280 },
@@ -261,7 +261,7 @@ console.log('\nthe reader’s own board');
 console.log('\nthe reading format');
 {
   const board = {
-    ts: 1, teams: 10, budget: 300, format: 'auction',
+    ts: 1, sv: 2, teams: 10, budget: 300, format: 'auction',
     players: [
       { n: 'Alpha Wideout', pos: 'WR', v: 60, pts: 300 },
       { n: 'Bravo Wideout', pos: 'WR', v: 48, pts: 280 },
@@ -378,7 +378,7 @@ console.log('\nthe default board');
   // The reader's own board still outranks the site's, in both directions.
   const own = load({
     iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
-    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'auction',
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, sv: 2, teams: 12, budget: 200, format: 'auction',
       players: [{ n: someone.n, pos: 'WR', v: 99, pts: 400 }, { n: 'Filler Wideout', pos: 'WR', v: 5, pts: 100 }] })
   }).L;
   ok('a saved board wins over the site\u2019s', /is \$99 on your sheet/.test(own.tailor('+10% versus price', someone.n, 'WR')));
@@ -448,7 +448,7 @@ console.log('\ndraft slots');
   for (let i = 0; i < 12; i++) players.push({ n: nm(i) + ' Catcher', pos: 'WR', v: 60 - i * 4, pts: 300 - i * 4 });
   const { L } = load({
     iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'snake' } }),
-    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'snake', players })
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, sv: 2, teams: 12, budget: 200, format: 'snake', players })
   });
   const wr = L.findPlayer(nm(6) + ' Catcher', 'WR');
   ok('the fixture board did not collapse on itself', wr && wr.pts === 276, wr && String(wr.pts));
@@ -473,7 +473,7 @@ console.log('\ndraft slots');
   for (let i = 0; i < 40; i++) deep.push({ n: nm(i) + ' Runner', pos: 'RB', v: i < 3 ? 30 - i * 5 : 1, pts: 200 - i * 2 });
   const tail = load({
     iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'snake' } }),
-    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'snake', players: deep })
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, sv: 2, teams: 12, budget: 200, format: 'snake', players: deep })
   }).L;
   const endgame = tail.tailor('+20% versus late-round price', nm(30) + ' Runner', 'RB');
   ok('a $1 dart is not quoted a precise slot count', !/\d+ slots/.test(endgame), endgame);
@@ -645,7 +645,7 @@ console.log('\nfront.html myCase');
   const myCase = new Function('window', front.slice(i, j + 4) + '\n;return myCase;')({ ITLeague: null });
   ok('no library, no personalisation', myCase({ position: 'WR' }) === null);
 
-  const board = { ts: 1, teams: 12, budget: 400, format: 'auction', players: [
+  const board = { ts: 1, sv: 2, teams: 12, budget: 400, format: 'auction', players: [
     { n: 'Top Wideout', pos: 'WR', v: 70, pts: 320 },
     { n: 'Case Wideout', pos: 'WR', v: 40, pts: 250 },
     { n: 'Third Wideout', pos: 'WR', v: 20, pts: 200 }
@@ -685,7 +685,7 @@ console.log('\nthe desk\u2019s dollars in the reader\u2019s league');
   const site = load({}).L.defaultBoard();
   const priceOf = n => (site.find(p => p.n === n) || {}).v || 0;
   const readerBoard = {
-    ts: 1, teams: 10, budget: 300, format: 'auction',
+    ts: 1, sv: 2, teams: 10, budget: 300, format: 'auction',
     players: [
       { n: 'Zay Flowers', pos: 'WR', v: priceOf('Zay Flowers') * 2, pts: 260 },
       { n: 'Derrick Henry', pos: 'RB', v: priceOf('Derrick Henry'), pts: 250 },
@@ -770,7 +770,7 @@ console.log('\na dollar figure belongs to the player it is bound to');
   // only thing under test is which player each figure was read against.
   const store = (players, cfg = { teams: 12, budget: 200, format: 'auction' }) => ({
     iron_tuna_draft_state_v2: JSON.stringify({ config: cfg }),
-    iron_tuna_values_v1: JSON.stringify(Object.assign({ ts: 1, format: 'auction' }, cfg, { players }))
+    iron_tuna_values_v1: JSON.stringify(Object.assign({ ts: 1, sv: 2, format: 'auction' }, cfg, { players }))
   });
   const cast = [
     { n: 'J.K. Dobbins', pos: 'RB', v: 1, pts: 110 },
@@ -838,7 +838,7 @@ console.log('\nan older story is restated too, and says why it can still differ'
   const store = {
     iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
     iron_tuna_values_v1: JSON.stringify({
-      ts: 1, teams: 12, budget: 200, format: 'auction',
+      ts: 1, sv: 2, teams: 12, budget: 200, format: 'auction',
       players: [{ n: 'Zay Flowers', pos: 'WR', v: 21, pts: 230 }]
     })
   };
@@ -874,6 +874,68 @@ console.log('\nan older story is restated too, and says why it can still differ'
                 L.pricingNote(true, FULL), load({}).L.pricingNote(false)];
   ok('no reader-facing note calls it "the desk"',
      seen.every(t => !/desk/i.test(t)), seen.join(' | '));
+}
+
+// ── 11d. the number on the page is the number on the reader's sheet ────────
+// The whole point, stated as a test: a story's sheet figure must land on the
+// reader's own row, not near it. The app writes MARKET PRICE into the snapshot
+// at the reader's slider, scoring, budget and team count, and this library
+// copies it rather than recomputing it. A second calculation is only a second
+// chance to disagree with the sheet.
+console.log('\nthe sheet figure lands on the reader’s own row');
+{
+  const site = load({}).L.defaultBoard();
+  const priceOf = n => (site.find(p => p.n === n) || {}).v || 0;
+  const SITE_MC = priceOf('Tetairoa McMillan');       // the site's market price
+  const READER_MC = 31;                                // theirs, at their settings
+  const mk = extra => ({
+    iron_tuna_draft_state_v2: JSON.stringify({
+      config: { teams: 12, budget: 200, format: 'auction', strategy: { vegasWeight: 0.4 } }
+    }),
+    iron_tuna_values_v1: JSON.stringify(Object.assign({
+      ts: 1, sv: 2, teams: 12, budget: 200, format: 'auction',
+      players: [{ n: 'Tetairoa McMillan', pos: 'WR', v: READER_MC, tv: 44, pts: 250 }]
+    }, extra))
+  });
+  const { L } = load(mk());
+
+  ok('the reader’s own sheet price is readable without recomputing it',
+     L.sheetPrice('Tetairoa McMillan') === READER_MC, String(L.sheetPrice('Tetairoa McMillan')));
+  ok('a player the sheet does not carry has no price rather than a guessed one',
+     L.sheetPrice('Nobody At All') === 0);
+
+  // siteFigure x (readerPrice / siteFigure) === readerPrice, exactly.
+  const out = L.repriceCopy(
+    'The consensus sheet says $' + SITE_MC + ' for Tetairoa McMillan.', ['Tetairoa McMillan']);
+  ok('a story quoting the site’s sheet price prints the reader’s sheet price',
+     out && out.text === 'The consensus sheet says $' + READER_MC + ' for Tetairoa McMillan.',
+     out && out.text);
+
+  // The slider was sitting in the saved config and being thrown away.
+  ok('the reader’s Vegas slider is kept, not silently replaced by the default',
+     L.vegasWeight() === 0.4, String(L.vegasWeight()));
+  ok('and a reader who never moved it is reported at the site default',
+     load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200 } }) })
+       .L.vegasWeight() === 0.75);
+
+  // Shape 1 stored True Value in `v`. Reading that as a market price is the bug
+  // that put "$38 for Derrick Henry" over a sheet saying $23, so an old
+  // snapshot is read for its league and never for its dollars. It heals itself
+  // the next time the reader opens the draft app.
+  const old = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
+    iron_tuna_values_v1: JSON.stringify({
+      ts: 1, teams: 12, budget: 200, format: 'auction',
+      players: [{ n: 'Tetairoa McMillan', pos: 'WR', v: 44, pts: 250 }]
+    })
+  }).L;
+  ok('a pre-Market-Price snapshot is never read for a price',
+     old.sheetPrice('Tetairoa McMillan') === 0);
+  ok('and its stored True Value cannot reach the page as a market price',
+     !/\$44/.test((old.repriceCopy('The consensus sheet says $' + SITE_MC
+        + ' for Tetairoa McMillan.', ['Tetairoa McMillan']) || {}).text || ''));
+  ok('but the league it names is still honoured',
+     old.config && old.config.teams === 12 && old.config.budget === 200);
 }
 
 // ── 12. the pages that print the desk's dollars all go through it ──────────

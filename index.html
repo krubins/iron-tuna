@@ -21648,12 +21648,37 @@ function App() {
   useEffect(() => {
     try {
       if (!baseValued || !baseValued.length) return;
+      // `v` is MARKET PRICE — the number printed in the reader's Market Price
+      // column, which is the one a story means by "what the cheat sheet says".
+      // It used to be `auctionValue`, the True Value column, and /it-league.js
+      // divided it by a market price off the site's own board to restate a
+      // story's dollars. Dividing True Value by Market Price is not a league
+      // conversion; it is two different columns over each other, and it put
+      // "$35 for Derrick Henry" on a front page whose sheet said $23.
+      //
+      // Nothing here is recomputed for the snapshot on purpose. `baseValued`
+      // has already been through applyVegasWeight() at THIS reader's slider,
+      // their scoring, their budget and their team count, so copying the number
+      // off it is the same answer they are looking at, by construction. Any
+      // second calculation is a second chance to disagree with the sheet.
+      //
+      // `sv` is the snapshot's shape, so a reader who has not reopened the app
+      // is not read as though their stored `v` meant market price when it did
+      // not. `tv` keeps True Value for anything that wants the other column.
       const snap = {
         ts: Date.now(),
+        sv: 2,
         teams: config.teams,
         budget: config.budget,
         format: config.format || 'auction',
-        players: baseValued.map(p => ({ n: p.name, pos: p.position, v: p.auctionValue || 0, pts: Math.round((p.projectedPoints || 0) * 10) / 10 }))
+        vegasWeight: vegasWeightOf(config),
+        players: baseValued.map(p => ({
+          n: p.name,
+          pos: p.position,
+          v: p.marketValue != null ? p.marketValue : (p.auctionValue || 0),
+          tv: p.auctionValue || 0,
+          pts: Math.round((p.projectedPoints || 0) * 10) / 10
+        }))
       };
       localStorage.setItem('iron_tuna_values_v1', JSON.stringify(snap));
     } catch (e) {}

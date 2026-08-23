@@ -63,6 +63,17 @@
     DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   };
   var MIN_BID = 1;
+  // Mirrors VEGAS_DEFAULT_W in index.html: how far the board leans on the
+  // sportsbook where it and the projections disagree. Only used as the fallback
+  // when a reader's saved config does not name their own setting.
+  var VEGAS_DEFAULT_W = 0.75;
+  // The snapshot shape this library can read PRICES out of. Shape 1 stored the
+  // True Value column in `v`; shape 2 stores Market Price, which is the number
+  // printed on the reader's sheet and the one a story means. An older snapshot
+  // is still read for the league it names, never for a price, because a True
+  // Value read as a market price is the bug this constant exists to end. It
+  // heals itself the next time the reader opens the draft app.
+  var SNAP_SHAPE = 2;
   var FORMAT_WORD = { auction: 'auction', snake: 'snake draft', bestball: 'best ball' };
 
   // ── the site's own board, for a reader who has not got one ────────────────
@@ -125,7 +136,24 @@
       teams: Math.max(2, Math.round(num(raw && raw.teams, num(snap && snap.teams, DEFAULT_TEAMS)))),
       budget: Math.max(1, Math.round(num(raw && raw.budget, num(snap && snap.budget, DEFAULT_BUDGET)))),
       format: (raw && raw.format) || (snap && snap.format) || 'auction',
-      scoring: scoring
+      scoring: scoring,
+      // The Vegas slider. It was dropped here for months while sitting in the
+      // saved config the line above already reads, so every number this library
+      // quoted a reader was at a weighting they had not chosen. It only decides
+      // who wins where the odds and the projections disagree, which is exactly
+      // the disagreement a story is usually about.
+      //
+      // typeof, not num(): num(null, 0.75) is 0, because Number(null) is 0 and
+      // 0 is finite. A reader with no slider saved would have been read as one
+      // who had dragged it all the way off the sportsbook. Same trap the worker
+      // documents in applyVegasWeight, and the same guard, so the two files
+      // answer this question identically.
+      vegasWeight: (function () {
+        var w = raw && raw.strategy ? raw.strategy.vegasWeight
+              : (snap ? snap.vegasWeight : null);
+        return typeof w === 'number' && isFinite(w)
+          ? Math.min(1, Math.max(0, w)) : VEGAS_DEFAULT_W;
+      })()
     };
   }
 
@@ -299,6 +327,11 @@
     return { players: players, byName: byName, byLast: byLast, byPos: byPos };
   }
   var mine = snap ? makeIndex(snap.players) : null;
+  // Whether the reader's saved board may be read for PRICES. See SNAP_SHAPE:
+  // before shape 2 the stored `v` was the True Value column, and quoting it as
+  // the sheet's price is how a story ended up $12 above the reader's own row.
+  // The league it names is still honoured either way; only the dollars wait.
+  var minePrices = !!(snap && num(snap.sv, 1) >= SNAP_SHAPE);
 
   // The site's default board, parsed on first use — a reader who has their own
   // never pays for it. Prices come off the market curve at the site's default
@@ -657,7 +690,21 @@
   //     auction board scales by.
   // Nothing is invented: with no saved league this returns null and the copy
   // ships exactly as the desk wrote it, labelled as the desk's own league.
+  // Both sides of this ratio must be the SAME COLUMN of the same kind of board,
+  // or it is not a conversion at all. It used to divide the reader's True Value
+  // by the site's Market Price and multiply a story's dollars by the result,
+  // which is how "$38 for Derrick Henry" reached a reader whose own row said
+  // $23. Now both sides are Market Price: the reader's is copied off the sheet
+  // the app already built at their slider, scoring, budget and team count, and
+  // the site's is the same column on the site's own board.
+  //
+  // The consequence worth keeping in mind: a story's sheet figure lands on the
+  // reader's own number exactly, because siteFigure x (readerPrice / siteFigure)
+  // is readerPrice. That is the whole point — the number on the page and the
+  // number on their sheet are the same number, not two calculations that were
+  // supposed to agree.
   function boardRatio(name) {
+    if (!minePrices) return 0;
     var site = defaultBoard();
     var sp = findPlayer(name, null, site);
     var mp = mine ? findPlayer(name, null, mine) : null;
@@ -665,6 +712,14 @@
     var a = sp.v || 0, b = mp.v || 0;
     if (a < 1 || b < 1) return 0;
     return b / a;
+  }
+  // What the reader's own sheet prints for this player, or 0 when there is no
+  // sheet to read. Pulled, never recomputed: the app has already done this sum
+  // at their settings and a second attempt is only a second chance to disagree.
+  function sheetPrice(name) {
+    if (!minePrices || !mine) return 0;
+    var mp = findPlayer(name, null, mine);
+    return mp ? (mp.v || 0) : 0;
   }
   // The money in the room, relative to the room the desk writes for.
   function leagueScale() {
@@ -1020,6 +1075,8 @@
     tailor: tailor,
     tailorLabel: tailorLabel,
     staleModel: staleModel,
+    sheetPrice: sheetPrice,
+    vegasWeight: function () { return cfg ? cfg.vegasWeight : VEGAS_DEFAULT_W; },
     repriceCopy: repriceCopy,
     pricingNote: pricingNote,
     leagueScale: leagueScale,
