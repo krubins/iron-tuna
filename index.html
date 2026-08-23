@@ -65,6 +65,10 @@ function gtag_report_conversion(url) {
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- The player lookup behind the ribbon's search box. Plain script, not a
+       module: it sets window.ITPlayerSearch, which the app reads from an
+       effect. Same file the front page runs, so the two boxes cannot drift. -->
+  <script src="/player-search.js"></script>
   <style>
 .hub-hero-row { display: flex; align-items: center; justify-content: center; gap: 44px; width: 100%; }
 .lp-ai-line { animation: aiFade 0.7s ease; }
@@ -1446,6 +1450,39 @@ input:focus, select:focus { border-color: var(--accent); }
 .lp-ribbon-links button:hover { color: var(--text-primary); background: var(--bg-elev); }
 .lp-ribbon-cta { color: var(--positive) !important; background: rgba(45,212,163,0.15) !important; border: 1px solid var(--positive) !important; font-weight: 700 !important; padding: 7px 15px !important; font-size: 13px !important; border-radius: 10px !important; box-shadow: none !important; text-transform: uppercase; letter-spacing: 0.07em; }
 .lp-ribbon-cta:hover { background: rgba(45,212,163,0.28) !important; color: var(--positive) !important; }
+/* ── player lookup, in the ribbon ── */
+/* The same widget the front page's white ribbon runs (/player-search.js), in
+   the app's dark palette. It sits in the ribbon because the ribbon is the one
+   band that stays on screen the whole way down, so looking a player up never
+   costs a scroll back to the top. */
+.lp-ribbon-search { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 0 10px; height: 32px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-elev); }
+.lp-ribbon-search:focus-within { border-color: var(--positive); box-shadow: 0 0 0 2px rgba(45,212,163,0.16); }
+.lp-ribbon-search svg { width: 14px; height: 14px; flex: 0 0 auto; color: var(--text-muted); }
+.lp-ribbon-search:focus-within svg { color: var(--positive); }
+.lp-ribbon-search input { width: 150px; border: 0; outline: 0; background: none; padding: 0; font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.02em; color: var(--text-primary); line-height: 1; }
+.lp-ribbon-search input::placeholder { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11.5px; }
+.lp-ribbon-search input::-webkit-search-decoration, .lp-ribbon-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+/* The suggestion menu is a child of <body>, positioned in viewport coordinates
+   by the script — it cannot be nested in the ribbon, which scrolls sideways on
+   a phone and would clip it to the band's height. So these rules stand alone
+   and cannot inherit anything from .lp-ribbon. */
+/* z-index 1050 is load-bearing, not a round number: .landing-splash — the
+   surface this ribbon sits on — is 1000, so the front page's 60 leaves the
+   menu painted underneath it and invisible. It stays below .modal-bg (1100),
+   because a modal genuinely should cover the ribbon. */
+.pl-menu { position: fixed; z-index: 1050; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: 0 16px 40px rgba(0,0,0,0.55); overflow: hidden; max-height: min(60vh, 420px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.pl-menu[hidden] { display: none; }
+.pl-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--border-subtle); background: none; text-align: left; cursor: pointer; color: var(--text-primary); text-decoration: none; }
+.pl-opt:last-child { border-bottom: 0; }
+.pl-opt:hover, .pl-opt.on { background: var(--bg-elev); }
+.pl-meta { min-width: 0; }
+.pl-opt b { display: block; font-weight: 600; font-size: 13.5px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-opt b em { font-style: normal; color: var(--positive); background: rgba(45,212,163,0.16); border-radius: 2px; }
+.pl-meta span { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
+.pl-face { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 5px; background: var(--bg-elev); overflow: hidden; position: relative; display: grid; place-items: center; }
+.pl-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.pl-face i { font-style: normal; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--text-muted); }
+.pl-empty { padding: 11px 13px; font-size: 12.5px; color: var(--text-muted); }
 .lp-faq { width: 100%; max-width: 720px; margin: 21px auto 30px; text-align: left; }
 .lp-faq-item { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
 .lp-faq-q { font-family: var(--font-display); font-size: 16px; color: var(--text-primary); letter-spacing: 0.02em; margin-bottom: 6px; }
@@ -1464,6 +1501,12 @@ input:focus, select:focus { border-color: var(--accent); }
   .lp-ribbon-links { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; justify-content: flex-start; gap: 2px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .lp-ribbon-links::-webkit-scrollbar { display: none; }
   .lp-ribbon-links button { flex: 0 0 auto; font-size: 12px; padding: 8px 9px; }
+  /* The lookup leads the scrolling row rather than sitting past the fold: a
+     search box you have to scroll sideways to find is one nobody uses. Same
+     call the front page's ribbon makes for its edition switch. */
+  .lp-ribbon-search { order: -1; height: 28px; padding: 0 8px; }
+  .lp-ribbon-search input { width: 96px; font-size: 12px; }
+  .lp-ribbon-search:focus-within input { width: 140px; }
   .lp-ribbon-cta { position: sticky; right: 0; flex: 0 0 auto; padding: 7px 12px !important; background: #102e2c !important; box-shadow: -8px 0 0 0 #0b1117, -22px 0 16px -7px #0b1117 !important; }
 }
 .assumptions { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -5884,6 +5927,54 @@ function phaseIcon(i) {
     d: "M26 5 13 27h9l-1 16 14-23h-9l2-15z"
   }));
 }
+// The player lookup that rides in the ribbon, on both the splash and the hub.
+//
+// The widget itself is /player-search.js — the same file the front page's white
+// ribbon runs, so there is one search box on this site rather than two that
+// drift. It is deliberately NOT rebuilt against the app's own board: the board
+// only exists once a reader has opened the app and configured a league, and the
+// box has to work on the splash screen, before any of that. What it offers is
+// identity (name, club, position, face) and where it sends you is the player
+// card, which does the pricing through /it-league.js like every other page.
+//
+// The menu the widget opens is parented to <body>, so React would not clean it
+// up on its own — hence the teardown returned by mount().
+function RibbonPlayerSearch({ from }) {
+  const box = useRef(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || !window.ITPlayerSearch) return;
+    return window.ITPlayerSearch.mount(el, { from: from || 'app_ribbon' });
+  }, [from]);
+  // A real <form> with a real action, so the box still goes somewhere sensible
+  // if the lookup script has not loaded; mount() takes the submit over once it
+  // has. `key` is not needed here — the ribbon renders this once.
+  return React.createElement("form", {
+    className: "lp-ribbon-search",
+    role: "search",
+    autoComplete: "off",
+    action: "/player",
+    method: "get"
+  }, React.createElement("svg", {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.1",
+    strokeLinecap: "round",
+    "aria-hidden": "true"
+  }, React.createElement("circle", { cx: "11", cy: "11", r: "7" }),
+     React.createElement("path", { d: "M20 20l-3.6-3.6" })),
+    React.createElement("input", {
+      ref: box,
+      type: "search",
+      name: "q",
+      placeholder: "Find a player",
+      "aria-label": "Search for a player",
+      role: "combobox",
+      "aria-expanded": "false",
+      "aria-autocomplete": "list"
+    }));
+}
 function LandingSplash({
   onDismiss,
   onNav,
@@ -6048,7 +6139,7 @@ function LandingSplash({
     onClick: () => go('legal')
   }, "Terms"), React.createElement("button", {
     onClick: () => { try { ITAnalytics.track('nav_click', { to: 'share_earn', from: 'ribbon' }); } catch (e) {} onShareEarn && onShareEarn(); }
-  }, "Share & Earn"), React.createElement("button", {
+  }, "Share & Earn"), React.createElement(RibbonPlayerSearch, { from: 'splash_ribbon' }), React.createElement("button", {
     className: "lp-ribbon-cta",
     onClick: () => go('signin'),
     title: "Sign in to restore your purchase on this device"
@@ -20785,7 +20876,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     className: "lp-ribbon"
   }, React.createElement("div", { className: "lp-ribbon-spacer" }), React.createElement("div", {
     className: "lp-ribbon-links"
-  }, React.createElement("span", { className: "ins-dd" }, React.createElement("button", { type: "button", onClick: () => {} }, "Insights"), React.createElement("span", { className: "ins-dd-menu" }, React.createElement("button", { onClick: () => { try { window.location.href = "/auction-insights"; } catch (e) {} } }, "Auction"), React.createElement("button", { onClick: () => { try { window.location.href = "/snake-insights"; } catch (e) {} } }, "Snake"))), React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin, title: "Sign in to restore your purchase on this device" }, "Sign in"))), React.createElement("div", {
+  }, React.createElement("span", { className: "ins-dd" }, React.createElement("button", { type: "button", onClick: () => {} }, "Insights"), React.createElement("span", { className: "ins-dd-menu" }, React.createElement("button", { onClick: () => { try { window.location.href = "/auction-insights"; } catch (e) {} } }, "Auction"), React.createElement("button", { onClick: () => { try { window.location.href = "/snake-insights"; } catch (e) {} } }, "Snake"))), React.createElement("button", { onClick: () => { try { window.location.href = "/faq"; } catch (e) {} } }, "FAQ"), React.createElement("button", { onClick: onTerms }, "Terms"), React.createElement("button", { onClick: () => setReferOpen(true) }, "Share & Earn"), React.createElement(RibbonPlayerSearch, { from: 'hub_ribbon' }), React.createElement("button", { className: "lp-ribbon-cta", onClick: onSignin, title: "Sign in to restore your purchase on this device" }, "Sign in"))), React.createElement("div", {
     className: "lp-inner"
   }, React.createElement("div", {
     className: "lp-hero it-hero"

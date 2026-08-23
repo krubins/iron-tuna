@@ -55,6 +55,23 @@ jobs:
             console.log("lead.html PARSE OK (" + blocks.length + " blocks)");
           '
 
+      - name: Parse the player.html scripts
+        run: |
+          node -e '
+            const fs = require("fs");
+            const h = fs.readFileSync("player.html", "utf8");
+            const blocks = [...h.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+            if (!blocks.length) { console.error("no <script> blocks found"); process.exit(1); }
+            blocks.forEach(b => new Function(b[1]));
+            console.log("player.html PARSE OK (" + blocks.length + " blocks)");
+          '
+
+      # The lookup index and the widget that reads it ship as one plain file,
+      # loaded by front.html and player.html alike, so a syntax error there
+      # takes out the search box on every page at once.
+      - name: Parse player-search.js
+        run: node --check player-search.js
+
       - name: Parse the analyst-desk.html scripts
         run: |
           node -e '
@@ -97,7 +114,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "analyst-desk.html", "the-pick.html", "play-caller-premium.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "analyst-desk.html", "the-pick.html", "play-caller-premium.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -130,15 +147,20 @@ jobs:
       # pages. Adding a page without re-running build-front.mjs leaves that array
       # stale — which is exactly how Top Headlines got stuck showing an old camp
       # report. Rebuilding here must produce no diff.
+      #
+      # The same run also writes the player lookup index into player-search.js
+      # (the ribbon's search box and every /player/<slug> card read it) and the
+      # STORIES array into player.html, so all three are checked together — a
+      # stale index means a player the site prices that the box cannot find.
       - name: front.html is rebuilt from its source pages
         run: |
           node tools/build-front.mjs
-          if ! git diff --quiet -- front.html; then
-            echo "::error file=front.html::front.html is stale — run 'node tools/build-front.mjs' and commit the result"
-            git --no-pager diff --stat -- front.html
+          if ! git diff --quiet -- front.html player-search.js player.html; then
+            echo "::error file=front.html::the generated front-page data is stale — run 'node tools/build-front.mjs' and commit the result"
+            git --no-pager diff --stat -- front.html player-search.js player.html
             exit 1
           fi
-          echo "front.html is up to date"
+          echo "front.html, player-search.js and player.html are up to date"
 
       # Google Analytics collects NOTHING from a page that does not configure the
       # GA4 destination, and the failure is silent: the page renders, the Ads tag
@@ -257,6 +279,14 @@ jobs:
 
       - name: What the board grades a player name against
         run: node tools/test-board-colour.mjs
+
+      # The ribbon's player lookup and the /player/<slug> card it lands on. The
+      # index is generated from PROJECTIONS, so a projections update that skips
+      # tools/build-front.mjs leaves the box unable to find a player the site is
+      # actively pricing — and the box does not say "my index is old", it says
+      # "No player by that name on the board".
+      - name: The player lookup and the card it lands on
+        run: node tools/test-player-card.mjs
 
       - name: Vegas column (worker)
         run: node tools/test-worker-column.mjs

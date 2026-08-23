@@ -2972,6 +2972,59 @@ What changed in it, 2026-08-22:
   nobody could open. Stories written before 2026-08-22 are not directly
   comparable for pass-catching backs and slot receivers.
 
+#### Plain English, and the words the desk may not use (2026-08-23)
+
+The complaint that produced this was one line: *"People won't know what we mean
+by 'the book.'"* It was made about the front page, where the lead card had gone
+out reading **"The book raises the running back floor 9% and guts the cheap
+tier"** over a dek that opened *"Rebuild the auction board on today's odds
+refresh and replacement-level running back jumps from 126.20 half-PPR points to
+137.66, a 9.1% lift that strips 23.5% off the RB25 to RB42 tier..."*. Forty-five
+words, five figures, and four pieces of in-house shorthand in the first
+sentence, on the site's front door.
+
+The headline rules above had already banned "the book" **in the headline**. They
+had not banned it anywhere else, which is how it survived in the dek and right
+through the article. So the prompt now carries two things the headline section
+cannot do on its own:
+
+- **"WRITE IT FOR A TENTH GRADER."** A stated reading level, with the test
+  written as a person rather than a formula: a smart sixteen-year-old who has
+  played one season reads the line once, at full speed, on a phone, and knows
+  what to do. Under it, the four mechanical rules that were already learned the
+  hard way — one idea per sentence, no sentence over 25 words, at most three
+  figures in a sentence (the player-and-price list excepted), never open on the
+  run's own process — plus the one that fixes the 126.20-to-137.66 sentence: **a
+  number only helps next to the thing it changes.**
+- **A banned-words table.** `the book`, `the sheet`, `the floor`, `replacement
+  level`, a bare `tier`, `lift`, `strips`, `guts`, `VORP`, `fade`, `the room`,
+  `chalk`, `leverage`, `spike week`, each with the plain phrase that replaces it.
+  It governs **the title, the dek, `body_html`, `method` and any `calls.why`** —
+  the scope is the point, because the earlier rule reached only the title. The
+  dek gets its own five-point checklist run on the exact string before the
+  INSERT, the same shape as the headline checks, because a rule read once at the
+  top is not a rule checked against a finished string.
+
+The prompt's own examples were scrubbed to match: the `calls.why` sample said
+"The book has Kansas City fifth", the actionable-output example said "sheet says
+$25", and `fade` was on the list of approved headline verbs while the table bans
+it. A prompt that models the shorthand teaches it.
+
+**The live row was rewritten too.** Story 31 (`rb-replacement-floor-2026-08-22-22`)
+was the one on the front page when the complaint landed. Its title and dek had
+already been made plainer once that night, from the 101-character "The book
+raises the running back floor 9%..." to a 108-character summary, but the article
+underneath still ran on the shorthand from the first paragraph on. Title, dek and
+body were rewritten in plain words with **every figure unchanged**: title to 82
+characters and to an instruction ("Cap J.K. Dobbins at $12 and bid Tetairoa
+McMillan to $33 as cheap backs get better"), "the book" to Vegas, "replacement
+level" to "the cheapest running back worth starting", "the RB25 to RB42 tier" to
+"backs ranked 25 to 42", UTC stamps to ET. Its `method` column is untouched and still reads in model
+vocabulary; that box is the receipts appendix, not front-page copy, and
+rewriting it by hand risks distorting the record it exists to preserve. If the
+desk should write that box in plain English too, the rule belongs in the prompt
+first, so the next run produces it rather than a later session editing it.
+
 ### Tests
 
 - `tools/test-it-league.mjs` — the anchoring rules, the surname case, the
@@ -2980,3 +3033,114 @@ What changed in it, 2026-08-22:
 - `tools/test-lead-story.mjs` — the clock conversions in both DST halves, the
   12-hour and no-minutes forms, the previous-day marker, the nonsense-hour
   refusal, the fallback-versus-`Intl` sweep, and `names` in the payload.
+
+---
+
+## 32. August 2026: the player lookup, and the card it lands on
+
+**What a reader can now do.** Type a name in the ribbon, pick a face out of the
+list, and land on that player's card at `/player/<slug>`. Every ribbon is
+`position: sticky`, so the box is on screen the whole way down the page rather
+than only at the top.
+
+**Four surfaces, one widget.** The front page's white ribbon (`front.html`), the
+draft app's dark ribbon in both its forms — the splash and the hub, which share
+`.lp-ribbon` in `index.html` — and the card itself, because the second thing a
+reader does on a player card is look up another player. All four mount the same
+`/player-search.js`; there is one search box on this site, not four that drift.
+
+### The pieces
+
+- **`player-search.js`** — the lookup index and the widget that reads it, as one
+  plain file loaded by `front.html`, `player.html` and `index.html` alike. It
+  carries **identity only**: `slug|Name|TEAM|POS|espnId|nflId`, one line per
+  player, ~28 KB for 407 rows. The block between the `generated by
+  tools/build-front.mjs` sentinels is generated, exactly like
+  `DEFAULT_BOARD_RAW` in `/it-league.js`.
+  - **`mount()` returns a teardown.** The app is React and mounts the box from
+    an effect; the menu it opens is parented to `<body>`, so React will not
+    clean up something it never rendered. Every listener is registered through
+    the widget's own `on()` for that reason.
+  - **The app deliberately does NOT search its own board.** The board only
+    exists once a reader has opened the app and configured a league, and the box
+    has to work on the splash screen, before any of that. So it offers identity
+    and hands the pricing to the card, like every other surface.
+- **`player.html`** — the card, served at `/player` and `/player/<slug>`. It is
+  a shell: the slug is read off the path and the card is assembled in the
+  browser. `noindex,follow` and deliberately absent from `sitemap.xml`, for the
+  same reason `/lead` is — one file answering at ~400 URLs, with nothing in the
+  served HTML for a crawler to read. `tools/test-seo.mjs` asserts both halves of
+  that.
+- **The route** — `_worker.js` rewrites `/player/<slug>` onto `/player`, the
+  same shape as `/lead/<slug>`. **Extensionless**, or the assets layer answers a
+  `.html` target with a 307 back to the path the rewrite fires on
+  (`ERR_TOO_MANY_REDIRECTS`, §12's routing note). Pinned by
+  `tools/test-asset-routing.mjs`.
+- **`tools/build-front.mjs`** now writes three things, not one: `front.html`'s
+  data blocks as before, `player-search.js`'s index, and `player.html`'s
+  `STORIES`. **Run it after every projections update.** CI diffs all three.
+
+### The card carries no valuation of its own
+
+Every number on it comes from **`/it-league.js`** — the reader's own saved board
+when they have one, the site's default 12-team $200 board when they do not, and
+`tailorLabel()` says which just answered. Nothing on the card computes points or
+dollars. A second valuation on the site is a second answer to "what is he
+worth", and §20 is the monument to how that goes.
+`tools/test-player-card.mjs` fails the build if either file grows one.
+
+### The trap: the two boards do not mean the same thing by `v`
+
+| board | `v` is | in the app |
+|---|---|---|
+| the reader's saved board (`iron_tuna_values_v1`) | `auctionValue` — the VBD number, **what he is worth** | `buildValuations` |
+| the site's default board (`DEFAULT_BOARD_RAW` + the curve) | the market curve at his slot — **the going rate** | `calculateMarketValues` |
+
+So the card labels the tile for whichever board answered — **Worth** on the
+reader's own, **Going rate** on the default — and the line under it says the
+same thing in words. Labelling both "worth" would have the site telling a reader
+the price is the value, which is the confusion the cheat sheet's Proj / Value
+split exists to end. Asserted in `tools/test-player-card.mjs`, including the
+fact it rests on (that `/it-league.js` reads its default price off the curve).
+
+### Two smaller things that are load-bearing
+
+- **The suggestion menu is a child of `<body>`, positioned in viewport
+  coordinates.** It cannot be nested under the input: `.ribbon .wrap` is a
+  sideways scroller, and an absolutely positioned child of it is clipped to the
+  band's 44px — which is to say invisible. It re-places on scroll, because the
+  ribbon moves under the page.
+- **Its `z-index` is per page, and in `index.html` the number is load-bearing.**
+  60 clears the front page's ribbon (40). In the app it has to clear
+  **`.landing-splash`, which is 1000** — the surface the dark ribbon sits on —
+  or the menu paints underneath it and is simply invisible, with no error and
+  nothing in the DOM to show for it. It is 1050 there: above the splash, below
+  `.modal-bg` (1100), because a modal genuinely should cover the ribbon.
+  `tools/test-player-card.mjs` asserts both inequalities against the real
+  declarations rather than the literal number.
+- **The index is keyed by the HEADSHOT slug, not the projection name's.** Every
+  story carries `ppl`, the headshot slugs of the players it names, and a card
+  keyed the other way could not find the calls written about its own player. The
+  two spellings do not always agree — "Chigoziem Okonkwo" against "Chig
+  Okonkwo", "Deebo Samuel" against "Deebo Samuel Sr." — so `build-front.mjs`
+  tries an exact slug match first and a club-and-position match on the surname
+  second. Anything still ambiguous resolves to nothing rather than to the wrong
+  face and the wrong article list.
+
+### Scope
+
+Kickers and defences are in the index, because a reader who types "Bates" and is
+told the board has never heard of him has been told something untrue. They sort
+below the skill players, and their cards say plainly that the shared library
+carries points for QB/RB/WR/TE only and point at the cheat sheet.
+
+### Tests
+
+- `tools/test-player-card.mjs` — index coverage against `PROJECTIONS` (by name,
+  club and position, never by slug), slug uniqueness and URL-safety, the
+  no-second-valuation rule, the Worth/Going-rate split, the route, the box's
+  place in both the white and the dark sticky ribbons, the menu's stacking
+  against `.landing-splash` and `.modal-bg`, and that every player a published
+  call names *and the app prices* has a card.
+- `tools/test-asset-routing.mjs` — `/player`, `/player/`, `/player/<slug>`.
+- `tools/test-seo.mjs` — the card is noindex and out of the sitemap.
