@@ -1595,6 +1595,13 @@ input:focus, select:focus { border-color: var(--accent); }
      as a rendering artefact. */
   .modal-close { position: sticky; float: right; top: 0; right: auto; margin: 2px 2px -34px 0; z-index: 4;
     border: 1px solid var(--border-strong); box-shadow: 0 3px 12px rgba(0,0,0,0.6); }
+  /* Zero exclusion means a heading long enough to reach the corner runs under
+     the ✕ and gets clipped, so reserve the corner explicitly. Adjacent-sibling
+     is deliberate: it matches only the heading the ✕ actually sits on, which in
+     every modal is the left-aligned one. The two centred headings (Upgrade,
+     post-purchase) sit below a 🔒 / 🎉 rather than beside the ✕, so they never
+     match and their centring is untouched — padding would have shifted it. */
+  .modal-close + .section-title { padding-right: 42px; }
 }
 /* Tied to the bottom tab bar, which only exists below 760px. A fixed backdrop is
    sized to the *small* viewport on phones, but `vh` is the *large* one — so an
@@ -1615,6 +1622,8 @@ input:focus, select:focus { border-color: var(--accent); }
      already occupies, so the top-right anchor doesn't move; the negative bottom
      margin tracks the new height (38 + 2) to keep the float's box zero-height. */
   .modal-close { width: 38px; height: 38px; margin-bottom: -40px; font-size: 21px; }
+  /* 6px wider button, so 6px more reserved beside it. */
+  .modal-close + .section-title { padding-right: 48px; }
 }
 .landing-page { background: radial-gradient(115% 460px at 50% 4%, rgba(20,184,166,0.18), transparent 62%), radial-gradient(135% 720px at 50% -8%, rgba(20,184,166,0.10), transparent 70%), radial-gradient(90% 540px at 50% 80%, rgba(20,184,166,0.15), transparent 64%), radial-gradient(120% 700px at 50% 116%, rgba(20,184,166,0.07), transparent 66%), linear-gradient(180deg, #0d0f12 0%, #0a0b0d 55%, #08090b 100%); }
 /* ============ Landing overhaul: reassurance, trust band, how-it-works ============ */
