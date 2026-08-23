@@ -367,6 +367,11 @@ img{max-width:100%}
 .vs-dot{width:7px;height:7px;padding:0;border-radius:50%;border:0;background:#d3d8de;cursor:pointer}
 .vs-dot.on{background:var(--brand)}
 .vs-empty{font-size:13px;color:var(--ink-3);line-height:1.55;padding:14px 0}
+/* the day's dateline: counted off the morning's pull, never written */
+.vs-day{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:6px;padding:12px 15px;margin:0 0 14px;font-size:13px;line-height:1.6;color:var(--ink-2)}
+.vs-day b{color:var(--ink)}
+.vs-day .vs-stamp{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-right:5px}
+.vs-day .vs-quiet{color:var(--ink-3)}
 /* ── camp ── */
 .camp-note{font-size:13px;color:var(--ink-3);margin:-6px 0 14px}
 .camp-note b{color:var(--ink-2)}
@@ -823,6 +828,7 @@ img{max-width:100%}
 
   <div class="sec-head" id="vegas"><h2>Vegas vs. Consensus</h2><a class="sec-more" href="/auctiondraft?screen=cheat">See it on your cheat sheet &rarr;</a></div>
   <p class="sec-sub">Iron Tuna prices every player against the betting market. Almost nobody else does. These are the players where that changes the number &mdash; recomputed from the live lines, with a new case every six hours.</p>
+  <p class="vs-day" id="vsDay" hidden></p>
   <div class="vs-wrap">
     <div class="vs-thesis">
       <h3>Why the odds get a vote</h3>
@@ -1644,6 +1650,79 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     return m;
   }
 
+  // ── the day's dateline ────────────────────────────────────────────────────
+  // Twelve cases at one every six hours is three days of rotation, so the case
+  // on screen cannot by itself tell a reader what changed TODAY. The digest
+  // can: it is counted fresh off each morning's pull of the lines, and it says
+  // how wide the argument between the two boards is before a single case is
+  // read. Counted, never written — the same rule the cases live by.
+  function vsDayStamp(ms) {
+    var d = new Date(ms);
+    if (!isFinite(d.getTime())) return '';
+    // UTC, because the pull happens once a day at a fixed UTC hour and a
+    // reader in Auckland must not be told the lines are a day newer than a
+    // reader in Los Angeles is.
+    return 'Lines of ' + d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+  }
+  var VS_POS_WORD = { QB: 'Quarterback', RB: 'Running back', WR: 'Wide receiver', TE: 'Tight end' };
+  function vsClub(t) { return (TEAM_ART[t] && TEAM_ART[t][0]) || t; }
+  function vsMove(b) {
+    return esc(b.name) + ', <b>' + esc(b.position + b.rankConsensus) + ' on the rankings and '
+      + esc(b.position + b.rankIronTuna) + '</b> once the odds are in ('
+      + (b.priceDelta > 0 ? '+$' : '&minus;$') + Math.abs(b.priceDelta) + ')';
+  }
+
+  function renderDay() {
+    var host = document.getElementById('vsDay');
+    if (!host) return;
+    var g = vsMeta && vsMeta.digest;
+    // No digest is not a small digest. An older cached payload, or no overlay
+    // at all, gets no dateline rather than a sentence full of zeroes.
+    if (!g || !isFinite(g.moved) || !isFinite(g.priced)) { host.hidden = true; return; }
+    var h = '';
+    if (vsMeta.asOf) h += '<span class="vs-stamp">' + esc(vsDayStamp(vsMeta.asOf)) + '</span>';
+    if (!g.moved) {
+      h += 'The market put a price on <b>' + g.priced + '</b> players this morning and did not move '
+         + 'one of them far enough to change a slot. Nothing to buy here today — which is itself '
+         + 'the answer: the consensus and the book agree on the draftable board.';
+    } else {
+      h += 'The market put a price on <b>' + g.priced + '</b> players and lands somewhere other than '
+         + 'the consensus on <b>' + g.moved + '</b> of the ones you can actually draft — <b>'
+         + g.up + '</b> the rankings are charging too little for, <b>' + g.down + '</b> too much, '
+         + '<b>$' + g.dollars + '</b> of disagreement across a 12-team, $200 room.';
+      if (g.topUp) h += ' Biggest raise: ' + vsMove(g.topUp) + '.';
+      if (g.topDown) h += ' Biggest fade: ' + vsMove(g.topDown) + '.';
+      // Where the argument is loudest, by position. Only worth a clause when one
+      // position is genuinely ahead of the others — "RB 13, WR 13" is not news.
+      var pos = null;
+      Object.keys(g.byPos || {}).forEach(function (k) {
+        var v = g.byPos[k];
+        if (!v || !v.moved) return;
+        if (!pos || v.moved > g.byPos[pos].moved) pos = k;
+      });
+      if (pos) {
+        var tie = Object.keys(g.byPos).filter(function (k) { return g.byPos[k].moved === g.byPos[pos].moved; });
+        if (tie.length === 1) {
+          h += ' <b>' + esc(VS_POS_WORD[pos] || pos) + '</b> is where the two boards argue most: '
+             + g.byPos[pos].moved + ' players, $' + g.byPos[pos].dollars + '.';
+        }
+      }
+    }
+    // The team clause is the money-line evidence in one sentence: the signal is
+    // a RATIO, so both ranks are always stated and neither stands alone.
+    if (g.teamUp && g.teamDown && g.teamUp.team !== g.teamDown.team) {
+      h += ' The lines rate the <b>' + esc(vsClub(g.teamUp.team)) + '</b> #' + g.teamUp.rankMarket
+         + ' in implied points' + (g.teamUp.implied != null ? ' (' + g.teamUp.implied + ' a game)' : '')
+         + ' where the consensus projections have them #' + g.teamUp.rankConsensus
+         + '; they are coolest on the <b>' + esc(vsClub(g.teamDown.team)) + '</b>, #' + g.teamDown.rankMarket
+         + ' against #' + g.teamDown.rankConsensus + '.';
+    }
+    h += ' <span class="vs-quiet">Recounted from a fresh pull of the lines every morning. '
+       + 'The case below turns over every six hours.</span>';
+    host.innerHTML = h;
+    host.hidden = false;
+  }
+
   function renderCase() {
     var host = document.getElementById('vsCase');
     if (!host) return;
@@ -1785,7 +1864,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   // so a renamed field would otherwise let a stale payload reach this renderer
   // and print "undefined" at readers until the cache expired. Asking for a
   // contract by number makes the cached copies disjoint.
-  var VS_CONTRACT = 3;
+  var VS_CONTRACT = 4;
   // Belt and braces — an item missing any field this renderer prints is dropped
   // rather than rendered with holes in it. Nothing is better than "undefined".
   var VS_REQUIRED = ['name', 'position', 'rankConsensus', 'rankIronTuna', 'rankMarket',
@@ -1807,6 +1886,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       vsItems = (d && d.contract === VS_CONTRACT) ? raw.filter(vsUsable) : [];
       vsMeta = d || null;
       vsIdx = vsSlotIndex(vsItems.length);
+      renderDay();
       renderCase();
       startCaseTick();
     })

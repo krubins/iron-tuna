@@ -3282,3 +3282,144 @@ already, so rule 1 leaves them alone — that is the correct outcome, not a gap.
 - The freshness check in CI now diffs the whole tree after `build-front.mjs`,
   because a stale stamp fails silently — the page renders, the short forms just
   stop linking.
+
+---
+
+## 34. August 2026: every card says how the odds rate him, and the front page says so daily
+
+**What a reader can now do.** Open any player card and read, in one panel, where
+the consensus rankings put him and where he lands once the betting market is
+priced in — for all four hundred players, not the twelve the front page happens
+to be rotating. And read on the front page, above the case, what the two boards
+argued about *today*.
+
+Both are counted off the same daily odds pull (§9b, `0 11 * * *`), and both are
+computed rather than written, for the same reason §9c is: a hand-authored line
+about a market goes stale the day after it is written.
+
+### One computation, three surfaces
+
+The change is mostly a refactor. `buildVegasColumn` used to build its twelve
+cases inline; the ranking work is now `buildVegasBoard(overlay, ctx)`, which
+returns **a row for every skill player**, and three things read it:
+
+| surface | reads the board as | endpoint |
+|---|---|---|
+| the front page's `#vegas` case | a filter — priced, draftable, past the noise floors, top twelve by dollar gap | `/api/vegas-column` |
+| a player card's odds panel | a lookup — one row, plus his place in the day's queue of risers or faders | `/api/player-odds` |
+| the front page's dateline | a count — how wide the disagreement is today | `digest` on both |
+
+That is the point of the split, not a side effect of it. A card and the column
+quoting two different slots for the same man is the failure this makes
+structurally impossible, and `tools/test-player-odds.mjs` asserts it directly:
+every case the column ships is looked up again through the card's path and the
+numbers have to match.
+
+Two flags are new on a row and deliberately do **not** leave the worker on the
+column's payload (`buildVegasColumn` deletes them, and a test checks it):
+
+- **`priced`** — a book moved *this man's own* numbers.
+- **`draftable`** — either board still has him inside the curve.
+
+The column needs both true. A card needs neither, which is the whole reason the
+per-player answer exists.
+
+### A player nobody priced still has an answer
+
+This is the case the column could never cover and the most common one on the
+site. A board is a queue: when the market raises the backs around him, his own
+slot moves without a single line being posted on him. The card says exactly
+that — *"No book posted a line on Achane himself. He still slides 2 slots down
+the RB board… because the market moved the players around him."* — rather than
+hiding the panel, which reads as a bug.
+
+Five true lead sentences, chosen by what the day's lines actually did:
+
+1. priced and moved → the slot change and the dollars.
+2. priced and landed on the same slot → confirmation, and it says it is
+   confirmation rather than an edge.
+3. not priced but the slot moved anyway → the sentence above.
+4. not priced and nothing around him moved → both boards agree, stated plainly.
+5. a kicker or a defence → **no book posts a season-long market this site
+   models for either**, so there is nothing to hold a ranking up against. Said
+   out loud, because §32 already puts K and DEF in the lookup and a silent
+   panel on one position group and not the others reads as breakage.
+
+### The daily dateline on the front page
+
+Twelve cases at one every six hours is three days of rotation, so the case on
+screen cannot by itself say what changed today. `buildVegasDigest(board)` counts
+it: how many players a book priced, how many draftable players the two boards
+part company on, the up/down split, the total dollars of disagreement, the split
+by position, the biggest raise and the biggest fade, and the club at each end of
+the argument. `#vsDay` renders it as one paragraph above the thesis.
+
+Three things it will not do:
+
+- **No digest, no dateline.** An older cached payload or a missing overlay
+  hides the element rather than printing a sentence full of zeroes.
+- **A quiet day is stated, not faked.** Nought disagreements gets its own
+  sentence — *"…did not move one of them far enough to change a slot"* — which
+  is itself the answer.
+- **The team clause always states both ranks.** Same constraint as §9c: the
+  team-environment signal is a *ratio*, so "the market has them #4" alone is
+  misleading when the consensus already has them #3.
+
+The digest is sorted with a name as the final tiebreak (`_colByRise` /
+`_colByFade`) so two reads of one overlay produce the identical dateline. A
+front-page paragraph that reshuffles on reload reads as noise, not as news.
+
+### Contracts, and the cache that made them necessary
+
+`COLUMN_CONTRACT` went **3 → 4** with the digest, and `VS_CONTRACT` in
+`front.html` with it — the pair is asserted by `tools/test-it-league.mjs` and
+again here. §9c's monument to why is still accurate: fifteen minutes of public
+cache means new HTML meets an old payload unless the two are keyed apart.
+
+`/api/player-odds` carries its **own** contract, `PODDS_CONTRACT` (1, matched by
+`PC_ODDS_CONTRACT` in `player.html`). Separate on purpose: the two endpoints
+ship different shapes and are cached separately, so one can grow a field without
+throwing away a quarter of an hour of the other's cache. The card drops any
+payload whose contract is not its own, and drops any player missing a field it
+prints (`PC_ODDS_REQUIRED`), exactly as the column does.
+
+**The daily pull now drops both caches.** `runOddsRefresh` clears
+`_COLUMN_CACHE` and `_PODDS_BOARD` on success. They would age out inside the
+quarter hour anyway, but the whole promise of these two surfaces is that they
+are current, and the pull is the moment they stop being.
+
+### Why a per-player query rather than one payload
+
+The full board is ~350 rows with three stat lines each; a card needs one of
+them. The board is built **once per isolate** and every card slices it, so four
+hundred distinct URLs cost a map lookup each, not a rebuild and not a D1 read.
+The response stays public and cacheable — nothing in it is specific to a reader.
+
+### Money on the card
+
+Ranks are the site's default scoring and say so. Dollars go through
+`ITLeague.deskPrice()` — the library's own conversion, the one the card's
+"Going rate" tile already uses — so a reader with a saved league is quoted the
+same going rate in their own money, and the tile and the panel cannot disagree
+on the same page. Points are deliberately **not** printed beside the boards:
+this endpoint scores at the site's rules and the Projected tile above may be
+scored on the reader's own board, and two point scales on one card is the §32
+`v` trap in another costume.
+
+### Tests
+
+- `tools/test-player-odds.mjs` (in CI) — the contracts on both sides; that the
+  board covers every skill player and that each position's ranks are a clean
+  1..N on both boards; that the column is a filter over the board and never
+  disagrees with a card about a player; every refusal (`unpriced_position`,
+  `off_board`, `ambiguous`, `no_player`, no overlay); the digest recounted
+  against the rows it claims to summarise, including that the biggest raise
+  really is the biggest and that two builds of one overlay match; and then the
+  **real renderers, lifted out of `player.html` and `front.html` and driven on
+  real payloads through a minimal DOM** — every lead sentence, the kicker
+  answer, the money-line clause, a saved league's money, and the empty states,
+  each asserted to contain no `undefined` and no `NaN`. It finishes on the live
+  nflverse pull and checks that *every* skill player on the real board gets an
+  answer, then prints the day's dateline as a reader would read it.
+- `tools/test-worker-column.mjs` and `tools/test-it-league.mjs` are unchanged
+  and still pass — the column's payload shape did not move.

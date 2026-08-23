@@ -301,6 +301,12 @@ jobs:
       - name: Vegas column (worker)
         run: node tools/test-worker-column.mjs
 
+      # The same board, asked about one player. The column prints twelve cases;
+      # a card has to answer for all four hundred, and both read one
+      # computation — this fails if they ever start disagreeing.
+      - name: Consensus vs odds, per player and per day
+        run: node tools/test-player-odds.mjs
+
       - name: Vegas rank chips on the boards
         run: node tools/test-vegas-rank-chip.mjs
 
