@@ -1665,7 +1665,12 @@ const COLUMN_MIN_PRICE_GAP = 2;       // ...or a dollar of rounding
 // "undefined" at readers for a quarter of an hour. The client asks for ?v=N and
 // only renders items whose shape it recognises; the two together make a
 // contract change safe to deploy.
-const COLUMN_CONTRACT = 3;   // 3: items carry their stat lines so a reader's own scoring can re-score them
+const COLUMN_CONTRACT = 4;   // 4: the response carries the day's digest alongside the cases
+                             // 3: items carry their stat lines so a reader's own scoring can re-score them
+// The player card's own contract, versioned separately from the column's: the
+// two endpoints ship different shapes, are cached separately, and one can grow
+// a field without invalidating a quarter of an hour of the other's cache.
+const PODDS_CONTRACT = 1;
 const COLUMN_MAX_ITEMS = 12;          // three days of six-hour slots
 const COLUMN_MAX_AGREE = 3;           // agreement cases are filler, never the point
 const COLUMN_AGREE_MAX_RANK = 24;     // and only worth printing near the top of a board
@@ -1775,13 +1780,22 @@ function _colVegasStats(p, overlay) {
 
 // Rank every skill player twice — once off the committed projections (the
 // "rankings" board) and once off the market's numbers (the "odds" board) — and
-// return the players the two boards disagree about most.
+// hand back a row for EVERY one of them.
 //
-// Players the market does not price still occupy slots on both boards: when the
-// odds push someone up, somebody else is pushed down, and hiding that would
-// overstate the gap for the player who moved.
-function buildVegasColumn(overlay, ctx) {
-  if (!overlay || typeof overlay !== 'object') return { ok: false, error: 'no_overlay', items: [] };
+// Three surfaces read this one computation, and that is the point: the front
+// page's column is a filter over these rows, a player card is a lookup into
+// them, and the daily digest is a count of them. Computing the board once means
+// the card and the column can never tell a reader two different stories about
+// the same player.
+//
+// Players the market does not price still get a row, and still occupy slots on
+// both boards: when the odds push someone up, somebody else is pushed down. For
+// the column, hiding that would overstate the gap for the player who moved. For
+// a card it is the answer itself — "no book touched his numbers, but the backs
+// around him went up, so he slides two slots" is a true and useful thing to say
+// about a man nobody priced.
+function buildVegasBoard(overlay, ctx) {
+  if (!overlay || typeof overlay !== 'object') return { ok: false, error: 'no_overlay', rows: [] };
   const projTeamRank = _colTeamProjRank();
   const byPos = {};
   for (const p of PROJECTIONS) {
@@ -1806,7 +1820,7 @@ function buildVegasColumn(overlay, ctx) {
     });
   }
 
-  const conflicts = [], agreements = [];
+  const rows = [];
   for (const pos of COLUMN_POSITIONS) {
     const list = byPos[pos] || [];
     if (list.length < 2) continue;
@@ -1822,13 +1836,11 @@ function buildVegasColumn(overlay, ctx) {
     const curveLen = (COLUMN_CURVE[pos] || []).length;
     for (let li = 0; li < list.length; li++) {
       const r = list[li];
-      if (!r.moved) continue;                          // the market never priced them
       const iC = rCon.get(li), iI = rIT.get(li), iM = rMkt.get(li);
-      if (iC >= curveLen && iI >= curveLen) continue;   // undraftable on either board
       const priceConsensus = _colPrice(pos, iC), priceIronTuna = _colPrice(pos, iI);
       const rankDelta = iC - iI;                       // + => Iron Tuna rates them higher
       const priceDelta = priceIronTuna - priceConsensus;
-      const item = {
+      rows.push({
         name: r.name, team: r.team, position: pos,
         rankConsensus: iC + 1, rankIronTuna: iI + 1, rankMarket: iM + 1, rankDelta,
         ptsConsensus: Math.round(r.ptsConsensus * 10) / 10,
@@ -1842,19 +1854,103 @@ function buildVegasColumn(overlay, ctx) {
         statsMarket: _colStatLine(r.statsMarket),
         priceConsensus, priceIronTuna, priceDelta,
         side: rankDelta > 0 ? 'under' : rankDelta < 0 ? 'over' : 'flat',
-        moved: r.moved.map(m => ({ stat: m.stat, consensus: _oddsRound(m.consensus), market: _oddsRound(m.market) })),
+        moved: r.moved ? r.moved.map(m => ({ stat: m.stat, consensus: _oddsRound(m.consensus), market: _oddsRound(m.market) })) : [],
+        // `priced` is whether a book moved THIS man's own numbers; `draftable`
+        // is whether either board still has him inside the curve. The column
+        // needs both to be true, a card needs neither.
+        priced: !!r.moved,
+        draftable: iC < curveLen || iI < curveLen,
         teamImplied: ctx && ctx.ppg && ctx.ppg[r.team] != null ? Math.round(ctx.ppg[r.team] * 10) / 10 : null,
         teamRank: ctx && ctx.rank && ctx.rank[r.team] != null ? ctx.rank[r.team] : null,
         teamRankConsensus: projTeamRank[r.team] != null ? projTeamRank[r.team] : null
-      };
-      if (Math.abs(rankDelta) >= COLUMN_MIN_RANK_GAP || Math.abs(priceDelta) >= COLUMN_MIN_PRICE_GAP) {
-        conflicts.push({ ...item, kind: 'conflict' });
-      } else if (iC === iI && iC < COLUMN_AGREE_MAX_RANK) {
-        // Confirmation, not conflict: the market priced this player and landed
-        // on the same slot the consensus did. Only worth printing near the top
-        // of the board — "the odds agree the WR61 is the WR61" says nothing.
-        agreements.push({ ...item, kind: 'agree' });
-      }
+      });
+    }
+  }
+  return { ok: true, rows, scanned: PROJECTIONS.length };
+}
+
+// Is the gap between the two boards big enough to be worth a reader's time, or
+// is it a rounding artefact? One definition, used by the column, the digest and
+// every card, so the three can never disagree about what counts as a move.
+function _colMeaningful(r) {
+  return Math.abs(r.rankDelta) >= COLUMN_MIN_RANK_GAP || Math.abs(r.priceDelta) >= COLUMN_MIN_PRICE_GAP;
+}
+
+// What the board looks like TODAY, in numbers rather than in one player's case.
+// This is the front page's dateline: it turns over with every daily odds pull,
+// it is counted rather than written, and it says how wide the disagreement is
+// before the reader has clicked through a single case.
+function buildVegasDigest(board) {
+  const rows = (board && board.rows) || [];
+  const draftable = rows.filter(r => r.draftable);
+  const priced = rows.filter(r => r.priced).length;
+  const moved = draftable.filter(_colMeaningful);
+  const up = moved.filter(r => r.rankDelta > 0).length;
+  const down = moved.filter(r => r.rankDelta < 0).length;
+  const dollars = moved.reduce((a, r) => a + Math.abs(r.priceDelta), 0);
+  const byPos = {};
+  for (const pos of COLUMN_POSITIONS) {
+    const at = moved.filter(r => r.position === pos);
+    byPos[pos] = { moved: at.length, up: at.filter(r => r.rankDelta > 0).length,
+                   down: at.filter(r => r.rankDelta < 0).length,
+                   dollars: at.reduce((a, r) => a + Math.abs(r.priceDelta), 0) };
+  }
+  const brief = r => r ? {
+    name: r.name, team: r.team, position: r.position,
+    rankConsensus: r.rankConsensus, rankIronTuna: r.rankIronTuna,
+    priceConsensus: r.priceConsensus, priceIronTuna: r.priceIronTuna, priceDelta: r.priceDelta
+  } : null;
+  const rises = moved.filter(r => r.priceDelta > 0).sort(_colByRise);
+  const fades = moved.filter(r => r.priceDelta < 0).sort(_colByFade);
+  // The club the two boards disagree about most, in both directions. One row
+  // per team: every skill player on a roster carries the same pair of ranks, so
+  // counting them player-by-player would just be counting roster sizes.
+  const teams = new Map();
+  for (const r of rows) {
+    if (!r.team || r.teamRank == null || r.teamRankConsensus == null) continue;
+    if (!teams.has(r.team)) teams.set(r.team, {
+      team: r.team, implied: r.teamImplied,
+      rankMarket: r.teamRank, rankConsensus: r.teamRankConsensus,
+      gap: r.teamRankConsensus - r.teamRank       // + => the market likes them more
+    });
+  }
+  const clubs = [...teams.values()];
+  const teamUp = clubs.filter(t => t.gap > 0).sort((a, b) => b.gap - a.gap)[0] || null;
+  const teamDown = clubs.filter(t => t.gap < 0).sort((a, b) => a.gap - b.gap)[0] || null;
+  return {
+    scanned: board.scanned || 0, priced, draftable: draftable.length,
+    moved: moved.length, up, down, dollars,
+    byPos, topUp: brief(rises[0]), topDown: brief(fades[0]), teamUp, teamDown
+  };
+}
+// Dollars first, then points, then name — the third key only so a tie cannot
+// reorder the digest between two calls that read the same overlay. A dateline
+// that reshuffles itself on a page reload reads as noise, not as news.
+function _colByRise(a, b) {
+  return b.priceDelta - a.priceDelta || b.ptsDelta - a.ptsDelta || (a.name < b.name ? -1 : 1);
+}
+function _colByFade(a, b) {
+  return a.priceDelta - b.priceDelta || a.ptsDelta - b.ptsDelta || (a.name < b.name ? -1 : 1);
+}
+
+// The front page's cases: the players the two boards disagree about most.
+function buildVegasColumn(overlay, ctx) {
+  const board = buildVegasBoard(overlay, ctx);
+  if (!board.ok) return { ok: false, error: board.error, items: [] };
+
+  const conflicts = [], agreements = [];
+  for (const r of board.rows) {
+    if (!r.priced) continue;                           // the market never priced them
+    if (!r.draftable) continue;                        // undraftable on either board
+    const item = { ...r };
+    delete item.priced; delete item.draftable;
+    if (_colMeaningful(r)) {
+      conflicts.push({ ...item, kind: 'conflict' });
+    } else if (r.rankConsensus === r.rankIronTuna && r.rankConsensus - 1 < COLUMN_AGREE_MAX_RANK) {
+      // Confirmation, not conflict: the market priced this player and landed
+      // on the same slot the consensus did. Only worth printing near the top
+      // of the board — "the odds agree the WR61 is the WR61" says nothing.
+      agreements.push({ ...item, kind: 'agree' });
     }
   }
 
@@ -1870,7 +1966,57 @@ function buildVegasColumn(overlay, ctx) {
   const filler = agreements.slice(0, Math.min(room, COLUMN_MAX_AGREE));
   const items = conflicts.slice(0, COLUMN_MAX_ITEMS).concat(filler);
   return { ok: true, items, conflicts: Math.min(conflicts.length, COLUMN_MAX_ITEMS),
-           agreements: filler.length, scanned: PROJECTIONS.length };
+           agreements: filler.length, scanned: PROJECTIONS.length,
+           // The dateline. Twelve cases is three days of six-hour slots, so the
+           // rotation alone cannot tell a reader what changed TODAY; the digest
+           // is counted fresh off every daily pull and does.
+           digest: buildVegasDigest(board) };
+}
+
+// One player's standing on the same board, for his card. Everything the column
+// says about its twelve is said here about all four hundred — a card that only
+// answered for the players who happened to make the front page would leave the
+// rest of the board looking like the odds had no opinion about them at all.
+//
+// `rank` is his place in the day's queue of risers or faders, which is the
+// honest way to size a gap: "+$4" means nothing until you know whether that is
+// the biggest raise on the board or the fortieth.
+function buildPlayerOdds(overlay, ctx, name, position) {
+  const board = buildVegasBoard(overlay, ctx);
+  if (!board.ok) return { ok: false, error: board.error, player: null };
+  return playerOddsFrom(board, buildVegasDigest(board), name, position);
+}
+// The lookup, split out from the build so a warm isolate answers four hundred
+// cards off one board instead of re-ranking the league for every one of them.
+function playerOddsFrom(board, digest, name, position) {
+  if (!board || !board.ok) return { ok: false, error: (board && board.error) || 'no_overlay', player: null };
+  const pos = String(position || '').toUpperCase();
+  const want = _oddsNorm(name);
+  if (!want) return { ok: true, player: null, reason: 'no_player', digest };
+  if (!COLUMN_POSITIONS.includes(pos)) {
+    // Kickers and defences are on the board and in the lookup, and no book
+    // prices a season-long market this site models for either. Saying so is a
+    // real answer; hiding the section reads as a bug.
+    return { ok: true, player: null, reason: 'unpriced_position', digest };
+  }
+  const hit = board.rows.filter(r => r.position === pos && _oddsNorm(r.name) === want);
+  // Two men, one normalised name, one position: there is no way to tell which
+  // card is being looked at, and guessing would put another player's price on
+  // this page. Say nothing instead.
+  if (hit.length !== 1) return { ok: true, player: null, reason: hit.length ? 'ambiguous' : 'off_board', digest };
+  const r = hit[0];
+  const moved = board.rows.filter(x => x.draftable && _colMeaningful(x));
+  const queue = r.priceDelta > 0 ? moved.filter(x => x.priceDelta > 0).sort(_colByRise)
+              : r.priceDelta < 0 ? moved.filter(x => x.priceDelta < 0).sort(_colByFade)
+              : [];
+  const at = queue.findIndex(x => x === r);
+  const player = { ...r,
+    meaningful: _colMeaningful(r),
+    // His place in today's queue, and how long the queue is. Both, or the
+    // number is unreadable: 4th of 6 and 4th of 90 are not the same sentence.
+    queueRank: at >= 0 ? at + 1 : null,
+    queueOf: queue.length || null };
+  return { ok: true, player, digest };
 }
 
 // ── D1 cache ───────────────────────────────────────────────────────────────
@@ -1960,6 +2106,12 @@ async function runOddsRefresh(env) {
   if (matched < ODDS_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', matched, tried };
   await oddsCacheWrite(env, merged, used.join('+') || 'none', matched);
   _PROJ_ENC = null;                            // force re-encode with the new blend
+  // Everything downstream of the overlay is now describing yesterday's lines.
+  // The caches would age out on their own inside the quarter hour, but the pull
+  // is a DAILY event and the whole promise of these two surfaces is that they
+  // are current — so they are dropped the moment the numbers behind them move.
+  _COLUMN_CACHE = null; _COLUMN_AT = 0;
+  _PODDS_BOARD = null; _PODDS_BOARD_AT = 0;
   return { ok: true, provider: used.join('+'), matched, tried };
 }
 
@@ -1970,6 +2122,11 @@ let _ODDS_KICK_AT = 0;
 let _COLUMN_CACHE = null;
 let _COLUMN_AT = 0;
 let _COLUMN_KEY = '';
+// The player card asks about ONE man, so its cache is a map keyed by the man —
+// but the board behind every answer is built once per isolate and shared, which
+// is what keeps four hundred distinct URLs down to a single D1 read.
+let _PODDS_BOARD = null;
+let _PODDS_BOARD_AT = 0;
 let _LEAD_CACHE = null;
 let _LEAD_AT = 0;
 
@@ -2513,6 +2670,48 @@ export default {
       } catch (e) { out = { ok: false, error: 'unavailable', items: [] }; }
       if (out.contract == null) out.contract = COLUMN_CONTRACT;
       _COLUMN_CACHE = out; _COLUMN_AT = now; _COLUMN_KEY = ck;
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
+    }
+    // The same board, asked about one player, for his card at /player/<slug>.
+    // Public and read-only for the same reasons the column is: it ships numbers
+    // the cheat sheet already publishes, and the card is a static asset that
+    // cannot hold the projections key.
+    //
+    // Why a per-player query rather than one payload of the whole board: the
+    // full index is ~400 rows of stat lines, and a card needs one of them. The
+    // board is built once per isolate and every card slices it, so the cost of
+    // the extra URLs is a map lookup, not a rebuild and not a D1 read.
+    if (url.pathname === '/api/player-odds') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      const now = Date.now();
+      const name = (url.searchParams.get('name') || '').slice(0, 80);
+      const pos = (url.searchParams.get('pos') || '').slice(0, 4).toUpperCase();
+      let out = { ok: false, error: 'no_overlay', player: null };
+      try {
+        // One board per isolate for a quarter of an hour, exactly like the
+        // column's payload — the odds themselves only move once a day.
+        if (!_PODDS_BOARD || now - _PODDS_BOARD_AT >= 900000) {
+          const cached = await oddsCacheRead(env);
+          if (cached && cached.overlay) {
+            const board = buildVegasBoard(cached.overlay, await oddsCtxRead(env));
+            _PODDS_BOARD = { board, digest: board.ok ? buildVegasDigest(board) : null,
+                             provider: cached.provider, asOf: cached.updatedAt };
+          } else {
+            _PODDS_BOARD = { board: null };
+          }
+          _PODDS_BOARD_AT = now;
+        }
+        if (_PODDS_BOARD.board && _PODDS_BOARD.board.ok) {
+          const built = playerOddsFrom(_PODDS_BOARD.board, _PODDS_BOARD.digest, name, pos);
+          out = { ...built, contract: PODDS_CONTRACT, provider: _PODDS_BOARD.provider,
+                  asOf: _PODDS_BOARD.asOf,
+                  // Same honesty constraint as the column: the free provider
+                  // prices GAMES, and a card must not sell that as a prop.
+                  basis: /the-odds-api/.test(_PODDS_BOARD.provider || '') ? 'props' : 'gamelines' };
+        }
+      } catch (e) { out = { ok: false, error: 'unavailable', player: null }; }
+      if (out.contract == null) out.contract = PODDS_CONTRACT;
       return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
     }
     // The front page's lead, and the archive behind it. Two minutes of cache:
