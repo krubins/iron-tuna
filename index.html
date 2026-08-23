@@ -586,6 +586,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .rail-row { padding: 6px 8px; border-radius: var(--radius-sm); border-left: 3px solid transparent; margin-bottom: 4px; background: var(--bg-elev); }
 .rail-row.ideal { border-left-color: #2ec85f; background: rgba(46,200,95,0.16); }
 .rail-row.reserve { border-left-color: var(--gold); background: rgba(245,184,0,0.10); }
+.rail-row.rail-target { border-left-color: var(--positive); background: rgba(45,212,163,0.20); box-shadow: inset 0 0 0 1px rgba(45,212,163,0.35); }
 .rr-l1 { display: flex; align-items: center; gap: 6px; }
 .target-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--text-muted); background: transparent; padding: 0; flex: 0 0 auto; cursor: pointer; }
 .target-dot:hover { border-color: #2ec85f; }
@@ -1100,7 +1101,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-hl { background: #fbf2d6 !important; border-left: 3px solid #b8860b; box-shadow: none; }
   .cheat-row.cheat-hl .cheat-name { font-weight: 700; }
   .cheat-row.cheat-hl .cheat-rank::before { content: '\2605'; color: #b8860b; margin-right: 1px; }
-  .cheat-row.cheat-target { background: #eafaf3 !important; }
+  .cheat-row.cheat-target { background: #eafaf3 !important; border-left: 3px solid #0a7a3f; }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 8px; }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 7.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
   body.print-onepage .cheat-print-head, body.print-onepage .cheat-print-foot { display: none !important; }
@@ -1147,19 +1148,25 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-hl { background: rgba(212,160,23,0.14); box-shadow: inset 2px 0 0 var(--gold-text); }
 .cheat-row.cheat-hl .cheat-name { font-weight: 700; }
 .cheat-grid.has-hl .cheat-row:not(.cheat-hl) { opacity: 0.4; }
-.cheat-row.cheat-target { background: rgba(45,212,163,0.12); }
 .cheat-row.cheat-target .cheat-name::before { content: '●'; color: var(--positive); margin-right: 4px; font-size: 10px; }
 .cheat-row.cheat-target .cheat-rank { color: var(--positive); font-weight: 700; }
 .cheat-rank:hover { color: var(--positive); }
 .cheat-star { cursor: pointer; color: var(--text-faint); font-size: 13px; line-height: 1; text-align: center; user-select: none; }
 .cheat-star:hover { color: var(--gold-text); }
-.cheat-row.cheat-target .cheat-star { color: var(--gold-text); }
+.cheat-star.on { color: var(--gold-text); }
 .cheat-grid.has-hl .cheat-row.cheat-target { opacity: 1; }
 .cheat-row.cheat-modelfit { box-shadow: inset 3px 0 0 var(--gold-text); }
 .cheat-row.cheat-modelfit .cheat-rank { color: var(--gold-text); font-weight: 700; }
 .cheat-row.cheat-stack { box-shadow: inset 3px 0 0 #a78bfa; background: rgba(167,139,250,0.10); }
 .cheat-row.cheat-stack .cheat-name::after { content: "STACK"; margin-left: 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: #c4b1ff; border: 1px solid rgba(167,139,250,0.6); border-radius: 4px; padding: 0 4px; vertical-align: middle; }
 .cheat-row.cheat-stack.cheat-modelfit { box-shadow: inset 3px 0 0 #a78bfa; }
+/* A target lights its whole line and stays lit until he is assigned or the flag
+   comes off. It sits after model-fit and stack because those repaint the row
+   background and left bar underneath it. */
+.cheat-row.cheat-target { background: rgba(45,212,163,0.22); box-shadow: inset 3px 0 0 var(--positive); }
+.cheat-row.cheat-target:hover { background: rgba(45,212,163,0.30); }
+.cheat-row.cheat-target.cheat-modelfit { box-shadow: inset 3px 0 0 var(--positive), inset 6px 0 0 var(--gold-text); }
+.cheat-row.cheat-target.cheat-stack { background: rgba(45,212,163,0.22); box-shadow: inset 3px 0 0 var(--positive), inset 6px 0 0 #a78bfa; }
 .cheat-row.cheat-tier-top { border-top: 1px solid rgba(234,179,8,0.5); margin-top: 4px; padding-top: 4px; }
 .cheat-team-inline { color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: 0.03em; margin-left: 6px; }
 .model-tab-pts { font-size: 10.5px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.02em; white-space: nowrap; }
@@ -12195,14 +12202,14 @@ function Cheatsheet({
       "data-pos": pos,
       "data-tierband": undefined,
       title: drafted ? dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool' : undefined,
-      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''} ${(config && config.format === 'bestball' && !drafted && _fmtMyRoster.length && typeof bestballStackBoost === 'function' && bestballStackBoost(p, _fmtMyRoster, 1) > 0) ? 'cheat-stack' : ''}`,
+      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) && !drafted ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''} ${(config && config.format === 'bestball' && !drafted && _fmtMyRoster.length && typeof bestballStackBoost === 'function' && bestballStackBoost(p, _fmtMyRoster, 1) > 0) ? 'cheat-stack' : ''}`,
       onPointerDown: e => startDrag(e, p.id, pos),
       style: {
         touchAction: 'pan-y',
         gridTemplateColumns: gridT
       }
     }, React.createElement("div", { className: "cheat-grip no-print", onPointerDown: e => startGripDrag(e, p.id, pos), title: "Drag to reorder", style: { touchAction: 'none' } }, React.createElement("svg", { viewBox: "0 0 24 24", className: "cheat-grip-ico", "aria-hidden": "true" }, React.createElement("path", { d: "M8 10l4-4 4 4M8 14l4 4 4-4" }))), React.createElement("span", {
-      className: "cheat-star",
+      className: "cheat-star" + (targets && targets.has(p.id) ? ' on' : ''),
       title: targets && targets.has(p.id) ? 'Target \u2014 click to clear' : 'Click to set as a target',
       onPointerDown: e => e.stopPropagation(),
       onClick: e => {
@@ -16097,7 +16104,7 @@ function PlayersRail({
             pos: p.position
           };else delete rowRefs.current[p.id];
         },
-        className: `rail-row ${cls}`,
+        className: `rail-row ${cls}${targets && targets.has(p.id) ? ' rail-target' : ''}`,
         onPointerDown: e => startRankDrag(e, p.id, p.position),
         style: {
           cursor: 'grab',
