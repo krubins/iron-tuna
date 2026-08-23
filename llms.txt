@@ -34,7 +34,7 @@ A ranking cannot answer any of those questions, which is why an auction drafter 
 
 ## FAQ
 - Is it free? Yes — the auction board with expert default values is free, no signup. The one-time $9.99 upgrade rebuilds every value for your league's exact custom scoring and adds board reordering, the live draft tools, and the Value Coach.
-- Is it only for auctions? Auction is what it is built for and the only format that gets max-bid maths and room-wide budget tracking. Snake is supported; you can switch to it from the ribbon on the home page.
+- Is it only for auctions? Auction is what it is built for and the only format that gets bid maths and room-wide budget tracking. Snake is supported; you can switch to it from the ribbon on the home page.
 - Does it work for any league? Yes — including salary-cap, keeper, Superflex and 2-QB formats, and any custom scoring.
 - How is it different? Most tools give one generic ranking. Iron Tuna gives three dollar figures per player, calibrated to your league, blended with the betting market, plus a real-time AI Value Coach that advises you bid by bid.
 

@@ -12,7 +12,7 @@
 // THE THINGS THAT WOULD BE WRONG AND LOOK RIGHT, which is what the assertions
 // below are aimed at:
 //
-//   - A max bid above the budget. The share model multiplies a fraction by the
+//   - A recommended bid above the budget. The share model multiplies a fraction by the
 //     reader's remaining FAAB; get the fraction wrong (a denominator that can go
 //     below the numerator) and the page confidently tells someone to bid $140 of
 //     their $80. Nothing about the layout would look broken.
@@ -54,7 +54,7 @@ const ok = (n, c, x = '') => { if (c) { pass++; console.log(`  ok   ${n}`); } el
 
 // ── the league under test ──────────────────────────────────────────────────
 // Twelve teams, $100 FAAB, week 5 of 17. The reader is roster 1 and has spent
-// $20, so $80 is the ceiling every max bid has to respect. The rival budgets are
+// $20, so $80 is the ceiling every recommended bid has to respect. The rival budgets are
 // chosen so the three interesting cases all exist in one fixture: two teams
 // richer than the reader, several poorer, and three with nothing left at all.
 const WEEK = 5, BUDGET = 100, MY_USED = 20, MY_LEFT = BUDGET - MY_USED;
@@ -242,9 +242,9 @@ ok('and the week it is', /Week/.test(r.bar) && r.bar.includes(String(WEEK)));
 
 // The ceiling. A share of a budget can never exceed the budget.
 const overBudget = r.rows.filter(x => x.max > MY_LEFT);
-ok('no max bid exceeds the money actually left', overBudget.length === 0,
+ok('no recommended bid exceeds the money actually left', overBudget.length === 0,
    overBudget.slice(0, 3).map(x => `${x.name}=$${x.max}`).join(', '));
-ok('every max bid is a real number', r.rows.every(x => x.max !== null && x.max >= 0));
+ok('every recommended bid is a real number', r.rows.every(x => x.max !== null && x.max >= 0));
 
 // Rest-of-season must be a discount on the full-season price, and the table is
 // sorted by it, so it can only fall as you read down.

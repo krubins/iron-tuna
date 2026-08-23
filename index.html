@@ -3564,7 +3564,7 @@ function generateTeamInsights(plan, myTeam, teams, players, config, seasonGames,
       severity: 'opportunity',
       headline: 'You have spending power',
       detail: `~$${Math.round(perSlot)}/slot with only ${openStarters} starter${openStarters !== 1 ? 's' : ''} left to fill.`,
-      action: 'Push on the next player you actually want, your max bid towers over the field.'
+      action: 'Push on the next player you actually want, you can outbid the field.'
     });
   }
   const minBidN = config.valuation.minBid;
@@ -5961,7 +5961,7 @@ function LandingSplash({
   const threeNum = [['Market Price', 'What the room is likely to pay for him right now.', 'price'], ['True Value', 'What he is actually worth under your exact league settings.', 'value'], ['What You Should Bid (You)', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'The player\'s value to your starting lineup, adjusted for your roster and remaining needs.' : 'The highest you should personally bid, given your roster, budget, and remaining needs.'), 'max']];
   const proof = [['Tracks every team\'s budget', 'See who is flush and who is broke, so you know who can still bid you up and who is stuck bargain hunting.'], ['Recalculates what you should bid after every nomination', 'What you should bid updates the instant the board moves, so the number on screen is always current.'], ['Shows where the room is overpaying', 'Spot the runs and panic bids in real time, and let rivals torch their budgets on names.'], ['Finds value pockets by position', 'Know which positions still have cheap points left, and pounce before anyone else notices.'], ['Keeps your roster legal and balanced', 'Guidance that respects your open slots and budget, so you never get stuck unable to fill a starter.'], ['Helps you avoid panic bids', 'A clear walk-away number on every player, so you stop chasing and start winning the auction.'], ['🔥 Roast a Rival', 'Talk trash with receipts: one tap generates a savage, shareable AI breakdown of any opponent’s roster — their reaches, their holes, their bargain-bin bench — live as the draft unfolds.']];
   const tiers = [['Free Cheat Sheet', '$0', 'Start planning in 60 seconds', false, [(_PF ? 'Expert rankings for every player, instantly' : 'Expert auction values for every player, instantly'), (_PF ? 'Player tiers and draft strategy models' : 'Player tiers and auction strategy models'), 'Sortable, printable cheat sheet', (_PF ? 'The ideal team for your draft position, no points left on the table' : 'The ideal team your budget can afford, no points left on the table'), 'No signup required to start'], (_PF ? 'Build my free board' : 'Build my free auction board'), 'prep', 'hero_cta_click'], [(_PF ? 'Custom Rankings + Draft Day' : 'Custom Values + Draft Day'), '$9.99', (_PF ? 'Your league’s real rankings, today' : 'Your league’s real values, today'), true, [(_PF ? 'Your league’s FULL custom scoring: every ranking recalculated to your exact rules' : 'Your league’s FULL custom scoring: every dollar value re-priced to your exact rules'), 'Reorder any player and build the board you actually believe in', 'A Value Coach that answers player and strategy questions from planning through draft night', (_PF ? 'On draft day: live pick tracking, survival odds, and rankings that update as the board moves' : 'On draft day: live bid tracking, opponent budgets, and what you should bid, updated as the room moves'), '🔥 Roast a Rival: a savage, shareable AI takedown of any opponent’s roster, served up live during the draft', 'Save and reopen your draft, works even if Wi-Fi drops'], (_PF ? 'Unlock my league’s rankings' : 'Unlock my league’s values'), 'prep', 'draft_mode_clicked']];
-  const faqs = [[((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Does this work for auction leagues?' : 'Does this work for snake drafts?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'This page is the snake tool, built for pick-order drafts: custom rankings that re-rank to your roster, survival odds for your next pick, and a live AI Value Coach. If your league spends a budget to bid on players, use our auction tool instead.' : 'No, and that is the point. Iron Tuna is built around budgets, bidding, and max-bid math. If your league spends a budget to buy players, this is the sharpest tool you will find. If you draft in pick order, use a rankings tool.')], ['Do I need to create an account?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'No. Build your free rankings with zero signup. You only make an account if you want to save your league and reopen it on draft day.' : 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft day.')], ['Can I use custom scoring?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes — that is the heart of the $9.99 unlock. Enter your teams, draft slot, roster slots, and full custom scoring, and every ranking recalculates to your exact settings, including weird home-league rules. The free board uses expert default scoring so you can try it first.' : 'Yes — that is the heart of the $9.99 unlock. Enter your teams, budget, roster slots, and full custom scoring, and every value re-prices to your exact settings, including weird home-league rules. The free board uses expert default scoring so you can try it first.')], ['Can I use it during a live draft?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes. Draft Day Mode is built to run live: log each pick, track every roster, and read your updated rankings and survival odds as the draft unfolds.' : 'Yes. Draft Day Mode is built to run live: log each bid, track every budget, and read what you should bid as the auction unfolds.')], ['What happens if my Wi-Fi drops?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-draft.' : 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.')], ['How is this different from a normal cheat sheet?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'A normal sheet gives you one static ranking before the draft. Iron Tuna gives three numbers per player, then re-ranks live based on your roster, your remaining needs, and who has already come off the board.' : 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.')], ['Does it handle superflex and two-QB leagues?', 'Yes. Add QB to your flex eligibility and every quarterback re-prices for the scarcity, so you know exactly how far up to go on the position.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What about keeper or dynasty leagues?' : 'What about keeper or auction-keeper leagues?'), 'Mark the players already kept as drafted before you start. The remaining pool and the inflation math adjust around them, so your values stay accurate.'], ['How accurate are the values?', 'They are projections, not guarantees. Iron Tuna builds on ESPN and CBS projections, reliability-adjusts for injuries and consistency, then converts to dollars at your exact settings. The edge is reacting faster and more rationally than the room, not predicting the future.'], ['Can I use it on my phone?', 'Yes. It runs in any browser, so keep it open on your phone or a second tab and work straight from the board during the draft.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What is the difference between Prep and Draft Day?' : 'What is the difference between Prep and Auction Day?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Prep is your free cheat sheet: build your rankings, set your strategy, and study the board before the draft. Draft Day is the live draft board where you log each pick and track every roster as the draft unfolds.' : 'Prep is your free cheat sheet: build your values, set your strategy, and study the board before the draft. Auction Day is the live draft board where you log each bid and track every budget on the clock.')]];
+  const faqs = [[((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Does this work for auction leagues?' : 'Does this work for snake drafts?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'This page is the snake tool, built for pick-order drafts: custom rankings that re-rank to your roster, survival odds for your next pick, and a live AI Value Coach. If your league spends a budget to bid on players, use our auction tool instead.' : 'No, and that is the point. Iron Tuna is built around budgets, bidding, and bid math. If your league spends a budget to buy players, this is the sharpest tool you will find. If you draft in pick order, use a rankings tool.')], ['Do I need to create an account?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'No. Build your free rankings with zero signup. You only make an account if you want to save your league and reopen it on draft day.' : 'No. Build your free auction sheet with zero signup. You only make an account if you want to save your league and reopen it on draft day.')], ['Can I use custom scoring?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes — that is the heart of the $9.99 unlock. Enter your teams, draft slot, roster slots, and full custom scoring, and every ranking recalculates to your exact settings, including weird home-league rules. The free board uses expert default scoring so you can try it first.' : 'Yes — that is the heart of the $9.99 unlock. Enter your teams, budget, roster slots, and full custom scoring, and every value re-prices to your exact settings, including weird home-league rules. The free board uses expert default scoring so you can try it first.')], ['Can I use it during a live draft?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Yes. Draft Day Mode is built to run live: log each pick, track every roster, and read your updated rankings and survival odds as the draft unfolds.' : 'Yes. Draft Day Mode is built to run live: log each bid, track every budget, and read what you should bid as the auction unfolds.')], ['What happens if my Wi-Fi drops?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-draft.' : 'It keeps working. Iron Tuna runs in your browser, so a flaky draft-night connection will not leave you stranded mid-auction.')], ['How is this different from a normal cheat sheet?', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'A normal sheet gives you one static ranking before the draft. Iron Tuna gives three numbers per player, then re-ranks live based on your roster, your remaining needs, and who has already come off the board.' : 'A normal sheet gives you one static number before the draft. Iron Tuna gives three numbers per player, then updates your personal max live based on your roster, your budget, and what the room has already spent.')], ['Does it handle superflex and two-QB leagues?', 'Yes. Add QB to your flex eligibility and every quarterback re-prices for the scarcity, so you know exactly how far up to go on the position.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What about keeper or dynasty leagues?' : 'What about keeper or auction-keeper leagues?'), 'Mark the players already kept as drafted before you start. The remaining pool and the inflation math adjust around them, so your values stay accurate.'], ['How accurate are the values?', 'They are projections, not guarantees. Iron Tuna builds on ESPN and CBS projections, reliability-adjusts for injuries and consistency, then converts to dollars at your exact settings. The edge is reacting faster and more rationally than the room, not predicting the future.'], ['Can I use it on my phone?', 'Yes. It runs in any browser, so keep it open on your phone or a second tab and work straight from the board during the draft.'], [((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'What is the difference between Prep and Draft Day?' : 'What is the difference between Prep and Auction Day?'), ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'Prep is your free cheat sheet: build your rankings, set your strategy, and study the board before the draft. Draft Day is the live draft board where you log each pick and track every roster as the draft unfolds.' : 'Prep is your free cheat sheet: build your values, set your strategy, and study the board before the draft. Auction Day is the live draft board where you log each bid and track every budget on the clock.')]];
   return React.createElement("div", {
     className: `landing-splash landing-page ${fadingOut ? 'fading-out' : ''}`
   }, React.createElement("div", {
@@ -7292,7 +7292,7 @@ function QuickDraftModal({
       color: 'var(--danger)',
       marginBottom: 12
     }
-  }, noSpots && `${team.name} has no roster spots remaining.`, posFull && !noSpots && `${team.name} already has every ${player.position} slot filled (set-positions mode).`, overMax && !noSpots && !posFull && `Exceeds ${team.name}'s max bid of $${teamMax}.`), React.createElement("div", {
+  }, noSpots && `${team.name} has no roster spots remaining.`, posFull && !noSpots && `${team.name} already has every ${player.position} slot filled (set-positions mode).`, overMax && !noSpots && !posFull && `Exceeds ${team.name}'s spending limit of $${teamMax}.`), React.createElement("div", {
     className: "qd-actions",
     style: {
       display: 'flex',
@@ -7437,7 +7437,7 @@ function AddPlayerModal({
       color: 'var(--danger)',
       marginBottom: 12
     }
-  }, noSpots && `${mgr.name} has no roster spots remaining.`, overMax && !noSpots && `Exceeds ${mgr.name}'s max bid of $${teamMax}.`), React.createElement("div", {
+  }, noSpots && `${mgr.name} has no roster spots remaining.`, overMax && !noSpots && `Exceeds ${mgr.name}'s spending limit of $${teamMax}.`), React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8
@@ -8888,7 +8888,7 @@ function TeamsBoard({
         fontWeight: 400,
         letterSpacing: '0.04em'
       }
-    }, "Max Bid"))), React.createElement("div", {
+    }, "Can Bid"))), React.createElement("div", {
       style: {
         fontSize: 12,
         fontFamily: 'var(--font-mono)',
@@ -10308,10 +10308,10 @@ const BIDDING_NOTES = [{
   text: 'Four or five $20 to $40 players gives a higher floor than two superstars and a thin roster.'
 }, {
   label: 'The $1 endgame',
-  text: 'Most leagues hold back $1 for every open roster spot, so your last six to eight picks come at $1 to $2. Your true max bid is your budget minus a dollar for each slot still to fill.'
+  text: 'Most leagues hold back $1 for every open roster spot, so your last six to eight picks come at $1 to $2. The most you can truly bid is your budget minus a dollar for each slot still to fill.'
 }, {
-  label: 'Set your max',
-  text: 'Decide your true max before nominations open and never chase a dollar past it.'
+  label: 'Set your walk-away number',
+  text: 'Decide your walk-away number before nominations open and never chase a dollar past it.'
 }, {
   label: 'Reserve math',
   text: 'Keep at least (open slots minus one) dollars so you can still fill every roster spot.'
@@ -10362,7 +10362,7 @@ const BIDDING_NOTES = [{
   text: 'Bid to your You value, not to the room\'s projected price.'
 }, {
   label: 'Pounce on value',
-  text: 'When a player you like goes well under your max, take him even if he was not in the plan.'
+  text: 'When a player you like goes well under what you should bid, take him even if he was not in the plan.'
 }, {
   label: 'Avoid the $2 trap',
   text: 'Overspending $2 to $3 again and again on bench bodies quietly drains your stud budget.'
@@ -10380,7 +10380,7 @@ const BIDDING_NOTES = [{
   text: 'Every overpay raises remaining fair prices, every bargain lowers them. Adjust on the fly.'
 }, {
   label: 'Hide your sleeper',
-  text: 'Do not nominate your favorite cheap target. Floating him invites rivals to bid him to your max.'
+  text: 'Do not nominate your favorite cheap target. Floating him invites rivals to bid him up to what you should bid.'
 }, {
   label: 'End-of-tier urgency',
   text: 'If only one or two players remain in a tier you need, be willing to pay the premium now.'
@@ -10416,7 +10416,7 @@ const BIDDING_NOTES = [{
   text: 'If you want an early anchor, nominate him before budgets thin and bidding turns cagey.'
 }, {
   label: 'Walk-away power',
-  text: 'The willingness to walk at $1 over your max is your single biggest edge at the table.'
+  text: 'The willingness to walk at $1 over what you should bid is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
   updated: 'Aug 21, 2026',
@@ -12561,7 +12561,7 @@ function ReferralModal({
   const link = code ? 'https://irontuna.com/?ref=' + encodeURIComponent(code) : 'https://irontuna.com';
   const REF = 'Powered by IronTuna.com';
   const msg = 'I built my fantasy football auction cheat sheet on Iron Tuna: custom values and what you should bid on every player. Grab a free one, and get $1 off the Full Site with my code: ' + link + '  (' + REF + ')';
-  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values + live max-bid math. Get $1 off the Full Site with my code:  (' + REF + ')';
+  const tweet = 'Building my fantasy auction draft on Iron Tuna. Custom values + live bid math. Get $1 off the Full Site with my code:  (' + REF + ')';
   function copy(what, val) {
     try {
       navigator.clipboard.writeText(val);
@@ -13350,7 +13350,7 @@ function MockAuction({
     className: "mock-intro"
   }, "Practice the bidding against ", teamsN - 1, " CPU managers, each running a different strategy. The top remaining player is auto-nominated, decide how high to go. Watch the board fill as players are won; once your roster fills, the room finishes and you see where you placed."), React.createElement("div", {
     className: "mock-top"
-  }, React.createElement("div", null, "Budget ", React.createElement("b", null, "$", you.budget), " · roster ", React.createElement("b", null, you.roster.length, "/", totalSlots), " · max bid ", React.createElement("b", null, "$", maxAllowed(you))), React.createElement("button", {
+  }, React.createElement("div", null, "Budget ", React.createElement("b", null, "$", you.budget), " · roster ", React.createElement("b", null, you.roster.length, "/", totalSlots), " · can bid ", React.createElement("b", null, "$", maxAllowed(you))), React.createElement("button", {
     className: "btn-secondary",
     onClick: reset
   }, "Restart")), React.createElement("div", {
@@ -13363,7 +13363,7 @@ function MockAuction({
     onClick: () => setBidMode('active')
   }, "Active Bidding"), React.createElement("span", {
     className: "mock-mode-hint"
-  }, bidMode === 'blind' ? 'Submit one sealed max bid, we tell you if you got him.' : 'Bid live, raise when a rival tops you.')), React.createElement("div", {
+  }, bidMode === 'blind' ? 'Submit one sealed bid, we tell you if you got him.' : 'Bid live, raise when a rival tops you.')), React.createElement("div", {
     className: "mock-settings"
   }, React.createElement("label", {
     className: "mock-set"
@@ -17948,12 +17948,12 @@ function coachAdvise(q, ctx) {
   const maxBid = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
   const undr = (evalPlayers || []).filter(p => !di.has(p.id));
   const youOf = p => p.personalValue != null ? p.personalValue : p.auctionValue;
-  if (/\b(budget|left to spend|how much.*(left|spend)|max bid|on track|on budget|can i afford|spending)\b/.test(t)) {
+  if (/\b(budget|left to spend|how much.*(left|spend)|max bid|what should i bid|how much should i bid|on track|on budget|can i afford|spending)\b/.test(t)) {
     const per = (myTeam.budgetRemaining / Math.max(1, myTeam.spotsRemaining)).toFixed(1);
     const pr = myTeam.budgetRemaining / Math.max(1, myTeam.spotsRemaining);
     let g = '';
     if (pr < 3) g = ' You’re getting thin, keep $1 for every open slot.';else if (pr > 12) g = ' You have real spending power, don’t leave money on the table.';
-    return `You have $${myTeam.budgetRemaining} for ${myTeam.spotsRemaining} slots (~$${per}/slot). Max bid right now: $${maxBid}.${g}`;
+    return `You have $${myTeam.budgetRemaining} for ${myTeam.spotsRemaining} slots (~$${per}/slot). Most you can bid right now: $${maxBid}.${g}`;
   }
   if (/\b(need|needs|open slot|open slots|positions|what positions|holes|fill)\b/.test(t) && plan) {
     const open = (plan.remainingStarterSlots || []).map(s => s.label);
@@ -19118,7 +19118,7 @@ function buildCoachInsights(ctx) {
     const maxBid = Math.max(minBid, (myTeam.budgetRemaining || 0) - ((myTeam.spotsRemaining || 1) - 1) * minBid);
     draft.push({
       label: 'Your budget',
-      text: 'You have $' + (myTeam.budgetRemaining || 0) + ' for ' + (myTeam.spotsRemaining || 0) + ' spots, so your max bid on any one player is $' + maxBid + '.'
+      text: 'You have $' + (myTeam.budgetRemaining || 0) + ' for ' + (myTeam.spotsRemaining || 0) + ' spots, so the most you can bid on any one player is $' + maxBid + '.'
     });
   }
   if (teams && teams.length && config.budget) {
@@ -19132,7 +19132,7 @@ function buildCoachInsights(ctx) {
     const flush = teams.filter(t => !t.isMine).slice().sort((a, b) => (b.budgetRemaining || 0) - (a.budgetRemaining || 0))[0];
     if (flush) draft.push({
       label: 'Watch the wallets',
-      text: flush.name + ' holds the most cash at $' + (flush.budgetRemaining || 0) + '. Expect them to drive up the next stud, so set your max before the bidding starts.'
+      text: flush.name + ' holds the most cash at $' + (flush.budgetRemaining || 0) + '. Expect them to drive up the next stud, so set your walk-away number before the bidding starts.'
     });
   }
   if (myTeam && myTeam.spotsRemaining) draft.push({
@@ -19954,7 +19954,7 @@ function UpgradeModal({
     ? ['Custom rankings for YOUR exact scoring — different scoring, different board', 'Reorder & build the cheat sheet you actually believe in', 'AI Value Coach: strategy answers while you plan', 'Draft day included: survival odds + who to take, live on the clock']
     : f === 'bestball'
     ? ['Ceiling values for YOUR exact scoring', 'Reorder & build the board you actually believe in', 'AI Value Coach: stack and ceiling answers while you plan', 'Draft day included: live stack alerts + championship-week edges']
-    : ['Custom dollar values for YOUR exact scoring — different scoring, different prices', 'Reorder & build the cheat sheet you actually believe in', 'AI Value Coach: who to target and how high, while you plan', 'Draft day included: live max-bid math as the money leaves the room'];
+    : ['Custom dollar values for YOUR exact scoring — different scoring, different prices', 'Reorder & build the cheat sheet you actually believe in', 'AI Value Coach: who to target and how high, while you plan', 'Draft day included: live bid math as the money leaves the room'];
   return React.createElement("div", {
     className: "modal-bg",
     onClick: onClose
@@ -20709,14 +20709,14 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
   const HUB_STK_BESTBALL = HUB_STK_SNAKE.replace('SNAKE DRAFT TOOL', 'BEST BALL TOOL').replace("best AI snake draft tool", "best AI best-ball tool").replace(/#22d3ee/g, '#a78bfa').replace(/#d8f7fd/g, '#ece3ff').replace(/#06313b/g, '#2a1c4a').replace(/#0b6f8a/g, '#5b21b6').replace(/#04262e/g, '#1c1338');
   const HUB_STK_COACH = HUB_STK_SNAKE.replace('SNAKE DRAFT TOOL', 'VALUE COACH').replace("best AI snake draft tool", "best AI in-draft advice tool").replace(/#22d3ee/g, '#2dd4a3').replace(/#d8f7fd/g, '#d6f7ea').replace(/#06313b/g, '#073a2e').replace(/#0b6f8a/g, '#0b7a52').replace(/#04262e/g, '#042a1e');
   const SNAKE_PANEL = `<div class="ip-head"><span class="ip-name">Snake Draft</span></div><p class="ip-intro">See rounds ahead and build the best roster your slot can reach.</p><ul class="ip-specs"><li><div><b>Real-time re-ranking</b><span>Rankings re-sort to your roster after every pick that comes off the board.</span></div></li><li><div><b>Survival probability</b><span>Exact odds each player is available when you will want them.</span></div></li><li><div><b>Roster-construction optimization</b><span>The highest-PPG build attainable from your draft slot, round by round.</span></div></li></ul><div class="ip-cta">Enter snake draft →</div>`;
-  const AUCTION_PANEL = `<div class="ip-head"><span class="ip-name">Auction Draft</span></div><p class="ip-intro">Spend every dollar where it converts to the most points your roster can field.</p><ul class="ip-specs"><li><div><b>Real-time dynamic valuation</b><span>Every player&#39;s price re-solves the instant a dollar leaves the room.</span></div></li><li><div><b>Algorithmic room tracking</b><span>Live budgets and roster holes across all teams.</span></div></li><li><div><b>Max-bid optimization</b><span>The strongest starting lineup your remaining cap can still buy.</span></div></li></ul><div class="ip-cta">Enter auction draft →</div>`;
+  const AUCTION_PANEL = `<div class="ip-head"><span class="ip-name">Auction Draft</span></div><p class="ip-intro">Spend every dollar where it converts to the most points your roster can field.</p><ul class="ip-specs"><li><div><b>Real-time dynamic valuation</b><span>Every player&#39;s price re-solves the instant a dollar leaves the room.</span></div></li><li><div><b>Algorithmic room tracking</b><span>Live budgets and roster holes across all teams.</span></div></li><li><div><b>Bid optimization</b><span>The strongest starting lineup your remaining cap can still buy.</span></div></li></ul><div class="ip-cta">Enter auction draft →</div>`;
   const BESTBALL_PANEL = `<div class="ip-head"><span class="ip-name">Best Ball</span></div><p class="ip-intro">Flags your stacks live, ranks by true ceiling, and points you at championship-week edges &mdash; tuned to your exact roster as you draft.</p><ul class="ip-specs"><li><div><b>Ceiling-weighted values</b><span>Upside-ranked for the format that auto-starts your best weekly scores.</span></div></li><li><div><b>Live stack detection</b><span>Surfaces the QB and pass-catcher pairings that amplify your roster.</span></div></li><li><div><b>Championship-week edge</b><span>Targets with soft Weeks 15&ndash;17, where best-ball titles are decided.</span></div></li></ul><div class="ip-cta">Enter best ball &rarr;</div>`;
   const VALUECOACH_HTML =`<div class="ip-coach-head"><span class="ip-coach-title"><span style="font-style:italic">Value Coach</span> - The Unfair Advantage</span></div><p class="ip-coach-summary">Value Coach answers questions and offers team-specific advice in real time as the draft unfolds, so your values and rankings are never stale. And it is there for on-the-fly questions, answering with advice built around your exact league settings and your specific draft, never generic. Ask it anything, any moment.<span style="display:block;margin-top:0.5em">There is nothing on the market like it.</span></p>`;
   const INSULTS_HTML = `<div class="ip-coach-head"><span class="ip-coach-title">Built-In Insults</span></div><p class="ip-coach-summary">Jabs on demand. One tap and Iron Tuna hands you a sharp, shareable line to chirp at your league mates — about any single pick the moment it lands, or their whole roster in general.<span style="display:block;margin-top:0.5em">Draft with the perfect comeback already loaded.</span></p>`;
   const MANIFESTO_HTML = `The manager who knocks you out this year won&#39;t study the hardest.<span class="ht-mani-2">They&#39;ll have the <span class="ht-cy">better</span> <span class="ht-au">engine</span>.</span>`;
   const GAVEL_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="brass" x1="0" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".4" stop-color="#e9bf4e"/><stop offset="1" stop-color="#9a6a12"/></linearGradient><linearGradient id="brassD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#caa033"/><stop offset="1" stop-color="#6c4708"/></linearGradient><linearGradient id="band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8"/><stop offset="1" stop-color="#b9892a"/></linearGradient><radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e9bf4e" stop-opacity="0.42"/><stop offset="1" stop-color="#e9bf4e" stop-opacity="0"/></radialGradient></defs><ellipse cx="36" cy="38" rx="32" ry="32" fill="url(#glow)"/><!-- sound block (disc the gavel strikes) --><ellipse cx="34" cy="60" rx="22" ry="5.5" fill="url(#brassD)"/><ellipse cx="34" cy="58.4" rx="22" ry="5.5" fill="url(#brass)"/><ellipse cx="34" cy="57.6" rx="15" ry="2.6" fill="#fff" opacity="0.35"/><!-- gavel: cylindrical head + handle, angled --><g transform="rotate(38 36 30)"><!-- handle --><rect x="33.2" y="22" width="5.6" height="30" rx="2.8" fill="url(#brass)" stroke="#7a520c" stroke-width="0.5"/><rect x="34" y="24" width="1.7" height="26" rx="0.8" fill="#fff" opacity="0.45"/><!-- head (capsule) --><rect x="18" y="8" width="36" height="16" rx="8" fill="url(#brass)" stroke="#7a520c" stroke-width="0.7"/><!-- striking-face bands --><rect x="23.5" y="8" width="3.4" height="16" rx="1.5" fill="url(#band)" stroke="#7a520c" stroke-width="0.4"/><rect x="45.1" y="8" width="3.4" height="16" rx="1.5" fill="url(#band)" stroke="#7a520c" stroke-width="0.4"/><!-- end caps --><rect x="18" y="8" width="5.5" height="16" rx="6" fill="url(#brassD)" opacity="0.55"/><rect x="48.5" y="8" width="5.5" height="16" rx="6" fill="url(#brassD)" opacity="0.55"/><!-- top highlight --><rect x="26" y="10.5" width="18" height="3" rx="1.5" fill="#fff" opacity="0.5"/></g></svg>';
   const CLOCK_SVG = '<svg viewBox="0 0 72 72" width="58" height="58" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dfeef5"/><stop offset=".4" stop-color="#7f97a6"/><stop offset="1" stop-color="#33414d"/></linearGradient><linearGradient id="steel2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#aebfca"/><stop offset="1" stop-color="#2b3741"/></linearGradient><radialGradient id="sglow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#22d3ee" stop-opacity="0.42"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient><filter id="cyG" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="36" cy="36" r="33" fill="url(#sglow)"/><!-- BODY base (steel) --><path id="bp" d="M52 13 C60 22 57 33 45 35 C31 37 27 47 35 54 C41 59 50 58 56 51" fill="none" stroke="url(#steel)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><!-- darker underplate edge --><path d="M52 13 C60 22 57 33 45 35 C31 37 27 47 35 54 C41 59 50 58 56 51" fill="none" stroke="#1c2630" stroke-width="10" stroke-linecap="round" opacity="0.22"/><!-- segment seams (perpendicular dark dashes) --><path d="M52 13 C60 22 57 33 45 35 C31 37 27 47 35 54 C41 59 50 58 56 51" fill="none" stroke="#1b242d" stroke-width="10" stroke-linecap="butt" stroke-dasharray="1.4 6.2" opacity="0.65"/><!-- top steel highlight rib --><path d="M52 13 C60 22 57 33 45 35 C31 37 27 47 35 54 C41 59 50 58 56 51" fill="none" stroke="#eaf4f9" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="3 4.6" opacity="0.55" transform="translate(-1.3,-1.3)"/><!-- cyan energy spine --><path d="M52 13 C60 22 57 33 45 35 C31 37 27 47 35 54 C41 59 50 58 56 51" fill="none" stroke="#22d3ee" stroke-width="1.7" stroke-linecap="round" filter="url(#cyG)"/><!-- tail taper --><path d="M55.5 51.5 C59.5 48 61 44 60 40" fill="none" stroke="url(#steel)" stroke-width="5.5" stroke-linecap="round"/><path d="M60 41.5 C61 39.5 61 38 60.3 36.7" fill="none" stroke="url(#steel)" stroke-width="2.6" stroke-linecap="round"/><!-- HEAD: angular robotic wedge --><g transform="rotate(-34 52 13)" filter="url(#cyG)"><path d="M44 13.4 L52 8.6 L63 11.4 L66.5 13.4 L63 15.4 L52 18.2 Z" fill="url(#steel2)" stroke="#1c2630" stroke-width="0.7" stroke-linejoin="round"/><!-- jaw line --><path d="M52 13.4 L66.5 13.4" stroke="#10181f" stroke-width="0.7" opacity="0.7"/><!-- plate seam on head --><path d="M55 9.6 L55 17.2" stroke="#10181f" stroke-width="0.6" opacity="0.5"/><!-- glowing cyan eye --><circle cx="58.5" cy="11.7" r="1.9" fill="#0a2a33"/><circle cx="58.5" cy="11.7" r="1.15" fill="#22d3ee"/><circle cx="58.1" cy="11.3" r="0.45" fill="#eafdff"/></g><!-- forked metal tongue --><path d="M67 6.3 L73 2.4 M73 2.4 L71.4 0.8 M73 2.4 L74.4 0.9" fill="none" stroke="#22d3ee" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" filter="url(#cyG)"/></svg>';
-  const HUB_FAQS = [['Does Iron Tuna work for both snake and auction drafts?', 'Yes. Pick your format above. Auction gives live max-bid math and budget tracking; Snake gives a best-available board and survival odds for your next pick.'], ['Do I need an account?', 'No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft day.'], ['Can I use my exact league scoring?', 'Yes. Set your scoring, roster slots, and league size, and every value recalculates to your settings, including superflex and 2-QB.'], ['How much does it cost?', 'The cheat sheet is free in both formats. The live Draft Day experience is a one-time $9.99.'], ['Can I use it during the live draft?', 'Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft.']];
+  const HUB_FAQS = [['Does Iron Tuna work for both snake and auction drafts?', 'Yes. Pick your format above. Auction gives live bid math and budget tracking; Snake gives a best-available board and survival odds for your next pick.'], ['Do I need an account?', 'No. Build your free, custom cheat sheet with no signup. An account just lets you save your league and reopen it on draft day.'], ['Can I use my exact league scoring?', 'Yes. Set your scoring, roster slots, and league size, and every value recalculates to your settings, including superflex and 2-QB.'], ['How much does it cost?', 'The cheat sheet is free in both formats. The live Draft Day experience is a one-time $9.99.'], ['Can I use it during the live draft?', 'Yes. It is built to run live and keeps working even if your Wi-Fi drops mid-draft.']];
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "landing-splash landing-page hub-landing"
   }, React.createElement("div", {
@@ -21833,7 +21833,7 @@ function App() {
       return;
     }
     if (p > teamMaxP) {
-      alert(`That bid exceeds ${team.name}'s max bid of $${teamMaxP}.`);
+      alert(`That bid exceeds ${team.name}'s spending limit of $${teamMaxP}.`);
       return;
     }
     if (positionFull(team, position, config)) {
@@ -21892,7 +21892,7 @@ function App() {
     }
     if (price < config.valuation.minBid) price = config.valuation.minBid;
     if (price > team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid) {
-      alert(`That bid exceeds ${team.name}'s max bid.`);
+      alert(`That bid exceeds ${team.name}'s spending limit.`);
       return;
     }
     if (positionFull(team, player.position, config)) {
@@ -23005,7 +23005,7 @@ function App() {
     className: "blb-title"
   }, boardLockName + " is locked"), React.createElement("div", {
     className: "blb-text"
-  }, "This is the live board \u2014 every team\u2019s budget, max-bid math and the Value Coach as picks come in. Unlock it to make a single move here."), React.createElement("span", {
+  }, "This is the live board \u2014 every team\u2019s budget, bid math and the Value Coach as picks come in. Unlock it to make a single move here."), React.createElement("span", {
     className: "blb-cta"
   }, "Unlock \u00b7 " + boardLockPrice)))) : renderMainContent(), view === 'prep' && (config.format || 'auction') === 'bestball' && React.createElement("div", {
     style: { marginTop: 18 }
