@@ -3575,6 +3575,12 @@ export default {
       // slug back off the path and fetches its own body. The stories turn over
       // every three hours, so they are rendered rather than built as pages.
       else if (/^\/lead(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/lead', url).toString(), request);
+      // /player and /player/<slug> both serve the one player-card shell, which
+      // reads the slug back off the path and assembles the card in the browser
+      // from /player-search.js and /it-league.js. Same shape as /lead above and
+      // for the same reason: ~400 players is not ~400 files. Extensionless
+      // target, or the assets layer answers with a 307 back to this same path.
+      else if (/^\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/player', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
       // The in-season tools are deployed but closed (see POST_DRAFT_PAGES above).
       // A closed route serves the waiting-list gate rather than redirecting to it,
