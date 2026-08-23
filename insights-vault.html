@@ -266,6 +266,9 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
         + '<div class="fmt"><b>Snake:</b> ' + esc(it.snakePositioning) + '. <i>' + esc(it.snakeAction) + '</i></div></article>';
     });
     body.innerHTML = h;
+    // Same as the premium list: one <article class="ins"> is one insight, and
+    // the players it names link to their cards.
+    if (window.ITPlayerSearch) window.ITPlayerSearch.linkAllPlayers(body);
   }
   function open(email){
     fetch('/api/insights-vault', { method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({ email: email }) })
@@ -333,6 +336,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js"></script>
+<script src="/player-search.js" defer></script>
 <!--chrome:navjs--><script>
 (function(){
   var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');

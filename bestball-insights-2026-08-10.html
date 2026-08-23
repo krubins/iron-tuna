@@ -224,7 +224,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </div></header>
 
 <main id="main" class="wrap art">
-<div class="art-head">
+<div class="art-head" data-player-links>
 <div class="eyebrow">Best Ball Insights</div>
 <h1 class="art-h1">Best Ball Insights: August 10, 2026</h1>
 <div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>August 10, 2026<span class="dot">&middot;</span>5 calls, best ball edition</div>
@@ -232,7 +232,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="alsofmt">Also published in <a href="/auction-insights-2026-08-10">auction</a> and <a href="/snake-insights-2026-08-10">snake draft</a> editions.</p>
 <div class="toc"><a href="#call-1"><span class="tdot under"></span>Buffalo</a><a href="#call-2"><span class="tdot "></span>Maye</a><a href="#call-3"><span class="tdot fair"></span>Denver</a><a href="#call-4"><span class="tdot over"></span>Kyren</a><a href="#call-5"><span class="tdot under"></span>Loveland</a></div>
 </div>
-<section class="call" id="call-1">
+<section class="call" id="call-1" data-players="josh-allen dj-moore">
 <div class="call-side"><div class="cn">01</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">Market</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -242,7 +242,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: +4% to +6% passing efficiency spillover across the offense<span class="ebar" role="img" aria-label="effect +4% to +6% passing efficiency spillover across the offense"><i class="pos" style="width:22px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-2">
+<section class="call" id="call-2" data-players="drake-maye">
 <div class="call-side"><div class="cn">02</div>
 <div class="cmeta"><span class="chip ">Format-dependent</span><span class="cpos">QB</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -252,7 +252,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: another 300-plus fantasy-point season is the base case</p>
 </div>
 </section>
-<section class="call" id="call-3">
+<section class="call" id="call-3" data-players="bo-nix">
 <div class="call-side"><div class="cn">03</div>
 <div class="cmeta"><span class="chip fair">Near fair value</span><span class="cpos">Market</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -262,7 +262,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: +3% to +6% to Bo Nix and Broncos skill-player efficiency<span class="ebar" role="img" aria-label="effect +3% to +6% to Bo Nix and Broncos skill-player efficiency"><i class="pos" style="width:22px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-4">
+<section class="call" id="call-4" data-players="kyren-williams">
 <div class="call-side"><div class="cn">04</div>
 <div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">RB</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -272,7 +272,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: -0.5 FPPG or so from environment</p>
 </div>
 </section>
-<section class="call" id="call-5">
+<section class="call" id="call-5" data-players="colston-loveland">
 <div class="call-side"><div class="cn">05</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">TE</span><span class="cconf">Medium confidence</span></div></div>
 <div class="call-main">
@@ -347,6 +347,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js" defer></script>
+<script src="/player-search.js" defer></script>
 <!--chrome:navjs--><script>
 (function(){
   var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');

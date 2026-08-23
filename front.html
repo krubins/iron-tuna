@@ -793,7 +793,7 @@ img{max-width:100%}
         <span class="lm-mark" id="leadMediaMark" aria-hidden="true"></span>
         <div class="lm-cast" id="leadCast"></div>
       </div>
-      <div class="lead-body">
+      <div class="lead-body" id="leadBody" data-player-links>
         <div class="lead-kicker" id="leadKicker"></div>
         <h1 id="leadTitle"></h1>
         <p class="lead-play" id="leadPlay"></p>
@@ -1333,6 +1333,22 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     band.hidden = false;
   }
 
+  // The lead is a story, so the players it names link to their cards. It is
+  // repainted on every edition switch, arrow and dot, so this runs at the tail
+  // of both painters; a name already inside a link is left alone, which is why
+  // running it again is free and why the headline keeps its own destination.
+  function linkLead(s){
+    var PS = window.ITPlayerSearch, box = document.getElementById('leadBody');
+    if (!PS || !box) return;
+    // Every story already carries the players it names — `ppl` for a drop-page
+    // call, `names`/`cast` for a generated one — which is what lets a play line
+    // that only says "Kyren" find him. It is the same list the faces above are
+    // drawn from, so the band and the links can never name different men.
+    var who = (s && s.ppl) || (s && s.names)
+           || (s && s.cast ? s.cast.map(function(c){ return c.n; }) : []);
+    PS.linkPlayers(box, { cast: who || [] });
+  }
+
   var li = slotIndex(), pinned = false, tick = null;
   function renderLead(){
     if (!leadPool.length) return;
@@ -1374,6 +1390,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       b.onclick = function(){ li = k; pinned = true; renderLead(); };
       dots.appendChild(b);
     });
+    linkLead(s);
   }
   // The generated lead below replaces the dated rotation outright. Re-rendering
   // that rotation on an edition switch would quietly undo it and put a
@@ -1478,6 +1495,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       });
       also.innerHTML = ah + '</ul>';
     } else { also.innerHTML = ''; }
+    linkLead(s);
 
     // No dots and no arrows: there is one current story, and a control that
     // walks backwards through retired ones is how this got stale in the first

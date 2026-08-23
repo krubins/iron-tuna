@@ -149,18 +149,22 @@ jobs:
       # report. Rebuilding here must produce no diff.
       #
       # The same run also writes the player lookup index into player-search.js
-      # (the ribbon's search box and every /player/<slug> card read it) and the
-      # STORIES array into player.html, so all three are checked together — a
-      # stale index means a player the site prices that the box cannot find.
+      # (the ribbon's search box and every /player/<slug> card read it), the
+      # STORIES array into player.html, and the players each call names onto the
+      # drop pages themselves as data-players — which is what lets a call that
+      # only ever writes "Kyren" link him to his card. Every one of those fails
+      # SILENTLY when it goes stale: an index that cannot find a player the site
+      # prices, and a story whose short forms link to nothing. So the whole
+      # working tree is diffed, not a named handful of files.
       - name: front.html is rebuilt from its source pages
         run: |
           node tools/build-front.mjs
-          if ! git diff --quiet -- front.html player-search.js player.html; then
+          if ! git diff --quiet; then
             echo "::error file=front.html::the generated front-page data is stale — run 'node tools/build-front.mjs' and commit the result"
-            git --no-pager diff --stat -- front.html player-search.js player.html
+            git --no-pager diff --stat
             exit 1
           fi
-          echo "front.html, player-search.js and player.html are up to date"
+          echo "every generated block and stamp is up to date"
 
       # Google Analytics collects NOTHING from a page that does not configure the
       # GA4 destination, and the failure is silent: the page renders, the Ads tag
@@ -287,6 +291,12 @@ jobs:
       # "No player by that name on the board".
       - name: The player lookup and the card it lands on
         run: node tools/test-player-card.mjs
+
+      # The player names inside stories and insights, linked to those cards. The
+      # rules that keep a link off an adverb are not obvious, and getting one
+      # wrong ships a link on the word "likely" in every call about a tight end.
+      - name: Player mentions link to player cards
+        run: node tools/test-player-links.mjs
 
       - name: Vegas column (worker)
         run: node tools/test-worker-column.mjs

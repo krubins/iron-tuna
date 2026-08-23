@@ -224,7 +224,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </div></header>
 
 <main id="main" class="wrap art">
-<div class="art-head">
+<div class="art-head" data-player-links>
 <div class="eyebrow">Snake Draft Insights</div>
 <h1 class="art-h1">Snake Draft Insights: July 16, 2026</h1>
 <div class="byline"><b>Iron Tuna Research</b><span class="dot">&middot;</span>July 16, 2026<span class="dot">&middot;</span>5 calls, snake edition</div>
@@ -232,7 +232,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="alsofmt">Also published in an <a href="/auction-insights-2026-07-16">auction</a> edition.</p>
 <div class="toc"><a href="#call-1"><span class="tdot under"></span>Josh Allen</a><a href="#call-2"><span class="tdot over"></span>Arizona</a><a href="#call-3"><span class="tdot over"></span>Jahmyr Gibbs</a><a href="#call-4"><span class="tdot "></span>Puka Nacua</a><a href="#call-5"><span class="tdot under"></span>Tyler Warren</a></div>
 </div>
-<section class="call" id="call-1">
+<section class="call" id="call-1" data-players="josh-allen">
 <div class="call-side"><div class="cn">01</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">QB</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -242,7 +242,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: +0% to +4% versus price<span class="ebar" role="img" aria-label="effect +0% to +4% versus price"><i class="pos" style="width:17px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-2">
+<section class="call" id="call-2" data-players="trey-mcbride kyler-murray jacoby-brissett">
 <div class="call-side"><div class="cn">02</div>
 <div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">Market</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -252,7 +252,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: -5% to -10% to broad Cardinals scoring environment<span class="ebar" role="img" aria-label="effect -5% to -10% to broad Cardinals scoring environment"><i class="neg" style="width:32px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-3">
+<section class="call" id="call-3" data-players="jahmyr-gibbs">
 <div class="call-side"><div class="cn">03</div>
 <div class="cmeta"><span class="chip over">Overpriced</span><span class="cpos">RB</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -262,7 +262,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: -1% to +3% versus price<span class="ebar" role="img" aria-label="effect -1% to +3% versus price"><i class="pos" style="width:14px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-4">
+<section class="call" id="call-4" data-players="puka-nacua">
 <div class="call-side"><div class="cn">04</div>
 <div class="cmeta"><span class="chip ">Format-dependent</span><span class="cpos">WR</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -272,7 +272,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="statline">Projected effect: 0% to +5% versus market<span class="ebar" role="img" aria-label="effect 0% to +5% versus market"><i class="pos" style="width:19px"></i></span></p>
 </div>
 </section>
-<section class="call" id="call-5">
+<section class="call" id="call-5" data-players="tyler-warren">
 <div class="call-side"><div class="cn">05</div>
 <div class="cmeta"><span class="chip under">Underpriced</span><span class="cpos">TE</span><span class="cconf">High confidence</span></div></div>
 <div class="call-main">
@@ -347,6 +347,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js" defer></script>
+<script src="/player-search.js" defer></script>
 <!--chrome:navjs--><script>
 (function(){
   var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');

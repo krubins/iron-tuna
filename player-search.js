@@ -340,6 +340,308 @@
     };
   }
 
+  // ── player mentions in prose ──────────────────────────────────────────────
+  // Every story and every insight on this site names players, and a named
+  // player has a card. This turns those names into links to it, in the page
+  // that is already showing the copy — so there is no second copy of the desk's
+  // words anywhere, and nothing that can drift from what was actually written.
+  //
+  // IT LIVES IN THIS FILE because this is the file that knows a name is a
+  // player and where his card is. /it-league.js knows what he is WORTH, which
+  // is a different question answered by a different file (HANDOFF §32), and a
+  // second name index would be a second answer to "who is this".
+  //
+  // WHAT COUNTS AS ONE STORY. The unit is `.call` — the block the drop pages,
+  // /the-pick, /lead and /play-caller-premium all wrap a single call in — or
+  // `.ins`, the article the premium and vault lists render, or anything a page
+  // marks `data-player-links`. It is not decoration: the shorthand pass below
+  // is scoped to that block, because the only safe way to read "Kyren" is
+  // against the players the same block has already named in full.
+  //
+  // A NAME INSIDE A LINK IS LEFT ALONE. Most story headlines on the front page
+  // and the player card are already links to the story, and a link inside a
+  // link is not a thing. The headline keeps its own destination; the body copy
+  // under it is where the player links land.
+  var MENTION = 'pl-mention';
+  var MENTION_STYLE_ID = 'pl-mention-css';
+  var SUFFIX = /\s+(?:Jr\.?|Sr\.?|I{2,3}|IV|V)$/i;
+
+  // Ordinary English words that are also somebody's surname or first name. A
+  // sentence may legitimately start with any of them, and a capital letter
+  // after a full stop says nothing about which one it is, so as a ONE-WORD
+  // short form they only resolve mid-sentence or in the possessive ("Likely's
+  // outlook" is Isaiah Likely; "Likely, the Ravens..." is an adverb). Written
+  // out in full they link like every other name — this list never sees them.
+  var WORDS = {};
+  ('all best bell brown chase cook fields gay golden grant hill hunter jack king likely little '
+    + 'long love mark means mills price rice strange tank ward west white will young')
+    .split(' ').forEach(function (w) { WORDS[w] = 1; });
+
+  // A name as the desk might actually type it. The index spells a man one way;
+  // the copy varies the punctuation and nothing else, so the pattern relaxes
+  // exactly that: "A.J. Brown" also answers to "AJ Brown", "De'Von" to the
+  // curly apostrophe the CMS writes and to "DeVon", and every hyphen to the
+  // non-breaking one the desk uses so a name cannot wrap mid-word.
+  function relax(name) {
+    return name
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\\\./g, '\\.?')
+      .replace(/['’]/g, '[\'’]?')
+      .replace(/-/g, '[-‐‑–]')
+      .replace(/\s+/g, '\\s+');
+  }
+
+  // Full names, longest first — alternation is ordered, so "Kenneth Walker III"
+  // is tried before "Kenneth Walker" and a man is never linked by half his
+  // name. Club defences are dropped: "Kansas City Chiefs" in a sentence is a
+  // team, not a player mention. Built once, on the first page that asks.
+  var fullRe = null, fullMap = null;
+  function fullIndex() {
+    if (fullRe) return;
+    fullMap = {};
+    var forms = [];
+    players.forEach(function (p) {
+      if (p.p === 'DEF') return;
+      [p.n, p.n.replace(SUFFIX, '').trim()].forEach(function (n) {
+        if (!n || n.indexOf(' ') < 0) return;      // one word is never a full name
+        var k = fold(n);
+        if (fullMap[k]) return;                    // first spelling wins, as in byKey
+        fullMap[k] = p;
+        forms.push(n);
+      });
+    });
+    forms.sort(function (a, b) { return b.length - a.length; });
+    fullRe = new RegExp('(?:' + forms.map(relax).join('|') + ')', 'gi');
+  }
+
+  // The short forms one block has earned the right to use: the first and last
+  // word of every player it has already named in full. A word two of them share
+  // resolves to neither — an ambiguous "Williams" is left as text rather than
+  // sent to a coin flip, the same rule /it-league.js's findPlayer follows.
+  function shortIndex(cast) {
+    if (cast.length < 1) return null;
+    var owner = {}, toks = [];
+    cast.forEach(function (p) {
+      var parts = p.n.replace(SUFFIX, '').trim().split(/\s+/);
+      [parts[0], parts[parts.length - 1]].forEach(function (t) {
+        var k = fold(t);
+        if (k.length < 3) return;                  // "A.J.", "DJ": too little to go on
+        if (!(k in owner)) { owner[k] = p; toks.push(t); }
+        else if (owner[k] !== p) owner[k] = null;
+      });
+    });
+    var live = toks.filter(function (t) { return owner[fold(t)]; });
+    if (!live.length) return null;
+    live.sort(function (a, b) { return b.length - a.length; });
+    return { owner: owner, re: new RegExp('(?:' + live.map(relax).join('|') + ')', 'g') };
+  }
+
+  function alnum(c) { return !!c && /[A-Za-z0-9]/.test(c); }
+  // Where a sentence has just begun, so a capital letter carries no information.
+  function opens(text, i) {
+    for (var j = i - 1; j >= 0; j--) {
+      var c = text.charAt(j);
+      if (/\s/.test(c)) continue;
+      return '.?!;:—–"“”(·|'.indexOf(c) >= 0;
+    }
+    return true;
+  }
+
+  // One pass over one text node. `taken` are ranges already spoken for by an
+  // earlier pass, so the short form never re-links half of a full name.
+  function scan(text, re, resolve, taken, short) {
+    var out = [], m;
+    re.lastIndex = 0;
+    while ((m = re.exec(text))) {
+      var s = m.index, e = s + m[0].length;
+      if (!m[0].length) { re.lastIndex++; continue; }
+      if (alnum(text.charAt(s - 1)) || alnum(text.charAt(e))) continue;
+      if (!/[A-Z]/.test(m[0].charAt(0))) continue;          // lower case is prose, not a name
+      if (taken && taken.some(function (t) { return s < t.e && e > t.s; })) continue;
+      if (short && WORDS[fold(m[0])]
+        && !/^['’]/.test(text.slice(e)) && opens(text, s)) continue;
+      var p = resolve(m[0]);
+      if (p) out.push({ s: s, e: e, p: p });
+    }
+    return out;
+  }
+
+  // Underline only, in the reader's own text colour: a story is prose, and a
+  // paragraph where every third name is painted brand-teal stops being one.
+  // The tokens are the ones every page on the site already defines, each with a
+  // literal fallback for the pages that do not.
+  function ensureMentionStyle() {
+    var doc = root.document;
+    if (!doc || !doc.head || doc.getElementById(MENTION_STYLE_ID)) return;
+    var el = doc.createElement('style');
+    el.id = MENTION_STYLE_ID;
+    el.textContent = '.' + MENTION + '{color:inherit;text-decoration:underline;'
+      + 'text-decoration-color:var(--teal,#0e7c63);'
+      + 'text-decoration-thickness:1px;text-underline-offset:2px}'
+      + '.' + MENTION + ':hover,.' + MENTION + ':focus-visible{color:var(--teal,#0e7c63);'
+      + 'text-decoration-color:currentColor}';
+    doc.head.appendChild(el);
+  }
+
+  var SKIP = { A: 1, BUTTON: 1, CODE: 1, KBD: 1, PRE: 1, SCRIPT: 1, STYLE: 1, SVG: 1,
+    TEXTAREA: 1, INPUT: 1, SELECT: 1, OPTION: 1 };
+  function shielded(node, stop) {
+    for (var e = node.parentNode; e && e.nodeType === 1; e = e.parentNode) {
+      if (SKIP[e.nodeName]) return true;
+      if (e.getAttribute && e.getAttribute('data-no-player-links') !== null) return true;
+      if (e === stop) break;
+    }
+    return false;
+  }
+  function textNodesIn(el, out) {
+    var doc = el.ownerDocument || root.document;
+    var w = doc.createTreeWalker(el, 4, null, false);
+    var n;
+    while ((n = w.nextNode())) {
+      if (!n.nodeValue || !/[A-Za-z]{3}/.test(n.nodeValue)) continue;
+      if (shielded(n, el)) continue;
+      out.push(n);
+    }
+    return out;
+  }
+
+  // Link the players named inside one story. `scope` is the element that block
+  // lives in, or an array of them when a page paints one story into several
+  // boxes (/lead writes the headline, the dek and the body separately, and they
+  // are still one story for the purpose of reading "Kyren").
+  //
+  // `opts.cast` is who the story is about, as slugs or as full names, for a
+  // surface that renders from data and already knows: the front page and the
+  // player card pass the story's own `ppl`. It only ever ENABLES a short form —
+  // a full name in the copy resolves with or without it.
+  //
+  // `opts.skip` is a slug, or a list of them, to leave as plain text — the
+  // player card passes its own man, because a link back to the page you are
+  // already reading is a dead end wearing a link's clothes. He stays in the
+  // block's cast either way, so his surname still cannot be read as somebody
+  // else's.
+  //
+  // ONE LINK PER PLAYER PER STORY, on the first mention. A call about Kyren
+  // Williams names him six times, and six links to the same card is not
+  // navigation, it is a paragraph with a rash. The first time the reader meets
+  // the name is the moment the link is useful; after that he has already been
+  // offered the card and is trying to read a sentence.
+  //
+  // Idempotent: a second run finds every name already inside an <a> and skips
+  // it, and it counts the links already standing in the scope before it starts,
+  // so re-running cannot promote the second mention to a first one.
+  function linkPlayers(scope, opts) {
+    if (!scope) return 0;
+    opts = opts || {};
+    var els = scope.nodeType ? [scope]
+      : (scope.length != null ? Array.prototype.slice.call(scope) : []);
+    if (!els.length) return 0;
+    fullIndex();
+    var skip = {};
+    var s = opts.skip;
+    (typeof s === 'string' ? [s] : (s || [])).forEach(function (k) { skip[k] = 1; });
+
+    var nodes = [];
+    els.forEach(function (el) { if (el && el.nodeType === 1) textNodesIn(el, nodes); });
+    if (!nodes.length) return 0;
+
+    // The cast a block declares. The desk does not always write a man out in
+    // full — this drop page says "Kyren" four times and "Kyren Williams" never
+    // — and reading a bare word against the whole league is how a tight end
+    // called Likely turns every adverb into a link. So the answer the site
+    // already has travels with the story: the drop pages carry it in
+    // `data-players` (stamped by tools/build-front.mjs), and the surfaces that
+    // paint from data pass the same `ppl` the front page draws faces from.
+    var hits = [], cast = [], seen = {};
+    function enlist(token) {
+      var p = byKey[token] || fullMap[fold(token)] || null;   // a slug, or a name
+      if (p && !seen[p.k]) { seen[p.k] = 1; cast.push(p); }
+    }
+    els.forEach(function (el) {
+      var dec = el.getAttribute && el.getAttribute('data-players');
+      if (dec) dec.split(/\s+/).forEach(enlist);
+    });
+    (opts.cast || []).forEach(function (t) { if (t) enlist(String(t).trim()); });
+    nodes.forEach(function (n) {
+      var found = scan(n.nodeValue, fullRe, function (t) { return fullMap[fold(t)] || null; });
+      found.forEach(function (h) { if (!seen[h.p.k]) { seen[h.p.k] = 1; cast.push(h.p); } });
+      hits.push(found);
+    });
+    var short = shortIndex(cast);
+    if (short) {
+      nodes.forEach(function (n, i) {
+        var more = scan(n.nodeValue, short.re,
+          function (t) { return short.owner[fold(t)] || null; }, hits[i], true);
+        if (more.length) {
+          hits[i] = hits[i].concat(more).sort(function (a, b) { return a.s - b.s; });
+        }
+      });
+    }
+
+    // Who this story has already offered a card for — including on an earlier
+    // run over the same DOM, which is what keeps a repaint from linking the
+    // second mention as though it were the first.
+    var linked = {};
+    els.forEach(function (el) {
+      if (!el.querySelectorAll) return;
+      var done = el.querySelectorAll('.' + MENTION);
+      for (var i = 0; i < done.length; i++) {
+        var k = done[i].getAttribute && done[i].getAttribute('data-player');
+        if (k) linked[k] = 1;
+      }
+    });
+
+    var made = 0;
+    nodes.forEach(function (node, i) {
+      var list = hits[i];
+      if (!list.length) return;
+      var doc = node.ownerDocument || root.document;
+      var text = node.nodeValue, frag = doc.createDocumentFragment(), at = 0, drew = 0;
+      list.forEach(function (m) {
+        if (m.s < at || skip[m.p.k] || linked[m.p.k]) return;
+        if (m.s > at) frag.appendChild(doc.createTextNode(text.slice(at, m.s)));
+        var a = doc.createElement('a');
+        a.className = MENTION;
+        a.href = href(m.p);
+        a.setAttribute('data-player', m.p.k);
+        a.title = 'Player card: ' + m.p.n;
+        a.appendChild(doc.createTextNode(text.slice(m.s, m.e)));
+        frag.appendChild(a);
+        linked[m.p.k] = 1;
+        at = m.e;
+        drew++;
+      });
+      if (!drew) return;
+      if (at < text.length) frag.appendChild(doc.createTextNode(text.slice(at)));
+      node.parentNode.replaceChild(frag, node);
+      made += drew;
+    });
+    if (made) ensureMentionStyle();
+    return made;
+  }
+
+  // Every story inside `scope` (the document by default), each read as its own
+  // block. Pages call this again after they paint: the drop pages get their
+  // stories in the HTML, but the front page, the card, /lead and the two
+  // premium lists all render theirs from data.
+  var UNITS = '.call, .ins, [data-player-links]';
+  function linkAllPlayers(scope, opts) {
+    var where = scope || root.document;
+    if (!where || !where.querySelectorAll) return 0;
+    var found = where.querySelectorAll(UNITS), made = 0, i;
+    for (i = 0; i < found.length; i++) {
+      // A story nested inside another marked block is read once, as itself:
+      // merging two calls' casts would let one call's "Allen" mean the other's.
+      var up = found[i].parentNode;
+      if (up && up.closest && up.closest(UNITS)) continue;
+      made += linkPlayers(found[i], opts);
+    }
+    if (where.nodeType === 1 && where.matches && where.matches(UNITS)) {
+      made += linkPlayers(where, opts);
+    }
+    return made;
+  }
+
   root.ITPlayerSearch = {
     players: players,
     get: function (k) { return byKey[k] || null; },
@@ -347,7 +649,9 @@
     face: faceEl,
     href: href,
     fold: fold,
-    mount: mount
+    mount: mount,
+    linkPlayers: linkPlayers,
+    linkAllPlayers: linkAllPlayers
   };
 
   function boot() {
@@ -355,6 +659,10 @@
     for (var i = 0; i < boxes.length; i++) {
       mount(boxes[i], { from: boxes[i].getAttribute('data-player-search') || 'page' });
     }
+    // The stories already in the served HTML — the drop pages, /the-pick,
+    // /play-caller-premium. Pages that paint their stories from data call
+    // linkAllPlayers again once they have.
+    linkAllPlayers(root.document);
   }
   if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', boot);
   else boot();

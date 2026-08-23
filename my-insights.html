@@ -253,6 +253,7 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 </div>
 </main>
 <script src="/it-league.js"></script>
+<script src="/player-search.js" defer></script>
 <script>
 (function(){
   var IT_KEY = 'IT_pk_7c1a93f0', XK = 'tn$9xQ27z';
@@ -302,7 +303,12 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
         + (!SNAP && it.auctionTailoring ? '<p style="font-size:13px;color:var(--muted);margin:10px 0 0">Tailored by: ' + esc(it.auctionTailoring) + ' Open your league in the app for exact numbers.</p>' : '')
         + '</article>';
     });
-    document.getElementById('pi-list').innerHTML = h || '<p>No insights match those filters.</p>';
+    var host = document.getElementById('pi-list');
+    host.innerHTML = h || '<p>No insights match those filters.</p>';
+    // Each <article class="ins"> is one insight, so each is read on its own and
+    // the players it names link to their cards. Runs after every redraw,
+    // because a filter change repaints the whole list.
+    if (window.ITPlayerSearch) window.ITPlayerSearch.linkAllPlayers(host);
   }
   function show(){
     fetch('/api/insights', { headers: { 'x-it-key': IT_KEY }, credentials: 'include' })

@@ -3144,3 +3144,141 @@ carries points for QB/RB/WR/TE only and point at the cheat sheet.
   call names *and the app prices* has a card.
 - `tools/test-asset-routing.mjs` — `/player`, `/player/`, `/player/<slug>`.
 - `tools/test-seo.mjs` — the card is noindex and out of the sitemap.
+
+---
+
+## 33. August 2026: every player named in a story links to his card
+
+**What a reader can now do.** Read a call, an insight or a story, see a player's
+name in the copy, and click straight through to his card at `/player/<slug>`.
+Not a name in a list of links at the bottom of the page — the name where the
+desk actually wrote it.
+
+### Where it lives, and why there
+
+**`player-search.js`.** That file is already the site's answer to "who is this
+name, and where is his card": the ~400-row identity index behind the ribbon's
+search box. Linking a mention is the same question asked from the other end, so
+it is the same file. `/it-league.js` answers what a player is **worth**, which
+is a different question, and a second name index on this site would be a second
+answer to "who is this" — §20 is the monument to how a second answer goes.
+
+It exposes two calls and one automatic pass:
+
+- **`linkPlayers(scope, opts)`** — link the players named inside ONE story.
+  `scope` is the element, or an array of them when a page paints one story into
+  several boxes (`/lead` writes the headline, the dek, the body and the calls
+  list separately, and they are still one story).
+  - `opts.cast` — who the story is about, as slugs or as full names, for a
+    surface rendering from data that already knows. It only ever ENABLES a short
+    form; a full name in the copy resolves with or without it.
+  - `opts.skip` — a slug to leave as plain text. The player card passes its own
+    man: a link back to the page you are already reading is a dead end wearing a
+    link's clothes. He stays in the cast, so a surname he shares still cannot be
+    read as somebody else.
+- **`linkAllPlayers(scope)`** — every story inside `scope`, each read on its
+  own.
+- **On boot**, `linkAllPlayers(document)` — the stories already in the served
+  HTML.
+
+### What counts as one story
+
+`.call` — the block the drop pages, `/the-pick`, `/lead` and
+`/play-caller-premium` all wrap a single call in — or `.ins`, the article the
+premium and vault lists render, or anything a page marks `data-player-links`.
+
+**This is not decoration.** The block is the unit the short-form pass is scoped
+to. The desk writes "Kyren" after it has named him, and the only safe way to
+read a bare word is against the players that same block has already committed
+to. Two calls on one page never share a cast: one call's "Allen" must not be
+read out of the other's.
+
+### One link per player per story
+
+A call about Kyren Williams names him six times. Six links to the same card is
+not navigation, it is a paragraph with a rash — so only the **first** mention of
+each player in a story becomes a link. The first time a reader meets the name is
+the moment the card is useful; after that they have already been offered it and
+are trying to read a sentence. Every later mention stays as plain text.
+
+The cap is **per story, not per page**: the next call links him again, because a
+reader who starts there has not been offered anything yet. And `linkPlayers`
+counts the links already standing in a scope before it starts, so re-running it
+over the same DOM cannot promote the second mention to a first one.
+
+### The four rules that keep a link off an adverb
+
+1. **A name already inside a link is left alone.** Most story headlines ARE
+   links, to the story, and a link inside a link is not a thing. The headline
+   keeps its own destination; the copy under it carries the player links.
+2. **A full name always resolves**, with the punctuation the desk actually
+   varies: `A.J. Brown` also answers to `AJ Brown`, `De'Von` to the curly
+   apostrophe the CMS writes and to `DeVon`, and every hyphen to the
+   non-breaking one that stops a name wrapping mid-word.
+3. **A one-word short form resolves only against the block's cast**, and only
+   when exactly one member of it owns that word. A surname two of them share
+   resolves to neither — the same rule `findPlayer` follows in `/it-league.js`.
+4. **A word that is also ordinary English** — `likely`, `love`, `price`, `all`,
+   `will` — is left as text where a sentence has just begun, because a capital
+   letter after a full stop says nothing about which one it is. Mid-sentence, or
+   in the possessive, it is the player: "Likely's outlook" is Isaiah Likely,
+   "Likely, the Ravens will..." is an adverb. Written out in full it links like
+   any other name; the list only ever sees the one-word form.
+
+A club's defence is not a player mention: "Kansas City Chiefs" in a sentence is
+a team, and DEF rows are dropped from the pattern.
+
+### The trap: the desk does not always write a man out in full
+
+`auction-insights-2026-08-10#call-4` says **"Kyren" four times and "Kyren
+Williams" never**. Rule 3 alone leaves that call with no links at all, and
+relaxing it — reading a bare word against the whole league — is how a tight end
+called Likely turns every adverb on the site into a link.
+
+So **the answer travels with the call**. `tools/build-front.mjs` already works
+out who each call names, for the front page's faces; it now stamps that same
+list onto the section as `data-players`, and `linkPlayers` seeds the cast from
+it. One question, asked once, in the place that already asks it.
+
+- **Stamped in all three editions.** A drop is published as auction / snake /
+  bestball off one research set, and `call-3` on a date is the same call in
+  each, so the cast read out of the auction edition is the cast of all three.
+  `/insights` lifts these sections straight out of the drop page, which is how
+  the attribute reaches that page too.
+- **Only players the site prices are stamped.** The fullback the Ravens story
+  names earns a photo on the front page — `ppl` keeps him — but he has no card,
+  so he cannot be a link.
+- **The extraction regexes had to stop assuming a bare tag.** `build-front.mjs`
+  matched `<section class="call" id="call-N">` exactly; the first run after
+  stamping found six stories instead of seventy and rewrote both data blocks
+  with them. Both call regexes now allow attributes. CI diffs the WHOLE tree
+  after a build for this reason, not the three files that carry data blocks.
+
+### The surfaces
+
+| where | how it links |
+|---|---|
+| the drop pages, `/the-pick`, `/play-caller-premium` | boot pass over `.call` |
+| `/insights` and its per-format twins | the calls are fetched out of the drop page, then `linkAllPlayers` on the box |
+| `/my-insights`, `/insights-vault` | `linkAllPlayers` after every redraw — a filter change repaints the list |
+| `/lead` | `linkPlayers` over the four boxes as one story, cast from the run's own `names` |
+| `/analyst-desk` | `linkPlayers` per entry, cast from the analysts' calls |
+| the front page lead | `linkPlayers` on `#leadBody` at the tail of both painters, cast from the story's `ppl` |
+| the player card's call list | `linkPlayers` per call, `skip` the card's own man |
+
+The front page's story rails and the card's headlines are wholly inside `<a>`
+already, so rule 1 leaves them alone — that is the correct outcome, not a gap.
+
+### Tests
+
+- `tools/test-player-links.mjs` — the four rules above, each with the case that
+  would break it; the one-link-per-story cap, that it is the FIRST mention that
+  carries the link, that two men in one story get one each, and that the next
+  story links the same man again; the cast scoping, including that two calls on
+  a page do not share one; `skip`; idempotency; a real published call out of
+  `auction-insights-2026-08-10.html`, which is the one that never writes the
+  full name; that every stamped slug is a player the index knows; and that every
+  page carrying a `.call` or `.ins` actually loads `/player-search.js`.
+- The freshness check in CI now diffs the whole tree after `build-front.mjs`,
+  because a stale stamp fails silently — the page renders, the short forms just
+  stop linking.
