@@ -280,8 +280,7 @@ img{max-width:100%}
 /* ── the coaching column ──────────────────────────────────────────────── */
 /* Four across, so the four cards the front page shows are one clean row
    rather than three and an orphan. */
-.pcp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-@media(max-width:1080px){.pcp-grid{grid-template-columns:repeat(2,1fr)}}
+.pcp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
 @media(max-width:620px){.pcp-grid{grid-template-columns:1fr}}
 .pcp-card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px 14px;display:flex;flex-direction:column;gap:9px;border-top:3px solid var(--ink)}
 .pcp-card.up{border-top-color:#0b7a43}
@@ -441,6 +440,11 @@ img{max-width:100%}
 .foot{margin-top:40px;background:#fff;border-top:1px solid var(--line)}
 .foot .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 18px 34px;font-size:13px;color:var(--ink-3)}
 .foot a:hover{color:var(--brand)}
+/* The tools row takes a line of its own above the secondary links: flex-basis
+   100% breaks it out of the footer's single wrapping row so it reads as a group
+   rather than seven more items in the legal-and-company run. */
+.foot-tools{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.foot-tools a{font-weight:700;color:var(--ink-2)}
 .foot .fm{margin-left:auto}
 
 /* Between the widest phone and the full desktop the ribbon is a handful of
@@ -732,26 +736,14 @@ img{max-width:100%}
 </div></div>
 
 <main class="wrap">
-  <div class="shelf-eyebrow">Before the draft</div>
-  <h2 class="tools-head">Your auction, priced</h2>
-  <p class="tools-sub">Six tools, all of them built for one draft format. Start with the free sheet.</p>
-  <div class="tools-grid">
-  <a class="tool is-alt" href="/auctiondraft?screen=cheat"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg></span><span class="tt"><h3>Custom Auction Values</h3><p>All 500+ players priced in dollars for your teams, your budget and your scoring settings.</p></span></a>
-  <a class="tool" href="/auctiondraft?screen=board"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 4-7 5 9"/><path d="M3 21h18"/></svg></span><span class="tt"><h3>Live Auction Manager</h3><p>Track every dollar in the room as the bidding runs, and see your max bid move with it.</p></span></a>
-  <a class="tool" href="/auction-draft-assistant"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 1 1-3.2-6.4"/><path d="M9.5 9a2.6 2.6 0 1 1 3.2 2.5c-.8.2-1.2.8-1.2 1.6"/><path d="M11.5 16.6h.01"/></svg></span><span class="tt"><h3>AI Value Coach</h3><p>Ask &ldquo;do I go to $41 here?&rdquo; and get an answer built on your roster and the money left.</p></span></a>
-  <a class="tool" href="/superflex-auction-values"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4.2"/><circle cx="16" cy="16" r="4.2"/><path d="M12.6 5.4h4v4"/></svg></span><span class="tt"><h3>Superflex &amp; 2QB Values</h3><p>A second quarterback re-prices the whole board. These values already know that.</p></span></a>
-  <a class="tool" href="/salary-cap-draft-tool"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M16.5 7.2C15.6 6 14 5.3 12 5.3c-2.5 0-4.2 1.2-4.2 3s1.6 2.6 4.2 3.1c2.9.6 4.6 1.4 4.6 3.4 0 2-1.9 3.2-4.6 3.2-2.2 0-3.9-.8-4.8-2.1"/></svg></span><span class="tt"><h3>Salary Cap &amp; Keepers</h3><p>Keeper inflation, cap holds and multi-year money, folded into the same sheet.</p></span></a>
-  <a class="tool" href="/guides"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/></svg></span><span class="tt"><h3>Auction Strategy Library</h3><p>Budget shape, nomination tactics and the $1 endgame &mdash; the playbooks behind the numbers.</p></span></a>
-  </div>
-
-  <div class="shelf-eyebrow post">After the draft<span class="soon">Coming soon</span></div>
-  <h2 class="tools-head">The season is still an auction</h2>
-  <p class="tools-sub">FAAB is a blind auction run every week against the same room. These price it. Free when they open &mdash; leave an email and we will tell you.</p>
-  <div class="tools-grid post">
-    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M16.5 7.2C15.6 6 14 5.3 12 5.3c-2.5 0-4.2 1.2-4.2 3s1.6 2.6 4.2 3.1c2.9.6 4.6 1.4 4.6 3.4 0 2-1.9 3.2-4.6 3.2-2.2 0-3.9-.8-4.8-2.1"/></svg></span><span class="tt"><h3>FAAB Advisor</h3><p>The going rate, what he is worth, and your max bid &mdash; read off your league&rsquo;s own rosters and every rival&rsquo;s remaining budget.</p></span></a>
-    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg></span><span class="tt"><h3>Start / Sit</h3><p>Your lineup scored against your league&rsquo;s own settings, with the week priced off the betting market.</p></span></a>
-    <a class="tool locked" href="/post-draft"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></span><span class="tt"><h3>Roster Audit</h3><p>What each player cost you at the auction against what he has actually returned.</p></span></a>
-  </div>
+  <!-- The two tool shelves that stood here — six "Before the draft" cards and
+       three "After the draft" cards, all three of those still Coming soon —
+       cost 1.6 screens before a reader reached a single piece of reporting, and
+       restated navigation the masthead, the hero buttons and the closing band
+       already carry. The products are what the hero sells and what the band
+       below closes on; the middle of the page is for the desk. Every
+       destination they held is still linked from the footer, so nothing on the
+       site lost its link from the homepage. -->
 
   <div class="sec-head" id="today"><h2>The Auction Desk</h2><a class="sec-more" href="/auction-insights">Every insight &rarr;</a></div>
   <div class="hero">
@@ -862,7 +854,16 @@ img{max-width:100%}
 </main>
 
 <footer class="foot"><div class="wrap">
-  <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
+  <!-- The tools row exists because the two card shelves above it do not any more.
+       Cutting nine cards from the reading flow is an editorial call; dropping the
+       homepage's only link to /auction-draft-assistant, /superflex-auction-values
+       and /salary-cap-draft-tool would have been an accidental SEO one, on the
+       highest-authority page on the site and on two pages the title tag targets
+       by name. The cards go, the links stay. -->
+  <nav class="foot-tools" aria-label="Tools">
+    <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/post-draft">In-Season</a>
+  </nav>
+  <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/auction-watch">Auction Watch</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; Player photos &copy; NFL/ESPN</span>
 </div></footer>
 
@@ -2155,14 +2156,20 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   })();
 
   // ── the coaching column ────────────────────────────────────────────────
-  // Newest first, four on the front page, each carrying the faces of the
-  // players it actually commits to. The entries come out of
+  // Newest first, two on the front page, each carrying the faces of the
+  // players it actually commits to. Four cards in a four-up row was a full
+  // screen of the page spent on a standing column that publishes daily and has
+  // its own page; two make the argument and "The whole column" takes the reader
+  // to the other thirteen. The entries come out of
   // play-caller-premium.html at build time (tools/build-front.mjs), so the
   // column page stays the source of truth and this can never quote it wrongly.
   (function(){
     var host = document.getElementById('pcpGrid');
     if (!host || !COLUMN.length) return;
-    COLUMN.slice(0, 4).forEach(function(c){
+    // Keep this and the .pcp-grid column count in step, or the last row of the
+    // grid ends up half-empty.
+    var PCP_ON_FRONT = 2;
+    COLUMN.slice(0, PCP_ON_FRONT).forEach(function(c){
       var card = el('div', 'pcp-card' + (c.side ? ' ' + c.side : ''));
       var kick = el('div', 'pcp-kick');
       if (c.label) kick.appendChild(el('span', 'pcp-side' + (c.side ? ' ' + c.side : ''), c.label));
