@@ -1377,6 +1377,58 @@ The four edits, as they now stand:
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
 
+#### last_insert_rowid() is 0 in a separate statement (2026-08-23)
+
+**This one took the whole site's generated lead down and nobody noticed for a
+day.** On the morning of 2026-08-23, `lead_story` had **zero published rows and
+zero verified rows** out of 34. The front page had silently fallen back to its
+dated deep-dive rotation, `/analyst-desk` showed its empty state, and `/lead`
+returned not-found. Nothing looked broken to a visitor, which is exactly why it
+survived a day.
+
+The cause was in the desk's own prompt, from the beginning:
+
+```sql
+UPDATE lead_story SET published=0 WHERE id <> last_insert_rowid();
+-- "run as a separate statement"
+```
+
+**D1 gives every statement its own session, so `last_insert_rowid()` returns 0
+there.** `id <> 0` matches every row in the table, so the retire unpublished the
+story the run had just published, along with the entire archive. The instruction
+to run it separately is what made it fire wrong.
+
+Measured, not inferred, against the live database:
+
+```sql
+CREATE TABLE _lastid_probe (id INTEGER PRIMARY KEY AUTOINCREMENT, x TEXT);
+INSERT INTO _lastid_probe (x) VALUES ('probe');   -- meta.last_row_id = 1
+SELECT last_insert_rowid();                        -- 0
+```
+
+The prompt now retires by binding the slug it just wrote
+(`UPDATE lead_story SET published = 0 WHERE slug <> ?1`), says explicitly never
+to use `last_insert_rowid()` and why, and its self-check selects
+`(SELECT COUNT(*) FROM lead_story WHERE published=1) AS published_rows` with an
+instruction to republish itself if that comes back 0. The daily watch checks the
+same count first, before anything else.
+
+**Two things this cost, worth remembering.** It looked for a while like an
+external writer was vandalising the table, because rows kept changing state
+between reads; it was the desk doing it to itself on a three-hour timer. And it
+is not fully explained: the `published` wipe is accounted for, but **nothing here
+explains `verified` also being zeroed** on all 34 rows. If verified ever wipes
+again with published intact, that is a second, separate bug and this section is
+not the answer.
+
+**Why the archive was not restored.** Only `published = 1` was put back, on the
+single newest story, after reading it. `verified` is each run's own assertion
+that it traced every number to a source it pulled that run; the original values
+are not recoverable from D1, and setting them to 1 in bulk would manufacture
+claims no run ever made. Ids 27 through 34 are still `verified = 0` on purpose,
+so the archive and the record table are thinner than they should be. That is the
+honest state, not a pending chore.
+
 #### The headline check (2026-08-22)
 
 The prompt ends with four mechanical checks to run on the exact title string
