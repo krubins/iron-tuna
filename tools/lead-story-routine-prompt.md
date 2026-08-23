@@ -121,13 +121,25 @@ Scoring: passYd/25, passTD*4, passInt*-2, rushYd/10, rushTD*6, recYd/10, recTD*6
 3. That position rank IS the slot in the market curve. Read the curve value at that slot; past the end of the curve a player is $1.
 4. Multiply by `(teams x budget) / 1440` and round, with a $1 floor. At this model's 12 teams and $200 that multiplier is 1.6667.
 
-**Read the curve out of the repo this run — do not copy it from memory or from this prompt.** It is `CURVE` and `CURVE_BUDGET` in `it-league.js`, which mirror `LEAGUE_MARKET_CURVE` and `LEAGUE_CURVE_BUDGET` in `index.html`; `tools/test-it-league.mjs` fails the build if the two ever disagree, so either one is authoritative and neither can drift from the other. `tools/build-default-board.mjs` runs the whole recipe if you would rather call it than reimplement it.
+**Read the curve out of the repo this run — do not copy it from memory or from this prompt.** It is `CURVE` and `CURVE_BUDGET` in `it-league.js`, which mirror `LEAGUE_MARKET_CURVE` and `LEAGUE_CURVE_BUDGET` in `index.html`; `tools/test-it-league.mjs` fails the build if the two ever disagree, so either one is authoritative and neither can drift from the other. The static block inside `it-league.js` is a FALLBACK for readers whose browser cannot reach `/api/board`; it is generated from the committed projections and has not seen today's odds, so never verify a price against it.
 
 There is no priced-pool cutoff and no replacement level any more. The curve's own length is the pool: a position rank past the last slot is a $1 player, which is the same statement replacement level used to make and the one the reader's board already makes.
 
-The market side is unchanged in spirit and re-ranked the same way: overlay the odds payload onto the baseline projections, replacing passing, rushing and receiving yards and touchdowns where a line exists and holding `rec` at baseline (the market does not price receptions), then re-sort by position and read the curve again. A player's market price is his curve slot AFTER the odds move him. That is what "the odds move him from WR12 to WR9" is worth in dollars.
+**THERE IS ONE BOARD, AND THE ODDS ARE ALREADY IN IT.** This is the part that went wrong on 2026-08-23 even after the curve change, so read it twice.
 
-**Check two of them before you insert.** Take the consensus price you are about to print for a named player and confirm it equals what the cheat sheet gives him at 12 teams and $200. If it does not, your pricing is wrong and the story is wrong; fix it rather than publishing it. This check is the whole point of the section: the two numbers must track.
+The projections the app is served are NOT the committed `PROJECTIONS` array. The Worker blends today's odds into them before it serves them (`blendProjections`), at `VEGAS_WEIGHT = 3`:
+
+    blended = (committed + 3 x market_implied) / 4
+
+per stat, only where a line exists, and `rec` is never touched because the betting market does not price catches. **That blended set is the cheat sheet.** Score it, rank within position, read the curve: those are the dollars on the reader's screen.
+
+So do not build a second, more aggressive board by replacing the stats outright. A run did exactly that and published "$38 for Derrick Henry" beside "$47 on the consensus sheet" for a back the reader's own sheet had at $25 and $38 respectively: the recommendation was right and the consensus figure was wrong, because the consensus figure came off the unblended committed array and nothing on the site prices players that way.
+
+**The easiest correct route: read `/api/board`.** It returns the site's own board at 12 teams and $200, built from the same blended pool, priced by the same curve, as `{n, pos, v, pts}` rows where `v` is the Market Price. That is the number the reader sees, pulled rather than recalculated, and it cannot drift from the sheet because it *is* the sheet. Use it for every "the consensus sheet says $X" in your story. If the request fails, do the blend above yourself and say in the method line that you computed it rather than reading it.
+
+What the odds move is then a RANK STORY, not a second price: "the odds have him RB8 rather than RB13" is the finding, and both dollar figures still come off the one board.
+
+**Check two of them against `/api/board` before you insert.** Take the consensus price you are about to print for a named player and confirm it equals that player's `v` in the `/api/board` response. Not the committed projections, not a board you built: the served one. If it does not match, your pricing is wrong and the story is wrong; fix it rather than publishing it. This check is the whole point of the section, and it is the check a run passed in the wrong direction on 2026-08-23 by verifying against `it-league.js`'s static block, which had not seen the odds. Name the endpoint you checked against in the method line so the next run can tell which board you meant.
 
 If you deviate from any of this, say so in the method line.
 

@@ -252,8 +252,20 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
     document.getElementById('dek').textContent =
       'Iron Tuna publishes a new one every three hours. The front page carries the rest of the board in the meantime.';
   }
+  // The site's own board is fetched (/api/board), so it can settle after the
+  // article does. This page paints ONCE, so it waits for that answer rather
+  // than printing one set of dollars and swapping them under the reader a
+  // moment later. onBoard fires immediately once the request has settled either
+  // way, and settles instantly when there is no fetch at all, so this cannot
+  // hang the page on a board that never arrives.
+  function afterBoard(d){
+    var LB = window.ITLeague || null;
+    if (!LB || !LB.onBoard || LB.boardIsServed()) return d;
+    return new Promise(function(resolve){ LB.onBoard(function(){ resolve(d); }); });
+  }
   fetch('/api/lead-story/body' + (slug ? '?slug=' + encodeURIComponent(slug) : ''))
     .then(function(r){ return r.json(); })
+    .then(afterBoard)
     .then(function(d){
       if (!d || !d.ok || !d.story) return fail('That insight is not on the board right now.');
       var s = d.story;
@@ -354,7 +366,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
     })
     .catch(function(){ fail('Iron Tuna\u2019s insights are unreachable right now.'); });
 
-  fetch('/api/lead-story').then(function(r){ return r.json(); }).then(function(d){
+  fetch('/api/lead-story').then(function(r){ return r.json(); }).then(afterBoard).then(function(d){
     var all = [];
     if (d && d.story) all.push(d.story);
     if (d && d.recent) all = all.concat(d.recent);

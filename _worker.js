@@ -1715,6 +1715,52 @@ function _colPrice(position, rankIndex) {
   return Math.max(COLUMN_MIN_BID, Math.round(base * scale));
 }
 
+// ── §9d. the site's own board, served ──────────────────────────────────────
+// The board /it-league.js quotes to a reader with no league of their own used
+// to be a STATIC block generated from the committed PROJECTIONS. The app is
+// served `blendProjections(overlay)` — the same projections re-blended with
+// TODAY's odds — so the two were different boards, and the gap was the whole
+// of a bug: a story quoted "$47 on the consensus sheet" for a back whose row
+// on the reader's screen said $25, because the library's copy had not seen the
+// odds that moved him.
+//
+// A static board cannot track a feed that refreshes daily. So the board is
+// computed HERE, off the same pool the app gets, and served. One board, one
+// answer, and no regeneration step anybody can forget to run.
+//
+// Prices only, no stat lines. The reader's own board already carries their
+// scoring; this exists so the SITE side of a comparison is the site's real
+// sheet, and shipping stat lines would invite a second valuation to grow here.
+const BOARD_CONTRACT = 1;
+let _BOARD_CACHE = null, _BOARD_AT = 0;
+async function boardPayload(env) {
+  const now = Date.now();
+  if (_BOARD_CACHE && now - _BOARD_AT < 900000) return _BOARD_CACHE;
+  let pool = PROJECTIONS, asOf = 0;
+  try {
+    const cached = await oddsCacheRead(env);
+    if (cached && cached.overlay) { pool = blendProjections(cached.overlay); asOf = cached.updatedAt || 0; }
+  } catch (e) { /* the committed pool is a worse board, not a broken one */ }
+  const byPos = {};
+  for (const p of pool) {
+    if (COLUMN_POSITIONS.indexOf(p.position) < 0) continue;
+    (byPos[p.position] = byPos[p.position] || []).push({
+      n: p.name, pos: p.position, pts: _oddsRound(_colScore(p.projectedStats || {}, p.position))
+    });
+  }
+  const players = [];
+  for (const pos of COLUMN_POSITIONS) {
+    const list = (byPos[pos] || []).sort((a, b) => b.pts - a.pts);
+    // Rank within position IS the curve slot, exactly as calculateMarketValues
+    // does it on the client. `v` is Market Price, the column a story means.
+    list.forEach((p, i) => players.push({ n: p.n, pos: p.pos, v: _colPrice(pos, i), pts: p.pts }));
+  }
+  _BOARD_CACHE = { ok: players.length > 0, contract: BOARD_CONTRACT, asOf,
+                   teams: 12, budget: 200, players };
+  _BOARD_AT = now;
+  return _BOARD_CACHE;
+}
+
 // Where the RANKINGS put each team's offence, on the same points model
 // buildTeamEnvOverlay uses for the Vegas side. Without this a card can only say
 // "Vegas has San Francisco 4th in implied points", which reads as a promotion
@@ -2513,6 +2559,19 @@ export default {
       } catch (e) { out = { ok: false, error: 'unavailable', items: [] }; }
       if (out.contract == null) out.contract = COLUMN_CONTRACT;
       _COLUMN_CACHE = out; _COLUMN_AT = now; _COLUMN_KEY = ck;
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
+    }
+    // The site's own board, at the site's default league. /it-league.js reads
+    // this so the SITE side of every price comparison is the sheet the app
+    // actually shows, odds and all, rather than a static copy that stopped
+    // tracking the feed. Public and cacheable: it is the same board for every
+    // reader, and the numbers are already published on the cheat sheet.
+    if (url.pathname === '/api/board') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      let out;
+      try { out = await boardPayload(env); }
+      catch (e) { out = { ok: false, error: 'unavailable', contract: BOARD_CONTRACT, players: [] }; }
       return json(out, 200, { ...c, 'cache-control': 'public, max-age=900' });
     }
     // The front page's lead, and the archive behind it. Two minutes of cache:

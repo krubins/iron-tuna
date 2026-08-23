@@ -3022,6 +3022,74 @@ The general lesson, which is the one worth carrying: **a conversion has to know
 what it is converting from.** `repriceCopy` knew the reader's league and assumed
 the rest.
 
+#### Two different columns over each other, and the board that was never the board (2026-08-23)
+
+The report that finally reached the bottom of this: *"the numbers you just gave
+me are above what's on my sheet. Does the site have the ability to look at the
+cheat sheet and see what the sliders are set to?"*
+
+It did. It was throwing both away.
+
+**Defect one: the snapshot stored the wrong column.** `index.html` wrote
+`v: p.auctionValue` into `iron_tuna_values_v1` — the **True Value** column,
+value over replacement. `it-league.js`'s own board stores the market curve
+price — the **Market Price** column. `boardRatio` then computed
+`mine.v / site.v` and multiplied every story dollar by it. That is not a league
+conversion. It is two different columns of one sheet divided by each other, at
+two different Vegas settings, which is why the error ran in both directions and
+why three rounds of fixing the story pipeline never moved it. The snapshot now
+stores Market Price (with True Value alongside as `tv`, and `sv: 2` marking the
+shape), copied off `baseValued` — which has already been through
+`applyVegasWeight()` at the reader's own slider, scoring, budget and team count.
+**Nothing is recomputed for it on purpose: a second calculation is only a second
+chance to disagree with the sheet.** A shape-1 snapshot is read for the league it
+names and never for a price, and heals on the reader's next app open.
+
+**Defect two: the Vegas slider was read and discarded.** `cfg` kept teams,
+budget, format and scoring out of a saved config that also carried
+`strategy.vegasWeight`, so every number this library quoted was at a weighting
+the reader had not chosen. Kept now, guarded with `typeof` rather than `num()`:
+`num(null, 0.75)` is **0**, because `Number(null)` is 0 and 0 is finite, so a
+reader with no slider saved would have been read as one who had dragged it fully
+off the sportsbook. Same trap `_worker.js` documents in `applyVegasWeight`.
+
+**Defect three, and the reason a static board can never be right.** The board in
+`it-league.js` is generated from the **committed** `PROJECTIONS`. The app is
+served `blendProjections(overlay)` — those projections re-blended with TODAY's
+odds at `VEGAS_WEIGHT = 3`. Two different boards, diverging every time a line
+moves. Measured on the day: Derrick Henry $25 RB13 on the static block, **$38
+RB8** on the board the reader actually sees; Jeremiyah Love $47 RB6 static,
+**$25 RB13** served. A story quoted the $47 as "the consensus sheet" at readers
+whose row said $25, and it was *right* to quote its $38 recommendation, which is
+the served number exactly.
+
+So the board is now **served, not shipped**: `/api/board` (§9d in `_worker.js`)
+builds it from the same blended pool the app gets, prices it with `_colPrice`,
+and caches it for fifteen minutes. `it-league.js` fetches it and adopts it over
+the static block, which survives only as the fallback for a browser that cannot
+reach it — a rejected request, a non-200, an empty or price-less payload all
+leave the reader on the static board rather than on nothing. `onBoard(cb)` is
+the repaint hook: the front page registers it **once, outside any paint** (a
+waiter registered inside a paint repaints itself forever, because `onBoard`
+fires immediately once the request has settled), and `/lead` paints once so it
+*waits* on the board rather than swapping dollars under the reader.
+
+The prompt now sends the run to `/api/board` for every "the consensus sheet says
+$X" and tells it to verify against that endpoint by name. The run of
+2026-08-23 10:15 passed its own price check against `it-league.js`'s static
+block and reported "all three match" — true, and worthless, because it was
+checking against a board no reader sees.
+
+**The lesson, third time of asking: do not recompute a number the site has
+already published. Read it.** Every one of these three defects is a second
+calculation that was supposed to agree with the first and did not.
+
+`tools/test-it-league.mjs` blocks 11d and 11e pin it: the sheet figure landing on
+the reader's own row, the slider kept and the `num(null)` trap, a shape-1
+snapshot refused for prices, the fetch and adoption of `/api/board`, all four
+failure modes falling back to the static block, the late-`onBoard` caller, the
+no-`fetch` case settling instead of hanging, and both pages' hooks.
+
 ### Tests
 
 - `tools/test-it-league.mjs` — the anchoring rules, the surname case, the

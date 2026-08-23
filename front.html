@@ -1561,6 +1561,13 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       .catch(function(){});
   }
   loadGeneratedLead();
+  // /api/board is fetched, so it can land after the lead has already painted
+  // off the static fallback board. Repaint once on the better answer rather
+  // than leaving a reader looking at dollars from a board the site no longer
+  // serves. Registered HERE, once, and never inside a paint: onBoard fires
+  // immediately after the fetch has settled, so a paint that registered its
+  // own waiter would repaint itself forever.
+  if (L && L.onBoard) L.onBoard(function(ok){ if (ok) repaintLead(); });
 
 
   // ── Vegas vs. Rankings & ADP ───────────────────────────────────────────────

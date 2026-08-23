@@ -938,6 +938,83 @@ console.log('\nthe sheet figure lands on the reader’s own row');
      old.config && old.config.teams === 12 && old.config.budget === 200);
 }
 
+// ── 11e. the site's board is the one the site serves ───────────────────────
+// The committed block in it-league.js is generated from the COMMITTED
+// projections. The app is served those projections re-blended with today's
+// odds, so the static copy is a different board the moment a line moves. That
+// is how "$47 on the consensus sheet" reached a reader whose row said $25.
+// /api/board is the served board; the static block is only the fallback.
+console.log('\nthe site board is fetched, and the static block is the fallback');
+{
+  // A stub fetch, so the real load path runs rather than a mock of it.
+  const boardPayload = {
+    ok: true, contract: 1, teams: 12, budget: 200,
+    players: [{ n: 'Derrick Henry', pos: 'RB', v: 38, pts: 300 },
+              { n: 'Filler Back', pos: 'RB', v: 4, pts: 120 }]
+  };
+  const withFetch = (payload, opts = {}) => {
+    const w = makeWindow({});
+    w.fetch = (url) => {
+      w._asked = url;
+      if (opts.reject) return Promise.reject(new Error('offline'));
+      return Promise.resolve({ ok: opts.httpFail ? false : true, json: () => Promise.resolve(payload) });
+    };
+    new Function('window', lib + '\n;return window.ITLeague;')(w);
+    return w;
+  };
+  const settled = (L) => new Promise(res => L.onBoard(res));
+
+  const staticHenry = load({}).L.defaultBoard().find(p => p.n === 'Derrick Henry');
+  ok('the static block prices Derrick Henry at all', staticHenry && staticHenry.v > 0);
+
+  const w1 = withFetch(boardPayload);
+  const L1 = w1.ITLeague;
+  await settled(L1);
+  ok('the board is fetched from /api/board', w1._asked === '/api/board', String(w1._asked));
+  ok('and it is adopted as the site board', L1.boardIsServed() === true);
+  ok('the served price wins over the static one',
+     (L1.defaultBoard().find(p => p.n === 'Derrick Henry') || {}).v === 38,
+     JSON.stringify(L1.defaultBoard().find(p => p.n === 'Derrick Henry')));
+  ok('a player the served board does not carry is simply absent, not invented',
+     !L1.defaultBoard().some(p => p.n === 'Zay Flowers'));
+
+  // Every failure mode leaves the reader on the static board rather than on
+  // nothing. A board that cannot be fetched is a worse answer, not a broken page.
+  for (const [label, opts] of [['a rejected request', { reject: true }],
+                               ['a non-200 response', { httpFail: true }]]) {
+    const w = withFetch(boardPayload, opts);
+    await settled(w.ITLeague);
+    ok(`${label} leaves the static board in place`,
+       w.ITLeague.boardIsServed() === false
+       && w.ITLeague.defaultBoard().length === load({}).L.defaultBoard().length);
+  }
+  for (const [label, bad] of [['an empty player list', { ok: true, players: [] }],
+                              ['an ok:false payload', { ok: false, players: [{ n: 'X', pos: 'RB', v: 9 }] }],
+                              ['a payload with no prices', { ok: true, players: [{ n: 'X', pos: 'RB', v: 0 }] }],
+                              ['a null payload', null]]) {
+    const w = withFetch(bad);
+    await settled(w.ITLeague);
+    ok(`${label} is refused rather than adopted`, w.ITLeague.boardIsServed() === false);
+  }
+
+  // onBoard is the pages' repaint hook. It must fire for a caller that arrives
+  // after the request has already settled, or a page that painted late waits
+  // forever for an event that has been and gone.
+  const w2 = withFetch(boardPayload);
+  await settled(w2.ITLeague);
+  let late = null;
+  w2.ITLeague.onBoard(ok2 => { late = ok2; });
+  ok('a late onBoard caller is answered immediately', late === true, String(late));
+
+  // A page with no fetch at all (an old browser, a test rig) must not hang.
+  const w3 = makeWindow({});
+  new Function('window', lib + '\n;return window.ITLeague;')(w3);
+  let noFetch = 'never';
+  w3.ITLeague.onBoard(v => { noFetch = v; });
+  ok('with no fetch available the board settles at once instead of hanging',
+     noFetch === false, String(noFetch));
+}
+
 // ── 12. the pages that print the desk's dollars all go through it ──────────
 console.log('\nthe front page and /lead restate before they paint');
 {
@@ -964,6 +1041,31 @@ console.log('\nthe front page and /lead restate before they paint');
      && /pricingNote\(restated, s\.createdAt\)/.test(page));
   ok('/lead\u2019s archive list carries them as well',
      /repriceCopy\(x\.title,[\s\S]{0,120}?x\.createdAt\)/.test(page));
+
+  // The served board can settle after a page has painted. The front page
+  // repaints on it; /lead paints once, so it waits for it instead.
+  ok('the front page repaints when the served board lands',
+     /L\.onBoard\(function\(ok\)\{ if \(ok\) repaintLead\(\); \}\)/.test(front));
+  ok('and registers that hook once, outside any paint',
+     (front.match(/L\.onBoard\(/g) || []).length === 1);
+  ok('/lead waits for the board rather than swapping dollars under the reader',
+     /function afterBoard\(d\)/.test(page) && /\.then\(afterBoard\)/.test(page));
+  ok('and waits on both of its fetches',
+     (page.match(/\.then\(afterBoard\)/g) || []).length === 2);
+
+  // The worker has to build that board from the SAME pool the app is served,
+  // or the endpoint just moves the old mismatch behind an HTTP call.
+  ok('the worker serves /api/board at all', /url\.pathname === '\/api\/board'/.test(worker));
+  const bp = worker.slice(worker.indexOf('async function boardPayload'),
+                          worker.indexOf('// Where the RANKINGS put each team'));
+  ok('and builds it from the odds-blended pool, not the committed one',
+     /blendProjections\(cached\.overlay\)/.test(bp), bp.slice(0, 200));
+  ok('and prices it with the same curve the cheat sheet uses',
+     /_colPrice\(pos, i\)/.test(bp));
+  ok('and ranks within position by points, which is the curve slot',
+     /sort\(\(a, b\) => b\.pts - a\.pts\)/.test(bp));
+  ok('and ships prices only, so no second valuation can grow in it',
+     !/_colStatLine|projectedStats:/.test(bp));
 }
 
 // ── 13. the preview tool still finds the copy it previews ──────────────────

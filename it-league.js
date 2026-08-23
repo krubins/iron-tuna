@@ -339,6 +339,7 @@
   // position by points, read the curve slot, scale by teams x budget.
   var defIndex = null;
   function defaultBoard() {
+    if (served) return served;
     if (defIndex) return defIndex;
     var players = [];
     String(DEFAULT_BOARD_RAW).split('\n').forEach(function (line) {
@@ -356,6 +357,57 @@
     });
     return defIndex;
   }
+
+  // ── the site's board, as the site actually serves it ──────────────────────
+  // The block above is generated from the COMMITTED projections. The app is
+  // served those projections re-blended with today's odds, so the static copy
+  // is a different board from the cheat sheet the moment a line moves — which
+  // is how a story quoted "$47 on the consensus sheet" at a reader whose row
+  // said $25. `/api/board` is that same blended board, priced by the same
+  // curve, computed once in the worker and cached.
+  //
+  // Fetched, never required. The static block answers immediately and keeps
+  // answering if the request fails, is blocked, or the page is offline; the
+  // served board replaces it when it lands. `onBoard()` lets a page that has
+  // already painted repaint on the better answer instead of showing the
+  // fallback for the life of the visit.
+  var served = null, boardWaiters = [], boardTried = false;
+  function adoptBoard(payload) {
+    if (!payload || !payload.ok || !payload.players || !payload.players.length) return false;
+    var rows = [];
+    for (var i = 0; i < payload.players.length; i++) {
+      var p = payload.players[i];
+      if (!p || !p.n || !p.pos) continue;
+      var v = num(p.v, 0);
+      if (v < MIN_BID) continue;
+      rows.push({ n: p.n, pos: p.pos, pts: num(p.pts, 0), v: v });
+    }
+    if (!rows.length) return false;
+    // makeIndex sorts byPos on points, so the served prices are kept as sent
+    // rather than re-derived from a rank this file computed a second time.
+    served = makeIndex(rows);
+    return true;
+  }
+  function onBoard(cb) {
+    if (typeof cb !== 'function') return;
+    if (served || boardTried) { cb(!!served); return; }
+    boardWaiters.push(cb);
+  }
+  function settleBoard(ok) {
+    boardTried = true;
+    var list = boardWaiters; boardWaiters = [];
+    list.forEach(function (cb) { try { cb(ok); } catch (e) {} });
+  }
+  function loadBoard() {
+    if (typeof root.fetch !== 'function') { settleBoard(false); return; }
+    try {
+      root.fetch('/api/board', { credentials: 'omit' })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (d) { settleBoard(adoptBoard(d)); })
+        .catch(function () { settleBoard(false); });
+    } catch (e) { settleBoard(false); }
+  }
+  loadBoard();
 
   // Resolve a name field to a row on a board. The premium insight set stores
   // several names per call, semicolon-separated ("DJ Moore; Allen"), so each
@@ -1076,6 +1128,8 @@
     tailorLabel: tailorLabel,
     staleModel: staleModel,
     sheetPrice: sheetPrice,
+    onBoard: onBoard,
+    boardIsServed: function () { return !!served; },
     vegasWeight: function () { return cfg ? cfg.vegasWeight : VEGAS_DEFAULT_W; },
     repriceCopy: repriceCopy,
     pricingNote: pricingNote,
