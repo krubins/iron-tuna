@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Regression test for the You (max bid) column's shape on the cheat sheet.
+// Regression test for the You (what you should bid) column's shape on the cheat sheet.
 //   node tools/test-you-column.mjs
 //
 // THE BUG THIS EXISTS FOR: personal value is computed by `switchPrice`, a plan

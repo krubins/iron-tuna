@@ -121,7 +121,7 @@ No `.env` file is used in production; everything is configured in Cloudflare. Fo
 
 - **Global CSS:** the single `<style>` block beginning at **line 35**. To add a stylesheet "after global CSS so its tokens win," append a second `<style>` (or a `<link>`) immediately after that block, or paste rules at its end.
 - **Landing/hero component render:** around **line 2276** (`<div className="landing-splash landing-page …">`). The hero proper is `.lp-hero`; hero CSS is around lines **943–965**.
-- **The three value boxes (market price / true value / your max bid):** these are the **PROJ / VALUE / YOU** columns, shown in the mock-screenshot `.lp-shot` block (`.lp-shot-row`, CSS lines **1015–1029**) and explained in the caption near **line 2333**.
+- **The three value boxes (market price / true value / what you should bid):** these are the **PROJ / VALUE / YOU** columns, shown in the mock-screenshot `.lp-shot` block (`.lp-shot-row`, CSS lines **1015–1029**) and explained in the caption near **line 2333**.
 - **Primary call-to-action button:** `.lp-cta` — "Get my auction values" at **line 2295** (CSS at line **959**).
 - **App scoring/value engine:** functions `scorePlayer` / `scoreSkillPlayer` / `scoreKicker` / `scoreDefense`, plus `applyQbActuals` (remaps each position's projected line to last year's actual line **by projected rank**), `applyBaselineRankFixes`, and `applyCustomRanks`, all feeding the `baseValued` memo.
 - **User state:** all per-user customization (ranks, price overrides, scoring config, targets) is stored in the browser's `localStorage` under `iron_tuna_draft_state_v2`. Nothing a user does on the site touches the repo or other users — see §7.
@@ -278,7 +278,7 @@ Six-hour wall-clock slots (00/06/12/18 UTC), same mechanism and the same phase s
 
 ## 9d. The You column and the optimiser window (fixed August 2026)
 
-`You` (max bid) comes from `personalValue`, built in `_basePersonalized` in `index.html`. Personal value is `switchPrice()` — how many starter points a player actually adds to *your* lineup — and that is a plan rebuild per player, so it is only run for a `relevant` set: plan targets, your stars, and **the top 20 at each position**.
+`You` (what you should bid) comes from `personalValue`, built in `_basePersonalized` in `index.html`. Personal value is `switchPrice()` — how many starter points a player actually adds to *your* lineup — and that is a plan rebuild per player, so it is only run for a `relevant` set: plan targets, your stars, and **the top 20 at each position**.
 
 **The bug:** everyone below that window fell straight back to `auctionValue`, which is the VALUE column. So `You` decayed all the way down the board and then **jumped back up at rank 21**, and the sheet priced WR21 above WR16 for no reason other than being outside the window. A cutoff in an internal optimisation was visible in a published price.
 
@@ -1252,7 +1252,7 @@ structured summary the page lays out as cards and tallies into the record:
 ```json
 [{"analyst":"Mike Clay","outlet":"ESPN","player":"Kenneth Walker III",
   "pos":"RB","team":"KC","their":"RB7, a round above the sheet",
-  "ours":"$24 max bid, RB14","stance":"disagree",
+  "ours":"$24 bid, RB14","stance":"disagree",
   "why":"The odds do not back the workload the ranking implies"}]
 ```
 
@@ -2646,7 +2646,7 @@ their hole at that position, their alternatives. A leaguemate with $0 left is no
 competition however badly they need a running back, and the page names who the
 real threat is. This is the one genuinely novel thing on the page.
 
-**Two currencies, said out loud.** `ros` is draft dollars; going rate and max bid
+**Two currencies, said out loud.** `ros` is draft dollars; going rate and what you should bid
 are FAAB dollars. They are not the same scale — a $100 FAAB budget buys a handful
 of claims where a $200 draft budget buys a roster — so a going rate *above* the
 rest-of-season figure is normal. The column headers carry the unit and the method
@@ -2692,7 +2692,7 @@ behind a max-width query.**
 
 `node tools/test-faab.mjs` (playwright-core + Chromium; skips cleanly without
 them) serves the real page against a stubbed 12-team league built to have known
-answers, and asserts: no max bid above the money actually left, rest-of-season
+answers, and asserts: no recommended bid above the money actually left, rest-of-season
 discounted for weeks played and never rising down the board, a $0 rival never
 named as the competition, no going rate above the richest rival's budget, a
 "Bid $n" always affordable and above the going rate, a "Let it go" never a player
@@ -2971,6 +2971,59 @@ What changed in it, 2026-08-22:
   and `it-league.js` both ship full PPR, so "the sheet says $26" was a sheet
   nobody could open. Stories written before 2026-08-22 are not directly
   comparable for pass-catching backs and slot receivers.
+
+#### Plain English, and the words the desk may not use (2026-08-23)
+
+The complaint that produced this was one line: *"People won't know what we mean
+by 'the book.'"* It was made about the front page, where the lead card had gone
+out reading **"The book raises the running back floor 9% and guts the cheap
+tier"** over a dek that opened *"Rebuild the auction board on today's odds
+refresh and replacement-level running back jumps from 126.20 half-PPR points to
+137.66, a 9.1% lift that strips 23.5% off the RB25 to RB42 tier..."*. Forty-five
+words, five figures, and four pieces of in-house shorthand in the first
+sentence, on the site's front door.
+
+The headline rules above had already banned "the book" **in the headline**. They
+had not banned it anywhere else, which is how it survived in the dek and right
+through the article. So the prompt now carries two things the headline section
+cannot do on its own:
+
+- **"WRITE IT FOR A TENTH GRADER."** A stated reading level, with the test
+  written as a person rather than a formula: a smart sixteen-year-old who has
+  played one season reads the line once, at full speed, on a phone, and knows
+  what to do. Under it, the four mechanical rules that were already learned the
+  hard way — one idea per sentence, no sentence over 25 words, at most three
+  figures in a sentence (the player-and-price list excepted), never open on the
+  run's own process — plus the one that fixes the 126.20-to-137.66 sentence: **a
+  number only helps next to the thing it changes.**
+- **A banned-words table.** `the book`, `the sheet`, `the floor`, `replacement
+  level`, a bare `tier`, `lift`, `strips`, `guts`, `VORP`, `fade`, `the room`,
+  `chalk`, `leverage`, `spike week`, each with the plain phrase that replaces it.
+  It governs **the title, the dek, `body_html`, `method` and any `calls.why`** —
+  the scope is the point, because the earlier rule reached only the title. The
+  dek gets its own five-point checklist run on the exact string before the
+  INSERT, the same shape as the headline checks, because a rule read once at the
+  top is not a rule checked against a finished string.
+
+The prompt's own examples were scrubbed to match: the `calls.why` sample said
+"The book has Kansas City fifth", the actionable-output example said "sheet says
+$25", and `fade` was on the list of approved headline verbs while the table bans
+it. A prompt that models the shorthand teaches it.
+
+**The live row was rewritten too.** Story 31 (`rb-replacement-floor-2026-08-22-22`)
+was the one on the front page when the complaint landed. Its title and dek had
+already been made plainer once that night, from the 101-character "The book
+raises the running back floor 9%..." to a 108-character summary, but the article
+underneath still ran on the shorthand from the first paragraph on. Title, dek and
+body were rewritten in plain words with **every figure unchanged**: title to 82
+characters and to an instruction ("Cap J.K. Dobbins at $12 and bid Tetairoa
+McMillan to $33 as cheap backs get better"), "the book" to Vegas, "replacement
+level" to "the cheapest running back worth starting", "the RB25 to RB42 tier" to
+"backs ranked 25 to 42", UTC stamps to ET. Its `method` column is untouched and still reads in model
+vocabulary; that box is the receipts appendix, not front-page copy, and
+rewriting it by hand risks distorting the record it exists to preserve. If the
+desk should write that box in plain English too, the rule belongs in the prompt
+first, so the next run produces it rather than a later session editing it.
 
 ### Tests
 

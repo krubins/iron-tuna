@@ -265,7 +265,7 @@ console.log('\nthe page itself');
   ok('a dead API still leaves the standing copy', page.includes('unreachable right now'));
   ok('the reader is told analyst-above-consensus is not analyst-above-us',
      page.includes('is not the same as being above us'));
-  ok('dollar figures are labelled max bids', page.includes('max bids'));
+  ok('dollar figures are labelled as what you should bid', page.includes('what you should bid'));
   ok('the front page and the lead both link here',
      fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8').includes('/analyst-desk'));
   // This page is an index. Laying every entry out in full turned it into one
