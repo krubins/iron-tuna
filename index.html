@@ -351,8 +351,10 @@ input:focus, select:focus { border-color: var(--accent); }
      100% of whatever is actually left. */
   .modal-bg { padding: 10px 0 calc(70px + env(safe-area-inset-bottom, 0px)); }
   .modal { max-height: 100%; }
-  /* Keep Cancel / Save Settings thumb-reachable while the settings modal scrolls */
-  .settings-actions { position: sticky; bottom: -18px; margin-bottom: -18px; padding: 10px 0 18px; background: var(--bg-panel); z-index: 3; }
+  /* Keep every modal's action buttons thumb-reachable while the card scrolls.
+     The negative bottom/margin cancels the modal's own padding so the row sits
+     flush on the card's bottom edge instead of floating 18px above it. */
+  .modal-actions, .qd-actions { position: sticky; bottom: -18px; margin-bottom: -18px; padding: 10px 0 18px; background: var(--bg-panel); z-index: 3; }
   @keyframes msheetup { from { transform: translateY(100%); } to { transform: translateY(0); } }
   @keyframes msheetfade { from { opacity: 0; } to { opacity: 1; } }
 }
@@ -1562,11 +1564,9 @@ input:focus, select:focus { border-color: var(--accent); }
   .ch-depth { flex-wrap: wrap; row-gap: 6px; }
   .section-meta, .section-meta > span { flex-wrap: wrap; row-gap: 6px; }
   .bm-rounds3 { column-count: 1; }
-  /* Keep Cancel/Confirm thumb-reachable when the draft modal scrolls */
-  .qd-actions { position: sticky; bottom: -14px; background: var(--bg-panel); padding: 10px 0 14px; margin-bottom: -14px; z-index: 2; }
   .filter-pill { font-size: 12px; padding: 6px 10px; }
   .modal { width: 96%; padding: 14px; border-radius: var(--radius-md); }
-  .settings-actions { bottom: -14px; margin-bottom: -14px; padding-bottom: 14px; }
+  .modal-actions, .qd-actions { bottom: -14px; margin-bottom: -14px; padding-bottom: 14px; }
   .budget-stats, .bid-numbers { grid-template-columns: 1fr 1fr; }
   .team-card { padding: 10px 12px; }
   .assumptions-panel { flex-wrap: wrap; }
@@ -7448,6 +7448,7 @@ function AddPlayerModal({
       marginBottom: 12
     }
   }, noSpots && `${mgr.name} has no roster spots remaining.`, overMax && !noSpots && `Exceeds ${mgr.name}'s spending limit of $${teamMax}.`), React.createElement("div", {
+    className: "modal-actions",
     style: {
       display: 'flex',
       gap: 8
@@ -8428,7 +8429,7 @@ function SettingsModal({
     value: draft.scoring.rbReceptionPoints,
     onChange: e => update('scoring.rbReceptionPoints', parseFloat(e.target.value))
   })))), React.createElement("div", {
-    className: "settings-actions",
+    className: "modal-actions",
     style: {
       marginTop: 24,
       display: 'flex',
@@ -9150,7 +9151,9 @@ function TeamsBoard({
         marginTop: 6,
         lineHeight: 1.5
       }
-    }, "Starter forces them into your lineup; Reserve keeps them on the bench; Auto lets the model decide.")), React.createElement("button", {
+    }, "Starter forces them into your lineup; Reserve keeps them on the bench; Auto lets the model decide.")), React.createElement("div", {
+      className: "modal-actions"
+    }, React.createElement("button", {
       className: "btn-secondary",
       style: {
         marginTop: 16,
@@ -9162,7 +9165,7 @@ function TeamsBoard({
           setDetail(null);
         }
       }
-    }, "↩ Unassign, return to pool")));
+    }, "↩ Unassign, return to pool"))));
   })());
 }
 function TeamsModal({
@@ -12741,6 +12744,7 @@ function DraftResultsModal({ teams, players, config, onClose }) {
   }), React.createElement("div", {
     style: { fontSize: 11.5, color: 'var(--text-muted)', margin: '6px 0 12px' }
   }, "Separate addresses with commas. Recipients are BCC'd so nobody sees the others' emails."), React.createElement("div", {
+    className: "modal-actions",
     style: { display: 'flex', gap: 10 }
   }, React.createElement("button", { className: "rf-getcode", onClick: send, style: { flex: 1 } }, sent ? "Re-open email" : "Email the results"), React.createElement("button", {
     onClick: onClose, style: { flex: '0 0 auto', background: 'var(--bg-elev)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-secondary)', padding: '0 16px', cursor: 'pointer' }
@@ -20067,14 +20071,16 @@ function AuthModal({
     onKeyDown: e => {
       if (e.key === 'Enter') sendRestore();
     }
-  }), React.createElement("button", {
+  }), React.createElement("div", {
+    className: "modal-actions"
+  }, React.createElement("button", {
     className: "btn-draft",
     style: {
       width: '100%',
       marginTop: 10
     },
     onClick: sendRestore
-  }, "Email me a sign-in link"))));
+  }, "Email me a sign-in link")))));
 }
 function LegalModal({
   onClose
@@ -20206,14 +20212,16 @@ function ShareModal({
       fontSize: 13,
       lineHeight: 1.5
     }
-  }), React.createElement("button", {
+  }), React.createElement("div", {
+    className: "modal-actions"
+  }, React.createElement("button", {
     className: "btn-draft",
     style: {
       width: '100%',
       marginTop: 10
     },
     onClick: copy
-  }, copied ? 'Copied!' : 'Copy to clipboard')));
+  }, copied ? 'Copied!' : 'Copy to clipboard'))));
 }
 function OnboardingChecklist({
   steps,
@@ -23124,6 +23132,7 @@ function App() {
   }, "Projections updated"), React.createElement("p", {
     style: { fontSize: 14.5, lineHeight: 1.65, color: 'var(--text-secondary)', margin: '12px 0 18px' }
   }, "Player projections were refreshed with the latest numbers from our sources. You have custom rank reorders saved. Follow the updated rankings, or keep your own order pinned? You can switch anytime with the toggle on the cheat sheet — your reorder is kept either way."), React.createElement("div", {
+    className: "modal-actions",
     style: { display: 'flex', gap: 10, flexWrap: 'wrap' }
   }, React.createElement("button", {
     onClick: () => { setRankMode('updates'); setProjUpdateAsk(false); },
@@ -23136,15 +23145,15 @@ function App() {
   }, React.createElement("div", { className: "modal", style: { maxWidth: 420, textAlign: 'center' } },
     React.createElement("div", { className: "section-title" }, "Couldn\u2019t load player projections"),
     React.createElement("p", { style: { fontSize: 14.5, lineHeight: 1.6, color: 'var(--text-secondary)', margin: '12px 0 18px' } }, "The projections request didn\u2019t make it through \u2014 this is usually a network blip or an ad blocker. Your sheet can\u2019t build without it."),
-    React.createElement("button", {
+    React.createElement("div", { className: "modal-actions" }, React.createElement("button", {
       onClick: () => setProjRetryNonce(n => n + 1),
       style: { background: 'var(--positive, #2dd4a3)', color: '#04211c', border: 'none', borderRadius: 9, padding: '10px 22px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }
-    }, "Retry")
+    }, "Retry"))
   )), purchaseToast && React.createElement("div", {
     className: `purchase-toast no-print tone-${purchaseToast.tone}`,
     onClick: () => setPurchaseToast(null),
     title: "Click to dismiss"
-  }, purchaseToast.text), postBuyOpen && React.createElement("div", { className: "modal-bg no-print", onClick: () => setPostBuyOpen(false) }, React.createElement("div", { className: "modal", style: { maxWidth: 460, textAlign: 'center' }, onClick: e => e.stopPropagation() }, React.createElement("button", { className: "modal-close", onClick: () => setPostBuyOpen(false) }, "×"), React.createElement("div", { style: { fontSize: 40, marginBottom: 4 } }, "🎉"), React.createElement("div", { className: "section-title", style: { textAlign: 'center' } }, "You're in — Draft Day Mode unlocked"), React.createElement("p", { style: { fontSize: 13.5, color: 'var(--text-secondary)', margin: '6px 0 16px' } }, "Payment received. Your full draft tools are live on this device — custom scoring, the live Value Coach, and your own board."), React.createElement("div", { style: { background: 'rgba(45,212,163,0.08)', border: '1px solid rgba(45,212,163,0.35)', borderRadius: 12, padding: '14px 16px', textAlign: 'left', marginBottom: 14 } }, React.createElement("div", { style: { fontWeight: 700, color: 'var(--positive)', marginBottom: 4 } }, "Earn cash on every referral — no limit"), React.createElement("p", { style: { fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 } }, "Earn ", React.createElement("b", null, "$3 for every friend"), " who unlocks with your link — and they get $1 off.")), React.createElement("button", { className: "btn-draft", style: { width: '100%' }, onClick: () => { setPostBuyOpen(false); setReferOpen(true); } }, "Get my share link →"), React.createElement("button", { onClick: () => setPostBuyOpen(false), style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' } }, "Maybe later"))), !showSplash && isMobile && view !== 'board' && currentNomination && nomCardEl, overlay === 'pricing' && React.createElement(PricingModal, {
+  }, purchaseToast.text), postBuyOpen && React.createElement("div", { className: "modal-bg no-print", onClick: () => setPostBuyOpen(false) }, React.createElement("div", { className: "modal", style: { maxWidth: 460, textAlign: 'center' }, onClick: e => e.stopPropagation() }, React.createElement("button", { className: "modal-close", onClick: () => setPostBuyOpen(false) }, "×"), React.createElement("div", { style: { fontSize: 40, marginBottom: 4 } }, "🎉"), React.createElement("div", { className: "section-title", style: { textAlign: 'center' } }, "You're in — Draft Day Mode unlocked"), React.createElement("p", { style: { fontSize: 13.5, color: 'var(--text-secondary)', margin: '6px 0 16px' } }, "Payment received. Your full draft tools are live on this device — custom scoring, the live Value Coach, and your own board."), React.createElement("div", { style: { background: 'rgba(45,212,163,0.08)', border: '1px solid rgba(45,212,163,0.35)', borderRadius: 12, padding: '14px 16px', textAlign: 'left', marginBottom: 14 } }, React.createElement("div", { style: { fontWeight: 700, color: 'var(--positive)', marginBottom: 4 } }, "Earn cash on every referral — no limit"), React.createElement("p", { style: { fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 } }, "Earn ", React.createElement("b", null, "$3 for every friend"), " who unlocks with your link — and they get $1 off.")), React.createElement("div", { className: "modal-actions" }, React.createElement("button", { className: "btn-draft", style: { width: '100%' }, onClick: () => { setPostBuyOpen(false); setReferOpen(true); } }, "Get my share link →"), React.createElement("button", { onClick: () => setPostBuyOpen(false), style: { display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' } }, "Maybe later")))), !showSplash && isMobile && view !== 'board' && currentNomination && nomCardEl, overlay === 'pricing' && React.createElement(PricingModal, {
     account: account,
     onBuy: openCheckout,
     onClose: () => setOverlay(null),
