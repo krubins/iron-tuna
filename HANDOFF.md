@@ -2950,6 +2950,64 @@ tempting and is wrong: an English sentence can end in "is."
 title and dek as one case that asserts the two cannot disagree about one player.
 Five of its eight checks fail on the pre-fix library, verified by reverting.
 
+#### Restating between LEAGUES is not restating between MODELS (2026-08-23)
+
+The next report was "a story says bid $34 for Zay Flowers, not the sheet's $27,
+but the sheet has him far lower." It did, and everything in that sentence was
+working as designed.
+
+Story 29 (`zay-flowers-wr9-odds-2026-08-22-16`) was written at **half PPR** —
+its own method line says `rec*0.5` — and priced by **value over replacement**
+with the odds overlaid. It put Flowers at $26 on the consensus baseline and
+argued for $32. This board is a different animal on both counts: `it-league.js`
+prices at **full PPR** off a **fixed rank curve** with no odds, which puts
+Flowers at $20, WR14. A reader's own board said $21. So `boardRatio` came out at
+21/20 and `repriceCopy` multiplied the desk's half-PPR figures by 1.05, printing
+**$34 and $27 above a cheat sheet that reads $21**, under a heading that said
+"Your league".
+
+Nothing misfired. The ratio was computed correctly and applied to the right
+player. The defect is one assumption nobody had written down:
+
+> **`repriceCopy` assumed a dollar written by the desk was a dollar on this
+> board.** `mine / site` converts a price between LEAGUES, inside one model. It
+> cannot convert one between MODELS, and it has no way to notice it is being
+> asked to.
+
+Two ways that assumption is false, and they are different sizes:
+
+- **Scoring drift, which is fixable and now fixed.** The site moved to full PPR
+  between story 31 (2026-08-22 22:13) and story 32 (2026-08-23 01:13). Every row
+  before that carries half-PPR dollars. `staleModel(createdAt)` refuses to
+  restate them at all: they ship in the desk's own figures, `noteLabel()` calls
+  them "The desk's league" rather than the reader's, and `pricingNote()` names
+  the **scoring** as well as the league, because scoring is the half that makes
+  them disagree with the reader's sheet. All four call sites — the front-page
+  lead, its "Recent insights" list, the `/lead` article and its archive — now
+  pass the story's own `createdAt`. Without that date the guard is dead code, so
+  block 12 asserts each one passes it.
+- **Model drift, which is still open.** Even at matched scoring the desk prices
+  by value over replacement with the odds overlaid, and this board prices off
+  the rank curve without them. Story 32 is full PPR and current, and it still
+  quotes Cam Skattebo's consensus price at $32 where this board says $13. The
+  site's own rule is **one valuation** — the player card carries none of its own
+  and `tools/test-player-card.mjs` fails the build if it grows one — and the
+  desk is a second valuation that lives outside the browser where that test
+  cannot see it. Deciding what to do about that is a product call, not a
+  refactor: either the desk prices off the shipped board, or the board ships the
+  desk's prices, or a story's dollars are labelled as a different valuation
+  wherever they are printed.
+
+The general lesson, which is the one worth carrying: **a conversion needs to
+know what it is converting from.** `repriceCopy` knew the reader's league and
+assumed the rest. `MODEL_EPOCH` is a date constant standing in for a fact the
+row should carry itself; if the desk ever changes model again, the durable fix
+is a `model` column on `lead_story` written by the run, not a second constant.
+
+`tools/test-it-league.mjs` block 11c pins the refusal, the boundary date, the
+label, the note, and that a story with no date attached is still treated as
+current so nothing that used to be restated silently stopped being.
+
 **What it does not do:** ranks. "WR12 to WR9" is left alone, because reproducing
 those two ranks would mean reproducing the desk's own before-and-after
 projections, which the page does not have. A rank is the one number on the card
@@ -3093,6 +3151,8 @@ first, so the next run produces it rather than a later session editing it.
   Block 11b covers which player a figure belongs to: price-first and name-first
   phrasing, `and` as a separator rather than a link, a name written with
   initials, and a figure bound to a player the reader's board cannot price.
+  Block 11c covers the story written on the old scoring model: refused rather
+  than restated, labelled as the desk's, and the boundary date itself.
 - `tools/test-lead-story.mjs` — the clock conversions in both DST halves, the
   12-hour and no-minutes forms, the previous-day marker, the nonsense-hour
   refusal, the fallback-versus-`Intl` sweep, and `names` in the payload.

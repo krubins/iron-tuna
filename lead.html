@@ -267,22 +267,28 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
       var L = window.ITLeague || null;
       var names = (s.names && s.names.length) ? s.names
                 : (s.cast || []).map(function(c){ return c.n; });
-      var rp = function(t){ var r = L ? L.repriceCopy(t, names) : null; return r ? r.text : t; };
+      // The story's own date decides whether any of this is convertible at all:
+      // a story from before the site moved to full PPR is written in dollars
+      // this board cannot restate, and it-league.js says so rather than guessing.
+      var rp = function(t){ var r = L ? L.repriceCopy(t, names, s.createdAt) : null; return r ? r.text : t; };
       var restated = false;
       if (L) {
-        var probe = L.repriceCopy(s.title, names) || L.repriceCopy(s.dek || '', names)
-                 || L.repriceCopy(s.body || '', names);
+        var probe = L.repriceCopy(s.title, names, s.createdAt)
+                 || L.repriceCopy(s.dek || '', names, s.createdAt)
+                 || L.repriceCopy(s.body || '', names, s.createdAt);
         restated = !!probe;
       }
       document.title = rp(s.title) + ' | Iron Tuna';
       document.getElementById('title').textContent = rp(s.title);
       document.getElementById('dek').textContent = rp(s.dek || '');
       var yours = document.getElementById('yours');
-      var note = L ? L.pricingNote(restated) : '';
+      var note = L ? L.pricingNote(restated, s.createdAt) : '';
       if (note) {
         if (L.ensureStyle) L.ensureStyle();
-        yours.innerHTML = '<b>' + (L.has ? 'Your league' : 'Default league') + ':</b> ' + esc(note)
-          + (L.has ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
+        var stale = L.staleModel && L.staleModel(s.createdAt);
+        yours.innerHTML = '<b>' + esc(L.noteLabel ? L.noteLabel(s.createdAt)
+                                                  : (L.has ? 'Your league' : 'Default league')) + ':</b> ' + esc(note)
+          + ((L.has || stale) ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
         yours.hidden = false;
       }
       document.getElementById('cat').textContent = s.label || 'Insight';
@@ -360,7 +366,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
     // league nobody in the room plays is how this started.
     var LR = window.ITLeague || null;
     document.getElementById('recent').innerHTML = list.map(function(x){
-      var rr = LR ? LR.repriceCopy(x.title, x.names || (x.cast || []).map(function(c){ return c.n; })) : null;
+      var rr = LR ? LR.repriceCopy(x.title, x.names || (x.cast || []).map(function(c){ return c.n; }), x.createdAt) : null;
       return '<li><a href="' + esc(x.url) + '">' + esc(rr ? rr.text : x.title) + '</a>'
         + '<span class="rmeta">' + esc(x.label || 'Insight') + ' \u00b7 ' + esc(stamp(x.createdAt)) + '</span></li>';
     }).join('');

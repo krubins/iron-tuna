@@ -818,6 +818,53 @@ console.log('\na dollar figure belongs to the player it is bound to');
      off && /Dobbins at \$4\b/.test(off.text), off && off.text);
 }
 
+// ── 11c. a story written on a model this board cannot convert from ─────────
+// repriceCopy converts a price between LEAGUES. On 2026-08-23 the site changed
+// MODELS — receptions went from half a point to a full one — and story 29,
+// written the day before, priced Zay Flowers at $26 on its own half-PPR board
+// and argued for $32. This board prices him at $20 and a reader's at $21, so
+// the ratio came out 1.05 and the front page printed "bid $34, not the sheet's
+// $27" above a cheat sheet reading $21. The ratio was right. The input was
+// never on this board's scale.
+console.log('\na story from the old scoring model is not restated at all');
+{
+  const store = {
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
+    iron_tuna_values_v1: JSON.stringify({
+      ts: 1, teams: 12, budget: 200, format: 'auction',
+      players: [{ n: 'Zay Flowers', pos: 'WR', v: 21, pts: 230 }]
+    })
+  };
+  const { L } = load(store);
+  const title = "Zay Flowers moves to WR9: bid $32, not the sheet's $26.";
+  const HALF = Date.parse('2026-08-22T16:12:19Z');   // story 29, rec*0.5
+  const FULL = Date.parse('2026-08-23T01:13:21Z');   // story 32, rec*1.0
+
+  ok('the story that shipped the $34 is no longer restated',
+     L.repriceCopy(title, ['Zay Flowers'], HALF) === null);
+  ok('a story on the current model still is',
+     /bid \$34/.test((L.repriceCopy(title, ['Zay Flowers'], FULL) || {}).text || ''),
+     (L.repriceCopy(title, ['Zay Flowers'], FULL) || {}).text);
+  ok('the boundary is the day the scoring changed, not a guess about it',
+     L.staleModel(Date.parse('2026-08-22T23:59:59Z')) === true
+     && L.staleModel(Date.parse('2026-08-23T00:00:00Z')) === false);
+  ok('a story with no date on it is treated as current, as every caller was before',
+     L.staleModel(undefined) === false && L.staleModel(0) === false
+     && /bid \$34/.test((L.repriceCopy(title, ['Zay Flowers']) || {}).text || ''));
+
+  // The label is the half that made it a lie rather than a mismatch: these are
+  // the desk's dollars however much league the reader has saved.
+  ok('and they are never labelled as the reader’s own',
+     L.noteLabel(HALF) === 'The desk’s league' && L.noteLabel(FULL) === 'Your league',
+     L.noteLabel(HALF));
+  ok('the note says which SCORING they are, not only which league',
+     /half PPR/.test(L.pricingNote(false, HALF)) && /full PPR/.test(L.pricingNote(false, HALF)),
+     L.pricingNote(false, HALF));
+  ok('and does not claim anything was restated for the reader',
+     !/Restated for/.test(L.pricingNote(false, HALF)) && !/your /.test(L.pricingNote(false, HALF)),
+     L.pricingNote(false, HALF));
+}
+
 // ── 12. the pages that print the desk's dollars all go through it ──────────
 console.log('\nthe front page and /lead restate before they paint');
 {
@@ -825,6 +872,15 @@ console.log('\nthe front page and /lead restate before they paint');
   ok('the front-page lead restates the headline', /repriceCopy\(s\.title/.test(paint));
   ok('and the dek with it', /repriceCopy\(s\.dek/.test(paint));
   ok('and says whose league the numbers are', /pricingNote\(/.test(paint));
+  // Without the date the guard is dead code: every story looks current.
+  ok('and hands the story\u2019s own date to both, so an old-model story is refused',
+     /repriceCopy\(s\.title, names, s\.createdAt\)/.test(paint)
+     && /repriceCopy\(s\.dek \|\| '', names, s\.createdAt\)/.test(paint)
+     && /pricingNote\([^;]*s\.createdAt\)/.test(paint));
+  ok('and labels the note off the same date rather than off L.has alone',
+     /noteLabel\(s\.createdAt\)/.test(paint));
+  ok('the retired headlines under it carry their own dates too',
+     /repriceCopy\(o\.title,[\s\S]{0,120}?o\.createdAt\)/.test(front));
   ok('the old "nothing to re-price" branch is gone',
      !/Nothing to re-price/.test(front));
 
@@ -832,6 +888,12 @@ console.log('\nthe front page and /lead restate before they paint');
   ok('/lead loads the library at all', page.includes('src="/it-league.js"'));
   ok('/lead restates the article body, not just the headline', /rp\(s\.body/.test(page));
   ok('/lead says whose league the numbers are', /pricingNote\(/.test(page));
+  ok('/lead passes the story\u2019s date to the restatement and the note',
+     /repriceCopy\(t, names, s\.createdAt\)/.test(page)
+     && /pricingNote\(restated, s\.createdAt\)/.test(page)
+     && /noteLabel\(s\.createdAt\)/.test(page));
+  ok('/lead\u2019s archive list carries them as well',
+     /repriceCopy\(x\.title,[\s\S]{0,120}?x\.createdAt\)/.test(page));
 }
 
 // ── 13. the preview tool still finds the copy it previews ──────────────────

@@ -1457,8 +1457,11 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     // line below says whose league the numbers are.
     var names = (s.names && s.names.length) ? s.names
               : (s.cast || []).map(function(c){ return c.n; });
-    var rt = L ? L.repriceCopy(s.title, names) : null;
-    var rd = L ? L.repriceCopy(s.dek || '', names) : null;
+    // The story's own date rides along: a story written before the site moved
+    // to full PPR is priced in a currency this board cannot convert from, and
+    // it-league.js refuses rather than nudging it 5% and calling it yours.
+    var rt = L ? L.repriceCopy(s.title, names, s.createdAt) : null;
+    var rd = L ? L.repriceCopy(s.dek || '', names, s.createdAt) : null;
     document.getElementById('leadTitle').innerHTML =
       '<a href="' + esc(s.url) + '">' + esc(rt ? rt.text : s.title) + '</a>';
     // The dek IS the finding, in the desk's own words. It is not a "play" line
@@ -1470,11 +1473,13 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     // of it; a reader whose league happens to match the desk's is told that
     // rather than left wondering whether anything happened.
     var yours = document.getElementById('leadYours');
-    var note = L ? L.pricingNote(!!(rt || rd)) : '';
+    var note = L ? L.pricingNote(!!(rt || rd), s.createdAt) : '';
     if (note) {
       if (L.ensureStyle) L.ensureStyle();
-      yours.innerHTML = '<b>' + (L.has ? 'Your league' : 'Default league') + ':</b> ' + esc(note)
-        + (L.has ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
+      var stale = L.staleModel && L.staleModel(s.createdAt);
+      yours.innerHTML = '<b>' + esc(L.noteLabel ? L.noteLabel(s.createdAt)
+                                                : (L.has ? 'Your league' : 'Default league')) + ':</b> ' + esc(note)
+        + ((L.has || stale) ? '' : ' <a href="/auctiondraft?screen=cheat">Set up your league &rarr;</a>');
     } else { yours.innerHTML = ''; }
     yours.hidden = !note;
     renderArt(s);
@@ -1490,7 +1495,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
         // Retired stories quote the same one-league dollars the lead does, so
         // they are restated the same way rather than left as the only prices on
         // the card still written in somebody else's money.
-        var rr = L ? L.repriceCopy(o.title, o.names || (o.cast || []).map(function(c){ return c.n; })) : null;
+        var rr = L ? L.repriceCopy(o.title, o.names || (o.cast || []).map(function(c){ return c.n; }), o.createdAt) : null;
         ah += '<li><a href="' + esc(o.url) + '">' + esc(rr ? rr.text : o.title) + '</a></li>';
       });
       also.innerHTML = ah + '</ul>';
