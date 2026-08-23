@@ -601,9 +601,15 @@ img{max-width:100%}
 .tr span em{font-style:italic;color:#c3cfcb}
 @media(max-width:900px){
   .hero-band .hb-grid{grid-template-columns:1fr;gap:26px;padding-top:32px;padding-bottom:30px}
-  .trio .wrap{grid-template-columns:1fr}
-  .tr{border-left:0;border-top:1px solid rgba(255,255,255,.09);padding:16px 18px}
-  .tr:first-child{border-top:0}
+  /* The trio stacked to three full-width blocks here — 376px, a fifth of
+     everything above the first section, spent on three sentences. As a
+     snap-scrolling row it keeps all three intact at the height of one. The 82%
+     basis leaves the next card's edge showing, which is what tells a reader the
+     row moves; a full-width basis reads as a single static block and the other
+     two are never found. */
+  .trio .wrap{grid-template-columns:none;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .trio .wrap::-webkit-scrollbar{display:none}
+  .tr{flex:0 0 min(82%, 340px);scroll-snap-align:start;padding:16px 18px}
 }
 
 /* ── the tool grid ────────────────────────────────────────────────────────
@@ -709,7 +715,10 @@ img{max-width:100%}
       <figcaption class="hb-cap">The cheat sheet, priced for a 12-team $200 auction.</figcaption>
     </figure>
   </div>
-  <div class="trio"><div class="wrap">
+  <!-- Scrolls sideways under 900px (see .trio .wrap below), so the region is
+       focusable: a scroll container that only a pointer can move is unreachable
+       by keyboard. -->
+  <div class="trio"><div class="wrap" tabindex="0" role="group" aria-label="The three numbers on every player">
     <div class="tr"><i>Proj</i><b>The going rate</b><span>What the room is likely to pay for him, on the curve your league&rsquo;s budget actually produces.</span></div>
     <div class="tr on"><i>Value</i><b>What he is worth</b><span>His points converted to dollars against a replacement starter &mdash; the honest price, whatever the room does.</span></div>
     <div class="tr"><i>You</i><b>Your max bid</b><span>What one more dollar buys <em>your</em> lineup, given the roster you have already bought and the money still in your pocket.</span></div>
@@ -1089,7 +1098,12 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   // at 00/03/06/09/12/15/18/21 UTC. A reader who lands twice inside one slot
   // gets one consistent front page; a reader who comes back later gets a new one.
   var SLOT_MS = 3 * 60 * 60 * 1000;
-  var LEAD_WINDOW = 8;              // most recent N deep dives stay in rotation
+  // Five, not eight. Every `deep` story is a Market story, so the lead rotation
+  // and the Market module draw from one pool of fifteen and whatever the lead
+  // holds, the module cannot show. At eight the module was down to stories three
+  // weeks old while the lead sat on the newest eight. Five keeps the rotation
+  // varied and hands the module back the sixth, seventh and eighth newest.
+  var LEAD_WINDOW = 5;              // most recent N deep dives stay in rotation
   var deep = live.filter(function(s){ return s.deep; });
   // Fall back to the latest drop if no deep dive has unlocked yet, so the lead
   // is never empty on a fresh season.
@@ -1098,9 +1112,10 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
                             : live.filter(function(s){ return s.date === latestDate; });
 
   // A plain `slot % pool` would lock the rotation to the time of day whenever the
-  // pool divides evenly into the 8 slots a day (which it does at a full
-  // LEAD_WINDOW of 8): a reader who always checks at 4pm would see the same deep
-  // dive forever. Advancing one extra step per completed pass rotates the phase
+  // pool divides evenly into the 8 slots a day: a reader who always checks at 4pm
+  // would see the same deep dive forever. A full LEAD_WINDOW of 5 is not such a
+  // pool, but the smaller ones it passes through early in a season are — 1, 2 and
+  // 4 all divide 8 — so the correction still earns its place. Advancing one extra step per completed pass rotates the phase
   // daily, so a fixed-hour reader gets a different lead each day and works
   // through the whole pool. The shift is skipped for tiny pools, where it could
   // land on the same story twice in a row instead of moving on.
