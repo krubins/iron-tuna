@@ -713,10 +713,14 @@ img{max-width:100%}
 </section>
 
 <div class="ribbon"><div class="wrap">
+  <!-- Ribbon order tracks the page order. The Build moved up because it is the
+       proof the rest of the page is arguing for — a solved roster with the money
+       on it — and it was sitting eight screens down on a phone behind two
+       sections of prose. -->
   <a href="#today">Today</a>
+  <a href="#build">The Build</a>
   <a href="#thepick">The Pick</a>
   <a href="#vegas">Vegas</a>
-  <a href="#build">The Build</a>
   <a href="#positions">Position Intel</a>
   <a href="#allocation">Allocation</a>
   <a href="#camp">Camp</a>
@@ -781,6 +785,23 @@ img{max-width:100%}
     </aside>
   </div>
 
+  <div class="sec-head" id="build"><h2>The Build<span class="ed-tag" id="buildTag" hidden></span></h2><a class="sec-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>
+  <p class="sec-sub" id="buildSub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
+  <div class="build-wrap">
+    <div class="build-main">
+      <h3 id="buildHeadline">The best team <em id="buildBudget">$200</em> can buy</h3>
+      <p class="build-dek" id="buildDek"></p>
+      <div class="roster" id="rosterStrip"></div>
+      <p class="bench-line" id="benchLine"></p>
+      <div class="spend-bar" id="spendBar"></div>
+      <div class="spend-key" id="spendKey"></div>
+      <div class="build-meta" id="buildMeta"></div>
+      <p class="bnote" id="buildCustomNote"></p>
+    </div>
+    <aside class="build-side" id="buildSide"></aside>
+  </div>
+  <div class="build-cards" id="buildCards"></div>
+
   <div class="sec-head" id="thepick"><h2>The Pick</h2><a class="sec-more" href="/the-pick">Every entry &rarr;</a></div>
   <p class="sec-sub" id="pickSub">One story a day, each one arguing a single idea &mdash; scarcity, scoring settings, tier cliffs &mdash; with the projection numbers that prove it and the player it tells you to buy.</p>
   <div class="pick-band" id="pickBand"></div>
@@ -804,22 +825,6 @@ img{max-width:100%}
     <div class="vs-case" id="vsCase"><p class="vs-empty">Loading the current case&hellip;</p></div>
   </div>
 
-  <div class="sec-head" id="build"><h2>The Build<span class="ed-tag" id="buildTag" hidden></span></h2><a class="sec-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>
-  <p class="sec-sub" id="buildSub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
-  <div class="build-wrap">
-    <div class="build-main">
-      <h3 id="buildHeadline">The best team <em id="buildBudget">$200</em> can buy</h3>
-      <p class="build-dek" id="buildDek"></p>
-      <div class="roster" id="rosterStrip"></div>
-      <p class="bench-line" id="benchLine"></p>
-      <div class="spend-bar" id="spendBar"></div>
-      <div class="spend-key" id="spendKey"></div>
-      <div class="build-meta" id="buildMeta"></div>
-      <p class="bnote" id="buildCustomNote"></p>
-    </div>
-    <aside class="build-side" id="buildSide"></aside>
-  </div>
-  <div class="build-cards" id="buildCards"></div>
 
   <div class="sec-head" id="positions"><h2>Position Intel</h2>
     <a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
@@ -839,12 +844,12 @@ img{max-width:100%}
     <div class="alloc-card"><h3><a href="/auctiondraft">Budget Planner</a></h3><p>The live tool: a budget-aware planner that finds the dollar allocation producing your highest-scoring lineup.</p><a class="go" href="/auctiondraft">Open the planner &rarr;</a></div>
   </div>
 
-  <div class="sec-head" id="camp"><h2>Training Camp &amp; Preseason</h2></div>
+  <div class="sec-head" id="camp"><h2>Training Camp &amp; Preseason</h2><a class="sec-more" href="/auction-watch">Every report &rarr;</a></div>
   <p class="camp-note" id="campNote">Verified, auction-relevant signals from camps and preseason games. This desk updates as news breaks — <b>latest report: August 22, 2026</b>.</p>
   <div class="week-strip" id="weekStrip"></div>
   <div class="camp-grid">
     <div class="camp-feat" id="campFeat"><span><span class="badge badge-pos">Latest report</span></span><h3><a href="/auction-watch-2026-08-22">Auction Watch: August 22, 2026</a></h3><p>Verified, auction-relevant player signals from August 22: Jayden Higgins' season-ending ACL tear and who it helps in Houston, Tre Tucker's clear WR1 role in Las Vegas, Trevor Etienne's growing passing-down role behind Jonathon Brooks, Erick All stepping into Cincinnati's tight end job, and Tyler Warren's minor groin injury.</p><a class="lead-link" href="/auction-watch-2026-08-22">Read the report &rarr;</a></div>
-    <ul class="camp-list" id="campList"><li><span class="cd">Aug 21</span><a href="/auction-watch-2026-08-21">Auction Watch: August 21, 2026</a></li><li><span class="cd">Aug 18</span><a href="/auction-watch-2026-08-18">Auction Watch: August 18, 2026</a></li><li><span class="cd">Jul 26</span><a href="/auction-watch-2026-07-26">Auction Watch: July 26, 2026</a></li><li><span class="cd">Jul 22</span><a href="/auction-watch-2026-07-22">Auction Watch: July 22, 2026</a></li><li><span class="cd">Jul 21</span><a href="/auction-watch-2026-07-21">Auction Watch: July 21, 2026</a></li><li><span class="cd">Jul 20</span><a href="/auction-watch-2026-07-20">Auction Watch: July 20, 2026</a></li><li><span class="cd">Jul 15</span><a href="/auction-watch-2026-07-15">Auction Watch: July 15, 2026</a></li><li><span class="cd">Jul 12</span><a href="/auction-watch-2026-07-12">Auction Watch: July 12, 2026</a></li><li><span class="cd">Jul 11</span><a href="/auction-watch-2026-07-11">Auction Watch: July 11, 2026</a></li><li><span class="cd">Jul 9</span><a href="/auction-watch-2026-07-09">Auction Watch: July 9, 2026</a></li><li><span class="cd">Jul 5</span><a href="/auction-watch-2026-07-05">Auction Watch: July 5, 2026</a></li><li><span class="cd">Jul 4</span><a href="/auction-watch-2026-07-04">Auction Watch: July 4, 2026</a></li><li><span class="cd">Jul 3</span><a href="/auction-watch-2026-07-03">Auction Watch: July 3, 2026</a></li><li><span class="cd">Jul 2</span><a href="/auction-watch-2026-07-02">Auction Watch: July 2, 2026</a></li><li><span class="cd">Jul 1</span><a href="/auction-watch-2026-07-01">Auction Watch: July 1, 2026</a></li><li><span class="cd">Jun 29</span><a href="/auction-watch-2026-06-29">Auction Watch: June 29, 2026</a></li><li><span class="cd">Jun 28</span><a href="/auction-watch-2026-06-28">Auction Watch: June 28, 2026</a></li><li><span class="cd">Jun 26</span><a href="/auction-watch-2026-06-26">Auction Watch: June 26, 2026</a></li><li><span class="cd">Jun 25</span><a href="/auction-watch-2026-06-25">Auction Watch: June 25, 2026</a></li><li><span class="cd">Jun 24</span><a href="/auction-watch-2026-06-24">Auction Watch: June 24, 2026</a></li><li><span class="cd">Jun 23</span><a href="/auction-watch-2026-06-23">Auction Watch: June 23, 2026</a></li><li><span class="cd">Jun 22</span><a href="/auction-watch-2026-06-22">Auction Watch: June 22, 2026</a></li><li><span class="cd">Jun 21</span><a href="/auction-watch-2026-06-21">Auction Watch: June 21, 2026</a></li><li><span class="cd">Jun 19</span><a href="/auction-watch-2026-06-19">Auction Watch: June 19, 2026</a></li></ul>
+    <ul class="camp-list" id="campList"><li><span class="cd">Aug 21</span><a href="/auction-watch-2026-08-21">Auction Watch: August 21, 2026</a></li><li><span class="cd">Aug 18</span><a href="/auction-watch-2026-08-18">Auction Watch: August 18, 2026</a></li><li><span class="cd">Jul 26</span><a href="/auction-watch-2026-07-26">Auction Watch: July 26, 2026</a></li><li><span class="cd">Jul 22</span><a href="/auction-watch-2026-07-22">Auction Watch: July 22, 2026</a></li></ul>
   </div>
 
   <div class="tools-band">
@@ -1817,8 +1822,14 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     var pos = pair[0];
     var all = live.filter(function(s){ return s.pos === pos; });
     posAll[pos] = all;
+    // Two per position, three on the double-width Market module — down from
+    // three and five. The library behind these keeps growing (50 live calls and
+    // counting) while the page's job does not: show the newest, say how many
+    // more there are, and send the reader to /auction-insights for the rest. The
+    // count badge beside each heading is what makes the trim honest — "QB 10"
+    // over two cards reads as a library, where ten cards read as a wall.
     var pick = all.filter(function(s){ return !claimed[s.url]; })
-                  .slice(0, pos === 'Market' ? 5 : 3);
+                  .slice(0, pos === 'Market' ? 3 : 2);
     pick.forEach(function(s){ claimed[s.url] = 1; });
     posPick[pos] = pick;
   });
@@ -2201,7 +2212,11 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     // run JavaScript can still reach the camp reports. Clear it before rebuilding,
     // or the client render appends a second copy of every row.
     cl.innerHTML = '';
-    REPORTS.slice(1).forEach(function(r){
+    // Four, matching what build-front.mjs writes into the static list above. The
+    // full run lives at /auction-watch; printing all 25 here made the desk a
+    // directory listing of near-identical link text and the densest block on the
+    // page. Keep this number and CAMP_ON_FRONT in build-front.mjs in step.
+    REPORTS.slice(1, 5).forEach(function(r){
       var el = document.createElement('li');
       el.innerHTML = '<span class="cd">' + fmtShort(r.date) + '</span><a href="' + r.url + '">' + esc(r.title) + '</a>';
       cl.appendChild(el);

@@ -235,9 +235,11 @@ function buildGraph(file, html) {
       },
       crumbs([
         { name: 'Iron Tuna', url: SITE + '/' },
-        // Camp reports have no index page of their own; the front page's camp
-        // desk (#camp) is where every one of them is listed.
-        { name: section, url: SITE + (section === 'Insights' ? '/insights' : '/#camp') },
+        // Camp reports used to have no index page of their own, so this pointed
+        // at the front page's camp desk (/#camp) — which listed all of them only
+        // because the desk was printing the entire run. The desk now shows the
+        // latest five and /auction-watch is the archive, so that is the parent.
+        { name: section, url: SITE + (section === 'Insights' ? '/insights' : '/auction-watch') },
         { name },
       ]),
     ];
@@ -335,6 +337,26 @@ function buildGraph(file, html) {
         }),
       },
       crumbs([{ name: 'Iron Tuna', url: SITE + '/' }, { name: 'Guides' }]),
+    ];
+  }
+
+  // The camp archive. Its rows are written by build-front.mjs from the report
+  // pages themselves, so the CollectionPage is read back off that same list
+  // rather than re-scanning the directory — the page and its structured data
+  // cannot then disagree about what has been published.
+  if (file === 'auction-watch.html') {
+    const rows = [...html.matchAll(/<li><span class="wd">[^<]*<\/span><a href="([^"]+)">([\s\S]*?)<\/a>/g)];
+    return [
+      {
+        '@type': 'CollectionPage',
+        name, description, url, inLanguage: 'en-US', publisher: PUBLISHER,
+        hasPart: rows.map((m) => ({
+          '@type': 'Article',
+          headline: decode(m[2].replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim(),
+          url: SITE + m[1],
+        })),
+      },
+      crumbs([{ name: 'Iron Tuna', url: SITE + '/' }, { name: 'Camp Reports' }]),
     ];
   }
 

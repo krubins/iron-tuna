@@ -540,7 +540,13 @@ if (reports.length) {
     + `<h3><a href="${f.url}">${escText(f.title)}</a></h3>`
     + `<p>${escText(f.desc)}</p>`
     + `<a class="lead-link" href="${f.url}">Read the report &rarr;</a>`;
-  const list = reports.slice(1)
+  // Four, not all of them. The desk used to print every report ever published —
+  // 24 rows of "Auction Watch: <date>" reaching back to June, which is a
+  // directory listing rather than a section, and the single densest block of
+  // near-identical link text on the page. The archive at /auction-watch is where
+  // the run lives now; the front page carries the latest and the last four.
+  const CAMP_ON_FRONT = 4;
+  const list = reports.slice(1, 1 + CAMP_ON_FRONT)
     .map(r => `<li><span class="cd">${fmtShort(r.date)}</span><a href="${r.url}">${escText(r.title)}</a></li>`)
     .join('');
   front = front.replace(/<p class="camp-note" id="campNote">[\s\S]*?<\/p>/, `<p class="camp-note" id="campNote">${note}</p>`);
@@ -551,6 +557,29 @@ if (reports.length) {
     process.exit(1);
   }
 }
+// ── the camp archive: /auction-watch ─────────────────────────────────────────
+// Every report, newest first, on a page of its own. The front page's desk shows
+// the latest plus four; this is where the other twenty live, and it is what the
+// "Every report" link and the camp reports' own breadcrumb (build-seo.mjs) point
+// at. Generated from the same scan, so the two can never disagree about what has
+// been published.
+if (reports.length) {
+  const watchFile = path.join(root, 'auction-watch.html');
+  const watchBefore = fs.readFileSync(watchFile, 'utf8');
+  const rows = reports
+    .map(r => `<li><span class="wd">${fmtShort(r.date)}</span><a href="${r.url}">${escText(r.title)}</a>`
+      + `<p>${escText(r.desc)}</p></li>`)
+    .join('');
+  const watchNext = watchBefore.replace(
+    /<ul class="watch-list" id="watchList">[\s\S]*?<\/ul>/,
+    `<ul class="watch-list" id="watchList">${rows}</ul>`);
+  if (!watchNext.includes(`<ul class="watch-list" id="watchList">${rows}</ul>`)) {
+    console.error('ABORT: could not write the camp archive into auction-watch.html');
+    process.exit(1);
+  }
+  if (watchNext !== watchBefore) fs.writeFileSync(watchFile, watchNext);
+}
+
 front = front.replace(/var PRESEASON = \[[\s\S]*?\];\n/, 'var PRESEASON = ' + JSON.stringify(preseason) + ';\n');
 if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PICKS = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
   console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PICKS/PRESEASON declarations in front.html');
