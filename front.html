@@ -29,6 +29,13 @@
 <style>
 :root{--brand:#0e7c63;--brand-dark:#0a6151;--brand-tint:#e9f5f1;--brand-line:#bfe3d8;--value-red:#c8322b;--ink:#0f1719;--ink-2:#3f4e58;--ink-3:#6d7c86;--line:#e1e7ea;--bg:#f4f7f7;--card:#ffffff;--mast:#0b1614;--gold:#f2a900;--gold-ink:#7a5300;--teal:#2dd4a3}
 *{box-sizing:border-box;margin:0;padding:0}
+/* The UA sheet's [hidden] is specificity (0,1,0) — the same as any class — and
+   loses to an author sheet at a tie, so `.vs-wrap{display:grid}` kept rendering
+   a section the script had hidden. This repo had already patched that one class
+   at a time (.ed-tag, .lead-ctrls, .lead-media below); this makes the attribute
+   mean what it says everywhere, including on the sections that hide themselves
+   when their feed has nothing to show. */
+[hidden]{display:none !important}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
@@ -113,6 +120,8 @@ img{max-width:100%}
 
 /* ── hero ── */
 .hero{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:18px;margin-top:20px;align-items:start}
+/* No rail to sit beside: the lead takes the row rather than leaving a hole. */
+.hero.solo{grid-template-columns:minmax(0,1fr)}
 .lead{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;position:relative}
 .lead-body{padding:26px 28px 20px;display:flex;flex-direction:column;gap:12px;min-height:0}
 .lead-kicker{display:flex;gap:8px;align-items:center}
@@ -416,7 +425,6 @@ img{max-width:100%}
 .week li{font-size:12px;color:var(--ink-2);padding-left:13px;position:relative;line-height:1.42}
 .week li::before{content:'';position:absolute;left:0;top:6px;width:4px;height:4px;border-radius:50%;background:var(--brand)}
 .week .go{margin-top:auto;padding-top:4px;display:inline-block;font-size:12px;font-weight:700;color:var(--brand);letter-spacing:.04em}
-.week-empty{grid-column:1/-1;background:var(--card);border:1px dashed var(--line);border-radius:6px;padding:16px 18px;font-size:13px;color:var(--ink-2);line-height:1.55}
 
 @media (max-width:900px){.build-wrap{grid-template-columns:1fr}.roster{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media (max-width:560px){.roster{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -777,9 +785,10 @@ img{max-width:100%}
   <p class="sec-sub" id="pickSub">One story a day, each one arguing a single idea &mdash; scarcity, scoring settings, tier cliffs &mdash; with the projection numbers that prove it and the player it tells you to buy.</p>
   <div class="pick-band" id="pickBand"></div>
 
-  <div class="sec-head" id="vegas"><h2>Vegas vs. Consensus</h2><a class="sec-more" href="/auctiondraft?screen=cheat">See it on your cheat sheet &rarr;</a></div>
-  <p class="sec-sub">Iron Tuna prices every player against the betting market. Almost nobody else does. These are the players where that changes the number &mdash; recomputed from the live lines, with a new case every six hours.</p>
-  <div class="vs-wrap">
+  <!-- Hidden until the odds feed actually has a case to make: see setVegasVisible(). -->
+  <div class="sec-head" id="vegas" hidden><h2>Vegas vs. Consensus</h2><a class="sec-more" href="/auctiondraft?screen=cheat">See it on your cheat sheet &rarr;</a></div>
+  <p class="sec-sub" id="vegasSub" hidden>Iron Tuna prices every player against the betting market. Almost nobody else does. These are the players where that changes the number &mdash; recomputed from the live lines, with a new case every six hours.</p>
+  <div class="vs-wrap" id="vegasWrap" hidden>
     <div class="vs-thesis">
       <h3>Why the odds get a vote</h3>
       <p>A sportsbook posts a number with <b>its own money behind it</b>. Get it wrong and sharp bettors take the other side until it moves, so every line is priced off repeatable trends, statistical modelling, and injury and usage news the moment it lands &mdash; then corrected in public, continuously.</p>
@@ -875,6 +884,26 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   function fmtShort(d){ var p = d.split('-'); return MONTHS[+p[1]-1].slice(0,3) + ' ' + (+p[2]); }
   function viewCls(s){ return s.viewCls === 'under' ? 'badge-under' : s.viewCls === 'over' ? 'badge-over' : 'badge-fair'; }
   function esc(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+  // ── a section with nothing in it is not a section ─────────────────────────
+  // Hiding a section means hiding its head, its dek, its body AND the ribbon
+  // jump-link that would otherwise scroll a reader down to nothing. That is the
+  // same move in three places on this page, so it lives here rather than three
+  // times over. Sections start hidden in the markup wherever their content is
+  // fetched or computed, so a dead one never flashes up before it is removed.
+  function setSectionVisible(ids, anchor, on){
+    ids.forEach(function(id){
+      var e = document.getElementById(id);
+      if (e) e.hidden = !on;
+    });
+    if (anchor) {
+      var jump = document.querySelector('.ribbon a[href="#' + anchor + '"]');
+      if (jump) jump.hidden = !on;
+    }
+    // The ribbon's overflow fade is measured, so it has to re-measure when a
+    // link joins or leaves the row. Hoisted var, assigned during init below.
+    if (typeof syncRibbon === 'function') syncRibbon();
+  }
 
   // ── the reading lens ──
   // Every "Your league" line on this page has to commit to a draft type: an
@@ -1314,7 +1343,14 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     document.getElementById('leadLink').setAttribute('href', s.url);
     document.getElementById('leadDate').textContent = fmtDate(s.date) + ' drop'
       + (isDeepLead && !pinned ? ' · next deep dive in ' + fmtCountdown(msToNextSlot()) : '');
+    // "More deep dives" over a pool of one is the lead's own headline printed a
+    // second time under the word "more", and the dots and arrows beside it are a
+    // carousel with nowhere to go. Both belong to a rotation, so both wait for
+    // one to exist.
     var also = document.getElementById('leadAlso');
+    var solo = leadPool.length < 2;
+    document.getElementById('leadCtrls').hidden = solo;
+    if (solo) { also.innerHTML = ''; return; }
     var ah = '<span class="la-label">' + (isDeepLead ? 'More deep dives' : 'Also in this drop') + '</span><ul>';
     leadPool.forEach(function(o, k){
       ah += '<li><a class="' + (k === i ? 'on' : '') + '" href="' + o.url + '">' + esc(o.title) + '</a></li>';
@@ -1581,16 +1617,22 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     return m;
   }
 
+  // The column's argument needs a case to make. A 294-word methodology essay
+  // standing over "no case on the board right now" was the most expensive empty
+  // state on the page: a full screen of explanation with nothing to explain, and
+  // it rendered whenever the odds feed had no disagreement worth printing. The
+  // section now leaves the page entirely — head, dek, thesis and its ribbon
+  // jump-link with it — and returns the moment a case lands. It never invents
+  // one; the whole point of the column is that the numbers are earned.
+  function setVegasVisible(on) {
+    setSectionVisible(['vegas', 'vegasSub', 'vegasWrap'], 'vegas', on);
+  }
+
   function renderCase() {
     var host = document.getElementById('vsCase');
     if (!host) return;
-    if (!vsItems.length) {
-      // No overlay yet, or the pull is mid-refresh. Say so plainly rather than
-      // inventing a case — the column's whole argument is that numbers are earned.
-      host.innerHTML = '<p class="vs-empty">No case on the board right now. The odds feed refreshes daily; ' +
-        'when the market and the consensus rankings disagree by enough to matter, the next case appears here.</p>';
-      return;
-    }
+    if (!vsItems.length) { setVegasVisible(false); return; }
+    setVegasVisible(true);
     var i = ((vsIdx % vsItems.length) + vsItems.length) % vsItems.length;
     var it = vsItems[i];
     var my = myCase(it);
@@ -1749,23 +1791,54 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     })
     .catch(function () { vsItems = []; renderCase(); });
 
-  // ── top headlines rail: strictly newest-first across BOTH desks ───────────
-  // Camp reports and insight calls are merged into one feed and sorted by date,
-  // rather than pinning the newest camp report to the top: a July camp report
-  // must not outrank an August drop just because it came from the other desk.
-  // Dates are ISO (YYYY-MM-DD) so a plain string compare is a date compare.
+  // ── one story, one slot ───────────────────────────────────────────────────
+  // Every section below used to draw from `live` independently, so one call could
+  // land in the lead rotation, a position module AND the rail at once — 101 links
+  // in <main> resolving to 66 destinations, with the top story on the page
+  // reachable four separate ways before a reader had scrolled past it.
+  //
+  // The Market module was the worst of it, and structurally so: every `deep`
+  // story is a Market story, so the five cards it drew were a strict subset of
+  // the lead's eight. The section could not say anything the top of the page had
+  // not already said.
+  //
+  // Sections now claim their stories in reading order — the lead first, then the
+  // position modules, then the rail takes what is left. A section that comes up
+  // short carries fewer cards; nothing is padded with a repeat.
+  var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
+  var claimed = {};
+  leadPool.forEach(function(s){ claimed[s.url] = 1; });
+
+  // posAll keeps the FULL position count for the header badge. "QB 10" is a
+  // statement about the library behind the module, not about how many cards this
+  // particular module happened to draw, so it must not shrink as slots are taken.
+  var posAll = {}, posPick = {};
+  ORDER.forEach(function(pair){
+    var pos = pair[0];
+    var all = live.filter(function(s){ return s.pos === pos; });
+    posAll[pos] = all;
+    var pick = all.filter(function(s){ return !claimed[s.url]; })
+                  .slice(0, pos === 'Market' ? 5 : 3);
+    pick.forEach(function(s){ claimed[s.url] = 1; });
+    posPick[pos] = pick;
+  });
+
+  // ── top headlines rail: the newest calls no other section is showing ──────
+  // Sorted strictly newest-first. Dates are ISO (YYYY-MM-DD) so a plain string
+  // compare is a date compare.
+  //
+  // Camp reports are deliberately NOT merged in any more. The Training Camp desk
+  // at the foot of the page lists every one of them, so a report here was always
+  // a second copy of a row already on the page — and because they are the most
+  // frequent drop, the newest two or three took the rail slots that the insight
+  // headlines this rail exists to surface should have had.
   var RAIL_MAX = 9;          // rail slots
   var RAIL_MIN_TOP_DAY = 3;  // never show the newest day as a lone headline
-  var inLead = {};
-  leadPool.forEach(function(s){ inLead[s.url] = 1; });
 
   var railPool = [];
   live.forEach(function(s){
-    if (inLead[s.url]) return;                       // already the lead / in its rail
+    if (claimed[s.url]) return;                      // the lead or a position module has it
     railPool.push({ date: s.date, title: s.title, url: s.url, meta: s.pos + ' · ' + fmtShort(s.date) });
-  });
-  REPORTS.filter(function(r){ return unlocked(r.date); }).forEach(function(r){
-    railPool.push({ date: r.date, title: r.title, url: r.url, meta: 'Camp report · ' + fmtShort(r.date) });
   });
   railPool.sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
 
@@ -1782,13 +1855,24 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
 
   var rail = document.getElementById('railList');
   railItems.forEach(function(it){
+    claimed[it.url] = 1;                             // nothing further down repeats a headline
     var el = document.createElement('li');
     el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
     rail.appendChild(el);
   });
+  // Early in a season the lead rotation and the position modules can between
+  // them hold every story there is, leaving nothing for the rail. A "Top
+  // Headlines" box with no headlines under it is worse than no box, so the rail
+  // leaves and the lead takes the full width rather than sitting in two thirds
+  // of a two-column grid beside a hole.
+  if (!railItems.length) {
+    var railBox = document.querySelector('.rail');
+    if (railBox) railBox.hidden = true;
+    var heroBox = document.querySelector('.hero');
+    if (heroBox) heroBox.classList.add('solo');
+  }
 
   // ── position modules ──
-  var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
   var grid = document.getElementById('posGrid');
 
   // The face for a story: its first named player who has a photo. A story that
@@ -1816,7 +1900,10 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
     var yourLbl = (L && L.tailorLabel) ? L.tailorLabel() : 'Your league';
     ORDER.forEach(function(pair){
       var pos = pair[0], id = pair[1];
-      var list = live.filter(function(s){ return s.pos === pos; });
+      // Selected once, up top, so the claim order holds and an edition switch
+      // repaints the same stories in the reader's format rather than reshuffling
+      // which stories the module is showing.
+      var all = posAll[pos] || [], list = posPick[pos] || [];
       if (!list.length) return;
       var mod = el('div', 'pos-mod' + (pos === 'Market' ? ' wide' : ''));
       mod.id = id;
@@ -1824,7 +1911,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       var head = el('div', 'pm-head');
       var h3 = el('h3');
       h3.appendChild(document.createTextNode(pos === 'Market' ? 'Market & League-Wide' : pos));
-      h3.appendChild(el('span', 'pos-count', String(list.length)));
+      h3.appendChild(el('span', 'pos-count', String(all.length)));
       var more = el('a', 'mod-more', 'More ' + (pos === 'Market' ? 'market' : pos) + ' intel \u2192');
       more.href = '/auction-insights';
       head.appendChild(h3); head.appendChild(more);
@@ -1873,10 +1960,12 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       if (claimed) mod.appendChild(claimed);
 
       // ── the follow-ups ──
-      // Two per card, four on the double-width Market module. Five stacks of
-      // four headlines was the densest block on the page and the one a reader
-      // skimmed past; the lead of each card is what the section is for.
-      var rest = list.slice(1, pos === 'Market' ? 5 : 3);
+      // Two per card, four on the double-width Market module — the widths are
+      // applied by the claim pass above, which already sliced each module to its
+      // budget. Five stacks of four headlines was the densest block on the page
+      // and the one a reader skimmed past; the lead of each card is what the
+      // section is for.
+      var rest = list.slice(1);
       if (rest.length) {
         var ul = el('ul', 'pm-rest');
         rest.forEach(function(st){
@@ -1907,6 +1996,11 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
       }
       grid.appendChild(mod);
     });
+    // Same rule as the rail and the odds column: if every module came up empty
+    // because the lead already holds the whole library, the head and dek go with
+    // them rather than standing over an empty grid. Checked on every repaint, so
+    // an edition switch cannot leave a stale heading behind.
+    setSectionVisible(['positions', 'posSub', 'posGrid'], 'positions', grid.children.length > 0);
   }
   renderPositions();
 
@@ -2284,6 +2378,7 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
   var strip = document.getElementById('weekStrip');
   if (strip) {
     if (typeof PRESEASON !== 'undefined' && PRESEASON.length) {
+      strip.hidden = false;
       strip.innerHTML = PRESEASON.map(function(w, i){
         return '<article class="week"><span class="week-tag">Week ' + esc(String(w.week)) + (i === 0 ? ' &middot; latest' : '') + '</span>' +
           '<h3><a href="' + w.url + '">' + esc(w.headline || w.title) + '</a></h3>' +
@@ -2292,8 +2387,13 @@ var COLUMN = [{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliot
           '<a class="go" href="' + w.url + '">Read the Week ' + esc(String(w.week)) + ' takeaways &rarr;</a></article>';
       }).join('');
     } else {
-      strip.innerHTML = '<div class="week-empty">Weekly preseason takeaways publish the morning after each slate: ' +
-        'who actually worked with the ones, which snap counts changed, and what it moves on your board. Nothing here yet for 2026.</div>';
+      // Nothing published yet. A dashed box explaining what would be here if it
+      // existed is not a section — it is a promise taking up a slot, and it sat
+      // on the front page for the whole of a season in which no preseason week
+      // had been written. The strip is simply not on the page until a week's
+      // takeaways land; the Training Camp desk below it already carries the news.
+      strip.innerHTML = '';
+      strip.hidden = true;
     }
   }
 
