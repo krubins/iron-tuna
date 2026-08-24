@@ -1483,9 +1483,9 @@ read as a feed rather than a column. The split now is:
   rest of the site uses. Under the article it carries that story's own call
   cards, then the method box and sources, then **Continue reading**: the other
   stories, as links, for anyone who wants to keep going.
-- **`/analyst-desk` is the index.** The standing copy, the record table, and one
-  compact item per entry: kicker, date, headline, dek, and a summary line naming
-  the analysts it argues with. No call cards. Every item links to its story.
+- **`/analyst-desk` is the index.** The standing copy and one compact item per
+  entry: kicker, date, headline, dek, and a summary line naming the analysts it
+  argues with. No call cards. Every item links to its story.
 
 The white page is `lead.html`'s own `:root`, so it applies to **every** lead
 story, not only analyst ones. Three things had to change beyond swapping the
@@ -1552,8 +1552,10 @@ Three findings from firing the desk by hand, all of which outlived the test:
   the underlying cause.
 - **The desk skewed to one writer.** The first entry took six of eight calls
   from a single CBS column, because one aggregated risers-and-fallers piece is
-  the cheapest thing to find. Hence edit 4 above. Judge the skew off the record
-  table on `/analyst-desk`, which is exactly what it is for.
+  the cheapest thing to find. Hence edit 4 above. The record table on
+  `/analyst-desk` used to be where you judged that skew; it was **removed in
+  August 2026** (see below), so read the skew off `/api/analyst-column`, whose
+  `scoreboard` array is still built exactly as it was.
 - **A scheduled slot can produce nothing at all.** The 21:58 UTC run on
   2026-08-21 wrote no row, not even a held `verified = 0` one, while every other
   slot that night walked the cycle correctly. A missing story is invisible from
@@ -2610,7 +2612,8 @@ desk, unchanged.
 - **The masthead nav is the site; the ribbon is the page.** Masthead: Auction
   Values / Strategy / Insights / Columns / FAQ plus Sign In and two CTAs.
   Ribbon: in-page anchors plus the edition switch. Two navs that both listed
-  destinations was the density complaint.
+  destinations was the density complaint. **Columns is the one exception to
+  that split** — it is an in-page anchor, `#today` — for the reason in §29a.
 - **Density inside the news desk:** Position Intel dropped from three
   follow-ups per card to two (four on the double-width Market module). Five
   stacks of four headlines was the block readers skimmed past.
@@ -2846,6 +2849,67 @@ article inside a 1740px sticky header. `tools/test-asset-routing.mjs` asserts
 every local asset a page points at exists on disk, because renaming `tuna.png`
 to `tuna.webp` left 91 pages pointing at a deleted file twice — once on the
 rename and once when a merge took the other side — and nothing else noticed.
+
+---
+
+## 29a. Columns points at the story, and the record table is gone (August 2026)
+
+Two changes to the same column, both asked for in the same breath: *"the Columns
+link should take you down the page to the substantive articles, not to a white
+page with a series of articles."*
+
+**Columns is now `/#today`, not `/analyst-desk`.** `#today` is The Auction Desk —
+the first story on the front page after the hero's pitch for the site, and the
+lead rendered in full rather than as a headline. It is also the desk the analyst
+column's own entries run in: they are lead stories with `category = 'analyst'`
+and the kicker "Analysts vs. Iron Tuna" (§ the analyst desk), so "Columns" lands
+on a column rather than on a list of them. The old destination was an index —
+white page, headline and dek per entry — which meant every reader who clicked
+Columns arrived somewhere they still had to choose from before reading a word.
+
+Four things had to move together, because the link lives in four places:
+
+- **`tools/build-chrome.mjs`** — the canonical `NAV` entry. Regenerates the 97
+  pages the generator owns. Run it and commit, or CI's `--check` gate fails.
+- **`front.html`** — excluded from the generator, hand-maintained masthead. It
+  uses the bare `#today`, not `/#today`, because it *is* the front page and the
+  bare form keeps whatever `?fmt=` the reader arrived on.
+- **`lead.html`, `analyst-desk.html`, `play-caller-premium.html`** — the three
+  reading pages in `NAV_EXCLUDE`, which keep their own short header.
+- **`tools/templates/preseason-week.html`** — the template new camp pages are
+  stamped from. Miss this one and the next generated report reintroduces the old
+  link, invisibly, weeks later.
+
+**`/analyst-desk` did not stop existing** — it still serves, is still in the
+sitemap, and `tools/test-seo.mjs` still asserts it is indexable. But it left the
+nav, so two link assertions had to follow it rather than be deleted:
+`tools/test-chrome.mjs` moved `/analyst-desk` from `MUST_NAV` to `MUST_FOOT`
+(the footer's Read column already carried it on all 100 generated pages), and
+**`front.html`'s hand-written footer had to gain an Analyst Desk link it never
+had** — the masthead "Columns" was that page's only link from the front page, so
+repointing it would otherwise have orphaned an indexed page from the
+highest-authority page on the site.
+
+**"The record so far" is deleted from `/analyst-desk`.** The table scored the
+desk against each analyst — agree / differ / partly, one row per analyst. The
+page is a column, not a leaderboard, and the table stood between the standing
+copy and the entries the reader came for. Gone with it: the `#scoreboardWrap`
+block, the JS that filled it, and the `.board` / `.n-agree` / `.n-disagree` /
+`.n-partial` rules that nothing else used.
+
+The worker is **unchanged**. `analystScoreboard()` still runs and
+`/api/analyst-column` still ships its `scoreboard` array —
+`tools/test-analyst-column.mjs` still pins that, because the route is a public
+shape and the counts are the only way left to read the desk's skew toward one
+writer. The page simply stops reading a field the API still sends.
+
+Two assertions moved with the table rather than being dropped:
+`tools/test-reading-view.mjs` and `tools/test-analyst-column.mjs` both pinned
+`.n-partial{color:var(--goldink)}` as the proof that gold-as-text uses the ink
+weight and gold-as-fill uses the bright one. The play-caller column's two-sided
+verdict chip is the one place left that does it, so that is what they pin now;
+`--goldink` stays *declared* on `analyst-desk.html` so the three reading pages
+keep one identical palette.
 
 ---
 

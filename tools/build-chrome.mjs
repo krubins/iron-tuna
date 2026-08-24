@@ -76,7 +76,15 @@ const NAV = [
     ],
   },
   { label: 'The Pick', href: '/the-pick' },
-  { label: 'Columns', href: '/analyst-desk' },
+  // Columns lands on the front page's first story, not on /analyst-desk.
+  // That page is an index — a white page of headlines and deks — so a reader
+  // who clicks "Columns" from anywhere on the site arrived at a list and still
+  // had to pick something before reading a word. #today is The Auction Desk:
+  // the lead story rendered in full, and the desk the analyst column's own
+  // entries run in (they are lead stories, category `analyst`, kicker
+  // "Analysts vs. Iron Tuna"). /analyst-desk still serves, is still indexed,
+  // and is still linked from the footer's Read column and the related rail.
+  { label: 'Columns', href: '/#today' },
   { label: 'In-Season', href: '/post-draft' },
   { label: 'FAQ', href: '/faq' },
   { label: 'Free cheat sheet', href: '{app}', cta: true },

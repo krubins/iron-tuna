@@ -65,11 +65,17 @@ console.log('\nevery destination is reachable from every page');
   // hub was a format chooser for a site that now has one format; the auction
   // edition is the destination. The pages still serve at their old URLs — see
   // the sitemap assertions in tools/test-seo.mjs — they are simply not linked.
+  //
+  // /analyst-desk moved from the nav to the footer when Columns was repointed
+  // at the front page's first story (see build-chrome.mjs). The page is still
+  // reachable from every page on the site — the assertion just moved with the
+  // link, rather than being dropped.
   const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
     '/snake-insights', '/insights-vault', '/the-pick', '/guides',
-    '/analyst-desk', '/post-draft', '/faq'];
+    '/post-draft', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
-    '/play-caller-premium', '/auction-insights', '/guides', '/the-pick'];
+    '/play-caller-premium', '/auction-insights', '/guides', '/the-pick',
+    '/analyst-desk'];
   const badNav = [], badFoot = [];
   for (const f of pages) {
     const nav = hrefs(header(read(f)));

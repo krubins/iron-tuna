@@ -64,14 +64,15 @@ for (const f of PAGES) {
 console.log('\ngold is a fill, not an ink');
 {
   // Wherever gold carries meaning as TEXT rather than as a filled button, it has
-  // to be the darker ink. Both columns do this: the record table's Partly
-  // column, and the two-sided verdict chip.
+  // to be the darker ink. The play-caller column's two-sided verdict chip is the
+  // one place left that does it: /analyst-desk's record table used to be the
+  // other, and it was removed with the table. The three reading pages still
+  // declare the same palette, so the token stays defined on all of them.
   const desk = fs.readFileSync(path.join(ROOT, 'analyst-desk.html'), 'utf8');
   const pcp = fs.readFileSync(path.join(ROOT, 'play-caller-premium.html'), 'utf8');
-  ok('the record table\'s Partly column is ink gold', desk.includes('.n-partial{color:var(--goldink)'));
   ok('the two-sided verdict chip is ink gold', pcp.includes('color:var(--goldink)'));
   for (const [f, src] of [['analyst-desk.html', desk], ['play-caller-premium.html', pcp]]) {
-    ok(`${f} defines --goldink it reaches for`, /--goldink:\s*#[0-9a-f]{6}/i.test(src));
+    ok(`${f} defines --goldink`, /--goldink:\s*#[0-9a-f]{6}/i.test(src));
   }
   // The buttons keep the bright fill: dark text on a gold block is fine on white.
   ok('buttons keep the bright gold fill',

@@ -289,9 +289,13 @@ console.log('\nthe page itself');
   const iroot = (page.match(/:root\{[^}]*\}/) || [''])[0];
   ok('the index is white too', /--bg:\s*#fff/i.test(iroot), iroot.slice(0, 90));
   ok('the index accent is the white-safe teal', /--teal:\s*#0e7c63/i.test(iroot));
-  // #f5b800 stays the button fill, but as a numeral on white it is unreadable,
-  // so the record table's Partly column uses an ink-weight gold instead.
-  ok('the Partly column is not button gold', page.includes('.n-partial{color:var(--goldink)'));
+  // The record table that stood between the standing copy and the entries is
+  // gone: it scored the desk against each analyst, and the page is a column,
+  // not a leaderboard. Nothing on the index reads a scoreboard now, so the
+  // payload's `scoreboard` array has no consumer here — it is still built and
+  // still asserted below, because /api/analyst-column is a public shape.
+  ok('no record table survives on the index',
+     !page.includes('scoreboardWrap') && !/[Tt]he record so far/.test(page));
   ok('no dark-theme accent survives in either page',
      !page.includes('rgba(45,212,163') && !fs.readFileSync(path.join(ROOT, 'lead.html'), 'utf8').includes('rgba(45,212,163'));
 }

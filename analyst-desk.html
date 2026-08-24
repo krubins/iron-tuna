@@ -93,15 +93,6 @@ footer.site a{color:var(--muted)}
 .intro{max-width:720px}
 .note{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:22px 0;font-size:13.5px;color:var(--muted);line-height:1.62}
 .note b{color:var(--sec)}
-.board{width:100%;border-collapse:collapse;font-size:15px;margin:14px 0 0}
-.board th{color:var(--muted);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
-.board td:first-child,.board th:first-child{text-align:left}
-.board th+th,.board td+td{text-align:right;width:64px}
-.board td:first-child{color:var(--text);font-weight:700}
-.board .out{display:block;color:var(--muted);font-size:12px;font-weight:400;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
-.n-agree{color:var(--teal);font-weight:700}
-.n-disagree{color:var(--danger);font-weight:700}
-.n-partial{color:var(--goldink);font-weight:700}
 .entry{border-top:1px solid var(--line);padding:26px 0 6px}
 .entry:first-of-type{border-top:0}
 .entry h2{margin:8px 0 10px;font-size:clamp(20px,2.6vw,26px)}
@@ -122,7 +113,7 @@ footer.site a{color:var(--muted)}
     <a href="/fantasy-football-auction-values">Auction Values</a>
     <a href="/guides">Strategy</a>
     <a href="/auction-insights">Insights</a>
-    <a href="/analyst-desk">Columns</a>
+    <a href="/#today">Columns</a>
     <a class="cta" href="/auctiondraft?screen=cheat">Free cheat sheet</a>
   </nav>
 </div></header>
@@ -138,12 +129,6 @@ footer.site a{color:var(--muted)}
   <p><b>How to read this.</b> An analyst being above consensus is not the same as being above us. Iron Tuna&rsquo;s shipped values are already blended toward the sportsbook lines, so on plenty of players we are the ones off consensus. &ldquo;Above consensus&rdquo; here always means above the projection set the site treats as the baseline, not above our price.</p>
   <p><b>Where their numbers come from.</b> One specific, dated position per analyst, quoted only as far as the argument needs and cited on the story it appears in. We do not reproduce anyone&rsquo;s ranking set, and we never state an analyst&rsquo;s position from memory. If the desk cannot source a position on a given run, it writes nothing rather than paraphrasing one.</p>
   <p><b>Dollar figures are what you should bid</b> in a 12-team, $200, half-PPR auction, not price predictions. Set your own scoring and roster and the whole board re-prices to your league.</p>
-</div>
-
-<div id="scoreboardWrap" hidden>
-  <div class="eyebrow">The record so far</div>
-  <p>Every call this column has made, by analyst. A disagreement is not a criticism: these are the players worth a second look before you bid.</p>
-  <table class="board"><thead><tr><th>Analyst</th><th>Agree</th><th>Differ</th><th>Partly</th></tr></thead><tbody id="scoreboard"></tbody></table>
 </div>
 
 <div class="eyebrow">The entries</div>
@@ -267,17 +252,6 @@ footer.site a{color:var(--muted)}
           if (!arts[i]) return;
           PS.linkPlayers(arts[i], { cast: (e.calls || []).map(function(c){ return c.player; }) });
         });
-      }
-      var sb = (d.scoreboard || []).filter(function(x){ return x.total > 0; });
-      if (sb.length) {
-        document.getElementById('scoreboard').innerHTML = sb.map(function(x){
-          return '<tr><td>' + esc(x.analyst)
-            + (x.outlet ? '<span class="out">' + esc(x.outlet) + '</span>' : '')
-            + '</td><td class="n-agree">' + (x.agree || 0)
-            + '</td><td class="n-disagree">' + (x.disagree || 0)
-            + '</td><td class="n-partial">' + (x.partial || 0) + '</td></tr>';
-        }).join('');
-        document.getElementById('scoreboardWrap').hidden = false;
       }
     })
     .catch(function(){ empty('This column is unreachable right now. The front page carries the rest of the board in the meantime.'); });
