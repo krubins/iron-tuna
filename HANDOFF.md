@@ -3713,3 +3713,114 @@ Two things follow, and both are in the story rather than buried here:
 Do not promote this model into `_worker.js` or quote its decimals on a page. It
 is a desk instrument for ordering players, and the order is the only part of it
 that is robust.
+
+## 36. August 2026: who flipped the flag, and the watcher that kept flipping it back
+
+`lead_story` has two flags and both decide what a reader sees. `published = 1`
+puts a row on the front page. **`verified = 1` alone is enough to put a row in
+"Recent insights"** (`WHERE verified = 1 AND slug IS NOT NULL`), which is the
+part that keeps being missed: taking a story *down* means clearing both, and
+`published = 0` on its own leaves it visible.
+
+### The recurring incident
+
+Rows written before the pipeline priced off the served board quote figures the
+cheat sheet contradicts in both directions — Jeremiyah Love at $47 against a
+board that says $25, Brock Bowers at $25 against $53, Zay Flowers at $26 and
+$32 against $25. Every row up to and including id 40 was cleared to
+`verified = 0, published = 0` deliberately, and is not recoverable: their
+figures are wrong, not merely old.
+
+Three times those rows came back. On 2026-08-24 ids 27 through 35 went from
+cleared at 12:40 UTC to `verified = 1` at 14:56 UTC, which put nine stale
+stories back into "Recent insights" on the live site. The only write in that
+window that could have done it was the daily watch Routine
+(`trig_01WTgFuRik7kDWJHJv5pDwgQ`, `15 14 * * *`, fired 14:18:26 UTC); the
+lead-story Routine retires by slug and touches `published` only, and the two
+column Routines write HTML, not D1.
+
+**The watcher's own SQL is what convinced it.** Its prompt opened with:
+
+```sql
+SELECT COUNT(*) AS published_rows, COUNT(*) FILTER (WHERE verified=1) AS verified_rows
+FROM lead_story;
+```
+
+`COUNT(*)` with no filter counts the whole table. It reported 43 where the
+truth was 1, next to a `verified_rows` that had legitimately fallen to single
+digits — a reading that looks exactly like "the flags were wiped," which is a
+thing that genuinely happened on 2026-08-23. The watcher was fed a false
+positive by its own query and repaired damage that did not exist. The
+corrected form:
+
+```sql
+SELECT COUNT(*) FILTER (WHERE published = 1) AS published_rows,
+       COUNT(*) FILTER (WHERE verified  = 1) AS verified_rows,
+       COUNT(*)                               AS total_rows
+FROM lead_story;
+```
+
+A `verified_rows` in the low single digits is the system working, not a wipe.
+Only stories checked against the served board carry the flag.
+
+The Routine is **paused**, because its prompt cannot be edited from a session
+other than the one its fires deliver into — `update_trigger` refuses. The
+corrected prompt is kept at `tools/lead-story-watch-prompt.md`; re-enabling the
+Routine means pasting that in first, from the session that owns it.
+
+### The audit trail
+
+`lead_story` had none, which is why three sessions each read the others' writes
+as corruption and why the paragraph above had to be argued from fire times
+instead of read off a table. There is now one:
+
+```sql
+CREATE TABLE lead_story_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  story_id INTEGER NOT NULL,
+  at INTEGER NOT NULL,
+  old_published INTEGER, new_published INTEGER,
+  old_verified  INTEGER, new_verified  INTEGER
+);
+
+CREATE TRIGGER lead_story_flag_audit
+AFTER UPDATE OF published, verified ON lead_story
+FOR EACH ROW WHEN old.published <> new.published OR old.verified <> new.verified
+BEGIN
+  INSERT INTO lead_story_audit (story_id, at, old_published, new_published, old_verified, new_verified)
+  VALUES (old.id, CAST(strftime('%s','now') AS INTEGER) * 1000,
+          old.published, new.published, old.verified, new.verified);
+END;
+```
+
+Both are live on `iron-tuna-leads`. It records **what changed and when**, not
+who: D1 exposes no caller identity to a trigger. That is still enough, because
+every writer here is a Routine on a known schedule, so a timestamp names the
+suspect. Read it with:
+
+```sql
+SELECT story_id, datetime(at/1000,'unixepoch') AS at_utc,
+       old_verified, new_verified, old_published, new_published
+FROM lead_story_audit ORDER BY id DESC LIMIT 40;
+```
+
+The trigger fires on the flags only, so a normal retire-by-slug leaves one row
+per story and the table stays small. It is additive and touches no read path.
+
+### Verifying a story's prices, which is the whole point of the flags
+
+Never verify against `DEFAULT_BOARD` in `/it-league.js` — that is built from the
+committed `PROJECTIONS` and is the fallback, not the board. The served board is
+`/api/board` (`_worker.js` §9d): the same projections re-blended with the day's
+odds at `VEGAS_WEIGHT = 3`, scored with `_colScore`, priced with `_colPrice`.
+When the endpoint is unreachable, reproduce it locally from `_worker.js` plus
+the stored overlay rather than trusting any other number:
+
+```sql
+SELECT payload FROM odds_overlay WHERE id = 1;   -- check length(payload) matches what you saved
+```
+
+Row 43 (Omarion Hampton, 2026-08-24) was checked this way: RB15 at $18, Ladd
+McConkey WR23 at $10, every Chargers tight end at $2 — all exact. Row 42
+(LaPorta) reproduced seven figures exactly against an overlay that had
+refreshed *after* it was written.
