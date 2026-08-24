@@ -6013,44 +6013,6 @@ function LandingSplash({
       return () => clearTimeout(t);
     }
   }, []);
-  function nudge(v, dir) {
-    const s = String(v);
-    if (s.indexOf('#') >= 0) return v;
-    const dollar = s.startsWith('$'),
-      pct = s.endsWith('%');
-    const num = parseFloat(s.replace('$', '').replace('%', ''));
-    if (isNaN(num)) return v;
-    const decimal = s.indexOf('.') >= 0;
-    const nv = num + dir * (decimal ? 0.5 : 1);
-    const body = decimal ? nv.toFixed(1) : String(Math.round(nv));
-    return (dollar ? '$' : '') + body + (pct ? '%' : '');
-  }
-  const DEMO = {
-    auction: {
-      name: 'Auction',
-      color: '#e0b341',
-      cols: ['Proj', 'Value', 'You'],
-      liveCol: 2,
-      note: 'What you should bid re-prices the instant a budget moves.',
-      rows: [['Bijan Robinson', 'RB', ['$54', '$58', '$61']], ["Ja'Marr Chase", 'WR', ['$49', '$52', '$55']], ['Jahmyr Gibbs', 'RB', ['$46', '$49', '$47']], ['Josh Allen', 'QB', ['$9', '$6', '$7']]]
-    },
-    snake: {
-      name: 'Snake',
-      color: '#46a6ff',
-      cols: ['Rank', 'Best', 'Surv%'],
-      liveCol: 2,
-      note: 'Survival odds shift as the board comes off ahead of you.',
-      rows: [["Ja'Marr Chase", 'WR', ['3', '#5', '21%']], ['Bijan Robinson', 'RB', ['4', '#3', '12%']], ['Jahmyr Gibbs', 'RB', ['6', '#4', '34%']], ['Josh Allen', 'QB', ['17', '#22', '88%']]]
-    },
-    bestball: {
-      name: 'Best Ball',
-      color: '#a78bfa',
-      cols: ['Rank', 'Ceil', 'Stack'],
-      liveCol: 1,
-      note: 'Ceiling-weighted, with QB-to-receiver stacks auto-flagged.',
-      rows: [['Josh Allen', 'QB', ['1', '25.8', 'STK']], ["Ja'Marr Chase", 'WR', ['3', '21.4', 'STK']], ['Bijan Robinson', 'RB', ['5', '19.9', '-']], ['Brock Bowers', 'TE', ['24', '17.6', '-']]]
-    }
-  };
   const faqRef = useRef(null);
   const howRef = useRef(null);
   const pricingRef = useRef(null);
@@ -6104,7 +6066,6 @@ function LandingSplash({
     trk('email_submitted', {});
     setEmailDone(true);
   }
-  const mock = [['Bijan Robinson', 'RB', '$54', '$58', '$61', 'Target · bid to $61'], ['Justin Jefferson', 'WR', '$49', '$52', '$55', 'Bid to $55'], ['Jahmyr Gibbs', 'RB', '$46', '$49', '$47', 'Stop at $47'], ['CeeDee Lamb', 'WR', '$44', '$47', '$50', 'Value · push to $50'], ['Brock Bowers', 'TE', '$18', '$20', '$22', 'Pay up to $22'], ['Josh Allen', 'QB', '$9', '$6', '$7', 'Walk past $7']];
   const _PF = (typeof window !== "undefined" && (window.location.pathname.indexOf("/snakedraft") === 0 || window.location.pathname.indexOf("/bestball") === 0));
   const problems = ['Static sheets tell you what a player is worth before the draft starts, not after the room has spent half its budget.', 'They ignore your remaining roster needs, so a player is worth a different amount to you than to the manager across the table.', 'They do not track who still has money, so you cannot see who is about to be forced into overpaying next.', 'Nothing stops you from chasing a player two or three bids too far, which is exactly how good drafts go bad.'];
   const threeNum = [['Market Price', 'What the room is likely to pay for him right now.', 'price'], ['True Value', 'What he is actually worth under your exact league settings.', 'value'], ['What You Should Bid (You)', ((typeof window !== "undefined" && window.location.pathname.indexOf("/snakedraft") === 0) ? 'The player\'s value to your starting lineup, adjusted for your roster and remaining needs.' : 'The highest you should personally bid, given your roster, budget, and remaining needs.'), 'max']];
