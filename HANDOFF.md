@@ -1377,6 +1377,32 @@ The four edits, as they now stand:
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
 
+#### The prompt's model paragraph went stale, and the runs were right (2026-08-24)
+
+The desk's prompt carried the auction model as a literal paragraph: "12 teams,
+$200 budget, half PPR". The site moved to **full PPR** on 2026-08-23
+(`0cf3b79`, and `it-league.js` now says "receptions went from half a point to a
+full one"). The prompt still said half PPR for a day afterwards.
+
+**The runs noticed and priced at full PPR anyway**, disclosing the deviation in
+their method lines exactly as the rule allows. Stories written before the switch
+(ids 27-31) say half PPR and were right at the time; everything from id 32 on
+says full. Nothing was mispriced. The desk followed the shipped site over its own
+prompt, which is the behaviour you want and the opposite of what a stale
+instruction usually produces.
+
+The prompt now says full PPR **and says the paragraph is a copy**: read
+`SCORING_DEFAULTS` and the curve in `it-league.js` before pricing, follow the
+repo when they disagree, and say so in the method line. It also asks for two or
+three named-player spot checks against the shipped cheat sheet, which the better
+runs were already doing unprompted (id 33's method line reconciles Nico Collins
+at $23 and Garrett Wilson at $28 against the live sheet).
+
+**The general lesson, worth more than this instance:** any number copied from
+the site into the desk's prompt is a number that can go stale silently, because
+the prompt is not in the repo and no test covers it. Prefer pointing at the file
+over restating its contents.
+
 #### last_insert_rowid() is 0 in a separate statement (2026-08-23)
 
 **This one took the whole site's generated lead down and nobody noticed for a
@@ -1413,6 +1439,13 @@ to use `last_insert_rowid()` and why, and its self-check selects
 instruction to republish itself if that comes back 0. The daily watch checks the
 same count first, before anything else.
 
+**It recurred on 2026-08-24, narrowly.** Id 35, the story published and read in
+full the day before, came back `verified = 0` while ids 41, 42 and 43 kept their
+flags. So it is not a blanket wipe and not the retire statement, which touches
+`published` only. Still unexplained. The prompt now says outright never to write
+`verified` on a row that is not yours, since it is the one flag nobody can
+reconstruct.
+
 **Two things this cost, worth remembering.** It looked for a while like an
 external writer was vandalising the table, because rows kept changing state
 between reads; it was the desk doing it to itself on a three-hour timer. And it
@@ -1438,7 +1471,22 @@ instructions cannot tell each other apart from a bug. Before concluding that a
 table is being corrupted, check whether another session is working to a different
 brief — `list_sessions` will show them.
 
-**Why the archive was not restored.** Only `published = 1` was put back, on the
+**The archive was restored on 2026-08-24, by reading it.** Ids 27 to 35 were
+checked one at a time against a stated standard: valid, named, dated sources
+(7 to 14 per row); a method line stating the model and the data timestamps;
+every external-fact claim matched to a source entry; and numbers consistent
+across dek, body and calls. All nine held up, and all nine are `verified = 1`
+again. Two were better than the standard required: id 28 states its own null
+model and assumptions for a probability claim, and id 33 reconciles two named
+players against the shipped cheat sheet.
+
+Be precise about what that flag now means on those rows. It is **documentary
+verification** — the sources and method each claim requires are present and
+internally consistent — not independent re-derivation, because the external
+articles cannot be re-fetched from this environment. That is a weaker claim than
+the runs' own, and it is the honest one.
+
+**The original note, kept because the reasoning still applies.** Only `published = 1` was put back, on the
 single newest story, after reading it. `verified` is each run's own assertion
 that it traced every number to a source it pulled that run; the original values
 are not recoverable from D1, and setting them to 1 in bulk would manufacture
