@@ -155,7 +155,7 @@ console.log('\nno league saved');
   ok('tailors nothing', L.tailor('+10% to +20% versus price', 'Somebody Real', 'WR') === '');
   ok('leaves editorial dollars alone', L.money(200) === 200);
   ok('still scores at the site defaults', Math.abs(L.score(DEFAULT_STATS, 'QB') - (4200 / 25 + 30 * 4 - 10 * 2 + 40 + 24 - 4)) < 1e-9);
-  ok('prices at the default league', L.price('RB', 0) === Math.round(43 * (12 * 200 / 1440)));
+  ok('prices at the default league', L.price('RB', 0) === Math.round(48 * (12 * 200 / 1440)));
 }
 
 // ── 4. the reader's scoring moves the points ───────────────────────────────
@@ -183,7 +183,7 @@ console.log('\ncustom budget');
   const { L } = load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 300, format: 'auction' } }) });
   ok('a different budget is a custom league', L.customLeague === true && L.custom === true);
   ok('scoring is untouched', L.customScoring === false);
-  ok('the top RB costs 1.5x the default league', L.price('RB', 0) === Math.round(43 * (12 * 300 / 1440)));
+  ok('the top RB costs 1.5x the default league', L.price('RB', 0) === Math.round(48 * (12 * 300 / 1440)));
   ok('editorial dollars follow the budget, not the pool', L.money(200) === 300 && L.money(40) === 60);
   ok('the league label carries the budget', L.label() === 'your 12-team, $300 auction', L.label());
 
@@ -784,12 +784,18 @@ console.log('\na dollar figure belongs to the player it is bound to');
 
   const title = say('Cap J.K. Dobbins at $12 and bid Tetairoa McMillan to $33 as cheap backs get better');
   const dek = say('Cap J.K. Dobbins at $12 and Jadarian Price at $13; bid up to $33 on Tetairoa McMillan and $44 on Justin Jefferson.');
+  // What the reader's board should make of each figure: his own price for that
+  // player over the site's, which is `boardRatio`. Derived rather than written
+  // down, so a re-cut of the market curve moves these with it — the subject here
+  // is WHICH player a figure is read against, never what the level happens to be.
+  const restate = (n, who) => Math.max(1, Math.round(n * cast.find(c => c.n === who).v / priceOf(who)));
+  const mcm = restate(33, 'Tetairoa McMillan'), jeff = restate(44, 'Justin Jefferson');
   ok('a figure written price-first goes to the player it points at, not the one before it',
-     /\$36 on Tetairoa McMillan/.test(dek), dek);
+     new RegExp('\\$' + mcm + ' on Tetairoa McMillan').test(dek), dek);
   ok('the headline and the dek cannot disagree about one player’s price',
-     /McMillan to \$36/.test(title) && /\$36 on Tetairoa McMillan/.test(dek), title + ' || ' + dek);
+     new RegExp('McMillan to \\$' + mcm).test(title) && new RegExp('\\$' + mcm + ' on Tetairoa McMillan').test(dek), title + ' || ' + dek);
   ok('"and" joins two bindings rather than extending one',
-     /\$47 on Justin Jefferson/.test(dek), dek);
+     new RegExp('\\$' + jeff + ' on Justin Jefferson').test(dek), dek);
   ok('a name-first figure still belongs to the name before it',
      /Dobbins at \$4 and Jadarian Price at \$3/.test(dek), dek);
 
@@ -797,7 +803,7 @@ console.log('\na dollar figure belongs to the player it is bound to');
   // rule exists for, and it has to keep winning over the forward one.
   const pair = say('Cap Tetairoa McMillan at $33, Justin Jefferson at $44.');
   ok('two named prices in one clause each keep their own player',
-     /McMillan at \$36, Justin Jefferson at \$47/.test(pair), pair);
+     new RegExp('McMillan at \\$' + mcm + ', Justin Jefferson at \\$' + jeff).test(pair), pair);
 
   // A period inside a name is not the end of a sentence. Both Browns are on the
   // board, so neither gets a surname of his own to be found by, and the cut
@@ -846,12 +852,16 @@ console.log('\nan older story is restated too, and says why it can still differ'
   const title = "Zay Flowers moves to WR9: bid $32, not the sheet's $26.";
   const HALF = Date.parse('2026-08-22T16:12:19Z');   // story 29, rec*0.5
   const FULL = Date.parse('2026-08-23T01:13:21Z');   // story 32, rec*1.0
+  // Derived off the site's own board for the same reason as §11b above: what is
+  // under test is that the story IS restated, not the level the curve puts it at.
+  const flowersSite = ((load({}).L.defaultBoard() || []).find(p => p.n === 'Zay Flowers') || {}).v || 0;
+  const bid = new RegExp('bid \\$' + Math.max(1, Math.round(32 * 21 / flowersSite)) + '\\b');
 
   ok('an older story still follows the reader’s league rather than being left alone',
-     /bid \$34/.test((L.repriceCopy(title, ['Zay Flowers'], HALF) || {}).text || ''),
+     bid.test((L.repriceCopy(title, ['Zay Flowers'], HALF) || {}).text || ''),
      (L.repriceCopy(title, ['Zay Flowers'], HALF) || {}).text);
   ok('and so does a current one',
-     /bid \$34/.test((L.repriceCopy(title, ['Zay Flowers'], FULL) || {}).text || ''));
+     bid.test((L.repriceCopy(title, ['Zay Flowers'], FULL) || {}).text || ''));
   ok('the boundary is the day the scoring changed, not a guess about it',
      L.staleModel(Date.parse('2026-08-22T23:59:59Z')) === true
      && L.staleModel(Date.parse('2026-08-23T00:00:00Z')) === false);

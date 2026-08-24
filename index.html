@@ -3353,6 +3353,18 @@ function applyPriceOverrides(players, overrides, draftedIds, config) {
     };
   });
 }
+// The budget the curve below is DRAWN AT: 12 teams x $120. A league's prices are
+// the curve scaled by (teams x budget) / this, so the constant is only honest if
+// the curve actually adds up to it — sum the 1-QB set over a full board (12 x the
+// 16 roster spots, with the min bid past the end of each position's curve) and it
+// must come to exactly 1440. It did not: the set totalled $1298, so every price
+// off it was ~10% light. In-app that was invisible, because renormalizeToBudget
+// silently stretched the column back to the league's budget; but /it-league.js and
+// the worker's /api/vegas-column publish the RAW curve, so off-app copy quoted WR1
+// at $42 against a cheat sheet reading $50. The curve was re-cut (Aug 2026) by a
+// flat 1.125x — level only, every ratio between players and positions preserved —
+// so the raw curve and the rendered column now agree. tools/test-curve-budget.mjs
+// pins the total across all three copies; keep them in step.
 const LEAGUE_CURVE_BUDGET = 1440;
 // What the room pays for a QB when starting one is optional. This is the curve the
 // historical auction data drew, and it is kept ONLY for QB-premium leagues: with two
@@ -3361,7 +3373,7 @@ const LEAGUE_CURVE_BUDGET = 1440;
 // tools/test-it-league.mjs read the first `QB: [...]` after `const LEAGUE_MARKET_CURVE`
 // to check the worker's and the library's mirrors, and those two price the site's
 // default 1-QB league.
-const SUPERFLEX_QB_CURVE = [39, 35, 30, 28, 25, 22, 18, 15, 10, 8, 8, 5, 3, 2, 2, 2];
+const SUPERFLEX_QB_CURVE = [44, 39, 34, 32, 28, 25, 20, 17, 11, 9, 9, 6, 3, 2, 2, 2];
 // The premium curve is OPT-IN: a league is priced as 1-QB unless it says otherwise.
 // "Otherwise" means a QB can actually fill a second STARTING slot — superflex (QB in
 // the flex, and a flex slot to put him in) or straight 2-QB. Only the QB-format
@@ -3382,10 +3394,10 @@ function qbIsPremium(config) {
   return flexQb || starters >= 2;
 }
 const LEAGUE_MARKET_CURVE = {
-  QB: [25, 20, 17, 14, 11, 10, 7, 5, 4, 4, 3, 3, 2, 2, 1, 1],
-  RB: [43, 40, 38, 33, 30, 28, 25, 23, 22, 20, 19, 18, 15, 12, 11, 9, 8, 8, 7, 6, 6, 6, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  WR: [42, 40, 36, 35, 31, 28, 24, 24, 17, 16, 15, 14, 12, 12, 10, 9, 9, 9, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  TE: [32, 28, 20, 14, 11, 9, 7, 6, 5, 5, 3, 2, 2, 2, 1, 1],
+  QB: [28, 22, 19, 16, 12, 11, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1],
+  RB: [48, 45, 43, 37, 34, 31, 28, 26, 25, 22, 21, 20, 17, 13, 12, 10, 9, 9, 8, 7, 7, 7, 6, 5, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  WR: [47, 45, 40, 39, 35, 31, 27, 27, 19, 18, 17, 16, 14, 13, 11, 10, 10, 10, 8, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  TE: [36, 31, 22, 16, 12, 10, 8, 7, 6, 6, 3, 2, 2, 2, 1, 1],
   K: [2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 };
@@ -3488,13 +3500,63 @@ function renormalizeToBudget(players, config) {
   };
   const fA = scaleFor('auctionValue'),
     fM = scaleFor('marketValue');
+  // Whole dollars, allocated so the COLUMN ADDS UP. Rounding each price on its own
+  // quietly loses money: every price that rounds down takes a dollar off a board
+  // that has to total the league's budget, and a dozen of those told a room of
+  // twelve to spend $1432 of its $1440. So each price is FLOORED and the leftover
+  // dollars are handed back to the prices the floor cost the most — largest
+  // remainder first, which is the allocation that stays closest to the exact
+  // scaling. A bump is SKIPPED when it would lift a player above the one ranked
+  // directly ahead of him at his position: the column must still never rise as you
+  // read down it, which tools/test-you-column.mjs asserts. Only ever additive, so
+  // no price can fall below the min bid on the way.
+  const settle = (key, f) => {
+    const slots = [];
+    Object.keys(byPos).forEach(pos => byPos[pos].forEach((p, rank) => {
+      if (!rostered.has(p.id) || typeof p[key] !== 'number') return;
+      const exact = Math.max(minBid, minBid + (p[key] - minBid) * f);
+      slots.push({
+        id: p.id,
+        pos,
+        rank,
+        exact,
+        val: Math.max(minBid, Math.floor(exact))
+      });
+    }));
+    if (!slots.length) return new Map();
+    const atRank = {};
+    slots.forEach(s => ((atRank[s.pos] = atRank[s.pos] || {})[s.rank] = s));
+    // The target is the exact scaled total, not `budget` directly: the two are the
+    // same number whenever every rostered player carries this key, and taking it
+    // off the slots themselves means a player who somehow does not cannot make the
+    // rest of the board absorb his share.
+    let residual = Math.round(slots.reduce((sum, s) => sum + s.exact, 0)) - slots.reduce((sum, s) => sum + s.val, 0);
+    const order = slots.slice().sort((a, b) => (b.exact - b.val) - (a.exact - a.val) || a.rank - b.rank);
+    // One pass can leave dollars stranded behind the no-rise rule, so keep going
+    // while a pass still places one. It converges: every pass spends or stops.
+    let moved = true;
+    while (residual > 0 && moved) {
+      moved = false;
+      for (const s of order) {
+        if (residual <= 0) break;
+        const above = s.rank > 0 ? atRank[s.pos][s.rank - 1] : null;
+        if (above && s.val + 1 > above.val) continue;
+        s.val += 1;
+        residual -= 1;
+        moved = true;
+      }
+    }
+    return new Map(slots.map(s => [s.id, s.val]));
+  };
+  const priceA = settle('auctionValue', fA),
+    priceM = settle('marketValue', fM);
   return players.map(p => {
     if (!rostered.has(p.id)) return p;
     const out = {
       ...p
     };
-    if (typeof out.auctionValue === 'number') out.auctionValue = Math.max(minBid, Math.round(minBid + (out.auctionValue - minBid) * fA));
-    if (typeof out.marketValue === 'number') out.marketValue = Math.max(minBid, Math.round(minBid + (out.marketValue - minBid) * fM));
+    if (priceA.has(p.id)) out.auctionValue = priceA.get(p.id);
+    if (priceM.has(p.id)) out.marketValue = priceM.get(p.id);
     return out;
   });
 }

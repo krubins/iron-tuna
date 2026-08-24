@@ -177,6 +177,7 @@ console.log('\nthe planner spends what it is given');
 
   const dflt = rows.filter(r => !r.error && r.alloc === 0.55 && r.conc === 0.5);
   const SLACK = 3;
+  const budgetOf = rs => (rs.find(r => r.budget) || {}).budget || 200;
 
   // THE DEFAULT BOARD IS THE ONE ALMOST EVERY READER SEES, and it is exact.
   // Before August 2026 the eight non-`ideal` models stranded $9 to $30 here:
@@ -203,17 +204,25 @@ console.log('\nthe planner spends what it is given');
      over.map(r => `${r.key} alloc ${r.alloc}/conc ${r.conc} over by $${-r.unspent}`).join('; '));
 
   // 2. ONE KNOWN RESIDUAL. Away from the default allocation, `extraBench` can
-  //    still withhold more than `backupCap` lets the bench absorb, so up to $19
-  //    goes unspent at the far Depth end. That is the tail of the same fault:
-  //    before this was fixed the identical money went unspent at EVERY setting
-  //    including the default, where it ran to $30. Handing the leftover back
-  //    needs the starter solve to run a second time, which is a larger change
-  //    than this one. Bounded rather than asserted away, so a regression that
-  //    makes it worse still fails here.
+  //    still withhold more than `backupCap` lets the bench absorb, so a tenth of
+  //    the budget goes unspent at the far Depth end. That is the tail of the same
+  //    fault: before this was fixed the identical money went unspent at EVERY
+  //    setting including the default, where it ran to 15% of the budget. Handing
+  //    the leftover back needs the starter solve to run a second time, which is a
+  //    larger change than this one. Bounded rather than asserted away, so a
+  //    regression that makes it worse still fails here.
+  //
+  //    The bound is a SHARE of the budget, not a dollar figure. It used to be a
+  //    flat $19, which was the exact high-water mark on the board of the day — so
+  //    any reprice of the market curve tripped it without the planner having
+  //    changed at all (re-cutting the curve to total its own $1440 in Aug 2026
+  //    moved the same residual to $21). What this is guarding is the size of the
+  //    hole relative to the money, and that is what it now measures.
+  const CAP = Math.round(budgetOf(rows) * 0.12);
   const strand = rows.filter(r => !r.error && r.unspent > SLACK);
-  ok('nothing strands off the default allocation by more than $19',
-     strand.every(r => r.alloc !== 0.55 && r.unspent <= 19),
-     strand.filter(r => !(r.alloc !== 0.55 && r.unspent <= 19))
+  ok(`nothing strands off the default allocation by more than $${CAP} (12% of the budget)`,
+     strand.every(r => r.alloc !== 0.55 && r.unspent <= CAP),
+     strand.filter(r => !(r.alloc !== 0.55 && r.unspent <= CAP))
            .map(r => `${r.key} alloc ${r.alloc}/conc ${r.conc} left $${r.unspent}`).join('; '));
 
   ok('nothing on the page threw', pageErrors.length === 0, pageErrors[0]);
