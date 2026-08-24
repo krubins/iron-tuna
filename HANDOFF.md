@@ -3571,3 +3571,145 @@ scored on the reader's own board, and two point scales on one card is the §32
   answer, then prints the day's dateline as a reader would read it.
 - `tools/test-worker-column.mjs` and `tools/test-it-league.mjs` are unchanged
   and still pass — the column's payload shape did not move.
+
+---
+
+## 35. August 2026: three stories staged in the queue, and the report that backs them
+
+Three lead stories were written to order on 2026-08-23 and inserted with
+`verified=1, published=0`, which is the "stage it" path in §17 rather than a slot
+run. They sit in the queue until somebody promotes one with
+`/api/admin/lead?promote=<id>`. Nothing was retired to make room for them, and
+the trigger `lead_story_one_per_slot` never fires on an unpublished insert, so
+all three share one clock slot without colliding.
+
+| id | slug | desk | what it argues |
+|---|---|---|---|
+| 38 | `coach-changes-help-hurt-2026-08-23-20` | playcaller | the five players a 2026 staff change helps and the five it costs |
+| 39 | `rankings-vs-odds-widest-gaps-2026-08-23-20` | vegas | the five widest rankings-versus-odds gaps each way, in dollars |
+
+### All three are BLOCKED on the one-board rule, and none should be promoted as written
+
+They were written on 2026-08-23 against the pricing model that this repo
+replaced the same day. Each one prints **two** dollar figures per player: a
+"consensus sheet" price taken from the player's rank on the raw committed
+projections, and a recommended bid taken from his rank on the blended pool.
+
+The blended figure is right. It is `_colPrice` at the blended rank, which is
+exactly what `boardPayload` serves at `/api/board` and what `/it-league.js`
+puts on a reader's screen. **The left-hand figure is the bug.** No page on this
+site prices a player off the unblended array, so that number does not exist
+anywhere a reader can check it, and printing it as "the consensus sheet says
+$47" is the failure "PRICE OFF THE CHEAT SHEET'S OWN CURVE" in
+`tools/lead-story-routine-prompt.md` was written to stop.
+
+Story 39 was promoted at 02:16 UTC on 2026-08-24 and pulled roughly ten minutes
+later for this reason; id 36 went back to being the lead. Before any of the
+three is promoted, the fix is the same in each: **one price per player, the
+board price, and tell the odds disagreement as a rank move.** "The odds have him
+RB8 rather than RB13" is the finding, and it needs no second dollar figure.
+Story 39 loses its organising idea in that rewrite, because "the widest gaps in
+dollars" is a ranking of an artefact; the honest version ranks by rank move.
+
+### `verified` wiped a second time, on 2026-08-24, and it is still not explained
+
+§17 ends by saying that if `verified` ever zeroes again with `published`
+intact, that is a second and separate bug. It happened, inside a ten-minute
+window that is worth writing down because the first occurrence had a day-long
+one.
+
+- 02:16:37 UTC: id 39 promoted. Read back immediately: `verified=1`,
+  `published=1`, `published_rows=1`, `live_rows=1`.
+- Between then and 02:2x: only read-only `SELECT`s against this database from
+  this session.
+- 02:2x: a single `UPDATE ... SET published = ...` that named no other column.
+  Read back after it: **all 39 rows `verified=0`**, `verified_rows=0`,
+  `live_rows=0`. The site had no generated lead and had silently fallen back to
+  the dated rotation, exactly as in the first incident.
+
+What that rules out, measured rather than assumed:
+
+- **Not the Worker.** `grep verified _worker.js` finds exactly one write,
+  `UPDATE lead_story SET verified = 1, published = 1 WHERE id = ?` in the
+  `promote` branch. There is no code path in the site that sets it to 0.
+- **Not a trigger.** `lead_story_one_per_slot` is the only trigger on the table,
+  it is `BEFORE INSERT`, and it only reads `verified`.
+- **Not an insert or a delete.** `sqlite_sequence` for `lead_story` was still
+  40 afterwards, so no insert was attempted and rolled back, and the only
+  missing id in 1..40 is 2, which predates all of this.
+
+So the writer is outside the site: the Routine's own D1 connector, or another
+session holding the same credentials. The blanket shape of it (39 of 39 rows,
+including rows that were already 0) fits an `UPDATE` whose `WHERE` matched
+everything, which is the same shape as the `id <> last_insert_rowid()` fault in
+§17 but on a different column. **Nothing found here proves that, and the next
+person should not treat it as proven.**
+
+Recovery was deliberately narrow. `verified = 1` went back on exactly the four
+rows whose value was observed as 1 earlier in the same session (36, 38, 39, 40)
+and on nothing else, for the reason §17 gives: `verified` is a claim a run made
+about its own sourcing, and restoring it in bulk manufactures claims nobody
+made. Ids 1 to 35 stay at 0.
+
+**The daily watch does not catch this.** `Iron Tuna: watch for empty lead-story
+slots` checks `published_rows` first, and `published_rows` was 1 throughout. A
+watch that tested `live_rows`, meaning `published = 1 AND verified = 1`, would
+have caught both this and the original incident, because that is the pair the
+site actually reads.
+
+| 40 | `weekly-swing-steady-varied-2026-08-23-20` | market | the five steadiest week to week and the five most varied |
+
+A staged row that is `verified=1` is **not invisible**. `published=0` on a
+verified row is the *Recent insights* list under the front-page lead (§17), so
+these are reachable from the moment they land. They are simply not the lead.
+If that is not wanted, `verified=0` hides a row completely, but it also means
+"the run failed its own gate", which is a lie about these three.
+
+### `tools/board-report.mjs`
+
+The numbers in stories 39 and 40 are not hand-derived. `node tools/board-report.mjs`
+prints them, and it exists so the next desk run does not re-derive them either.
+
+It lifts the **real** Vegas section out of `_worker.js` with the same
+`new Function` harness `tools/test-worker-column.mjs` uses, so it runs
+`buildVegasBoard` itself rather than a copy: the report cannot drift from what
+`/api/vegas-column` and the player cards serve. Two markers are load-bearing,
+`// Vegas-weighted projections` and `export default {`, and the script exits
+non-zero with a named error if either moves or the projection parse comes back
+short.
+
+- **`--games <path>`** reads a local `games.csv` instead of fetching the
+  nflverse release, which is how it runs without network.
+- **`--json`** prints every row with its ranks, prices, team context and shape
+  figures, which is the form the stories were written from.
+- It rebuilds the odds side from today's game lines rather than reading
+  `odds_overlay` out of D1. Spot-checked against the stored row on 2026-08-23:
+  agreement within 0.3%, the difference being lines that moved between the
+  7:00 AM ET refresh and the run. **If a story needs to quote exactly what the
+  site is serving right now, read D1; if it needs to be reproducible from the
+  repository, use this.** Story 39 says which one it used.
+
+### The week-to-week model is this file's, and only this file's
+
+`PROJECTIONS` holds season totals and no game logs, so **week-to-week variance
+cannot be measured anywhere in this repository.** The `shape()` function derives
+it instead, and the derivation is written out in full in the comment above it:
+every scoring event is treated as a Poisson count over 17 games, so points of
+size `k` arriving `m` times a game contribute `k² · m` of variance, and the
+pieces sum. There are no fitted constants. There are two assumed league-level
+rates, 4.3 yards a carry and 11.5 yards a completion, used only to turn
+projected yardage back into a count of events.
+
+Two things follow, and both are in the story rather than buried here:
+
+1. **It is a floor, not a forecast.** It cannot see injuries, game script, or the
+   fact that a touchdown catch is also a catch. Real Sundays are wider.
+2. **The raw ranking is mostly a position ranking.** Backs collect hundreds of
+   small events and tight ends collect dozens, so a raw list puts five backs at
+   the steady end and tight ends at the other every time. That is why the report
+   also prints `spreadZ`, each player against the mean at *his own* position,
+   which is the comparison that is not knowable before you read the names.
+
+Do not promote this model into `_worker.js` or quote its decimals on a page. It
+is a desk instrument for ordering players, and the order is the only part of it
+that is robust.
