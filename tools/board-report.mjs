@@ -160,10 +160,23 @@ const lpad = (v, n) => String(v).padStart(n);
 
 console.log(`\nteams priced ${teams}   players the overlay moved ${matched}   pool ${PROJECTIONS.length}`);
 
-// A gap only matters where a reader has a decision to make. Everything below
-// the curve is a $1 name whose "eight-slot move" is two projection points
-// shuffling a queue of backups, so both halves of the report are cut to the
-// players a room actually bids on.
+// ── THERE IS ONE BOARD, AND `priceIronTuna` IS IT ──────────────────────────
+// Read this before quoting a dollar figure out of this report.
+//
+// `priceIronTuna` is the curve price at a player's rank on the BLENDED pool,
+// which is what `/api/board` serves, what `/it-league.js` shows a reader, and
+// therefore the only dollar figure that exists as far as the site is concerned.
+//
+// `priceConsensus` is the curve price at his rank on the raw committed
+// projections. **Nothing on the site prices players that way and no reader can
+// see that number.** It is printed below only as the left half of a rank
+// comparison, and printing it in a story as "the consensus sheet says $X" is a
+// bug the desk has shipped twice: a story quoted $47 for a back whose row on
+// the reader's own screen said $30. See "PRICE OFF THE CHEAT SHEET'S OWN CURVE"
+// in tools/lead-story-routine-prompt.md.
+//
+// So: what the odds do to a player is a RANK story with ONE price attached.
+// The columns below are labelled to make writing it the other way awkward.
 const BID = r => r.draftable && (r.priceConsensus >= 5 || r.priceIronTuna >= 5 || r.rankConsensus <= 24);
 
 console.log('\n══ RANKINGS vs ODDS ══  positional rank on the committed sheet minus rank on the odds board');
@@ -173,24 +186,24 @@ for (const dir of ['up', 'down']) {
     .slice(0, 8);
   console.log(`\n  ${dir === 'up' ? 'ODDS RATE HIM HIGHER' : 'ODDS RATE HIM LOWER'}`);
   console.log('   ' + pad('player', 24) + pad('pos', 4) + pad('tm', 4) + lpad('rank', 6) + lpad('odds', 6) +
-              lpad('move', 6) + lpad('ptsC', 7) + lpad('ptsM', 7) + lpad('$C', 5) + lpad('$IT', 5) + '  team implied');
+              lpad('move', 6) + lpad('ptsC', 7) + lpad('ptsM', 7) + lpad('board$', 8) + lpad('(raw)', 7) + '  team implied');
   for (const r of list) {
     console.log('   ' + pad(r.name, 24) + pad(r.position, 4) + pad(r.team, 4) +
       lpad(r.rankConsensus, 6) + lpad(r.rankMarket, 6) + lpad((r.oddsRankDelta > 0 ? '+' : '') + r.oddsRankDelta, 6) +
-      lpad(f1(r.ptsConsensus), 7) + lpad(f1(r.ptsMarket), 7) + lpad('$' + r.priceConsensus, 5) + lpad('$' + r.priceIronTuna, 5) +
+      lpad(f1(r.ptsConsensus), 7) + lpad(f1(r.ptsMarket), 7) + lpad('$' + r.priceIronTuna, 8) + lpad('$' + r.priceConsensus, 7) +
       '  ' + f1(r.teamImplied) + ' (#' + r.teamRank + ' vs #' + r.teamRankConsensus + ' on the sheet)');
   }
 }
 
-console.log('\n══ THE SAME DISAGREEMENT IN DOLLARS ══  the site ships the odds blended in at 3:1, so this is the move a reader sees on their own sheet');
+console.log('\n══ THE BIGGEST RANK MOVES, WITH THE ONE PRICE ══  board$ is what /api/board serves and what a reader sees; (raw) is NOT a site number and must never be printed as "the consensus sheet says"');
 {
   const list = rows.filter(BID).sort((a, b) => Math.abs(b.priceDelta) - Math.abs(a.priceDelta)).slice(0, 14);
-  console.log('   ' + pad('player', 24) + pad('pos', 4) + pad('tm', 4) + lpad('$sheet', 8) + lpad('$IT', 6) +
-              lpad('move', 6) + lpad('rank', 6) + lpad('odds', 6) + '  team implied');
+  console.log('   ' + pad('player', 24) + pad('pos', 4) + pad('tm', 4) + lpad('board$', 8) + lpad('(raw)', 7) +
+              lpad('rank', 6) + lpad('odds', 6) + lpad('move', 6) + '  team implied');
   for (const r of list) {
     console.log('   ' + pad(r.name, 24) + pad(r.position, 4) + pad(r.team, 4) +
-      lpad('$' + r.priceConsensus, 8) + lpad('$' + r.priceIronTuna, 6) +
-      lpad((r.priceDelta > 0 ? '+' : '') + r.priceDelta, 6) + lpad(r.rankConsensus, 6) + lpad(r.rankMarket, 6) +
+      lpad('$' + r.priceIronTuna, 8) + lpad('$' + r.priceConsensus, 7) +
+      lpad(r.rankConsensus, 6) + lpad(r.rankMarket, 6) + lpad((r.oddsRankDelta > 0 ? '+' : '') + r.oddsRankDelta, 6) +
       '  ' + f1(r.teamImplied) + ' (#' + r.teamRank + ' vs #' + r.teamRankConsensus + ' on the sheet)');
   }
 }
@@ -203,11 +216,11 @@ for (const scope of [['FLEX (RB/WR/TE)', r => r.position !== 'QB'], ['QB', r => 
     const list = [...pool].sort((a, b) => dir === 'steady' ? a.spread - b.spread : b.spread - a.spread).slice(0, 8);
     console.log(`\n  ${scope[0]} — ${dir === 'steady' ? 'STEADIEST' : 'LUMPIEST'}`);
     console.log('   ' + pad('player', 24) + pad('pos', 4) + pad('tm', 4) + lpad('pts/gm', 8) + lpad('sd', 6) +
-                lpad('spread', 8) + lpad('TD%', 6) + lpad('rank', 6) + lpad('$C', 5));
+                lpad('spread', 8) + lpad('TD%', 6) + lpad('rank', 6) + lpad('board$', 7));
     for (const r of list) {
       console.log('   ' + pad(r.name, 24) + pad(r.position, 4) + pad(r.team, 4) +
         lpad(f1(r.perGame), 8) + lpad(f1(r.sd), 6) + lpad(r.spread.toFixed(3), 8) +
-        lpad(Math.round(r.tdShare * 100) + '%', 6) + lpad(r.rankConsensus, 6) + lpad('$' + r.priceConsensus, 5));
+        lpad(Math.round(r.tdShare * 100) + '%', 6) + lpad(r.rankConsensus, 6) + lpad('$' + r.priceIronTuna, 6));
     }
   }
 }
@@ -218,12 +231,12 @@ for (const dir of ['steady', 'lumpy']) {
     .sort((a, b) => dir === 'steady' ? a.spreadZ - b.spreadZ : b.spreadZ - a.spreadZ).slice(0, 10);
   console.log(`\n  ${dir === 'steady' ? 'STEADIER THAN HIS POSITION' : 'LUMPIER THAN HIS POSITION'}`);
   console.log('   ' + pad('player', 24) + pad('pos', 4) + pad('tm', 4) + lpad('z', 7) + lpad('spread', 8) +
-              lpad('pts/gm', 8) + lpad('TD%', 6) + lpad('rank', 6) + lpad('$C', 5));
+              lpad('pts/gm', 8) + lpad('TD%', 6) + lpad('rank', 6) + lpad('board$', 7));
   for (const r of list) {
     console.log('   ' + pad(r.name, 24) + pad(r.position, 4) + pad(r.team, 4) +
       lpad((r.spreadZ > 0 ? '+' : '') + r.spreadZ.toFixed(2), 7) + lpad(r.spread.toFixed(3), 8) +
       lpad(f1(r.perGame), 8) + lpad(Math.round(r.tdShare * 100) + '%', 6) +
-      lpad(r.rankConsensus, 6) + lpad('$' + r.priceConsensus, 5));
+      lpad(r.rankConsensus, 6) + lpad('$' + r.priceIronTuna, 6));
   }
 }
 console.log('');

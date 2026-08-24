@@ -3587,6 +3587,76 @@ all three share one clock slot without colliding.
 |---|---|---|---|
 | 38 | `coach-changes-help-hurt-2026-08-23-20` | playcaller | the five players a 2026 staff change helps and the five it costs |
 | 39 | `rankings-vs-odds-widest-gaps-2026-08-23-20` | vegas | the five widest rankings-versus-odds gaps each way, in dollars |
+
+### All three are BLOCKED on the one-board rule, and none should be promoted as written
+
+They were written on 2026-08-23 against the pricing model that this repo
+replaced the same day. Each one prints **two** dollar figures per player: a
+"consensus sheet" price taken from the player's rank on the raw committed
+projections, and a recommended bid taken from his rank on the blended pool.
+
+The blended figure is right. It is `_colPrice` at the blended rank, which is
+exactly what `boardPayload` serves at `/api/board` and what `/it-league.js`
+puts on a reader's screen. **The left-hand figure is the bug.** No page on this
+site prices a player off the unblended array, so that number does not exist
+anywhere a reader can check it, and printing it as "the consensus sheet says
+$47" is the failure "PRICE OFF THE CHEAT SHEET'S OWN CURVE" in
+`tools/lead-story-routine-prompt.md` was written to stop.
+
+Story 39 was promoted at 02:16 UTC on 2026-08-24 and pulled roughly ten minutes
+later for this reason; id 36 went back to being the lead. Before any of the
+three is promoted, the fix is the same in each: **one price per player, the
+board price, and tell the odds disagreement as a rank move.** "The odds have him
+RB8 rather than RB13" is the finding, and it needs no second dollar figure.
+Story 39 loses its organising idea in that rewrite, because "the widest gaps in
+dollars" is a ranking of an artefact; the honest version ranks by rank move.
+
+### `verified` wiped a second time, on 2026-08-24, and it is still not explained
+
+§17 ends by saying that if `verified` ever zeroes again with `published`
+intact, that is a second and separate bug. It happened, inside a ten-minute
+window that is worth writing down because the first occurrence had a day-long
+one.
+
+- 02:16:37 UTC: id 39 promoted. Read back immediately: `verified=1`,
+  `published=1`, `published_rows=1`, `live_rows=1`.
+- Between then and 02:2x: only read-only `SELECT`s against this database from
+  this session.
+- 02:2x: a single `UPDATE ... SET published = ...` that named no other column.
+  Read back after it: **all 39 rows `verified=0`**, `verified_rows=0`,
+  `live_rows=0`. The site had no generated lead and had silently fallen back to
+  the dated rotation, exactly as in the first incident.
+
+What that rules out, measured rather than assumed:
+
+- **Not the Worker.** `grep verified _worker.js` finds exactly one write,
+  `UPDATE lead_story SET verified = 1, published = 1 WHERE id = ?` in the
+  `promote` branch. There is no code path in the site that sets it to 0.
+- **Not a trigger.** `lead_story_one_per_slot` is the only trigger on the table,
+  it is `BEFORE INSERT`, and it only reads `verified`.
+- **Not an insert or a delete.** `sqlite_sequence` for `lead_story` was still
+  40 afterwards, so no insert was attempted and rolled back, and the only
+  missing id in 1..40 is 2, which predates all of this.
+
+So the writer is outside the site: the Routine's own D1 connector, or another
+session holding the same credentials. The blanket shape of it (39 of 39 rows,
+including rows that were already 0) fits an `UPDATE` whose `WHERE` matched
+everything, which is the same shape as the `id <> last_insert_rowid()` fault in
+§17 but on a different column. **Nothing found here proves that, and the next
+person should not treat it as proven.**
+
+Recovery was deliberately narrow. `verified = 1` went back on exactly the four
+rows whose value was observed as 1 earlier in the same session (36, 38, 39, 40)
+and on nothing else, for the reason §17 gives: `verified` is a claim a run made
+about its own sourcing, and restoring it in bulk manufactures claims nobody
+made. Ids 1 to 35 stay at 0.
+
+**The daily watch does not catch this.** `Iron Tuna: watch for empty lead-story
+slots` checks `published_rows` first, and `published_rows` was 1 throughout. A
+watch that tested `live_rows`, meaning `published = 1 AND verified = 1`, would
+have caught both this and the original incident, because that is the pair the
+site actually reads.
+
 | 40 | `weekly-swing-steady-varied-2026-08-23-20` | market | the five steadiest week to week and the five most varied |
 
 A staged row that is `verified=1` is **not invisible**. `published=0` on a
