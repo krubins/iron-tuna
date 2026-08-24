@@ -619,7 +619,7 @@ const fmtShort = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1].sl
 if (reports.length) {
   const f = reports[0];
   const note = 'Verified, auction-relevant signals from camps and preseason games. '
-    + `This desk updates as news breaks — <b>latest report: ${fmtDate(f.date)}</b>.`;
+    + `These reports update as news breaks — <b>latest report: ${fmtDate(f.date)}</b>.`;
   const feat = '<span><span class="badge badge-pos">Latest report</span></span>'
     + `<h3><a href="${f.url}">${escText(f.title)}</a></h3>`
     + `<p>${escText(f.desc)}</p>`

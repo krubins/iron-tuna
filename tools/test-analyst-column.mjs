@@ -261,7 +261,16 @@ console.log('\nthe page itself');
   // strings this file built.
   ok('the page escapes what the desk wrote', /function\(s\)\{ return String\(s == null \? '' : s\)\.replace/.test(page.replace(/\s+/g, ' ')) || page.includes('var esc ='));
   ok('an empty column says so instead of showing an error',
-     page.includes('has not published an analyst piece yet'));
+     page.includes('No entries are up right now'));
+  // Every entry was pulled at once on 2026-08-23, so "nothing published yet" is
+  // a claim the page cannot make: it had been full an hour earlier. An empty
+  // column has to read the same whether it was never filled or just emptied.
+  // Checked on the strings handed to empty(), not the file, so the comment
+  // explaining this rule does not trip the rule.
+  const emptyMsgs = [...page.matchAll(/empty\('([^']*)'\)/g)].map(m => m[1]);
+  ok('the empty states are reader copy, both of them', emptyMsgs.length === 2, String(emptyMsgs.length));
+  ok('and neither claims nothing was ever published',
+     emptyMsgs.every(m => !/not published|yet\b/.test(m)), emptyMsgs.join(' | '));
   ok('a dead API still leaves the standing copy', page.includes('unreachable right now'));
   ok('the reader is told analyst-above-consensus is not analyst-above-us',
      page.includes('is not the same as being above us'));

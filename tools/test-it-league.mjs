@@ -199,7 +199,7 @@ console.log('\ncustom budget');
 console.log('\nthe reader’s own board');
 {
   const board = {
-    ts: 1, teams: 10, budget: 300, format: 'auction',
+    ts: 1, sv: 2, teams: 10, budget: 300, format: 'auction',
     players: [
       { n: 'Alpha Wideout', pos: 'WR', v: 60, pts: 300 },
       { n: 'Bravo Wideout', pos: 'WR', v: 48, pts: 280 },
@@ -261,7 +261,7 @@ console.log('\nthe reader’s own board');
 console.log('\nthe reading format');
 {
   const board = {
-    ts: 1, teams: 10, budget: 300, format: 'auction',
+    ts: 1, sv: 2, teams: 10, budget: 300, format: 'auction',
     players: [
       { n: 'Alpha Wideout', pos: 'WR', v: 60, pts: 300 },
       { n: 'Bravo Wideout', pos: 'WR', v: 48, pts: 280 },
@@ -378,7 +378,7 @@ console.log('\nthe default board');
   // The reader's own board still outranks the site's, in both directions.
   const own = load({
     iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
-    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'auction',
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, sv: 2, teams: 12, budget: 200, format: 'auction',
       players: [{ n: someone.n, pos: 'WR', v: 99, pts: 400 }, { n: 'Filler Wideout', pos: 'WR', v: 5, pts: 100 }] })
   }).L;
   ok('a saved board wins over the site\u2019s', /is \$99 on your sheet/.test(own.tailor('+10% versus price', someone.n, 'WR')));
@@ -448,7 +448,7 @@ console.log('\ndraft slots');
   for (let i = 0; i < 12; i++) players.push({ n: nm(i) + ' Catcher', pos: 'WR', v: 60 - i * 4, pts: 300 - i * 4 });
   const { L } = load({
     iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'snake' } }),
-    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'snake', players })
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, sv: 2, teams: 12, budget: 200, format: 'snake', players })
   });
   const wr = L.findPlayer(nm(6) + ' Catcher', 'WR');
   ok('the fixture board did not collapse on itself', wr && wr.pts === 276, wr && String(wr.pts));
@@ -473,7 +473,7 @@ console.log('\ndraft slots');
   for (let i = 0; i < 40; i++) deep.push({ n: nm(i) + ' Runner', pos: 'RB', v: i < 3 ? 30 - i * 5 : 1, pts: 200 - i * 2 });
   const tail = load({
     iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'snake' } }),
-    iron_tuna_values_v1: JSON.stringify({ ts: 1, teams: 12, budget: 200, format: 'snake', players: deep })
+    iron_tuna_values_v1: JSON.stringify({ ts: 1, sv: 2, teams: 12, budget: 200, format: 'snake', players: deep })
   }).L;
   const endgame = tail.tailor('+20% versus late-round price', nm(30) + ' Runner', 'RB');
   ok('a $1 dart is not quoted a precise slot count', !/\d+ slots/.test(endgame), endgame);
@@ -645,7 +645,7 @@ console.log('\nfront.html myCase');
   const myCase = new Function('window', front.slice(i, j + 4) + '\n;return myCase;')({ ITLeague: null });
   ok('no library, no personalisation', myCase({ position: 'WR' }) === null);
 
-  const board = { ts: 1, teams: 12, budget: 400, format: 'auction', players: [
+  const board = { ts: 1, sv: 2, teams: 12, budget: 400, format: 'auction', players: [
     { n: 'Top Wideout', pos: 'WR', v: 70, pts: 320 },
     { n: 'Case Wideout', pos: 'WR', v: 40, pts: 250 },
     { n: 'Third Wideout', pos: 'WR', v: 20, pts: 200 }
@@ -685,7 +685,7 @@ console.log('\nthe desk\u2019s dollars in the reader\u2019s league');
   const site = load({}).L.defaultBoard();
   const priceOf = n => (site.find(p => p.n === n) || {}).v || 0;
   const readerBoard = {
-    ts: 1, teams: 10, budget: 300, format: 'auction',
+    ts: 1, sv: 2, teams: 10, budget: 300, format: 'auction',
     players: [
       { n: 'Zay Flowers', pos: 'WR', v: priceOf('Zay Flowers') * 2, pts: 260 },
       { n: 'Derrick Henry', pos: 'RB', v: priceOf('Derrick Henry'), pts: 250 },
@@ -748,9 +748,271 @@ console.log('\nthe desk\u2019s dollars in the reader\u2019s league');
      !/desk/i.test(L.pricingNote(true)) && !/\$200/.test(L.pricingNote(true))
      && !/desk/i.test(L.pricingNote(false)) && !/\$200/.test(L.pricingNote(false)),
      L.pricingNote(true) + ' | ' + L.pricingNote(false));
-  ok('a reader with no league is told whose dollars these are, and how to change it',
-     /12-team, \$200 full-PPR/.test(load({}).L.pricingNote(false))
-     && /Set up your league/.test(load({}).L.pricingNote(false)));
+  // A reader with nothing saved is shown the site's default league, and it is
+  // named in full: "the default" is not a league anybody can check a price at.
+  ok('a reader with no league is shown the default league, named in full',
+     /default league: 12 teams, \$200, full PPR/.test(load({}).L.pricingNote(false))
+     && /Set up your own/.test(load({}).L.pricingNote(false)), load({}).L.pricingNote(false));
+}
+
+// ── 11b. which player a dollar figure belongs to ───────────────────────────
+// The lead of 2026-08-23 went out with McMillan at $36 in the headline and $7
+// in the dek, one player and two prices on the front page. Every figure in the
+// dek was written price-first ("$33 on Tetairoa McMillan") and every one of
+// them was handed to the player named BEFORE it, so McMillan was restated off
+// Price's board slot and Jefferson off McMillan's. The headline says the same
+// thing name-first, which is the only reason it was right.
+console.log('\na dollar figure belongs to the player it is bound to');
+{
+  const site = load({}).L.defaultBoard();
+  const priceOf = n => (site.find(p => p.n === n) || {}).v || 0;
+  // The desk's own league, so nothing here moves for budget reasons and the
+  // only thing under test is which player each figure was read against.
+  const store = (players, cfg = { teams: 12, budget: 200, format: 'auction' }) => ({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: cfg }),
+    iron_tuna_values_v1: JSON.stringify(Object.assign({ ts: 1, sv: 2, format: 'auction' }, cfg, { players }))
+  });
+  const cast = [
+    { n: 'J.K. Dobbins', pos: 'RB', v: 1, pts: 110 },
+    { n: 'Jadarian Price', pos: 'RB', v: 1, pts: 105 },
+    { n: 'Tetairoa McMillan', pos: 'WR', v: 22, pts: 200 },
+    { n: 'Justin Jefferson', pos: 'WR', v: 50, pts: 260 }
+  ];
+  const { L } = load(store(cast));
+  const names = ['J.K. Dobbins', 'Tetairoa McMillan', 'Jadarian Price', 'Justin Jefferson'];
+  const say = t => (L.repriceCopy(t, names) || {}).text || '';
+
+  const title = say('Cap J.K. Dobbins at $12 and bid Tetairoa McMillan to $33 as cheap backs get better');
+  const dek = say('Cap J.K. Dobbins at $12 and Jadarian Price at $13; bid up to $33 on Tetairoa McMillan and $44 on Justin Jefferson.');
+  ok('a figure written price-first goes to the player it points at, not the one before it',
+     /\$36 on Tetairoa McMillan/.test(dek), dek);
+  ok('the headline and the dek cannot disagree about one player’s price',
+     /McMillan to \$36/.test(title) && /\$36 on Tetairoa McMillan/.test(dek), title + ' || ' + dek);
+  ok('"and" joins two bindings rather than extending one',
+     /\$47 on Justin Jefferson/.test(dek), dek);
+  ok('a name-first figure still belongs to the name before it',
+     /Dobbins at \$4 and Jadarian Price at \$3/.test(dek), dek);
+
+  // "Cap Drake London at $29, Garrett Wilson at $26" is the case the backward
+  // rule exists for, and it has to keep winning over the forward one.
+  const pair = say('Cap Tetairoa McMillan at $33, Justin Jefferson at $44.');
+  ok('two named prices in one clause each keep their own player',
+     /McMillan at \$36, Justin Jefferson at \$47/.test(pair), pair);
+
+  // A period inside a name is not the end of a sentence. Both Browns are on the
+  // board, so neither gets a surname of his own to be found by, and the cut
+  // after "A.J." used to put A.J. out of his own sentence's reach.
+  const brown = load(store([
+    { n: 'A.J. Brown', pos: 'WR', v: priceOf('A.J. Brown') * 2, pts: 230 },
+    { n: 'Chase Brown', pos: 'RB', v: priceOf('Chase Brown'), pts: 210 }
+  ])).L.repriceCopy('Cap A.J. Brown at $25 and Chase Brown at $20.', ['A.J. Brown', 'Chase Brown']);
+  ok('a player written with initials is still named in his own sentence',
+     brown && /A\.J\. Brown at \$50 and Chase Brown at \$20/.test(brown.text),
+     brown ? brown.text : '(nothing restated at all)');
+
+  // The one case that must NOT fall back on the previous player: a figure bound
+  // to somebody this reader's board has never heard of. It is still his figure.
+  const off = load(store(cast, { teams: 10, budget: 300, format: 'auction' })).L
+    .repriceCopy('Cap J.K. Dobbins at $12 and bid up to $33 on Rome Odunze.', names);
+  ok('a figure bound to a player the board cannot price scales with the room instead',
+     off && /Odunze/.test(off.text) && /\$41 on Rome Odunze/.test(off.text), off && off.text);
+  ok('and the player it is not about keeps his own number',
+     off && /Dobbins at \$4\b/.test(off.text), off && off.text);
+}
+
+// ── 11c. a story written before the scoring changed ────────────────────────
+// repriceCopy converts a price between LEAGUES. On 2026-08-23 the site changed
+// MODELS — receptions went from half a point to a full one — and story 29,
+// written the day before, priced Zay Flowers at $26 on its own half-PPR board
+// and argued for $32. This board prices him at $20 and a reader's at $21, so
+// the ratio came out 1.05 and the front page printed "bid $34, not the sheet's
+// $27" above a cheat sheet reading $21.
+//
+// The fix for that is upstream: a story's prices are computed off the same
+// market curve this file prices the cheat sheet with, so the two track. Down
+// here every story is still restated into the reader's league, because a price
+// in a league nobody plays helps nobody — and the older ones say out loud that
+// their scoring is not this board's.
+console.log('\nan older story is restated too, and says why it can still differ');
+{
+  const store = {
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
+    iron_tuna_values_v1: JSON.stringify({
+      ts: 1, sv: 2, teams: 12, budget: 200, format: 'auction',
+      players: [{ n: 'Zay Flowers', pos: 'WR', v: 21, pts: 230 }]
+    })
+  };
+  const { L } = load(store);
+  const title = "Zay Flowers moves to WR9: bid $32, not the sheet's $26.";
+  const HALF = Date.parse('2026-08-22T16:12:19Z');   // story 29, rec*0.5
+  const FULL = Date.parse('2026-08-23T01:13:21Z');   // story 32, rec*1.0
+
+  ok('an older story still follows the reader’s league rather than being left alone',
+     /bid \$34/.test((L.repriceCopy(title, ['Zay Flowers'], HALF) || {}).text || ''),
+     (L.repriceCopy(title, ['Zay Flowers'], HALF) || {}).text);
+  ok('and so does a current one',
+     /bid \$34/.test((L.repriceCopy(title, ['Zay Flowers'], FULL) || {}).text || ''));
+  ok('the boundary is the day the scoring changed, not a guess about it',
+     L.staleModel(Date.parse('2026-08-22T23:59:59Z')) === true
+     && L.staleModel(Date.parse('2026-08-23T00:00:00Z')) === false);
+  ok('a story with no date on it is treated as current, as every caller was before',
+     L.staleModel(undefined) === false && L.staleModel(0) === false);
+
+  // The note is where the reader is told why a restated price can still sit
+  // above a cheat sheet that disagrees with it.
+  ok('the older story’s note warns that its prices can differ from the cheat sheet',
+     /before the site changed its scoring/.test(L.pricingNote(true, HALF))
+     && /cheat sheet/.test(L.pricingNote(true, HALF)), L.pricingNote(true, HALF));
+  ok('and it is still told to the reader as their own league',
+     /Restated for your 12-team, \$200 auction/.test(L.pricingNote(true, HALF)),
+     L.pricingNote(true, HALF));
+  ok('a current story carries no such warning',
+     !/changed its scoring/.test(L.pricingNote(true, FULL)), L.pricingNote(true, FULL));
+
+  // "The desk" is in-house shorthand: it means nothing to a reader.
+  const seen = [L.pricingNote(true, HALF), L.pricingNote(false, HALF),
+                L.pricingNote(true, FULL), load({}).L.pricingNote(false)];
+  ok('no reader-facing note calls it "the desk"',
+     seen.every(t => !/desk/i.test(t)), seen.join(' | '));
+}
+
+// ── 11d. the number on the page is the number on the reader's sheet ────────
+// The whole point, stated as a test: a story's sheet figure must land on the
+// reader's own row, not near it. The app writes MARKET PRICE into the snapshot
+// at the reader's slider, scoring, budget and team count, and this library
+// copies it rather than recomputing it. A second calculation is only a second
+// chance to disagree with the sheet.
+console.log('\nthe sheet figure lands on the reader’s own row');
+{
+  const site = load({}).L.defaultBoard();
+  const priceOf = n => (site.find(p => p.n === n) || {}).v || 0;
+  const SITE_MC = priceOf('Tetairoa McMillan');       // the site's market price
+  const READER_MC = 31;                                // theirs, at their settings
+  const mk = extra => ({
+    iron_tuna_draft_state_v2: JSON.stringify({
+      config: { teams: 12, budget: 200, format: 'auction', strategy: { vegasWeight: 0.4 } }
+    }),
+    iron_tuna_values_v1: JSON.stringify(Object.assign({
+      ts: 1, sv: 2, teams: 12, budget: 200, format: 'auction',
+      players: [{ n: 'Tetairoa McMillan', pos: 'WR', v: READER_MC, tv: 44, pts: 250 }]
+    }, extra))
+  });
+  const { L } = load(mk());
+
+  ok('the reader’s own sheet price is readable without recomputing it',
+     L.sheetPrice('Tetairoa McMillan') === READER_MC, String(L.sheetPrice('Tetairoa McMillan')));
+  ok('a player the sheet does not carry has no price rather than a guessed one',
+     L.sheetPrice('Nobody At All') === 0);
+
+  // siteFigure x (readerPrice / siteFigure) === readerPrice, exactly.
+  const out = L.repriceCopy(
+    'The consensus sheet says $' + SITE_MC + ' for Tetairoa McMillan.', ['Tetairoa McMillan']);
+  ok('a story quoting the site’s sheet price prints the reader’s sheet price',
+     out && out.text === 'The consensus sheet says $' + READER_MC + ' for Tetairoa McMillan.',
+     out && out.text);
+
+  // The slider was sitting in the saved config and being thrown away.
+  ok('the reader’s Vegas slider is kept, not silently replaced by the default',
+     L.vegasWeight() === 0.4, String(L.vegasWeight()));
+  ok('and a reader who never moved it is reported at the site default',
+     load({ iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200 } }) })
+       .L.vegasWeight() === 0.75);
+
+  // Shape 1 stored True Value in `v`. Reading that as a market price is the bug
+  // that put "$38 for Derrick Henry" over a sheet saying $23, so an old
+  // snapshot is read for its league and never for its dollars. It heals itself
+  // the next time the reader opens the draft app.
+  const old = load({
+    iron_tuna_draft_state_v2: JSON.stringify({ config: { teams: 12, budget: 200, format: 'auction' } }),
+    iron_tuna_values_v1: JSON.stringify({
+      ts: 1, teams: 12, budget: 200, format: 'auction',
+      players: [{ n: 'Tetairoa McMillan', pos: 'WR', v: 44, pts: 250 }]
+    })
+  }).L;
+  ok('a pre-Market-Price snapshot is never read for a price',
+     old.sheetPrice('Tetairoa McMillan') === 0);
+  ok('and its stored True Value cannot reach the page as a market price',
+     !/\$44/.test((old.repriceCopy('The consensus sheet says $' + SITE_MC
+        + ' for Tetairoa McMillan.', ['Tetairoa McMillan']) || {}).text || ''));
+  ok('but the league it names is still honoured',
+     old.config && old.config.teams === 12 && old.config.budget === 200);
+}
+
+// ── 11e. the site's board is the one the site serves ───────────────────────
+// The committed block in it-league.js is generated from the COMMITTED
+// projections. The app is served those projections re-blended with today's
+// odds, so the static copy is a different board the moment a line moves. That
+// is how "$47 on the consensus sheet" reached a reader whose row said $25.
+// /api/board is the served board; the static block is only the fallback.
+console.log('\nthe site board is fetched, and the static block is the fallback');
+{
+  // A stub fetch, so the real load path runs rather than a mock of it.
+  const boardPayload = {
+    ok: true, contract: 1, teams: 12, budget: 200,
+    players: [{ n: 'Derrick Henry', pos: 'RB', v: 38, pts: 300 },
+              { n: 'Filler Back', pos: 'RB', v: 4, pts: 120 }]
+  };
+  const withFetch = (payload, opts = {}) => {
+    const w = makeWindow({});
+    w.fetch = (url) => {
+      w._asked = url;
+      if (opts.reject) return Promise.reject(new Error('offline'));
+      return Promise.resolve({ ok: opts.httpFail ? false : true, json: () => Promise.resolve(payload) });
+    };
+    new Function('window', lib + '\n;return window.ITLeague;')(w);
+    return w;
+  };
+  const settled = (L) => new Promise(res => L.onBoard(res));
+
+  const staticHenry = load({}).L.defaultBoard().find(p => p.n === 'Derrick Henry');
+  ok('the static block prices Derrick Henry at all', staticHenry && staticHenry.v > 0);
+
+  const w1 = withFetch(boardPayload);
+  const L1 = w1.ITLeague;
+  await settled(L1);
+  ok('the board is fetched from /api/board', w1._asked === '/api/board', String(w1._asked));
+  ok('and it is adopted as the site board', L1.boardIsServed() === true);
+  ok('the served price wins over the static one',
+     (L1.defaultBoard().find(p => p.n === 'Derrick Henry') || {}).v === 38,
+     JSON.stringify(L1.defaultBoard().find(p => p.n === 'Derrick Henry')));
+  ok('a player the served board does not carry is simply absent, not invented',
+     !L1.defaultBoard().some(p => p.n === 'Zay Flowers'));
+
+  // Every failure mode leaves the reader on the static board rather than on
+  // nothing. A board that cannot be fetched is a worse answer, not a broken page.
+  for (const [label, opts] of [['a rejected request', { reject: true }],
+                               ['a non-200 response', { httpFail: true }]]) {
+    const w = withFetch(boardPayload, opts);
+    await settled(w.ITLeague);
+    ok(`${label} leaves the static board in place`,
+       w.ITLeague.boardIsServed() === false
+       && w.ITLeague.defaultBoard().length === load({}).L.defaultBoard().length);
+  }
+  for (const [label, bad] of [['an empty player list', { ok: true, players: [] }],
+                              ['an ok:false payload', { ok: false, players: [{ n: 'X', pos: 'RB', v: 9 }] }],
+                              ['a payload with no prices', { ok: true, players: [{ n: 'X', pos: 'RB', v: 0 }] }],
+                              ['a null payload', null]]) {
+    const w = withFetch(bad);
+    await settled(w.ITLeague);
+    ok(`${label} is refused rather than adopted`, w.ITLeague.boardIsServed() === false);
+  }
+
+  // onBoard is the pages' repaint hook. It must fire for a caller that arrives
+  // after the request has already settled, or a page that painted late waits
+  // forever for an event that has been and gone.
+  const w2 = withFetch(boardPayload);
+  await settled(w2.ITLeague);
+  let late = null;
+  w2.ITLeague.onBoard(ok2 => { late = ok2; });
+  ok('a late onBoard caller is answered immediately', late === true, String(late));
+
+  // A page with no fetch at all (an old browser, a test rig) must not hang.
+  const w3 = makeWindow({});
+  new Function('window', lib + '\n;return window.ITLeague;')(w3);
+  let noFetch = 'never';
+  w3.ITLeague.onBoard(v => { noFetch = v; });
+  ok('with no fetch available the board settles at once instead of hanging',
+     noFetch === false, String(noFetch));
 }
 
 // ── 12. the pages that print the desk's dollars all go through it ──────────
@@ -760,6 +1022,13 @@ console.log('\nthe front page and /lead restate before they paint');
   ok('the front-page lead restates the headline', /repriceCopy\(s\.title/.test(paint));
   ok('and the dek with it', /repriceCopy\(s\.dek/.test(paint));
   ok('and says whose league the numbers are', /pricingNote\(/.test(paint));
+  // Without the date the guard is dead code: every story looks current.
+  ok('and hands the story\u2019s own date to both, so an old-model story is refused',
+     /repriceCopy\(s\.title, names, s\.createdAt\)/.test(paint)
+     && /repriceCopy\(s\.dek \|\| '', names, s\.createdAt\)/.test(paint)
+     && /pricingNote\([^;]*s\.createdAt\)/.test(paint));
+  ok('the retired headlines under it carry their own dates too',
+     /repriceCopy\(o\.title,[\s\S]{0,120}?o\.createdAt\)/.test(front));
   ok('the old "nothing to re-price" branch is gone',
      !/Nothing to re-price/.test(front));
 
@@ -767,6 +1036,36 @@ console.log('\nthe front page and /lead restate before they paint');
   ok('/lead loads the library at all', page.includes('src="/it-league.js"'));
   ok('/lead restates the article body, not just the headline', /rp\(s\.body/.test(page));
   ok('/lead says whose league the numbers are', /pricingNote\(/.test(page));
+  ok('/lead passes the story\u2019s date to the restatement and the note',
+     /repriceCopy\(t, names, s\.createdAt\)/.test(page)
+     && /pricingNote\(restated, s\.createdAt\)/.test(page));
+  ok('/lead\u2019s archive list carries them as well',
+     /repriceCopy\(x\.title,[\s\S]{0,120}?x\.createdAt\)/.test(page));
+
+  // The served board can settle after a page has painted. The front page
+  // repaints on it; /lead paints once, so it waits for it instead.
+  ok('the front page repaints when the served board lands',
+     /L\.onBoard\(function\(ok\)\{ if \(ok\) repaintLead\(\); \}\)/.test(front));
+  ok('and registers that hook once, outside any paint',
+     (front.match(/L\.onBoard\(/g) || []).length === 1);
+  ok('/lead waits for the board rather than swapping dollars under the reader',
+     /function afterBoard\(d\)/.test(page) && /\.then\(afterBoard\)/.test(page));
+  ok('and waits on both of its fetches',
+     (page.match(/\.then\(afterBoard\)/g) || []).length === 2);
+
+  // The worker has to build that board from the SAME pool the app is served,
+  // or the endpoint just moves the old mismatch behind an HTTP call.
+  ok('the worker serves /api/board at all', /url\.pathname === '\/api\/board'/.test(worker));
+  const bp = worker.slice(worker.indexOf('async function boardPayload'),
+                          worker.indexOf('// Where the RANKINGS put each team'));
+  ok('and builds it from the odds-blended pool, not the committed one',
+     /blendProjections\(cached\.overlay\)/.test(bp), bp.slice(0, 200));
+  ok('and prices it with the same curve the cheat sheet uses',
+     /_colPrice\(pos, i\)/.test(bp));
+  ok('and ranks within position by points, which is the curve slot',
+     /sort\(\(a, b\) => b\.pts - a\.pts\)/.test(bp));
+  ok('and ships prices only, so no second valuation can grow in it',
+     !/_colStatLine|projectedStats:/.test(bp));
 }
 
 // ── 13. the preview tool still finds the copy it previews ──────────────────

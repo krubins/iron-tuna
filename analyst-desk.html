@@ -218,9 +218,13 @@ footer.site a{color:var(--muted)}
     if (!ms || isNaN(d.getTime())) return '';
     return MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
   }
-  // The desk is allowed to have published nothing yet, and that is not an
-  // error worth showing a reader as one. Say what the column is and when it
-  // fills, and leave the rest of the page standing.
+  // The column is allowed to be empty - nothing published yet, or everything
+  // pulled - and that is not an error worth showing a reader as one. Say what
+  // the column is and when it fills, and leave the rest of the page standing.
+  // The message must not claim nothing was ever published: on 2026-08-23 every
+  // entry was pulled at once because they priced players by a valuation the
+  // cheat sheet no longer uses, and "has not published yet" would have been a
+  // false account of a page that had been full an hour earlier.
   function empty(msg){
     document.getElementById('entries').innerHTML =
       '<p class="state">' + esc(msg) + '</p>';
@@ -248,7 +252,7 @@ footer.site a{color:var(--muted)}
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!d || !d.entries || !d.entries.length) {
-        return empty('The desk has not published an analyst piece yet. It writes one about once a day, and every entry lands here as it goes up.');
+        return empty('No entries are up right now. Iron Tuna publishes one about once a day, and every entry lands here as it goes up.');
       }
       var host = document.getElementById('entries');
       host.innerHTML = d.entries.map(entryHtml).join('');
@@ -276,7 +280,7 @@ footer.site a{color:var(--muted)}
         document.getElementById('scoreboardWrap').hidden = false;
       }
     })
-    .catch(function(){ empty('The analyst desk is unreachable right now. The front page carries the rest of the board in the meantime.'); });
+    .catch(function(){ empty('This column is unreachable right now. The front page carries the rest of the board in the meantime.'); });
 })();
 </script>
 <script src="/player-search.js" defer></script>

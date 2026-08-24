@@ -14,9 +14,24 @@
 // carries points only — no stat lines — so it cannot be re-scored at somebody
 // else's scoring, and the library never quotes it as "your league".
 //
+// THIS BLOCK IS THE FALLBACK, NOT THE BOARD. Read this before trusting it.
+// It is built from the COMMITTED `PROJECTIONS` array. The app is served those
+// projections re-blended with the DAY's odds (`blendProjections` in _worker.js,
+// at VEGAS_WEIGHT = 3), so this block and the reader's cheat sheet are two
+// different boards, and they diverge every time a line moves. On 2026-08-23 the
+// gap was Derrick Henry at $25 here and $38 on the sheet, and Jeremiyah Love at
+// $47 here and $25 on the sheet — which a story then quoted at readers as "the
+// consensus sheet". This header used to claim the two were "the same
+// odds-blended projections the app serves". They never were.
+//
+// The real board is `/api/board` (_worker.js §9d), computed off the same
+// blended pool and served. /it-league.js fetches it and only falls back to this
+// block when it cannot. **Never verify a price against this block.**
+//
 // THE RECIPE, which is the app's own (index.html `calculateMarketValues`):
 //   points  = it-league.js `score()` at SCORING_DEFAULTS, run over the worker's
-//             PROJECTIONS — the same odds-blended projections the app serves.
+//             committed PROJECTIONS — no odds overlay, which is exactly why
+//             this is a fallback.
 //   rank    = sort by points, within position.
 //   price   = the market curve at that slot, scaled to 12 x $200. Computed at
 //             READ time by the library, not stored here, so a curve change needs
