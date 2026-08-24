@@ -298,6 +298,17 @@ jobs:
       - name: Player mentions link to player cards
         run: node tools/test-player-links.mjs
 
+      # A column entry naming the wrong team for a coach is not a typo, it is the
+      # whole thesis pointing at the wrong roster: call-2026-08-19-7 shipped with
+      # Ben Johnson taking over Tampa Bay and priced Emeka Egbuka off it, when
+      # every page in the repo has Johnson in Chicago (HANDOFF.md §"The staff
+      # table is the arbiter"). STAFFS_2026 is the table that settles it, and it
+      # also grounds the Value Coach's staff answers. This was written as that
+      # fix's guard but never wired up here, so it only ever ran by hand — the
+      # same honour-system gap the rest of this file exists to close.
+      - name: Coaching staffs, and the column entries priced off them
+        run: node tools/test-coaching-staffs.mjs
+
       - name: Vegas column (worker)
         run: node tools/test-worker-column.mjs
 
