@@ -3824,3 +3824,37 @@ Row 43 (Omarion Hampton, 2026-08-24) was checked this way: RB15 at $18, Ladd
 McConkey WR23 at $10, every Chargers tight end at $2 — all exact. Row 42
 (LaPorta) reproduced seven figures exactly against an overlay that had
 refreshed *after* it was written.
+
+### The empty slots, and what the price check now says
+
+Three of the six lead-story slots on 2026-08-24 produced no row at all — 00:58,
+09:58 and 15:58 — while `last_fired_at` on `trig_011LYewcPUQikF8izFsN2LAr`
+confirms the Routine did fire. A slot that writes nothing is invisible twice
+over: nothing on the site, and nothing in D1 to say the run happened or why it
+held back. That is now forbidden by the prompt: a run that decides not to
+publish still inserts its row at `verified=0, published=0` with the reason as
+the first line of `method`.
+
+The likely cause, and the reason the prompt changed with it: this prompt used to
+say **"the easiest correct route: read `/api/board`"**, and `/api/board` has
+never once been reachable from a Routine's environment. Direct fetches to
+irontuna.com are blocked and the fetcher returns a permission prompt nobody is
+there to answer — rows 42 and 43 both say so in their own method lines. Every
+story that shipped did so by working around the instruction. So the prompt now
+makes the local reproduction the primary method, spells out the four steps, and
+says plainly that an unreachable endpoint is never a reason to skip a slot.
+
+Two other rules went in at the same time:
+
+- **Check every board price you print, not two of them.** The old text asked for
+  two spot checks, which is how a story can carry five figures and have three of
+  them unverified.
+- **Name the board's number for every dollar figure, not just the headline one.**
+  Row 43 told readers to "bid up to $15 on Ladd McConkey" against a board that
+  prices him at $10, and never mentioned the $10. Not false, but it is the same
+  reader-versus-their-own-sheet collision that started this whole thread, and it
+  had survived four rounds of fixes because every rule so far was written about
+  the headline player.
+
+The canonical prompt is `tools/lead-story-routine-prompt.md`; the live copy was
+verified byte-identical to it after the push.
