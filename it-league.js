@@ -53,12 +53,19 @@
   // The client's market curve, and the budget it is drawn at. A league's prices
   // are this curve scaled by (teams x budget) / CURVE_BUDGET — which is the
   // whole of "use the reader's budget": a $300 league pays 1.5x the sheet.
+  //
+  // CURVE_BUDGET is only honest if CURVE adds up to it: summed over a full 12-team
+  // board (16 roster spots each, MIN_BID past the end of a position's curve) the
+  // set must come to exactly 1440. It used to total 1298, and because this file
+  // publishes the RAW curve while the app renormalises its own column to the
+  // league budget, every dollar quoted here ran ~10% under the reader's own sheet.
+  // Re-cut Aug 2026 by a flat 1.125x. tools/test-curve-budget.mjs pins the total.
   var CURVE_BUDGET = 1440;
   var CURVE = {
-    QB: [25, 20, 17, 14, 11, 10, 7, 5, 4, 4, 3, 3, 2, 2, 1, 1],
-    RB: [43, 40, 38, 33, 30, 28, 25, 23, 22, 20, 19, 18, 15, 12, 11, 9, 8, 8, 7, 6, 6, 6, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    WR: [42, 40, 36, 35, 31, 28, 24, 24, 17, 16, 15, 14, 12, 12, 10, 9, 9, 9, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    TE: [32, 28, 20, 14, 11, 9, 7, 6, 5, 5, 3, 2, 2, 2, 1, 1],
+    QB: [28, 22, 19, 16, 12, 11, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1],
+    RB: [48, 45, 43, 37, 34, 31, 28, 26, 25, 22, 21, 20, 17, 13, 12, 10, 9, 9, 8, 7, 7, 7, 6, 5, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    WR: [47, 45, 40, 39, 35, 31, 27, 27, 19, 18, 17, 16, 14, 13, 11, 10, 10, 10, 8, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    TE: [36, 31, 22, 16, 12, 10, 8, 7, 6, 6, 3, 2, 2, 2, 1, 1],
     K: [2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     DEF: [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
   };

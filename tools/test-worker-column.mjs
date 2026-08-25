@@ -135,7 +135,7 @@ console.log('\nscoring port matches the client function');
 // ── 3. price curve ─────────────────────────────────────────────────────────
 console.log('\nprice curve');
 {
-  ok('rank 1 RB prices off the top of the curve', W._colPrice('RB', 0) === Math.round(43 * (W.COLUMN_LEAGUE_BUDGET / W.COLUMN_CURVE_BUDGET)));
+  ok('rank 1 RB prices off the top of the curve', W._colPrice('RB', 0) === Math.round(48 * (W.COLUMN_LEAGUE_BUDGET / W.COLUMN_CURVE_BUDGET)));
   // The client scales the min bid by the league/curve ratio too, so the floor is
   // not literally $1 in a 12x$200 league. Matching that exactly is the point.
   const floor = Math.max(1, Math.round(1 * (W.COLUMN_LEAGUE_BUDGET / W.COLUMN_CURVE_BUDGET)));

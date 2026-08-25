@@ -474,6 +474,100 @@ So the load effect no longer short-circuits on `savedFresh` alone. When the save
 
 `node tools/test-vegas-weight.mjs` pins the math, the clamping, the hostile inputs, the graft and the wiring (58 assertions, no browser). `node tools/test-vegas-slider.mjs` drives the real app in Chromium: it stubs an overlay, opens the panel, drags to both ends and back, and asserts Proj, position rank, the `V` flag and the readout all follow — that reset lands back on the exact numbers it started from, and that a seeded odds-free saved board at the current `PROJ_VERSION` gets the slider and the flags back on its own. Same playwright-core/react/Chromium dependencies and the same clean skip as `test-you-column.mjs`.
 
+## 9j. Does the sheet's money add up? (fixed August 2026)
+
+Twelve managers at $120 bring **$1440** into the room and they spend all of it. So
+every dollar column on the cheat sheet has to total $1440 across a full board — 12
+teams x the 16 roster spots, 192 players — plus a dollar apiece for the undraftable
+tail past those spots, which can only push the whole-board figure *up*. A column
+that totals less is telling a room to spend less money than it has.
+
+Measured against the committed projections at 12 x $120, before this fix:
+
+| column | over the 192 rostered | should be |
+|---|---|---|
+| Proj (`marketValue`) | $1441 | $1440 |
+| Value (`auctionValue`) | $1435 | $1440 |
+| **the raw curve, unnormalised** | **$1298** | **$1440** |
+
+**The bug was in the third row.** `LEAGUE_CURVE_BUDGET = 1440` says out loud that
+`LEAGUE_MARKET_CURVE` is drawn at 12 teams x $120, and a league's prices are that
+curve scaled by `(teams x budget) / 1440`. But the curve did not add up to it: the
+1-QB set came to **$1298**, ~10% light, so the constant was an assertion the data
+did not support and every price scaled off it inherited the shortfall.
+
+Inside the app this was invisible, which is why it survived. `renormalizeToBudget`
+re-scales Proj and Value to the league's budget on every render, so it quietly
+stretched a $1298 curve back to $1440 — a hidden ~1.13x nobody had asked for.
+**`/it-league.js` and the worker's `/api/vegas-column` have no such step.** They
+price straight off the raw curve, so off-app copy quoted WR1 at **$42** against a
+cheat sheet reading **$50** — the same class of failure as the True-Value-as-Market-
+Price bug in §11b, arriving by a different road.
+
+### What changed
+
+1. **The curve was re-cut by a flat 1.125x** in all three hand-synced copies
+   (`index.html`, `it-league.js`, `_worker.js`), plus `SUPERFLEX_QB_CURVE` by the
+   same factor so the QB-premium board keeps its exact relationship to the rest.
+   **Level only — every ratio between players and between positions is preserved**,
+   so nothing in §9h's re-cut of what a quarterback costs is disturbed
+   (`tools/test-qb-curve.mjs` is all ratios, and still passes untouched). K and DEF
+   do not move: their entries are $1-$2 and round to themselves.
+2. **`renormalizeToBudget` now hands out whole dollars by largest remainder.**
+   Rounding each price on its own leaks money — every price that rounds down takes
+   a dollar off a board that has to total the budget, and a dozen of those is why
+   Proj read $1441 and Value $1435 for the same league. Prices are now FLOORED and
+   the leftover dollars handed back to whoever the floor cost most. A bump is
+   skipped when it would lift a player above the one ranked directly ahead of him,
+   so the column still never rises as you read down it.
+
+Both columns now total the league budget **exactly**, at every league shape tested.
+
+### What did NOT change, and why
+
+**The You column totals $1108 of $1440, and that is correct.** You is
+`switchPrice` — an *indifference* price, the most you can pay before a player stops
+improving *your* lineup — so it is structurally at or below Value (§9d, and the
+measured table in "Grading against YOU is the trap"). It is one team's bidding
+ceiling, not a share of a market that has to clear, so there is no budget for it to
+add up to and renormalising it would destroy exactly the marginal signal it exists
+to carry. **Do not "fix" the You column by scaling it to the budget.**
+
+One quirk worth knowing rather than fixing: K and DEF skip `switchPrice` entirely,
+so You falls back to Value for them and reads *above* Proj at those two positions
+($31 vs $24 at K, $35 vs $25 at DEF).
+
+**Past the end of a position's curve the floor is `minBid` scaled by the league
+ratio, not a literal $1.** So an undraftable costs $2 in a $200 league and $3 in a
+$300 one, while Value prices the same player at $1. That is deliberate and pinned
+by `tools/test-worker-column.mjs` ("the client scales the min bid by the league/curve
+ratio too... matching that exactly is the point"), and it is why the whole-board
+Proj and Value totals separate above $120 a team. It does not touch the $1440
+question — at 12 x $120 the ratio is 1 and the tail really is $1 a head.
+
+### The test
+
+`node tools/test-curve-budget.mjs` — 45 assertions, **no browser, no network**. It
+lifts the real `LEAGUE_MARKET_CURVE`, `renormalizeToBudget` and the whole valuation
+pipeline out of `index.html` by brace-matching rather than re-implementing them, runs
+them over the committed projections, and asserts: the raw curve totals the budget it
+names; every position's curve still falls and never dips under the min bid; Proj and
+Value total the league budget **exactly** at 12x$120, 12x$200, 10x$200, 12x$300 and
+14x$100; neither column rises down a position; the tail only adds; and all three
+copies of the curve and the curve budget still agree.
+
+Two existing tests carried the old curve as a magic number and were updated with it:
+`tools/test-worker-column.mjs` and `tools/test-it-league.mjs` both hard-coded RB1 at
+`43`. The story-reprice fixtures in `test-it-league.mjs` went further and pinned
+whole restated sentences ("$36 on Tetairoa McMillan") to the board of the day; those
+now derive their expected figures from `defaultBoard()` the way `boardRatio` does, so
+what they test is which player a figure is read against rather than what the level
+happens to be. `tools/test-planner-budget.mjs` bounded a known planner residual at a
+flat `$19`, which was the exact high-water mark on the old board — so a reprice
+tripped it with the planner unchanged (the same residual is $21 on the new one). It
+now bounds the hole as a **share of the budget** (12%), which is what it was always
+trying to guard.
+
 ## 10. X (Twitter) auto-post (added July 2026)
 
 Posts to **@irontunafantasy** every **weekday, staggered across three slots** (13:00 / 16:00 / 19:00 UTC = 9am / noon / 3pm EDT) so the day's threads hit different audience windows instead of one same-minute botlike burst: the **auction insight thread at 13:00**, the **snake insight thread at 16:00**, and the **day's bonus post at 19:00** — Monday a poll, Tuesday+Thursday snake-draft "survival odds" feature promos, Wednesday alternating auction money-allocation strategy and Value Coach promos, and Friday (much lower volume, by design, best ball is a separate niche format) best-ball insights and ceiling/stack/championship-week feature promos. Runs via three Cloudflare Worker **Cron Triggers** (one per slot, dispatched on `event.cron` in `scheduled()`), no external scheduler needed.
@@ -1377,6 +1471,32 @@ The four edits, as they now stand:
    time, because `analystScoreboard()` groups by name and "Matt Berry" would
    split Berry into two rows.
 
+#### The prompt's model paragraph went stale, and the runs were right (2026-08-24)
+
+The desk's prompt carried the auction model as a literal paragraph: "12 teams,
+$200 budget, half PPR". The site moved to **full PPR** on 2026-08-23
+(`0cf3b79`, and `it-league.js` now says "receptions went from half a point to a
+full one"). The prompt still said half PPR for a day afterwards.
+
+**The runs noticed and priced at full PPR anyway**, disclosing the deviation in
+their method lines exactly as the rule allows. Stories written before the switch
+(ids 27-31) say half PPR and were right at the time; everything from id 32 on
+says full. Nothing was mispriced. The desk followed the shipped site over its own
+prompt, which is the behaviour you want and the opposite of what a stale
+instruction usually produces.
+
+The prompt now says full PPR **and says the paragraph is a copy**: read
+`SCORING_DEFAULTS` and the curve in `it-league.js` before pricing, follow the
+repo when they disagree, and say so in the method line. It also asks for two or
+three named-player spot checks against the shipped cheat sheet, which the better
+runs were already doing unprompted (id 33's method line reconciles Nico Collins
+at $23 and Garrett Wilson at $28 against the live sheet).
+
+**The general lesson, worth more than this instance:** any number copied from
+the site into the desk's prompt is a number that can go stale silently, because
+the prompt is not in the repo and no test covers it. Prefer pointing at the file
+over restating its contents.
+
 #### last_insert_rowid() is 0 in a separate statement (2026-08-23)
 
 **This one took the whole site's generated lead down and nobody noticed for a
@@ -1413,6 +1533,13 @@ to use `last_insert_rowid()` and why, and its self-check selects
 instruction to republish itself if that comes back 0. The daily watch checks the
 same count first, before anything else.
 
+**It recurred on 2026-08-24, narrowly.** Id 35, the story published and read in
+full the day before, came back `verified = 0` while ids 41, 42 and 43 kept their
+flags. So it is not a blanket wipe and not the retire statement, which touches
+`published` only. Still unexplained. The prompt now says outright never to write
+`verified` on a row that is not yours, since it is the one flag nobody can
+reconstruct.
+
 **Two things this cost, worth remembering.** It looked for a while like an
 external writer was vandalising the table, because rows kept changing state
 between reads; it was the desk doing it to itself on a three-hour timer. And it
@@ -1438,7 +1565,22 @@ instructions cannot tell each other apart from a bug. Before concluding that a
 table is being corrupted, check whether another session is working to a different
 brief — `list_sessions` will show them.
 
-**Why the archive was not restored.** Only `published = 1` was put back, on the
+**The archive was restored on 2026-08-24, by reading it.** Ids 27 to 35 were
+checked one at a time against a stated standard: valid, named, dated sources
+(7 to 14 per row); a method line stating the model and the data timestamps;
+every external-fact claim matched to a source entry; and numbers consistent
+across dek, body and calls. All nine held up, and all nine are `verified = 1`
+again. Two were better than the standard required: id 28 states its own null
+model and assumptions for a probability claim, and id 33 reconciles two named
+players against the shipped cheat sheet.
+
+Be precise about what that flag now means on those rows. It is **documentary
+verification** — the sources and method each claim requires are present and
+internally consistent — not independent re-derivation, because the external
+articles cannot be re-fetched from this environment. That is a weaker claim than
+the runs' own, and it is the honest one.
+
+**The original note, kept because the reasoning still applies.** Only `published = 1` was put back, on the
 single newest story, after reading it. `verified` is each run's own assertion
 that it traced every number to a source it pulled that run; the original values
 are not recoverable from D1, and setting them to 1 in bulk would manufacture
