@@ -1588,6 +1588,33 @@ claims no run ever made. Ids 27 through 34 are still `verified = 0` on purpose,
 so the archive and the record table are thinner than they should be. That is the
 honest state, not a pending chore.
 
+#### SUPERSEDED 2026-08-25: documentary verification is not the standard
+
+Read the two paragraphs above as history. **Ids 27 to 35 are `verified = 0` and
+`published = 0`, permanently**, and the documentary re-verification recorded
+above does not put them back.
+
+Both accounts were right about their own test and neither was the site's. The
+documentary standard asks whether a story cites what it claims to cite and holds
+together internally; all nine passed it. The site's standard is Ken's, stated
+twice: *use the same valuation as the cheat sheet* and *the two values should
+always track identically*. Against that, those rows fail on the only thing a
+reader can check — Jeremiyah Love quoted at $47 against a board that says $25,
+Brock Bowers at $25 against $53, Zay Flowers at $26 and $32 against $25. A story
+whose sourcing is impeccable and whose price contradicts the sheet open on the
+reader's other tab is still the bug this whole thread is about.
+
+So: **a story is verified when its board figures reproduce against the served
+board, and not otherwise.** Sourcing is necessary and not sufficient. Ken settled
+this on 2026-08-25 when the two positions were put to him.
+
+The "verified wipe recurred on 2026-08-24, narrowly, still unexplained" note in
+the entry above is also resolved, and it was not a wipe. Another session retired
+ids 27 to 35 deliberately at 14:58 UTC on price grounds, having recomputed the
+board; id 35 came back to 0 while 41 to 43 kept their flags because those three
+had been checked and held. There is now an audit trail (§36) so the next such
+change carries a timestamp instead of an inference.
+
 #### The headline check (2026-08-22)
 
 The prompt ends with four mechanical checks to run on the exact title string
@@ -4050,3 +4077,55 @@ to bid $15 on a $10 player.
 Slot coverage is still not fixed: 21:58 on 2026-08-24 produced no row either,
 which is the fourth empty slot that day and the first since the "insert a row
 either way" rule landed. Watch it.
+
+### PR #105 moved every dollar, and what that cost
+
+Merging #105 on 2026-08-25 re-cut `LEAGUE_MARKET_CURVE` by a level factor so the
+column adds up to the league budget. Ranks are untouched and every ratio is
+preserved — but **every published dollar figure became wrong at once**, and the
+site had five stories carrying them: one live lead and four in "Recent
+insights". Gibbs $72 to $80, Bowers $53 to $60, Josh Allen $42 to $47, Walker
+$42 to $47, LaPorta $18 to $20.
+
+Two things are worth keeping from the cleanup.
+
+**`repriceCopy` does not save you here, and it is easy to assume it does.**
+`it-league.js` restates a story's dollars against the reader's own board, which
+is why the column can be written in one league and read in another. But
+`boardRatio()` is *reader's board ÷ desk's board*: it converts between leagues,
+not between curves. When the desk's board moves, the ratio is still 1 and the
+stale number passes straight through to the reader. A curve change has to be
+fixed in the stored text.
+
+**All five were repriced rather than retired**, on Ken's instruction, and the
+repricing was derived, never scaled. Every figure came from `COLUMN_CURVE`,
+`COLUMN_SCORING` and `VEGAS_WEIGHT` read out of the deployed `_worker.js` at
+repricing time and blended with the current `odds_overlay` — including the
+derived ones: round boundaries by overall price rank, cost-per-point tables,
+marginal dollar totals, catch- and touchdown-sensitivity thresholds. Sixty
+figures were re-checked afterwards against the board and all sixty matched.
+
+Two findings changed shape rather than level, and were rewritten to say what is
+now true instead of being forced back into the old sentence: the tight-end
+premium is 2.5x rather than 2.4x, and there are now two non-tight-end upgrades
+above the cheapest tight-end upgrade rather than one.
+
+**The harness that checks this used to carry the curve as a hand-copied
+constant**, which would have made it agree with the pre-#105 board forever
+without complaining. It now lifts `PROJECTIONS`, `COLUMN_CURVE`,
+`COLUMN_SCORING`, `COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID`
+and `VEGAS_WEIGHT` out of `_worker.js` at run time. Any checker with a copied
+number in it is a checker that will eventually pass a wrong board — the same
+failure as validating against `DEFAULT_BOARD_RAW`, one level up.
+
+### Cadence: 6-hourly from 2026-08-25
+
+`trig_011LYewcPUQikF8izFsN2LAr` ran `58 */3 * * *` and five of twelve slots
+produced no row at all, while the runs that did finish took 15 to 24 minutes
+against a stated 8-to-20 band. Two prompt-level attempts to fix it failed,
+including an "insert a row either way" rule that could not help because runs were
+dying before they reached it. The schedule is now `58 */6 * * *`: four runs a day
+that finish beats eight where half do not, and it halves the chance of a story
+sitting live across the daily odds refresh. The underlying question — why a run
+ends without inserting — is still open, and a heartbeat table would answer it
+without touching the story-insert path.
