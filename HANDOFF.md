@@ -1790,8 +1790,8 @@ answer), and capped at 20, which covers the 40 minutes after firing — past the
 
 `/admin` used to answer "how much money" and had nothing to say about "how many
 people". It does now: a **Traffic** section above Sales & referrals leading with
-**unique daily users**, plus page views, top pages, where arrivals came from, and
-the site's named click events, over a 7 / 30 / 90-day window.
+**unique daily users**, plus page views, time on site, top pages, where arrivals
+came from, and the site's named click events, over a 7 / 30 / 90-day window.
 
 ### Counting happens in the Worker, not in a script tag
 
@@ -1835,6 +1835,47 @@ tell different stories.
 
 If true multi-day uniques ever matter more than the privacy property, the salt is
 the one line to change — and every "user-days" label has to change with it.
+
+### Time on site is read off the log, and says where it stops being able to
+
+There is no beacon (see above — that was the whole point), so nothing reports how
+long a page stayed open. What the log does support is the gap between one view
+and the next: consecutive views by the same visitor less than **30 minutes** apart
+are one visit, and a visit is measured from its first view to its last. Thirty
+minutes is the same idle window `activeNow` already uses.
+
+The visitor id is minted fresh at UTC midnight, so a visit can never span two
+days. The gap rule is only ever doing work inside a day.
+
+That measure has one limitation, and it is a big enough one that the dashboard
+states it rather than letting the number stand: **the last page of a visit has no
+following view to measure against, so a one-page visit reads as 0:00.** On a site
+where a guide can be the whole reason someone came, that is a lot of zeroes, and
+an average over all of them understates.
+
+The answer is not to invent a dwell time for the final page — that would make the
+number look better and mean less. It is the same answer as "user-days": ship both
+figures and name what each one is.
+
+- **Time on site** — `avgSec`, the mean over *every* visit, zeroes included. The
+  honest floor, and the one that leads.
+- **Time on site, 2+ pages** — `avgEngagedSec`, the mean over visits that turned
+  at least one page, i.e. the ones where something was actually measured.
+
+`medianSec`, `visits`, `engagedVisits`, `singlePageVisits`, `totalSec` and
+`gapMinutes` all ship alongside, and the note under the tiles spells the rule out
+including how many visits in the window read as zero.
+
+The sessionisation is one SQL statement (`LAG` for the gap, a running `SUM` over
+the gap flags for the visit number), so what comes back is one row per visit
+rather than every pageview in the window. It carries the same `internal = 0`
+filter as every other read: the operator reading their own site for twenty
+minutes does not become the site's time on site, and `&includeMe=1` puts it back.
+
+If a real dwell time ever matters more than not touching ~100 static files, the
+shape is a `pagehide` beacon to `/api/track` and `timeOnSite` becomes a read over
+`site_events` — but the two-number habit should survive it, because a beacon that
+is blocked or fires late has its own way of being wrong.
 
 ### The operator's own browsing is flagged, not counted
 
@@ -1908,13 +1949,20 @@ render. `admin.html` fetches both independently and the chart is now one
 
 ### Tests
 
-`node tools/test-analytics.mjs` (78 assertions, no network, no browser), wired
+`node tools/test-analytics.mjs` (93 assertions, no network, no browser), wired
 into `.github/workflows/checks.yml` — it existed from the start but was
 honour-system until Aug 2026. It drives the real `_worker.js` over an in-memory
 SQLite standing in for D1, so the SQL is actually executed rather than described.
 Beyond the never-break-the-page cases above, it pins who gets counted, that one
 person on one day is one unique user, that no row contains an IP or user-agent,
 and that the admin read stays gated.
+
+The time-on-site sections seed SQLite directly too, for the same reason: the gaps
+between timestamps are the entire subject and the worker can only ever write
+"now". They pin both edges of the 30-minute rule (a gap of exactly 30 minutes is
+still one visit; a millisecond past it is two), that a one-page visit reads as
+zero and is counted as such, and that an empty window gives zeroes rather than
+NaNs — the shape a mean over no rows takes if nobody guards it.
 
 The unique-user and exclusion sections seed SQLite directly, because the worker
 can only ever write "now" and the whole question is what happens across days.

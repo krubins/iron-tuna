@@ -39,6 +39,10 @@ h2{font-size:16px;margin:0 0 12px;letter-spacing:.01em}
 .tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0 0 16px}
 @media(max-width:960px){.tiles{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.tiles{grid-template-columns:repeat(2,1fr)}}
+/* Traffic carries eight tiles: four to a row is two clean rows rather than six and two stragglers. */
+#trafTiles{grid-template-columns:repeat(4,1fr)}
+@media(max-width:960px){#trafTiles{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){#trafTiles{grid-template-columns:repeat(2,1fr)}}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .tile .lbl{color:var(--muted);font-size:12px;letter-spacing:.04em}
 .tile .val{font-size:24px;font-weight:600;margin-top:2px}
@@ -161,7 +165,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   </div>
 
   <div class="tiles" id="trafTiles"></div>
-  <p class="note" id="meNote" style="margin:-4px 0 18px"></p>
+  <p class="note" id="timeNote" style="margin:-4px 0 6px"></p>
+  <p class="note" id="meNote" style="margin:0 0 18px"></p>
 
   <div class="card">
     <h2>Unique users per day</h2>
@@ -249,6 +254,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); };
   var money = function(v){ return '$' + Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); };
   var num = function(v){ return Number(v || 0).toLocaleString('en-US'); };
+  // Durations read as m:ss, and only grow an hours field when there is one.
+  var dur = function(sec){
+    var n = Math.max(0, Math.round(Number(sec) || 0));
+    var h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), r = n % 60;
+    var pad = function(v){ return (v < 10 ? '0' : '') + v; };
+    return h ? h + ':' + pad(m) + ':' + pad(r) : m + ':' + pad(r);
+  };
 
   function getKey(){ try { return localStorage.getItem(KEY_LS) || ''; } catch(e){ return ''; } }
   function setKey(k){ try { if (k) localStorage.setItem(KEY_LS, k); else localStorage.removeItem(KEY_LS); } catch(e){} }
@@ -464,13 +476,34 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       : (u.today > u.yesterday ? '+' : '−') + num(Math.abs(u.today - u.yesterday)) + ' vs. yesterday';
     var best = u.best || {};
 
+    // Time on site is measured between page views, so the last page of a visit has
+    // nothing to measure against and a one-page visit reads as 0:00. Both numbers
+    // are shown for that reason: the first is the whole audience and understates,
+    // the second is only the visits where there was something to measure.
+    var ts = d.timeOnSite || {};
+    var oneP = ts.singlePageVisits || 0, engV = ts.engagedVisits || 0;
+
     $('trafTiles').innerHTML =
       tile('Unique users today', num(u.today), vs, true) +
       tile('Unique users/day', avg ? avg.toFixed(1) : '0', 'average over ' + d.days + ' days') +
       tile('Best day', num(best.users), best.date ? best.date : 'nothing recorded yet') +
       tile('User-days', num(userDays), 'daily uniques added up, not people') +
       tile('Page views', num(views), (perUser ? perUser.toFixed(1) : '0') + ' per user-day') +
-      tile('Active now', num(t.activeNow), 'last 30 minutes');
+      tile('Active now', num(t.activeNow), 'last 30 minutes') +
+      tile('Time on site', dur(ts.avgSec), ts.visits
+        ? 'average of ' + num(ts.visits) + ' visit' + (ts.visits === 1 ? '' : 's') + ', median ' + dur(ts.medianSec)
+        : 'nothing recorded yet') +
+      tile('Time on site, 2+ pages', dur(ts.avgEngagedSec), engV
+        ? num(engV) + ' of ' + num(ts.visits) + ' visit' + (ts.visits === 1 ? '' : 's') + ' turned a page'
+        : (oneP ? 'every visit so far was one page' : 'nothing recorded yet'));
+
+    $('timeNote').textContent = !ts.visits
+      ? 'Time on site starts reading once there are page views to measure between.'
+      : 'Time on site is measured between page views: a visit runs from its first page to its last, and a gap of ' +
+        (ts.gapMinutes || 30) + ' minutes or more starts a new visit. The last page of a visit has no next view to measure against, so ' +
+        (oneP ? num(oneP) + ' one-page visit' + (oneP === 1 ? '' : 's') + ' in this window read' + (oneP === 1 ? 's' : '') + ' as 0:00'
+              : 'a one-page visit reads as 0:00') +
+        ' and the first figure understates. The second counts only the visits where there was something to measure.';
 
     var ex = d.excluded || {};
     var you = (d.you || {}).excluded;
