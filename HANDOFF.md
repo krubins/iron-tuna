@@ -3858,3 +3858,53 @@ Two other rules went in at the same time:
 
 The canonical prompt is `tools/lead-story-routine-prompt.md`; the live copy was
 verified byte-identical to it after the push.
+
+### Row 44, and the check that could not fail
+
+The 18:58 run on 2026-08-24 published a preseason story priced entirely off the
+**committed** array. Its own method line is the confession:
+
+> The 407-player PROJECTIONS array was pulled from the iron-tuna Worker this
+> run, parsed to a file, and re-scored at SCORING_DEFAULTS. The result was
+> checked against DEFAULT_BOARD_RAW, the generated cheat sheet committed in
+> it-league.js: 343 players overlap, 332 match to within 0.15 points ... Exact
+> on all four.
+
+`DEFAULT_BOARD_RAW` is built from the committed array. An unblended board
+checked against it agrees perfectly and proves nothing — two wrong boards
+agreeing. The run also read `odds_overlay` **row 2** (team context) and never
+row 1 (the player lines), so no blend ever happened. Six of its eight board
+claims match the committed board and not the served one, the worst being
+"Jonathan Taylor at RB4 and $55" where the sheet says **RB5 and $50**. It also
+wrote "Alec Pierce carries 199.3 projected points **on the shipped board**";
+the shipped board says 196.1.
+
+The dollar recommendations happened to be right, because the curve is flat
+where most of those players sit. That is luck, not method. Row 44 was retired
+and row 43 restored as the published lead.
+
+The prompt now carries three specific guards, all added because this run got
+past the general ones:
+
+1. At the `PROJECTIONS` bullet: **this array is the committed baseline, not the
+   board.**
+2. A blend self-test with a named player — Chuba Hubbard is RB34/$3 committed
+   and RB28/$5 blended. If your two boards agree on him, the blend is not
+   running.
+3. **Never validate against `DEFAULT_BOARD_RAW`**, stated where the validation
+   step is, not three sections away.
+
+Plus a line for a run that believes the brief still says value over replacement:
+it does not, and has not since 2026-08-23; that belief means a stale copy.
+
+**It worked.** Row 45 (00:58 on 2026-08-25, the tight-end pricing piece) is the
+first story that demonstrably used the served board: it prices Brock Bowers at
+$53, which is TE1 blended, where the committed board says $47. Thirteen named
+board figures and eight derived arithmetic claims all reproduce exactly, and it
+carries a "Board price" column naming the sheet's number next to every
+recommendation — the rule added the same day after row 43 quietly told readers
+to bid $15 on a $10 player.
+
+Slot coverage is still not fixed: 21:58 on 2026-08-24 produced no row either,
+which is the fourth empty slot that day and the first since the "insert a row
+either way" rule landed. Watch it.

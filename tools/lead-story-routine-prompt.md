@@ -29,7 +29,7 @@ This is not hypothetical. On 2026-08-21 one run inserted two analyst stories sev
 - Cloudflare connector, D1 database `iron-tuna-leads`, id `75f7c43a-69cc-48eb-aa78-6ecfd91af2fb`.
 - Table `lead_story(id, slug, title, dek, body_html, method, sources, category, players, calls, verified, published, created_at, published_at)`.
 - Table `odds_overlay` holds row `id=1` whose `payload` is a JSON map of `"playername|POS"` to sportsbook-implied season projections (`passYd`, `passTD`, `rushYd`, `rushTD`, `recYd`, `recTD`), and row `id=2` (provider `teamctx`) with book-implied points per game and an implied-scoring rank for all 32 teams. Both refresh daily at about **7:00 AM ET** (11:00 on the server's UTC clock; 6:00 AM ET in winter). Check `updated_at` (epoch ms) and note staleness in the method line if it is more than 36 hours old. **Write that time as ET, never as UTC** - see "Clock times are Eastern" below.
-- The consensus baseline projection set (~407 players, includes `rec`, `passInt`, `fumLost`) is embedded in the `iron-tuna` Worker as `var PROJECTIONS = [...]`. Retrieve it with the Cloudflare connector's `workers_get_worker_code` on script `iron-tuna`. The result is ~625 KB, so it will be written to a file; parse it there with a script rather than reading it into context.
+- The consensus baseline projection set (~407 players, includes `rec`, `passInt`, `fumLost`) is embedded in the `iron-tuna` Worker as `var PROJECTIONS = [...]`. Retrieve it with the Cloudflare connector's `workers_get_worker_code` on script `iron-tuna`. The result is ~625 KB, so it will be written to a file; parse it there with a script rather than reading it into context. **This array is the COMMITTED baseline. It is NOT the board and it is NOT what the reader's cheat sheet shows.** Scoring it and ranking it gives you a board nobody on the site sees. You must blend today's odds into it first — see "BUILD THE BOARD LOCALLY" below — and a run that skips that step will print prices and ranks the reader's own sheet contradicts. This has now happened three times.
 - The repo `krubins/iron-tuna` is the site's own record of the season: `auction-insights-*.html`, `auction-watch-*.html`, `preseason-week-*.html` and `play-caller-premium.html`. Read these when your desk (below) calls for them.
 
 ## ROTATE THE DESK — this is required, not a preference
@@ -143,6 +143,15 @@ So do not build a second, more aggressive board by replacing the stats outright.
 4. Score with the Worker's `_colScore`, sort within position, price with `_colPrice`.
 
 That is `boardPayload` in `_worker.js` §9d run by hand, so it produces the served board by construction. Say in the method line that you computed it rather than read it, and give the overlay's `updated_at`.
+
+**Prove to yourself the blend actually happened, before you price anything.** Two checks, both one line:
+
+- `odds_overlay` **row `id = 1`** is the player odds. Row `id = 2` is team context and contains no player lines at all, so a run that reads only row 2 has not blended anything. On 2026-08-24 a run did exactly that and its method line said so in its own words.
+- Score one heavily-lined player both ways and confirm the numbers differ. Chuba Hubbard is RB34 at $3 committed and RB28 at $5 blended. **If your two boards agree on him, your blend is not running, and every price you are about to print is off the wrong board.**
+
+**Never validate your board against `DEFAULT_BOARD_RAW` in `it-league.js`.** That block is generated from the committed array and has never seen an odds refresh, so it will agree with an unblended board perfectly and tell you nothing. A run on 2026-08-24 reported "343 players overlap, 332 match to within 0.15 points, exact on all four" against it and published six figures the served board contradicts, including Jonathan Taylor at "RB4 and $55" where the sheet says RB5 and $50. Two wrong boards agreeing is not a check. The only valid check is your blended build against the served board.
+
+**If you believe this brief tells you to price by value over replacement, you are reading a stale copy.** It has not said that since 2026-08-23. Re-read the section above and price off the curve; do not "deviate from the brief" to reach the curve, because the curve IS the brief.
 
 `/api/board` returns the same thing as `{n, pos, v, pts}` rows where `v` is the Market Price. **Try it once**; if it answers, use it and say so, and treat any disagreement with your local build as a bug to report rather than a number to pick between. If it does not answer, move on without further attempts — do not spend the run on it, and do not let it stop you publishing.
 
