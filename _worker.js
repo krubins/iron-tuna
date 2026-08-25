@@ -1648,12 +1648,15 @@ const COLUMN_SCORING = {
   receptionPoints: 1, rbReceptionPoints: 1, fumbleLost: -2
 };
 const COLUMN_CURVE = {
-  QB: [25, 20, 17, 14, 11, 10, 7, 5, 4, 4, 3, 3, 2, 2, 1, 1],
-  RB: [43, 40, 38, 33, 30, 28, 25, 23, 22, 20, 19, 18, 15, 12, 11, 9, 8, 8, 7, 6, 6, 6, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  WR: [42, 40, 36, 35, 31, 28, 24, 24, 17, 16, 15, 14, 12, 12, 10, 9, 9, 9, 7, 6, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  TE: [32, 28, 20, 14, 11, 9, 7, 6, 5, 5, 3, 2, 2, 2, 1, 1]
+  QB: [28, 22, 19, 16, 12, 11, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1],
+  RB: [48, 45, 43, 37, 34, 31, 28, 26, 25, 22, 21, 20, 17, 13, 12, 10, 9, 9, 8, 7, 7, 7, 6, 5, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  WR: [47, 45, 40, 39, 35, 31, 27, 27, 19, 18, 17, 16, 14, 13, 11, 10, 10, 10, 8, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  TE: [36, 31, 22, 16, 12, 10, 8, 7, 6, 6, 3, 2, 2, 2, 1, 1]
 };
-const COLUMN_CURVE_BUDGET = 1440;     // the curve's own scale, as on the client
+// The curve's own scale, as on the client. The curve above must ADD UP to it over
+// a full 12-team board — see the note on LEAGUE_CURVE_BUDGET in index.html, and
+// tools/test-curve-budget.mjs, which pins the total across all three copies.
+const COLUMN_CURVE_BUDGET = 1440;
 const COLUMN_LEAGUE_BUDGET = 12 * 200; // the site's default league: 12 teams, $200
 const COLUMN_MIN_BID = 1;
 const COLUMN_POSITIONS = ['QB', 'RB', 'WR', 'TE'];

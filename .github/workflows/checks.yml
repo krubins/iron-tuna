@@ -301,6 +301,14 @@ jobs:
       - name: Vegas column (worker)
         run: node tools/test-worker-column.mjs
 
+      # Twelve managers at $120 spend $1440, so every dollar column has to total
+      # $1440 over a full board. The market curve claimed to be drawn at that
+      # budget and added up to $1298 — invisible in the app, which renormalises,
+      # but /it-league.js and /api/vegas-column publish the raw curve, so a story
+      # quoted WR1 at $42 against a sheet reading $50. No browser, no network.
+      - name: The cheat sheet's dollars add up
+        run: node tools/test-curve-budget.mjs
+
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one
       # computation — this fails if they ever start disagreeing.
