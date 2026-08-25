@@ -29,7 +29,7 @@ This is not hypothetical. On 2026-08-21 one run inserted two analyst stories sev
 - Cloudflare connector, D1 database `iron-tuna-leads`, id `75f7c43a-69cc-48eb-aa78-6ecfd91af2fb`.
 - Table `lead_story(id, slug, title, dek, body_html, method, sources, category, players, calls, verified, published, created_at, published_at)`.
 - Table `odds_overlay` holds row `id=1` whose `payload` is a JSON map of `"playername|POS"` to sportsbook-implied season projections (`passYd`, `passTD`, `rushYd`, `rushTD`, `recYd`, `recTD`), and row `id=2` (provider `teamctx`) with book-implied points per game and an implied-scoring rank for all 32 teams. Both refresh daily at about **7:00 AM ET** (11:00 on the server's UTC clock; 6:00 AM ET in winter). Check `updated_at` (epoch ms) and note staleness in the method line if it is more than 36 hours old. **Write that time as ET, never as UTC** - see "Clock times are Eastern" below.
-- The consensus baseline projection set (~407 players, includes `rec`, `passInt`, `fumLost`) is embedded in the `iron-tuna` Worker as `var PROJECTIONS = [...]`. Retrieve it with the Cloudflare connector's `workers_get_worker_code` on script `iron-tuna`. The result is ~625 KB, so it will be written to a file; parse it there with a script rather than reading it into context.
+- The consensus baseline projection set (~407 players, includes `rec`, `passInt`, `fumLost`) is embedded in the `iron-tuna` Worker as `var PROJECTIONS = [...]`. Retrieve it with the Cloudflare connector's `workers_get_worker_code` on script `iron-tuna`. The result is ~625 KB, so it will be written to a file; parse it there with a script rather than reading it into context. **This array is the COMMITTED baseline. It is NOT the board and it is NOT what the reader's cheat sheet shows.** Scoring it and ranking it gives you a board nobody on the site sees. You must blend today's odds into it first — see "BUILD THE BOARD LOCALLY" below — and a run that skips that step will print prices and ranks the reader's own sheet contradicts. This has now happened three times.
 - The repo `krubins/iron-tuna` is the site's own record of the season: `auction-insights-*.html`, `auction-watch-*.html`, `preseason-week-*.html` and `play-caller-premium.html`. Read these when your desk (below) calls for them.
 
 ## ROTATE THE DESK — this is required, not a preference
@@ -135,11 +135,31 @@ per stat, only where a line exists, and `rec` is never touched because the betti
 
 So do not build a second, more aggressive board by replacing the stats outright. A run did exactly that and published "$38 for Derrick Henry" beside "$47 on the consensus sheet" for a back the reader's own sheet had at $25 and $38 respectively: the recommendation was right and the consensus figure was wrong, because the consensus figure came off the unblended committed array and nothing on the site prices players that way.
 
-**The easiest correct route: read `/api/board`.** It returns the site's own board at 12 teams and $200, built from the same blended pool, priced by the same curve, as `{n, pos, v, pts}` rows where `v` is the Market Price. That is the number the reader sees, pulled rather than recalculated, and it cannot drift from the sheet because it *is* the sheet. Use it for every "the consensus sheet says $X" in your story. If the request fails, do the blend above yourself and say in the method line that you computed it rather than reading it.
+**BUILD THE BOARD LOCALLY. THIS IS THE PRIMARY METHOD, NOT THE FALLBACK.** Every run so far has found `/api/board` unreachable — direct fetches to irontuna.com are blocked from this environment and the fetcher returns a permission prompt with nobody present to answer it. That is the normal case, not a failure, and **it is never a reason to skip the slot or to publish nothing.** Reproduce the served board yourself, which takes one script and is exact:
+
+1. Read `PROJECTIONS` and `VEGAS_WEIGHT` out of `_worker.js`.
+2. Read the odds from D1: `SELECT payload, length(payload) FROM odds_overlay WHERE id = 1`. Confirm the payload you parsed has the same character count the query reports, so you know you read all of it.
+3. Blend per the formula above, keying on the Worker's own `_oddsNorm(name) + '|' + position`, only for stats the player already has, skipping non-finite and negative values, rounding each to one decimal.
+4. Score with the Worker's `_colScore`, sort within position, price with `_colPrice`.
+
+That is `boardPayload` in `_worker.js` §9d run by hand, so it produces the served board by construction. Say in the method line that you computed it rather than read it, and give the overlay's `updated_at`.
+
+**Prove to yourself the blend actually happened, before you price anything.** Two checks, both one line:
+
+- `odds_overlay` **row `id = 1`** is the player odds. Row `id = 2` is team context and contains no player lines at all, so a run that reads only row 2 has not blended anything. On 2026-08-24 a run did exactly that and its method line said so in its own words.
+- Score one heavily-lined player both ways and confirm the numbers differ. Chuba Hubbard is RB34 at $3 committed and RB28 at $5 blended. **If your two boards agree on him, your blend is not running, and every price you are about to print is off the wrong board.**
+
+**Never validate your board against `DEFAULT_BOARD_RAW` in `it-league.js`.** That block is generated from the committed array and has never seen an odds refresh, so it will agree with an unblended board perfectly and tell you nothing. A run on 2026-08-24 reported "343 players overlap, 332 match to within 0.15 points, exact on all four" against it and published six figures the served board contradicts, including Jonathan Taylor at "RB4 and $55" where the sheet says RB5 and $50. Two wrong boards agreeing is not a check. The only valid check is your blended build against the served board.
+
+**If you believe this brief tells you to price by value over replacement, you are reading a stale copy.** It has not said that since 2026-08-23. Re-read the section above and price off the curve; do not "deviate from the brief" to reach the curve, because the curve IS the brief.
+
+`/api/board` returns the same thing as `{n, pos, v, pts}` rows where `v` is the Market Price. **Try it once**; if it answers, use it and say so, and treat any disagreement with your local build as a bug to report rather than a number to pick between. If it does not answer, move on without further attempts — do not spend the run on it, and do not let it stop you publishing.
 
 What the odds move is then a RANK STORY, not a second price: "the odds have him RB8 rather than RB13" is the finding, and both dollar figures still come off the one board.
 
-**Check two of them against `/api/board` before you insert.** Take the consensus price you are about to print for a named player and confirm it equals that player's `v` in the `/api/board` response. Not the committed projections, not a board you built: the served one. If it does not match, your pricing is wrong and the story is wrong; fix it rather than publishing it. This check is the whole point of the section, and it is the check a run passed in the wrong direction on 2026-08-23 by verifying against `it-league.js`'s static block, which had not seen the odds. Name the endpoint you checked against in the method line so the next run can tell which board you meant.
+**Check every board price you print against that build before you insert** — not two of them, all of them. Take each "the consensus sheet says $X" and confirm it equals that player's price and position rank in the board you just built. If one does not match, your pricing is wrong and the story is wrong; fix it rather than publishing it. This is the check a run passed in the wrong direction on 2026-08-23 by verifying against `it-league.js`'s static block, which had not seen the odds — so name in the method line exactly what you verified against, including the overlay's `updated_at`, so the next run can tell which board you meant.
+
+**And name the board's number for every dollar figure you print, not just the headline one.** If you tell the reader to bid $15 on a player the board prices at $10, say the board says $10 and say why you disagree. A recommendation that differs from the sheet is the whole point of the column; a recommendation that differs from the sheet *silently* is the bug this column has now shipped four times, because the reader has their own sheet open and it contradicts you with no explanation. This applies to secondary players and throwaway asides, not only to the player in the headline.
 
 If you deviate from any of this, say so in the method line.
 
@@ -153,6 +173,8 @@ If you deviate from any of this, say so in the method line.
 
 ## The verification gate
 Set `verified=1` only if every number in the body traces to a source you pulled this run. If anything is unverified, thin, or reasoned from memory, write the row with `verified=0` and `published=0`; it stays off the site until a human promotes it. Do not defeat this gate to get something published. Publishing nothing is an acceptable outcome.
+
+**But INSERT A ROW EITHER WAY. Ending the run with nothing in the table is not.** On 2026-08-24 three of six slots produced no row at all — 00:58, 09:58 and 15:58 — and a slot that writes nothing is invisible twice over: nothing on the site, and nothing in D1 to say the run happened or why it held back. So when you decide not to publish, still insert the row you have with `verified=0, published=0` and put the reason in `method` as the first line: what you could not verify, what you tried, what a later run should try instead. If you got far enough to have no story at all, insert a row whose `title` says so and whose `method` explains it. The empty slot is the one outcome that leaves no evidence, and the watch that used to catch it is paused.
 
 ## Writing style
 Lead with the finding, not the setup. Plain, direct, confident sentences. No em dashes. No hedging filler. Short paragraphs.

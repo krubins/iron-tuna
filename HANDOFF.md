@@ -1588,6 +1588,33 @@ claims no run ever made. Ids 27 through 34 are still `verified = 0` on purpose,
 so the archive and the record table are thinner than they should be. That is the
 honest state, not a pending chore.
 
+#### SUPERSEDED 2026-08-25: documentary verification is not the standard
+
+Read the two paragraphs above as history. **Ids 27 to 35 are `verified = 0` and
+`published = 0`, permanently**, and the documentary re-verification recorded
+above does not put them back.
+
+Both accounts were right about their own test and neither was the site's. The
+documentary standard asks whether a story cites what it claims to cite and holds
+together internally; all nine passed it. The site's standard is Ken's, stated
+twice: *use the same valuation as the cheat sheet* and *the two values should
+always track identically*. Against that, those rows fail on the only thing a
+reader can check — Jeremiyah Love quoted at $47 against a board that says $25,
+Brock Bowers at $25 against $53, Zay Flowers at $26 and $32 against $25. A story
+whose sourcing is impeccable and whose price contradicts the sheet open on the
+reader's other tab is still the bug this whole thread is about.
+
+So: **a story is verified when its board figures reproduce against the served
+board, and not otherwise.** Sourcing is necessary and not sufficient. Ken settled
+this on 2026-08-25 when the two positions were put to him.
+
+The "verified wipe recurred on 2026-08-24, narrowly, still unexplained" note in
+the entry above is also resolved, and it was not a wipe. Another session retired
+ids 27 to 35 deliberately at 14:58 UTC on price grounds, having recomputed the
+board; id 35 came back to 0 while 41 to 43 kept their flags because those three
+had been checked and held. There is now an audit trail (§36) so the next such
+change carries a timestamp instead of an inference.
+
 #### The headline check (2026-08-22)
 
 The prompt ends with four mechanical checks to run on the exact title string
@@ -3855,3 +3882,250 @@ Two things follow, and both are in the story rather than buried here:
 Do not promote this model into `_worker.js` or quote its decimals on a page. It
 is a desk instrument for ordering players, and the order is the only part of it
 that is robust.
+
+## 36. August 2026: who flipped the flag, and the watcher that kept flipping it back
+
+`lead_story` has two flags and both decide what a reader sees. `published = 1`
+puts a row on the front page. **`verified = 1` alone is enough to put a row in
+"Recent insights"** (`WHERE verified = 1 AND slug IS NOT NULL`), which is the
+part that keeps being missed: taking a story *down* means clearing both, and
+`published = 0` on its own leaves it visible.
+
+### The recurring incident
+
+Rows written before the pipeline priced off the served board quote figures the
+cheat sheet contradicts in both directions — Jeremiyah Love at $47 against a
+board that says $25, Brock Bowers at $25 against $53, Zay Flowers at $26 and
+$32 against $25. Every row up to and including id 40 was cleared to
+`verified = 0, published = 0` deliberately, and is not recoverable: their
+figures are wrong, not merely old.
+
+Three times those rows came back. On 2026-08-24 ids 27 through 35 went from
+cleared at 12:40 UTC to `verified = 1` at 14:56 UTC, which put nine stale
+stories back into "Recent insights" on the live site. The only write in that
+window that could have done it was the daily watch Routine
+(`trig_01WTgFuRik7kDWJHJv5pDwgQ`, `15 14 * * *`, fired 14:18:26 UTC); the
+lead-story Routine retires by slug and touches `published` only, and the two
+column Routines write HTML, not D1.
+
+**The watcher's own SQL is what convinced it.** Its prompt opened with:
+
+```sql
+SELECT COUNT(*) AS published_rows, COUNT(*) FILTER (WHERE verified=1) AS verified_rows
+FROM lead_story;
+```
+
+`COUNT(*)` with no filter counts the whole table. It reported 43 where the
+truth was 1, next to a `verified_rows` that had legitimately fallen to single
+digits — a reading that looks exactly like "the flags were wiped," which is a
+thing that genuinely happened on 2026-08-23. The watcher was fed a false
+positive by its own query and repaired damage that did not exist. The
+corrected form:
+
+```sql
+SELECT COUNT(*) FILTER (WHERE published = 1) AS published_rows,
+       COUNT(*) FILTER (WHERE verified  = 1) AS verified_rows,
+       COUNT(*)                               AS total_rows
+FROM lead_story;
+```
+
+A `verified_rows` in the low single digits is the system working, not a wipe.
+Only stories checked against the served board carry the flag.
+
+The Routine is **paused**, because its prompt cannot be edited from a session
+other than the one its fires deliver into — `update_trigger` refuses. The
+corrected prompt is kept at `tools/lead-story-watch-prompt.md`; re-enabling the
+Routine means pasting that in first, from the session that owns it.
+
+### The audit trail
+
+`lead_story` had none, which is why three sessions each read the others' writes
+as corruption and why the paragraph above had to be argued from fire times
+instead of read off a table. There is now one:
+
+```sql
+CREATE TABLE lead_story_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  story_id INTEGER NOT NULL,
+  at INTEGER NOT NULL,
+  old_published INTEGER, new_published INTEGER,
+  old_verified  INTEGER, new_verified  INTEGER
+);
+
+CREATE TRIGGER lead_story_flag_audit
+AFTER UPDATE OF published, verified ON lead_story
+FOR EACH ROW WHEN old.published <> new.published OR old.verified <> new.verified
+BEGIN
+  INSERT INTO lead_story_audit (story_id, at, old_published, new_published, old_verified, new_verified)
+  VALUES (old.id, CAST(strftime('%s','now') AS INTEGER) * 1000,
+          old.published, new.published, old.verified, new.verified);
+END;
+```
+
+Both are live on `iron-tuna-leads`. It records **what changed and when**, not
+who: D1 exposes no caller identity to a trigger. That is still enough, because
+every writer here is a Routine on a known schedule, so a timestamp names the
+suspect. Read it with:
+
+```sql
+SELECT story_id, datetime(at/1000,'unixepoch') AS at_utc,
+       old_verified, new_verified, old_published, new_published
+FROM lead_story_audit ORDER BY id DESC LIMIT 40;
+```
+
+The trigger fires on the flags only, so a normal retire-by-slug leaves one row
+per story and the table stays small. It is additive and touches no read path.
+
+### Verifying a story's prices, which is the whole point of the flags
+
+Never verify against `DEFAULT_BOARD` in `/it-league.js` — that is built from the
+committed `PROJECTIONS` and is the fallback, not the board. The served board is
+`/api/board` (`_worker.js` §9d): the same projections re-blended with the day's
+odds at `VEGAS_WEIGHT = 3`, scored with `_colScore`, priced with `_colPrice`.
+When the endpoint is unreachable, reproduce it locally from `_worker.js` plus
+the stored overlay rather than trusting any other number:
+
+```sql
+SELECT payload FROM odds_overlay WHERE id = 1;   -- check length(payload) matches what you saved
+```
+
+Row 43 (Omarion Hampton, 2026-08-24) was checked this way: RB15 at $18, Ladd
+McConkey WR23 at $10, every Chargers tight end at $2 — all exact. Row 42
+(LaPorta) reproduced seven figures exactly against an overlay that had
+refreshed *after* it was written.
+
+### The empty slots, and what the price check now says
+
+Three of the six lead-story slots on 2026-08-24 produced no row at all — 00:58,
+09:58 and 15:58 — while `last_fired_at` on `trig_011LYewcPUQikF8izFsN2LAr`
+confirms the Routine did fire. A slot that writes nothing is invisible twice
+over: nothing on the site, and nothing in D1 to say the run happened or why it
+held back. That is now forbidden by the prompt: a run that decides not to
+publish still inserts its row at `verified=0, published=0` with the reason as
+the first line of `method`.
+
+The likely cause, and the reason the prompt changed with it: this prompt used to
+say **"the easiest correct route: read `/api/board`"**, and `/api/board` has
+never once been reachable from a Routine's environment. Direct fetches to
+irontuna.com are blocked and the fetcher returns a permission prompt nobody is
+there to answer — rows 42 and 43 both say so in their own method lines. Every
+story that shipped did so by working around the instruction. So the prompt now
+makes the local reproduction the primary method, spells out the four steps, and
+says plainly that an unreachable endpoint is never a reason to skip a slot.
+
+Two other rules went in at the same time:
+
+- **Check every board price you print, not two of them.** The old text asked for
+  two spot checks, which is how a story can carry five figures and have three of
+  them unverified.
+- **Name the board's number for every dollar figure, not just the headline one.**
+  Row 43 told readers to "bid up to $15 on Ladd McConkey" against a board that
+  prices him at $10, and never mentioned the $10. Not false, but it is the same
+  reader-versus-their-own-sheet collision that started this whole thread, and it
+  had survived four rounds of fixes because every rule so far was written about
+  the headline player.
+
+The canonical prompt is `tools/lead-story-routine-prompt.md`; the live copy was
+verified byte-identical to it after the push.
+
+### Row 44, and the check that could not fail
+
+The 18:58 run on 2026-08-24 published a preseason story priced entirely off the
+**committed** array. Its own method line is the confession:
+
+> The 407-player PROJECTIONS array was pulled from the iron-tuna Worker this
+> run, parsed to a file, and re-scored at SCORING_DEFAULTS. The result was
+> checked against DEFAULT_BOARD_RAW, the generated cheat sheet committed in
+> it-league.js: 343 players overlap, 332 match to within 0.15 points ... Exact
+> on all four.
+
+`DEFAULT_BOARD_RAW` is built from the committed array. An unblended board
+checked against it agrees perfectly and proves nothing — two wrong boards
+agreeing. The run also read `odds_overlay` **row 2** (team context) and never
+row 1 (the player lines), so no blend ever happened. Six of its eight board
+claims match the committed board and not the served one, the worst being
+"Jonathan Taylor at RB4 and $55" where the sheet says **RB5 and $50**. It also
+wrote "Alec Pierce carries 199.3 projected points **on the shipped board**";
+the shipped board says 196.1.
+
+The dollar recommendations happened to be right, because the curve is flat
+where most of those players sit. That is luck, not method. Row 44 was retired
+and row 43 restored as the published lead.
+
+The prompt now carries three specific guards, all added because this run got
+past the general ones:
+
+1. At the `PROJECTIONS` bullet: **this array is the committed baseline, not the
+   board.**
+2. A blend self-test with a named player — Chuba Hubbard is RB34/$3 committed
+   and RB28/$5 blended. If your two boards agree on him, the blend is not
+   running.
+3. **Never validate against `DEFAULT_BOARD_RAW`**, stated where the validation
+   step is, not three sections away.
+
+Plus a line for a run that believes the brief still says value over replacement:
+it does not, and has not since 2026-08-23; that belief means a stale copy.
+
+**It worked.** Row 45 (00:58 on 2026-08-25, the tight-end pricing piece) is the
+first story that demonstrably used the served board: it prices Brock Bowers at
+$53, which is TE1 blended, where the committed board says $47. Thirteen named
+board figures and eight derived arithmetic claims all reproduce exactly, and it
+carries a "Board price" column naming the sheet's number next to every
+recommendation — the rule added the same day after row 43 quietly told readers
+to bid $15 on a $10 player.
+
+Slot coverage is still not fixed: 21:58 on 2026-08-24 produced no row either,
+which is the fourth empty slot that day and the first since the "insert a row
+either way" rule landed. Watch it.
+
+### PR #105 moved every dollar, and what that cost
+
+Merging #105 on 2026-08-25 re-cut `LEAGUE_MARKET_CURVE` by a level factor so the
+column adds up to the league budget. Ranks are untouched and every ratio is
+preserved — but **every published dollar figure became wrong at once**, and the
+site had five stories carrying them: one live lead and four in "Recent
+insights". Gibbs $72 to $80, Bowers $53 to $60, Josh Allen $42 to $47, Walker
+$42 to $47, LaPorta $18 to $20.
+
+Two things are worth keeping from the cleanup.
+
+**`repriceCopy` does not save you here, and it is easy to assume it does.**
+`it-league.js` restates a story's dollars against the reader's own board, which
+is why the column can be written in one league and read in another. But
+`boardRatio()` is *reader's board ÷ desk's board*: it converts between leagues,
+not between curves. When the desk's board moves, the ratio is still 1 and the
+stale number passes straight through to the reader. A curve change has to be
+fixed in the stored text.
+
+**All five were repriced rather than retired**, on Ken's instruction, and the
+repricing was derived, never scaled. Every figure came from `COLUMN_CURVE`,
+`COLUMN_SCORING` and `VEGAS_WEIGHT` read out of the deployed `_worker.js` at
+repricing time and blended with the current `odds_overlay` — including the
+derived ones: round boundaries by overall price rank, cost-per-point tables,
+marginal dollar totals, catch- and touchdown-sensitivity thresholds. Sixty
+figures were re-checked afterwards against the board and all sixty matched.
+
+Two findings changed shape rather than level, and were rewritten to say what is
+now true instead of being forced back into the old sentence: the tight-end
+premium is 2.5x rather than 2.4x, and there are now two non-tight-end upgrades
+above the cheapest tight-end upgrade rather than one.
+
+**The harness that checks this used to carry the curve as a hand-copied
+constant**, which would have made it agree with the pre-#105 board forever
+without complaining. It now lifts `PROJECTIONS`, `COLUMN_CURVE`,
+`COLUMN_SCORING`, `COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID`
+and `VEGAS_WEIGHT` out of `_worker.js` at run time. Any checker with a copied
+number in it is a checker that will eventually pass a wrong board — the same
+failure as validating against `DEFAULT_BOARD_RAW`, one level up.
+
+### Cadence: 6-hourly from 2026-08-25
+
+`trig_011LYewcPUQikF8izFsN2LAr` ran `58 */3 * * *` and five of twelve slots
+produced no row at all, while the runs that did finish took 15 to 24 minutes
+against a stated 8-to-20 band. Two prompt-level attempts to fix it failed,
+including an "insert a row either way" rule that could not help because runs were
+dying before they reached it. The schedule is now `58 */6 * * *`: four runs a day
+that finish beats eight where half do not, and it halves the chance of a story
+sitting live across the daily odds refresh. The underlying question — why a run
+ends without inserting — is still open, and a heartbeat table would answer it
+without touching the story-insert path.
