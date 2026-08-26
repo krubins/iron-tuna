@@ -32,6 +32,49 @@ This is not hypothetical. On 2026-08-21 one run inserted two analyst stories sev
 - The consensus baseline projection set (~407 players, includes `rec`, `passInt`, `fumLost`) is embedded in the `iron-tuna` Worker as `var PROJECTIONS = [...]`. Retrieve it with the Cloudflare connector's `workers_get_worker_code` on script `iron-tuna`. The result is ~625 KB, so it will be written to a file; parse it there with a script rather than reading it into context. **This array is the COMMITTED baseline. It is NOT the board and it is NOT what the reader's cheat sheet shows.** Scoring it and ranking it gives you a board nobody on the site sees. You must blend today's odds into it first — see "BUILD THE BOARD LOCALLY" below — and a run that skips that step will print prices and ranks the reader's own sheet contradicts. This has now happened three times.
 - The repo `krubins/iron-tuna` is the site's own record of the season: `auction-insights-*.html`, `auction-watch-*.html`, `preseason-week-*.html` and `play-caller-premium.html`. Read these when your desk (below) calls for them.
 
+## LEAVE A HEARTBEAT. Do this FIRST, before anything else.
+
+Between 2026-08-24 and 2026-08-25, **five of twelve runs ended without inserting anything.** The Routine fired every time — `last_fired_at` proves it — but no row appeared and no evidence of what went wrong survived. A rule was added telling you to insert a story row either way; it did not help, because the runs were dying before they ever reached that part of this brief. Nothing written near the end of a prompt can help a run that stops in the middle.
+
+So the first thing you do, before reading the projections or anything else, is claim a row in `lead_story_run`:
+
+```sql
+INSERT INTO lead_story_run (run_key, slot, stage, started_at, updated_at)
+VALUES (?1, ?2, 'start',
+        CAST(strftime('%s','now') AS INTEGER)*1000,
+        CAST(strftime('%s','now') AS INTEGER)*1000);
+```
+
+`run_key` (?1) is `<slot>-<the epoch-ms you just wrote>`, e.g. `165524-1787670736000`. It only has to be unique; it exists so you can update your own row and nobody else's. `slot` (?2) is the desk slot from the section below. Keep the `run_key` string; you will reuse it.
+
+Then update that one row as you pass each checkpoint:
+
+```sql
+UPDATE lead_story_run SET stage = ?2, note = ?3,
+       updated_at = CAST(strftime('%s','now') AS INTEGER)*1000
+WHERE run_key = ?1;
+```
+
+The stages, in order. Use these exact words:
+
+| `stage` | you have just finished |
+|---|---|
+| `start` | claimed this row; nothing else done yet |
+| `board` | built the blended board and passed the blend self-test |
+| `research` | gathered and confirmed the desk's material |
+| `drafted` | written the story and run the headline and dek checks |
+| `inserted` | the INSERT into `lead_story` returned; set `story_id` too |
+| `done` | retire-by-slug and the read-back check are finished |
+
+Set `desk` on the `board` update. Set `story_id` on the `inserted` update. Use `note` for the one thing a later reader would want: which desk you skipped and why, what you could not source, what the blend self-test showed.
+
+**Two rules about this table, and they matter more than the table does:**
+
+1. **A heartbeat must never stop the run.** If any of these statements fails, ignore it and carry on writing the story. This table is instrumentation. It has no authority over whether a story ships, and a run that abandons a good story because it could not write a log entry has done something much worse than not logging.
+2. **It is not a substitute for the story row.** The verification gate still applies: when you decide not to publish, you still insert into `lead_story` with `verified=0, published=0` and the reason in `method`. The heartbeat says how far you got; the story row says what you decided. They answer different questions.
+
+A run that dies leaves its row at the last stage it reached, which is the whole point. A slot with no `lead_story_run` row at all, on a Routine that fired, means the run died before its first statement — which is a different failure, in the session rather than the work, and worth knowing apart.
+
 ## ROTATE THE DESK — this is required, not a preference
 Compute `slot = floor(unix_epoch_seconds / 10800)` and `desk = DESKS[slot % 7]` where
 
