@@ -4312,3 +4312,52 @@ saying "today". Push it from a session that can hold the file, then diff the
 Routine's stored prompt back against `tools/lead-story-routine-prompt.md` below
 the `<!-- PROMPT BEGINS -->` marker; the two are identical apart from that
 marker and the header above it.
+
+### The heartbeat's first catch: 2026-08-26 12:58Z
+
+The 12:58Z slot produced no story. Unlike the five silent failures of 08-24 and
+08-25, this one left evidence:
+
+    run_key                   desk      stage   secs
+    165532-1787749542000      (unset)   start   0
+
+The row was claimed at 13:05:53Z — about eight minutes after the Routine fired,
+which is session startup — and `updated_at` never moved again. At 13:44Z it had
+been sitting at `start` for 38.75 minutes. No `lead_story` row was written;
+`max(id)` is still 51.
+
+**That narrows the fault to one window.** `board` means "built the blended board
+and passed the blend self-test", and the healthy 06:58Z run reached it in 227
+seconds. So the run died somewhere between claiming its row and finishing the
+board — before research, before drafting, before any of the publishing rules.
+Every prompt fix attempted before the heartbeat existed was written for the
+back half of the brief, which is why none of them helped: the runs were never
+getting there. That is now a measurement rather than a guess.
+
+**The heaviest thing in that window is the projections fetch.** The prompt has
+runs pull the ~625 KB `PROJECTIONS` array out of the deployed Worker with the
+Cloudflare connector's `workers_get_worker_code`. In this environment a tool
+result that size is diverted to a file rather than returned, and it is by some
+distance the largest operation a run performs.
+
+It is also unnecessary. `_worker.js` is in the repo, the Worker is deployed
+from `main` by the git integration, and the run already reads `it-league.js`
+out of the repo for the curve. `tools/live-board.mjs` (added earlier the same
+day) does exactly this: lifts `PROJECTIONS`, `COLUMN_SCORING`, `COLUMN_CURVE`,
+`COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID` and
+`VEGAS_WEIGHT` from the local file. That the boards agree is not an assumption:
+every figure in all nine live rows was verified against it on 2026-08-26, and
+those rows were written by runs that used the connector fetch.
+
+So the candidate fix is to point the board build at `tools/live-board.mjs` and
+drop the connector fetch. **This is one data point and it is a hypothesis, not
+a diagnosis.** Confirm it with the next failure: if a run again stalls at
+`start`, the window is the same and the fetch is the prime suspect. If one
+stalls at `board` or later, this is wrong.
+
+Do not respond to a stalled run by editing the back half of the brief. That has
+been tried twice and cannot work.
+
+**Failure rate to date: roughly six of sixteen slots.** Five of twelve across
+08-24/25, plus this one. Row 51 remained live and correct throughout, so a
+missed slot costs a fresh story, not an inaccurate one.
