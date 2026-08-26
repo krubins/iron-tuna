@@ -1,7 +1,7 @@
 <!--
 THIS FILE IS THE CANONICAL COPY of the prompt run by the Claude Routine
-"Iron Tuna - lead story refresh (every 3h)" (trig_011LYewcPUQikF8izFsN2LAr,
-cron `58 */3 * * *`). The Routine holds the live copy; this is the version
+"Iron Tuna - lead story refresh (every 6h)" (trig_011LYewcPUQikF8izFsN2LAr,
+cron `58 */6 * * *`). The Routine holds the live copy; this is the version
 under review.
 
 It lives in the repo because HANDOFF.md Section 17 records what happens when it
@@ -134,7 +134,9 @@ One exception, and it is a real one rather than an excuse: an analyst-desk story
 Getting this wrong costs the cards and the record table while the entry still lists by headline, so nothing will visibly fail in your own run. Check the JSON parses before you insert it.
 
 ## BE CURRENT
-The story should read as written today. Lead with the freshest thing you can verify: today's odds refresh, this week's camp and preseason news, a transaction or injury confirmed this run. State the timestamp of the data you used in the body, not only in the method line. A piece that would have read identically last Tuesday is a weak run even when every number in it is right.
+The story should read as written today. Lead with the freshest thing you can verify: this run's odds refresh, the week's camp and preseason news, a transaction or injury confirmed this run. State the timestamp of the data you used in the body, not only in the method line. A piece that would have read identically last Tuesday is a weak run even when every number in it is right.
+
+But be current **with a date attached, never with a bare "today."** Every story you publish stays in "Recent insights" for days after the run that wrote it, so a relative time word is wrong within 24 hours of going up and there is nobody coming back to fix it. Write "the 7:00 AM ET refresh on August 25", not "today's 7:00 AM ET refresh"; "the August 25 odds", not "this morning's odds"; "Iron Tuna, August 25" as a table header, not "Iron Tuna today". **Banned in title, dek, body and table headers: today, today's, this morning, tonight, yesterday, tomorrow, right now, as of now.** "This week" is allowed only beside a dated event that pins it. This is not a style note: rows 48 and 49 both had to be corrected by hand on 2026-08-26 because they said "today" about the previous day's refresh, which read as though the reader's own sheet had just moved when it had not.
 
 ## THE OUTPUT MUST BE ACTIONABLE AT THE PLAYER LEVEL
 This is the single most important requirement. Directional and team-level findings are only the setup. Every story must land on **named players with numbers a drafter can act on**:
@@ -260,9 +262,9 @@ All of this governs `body_html` as much as the title and the dek. The story is w
 ### Clock times are Eastern
 **Never print "UTC" or "GMT" in the title, dek, body, method or sources.** Nobody drafting keeps a UTC clock. The audience is American fantasy managers whose kickoffs, waiver deadlines and league nights are all quoted in Eastern, and a reader who has to convert an hour before they can judge whether your data is fresh will not convert it.
 
-Write every clock time as Eastern and label it `ET`: "today's 7:00 AM ET odds refresh", not "today's 11:00 UTC odds refresh". Eastern is UTC-4 from the second Sunday in March to the first Sunday in November and UTC-5 the rest of the year, so the 11:00 UTC refresh is 7:00 AM ET in season and 6:00 AM ET in winter. Convert it yourself before you write it. Slugs still carry the UTC hour (`short-topic-YYYY-MM-DD-HH`) because they are not prose and readers do not parse them.
+Write every clock time as Eastern and label it `ET`, and date it: "the 7:00 AM ET odds refresh on August 25", not "the 11:00 UTC odds refresh" and not "today's 7:00 AM ET odds refresh" (see "BE CURRENT" for why the date has to be there). Eastern is UTC-4 from the second Sunday in March to the first Sunday in November and UTC-5 the rest of the year, so the 11:00 UTC refresh is 7:00 AM ET in season and 6:00 AM ET in winter. Convert it yourself before you write it. Slugs still carry the UTC hour (`short-topic-YYYY-MM-DD-HH`) because they are not prose and readers do not parse them.
 
-The site converts any UTC time that reaches the table anyway (`leadClock` in `_worker.js`), so a slip is caught rather than published. Do not treat that as permission to keep writing UTC: the filter cannot fix "today's 01:00 run", which is last night in Eastern.
+The site converts any UTC time that reaches the table anyway (`leadClock` in `_worker.js`), so a slip is caught rather than published. Do not treat that as permission to keep writing UTC: the filter cannot fix "today's 01:00 run", which is last night in Eastern, and it cannot put a date on a bare "today" either.
 
 ### Say whose league the dollars are
 Every price you print is a price in ONE league, the model below, and the site restates it for each reader: `it-league.js` re-anchors each dollar figure on what the named player costs on that reader's own board, at their scoring, budget and league size. That only works if your figures are the model's and nothing else.

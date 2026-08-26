@@ -4189,3 +4189,126 @@ authority over the thing it measures.
 
 The heartbeat says how far a run got. The `verified=0` story row says what it
 decided. Both still apply; they answer different questions.
+
+### The 2026-08-26 11:00Z refresh: what a board move actually breaks
+
+The first odds refresh after PR #105 landed at 11:00:35Z on 2026-08-26
+(`odds_overlay` row 1, `updated_at` 1787742035336, 16,897 chars, up from
+1787655628685 / 16,889). It is the first refresh checked end to end against
+every live row, and the result is worth writing down because it sets the size
+of the problem.
+
+**241 of 312 players changed.** Almost all of it was noise — a tenth of a yard.
+Only **twelve players changed rank**, all of them adjacent-pair swaps, and only
+**two changed price**: Javonte Williams RB16 $17 to RB17 $15, and Cam Skattebo
+RB17 $15 to RB16 $17, a straight exchange.
+
+So the useful diff is not the overlay. It is the board:
+
+    node tools/board-diff.mjs old-overlay.json new-overlay.json
+
+That reduced a 241-player overlay diff to a twelve-name list, and from there to
+the four stories that could possibly be affected. Do this before re-reading any
+copy; reading nine stories to find one wrong number is the slow way round.
+
+**Every dollar figure in all nine live rows survived.** The originating
+complaint — a story quoting a price the reader's own cheat sheet contradicts —
+did not recur. What drifted was the supporting arithmetic, which no rule had
+ever been written about:
+
+| row | figure | said | was |
+|---|---|---|---|
+| 41 | QB5-to-QB12 spread | "less than one and a half" a game | 1.76 |
+| 41 | Mayfield behind Allen | 3.9 | 3.8 |
+| 42 | LaPorta / Pitts blended projections | 194.0 / 191.3 | 194.7 / 191.2 |
+| 45 | QB12 baseline, QB marginal points, QB cost per point | 291.4 / 287.9 / $0.59 | 291.3 / 292.3 / $0.58 |
+| 45 | RB / WR / TE marginal points | 1,519.4 / 1,813.3 / 226.9 | 1,521.6 / 1,815.7 / 226.7 |
+| 45 | McLaurin above the WR36 baseline | 23.8 | 23.6 |
+| 47 | Kelce at 58 catches | TE15 | TE16 |
+| 48 | running back disagreement total | $116 | $120 |
+| 49 | Tank Dell, Higgins yards, Collins blended yards | WR86 / 635.7 / 1,173.9 | WR87 / 631.8 / 1,168.6 |
+| 50 | Flowers' Vegas receiving yards | 1,241.9 | 1,241.7 |
+
+All corrected in place. Nothing was retired: a story whose argument still holds
+and whose prices still reproduce does not come down over a tenth of a point.
+
+**Every one of these was exact at publication.** Row 45 is the clearest case —
+more than twenty computed aggregates, and all of them reproduced on the board
+its method line names. These are not errors. They are a snapshot ageing.
+
+### Two rules that came out of it
+
+**A story is a snapshot; the cheat sheet is live.** Where the two can disagree,
+the copy must say which board it means. Rows 48, 49 and 51 now name their
+refresh and state the current value beside it. Rows that assert a bare present
+tense get updated to current instead.
+
+**Never write a bare "today."** Rows 48 and 49 both said "today" and "this
+morning" about the previous day's refresh, which reads as though the reader's
+sheet had just moved when it had not. Every row sits in "Recent insights" for
+days and nobody comes back to date it. The prompt now bans `today, today's,
+this morning, tonight, yesterday, tomorrow, right now, as of now` in title,
+dek, body and table headers, and its own worked example was changed — the old
+one said "today's 7:00 AM ET odds refresh" and was teaching the defect.
+
+### Definitions matter more than arithmetic here
+
+Two figures looked wrong and were not, both because a checker guessed the
+definition rather than reading it:
+
+- Row 48's receiver disagreement is **$66 over the committed top 24**, which is
+  what its left column names. Summing over the union of both boards' top 24
+  gives $68. The story is right; the union is the wrong question.
+- Row 45's "upgrade" is a player priced above the positional baseline, costed
+  **against that baseline** — not the step from one rank to the next. Under the
+  step reading Bowers costs $0.30 a point and thirty-nine non-tight-ends beat
+  him. Under the story's own reading he costs $0.84 and exactly two do, which
+  is what it says.
+
+Work out which definition the copy used before calling a number wrong. Both of
+these were nearly reported as defects.
+
+### The harness has to read the worker, not remember it
+
+`scratchpad/recheck-all.mjs` was run first and reported all five older rows
+failing on every figure. It was wrong: its claims table was hand-copied from
+the stories **before** the PR #105 reprice, so it was comparing pre-reprice
+claims against a post-reprice board. Same failure mode as the curve that
+`live-board.mjs` was written to fix, one level up — the constants were lifted
+correctly, and then the *claims* went stale instead.
+
+Rebuild claims from the live `dek` and `body_html` each time. A verification
+table that is not regenerated is a second thing to keep in sync, and it will
+lose sync exactly when it matters.
+
+The harness itself is now in the repo rather than a scratch directory:
+`tools/live-board.mjs` lifts `PROJECTIONS`, `COLUMN_SCORING`, `COLUMN_CURVE`,
+`COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID` and
+`VEGAS_WEIGHT` straight out of `_worker.js` at run time, so it cannot disagree
+with what the site serves. `board(path)` gives the blended board,
+`board(null, false)` the committed one. That pair is what every claim in this
+section was checked against.
+
+### State at 2026-08-26 12:00Z
+
+Live and verified: **51** (playcaller, Kyle Pitts). Verified, retired: 41, 42,
+43, 45, 47, 48, 49, 50. Rows 1-40, 44, 46 down permanently. Curve unchanged
+since `0d3677d`. `lead_story_audit` still shows exactly two flag transitions,
+both from 2026-08-24, both accounted for.
+
+The heartbeat has now recorded three complete runs and no failures: 898s
+(injury, row 49), 714s (analyst, row 50), 1,479s (playcaller, row 51). The
+playcaller run's `board` note is what the instrumentation was for — it names
+the overlay it matched (1787655628685), the match rate (312 of 407) and the
+Chuba Hubbard self-test result, so the board it used is recoverable after the
+fact rather than inferred.
+
+**The live Routine prompt has NOT been updated with the dated-time rule.** The
+repo copy here has it; `trig_011LYewcPUQikF8izFsN2LAr` still runs the previous
+text. Pushing it means resending all 44,360 characters through
+`update_trigger`, and a transcription slip in a brief that publishes to the
+front page with no human in the loop is a worse outcome than one more story
+saying "today". Push it from a session that can hold the file, then diff the
+Routine's stored prompt back against `tools/lead-story-routine-prompt.md` below
+the `<!-- PROMPT BEGINS -->` marker; the two are identical apart from that
+marker and the header above it.
