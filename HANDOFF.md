@@ -4361,3 +4361,47 @@ been tried twice and cannot work.
 **Failure rate to date: roughly six of sixteen slots.** Five of twelve across
 08-24/25, plus this one. Row 51 remained live and correct throughout, so a
 missed slot costs a fresh story, not an inaccurate one.
+
+### The 18:58Z run, and why the stall hypothesis is not confirmed
+
+The 18:58Z slot succeeded: `done` in 724 seconds, row 52, market desk. It
+reached `board` normally, which means **the `workers_get_worker_code` path is
+not deterministically broken** and the 12:58Z stall was intermittent. The
+hypothesis in the previous section is neither confirmed nor refuted — it is
+weaker as a deterministic cause and still open as an intermittent one. Do not
+act on it until a stall repeats and lands in the same window.
+
+Run 52 is the best-documented run so far. Its method line names the overlay's
+`updated_at`, states the character count it parsed and that it matched
+`length(payload)`, records the Chuba Hubbard self-test, lists all fourteen
+figures it re-checked before insert, and says plainly that it did not attempt
+`/api/board` and why. Every one of those fourteen reproduced here, as did every
+derived figure: the committed Rice-London gap of 11.4 against the blended 22.9,
+London at -7.9 and Rice at +3.6 across the blend, Burrow's committed QB8 and
+$10, the $13 eighth-to-ninth receiver step being the widest inside any top ten,
+and the first $2 rank at TE15, RB35 and WR40.
+
+### `method` is reader-visible, and the sweep has to include it
+
+`_worker.js` line 2826 serves `method` to the page through `leadClock`. The
+2026-08-26 morning sweep for undated time words checked `title`, `dek` and
+`body_html` and **missed `method` entirely**, which left two inconsistencies
+that the same morning's edits had created:
+
+- Row 48's method explained that `"Iron Tuna today" is the blended price`,
+  naming a table column that had just been renamed to `"Iron Tuna, August 25"`.
+- Row 49's body was updated to the August 26 overlay (631.8 receiving yards for
+  Jayden Higgins) while its method still quoted the August 25 values, 635.7 and
+  3.7. The two halves of one story disagreed about the same number.
+
+Both are the same mistake: **a story's method describes its body, so editing
+one without re-reading the other splits them.** After any correction, re-check
+`title`, `dek`, `body_html` AND `method` together, and diff the story against
+itself before moving on.
+
+Six further methods carried a bare "today" or "this morning" and are now dated.
+All ten live rows are clean across all four fields.
+
+Row 52 arrived with seven undated time references, exactly as expected — it ran
+the live Routine prompt, which still lacks the dated-time rule. They were dated
+by hand before the 08-27 refresh could make them false.
