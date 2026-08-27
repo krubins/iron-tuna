@@ -4405,3 +4405,51 @@ All ten live rows are clean across all four fields.
 Row 52 arrived with seven undated time references, exactly as expected — it ran
 the live Routine prompt, which still lacks the dated-time rule. They were dated
 by hand before the 08-27 refresh could make them false.
+
+### The 00:58Z run, and a gap in what "verify every figure" covers
+
+The 00:58Z slot on 2026-08-27 succeeded: `done` in 815s, row 53, player desk.
+Two clean runs in a row after the 12:58Z stall, and the overlay had not moved,
+so the older rows needed no re-verification.
+
+Row 53 verified almost completely. Every board figure reproduced — Maye QB3
+$32 at 322.7, Dart QB5 $20 at 321.2, Daniels QB7 $13 at 308.5, the 1.5-point
+gap, the $12 price difference, QB6 at $18 — as did every committed-versus-
+blended claim: A.J. Brown's one-dollar move from WR11 $28 to WR12 $27, Terry
+McLaurin not moving at all, TreVeyon Henderson's $10 to $12, the $7 cut to
+Daniels. So did both cost-per-point figures ($19 buying 14.2 points at
+quarterback, $13 buying 21.8 at receiver) and all three team lines from
+`odds_overlay` row 2 (New England 14th at 23.7, the Giants 16th at 23.3,
+Washington 17th at 23.3).
+
+**One claim was wrong.** The story said Vegas gives Dart "7.5 rushing
+touchdowns, five more scores on the ground than Maye." Maye's overlay line is
+3.1. The difference is 4.4, not five. Corrected to "four more".
+
+That is a different failure from everything logged above it. It is not drift —
+it was wrong the moment it was written — and the run's own verification pass
+did not catch it, because **the pass is not scoped to catch it.** The rule in
+the brief says to check every board price and position rank printed against the
+build. Row 53 did exactly that, and its method line lists the checks. But
+"five more scores on the ground" is arithmetic on two raw overlay stats, not a
+price or a rank, so nothing in the brief told the run to check it.
+
+So the verification rule needs a third clause: **any number derived from the
+overlay or the projections — a difference, a ratio, a count, a "more than" —
+gets recomputed and checked, not just prices and ranks.** Added to the pending
+prompt edits below.
+
+Row 53 also arrived with two undated time references ("WR25 today", "cost right
+now"), both dated by hand. It did correctly write "refreshed at 7:00 AM ET on
+August 26" unprompted, which is the form the pending rule asks for.
+
+### Pending prompt edits, in priority order
+
+None of these are live. All three are in the repo copy only.
+
+1. **Point the board build at `tools/live-board.mjs`** instead of the ~625 KB
+   `workers_get_worker_code` fetch. Reliability, and the prime suspect for the
+   12:58Z stall — though the two successes since mean it is intermittent at
+   worst, and unconfirmed.
+2. **Verify derived numbers, not only prices and ranks** (this section).
+3. **No bare "today"** — the dated-time rule.
