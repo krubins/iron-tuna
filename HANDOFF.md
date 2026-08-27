@@ -4537,3 +4537,68 @@ stood. Detail worth keeping:
   Its recommendation is unchanged and every dollar figure still reproduces.
 - **Row 54** was exact at publish on all six tight end ranks and prices, which
   this refresh left untouched. Only three cross-position spans moved.
+
+### The stalls are slot-specific, not random: 12:58Z collides with two other Routines
+
+The 12:58Z slot failed again on 2026-08-27 — run `165540-1787835558000` claimed
+its row at 12:59:28Z and never moved off `start`. That is the second stall, and
+both have been the same slot.
+
+    slot     runs   stalls
+    00:58Z     2      0
+    06:58Z     2      0
+    12:58Z     2      2
+    18:58Z     2      0
+
+12:58Z is also the only lead-story slot with neighbours:
+
+    12:00Z   Iron Tuna — Play-Caller Premium daily entries   (0 12 * * *)
+    12:58Z   Iron Tuna — lead story refresh                  (58 */6 * * *)
+    13:00Z   Iron Tuna — The Pick (daily story)              (0 13 * * *)
+
+The lead-story run claims its heartbeat and then, ninety seconds later, a
+second Routine starts. On 08-26 it claimed at 13:05:53, five minutes *after*
+The Pick had already begun. Both times it died before finishing the board.
+
+**This displaces the `workers_get_worker_code` hypothesis.** A 625 KB fetch that
+was too heavy would fail at every slot, and 00:58Z, 06:58Z and 18:58Z are six
+for six. Contention with a neighbouring Routine explains the pattern the fetch
+hypothesis cannot: why only this slot, and why every time.
+
+Two data points is not proof, and the mechanism is inferred rather than observed
+— there is no log showing what the dying session was doing. But the correlation
+is exact and the mechanism is specific, so the next stall should be checked
+against this first.
+
+**The fix is a cron change, not a prompt change.** `update_trigger` can set
+`cron_expression` without resending the 44,000-character prompt, so unlike the
+four pending prompt edits this one is not blocked. Shifting the lead story an
+hour, to `58 1,7,13,19 * * *`, puts the slots at 01:58, 07:58, 13:58 and 19:58,
+none of them within half an hour before another Routine's start. Avoid
+`58 2,8,14,20` (14:58 lands two minutes before the camp desk at 15:00) and
+`58 5,11,17,23` (11:58 lands two minutes before Play-Caller Premium).
+
+**Not applied.** The schedule is Ken's configuration and a missed slot costs a
+story, not an inaccuracy, so this is recommended rather than done. If it stalls
+a third time at 12:58Z the case is strong enough to raise again.
+
+### Row 55, and a field the sweep had not covered
+
+The 18:58Z run published row 55 (analyst desk, Derrick Henry) in 1041s and it
+verified completely: all four rank moves against both boards (Henry RB13 to RB8,
+Cook RB12 to RB14, Chase Brown RB14 to RB12, Hall RB8 to RB11), the $11 cut to
+Cook, Henry's league-leading 1,569.3 rushing yards and second-place 13.4 rushing
+touchdowns behind Gibbs, the 101.9-yard gap worth about 10 points, the
+five-touchdown split worth 30, and all four round bands the analyst tiers are
+translated into.
+
+It also carried five undated time references, one of them inside `calls` —
+**the analyst desk's JSON column, which no previous sweep had checked.** `calls`
+renders on the standing column at /analyst-desk, so it needs the same treatment
+as `title`, `dek`, `body_html` and `method`. Edited with `replace()` and
+re-checked with `json_valid(calls)` afterwards; rows 42, 50 and 55 are the only
+ones carrying it and all three still parse.
+
+Sweep all five fields. The count of places a story states something has gone up
+twice now — `method` on 08-26, `calls` on 08-27 — both times because the sweep
+was written from what the last defect touched rather than from the schema.
