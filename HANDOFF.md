@@ -4453,3 +4453,87 @@ None of these are live. All three are in the repo copy only.
    worst, and unconfirmed.
 2. **Verify derived numbers, not only prices and ranks** (this section).
 3. **No bare "today"** — the dated-time rule.
+
+### 2026-08-27: the correction loop does not converge
+
+The 11:00Z refresh on 08-27 (`odds_overlay` row 1, `updated_at` 1787828413360,
+16,885 chars) moved eighteen ranks and six prices. All three runs since the
+last audit succeeded — 724s (52), 815s (53), 1136s (54) — and the overlay had
+not moved between them, so the only work was this refresh.
+
+**Two figures corrected on 08-26 had to be reverted on 08-27, because the
+correction was the error.** Row 41's quarterback 5-to-12 spread and Baker
+Mayfield's gap behind Josh Allen:
+
+| figure | 08-25 | 08-26 | 08-27 |
+|---|---|---|---|
+| QB5-to-QB12 spread, per game | 1.4941 | 1.7588 | 1.4941 |
+| Mayfield behind Allen, per game | 3.8529 | 3.8471 | 3.8529 |
+
+08-25 and 08-27 are identical to four decimal places. The 08-26 board was a
+one-day excursion, and "less than one and a half points" — the original text —
+was right on two of the three days. Rewriting it to "1.8" made a correct
+sentence wrong.
+
+The same shape appears elsewhere. Tank Dell went WR86, WR87, WR86 on
+consecutive days; row 49 was edited twice and is now back where it started.
+Row 48's running back disagreement total went $116, $120, $116. Jayden Higgins'
+receiving line went 635.7, 631.8, 635.9.
+
+**This is the finding, not the corrections.** Chasing a daily refresh with
+hand-edits is not a convergent process. It is tracking noise, it costs an edit
+per figure per day, it grows with the story count, and — demonstrated above —
+it introduces errors of its own. Every one of these figures was exact when its
+run wrote it.
+
+### What actually needs to hold, and what does not
+
+Across three refreshes and thirteen live rows, **no dollar figure has ever been
+wrong except when a genuine rank change moved it.** That has happened four
+times in three days: Javonte Williams RB17 $15 to RB16 $17, Cam Skattebo the
+reverse, Jordyn Tyson WR33 $5 to WR34 $3, Michael Pittman the reverse. Those
+are real and must be fixed, and `tools/board-diff.mjs` finds them in one
+command.
+
+Everything else that has needed correcting is a point total, a rank deep in the
+board, or an aggregate over the whole board — quantities the market perturbs
+daily and which no reader checks against anything.
+
+So the standard should split:
+
+- **Dollar figures and position ranks must reproduce against the current
+  board.** They are what the reader compares to their cheat sheet, they are
+  quantised by the curve, and they almost never move. This is Ken's actual
+  requirement and it is being met.
+- **Point totals, spans and derived aggregates should be stated as of a named
+  board and left alone.** Every story already names its refresh in the method
+  line; rows 48, 49, 51 and 54 now name it in the body too. A figure that is
+  true of a dated board does not become false when the board moves.
+
+That change belongs in the prompt, not in a nightly edit pass: have each story
+carry its board date next to its point totals, and round season points to whole
+numbers so a tenth of a point cannot churn them.
+
+### Corrections applied 2026-08-27
+
+Rows 42, 45, 49, 52, 53 and 54 corrected against the new board; row 41 reverted.
+Each carries a dated `CORRECTED 2026-08-27` line in its method saying the
+figures were re-derived and the run's own verification record was left as it
+stood. Detail worth keeping:
+
+- **Row 42** claimed Detroit was "the highest-scoring offense in football, first
+  of all 32 teams". Baltimore is now first at 26.79 to Detroit's 26.75. Fixed
+  to second, in dek and body.
+- **Row 45** lost its named exception: "Jordyn Tyson, WR33, at $1.05" is now
+  Michael Pittman at WR33 and $1.11, with Tyson at WR34 $3 and no longer an
+  upgrade at all. The *claim* — exactly two non-tight-end upgrades cost more
+  than the cheapest tight end one — survived; only the name did not.
+- **Row 52** had "Javonte Williams and Kyren Williams both price at $15", which
+  a real price move broke. Rewritten to $17 and $15.
+- **Row 53** took the most damage: the Maye-to-Dart gap went from 1.5 points to
+  6.0, and the three team lines behind "Vegas cannot tell these three offenses
+  apart" moved to 13th, 16th and 19th, a 0.94-point spread. Renumbered, and the
+  heading changed to "inside a point a game", which is what the data now says.
+  Its recommendation is unchanged and every dollar figure still reproduces.
+- **Row 54** was exact at publish on all six tight end ranks and prices, which
+  this refresh left untouched. Only three cross-position spans moved.
