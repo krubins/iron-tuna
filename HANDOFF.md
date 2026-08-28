@@ -4602,3 +4602,83 @@ ones carrying it and all three still parse.
 Sweep all five fields. The count of places a story states something has gone up
 twice now — `method` on 08-26, `calls` on 08-27 — both times because the sweep
 was written from what the last defect touched rather than from the schema.
+
+### 2026-08-28: the slot-collision hypothesis is refuted
+
+The 06:58Z slot stalled — run `165546-1787900354000`, claimed at 06:59:23Z,
+never moved off `start`. That is a slot with no neighbouring Routine, which is
+the test the previous section set in advance, and it fails.
+
+    slot     runs   stalls
+    00:58Z     3      0
+    06:58Z     3      1
+    12:58Z     2      2
+    18:58Z     2      0
+
+Three stalls in ten runs. 12:58Z is still 2 for 2 and the other slots are 1 in
+8, so the skew may be real, but **contention with a 13:00Z Routine cannot
+explain a 06:59Z failure.** The mechanism is wrong even if the correlation
+survives. The cron change is no longer recommended on this evidence; it would
+have moved the schedule for nothing.
+
+Two hypotheses have now been raised and knocked down — the 625 KB
+`workers_get_worker_code` fetch (killed by three clean slots on 08-27) and slot
+collision (killed here). What survives is only what the heartbeat measures
+directly: **runs die between claiming their row and finishing the board, at a
+rate of roughly one in three, at any slot.** Anything beyond that is inference,
+and inference has now been wrong twice.
+
+Do not raise a third mechanism without evidence that distinguishes it. The
+useful next step is not a better guess, it is a finer-grained heartbeat: a stage
+between `start` and `board` written immediately after the projections are
+parsed. That splits the failing window in two and is a prompt edit, not a
+diagnosis.
+
+### The Maye and Burrow swap: this is the class that must be fixed
+
+The 08-28 refresh moved eight ranks and four prices. Two of them mattered:
+
+    Drake Maye   QB3 $32  ->  QB4 $27
+    Joe Burrow   QB4 $27  ->  QB3 $32
+
+Five rows named one or both, and unlike a drifting decimal these are prices a
+reader checks. Fixed in 41 (table row), 45, 48 and 52; row 53 was taken down.
+
+**Row 45 lost a claim, not a decimal.** "Only two non-tight-end upgrades cost
+more than the cheapest tight end one" is now one: Maye's cost above the
+quarterback baseline fell from $27 to $22, taking him from $0.86 a point to
+$0.70 and out of the exception list. Michael Pittman is the only one left. The
+"everything else comes in under $0.72" line went with it — the dearest is now
+Joe Burrow at $0.83 — and is restated against the tight end minimum instead.
+
+**Row 52's call landed.** It had said to buy Maye like the 4th quarterback and
+Burrow like the 3rd. The market has since done exactly that. The table now
+states the current prices and says so, which is reporting the board rather than
+re-arguing it.
+
+**Row 48 understated a move it was built on.** Burrow's rise is now QB8 to QB3
+and $10 to $32, worth $22 rather than $17, and he displaces Jalen Hurts as the
+position's biggest single swing.
+
+And the discipline from 08-27 held: the marginal-points column in row 45 moved
+again (287.8 to 287.4, 1,521.5 to 1,520, 226.0 to 225.2) and was **left alone**.
+Those are the figures that oscillate. Chasing them is what produced the reverted
+edit.
+
+### Row 53 retired
+
+The swap put a wrong dollar figure in a headline: "Pass on Drake Maye at $32 ...
+and keep the $12", for a quarterback the reader's sheet now prices at $27. That
+is the originating complaint, on the most prominent text a story has.
+
+Repairing it meant rewriting the headline, the dek and the central comparison —
+authoring, not correcting — and the entry had already needed its thesis gap
+(1.5 points to 6.0) and all three of its team lines re-derived the day before.
+Two consecutive days of structural repair on the same row is the signal to stop
+repairing it. `verified` and `published` both set to 0, with the reason recorded
+in its method.
+
+This is the first row retired for drift rather than for a defect present at
+publication, and it sets the line: **a story comes down when correcting it would
+mean rewriting its argument, and stays up when the argument holds and only
+figures have moved.**
