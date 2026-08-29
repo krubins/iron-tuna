@@ -4682,3 +4682,75 @@ This is the first row retired for drift rather than for a defect present at
 publication, and it sets the line: **a story comes down when correcting it would
 mean rewriting its argument, and stays up when the argument holds and only
 figures have moved.**
+
+### 2026-08-29: a modelling error, not drift — the vacated-slot off-by-one
+
+The 11:00Z refresh moved six ranks and **no prices**. The audit's real find was
+in row 59, the live lead, and it was wrong when published.
+
+Row 59 caps Ashton Jeanty on the theory that a missed game costs him rank. Its
+method states the model exactly, which is what made the error findable:
+
+> 288.11 x 16/17 = 271.16 points, which slots ninth among running backs and
+> prices at $42; 288.11 x 15/17 = 254.21, which slots sixteenth and prices at $17.
+
+The points are right. The slots are not. The run compared 271.16 against the
+board **as it stands with Jeanty still at RB6** — where it lands just above Josh
+Jacobs at RB9 — and forgot that removing Jeanty from RB6 shifts every back below
+him up one. He actually lands above Jacobs at **RB8, $43**. Same error at two
+games: **RB15, $20**, not RB16 and $17.
+
+That put a wrong dollar figure in the headline ("Cap Ashton Jeanty at $42") and
+inverted a comparison in the body ("Omarion Hampton costs $20, which is more
+than Jeanty is worth if he misses two" — they are level). Corrected throughout,
+including the rhetorical hook, which had rested on $42 being "exactly what Josh
+Jacobs costs"; at $43 that is Derrick Henry. The method now carries both the
+corrected slots and a note explaining the original mistake.
+
+**This is a general trap, not a one-off.** Any story that reprices a player by
+changing his projection has to re-rank the position with him removed from his
+old slot, not read the adjusted score against the standing list. Row 47's catch
+sensitivities got this right by rebuilding the whole ladder; row 59 did not.
+Added to the pending prompt edits.
+
+### Row 54's market-only ordering was wrong at publication too
+
+Row 54 lists the six tight ends in odds-only order as "Mark Andrews, George
+Kittle, Kraft, Travis Kelce, Goedert, then Harold Fannin Jr." Its own method
+says the model keeps each player's committed reception count. Under that model
+the order is **Kittle, Andrews, Kelce, Kraft, Goedert, Fannin** — the first two
+and the middle two are both transposed. The order is stable across the 08-27,
+08-28 and 08-29 boards, so this is not drift.
+
+The claim the section rests on does survive: Kraft and Kelce, the two cheapest,
+both finish ahead of Goedert and Fannin, the two the sheet charges $10 for. Only
+the printed sequence was wrong. Corrected.
+
+Worth noting how it was caught: computing the ordering two ways — with and
+without receptions — and finding that *neither* matched, which forced a read of
+the method to learn which model the run had declared. A single-model check would
+have produced a confident wrong answer either way.
+
+### Stalls: three slots now, and the rate is holding
+
+The 00:58Z slot stalled on 08-29 — the third distinct slot to do so.
+
+    slot     runs   stalls
+    00:58Z     4      1
+    06:58Z     4      1
+    12:58Z     3      2
+    18:58Z     3      0
+
+Four stalls in fourteen runs, 29%, and no longer concentrated anywhere. All four
+sit at `start` with `updated_at` never moving. Nothing new has been learned since
+the mechanism guesses were withdrawn, and nothing should be guessed now. The
+finer-grained heartbeat is the only next step that would add information.
+
+### Corrections applied 2026-08-29
+
+Rows 45, 54, 57, 58 and 59, each with a dated `CORRECTED 2026-08-29` line.
+Goedert and Fannin swapping TE9/TE10 was the only rank move any entry named;
+both prices stayed $10, so no dollar figure moved on the refresh itself. Row 57
+verified clean on every one of its figures — the four points-per-dollar rates,
+the 117-point trade, $107 against $23, and "ten of the top twelve quarterbacks"
+— and Saquon Barkley's 0.8-point drift was left alone under the noise rule.
