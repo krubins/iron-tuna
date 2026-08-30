@@ -187,7 +187,62 @@ const track = (h, body) => h.hit('/api/track', { method: 'POST', headers: { 'use
   ok('a one-day window has no yesterday to compare against', one.uniqueUsers.yesterday === null, JSON.stringify(one.uniqueUsers));
 }
 
-// ── 4c. the operator's own browsing does not cloud the data ──
+// ── 4c. time spent on site ──
+// There is no beacon, so a visit is read off the pageview log: same visitor,
+// consecutive views less than 30 minutes apart, first view to last. The whole
+// point of the section is gaps between timestamps, which the worker can never
+// write on demand, so the rows are seeded straight into SQLite.
+{
+  const db = makeDb(), h = harness(makeEnv(db));
+  const T = Date.now() - 2 * 3600000, MIN = 60000;
+  const seed = (visitor, offsets, internal = 0) => {
+    for (const off of offsets) {
+      const ts = T + off, day = new Date(ts).toISOString().slice(0, 10);
+      db.sqlite.prepare('INSERT INTO page_views (ts, day, path, visitor, source, country, internal) VALUES (?,?,?,?,?,?,?)')
+        .run(ts, day, '/guides', visitor, '', '', internal);
+    }
+  };
+  seed('v1', [0, 60000, 120000]);                 // one visit, three pages, two minutes
+  seed('v2', [0, 45 * MIN, 45 * MIN + 30000]);    // the 45-minute gap splits this into two
+  seed('v3', [0]);                                // one page, nothing to measure against
+  seed('op', [0, 20 * MIN], 1);                   // the operator, reading for twenty minutes
+
+  const ts = (await traffic(h)).timeOnSite;
+  ok('a visit runs from its first page view to its last', ts.avgEngagedSec === 75, JSON.stringify(ts));
+  ok('an idle gap starts a new visit rather than stretching the old one', ts.visits === 4, JSON.stringify(ts));
+  ok('a one-page visit reads as zero, not as a guess', ts.singlePageVisits === 2 && ts.avgSec === 37.5, JSON.stringify(ts));
+  ok('the average that includes those zeros is the one that leads', ts.avgSec < ts.avgEngagedSec);
+  ok('and the count they came from is on the payload, not hidden', ts.engagedVisits === 2 && ts.visits === 4, JSON.stringify(ts));
+  ok('the median is over every visit, zeroes included', ts.medianSec === 15, `got ${ts.medianSec}`);
+  ok('the total is the visits added up', ts.totalSec === 150, `got ${ts.totalSec}`);
+  ok('the gap that defines a visit is reported, not implied', ts.gapMinutes === 30, JSON.stringify(ts));
+  ok('the operator reading for twenty minutes is not the audience', ts.totalSec === 150 && ts.visits === 4, JSON.stringify(ts));
+  const all = (await traffic(h, '&includeMe=1')).timeOnSite;
+  ok('includeMe=1 puts their reading back', all.visits === 5 && all.totalSec === 150 + 20 * 60, JSON.stringify(all));
+}
+
+// ── 4c-2. the edges: the gap boundary, and no traffic at all ──
+{
+  const db = makeDb(), h = harness(makeEnv(db));
+  const T = Date.now() - 2 * 3600000;
+  const at = (visitor, off) => {
+    const ts = T + off, day = new Date(ts).toISOString().slice(0, 10);
+    db.sqlite.prepare('INSERT INTO page_views (ts, day, path, visitor, source, country, internal) VALUES (?,?,?,?,?,?,?)')
+      .run(ts, day, '/guides', visitor, '', '', 0);
+  };
+  const empty = (await traffic(h)).timeOnSite;
+  ok('with nothing recorded every figure is a zero, not a NaN', Object.keys(empty).every(k => Number.isFinite(empty[k])), JSON.stringify(empty));
+  ok('and no visit is invented', empty.visits === 0 && empty.avgSec === 0 && empty.medianSec === 0, JSON.stringify(empty));
+
+  at('b1', 0); at('b1', 1800000);                  // exactly 30 minutes: still reading
+  at('b2', 0); at('b2', 1800001);                  // a millisecond past: a second visit
+  const ts = (await traffic(h)).timeOnSite;
+  ok('a gap of exactly the window is still the same visit', ts.visits === 3, JSON.stringify(ts));
+  ok('a millisecond past it is a new one', ts.singlePageVisits === 2 && ts.engagedVisits === 1, JSON.stringify(ts));
+  ok('the long visit is measured whole', ts.totalSec === 1800, `got ${ts.totalSec}`);
+}
+
+// ── 4d. the operator's own browsing does not cloud the data ──
 {
   const db = makeDb(), h = harness(makeEnv(db));
   const mine = { cookie: 'it_owner=1' };
@@ -216,7 +271,7 @@ const track = (h, body) => h.hit('/api/track', { method: 'POST', headers: { 'use
   ok('includeMe=1 says so in the payload', all.includeMe === true && j.includeMe === false);
 }
 
-// ── 4d. how a browser gets flagged, and how it stops being flagged ──
+// ── 4e. how a browser gets flagged, and how it stops being flagged ──
 {
   const db = makeDb(), h = harness(makeEnv(db));
   const cookieOf = res => res.headers.get('set-cookie') || '';
@@ -248,7 +303,7 @@ const track = (h, body) => h.hit('/api/track', { method: 'POST', headers: { 'use
   ok('a wrong key cannot move the flag', (await h.hit('/api/admin/exclude-me?key=nope')).status === 403);
 }
 
-// ── 4e. the internal column lands on tables that predate it ──
+// ── 4f. the internal column lands on tables that predate it ──
 // A fresh import of the worker gets a fresh "tables are ready" cache, which is
 // the only way to exercise the migration path a live D1 will actually take.
 {
