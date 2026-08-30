@@ -5121,3 +5121,60 @@ least wrote `start`.
 **Add the Routine itself to the daily sweep.** Diffing the live prompt against the
 repo copy is one comparison and would have caught this in ten hours instead of
 never.
+
+## 39. August 30: the merge is live, and the mystery was Ken
+
+Ken answered both questions in §38 directly: **deploy the merge, and the
+03:04:45Z change was his own.** That closes the investigation. There is no third
+party with write access to the Routines, nothing to chase, and the analyst-desk
+retirement is his product decision — which is why the four rows that came down
+with it stay down.
+
+`tools/lead-story-routine-prompt.merged.md` was deployed to
+`trig_011LYewcPUQikF8izFsN2LAr` at **2026-08-30T16:54:17Z** and verified
+byte-identical against the repo: **40,550 characters, sha256 `f4a3fc0420d4…`,
+diff empty**. Cron unchanged at `58 */6 * * *`, enabled, next run 18:58Z. The
+canonical file is canonical again — the body below its marker round-trips to the
+deployed text exactly, and the "no longer mirrors" banner is gone. The
+pre-merge revision is kept as `lead-story-routine-prompt.live-2026-08-30.md`
+purely as history.
+
+So the live prompt now carries **both** sets of decisions:
+
+- Ken's: six desks, `deskSlot` off the six-hour grid, `calls` left NULL, and
+  "retire `published` and nothing else, never `verified`".
+- The six accuracy edits: vacated-slot re-ranking, derived-number checking,
+  board-naming beside point totals, the dated-currency rule in all four of its
+  places, the `parsed` heartbeat stage, and `tools/live-board.mjs` as a
+  documented fallback.
+
+### What this run should be remembered for
+
+Two conclusions in this HANDOFF were wrong in a way worth naming, because both
+came from reasoning about a system without checking what it was actually running.
+
+**"The first run on the new prompt stalled"** (§36) was false. There was no new
+prompt — it had been replaced six hours before that run fired. Five days of
+`parsed` telemetry was measuring a stage that did not exist in the live document.
+The rule earned here: *before diagnosing a Routine from its telemetry, diff the
+prompt it is running against the one you think it is running.* That check is one
+comparison and is now step 0 of the daily audit.
+
+**"Something outside this session"** was Ken. The evidence genuinely pointed at an
+external write — an unattributed change, a bulk flag update nothing this session
+made, and a rewrite seventeen minutes after a verified push. But "unattributed"
+is not "unauthorized", and the right move was the one taken: record it precisely,
+change nothing, and ask. Reverting the analyst retirement on my own reading would
+have undone a deliberate product decision and put nine rows back that their own
+desk no longer supports.
+
+The narrower lesson stands too: **nothing watched the Routine.** The tamper
+predicates cover `lead_story` flags, so a total rewrite of the prompt that
+generates every story was invisible for ten hours and surfaced only because a
+check-in about something else happened to compare two files. Watch the thing that
+writes, not only the thing it writes to.
+
+State at the end of this session: live and verified **62**; `published_rows=1`;
+Recent insights **14**; /analyst-desk **0**, which is now correct rather than a
+defect. Overlay `1788087628630`, 16,901 bytes. Mahomes QB7 $13, Daniels QB8 $10.
+Live prompt and repo canonical in agreement, verified byte-for-byte.
