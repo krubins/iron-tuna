@@ -5178,3 +5178,56 @@ State at the end of this session: live and verified **62**; `published_rows=1`;
 Recent insights **14**; /analyst-desk **0**, which is now correct rather than a
 defect. Overlay `1788087628630`, 16,901 bytes. Mahomes QB7 $13, Daniels QB8 $10.
 Live prompt and repo canonical in agreement, verified byte-for-byte.
+
+## 40. August 30: the merged prompt's first run, and a test that could not have worked
+
+The 18:58Z run on 08-30 was the first on the merged prompt (deployed 16:54:17Z).
+It published **row 63**, "Pass on Josh Jacobs at $42; bid Tucker Kraft to $12,
+not $5", and every part of it checks out.
+
+**The six-desk rotation is correct.** Started 18:59:13, epoch 1788116353,
+`deskSlot = floor(1788116353 / 21600) = 82783`, `82783 % 6 = 1`, `DESKS[1] =
+playcaller` — and the row was written as `playcaller`. Computed independently
+here and in the run's own method line, which now shows its work. `slot` came out
+165566 and matches the `run_key`.
+
+**Every price and rank reproduces exactly** against the August 30 board — ten of
+ten checked: Jacobs RB9 $42 (RB11 $35 committed), Kraft TE11 $5, Andrews TE8 $12,
+Goedert TE10 $10, Fannin TE9 $10, Golden WR35 $3, Watson WR45 $2, Reed WR49 $2,
+Love QB23 $2, Brooks RB59 $2. MarShawn Lloyd is correctly absent from the board
+and the story says so instead of inventing a price for him. "Not one Green Bay
+receiver costs more than $3" holds — Golden at $3 is the most expensive. The
+method's stated sample, 64 QB / 93 RB / 124 WR / 64 TE, matches the build exactly.
+
+**All three new rules are visibly in force.** The board is named beside every
+point total ("179.22 points on the August 30 board", "262.39 points on the same
+board"), the bid table's header column is literally "Iron Tuna, August 30", there
+are zero occurrences of today/this morning/tonight and zero of "UTC", and the
+method carries a DERIVED FIGURES CHECKED section recomputing the gaps it prints.
+Ken's retire rule held too: the run's note records that retire-by-slug "touched
+published only and changed 62 rows; verified untouched".
+
+### The `parsed` test was malformed, and no run could ever have passed it
+
+`lead_story_run` holds **one row per run, updated in place**. `stage` therefore
+carries only the *last* stage reached. A run that finishes ends at `done` no
+matter which stages it passed through, so a successful run can never demonstrate
+that `parsed` was written. The check-in that asked "did it reach `board` with
+`parsed` on the way?" was asking for something the schema cannot show.
+
+This does not mean the stage is useless — it means the stage is only ever
+observable in the situation it was built for. **`parsed` will be seen only on a
+run that dies between parsing and the board.** If the next stall shows `parsed`
+instead of `start`, the failure is in blend/score/self-test; if it still shows
+`start`, the failure is in the reads. Either way the question is settled by the
+next stall, not by the next success.
+
+That is the second time in one day a conclusion here rested on a check that could
+not have produced the answer — the first being five days of `parsed` telemetry
+against a prompt that had no `parsed` stage. Same failure both times: *confirm
+the observation is capable of distinguishing the cases before drawing anything
+from it.*
+
+State: live and verified **63**; `published_rows=1`; Recent insights **15**;
+/analyst-desk 0. Overlay unchanged at `1788087628630`, 16,901 bytes. Live prompt
+still byte-identical to the repo canonical.
