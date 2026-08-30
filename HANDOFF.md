@@ -4883,3 +4883,65 @@ conflict risk. `tools/live-board.mjs` reads the checked-out `_worker.js`, so an
 out-of-date checkout means an out-of-date board and a verification pass that
 confidently agrees with the wrong numbers. Check `PROJECTIONS` and the curve
 constants against main whenever the branch has drifted.
+
+### 2026-08-30: the analyst column was emptied by something that is not this session
+
+At **03:00:21Z on 2026-08-30**, in a single operation, `verified` was set from 1
+to 0 on rows **42, 50, 55 and 60** — every analyst-desk row that still had it.
+The audit trigger caught all four at the same timestamp:
+
+    42  2026-08-30 03:00:21  ver 1->0  pub 0->0
+    50  2026-08-30 03:00:21  ver 1->0  pub 0->0
+    55  2026-08-30 03:00:21  ver 1->0  pub 0->0
+    60  2026-08-30 03:00:21  ver 1->0  pub 0->0
+
+**`/analyst-desk` now renders nothing.** `_worker.js:2488` selects
+`WHERE verified = 1 AND category = 'analyst' AND slug IS NOT NULL`, and that
+count is now zero of nine analyst rows.
+
+**It was not this session and it was not a lead-story run.** At 03:00Z this
+session was pushing git branches, between the #111 merge and the branch restart;
+its last D1 write before then was during the 08-29 audit. The lead-story Routine
+fires at :58 past 00/06/12/18, and its 00:58Z run finished at 01:21:56. No other
+Routine is scheduled near 03:00Z.
+
+**Not reversed, deliberately.** The standing rule is that `verified` is each
+run's own assertion and restoring flags in bulk manufactures claims nobody made
+— which is exactly what a bulk 0→1 here would do. It is also the safe direction:
+this is a takedown, so nothing inaccurate reached a reader. The recurring
+incident this database has a history of was the opposite, unauthorised 0→1
+restores putting retired rows back on the site.
+
+Worth noting the tamper query in every check-in since 08-24 would **not** have
+flagged this. Its predicate is
+`(old_verified=0 AND new_verified=1) OR (old_published=0 AND new_published=1)` —
+built to catch restores, because restores were the problem. A mass takedown
+matches neither clause. It surfaced only because the verified-row list was
+compared against the previous check-in's and three ids had vanished.
+
+**Add a second predicate.** Alongside the restore check, count verified rows per
+category and compare with the previous run: a whole desk going to zero is worth
+a sentence either way, whoever did it.
+
+Rows 42, 50 and 55 were each verified accurate against the served board on the
+day they were checked, so if this was not deliberate the content is sound and
+they can be restored individually. Row 60 was published normally on 08-29 and
+retired by slug when 61 replaced it; it was **not** held by the verification
+gate, contrary to a first reading of its flags.
+
+### The first run on the new prompt stalled, and what that does and does not show
+
+The 06:58Z run on 08-30 — the first to use the seven-stage prompt — stalled at
+`start` and never wrote `parsed` (run_key `165562-1788073128000`, 42 minutes
+idle at the check, no story row).
+
+That is *consistent with* dying before the projections and the odds payload are
+both in hand, which would put the failure in the reads rather than in
+blend/score/self-test. **It does not establish it.** No run has yet reached
+`board` on the new prompt, so "died before parsing" and "the `parsed` update is
+not being written at all" are still indistinguishable. The next run that reaches
+`board` settles it in one observation: if it writes `parsed` on the way, the
+stage works and the stall means what it looks like.
+
+Stall record: 12:58Z 08-26, 12:58Z 08-27, 06:58Z 08-28, 00:58Z 08-29, 06:58Z
+08-30 — five in seventeen, four different slots.
