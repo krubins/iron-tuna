@@ -42,9 +42,7 @@ const ADS = 'AW-18397866361';
 
 // The operator's own console. It is noindex,nofollow and no visitor reaches it;
 // counting admin sessions as site traffic is exactly the drift the first-party
-// counter in _worker.js already guards against. /analyst-desk is NOT in here —
-// it reads like an internal tool but is a deliberately indexed public column
-// (see the comment at the top of analyst-desk.html).
+// counter in _worker.js already guards against.
 const NO_TAG = new Set(['admin.html']);
 
 const PUBLISHER = {

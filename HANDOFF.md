@@ -4307,3 +4307,41 @@ authority over the thing it measures.
 
 The heartbeat says how far a run got. The `verified=0` story row says what it
 decided. Both still apply; they answer different questions.
+
+### The analyst desk, retired 2026-08-30
+
+Ken: *"I don't need anything about the other analysts."* The desk that compared
+Matthew Berry, Mike Clay and others against the Iron Tuna board is gone — the
+rotation slot, the standing column, the API, the tests and the nine stories.
+
+What came out, so a later reader is not hunting a half-removed feature:
+
+| where | what |
+|---|---|
+| `_worker.js` | the whole `── The Analyst Desk` block (`analystCalls`, `analystScoreboard`, `analystCallsReady`, `analystColumnPayload`, the caches and the three constants), the `analyst` entry in `LEAD_CATEGORIES`, the `calls` side-query on `/api/lead-story/body`, and the `GET /api/analyst-column` route |
+| pages | `analyst-desk.html` deleted; its nav and footer links stripped from 107 pages and from `tools/build-chrome.mjs`, which is what would have put them back. Nav "Columns" now points at `/play-caller-premium` |
+| `lead.html` | the call-card CSS, the `#calls` container and the render block |
+| tests | `tools/test-analyst-column.mjs` deleted; `test-reading-view`, `test-chrome`, `test-seo`, `test-asset-routing` and `test-lead-story` updated |
+| `sitemap.xml` | `/analyst-desk` removed — a sitemap advertising a 404 is worse than a short one |
+| D1 | the nine `category='analyst'` rows set `verified=0, published=0`. Four were verified; the audit trail has the transitions |
+
+**The `calls` column stays on `lead_story`.** Dropping it would rewrite the
+table for no gain, and the nine retired rows still hold their JSON. The prompt
+says to leave it NULL.
+
+**The arithmetic that nearly broke this, and the reason to read a change like
+it twice.** Seven desks became six, and the obvious edit — `DESKS[slot % 7]` to
+`DESKS[slot % 6]` — would have silently stranded half of them. `slot` is on a
+three-hour grid but the Routine has fired every **six** hours since 08-25, so
+`slot` advances by two each run. With seven desks that was harmless, because
+gcd(2,7) = 1 and the cycle still reached all seven. With six it is gcd(2,6) = 2:
+`slot % 6` steps 0, 2, 4, 0, 2, 4 forever, and `playcaller`, `preseason` and
+`market` would never have been written again. Nothing would have errored. The
+prompt now takes the desk off `deskSlot = floor(epoch / 21600)` and keeps `slot`
+for `run_key` and the `lead_story_one_per_slot` dedupe, which is what each is
+actually for.
+
+The desk's other legacy is worth keeping: it is what produced the audit trigger,
+and the sourcing rule it was built under (never state a named person's position
+without a source pulled that run) survives as hard rule 6, now scoped to every
+desk rather than to one.

@@ -101,7 +101,7 @@ console.log('\nwhat the desk labels are allowed to be');
   // The user-facing desk names are the site's, not the run's. A row storing an
   // unknown string must fall back rather than invent a new desk on the lead.
   ok('every category the routine rotates is defined here',
-     ['player', 'playcaller', 'vegas', 'preseason', 'injury', 'market', 'analyst']
+     ['player', 'playcaller', 'vegas', 'preseason', 'injury', 'market']
        .every(k => typeof w.LEAD_CATEGORIES[k] === 'string' && w.LEAD_CATEGORIES[k].length));
   const bogus = w.leadRow(ROW({ category: 'whatever-the-model-felt-like' }));
   ok('an unknown category is refused', bogus.category === null && bogus.label === 'Insight');
@@ -110,12 +110,12 @@ console.log('\nwhat the desk labels are allowed to be');
   const good = w.leadRow(ROW({ category: 'PlayCaller' }));
   ok('the category is matched case-insensitively',
      good.category === 'playcaller' && good.label === 'Play-Caller Premium', good.label);
-  // The analyst desk quotes named outside analysts by name. Its label has to
-  // make clear whose call is whose, or the front page reads as though Iron Tuna
-  // were the one making the ranking it is arguing with.
+  // The analyst desk was retired on 2026-08-30 and its category with it. A row
+  // still carrying `analyst` (there are nine in the table) must fall back to
+  // the neutral badge rather than resurrect a desk the site no longer runs.
   const an = w.leadRow(ROW({ category: 'analyst' }));
-  ok('the analyst desk says whose board is whose',
-     an.category === 'analyst' && /Iron Tuna/.test(an.label), an.label);
+  ok('the retired analyst category falls back to the neutral badge',
+     an.category === null && an.label === 'Insight', an.label);
 }
 
 console.log('\nthe faces the story commits to');

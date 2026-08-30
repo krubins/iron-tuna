@@ -33,7 +33,7 @@ const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
 // The reading pages take the footer and the stylesheet but keep their own short
 // header — see the NAV_EXCLUDE note in build-chrome.mjs. `pages` is what the nav
 // assertions run over; `allPages` is everything the footer must reach.
-const NAV_EXCLUDE = new Set(['lead.html', 'analyst-desk.html', 'play-caller-premium.html']);
+const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html']);
 const allPages = fs.readdirSync(ROOT)
   .filter((f) => f.endsWith('.html') && !EXCLUDE.has(f))
   .filter((f) => read(f).includes('<header class="site">'))
@@ -67,7 +67,7 @@ console.log('\nevery destination is reachable from every page');
   // the sitemap assertions in tools/test-seo.mjs — they are simply not linked.
   const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
     '/snake-insights', '/insights-vault', '/the-pick', '/guides',
-    '/analyst-desk', '/post-draft', '/faq'];
+    '/post-draft', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
     '/play-caller-premium', '/auction-insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];
@@ -147,7 +147,7 @@ console.log('\nthe page you are on is marked');
   // insights.html is off this list: it was the three-format chooser, and a site
   // with one format sends the reader to /auction-insights instead. The page
   // still serves and stays in the sitemap; it is simply not a nav destination.
-  const named = pages.filter((f) => /^(guides|faq|the-pick|analyst-desk|insights-vault)\.html$/.test(f));
+  const named = pages.filter((f) => /^(guides|faq|the-pick|insights-vault)\.html$/.test(f));
   const missing = named.filter((f) => !read(f).includes('aria-current="page"'));
   ok('a nav destination marks itself as current', missing.length === 0, missing.join(', '));
 }

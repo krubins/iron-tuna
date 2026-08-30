@@ -111,22 +111,6 @@ table.lead-table td:first-child{color:var(--text);font-weight:700}
 .methodbox li{margin-bottom:8px}
 .methodbox li:last-child{margin-bottom:0}
 details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px}
-/* The analyst desk's structured calls, laid out under the article. Only that
-   desk sends them; every other story renders nothing here. */
-.calls{list-style:none;padding:0;margin:22px 0 0}
-.calls li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin-bottom:10px}
-.calls .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:8px}
-.calls .who{color:var(--text);font-weight:700}
-.calls .out{color:var(--muted);font-weight:400}
-.calls .plr{color:var(--teal);font-weight:700}
-.calls .stance{border-radius:4px;padding:2px 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-left:auto}
-.calls .stance.agree{background:rgba(14,124,99,.10);color:var(--teal);border:1px solid rgba(14,124,99,.34)}
-.calls .stance.disagree{background:rgba(192,50,47,.08);color:var(--danger);border:1px solid rgba(192,50,47,.3)}
-.calls .stance.partial{background:rgba(150,110,0,.10);color:#7a5300;border:1px solid rgba(150,110,0,.3)}
-.calls .side{display:block;color:var(--sec);font-size:14.5px;margin:3px 0}
-.calls .side b{color:var(--muted);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;display:inline-block;min-width:74px}
-.calls .why{color:var(--sec);font-size:14px;font-style:italic;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)}
-@media(max-width:640px){.calls .stance{margin-left:0}.calls .side b{min-width:0;margin-right:6px}}
 .recent{list-style:none;padding:0;margin:14px 0 0}
 .recent li{border-top:1px solid var(--line);padding:12px 0}
 .recent a{color:var(--text);font-weight:600;font-size:15px;line-height:1.35;display:block}
@@ -143,7 +127,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
     <a href="/fantasy-football-auction-values">Auction Values</a>
     <a href="/guides">Strategy</a>
     <a href="/auction-insights">Insights</a>
-    <a href="/analyst-desk">Columns</a>
+    <a href="/play-caller-premium">Columns</a>
     <a class="cta" href="/auctiondraft?screen=cheat">Free cheat sheet</a>
   </nav>
 </div></header>
@@ -157,7 +141,6 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
 <div class="cta-row"><a class="btn" href="/auctiondraft?screen=cheat">Build My Free Auction Sheet</a><a class="btn alt" href="/">The front page</a></div>
 
 <div class="body" id="body"></div>
-<div id="calls"></div>
 <div id="method"></div>
 <div id="sources"></div>
 
@@ -169,7 +152,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
 
 <div class="eyebrow">Continue reading</div>
 <ul class="recent" id="recent"></ul>
-<div class="related"><a href="/">Front page</a><a href="/auction-insights">Auction insights</a><a href="/analyst-desk">Analysts vs. Iron Tuna</a><a href="/play-caller-premium">The Play-Caller Premium</a><a href="/guides">Guides</a></div>
+<div class="related"><a href="/">Front page</a><a href="/auction-insights">Auction insights</a><a href="/play-caller-premium">The Play-Caller Premium</a><a href="/guides">Guides</a></div>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -191,7 +174,6 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
       <li><a href="/the-pick">The Pick</a></li>
       <li><a href="/auction-watch">Auction Watch</a></li>
       <li><a href="/guides">Guides</a></li>
-      <li><a href="/analyst-desk">Analyst Desk</a></li>
       <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
@@ -320,34 +302,13 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
         t.parentNode.insertBefore(w, t);
         w.appendChild(t);
       });
-      // The analyst desk sends `calls`; every other desk sends an empty list and
-      // this block draws nothing. Each field is escaped: it was written by an
-      // autonomous run, not by this file.
-      if (s.calls && s.calls.length) {
-        var ch = '<div class="eyebrow" style="margin-top:34px">The calls in this story</div><ul class="calls">';
-        s.calls.forEach(function(c){
-          ch += '<li><div class="chead"><span class="who">' + esc(c.analyst)
-             + (c.outlet ? ' <span class="out">' + esc(c.outlet) + '</span>' : '') + '</span>'
-             + '<span class="plr">' + esc(c.player)
-             + ((c.pos || c.team) ? ' <span class="out">' + esc([c.pos, c.team].filter(Boolean).join(' ')) + '</span>' : '')
-             + '</span>';
-          if (c.stance && c.stanceLabel) ch += '<span class="stance ' + esc(c.stance) + '">' + esc(c.stanceLabel) + '</span>';
-          ch += '</div>';
-          if (c.their) ch += '<span class="side"><b>They say</b>' + esc(c.their) + '</span>';
-          if (c.ours)  ch += '<span class="side"><b>We say</b>' + esc(c.ours) + '</span>';
-          if (c.why)   ch += '<p class="why">' + esc(c.why) + '</p>';
-          ch += '</li>';
-        });
-        document.getElementById('calls').innerHTML = ch + '</ul>';
-      }
       // Every player this story names, linked to his card. The headline, the
-      // dek, the body and the analyst calls go in as ONE story: the desk
-      // writes "Kyren" in the body after naming him in full in the headline,
-      // and reading the four boxes separately would lose him.
+      // dek and the body go in as ONE story: the desk writes "Kyren" in the
+      // body after naming him in full in the headline, and reading the three
+      // boxes separately would lose him.
       if (window.ITPlayerSearch) {
         window.ITPlayerSearch.linkPlayers([
-          document.getElementById('title'), document.getElementById('dek'),
-          host, document.getElementById('calls')
+          document.getElementById('title'), document.getElementById('dek'), host
         ], { cast: names });
       }
       if (s.method) {
