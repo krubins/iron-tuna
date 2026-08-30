@@ -3656,6 +3656,47 @@ export default {
           userDays: userDays,
         };
 
+        // ── time spent on site ──
+        // Sessionised from the pageview log itself, because there is no beacon to
+        // ask: consecutive views by the same visitor more than SESSION_GAP_MS apart
+        // are separate visits, and a visit lasts from its first view to its last.
+        //
+        // That measure has one honest limitation and the page states it rather than
+        // burying it: the last page of a visit has no following view to measure
+        // against, so a ONE-PAGE VISIT READS AS ZERO. Averaged over everything it
+        // therefore understates — so `avgSec` (every visit, zeroes included) ships
+        // next to `avgEngagedSec` (visits that turned at least one page, where the
+        // number is actually measured) and the count of each, and the admin page
+        // shows both. Inventing a dwell time for the final page would make the
+        // average look better and mean less.
+        //
+        // A visitor id is minted fresh at UTC midnight, so a session can never span
+        // two days — the gap rule is doing the work inside a day, not across them.
+        const SESSION_GAP_MS = 1800000;   // 30 minutes, the same idle window as activeNow
+        const visits = await rows(
+          'WITH v AS (SELECT visitor, ts, ts - LAG(ts) OVER (PARTITION BY visitor ORDER BY ts) AS gap FROM page_views WHERE ts >= ?' + mine + '), ' +
+          'b AS (SELECT visitor, ts, CASE WHEN gap IS NULL OR gap > ? THEN 1 ELSE 0 END AS started FROM v), ' +
+          's AS (SELECT visitor, ts, SUM(started) OVER (PARTITION BY visitor ORDER BY ts ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS visit FROM b) ' +
+          'SELECT COUNT(*) AS views, MAX(ts) - MIN(ts) AS ms FROM s GROUP BY visitor, visit',
+          since, SESSION_GAP_MS);
+        const secs = visits.map(r => Math.max(0, Number(r.ms) || 0) / 1000);
+        const engaged = visits.filter(r => (Number(r.views) || 0) > 1).map(r => Math.max(0, Number(r.ms) || 0) / 1000);
+        const sum = a => a.reduce((s, n) => s + n, 0);
+        const sorted = secs.slice().sort((a, b) => a - b);
+        const median = !sorted.length ? 0
+          : sorted.length % 2 ? sorted[(sorted.length - 1) / 2]
+          : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+        out.timeOnSite = {
+          visits: secs.length,
+          avgSec: secs.length ? sum(secs) / secs.length : 0,
+          medianSec: median,
+          engagedVisits: engaged.length,
+          avgEngagedSec: engaged.length ? sum(engaged) / engaged.length : 0,
+          singlePageVisits: secs.length - engaged.length,
+          totalSec: sum(secs),
+          gapMinutes: SESSION_GAP_MS / 60000,
+        };
+
         out.topPages = (await rows('SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY path ORDER BY views DESC LIMIT 25', since))
           .map(r => ({ path: r.path, views: r.views || 0, users: r.users || 0 }));
         out.sources = (await rows('SELECT source, COUNT(*) AS views, COUNT(DISTINCT visitor) AS users FROM page_views WHERE ts >= ?' + mine + ' GROUP BY source ORDER BY views DESC LIMIT 20', since))
