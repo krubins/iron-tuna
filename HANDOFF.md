@@ -4945,3 +4945,93 @@ stage works and the stall means what it looks like.
 
 Stall record: 12:58Z 08-26, 12:58Z 08-27, 06:58Z 08-28, 00:58Z 08-29, 06:58Z
 08-30 — five in seventeen, four different slots.
+
+## 37. August 30: the quarterback swap, and the first price defect the new prompt would have caught
+
+The 11:00Z refresh on 2026-08-30 moved 175 of 312 players, and exactly two of
+them changed rank or price:
+
+```
+Jayden Daniels    QB7 $13  ->  QB8 $10   PRICE
+Patrick Mahomes   QB8 $10  ->  QB7 $13   PRICE
+```
+
+An adjacent swap on a margin of **0.1 season points** — 308.3 against 308.2.
+Daniels lost 8.4 points of blended projection, the largest single move in the
+refresh, and that was enough to drop him one slot. `board-diff` found it in one
+command, as it has every time.
+
+This is the fifth genuine price move in eight days, and it is worth being precise
+about what that means: **no dollar figure on this site has ever been wrong except
+when a real rank change moved it.** The originating bug — a story quoting a price
+the cheat sheet contradicts — is not recurring on its own. It recurs only as the
+downstream consequence of the board moving under published copy, which is exactly
+what the daily sweep exists to catch.
+
+### Six rows named one of the two, and they did not all need the same treatment
+
+The sweep across all five fields (`title`, `dek`, `body_html`, `method`, `calls`)
+found six verified rows naming Mahomes or Daniels. They split three ways, and the
+split is the useful part of this record:
+
+**Corrected in place (41, 47, 52).** Row 41's thesis is "quarterback is flat in
+the middle, wait" — just as true at $13 as at $10. Ten substitutions: the title,
+the dek, the rank and price in prose, the two table rows swapped, `$37` savings
+to `$34`, and the recommendation line. Two derived figures that no longer
+reproduced were fixed in the same pass: Lamar Jackson trails Allen by 1.6 points
+a game, not 1.5, and beats Mahomes by 1.8, not 1.9. Row 47 needed one clause —
+the blend moves Mahomes six dollars and three spots now, not three dollars and
+two spots; the other three players in that paragraph still reproduce exactly.
+
+Row 52 is the interesting one. It **predicted this swap**: its max-bid column
+said "do not pay more than $10" for Daniels and "bid up to $13" for Mahomes, and
+the board has now done precisely that. It also already carried the right device —
+"the board has since moved him here" — from when the August 28 refresh swapped
+Maye and Burrow. So the fix was to reuse the row's own annotation on the two QB
+rows and extend the sentence that follows. Its consensus-sheet column still shows
+the August 27 sheet, which the row states in its own text.
+
+**Retired (57).** Row 57 made row 41's argument with far more arithmetic hanging
+off Mahomes's price: `$84` saved, `$23` spent, `$175` left, `$29` a spot, "clears
+by `$81`" — a dozen derived figures. Two things made it unfixable rather than
+merely tedious. Its headline instruction was "spend the $37 on Saquon Barkley",
+and Barkley costs $37; at a $34 gap that sentence stops being true no matter how
+it is reworded. And its load-bearing paragraph is a narrative about a *specific
+past refresh* — "that refresh moved ten of the top twelve quarterbacks" — so
+re-dating the story to August 30, where the refresh moved two, would falsify it,
+while leaving it dated August 28 leaves a headline price the cheat sheet
+contradicts. **That is the definition of the retire case**: correcting it would
+mean rewriting the argument. Retiring it also leaves row 41 carrying the same
+thesis accurately, rather than two rows saying it and one of them wrong.
+
+**Left alone (43, 45).** Row 43's method quotes "Mahomes 308.3 points, QB8, $8"
+inside an explicit claim about *figures this site published from earlier
+refreshes* — a provenance record, not a current price, and editing it would
+falsify the record. Row 45 mentions Mahomes with no number attached. The
+temptation to sweep these too is the failure mode that caused the 08-26 → 08-27
+revert loop: **a name is not a defect. A stale number is.**
+
+### Two rules from the prompt did real work here, in opposite directions
+
+The board-naming rule justified *leaving* dated figures alone — rows 45 and 52
+both survive because they say which board they came from. The derived-numbers
+rule justified *changing* figures nobody complained about: 1.5 → 1.6 and 1.9 →
+1.8 in row 41 were never reported by anyone and would not have been found by
+checking prices alone.
+
+The 06:58Z run on 08-30 still stands as the only run on the new prompt, and it
+stalled at `start`. **Open question 1 is unchanged**: no run has yet reached
+`board`, so whether `parsed` is ever written remains undetermined. The next run
+to reach `board` settles it in one observation.
+
+**Open question 2 is also unchanged.** The analyst column is still zero of nine;
+the 03:00:21Z mass takedown of rows 42, 50, 55 and 60 has not been touched, and
+the audit table shows no `0 -> 1` restore by anyone. Not reversed, and not to be
+reversed without Ken.
+
+State at the end of this pass: live and verified **62** (unaffected — it names no
+quarterback that moved); `published_rows=1`; Recent insights **14** rows, down one
+from the retirement; /analyst-desk **0**; overlay `1788087628630`, 16,901 bytes,
+reconstructed and checked byte-for-byte against `length(payload)` with all 312
+per-player sums matched against the database's own computation before any copy
+was read.
