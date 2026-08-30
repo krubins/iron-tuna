@@ -4754,3 +4754,45 @@ both prices stayed $10, so no dollar figure moved on the refresh itself. Row 57
 verified clean on every one of its figures — the four points-per-dollar rates,
 the 117-point trade, $107 against $23, and "ten of the top twelve quarterbacks"
 — and Saquon Barkley's 0.8-point drift was left alone under the noise rule.
+
+### 2026-08-30: the prompt edits are live
+
+Pushed to `trig_011LYewcPUQikF8izFsN2LAr` at 02:46Z, four hours before the
+06:58Z run. The stored prompt is **byte-identical to
+`tools/lead-story-routine-prompt.md` below the `<!-- PROMPT BEGINS -->` marker**,
+46,923 characters, verified twice: once against the write's own echo and once
+against an independent `list_triggers` read. `cron_expression`, `enabled` and
+`next_run_at` are unchanged.
+
+Six edits, in the order they matter:
+
+1. **Re-rank with the player removed from his old slot** when repricing on a
+   changed projection. Sits in the board-building section, next to the worked
+   example, because that is where a run is when it needs it.
+2. **The verification pass covers derived numbers**, not only prices and ranks —
+   differences, ratios, counts, spans, "more than" claims.
+3. **A `parsed` heartbeat stage** between `start` and `board`, written the moment
+   the projections and the odds payload are both in hand. Every stall so far has
+   been in that window; this splits it.
+4. **Name the board beside any point total.** Prices are quantised and hold;
+   point totals move every refresh, forever.
+5. **No bare "today"** (already live since 2026-08-26, unchanged here).
+6. **`tools/live-board.mjs` as a documented fallback** if the connector fetch
+   fails — explicitly *not* the primary, because the checkout can sit behind
+   what is deployed.
+
+**Two of these were downgraded from what was originally proposed, and the reason
+matters.** Edit 6 was going to replace the 625 KB connector fetch outright, on
+the theory that the fetch was killing runs. That theory was refuted on 08-27, so
+replacing the authoritative source with a checkout that can lag would have traded
+a real property for nothing. It went in as a fallback instead. Edit 4 was going
+to require season points rounded to whole numbers; that would have broken row
+45's cost-per-point analysis, which needs tenths, so only the name-the-board half
+shipped.
+
+**A drafting error was caught by reading the assembled prompt back before
+pushing, not by the diff.** The first pass inserted the two new verification
+paragraphs in the middle of an existing sentence pair, orphaning "If one does not
+match, your pricing is wrong" three paragraphs from what it referred to. The
+character count and the hunk count both looked fine. Only reading it in sequence
+showed it. Re-read the passages you edit, in full, in order.

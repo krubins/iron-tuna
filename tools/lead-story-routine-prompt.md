@@ -60,11 +60,14 @@ The stages, in order. Use these exact words:
 | `stage` | you have just finished |
 |---|---|
 | `start` | claimed this row; nothing else done yet |
+| `parsed` | read `PROJECTIONS` and the odds payload; nothing scored yet |
 | `board` | built the blended board and passed the blend self-test |
 | `research` | gathered and confirmed the desk's material |
 | `drafted` | written the story and run the headline and dek checks |
 | `inserted` | the INSERT into `lead_story` returned; set `story_id` too |
 | `done` | retire-by-slug and the read-back check are finished |
+
+**Write `parsed` the moment the projections and the odds payload are both in hand, before you score anything.** Four runs between 2026-08-26 and 2026-08-29 died between `start` and `board` and left nothing else behind — about one run in three, at three different slots. That window covers reading 625 KB of Worker code, parsing it, reading the odds, blending, scoring and self-testing, and a row stuck at `start` cannot say which of those it was. `parsed` splits it in half. It costs one UPDATE.
 
 Set `desk` on the `board` update. Set `story_id` on the `inserted` update. Use `note` for the one thing a later reader would want: which desk you skipped and why, what you could not source, what the blend self-test showed.
 
@@ -182,10 +185,12 @@ So do not build a second, more aggressive board by replacing the stats outright.
 
 **BUILD THE BOARD LOCALLY. THIS IS THE PRIMARY METHOD, NOT THE FALLBACK.** Every run so far has found `/api/board` unreachable — direct fetches to irontuna.com are blocked from this environment and the fetcher returns a permission prompt with nobody present to answer it. That is the normal case, not a failure, and **it is never a reason to skip the slot or to publish nothing.** Reproduce the served board yourself, which takes one script and is exact:
 
-1. Read `PROJECTIONS` and `VEGAS_WEIGHT` out of `_worker.js`.
+1. Read `PROJECTIONS` and `VEGAS_WEIGHT` out of `_worker.js`. Fetch the deployed Worker code with the Cloudflare connector — that is the authoritative copy, because the site serves it. If that fetch fails or returns nothing, the repo has `tools/live-board.mjs`, which lifts the same constants out of the checked-out `_worker.js` and exposes `board(overlayPath)` for the blended board and `board(null, false)` for the committed one. It is a fallback, not the primary: the checkout can sit behind what is deployed. If you use it, say so in the method line.
 2. Read the odds from D1: `SELECT payload, length(payload) FROM odds_overlay WHERE id = 1`. Confirm the payload you parsed has the same character count the query reports, so you know you read all of it.
 3. Blend per the formula above, keying on the Worker's own `_oddsNorm(name) + '|' + position`, only for stats the player already has, skipping non-finite and negative values, rounding each to one decimal.
 4. Score with the Worker's `_colScore`, sort within position, price with `_colPrice`.
+
+**If you reprice a player by changing his projection, re-rank the position with him taken out of his old slot.** Say a back is RB6 and you ask what one missed game costs him. Scale his line, then rebuild the ladder *without* his old entry and insert the new score — every back below RB6 moves up one when he leaves. Reading the adjusted score against the standing list is off by exactly one slot, and one slot is a real dollar figure. A run on 2026-08-29 did that and published "$42" in its own headline for a player the corrected ladder prices at $43. The same applies to "ten more catches" and any other what-if.
 
 That is `boardPayload` in `_worker.js` §9d run by hand, so it produces the served board by construction. Say in the method line that you computed it rather than read it, and give the overlay's `updated_at`.
 
@@ -203,6 +208,10 @@ That is `boardPayload` in `_worker.js` §9d run by hand, so it produces the serv
 What the odds move is then a RANK STORY, not a second price: "the odds have him RB8 rather than RB13" is the finding, and both dollar figures still come off the one board.
 
 **Check every board price you print against that build before you insert** — not two of them, all of them. Take each "the consensus sheet says $X" and confirm it equals that player's price and position rank in the board you just built. If one does not match, your pricing is wrong and the story is wrong; fix it rather than publishing it. This is the check a run passed in the wrong direction on 2026-08-23 by verifying against `it-league.js`'s static block, which had not seen the odds — so name in the method line exactly what you verified against, including the overlay's `updated_at`, so the next run can tell which board you meant.
+
+**That check covers derived numbers too, not only prices and ranks.** Any figure you compute from the board or the odds — a difference, a ratio, a count, a span, a "more than" or "twice as much as" — gets recomputed and checked the same way. A run on 2026-08-27 printed "five more scores on the ground" for a gap of 4.2, and its own verification pass could not have caught it, because the pass was scoped to prices and ranks and that sentence is arithmetic over two raw overlay lines.
+
+**Name the board beside any point total you print.** Prices and ranks are quantised by the curve and almost never move; point totals move every single refresh, by a tenth or two, forever. A season-point figure is only true of one board, so say which — "322.8 points on the August 28 board", not "322.8 points". Stories stay in "Recent insights" for days and nobody comes back to re-derive them.
 
 **And name the board's number for every dollar figure you print, not just the headline one.** If you tell the reader to bid $15 on a player the board prices at $10, say the board says $10 and say why you disagree. A recommendation that differs from the sheet is the whole point of the column; a recommendation that differs from the sheet *silently* is the bug this column has now shipped four times, because the reader has their own sheet open and it contradicts you with no explanation. This applies to secondary players and throwaway asides, not only to the player in the headline.
 
