@@ -5035,3 +5035,89 @@ from the retirement; /analyst-desk **0**; overlay `1788087628630`, 16,901 bytes,
 reconstructed and checked byte-for-byte against `length(payload)` with all 312
 per-player sums matched against the database's own computation before any copy
 was read.
+
+## 38. August 30: the live prompt was replaced by something outside this session
+
+At **`2026-08-30T03:04:45Z`** the prompt on Routine `trig_011LYewcPUQikF8izFsN2LAr`
+was overwritten. This session pushed the seven-edit prompt at about 02:47Z and
+verified it byte-identical against the repo copy twice. Seventeen minutes later
+the live prompt became a different document: **36,970 characters against this
+repo's 46,923**, with all six accuracy edits gone.
+
+This was found by comparing the live prompt to `tools/lead-story-routine-prompt.md`
+during a check-in that was looking at something else entirely. **No alarm fired.**
+The tamper predicates watch `lead_story` flags; nothing watches the Routine.
+
+### What the replacement actually does
+
+It is not vandalism. It is a coherent, well-argued revision by someone who knows
+the project, and it fixes two real bugs this HANDOFF documents:
+
+- **It retires the analyst desk.** `DESKS` is now the six
+  `[player, playcaller, vegas, preseason, injury, market]`. The analyst section is
+  gone, and `calls` is described as a column "from the retired analyst desk; leave
+  it NULL". The stated reason is the one §36 ran into: the analysts' boards are
+  behind the egress proxy and their paid ranking sets are not ours to republish.
+- **It fixes the desk-rotation bug that retirement would have caused.** With seven
+  desks and a six-hour cron, `slot` advances by two and `slot % 7` still reaches
+  every desk, because 2 and 7 are coprime. Drop to six desks and `slot % 6` steps
+  0, 2, 4, 0, 2, 4 — `playcaller`, `preseason` and `market` would never be written
+  again. The replacement introduces `deskSlot = floor(epoch / 21600)` and takes the
+  desk off that. The reasoning is correct.
+- **It adds "Retire `published` and nothing else. Never put `verified` in that
+  statement."** — which is exactly the failure of 2026-08-23 and 08-24.
+
+### This answers both standing open questions
+
+**OPEN QUESTION 1 is closed, and the answer is that the question was malformed.**
+`parsed` is never written because **the live prompt has no `parsed` stage** — the
+edit that added it is not deployed. The 06:58Z stall on 08-30 therefore says
+nothing new, and five days of "does `parsed` get written" was measuring a stage
+that does not exist. The lesson is narrow and worth keeping: *before diagnosing a
+Routine from its telemetry, confirm the telemetry you are reading for is actually
+in the prompt the Routine is running.*
+
+**OPEN QUESTION 2 is closed.** The analyst column was emptied at `03:00:21Z` and
+the prompt was rewritten at `03:04:45Z` — four minutes apart. They are one
+operation: the desk was retired, and its nine rows came down with it. This was a
+deliberate product decision, not tampering. **Not restoring rows 42, 50, 55 and 60
+was the right call, and they should stay down** — the desk that produced them no
+longer exists.
+
+### What was done about it, and what deliberately was not
+
+**Nothing was deployed.** Overwriting the live prompt would clobber someone's
+considered work, and it is the outward-facing, hard-to-reverse action that needs
+Ken's word first. Instead:
+
+- `tools/lead-story-routine-prompt.live-2026-08-30.md` — what is actually live.
+- `tools/lead-story-routine-prompt.merged.md` — the replacement's base with the six
+  accuracy edits re-applied on top. Verified both directions: the base's four
+  decisions (six desks, `deskSlot`, retire-`published`-only, analyst retired) all
+  survive, and all six edits are present.
+- `tools/lead-story-routine-prompt.md` now carries a banner saying it no longer
+  mirrors the Routine, because a canonical copy that silently disagrees with live
+  is worse than no copy at all.
+
+Building the merge surfaced a real defect that a one-line port would have shipped.
+The `today` ban is not one paragraph, it is **four**: the ban itself, a reworded
+"BE CURRENT" lead-in, a dated example under "Clock times are Eastern", and a note
+that `leadClock` cannot put a date on a bare "today". Porting only the ban would
+have left the prompt instructing the run to write `"today's 7:00 AM ET odds
+refresh"` as the *correct* form two sections below the rule forbidding it. Reading
+the assembled text back in order is what caught it — the same check that caught
+the orphaned sentence when these edits were first drafted.
+
+### The gap this leaves
+
+Six accuracy edits are **not live**, including the two aimed straight at the bug
+Ken has reported four times: vacated-slot re-ranking, and recomputing derived
+numbers. Every lead story written since 03:04:45Z has run without them. Two runs
+have fired since: 06:58Z stalled at `start`, and 12:58Z fired at 12:58:58Z
+(session `cse_01M5dQVbEuFtjknBgoHqivas`) and was still `PENDING` with no heartbeat
+row at all 32 minutes later — a new failure shape, since every previous stall at
+least wrote `start`.
+
+**Add the Routine itself to the daily sweep.** Diffing the live prompt against the
+repo copy is one comparison and would have caught this in ten hours instead of
+never.
