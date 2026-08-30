@@ -4844,3 +4844,42 @@ paragraphs in the middle of an existing sentence pair, orphaning "If one does no
 match, your pricing is wrong" three paragraphs from what it referred to. The
 character count and the hunk count both looked fine. Only reading it in sequence
 showed it. Re-read the passages you edit, in full, in order.
+
+### PR #107 merged 2026-08-30
+
+Merged at Ken's instruction as `e792090`. Both checks were green on the head
+commit (`checks`, `Workers Builds: iron-tuna`) and `mergeable_state` was clean.
+
+`lead_story_run` had been live on D1 since 2026-08-25 and the prompt section
+had been running on the Routine since then, so the merge changed nothing about
+how the desk behaves. What it did was put the repo's record back in step with
+production, which had been the whole reason it was outstanding.
+
+**The prompt copy #107 landed is already superseded.** It carries the original
+six-stage heartbeat; the live Routine and this branch carry the seven-stage
+version with `parsed`, plus the five other edits pushed on 2026-08-30. Merging
+this branch resolves that, and it resolves in this branch's favour because it
+already carried #107's commit as an ancestor.
+
+**Checked while merging, because main had moved further than expected.** Main had
+taken PR #110 and PR #108 and five camp-watch commits since this branch last
+saw it. PR #110's title — "cheat-sheet-dollar-check" — reads like a pricing
+change and would have meant repricing every published row. It is not: it touches
+one line of `auction-watch.html`. Verified properly rather than by title:
+
+- Every pricing constant (`COLUMN_CURVE`, `COLUMN_CURVE_BUDGET`,
+  `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID`, `VEGAS_WEIGHT`) is unchanged.
+- `it-league.js` is byte-identical between main and this branch.
+- The `PROJECTIONS` block hashes the same on both (`a8e4a3593b44`).
+- `_worker.js` differs by exactly the +41 lines of PR #108's admin analytics.
+
+So the harness has been reading the right board throughout, and no republished
+figure moved. Confirmed after the merge by rebuilding the board and re-checking
+the live lead's figures: Jeanty RB6 $52, Jacobs RB9 $42, Henry RB8 $43, Hampton
+RB15 $20, Washington RB67 $2, Bowers TE1 $60 — all unchanged.
+
+A branch that has fallen behind main is a stale-board risk, not just a merge
+conflict risk. `tools/live-board.mjs` reads the checked-out `_worker.js`, so an
+out-of-date checkout means an out-of-date board and a verification pass that
+confidently agrees with the wrong numbers. Check `PROJECTIONS` and the curve
+constants against main whenever the branch has drifted.
