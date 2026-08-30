@@ -4345,3 +4345,648 @@ The desk's other legacy is worth keeping: it is what produced the audit trigger,
 and the sourcing rule it was built under (never state a named person's position
 without a source pulled that run) survives as hard rule 6, now scoped to every
 desk rather than to one.
+### The 2026-08-26 11:00Z refresh: what a board move actually breaks
+
+The first odds refresh after PR #105 landed at 11:00:35Z on 2026-08-26
+(`odds_overlay` row 1, `updated_at` 1787742035336, 16,897 chars, up from
+1787655628685 / 16,889). It is the first refresh checked end to end against
+every live row, and the result is worth writing down because it sets the size
+of the problem.
+
+**241 of 312 players changed.** Almost all of it was noise — a tenth of a yard.
+Only **twelve players changed rank**, all of them adjacent-pair swaps, and only
+**two changed price**: Javonte Williams RB16 $17 to RB17 $15, and Cam Skattebo
+RB17 $15 to RB16 $17, a straight exchange.
+
+So the useful diff is not the overlay. It is the board:
+
+    node tools/board-diff.mjs old-overlay.json new-overlay.json
+
+That reduced a 241-player overlay diff to a twelve-name list, and from there to
+the four stories that could possibly be affected. Do this before re-reading any
+copy; reading nine stories to find one wrong number is the slow way round.
+
+**Every dollar figure in all nine live rows survived.** The originating
+complaint — a story quoting a price the reader's own cheat sheet contradicts —
+did not recur. What drifted was the supporting arithmetic, which no rule had
+ever been written about:
+
+| row | figure | said | was |
+|---|---|---|---|
+| 41 | QB5-to-QB12 spread | "less than one and a half" a game | 1.76 |
+| 41 | Mayfield behind Allen | 3.9 | 3.8 |
+| 42 | LaPorta / Pitts blended projections | 194.0 / 191.3 | 194.7 / 191.2 |
+| 45 | QB12 baseline, QB marginal points, QB cost per point | 291.4 / 287.9 / $0.59 | 291.3 / 292.3 / $0.58 |
+| 45 | RB / WR / TE marginal points | 1,519.4 / 1,813.3 / 226.9 | 1,521.6 / 1,815.7 / 226.7 |
+| 45 | McLaurin above the WR36 baseline | 23.8 | 23.6 |
+| 47 | Kelce at 58 catches | TE15 | TE16 |
+| 48 | running back disagreement total | $116 | $120 |
+| 49 | Tank Dell, Higgins yards, Collins blended yards | WR86 / 635.7 / 1,173.9 | WR87 / 631.8 / 1,168.6 |
+| 50 | Flowers' Vegas receiving yards | 1,241.9 | 1,241.7 |
+
+All corrected in place. Nothing was retired: a story whose argument still holds
+and whose prices still reproduce does not come down over a tenth of a point.
+
+**Every one of these was exact at publication.** Row 45 is the clearest case —
+more than twenty computed aggregates, and all of them reproduced on the board
+its method line names. These are not errors. They are a snapshot ageing.
+
+### Two rules that came out of it
+
+**A story is a snapshot; the cheat sheet is live.** Where the two can disagree,
+the copy must say which board it means. Rows 48, 49 and 51 now name their
+refresh and state the current value beside it. Rows that assert a bare present
+tense get updated to current instead.
+
+**Never write a bare "today."** Rows 48 and 49 both said "today" and "this
+morning" about the previous day's refresh, which reads as though the reader's
+sheet had just moved when it had not. Every row sits in "Recent insights" for
+days and nobody comes back to date it. The prompt now bans `today, today's,
+this morning, tonight, yesterday, tomorrow, right now, as of now` in title,
+dek, body and table headers, and its own worked example was changed — the old
+one said "today's 7:00 AM ET odds refresh" and was teaching the defect.
+
+### Definitions matter more than arithmetic here
+
+Two figures looked wrong and were not, both because a checker guessed the
+definition rather than reading it:
+
+- Row 48's receiver disagreement is **$66 over the committed top 24**, which is
+  what its left column names. Summing over the union of both boards' top 24
+  gives $68. The story is right; the union is the wrong question.
+- Row 45's "upgrade" is a player priced above the positional baseline, costed
+  **against that baseline** — not the step from one rank to the next. Under the
+  step reading Bowers costs $0.30 a point and thirty-nine non-tight-ends beat
+  him. Under the story's own reading he costs $0.84 and exactly two do, which
+  is what it says.
+
+Work out which definition the copy used before calling a number wrong. Both of
+these were nearly reported as defects.
+
+### The harness has to read the worker, not remember it
+
+`scratchpad/recheck-all.mjs` was run first and reported all five older rows
+failing on every figure. It was wrong: its claims table was hand-copied from
+the stories **before** the PR #105 reprice, so it was comparing pre-reprice
+claims against a post-reprice board. Same failure mode as the curve that
+`live-board.mjs` was written to fix, one level up — the constants were lifted
+correctly, and then the *claims* went stale instead.
+
+Rebuild claims from the live `dek` and `body_html` each time. A verification
+table that is not regenerated is a second thing to keep in sync, and it will
+lose sync exactly when it matters.
+
+The harness itself is now in the repo rather than a scratch directory:
+`tools/live-board.mjs` lifts `PROJECTIONS`, `COLUMN_SCORING`, `COLUMN_CURVE`,
+`COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID` and
+`VEGAS_WEIGHT` straight out of `_worker.js` at run time, so it cannot disagree
+with what the site serves. `board(path)` gives the blended board,
+`board(null, false)` the committed one. That pair is what every claim in this
+section was checked against.
+
+### State at 2026-08-26 12:00Z
+
+Live and verified: **51** (playcaller, Kyle Pitts). Verified, retired: 41, 42,
+43, 45, 47, 48, 49, 50. Rows 1-40, 44, 46 down permanently. Curve unchanged
+since `0d3677d`. `lead_story_audit` still shows exactly two flag transitions,
+both from 2026-08-24, both accounted for.
+
+The heartbeat has now recorded three complete runs and no failures: 898s
+(injury, row 49), 714s (analyst, row 50), 1,479s (playcaller, row 51). The
+playcaller run's `board` note is what the instrumentation was for — it names
+the overlay it matched (1787655628685), the match rate (312 of 407) and the
+Chuba Hubbard self-test result, so the board it used is recoverable after the
+fact rather than inferred.
+
+**The live Routine prompt has NOT been updated with the dated-time rule.** The
+repo copy here has it; `trig_011LYewcPUQikF8izFsN2LAr` still runs the previous
+text. Pushing it means resending all 44,360 characters through
+`update_trigger`, and a transcription slip in a brief that publishes to the
+front page with no human in the loop is a worse outcome than one more story
+saying "today". Push it from a session that can hold the file, then diff the
+Routine's stored prompt back against `tools/lead-story-routine-prompt.md` below
+the `<!-- PROMPT BEGINS -->` marker; the two are identical apart from that
+marker and the header above it.
+
+### The heartbeat's first catch: 2026-08-26 12:58Z
+
+The 12:58Z slot produced no story. Unlike the five silent failures of 08-24 and
+08-25, this one left evidence:
+
+    run_key                   desk      stage   secs
+    165532-1787749542000      (unset)   start   0
+
+The row was claimed at 13:05:53Z — about eight minutes after the Routine fired,
+which is session startup — and `updated_at` never moved again. At 13:44Z it had
+been sitting at `start` for 38.75 minutes. No `lead_story` row was written;
+`max(id)` is still 51.
+
+**That narrows the fault to one window.** `board` means "built the blended board
+and passed the blend self-test", and the healthy 06:58Z run reached it in 227
+seconds. So the run died somewhere between claiming its row and finishing the
+board — before research, before drafting, before any of the publishing rules.
+Every prompt fix attempted before the heartbeat existed was written for the
+back half of the brief, which is why none of them helped: the runs were never
+getting there. That is now a measurement rather than a guess.
+
+**The heaviest thing in that window is the projections fetch.** The prompt has
+runs pull the ~625 KB `PROJECTIONS` array out of the deployed Worker with the
+Cloudflare connector's `workers_get_worker_code`. In this environment a tool
+result that size is diverted to a file rather than returned, and it is by some
+distance the largest operation a run performs.
+
+It is also unnecessary. `_worker.js` is in the repo, the Worker is deployed
+from `main` by the git integration, and the run already reads `it-league.js`
+out of the repo for the curve. `tools/live-board.mjs` (added earlier the same
+day) does exactly this: lifts `PROJECTIONS`, `COLUMN_SCORING`, `COLUMN_CURVE`,
+`COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID` and
+`VEGAS_WEIGHT` from the local file. That the boards agree is not an assumption:
+every figure in all nine live rows was verified against it on 2026-08-26, and
+those rows were written by runs that used the connector fetch.
+
+So the candidate fix is to point the board build at `tools/live-board.mjs` and
+drop the connector fetch. **This is one data point and it is a hypothesis, not
+a diagnosis.** Confirm it with the next failure: if a run again stalls at
+`start`, the window is the same and the fetch is the prime suspect. If one
+stalls at `board` or later, this is wrong.
+
+Do not respond to a stalled run by editing the back half of the brief. That has
+been tried twice and cannot work.
+
+**Failure rate to date: roughly six of sixteen slots.** Five of twelve across
+08-24/25, plus this one. Row 51 remained live and correct throughout, so a
+missed slot costs a fresh story, not an inaccurate one.
+
+### The 18:58Z run, and why the stall hypothesis is not confirmed
+
+The 18:58Z slot succeeded: `done` in 724 seconds, row 52, market desk. It
+reached `board` normally, which means **the `workers_get_worker_code` path is
+not deterministically broken** and the 12:58Z stall was intermittent. The
+hypothesis in the previous section is neither confirmed nor refuted — it is
+weaker as a deterministic cause and still open as an intermittent one. Do not
+act on it until a stall repeats and lands in the same window.
+
+Run 52 is the best-documented run so far. Its method line names the overlay's
+`updated_at`, states the character count it parsed and that it matched
+`length(payload)`, records the Chuba Hubbard self-test, lists all fourteen
+figures it re-checked before insert, and says plainly that it did not attempt
+`/api/board` and why. Every one of those fourteen reproduced here, as did every
+derived figure: the committed Rice-London gap of 11.4 against the blended 22.9,
+London at -7.9 and Rice at +3.6 across the blend, Burrow's committed QB8 and
+$10, the $13 eighth-to-ninth receiver step being the widest inside any top ten,
+and the first $2 rank at TE15, RB35 and WR40.
+
+### `method` is reader-visible, and the sweep has to include it
+
+`_worker.js` line 2826 serves `method` to the page through `leadClock`. The
+2026-08-26 morning sweep for undated time words checked `title`, `dek` and
+`body_html` and **missed `method` entirely**, which left two inconsistencies
+that the same morning's edits had created:
+
+- Row 48's method explained that `"Iron Tuna today" is the blended price`,
+  naming a table column that had just been renamed to `"Iron Tuna, August 25"`.
+- Row 49's body was updated to the August 26 overlay (631.8 receiving yards for
+  Jayden Higgins) while its method still quoted the August 25 values, 635.7 and
+  3.7. The two halves of one story disagreed about the same number.
+
+Both are the same mistake: **a story's method describes its body, so editing
+one without re-reading the other splits them.** After any correction, re-check
+`title`, `dek`, `body_html` AND `method` together, and diff the story against
+itself before moving on.
+
+Six further methods carried a bare "today" or "this morning" and are now dated.
+All ten live rows are clean across all four fields.
+
+Row 52 arrived with seven undated time references, exactly as expected — it ran
+the live Routine prompt, which still lacks the dated-time rule. They were dated
+by hand before the 08-27 refresh could make them false.
+
+### The 00:58Z run, and a gap in what "verify every figure" covers
+
+The 00:58Z slot on 2026-08-27 succeeded: `done` in 815s, row 53, player desk.
+Two clean runs in a row after the 12:58Z stall, and the overlay had not moved,
+so the older rows needed no re-verification.
+
+Row 53 verified almost completely. Every board figure reproduced — Maye QB3
+$32 at 322.7, Dart QB5 $20 at 321.2, Daniels QB7 $13 at 308.5, the 1.5-point
+gap, the $12 price difference, QB6 at $18 — as did every committed-versus-
+blended claim: A.J. Brown's one-dollar move from WR11 $28 to WR12 $27, Terry
+McLaurin not moving at all, TreVeyon Henderson's $10 to $12, the $7 cut to
+Daniels. So did both cost-per-point figures ($19 buying 14.2 points at
+quarterback, $13 buying 21.8 at receiver) and all three team lines from
+`odds_overlay` row 2 (New England 14th at 23.7, the Giants 16th at 23.3,
+Washington 17th at 23.3).
+
+**One claim was wrong.** The story said Vegas gives Dart "7.5 rushing
+touchdowns, five more scores on the ground than Maye." Maye's overlay line is
+3.1. The difference is 4.4, not five. Corrected to "four more".
+
+That is a different failure from everything logged above it. It is not drift —
+it was wrong the moment it was written — and the run's own verification pass
+did not catch it, because **the pass is not scoped to catch it.** The rule in
+the brief says to check every board price and position rank printed against the
+build. Row 53 did exactly that, and its method line lists the checks. But
+"five more scores on the ground" is arithmetic on two raw overlay stats, not a
+price or a rank, so nothing in the brief told the run to check it.
+
+So the verification rule needs a third clause: **any number derived from the
+overlay or the projections — a difference, a ratio, a count, a "more than" —
+gets recomputed and checked, not just prices and ranks.** Added to the pending
+prompt edits below.
+
+Row 53 also arrived with two undated time references ("WR25 today", "cost right
+now"), both dated by hand. It did correctly write "refreshed at 7:00 AM ET on
+August 26" unprompted, which is the form the pending rule asks for.
+
+### Pending prompt edits, in priority order
+
+None of these are live. All three are in the repo copy only.
+
+1. **Point the board build at `tools/live-board.mjs`** instead of the ~625 KB
+   `workers_get_worker_code` fetch. Reliability, and the prime suspect for the
+   12:58Z stall — though the two successes since mean it is intermittent at
+   worst, and unconfirmed.
+2. **Verify derived numbers, not only prices and ranks** (this section).
+3. **No bare "today"** — the dated-time rule.
+
+### 2026-08-27: the correction loop does not converge
+
+The 11:00Z refresh on 08-27 (`odds_overlay` row 1, `updated_at` 1787828413360,
+16,885 chars) moved eighteen ranks and six prices. All three runs since the
+last audit succeeded — 724s (52), 815s (53), 1136s (54) — and the overlay had
+not moved between them, so the only work was this refresh.
+
+**Two figures corrected on 08-26 had to be reverted on 08-27, because the
+correction was the error.** Row 41's quarterback 5-to-12 spread and Baker
+Mayfield's gap behind Josh Allen:
+
+| figure | 08-25 | 08-26 | 08-27 |
+|---|---|---|---|
+| QB5-to-QB12 spread, per game | 1.4941 | 1.7588 | 1.4941 |
+| Mayfield behind Allen, per game | 3.8529 | 3.8471 | 3.8529 |
+
+08-25 and 08-27 are identical to four decimal places. The 08-26 board was a
+one-day excursion, and "less than one and a half points" — the original text —
+was right on two of the three days. Rewriting it to "1.8" made a correct
+sentence wrong.
+
+The same shape appears elsewhere. Tank Dell went WR86, WR87, WR86 on
+consecutive days; row 49 was edited twice and is now back where it started.
+Row 48's running back disagreement total went $116, $120, $116. Jayden Higgins'
+receiving line went 635.7, 631.8, 635.9.
+
+**This is the finding, not the corrections.** Chasing a daily refresh with
+hand-edits is not a convergent process. It is tracking noise, it costs an edit
+per figure per day, it grows with the story count, and — demonstrated above —
+it introduces errors of its own. Every one of these figures was exact when its
+run wrote it.
+
+### What actually needs to hold, and what does not
+
+Across three refreshes and thirteen live rows, **no dollar figure has ever been
+wrong except when a genuine rank change moved it.** That has happened four
+times in three days: Javonte Williams RB17 $15 to RB16 $17, Cam Skattebo the
+reverse, Jordyn Tyson WR33 $5 to WR34 $3, Michael Pittman the reverse. Those
+are real and must be fixed, and `tools/board-diff.mjs` finds them in one
+command.
+
+Everything else that has needed correcting is a point total, a rank deep in the
+board, or an aggregate over the whole board — quantities the market perturbs
+daily and which no reader checks against anything.
+
+So the standard should split:
+
+- **Dollar figures and position ranks must reproduce against the current
+  board.** They are what the reader compares to their cheat sheet, they are
+  quantised by the curve, and they almost never move. This is Ken's actual
+  requirement and it is being met.
+- **Point totals, spans and derived aggregates should be stated as of a named
+  board and left alone.** Every story already names its refresh in the method
+  line; rows 48, 49, 51 and 54 now name it in the body too. A figure that is
+  true of a dated board does not become false when the board moves.
+
+That change belongs in the prompt, not in a nightly edit pass: have each story
+carry its board date next to its point totals, and round season points to whole
+numbers so a tenth of a point cannot churn them.
+
+### Corrections applied 2026-08-27
+
+Rows 42, 45, 49, 52, 53 and 54 corrected against the new board; row 41 reverted.
+Each carries a dated `CORRECTED 2026-08-27` line in its method saying the
+figures were re-derived and the run's own verification record was left as it
+stood. Detail worth keeping:
+
+- **Row 42** claimed Detroit was "the highest-scoring offense in football, first
+  of all 32 teams". Baltimore is now first at 26.79 to Detroit's 26.75. Fixed
+  to second, in dek and body.
+- **Row 45** lost its named exception: "Jordyn Tyson, WR33, at $1.05" is now
+  Michael Pittman at WR33 and $1.11, with Tyson at WR34 $3 and no longer an
+  upgrade at all. The *claim* — exactly two non-tight-end upgrades cost more
+  than the cheapest tight end one — survived; only the name did not.
+- **Row 52** had "Javonte Williams and Kyren Williams both price at $15", which
+  a real price move broke. Rewritten to $17 and $15.
+- **Row 53** took the most damage: the Maye-to-Dart gap went from 1.5 points to
+  6.0, and the three team lines behind "Vegas cannot tell these three offenses
+  apart" moved to 13th, 16th and 19th, a 0.94-point spread. Renumbered, and the
+  heading changed to "inside a point a game", which is what the data now says.
+  Its recommendation is unchanged and every dollar figure still reproduces.
+- **Row 54** was exact at publish on all six tight end ranks and prices, which
+  this refresh left untouched. Only three cross-position spans moved.
+
+### The stalls are slot-specific, not random: 12:58Z collides with two other Routines
+
+The 12:58Z slot failed again on 2026-08-27 — run `165540-1787835558000` claimed
+its row at 12:59:28Z and never moved off `start`. That is the second stall, and
+both have been the same slot.
+
+    slot     runs   stalls
+    00:58Z     2      0
+    06:58Z     2      0
+    12:58Z     2      2
+    18:58Z     2      0
+
+12:58Z is also the only lead-story slot with neighbours:
+
+    12:00Z   Iron Tuna — Play-Caller Premium daily entries   (0 12 * * *)
+    12:58Z   Iron Tuna — lead story refresh                  (58 */6 * * *)
+    13:00Z   Iron Tuna — The Pick (daily story)              (0 13 * * *)
+
+The lead-story run claims its heartbeat and then, ninety seconds later, a
+second Routine starts. On 08-26 it claimed at 13:05:53, five minutes *after*
+The Pick had already begun. Both times it died before finishing the board.
+
+**This displaces the `workers_get_worker_code` hypothesis.** A 625 KB fetch that
+was too heavy would fail at every slot, and 00:58Z, 06:58Z and 18:58Z are six
+for six. Contention with a neighbouring Routine explains the pattern the fetch
+hypothesis cannot: why only this slot, and why every time.
+
+Two data points is not proof, and the mechanism is inferred rather than observed
+— there is no log showing what the dying session was doing. But the correlation
+is exact and the mechanism is specific, so the next stall should be checked
+against this first.
+
+**The fix is a cron change, not a prompt change.** `update_trigger` can set
+`cron_expression` without resending the 44,000-character prompt, so unlike the
+four pending prompt edits this one is not blocked. Shifting the lead story an
+hour, to `58 1,7,13,19 * * *`, puts the slots at 01:58, 07:58, 13:58 and 19:58,
+none of them within half an hour before another Routine's start. Avoid
+`58 2,8,14,20` (14:58 lands two minutes before the camp desk at 15:00) and
+`58 5,11,17,23` (11:58 lands two minutes before Play-Caller Premium).
+
+**Not applied.** The schedule is Ken's configuration and a missed slot costs a
+story, not an inaccuracy, so this is recommended rather than done. If it stalls
+a third time at 12:58Z the case is strong enough to raise again.
+
+### Row 55, and a field the sweep had not covered
+
+The 18:58Z run published row 55 (analyst desk, Derrick Henry) in 1041s and it
+verified completely: all four rank moves against both boards (Henry RB13 to RB8,
+Cook RB12 to RB14, Chase Brown RB14 to RB12, Hall RB8 to RB11), the $11 cut to
+Cook, Henry's league-leading 1,569.3 rushing yards and second-place 13.4 rushing
+touchdowns behind Gibbs, the 101.9-yard gap worth about 10 points, the
+five-touchdown split worth 30, and all four round bands the analyst tiers are
+translated into.
+
+It also carried five undated time references, one of them inside `calls` —
+**the analyst desk's JSON column, which no previous sweep had checked.** `calls`
+renders on the standing column at /analyst-desk, so it needs the same treatment
+as `title`, `dek`, `body_html` and `method`. Edited with `replace()` and
+re-checked with `json_valid(calls)` afterwards; rows 42, 50 and 55 are the only
+ones carrying it and all three still parse.
+
+Sweep all five fields. The count of places a story states something has gone up
+twice now — `method` on 08-26, `calls` on 08-27 — both times because the sweep
+was written from what the last defect touched rather than from the schema.
+
+### 2026-08-28: the slot-collision hypothesis is refuted
+
+The 06:58Z slot stalled — run `165546-1787900354000`, claimed at 06:59:23Z,
+never moved off `start`. That is a slot with no neighbouring Routine, which is
+the test the previous section set in advance, and it fails.
+
+    slot     runs   stalls
+    00:58Z     3      0
+    06:58Z     3      1
+    12:58Z     2      2
+    18:58Z     2      0
+
+Three stalls in ten runs. 12:58Z is still 2 for 2 and the other slots are 1 in
+8, so the skew may be real, but **contention with a 13:00Z Routine cannot
+explain a 06:59Z failure.** The mechanism is wrong even if the correlation
+survives. The cron change is no longer recommended on this evidence; it would
+have moved the schedule for nothing.
+
+Two hypotheses have now been raised and knocked down — the 625 KB
+`workers_get_worker_code` fetch (killed by three clean slots on 08-27) and slot
+collision (killed here). What survives is only what the heartbeat measures
+directly: **runs die between claiming their row and finishing the board, at a
+rate of roughly one in three, at any slot.** Anything beyond that is inference,
+and inference has now been wrong twice.
+
+Do not raise a third mechanism without evidence that distinguishes it. The
+useful next step is not a better guess, it is a finer-grained heartbeat: a stage
+between `start` and `board` written immediately after the projections are
+parsed. That splits the failing window in two and is a prompt edit, not a
+diagnosis.
+
+### The Maye and Burrow swap: this is the class that must be fixed
+
+The 08-28 refresh moved eight ranks and four prices. Two of them mattered:
+
+    Drake Maye   QB3 $32  ->  QB4 $27
+    Joe Burrow   QB4 $27  ->  QB3 $32
+
+Five rows named one or both, and unlike a drifting decimal these are prices a
+reader checks. Fixed in 41 (table row), 45, 48 and 52; row 53 was taken down.
+
+**Row 45 lost a claim, not a decimal.** "Only two non-tight-end upgrades cost
+more than the cheapest tight end one" is now one: Maye's cost above the
+quarterback baseline fell from $27 to $22, taking him from $0.86 a point to
+$0.70 and out of the exception list. Michael Pittman is the only one left. The
+"everything else comes in under $0.72" line went with it — the dearest is now
+Joe Burrow at $0.83 — and is restated against the tight end minimum instead.
+
+**Row 52's call landed.** It had said to buy Maye like the 4th quarterback and
+Burrow like the 3rd. The market has since done exactly that. The table now
+states the current prices and says so, which is reporting the board rather than
+re-arguing it.
+
+**Row 48 understated a move it was built on.** Burrow's rise is now QB8 to QB3
+and $10 to $32, worth $22 rather than $17, and he displaces Jalen Hurts as the
+position's biggest single swing.
+
+And the discipline from 08-27 held: the marginal-points column in row 45 moved
+again (287.8 to 287.4, 1,521.5 to 1,520, 226.0 to 225.2) and was **left alone**.
+Those are the figures that oscillate. Chasing them is what produced the reverted
+edit.
+
+### Row 53 retired
+
+The swap put a wrong dollar figure in a headline: "Pass on Drake Maye at $32 ...
+and keep the $12", for a quarterback the reader's sheet now prices at $27. That
+is the originating complaint, on the most prominent text a story has.
+
+Repairing it meant rewriting the headline, the dek and the central comparison —
+authoring, not correcting — and the entry had already needed its thesis gap
+(1.5 points to 6.0) and all three of its team lines re-derived the day before.
+Two consecutive days of structural repair on the same row is the signal to stop
+repairing it. `verified` and `published` both set to 0, with the reason recorded
+in its method.
+
+This is the first row retired for drift rather than for a defect present at
+publication, and it sets the line: **a story comes down when correcting it would
+mean rewriting its argument, and stays up when the argument holds and only
+figures have moved.**
+
+### 2026-08-29: a modelling error, not drift — the vacated-slot off-by-one
+
+The 11:00Z refresh moved six ranks and **no prices**. The audit's real find was
+in row 59, the live lead, and it was wrong when published.
+
+Row 59 caps Ashton Jeanty on the theory that a missed game costs him rank. Its
+method states the model exactly, which is what made the error findable:
+
+> 288.11 x 16/17 = 271.16 points, which slots ninth among running backs and
+> prices at $42; 288.11 x 15/17 = 254.21, which slots sixteenth and prices at $17.
+
+The points are right. The slots are not. The run compared 271.16 against the
+board **as it stands with Jeanty still at RB6** — where it lands just above Josh
+Jacobs at RB9 — and forgot that removing Jeanty from RB6 shifts every back below
+him up one. He actually lands above Jacobs at **RB8, $43**. Same error at two
+games: **RB15, $20**, not RB16 and $17.
+
+That put a wrong dollar figure in the headline ("Cap Ashton Jeanty at $42") and
+inverted a comparison in the body ("Omarion Hampton costs $20, which is more
+than Jeanty is worth if he misses two" — they are level). Corrected throughout,
+including the rhetorical hook, which had rested on $42 being "exactly what Josh
+Jacobs costs"; at $43 that is Derrick Henry. The method now carries both the
+corrected slots and a note explaining the original mistake.
+
+**This is a general trap, not a one-off.** Any story that reprices a player by
+changing his projection has to re-rank the position with him removed from his
+old slot, not read the adjusted score against the standing list. Row 47's catch
+sensitivities got this right by rebuilding the whole ladder; row 59 did not.
+Added to the pending prompt edits.
+
+### Row 54's market-only ordering was wrong at publication too
+
+Row 54 lists the six tight ends in odds-only order as "Mark Andrews, George
+Kittle, Kraft, Travis Kelce, Goedert, then Harold Fannin Jr." Its own method
+says the model keeps each player's committed reception count. Under that model
+the order is **Kittle, Andrews, Kelce, Kraft, Goedert, Fannin** — the first two
+and the middle two are both transposed. The order is stable across the 08-27,
+08-28 and 08-29 boards, so this is not drift.
+
+The claim the section rests on does survive: Kraft and Kelce, the two cheapest,
+both finish ahead of Goedert and Fannin, the two the sheet charges $10 for. Only
+the printed sequence was wrong. Corrected.
+
+Worth noting how it was caught: computing the ordering two ways — with and
+without receptions — and finding that *neither* matched, which forced a read of
+the method to learn which model the run had declared. A single-model check would
+have produced a confident wrong answer either way.
+
+### Stalls: three slots now, and the rate is holding
+
+The 00:58Z slot stalled on 08-29 — the third distinct slot to do so.
+
+    slot     runs   stalls
+    00:58Z     4      1
+    06:58Z     4      1
+    12:58Z     3      2
+    18:58Z     3      0
+
+Four stalls in fourteen runs, 29%, and no longer concentrated anywhere. All four
+sit at `start` with `updated_at` never moving. Nothing new has been learned since
+the mechanism guesses were withdrawn, and nothing should be guessed now. The
+finer-grained heartbeat is the only next step that would add information.
+
+### Corrections applied 2026-08-29
+
+Rows 45, 54, 57, 58 and 59, each with a dated `CORRECTED 2026-08-29` line.
+Goedert and Fannin swapping TE9/TE10 was the only rank move any entry named;
+both prices stayed $10, so no dollar figure moved on the refresh itself. Row 57
+verified clean on every one of its figures — the four points-per-dollar rates,
+the 117-point trade, $107 against $23, and "ten of the top twelve quarterbacks"
+— and Saquon Barkley's 0.8-point drift was left alone under the noise rule.
+
+### 2026-08-30: the prompt edits are live
+
+Pushed to `trig_011LYewcPUQikF8izFsN2LAr` at 02:46Z, four hours before the
+06:58Z run. The stored prompt is **byte-identical to
+`tools/lead-story-routine-prompt.md` below the `<!-- PROMPT BEGINS -->` marker**,
+46,923 characters, verified twice: once against the write's own echo and once
+against an independent `list_triggers` read. `cron_expression`, `enabled` and
+`next_run_at` are unchanged.
+
+Six edits, in the order they matter:
+
+1. **Re-rank with the player removed from his old slot** when repricing on a
+   changed projection. Sits in the board-building section, next to the worked
+   example, because that is where a run is when it needs it.
+2. **The verification pass covers derived numbers**, not only prices and ranks —
+   differences, ratios, counts, spans, "more than" claims.
+3. **A `parsed` heartbeat stage** between `start` and `board`, written the moment
+   the projections and the odds payload are both in hand. Every stall so far has
+   been in that window; this splits it.
+4. **Name the board beside any point total.** Prices are quantised and hold;
+   point totals move every refresh, forever.
+5. **No bare "today"** (already live since 2026-08-26, unchanged here).
+6. **`tools/live-board.mjs` as a documented fallback** if the connector fetch
+   fails — explicitly *not* the primary, because the checkout can sit behind
+   what is deployed.
+
+**Two of these were downgraded from what was originally proposed, and the reason
+matters.** Edit 6 was going to replace the 625 KB connector fetch outright, on
+the theory that the fetch was killing runs. That theory was refuted on 08-27, so
+replacing the authoritative source with a checkout that can lag would have traded
+a real property for nothing. It went in as a fallback instead. Edit 4 was going
+to require season points rounded to whole numbers; that would have broken row
+45's cost-per-point analysis, which needs tenths, so only the name-the-board half
+shipped.
+
+**A drafting error was caught by reading the assembled prompt back before
+pushing, not by the diff.** The first pass inserted the two new verification
+paragraphs in the middle of an existing sentence pair, orphaning "If one does not
+match, your pricing is wrong" three paragraphs from what it referred to. The
+character count and the hunk count both looked fine. Only reading it in sequence
+showed it. Re-read the passages you edit, in full, in order.
+
+### PR #107 merged 2026-08-30
+
+Merged at Ken's instruction as `e792090`. Both checks were green on the head
+commit (`checks`, `Workers Builds: iron-tuna`) and `mergeable_state` was clean.
+
+`lead_story_run` had been live on D1 since 2026-08-25 and the prompt section
+had been running on the Routine since then, so the merge changed nothing about
+how the desk behaves. What it did was put the repo's record back in step with
+production, which had been the whole reason it was outstanding.
+
+**The prompt copy #107 landed is already superseded.** It carries the original
+six-stage heartbeat; the live Routine and this branch carry the seven-stage
+version with `parsed`, plus the five other edits pushed on 2026-08-30. Merging
+this branch resolves that, and it resolves in this branch's favour because it
+already carried #107's commit as an ancestor.
+
+**Checked while merging, because main had moved further than expected.** Main had
+taken PR #110 and PR #108 and five camp-watch commits since this branch last
+saw it. PR #110's title — "cheat-sheet-dollar-check" — reads like a pricing
+change and would have meant repricing every published row. It is not: it touches
+one line of `auction-watch.html`. Verified properly rather than by title:
+
+- Every pricing constant (`COLUMN_CURVE`, `COLUMN_CURVE_BUDGET`,
+  `COLUMN_LEAGUE_BUDGET`, `COLUMN_MIN_BID`, `VEGAS_WEIGHT`) is unchanged.
+- `it-league.js` is byte-identical between main and this branch.
+- The `PROJECTIONS` block hashes the same on both (`a8e4a3593b44`).
+- `_worker.js` differs by exactly the +41 lines of PR #108's admin analytics.
+
+So the harness has been reading the right board throughout, and no republished
+figure moved. Confirmed after the merge by rebuilding the board and re-checking
+the live lead's figures: Jeanty RB6 $52, Jacobs RB9 $42, Henry RB8 $43, Hampton
+RB15 $20, Washington RB67 $2, Bowers TE1 $60 — all unchanged.
+
+A branch that has fallen behind main is a stale-board risk, not just a merge
+conflict risk. `tools/live-board.mjs` reads the checked-out `_worker.js`, so an
+out-of-date checkout means an out-of-date board and a verification pass that
+confidently agrees with the wrong numbers. Check `PROJECTIONS` and the curve
+constants against main whenever the branch has drifted.
