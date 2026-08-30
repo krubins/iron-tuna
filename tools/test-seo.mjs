@@ -223,10 +223,11 @@ console.log('\nsitemap.xml');
   const notNoindex = shouldBeNoindex.filter((f) => !/name="robots"[^>]*noindex/.test(read(f)));
   ok('the pages kept out of the sitemap are noindex', notNoindex.length === 0, notNoindex.join(', '));
 
-  // /analyst-desk reads like an internal tool but is a deliberately indexed
-  // public column. Dropping it from the sitemap is a regression, not a cleanup.
-  ok('/analyst-desk is still listed', locs.has('https://irontuna.com/analyst-desk'));
-  ok('/analyst-desk is still indexable', !/name="robots"[^>]*noindex/.test(read('analyst-desk.html')));
+  // The analyst desk was retired on 2026-08-30. Its page is gone, so the URL
+  // must be gone from the sitemap too: a sitemap that advertises a 404 is worse
+  // than one that is short.
+  ok('the retired /analyst-desk is not advertised', !locs.has('https://irontuna.com/analyst-desk'));
+  ok('and its page is really gone', !fs.existsSync(path.join(ROOT, 'analyst-desk.html')));
 
   // The worker's own drop-date filter, run against the real file.
   const filtered = xml.replace(

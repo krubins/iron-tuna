@@ -115,7 +115,6 @@ const ROUTES = [
   ['/bestball',                      '/index.html'],
   // ordinary static pages: the block must not touch these
   ['/faq',                           '/faq.html'],
-  ['/analyst-desk',                  '/analyst-desk.html'],
   ['/play-caller-premium',           '/play-caller-premium.html'],
   ['/insights',                      '/insights.html'],
 ];

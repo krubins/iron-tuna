@@ -72,17 +72,6 @@ jobs:
       - name: Parse player-search.js
         run: node --check player-search.js
 
-      - name: Parse the analyst-desk.html scripts
-        run: |
-          node -e '
-            const fs = require("fs");
-            const h = fs.readFileSync("analyst-desk.html", "utf8");
-            const blocks = [...h.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-            if (!blocks.length) { console.error("no <script> blocks found"); process.exit(1); }
-            blocks.forEach(b => new Function(b[1]));
-            console.log("analyst-desk.html PARSE OK (" + blocks.length + " blocks)");
-          '
-
       # /admin is the only page with a form that calls an API, and it is
       # hand-written like the rest — a syntax error there breaks the dashboard
       # and the comp-access form with it, silently, since nobody browses it.
@@ -114,7 +103,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "analyst-desk.html", "the-pick.html", "play-caller-premium.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -257,10 +246,7 @@ jobs:
       - name: Route rewrites resolve without redirecting or looping
         run: node tools/test-asset-routing.mjs
 
-      - name: The standing analyst column
-        run: node tools/test-analyst-column.mjs
-
-      - name: The reading view's palette, across all three pages
+      - name: The reading view's palette, across both pages
         run: node tools/test-reading-view.mjs
 
       # The Pick is written a story a day by a Routine, in prose, with tables of

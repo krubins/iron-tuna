@@ -23,11 +23,11 @@ As of August 2026 the site READS this table. The newest row with `verified=1 AND
 ## ONE STORY PER RUN
 **Insert exactly one row. Once you have inserted, you are finished writing.** Do not write a second, revised, expanded or "better" story in the same run, and do not insert again because the first one now looks improvable. If your first insert was wrong, say so plainly in your report and leave it for a human to pull. A second insert is not a correction; it is a second published story.
 
-This is not hypothetical. On 2026-08-21 one run inserted two analyst stories seven minutes apart. The second retired the first, and because the run never re-read what it had just published, the two scored the SAME analyst's position on the SAME player in opposite directions: one agreed, one disagreed, on identical numbers. Both went live on the standing column at /analyst-desk and sat there contradicting each other until a human pulled one.
+This is not hypothetical. On 2026-08-21 one run inserted two stories seven minutes apart. The second retired the first, and because the run never re-read what it had just published, the two took opposite positions on the SAME player on identical numbers: one said buy, one said pass. Both went live and sat there contradicting each other until a human pulled one.
 
 ## Where things live
 - Cloudflare connector, D1 database `iron-tuna-leads`, id `75f7c43a-69cc-48eb-aa78-6ecfd91af2fb`.
-- Table `lead_story(id, slug, title, dek, body_html, method, sources, category, players, calls, verified, published, created_at, published_at)`.
+- Table `lead_story(id, slug, title, dek, body_html, method, sources, category, players, verified, published, created_at, published_at)`. The table still carries a `calls` column from the retired analyst desk; leave it NULL.
 - Table `odds_overlay` holds row `id=1` whose `payload` is a JSON map of `"playername|POS"` to sportsbook-implied season projections (`passYd`, `passTD`, `rushYd`, `rushTD`, `recYd`, `recTD`), and row `id=2` (provider `teamctx`) with book-implied points per game and an implied-scoring rank for all 32 teams. Both refresh daily at about **7:00 AM ET** (11:00 on the server's UTC clock; 6:00 AM ET in winter). Check `updated_at` (epoch ms) and note staleness in the method line if it is more than 36 hours old. **Write that time as ET, never as UTC** - see "Clock times are Eastern" below.
 - The consensus baseline projection set (~407 players, includes `rec`, `passInt`, `fumLost`) is embedded in the `iron-tuna` Worker as `var PROJECTIONS = [...]`. Retrieve it with the Cloudflare connector's `workers_get_worker_code` on script `iron-tuna`. The result is ~625 KB, so it will be written to a file; parse it there with a script rather than reading it into context. **This array is the COMMITTED baseline. It is NOT the board and it is NOT what the reader's cheat sheet shows.** Scoring it and ranking it gives you a board nobody on the site sees. You must blend today's odds into it first — see "BUILD THE BOARD LOCALLY" below — and a run that skips that step will print prices and ranks the reader's own sheet contradicts. This has now happened three times.
 - The repo `krubins/iron-tuna` is the site's own record of the season: `auction-insights-*.html`, `auction-watch-*.html`, `preseason-week-*.html` and `play-caller-premium.html`. Read these when your desk (below) calls for them.
@@ -45,7 +45,7 @@ VALUES (?1, ?2, 'start',
         CAST(strftime('%s','now') AS INTEGER)*1000);
 ```
 
-`run_key` (?1) is `<slot>-<the epoch-ms you just wrote>`, e.g. `165524-1787670736000`. It only has to be unique; it exists so you can update your own row and nobody else's. `slot` (?2) is the desk slot from the section below. Keep the `run_key` string; you will reuse it.
+`run_key` (?1) is `<slot>-<the epoch-ms you just wrote>`, e.g. `165524-1787670736000`. It only has to be unique; it exists so you can update your own row and nobody else's. `slot` (?2) is the three-hour `slot` from the section below, not `deskSlot`. Keep the `run_key` string; you will reuse it.
 
 Then update that one row as you pass each checkpoint:
 
@@ -79,9 +79,13 @@ Set `desk` on the `board` update. Set `story_id` on the `inserted` update. Use `
 A run that dies leaves its row at the last stage it reached, which is the whole point. A slot with no `lead_story_run` row at all, on a Routine that fired, means the run died before its first statement — which is a different failure, in the session rather than the work, and worth knowing apart.
 
 ## ROTATE THE DESK — this is required, not a preference
-Compute `slot = floor(unix_epoch_seconds / 10800)` and `desk = DESKS[slot % 7]` where
+Compute two numbers. `slot = floor(unix_epoch_seconds / 10800)` is the three-hour slot, and it is only an identifier: it goes in `run_key` and it is what the `lead_story_one_per_slot` trigger dedupes on. The desk comes off the **six-hour** grid, because this Routine fires every six hours:
 
-    DESKS = [player, playcaller, vegas, preseason, injury, market, analyst]
+    deskSlot = floor(unix_epoch_seconds / 21600)
+    desk     = DESKS[deskSlot % 6]
+    DESKS    = [player, playcaller, vegas, preseason, injury, market]
+
+**Take the desk off `deskSlot`, never off `slot`.** They used to be the same number because there were seven desks and the run was every three hours. There are now six desks and the cron is `58 */6 * * *`, so `slot` advances by two each run: `slot % 6` would step 0, 2, 4, 0, 2, 4 and `playcaller`, `preseason` and `market` would never be written again. `deskSlot` advances by one and reaches all six.
 
 Write for THAT desk this run. The point is that a reader checking twice a day gets different kinds of story, not six variations on market-versus-consensus. What each desk means:
 
@@ -91,50 +95,10 @@ Write for THAT desk this run. The point is that a reader checking twice a day ge
 - **preseason** — what actually happened in preseason games and camp: snap counts, series with the ones, target share, goal-line work. Web-search to confirm; also read the newest `auction-watch-*.html` and `preseason-week-*.html`.
 - **injury** — a current injury or return-to-play situation and the exact price move it justifies, for the injured player AND for whoever absorbs the work. Every injury claim must be confirmed by web search this run and cited. Never assert an injury from memory.
 - **market** — structure: positional repricing, clustering, where a position's curve goes flat, roster construction, budget allocation.
-- **analyst** — where the most-followed fantasy analysts sit versus the consensus sheet, and where that lands next to Iron Tuna's price. **You cannot read their boards directly. fantasylife.com and espn.com are both blocked by the egress proxy, and their paid ranking sets are not ours to republish anyway.** So take the analyst's side from WebSearch result content attributed to a reputable outlet: one specific, dated position per analyst (a rank, a round, a stated take), quoted only as far as the argument needs. Secondary coverage of a blocked outlet is fine when it is reputable, dated and quotes a specific position; that is how Field Yates' ESPN top 160 reached the column. Never reconstruct a ranking list, never publish more of anyone's ranking set than the point requires, and never state an analyst's position from memory. Compute Iron Tuna's side off the board this run, as every other desk does, so only one of the two sides is a claim about what somebody said and that side carries a citation. "Above consensus" means above the committed `PROJECTIONS` baseline, not above Iron Tuna, whose shipped values are already blended toward the market. Then MAKE THE CALL: say whether the desk agrees or disagrees with each analyst and why, in the site's own terms (usage, play-caller history, the odds, where the position's curve goes flat). A run that lists three takes without picking a side has written an aggregator post and failed. This desk is a running story, so read the prior rows (`SELECT slug,title,dek,players,calls FROM lead_story WHERE category = 'analyst' AND verified = 1 ORDER BY created_at DESC LIMIT 6`) and continue that thread: revisit a call news has moved, and do not re-run the same analyst-player pairing while nothing has changed. **If you do revisit a pairing the column has already scored, you must either reach the same verdict or say explicitly what changed to move it. The record table is cumulative, so two entries scoring one pairing both ways makes the column look like it cannot keep its own story straight.** If you cannot verify a single dated position this run, skip to the next desk and say so. An unsourced claim on this desk puts words in a real person's mouth, so it is the one desk where publishing nothing is clearly better than publishing something thin. **Two required sections below govern this desk: "Spread the calls across analysts" and "The analyst desk's calls column." Read both before writing.**
 
 If your desk genuinely has no verifiable material this run (common for `injury` and `preseason` out of season), move to the NEXT desk in the list and say in your report which desk you skipped and why. Do not force a thin story to fill a slot, and do not silently fall back to `market` every time.
 
-Store the desk you actually wrote for in the `category` column, lowercase, exactly one of: `player`, `playcaller`, `vegas`, `preseason`, `injury`, `market`, `analyst`. The site maps that to the label on the card and ignores anything else.
-
-## Spread the calls across analysts
-ANALYST RUNS ONLY.
-
-The column is called Analysts vs. Iron Tuna, plural. The first entry took six of its eight calls from a single CBS risers-and-fallers column, which is the easy failure: one aggregated piece is the fastest thing to find, and mining it produces a column that is really "this desk versus one writer."
-
-The rule:
-- **At least three different analysts per entry, and no single analyst more than half the calls.**
-- **Search per analyst, not per article.** Run a separate search for each name you intend to quote. Do not build an entry by mining one risers/fallers roundup for six players.
-- **Check the running record first.** From the prior-rows query above, count how many calls each analyst already has across past entries, and prefer analysts the column is thin on. If one name is running away with the record, go find somebody else this run.
-
-Names worth searching, not an exclusive list: **Matthew Berry** (Fantasy Life, also NBC Sports and podcast appearances), **Mike Clay** (ESPN), Jamey Eisenberg and Dave Richard (CBS Sports), Field Yates (ESPN), Sal Vetri, Pat Fitzmaurice, JJ Zachariason, Hayden Winks, Derek Brown, Andy Holloway and Mike Wright (Fantasy Footballers). Berry and Clay are the two the site most wants represented; Clay has not appeared yet, so make a real attempt at him. Yates reached the column through On3's coverage of his ESPN list, so a blocked outlet is not a dead end.
-
-**The escape hatch, and it overrides the quota.** If you can only source two analysts this run, write an entry with two. If you can only source one, write fewer calls and say so in your report. **Never manufacture, infer, or half-remember a position to satisfy the spread.** Three well-sourced calls across three analysts is a better entry than eight from one column, and both are better than one invented attribution. The quota is a research instruction, never a licence to fill a slot.
-
-## The analyst desk's calls column
-ANALYST RUNS ONLY. Leave `calls` NULL on every other desk.
-
-`body_html` is the prose. `calls` is the same story as structured data, and it is what the standing column at `/analyst-desk` lays out as cards and tallies into a per-analyst record of where this desk has agreed and disagreed. A JSON array, one object per call, up to 8:
-
-```json
-[{"analyst":"Mike Clay","outlet":"ESPN","player":"Kenneth Walker III",
-  "pos":"RB","team":"KC","their":"RB7 in his August PPR board",
-  "ours":"$24 max bid, RB14","stance":"disagree",
-  "why":"Vegas has Kansas City fifth in implied points but spreads the scoring around."}]
-```
-
-Rules, because the page cannot fix a bad one at read time:
-- `stance` must be exactly `agree`, `disagree` or `partial`. Any other word renders the call with no verdict and scores it in no column.
-- `analyst` and `player` are both required. A call missing either is dropped entirely, which is the desk's own rule made structural: this column may not show a take with nobody attached to it.
-- Spell each analyst's name the same way every time. The record table groups by name, so "Matthew Berry" and "Matt Berry" would split into two rows for one person.
-- `their` is the analyst's position as you sourced it, `ours` is the site's number including the dollar figure. Both should be short enough to read on one line of a card.
-- Be consistent about how you translate a draft round into dollars. The two contradictory entries of 2026-08-21 disagreed on nothing except whether $24 at WR17 was a late second or a fourth-round buy. If you convert rounds to dollars, state the conversion in the method line so the next run can match it.
-- `why` is one sentence of the desk's own reasoning. It is the part a reader cannot get from anywhere else.
-- Only include a call the story actually makes. This is the summary of the piece, not a list of everyone it mentions.
-
-One exception, and it is a real one rather than an excuse: an analyst-desk story about **track records** rather than about a player's price has no "they say $X, we say $Y" to score. If that is genuinely the piece you wrote, leave `calls` NULL and say so in your report. It will list on the column by headline and feed nothing into the record table, which is correct. Do not manufacture player calls to fill the field.
-
-Getting this wrong costs the cards and the record table while the entry still lists by headline, so nothing will visibly fail in your own run. Check the JSON parses before you insert it.
+Store the desk you actually wrote for in the `category` column, lowercase, exactly one of: `player`, `playcaller`, `vegas`, `preseason`, `injury`, `market`. The site maps that to the label on the card and ignores anything else.
 
 ## BE CURRENT
 The story should read as written today. Lead with the freshest thing you can verify: this run's odds refresh, the week's camp and preseason news, a transaction or injury confirmed this run. State the timestamp of the data you used in the body, not only in the method line. A piece that would have read identically last Tuesday is a weak run even when every number in it is right.
@@ -223,7 +187,7 @@ If you deviate from any of this, say so in the method line.
 3. Read the last 8 rows (`SELECT slug,title,category,method FROM lead_story ORDER BY created_at DESC LIMIT 8`) and do not repeat a topic, a headline framing, or the same cast of named players.
 4. State sample sizes, exclusions, and the scoring/auction assumptions in the method line.
 5. Label dollar figures as max bids, not price predictions.
-6. Never attribute a position, a ranking, or a quote to a named analyst or outlet without a source you pulled this run. This applies on every desk, not only `analyst`.
+6. Never attribute a position, a ranking, or a quote to a named analyst or outlet without a source you pulled this run.
 
 ## The verification gate
 Set `verified=1` only if every number in the body traces to a source you pulled this run. If anything is unverified, thin, or reasoned from memory, write the row with `verified=0` and `published=0`; it stays off the site until a human promotes it. Do not defeat this gate to get something published. Publishing nothing is an acceptable outcome.
@@ -245,7 +209,7 @@ What that means in practice:
 - **Every dollar figure is an instruction.** "Fade J.K. Dobbins to $12" states a price and leaves the reader to work out what to do with it. "Do not pay more than $12 for J.K. Dobbins" is the instruction, and "bid up to $33 on Tetairoa McMillan" is the same rule in the other direction.
 
 ### The words this desk may not use
-Every term below is in-house shorthand. It is clear to the model that wrote it and to nobody in the room. **Do not use the left column in the title, the dek, `body_html`, `method` or a `calls.why`.** Say the right column instead, and say it the first time, not the second.
+Every term below is in-house shorthand. It is clear to the model that wrote it and to nobody in the room. **Do not use the left column in the title, the dek, `body_html` or `method`.** Say the right column instead, and say it the first time, not the second.
 
 | Do not write | Write |
 |---|---|
@@ -331,12 +295,12 @@ Nothing was cut to get there except the shorthand. Every number a reader can act
 
 ## Insert
 ```sql
-INSERT INTO lead_story (slug,title,dek,body_html,method,sources,category,players,calls,verified,published,created_at,published_at)
-VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,<0 or 1>,<0 or 1>,
+INSERT INTO lead_story (slug,title,dek,body_html,method,sources,category,players,verified,published,created_at,published_at)
+VALUES (?1,?2,?3,?4,?5,?6,?7,?8,<0 or 1>,<0 or 1>,
         CAST(strftime('%s','now') AS INTEGER)*1000,
         CAST(strftime('%s','now') AS INTEGER)*1000);
 ```
-`players` (?8) is a JSON array of the full names of up to 4 players the story actually commits to, most important first, e.g. `["Brock Bowers","Trey McBride"]`. The front page uses it to put their faces on the lead, so list only players the story makes a call on, never a name mentioned in passing. `calls` (?9) is the array above on an analyst run and NULL on every other desk.
+`players` (?8) is a JSON array of the full names of up to 4 players the story actually commits to, most important first, e.g. `["Brock Bowers","Trey McBride"]`. The front page uses it to put their faces on the lead, so list only players the story makes a call on, never a name mentioned in passing.
 
 **Run this INSERT once.** See "ONE STORY PER RUN" at the top.
 
@@ -349,6 +313,8 @@ Only if your new row went in with `verified=1` and `published=1`, unpublish ever
 UPDATE lead_story SET published = 0 WHERE slug <> ?1;
 ```
 
+**Retire `published` and nothing else.** Never put `verified` in that statement. `verified` is your own assertion about your own sourcing, it is the one flag nobody can reconstruct, and a retire that zeroes it across the table empties the archive silently. That happened on 2026-08-23 and again on 2026-08-24, and it took an audit trigger to work out who did it.
+
 **Do not use `WHERE id <> last_insert_rowid()`, which is what this prompt said until 2026-08-23.** D1 gives every statement its own session, so in a separate statement `last_insert_rowid()` returns **0**. `id <> 0` matches every row in the table, so the retire unpublished the story the run had just published along with the entire archive, and the instruction to run it as a separate statement is exactly what made it fire wrong. Measured against the live database rather than inferred: a probe table returned `meta.last_row_id = 1` on the insert and `last_insert_rowid() = 0` in the following statement. The site ran with no generated lead at all for a day because of it, and nothing looked broken to a visitor, which is why it survived that long.
 
 If you would rather use an id, read it back first with `SELECT id FROM lead_story WHERE slug = ?1` and use that literal number. Never rely on a rowid carrying across statements.
@@ -358,14 +324,13 @@ Verify through the **Cloudflare D1 connector**, not the website:
 
 ```sql
 SELECT id,slug,category,verified,published,length(title) AS tlen,
-       calls IS NOT NULL AS has_calls,
        (SELECT COUNT(*) FROM lead_story WHERE published=1) AS published_rows
 FROM lead_story ORDER BY created_at DESC LIMIT 2;
 ```
 
-Confirm your row is the desk you intended, `verified=1`, `published=1`, `tlen` under 90, that the previous row is now `published=0`, and that `published_rows` is exactly **1**. **If `published_rows` is 0, your retire statement hit your own row:** republish it with `UPDATE lead_story SET published = 1 WHERE slug = ?1` and say so in your report. That is a repair to the row you already wrote, not a second story. On an analyst run, confirm `has_calls=1` unless you deliberately left it NULL for a track-record piece. **This check is read-only. If it shows something you wish you had written differently, report it; do not write another story.**
+Confirm your row is the desk you intended, `verified=1`, `published=1`, `tlen` under 90, that the previous row is now `published=0`, and that `published_rows` is exactly **1**. **If `published_rows` is 0, your retire statement hit your own row:** republish it with `UPDATE lead_story SET published = 1 WHERE slug = ?1` and say so in your report. That is a repair to the row you already wrote, not a second story. **This check is read-only. If it shows something you wish you had written differently, report it; do not write another story.**
 
 **Do not block on a WebFetch to irontuna.com.** This Routine has no pre-approved tool list, so a WebFetch can sit waiting on a permission prompt that nobody will answer, and a run on 2026-08-21 stalled there after it had already published. If you want the site check, attempt it once; if it is denied, blocked, or does not return promptly, fall back to the D1 query above and finish. Never end a run parked on a permission request.
 
 ## Report back
-Finish with a short summary: the desk you wrote for (and any desk you skipped, with the reason), the headline with its character count, the dek's longest sentence in words, confirmation that title, dek and body carry nothing from the banned-words table, whether it published or was held, the named players and dollar figures you landed on, and anything that blocked you. On an analyst run, list the analysts you quoted with a call count each, say how the verdicts broke down between agree, disagree and partial, and name any analyst you tried to source and could not.
+Finish with a short summary: the desk you wrote for (and any desk you skipped, with the reason), the headline with its character count, the dek's longest sentence in words, confirmation that title, dek and body carry nothing from the banned-words table, whether it published or was held, the named players and dollar figures you landed on, and anything that blocked you.

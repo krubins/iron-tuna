@@ -1569,10 +1569,21 @@ brief — `list_sessions` will show them.
 checked one at a time against a stated standard: valid, named, dated sources
 (7 to 14 per row); a method line stating the model and the data timestamps;
 every external-fact claim matched to a source entry; and numbers consistent
-across dek, body and calls. All nine held up, and all nine are `verified = 1`
-again. Two were better than the standard required: id 28 states its own null
-model and assumptions for a probability claim, and id 33 reconciles two named
-players against the shipped cheat sheet.
+across dek, body and calls. All nine held up on that reading. Two were better
+than the standard required: id 28 states its own null model and assumptions for
+a probability claim, and id 33 reconciles two named players against the shipped
+cheat sheet.
+
+**The restore did not stand, and that was the right outcome.** Ids 27 to 35 are
+`verified = 0` today and should stay there. The `lead_story_audit` trail (see
+the closing subsection of the 08-24 entry below) shows exactly one of the nine
+ever reaching `verified = 1` after the audit trigger was installed — id 27, at
+15:01:34 on 08-24 — and shows it back at 0 six seconds later. The reason is the
+one this section already gives: documentary re-reading is a weaker claim than
+the one the flag encodes, and the daily watch's own prompt was updated the same
+minute to say so ("Ids 27 through 34 were left `verified=0` after the 08-23
+wipe, deliberately ... do not restore them"). Anyone reading the paragraph above
+and finding zeros should not treat that as a regression to fix.
 
 Be precise about what that flag now means on those rows. It is **documentary
 verification** — the sources and method each claim requires are present and
@@ -3828,7 +3839,7 @@ RB8 rather than RB13" is the finding, and it needs no second dollar figure.
 Story 39 loses its organising idea in that rewrite, because "the widest gaps in
 dollars" is a ranking of an artefact; the honest version ranks by rank move.
 
-### `verified` wiped a second time, on 2026-08-24, and it is still not explained
+### `verified` wiped a second time, on 2026-08-24 — closed 2026-08-30
 
 §17 ends by saying that if `verified` ever zeroes again with `published`
 intact, that is a second and separate bug. It happened, inside a ten-minute
@@ -3873,6 +3884,65 @@ slots` checks `published_rows` first, and `published_rows` was 1 throughout. A
 watch that tested `live_rows`, meaning `published = 1 AND verified = 1`, would
 have caught both this and the original incident, because that is the pair the
 site actually reads.
+
+#### Closed. It was other agents, and it stopped when the audit trail went in.
+
+Asked on 2026-08-30 to find what keeps zeroing `verified`, and the answer is
+that nothing does any more. The thing that settled it is the trigger this
+section's successor installed:
+
+```sql
+CREATE TRIGGER lead_story_flag_audit AFTER UPDATE OF published, verified ON lead_story
+FOR EACH ROW WHEN old.published <> new.published OR old.verified <> new.verified
+BEGIN INSERT INTO lead_story_audit (story_id, at, old_published, new_published, old_verified, new_verified)
+  VALUES (old.id, CAST(strftime('%s','now') AS INTEGER) * 1000, old.published, new.published, old.verified, new.verified); END
+```
+
+It has been in place since 15:01 UTC on 2026-08-24. In the six days since, the
+whole table has produced **25 flag changes**, and only four of them lower
+`verified`:
+
+| audit id | story | when (UTC) | published | verified | what it was |
+|---|---|---|---|---|---|
+| 2 | 27 | 08-24 15:01:40 | 0→0 | 1→0 | the archive restore above, reverted on purpose 6s later |
+| 4 | 44 | 08-24 19:40:02 | 1→0 | 1→0 | the retraction written up under "Row 44, and the check that could not fail" |
+| 9 | 46 | 08-25 11:18:34 | 0→0 | 1→0 | a hand retraction with no reason recorded anywhere — the one gap left |
+| 19 | 53 | 08-28 11:26:53 | 0→0 | 1→0 | retired deliberately, noted in the desk prompt |
+
+Every one of the other twenty-one is a run retiring its predecessor, and every
+one of those reads `published 1→0, verified 1→1`. The retire-by-slug fix holds:
+**`verified` has not been collaterally touched since 08-24.**
+
+The zeros that remain are therefore all accounted for, and none of them is a
+live bug:
+
+- **Ids 1 to 40** were zeroed before the trigger existed, by the two incidents
+  this section and §17 describe. They have not moved since. §17's "it is not
+  fully explained" is now answered as far as it can be: a second session running
+  `UPDATE lead_story SET verified = 0, published = 0` to a different brief, plus
+  the `last_insert_rowid()` fault, plus the 08-24 blanket `UPDATE` above.
+- **Ids 44, 46, 53** are the four rows in the table — deliberate retractions.
+- **Everything else is 1.**
+
+Three things to carry forward, because the shape of this recurs:
+
+1. **The suspicion was of a mystery writer, and the writers were all ours.** Six
+   Routines hold the same D1 credentials and work to different briefs. A state
+   change with no author looks identical to corruption. The audit trigger is
+   what turns "the table keeps changing" into "this agent did this at this
+   second", and it cost four lines of SQL.
+2. **Ask for transitions, not end states.** Every earlier pass at this read
+   current `verified` values and tried to infer history from the pattern of
+   zeros. The pattern is unreadable — post-fix zeros (deliberate retractions)
+   and pre-fix zeros (the wipes) interleave by id, so no cutoff separates them.
+   Only `old_verified=1 AND new_verified=0` separates them, and that needs the
+   trail.
+3. **`Iron Tuna: watch for empty lead-story slots` is paused, and its title says
+   why: it restored retired rows.** It was armed to catch empty slots and its
+   own brief pushed it toward republishing the newest `verified=1` row; it
+   fired at 14:18 on 08-24 and was paused 43 minutes later. If it is ever
+   re-enabled, that is the line to fix first — and the `live_rows` gap in the
+   paragraph above is still unfixed in its prompt.
 
 | 40 | `weekly-swing-steady-varied-2026-08-23-20` | market | the five steadiest week to week and the five most varied |
 
@@ -4238,6 +4308,43 @@ authority over the thing it measures.
 The heartbeat says how far a run got. The `verified=0` story row says what it
 decided. Both still apply; they answer different questions.
 
+### The analyst desk, retired 2026-08-30
+
+Ken: *"I don't need anything about the other analysts."* The desk that compared
+Matthew Berry, Mike Clay and others against the Iron Tuna board is gone — the
+rotation slot, the standing column, the API, the tests and the nine stories.
+
+What came out, so a later reader is not hunting a half-removed feature:
+
+| where | what |
+|---|---|
+| `_worker.js` | the whole `── The Analyst Desk` block (`analystCalls`, `analystScoreboard`, `analystCallsReady`, `analystColumnPayload`, the caches and the three constants), the `analyst` entry in `LEAD_CATEGORIES`, the `calls` side-query on `/api/lead-story/body`, and the `GET /api/analyst-column` route |
+| pages | `analyst-desk.html` deleted; its nav and footer links stripped from 107 pages and from `tools/build-chrome.mjs`, which is what would have put them back. Nav "Columns" now points at `/play-caller-premium` |
+| `lead.html` | the call-card CSS, the `#calls` container and the render block |
+| tests | `tools/test-analyst-column.mjs` deleted; `test-reading-view`, `test-chrome`, `test-seo`, `test-asset-routing` and `test-lead-story` updated |
+| `sitemap.xml` | `/analyst-desk` removed — a sitemap advertising a 404 is worse than a short one |
+| D1 | the nine `category='analyst'` rows set `verified=0, published=0`. Four were verified; the audit trail has the transitions |
+
+**The `calls` column stays on `lead_story`.** Dropping it would rewrite the
+table for no gain, and the nine retired rows still hold their JSON. The prompt
+says to leave it NULL.
+
+**The arithmetic that nearly broke this, and the reason to read a change like
+it twice.** Seven desks became six, and the obvious edit — `DESKS[slot % 7]` to
+`DESKS[slot % 6]` — would have silently stranded half of them. `slot` is on a
+three-hour grid but the Routine has fired every **six** hours since 08-25, so
+`slot` advances by two each run. With seven desks that was harmless, because
+gcd(2,7) = 1 and the cycle still reached all seven. With six it is gcd(2,6) = 2:
+`slot % 6` steps 0, 2, 4, 0, 2, 4 forever, and `playcaller`, `preseason` and
+`market` would never have been written again. Nothing would have errored. The
+prompt now takes the desk off `deskSlot = floor(epoch / 21600)` and keeps `slot`
+for `run_key` and the `lead_story_one_per_slot` dedupe, which is what each is
+actually for.
+
+The desk's other legacy is worth keeping: it is what produced the audit trigger,
+and the sourcing rule it was built under (never state a named person's position
+without a source pulled that run) survives as hard rule 6, now scoped to every
+desk rather than to one.
 ### The 2026-08-26 11:00Z refresh: what a board move actually breaks
 
 The first odds refresh after PR #105 landed at 11:00:35Z on 2026-08-26
