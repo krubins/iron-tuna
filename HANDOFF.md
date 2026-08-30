@@ -4177,3 +4177,63 @@ that finish beats eight where half do not, and it halves the chance of a story
 sitting live across the daily odds refresh. The underlying question — why a run
 ends without inserting — is still open, and a heartbeat table would answer it
 without touching the story-insert path.
+
+### `lead_story_run`: the heartbeat, and why the last two fixes could not have worked
+
+Five of twelve runs between 2026-08-24 and 2026-08-25 ended without inserting a
+story. Two attempts to fix that failed, and both failed for the same reason,
+which is the part worth keeping.
+
+The first told the run to insert a story row either way. The second added the
+blend guards. Both were placed where they belonged topically — the verification
+gate, the pricing section — which is to say **most of the way through a 43,000
+character brief**. If a run is dying before it gets there, no wording in those
+sections can reach it. A rule only fires if the run survives to read it.
+
+So the heartbeat is the first instruction in the prompt, before the projections,
+before the desk rotation, before anything. The run claims a row and then updates
+one column as it passes each checkpoint:
+
+    start -> board -> research -> drafted -> inserted -> done
+
+```sql
+CREATE TABLE lead_story_run (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_key TEXT NOT NULL UNIQUE,   -- '<slot>-<started_at ms>', so a run can
+  slot INTEGER,                   -- update its own row and nobody else's
+  desk TEXT,
+  stage TEXT NOT NULL,
+  story_id INTEGER,
+  note TEXT,
+  started_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX lead_story_run_started ON lead_story_run(started_at DESC);
+```
+
+A run that dies leaves its row at the last stage it reached. That is the
+diagnosis, and it distinguishes the cases that matter: `drafted` means the story
+was written and thrown away, which is the expensive failure; `research` or
+`board` means it ran out of room gathering; **no row at all**, on a Routine whose
+`last_fired_at` says it fired, means the session died before its first statement,
+which is an environment failure and needs a different fix entirely. Until now
+those four were indistinguishable from each other and from a deliberate hold.
+
+`tools/run-report.mjs` prints the queries, with a legend for reading them.
+
+**Two design constraints, both deliberate.**
+
+It is a **separate table with no trigger on `lead_story`**. The obvious cheaper
+design — insert a stub story row up front and update it at the end — was
+rejected: it puts instrumentation directly in the path of the publish, and this
+column has already shipped a double-insert once (2026-08-21, two contradictory
+analyst stories seven minutes apart). Diagnosing a reliability problem must not
+risk the correctness problem that is already fixed.
+
+And the prompt says plainly that **a failed heartbeat must never stop the run**.
+A run that abandoned a good story because it could not write a log entry would
+have done something far worse than not logging. Instrumentation gets no
+authority over the thing it measures.
+
+The heartbeat says how far a run got. The `verified=0` story row says what it
+decided. Both still apply; they answer different questions.
