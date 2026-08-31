@@ -3243,46 +3243,105 @@ function positionFull(team, pos, config) {
 }
 function applyPositionalDemand(players, teams, config, draftedIds) {
   const di = draftedIds || new Set();
-  if (!di.size || !teams || !teams.length) return players.map(p => ({
+  const minBid = config.valuation.minBid;
+  const POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+  const flat = () => players.map(p => ({
     ...p,
     demandFactor: 1
   }));
-  const minBid = config.valuation.minBid;
+  if (!di.size || !teams || !teams.length) return flat();
+  // Phase in with draft progress: one pick must not reprice the whole board.
+  const ramp = Math.min(1, di.size / Math.max(1, teams.length * 2));
   const fixed = (config.benchPositions || 'any') === 'fixed';
-  const POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
-  const cap = pos => fixed ? positionCapacity(config, pos) : 999;
+  const eligPos = config.flex && config.flex.eligible || [];
+  const flexCount = config.flex && config.flex.count || 0;
+  const starters = pos => config.roster[pos] && config.roster[pos].starters || 0;
+  const capTotal = pos => config.roster[pos] && config.roster[pos].total || 0;
   const tmax = t => Math.max(0, (t.budgetRemaining || 0) - Math.max(0, (t.spotsRemaining || 0) - 1) * minBid);
-  const demand = {},
-    supply = {};
-  POS.forEach(pos => {
-    let dollars = 0;
-    teams.forEach(t => {
-      if ((t.spotsRemaining || 0) <= 0) return;
-      const cnt = (t.roster || []).filter(r => r.position === pos).length;
-      if (cnt >= cap(pos)) return;
-      const m = tmax(t);
-      if (m > minBid) dollars += m - minBid;
-    });
-    demand[pos] = dollars;
-  });
+  const above = v => Math.max(0, (v == null ? minBid : v) - minBid);
+  // Supply = above-min dollars still on the board, by position. The baseline is the
+  // same measure over the whole pre-draft pool, so factors read exactly 1.0 at the
+  // start of the draft and only move as the board and rosters actually drift apart.
+  const supply = {},
+    supply0 = {};
   players.forEach(p => {
+    supply0[p.position] = (supply0[p.position] || 0) + above(p.auctionValue);
     if (di.has(p.id)) return;
-    const v = p.marketValue != null ? p.marketValue : p.auctionValue != null ? p.auctionValue : minBid;
-    supply[p.position] = (supply[p.position] || 0) + Math.max(0, v - minBid);
+    supply[p.position] = (supply[p.position] || 0) + above(p.marketValue != null ? p.marketValue : p.auctionValue);
   });
-  const totalD = POS.reduce((s, pos) => s + (demand[pos] || 0), 0);
-  const totalS = POS.reduce((s, pos) => s + (supply[pos] || 0), 0) || 1;
-  const globalRatio = totalD / totalS || 1;
+  const totalS = POS.reduce((s, pos) => s + (supply[pos] || 0), 0);
+  const totalS0 = POS.reduce((s, pos) => s + (supply0[pos] || 0), 0);
+  if (totalS <= 0 || totalS0 <= 0) return flat();
+  // Split each team's spendable dollars across the slots it still has to fill --
+  // not across every position it is merely allowed to roster, which under "any"
+  // benches is all six of them. Flex dollars follow the value left at each
+  // eligible position.
+  const allocate = (roster, pool) => {
+    const elig = eligPos.filter(pos => (pool[pos] || 0) > 0);
+    const eligTotal = elig.reduce((s, pos) => s + pool[pos], 0) || 1;
+    const poolTotal = POS.reduce((s, pos) => s + (pool[pos] || 0), 0) || 1;
+    const out = {};
+    POS.forEach(pos => out[pos] = 0);
+    roster.forEach(t => {
+      if ((t.spotsRemaining || 0) <= 0) return;
+      const m = tmax(t) - minBid;
+      if (m <= 0) return;
+      const have = {};
+      (t.roster || []).forEach(r => have[r.position] = (have[r.position] || 0) + 1);
+      const full = pos => fixed && (have[pos] || 0) >= positionCapacity(config, pos);
+      const w = {};
+      POS.forEach(pos => w[pos] = full(pos) ? 0 : Math.max(0, starters(pos) - (have[pos] || 0)));
+      const flexUsed = eligPos.reduce((s, pos) => s + Math.max(0, (have[pos] || 0) - starters(pos)), 0);
+      const flexLeft = Math.max(0, flexCount - flexUsed);
+      if (flexLeft > 0) elig.forEach(pos => {
+        if (!full(pos)) w[pos] += flexLeft * (pool[pos] / eligTotal);
+      });
+      let wTotal = POS.reduce((s, pos) => s + w[pos], 0);
+      if (wTotal <= 0) {
+        // Starters and flex are covered: what is left is bench money, which chases
+        // whatever upside remains rather than any particular slot.
+        POS.forEach(pos => w[pos] = full(pos) ? 0 : Math.max(0, capTotal(pos) - (have[pos] || 0)) * ((pool[pos] || 0) / poolTotal));
+        wTotal = POS.reduce((s, pos) => s + w[pos], 0);
+      }
+      if (wTotal <= 0) return;
+      POS.forEach(pos => out[pos] += m * (w[pos] / wTotal));
+    });
+    return out;
+  };
+  const spots0 = POS.reduce((s, pos) => s + capTotal(pos), 0) + flexCount;
+  const fresh = teams.map(() => ({
+    budgetRemaining: config.budget,
+    spotsRemaining: spots0,
+    roster: []
+  }));
+  const demand = allocate(teams, supply);
+  const demand0 = allocate(fresh, supply0);
+  const totalD = POS.reduce((s, pos) => s + demand[pos], 0);
+  const totalD0 = POS.reduce((s, pos) => s + demand0[pos], 0);
+  if (totalD <= 0 || totalD0 <= 0) return flat();
+  // Money-chasing-a-position vs value-on-offer, measured against where that ratio
+  // started. Clamp the raw signal, phase it in, then rescale so demand only moves
+  // dollars between positions instead of deflating the board as a whole.
   const factor = {};
   POS.forEach(pos => {
-    const local = (supply[pos] || 0) > 0 ? demand[pos] / supply[pos] : globalRatio;
-    let f = globalRatio > 0 ? local / globalRatio : 1;
-    if (!isFinite(f) || f <= 0) f = 1;
-    factor[pos] = Math.max(0.4, Math.min(1.2, f));
+    const sShare = (supply[pos] || 0) / totalS;
+    const sShare0 = (supply0[pos] || 0) / totalS0;
+    if (sShare < 0.02 || sShare0 <= 0) {
+      factor[pos] = 1;
+      return;
+    }
+    const now = demand[pos] / totalD / sShare;
+    const then = demand0[pos] / totalD0 / sShare0;
+    const raw = then > 0 ? now / then : 1;
+    const clamped = !isFinite(raw) || raw <= 0 ? 1 : Math.max(0.65, Math.min(1.5, raw));
+    factor[pos] = 1 + (clamped - 1) * ramp;
   });
+  const weighted = POS.reduce((s, pos) => s + (supply[pos] || 0) * factor[pos], 0);
+  const scale = weighted > 0 ? totalS / weighted : 1;
+  POS.forEach(pos => factor[pos] = Math.max(0.6, Math.min(1.55, factor[pos] * scale)));
   return players.map(p => {
     const f = factor[p.position] != null ? factor[p.position] : 1;
-    if (di.has(p.id) || f === 1) return {
+    if (di.has(p.id) || f === 1 || p.priceOverridden) return {
       ...p,
       demandFactor: f
     };
@@ -21969,7 +22028,7 @@ function App() {
       return {
         ...p,
         scarce: fl || null,
-        personalValue: Math.max(config.valuation.minBid, Math.round(scarBoost(base, fl, config.budget) * (p.demandFactor || 1)))
+        personalValue: Math.max(config.valuation.minBid, Math.round(scarBoost(base, fl, config.budget)))
       };
     });
     const draftedIds = new Set(draftHistory.map(d => d.playerId));
@@ -22087,7 +22146,6 @@ function App() {
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : isTgt ? 'target' : needEligPos.has(p.position) ? 'open' : 'fade';
       const _fl = p.position === 'K' || p.position === 'DEF' || draftedIds.has(p.id) ? null : scarMap.get(p.id);
-      pv = Math.max(minBid, Math.round(pv * (p.demandFactor || 1)));
       return {
         ...p,
         marketPrice: adj.recommendedPrice,
