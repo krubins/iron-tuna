@@ -18911,32 +18911,57 @@ function buildCoachContext(q, ctx) {
   };
 }
 // The 2026 coaching staffs this repo actually asserts, and the only ones the Value
-// Coach is allowed to state. The system prompt invites the model to answer staff and
-// scheme questions from its own football knowledge, and without a table to check
-// against it answers them from its training data: it pitched Trevor Lawrence as a
-// Doug Pederson beneficiary two coaching hires after Pederson left Jacksonville.
-// Every row below is quoted from a page in this repo, never from memory — see the
-// Auction Watch pages and /play-caller-premium. Teams the site has never named are
-// deliberately absent, because "not sure" beats a confident wrong name; grep the
-// corpus for the claim before adding a row, and update a row when a page changes it.
+// Coach and the Roast a Rival jabs are allowed to state. The system prompt invites
+// the model to answer staff and scheme questions from its own football knowledge, and
+// without a table to check against it answers them from its training data: it pitched
+// Trevor Lawrence as a Doug Pederson beneficiary two coaching hires after Pederson
+// left Jacksonville.
+//
+// Provenance is per row. A row citing a page was quoted from this repo's own copy, and
+// tools/test-coaching-staffs.mjs cross-checks it against that copy — grep the corpus
+// before editing one, and update it when a page changes. A row marked `verified` had no
+// page to quote and was checked against the club's own announcement plus a second
+// published list; the 2026 cycle moved ten head coaches, so no row here may be filled in
+// from memory. Re-check the whole table each offseason.
+//
+// All 32 teams are listed, which is a change: the table used to omit teams the site had
+// never written about, on the reasoning that "not sure" beats a confident wrong name.
+// The prompt still falls back to exactly that for any team missing here. But Roast a
+// Rival names coaches from this table too and needs a head coach for every team, so the
+// test now asserts both 32 rows and an HC in each.
 const STAFFS_2026 = {
   ARI: 'HC Mike LaFleur',                                  // auction-watch-2026-08-21
+  ATL: 'HC Kevin Stefanski',                               // verified
+  BAL: 'HC Jesse Minter',                                  // verified
+  BUF: 'HC Joe Brady',                                     // verified
   CAR: 'HC Dave Canales',                                  // auction-watch-2026-07-26
   CHI: 'HC Ben Johnson',                                   // auction-watch-2026-07-04, 2026-08-21
-  CLE: 'play-caller Todd Monken, hired from Baltimore with Travis Switzer', // play-caller-premium
+  CIN: 'HC Zac Taylor',                                    // verified
+  CLE: 'HC Todd Monken, hired from Baltimore with Travis Switzer', // play-caller-premium
+  DAL: 'HC Brian Schottenheimer',                          // verified
+  DEN: 'HC Sean Payton',                                   // verified
   DET: 'HC Dan Campbell, OC Drew Petzing',                 // auction-watch-2026-06-28, 2026-06-29
+  GB:  'HC Matt LaFleur',                                  // verified
+  HOU: 'HC DeMeco Ryans',                                  // verified
   IND: 'HC Shane Steichen',                                // auction-watch-2026-08-18
   JAX: 'HC Liam Coen',                                     // auction-watch-2026-06-24, 2026-07-11
   KC:  'HC Andy Reid',                                     // auction-watch-2026-07-21
-  LAC: 'OC Mike McDaniel',                                 // auction-watch-2026-06-29
+  LAC: 'HC Jim Harbaugh, OC Mike McDaniel',                // auction-watch-2026-06-29 names the OC
+  LAR: 'HC Sean McVay',                                    // verified
   LV:  'HC Klint Kubiak',                                  // auction-watch-2026-08-22
+  MIA: 'HC Jeff Hafley',                                   // verified
+  MIN: "HC Kevin O'Connell",                               // verified
   NE:  'HC Mike Vrabel',                                   // auction-watch-2026-06-23, 2026-07-22
   NO:  'HC Kellen Moore',                                  // auction-watch-2026-07-01
   NYG: 'HC John Harbaugh, OC Matt Nagy',                   // play-caller-premium
   NYJ: 'HC Aaron Glenn',                                   // auction-watch-2026-07-12, 2026-07-20
+  PHI: 'HC Nick Sirianni',                                 // verified
   PIT: 'HC Mike McCarthy',                                 // auction-watch-2026-07-03
+  SEA: 'HC Mike Macdonald',                                // verified
+  SF:  'HC Kyle Shanahan',                                 // verified
   TB:  'HC Todd Bowles',                                   // auction-watch-2026-06-22
-  TEN: 'HC Brian Daboll'                                   // snake-insights-2026-09-03
+  TEN: 'HC Robert Saleh, OC Brian Daboll',                 // snake-insights-2026-09-03 names Daboll; he is the OC, Saleh is the HC
+  WAS: 'HC Dan Quinn'                                      // verified
 };
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _coachFmt = contextObj && contextObj.format || 'auction';
@@ -20905,21 +20930,6 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   }
   return planFor(key);
 }
-// Head coaches, 2026 season. Not available from /api/projections or /api/live, so this is
-// the one hand-maintained table in the taunt engine — re-check it each offseason (the 2026
-// cycle alone moved ten of these). Drop a team and its jabs fall back to "the Denver staff";
-// nothing breaks. Ten new for 2026: ARI, ATL, BAL, BUF, CLE, LV, MIA, NYG, PIT, TEN.
-const NFL_COACHES = {
-  ARI: 'Mike LaFleur', ATL: 'Kevin Stefanski', BAL: 'Jesse Minter', BUF: 'Joe Brady',
-  CAR: 'Dave Canales', CHI: 'Ben Johnson', CIN: 'Zac Taylor', CLE: 'Todd Monken',
-  DAL: 'Brian Schottenheimer', DEN: 'Sean Payton', DET: 'Dan Campbell', GB: 'Matt LaFleur',
-  HOU: 'DeMeco Ryans', IND: 'Shane Steichen', JAC: 'Liam Coen', JAX: 'Liam Coen',
-  KC: 'Andy Reid', LAC: 'Jim Harbaugh', LAR: 'Sean McVay', LV: 'Klint Kubiak',
-  MIA: 'Jeff Hafley', MIN: "Kevin O'Connell", NE: 'Mike Vrabel', NO: 'Kellen Moore',
-  NYG: 'John Harbaugh', NYJ: 'Aaron Glenn', PHI: 'Nick Sirianni', PIT: 'Mike McCarthy',
-  SEA: 'Mike Macdonald', SF: 'Kyle Shanahan', TB: 'Todd Bowles', TEN: 'Robert Saleh',
-  WAS: 'Dan Quinn'
-};
 const NFL_CITY = {
   ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo', CAR: 'Carolina',
   CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland', DAL: 'Dallas', DEN: 'Denver',
@@ -20933,8 +20943,17 @@ const NFL_CITY = {
 function staffLabel(tm) {
   return `the ${NFL_CITY[tm] || tm} staff`;
 }
+// The head coach comes out of STAFFS_2026, the same table the Value Coach is
+// grounded on, so the roast and the coach can never name different men for one
+// team. tools/test-coaching-staffs.mjs guards that table against the site's own
+// pages. A team with no entry falls back to "the Denver staff" and nothing breaks.
+function headCoachOf(tm) {
+  const entry = STAFFS_2026[tm === 'JAC' ? 'JAX' : tm];
+  const m = entry && entry.match(/HC ([^,]+)/);
+  return m ? m[1].trim() : null;
+}
 function coachLabel(tm) {
-  return NFL_COACHES[tm] || staffLabel(tm);
+  return headCoachOf(tm) || staffLabel(tm);
 }
 function capFirst(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
