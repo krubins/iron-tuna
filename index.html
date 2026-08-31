@@ -2891,10 +2891,19 @@ function scoreKicker(stats = {}, config) {
     pts += fgMade * dist[3] * s.fieldGoalTiers[3].points;
     pts += fgMade * dist[4] * s.fieldGoalTiers[4].points;
     const fgMissed = stats.fgMissed || 0;
-    pts += fgMissed * dist[0] * s.fieldGoalTiers[0].missPoints;
-    pts += fgMissed * dist[1] * s.fieldGoalTiers[1].missPoints;
-    pts += fgMissed * dist[2] * s.fieldGoalTiers[2].missPoints;
-    pts += fgMissed * dist[3] * s.fieldGoalTiers[3].missPoints;
+    // Misses do NOT follow the make-distance mix above: NFL kickers convert
+    // ~97% inside 35 yards, so the misses pile up on the long attempts, where
+    // the miss penalty is mildest. Spreading misses across the MAKE profile
+    // billed each miss at ~-2.4 pts instead of ~-1.0 and put a spurious
+    // ~14-pt spread across the top kickers — enough to reorder K1-K8. This
+    // profile is the league-wide miss mix by distance, and it sums to 1 so
+    // the 50+ tier's share is no longer silently dropped.
+    const missDist = [0.02, 0.06, 0.17, 0.25, 0.50];
+    pts += fgMissed * missDist[0] * s.fieldGoalTiers[0].missPoints;
+    pts += fgMissed * missDist[1] * s.fieldGoalTiers[1].missPoints;
+    pts += fgMissed * missDist[2] * s.fieldGoalTiers[2].missPoints;
+    pts += fgMissed * missDist[3] * s.fieldGoalTiers[3].missPoints;
+    pts += fgMissed * missDist[4] * (s.fieldGoalTiers[4].missPoints || 0);
   }
   pts += (stats.xpMade || 0) * s.extraPoint;
   pts += (stats.xpMissed || 0) * s.missedExtraPoint;
@@ -3239,10 +3248,20 @@ function applyInflation(players, draftedPlayerIds, teamBudgets, config) {
   const effectiveBudget = totalBudgetRemaining - totalMinBidsReserved;
   const baseAboveMins = Math.max(1, totalBaseValueRemaining - undrafted.length * config.valuation.minBid);
   const inflation = Math.max(0.1, effectiveBudget / baseAboveMins);
+  // Each column inflates against ITS OWN baseline. One factor, measured off
+  // VALUE, used to reprice both columns — but the market curve is more
+  // top-heavy than VALUE, so a room paying exactly the predicted prices read
+  // as "overpaying" and PROJ deflated ~10% mid-draft in a perfectly normal
+  // draft. Measured against the market column's own remainder, picks at the
+  // predicted price leave the remaining predictions exactly where they were
+  // (factor 1.0), and only a genuinely hot or cold room moves them.
+  const totalMarketRemaining = undrafted.reduce((sum, p) => sum + (p.marketValue ?? p.auctionValue), 0);
+  const marketAboveMins = Math.max(1, totalMarketRemaining - undrafted.length * config.valuation.minBid);
+  const marketInflation = Math.max(0.1, effectiveBudget / marketAboveMins);
   return players.map(p => {
     if (draftedPlayerIds.has(p.id)) return p;
     const adjusted = config.valuation.minBid + (p.auctionValue - config.valuation.minBid) * inflation;
-    const adjMarket = config.valuation.minBid + ((p.marketValue ?? p.auctionValue) - config.valuation.minBid) * inflation;
+    const adjMarket = config.valuation.minBid + ((p.marketValue ?? p.auctionValue) - config.valuation.minBid) * marketInflation;
     return {
       ...p,
       inflatedValue: Math.max(config.valuation.minBid, Math.round(adjusted)),
@@ -3340,7 +3359,10 @@ function applyPositionalDemand(players, teams, config, draftedIds) {
     });
     return out;
   };
-  const spots0 = POS.reduce((s, pos) => s + capTotal(pos), 0) + flexCount;
+  // A full roster is the sum of the per-position totals; the flex STARTER is
+  // drawn from those totals, not an extra seat (totalRosterSpots agrees, and
+  // it is what seeds every real team's spotsRemaining).
+  const spots0 = totalRosterSpots(config);
   const fresh = teams.map(() => ({
     budgetRemaining: config.budget,
     spotsRemaining: spots0,
@@ -3553,8 +3575,12 @@ function calculateMarketValues(players, config, marketOrder) {
     const hint = new Map();
     list.forEach((p, i) => hint.set(p.id, marketOrder && marketOrder[p.id] != null ? marketOrder[p.id] : i));
     list.slice().sort((a, b) => (hint.get(a.id) - hint.get(b.id)) || ((b.projectedPoints || 0) - (a.projectedPoints || 0))).forEach((p, i) => {
-      const base = i < curve.length ? curve[i] : minBid;
-      priceById.set(p.id, Math.max(minBid, Math.round(base * scale)));
+      // Only CURVE prices scale with the league's budget; past the end of the
+      // curve the room pays the min bid, full stop. Scaling the fallback put
+      // every deep-tail player at $2 in a $200 league — 215 phantom dollars on
+      // a board whose spendable money is fixed, which read as ~9% deflation
+      // the moment anything measured the column against the real budget.
+      priceById.set(p.id, i < curve.length ? Math.max(minBid, Math.round(curve[i] * scale)) : minBid);
     });
   });
   return players.map(p => ({
@@ -3585,17 +3611,27 @@ const POSITION_PREDICTABILITY = {
   K: 0.55,
   DEF: 0.50
 };
+// VALUE only. PROJ (marketValue) is the empirical LEAGUE_MARKET_CURVE — what
+// rooms actually pay — and the room does not discount its own bids for a
+// position's predictability, so discounting the prediction made it wrong in a
+// measurable way: with renormalizeToBudget stretching the column back to the
+// budget, every WR quote ran ~6% over the curve and every RB ~5% under, and the
+// worker's /api/board and it-league.js — which publish the raw curve — disagreed
+// with the rendered PROJ column on 118 of 407 players (Nacua $83 in-app vs $78
+// published). VALUE keeps the discount: it is an opinion of worth, it stacks
+// deliberately with POS_RELIABILITY's per-rank shaping inside
+// calculateAuctionValues, and it is what keeps K/DEF "worth" $1-3 rather than
+// the $5-7 a raw VORP share would print.
 function applyPredictability(players, config) {
   const minBid = config.valuation && config.valuation.minBid || 1;
   return players.map(p => {
     const f = POSITION_PREDICTABILITY[p.position];
     if (f == null || f >= 1) return p;
-    const out = {
-      ...p
+    if (typeof p.auctionValue !== 'number') return p;
+    return {
+      ...p,
+      auctionValue: Math.max(minBid, Math.round(p.auctionValue * f))
     };
-    if (typeof out.auctionValue === 'number') out.auctionValue = Math.max(minBid, Math.round(out.auctionValue * f));
-    if (typeof out.marketValue === 'number') out.marketValue = Math.max(minBid, Math.round(out.marketValue * f));
-    return out;
   });
 }
 function renormalizeToBudget(players, config) {
@@ -17784,7 +17820,12 @@ function normalizeToLastYear(scored, config) {
     DEF: LAST_YEAR_DEF_STATS
   };
   const teams = config && config.teams || 12;
-  const sflex = !!(config && config.flex && config.flex.eligible && config.flex.eligible.includes('QB'));
+  // The same "is QB really a second starter" question qbIsPremium answers for
+  // pricing, and it must get the same answer here: eligibility alone matches a
+  // saved "QB eligible, flex count 0" shape (calibrating QBs against a top-22
+  // mean ~12% below the top-13 one — every QB deflated 3-6%), and eligibility
+  // alone also misses straight 2-QB leagues, which are just as QB-hungry.
+  const sflex = qbIsPremium(config);
   const startK = {
     QB: Math.round(teams * (sflex ? 1.8 : 1.1)),
     RB: Math.round(teams * 2.6),
@@ -22244,7 +22285,7 @@ function App() {
         cap: arr.length ? Math.min(...arr.map(x => x.pv)) : null
       };
     });
-    return _pre.map(({ p, adj, worthPrice, personalValue }) => {
+    const _rows = _pre.map(({ p, adj, worthPrice, personalValue }) => {
       let pv = personalValue;
       if (pv == null) {
         const e = _edge[p.position];
@@ -22270,6 +22311,23 @@ function App() {
         personalValue: pv
       };
     });
+    // You must never rise as you read down a position, same rule as every other
+    // dollar column. It cannot legitimately: at the same position, forcing the
+    // higher-projected player at any price P yields at least the plan the
+    // lower-projected one does (same slots fit, same budget spent), so his
+    // indifference price is at least as high. Any inversion is solver wobble —
+    // the integer binary search and the bench greedy can wobble a dollar — so
+    // clamp reading down the board, skipping drafted rows.
+    {
+      const lastAt = {};
+      _rows.slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).forEach(r => {
+        if (draftedIds.has(r.id) || r.personalValue == null) return;
+        const prev = lastAt[r.position];
+        if (prev != null && r.personalValue > prev) r.personalValue = prev;
+        lastAt[r.position] = r.personalValue;
+      });
+    }
+    return _rows;
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
   const _starPersonalized = useMemo(() => {
     const arr = _basePersonalized;
@@ -22824,7 +22882,12 @@ function App() {
       const order = {
         ...prev
       };
-      let arr = order[pos] ? [...order[pos]] : players.filter(x => x.position === pos).map(x => ({
+      // Seed from the order the reader is LOOKING AT: the board scores off the
+      // vegas-blended stats at their slider setting, so seeding from the raw
+      // pool would silently permute players they never touched the moment they
+      // reorder anyone. (normalizeToLastYear is a flat per-position factor, so
+      // the blend is the only stage that can change the order.)
+      let arr = order[pos] ? [...order[pos]] : applyVegasWeight(players.filter(x => x.position === pos), vegasWeightOf(config)).map(x => ({
         id: x.id,
         pts: scorePlayer(x, config)
       })).sort((a, b) => b.pts - a.pts).map(x => x.id);
@@ -22852,7 +22915,9 @@ function App() {
       const order = {
         ...prev
       };
-      let arr = order[pos] ? [...order[pos]] : players.filter(x => x.position === pos).map(x => ({
+      // Same seeding rule as handleRankMove: the reader's blended order, not
+      // the raw pool's.
+      let arr = order[pos] ? [...order[pos]] : applyVegasWeight(players.filter(x => x.position === pos), vegasWeightOf(config)).map(x => ({
         id: x.id,
         pts: scorePlayer(x, config)
       })).sort((m, n) => n.pts - m.pts).map(x => x.id);
