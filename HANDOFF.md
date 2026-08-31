@@ -5524,3 +5524,67 @@ column by column.
 
 Full suite: **27 passed, 0 failed** — green for the first time since the
 projections were replaced.
+
+## 44. August 31: hand-correcting the archive does not converge, and now there is proof
+
+The 11:00Z refresh on 08-31 moved **60 of 345 prices**. Yesterday's projection
+re-baseline moved 38; an ordinary odds refresh moves two. This was an ordinary
+refresh — the feed was checked and is healthy: 811 stat fields became 810, 58
+players lost a line and 54 gained one, two were added (Michael Penix, Deebo
+Samuel), and nothing was truncated. The market simply moved a long way.
+
+**Every one of the 15 rows in Recent insights now prints at least one stale
+price.** And the part that settles the argument:
+
+> **21 of the figures corrected twelve hours earlier were already stale again.**
+> Row 41's Daniels $13 → $20. Row 45's Kelce $3 → $10. Row 48's Burrow $32 → $13.
+> Row 58's Collins $18 → $30.
+
+§41 corrected nine rows by hand against the 08-31 board. Less than a day later
+those same figures are wrong, in rows that were *already* on their second or
+third correction of the same players. The convergence warning in this file has
+been about individual figures oscillating; this is the whole archive doing it at
+once, and it means hand-correction is not a maintenance strategy. It is a
+treadmill that loses.
+
+**So the archive was not corrected again.** Only the live lead was, because a
+front-page headline contradicting the reader's own sheet is the originating
+complaint and cannot wait for a decision.
+
+### What was done to row 65
+
+Row 65 is honest work: it dates its board in the prose, in the bid-table header
+("Iron Tuna, August 30") and in its closing line, and every figure reproduces
+against that board. The refresh moved Kyle Pitts to TE8 and **$12** — exactly
+the cap the story argued for. The call came true in four hours.
+
+Three things read as live claims rather than dated ones, and those were fixed:
+the headline's "not $17", the dek's "still prices Pitts at $17", and "Bijan
+Robinson is still a $72 buy at RB3" (now RB2 and $75). The story now says
+plainly that the August 31 refresh moved the board onto its own number, which is
+the row 52 device and the truthful framing: a column whose call the market
+confirms the same morning is the column working.
+
+### The structural options, for a decision
+
+Hand-correction is out. The real choices:
+
+1. **Age rows out of Recent insights.** A story stops being a live
+   recommendation after a day or two and moves to a dated archive. Cheapest, and
+   it matches what the copy already does by naming its board.
+2. **Re-anchor archived prices from the live board at render time.** The site
+   already owns this machinery — `it-league.js` re-anchors dollar figures on the
+   reader's own board. Pointing it at archived rows would make prices track by
+   construction instead of by maintenance.
+3. **Require every dollar figure to carry its board date in the copy**, and
+   accept archived stories as historical record rather than advice.
+
+Option 2 is the one that actually fixes the originating bug, because it removes
+the human step entirely. Option 1 is the cheapest thing that stops the bleeding
+today.
+
+State: live and verified **65**, corrected; `published_rows=1`; Recent insights
+15; /analyst-desk 0. Overlay `1788174013112`, 16,922 bytes, reconstruction
+verified six ways including sum-of-squares. Deployed `PROJECTIONS` semantically
+identical to the repo across all 407 players; every pricing constant identical.
+Live prompt 40,786 chars / `af5384664474`, matching the repo. CI 27 of 27.
