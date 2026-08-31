@@ -5481,3 +5481,46 @@ caught it the day the projections changed.
 
 State: `the-pick.html` carries one entry, corrected and verified. 26 of 27 checks
 pass; the one failure is the coverage guard above.
+
+## 43. August 31: the rank cells are checked now
+
+§42 ended with the gap that let `pick-2026-08-20` sit wrong: `test-the-pick.mjs`
+validated a table column headed **Points** and nothing else, so a cell reading
+`RB9` was decoration. That entry's only table is a rank table, so the entry was
+unchecked end to end.
+
+`tools/test-the-pick.mjs` now checks rank cells the same way it checks points.
+
+**How it decides what a rank means.** A rank is meaningless until you know what a
+catch is worth in it, so a column is only graded when its header says: "Full PPR"
+(1.0), "Half PPR" (0.5), "Standard" or "non-PPR" (0), and a bare "Rank" as the
+site's own model, full PPR since 2026-08-22. Everything else — "Max bid", "Rank
+move" — is left alone, because those are arguments, not facts. A cell is graded
+only when it reads exactly `RB9`; anything wordier is prose or a move ("RB8 to
+RB6") and this is not the file that grades those.
+
+Two things fall out of that. The position prefix is checked against the player's
+own position, so `WR9` on a running back is caught. And the ladder is built the
+way the site builds it — score, round to a tenth, *then* sort, matching
+`_colScore` and `tools/live-board.mjs` — because sorting raw and sorting rounded
+can disagree on a tie and the reader sees the rounded one. The scoring formula
+was parameterised rather than copied, so a second copy cannot drift from the
+first the next time a coefficient changes.
+
+**The coverage guard now counts ranks.** It exists so the correctness checks
+cannot pass on an empty set, and holding out specifically for a "Points" column
+is what let this entry through. It fails if an entry prints no checkable number
+of either kind.
+
+### It was verified by mutation, not by going green
+
+A check that passes without catching anything is the failure it is meant to
+prevent, so it was tested against four deliberate corruptions before being
+trusted: a wrong rank value (caught, naming the column), a wrong position prefix
+(caught), a wrong half-PPR cell (caught), and the table deleted entirely (the
+coverage guard fired). Then the pre-correction table was pasted back, and the
+check independently reported **exactly the 16 stale cells §42 found by hand**,
+column by column.
+
+Full suite: **27 passed, 0 failed** — green for the first time since the
+projections were replaced.
