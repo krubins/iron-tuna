@@ -2730,10 +2730,13 @@ function picksUntilNextPick(draftSlot, teams, currentOverallPick) {
   return 0;
 }
 function survivalProb(player, currentOverallPick, picksUntilNext, recentPicks) {
+  if (picksUntilNext <= 0) return 1;
   const adp = player && player.adp != null ? player.adp : 999;
   const sd = Math.max(3, 0.16 * adp);
   const nextPick = currentOverallPick + picksUntilNext;
-  let survives = 1 - normalCdf((nextPick - adp) / sd);
+  const pNext = 1 - normalCdf((nextPick - adp) / sd);
+  const pNow = 1 - normalCdf((currentOverallPick - adp) / sd);
+  let survives = pNow < 0.05 ? Math.pow(0.97, picksUntilNext) : pNext / pNow;
   survives = Math.max(0, Math.min(1, survives));
   const recent = (recentPicks || []).slice(-8);
   if (recent.length >= 4 && player) {
@@ -2753,7 +2756,9 @@ function availabilityOdds(player, targetPick, players, draftedIds, draftHistory,
   if (picksUntil <= 0) return 1;
   const adp = player && player.adp != null ? player.adp : 999;
   const sd = Math.max(3, 0.16 * adp);
-  let surv = 1 - normalCdf((targetPick - adp) / sd);
+  const pTarget = 1 - normalCdf((targetPick - adp) / sd);
+  const pNow = 1 - normalCdf((currentPick - adp) / sd);
+  let surv = pNow < 0.05 ? Math.pow(0.97, picksUntil) : pTarget / pNow;
   surv = Math.max(0, Math.min(1, surv));
   const recent = (draftHistory || []).slice(-10).map(d => (players || []).find(p => p.id === d.playerId)).filter(Boolean);
   const samePosRecent = recent.filter(rp => rp.position === player.position).length;
@@ -2770,10 +2775,14 @@ console.assert(picksUntilNextPick(1, 12, 1) === 23, 'snake gap: slot1 r1 -> 23')
 console.assert(picksUntilNextPick(1, 12, 24) === 1, 'snake gap: slot1 r2 -> 1');
 console.assert(picksUntilNextPick(12, 12, 12) === 1, 'snake gap: slot12 r1 -> 1');
 console.assert(picksUntilNextPick(6, 12, 6) === 13, 'snake gap: slot6 r1 -> 13');
-console.assert(Math.abs(survivalProb({
+console.assert(survivalProb({
   adp: 23,
   position: 'RB'
-}, 23, 0, []) - 0.5) < 0.02, 'survival ~0.5 at adp==nextPick');
+}, 23, 0, []) === 1, 'survival 1 when it is your pick');
+console.assert(survivalProb({
+  adp: 10,
+  position: 'RB'
+}, 40, 3, []) > 0.5, 'conditioned survival not ~0 for a player still on the board past his ADP');
 console.assert(survivalProb({
   adp: 10,
   position: 'RB'
@@ -2782,6 +2791,9 @@ console.assert(survivalProb({
   adp: 40,
   position: 'WR'
 }, 5, 18, []) > 0.9, 'survival high when adp >> nextPick');
+function itNorm(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 function totalRosterSpots(config) {
   return Object.values(config.roster).reduce((sum, p) => sum + p.total, 0);
 }
@@ -6926,10 +6938,10 @@ function DraftBoard({
   }, [_dbFmt, config, draftedIds]);
   const whbResult = useMemo(() => {
     if (_dbFmt !== 'snake') return null;
-    const q = (whbQuery || '').trim().toLowerCase();
+    const q = itNorm((whbQuery || '').trim());
     const rd = parseInt(whbRound, 10);
     if (!q || !rd || rd < 1) return null;
-    const player = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
+    const player = (players || []).find(p => p.name && itNorm(p.name).includes(q));
     if (!player) return { err: 'No player matches "' + whbQuery.trim() + '".' };
     const di = draftedIds || new Set();
     if (di.has(player.id)) return { player, drafted: true };
@@ -6987,8 +6999,8 @@ function DraftBoard({
     let list = players;
     if (posFilter !== 'ALL') list = list.filter(p => p.position === posFilter);
     if (search) {
-      const sx = search.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(sx) || p.team.toLowerCase().includes(sx));
+      const sx = itNorm(search);
+      list = list.filter(p => itNorm(p.name).includes(sx) || itNorm(p.team).includes(sx));
     }
     if (hideDrafted) list = list.filter(p => !draftedIds.has(p.id));
     if (starredOnly) list = list.filter(p => starred.has(p.id));
@@ -11117,16 +11129,16 @@ function CheatHeader({
     if (onSetAnchors) onSetAnchors(next);
   }
   function matchesFor(name) {
-    const t = (name || '').toLowerCase().trim();
+    const t = itNorm((name || '').trim());
     const taken = new Set(activeAnchors.map(a => String(a.id)));
-    const base = (t ? wiPool.filter(p => p.name.toLowerCase().includes(t)) : wiPool).filter(p => !taken.has(String(p.id)));
+    const base = (t ? wiPool.filter(p => itNorm(p.name).includes(t)) : wiPool).filter(p => !taken.has(String(p.id)));
     return base.slice(0, 10);
   }
   function onRowInput(i, v) {
     setWiNames(ns => ns.map((x, j) => j === i ? v : x));
     setWiShowRow(i);
-    const t = v.toLowerCase().trim();
-    const pl = wiPool.find(p => `${p.name} (${p.position})`.toLowerCase() === t) || wiPool.find(p => p.name.toLowerCase() === t);
+    const t = itNorm(v.trim());
+    const pl = wiPool.find(p => itNorm(`${p.name} (${p.position})`) === t) || wiPool.find(p => itNorm(p.name) === t);
     if (pl) setAnchorAt(i, pl.id, wiPriceOf(pl));else setAnchorAt(i, '', 0);
   }
   function chooseRow(i, pl) {
@@ -11820,10 +11832,10 @@ function Cheatsheet({
   const [whbShow, setWhbShow] = useState(false);
   const whbResultCheat = useMemo(() => {
     if (!config || config.format !== 'snake') return null;
-    const q = (whbQ || '').trim().toLowerCase();
+    const q = itNorm((whbQ || '').trim());
     const rd = parseInt(whbR, 10);
     if (!q || !rd || rd < 1) return null;
-    const pl = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
+    const pl = (players || []).find(p => p.name && itNorm(p.name).includes(q));
     if (!pl) return { err: 'No player matches "' + whbQ.trim() + '".' };
     const di = draftedIds || new Set();
     if (di.has(pl.id)) return { player: pl, drafted: true };
@@ -14160,7 +14172,7 @@ function PrepProjections({
   const [editingId, setEditingId] = useState(null);
   const valuedMap = new Map();
   valuedPlayers.forEach(p => valuedMap.set(p.id, p));
-  const filtered = players.filter(p => posFilter === 'ALL' || p.position === posFilter).filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => (valuedMap.get(b.id)?.projectedPoints || 0) - (valuedMap.get(a.id)?.projectedPoints || 0)).slice(0, 100);
+  const filtered = players.filter(p => posFilter === 'ALL' || p.position === posFilter).filter(p => !search || itNorm(p.name).includes(itNorm(search))).sort((a, b) => (valuedMap.get(b.id)?.projectedPoints || 0) - (valuedMap.get(a.id)?.projectedPoints || 0)).slice(0, 100);
   return React.createElement("div", null, React.createElement("div", {
     style: {
       display: 'flex',
@@ -16091,8 +16103,8 @@ function PlayersRail({
     let l = players.filter(p => !draftedIds.has(p.id));
     if (posFilter !== 'ALL') l = l.filter(p => p.position === posFilter);
     if (search) {
-      const sx = search.toLowerCase();
-      l = l.filter(p => p.name.toLowerCase().includes(sx) || p.team.toLowerCase().includes(sx));
+      const sx = itNorm(search);
+      l = l.filter(p => itNorm(p.name).includes(sx) || itNorm(p.team).includes(sx));
     }
     if (filterMode === 'targets') l = l.filter(p => green.has(p.id) || yellow.has(p.id));
     if (filterMode === 'star') l = l.filter(p => starred.has(p.id));
@@ -20893,182 +20905,6 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   }
   return planFor(key);
 }
-function ModelsPanel({
-  myTeam,
-  players,
-  config,
-  draftedIds,
-  roleOverrides,
-  seasonGames,
-  model,
-  onSelectModel,
-  targets,
-  mode,
-  teams,
-  marketState
-}) {
-  const shownKey = model || 'ideal';
-  const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
-  const plan = useMemo(() => myTeam ? buildModel(shownKey, myTeam, players, config, draftedIds, roleOverrides, targets) : null, [shownKey, myTeam, players, config, draftedIds, roleOverrides, targets]);
-  const modelPts = useMemo(() => {
-    if (!myTeam) return {};
-    const m = {};
-    models.forEach(([k]) => {
-      try {
-        const pl = buildModel(k, myTeam, players, config, draftedIds, roleOverrides, targets);
-        m[k] = pl ? pl.starterPoints : null;
-      } catch (e) {
-        m[k] = null;
-      }
-    });
-    return m;
-  }, [myTeam, players, config, draftedIds, roleOverrides, targets]);
-  const isBoard = mode === 'board';
-  const isNonAuction = !!(config.format && config.format !== 'auction');
-  const [npQ, setNpQ] = useState('');
-  const [npR, setNpR] = useState('');
-  const nextFive = useMemo(() => {
-    if (!isNonAuction || !myTeam) return null;
-    let sp; try { sp = getFormat(config).planFills(myTeam, players, config, draftedIds || new Set()); } catch (e) { return null; }
-    const br = (sp && sp.byRound) || [];
-    if (!br.length) return null;
-    const teamsN = (config && config.teams) || 12;
-    const mySlot = (config && config.snake && config.snake.draftSlot) || 1;
-    const pa = r => r % 2 === 1 ? (r - 1) * teamsN + mySlot : r * teamsN - mySlot + 1;
-    const cur = ((draftedIds && draftedIds.size) || 0) + 1;
-    let nr = 1; while (pa(nr) < cur && nr < 60) nr++;
-    const g = seasonGames || 17;
-    return br.slice(0, 20).map((b, k) => {
-      const round = nr + k;
-      const until = Math.max(0, pa(round) - cur);
-      const surv = Math.round(survivalProb(b.player, cur, until, []) * 100);
-      return { round: round, player: b.player, surv: surv, ppg: (b.player.projectedPoints / g).toFixed(1) };
-    });
-  }, [isNonAuction, myTeam, players, config, draftedIds, seasonGames]);
-  const npResult = useMemo(() => {
-    if (!isNonAuction) return null;
-    const q = (npQ || '').trim().toLowerCase();
-    const rd = parseInt(npR, 10);
-    if (!q || !rd || rd < 1) return null;
-    const player = (players || []).find(p => p.name && p.name.toLowerCase().includes(q));
-    if (!player) return { err: 'No player matches "' + npQ.trim() + '".' };
-    const di = draftedIds || new Set();
-    if (di.has(player.id)) return { player: player, drafted: true };
-    const teamsN = (config && config.teams) || 12;
-    const mySlot = (config && config.snake && config.snake.draftSlot) || 1;
-    const pa = r => r % 2 === 1 ? (r - 1) * teamsN + mySlot : r * teamsN - mySlot + 1;
-    const targetPick = pa(rd);
-    const cur = ((di && di.size) || 0) + 1;
-    if (targetPick < cur) return { player: player, round: rd, passed: true };
-    const prob = Math.round(survivalProb(player, cur, targetPick - cur, []) * 100);
-    return { player: player, round: rd, prob: prob };
-  }, [isNonAuction, npQ, npR, players, config, draftedIds]);
-  const mxGames = seasonGames || 17;
-  const insights = useMemo(() => isBoard ? [] : buildCoachInsights({
-    evalPlayers: players,
-    myTeam,
-    teams,
-    config,
-    draftedIds,
-    marketState,
-    games: mxGames,
-    mode: 'prep'
-  }), [isBoard, players, myTeam, teams, config, draftedIds, marketState, mxGames]);
-  const rivals = useMemo(() => (teams || []).filter(t => !t.isMine), [teams]);
-  const [extraIdx, setExtraIdx] = useState(0);
-  const extraLen = isBoard ? rivals.length : insights.length;
-  useEffect(() => {
-    if (extraLen <= 1) return;
-    const t = setInterval(() => setExtraIdx(i => (i + 1) % extraLen), 20000);
-    return () => clearInterval(t);
-  }, [extraLen]);
-  const tauntState = useRef({ last: -1, counts: {} });
-  const taunt = useMemo(() => {
-    if (!(isBoard && rivals.length)) return null;
-    const _team = rivals[extraIdx % rivals.length];
-    const _st = tauntState.current;
-    if (_st.last !== extraIdx) { _st.counts[_team.id] = (_st.counts[_team.id] || 0) + 1; _st.last = extraIdx; }
-    const _n = (_st.counts[_team.id] || 1) - 1;
-    return teamTaunt(_team, players, config, mxGames, _n);
-  }, [isBoard, rivals, extraIdx, players, config, mxGames]);
-  const games = seasonGames || 17;
-  if (!myTeam) return React.createElement("aside", {
-    className: "sidebar models-panel"
-  }, React.createElement("div", {
-    className: "models-head"
-  }, "Draft Models"), React.createElement("p", {
-    style: {
-      fontSize: 13,
-      color: 'var(--text-muted)',
-      padding: 8
-    }
-  }, "Mark a team as yours on the Draft Board to see ideal builds."));
-  const slots = plan ? plan.slots || [] : [];
-  const cost = slots.reduce((s, sl) => s + (sl.status === 'filled' ? sl.price || 0 : sl.targetPrice || 0), 0);
-  const posRank = useMemo(() => {
-    const by = {},
-      m = {};
-    (players || []).forEach(p => (by[p.position] = by[p.position] || []).push(p));
-    Object.values(by).forEach(a => {
-      a.sort((x, y) => (y.projectedPoints || 0) - (x.projectedPoints || 0));
-      a.forEach((p, i) => {
-        m[p.id] = i + 1;
-      });
-    });
-    return m;
-  }, [players]);
-  const focusInfo = MODEL_FOCUS[shownKey] || {
-    focus: [],
-    note: ''
-  };
-  return React.createElement("aside", {
-    className: "sidebar models-panel"
-  }, React.createElement("div", {
-    className: "models-head"
-  }, "Draft Models"), React.createElement("div", {
-    className: "models-tabs"
-  }, models.map(([k, lbl]) => React.createElement("button", {
-    key: k,
-    className: `model-tab ${model === k ? 'active' : ''}`,
-    onClick: () => onSelectModel(model === k ? null : k)
-  }, lbl, modelPts[k] != null ? React.createElement("span", {
-    className: "model-tab-pts"
-  }, (modelPts[k] / games).toFixed(1), " pts/gm") : null))), plan && React.createElement("div", {
-    className: "model-summary"
-  }, React.createElement("b", null, (plan.starterPoints / games).toFixed(1)), " pts/gm · ~$", cost, "/", config.budget, plan.feasible ? '' : ' · over'), (isNonAuction && myTeam && nextFive ? React.createElement("div", { className: "mnp" }, React.createElement("div", { className: "mnp-h" }, "Best available target \u00b7 each round"), React.createElement("div", { className: "mnp-rows" }, nextFive.map((r, i) => React.createElement("div", { key: i, className: "mnp-row" }, React.createElement("span", { className: "mnp-rd" }, "R" + r.round), React.createElement("span", { className: "mnp-pl" }, r.player.name, React.createElement("em", null, r.player.position)), React.createElement("span", { className: "mnp-sv", title: "Estimated chance still available at your round " + r.round + " pick" }, r.surv + "%")))), React.createElement("div", { className: "mnp-whb" }, React.createElement("div", { className: "mnp-whb-h" }, "Will he be there?"), React.createElement("div", { className: "mnp-whb-in" }, React.createElement("input", { className: "mnp-inp", placeholder: "Player name", value: npQ, onChange: e => setNpQ(e.target.value) }), React.createElement("input", { className: "mnp-inp mnp-rnd", type: "number", min: "1", placeholder: "Rd", value: npR, onChange: e => setNpR(e.target.value) })), npResult ? React.createElement("div", { className: "mnp-out" }, npResult.err ? npResult.err : npResult.drafted ? (npResult.player.name + " is already off the board.") : npResult.passed ? ("Your round " + npResult.round + " pick has already passed.") : (npResult.player.name + ": ~" + npResult.prob + "% likely available at your round " + npResult.round + " pick.")) : React.createElement("div", { className: "mnp-out mnp-hint" }, "Type a player and a round to see their odds."))) : null), React.createElement("div", {
-    className: "models-extra"
-  }, React.createElement("div", {
-    className: "mx-head"
-  }, React.createElement("span", null, isBoard ? 'Trash talk' : 'Insights'), extraLen > 1 && React.createElement("div", {
-    className: "mx-nav"
-  }, React.createElement("button", {
-    onClick: () => setExtraIdx(i => (i - 1 + extraLen) % extraLen),
-    title: "Previous"
-  }, "▲"), React.createElement("button", {
-    onClick: () => setExtraIdx(i => (i + 1) % extraLen),
-    title: "Next"
-  }, "▼"))), isBoard ? taunt ? React.createElement("div", {
-    className: "mx-body"
-  }, React.createElement("div", {
-    className: "mx-taunt-team"
-  }, rivals[extraIdx % rivals.length].name), React.createElement("div", {
-    className: "mx-text"
-  }, taunt)) : React.createElement("div", {
-    className: "mx-body mx-empty"
-  }, "Once rivals start drafting, the roasts begin.") : insights.length ? React.createElement("div", {
-    className: "mx-body"
-  }, React.createElement("div", {
-    className: "mx-label"
-  }, insights[extraIdx % insights.length].label), React.createElement("div", {
-    className: "mx-text"
-  }, insights[extraIdx % insights.length].text)) : React.createElement("div", {
-    className: "mx-body mx-empty"
-  }, "Insights appear as the board fills in.")), focusInfo.note && React.createElement("div", {
-    className: "model-focus-note"
-  }, focusInfo.note), React.createElement("div", {
-    className: "models-foot"
-  }, "Click a model to box its target players on the cheat sheet; click it again to clear. Teal marks the positions this model targets; every other spot takes the best value available."));
-}
 function teamTaunt(team, players, config, games, idx) {
   const g = games || 17;
   const isAuction = !(config && config.format && config.format !== 'auction');
@@ -21223,10 +21059,10 @@ function WillHeBeThere({ players, draftedIds, draftHistory, config }) {
   const [rd, setRd] = useState('');
   const [show, setShow] = useState(false);
   const result = useMemo(() => {
-    const qq = (q || '').trim().toLowerCase();
+    const qq = itNorm((q || '').trim());
     const r = parseInt(rd, 10);
     if (!qq || !r || r < 1) return null;
-    const player = (players || []).find(p => p.name && p.name.toLowerCase().includes(qq));
+    const player = (players || []).find(p => p.name && itNorm(p.name).includes(qq));
     if (!player) return { err: 'No player matches "' + q.trim() + '".' };
     const di = draftedIds || new Set();
     if (di.has(player.id)) return { player: player, drafted: true };
@@ -21252,9 +21088,9 @@ function QuickLogBar({ players, teams, draftedIds, config, onDraft }) {
   const [price, setPrice] = useState('');
   const di = draftedIds || new Set();
   const matches = useMemo(() => {
-    const qq = (q || '').trim().toLowerCase();
+    const qq = itNorm((q || '').trim());
     if (!qq) return [];
-    return (players || []).filter(p => p.name && !di.has(p.id) && p.name.toLowerCase().indexOf(qq) >= 0).sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0)).slice(0, 7);
+    return (players || []).filter(p => p.name && !di.has(p.id) && itNorm(p.name).indexOf(qq) >= 0).sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0)).slice(0, 7);
   }, [q, players, di]);
   function choose(p) { setSel(p); setShow(false); if (isAuction) setPrice(String(p.marketValue != null ? p.marketValue : (p.auctionValue || 1))); }
   function commit() { if (!sel || teamId === '' || teamId == null) return; onDraft(sel.id, teamId, isAuction ? (parseInt(price, 10) || 1) : 0); setSel(null); setQ(''); setPrice(''); setShow(false); setHi(0); }
