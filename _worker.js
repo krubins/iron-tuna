@@ -1719,8 +1719,10 @@ function _colStatLine(stats) {
 function _colPrice(position, rankIndex) {
   const curve = COLUMN_CURVE[position] || [];
   const scale = COLUMN_LEAGUE_BUDGET / COLUMN_CURVE_BUDGET;
-  const base = rankIndex < curve.length ? curve[rankIndex] : COLUMN_MIN_BID;
-  return Math.max(COLUMN_MIN_BID, Math.round(base * scale));
+  // Only curve prices scale with the budget; past the curve the room pays the
+  // min bid, full stop (mirrors calculateMarketValues in index.html).
+  if (rankIndex >= curve.length) return COLUMN_MIN_BID;
+  return Math.max(COLUMN_MIN_BID, Math.round(curve[rankIndex] * scale));
 }
 
 // ── §9d. the site's own board, served ──────────────────────────────────────

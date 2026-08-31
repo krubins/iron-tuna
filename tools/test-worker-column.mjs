@@ -136,10 +136,10 @@ console.log('\nscoring port matches the client function');
 console.log('\nprice curve');
 {
   ok('rank 1 RB prices off the top of the curve', W._colPrice('RB', 0) === Math.round(48 * (W.COLUMN_LEAGUE_BUDGET / W.COLUMN_CURVE_BUDGET)));
-  // The client scales the min bid by the league/curve ratio too, so the floor is
-  // not literally $1 in a 12x$200 league. Matching that exactly is the point.
-  const floor = Math.max(1, Math.round(1 * (W.COLUMN_LEAGUE_BUDGET / W.COLUMN_CURVE_BUDGET)));
-  ok('past the end of the curve everyone pays the scaled floor', W._colPrice('TE', 999) === floor, String(W._colPrice('TE', 999)));
+  // The client does NOT scale the min bid: past the curve the room pays $1
+  // whatever the budget (calculateMarketValues). Matching that exactly is the
+  // point — the scaled floor used to quote the deep tail at $2 in a $200 league.
+  ok('past the end of the curve everyone pays the min bid', W._colPrice('TE', 999) === 1, String(W._colPrice('TE', 999)));
   ok('the floor is never above an in-curve price', W._colPrice('TE', 999) <= W._colPrice('TE', 0));
   ok('prices are monotonically non-increasing down the curve',
      W.COLUMN_CURVE.WR.every((_, i) => i === 0 || W._colPrice('WR', i) <= W._colPrice('WR', i - 1)));

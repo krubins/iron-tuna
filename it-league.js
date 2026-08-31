@@ -287,8 +287,11 @@
   function price(position, rankIndex) {
     var curve = CURVE[position] || [];
     var scale = (cfg ? cfg.teams * cfg.budget : DEFAULT_TEAMS * DEFAULT_BUDGET) / CURVE_BUDGET;
-    var base = rankIndex < curve.length ? curve[rankIndex] : MIN_BID;
-    return Math.max(MIN_BID, Math.round(base * scale));
+    // Only curve prices scale with the budget; past the curve the room pays the
+    // min bid, full stop (mirrors calculateMarketValues — scaling the fallback
+    // quoted the deep tail at $2 in a $200 league).
+    if (rankIndex >= curve.length) return MIN_BID;
+    return Math.max(MIN_BID, Math.round(curve[rankIndex] * scale));
   }
 
   // A dollar figure written about a MANAGER'S OWN money in the site's default
@@ -359,7 +362,7 @@
       var curve = CURVE[pos] || [];
       // byPos is already sorted by points, so the array index IS the curve slot.
       defIndex.byPos[pos].forEach(function (p, i) {
-        p.v = Math.max(MIN_BID, Math.round((i < curve.length ? curve[i] : MIN_BID) * scale));
+        p.v = i < curve.length ? Math.max(MIN_BID, Math.round(curve[i] * scale)) : MIN_BID;
       });
     });
     return defIndex;
