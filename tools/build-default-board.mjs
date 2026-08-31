@@ -80,13 +80,50 @@ export function loadLibrary(libSrc) {
   return w.ITLeague;
 }
 
+// The app re-levels each position's points to last season's top-K mean before
+// printing them (normalizeToLastYear in index.html), so a board baked from raw
+// scores sits on a different scale than the reader's sheet — Nacua 356.0 here
+// against 330.0 on the sheet. The worker mirrors the client's rule as
+// COLUMN_NORM + _colNormFactors (tools/test-worker-column.mjs pins the mirror
+// against index.html); this parses that ONE mirror out of the worker source and
+// applies the same rule, so the baked block, /api/board and the sheet agree.
+export function normFactors(workerSrc, pool, L) {
+  const m = workerSrc.match(/const COLUMN_NORM = \{([\s\S]*?)\};/);
+  const norm = {};
+  if (m) {
+    const re = /(\w+): \{ mean: ([\d.]+), k: (\d+) \}/g;
+    let q;
+    while ((q = re.exec(m[1]))) norm[q[1]] = { mean: parseFloat(q[2]), k: parseInt(q[3], 10) };
+  }
+  const out = {};
+  for (const pos of KEEP) {
+    out[pos] = 1;
+    if (!norm[pos]) continue;
+    const arr = pool.filter(p => p.position === pos)
+      .map(p => L.score(p.stats, p.position)).filter(v => v > 0).sort((a, b) => b - a);
+    if (arr.length < 3) continue;
+    const K = Math.max(3, Math.min(norm[pos].k, arr.length));
+    const projMean = arr.slice(0, K).reduce((a, b) => a + b, 0) / K;
+    if (!(projMean > 0)) continue;
+    const f = norm[pos].mean / projMean;
+    if (f >= 0.98 && f <= 1.02) continue;
+    out[pos] = f;
+  }
+  return out;
+}
+
 // One player per line, "name|pos|points" — the same one-long-line convention
 // front.html's generated STORIES array uses. Points carry one decimal, which is
 // what the app's own snapshot rounds to.
-export function boardLines(pool, L) {
+export function boardLines(pool, L, factors) {
+  const f = factors || {};
   return pool
     .filter(p => KEEP.includes(p.position))
-    .map(p => ({ n: p.name, pos: p.position, pts: Math.round(L.score(p.stats, p.position) * 10) / 10 }))
+    .map(p => {
+      const raw = L.score(p.stats, p.position);
+      const pts = Math.round((raw > 0 ? raw * (f[p.position] || 1) : raw) * 10) / 10;
+      return { n: p.name, pos: p.position, pts };
+    })
     // A player the projections do not score — a free agent with an empty line, a
     // backup under the passing-yard threshold — cannot be moved up or down
     // anything. Leaving them out is how the library keeps its promise not to
@@ -103,7 +140,10 @@ export function block(lines) {
 // Importable for the test; only rewrites the file when run directly.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const lib = read('it-league.js');
-  const lines = boardLines(projections(read('_worker.js')), loadLibrary(lib));
+  const workerSrc = read('_worker.js');
+  const pool = projections(workerSrc);
+  const L = loadLibrary(lib);
+  const lines = boardLines(pool, L, normFactors(workerSrc, pool, L));
   const s = lib.indexOf(START), e = lib.indexOf(END);
   if (s < 0 || e < 0) {
     console.error('ABORT: could not find the DEFAULT_BOARD markers in it-league.js');

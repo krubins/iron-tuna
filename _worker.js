@@ -1697,6 +1697,52 @@ function _colScore(stats, position) {
   return pts;
 }
 
+// ── season normalisation, mirrored from the client ─────────────────────────
+// The app re-levels each position's projected points to LAST SEASON's actual
+// top-K mean before anything is ranked or printed (normalizeToLastYear in
+// index.html), so the points on a reader's sheet are NOT the raw scores of the
+// stat lines. /api/board — the payload that claims to BE the site's sheet —
+// used to ship raw scores (Puka Nacua 356.0 against 330.0 on the sheet), so
+// any copy quoting its season totals disagreed with the board it was quoting.
+// The factor is flat per position, so ranks and prices never move; only the
+// printed points do. The vegas column's pts fields deliberately stay raw:
+// contract 3 promises they re-score from the shipped stat lines to the digit,
+// and a pool-level factor cannot ride a stat line.
+//
+// HAND-SYNCED with index.html, same as COLUMN_SCORING above: `mean` is the
+// top-K mean of the client's LAST_YEAR_*_STATS scored at the default league's
+// scoring, and `k` is normalizeToLastYear's startK at 12 teams (round(12*1.1)
+// for QB/TE, round(12*2.6) for RB/WR). tools/test-worker-column.mjs recomputes
+// both from index.html and fails when they drift.
+const COLUMN_NORM = {
+  QB: { mean: 306.8246, k: 13 },
+  RB: { mean: 236.5774, k: 31 },
+  WR: { mean: 227.4839, k: 31 },
+  TE: { mean: 192.9, k: 13 }
+};
+// One factor per position for a given pool of scored points — the client's
+// rule exactly: top-K projected mean against last year's, skipped inside the
+// 2% dead zone, and only ever applied to positive scores (the client's filter
+// keeps zero- and negative-point players out of both the mean and the scale).
+function _colNormFactors(ptsByPos) {
+  const out = {};
+  for (const pos of Object.keys(COLUMN_NORM)) {
+    out[pos] = 1;
+    const arr = (ptsByPos[pos] || []).filter(v => v > 0).sort((a, b) => b - a);
+    if (arr.length < 3) continue;
+    const K = Math.max(3, Math.min(COLUMN_NORM[pos].k, arr.length));
+    const projMean = arr.slice(0, K).reduce((a, b) => a + b, 0) / K;
+    if (!(projMean > 0)) continue;
+    const f = COLUMN_NORM[pos].mean / projMean;
+    if (f >= 0.98 && f <= 1.02) continue;
+    out[pos] = f;
+  }
+  return out;
+}
+function _colNormApply(pts, factor) {
+  return pts > 0 ? pts * factor : pts;
+}
+
 // The stat line a card is built from, trimmed to the stats the site actually
 // models and rounded once. The front page ships this to the reader's browser so
 // a league with half-PPR or six-point passing TDs can re-score the card in its
@@ -1755,8 +1801,15 @@ async function boardPayload(env) {
   for (const p of pool) {
     if (COLUMN_POSITIONS.indexOf(p.position) < 0) continue;
     (byPos[p.position] = byPos[p.position] || []).push({
-      n: p.name, pos: p.position, pts: _oddsRound(_colScore(p.projectedStats || {}, p.position))
+      n: p.name, pos: p.position, pts: _colScore(p.projectedStats || {}, p.position)
     });
+  }
+  // Points on the client's scale, not the raw stat-line scale — see COLUMN_NORM.
+  // Flat per position, so the ranking below is untouched.
+  const normF = _colNormFactors(Object.fromEntries(
+    Object.entries(byPos).map(([pos, list]) => [pos, list.map(p => p.pts)])));
+  for (const pos of Object.keys(byPos)) {
+    for (const p of byPos[pos]) p.pts = _oddsRound(_colNormApply(p.pts, normF[pos]));
   }
   const players = [];
   for (const pos of COLUMN_POSITIONS) {
@@ -1894,6 +1947,12 @@ function buildVegasBoard(overlay, ctx) {
       rows.push({
         name: r.name, team: r.team, position: pos,
         rankConsensus: iC + 1, rankIronTuna: iI + 1, rankMarket: iM + 1, rankDelta,
+        // Raw stat-line scores, DELIBERATELY un-normalised: contract 3 promises
+        // that re-scoring the shipped stat line reproduces these to the digit
+        // (test-it-league §9), so they can never carry the pool-level season
+        // normalisation. front.html calibrates them onto the reader's board
+        // per player (myCase's `k`); the SHEET-scale boards are /api/board and
+        // it-league's baked block, which do carry it — see COLUMN_NORM.
         ptsConsensus: Math.round(r.ptsConsensus * 10) / 10,
         ptsIronTuna: Math.round(r.ptsIronTuna * 10) / 10,
         ptsMarket: Math.round(r.ptsMarket * 10) / 10,

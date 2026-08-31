@@ -112,11 +112,12 @@ const pool = (() => {
   return out;
 })();
 
-const run = new Function('POOL', 'TEAMS', 'BUDGET', `
+const run = new Function('POOL', 'TEAMS', 'BUDGET', 'SFLEX', `
 ${consts}
 ${fns}
 const config = JSON.parse(JSON.stringify(DEFAULT_LEAGUE_CONFIG));
 config.teams = TEAMS; config.budget = BUDGET;
+if (SFLEX) config.flex.eligible = config.flex.eligible.concat(['QB']);
 const players = POOL.map(p => ({
   id: (p.name + '-' + p.position + '-' + p.team).replace(/\\s+/g, '_'),
   name: p.name, position: p.position, team: p.team,
@@ -144,7 +145,10 @@ const rawCurveTotal = (() => {
   let total = 0;
   Object.entries(config.roster).forEach(([pos, c]) => {
     const curve = LEAGUE_MARKET_CURVE[pos] || [];
-    for (let i = 0; i < c.total * config.teams; i++) total += Math.max(MIN, Math.round((i < curve.length ? curve[i] : MIN) * scale));
+    // Past the curve the room pays the min bid unscaled, same as every
+    // shipped copy of this arithmetic (calculateMarketValues, _colPrice,
+    // it-league's price()).
+    for (let i = 0; i < c.total * config.teams; i++) total += i < curve.length ? Math.max(MIN, Math.round(curve[i] * scale)) : MIN;
   });
   return total;
 })();
@@ -155,6 +159,10 @@ const rises = [];
     if (i && p[key] > arr[i - 1][key]) rises.push(key + ' ' + pos + (i + 1) + ' ' + p.name + ' $' + p[key] + ' > $' + arr[i - 1][key]);
   });
 }));
+// The top of each position's rendered PROJ column, for parity checks against
+// the published copies.
+const top = {};
+Object.keys(byPos).forEach(pos => top[pos] = byPos[pos].slice(0, 12).map(p => p.marketValue));
 return {
   rises,
   curveBudget: LEAGUE_CURVE_BUDGET,
@@ -167,7 +175,8 @@ return {
   tail: rendered.length - rostered.length,
   wholeProj: sum(rendered, 'marketValue'),
   wholeValue: sum(rendered, 'auctionValue'),
-  curve: LEAGUE_MARKET_CURVE
+  curve: LEAGUE_MARKET_CURVE,
+  top
 };
 `);
 
@@ -225,6 +234,63 @@ for (const pos of ['QB', 'RB', 'WR', 'TE']) {
 for (const [name, src, re] of [['_worker.js', worker, /COLUMN_CURVE_BUDGET\s*=\s*(\d+)/], ['it-league.js', itLeague, /CURVE_BUDGET\s*=\s*(\d+)/]]) {
   const m = src.match(re);
   ok(`${name} carries the same curve budget`, m && +m[1] === base.curveBudget, m && m[1]);
+}
+// The superflex QB curve now has a mirror in it-league.js (its price() swaps
+// curves for a saved QB-premium league). Same drift risk, same pin. The worker
+// deliberately has no copy: its board is the site's 1-QB default league.
+{
+  const sfOf = src => {
+    const m = src.match(/SUPERFLEX_QB_CURVE\s*=\s*\[([^\]]*)\]/);
+    return m ? m[1].split(',').map(s => +s.trim()) : null;
+  };
+  const clientSf = sfOf(idx), libSf = sfOf(itLeague);
+  ok('superflex QB: it-league.js matches index.html',
+     !!clientSf && JSON.stringify(libSf) === JSON.stringify(clientSf), JSON.stringify(libSf));
+}
+
+// ── 5. a superflex reader's it-league quotes land on the app's SF board ────
+// it-league.js swaps to SUPERFLEX_QB_CURVE and renormalises when the saved
+// league is QB-premium. The app renormalises by largest remainder, the library
+// by a flat factor, so parity is within a dollar — the bug this guards against
+// was a whole QB tier ($47 quoted against a $69 sheet).
+console.log('\nsuperflex parity with the app');
+{
+  const sf = run(pool, 12, 200, true);
+  const store = { iron_tuna_draft_state_v2: JSON.stringify({ config: {
+    teams: 12, budget: 200, format: 'auction',
+    flex: { count: 1, eligible: ['RB', 'WR', 'TE', 'QB'] } } }) };
+  const loadLib = st => {
+    const w = { localStorage: { getItem: k => st[k] || null, setItem() {} } };
+    new Function('window', 'var localStorage=window.localStorage;' + itLeague + ';return 0;')(w);
+    return w.ITLeague;
+  };
+  const L = loadLib(store);
+  let worst = 0, worstAt = '';
+  for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+    for (let i = 0; i < 8; i++) {
+      const d = Math.abs(sf.top[pos][i] - L.price(pos, i));
+      if (d > worst) { worst = d; worstAt = pos + (i + 1) + ' app $' + sf.top[pos][i] + ' vs lib $' + L.price(pos, i); }
+    }
+  }
+  ok('every top-8 price lands within $1 of the app’s SF board', worst <= 1, worstAt);
+  ok('the QB premium is real money, not a rounding artefact',
+     L.price('QB', 0) >= loadLib({}).price('QB', 0) + 10,
+     `SF $${L.price('QB', 0)} vs 1-QB $${loadLib({}).price('QB', 0)}`);
+  // The qbIsPremium trap the client documents: QB listed as flex-ELIGIBLE with
+  // a flex count of zero is a 1-QB league, and so is a plain saved league.
+  const trap = loadLib({ iron_tuna_draft_state_v2: JSON.stringify({ config: {
+    teams: 12, budget: 200, format: 'auction',
+    flex: { count: 0, eligible: ['RB', 'WR', 'TE', 'QB'] } } }) });
+  ok('flex-eligible with zero flex slots stays on the 1-QB curve',
+     trap.price('QB', 0) === loadLib({}).price('QB', 0),
+     String(trap.price('QB', 0)));
+  // Straight 2-QB (no superflex slot) is just as QB-hungry and gets the curve.
+  const twoQb = loadLib({ iron_tuna_draft_state_v2: JSON.stringify({ config: {
+    teams: 12, budget: 200, format: 'auction',
+    roster: { QB: { total: 3, starters: 2 } } } }) });
+  ok('a straight 2-QB league is priced as QB-premium',
+     twoQb.price('QB', 0) > loadLib({}).price('QB', 0) + 10,
+     String(twoQb.price('QB', 0)));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
