@@ -413,10 +413,33 @@ server.listen(PORT, '127.0.0.1', () => {
 
 server.on('error', e => {
   if (e.code === 'EADDRINUSE') {
-    console.error('Port ' + PORT + ' is already in use. Another bridge may already be running.');
-    console.error('Set a different one with:  FABLE_BRIDGE_PORT=8788 node tools/fable-bridge.js');
+    console.error('');
+    console.error('  Port ' + PORT + ' is already in use, so the bridge did NOT start.');
+    console.error('');
+    console.error('  Something else on this machine is holding that port. Usually it is a');
+    console.error('  local dev server for this same site rather than a second bridge, so');
+    console.error('  look before assuming the bridge is already running:');
+    console.error('');
+    console.error('      Windows:  netstat -ano | findstr :' + PORT);
+    console.error('      mac/Linux:  lsof -i :' + PORT);
+    console.error('');
+    console.error('  Either stop that program, or put the bridge on another port:');
+    console.error('');
+    console.error('      Windows:  set FABLE_BRIDGE_PORT=8788 && node tools\\fable-bridge.js');
+    console.error('      mac/Linux:  FABLE_BRIDGE_PORT=8788 node tools/fable-bridge.js');
+    console.error('');
+    console.error('  Moving the port is only half the job. The panel\'s bridge URL is baked');
+    console.error('  into index.html as 127.0.0.1:' + PORT + ' and there is no setting for it, so');
+    console.error('  the panel keeps calling the old port until you repoint it. Paste this');
+    console.error('  into the browser console on the draft page:');
+    console.error('');
+    console.error('      (()=>{const k="it_fable_dock_v1",s=JSON.parse(localStorage.getItem(k)||"{}");');
+    console.error('       s.bridge="http://127.0.0.1:8788";localStorage.setItem(k,JSON.stringify(s));location.reload()})()');
+    console.error('');
   } else {
-    console.error(e.message);
+    console.error('');
+    console.error('  Bridge failed to start: ' + (e.message || e));
+    console.error('');
   }
   process.exit(1);
 });
