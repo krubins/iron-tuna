@@ -18917,32 +18917,57 @@ function buildCoachContext(q, ctx) {
   };
 }
 // The 2026 coaching staffs this repo actually asserts, and the only ones the Value
-// Coach is allowed to state. The system prompt invites the model to answer staff and
-// scheme questions from its own football knowledge, and without a table to check
-// against it answers them from its training data: it pitched Trevor Lawrence as a
-// Doug Pederson beneficiary two coaching hires after Pederson left Jacksonville.
-// Every row below is quoted from a page in this repo, never from memory — see the
-// Auction Watch pages and /play-caller-premium. Teams the site has never named are
-// deliberately absent, because "not sure" beats a confident wrong name; grep the
-// corpus for the claim before adding a row, and update a row when a page changes it.
+// Coach and the Roast a Rival jabs are allowed to state. The system prompt invites
+// the model to answer staff and scheme questions from its own football knowledge, and
+// without a table to check against it answers them from its training data: it pitched
+// Trevor Lawrence as a Doug Pederson beneficiary two coaching hires after Pederson
+// left Jacksonville.
+//
+// Provenance is per row. A row citing a page was quoted from this repo's own copy, and
+// tools/test-coaching-staffs.mjs cross-checks it against that copy — grep the corpus
+// before editing one, and update it when a page changes. A row marked `verified` had no
+// page to quote and was checked against the club's own announcement plus a second
+// published list; the 2026 cycle moved ten head coaches, so no row here may be filled in
+// from memory. Re-check the whole table each offseason.
+//
+// All 32 teams are listed, which is a change: the table used to omit teams the site had
+// never written about, on the reasoning that "not sure" beats a confident wrong name.
+// The prompt still falls back to exactly that for any team missing here. But Roast a
+// Rival names coaches from this table too and needs a head coach for every team, so the
+// test now asserts both 32 rows and an HC in each.
 const STAFFS_2026 = {
   ARI: 'HC Mike LaFleur',                                  // auction-watch-2026-08-21
+  ATL: 'HC Kevin Stefanski',                               // verified
+  BAL: 'HC Jesse Minter',                                  // verified
+  BUF: 'HC Joe Brady',                                     // verified
   CAR: 'HC Dave Canales',                                  // auction-watch-2026-07-26
   CHI: 'HC Ben Johnson',                                   // auction-watch-2026-07-04, 2026-08-21
-  CLE: 'play-caller Todd Monken, hired from Baltimore with Travis Switzer', // play-caller-premium
+  CIN: 'HC Zac Taylor',                                    // verified
+  CLE: 'HC Todd Monken, hired from Baltimore with Travis Switzer', // play-caller-premium
+  DAL: 'HC Brian Schottenheimer',                          // verified
+  DEN: 'HC Sean Payton',                                   // verified
   DET: 'HC Dan Campbell, OC Drew Petzing',                 // auction-watch-2026-06-28, 2026-06-29
+  GB:  'HC Matt LaFleur',                                  // verified
+  HOU: 'HC DeMeco Ryans',                                  // verified
   IND: 'HC Shane Steichen',                                // auction-watch-2026-08-18
   JAX: 'HC Liam Coen',                                     // auction-watch-2026-06-24, 2026-07-11
   KC:  'HC Andy Reid',                                     // auction-watch-2026-07-21
-  LAC: 'OC Mike McDaniel',                                 // auction-watch-2026-06-29
+  LAC: 'HC Jim Harbaugh, OC Mike McDaniel',                // auction-watch-2026-06-29 names the OC
+  LAR: 'HC Sean McVay',                                    // verified
   LV:  'HC Klint Kubiak',                                  // auction-watch-2026-08-22
+  MIA: 'HC Jeff Hafley',                                   // verified
+  MIN: "HC Kevin O'Connell",                               // verified
   NE:  'HC Mike Vrabel',                                   // auction-watch-2026-06-23, 2026-07-22
   NO:  'HC Kellen Moore',                                  // auction-watch-2026-07-01
   NYG: 'HC John Harbaugh, OC Matt Nagy',                   // play-caller-premium
   NYJ: 'HC Aaron Glenn',                                   // auction-watch-2026-07-12, 2026-07-20
+  PHI: 'HC Nick Sirianni',                                 // verified
   PIT: 'HC Mike McCarthy',                                 // auction-watch-2026-07-03
+  SEA: 'HC Mike Macdonald',                                // verified
+  SF:  'HC Kyle Shanahan',                                 // verified
   TB:  'HC Todd Bowles',                                   // auction-watch-2026-06-22
-  TEN: 'HC Brian Daboll'                                   // snake-insights-2026-09-03
+  TEN: 'HC Robert Saleh, OC Brian Daboll',                 // snake-insights-2026-09-03 names Daboll; he is the OC, Saleh is the HC
+  WAS: 'HC Dan Quinn'                                      // verified
 };
 async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _coachFmt = contextObj && contextObj.format || 'auction';
@@ -20911,13 +20936,111 @@ function buildModel(key, myTeam, players, config, draftedIds, roleOverrides, tar
   }
   return planFor(key);
 }
-function teamTaunt(team, players, config, games, idx) {
+const NFL_CITY = {
+  ARI: 'Arizona', ATL: 'Atlanta', BAL: 'Baltimore', BUF: 'Buffalo', CAR: 'Carolina',
+  CHI: 'Chicago', CIN: 'Cincinnati', CLE: 'Cleveland', DAL: 'Dallas', DEN: 'Denver',
+  DET: 'Detroit', GB: 'Green Bay', HOU: 'Houston', IND: 'Indianapolis',
+  JAC: 'Jacksonville', JAX: 'Jacksonville', KC: 'Kansas City', LAC: 'Chargers',
+  LAR: 'Rams', LV: 'Las Vegas', MIA: 'Miami', MIN: 'Minnesota', NE: 'New England',
+  NO: 'New Orleans', NYG: 'Giants', NYJ: 'Jets', PHI: 'Philadelphia',
+  PIT: 'Pittsburgh', SEA: 'Seattle', SF: 'San Francisco', TB: 'Tampa Bay',
+  TEN: 'Tennessee', WAS: 'Washington'
+};
+function staffLabel(tm) {
+  return `the ${NFL_CITY[tm] || tm} staff`;
+}
+// The head coach comes out of STAFFS_2026, the same table the Value Coach is
+// grounded on, so the roast and the coach can never name different men for one
+// team. tools/test-coaching-staffs.mjs guards that table against the site's own
+// pages. A team with no entry falls back to "the Denver staff" and nothing breaks.
+function headCoachOf(tm) {
+  const entry = STAFFS_2026[tm === 'JAC' ? 'JAX' : tm];
+  const m = entry && entry.match(/HC ([^,]+)/);
+  return m ? m[1].trim() : null;
+}
+function coachLabel(tm) {
+  return headCoachOf(tm) || staffLabel(tm);
+}
+function capFirst(str) {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
+}
+function ordinal(n) {
+  const s = ['th', 'st', 'nd', 'rd'],
+    v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+function nflTeamContext(players) {
+  const pts = p => p && p.projectedPoints || 0;
+  const raw = p => p && p.projectedStats || {};
+  const byTeam = new Map();
+  const byPos = new Map();
+  (players || []).forEach(p => {
+    if (!p) return;
+    if (!byPos.has(p.position)) byPos.set(p.position, []);
+    byPos.get(p.position).push(p);
+    if (!p.team || p.team === 'FA') return;
+    if (!byTeam.has(p.team)) byTeam.set(p.team, []);
+    byTeam.get(p.team).push(p);
+  });
+  const posRank = new Map();
+  byPos.forEach(list => list.slice().sort((a, b) => pts(b) - pts(a)).forEach((p, i) => posRank.set(p.id, i + 1)));
+  const qb1 = new Map();
+  const depth = new Map();
+  const best = new Map();
+  const staff = new Map();
+  const off = [];
+  const tdRates = [];
+  byTeam.forEach((list, tm) => {
+    const at = {};
+    ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+      at[pos] = list.filter(p => p.position === pos).sort((a, b) => pts(b) - pts(a));
+      at[pos].forEach((p, i) => depth.set(p.id, i + 1));
+      if (at[pos][0]) best.set(tm + '|' + pos, at[pos][0]);
+    });
+    const q = at.QB[0];
+    if (q) qb1.set(tm, q);
+    if (list.length < 6) return;
+    const skill = list.filter(p => p.position === 'RB' || p.position === 'WR' || p.position === 'TE').sort((a, b) => pts(b) - pts(a)).slice(0, 6);
+    off.push({ team: tm, pts: skill.reduce((a, b) => a + pts(b), 0) + pts(q) });
+    const yards = list.reduce((a, b) => a + (raw(b).rushYd || 0) + (raw(b).recYd || 0), 0);
+    const tds = list.reduce((a, b) => a + (raw(b).rushTD || 0) + (raw(b).recTD || 0), 0);
+    if (yards > 0) tdRates.push({ team: tm, rate: tds / (yards / 100) });
+    staff.set(tm, {
+      rbSplit: at.RB.length >= 2 && pts(at.RB[1]) >= 90 && pts(at.RB[0]) > 0 ? pts(at.RB[1]) / pts(at.RB[0]) : 0,
+      rb1: at.RB[0] || null,
+      rb2: at.RB[1] || null,
+      wrFlat: at.WR.length >= 3 && pts(at.WR[2]) >= 90 && pts(at.WR[0]) > 0 ? pts(at.WR[2]) / pts(at.WR[0]) : 0,
+      wr1: at.WR[0] || null,
+      wr3: at.WR[2] || null
+    });
+  });
+  const qbOrder = [...qb1.values()].sort((a, b) => pts(b) - pts(a));
+  const qbRank = new Map(qbOrder.map((q, i) => [q.team, i + 1]));
+  off.sort((a, b) => b.pts - a.pts);
+  const offRank = new Map(off.map((o, i) => [o.team, i + 1]));
+  tdRates.sort((a, b) => b.rate - a.rate);
+  const tdRank = new Map(tdRates.map((o, i) => [o.team, i + 1]));
+  return {
+    qb1,
+    qbRank,
+    qbCount: qbOrder.length,
+    offRank,
+    offCount: off.length,
+    depth,
+    best,
+    posRank,
+    staff,
+    tdRank,
+    tdCount: tdRates.length
+  };
+}
+function teamTaunt(team, players, config, games, idx, draftHistory) {
   const g = games || 17;
   const isAuction = !(config && config.format && config.format !== 'auction');
   const byId = new Map((players || []).map(p => [p.id, p]));
   const roster = (team.roster || []).map(r => {
     const pl = byId.get(r.playerId) || {};
-    return { name: pl.name || 'a mystery man', position: r.position, price: r.price || 0, value: pl.auctionValue || 0, pts: pl.projectedPoints || 0 };
+    return { id: r.playerId, name: pl.name || 'a mystery man', nflTeam: pl.team || '', position: r.position, price: r.price || 0, value: pl.auctionValue || 0, pts: pl.projectedPoints || 0 };
   });
   const filled = roster.length;
   const totalSpots = totalRosterSpots(config);
@@ -20926,14 +21049,110 @@ function teamTaunt(team, players, config, games, idx) {
   const byPos = {};
   roster.forEach(r => byPos[r.position] = (byPos[r.position] || 0) + 1);
   const starterPts = mockStarterPts(roster.map(r => ({ position: r.position, projectedPoints: r.pts })), config, g);
-  let worst = null;
+  const ctx = nflTeamContext(players);
+  const nameList = a => a.length === 1 ? a[0] : a.length === 2 ? `${a[0]} and ${a[1]}` : `${a.slice(0, -1).join(', ')}, and ${a[a.length - 1]}`;
+  const posWord = { RB: 'running back', WR: 'receiver', TE: 'tight end', QB: 'quarterback', K: 'kicker', DEF: 'defense' };
+  const badOffense = tm => {
+    const r = ctx.offRank.get(tm);
+    return ctx.offCount >= 12 && r != null && r > ctx.offCount - Math.max(3, Math.round(ctx.offCount * 0.25));
+  };
+  const topOffense = tm => {
+    const r = ctx.offRank.get(tm);
+    return r != null && r <= Math.max(4, Math.round(ctx.offCount / 3));
+  };
+  const badQbTeam = tm => {
+    const r = ctx.qbRank.get(tm);
+    return ctx.qbCount >= 12 && r != null && r > ctx.qbCount - Math.max(3, Math.round(ctx.qbCount * 0.31));
+  };
+  const rostered = new Set(roster.map(r => r.id));
+  const byNflTeam = {};
+  roster.forEach(r => { if (r.nflTeam) (byNflTeam[r.nflTeam] = byNflTeam[r.nflTeam] || []).push(r); });
+  const groups = Object.keys(byNflTeam).map(tm => byNflTeam[tm]);
+  const sunkCost = roster.filter(r => r.nflTeam && badOffense(r.nflTeam)).sort((a, b) => b.pts - a.pts);
+  const orphaned = roster.filter(r => (r.position === 'WR' || r.position === 'TE') && badQbTeam(r.nflTeam) && ctx.qb1.get(r.nflTeam)).sort((a, b) => b.pts - a.pts)[0];
+  const badStack = groups.filter(list => list.length >= 2 && badOffense(list[0].nflTeam))[0];
+  const ownBadQb = roster.filter(r => r.position === 'QB' && badQbTeam(r.nflTeam)).sort((a, b) => a.pts - b.pts)[0];
+  const understudy = roster.filter(r => {
+    if (r.position !== 'RB' && r.position !== 'TE') return false;
+    const d = ctx.depth.get(r.id);
+    const ahead = ctx.best.get(r.nflTeam + '|' + r.position);
+    return d != null && d >= 2 && ahead && !rostered.has(ahead.id) && (ahead.projectedPoints || 0) >= r.pts * 1.4;
+  }).sort((a, b) => b.pts - a.pts)[0];
+  const committee = groups.map(list => list.filter(r => r.position === 'RB')).filter(list => list.length >= 2)[0];
+  const wrRoom = groups.map(list => list.filter(r => r.position === 'WR')).filter(list => list.length >= 3)[0];
+  const noTopOffense = filled >= 4 && roster.every(r => !topOffense(r.nflTeam));
+  const anchor = roster.slice().sort((a, b) => isAuction ? b.price - a.price : b.value - a.value)[0];
+  const pickOf = new Map((draftHistory || []).map((d, i) => [d.playerId, i + 1]));
+  const boardRank = new Map([...(players || [])].sort((a, b) => (b.auctionValue || 0) - (a.auctionValue || 0) || (b.projectedPoints || 0) - (a.projectedPoints || 0)).map((p, i) => [p.id, i + 1]));
+  let reach = null;
+  if (!isAuction) roster.forEach(r => {
+    const pk = pickOf.get(r.id),
+      rk = boardRank.get(r.id);
+    if (pk && rk && rk - pk >= 15 && (!reach || rk - pk > reach.gap)) reach = { name: r.name, pick: pk, rank: rk, gap: rk - pk };
+  });
+  let hyped = null;
   if (isAuction) roster.forEach(r => {
     const over = r.price - r.value;
-    if (r.value >= 3 && over >= 5 && (!worst || over > worst.over)) worst = { name: r.name, price: r.price, over: over };
+    if (r.value >= 3 && over >= 8 && (!hyped || over > hyped.over)) hyped = { name: r.name, price: r.price, over: over };
   });
+  // Overrated: bought the 2025 box score. Compares last season's actual production to this
+  // season's projection under the league's own scoring, so it tracks the user's settings.
+  let staleStar = null;
+  roster.forEach(r => {
+    if (r.position !== 'RB' && r.position !== 'WR' && r.position !== 'TE' && r.position !== 'QB') return;
+    const a = typeof act2025Of === 'function' ? act2025Of(r.name) : null;
+    if (!a) return;
+    const was = scoreSkillPlayer({ passYd: a[0], passTD: a[1], rushYd: a[2], rushTD: a[3], rec: a[4], recYd: a[5], recTD: a[6] }, r.position, config);
+    if (was < 180 || r.pts <= 0 || r.pts > was * 0.88) return;
+    const lost = was - r.pts;
+    if (!staleStar || lost > staleStar.lost) staleStar = { name: r.name, was: Math.round(was), now: Math.round(r.pts), lost: lost };
+  });
+  // Overrated: star money (or a premium pick) for a player our board has outside the starter tier.
+  const starterTier = { QB: 12, RB: 24, WR: 30, TE: 12 };
+  let priceyNonStar = null;
+  roster.forEach(r => {
+    const tier = starterTier[r.position];
+    const rk = ctx.posRank.get(r.id);
+    if (!tier || !rk || rk <= tier) return;
+    const pk = pickOf.get(r.id);
+    const budget = config && config.budget || 200;
+    const premium = isAuction ? r.price >= Math.max(8, budget * 0.12) : pk != null && pk <= (config && config.teams || 12) * 3;
+    if (!premium) return;
+    const weight = isAuction ? r.price : 1000 - pk;
+    if (!priceyNonStar || weight > priceyNonStar.weight) priceyNonStar = { name: r.name, position: r.position, price: r.price, pick: pk, rank: rk, weight: weight };
+  });
+  // Coaching tendencies, all derived from the projection pool rather than a hardcoded table.
+  const splitBackfield = roster.filter(r => {
+    const s = ctx.staff.get(r.nflTeam);
+    return r.position === 'RB' && s && s.rbSplit >= 0.75 && (byNflTeam[r.nflTeam] || []).filter(x => x.position === 'RB').length < 2;
+  }).sort((a, b) => b.pts - a.pts)[0];
+  const flatWrRoom = roster.filter(r => {
+    const s = ctx.staff.get(r.nflTeam);
+    return r.position === 'WR' && s && s.wrFlat >= 0.75;
+  }).sort((a, b) => b.pts - a.pts)[0];
+  const fieldGoalOffense = roster.filter(r => {
+    const rk = ctx.tdRank.get(r.nflTeam);
+    return (r.position === 'RB' || r.position === 'WR' || r.position === 'TE') && ctx.tdCount >= 12 && rk != null && rk > ctx.tdCount - Math.max(3, Math.round(ctx.tdCount * 0.16));
+  }).sort((a, b) => b.pts - a.pts)[0];
   const jabs = [];
   if (filled === 0) jabs.push(isAuction ? `${team.name} hasn't won a single player and is clutching $${team.budgetRemaining} like the last lifeboat. Waiting for prices to drop? They won't.` : `${team.name} hasn't drafted a single player yet. The board is filling up without them.`);
-  if (isAuction && worst) jabs.push(`${team.name} paid $${worst.price} for ${worst.name}, about $${worst.over} over the going rate. Big tipper, small returns.`);
+  if (sunkCost.length >= 3) jabs.push(`I see ${team.name} is collecting players on losing teams. ${nameList(sunkCost.slice(0, 3).map(r => r.name))} all report to offenses parked in the league's basement. That isn't a roster, it's a support group.`);
+  if (orphaned) jabs.push(`I see ${team.name} wants ${ctx.qb1.get(orphaned.nflTeam).name}'s favorite target. ${orphaned.name} is going to run some gorgeous routes that nobody throws to.`);
+  if (staleStar) jabs.push(`${team.name} drafted ${staleStar.name} off last year's box score. He scored ${staleStar.was} in 2025 and projects for ${staleStar.now} in 2026. Nostalgia is not a roster strategy.`);
+  if (splitBackfield) jabs.push(`${capFirst(coachLabel(splitBackfield.nflTeam))} has never looked at a backfield and thought "yes, that one guy." ${ctx.staff.get(splitBackfield.nflTeam).rb1.name} and ${ctx.staff.get(splitBackfield.nflTeam).rb2.name} project within a hair of each other, and ${team.name} bought ${splitBackfield.name} anyway. That's a coin flip with a roster spot.`);
+  if (sunkCost.length === 2) jabs.push(`${sunkCost[0].name} and ${sunkCost[1].name} play for two of the sorriest offenses in football. ${team.name} isn't drafting players, they're adopting them.`);
+  if (priceyNonStar) jabs.push(isAuction ? `${team.name} spent $${priceyNonStar.price} on ${priceyNonStar.name}, our ${ordinal(priceyNonStar.rank)}-best ${posWord[priceyNonStar.position]}. That's starter money for a bench body with a good agent.` : `${team.name} used pick ${priceyNonStar.pick} on ${priceyNonStar.name}, the ${ordinal(priceyNonStar.rank)} ${posWord[priceyNonStar.position]} on our board. Reputation drafted him. Reputation does not score points.`);
+  if (flatWrRoom) jabs.push(`Nobody on ${staffLabel(flatWrRoom.nflTeam)} has decided who the number one receiver is, and they've had an entire offseason to think it over. ${team.name} took ${flatWrRoom.name} and will find out on Sunday, same as everybody else.`);
+  if (badStack) jabs.push(`${team.name} stacked ${badStack[0].nflTeam}: ${nameList(badStack.slice(0, 3).map(r => r.name))}. Correlation is a lovely strategy right up until you correlate yourself to a bad offense.`);
+  if (fieldGoalOffense) jabs.push(`${capFirst(coachLabel(fieldGoalOffense.nflTeam))} runs an offense that marches eighty yards and settles for a field goal. ${fieldGoalOffense.name} will pile up yardage for ${team.name} and somehow never find the end zone.`);
+  if (ownBadQb) jabs.push(`${team.name} is walking into the season with ${ownBadQb.name} taking the snaps. Not as a bye-week patch. As the plan.`);
+  if (understudy) jabs.push(`${understudy.name} isn't even the best ${posWord[understudy.position]} on his own team. ${team.name} spent real draft capital on a guy whose ceiling requires a teammate to get hurt.`);
+  if (reach) jabs.push(`${team.name} took ${reach.name} at ${reach.pick} overall. Our board had him ${reach.rank}. Trusting your gut over the numbers is bold; doing it that early is a lifestyle.`);
+  if (committee) jabs.push(`${team.name} drafted both halves of the ${committee[0].nflTeam} backfield and will still manage to start the wrong one every single week.`);
+  if (wrRoom) jabs.push(`${team.name} owns ${wrRoom.length} ${wrRoom[0].nflTeam} receivers. One football, gentlemen. They only issue the one.`);
+  if (anchor && anchor.nflTeam && badOffense(anchor.nflTeam) && filled >= 2) jabs.push(`${team.name} built the whole thing around ${anchor.name}, a genuinely good player on a genuinely bad team. Talent doesn't score points. Offenses do.`);
+  if (noTopOffense) jabs.push(`Not one player on ${team.name} comes from a top-third offense. That isn't bad luck, that's a filter. You almost have to be trying.`);
+  if (hyped) jabs.push(`${team.name} paid $${hyped.price} for ${hyped.name} because the room liked the name. That's a price for the player he used to be, not the one he's about to be.`);
   if (filled >= 3 && !byPos['RB']) jabs.push(`${filled} players deep and ${team.name} still has zero running backs. Daring plan to win a league without the position that wins leagues.`);
   if (filled >= 3 && !byPos['WR']) jabs.push(`${team.name} forgot wide receivers exist. Those flex spots are going to feel awfully empty.`);
   if (isAuction && left > 0 && perSlot < 2 && filled < totalSpots - 1) jabs.push(`${team.name} has $${team.budgetRemaining} for ${left} spots. Enjoy a bench built entirely from the $1 bin.`);
@@ -20945,8 +21164,8 @@ function teamTaunt(team, players, config, games, idx) {
   if (!isAuction && filled >= 4 && !byPos['QB'] && !byPos['TE']) jabs.push(`${team.name} keeps reaching for the same spots and still has no QB or TE. Those bye weeks are going to be a horror show.`);
   if (!isAuction && filled >= 5 && (byPos['WR'] || 0) === 0) jabs.push(`${team.name} is five picks in without a single wide receiver. Bold, in a league that starts three.`);
   if (!jabs.length) jabs.push(`${team.name} is being suspiciously competent, no glaring holes yet. Give them a few picks; they'll find a way to mess it up.`);
-  const _n = (((idx || 0) % jabs.length) + jabs.length) % jabs.length;
-  return jabs[_n];
+  if (idx != null) return jabs[(idx % jabs.length + jabs.length) % jabs.length];
+  return jabs[Math.floor(Math.random() * Math.min(5, jabs.length))];
 }
 function HeaderModelTabs({
   myTeam,
@@ -21291,7 +21510,7 @@ function App() {
     setTaunt({
       id: Date.now(),
       name: t.name,
-      text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES)
+      text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES, null, draftHistory)
     });
     ITAnalytics.track('taunt', {
       team: t.name
@@ -21301,7 +21520,7 @@ function App() {
     if (!t) return;
     setTaunt({
       name: t.name,
-      text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES)
+      text: teamTaunt(t, personalizedPlayers, config, SEASON_GAMES, null, draftHistory)
     });
     ITAnalytics.track('taunt', {});
   }

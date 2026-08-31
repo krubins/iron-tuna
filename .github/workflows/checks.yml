@@ -258,6 +258,14 @@ jobs:
       - name: The Pick, against the player pool it prices from
         run: node tools/test-the-pick.mjs
 
+      # Who coaches whom is handed to the Value Coach as authoritative and told to
+      # override the model's own memory, so a wrong row is stated as confidently as
+      # a right one -- and Roast a Rival now names coaches off the same table. This
+      # holds STAFFS_2026 to all 32 teams, to an HC in every row, and to the site's
+      # own pages, which is how it caught TEN listing its OC as the head coach.
+      - name: Coaching staffs, against the pages that assert them
+        run: node tools/test-coaching-staffs.mjs
+
       # The Build desk states a budget, so it has to account for that budget.
       # It once published the starters ($183) under a headline quoting the whole
       # board ($200) and never mentioned the bench that spends the difference,
