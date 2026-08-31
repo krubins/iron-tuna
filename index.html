@@ -6040,10 +6040,10 @@ function Header({
   }, React.createElement("button", {
     className: view === 'prep' ? 'active' : '',
     onClick: () => setView('prep')
-  }, "Cheat Sheet"), (config && (config.format || 'auction') === 'auction') && React.createElement("button", { className: view === 'mock' ? 'active' : '', onClick: () => setView('mock') }, "Mock Auction"), (config && config.format && config.format !== 'auction') && React.createElement("button", { className: view === 'mockdraft' ? 'active' : '', onClick: () => setView('mockdraft') }, "Mock Draft"), React.createElement("button", {
+  }, "Cheat Sheet"), React.createElement("button", {
     className: view === 'board' || view === 'split' ? 'active' : '',
     onClick: () => setView('board')
-  }, ((config && config.format && config.format !== 'auction') ? "Draft Board" : "Auction Board")), React.createElement("button", {
+  }, ((config && config.format && config.format !== 'auction') ? "Draft Board" : "Auction Board")), (config && (config.format || 'auction') === 'auction') && React.createElement("button", { className: view === 'mock' ? 'active' : '', onClick: () => setView('mock') }, "Mock Auction"), (config && config.format && config.format !== 'auction') && React.createElement("button", { className: view === 'mockdraft' ? 'active' : '', onClick: () => setView('mockdraft') }, "Mock Draft"), React.createElement("button", {
     className: view === 'settings' ? 'active' : '',
     onClick: () => setView('settings')
   }, "Your League"), React.createElement("button", {
