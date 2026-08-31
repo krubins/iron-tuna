@@ -4,14 +4,14 @@
 //   node tools/test-reading-view.mjs
 //
 // Until August 2026 this was the other way round — the content pages were dark
-// navy and three READING pages (the two standing columns and the article page
-// every generated story lands on) were white, so a reader flashed between two
+// navy and the READING pages (the standing column and the article page every
+// generated story lands on) were white, so a reader flashed between two
 // palettes on every click. The auction-first pass took all 90-odd content pages
 // light and unified the accent, and this file is what keeps them in step: the
-// three pages below are checked in full, and the whole-site sweep at the bottom
+// pages below are checked in full, and the whole-site sweep at the bottom
 // makes sure nothing drifts back to the retired dark palette.
 //
-// The palette is duplicated inline in all three files. That is the repo's
+// The palette is duplicated inline in both files. That is the repo's
 // convention (every page carries its own <style>; there is no shared stylesheet
 // and no build step to make one), and it is exactly the setup where one page
 // gets updated and the others quietly drift. Nothing but this file keeps them in
@@ -35,7 +35,7 @@ const ok = (name, cond, extra = '') => {
   else { fail++; console.log(`  FAIL ${name}${extra ? ' — ' + extra : ''}`); }
 };
 
-const PAGES = ['lead.html', 'analyst-desk.html', 'play-caller-premium.html'];
+const PAGES = ['lead.html', 'play-caller-premium.html'];
 // The draft app is the one dark surface left, on purpose: it is a tool you work
 // in on draft night, not a page you read.
 const DARK = ['index.html'];
@@ -64,15 +64,12 @@ for (const f of PAGES) {
 console.log('\ngold is a fill, not an ink');
 {
   // Wherever gold carries meaning as TEXT rather than as a filled button, it has
-  // to be the darker ink. Both columns do this: the record table's Partly
-  // column, and the two-sided verdict chip.
-  const desk = fs.readFileSync(path.join(ROOT, 'analyst-desk.html'), 'utf8');
+  // to be the darker ink. The standing column does this in its two-sided
+  // verdict chip.
   const pcp = fs.readFileSync(path.join(ROOT, 'play-caller-premium.html'), 'utf8');
-  ok('the record table\'s Partly column is ink gold', desk.includes('.n-partial{color:var(--goldink)'));
   ok('the two-sided verdict chip is ink gold', pcp.includes('color:var(--goldink)'));
-  for (const [f, src] of [['analyst-desk.html', desk], ['play-caller-premium.html', pcp]]) {
-    ok(`${f} defines --goldink it reaches for`, /--goldink:\s*#[0-9a-f]{6}/i.test(src));
-  }
+  ok('play-caller-premium.html defines --goldink it reaches for',
+     /--goldink:\s*#[0-9a-f]{6}/i.test(pcp));
   // The buttons keep the bright fill: dark text on a gold block is fine on white.
   ok('buttons keep the bright gold fill',
      PAGES.every(f => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('background:var(--gold)')));
@@ -92,7 +89,7 @@ console.log('\nthe rest of the site reads as the same surface');
   // palette of its own and link the one that does. An inline :root would win,
   // because site.css is linked before the page's own <style> — which is exactly
   // how ninety-one divergent copies happened the first time.
-  // PAGES (the three reading pages) are checked in full above and keep their own
+  // PAGES (the reading pages) are checked in full above and keep their own
   // :root on purpose — they are excluded from the shared chrome for the same
   // reason, so they are excluded here rather than being a standing failure.
   const ownRoot = content.filter((f) => !PAGES.includes(f))

@@ -33,14 +33,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = process.argv.includes('--check');
 const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
 
-// The three READING pages. tools/test-reading-view.mjs states the rule they
+// The READING pages. tools/test-reading-view.mjs states the rule they
 // exist under: the app, the front page and the guides are one zone; the
-// standing analyst column, the standing play-caller column and the article page
-// every generated story lands on are a white reading zone. They are pages you
+// standing play-caller column and the article page every generated story lands
+// on are a white reading zone. They are pages you
 // read rather than use, and an eleven-item nav belongs on neither. They keep
 // their own short header and take the shared footer, so every destination is
 // still one scroll away.
-const NAV_EXCLUDE = new Set(['lead.html', 'analyst-desk.html', 'play-caller-premium.html']);
+const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html']);
 
 // ── the canonical link set ───────────────────────────────────────────────────
 // One place to change what the site links to. `app` is filled in per page so a
@@ -76,7 +76,7 @@ const NAV = [
     ],
   },
   { label: 'The Pick', href: '/the-pick' },
-  { label: 'Columns', href: '/analyst-desk' },
+  { label: 'Columns', href: '/play-caller-premium' },
   { label: 'In-Season', href: '/post-draft' },
   { label: 'FAQ', href: '/faq' },
   { label: 'Free cheat sheet', href: '{app}', cta: true },
@@ -98,7 +98,6 @@ const FOOT_COLS = [
       { label: 'The Pick', href: '/the-pick' },
       { label: 'Auction Watch', href: '/auction-watch' },
       { label: 'Guides', href: '/guides' },
-      { label: 'Analyst Desk', href: '/analyst-desk' },
       { label: 'Play-Caller Premium', href: '/play-caller-premium' },
       { label: 'Insight Vault', href: '/insights-vault' },
     ],

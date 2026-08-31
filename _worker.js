@@ -160,156 +160,156 @@ const INSIGHTS_VAULT = [{"code":"Q3","section":"QB","title":"DJ Moore’s arriva
 const PROJECTIONS = [
 
   // ── QB (CBS/SportsLine 2026, adjusted) ──
-  { name: "Josh Allen", position: "QB", team: "BUF", projectedStats: { passYd: 3944, passTD: 25, passInt: 12, rushYd: 577, rushTD: 11, fumLost: 0 }},
-  { name: "Lamar Jackson", position: "QB", team: "BAL", projectedStats: { passYd: 3887, passTD: 25, passInt: 10, rushYd: 667, rushTD: 3, fumLost: 0 }},
-  { name: "Drake Maye", position: "QB", team: "NE", projectedStats: { passYd: 4092, passTD: 26, passInt: 11, rushYd: 529, rushTD: 3, fumLost: 0 }},
-  { name: "Jayden Daniels", position: "QB", team: "WAS", projectedStats: { passYd: 3851, passTD: 21, passInt: 10, rushYd: 672, rushTD: 4, fumLost: 0 }},
-  { name: "Dak Prescott", position: "QB", team: "DAL", projectedStats: { passYd: 4115, passTD: 29, passInt: 12, rushYd: 189, rushTD: 3, fumLost: 0 }},
-  { name: "Joe Burrow", position: "QB", team: "CIN", projectedStats: { passYd: 4117, passTD: 32, passInt: 11, rushYd: 187, rushTD: 3, fumLost: 0 }},
-  { name: "Jalen Hurts", position: "QB", team: "PHI", projectedStats: { passYd: 3780, passTD: 25, passInt: 9, rushYd: 436, rushTD: 8, fumLost: 0 }},
-  { name: "Trevor Lawrence", position: "QB", team: "JAX", projectedStats: { passYd: 3926, passTD: 24, passInt: 13, rushYd: 336, rushTD: 6, fumLost: 0 }},
-  { name: "Jaxson Dart", position: "QB", team: "NYG", projectedStats: { passYd: 3686, passTD: 21, passInt: 10, rushYd: 555, rushTD: 7, fumLost: 0 }},
-  { name: "Brock Purdy", position: "QB", team: "SF", projectedStats: { passYd: 4183, passTD: 28, passInt: 14, rushYd: 274, rushTD: 5, fumLost: 0 }},
-  { name: "Patrick Mahomes", position: "QB", team: "KC", projectedStats: { passYd: 3992, passTD: 27, passInt: 12, rushYd: 327, rushTD: 4, fumLost: 0 }},
-  { name: "Matthew Stafford", position: "QB", team: "LAR", projectedStats: { passYd: 4046, passTD: 34, passInt: 7, rushYd: 38, fumLost: 2 }},
-  { name: "Daniel Jones", position: "QB", team: "IND", projectedStats: { passYd: 3746, passTD: 21, passInt: 11, rushYd: 305, rushTD: 7, fumLost: 0 }},
-  { name: "Justin Herbert", position: "QB", team: "LAC", projectedStats: { passYd: 3845, passTD: 25, passInt: 11, rushYd: 409, rushTD: 1, fumLost: 0 }},
-  { name: "Jared Goff", position: "QB", team: "DET", projectedStats: { passYd: 4231, passTD: 35, passInt: 10, rushYd: 42, fumLost: 4 }},
-  { name: "Caleb Williams", position: "QB", team: "CHI", projectedStats: { passYd: 3819, passTD: 24, passInt: 10, rushYd: 383, rushTD: 3, fumLost: 0 }},
-  { name: "Baker Mayfield", position: "QB", team: "TB", projectedStats: { passYd: 3944, passTD: 30, passInt: 15, rushYd: 398, rushTD: 3, fumLost: 3 }},
-  { name: "Malik Willis", position: "QB", team: "MIA", projectedStats: { passYd: 3551, passTD: 13, passInt: 10, rushYd: 542, rushTD: 3, fumLost: 0 }},
-  { name: "Sam Darnold", position: "QB", team: "SEA", projectedStats: { passYd: 4120, passTD: 31, passInt: 13, rushYd: 150, fumLost: 6 }},
-  { name: "Bo Nix", position: "QB", team: "DEN", projectedStats: { passYd: 3874, passTD: 27, passInt: 11, rushYd: 358, rushTD: 5, fumLost: 0 }},
-  { name: "C.J. Stroud", position: "QB", team: "HOU", projectedStats: { passYd: 3936, passTD: 28, passInt: 12, rushYd: 248, rushTD: 1, fumLost: 3 }},
-  { name: "Tyler Shough", position: "QB", team: "NO", projectedStats: { passYd: 3886, passTD: 20, passInt: 11, rushYd: 281, rushTD: 4, fumLost: 0 }},
-  { name: "Kyler Murray", position: "QB", team: "MIN", projectedStats: { passYd: 3344, passTD: 20, passInt: 10, rushYd: 441, rushTD: 2, fumLost: 0 }},
-  { name: "Jordan Love", position: "QB", team: "GB", projectedStats: { passYd: 3680, passTD: 28, passInt: 10, rushYd: 183, fumLost: 2 }},
-  { name: "Jacoby Brissett", position: "QB", team: "ARI", projectedStats: { passYd: 3770, passTD: 25, passInt: 12, rushYd: 260, rushTD: 2, fumLost: 6 }},
-  { name: "Tua Tagovailoa", position: "QB", team: "ATL", projectedStats: { passYd: 3458, passTD: 25, passInt: 10, rushYd: 53, fumLost: 2 }},
-  { name: "Bryce Young", position: "QB", team: "CAR", projectedStats: { passYd: 3636, passTD: 20, passInt: 12, rushYd: 271, rushTD: 2, fumLost: 0 }},
-  { name: "Aaron Rodgers", position: "QB", team: "PIT", projectedStats: { passYd: 3077, passTD: 25, passInt: 9, rushYd: 73, rushTD: 2, fumLost: 2 }},
-  { name: "Cam Ward", position: "QB", team: "TEN", projectedStats: { passYd: 3757, passTD: 16, passInt: 10, rushYd: 201, rushTD: 2, fumLost: 0 }},
-  { name: "Geno Smith", position: "QB", team: "NYJ", projectedStats: { passYd: 2937, passTD: 23, passInt: 16, rushYd: 247, rushTD: 0, fumLost: 1 }},
-  { name: "Fernando Mendoza", position: "QB", team: "LV", projectedStats: { passYd: 2634, passTD: 19, passInt: 16, rushYd: 237, rushTD: 1, fumLost: 2 }},
-  { name: "Deshaun Watson", position: "QB", team: "CLE", projectedStats: { passYd: 1880, passTD: 11, passInt: 12, rushYd: 186, rushTD: 3, fumLost: 4 }},
-  { name: "Shedeur Sanders", position: "QB", team: "CLE", projectedStats: { passYd: 1258, passTD: 9, passInt: 8, rushYd: 128, rushTD: 0, fumLost: 1 }},
-  { name: "Ty Simpson", position: "QB", team: "LAR", projectedStats: { passYd: 455, passTD: 4, passInt: 1, rushYd: 32 }},
-  { name: "Michael Penix Jr.", position: "QB", team: "ATL", projectedStats: { passYd: 612, passTD: 4, passInt: 2, rushYd: 20 }},
-  { name: "Kirk Cousins", position: "QB", team: "LV", projectedStats: { passYd: 674, passTD: 5, passInt: 4, rushYd: 9, fumLost: 1 }},
-  { name: "Marcus Mariota", position: "QB", team: "WAS", projectedStats: { passYd: 349, passTD: 2, passInt: 1, rushYd: 4 }},
-  { name: "Quinn Ewers", position: "QB", team: "MIA", projectedStats: { passYd: 126, passTD: 0, passInt: 1, rushYd: 23, rec: 6, recYd: 0, recTD: 0 }},
+  { name: "Josh Allen", position: "QB", team: "BUF", projectedStats: { passYd: 3946, passTD: 26.3, passInt: 11.6, rushYd: 580, rushTD: 12.5, fumLost: 4.2 }},
+  { name: "Lamar Jackson", position: "QB", team: "BAL", projectedStats: { passYd: 3887, passTD: 26, passInt: 9.7, rushYd: 671, rushTD: 3.7, fumLost: 4.3 }},
+  { name: "Drake Maye", position: "QB", team: "NE", projectedStats: { passYd: 4096, passTD: 27, passInt: 11.2, rushYd: 532, rushTD: 4.1, fumLost: 5.1 }},
+  { name: "Jayden Daniels", position: "QB", team: "WAS", projectedStats: { passYd: 3851, passTD: 22.4, passInt: 9.9, rushYd: 670, rushTD: 5.1, fumLost: 3.7 }},
+  { name: "Dak Prescott", position: "QB", team: "DAL", projectedStats: { passYd: 4112, passTD: 29.8, passInt: 11.9, rushYd: 186, rushTD: 2.1, fumLost: 3.6 }},
+  { name: "Joe Burrow", position: "QB", team: "CIN", projectedStats: { passYd: 4132, passTD: 33, passInt: 10.9, rushYd: 189, rushTD: 2.1, fumLost: 2.9 }},
+  { name: "Jalen Hurts", position: "QB", team: "PHI", projectedStats: { passYd: 3779, passTD: 23.5, passInt: 9.2, rushYd: 438, rushTD: 9.1, fumLost: 4.1 }},
+  { name: "Trevor Lawrence", position: "QB", team: "JAX", projectedStats: { passYd: 3932, passTD: 24.9, passInt: 13, rushYd: 335, rushTD: 4.8, fumLost: 3.8 }},
+  { name: "Jaxson Dart", position: "QB", team: "NYG", projectedStats: { passYd: 3685, passTD: 20.8, passInt: 10.1, rushYd: 552, rushTD: 6.5, fumLost: 3.7 }},
+  { name: "Brock Purdy", position: "QB", team: "SF", projectedStats: { passYd: 4181, passTD: 27.1, passInt: 13.9, rushYd: 277, rushTD: 3.5, fumLost: 3.7 }},
+  { name: "Patrick Mahomes", position: "QB", team: "KC", projectedStats: { passYd: 4001, passTD: 26.4, passInt: 11.7, rushYd: 327, rushTD: 3.3, fumLost: 3 }},
+  { name: "Matthew Stafford", position: "QB", team: "LAR", projectedStats: { passYd: 4282, passTD: 34.9, passInt: 9.7, rushYd: 39, fumLost: 3.5 }},
+  { name: "Daniel Jones", position: "QB", team: "IND", projectedStats: { passYd: 3750, passTD: 19.6, passInt: 11.1, rushYd: 307, rushTD: 5.9, fumLost: 4.5 }},
+  { name: "Justin Herbert", position: "QB", team: "LAC", projectedStats: { passYd: 3850, passTD: 25.6, passInt: 11, rushYd: 406, rushTD: 2.4, fumLost: 3.6 }},
+  { name: "Jared Goff", position: "QB", team: "DET", projectedStats: { passYd: 4216, passTD: 29, passInt: 10, rushYd: 49, fumLost: 3.4 }},
+  { name: "Caleb Williams", position: "QB", team: "CHI", projectedStats: { passYd: 3821, passTD: 25.3, passInt: 9.9, rushYd: 382, rushTD: 2.3, fumLost: 4 }},
+  { name: "Baker Mayfield", position: "QB", team: "TB", projectedStats: { passYd: 3823, passTD: 24.6, passInt: 11.6, rushYd: 323, rushTD: 1.4, fumLost: 4.4 }},
+  { name: "Malik Willis", position: "QB", team: "MIA", projectedStats: { passYd: 3560, passTD: 13.2, passInt: 10.4, rushYd: 546, rushTD: 3.4, fumLost: 6.2 }},
+  { name: "Sam Darnold", position: "QB", team: "SEA", projectedStats: { passYd: 4013, passTD: 24, passInt: 12.4, rushYd: 126, fumLost: 4.6 }},
+  { name: "Bo Nix", position: "QB", team: "DEN", projectedStats: { passYd: 3877, passTD: 26.5, passInt: 11.1, rushYd: 356, rushTD: 4, fumLost: 3.1 }},
+  { name: "C.J. Stroud", position: "QB", team: "HOU", projectedStats: { passYd: 3950, passTD: 21.5, passInt: 12, rushYd: 249, rushTD: 1.1, fumLost: 3.9 }},
+  { name: "Tyler Shough", position: "QB", team: "NO", projectedStats: { passYd: 3886, passTD: 20.5, passInt: 11.1, rushYd: 286, rushTD: 4.3, fumLost: 3.2 }},
+  { name: "Kyler Murray", position: "QB", team: "MIN", projectedStats: { passYd: 3347, passTD: 19.5, passInt: 10, rushYd: 444, rushTD: 3.1, fumLost: 3.5 }},
+  { name: "Jordan Love", position: "QB", team: "GB", projectedStats: { passYd: 3991, passTD: 25, passInt: 10.7, rushYd: 213, fumLost: 4 }},
+  { name: "Jacoby Brissett", position: "QB", team: "ARI", projectedStats: { passYd: 3354, passTD: 14.9, passInt: 9.2, rushYd: 210, rushTD: 1.3, fumLost: 3.7 }},
+  { name: "Tua Tagovailoa", position: "QB", team: "ATL", projectedStats: { passYd: 2171, passTD: 10.4, passInt: 7.9, rushYd: 44, fumLost: 2.5 }},
+  { name: "Bryce Young", position: "QB", team: "CAR", projectedStats: { passYd: 3640, passTD: 20.3, passInt: 12.1, rushYd: 272, rushTD: 2.1, fumLost: 4 }},
+  { name: "Aaron Rodgers", position: "QB", team: "PIT", projectedStats: { passYd: 3772, passTD: 20.2, passInt: 11.1, rushYd: 100, rushTD: 0.9, fumLost: 3.5 }},
+  { name: "Cam Ward", position: "QB", team: "TEN", projectedStats: { passYd: 3760, passTD: 16.6, passInt: 10.2, rushYd: 201, rushTD: 2, fumLost: 4.7 }},
+  { name: "Geno Smith", position: "QB", team: "NYJ", projectedStats: { passYd: 3815, passTD: 20.4, passInt: 14.4, rushYd: 220, rushTD: 1, fumLost: 3.4 }},
+  { name: "Fernando Mendoza", position: "QB", team: "LV", projectedStats: { passYd: 3059, passTD: 14.2, passInt: 10.5, rushYd: 226, rushTD: 1.9, fumLost: 3.4 }},
+  { name: "Deshaun Watson", position: "QB", team: "CLE", projectedStats: { passYd: 1284, passTD: 5.4, passInt: 4.4, rushYd: 130, rushTD: 0.6, fumLost: 1.7 }},
+  { name: "Shedeur Sanders", position: "QB", team: "CLE", projectedStats: { passYd: 2437, passTD: 10.3, passInt: 8.5, rushYd: 182, rushTD: 0.9, fumLost: 2.1 }},
+  { name: "Ty Simpson", position: "QB", team: "LAR", projectedStats: { passYd: 146, passTD: 1.2, passInt: 0.6, rushYd: 5 }},
+  { name: "Michael Penix Jr.", position: "QB", team: "ATL", projectedStats: { passYd: 1884, passTD: 9.5, passInt: 5.1, rushYd: 77 }},
+  { name: "Kirk Cousins", position: "QB", team: "LV", projectedStats: { passYd: 832, passTD: 4.1, passInt: 2.7, rushYd: 11, fumLost: 0.9 }},
+  { name: "Marcus Mariota", position: "QB", team: "WAS", projectedStats: { passYd: 166, passTD: 1, passInt: 0.7, rushYd: 10 }},
+  { name: "Quinn Ewers", position: "QB", team: "MIA", projectedStats: { passYd: 153, passTD: 0.6, passInt: 0.6, rushYd: 4, rec: 0, recYd: 0, recTD: 0 }},
   { name: "Desmond Ridder", position: "QB", team: "GB", projectedStats: { passYd: 154, passTD: 0, passInt: 0, rushYd: 22 }},
   { name: "Joe Milton III", position: "QB", team: "DAL", projectedStats: { passYd: 175, passTD: 0, passInt: 0, rushYd: 17 }},
-  { name: "Tyler Huntley", position: "QB", team: "BAL", projectedStats: { passYd: 133, passTD: 0, passInt: 0, rushYd: 28 }},
-  { name: "Davis Mills", position: "QB", team: "HOU", projectedStats: { passYd: 161, passTD: 2, passInt: 0, rushYd: 21 }},
+  { name: "Tyler Huntley", position: "QB", team: "BAL", projectedStats: { passYd: 129, passTD: 0.9, passInt: 0.5, rushYd: 9 }},
+  { name: "Davis Mills", position: "QB", team: "HOU", projectedStats: { passYd: 147, passTD: 0.8, passInt: 0.6, rushYd: 4 }},
   { name: "Shane Buechele", position: "QB", team: "BUF", projectedStats: { passYd: 146, passTD: 0, passInt: 0, rushYd: 20 }},
   { name: "Mason Rudolph", position: "QB", team: "PIT", projectedStats: { passYd: 132, passTD: 1, passInt: 0, rushYd: 15 }},
-  { name: "Jarrett Stidham", position: "QB", team: "DEN", projectedStats: { passYd: 147, passTD: 0, passInt: 0, rushYd: 19 }},
+  { name: "Jarrett Stidham", position: "QB", team: "DEN", projectedStats: { passYd: 162, passTD: 1.1, passInt: 0.6, rushYd: 7 }},
   { name: "Will Levis", position: "QB", team: "TEN", projectedStats: { passYd: 128, passTD: 1, passInt: 0, rushYd: 17 }},
-  { name: "Gardner Minshew", position: "QB", team: "ARI", projectedStats: { passYd: 156, passTD: 0, passInt: 0, rushYd: 18 }},
+  { name: "Gardner Minshew", position: "QB", team: "ARI", projectedStats: { passYd: 142, passTD: 0.6, passInt: 0.6, rushYd: 3 }},
   { name: "Garrett Nussmeier", position: "QB", team: "KC", projectedStats: { passYd: 113, passTD: 2, passInt: 0, rushYd: 2 }},
   { name: "Behren Morton", position: "QB", team: "NE", projectedStats: { passYd: 120, passTD: 0, passInt: 0, rushYd: 10 }},
   { name: "Seth Henigan", position: "QB", team: "IND", projectedStats: { passYd: 127, passTD: 1, passInt: 0, rushYd: 5 }},
-  { name: "Joshua Dobbs", position: "QB", team: "NE", projectedStats: { passYd: 155, passTD: 1, passInt: 0, rushYd: 15 }},
-  { name: "Tanner McKee", position: "QB", team: "PHI", projectedStats: { passYd: 130, passTD: 1, passInt: 0, rushYd: 17 }},
+  { name: "Joshua Dobbs", position: "QB", team: "NE", projectedStats: { passYd: 133, passTD: 0.9, passInt: 0.6, rushYd: 7 }},
+  { name: "Tanner McKee", position: "QB", team: "PHI", projectedStats: { passYd: 153, passTD: 1, passInt: 0.5, rushYd: 4 }},
   { name: "Teddy Bridgewater", position: "QB", team: "DET", projectedStats: { passYd: 164, passTD: 2, passInt: 0, rushYd: 13 }},
-  { name: "Cade Klubnik", position: "QB", team: "NYJ", projectedStats: { passYd: 90, passTD: 0, passInt: 0, rushYd: 10 }},
-  { name: "Tyson Bagent", position: "QB", team: "CHI", projectedStats: { passYd: 149, passTD: 1, passInt: 0, rushYd: 14 }},
+  { name: "Cade Klubnik", position: "QB", team: "NYJ", projectedStats: { passYd: 143, passTD: 0.8, passInt: 0.8, rushYd: 7 }},
+  { name: "Tyson Bagent", position: "QB", team: "CHI", projectedStats: { passYd: 156, passTD: 1, passInt: 0.5, rushYd: 6 }},
   { name: "Mitch Trubisky", position: "QB", team: "TEN", projectedStats: { passYd: 111, passTD: 2, passInt: 0, rushYd: 3 }},
   { name: "Cole Payton", position: "QB", team: "PHI", projectedStats: { passYd: 105, passTD: 1, passInt: 0, rushYd: 4 }},
   { name: "Adrian Martinez", position: "QB", team: "SF", projectedStats: { passYd: 117, passTD: 2, passInt: 0, rushYd: 7 }},
-  { name: "Carson Beck", position: "QB", team: "ARI", projectedStats: { passYd: 115, passTD: 1, passInt: 0, rushYd: 13 }},
-  { name: "Kyle Allen", position: "QB", team: "BUF", projectedStats: { passYd: 93, passTD: 0, passInt: 0, rushYd: 0 }},
+  { name: "Carson Beck", position: "QB", team: "ARI", projectedStats: { passYd: 451, passTD: 2.6, passInt: 1.5, rushYd: 29 }},
+  { name: "Kyle Allen", position: "QB", team: "BUF", projectedStats: { passYd: 138, passTD: 0.9, passInt: 0.7, rushYd: 3 }},
   { name: "Will Howard", position: "QB", team: "PIT", projectedStats: { passYd: 105, passTD: 2, passInt: 0, rushYd: 3 }},
-  { name: "Nick Mullens", position: "QB", team: "JAX", projectedStats: { passYd: 106, passTD: 1, passInt: 0, rushYd: 6 }},
+  { name: "Nick Mullens", position: "QB", team: "JAX", projectedStats: { passYd: 179, passTD: 1.1, passInt: 0.8, rushYd: 3 }},
   { name: "Jalen Milroe", position: "QB", team: "SEA", projectedStats: { passYd: 93, passTD: 0, passInt: 0, rushYd: 19 }},
-  { name: "Drew Allar", position: "QB", team: "PIT", projectedStats: { passYd: 108, passTD: 1, passInt: 0, rushYd: 6 }},
+  { name: "Drew Allar", position: "QB", team: "PIT", projectedStats: { passYd: 160, passTD: 0.9, passInt: 0.5, rushYd: 6 }},
   // ── RB (CBS/SportsLine 2026, adjusted) ──
-  { name: "Bijan Robinson", position: "RB", team: "ATL", projectedStats: { rushYd: 1374, rushTD: 7, rec: 77, recYd: 710, recTD: 4, fumLost: 0 }},
-  { name: "Jahmyr Gibbs", position: "RB", team: "DET", projectedStats: { rushYd: 1376, rushTD: 15, rec: 67, recYd: 546, recTD: 4, fumLost: 0 }},
-  { name: "Jonathan Taylor", position: "RB", team: "IND", projectedStats: { rushYd: 1511, rushTD: 12, rec: 46, recYd: 349, recTD: 1, fumLost: 0 }},
-  { name: "Derrick Henry", position: "RB", team: "BAL", projectedStats: { rushYd: 1483, rushTD: 12, rec: 20, recYd: 208, recTD: 0, fumLost: 0 }},
-  { name: "De'Von Achane", position: "RB", team: "MIA", projectedStats: { rushYd: 1346, rushTD: 5, rec: 64, recYd: 513, recTD: 3, fumLost: 0 }},
-  { name: "Christian McCaffrey", position: "RB", team: "SF", projectedStats: { rushYd: 1152, rushTD: 11, rec: 79, recYd: 690, recTD: 6, fumLost: 0 }},
-  { name: "Chase Brown", position: "RB", team: "CIN", projectedStats: { rushYd: 1043, rushTD: 6, rec: 63, recYd: 436, recTD: 2, fumLost: 0 }},
-  { name: "Ashton Jeanty", position: "RB", team: "LV", projectedStats: { rushYd: 1139, rushTD: 6, rec: 63, recYd: 497, recTD: 3, fumLost: 0 }},
-  { name: "James Cook", position: "RB", team: "BUF", projectedStats: { rushYd: 1435, rushTD: 8, rec: 31, recYd: 267, recTD: 3, fumLost: 3 }},
-  { name: "Saquon Barkley", position: "RB", team: "PHI", projectedStats: { rushYd: 1287, rushTD: 9, rec: 44, recYd: 368, recTD: 2, fumLost: 0 }},
-  { name: "Josh Jacobs", position: "RB", team: "GB", projectedStats: { rushYd: 1236, rushTD: 12, rec: 34, recYd: 280, recTD: 1, fumLost: 0 }},
-  { name: "Cam Skattebo", position: "RB", team: "NYG", projectedStats: { rushYd: 1051, rushTD: 7, rec: 51, recYd: 364, recTD: 2, fumLost: 0 }},
-  { name: "Kyren Williams", position: "RB", team: "LAR", projectedStats: { rushYd: 1136, rushTD: 11, rec: 32, recYd: 226, recTD: 2, fumLost: 0 }},
-  { name: "Breece Hall", position: "RB", team: "NYJ", projectedStats: { rushYd: 1165, rushTD: 8, rec: 50, recYd: 437, recTD: 3, fumLost: 0 }},
-  { name: "Omarion Hampton", position: "RB", team: "LAC", projectedStats: { rushYd: 939, rushTD: 10, rec: 48, recYd: 298, recTD: 3, fumLost: 1 }},
-  { name: "Bucky Irving", position: "RB", team: "TB", projectedStats: { rushYd: 1060, rushTD: 5, rec: 38, recYd: 315, recTD: 1, fumLost: 0 }},
-  { name: "Travis Etienne", position: "RB", team: "NO", projectedStats: { rushYd: 1115, rushTD: 5, rec: 43, recYd: 377, recTD: 1, fumLost: 0 }},
-  { name: "D'Andre Swift", position: "RB", team: "CHI", projectedStats: { rushYd: 993, rushTD: 9, rec: 31, recYd: 273, recTD: 0, fumLost: 0 }},
-  { name: "Jeremiyah Love", position: "RB", team: "ARI", projectedStats: { rushYd: 1131, rushTD: 8, rec: 67, recYd: 486, recTD: 1, fumLost: 0 }},
-  { name: "Javonte Williams", position: "RB", team: "DAL", projectedStats: { rushYd: 1253, rushTD: 10, rec: 39, recYd: 221, recTD: 1, fumLost: 0 }},
-  { name: "Kenneth Walker III", position: "RB", team: "KC", projectedStats: { rushYd: 1234, rushTD: 8, rec: 47, recYd: 375, recTD: 3, fumLost: 0 }},
-  { name: "Rico Dowdle", position: "RB", team: "PIT", projectedStats: { rushYd: 973, rushTD: 6, rec: 30, recYd: 212, recTD: 0, fumLost: 0 }},
-  { name: "Bhayshul Tuten", position: "RB", team: "JAX", projectedStats: { rushYd: 995, rushTD: 7, rec: 35, recYd: 252, recTD: 1, fumLost: 0 }},
-  { name: "TreVeyon Henderson", position: "RB", team: "NE", projectedStats: { rushYd: 853, rushTD: 7, rec: 42, recYd: 302, recTD: 2, fumLost: 0 }},
-  { name: "Quinshon Judkins", position: "RB", team: "CLE", projectedStats: { rushYd: 1237, rushTD: 6, rec: 34, recYd: 222, recTD: 2, fumLost: 0 }},
-  { name: "RJ Harvey", position: "RB", team: "DEN", projectedStats: { rushYd: 432, rushTD: 3, rec: 51, recYd: 365, recTD: 4, fumLost: 0 }},
-  { name: "Jaylen Warren", position: "RB", team: "PIT", projectedStats: { rushYd: 786, rushTD: 4, rec: 47, recYd: 317, recTD: 1, fumLost: 0 }},
-  { name: "Jadarian Price", position: "RB", team: "SEA", projectedStats: { rushYd: 919, rushTD: 8, rec: 29, recYd: 210, recTD: 1, fumLost: 0 }},
-  { name: "David Montgomery", position: "RB", team: "HOU", projectedStats: { rushYd: 933, rushTD: 8, rec: 33, recYd: 234, recTD: 0, fumLost: 0 }},
-  { name: "Rhamondre Stevenson", position: "RB", team: "NE", projectedStats: { rushYd: 723, rushTD: 7, rec: 36, recYd: 311, recTD: 2, fumLost: 0 }},
-  { name: "Tony Pollard", position: "RB", team: "TEN", projectedStats: { rushYd: 1073, rushTD: 6, rec: 31, recYd: 182, recTD: 0, fumLost: 0 }},
-  { name: "Chuba Hubbard", position: "RB", team: "CAR", projectedStats: { rushYd: 795, rushTD: 4, rec: 42, recYd: 305, recTD: 1, fumLost: 0 }},
-  { name: "J.K. Dobbins", position: "RB", team: "DEN", projectedStats: { rushYd: 1010, rushTD: 8, rec: 19, recYd: 108, recTD: 2, fumLost: 0 }},
+  { name: "Bijan Robinson", position: "RB", team: "ATL", projectedStats: { rushYd: 1372, rushTD: 8.4, rec: 76, recYd: 708, recTD: 3.4, fumLost: 1.6 }},
+  { name: "Jahmyr Gibbs", position: "RB", team: "DET", projectedStats: { rushYd: 1373, rushTD: 14.5, rec: 68, recYd: 546, recTD: 3.4, fumLost: 1.3 }},
+  { name: "Jonathan Taylor", position: "RB", team: "IND", projectedStats: { rushYd: 1500, rushTD: 11.6, rec: 51, recYd: 390, recTD: 1.5, fumLost: 1.5 }},
+  { name: "Derrick Henry", position: "RB", team: "BAL", projectedStats: { rushYd: 1484, rushTD: 13.1, rec: 21, recYd: 210, recTD: 1.2, fumLost: 1.5 }},
+  { name: "De'Von Achane", position: "RB", team: "MIA", projectedStats: { rushYd: 1308, rushTD: 5, rec: 65, recYd: 511, recTD: 3, fumLost: 1 }},
+  { name: "Christian McCaffrey", position: "RB", team: "SF", projectedStats: { rushYd: 1131, rushTD: 9.2, rec: 79, recYd: 682, recTD: 4.7, fumLost: 1.2 }},
+  { name: "Chase Brown", position: "RB", team: "CIN", projectedStats: { rushYd: 1038, rushTD: 7.4, rec: 64, recYd: 435, recTD: 2.9, fumLost: 1.2 }},
+  { name: "Ashton Jeanty", position: "RB", team: "LV", projectedStats: { rushYd: 1128, rushTD: 7.1, rec: 65, recYd: 496, recTD: 2, fumLost: 1.2 }},
+  { name: "James Cook", position: "RB", team: "BUF", projectedStats: { rushYd: 1401, rushTD: 11, rec: 36, recYd: 302, recTD: 1.6, fumLost: 1.8 }},
+  { name: "Saquon Barkley", position: "RB", team: "PHI", projectedStats: { rushYd: 1285, rushTD: 8.7, rec: 43, recYd: 371, recTD: 2.3, fumLost: 1 }},
+  { name: "Josh Jacobs", position: "RB", team: "GB", projectedStats: { rushYd: 1144, rushTD: 12.2, rec: 36, recYd: 280, recTD: 1.6, fumLost: 1.5 }},
+  { name: "Cam Skattebo", position: "RB", team: "NYG", projectedStats: { rushYd: 1007, rushTD: 6.8, rec: 45, recYd: 332, recTD: 1.5, fumLost: 1.1 }},
+  { name: "Kyren Williams", position: "RB", team: "LAR", projectedStats: { rushYd: 1071, rushTD: 10.2, rec: 33, recYd: 224, recTD: 1.6, fumLost: 1.1 }},
+  { name: "Breece Hall", position: "RB", team: "NYJ", projectedStats: { rushYd: 1164, rushTD: 7.6, rec: 52, recYd: 439, recTD: 2.7, fumLost: 1.4 }},
+  { name: "Omarion Hampton", position: "RB", team: "LAC", projectedStats: { rushYd: 1084, rushTD: 9.4, rec: 52, recYd: 363, recTD: 1.8, fumLost: 1.1 }},
+  { name: "Bucky Irving", position: "RB", team: "TB", projectedStats: { rushYd: 991, rushTD: 5.3, rec: 37, recYd: 294, recTD: 1.7, fumLost: 1 }},
+  { name: "Travis Etienne", position: "RB", team: "NO", projectedStats: { rushYd: 1142, rushTD: 6.2, rec: 45, recYd: 385, recTD: 2.1, fumLost: 1 }},
+  { name: "D'Andre Swift", position: "RB", team: "CHI", projectedStats: { rushYd: 994, rushTD: 8.1, rec: 30, recYd: 269, recTD: 1.1, fumLost: 1 }},
+  { name: "Jeremiyah Love", position: "RB", team: "ARI", projectedStats: { rushYd: 1128, rushTD: 6.6, rec: 65, recYd: 488, recTD: 2.2, fumLost: 1.3 }},
+  { name: "Javonte Williams", position: "RB", team: "DAL", projectedStats: { rushYd: 1266, rushTD: 11.1, rec: 37, recYd: 218, recTD: 1.5, fumLost: 1.2 }},
+  { name: "Kenneth Walker III", position: "RB", team: "KC", projectedStats: { rushYd: 1239, rushTD: 9.1, rec: 48, recYd: 377, recTD: 1.7, fumLost: 0.9 }},
+  { name: "Rico Dowdle", position: "RB", team: "PIT", projectedStats: { rushYd: 975, rushTD: 5.5, rec: 29, recYd: 211, recTD: 1.1, fumLost: 0.9 }},
+  { name: "Bhayshul Tuten", position: "RB", team: "JAX", projectedStats: { rushYd: 994, rushTD: 6.7, rec: 34, recYd: 250, recTD: 1.4, fumLost: 1.4 }},
+  { name: "TreVeyon Henderson", position: "RB", team: "NE", projectedStats: { rushYd: 837, rushTD: 6.7, rec: 39, recYd: 269, recTD: 1.4, fumLost: 0.7 }},
+  { name: "Quinshon Judkins", position: "RB", team: "CLE", projectedStats: { rushYd: 1249, rushTD: 7.4, rec: 32, recYd: 223, recTD: 0.7, fumLost: 0.7 }},
+  { name: "RJ Harvey", position: "RB", team: "DEN", projectedStats: { rushYd: 316, rushTD: 2.9, rec: 49, recYd: 367, recTD: 2.6, fumLost: 0.4 }},
+  { name: "Jaylen Warren", position: "RB", team: "PIT", projectedStats: { rushYd: 791, rushTD: 4.5, rec: 46, recYd: 320, recTD: 1.5, fumLost: 0.9 }},
+  { name: "Jadarian Price", position: "RB", team: "SEA", projectedStats: { rushYd: 922, rushTD: 7.9, rec: 27, recYd: 212, recTD: 1.3, fumLost: 1 }},
+  { name: "David Montgomery", position: "RB", team: "HOU", projectedStats: { rushYd: 932, rushTD: 7, rec: 31, recYd: 229, recTD: 0.6, fumLost: 1 }},
+  { name: "Rhamondre Stevenson", position: "RB", team: "NE", projectedStats: { rushYd: 740, rushTD: 6.8, rec: 42, recYd: 350, recTD: 2.1, fumLost: 1.2 }},
+  { name: "Tony Pollard", position: "RB", team: "TEN", projectedStats: { rushYd: 1044, rushTD: 5.4, rec: 30, recYd: 183, recTD: 0.5, fumLost: 1.2 }},
+  { name: "Chuba Hubbard", position: "RB", team: "CAR", projectedStats: { rushYd: 709, rushTD: 3.8, rec: 41, recYd: 300, recTD: 1.4, fumLost: 0.8 }},
+  { name: "J.K. Dobbins", position: "RB", team: "DEN", projectedStats: { rushYd: 958, rushTD: 6.6, rec: 21, recYd: 132, recTD: 0.8, fumLost: 0.5 }},
   { name: "Kenneth Gainwell", position: "RB", team: "TB", projectedStats: { rushYd: 537, rushTD: 3, rec: 59, recYd: 433, recTD: 3, fumLost: 1 }},
-  { name: "Jordan Mason", position: "RB", team: "MIN", projectedStats: { rushYd: 745, rushTD: 6, rec: 15, recYd: 82, recTD: 0, fumLost: 0 }},
-  { name: "Jacory Croskey-Merritt", position: "RB", team: "WAS", projectedStats: { rushYd: 847, rushTD: 8, rec: 15, recYd: 87, recTD: 0, fumLost: 0 }},
-  { name: "Aaron Jones", position: "RB", team: "MIN", projectedStats: { rushYd: 737, rushTD: 4, rec: 46, recYd: 342, recTD: 2, fumLost: 0 }},
-  { name: "Kyle Monangai", position: "RB", team: "CHI", projectedStats: { rushYd: 822, rushTD: 5, rec: 27, recYd: 212, recTD: 0, fumLost: 0 }},
-  { name: "Rachaad White", position: "RB", team: "WAS", projectedStats: { rushYd: 566, rushTD: 5, rec: 46, recYd: 293, recTD: 2, fumLost: 0 }},
-  { name: "Tyrone Tracy Jr.", position: "RB", team: "NYG", projectedStats: { rushYd: 618, rushTD: 4, rec: 30, recYd: 248, recTD: 3, fumLost: 1 }},
-  { name: "Blake Corum", position: "RB", team: "LAR", projectedStats: { rushYd: 772, rushTD: 6, rec: 18, recYd: 116, recTD: 2, fumLost: 0 }},
-  { name: "Woody Marks", position: "RB", team: "HOU", projectedStats: { rushYd: 562, rushTD: 3, rec: 22, recYd: 176, recTD: 3, fumLost: 1 }},
-  { name: "Chris Rodriguez Jr.", position: "RB", team: "JAC", projectedStats: { rushYd: 673, rushTD: 7, rec: 3, recYd: 16, recTD: 0, fumLost: 1 }},
-  { name: "Zach Charbonnet", position: "RB", team: "SEA", projectedStats: { rushYd: 502, rushTD: 7, rec: 22, recYd: 164, recTD: 0, fumLost: 1 }},
-  { name: "Tyjae Spears", position: "RB", team: "TEN", projectedStats: { rushYd: 408, rushTD: 3, rec: 51, recYd: 332, recTD: 2, fumLost: 0 }},
-  { name: "Isiah Pacheco", position: "RB", team: "DET", projectedStats: { rushYd: 614, rushTD: 4, rec: 27, recYd: 155, recTD: 2, fumLost: 1 }},
-  { name: "Jonathon Brooks", position: "RB", team: "CAR", projectedStats: { rushYd: 679, rushTD: 3, rec: 30, recYd: 214, recTD: 0, fumLost: 0 }},
-  { name: "Kaelon Black", position: "RB", team: "SF", projectedStats: { rushYd: 591, rushTD: 4, rec: 12, recYd: 128, recTD: 2, fumLost: 2 }},
-  { name: "Jordan James", position: "RB", team: "SF", projectedStats: { rushYd: 498, rushTD: 3, rec: 26, recYd: 234, recTD: 2, fumLost: 2 }},
+  { name: "Jordan Mason", position: "RB", team: "MIN", projectedStats: { rushYd: 899, rushTD: 6.4, rec: 13, recYd: 83, recTD: 0.3, fumLost: 1.2 }},
+  { name: "Jacory Croskey-Merritt", position: "RB", team: "WAS", projectedStats: { rushYd: 848, rushTD: 7.4, rec: 16, recYd: 119, recTD: 0.7, fumLost: 1.5 }},
+  { name: "Aaron Jones", position: "RB", team: "MIN", projectedStats: { rushYd: 652, rushTD: 3.2, rec: 47, recYd: 344, recTD: 2.1, fumLost: 1 }},
+  { name: "Kyle Monangai", position: "RB", team: "CHI", projectedStats: { rushYd: 825, rushTD: 6.5, rec: 26, recYd: 215, recTD: 1.3, fumLost: 0.4 }},
+  { name: "Rachaad White", position: "RB", team: "WAS", projectedStats: { rushYd: 568, rushTD: 5.1, rec: 40, recYd: 267, recTD: 1.8, fumLost: 0.6 }},
+  { name: "Tyrone Tracy Jr.", position: "RB", team: "NYG", projectedStats: { rushYd: 151, rushTD: 0.5, rec: 12, recYd: 87, recTD: 0.4, fumLost: 0.2 }},
+  { name: "Blake Corum", position: "RB", team: "LAR", projectedStats: { rushYd: 837, rushTD: 7.3, rec: 17, recYd: 117, recTD: 0.6, fumLost: 0.4 }},
+  { name: "Woody Marks", position: "RB", team: "HOU", projectedStats: { rushYd: 581, rushTD: 3, rec: 24, recYd: 200, recTD: 1.3, fumLost: 0.7 }},
+  { name: "Chris Rodriguez Jr.", position: "RB", team: "JAC", projectedStats: { rushYd: 432, rushTD: 3.4, rec: 4, recYd: 29, recTD: 0.2, fumLost: 0.3 }},
+  { name: "Zach Charbonnet", position: "RB", team: "SEA", projectedStats: { rushYd: 555, rushTD: 6.9, rec: 20, recYd: 145, recTD: 0.4, fumLost: 0.3 }},
+  { name: "Tyjae Spears", position: "RB", team: "TEN", projectedStats: { rushYd: 447, rushTD: 3, rec: 50, recYd: 336, recTD: 1.6, fumLost: 0.4 }},
+  { name: "Isiah Pacheco", position: "RB", team: "DET", projectedStats: { rushYd: 639, rushTD: 4.5, rec: 17, recYd: 114, recTD: 0.8, fumLost: 0.5 }},
+  { name: "Jonathon Brooks", position: "RB", team: "CAR", projectedStats: { rushYd: 810, rushTD: 4.3, rec: 33, recYd: 247, recTD: 1.2, fumLost: 0.9 }},
+  { name: "Kaelon Black", position: "RB", team: "SF", projectedStats: { rushYd: 311, rushTD: 2.2, rec: 8, recYd: 63, recTD: 0.4, fumLost: 0.3 }},
+  { name: "Jordan James", position: "RB", team: "SF", projectedStats: { rushYd: 151, rushTD: 1, rec: 4, recYd: 31, recTD: 0.2, fumLost: 0.2 }},
   { name: "James Conner", position: "RB", team: "ARI", projectedStats: { rushYd: 312, rushTD: 3, rec: 35, recYd: 263, recTD: 2 }},
-  { name: "Justice Hill", position: "RB", team: "BAL", projectedStats: { rushYd: 222, rushTD: 1, rec: 38, recYd: 348, recTD: 2, fumLost: 0 }},
-  { name: "Dylan Sampson", position: "RB", team: "CLE", projectedStats: { rushYd: 282, rushTD: 1, rec: 35, recYd: 308, recTD: 4, fumLost: 2 }},
-  { name: "Adam Randall", position: "RB", team: "BAL", projectedStats: { rushYd: 437, rushTD: 4, rec: 18, recYd: 178, recTD: 3, fumLost: 1 }},
-  { name: "Brian Robinson Jr.", position: "RB", team: "ATL", projectedStats: { rushYd: 572, rushTD: 5, rec: 4, recYd: 25, recTD: 0, fumLost: 1 }},
-  { name: "Malik Davis", position: "RB", team: "DAL", projectedStats: { rushYd: 555, rushTD: 3, rec: 7, recYd: 79, recTD: 1 }},
-  { name: "Tyler Allgeier", position: "RB", team: "ARI", projectedStats: { rushYd: 466, rushTD: 5, rec: 18, recYd: 91, recTD: 0, fumLost: 1 }},
-  { name: "Emari Demercado", position: "RB", team: "KC", projectedStats: { rushYd: 600, rushTD: 2, rec: 19, recYd: 132, recTD: 1, fumLost: 3 }},
-  { name: "Ty Johnson", position: "RB", team: "BUF", projectedStats: { rushYd: 219, rushTD: 3, rec: 26, recYd: 274, recTD: 4 }},
-  { name: "Braelon Allen", position: "RB", team: "NYJ", projectedStats: { rushYd: 436, rushTD: 6, rec: 11, recYd: 95, recTD: 2, fumLost: 3 }},
-  { name: "Emanuel Wilson", position: "RB", team: "SEA", projectedStats: { rushYd: 534, rushTD: 3, rec: 16, recYd: 89, recTD: 0, fumLost: 1 }},
+  { name: "Justice Hill", position: "RB", team: "BAL", projectedStats: { rushYd: 223, rushTD: 1.4, rec: 39, recYd: 349, recTD: 1.7, fumLost: 0.4 }},
+  { name: "Dylan Sampson", position: "RB", team: "CLE", projectedStats: { rushYd: 237, rushTD: 1.1, rec: 30, recYd: 208, recTD: 1.2, fumLost: 0.4 }},
+  { name: "Adam Randall", position: "RB", team: "BAL", projectedStats: { rushYd: 121, rushTD: 0.9, rec: 4, recYd: 29, recTD: 0.2, fumLost: 0.1 }},
+  { name: "Brian Robinson Jr.", position: "RB", team: "ATL", projectedStats: { rushYd: 560, rushTD: 3.7, rec: 9, recYd: 59, recTD: 0.3, fumLost: 0.5 }},
+  { name: "Malik Davis", position: "RB", team: "DAL", projectedStats: { rushYd: 136, rushTD: 1, rec: 4, recYd: 30, recTD: 0.2 }},
+  { name: "Tyler Allgeier", position: "RB", team: "ARI", projectedStats: { rushYd: 385, rushTD: 3.3, rec: 18, recYd: 126, recTD: 0.4, fumLost: 0.2 }},
+  { name: "Emari Demercado", position: "RB", team: "KC", projectedStats: { rushYd: 256, rushTD: 1.4, rec: 16, recYd: 109, recTD: 0.6, fumLost: 0.3 }},
+  { name: "Ty Johnson", position: "RB", team: "BUF", projectedStats: { rushYd: 219, rushTD: 2.1, rec: 22, recYd: 208, recTD: 1.3 }},
+  { name: "Braelon Allen", position: "RB", team: "NYJ", projectedStats: { rushYd: 348, rushTD: 2.9, rec: 13, recYd: 90, recTD: 0.4, fumLost: 0.4 }},
+  { name: "Emanuel Wilson", position: "RB", team: "SEA", projectedStats: { rushYd: 48, rushTD: 0.4, rec: 1, recYd: 10, recTD: 0.1, fumLost: 0 }},
   { name: "Christopher Brooks", position: "RB", team: "GB", projectedStats: { rushYd: 548, rushTD: 3, rec: 13, recYd: 108, recTD: 1, fumLost: 1 }},
   { name: "AJ Dillon", position: "RB", team: "CAR", projectedStats: { rushYd: 497, rushTD: 4, rec: 15, recYd: 130, recTD: 2, fumLost: 5 }},
-  { name: "Jawhar Jordan", position: "RB", team: "HOU", projectedStats: { rushYd: 379, rushTD: 2, rec: 22, recYd: 173, recTD: 1, fumLost: 1 }},
-  { name: "Samaje Perine", position: "RB", team: "CIN", projectedStats: { rushYd: 442, rushTD: 2, rec: 21, recYd: 137, recTD: 2, fumLost: 0 }},
-  { name: "Mike Washington Jr.", position: "RB", team: "LV", projectedStats: { rushYd: 339, rushTD: 1, rec: 24, recYd: 180, recTD: 0, fumLost: 1 }},
-  { name: "Keaton Mitchell", position: "RB", team: "LAC", projectedStats: { rushYd: 502, rushTD: 1, rec: 12, recYd: 66, recTD: 0, fumLost: 1 }},
-  { name: "Kimani Vidal", position: "RB", team: "LAC", projectedStats: { rushYd: 352, rushTD: 1, rec: 15, recYd: 148, recTD: 2 }},
-  { name: "Kendre Miller", position: "RB", team: "NO", projectedStats: { rushYd: 362, rushTD: 3, rec: 10, recYd: 63, recTD: 1 }},
-  { name: "Tank Bigsby", position: "RB", team: "PHI", projectedStats: { rushYd: 466, rushTD: 3, rec: 4, recYd: 36, recTD: 0 }},
-  { name: "Kyle Juszczyk", position: "RB", team: "SF", projectedStats: { rushYd: 0, rec: 28, recYd: 252, recTD: 2 }},
-  { name: "Jaylen Wright", position: "RB", team: "MIA", projectedStats: { rushYd: 390, rushTD: 3, rec: 6, recYd: 45, recTD: 0, fumLost: 2 }},
+  { name: "Jawhar Jordan", position: "RB", team: "HOU", projectedStats: { rushYd: 54, rushTD: 0.3, rec: 0, recYd: 0, recTD: 0, fumLost: 0 }},
+  { name: "Samaje Perine", position: "RB", team: "CIN", projectedStats: { rushYd: 441, rushTD: 3.3, rec: 19, recYd: 139, recTD: 0.7, fumLost: 0.8 }},
+  { name: "Mike Washington Jr.", position: "RB", team: "LV", projectedStats: { rushYd: 362, rushTD: 2.2, rec: 8, recYd: 60, recTD: 0.3, fumLost: 0.4 }},
+  { name: "Keaton Mitchell", position: "RB", team: "LAC", projectedStats: { rushYd: 393, rushTD: 2.4, rec: 20, recYd: 157, recTD: 0.8, fumLost: 0.5 }},
+  { name: "Kimani Vidal", position: "RB", team: "LAC", projectedStats: { rushYd: 136, rushTD: 1.1, rec: 8, recYd: 63, recTD: 0.4 }},
+  { name: "Kendre Miller", position: "RB", team: "NO", projectedStats: { rushYd: 100, rushTD: 0.5, rec: 2, recYd: 11, recTD: 0 }},
+  { name: "Tank Bigsby", position: "RB", team: "PHI", projectedStats: { rushYd: 373, rushTD: 3.4, rec: 4, recYd: 29, recTD: 0.1 }},
+  { name: "Kyle Juszczyk", position: "RB", team: "SF", projectedStats: { rushYd: 19, rec: 20, recYd: 162, recTD: 0.9 }},
+  { name: "Jaylen Wright", position: "RB", team: "MIA", projectedStats: { rushYd: 234, rushTD: 1.1, rec: 7, recYd: 56, recTD: 0.2, fumLost: 0.5 }},
   { name: "Brashard Smith", position: "RB", team: "KC", projectedStats: { rushYd: 182, rushTD: 0, rec: 22, recYd: 144, recTD: 0 }},
   { name: "Devin Neal", position: "RB", team: "NO", projectedStats: { rushYd: 176, rushTD: 3, rec: 4, recYd: 30, recTD: 0 }},
   { name: "Frank Gore Jr.", position: "RB", team: "BUF", projectedStats: { rushYd: 178, rushTD: 1, rec: 2, recYd: 29, recTD: 0 }},
   { name: "Roschon Johnson", position: "RB", team: "CHI", projectedStats: { rushYd: 120, rushTD: 2, rec: 5, recYd: 13, recTD: 0 }},
   { name: "Jerome Ford", position: "RB", team: "WAS", projectedStats: { rushYd: 194, rushTD: 2, rec: 7, recYd: 47, recTD: 1 }},
-  { name: "Isaiah Davis", position: "RB", team: "NYJ", projectedStats: { rushYd: 166, rushTD: 0, rec: 5, recYd: 58, recTD: 0 }},
+  { name: "Isaiah Davis", position: "RB", team: "NYJ", projectedStats: { rushYd: 178, rushTD: 1.3, rec: 13, recYd: 96, recTD: 0.4 }},
   { name: "Phil Mafah", position: "RB", team: "DAL", projectedStats: { rushYd: 142, rushTD: 2, rec: 2, recYd: 40, recTD: 0 }},
   { name: "Ty Chandler", position: "RB", team: "NO", projectedStats: { rushYd: 144, rushTD: 2, rec: 13, recYd: 56, recTD: 0 }},
-  { name: "Seth McGowan", position: "RB", team: "IND", projectedStats: { rushYd: 147, rushTD: 1, rec: 3, recYd: 26, recTD: 0 }},
-  { name: "Sean Tucker", position: "RB", team: "TB", projectedStats: { rushYd: 141, rushTD: 3, rec: 0, recYd: 4, recTD: 0 }},
-  { name: "Kaytron Allen", position: "RB", team: "WAS", projectedStats: { rushYd: 169, rushTD: 2, rec: 3, recYd: 21, recTD: 0 }},
+  { name: "Seth McGowan", position: "RB", team: "IND", projectedStats: { rushYd: 52, rushTD: 0.4, rec: 4, recYd: 30, recTD: 0.2 }},
+  { name: "Sean Tucker", position: "RB", team: "TB", projectedStats: { rushYd: 182, rushTD: 2.4, rec: 2, recYd: 14, recTD: 0.1 }},
+  { name: "Kaytron Allen", position: "RB", team: "WAS", projectedStats: { rushYd: 51, rushTD: 0.4, rec: 4, recYd: 29, recTD: 0.2 }},
   { name: "Austin Ekeler", position: "RB", team: "WAS", projectedStats: { rushYd: 151, rushTD: 1, rec: 5, recYd: 63, recTD: 0 }},
-  { name: "Michael Burton", position: "RB", team: "CLE", projectedStats: { rushYd: 10, rushTD: 2, rec: 5, recYd: 43, recTD: 2 }},
-  { name: "Andrew Beck", position: "RB", team: "NYJ", projectedStats: { rushYd: 12, rec: 3, recYd: 31, recTD: 2 }},
+  { name: "Michael Burton", position: "RB", team: "CLE", projectedStats: { rushYd: 18, rushTD: 0.1, rec: 4, recYd: 27, recTD: 0.1 }},
+  { name: "Andrew Beck", position: "RB", team: "NYJ", projectedStats: { rushYd: 0, rec: 4, recYd: 28, recTD: 0.2 }},
   { name: "Jeremy McNichols", position: "RB", team: "WAS", projectedStats: { rushYd: 87, rushTD: 0, rec: 6, recYd: 53, recTD: 1 }},
   { name: "Isaac Guerendo", position: "RB", team: "SF", projectedStats: { rushYd: 159, rushTD: 2, rec: 3, recYd: 34, recTD: 1 }},
   { name: "Ameer Abdullah", position: "RB", team: "JAX", projectedStats: { rushYd: 74, rushTD: 1, rec: 6, recYd: 54, recTD: 0 }},
@@ -318,186 +318,186 @@ const PROJECTIONS = [
   { name: "Elijah Mitchell", position: "RB", team: "PHI", projectedStats: { rushYd: 160, rushTD: 2, rec: 4, recYd: 19, recTD: 1 }},
   { name: "Zavier Scott", position: "RB", team: "MIN", projectedStats: { rushYd: 104, rec: 7, recYd: 46, recTD: 2 }},
   // ── WR (CBS/SportsLine 2026, adjusted) ──
-  { name: "Jaxon Smith-Njigba", position: "WR", team: "SEA", projectedStats: { rushYd: 28, rushTD: 0, rec: 115, recYd: 1570, recTD: 10, fumLost: 0 }},
-  { name: "Puka Nacua", position: "WR", team: "LAR", projectedStats: { rushYd: 105, rushTD: 1, rec: 121, recYd: 1591, recTD: 9, fumLost: 0 }},
-  { name: "Ja'Marr Chase", position: "WR", team: "CIN", projectedStats: { rushYd: 20, rushTD: 0, rec: 118, recYd: 1506, recTD: 11, fumLost: 0 }},
-  { name: "Drake London", position: "WR", team: "ATL", projectedStats: { rushYd: 0, rushTD: 0, rec: 103, recYd: 1255, recTD: 7, fumLost: 0 }},
-  { name: "Amon-Ra St. Brown", position: "WR", team: "DET", projectedStats: { rushYd: 16, rushTD: 0, rec: 116, recYd: 1429, recTD: 11, fumLost: 0 }},
-  { name: "Rashee Rice", position: "WR", team: "KC", projectedStats: { rushYd: 44, rushTD: 1, rec: 98, recYd: 1135, recTD: 10, fumLost: 0 }},
-  { name: "George Pickens", position: "WR", team: "DAL", projectedStats: { rushYd: 0, rushTD: 1, rec: 81, recYd: 1115, recTD: 7, fumLost: 0 }},
-  { name: "Chris Olave", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 1, rec: 91, recYd: 1161, recTD: 5, fumLost: 0 }},
-  { name: "A.J. Brown", position: "WR", team: "NE", projectedStats: { rushYd: 0, rushTD: 0, rec: 84, recYd: 1216, recTD: 7, fumLost: 0 }},
-  { name: "CeeDee Lamb", position: "WR", team: "DAL", projectedStats: { rushYd: 16, rushTD: 0, rec: 106, recYd: 1383, recTD: 9, fumLost: 0 }},
-  { name: "Nico Collins", position: "WR", team: "HOU", projectedStats: { rushYd: 14, rushTD: 0, rec: 88, recYd: 1214, recTD: 6, fumLost: 0 }},
-  { name: "Zay Flowers", position: "WR", team: "BAL", projectedStats: { rushYd: 60, rushTD: 0, rec: 80, recYd: 1174, recTD: 7, fumLost: 0 }},
-  { name: "Justin Jefferson", position: "WR", team: "MIN", projectedStats: { rushYd: 12, rushTD: 0, rec: 109, recYd: 1372, recTD: 7, fumLost: 0 }},
-  { name: "Tee Higgins", position: "WR", team: "CIN", projectedStats: { rushYd: 2, rushTD: 1, rec: 74, recYd: 953, recTD: 9, fumLost: 0 }},
-  { name: "DeVonta Smith", position: "WR", team: "PHI", projectedStats: { rushYd: 0, rushTD: 1, rec: 91, recYd: 1126, recTD: 7, fumLost: 0 }},
-  { name: "Malik Nabers", position: "WR", team: "NYG", projectedStats: { rushYd: 23, rushTD: 1, rec: 75, recYd: 1001, recTD: 6, fumLost: 0 }},
-  { name: "Garrett Wilson", position: "WR", team: "NYJ", projectedStats: { rushYd: 9, rushTD: 0, rec: 105, recYd: 1215, recTD: 6, fumLost: 0 }},
-  { name: "Emeka Egbuka", position: "WR", team: "TB", projectedStats: { rushYd: 14, rushTD: 1, rec: 69, recYd: 1076, recTD: 8, fumLost: 0 }},
-  { name: "Terry McLaurin", position: "WR", team: "WAS", projectedStats: { rushYd: 1, rushTD: 0, rec: 80, recYd: 1041, recTD: 5, fumLost: 0 }},
-  { name: "Alec Pierce", position: "WR", team: "IND", projectedStats: { rushYd: 0, rushTD: 1, rec: 67, recYd: 1023, recTD: 4, fumLost: 0 }},
-  { name: "Courtland Sutton", position: "WR", team: "DEN", projectedStats: { rushYd: 0, rushTD: 0, rec: 70, recYd: 891, recTD: 8, fumLost: 0 }},
-  { name: "Jameson Williams", position: "WR", team: "DET", projectedStats: { rushYd: 43, rushTD: 0, rec: 62, recYd: 1026, recTD: 6, fumLost: 0 }},
-  { name: "Tetairoa McMillan", position: "WR", team: "CAR", projectedStats: { rushYd: 1, rushTD: 0, rec: 85, recYd: 1192, recTD: 7, fumLost: 0 }},
-  { name: "Rome Odunze", position: "WR", team: "CHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 58, recYd: 1029, recTD: 8, fumLost: 0 }},
-  { name: "Davante Adams", position: "WR", team: "LAR", projectedStats: { rushYd: 1, rushTD: 1, rec: 67, recYd: 1016, recTD: 10, fumLost: 0 }},
-  { name: "Ladd McConkey", position: "WR", team: "LAC", projectedStats: { rushYd: 3, rushTD: 0, rec: 81, recYd: 1035, recTD: 5, fumLost: 0 }},
-  { name: "Luther Burden III", position: "WR", team: "CHI", projectedStats: { rushYd: 49, rushTD: 1, rec: 77, recYd: 936, recTD: 6, fumLost: 0 }},
-  { name: "Jaylen Waddle", position: "WR", team: "DEN", projectedStats: { rushYd: 11, rushTD: 1, rec: 76, recYd: 988, recTD: 7, fumLost: 0 }},
-  { name: "Marvin Harrison Jr.", position: "WR", team: "ARI", projectedStats: { rushYd: 2, rushTD: 1, rec: 70, recYd: 957, recTD: 6, fumLost: 0 }},
-  { name: "DJ Moore", position: "WR", team: "BUF", projectedStats: { rushYd: 37, rushTD: 0, rec: 69, recYd: 944, recTD: 7, fumLost: 0 }},
-  { name: "Mike Evans", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 56, recYd: 906, recTD: 7, fumLost: 0 }},
-  { name: "Jakobi Meyers", position: "WR", team: "JAX", projectedStats: { rushYd: 29, rushTD: 0, rec: 71, recYd: 768, recTD: 5, fumLost: 0 }},
-  { name: "Wan'Dale Robinson", position: "WR", team: "TEN", projectedStats: { rushYd: 19, rushTD: 0, rec: 78, recYd: 815, recTD: 3, fumLost: 0 }},
-  { name: "DK Metcalf", position: "WR", team: "PIT", projectedStats: { rushYd: 0, rushTD: 1, rec: 66, recYd: 944, recTD: 5, fumLost: 0 }},
-  { name: "Parker Washington", position: "WR", team: "JAX", projectedStats: { rushYd: 36, rushTD: 0, rec: 66, recYd: 847, recTD: 6, fumLost: 0 }},
-  { name: "Chris Godwin", position: "WR", team: "TB", projectedStats: { rushYd: 0, rushTD: 0, rec: 59, recYd: 701, recTD: 5, fumLost: 0 }},
-  { name: "Quentin Johnston", position: "WR", team: "LAC", projectedStats: { rushYd: 8, rushTD: 1, rec: 54, recYd: 770, recTD: 7, fumLost: 0 }},
-  { name: "Josh Downs", position: "WR", team: "IND", projectedStats: { rushYd: 10, rushTD: 0, rec: 78, recYd: 721, recTD: 3, fumLost: 0 }},
-  { name: "Christian Watson", position: "WR", team: "GB", projectedStats: { rushYd: 11, rushTD: 0, rec: 53, recYd: 871, recTD: 6, fumLost: 0 }},
-  { name: "Michael Pittman", position: "WR", team: "PIT", projectedStats: { rushYd: 1, rushTD: 0, rec: 89, recYd: 863, recTD: 3, fumLost: 0 }},
-  { name: "Michael Wilson", position: "WR", team: "ARI", projectedStats: { rushYd: 0, rushTD: 0, rec: 69, recYd: 815, recTD: 3, fumLost: 0 }},
-  { name: "Brian Thomas Jr.", position: "WR", team: "JAX", projectedStats: { rushYd: 26, rushTD: 0, rec: 59, recYd: 861, recTD: 6, fumLost: 0 }},
-  { name: "Khalil Shakir", position: "WR", team: "BUF", projectedStats: { rushYd: 11, rushTD: 1, rec: 68, recYd: 763, recTD: 5, fumLost: 0 }},
-  { name: "Tank Dell", position: "WR", team: "HOU", projectedStats: { rushYd: 44, rushTD: 0, rec: 36, recYd: 465, recTD: 4, fumLost: 0 }},
-  { name: "Jordan Addison", position: "WR", team: "MIN", projectedStats: { rushYd: 17, rushTD: 1, rec: 58, recYd: 772, recTD: 4, fumLost: 0 }},
-  { name: "Jordyn Tyson", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 65, recYd: 915, recTD: 6, fumLost: 0 }},
-  { name: "Jayden Reed", position: "WR", team: "GB", projectedStats: { rushYd: 66, rushTD: 0, rec: 62, recYd: 732, recTD: 5, fumLost: 0 }},
-  { name: "Romeo Doubs", position: "WR", team: "NE", projectedStats: { rushYd: 1, rushTD: 0, rec: 62, recYd: 766, recTD: 7, fumLost: 0 }},
+  { name: "Jaxon Smith-Njigba", position: "WR", team: "SEA", projectedStats: { rushYd: 25, rushTD: 0.2, rec: 117, recYd: 1569, recTD: 8.5, fumLost: 1.2 }},
+  { name: "Puka Nacua", position: "WR", team: "LAR", projectedStats: { rushYd: 106, rushTD: 1.2, rec: 123, recYd: 1590, recTD: 9.7, fumLost: 1 }},
+  { name: "Ja'Marr Chase", position: "WR", team: "CIN", projectedStats: { rushYd: 21, rushTD: 0.1, rec: 120, recYd: 1509, recTD: 10.8, fumLost: 0.9 }},
+  { name: "Drake London", position: "WR", team: "ATL", projectedStats: { rushYd: 0, rushTD: 0, rec: 102, recYd: 1250, recTD: 7.3, fumLost: 0.9 }},
+  { name: "Amon-Ra St. Brown", position: "WR", team: "DET", projectedStats: { rushYd: 13, rushTD: 0.1, rec: 118, recYd: 1426, recTD: 10.4, fumLost: 0.8 }},
+  { name: "Rashee Rice", position: "WR", team: "KC", projectedStats: { rushYd: 43, rushTD: 0.6, rec: 93, recYd: 1085, recTD: 8.8, fumLost: 1.1 }},
+  { name: "George Pickens", position: "WR", team: "DAL", projectedStats: { rushYd: 0, rushTD: 0, rec: 80, recYd: 1112, recTD: 8.2, fumLost: 0.9 }},
+  { name: "Chris Olave", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 91, recYd: 1197, recTD: 6.7, fumLost: 0.6 }},
+  { name: "A.J. Brown", position: "WR", team: "NE", projectedStats: { rushYd: 0, rushTD: 0, rec: 86, recYd: 1216, recTD: 7, fumLost: 0.6 }},
+  { name: "CeeDee Lamb", position: "WR", team: "DAL", projectedStats: { rushYd: 13, rushTD: 0.1, rec: 103, recYd: 1376, recTD: 8.6, fumLost: 0.7 }},
+  { name: "Nico Collins", position: "WR", team: "HOU", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 87, recYd: 1203, recTD: 6.7, fumLost: 0.7 }},
+  { name: "Zay Flowers", position: "WR", team: "BAL", projectedStats: { rushYd: 57, rushTD: 0.4, rec: 82, recYd: 1171, recTD: 5.5, fumLost: 1 }},
+  { name: "Justin Jefferson", position: "WR", team: "MIN", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 111, recYd: 1376, recTD: 7.4, fumLost: 0.7 }},
+  { name: "Tee Higgins", position: "WR", team: "CIN", projectedStats: { rushYd: 0, rushTD: 0, rec: 73, recYd: 956, recTD: 8.4, fumLost: 0.4 }},
+  { name: "DeVonta Smith", position: "WR", team: "PHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 91, recYd: 1130, recTD: 6, fumLost: 0.6 }},
+  { name: "Malik Nabers", position: "WR", team: "NYG", projectedStats: { rushYd: 23, rushTD: 0.1, rec: 86, recYd: 1135, recTD: 7.3, fumLost: 0.8 }},
+  { name: "Garrett Wilson", position: "WR", team: "NYJ", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 100, recYd: 1172, recTD: 5.2, fumLost: 1.1 }},
+  { name: "Emeka Egbuka", position: "WR", team: "TB", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 70, recYd: 1127, recTD: 7.5, fumLost: 0.6 }},
+  { name: "Terry McLaurin", position: "WR", team: "WAS", projectedStats: { rushYd: 0, rushTD: 0, rec: 77, recYd: 1053, recTD: 6.1, fumLost: 0.6 }},
+  { name: "Alec Pierce", position: "WR", team: "IND", projectedStats: { rushYd: 0, rushTD: 0, rec: 61, recYd: 948, recTD: 5.3, fumLost: 0.5 }},
+  { name: "Courtland Sutton", position: "WR", team: "DEN", projectedStats: { rushYd: 0, rushTD: 0, rec: 69, recYd: 895, recTD: 7.6, fumLost: 0.5 }},
+  { name: "Jameson Williams", position: "WR", team: "DET", projectedStats: { rushYd: 45, rushTD: 0.6, rec: 64, recYd: 1026, recTD: 5.7, fumLost: 0.4 }},
+  { name: "Tetairoa McMillan", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rushTD: 0, rec: 84, recYd: 1185, recTD: 5.9, fumLost: 0.8 }},
+  { name: "Rome Odunze", position: "WR", team: "CHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 59, recYd: 1029, recTD: 8.4, fumLost: 0.6 }},
+  { name: "Davante Adams", position: "WR", team: "LAR", projectedStats: { rushYd: 0, rushTD: 0, rec: 68, recYd: 1016, recTD: 10.6, fumLost: 0.4 }},
+  { name: "Ladd McConkey", position: "WR", team: "LAC", projectedStats: { rushYd: 0, rushTD: 0, rec: 80, recYd: 1039, recTD: 6.3, fumLost: 0.6 }},
+  { name: "Luther Burden III", position: "WR", team: "CHI", projectedStats: { rushYd: 50, rushTD: 0.4, rec: 75, recYd: 937, recTD: 5.1, fumLost: 0.7 }},
+  { name: "Jaylen Waddle", position: "WR", team: "DEN", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 77, recYd: 994, recTD: 6, fumLost: 0.7 }},
+  { name: "Marvin Harrison Jr.", position: "WR", team: "ARI", projectedStats: { rushYd: 0, rushTD: 0, rec: 69, recYd: 954, recTD: 5, fumLost: 0.6 }},
+  { name: "DJ Moore", position: "WR", team: "BUF", projectedStats: { rushYd: 36, rushTD: 0.4, rec: 67, recYd: 945, recTD: 7, fumLost: 0.6 }},
+  { name: "Mike Evans", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 57, recYd: 894, recTD: 5.8, fumLost: 0.4 }},
+  { name: "Jakobi Meyers", position: "WR", team: "JAX", projectedStats: { rushYd: 32, rushTD: 0.3, rec: 70, recYd: 767, recTD: 5.2, fumLost: 0.6 }},
+  { name: "Wan'Dale Robinson", position: "WR", team: "TEN", projectedStats: { rushYd: 22, rushTD: 0.1, rec: 79, recYd: 824, recTD: 1.9, fumLost: 0.6 }},
+  { name: "DK Metcalf", position: "WR", team: "PIT", projectedStats: { rushYd: 0, rushTD: 0, rec: 65, recYd: 944, recTD: 6.2, fumLost: 0.5 }},
+  { name: "Parker Washington", position: "WR", team: "JAX", projectedStats: { rushYd: 39, rushTD: 0.3, rec: 64, recYd: 851, recTD: 5.2, fumLost: 0.8 }},
+  { name: "Chris Godwin", position: "WR", team: "TB", projectedStats: { rushYd: 0, rushTD: 0, rec: 60, recYd: 701, recTD: 4.5, fumLost: 0.6 }},
+  { name: "Quentin Johnston", position: "WR", team: "LAC", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 53, recYd: 778, recTD: 5.6, fumLost: 0.4 }},
+  { name: "Josh Downs", position: "WR", team: "IND", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 70, recYd: 697, recTD: 2.7, fumLost: 0.6 }},
+  { name: "Christian Watson", position: "WR", team: "GB", projectedStats: { rushYd: 13, rushTD: 0.1, rec: 55, recYd: 866, recTD: 7, fumLost: 0.5 }},
+  { name: "Michael Pittman", position: "WR", team: "PIT", projectedStats: { rushYd: 0, rushTD: 0, rec: 88, recYd: 863, recTD: 3.9, fumLost: 0.6 }},
+  { name: "Michael Wilson", position: "WR", team: "ARI", projectedStats: { rushYd: 0, rushTD: 0, rec: 71, recYd: 860, recTD: 3.4, fumLost: 0.4 }},
+  { name: "Brian Thomas Jr.", position: "WR", team: "JAX", projectedStats: { rushYd: 23, rushTD: 0.2, rec: 57, recYd: 861, recTD: 5.1, fumLost: 0.3 }},
+  { name: "Khalil Shakir", position: "WR", team: "BUF", projectedStats: { rushYd: 13, rushTD: 0.1, rec: 70, recYd: 765, recTD: 3.7, fumLost: 0.6 }},
+  { name: "Tank Dell", position: "WR", team: "HOU", projectedStats: { rushYd: 45, rushTD: 0.2, rec: 34, recYd: 415, recTD: 2.4, fumLost: 0.4 }},
+  { name: "Jordan Addison", position: "WR", team: "MIN", projectedStats: { rushYd: 14, rushTD: 0.1, rec: 60, recYd: 770, recTD: 5.2, fumLost: 0.4 }},
+  { name: "Jordyn Tyson", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 36, recYd: 484, recTD: 2.7, fumLost: 0.4 }},
+  { name: "Jayden Reed", position: "WR", team: "GB", projectedStats: { rushYd: 65, rushTD: 0.4, rec: 63, recYd: 727, recTD: 4.4, fumLost: 0.8 }},
+  { name: "Romeo Doubs", position: "WR", team: "NE", projectedStats: { rushYd: 0, rushTD: 0, rec: 52, recYd: 667, recTD: 5.3, fumLost: 0.5 }},
   { name: "John Metchie III", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rec: 66, recYd: 596, recTD: 4 }},
-  { name: "Jauan Jennings", position: "WR", team: "MIN", projectedStats: { rushYd: 1, rushTD: 0, rec: 48, recYd: 483, recTD: 3, fumLost: 0 }},
-  { name: "Xavier Worthy", position: "WR", team: "KC", projectedStats: { rushYd: 74, rushTD: 1, rec: 56, recYd: 789, recTD: 4, fumLost: 0 }},
-  { name: "Makai Lemon", position: "WR", team: "PHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 60, recYd: 881, recTD: 6, fumLost: 0 }},
-  { name: "Cooper Kupp", position: "WR", team: "SEA", projectedStats: { rushYd: 0, rushTD: 1, rec: 39, recYd: 471, recTD: 4, fumLost: 0 }},
-  { name: "Troy Franklin", position: "WR", team: "DEN", projectedStats: { rushYd: 11, rec: 58, recYd: 577, recTD: 5, fumLost: 1 }},
-  { name: "Jalen Coker", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rushTD: 1, rec: 60, recYd: 691, recTD: 2, fumLost: 0 }},
-  { name: "Calvin Ridley", position: "WR", team: "TEN", projectedStats: { rushYd: 34, rushTD: 1, rec: 45, recYd: 720, recTD: 5, fumLost: 0 }},
-  { name: "Carnell Tate", position: "WR", team: "TEN", projectedStats: { rushYd: 0, rushTD: 0, rec: 76, recYd: 1065, recTD: 5, fumLost: 0 }},
+  { name: "Jauan Jennings", position: "WR", team: "MIN", projectedStats: { rushYd: 0, rushTD: 0, rec: 46, recYd: 486, recTD: 3.3, fumLost: 0.5 }},
+  { name: "Xavier Worthy", position: "WR", team: "KC", projectedStats: { rushYd: 76, rushTD: 0.6, rec: 56, recYd: 791, recTD: 4.7, fumLost: 0.3 }},
+  { name: "Makai Lemon", position: "WR", team: "PHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 52, recYd: 741, recTD: 4.7, fumLost: 0.5 }},
+  { name: "Cooper Kupp", position: "WR", team: "SEA", projectedStats: { rushYd: 0, rushTD: 0, rec: 38, recYd: 472, recTD: 2.8, fumLost: 0.3 }},
+  { name: "Troy Franklin", position: "WR", team: "DEN", projectedStats: { rushYd: 11, rec: 17, recYd: 216, recTD: 1.8, fumLost: 0.2 }},
+  { name: "Jalen Coker", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rushTD: 0, rec: 61, recYd: 689, recTD: 3, fumLost: 0.6 }},
+  { name: "Calvin Ridley", position: "WR", team: "TEN", projectedStats: { rushYd: 32, rushTD: 0.2, rec: 43, recYd: 678, recTD: 3.4, fumLost: 0.4 }},
+  { name: "Carnell Tate", position: "WR", team: "TEN", projectedStats: { rushYd: 0, rushTD: 0, rec: 75, recYd: 1024, recTD: 4.5, fumLost: 0.8 }},
   { name: "Theo Wease Jr.", position: "WR", team: "MIA", projectedStats: { rushYd: 7, rec: 46, recYd: 682, recTD: 6, fumLost: 1 }},
-  { name: "Jerry Jeudy", position: "WR", team: "CLE", projectedStats: { rushYd: 0, rushTD: 1, rec: 52, recYd: 709, recTD: 2, fumLost: 0 }},
-  { name: "Travis Hunter", position: "WR", team: "JAX", projectedStats: { rushYd: 11, rec: 71, recYd: 871, recTD: 6, fumLost: 1 }},
-  { name: "Keon Coleman", position: "WR", team: "BUF", projectedStats: { rushYd: 0, rushTD: 0, rec: 18, recYd: 267, recTD: 1, fumLost: 0 }},
-  { name: "Deebo Samuel", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 1, recYd: 0, recTD: 0, fumLost: 0 }},
-  { name: "Marvin Mims Jr.", position: "WR", team: "DEN", projectedStats: { rushYd: 32, rushTD: 2, rec: 57, recYd: 759, recTD: 4, fumLost: 1 }},
-  { name: "Rashod Bateman", position: "WR", team: "BAL", projectedStats: { rushYd: 0, rushTD: 0, rec: 40, recYd: 618, recTD: 4, fumLost: 0 }},
-  { name: "Tre Tucker", position: "WR", team: "LV", projectedStats: { rushYd: 57, rushTD: 0, rec: 49, recYd: 655, recTD: 2, fumLost: 0 }},
-  { name: "Rashid Shaheed", position: "WR", team: "SEA", projectedStats: { rushYd: 85, rushTD: 1, rec: 41, recYd: 643, recTD: 4, fumLost: 0 }},
-  { name: "Christian Kirk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 24, recYd: 319, recTD: 2, fumLost: 0 }},
-  { name: "Jalen Nailor", position: "WR", team: "LV", projectedStats: { rushYd: 9, rushTD: 1, rec: 40, recYd: 560, recTD: 2, fumLost: 0 }},
+  { name: "Jerry Jeudy", position: "WR", team: "CLE", projectedStats: { rushYd: 0, rushTD: 0, rec: 52, recYd: 722, recTD: 2.7, fumLost: 0.5 }},
+  { name: "Travis Hunter", position: "WR", team: "JAX", projectedStats: { rushYd: 11, rec: 42, recYd: 497, recTD: 3.3, fumLost: 0.4 }},
+  { name: "Keon Coleman", position: "WR", team: "BUF", projectedStats: { rushYd: 0, rushTD: 0, rec: 24, recYd: 338, recTD: 2.8, fumLost: 0.2 }},
+  { name: "Deebo Samuel", position: "WR", team: "SF", projectedStats: { rushYd: 109, rushTD: 1.1, rec: 48, recYd: 625, recTD: 3.7, fumLost: 0.7 }},
+  { name: "Marvin Mims Jr.", position: "WR", team: "DEN", projectedStats: { rushYd: 45, rushTD: 0.3, rec: 24, recYd: 273, recTD: 1.6, fumLost: 0.3 }},
+  { name: "Rashod Bateman", position: "WR", team: "BAL", projectedStats: { rushYd: 0, rushTD: 0, rec: 38, recYd: 614, recTD: 4, fumLost: 0.3 }},
+  { name: "Tre Tucker", position: "WR", team: "LV", projectedStats: { rushYd: 57, rushTD: 0.3, rec: 48, recYd: 658, recTD: 2.5, fumLost: 0.3 }},
+  { name: "Rashid Shaheed", position: "WR", team: "SEA", projectedStats: { rushYd: 87, rushTD: 0.5, rec: 43, recYd: 647, recTD: 3.5, fumLost: 0.6 }},
+  { name: "Christian Kirk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 10, recYd: 129, recTD: 0.8, fumLost: 0.1 }},
+  { name: "Jalen Nailor", position: "WR", team: "LV", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 44, recYd: 607, recTD: 3, fumLost: 0.4 }},
   { name: "Jayden Higgins", position: "WR", team: "HOU", projectedStats: { rushYd: 2, rushTD: 1, rec: 53, recYd: 665, recTD: 4, fumLost: 0 }},
-  { name: "Omar Cooper Jr.", position: "WR", team: "NYJ", projectedStats: { rushYd: 11, rushTD: 0, rec: 41, recYd: 480, recTD: 4, fumLost: 0 }},
-  { name: "Antonio Williams", position: "WR", team: "WAS", projectedStats: { rushYd: 20, rushTD: 0, rec: 43, recYd: 520, recTD: 4, fumLost: 0 }},
-  { name: "Kayshon Boutte", position: "WR", team: "NE", projectedStats: { rec: 39, recYd: 604, recTD: 5 }},
-  { name: "Jalen McMillan", position: "WR", team: "TB", projectedStats: { rushYd: 26, rushTD: 0, rec: 49, recYd: 588, recTD: 4, fumLost: 0 }},
+  { name: "Omar Cooper Jr.", position: "WR", team: "NYJ", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 33, recYd: 395, recTD: 2.2, fumLost: 0.4 }},
+  { name: "Antonio Williams", position: "WR", team: "WAS", projectedStats: { rushYd: 22, rushTD: 0.2, rec: 26, recYd: 344, recTD: 2.3, fumLost: 0.3 }},
+  { name: "Kayshon Boutte", position: "WR", team: "NE", projectedStats: { rec: 41, recYd: 528, recTD: 2.8 }},
+  { name: "Jalen McMillan", position: "WR", team: "TB", projectedStats: { rushYd: 25, rushTD: 0.2, rec: 47, recYd: 589, recTD: 3.9, fumLost: 0.4 }},
   { name: "Marquise Brown", position: "WR", team: "PHI", projectedStats: { rec: 42, recYd: 547, recTD: 4 }},
-  { name: "Devaughn Vele", position: "WR", team: "NO", projectedStats: { rec: 46, recYd: 583, recTD: 5 }},
-  { name: "Matthew Golden", position: "WR", team: "GB", projectedStats: { rushYd: 23, rushTD: 1, rec: 68, recYd: 872, recTD: 4, fumLost: 0 }},
-  { name: "Elic Ayomanor", position: "WR", team: "TEN", projectedStats: { rec: 39, recYd: 538, recTD: 4 }},
-  { name: "KC Concepcion", position: "WR", team: "CLE", projectedStats: { rushYd: 34, rushTD: 1, rec: 59, recYd: 771, recTD: 4, fumLost: 0 }},
-  { name: "Tory Horton", position: "WR", team: "SEA", projectedStats: { rushYd: 7, rec: 39, recYd: 508, recTD: 7, fumLost: 1 }},
-  { name: "Darnell Mooney", position: "WR", team: "NYG", projectedStats: { rushYd: 10, rushTD: 0, rec: 31, recYd: 467, recTD: 4, fumLost: 0 }},
-  { name: "Chimere Dike", position: "WR", team: "TEN", projectedStats: { rushYd: 22, rec: 42, recYd: 404, recTD: 7, fumLost: 1 }},
-  { name: "De'Zhaun Stribling", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 19, recYd: 299, recTD: 1, fumLost: 0 }},
-  { name: "Denzel Boston", position: "WR", team: "CLE", projectedStats: { rushYd: 3, rushTD: 0, rec: 51, recYd: 640, recTD: 3, fumLost: 0 }},
-  { name: "Darius Slayton", position: "WR", team: "NYG", projectedStats: { rushYd: 1, rec: 39, recYd: 611, recTD: 1, fumLost: 1 }},
-  { name: "Ja'Kobi Lane", position: "WR", team: "BAL", projectedStats: { rushYd: 16, rec: 33, recYd: 526, recTD: 5, fumLost: 1 }},
-  { name: "Germie Bernard", position: "WR", team: "PIT", projectedStats: { rushYd: 10, rushTD: 0, rec: 49, recYd: 591, recTD: 2, fumLost: 0 }},
-  { name: "Tyquan Thornton", position: "WR", team: "KC", projectedStats: { rec: 28, recYd: 573, recTD: 3 }},
+  { name: "Devaughn Vele", position: "WR", team: "NO", projectedStats: { rec: 50, recYd: 544, recTD: 3.4 }},
+  { name: "Matthew Golden", position: "WR", team: "GB", projectedStats: { rushYd: 25, rushTD: 0.2, rec: 67, recYd: 870, recTD: 4.7, fumLost: 0.7 }},
+  { name: "Elic Ayomanor", position: "WR", team: "TEN", projectedStats: { rec: 9, recYd: 116, recTD: 0.6 }},
+  { name: "KC Concepcion", position: "WR", team: "CLE", projectedStats: { rushYd: 35, rushTD: 0.2, rec: 59, recYd: 739, recTD: 3.1, fumLost: 0.7 }},
+  { name: "Tory Horton", position: "WR", team: "SEA", projectedStats: { rushYd: 0, rec: 22, recYd: 299, recTD: 2.3, fumLost: 0.2 }},
+  { name: "Darnell Mooney", position: "WR", team: "NYG", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 24, recYd: 349, recTD: 1.9, fumLost: 0.2 }},
+  { name: "Chimere Dike", position: "WR", team: "TEN", projectedStats: { rushYd: 50, rec: 11, recYd: 112, recTD: 0.8, fumLost: 0.2 }},
+  { name: "De'Zhaun Stribling", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 49, recYd: 746, recTD: 4.5, fumLost: 0.5 }},
+  { name: "Denzel Boston", position: "WR", team: "CLE", projectedStats: { rushYd: 0, rushTD: 0, rec: 55, recYd: 694, recTD: 3, fumLost: 0.6 }},
+  { name: "Darius Slayton", position: "WR", team: "NYG", projectedStats: { rushYd: 12, rec: 31, recYd: 439, recTD: 2, fumLost: 0.4 }},
+  { name: "Ja'Kobi Lane", position: "WR", team: "BAL", projectedStats: { rushYd: 0, rec: 32, recYd: 485, recTD: 3.5, fumLost: 0.3 }},
+  { name: "Germie Bernard", position: "WR", team: "PIT", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 40, recYd: 504, recTD: 2.8, fumLost: 0.4 }},
+  { name: "Tyquan Thornton", position: "WR", team: "KC", projectedStats: { rec: 24, recYd: 360, recTD: 3 }},
   { name: "Bub Means", position: "WR", team: "NO", projectedStats: { rushYd: 11, rec: 36, recYd: 520, recTD: 2, fumLost: 1 }},
-  { name: "Malik Washington", position: "WR", team: "MIA", projectedStats: { rushYd: 74, rushTD: 1, rec: 42, recYd: 434, recTD: 1, fumLost: 0 }},
-  { name: "Olamide Zaccheaus", position: "WR", team: "ATL", projectedStats: { rushYd: 15, rec: 47, recYd: 413, recTD: 2 }},
-  { name: "Jahdae Walker", position: "WR", team: "CHI", projectedStats: { rushYd: 4, rec: 30, recYd: 414, recTD: 4 }},
+  { name: "Malik Washington", position: "WR", team: "MIA", projectedStats: { rushYd: 78, rushTD: 0.4, rec: 45, recYd: 475, recTD: 1.7, fumLost: 0.6 }},
+  { name: "Olamide Zaccheaus", position: "WR", team: "ATL", projectedStats: { rushYd: 0, rec: 14, recYd: 142, recTD: 0.6 }},
+  { name: "Jahdae Walker", position: "WR", team: "CHI", projectedStats: { rushYd: 0, rec: 3, recYd: 36, recTD: 0.3 }},
   { name: "Calvin Austin III", position: "WR", team: "NYG", projectedStats: { rec: 31, recYd: 444, recTD: 4 }},
-  { name: "Andrei Iosivas", position: "WR", team: "CIN", projectedStats: { rushYd: 15, rec: 34, recYd: 477, recTD: 4 }},
+  { name: "Andrei Iosivas", position: "WR", team: "CIN", projectedStats: { rushYd: 11, rec: 21, recYd: 235, recTD: 2.1 }},
   { name: "Cedric Tillman", position: "WR", team: "CLE", projectedStats: { rushYd: 0, rec: 32, recYd: 413, recTD: 5 }},
-  { name: "Ted Hurst", position: "WR", team: "TB", projectedStats: { rushYd: 17, rec: 37, recYd: 487, recTD: 2, fumLost: 1 }},
-  { name: "Isaac TeSlaa", position: "WR", team: "DET", projectedStats: { rushYd: 1, rushTD: 0, rec: 23, recYd: 305, recTD: 2, fumLost: 0 }},
-  { name: "Ashton Dulin", position: "WR", team: "IND", projectedStats: { rushYd: 66, rec: 30, recYd: 557, recTD: 3 }},
-  { name: "Dontayvion Wicks", position: "WR", team: "PHI", projectedStats: { rushYd: 8, rec: 36, recYd: 394, recTD: 2 }},
-  { name: "Demarcus Robinson", position: "WR", team: "SF", projectedStats: { rushYd: 2, rec: 30, recYd: 466, recTD: 4 }},
-  { name: "Xavier Hutchinson", position: "WR", team: "HOU", projectedStats: { rushYd: 16, rec: 33, recYd: 409, recTD: 4 }},
-  { name: "Caleb Douglas", position: "WR", team: "MIA", projectedStats: { rushYd: 3, rushTD: 1, rec: 33, recYd: 446, recTD: 1, fumLost: 0 }},
+  { name: "Ted Hurst", position: "WR", team: "TB", projectedStats: { rushYd: 0, rec: 23, recYd: 295, recTD: 2.1, fumLost: 0.2 }},
+  { name: "Isaac TeSlaa", position: "WR", team: "DET", projectedStats: { rushYd: 0, rushTD: 0, rec: 24, recYd: 301, recTD: 3.2, fumLost: 0.2 }},
+  { name: "Ashton Dulin", position: "WR", team: "IND", projectedStats: { rushYd: 26, rec: 10, recYd: 126, recTD: 0.6 }},
+  { name: "Dontayvion Wicks", position: "WR", team: "PHI", projectedStats: { rushYd: 0, rec: 40, recYd: 518, recTD: 2.9 }},
+  { name: "Demarcus Robinson", position: "WR", team: "SF", projectedStats: { rushYd: 0, rec: 3, recYd: 44, recTD: 0.3 }},
+  { name: "Xavier Hutchinson", position: "WR", team: "HOU", projectedStats: { rushYd: 12, rec: 19, recYd: 230, recTD: 1.1 }},
+  { name: "Caleb Douglas", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 44, recYd: 585, recTD: 2.1, fumLost: 0.4 }},
   { name: "Josh Palmer", position: "WR", team: "BUF", projectedStats: { rec: 36, recYd: 464, recTD: 1 }},
-  { name: "Zavion Thomas", position: "WR", team: "CHI", projectedStats: { rushYd: 12, rec: 35, recYd: 436, recTD: 3, fumLost: 2 }},
-  { name: "Zachariah Branch", position: "WR", team: "ATL", projectedStats: { rushYd: 16, rec: 36, recYd: 504, recTD: 2, fumLost: 3 }},
-  { name: "Luke McCaffrey", position: "WR", team: "WAS", projectedStats: { rec: 23, recYd: 381, recTD: 4 }},
+  { name: "Zavion Thomas", position: "WR", team: "CHI", projectedStats: { rushYd: 0, rec: 12, recYd: 154, recTD: 1.2, fumLost: 0.1 }},
+  { name: "Zachariah Branch", position: "WR", team: "ATL", projectedStats: { rushYd: 0, rec: 31, recYd: 382, recTD: 1.9, fumLost: 0.3 }},
+  { name: "Luke McCaffrey", position: "WR", team: "WAS", projectedStats: { rec: 7, recYd: 80, recTD: 0.5 }},
   { name: "Kevin Austin Jr.", position: "WR", team: "NO", projectedStats: { rushYd: 6, rec: 35, recYd: 391, recTD: 1 }},
-  { name: "Kendrick Bourne", position: "WR", team: "ARI", projectedStats: { rushYd: 5, rec: 34, recYd: 421, recTD: 3 }},
-  { name: "Jalen Tolbert", position: "WR", team: "MIA", projectedStats: { rushYd: 3, rushTD: 1, rec: 25, recYd: 327, recTD: 2, fumLost: 0 }},
-  { name: "Tez Johnson", position: "WR", team: "TB", projectedStats: { rushYd: 28, rec: 27, recYd: 307, recTD: 3 }},
+  { name: "Kendrick Bourne", position: "WR", team: "ARI", projectedStats: { rushYd: 0, rec: 23, recYd: 239, recTD: 0.7 }},
+  { name: "Jalen Tolbert", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 33, recYd: 411, recTD: 1.7, fumLost: 0.3 }},
+  { name: "Tez Johnson", position: "WR", team: "TB", projectedStats: { rushYd: 23, rec: 7, recYd: 78, recTD: 0.6 }},
   { name: "Ben Skowronek", position: "WR", team: "PIT", projectedStats: { rec: 22, recYd: 374, recTD: 2 }},
-  { name: "Ryan Flournoy", position: "WR", team: "DAL", projectedStats: { rushYd: 11, rushTD: 0, rec: 32, recYd: 383, recTD: 3, fumLost: 0 }},
-  { name: "Roman Wilson", position: "WR", team: "PIT", projectedStats: { rushYd: 0, rec: 27, recYd: 374, recTD: 4, fumLost: 3 }},
-  { name: "Mack Hollins", position: "WR", team: "NE", projectedStats: { rushYd: 0, rec: 27, recYd: 370, recTD: 1 }},
-  { name: "Adonai Mitchell", position: "WR", team: "NYJ", projectedStats: { rushYd: 14, rushTD: 0, rec: 37, recYd: 562, recTD: 4, fumLost: 0 }},
-  { name: "Devontez Walker", position: "WR", team: "BAL", projectedStats: { rushYd: 1, rec: 22, recYd: 382, recTD: 4 }},
+  { name: "Ryan Flournoy", position: "WR", team: "DAL", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 34, recYd: 383, recTD: 2.7, fumLost: 0.4 }},
+  { name: "Roman Wilson", position: "WR", team: "PIT", projectedStats: { rushYd: 0, rec: 12, recYd: 135, recTD: 0.6, fumLost: 0.1 }},
+  { name: "Mack Hollins", position: "WR", team: "NE", projectedStats: { rushYd: 0, rec: 21, recYd: 258, recTD: 1.6 }},
+  { name: "Adonai Mitchell", position: "WR", team: "NYJ", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 42, recYd: 621, recTD: 3.6, fumLost: 0.5 }},
+  { name: "Devontez Walker", position: "WR", team: "BAL", projectedStats: { rushYd: 0, rec: 14, recYd: 209, recTD: 1.5 }},
   // ── TE (CBS/SportsLine 2026, adjusted) ──
-  { name: "Trey McBride", position: "TE", team: "ARI", projectedStats: { rushYd: 2, rushTD: 0, rec: 110, recYd: 1066, recTD: 5, fumLost: 0 }},
-  { name: "Brock Bowers", position: "TE", team: "LV", projectedStats: { rushYd: 14, rushTD: 0, rec: 99, recYd: 998, recTD: 7, fumLost: 0 }},
-  { name: "Colston Loveland", position: "TE", team: "CHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 82, recYd: 895, recTD: 6, fumLost: 0 }},
-  { name: "Tyler Warren", position: "TE", team: "IND", projectedStats: { rushYd: 17, rushTD: 0, rec: 86, recYd: 867, recTD: 5, fumLost: 0 }},
-  { name: "Kyle Pitts", position: "TE", team: "ATL", projectedStats: { rushYd: 0, rushTD: 1, rec: 81, recYd: 859, recTD: 4, fumLost: 0 }},
-  { name: "Dallas Goedert", position: "TE", team: "PHI", projectedStats: { rushYd: 3, rushTD: 0, rec: 68, recYd: 725, recTD: 7, fumLost: 0 }},
-  { name: "Harold Fannin Jr.", position: "TE", team: "CLE", projectedStats: { rushYd: 22, rushTD: 1, rec: 81, recYd: 821, recTD: 2, fumLost: 0 }},
-  { name: "Sam LaPorta", position: "TE", team: "DET", projectedStats: { rushYd: 0, rushTD: 1, rec: 76, recYd: 785, recTD: 6, fumLost: 0 }},
-  { name: "George Kittle", position: "TE", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 75, recYd: 813, recTD: 6, fumLost: 0 }},
-  { name: "Isaiah Likely", position: "TE", team: "NYG", projectedStats: { rushYd: 1, rushTD: 0, rec: 66, recYd: 683, recTD: 4, fumLost: 0 }},
-  { name: "Tucker Kraft", position: "TE", team: "GB", projectedStats: { rushYd: 9, rushTD: 1, rec: 66, recYd: 729, recTD: 5, fumLost: 0 }},
-  { name: "Travis Kelce", position: "TE", team: "KC", projectedStats: { rushYd: 0, rushTD: 0, rec: 76, recYd: 767, recTD: 4, fumLost: 0 }},
-  { name: "Brenton Strange", position: "TE", team: "JAX", projectedStats: { rushYd: 2, rushTD: 0, rec: 61, recYd: 600, recTD: 3, fumLost: 0 }},
-  { name: "Jake Ferguson", position: "TE", team: "DAL", projectedStats: { rushYd: 0, rushTD: 0, rec: 74, recYd: 603, recTD: 5, fumLost: 0 }},
-  { name: "Dalton Kincaid", position: "TE", team: "BUF", projectedStats: { rushYd: 2, rushTD: 0, rec: 58, recYd: 699, recTD: 3, fumLost: 0 }},
-  { name: "Juwan Johnson", position: "TE", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 62, recYd: 639, recTD: 3, fumLost: 0 }},
-  { name: "Mark Andrews", position: "TE", team: "BAL", projectedStats: { rushYd: 32, rushTD: 1, rec: 60, recYd: 616, recTD: 8, fumLost: 0 }},
-  { name: "Hunter Henry", position: "TE", team: "NE", projectedStats: { rushYd: 0, rushTD: 0, rec: 57, recYd: 631, recTD: 5, fumLost: 0 }},
-  { name: "Dalton Schultz", position: "TE", team: "HOU", projectedStats: { rushYd: 0, rushTD: 0, rec: 58, recYd: 553, recTD: 3, fumLost: 0 }},
-  { name: "Cade Otton", position: "TE", team: "TB", projectedStats: { rec: 65, recYd: 710, recTD: 4 }},
-  { name: "Greg Dulcich", position: "TE", team: "MIA", projectedStats: { rushYd: 0, rec: 59, recYd: 670, recTD: 4, fumLost: 2 }},
-  { name: "AJ Barner", position: "TE", team: "SEA", projectedStats: { rushYd: 13, rushTD: 2, rec: 48, recYd: 476, recTD: 6 }},
-  { name: "Kenyon Sadiq", position: "TE", team: "NYJ", projectedStats: { rushYd: 2, rushTD: 0, rec: 68, recYd: 691, recTD: 5, fumLost: 0 }},
-  { name: "Oronde Gadsden II", position: "TE", team: "LAC", projectedStats: { rushYd: 0, rushTD: 1, rec: 44, recYd: 482, recTD: 3, fumLost: 0 }},
-  { name: "T.J. Hockenson", position: "TE", team: "MIN", projectedStats: { rushYd: 3, rushTD: 0, rec: 77, recYd: 638, recTD: 3, fumLost: 0 }},
-  { name: "Pat Freiermuth", position: "TE", team: "PIT", projectedStats: { rushYd: 1, rushTD: 0, rec: 61, recYd: 599, recTD: 3, fumLost: 0 }},
+  { name: "Trey McBride", position: "TE", team: "ARI", projectedStats: { rushYd: 0, rushTD: 0, rec: 108, recYd: 1023, recTD: 5.3, fumLost: 0.5 }},
+  { name: "Brock Bowers", position: "TE", team: "LV", projectedStats: { rushYd: 15, rushTD: 0.2, rec: 99, recYd: 999, recTD: 6.6, fumLost: 0.4 }},
+  { name: "Colston Loveland", position: "TE", team: "CHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 80, recYd: 897, recTD: 6, fumLost: 0.4 }},
+  { name: "Tyler Warren", position: "TE", team: "IND", projectedStats: { rushYd: 14, rushTD: 0.4, rec: 85, recYd: 894, recTD: 5.5, fumLost: 0.6 }},
+  { name: "Kyle Pitts", position: "TE", team: "ATL", projectedStats: { rushYd: 0, rushTD: 0, rec: 80, recYd: 858, recTD: 3.2, fumLost: 0.3 }},
+  { name: "Dallas Goedert", position: "TE", team: "PHI", projectedStats: { rushYd: 0, rushTD: 0, rec: 71, recYd: 726, recTD: 5.7, fumLost: 0.4 }},
+  { name: "Harold Fannin Jr.", position: "TE", team: "CLE", projectedStats: { rushYd: 21, rushTD: 0.3, rec: 84, recYd: 826, recTD: 3.2, fumLost: 0.6 }},
+  { name: "Sam LaPorta", position: "TE", team: "DET", projectedStats: { rushYd: 0, rushTD: 0, rec: 78, recYd: 787, recTD: 5.4, fumLost: 0.4 }},
+  { name: "George Kittle", position: "TE", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 74, recYd: 810, recTD: 5.6, fumLost: 0.4 }},
+  { name: "Isaiah Likely", position: "TE", team: "NYG", projectedStats: { rushYd: 0, rushTD: 0, rec: 63, recYd: 683, recTD: 4.1, fumLost: 0.5 }},
+  { name: "Tucker Kraft", position: "TE", team: "GB", projectedStats: { rushYd: 8, rushTD: 0.1, rec: 71, recYd: 818, recTD: 4.4, fumLost: 0.4 }},
+  { name: "Travis Kelce", position: "TE", team: "KC", projectedStats: { rushYd: 0, rushTD: 0, rec: 74, recYd: 773, recTD: 4.5, fumLost: 0.5 }},
+  { name: "Brenton Strange", position: "TE", team: "JAX", projectedStats: { rushYd: 0, rushTD: 0, rec: 59, recYd: 599, recTD: 4, fumLost: 0.4 }},
+  { name: "Jake Ferguson", position: "TE", team: "DAL", projectedStats: { rushYd: 0, rushTD: 0, rec: 73, recYd: 598, recTD: 5.9, fumLost: 0.8 }},
+  { name: "Dalton Kincaid", position: "TE", team: "BUF", projectedStats: { rushYd: 0, rushTD: 0, rec: 59, recYd: 697, recTD: 4.4, fumLost: 0.5 }},
+  { name: "Juwan Johnson", position: "TE", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 63, recYd: 645, recTD: 2.8, fumLost: 0.6 }},
+  { name: "Mark Andrews", position: "TE", team: "BAL", projectedStats: { rushYd: 35, rushTD: 0.7, rec: 58, recYd: 618, recTD: 7.1, fumLost: 0.5 }},
+  { name: "Hunter Henry", position: "TE", team: "NE", projectedStats: { rushYd: 0, rushTD: 0, rec: 56, recYd: 629, recTD: 5.3, fumLost: 0.2 }},
+  { name: "Dalton Schultz", position: "TE", team: "HOU", projectedStats: { rushYd: 0, rushTD: 0, rec: 60, recYd: 552, recTD: 3.1, fumLost: 0.4 }},
+  { name: "Cade Otton", position: "TE", team: "TB", projectedStats: { rec: 45, recYd: 440, recTD: 2.3 }},
+  { name: "Greg Dulcich", position: "TE", team: "MIA", projectedStats: { rushYd: 0, rec: 52, recYd: 580, recTD: 1.7, fumLost: 0.4 }},
+  { name: "AJ Barner", position: "TE", team: "SEA", projectedStats: { rushYd: 18, rushTD: 0.5, rec: 45, recYd: 433, recTD: 3.6 }},
+  { name: "Kenyon Sadiq", position: "TE", team: "NYJ", projectedStats: { rushYd: 0, rushTD: 0, rec: 61, recYd: 630, recTD: 4, fumLost: 0.4 }},
+  { name: "Oronde Gadsden II", position: "TE", team: "LAC", projectedStats: { rushYd: 0, rushTD: 0, rec: 30, recYd: 322, recTD: 2.5, fumLost: 0.2 }},
+  { name: "T.J. Hockenson", position: "TE", team: "MIN", projectedStats: { rushYd: 0, rushTD: 0, rec: 78, recYd: 639, recTD: 2.8, fumLost: 0.3 }},
+  { name: "Pat Freiermuth", position: "TE", team: "PIT", projectedStats: { rushYd: 0, rushTD: 0, rec: 60, recYd: 603, recTD: 2.8, fumLost: 0.5 }},
   { name: "Chigoziem Okonkwo", position: "TE", team: "WAS", projectedStats: { rushYd: 0, rushTD: 0, rec: 56, recYd: 552, recTD: 2, fumLost: 0 }},
-  { name: "Colby Parkinson", position: "TE", team: "LAR", projectedStats: { rec: 44, recYd: 479, recTD: 7, fumLost: 1 }},
-  { name: "Mason Taylor", position: "TE", team: "NYJ", projectedStats: { rec: 58, recYd: 465, recTD: 3 }},
-  { name: "Mike Gesicki", position: "TE", team: "CIN", projectedStats: { rec: 51, recYd: 542, recTD: 3 }},
-  { name: "Evan Engram", position: "TE", team: "DEN", projectedStats: { rushYd: 11, rec: 57, recYd: 468, recTD: 3 }},
-  { name: "David Njoku", position: "TE", team: "LAC", projectedStats: { rec: 41, recYd: 405, recTD: 7 }},
-  { name: "Tyler Higbee", position: "TE", team: "LAR", projectedStats: { rec: 42, recYd: 504, recTD: 5 }},
-  { name: "Theo Johnson", position: "TE", team: "NYG", projectedStats: { rec: 35, recYd: 384, recTD: 4 }},
-  { name: "Terrance Ferguson", position: "TE", team: "LAR", projectedStats: { rushYd: 2, rushTD: 0, rec: 41, recYd: 537, recTD: 5, fumLost: 0 }},
-  { name: "Gunnar Helm", position: "TE", team: "TEN", projectedStats: { rushYd: 0, rushTD: 1, rec: 60, recYd: 497, recTD: 2, fumLost: 0 }},
-  { name: "Dawson Knox", position: "TE", team: "BUF", projectedStats: { rec: 37, recYd: 398, recTD: 2 }},
-  { name: "Noah Fant", position: "TE", team: "NO", projectedStats: { rec: 42, recYd: 421, recTD: 3, fumLost: 3 }},
-  { name: "Michael Mayer", position: "TE", team: "LV", projectedStats: { rec: 38, recYd: 347, recTD: 1 }},
-  { name: "Will Kacmarek", position: "TE", team: "MIA", projectedStats: { rec: 33, recYd: 327, recTD: 2, fumLost: 1 }},
-  { name: "Darnell Washington", position: "TE", team: "PIT", projectedStats: { rec: 37, recYd: 383, recTD: 3, fumLost: 1 }},
-  { name: "Brock Wright", position: "TE", team: "DET", projectedStats: { rec: 30, recYd: 280, recTD: 5 }},
-  { name: "Charlie Kolar", position: "TE", team: "LAC", projectedStats: { rushYd: 3, rec: 24, recYd: 334, recTD: 5 }},
-  { name: "Marlin Klein", position: "TE", team: "HOU", projectedStats: { rec: 33, recYd: 355, recTD: 3, fumLost: 1 }},
-  { name: "Erick All", position: "TE", team: "CIN", projectedStats: { rec: 34, recYd: 305, recTD: 2 }},
-  { name: "Daniel Bellinger", position: "TE", team: "TEN", projectedStats: { rec: 24, recYd: 315, recTD: 2 }},
-  { name: "Ben Sims", position: "TE", team: "MIA", projectedStats: { rec: 33, recYd: 307, recTD: 1 }},
-  { name: "Eli Stowers", position: "TE", team: "PHI", projectedStats: { rec: 29, recYd: 317, recTD: 3, fumLost: 1 }},
-  { name: "Josh Oliver", position: "TE", team: "MIN", projectedStats: { rec: 24, recYd: 245, recTD: 4 }},
-  { name: "Davis Allen", position: "TE", team: "LAR", projectedStats: { rec: 24, recYd: 236, recTD: 4 }},
-  { name: "Tommy Tremble", position: "TE", team: "CAR", projectedStats: { rec: 28, recYd: 267, recTD: 3 }},
-  { name: "Adam Trautman", position: "TE", team: "DEN", projectedStats: { rec: 29, recYd: 279, recTD: 2 }},
-  { name: "Ja'Tavion Sanders", position: "TE", team: "CAR", projectedStats: { rec: 28, recYd: 236, recTD: 1 }},
+  { name: "Colby Parkinson", position: "TE", team: "LAR", projectedStats: { rec: 28, recYd: 292, recTD: 3.1, fumLost: 0.3 }},
+  { name: "Mason Taylor", position: "TE", team: "NYJ", projectedStats: { rec: 32, recYd: 276, recTD: 1.4 }},
+  { name: "Mike Gesicki", position: "TE", team: "CIN", projectedStats: { rec: 32, recYd: 313, recTD: 3.7 }},
+  { name: "Evan Engram", position: "TE", team: "DEN", projectedStats: { rushYd: 0, rec: 47, recYd: 465, recTD: 2.2 }},
+  { name: "David Njoku", position: "TE", team: "LAC", projectedStats: { rec: 40, recYd: 417, recTD: 3.9 }},
+  { name: "Tyler Higbee", position: "TE", team: "LAR", projectedStats: { rec: 15, recYd: 154, recTD: 1.2 }},
+  { name: "Theo Johnson", position: "TE", team: "NYG", projectedStats: { rec: 25, recYd: 269, recTD: 1.6 }},
+  { name: "Terrance Ferguson", position: "TE", team: "LAR", projectedStats: { rushYd: 0, rushTD: 0, rec: 46, recYd: 580, recTD: 5.4, fumLost: 0.3 }},
+  { name: "Gunnar Helm", position: "TE", team: "TEN", projectedStats: { rushYd: 0, rushTD: 0, rec: 58, recYd: 499, recTD: 3.3, fumLost: 0.4 }},
+  { name: "Dawson Knox", position: "TE", team: "BUF", projectedStats: { rec: 25, recYd: 265, recTD: 2.8 }},
+  { name: "Noah Fant", position: "TE", team: "NO", projectedStats: { rec: 17, recYd: 145, recTD: 0.8, fumLost: 0.1 }},
+  { name: "Michael Mayer", position: "TE", team: "LV", projectedStats: { rec: 37, recYd: 364, recTD: 1.3 }},
+  { name: "Will Kacmarek", position: "TE", team: "MIA", projectedStats: { rec: 18, recYd: 174, recTD: 0.8, fumLost: 0.1 }},
+  { name: "Darnell Washington", position: "TE", team: "PIT", projectedStats: { rec: 31, recYd: 305, recTD: 1.9, fumLost: 0.3 }},
+  { name: "Brock Wright", position: "TE", team: "DET", projectedStats: { rec: 8, recYd: 72, recTD: 0.6 }},
+  { name: "Charlie Kolar", position: "TE", team: "LAC", projectedStats: { rushYd: 0, rec: 15, recYd: 149, recTD: 1.1 }},
+  { name: "Marlin Klein", position: "TE", team: "HOU", projectedStats: { rec: 4, recYd: 36, recTD: 0.2, fumLost: 0 }},
+  { name: "Erick All", position: "TE", team: "CIN", projectedStats: { rec: 26, recYd: 235, recTD: 1.9 }},
+  { name: "Daniel Bellinger", position: "TE", team: "TEN", projectedStats: { rec: 13, recYd: 113, recTD: 0.5 }},
+  { name: "Ben Sims", position: "TE", team: "MIA", projectedStats: { rec: 7, recYd: 65, recTD: 0.3 }},
+  { name: "Eli Stowers", position: "TE", team: "PHI", projectedStats: { rec: 11, recYd: 107, recTD: 0.8, fumLost: 0.1 }},
+  { name: "Josh Oliver", position: "TE", team: "MIN", projectedStats: { rec: 17, recYd: 151, recTD: 1.1 }},
+  { name: "Davis Allen", position: "TE", team: "LAR", projectedStats: { rec: 8, recYd: 74, recTD: 0.7 }},
+  { name: "Tommy Tremble", position: "TE", team: "CAR", projectedStats: { rec: 18, recYd: 177, recTD: 1.3 }},
+  { name: "Adam Trautman", position: "TE", team: "DEN", projectedStats: { rec: 12, recYd: 113, recTD: 1 }},
+  { name: "Ja'Tavion Sanders", position: "TE", team: "CAR", projectedStats: { rec: 20, recYd: 164, recTD: 1.1 }},
   { name: "Luke Musgrave", position: "TE", team: "GB", projectedStats: { rec: 24, recYd: 258, recTD: 1 }},
-  { name: "Austin Hooper", position: "TE", team: "ATL", projectedStats: { rec: 24, recYd: 287, recTD: 1 }},
-  { name: "Jeremy Ruckert", position: "TE", team: "NYJ", projectedStats: { rec: 28, recYd: 192, recTD: 2 }},
+  { name: "Austin Hooper", position: "TE", team: "ATL", projectedStats: { rec: 21, recYd: 181, recTD: 0.8 }},
+  { name: "Jeremy Ruckert", position: "TE", team: "NYJ", projectedStats: { rec: 12, recYd: 96, recTD: 0.5 }},
   { name: "Grant Calcaterra", position: "TE", team: "PHI", projectedStats: { rec: 21, recYd: 224, recTD: 1 }},
-  { name: "Cole Kmet", position: "TE", team: "CHI", projectedStats: { rushYd: 0, rec: 19, recYd: 219, recTD: 3 }},
-  { name: "Eli Raridon", position: "TE", team: "NE", projectedStats: { rec: 24, recYd: 240, recTD: 3, fumLost: 1 }},
-  { name: "Nate Boerkircher", position: "TE", team: "JAX", projectedStats: { rec: 22, recYd: 236, recTD: 1, fumLost: 1 }},
-  { name: "John Bates", position: "TE", team: "WAS", projectedStats: { rec: 21, recYd: 217, recTD: 2, fumLost: 1 }},
-  { name: "Matthew Hibner", position: "TE", team: "BAL", projectedStats: { rec: 18, recYd: 191, recTD: 3 }},
-  { name: "Elijah Higgins", position: "TE", team: "ARI", projectedStats: { rec: 21, recYd: 210, recTD: 1, fumLost: 1 }},
-  { name: "Nate Adkins", position: "TE", team: "DEN", projectedStats: { rec: 14, recYd: 112, recTD: 4 }},
+  { name: "Cole Kmet", position: "TE", team: "CHI", projectedStats: { rushYd: 0, rec: 22, recYd: 219, recTD: 1.7 }},
+  { name: "Eli Raridon", position: "TE", team: "NE", projectedStats: { rec: 16, recYd: 151, recTD: 1.1, fumLost: 0.1 }},
+  { name: "Nate Boerkircher", position: "TE", team: "JAX", projectedStats: { rec: 8, recYd: 74, recTD: 0.6, fumLost: 0.1 }},
+  { name: "John Bates", position: "TE", team: "WAS", projectedStats: { rec: 14, recYd: 136, recTD: 1.2, fumLost: 0.1 }},
+  { name: "Matthew Hibner", position: "TE", team: "BAL", projectedStats: { rec: 3, recYd: 36, recTD: 0.3 }},
+  { name: "Elijah Higgins", position: "TE", team: "ARI", projectedStats: { rec: 21, recYd: 182, recTD: 0.7, fumLost: 0.2 }},
+  { name: "Nate Adkins", position: "TE", team: "DEN", projectedStats: { rec: 8, recYd: 69, recTD: 0.7 }},
   // ── K (CBS/SportsLine 2026, adjusted) ──
   { name: "Harrison Mevis", position: "K", team: "LAR", projectedStats: { fgMade: 30, fgMissed: 4, xpMade: 55, xpMissed: 1 }},
   { name: "Jake Bates", position: "K", team: "DET", projectedStats: { fgMade: 28, fgMissed: 4, xpMade: 49, xpMissed: 2 }},
@@ -563,16 +563,16 @@ const PROJECTIONS = [
   { name: "Arizona Cardinals", position: "DEF", team: "ARI", projectedStats: { sacks: 35, ints: 12, fumRec: 12, defTD: 2, safety: 0, ptsAllowed: 520 }},
   { name: "New York Jets", position: "DEF", team: "NYJ", projectedStats: { sacks: 35, ints: 12, fumRec: 8, defTD: 3, safety: 0, ptsAllowed: 492 }},
 
-  { name: "Alvin Kamara", position: "RB", team: "NO", projectedStats: { rushYd: 479, rushTD: 2, rec: 34, recYd: 230, recTD: 1, fumLost: 0 }},
-  { name: "Chris Bell", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 41, recYd: 533, recTD: 3, fumLost: 0 }},
-  { name: "Stefon Diggs", position: "WR", team: "WAS", projectedStats: { rushYd: 8, rushTD: 0, rec: 62, recYd: 741, recTD: 4, fumLost: 1 }},
-  { name: "Jack Bech", position: "WR", team: "LV", projectedStats: { rushYd: 0, rushTD: 1, rec: 43, recYd: 486, recTD: 3, fumLost: 0 }},
+  { name: "Alvin Kamara", position: "RB", team: "NO", projectedStats: { rushYd: 451, rushTD: 2.1, rec: 33, recYd: 222, recTD: 0.9, fumLost: 0.6 }},
+  { name: "Chris Bell", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 27, recYd: 357, recTD: 1.3, fumLost: 0.3 }},
+  { name: "Stefon Diggs", position: "WR", team: "WAS", projectedStats: { rushYd: 0, rushTD: 0, rec: 71, recYd: 726, recTD: 3.4, fumLost: 0.5 }},
+  { name: "Jack Bech", position: "WR", team: "LV", projectedStats: { rushYd: 0, rushTD: 0, rec: 28, recYd: 315, recTD: 1.2, fumLost: 0.3 }},
   { name: "Brandon Aiyuk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 1, recYd: 3, recTD: 0, fumLost: 0 }},
-  { name: "Tre' Harris", position: "WR", team: "LAC", projectedStats: { rushYd: 0, rushTD: 0, rec: 34, recYd: 405, recTD: 2, fumLost: 0 }},
+  { name: "Tre' Harris", position: "WR", team: "LAC", projectedStats: { rushYd: 0, rushTD: 0, rec: 35, recYd: 411, recTD: 2.5, fumLost: 0.4 }},
   { name: "Tyreek Hill", position: "WR", team: "FA", projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0, fumLost: 0 }},
-  { name: "Savion Williams", position: "WR", team: "GB", projectedStats: { rushYd: 45, rushTD: 0, rec: 26, recYd: 275, recTD: 2, fumLost: 0 }},
+  { name: "Savion Williams", position: "WR", team: "GB", projectedStats: { rushYd: 47, rushTD: 0.3, rec: 20, recYd: 231, recTD: 1.7, fumLost: 0.3 }},
   { name: "Chris Brazzell II", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rushTD: 0, rec: 21, recYd: 289, recTD: 3, fumLost: 0 }},
-  { name: "Xavier Legette", position: "WR", team: "CAR", projectedStats: { rushYd: 14, rushTD: 0, rec: 25, recYd: 311, recTD: 2, fumLost: 0 }},
+  { name: "Xavier Legette", position: "WR", team: "CAR", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 36, recYd: 418, recTD: 2.6, fumLost: 0.4 }},
 ];
 
 // ── X (Twitter) auto-post: Mon/Wed/Fri, one auction + one snake insight, cycling through
@@ -2200,11 +2200,7 @@ const LEAD_CATEGORIES = {
   vegas:      'Vegas vs. Consensus',
   preseason:  'Preseason',
   injury:     'Injury Report',
-  market:     'Market & Roster Build',
-  // The analyst desk names other people's calls, so its label has to say whose
-  // board is whose. "Analysts" alone would read as if the site were quoting
-  // itself.
-  analyst:    'Analysts vs. Iron Tuna'
+  market:     'Market & Roster Build'
 };
 const LEAD_RECENT = 5;
 
@@ -2266,8 +2262,8 @@ async function leadStoryPayload(env) {
 // like "today's 11:00 UTC odds refresh". Nobody drafting reads a UTC clock.
 // This site's readers are American fantasy managers whose kickoffs, waivers and
 // league deadlines are all quoted in Eastern, so every clock time in a story is
-// converted on the way out — once, here, so the front page, /lead, the analyst
-// column and the admin desk cannot disagree about what time something happened.
+// converted on the way out — once, here, so the front page, /lead and the admin
+// desk cannot disagree about what time something happened.
 //
 // It is a filter over stored copy, not a substitute for writing it correctly:
 // the Routine's prompt now tells the desk to write ET in the first place (see
@@ -2393,137 +2389,6 @@ function leadSlug(n) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
-// ── The Analyst Desk ───────────────────────────────────────────────────────
-// The `analyst` desk's stories are the one kind the three-hour rotation should
-// not throw away. A piece arguing that a named analyst is a round high on a
-// back is still worth reading a month later, and the column only means
-// anything if the calls accumulate: the reader wants to see who the desk has
-// disagreed with and how often, not one story at a time. So the lead rotation
-// retires these rows the way it retires every other desk's, and this route
-// keeps them.
-//
-// `calls` is the structured half of an analyst story: who said what, what the
-// site says instead, and whether the desk agreed. It is deliberately OPTIONAL.
-// Rows written before the column existed, and any run that stored nothing
-// parseable, still appear here with their headline and dek. The scorecard just
-// has less to count. Nothing on this page may depend on a run having filled in
-// a field correctly.
-let _ANALYST_CACHE = null;
-let _ANALYST_AT = 0;
-const ANALYST_MAX = 60;        // entries the column will list at once
-const ANALYST_CALLS_MAX = 8;   // calls read out of any one row
-// The site owns this vocabulary, the same way LEAD_CATEGORIES owns the desk
-// names. A run that stores some other word does not get to invent a fourth
-// verdict on the page: the call still lists, it just scores nowhere.
-const ANALYST_STANCES = { agree: 'We agree', disagree: 'We disagree', partial: 'Partly' };
-
-function analystCalls(raw) {
-  let arr = [];
-  try { arr = JSON.parse(raw || '[]'); } catch (e) { return []; }
-  if (!Array.isArray(arr)) return [];
-  const str = (v) => (typeof v === 'string' ? v.trim() : '');
-  return arr.slice(0, ANALYST_CALLS_MAX).map(c => {
-    if (!c || typeof c !== 'object') return null;
-    const analyst = str(c.analyst);
-    const player = str(c.player);
-    // Without both of these there is no call to render: an unattributed take,
-    // or an attribution with nobody it is about, is exactly what this desk is
-    // not allowed to publish.
-    if (!analyst || !player) return null;
-    const stance = str(c.stance).toLowerCase();
-    return {
-      analyst,
-      outlet: str(c.outlet),
-      player,
-      pos: str(c.pos).toUpperCase(),
-      team: str(c.team).toUpperCase(),
-      their: str(c.their),
-      ours: str(c.ours),
-      stance: ANALYST_STANCES[stance] ? stance : null,
-      stanceLabel: ANALYST_STANCES[stance] || null,
-      why: str(c.why)
-    };
-  }).filter(Boolean);
-}
-
-// One row per analyst the column has ever taken a position on, so a reader can
-// see the record at a glance instead of reading twenty entries to find it.
-// Counted here rather than in the page because it is arithmetic over the same
-// rows the payload already holds, and two implementations of a tally is one
-// too many.
-function analystScoreboard(entries) {
-  const by = new Map();
-  for (const e of entries) {
-    for (const c of e.calls) {
-      const key = c.analyst.toLowerCase();
-      let rec = by.get(key);
-      if (!rec) { rec = { analyst: c.analyst, outlet: c.outlet, agree: 0, disagree: 0, partial: 0, total: 0 }; by.set(key, rec); }
-      if (!rec.outlet && c.outlet) rec.outlet = c.outlet;
-      rec.total++;
-      if (c.stance) rec[c.stance]++;
-    }
-  }
-  return [...by.values()].sort((a, b) => b.total - a.total || a.analyst.localeCompare(b.analyst));
-}
-
-// `calls` was added after `lead_story` already existed, so it arrives the same
-// way the analytics tables do (see ANALYTICS_DDL): lazily, once per isolate,
-// with nothing to run by hand and no migration step to remember. ALTER TABLE
-// ADD COLUMN has no IF NOT EXISTS in SQLite, so the duplicate-column error on
-// every run after the first IS the success case and is swallowed on purpose.
-let __analystCallsReady = false;
-async function analystCallsReady(env) {
-  if (__analystCallsReady) return;
-  __analystCallsReady = true;
-  try { await env.LEADS_DB.prepare('ALTER TABLE lead_story ADD COLUMN calls TEXT').run(); } catch (e) {}
-}
-
-async function analystColumnPayload(env) {
-  const now = Date.now();
-  if (_ANALYST_CACHE && now - _ANALYST_AT < 120000) return _ANALYST_CACHE;
-  let out = { ok: false, entries: [], scoreboard: [] };
-  try {
-    if (env.LEADS_DB) {
-      await analystCallsReady(env);
-      const WHERE = " WHERE verified = 1 AND category = 'analyst' AND slug IS NOT NULL"
-        + ' ORDER BY created_at DESC LIMIT ?';
-      let res;
-      try {
-        res = await env.LEADS_DB.prepare(
-          'SELECT slug, title, dek, category, players, calls, created_at FROM lead_story'
-          + WHERE).bind(ANALYST_MAX).all();
-      } catch (e) {
-        // The DDL above did not land - a binding without write access, or a D1
-        // that refused it. The column is still worth publishing without its
-        // call cards, so ask again for the shape that has always existed rather
-        // than showing the reader an empty page.
-        res = await env.LEADS_DB.prepare(
-          'SELECT slug, title, dek, category, players, created_at FROM lead_story'
-          + WHERE).bind(ANALYST_MAX).all();
-      }
-      const rows = (res && res.results) || [];
-      const entries = rows.map(r => {
-        // leadRow does not police the slug, its caller does, and here the check
-        // matters twice over: a row with no slug has no URL, and `slug IS NOT
-        // NULL` in SQL still lets an empty string through. An entry the reader
-        // cannot open is worse than one that is simply absent.
-        if (!r.slug || !r.title) return null;
-        const base = leadRow(r);
-        return { slug: base.slug, title: base.title, dek: base.dek, url: base.url,
-                 createdAt: base.createdAt, ppl: base.ppl, calls: analystCalls(r.calls) };
-      }).filter(Boolean);
-      out = { ok: entries.length > 0, entries, scoreboard: analystScoreboard(entries) };
-    }
-  } catch (e) {
-    // Same contract as the lead: an empty column is a quiet page, an exception
-    // is a broken one.
-    out = { ok: false, entries: [], scoreboard: [] };
-  }
-  _ANALYST_CACHE = out;
-  _ANALYST_AT = now;
-  return out;
-}
-
 async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
@@ -2807,38 +2672,14 @@ export default {
         if (!row) return json({ ok: false, error: 'not_found' }, 404, c);
         let sources = [];
         try { sources = JSON.parse(row.sources || '[]'); } catch (e) { sources = []; }
-        // The analyst desk's structured calls ride along so the story page can
-        // lay them out under the article. Fetched as a SEPARATE query, wrapped
-        // in its own try: `calls` is a late addition to the table, and a story
-        // page that 500s because one optional column is missing would be a far
-        // worse bug than a story page with no cards.
-        let calls = [];
-        if (String(row.category || '').toLowerCase() === 'analyst') {
-          try {
-            const cr = await env.LEADS_DB.prepare(
-              'SELECT calls FROM lead_story WHERE slug = ?').bind(row.slug).first();
-            calls = analystCalls(cr && cr.calls);
-          } catch (e) { calls = []; }
-        }
         return json({
           ok: true,
           story: { ...leadRow(row), body: leadClock(row.body_html || '', row.created_at),
                    method: leadClock(row.method || '', row.created_at),
                    sources: (Array.isArray(sources) ? sources : []).map(x => (x && typeof x === 'object'
-                     ? { ...x, detail: leadClock(x.detail || '', row.created_at) } : x)),
-                   calls }
+                     ? { ...x, detail: leadClock(x.detail || '', row.created_at) } : x)) }
         }, 200, { ...c, 'cache-control': 'public, max-age=120' });
       } catch (e) { return json({ ok: false, error: 'unavailable' }, 200, c); }
-    }
-    // The standing analyst column. Same two-minute memo as the lead: the desk
-    // adds an entry about once a day, so a page that is two minutes behind it
-    // is indistinguishable from a live one, and D1 is not asked again for every
-    // reader.
-    if (url.pathname === '/api/analyst-column') {
-      if (request.method !== 'GET') return new Response('method', { status: 405 });
-      const c = corsHeaders(request.headers.get('Origin'));
-      const out = await analystColumnPayload(env);
-      return json(out, 200, { ...c, 'cache-control': 'public, max-age=120' });
     }
     if (url.pathname === '/api/insights') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
@@ -3383,10 +3224,8 @@ export default {
         }
       } catch (e) { return json({ ok: false, error: 'write_failed', detail: String(e && e.message || e) }, 500, c); }
       // Any write invalidates the two-minute memo, or the response below would
-      // report the state we just left. The analyst column is memoised off the
-      // same table and `promote` sets verified = 1, which is exactly what puts
-      // a row into that column, so its memo goes with it.
-      if (did) { _LEAD_CACHE = null; _LEAD_AT = 0; _ANALYST_CACHE = null; _ANALYST_AT = 0; }
+      // report the state we just left.
+      if (did) { _LEAD_CACHE = null; _LEAD_AT = 0; }
       const rows = await env.LEADS_DB.prepare(
         'SELECT id, slug, title, category, players, verified, published, created_at'
         + ' FROM lead_story ORDER BY created_at DESC LIMIT 15').all();

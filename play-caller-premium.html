@@ -109,7 +109,7 @@ footer.site a{color:var(--muted)}
     <a href="/fantasy-football-auction-values">Auction Values</a>
     <a href="/guides">Strategy</a>
     <a href="/auction-insights">Insights</a>
-    <a href="/analyst-desk">Columns</a>
+    <a href="/play-caller-premium">Columns</a>
     <a class="cta" href="/auctiondraft?screen=cheat">Free cheat sheet</a>
   </nav>
 </div></header>
@@ -127,6 +127,24 @@ footer.site a{color:var(--muted)}
 
 <div class="eyebrow" id="entries">The board</div>
 <div class="entries">
+<article class="call" id="call-2026-08-30-1" data-players="trey-mcbride">
+<div class="cmeta"><span class="chip up">Underpriced</span><span class="cpos">TE</span><span class="cteam">ARI</span><span class="cdate">Aug 30</span></div>
+<h2>A true mismatch tight end has always outrun a bad quarterback situation, and Trey McBride is proving it in the worst one in the league</h2>
+<p>Antonio Gates spent a decade and a half as the clearest example football has of this: whoever started at quarterback in San Diego, healthy or hurt, Gates stayed the first read in the red zone and on third down, because a tight end built to beat a linebacker or a safety one&#8209;on&#8209;one does not need a great arm behind him to stay open. A shaky quarterback shrinks the throwing windows every ordinary receiver on the field depends on. It barely touches a mismatch nobody on the field can actually cover.</p>
+<p>Arizona is running the same experiment now, just from a worse starting point. The team released Kyler Murray and handed the offense to Jacoby Brissett, a downgrade that drags down the ceiling on every skill player in the building, on a roster already built around a run&#8209;leaning identity rather than a featured passing game. McBride is the one player that downgrade does not really touch. His catch radius makes him the safety&#8209;valve target no matter who is throwing him the ball, which is exactly the profile that has survived a bad quarterback before.</p>
+<p class="who"><b>Who it moves:</b> <b>Trey McBride</b> (ARI, TE). The market has already priced in Arizona&rsquo;s quarterback downgrade for the receivers around him. It should not be pricing McBride the same way &mdash; his role is the one part of this offense a bad quarterback cannot shrink.</p>
+<p class="statline">Projected effect: +6% to +10% above a standard TE1 price, insulated from Arizona&rsquo;s other downgrades</p>
+</article>
+
+<article class="call" id="call-2026-08-30-2" data-players="rj-harvey j-k-dobbins">
+<div class="cmeta"><span class="chip split">Two-sided</span><span class="cpos">RB</span><span class="cteam">DEN</span><span class="cdate">Aug 30</span></div>
+<h2>The receiving back is historically the safest job in a messy committee, and Denver&rsquo;s crowded backfield is about to prove it again</h2>
+<p>Darren Sproles never won a single training&#8209;camp competition for the nominal starting job &mdash; not in San Diego, not in New Orleans, not in Philadelphia. It never mattered. Across three franchises and three completely different coaching staffs over more than a decade, Sproles kept his third&#8209;down and two&#8209;minute role fully intact, because a back who is safe in pass protection and dangerous with the ball in space is the hardest role to take away once a staff trusts him with it. The name atop the depth chart changes constantly. The safest job in the room almost never does.</p>
+<p>Denver is running exactly that kind of muddled committee right now. J.K. Dobbins is back on a two&#8209;year deal and still projects for the bigger rushing workload on paper, but he has missed 54 games in six NFL seasons, and the touch split has stayed murky enough all camp that beat coverage keeps hedging on how the three&#8209;man group divides up. RJ Harvey already took over as Denver&rsquo;s lead back for stretches last season once Dobbins went down, and it is specifically his receiving role that gives him the safer weekly floor of the two, not his standing on the depth chart.</p>
+<p class="who"><b>Who it moves:</b> Up &mdash; <b>RJ Harvey</b> (DEN, RB), priced like the back half of an even timeshare when his receiving role alone gives him the safer weekly floor. Down &mdash; <b>J.K. Dobbins</b> (DEN, RB), priced like a clean lead back despite an injury history that has already cost him 54 games in six seasons.</p>
+<p class="statline">Projected effect: +8% to +12% above a committee price for Harvey, on the safety of his receiving role; -8% to -12% below a clean lead-back price for Dobbins, on his injury history</p>
+</article>
+
 <article class="call" id="call-2026-08-29-1" data-players="tre-tucker jalen-nailor">
 <div class="cmeta"><span class="chip split">Two-sided</span><span class="cpos">WR</span><span class="cteam">LV</span><span class="cdate">Aug 29</span></div>
 <h2>Klint Kubiak already turned play&#8209;action shots off the zone run into a superstar receiver once, and Raiders camp is already showing who gets that role this time</h2>
@@ -370,7 +388,7 @@ footer.site a{color:var(--muted)}
 <script>
 function itInsSignup(e){e.preventDefault();var em=document.getElementById('itInsEmail').value.trim();var ph=document.getElementById('itInsPhone').value.trim();var m=document.getElementById('itInsMsg');if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){m.textContent='Please enter a valid email address.';m.style.color='#f87171';return false;}m.textContent='Signing you up…';m.style.color='var(--sec)';fetch('/api/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:em,phone:ph,source:'insights'})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){m.textContent=ph?'You’re in — insights by email, top moves by text.':'You’re in — insights are headed to your inbox.';m.style.color='var(--teal)';document.getElementById('itInsForm').reset();}else{m.textContent='Hmm, that didn’t go through. Please try again.';m.style.color='#f87171';}}).catch(function(){m.textContent='Network hiccup — please try again.';m.style.color='#f87171';});return false;}
 </script>
-<div class="eyebrow">More</div><div class="related"><a href="/analyst-desk">Analysts vs. Iron Tuna</a><a href="/auction-insights">Auction insights</a><a href="/guides">All guides</a><a href="/auction-draft-strategy">Auction draft strategy</a><a href="/fantasy-football-auction-values">All auction values</a></div>
+<div class="eyebrow">More</div><div class="related"><a href="/auction-insights">Auction insights</a><a href="/guides">All guides</a><a href="/auction-draft-strategy">Auction draft strategy</a><a href="/fantasy-football-auction-values">All auction values</a></div>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -392,7 +410,6 @@ function itInsSignup(e){e.preventDefault();var em=document.getElementById('itIns
       <li><a href="/the-pick">The Pick</a></li>
       <li><a href="/auction-watch">Auction Watch</a></li>
       <li><a href="/guides">Guides</a></li>
-      <li><a href="/analyst-desk">Analyst Desk</a></li>
       <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
