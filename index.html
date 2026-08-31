@@ -1092,6 +1092,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-cost { color: #6a6a6a !important; font-size: 8px; }
   .cheat-val { color: #111 !important; font-size: 8.5px; font-weight: 700; }
   .cheat-you { color: #111 !important; font-size: 8.5px; font-weight: 700; }
+  span.cheat-you.you-shift-up, span.cheat-you.you-shift-down { color: #111 !important; }
   .cheat-ppg { color: #1a4a7a !important; font-size: 8.5px; font-weight: 700; }
   .cheat-you.cy-up { color: #0a7a3f !important; } .cheat-you.cy-down { color: #6a6a6a !important; font-weight: 400; }
   .cheat-name { color: #111 !important; }
@@ -1134,6 +1135,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
 .cheat-cost.price-shift-up { color: #e0a83c !important; }
 .cheat-cost.price-shift-down { color: #5aa9ff !important; }
+/* You moved because of the last pick (planner re-balance, not a market move) —
+   hover the cell for the why. Blue down / green up on purpose: a lower max bid
+   is not bad news, so it must not read as red. */
+.cheat-you.you-shift-up, .rr-c.you.you-shift-up { color: #46d39a !important; }
+.cheat-you.you-shift-down, .rr-c.you.you-shift-down { color: #5aa9ff !important; }
 .col-toggle.price-clear { color: var(--gold-text); border-color: var(--gold-text); }
 .cheat-sep { width: 1px; align-self: stretch; background: var(--border-strong); margin: 0 4px; }
 .cheat-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
@@ -2556,7 +2562,7 @@ function healRosterPositions(cfg) {
 const FORMATS = {
   auction: {
     label: 'Auction',
-    columns: [['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'], ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'], ['you', 'You', 'What you should bid, the most you should pay given your roster, budget, and needs.'], ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.']],
+    columns: [['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'], ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'], ['you', 'You', 'What you should bid, the most you should pay given your roster, budget, and needs. Re-balances after every pick as budgets and slots change; a tinted number moved on the last pick — hover it for why.'], ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.']],
     valuePlayers: (players) => players,
     progress: (draftHistory, players, config) => computeMarketState(draftHistory, players, config),
     planFills: (myTeam, players, config, draftedIds) => buildOptimalPlan(myTeam, players, config, draftedIds),
@@ -12474,8 +12480,8 @@ function Cheatsheet({
       title: "Value (VBD)"
     }, "$", value) : k === 'you' ? React.createElement("span", {
       key: k,
-      className: `cheat-you cy-${youDir}`,
-      title: "What you should bid"
+      className: `cheat-you cy-${youDir}${p.youShift ? p.youShift > 0 ? ' you-shift-up' : ' you-shift-down' : ''}`,
+      title: p.youShift ? `${p.youShift > 0 ? 'Up' : 'Down'} $${Math.abs(p.youShift)} since ${p.youShiftPick}. That pick changed the budgets, the open slots, or the pool, so the planner re-balanced the most YOU should pay — the market didn't move (his Proj and Value are untouched).` : "What you should bid"
     }, "$", you) : k === 'ppg' ? React.createElement("span", {
       key: k,
       className: "cheat-ppg",
@@ -16315,8 +16321,8 @@ function PlayersRail({
         className: "rr-c",
         title: (config && config.format === 'bestball') ? "Ceiling, per game (upside-weighted)" : (config && config.format === 'snake') ? "Projected points per game" : "Value, VBD fair value"
       }, (config && config.format === 'bestball') ? ((p.ceiling != null ? p.ceiling : p.projectedPoints) != null ? ((p.ceiling != null ? p.ceiling : p.projectedPoints) / games).toFixed(1) : '\u2014') : (config && config.format === 'snake') ? (p.projectedPoints != null ? (p.projectedPoints / games).toFixed(1) : '\u2014') : ('$' + valVal)), React.createElement("span", {
-        className: "rr-c you",
-        title: (config && config.format !== 'auction') ? "Positional rank by projection (e.g. WR5)" : "You, what you should be willing to pay"
+        className: `rr-c you${(config && config.format === 'auction') && p.youShift ? p.youShift > 0 ? ' you-shift-up' : ' you-shift-down' : ''}`,
+        title: (config && config.format !== 'auction') ? "Positional rank by projection (e.g. WR5)" : p.youShift ? `You, what you should be willing to pay. ${p.youShift > 0 ? 'Up' : 'Down'} $${Math.abs(p.youShift)} since ${p.youShiftPick}. That pick changed the budgets, the open slots, or the pool, so the planner re-balanced the most YOU should pay — the market didn't move (his Proj and Value are untouched).` : "You, what you should be willing to pay"
       }, (config && config.format !== 'auction') ? (p.position + (posRankMap[p.id] || '')) : ('$' + youVal))), React.createElement("div", {
         className: "rr-l2"
       }, React.createElement("span", {
@@ -21995,7 +22001,7 @@ function App() {
       };
     });
   }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
-  const personalizedPlayers = useMemo(() => {
+  const _starPersonalized = useMemo(() => {
     const arr = _basePersonalized;
     if ((config.format || 'auction') !== 'snake' || !starred || !starred.size) return arr;
     const di = new Set(draftHistory.map(d => d.playerId));
@@ -22017,6 +22023,53 @@ function App() {
       return Object.assign({}, p, { personalValue: pv, planSuppressed: true });
     });
   }, [_basePersonalized, starred, draftHistory, teams, config]);
+  // You is the planner's max bid, so a logged pick legitimately moves it for
+  // players who were never nominated — and with no explanation the board reads
+  // as if the market repriced itself (it didn't: Proj and Value hold still on a
+  // fair pick). Remember every You as it stood before the latest pick and pin
+  // the delta plus the pick that caused it on each moved player, so the cell
+  // itself can say why. An undo, like any retreat in pick count, clears it.
+  const [youShifts, setYouShifts] = useState(null);
+  const _youPrevRef = useRef({ picks: draftHistory.length, vals: null });
+  useEffect(() => {
+    const ref = _youPrevRef.current;
+    const picks = draftHistory.length;
+    const vals = new Map();
+    _starPersonalized.forEach(p => { if (p.personalValue != null) vals.set(p.id, p.personalValue); });
+    if (picks !== ref.picks) {
+      let shifts = null;
+      const last = picks > ref.picks ? draftHistory[picks - 1] : null;
+      if (last && ref.vals) {
+        const di = new Set(draftHistory.map(d => d.playerId));
+        const map = {};
+        let moved = 0;
+        vals.forEach((v, id) => {
+          const prev = ref.vals.get(id);
+          if (prev == null || v === prev || di.has(id)) return;
+          map[id] = v - prev;
+          moved++;
+        });
+        if (moved) {
+          const pl = _starPersonalized.find(p => p.id === last.playerId);
+          const tm = teams.find(t => t.id === last.teamId);
+          shifts = {
+            map,
+            pick: `${pl ? pl.name : 'the last pick'} → ${tm ? tm.name : 'a team'}${last.price ? ` for $${last.price}` : ''}`
+          };
+        }
+      }
+      setYouShifts(shifts);
+      ref.picks = picks;
+    }
+    ref.vals = vals;
+  }, [_starPersonalized, draftHistory, teams]);
+  const personalizedPlayers = useMemo(() => {
+    if (!youShifts) return _starPersonalized;
+    return _starPersonalized.map(p => {
+      const d = youShifts.map[p.id];
+      return d ? Object.assign({}, p, { youShift: d, youShiftPick: youShifts.pick }) : p;
+    });
+  }, [_starPersonalized, youShifts]);
   const modelFitIds = useMemo(() => {
     if (!draftModel) return null;
     const myTeam = teams.find(t => t.isMine);
