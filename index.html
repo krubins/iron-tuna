@@ -1319,6 +1319,15 @@ input:focus, select:focus { border-color: var(--accent); }
 .fable-dot.off { background: #f87171; box-shadow: 0 0 6px #f87171; }
 .fable-headbtns button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; margin-left: 9px; }
 .fable-headbtns button:hover { color: var(--text-primary); }
+.fable-headbtns button.on { color: #b9a6ff; }
+.fable-cfg { padding: 9px 12px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-base); display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+.fable-cfg label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.fable-cfg-row { display: flex; gap: 6px; }
+.fable-cfg-row input { flex: 1; min-width: 0; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 9px; color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; }
+.fable-cfg-row button { border-radius: 8px; padding: 0 12px; background: #7c5cff; color: #fff; border: none; font-weight: 600; cursor: pointer; }
+.fable-cfg-row button:disabled { opacity: 0.45; cursor: default; }
+.fable-cfg p { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--text-muted); }
+.fable-cfg-reset { background: none; border: none; padding: 0; color: #b9a6ff; cursor: pointer; font: inherit; text-decoration: underline; }
 .fable-body { flex: 1 1 auto; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 9px; min-height: 0; }
 .fable-msg { font-size: 13.5px; line-height: 1.5; padding: 9px 12px; border-radius: 11px; max-width: 92%; white-space: pre-wrap; word-break: break-word; }
 .fable-msg.bot { background: var(--bg-elev); color: var(--text-secondary); align-self: flex-start; border-bottom-left-radius: 3px; }
@@ -19452,7 +19461,7 @@ function buildCoachInsights(ctx) {
 }
 /*
  * FableDock — admin-only side panel that routes draft questions to Fable via a
- * local bridge (tools/fable-bridge.js, kept out of this repo) so answers run on
+ * local bridge (tools/fable-bridge.js) so answers run on
  * the operator's own Claude subscription rather than the metered /api/coach
  * path. Double-gated: IT_FABLE (?fable=1) hides it from everyone else, and it
  * talks only to 127.0.0.1, which does not exist for a normal visitor.
@@ -19492,6 +19501,17 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
   const [elapsed, setElapsed] = useState(0);
   const [health, setHealth] = useState(null);
   const [last, setLast] = useState(null);
+  const [showCfg, setShowCfg] = useState(false);
+  const [cfgVal, setCfgVal] = useState(() => loadFableDock().bridge || FABLE_BRIDGE_DEFAULT);
+  // Committed on Save rather than per keystroke: st.bridge is a dependency of the
+  // health check, so binding the input straight to it would fire a probe at every
+  // half-typed URL.
+  const applyCfg = () => {
+    const v = String(cfgVal || '').trim().replace(/\/+$/, '') || FABLE_BRIDGE_DEFAULT;
+    setCfgVal(v);
+    setHealth(null);
+    setSt(s => ({ ...s, bridge: v }));
+  };
   const bodyRef = useRef(null);
   const abortRef = useRef(null);
   const idRef = useRef(1);
@@ -19609,7 +19629,7 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       } else {
         setHealth(false);
         put({
-          text: 'Could not reach the bridge at ' + base() + '. Start it by double-clicking Start-Fable.bat.\n\n(' + e.message + ')',
+          text: 'Could not reach the bridge at ' + base() + '.\n\nStart it by double-clicking Start-Fable.bat. If it is already running on a different port, set that with Bridge in this panel\'s header.\n\n(' + e.message + ')',
           err: true
         });
       }
@@ -19636,12 +19656,35 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       React.createElement("span", { className: "fable-title" },
         React.createElement("span", {
           className: "fable-dot " + (health === true ? 'on' : health === false ? 'off' : ''),
-          title: health === true ? 'Bridge connected' : health === false ? 'Bridge offline — run Start-Fable.bat' : 'Checking bridge…'
+          title: health === true ? 'Bridge connected at ' + base() : health === false ? 'No bridge at ' + base() + ' — run Start-Fable.bat, or set the URL with Bridge' : 'Checking bridge…'
         }),
         "FABLE"),
       React.createElement("span", { className: "fable-headbtns" },
+        React.createElement("button", {
+          className: showCfg ? 'on' : '',
+          title: "Set the bridge URL",
+          onClick: () => setShowCfg(v => !v)
+        }, "Bridge"),
         msgs.length ? React.createElement("button", { onClick: () => { setMsgs([]); setLast(null); } }, "Clear") : null,
         React.createElement("button", { onClick: () => setSt(s => ({ ...s, open: false })) }, "Hide"))),
+    showCfg ? React.createElement("div", { className: "fable-cfg" },
+      React.createElement("label", null, "Bridge URL"),
+      React.createElement("div", { className: "fable-cfg-row" },
+        React.createElement("input", {
+          type: "text",
+          value: cfgVal,
+          spellCheck: false,
+          placeholder: FABLE_BRIDGE_DEFAULT,
+          onChange: e => setCfgVal(e.target.value),
+          onKeyDown: e => { if (e.key === 'Enter') { e.preventDefault(); applyCfg(); } }
+        }),
+        React.createElement("button", { onClick: applyCfg, disabled: !String(cfgVal || '').trim() }, "Save")),
+      React.createElement("p", null,
+        "Change this if the bridge is on another port, which happens when 8787 was taken and you started it with FABLE_BRIDGE_PORT. ",
+        React.createElement("button", {
+          className: "fable-cfg-reset",
+          onClick: () => { setCfgVal(FABLE_BRIDGE_DEFAULT); setHealth(null); setSt(s => ({ ...s, bridge: FABLE_BRIDGE_DEFAULT })); }
+        }, "Reset to default"))) : null,
     React.createElement("div", { className: "fable-body", ref: bodyRef },
       msgs.length ? msgs.map(m => React.createElement("div", {
         key: m._id,
@@ -19649,7 +19692,7 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       }, m.pending ? (elapsed ? 'Thinking… ' + elapsed + 's' : 'Thinking…') : m.text))
         : React.createElement("div", { className: "fable-empty" },
           health === false
-            ? "Bridge offline. Double-click Start-Fable.bat, then reopen this panel."
+            ? "Bridge offline. Double-click Start-Fable.bat, then reopen this panel. If it is running on a port other than the default, set that with Bridge above."
             : "Fable sees your live board — budgets, rosters, prices, who's gone. Ask the slower questions here: budget shape, whether you're about to get squeezed at a position, how the endgame plays out. Answers take 20–60s.")),
     React.createElement("div", { className: "fable-input" },
       React.createElement("textarea", {
