@@ -5338,3 +5338,89 @@ from it.*
 State: live and verified **63**; `published_rows=1`; Recent insights **15**;
 /analyst-desk 0. Overlay unchanged at `1788087628630`, 16,901 bytes. Live prompt
 still byte-identical to the repo canonical.
+
+## 41. August 31: a projection re-baseline, and what it did to the archive
+
+On 2026-08-30 the committed projection set was replaced with an owner-supplied
+423-player file (PR #112) and deployed. This is a different event from a daily
+odds refresh and it needs its own name in this file, because everything the
+daily audit was built to catch assumed the projections were fixed and only the
+overlay moved.
+
+**Scale.** 38 of 345 priced players changed PRICE. An odds refresh moves two.
+James Cook went RB14 $22 to RB9 $42. Saquon Barkley $37 to $28. Mahomes and
+Daniels swapped straight back, undoing a correction made twelve hours earlier.
+
+**The runs were fine; the archive was not.** Row 64, written at 01:09Z on the new
+set, verifies exactly against the deployed board and `/api/board` answered and
+agreed. The system self-corrected the moment the projections shipped. But every
+story written before the deploy was priced off a board that no longer exists, and
+**11 of 15 archived rows printed a price next to a player the reader's sheet
+contradicted.** That is the originating complaint, at scale, caused by the site
+changing its own numbers rather than the market moving.
+
+Ken's call was to correct all eleven in place, retiring only rows the new numbers
+destroyed. Result: **nine corrected (41, 45, 47, 48, 52, 56, 58, 59, 62), two
+retired (54, 63).** A precise re-scan afterwards — does any row still print a
+mover's old price beside his name — comes back zero of fourteen.
+
+### What separated the nine from the two
+
+The rule that did the work: **a story survives if its finding survives the new
+numbers, whatever happens to the figures.**
+
+- **Row 45** was the heaviest recompute and the cleanest survivor. Its whole
+  cost-per-point model had to be rebuilt — baselines, marginal dollars and points
+  at four positions, the repriced tight end table — and its headline came out
+  *identical*: Bowers still reprices to exactly $31 against $60. The
+  position table moved (TE $0.96 a point against $0.40 at running back) and the
+  finding did not.
+- **Row 48** survived in its primary claim and lost a secondary one. Running back
+  still shows the widest consensus-versus-odds disagreement, but "tight end is
+  where nothing happened" reversed: Loveland and Warren now trade places across
+  the blend. That paragraph was rewritten to what the board shows, and the
+  headline was untouched.
+- **Row 54 was retired because the update granted its wish.** It argued the sheet
+  underpriced Tucker Kraft against Dallas Goedert. The new projections already
+  put Kraft ahead — TE9 $10 committed, TE8 $12 served, Goedert TE11 $5. A story
+  whose recommendation has become the board's own price has nothing left to
+  recommend, and no edit fixes that.
+- **Row 63 was retired for the same reason plus a dead headline.** "Bid Tucker
+  Kraft to $12, not $5" is void when the board says $12. Its reporting stays
+  accurate; the price argument built on it does not.
+
+### The convergence rule now has a third data point, and it is worse
+
+Rows 41 and 52 were corrected on 08-30 for the Mahomes/Daniels swap and corrected
+back on 08-31, because the projection update reversed it. Two figures, three
+passes, same two players. The standing rule said retire on a third correction;
+these were corrected instead because Ken asked for correction in place, and
+because the swap is now *documented inside row 52* rather than presented as a
+fixed fact. That is the better answer to an oscillating figure: **say that it
+oscillates.** Row 52 now reads that the two have traded places twice and that the
+desk's call does not depend on which way it lands.
+
+### Two things this changed permanently
+
+**The daily audit now diffs the projections, not just the overlay.** Nothing was
+watching the committed set, because nothing had ever changed it. `board-diff`
+compares two overlays and would have reported "no change" all the way through.
+
+**`tools/live-board.mjs` cannot read a deployed bundle.** It lifts `const NAME`;
+esbuild emits `var`. Building a board from deployed code needs a scratch copy
+patched to `(?:const|var|let)`. Worth fixing properly, since checking the archive
+against what is actually served is now a routine operation.
+
+### Left undone, deliberately
+
+`tools/test-the-pick.mjs` is still red. Ken asked for the printed totals to be
+updated to match, but **both Pick entries' central findings have reversed**, not
+just their totals. The QB entry says the drop from QB1 to QB4 beats the drop from
+QB4 to QB16: it is now 47.4 against 53.7. The TE entry says the TE2-to-TE3 gap
+beats TE3-to-TE12: now 30.4 against 40.9. And Tucker Kraft, the actual Pick, is
+TE9 rather than TE12. Updating the numbers alone would publish two entries that
+contradict their own headlines and deks, so it was left for a decision.
+
+State: live and verified **64**; `published_rows=1`; Recent insights **14**;
+/analyst-desk 0. Live prompt 40,786 chars, sha256 `af5384664474`, matching the
+repo canonical copy.
