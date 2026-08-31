@@ -5424,3 +5424,60 @@ contradict their own headlines and deks, so it was left for a decision.
 State: live and verified **64**; `published_rows=1`; Recent insights **14**;
 /analyst-desk 0. Live prompt 40,786 chars, sha256 `af5384664474`, matching the
 repo canonical copy.
+
+## 42. August 31: The Pick retires two entries, and the third turned out to be broken too
+
+Ken's call on §41's open item was to retire both stale Pick entries. Done:
+`pick-2026-08-21` (quarterback scarcity) and `pick-2026-08-19` (tight end tier
+cliffs) are removed from `the-pick.html`, and `tools/build-seo.mjs` and
+`tools/build-front.mjs` regenerated the JSON-LD and the front page's `PICKS`
+array so nothing references them.
+
+Both were retired rather than corrected for the reason recorded in §41: their
+findings had *reversed*, not merely drifted. The QB entry's claim that the
+QB1-to-QB4 drop beats QB4-to-QB16 is now 47.4 against 53.7. The TE entry's claim
+that the TE2-to-TE3 gap beats TE3-to-TE12 is now 30.4 against 40.9.
+
+### Removing them exposed that the survivor was wrong as well
+
+`pick-2026-08-20` was never flagged, because `tools/test-the-pick.mjs` only
+validates a table column headed **Points**, and that entry's table prints
+**ranks at three scoring settings** instead. Nothing checked it. Checked by hand
+against the updated projections, 16 of its 18 rank cells were wrong and so was
+its headline: Derrick Henry moves **four** spots from full PPR to standard
+(RB9 to RB5), not eight.
+
+Its argument survives — a catch being worth a point still reorders the RB5-to-RB18
+band, and Henry still gains while Love and Jeanty lose — so it was corrected in
+place rather than retired, per the same rule §41 used on the nine archive rows.
+All six rows re-derived and re-verified: catches, and full PPR / half PPR /
+standard ranks, all match. Henry's prose figures now read RB9 at 273.2 and RB5 at
+252.2, on 1,484 rushing yards and thirteen touchdowns.
+
+One sentence was reworded rather than renumbered. "The top four do not move at
+all" named Gibbs, McCaffrey, Robinson and Taylor as RB1 through RB4 in every
+format. The four still hold the top four slots, but McCaffrey and Taylor now swap
+between full PPR and standard, so the claim is stated as the set holding the top
+of the board rather than each holding a fixed rank.
+
+### The test is still red, and it should be
+
+`tools/test-the-pick.mjs` now fails one assertion: **"at least one entry prints
+checkable point totals — 0."** That is a coverage guard. It exists so the
+"every printed point total matches PROJECTIONS" check can never pass vacuously,
+and with the two retired entries gone the column has no Points table left to
+validate — `pick-2026-08-20` prints ranks.
+
+**It was left failing on purpose.** Relaxing it would restore a silent-pass hole
+in exactly the check that guards the originating bug. Closing it honestly needs a
+content decision: publish a new entry with a Points table, or add a points column
+to the surviving entry. Either is Ken's call, not a test edit.
+
+The gap it revealed is worth fixing regardless: **the column's rank claims are
+checked by nothing.** A `Points` column is validated; `RB9` in a table cell is
+not. That is how `pick-2026-08-20` sat wrong with a green-ish suite. Extending
+the test to validate rank cells the same way it validates points would have
+caught it the day the projections changed.
+
+State: `the-pick.html` carries one entry, corrected and verified. 26 of 27 checks
+pass; the one failure is the coverage guard above.
