@@ -2318,6 +2318,62 @@ async function leadStoryPayload(env) {
   _LEAD_CACHE = out; _LEAD_AT = now;
   return out;
 }
+
+// ── the insights the desk has actually posted ──────────────────────────────
+// runXAutoPost (§10 of HANDOFF.md) logs every successful X post to the D1
+// `x_posts` table. This joins that log back against INSIGHTS_X_POOL so the
+// site can carry the same rotation: every insight that goes out on X shows up
+// on the site as a freshly posted story, three per weekday, without waiting
+// for a drop date — and without inventing anything, since the pool rows ARE
+// the drop pages' own calls. Only the three insight formats appear; the
+// hand-authored bonus posts (polls, feature promos) are marketing copy, not
+// site stories, and stay off.
+let _WIRE_CACHE = null;
+let _WIRE_AT = 0;
+let _WIRE_BY_ID = null;
+function wireEntry(id) {
+  if (!_WIRE_BY_ID) {
+    _WIRE_BY_ID = new Map();
+    for (const it of INSIGHTS_X_POOL) _WIRE_BY_ID.set(it.id, it);
+  }
+  return _WIRE_BY_ID.get(id) || null;
+}
+// A pool id ends in the insight's 0-based index on its drop page
+// ("auction-insights-2026-07-04-3"), and the pages anchor their calls as
+// #call-1..#call-5, so the link can land on the insight itself rather than
+// the top of the page. The stored url is absolute; the site links relative.
+function wireHref(it) {
+  let path = it.url || '';
+  try { path = new URL(it.url).pathname; } catch (e) {}
+  const m = /-(\d+)$/.exec(it.id || '');
+  return m ? path + '#call-' + (Number(m[1]) + 1) : path;
+}
+async function postedInsightsPayload(env) {
+  const now = Date.now();
+  if (_WIRE_CACHE && now - _WIRE_AT < 300000) return _WIRE_CACHE;
+  let out = { ok: false, items: [] };
+  try {
+    if (env.LEADS_DB) {
+      const rows = await env.LEADS_DB.prepare(
+        'SELECT insight_id, format, posted_at FROM x_posts'
+        + " WHERE ok = 1 AND format IN ('auction','snake','bestball')"
+        + ' ORDER BY posted_at DESC LIMIT 24').all();
+      const items = [];
+      for (const r of ((rows && rows.results) || [])) {
+        const it = wireEntry(r.insight_id);
+        if (!it) continue;   // a logged id the current pool no longer carries
+        items.push({
+          id: it.id, format: it.format, title: it.title, play: it.play || '',
+          stat: it.stat || '', href: wireHref(it), date: it.date,
+          postedAt: Number(r.posted_at) || 0
+        });
+      }
+      out = { ok: true, items };
+    }
+  } catch (e) { out = { ok: false, items: [], error: 'unavailable' }; }
+  _WIRE_CACHE = out; _WIRE_AT = now;
+  return out;
+}
 // ── the desk's clock, in a clock a reader keeps ────────────────────────────
 // The runs are scheduled in UTC and they write in UTC, so stories say things
 // like "today's 11:00 UTC odds refresh". Nobody drafting reads a UTC clock.
@@ -2711,6 +2767,15 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       const out = await leadStoryPayload(env);
       return json(out, 200, { ...c, 'cache-control': 'public, max-age=120' });
+    }
+    // The insights the desk has posted to X, newest first, joined back to
+    // their drop pages. Five minutes of cache: at most three land per weekday
+    // (13:00 / 16:00 / 19:00 UTC), so this turns over slowly.
+    if (url.pathname === '/api/posted-insights') {
+      if (request.method !== 'GET') return new Response('method', { status: 405 });
+      const c = corsHeaders(request.headers.get('Origin'));
+      const out = await postedInsightsPayload(env);
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // The full article, by slug. Kept separate from /api/lead-story so the front
     // page never pays for a body it does not show.

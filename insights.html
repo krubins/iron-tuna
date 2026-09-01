@@ -312,6 +312,11 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
 <p class="alsofmt">Permalinks: <a href="/auction-insights-2026-09-03">Auction</a> &middot; <a href="/snake-insights-2026-09-03">Snake Draft</a></p>
 </div>
 <div class="nextdrop" id="nextdrop" style="margin-top:14px"><span class="pulse"></span><span>Next drop</span></div>
+<div id="justposted" hidden>
+<div class="eyebrow" style="margin-top:36px">Just posted</div>
+<p style="font-size:13.5px;color:var(--muted);margin:6px 0 10px">The desk publishes three of these insights a day on weekdays. Newest first, each linking to its full write-up on the drop page.</p>
+<ul class="drop-list" id="jpList"></ul>
+</div>
 <div class="eyebrow" style="margin-top:36px">Pick your format</div>
 <div class="fmt-cards">
 <a class="card" href="/auction-insights"><div class="fc-title">Auction</div><p>What each signal means for your bids, your budget, and when to walk away.</p></a>
@@ -415,6 +420,32 @@ article.ins h2{margin:8px 0 10px;font-size:clamp(19px,2.6vw,24px)}
       var dayDiff = Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86400000);
       nd.querySelector('span:last-child').textContent = 'Next drop: ' + when + ' at 9am ET' + (dayDiff <= 0 ? ' — today' : dayDiff === 1 ? ' — tomorrow' : ' — in ' + dayDiff + ' days');
     } else { nd.style.display = 'none'; }
+  }
+  // Just posted: the insights the desk most recently published to X, straight
+  // from the worker's x_posts log joined back to the drop-page pool. The hub
+  // gains a fresh story three times a weekday this way, even between drop
+  // dates and after the last scheduled one. No feed, no section.
+  var jp = document.getElementById('justposted'), jpList = document.getElementById('jpList');
+  if (jp && jpList) {
+    var JP_FMT = { auction: 'Auction', snake: 'Snake Draft', bestball: 'Best Ball' };
+    var JP_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var jpEsc = function(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+    fetch('/api/posted-insights')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j || !j.ok || !j.items || !j.items.length) return;
+        var h = '';
+        j.items.slice(0, 9).forEach(function(it){
+          var d = new Date(+it.postedAt || 0);
+          var when = it.postedAt && !isNaN(d.getTime()) ? JP_MON[d.getMonth()] + ' ' + d.getDate() : '';
+          h += '<li><div><span class="dl-main" style="font-weight:700"><a href="' + jpEsc(it.href) + '">' + jpEsc(it.title) + '</a></span>' +
+               (it.play ? '<div class="dl-teaser" style="font-size:13.5px;color:var(--muted)">' + jpEsc(it.play) + '</div>' : '') +
+               '</div><span class="dl-date">' + when + ' &middot; ' + (JP_FMT[it.format] || '') + '</span></li>';
+        });
+        jpList.innerHTML = h;
+        jp.hidden = false;
+      })
+      .catch(function(){});
   }
 })();
 </script>

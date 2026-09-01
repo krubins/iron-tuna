@@ -393,6 +393,12 @@ img{max-width:100%}
 .camp-list li:last-child{border-bottom:0}
 .camp-list .cd{font-size:11.5px;font-weight:800;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;flex:0 0 58px}
 .camp-list a{font-size:13.5px;font-weight:700}
+/* ── Just Posted: the X rotation mirrored back onto the site ── */
+.wire-list{max-height:400px}
+.wire-list li{flex-wrap:wrap;row-gap:2px}
+.wire-list .wire-play{font-size:12.5px;color:var(--ink-2);flex-basis:100%;padding-left:68px}
+.wire-list .wire-fmt{font-size:10.5px;font-weight:800;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;margin-left:auto}
+@media (max-width:640px){.wire-list .wire-play{padding-left:0}}
 .camp-list a:hover{color:var(--brand)}
 
 /* ── tools band ── */
@@ -881,6 +887,10 @@ img{max-width:100%}
     <a class="sec-more" href="/auction-insights">All insights &rarr;</a></div>
   <p class="sec-sub" id="posSub">Every story is a stat-backed call from the 2026 research set, read through an auction lens. New drops land through Labor Day.</p>
   <div class="pos-grid" id="posGrid"></div>
+
+  <div class="sec-head" id="wire" hidden><h2>Just Posted</h2><a class="sec-more" href="/insights">All the drops &rarr;</a></div>
+  <p class="sec-sub" id="wireSub" hidden>The desk publishes three insights a day on weekdays. These are the newest ones, each linking to its full write-up.</p>
+  <ul class="camp-list wire-list" id="wireList" hidden></ul>
 
   <div class="sec-head" id="coaching"><h2>The Play-Caller Premium</h2><a class="sec-more" href="/play-caller-premium">The whole column &rarr;</a></div>
   <p class="sec-sub">A coach is worth real money. The habits that have repeated for decades &mdash; the zone scheme&rsquo;s running backs, Andy Reid&rsquo;s lead back, Todd Monken&rsquo;s tight ends &mdash; and the exact player each one moves this season. New entries daily through kickoff.</p>
@@ -1632,6 +1642,40 @@ var COLUMN = [{"id":"call-2026-08-31-1","title":"Kevin Stefanski has never let o
   // own waiter would repaint itself forever.
   if (L && L.onBoard) L.onBoard(function(ok){ if (ok) repaintLead(); });
 
+
+  // ── Just Posted: the X rotation, mirrored back onto the site ──────────────
+  // The desk posts insights to X three times a weekday, drawn from the same
+  // drop-page pool the Position Intel grid is built from. /api/posted-insights
+  // returns what actually posted (the worker joins the x_posts log back to the
+  // pool), so this list grows by itself every posting slot — including after
+  // the last scheduled drop date, when the grid above stops gaining stories.
+  // No feed, no section: the site works with X posting turned off entirely.
+  (function(){
+    var list = document.getElementById('wireList');
+    if (!list) return;
+    var FMT = { auction: 'Auction', snake: 'Snake Draft', bestball: 'Best Ball' };
+    function wireStamp(ms){
+      var d = new Date(+ms || 0);
+      return isNaN(d.getTime()) || !ms ? '' : MONTHS[d.getMonth()].slice(0,3) + ' ' + d.getDate();
+    }
+    fetch('/api/posted-insights')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j || !j.ok || !j.items || !j.items.length) return;
+        var h = '';
+        j.items.slice(0, 8).forEach(function(it){
+          h += '<li><span class="cd">' + wireStamp(it.postedAt) + '</span>' +
+               '<a href="' + esc(it.href) + '">' + esc(it.title) + '</a>' +
+               '<span class="wire-fmt">' + (FMT[it.format] || '') + '</span>' +
+               (it.play ? '<span class="wire-play">' + esc(it.play) + '</span>' : '') +
+               '</li>';
+        });
+        list.innerHTML = h;
+        if (window.ITPlayerSearch) window.ITPlayerSearch.linkAllPlayers(list);
+        setSectionVisible(['wire', 'wireSub', 'wireList'], 'wire', true);
+      })
+      .catch(function(){});
+  })();
 
   // ── Vegas vs. Rankings & ADP ───────────────────────────────────────────────
   // The cases are COMPUTED, never written: /api/vegas-column re-ranks the whole
