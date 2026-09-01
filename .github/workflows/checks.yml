@@ -236,6 +236,9 @@ jobs:
       - name: The generated lead story and its admin desk
         run: node tools/test-lead-story.mjs
 
+      - name: Just Posted mirrors the X insight rotation onto the site
+        run: node tools/test-posted-insights.mjs
+
       # The worker rewrites a few routes onto other assets ("/" -> front.html,
       # /lead/<slug> -> lead.html). Cloudflare's default html_handling answers a
       # ".html" request with a redirect to the extensionless path, so a rewrite
