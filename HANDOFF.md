@@ -2501,6 +2501,22 @@ deliverable and the PR is best-effort. Publishing nothing is an acceptable
 outcome and the prompt says so — a day with no checkable argument is better
 served by silence than by a thin entry.
 
+**The Routine also stores no git source — and that silently disabled the
+column for ten days.** Unlike §16's and the camp desk's Routines, whose
+trigger configs carry `sources: [krubins/iron-tuna]` (their fresh sessions
+start with the repo checked out and push credentials in hand), this Routine's
+config has neither. Every fresh session started with no checkout, hit the
+prompt's old stop condition ("if `the-pick.html` does not exist in the
+checkout, stop and report"), reported success into a transcript nobody read,
+and ended. See §46 for the incident. The prompt was rewritten on 2026-09-01
+to clone the repo itself instead of stopping; the canonical copy is
+`tools/the-pick-routine-prompt.md`, same discipline as
+`tools/lead-story-routine-prompt.md` — edit there, push the same text to the
+Routine, and the diff survives in history. The durable fix is still to
+re-create the Routine with the repo attached as a source, which only the
+claude.ai Routines UI can do; the prompt's clone path is the bridge until
+then.
+
 To change the cadence or the themes, edit the Routine; to stop it, delete it
 (`trig_016JAiJJMZi2jtZDmZS1QPNK`). It has no hard stop date, unlike §16's
 Routine — the column is about how to spend money on a fantasy roster, which
@@ -5653,3 +5669,86 @@ market. Option 2 — re-anchoring archived prices from the live board through
 State: live and verified **69**, corrected; `published_rows=1`; Recent insights
 19; /analyst-desk 0. Overlay `1788260457157`, 16,913 bytes, 314 players. Live
 prompt 40,786 / `af5384664474`, matching the repo. CI 27 of 27.
+
+## 46. September 1: The Pick never ran once, and every run said it had
+
+Ken reported the site's stories looking "about a week old". The audit that
+followed found every desk current except one: the lead story published at
+07:15 this morning (row 69), the camp watch and the Play-Caller column both
+landed entries on 2026-08-31, the twice-weekly drop pages are on schedule —
+and **The Pick's newest entry was `pick-2026-08-20`, twelve days old, in the
+band directly under the front page's hero.** After §42 retired the two stale
+entries beside it, that one entry is the whole column.
+
+### The failure
+
+The Pick's Routine (`trig_016JAiJJMZi2jtZDmZS1QPNK`) has fired daily at 13:00
+UTC since 2026-08-22 and **every run reported SUCCEEDED. Not one of them ever
+added an entry.** The three entries the column launched with (08-19/20/21)
+came from the launch branch; nothing has landed since. No
+`claude/the-pick-*` branch exists on the remote — ten runs, zero pushes,
+each one a 13-minute, ~$2 session that did real reading and then stopped.
+
+The cause is a configuration difference visible only in the trigger configs.
+The camp desk's and Play-Caller's Routines carry, in their
+`session_context`:
+
+    sources:  [{ git_repository: { url: https://github.com/krubins/iron-tuna } }]
+    outcomes: [{ git_repository: { git_info: { repo: krubins/iron-tuna, branches: [claude/…] } } }]
+
+so their fresh sessions start with the repo checked out and credentialed.
+The Pick's Routine has **neither** — created via a different path
+(`created_via: meta_mcp`, synthetic event) that never attached the repo. Its
+fresh sessions therefore started with an empty working directory, and the
+prompt's very first instruction was:
+
+> **Stop condition.** If `the-pick.html` does not exist in the checkout, the
+> column has not merged to `main` yet. Do not create it from scratch. Stop
+> and report that.
+
+An empty checkout has no `the-pick.html`. Every run obeyed, wrote its
+stop-report into a transcript nobody opened, and exited SUCCEEDED — the
+Routine's run status measures whether the session finished, not whether the
+column published. The stop condition was written to guard the launch window
+(the Routine was created hours before the column merged) and became a
+permanent trapdoor the moment it was paired with a config that never has a
+checkout. Two safety rails multiplied into silence: "publishing nothing is
+acceptable" (true per-day, wrong as a ten-day streak) and "stop rather than
+create from scratch" (right about the file, wrong about why it was absent).
+
+### What changed today
+
+- **The Routine's prompt was rewritten in place** (same trigger id, history
+  kept). The stop condition now reads the other way: a missing checkout is
+  the Routine's own known defect, never a reason to stop — clone
+  `krubins/iron-tuna` and carry on; only `the-pick.html` missing from `main`
+  itself still stops a run. The push step now requires the run to name the
+  branch it pushed in its report and to open the report with the push error,
+  verbatim, if the push failed — a stranded entry with a quiet success
+  report is this column's worst known failure mode. The canonical copy of
+  the live prompt is **`tools/the-pick-routine-prompt.md`**; §23 points at
+  it.
+- **§23's cadence section** now records the missing-source defect so the
+  next reader of the spec knows the trigger config is the fragile part.
+
+An attempt to re-create the Routine with the repo attached as a source (the
+durable fix, matching the working desks) was blocked by the session's
+permission classifier — trigger creation is not something a session in auto
+mode may do here. **That re-creation is Ken's move, in the claude.ai
+Routines UI: recreate "Iron Tuna — The Pick (daily story)" with
+`krubins/iron-tuna` attached as its repo, paste the prompt from
+`tools/the-pick-routine-prompt.md`, keep `0 13 * * *`, then delete the old
+trigger.** Until then the rewritten prompt's clone path is the bridge, and
+whether it holds depends on whether a sourceless session's git proxy will
+authenticate the clone and the push — today's 13:03 UTC run is the test.
+
+### What did not change
+
+The branch-per-day flow (`claude/the-pick-YYYY-MM-DD`, never `main`) stands,
+per the spec. That means a pushed entry still needs a human merge to
+publish, and ten days of silence also proves nobody was watching for those
+branches. If the column is meant to publish untouched like the camp desk
+does, that is a deliberate spec change for Ken to make, not a default.
+
+State: `the-pick.html` unchanged (one entry, `pick-2026-08-20`); Routine
+prompt updated 2026-09-01T12:02Z; next fire 13:03 UTC today.
