@@ -2014,37 +2014,33 @@ var COLUMN = [{"id":"call-2026-09-01-1","title":"Sean McVay has never let one ru
     })
     .catch(function () { vsItems = []; renderCase(); });
 
-  // ── one story, one slot ───────────────────────────────────────────────────
-  // Every section below used to draw from `live` independently, so one call could
-  // land in the lead rotation, a position module AND the rail at once — 101 links
-  // in <main> resolving to 66 destinations, with the top story on the page
-  // reachable four separate ways before a reader had scrolled past it.
+  // ── every section shows its own newest, not whatever is left over ─────────
+  // This page used to run "one story, one slot": the lead claimed its five
+  // rotation candidates, then each later section took only what nobody above
+  // it had already used. That stopped a call from being linked four different
+  // ways in one scroll, but it meant every section after the first was reading
+  // a picked-over pool — and with roughly one new call per position per drop,
+  // "picked-over" compounds fast. Reordering which section claimed first (Top
+  // Headlines ahead of Position Intel, 2026-09-01) only moved the staleness
+  // from one box to another; Position Intel and the Market card went dark at
+  // Aug 20 the same afternoon Top Headlines got fixed. Exclusivity itself was
+  // the bug: five sections all wanting "the newest" cannot all have first pick
+  // out of one shared, slow-refilling pool.
   //
-  // The Market module was the worst of it, and structurally so: every `deep`
-  // story is a Market story, so the five cards it drew were a strict subset of
-  // the lead's eight. The section could not say anything the top of the page had
-  // not already said.
-  //
-  // Sections now claim their stories in reading order — the lead first, then
-  // "Top Headlines" (it says "Top" right in the heading, so it gets first look
-  // at whatever the lead didn't use), then the position modules take what is
-  // left. A section that comes up short carries fewer cards; nothing is padded
-  // with a repeat.
-  //
-  // The rail used to claim AFTER the position modules, on the reasoning that a
-  // reader hits it later on the page. That reads fine for one drop cycle, but it
-  // compounds: Position Intel keeps its newest 2 per position every cycle, so
-  // by the time a header literally reading "Top Headlines" got its turn, the
-  // truly newest stories in every category were already gone and it was
-  // showing the 3rd-newest — a full drop cycle (3-4 days) stale, next to a lead
-  // story dated today. Nobody reads "Top Headlines Aug 24" as "the 3rd freshest
-  // QB story"; they read it as broken. Position Intel's own count badge ("QB
-  // 10") already tells a reader there is a library behind it and this is a
-  // sample, so it can afford to run a cycle behind; a box titled "Top" cannot.
+  // So only ONE thing is protected from repeating: the single story actually
+  // visible as the lead RIGHT NOW (leadPool[li], not the other four rotation
+  // candidates waiting behind it) — nobody wants the page's own headline
+  // repeated a few inches below itself. Every other section (the rail, and
+  // each position module) independently takes its own newest N straight out
+  // of `live`. A story can legitimately be both a Position Intel card and a
+  // Top Headlines line; that is what a real news front page's own sections
+  // look like, and it costs far less than a box that says "Top" or "Intel"
+  // showing a two-week-old date.
+  var activeLeadUrl = leadPool.length ? leadPool[((li % leadPool.length) + leadPool.length) % leadPool.length].url : null;
   var claimed = {};
-  leadPool.forEach(function(s){ claimed[s.url] = 1; });
+  if (activeLeadUrl) claimed[activeLeadUrl] = 1;
 
-  // ── top headlines rail: the newest the lead did not use ───────────────────
+  // ── top headlines rail: the newest calls on the site ───────────────────────
   // Sorted strictly newest-first. Dates are ISO (YYYY-MM-DD) so a plain string
   // compare is a date compare.
   //
@@ -2076,7 +2072,6 @@ var COLUMN = [{"id":"call-2026-09-01-1","title":"Sean McVay has never let one ru
 
   var rail = document.getElementById('railList');
   railItems.forEach(function(it){
-    claimed[it.url] = 1;                             // nothing further down repeats a headline
     var el = document.createElement('li');
     el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
     rail.appendChild(el);
