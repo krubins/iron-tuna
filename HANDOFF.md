@@ -5588,3 +5588,68 @@ State: live and verified **65**, corrected; `published_rows=1`; Recent insights
 verified six ways including sum-of-squares. Deployed `PROJECTIONS` semantically
 identical to the repo across all 407 players; every pricing constant identical.
 Live prompt 40,786 chars / `af5384664474`, matching the repo. CI 27 of 27.
+
+## 45. September 1: the checker was wrong, and nothing in the suite said so
+
+The valuation pass merged overnight (PR #116/#117) changed two things inside
+`_worker.js` that `tools/live-board.mjs` **reimplements rather than lifts**, and
+the harness went silently wrong the moment they deployed:
+
+- `_colPrice` now returns `COLUMN_MIN_BID` flat past the end of the curve
+  instead of scaling it. That moves **217 of 345 players from $2 to $1** on the
+  served sheet.
+- `boardPayload` re-levels each position's points to last season's top-K mean
+  (`COLUMN_NORM` / `_colNormFactors`) before serving them. The points on a
+  reader's sheet are not raw stat-line scores: Puka Nacua is 356.0 raw and
+  **330.0 on the sheet**.
+
+Every check run through the harness today would have been wrong by $1 on two
+thirds of the board and wrong on every point total, and **CI was green
+throughout** — the repo's own tests cover the worker and the app, not this
+verification tool.
+
+The file already warned that "a hand-copied curve is exactly how a checker goes
+stale". The warning was too narrow. These were hand-copied **functions**, and
+lifting the constants around them protected nothing. `COLUMN_NORM` is now lifted
+like every other constant, `price()` mirrors `_colPrice`, and `board()` applies
+score → normalise → round → sort, which is the worker's order.
+
+**Verified against something the site generates itself**: `it-league.js`'s
+`DEFAULT_BOARD_RAW`, built by `tools/build-default-board.mjs` through the same
+pipeline. **344 of 344 rows match on points, zero mismatches**, and the harness
+independently reproduces the worker's own documented example of Nacua at 330.0.
+That is the check this tool never had — it had been trusted because it lifted
+constants, not because anything compared its output to the site's.
+
+### The live lead was not the row this file said it was
+
+§44 left row 65 as the live lead. Four runs had published since (66, 67, 68,
+69), so the front page was row 69 — the Eagles play-caller story. The lesson is
+small and worth keeping: **re-read which row is published rather than carrying
+it forward from the last check-in.** The edit made to 65 was still right, but it
+was an archive edit described as a front-page one.
+
+Row 69 dates its board correctly in the dek and in its bid-table header, so the
+body is honest. One undated claim was contradicted: the headline's "cap Jalen
+Hurts at $13, not $18", when the 09-01 refresh had already moved Hurts to QB7
+and **$13** — the exact cap the story argued for. Barkley at $22 and Breece Hall
+at $28 both still reproduce. The headline dropped the stale half; the dek now
+records that the refresh moved the board onto the desk's number.
+
+That is twice in two days that a call landed within hours of publication. It is
+worth noticing that this is the column being right, not a defect — the defect is
+only ever the undated half of a sentence.
+
+Row 65's dek still said "Take Charlie Kolar at $1 ahead of the other Chargers
+tight ends" at $2; the off-curve change had moved all three Chargers tight ends
+to $1. Fixed.
+
+**The archive question from §44 is still open and still unanswered**, so the
+archive was again left alone. It is now worse than it was: on top of the odds
+movement, 217 players changed price for a reason that has nothing to do with the
+market. Option 2 — re-anchoring archived prices from the live board through
+`it-league.js` — would have absorbed both changes without a single edit.
+
+State: live and verified **69**, corrected; `published_rows=1`; Recent insights
+19; /analyst-desk 0. Overlay `1788260457157`, 16,913 bytes, 314 players. Live
+prompt 40,786 / `af5384664474`, matching the repo. CI 27 of 27.
