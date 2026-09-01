@@ -22880,51 +22880,17 @@ function App() {
     }
   }
   function handleToggleTarget(id) {
+    // Favorites are a watchlist, not a locked roster: flagging more than you
+    // can fit or afford is the point (multiple options for one slot). The
+    // plan builder (buildModel/buildOptimalPlan) already tolerates a target
+    // set bigger than the roster — it force-starts what fits and reports
+    // feasible:false with a "trim a target" hint when even that overruns
+    // budget — so this no longer evicts other favorites or refuses the add.
     const __wasOn = targets.has(id);
     setTargets(prev => {
-      if (prev.has(id)) {
-        const n = new Set(prev);
-        n.delete(id);
-        return n;
-      }
-      const mt = teams.find(t => t.isMine);
-      let order = [...prev, id];
-      if (!mt) return new Set(order);
-      const minBid = config.valuation.minBid;
-      const di = new Set(draftHistory.map(d => d.playerId));
-      const posOf = pid => {
-        const p = players.find(x => x.id === pid);
-        return p ? p.position : null;
-      };
-      const priceOf = pid => {
-        const p = personalizedPlayers.find(x => x.id === pid);
-        return p ? p.inflatedValue ?? p.auctionValue ?? minBid : minBid;
-      };
-      const newPos = posOf(id);
-      if (newPos && config.roster[newPos]) {
-        const cap = config.roster[newPos].total;
-        const draftedAtPos = mt.roster.filter(r => r.position === newPos).length;
-        const atPosCount = () => order.filter(x => !di.has(x) && posOf(x) === newPos).length;
-        while (draftedAtPos + atPosCount() > cap) {
-          const removeIdx = order.findIndex(x => x !== id && !di.has(x) && posOf(x) === newPos);
-          if (removeIdx < 0) break;
-          order.splice(removeIdx, 1);
-        }
-        if (draftedAtPos + atPosCount() > cap) return prev;
-      }
-      const affordable = ids => {
-        const live = ids.filter(x => !di.has(x));
-        const cost = live.reduce((sum, x) => sum + priceOf(x), 0);
-        if (live.length > mt.spotsRemaining) return false;
-        return cost + (mt.spotsRemaining - live.length) * minBid <= mt.budgetRemaining + 0.001;
-      };
-      while (!affordable(order) && order.length > 1) {
-        const removeIdx = order.findIndex(x => x !== id);
-        if (removeIdx < 0) break;
-        order.splice(removeIdx, 1);
-      }
-      if (!affordable(order)) return prev;
-      return new Set(order);
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
     });
     if (!__wasOn && config.format === 'snake') {
       const pl = personalizedPlayers.find(x => x.id === id);
