@@ -2025,34 +2025,26 @@ var COLUMN = [{"id":"call-2026-09-01-1","title":"Sean McVay has never let one ru
   // the lead's eight. The section could not say anything the top of the page had
   // not already said.
   //
-  // Sections now claim their stories in reading order — the lead first, then the
-  // position modules, then the rail takes what is left. A section that comes up
-  // short carries fewer cards; nothing is padded with a repeat.
-  var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
+  // Sections now claim their stories in reading order — the lead first, then
+  // "Top Headlines" (it says "Top" right in the heading, so it gets first look
+  // at whatever the lead didn't use), then the position modules take what is
+  // left. A section that comes up short carries fewer cards; nothing is padded
+  // with a repeat.
+  //
+  // The rail used to claim AFTER the position modules, on the reasoning that a
+  // reader hits it later on the page. That reads fine for one drop cycle, but it
+  // compounds: Position Intel keeps its newest 2 per position every cycle, so
+  // by the time a header literally reading "Top Headlines" got its turn, the
+  // truly newest stories in every category were already gone and it was
+  // showing the 3rd-newest — a full drop cycle (3-4 days) stale, next to a lead
+  // story dated today. Nobody reads "Top Headlines Aug 24" as "the 3rd freshest
+  // QB story"; they read it as broken. Position Intel's own count badge ("QB
+  // 10") already tells a reader there is a library behind it and this is a
+  // sample, so it can afford to run a cycle behind; a box titled "Top" cannot.
   var claimed = {};
   leadPool.forEach(function(s){ claimed[s.url] = 1; });
 
-  // posAll keeps the FULL position count for the header badge. "QB 10" is a
-  // statement about the library behind the module, not about how many cards this
-  // particular module happened to draw, so it must not shrink as slots are taken.
-  var posAll = {}, posPick = {};
-  ORDER.forEach(function(pair){
-    var pos = pair[0];
-    var all = live.filter(function(s){ return s.pos === pos; });
-    posAll[pos] = all;
-    // Two per position, three on the double-width Market module — down from
-    // three and five. The library behind these keeps growing (50 live calls and
-    // counting) while the page's job does not: show the newest, say how many
-    // more there are, and send the reader to /auction-insights for the rest. The
-    // count badge beside each heading is what makes the trim honest — "QB 10"
-    // over two cards reads as a library, where ten cards read as a wall.
-    var pick = all.filter(function(s){ return !claimed[s.url]; })
-                  .slice(0, pos === 'Market' ? 3 : 2);
-    pick.forEach(function(s){ claimed[s.url] = 1; });
-    posPick[pos] = pick;
-  });
-
-  // ── top headlines rail: the newest calls no other section is showing ──────
+  // ── top headlines rail: the newest the lead did not use ───────────────────
   // Sorted strictly newest-first. Dates are ISO (YYYY-MM-DD) so a plain string
   // compare is a date compare.
   //
@@ -2066,7 +2058,7 @@ var COLUMN = [{"id":"call-2026-09-01-1","title":"Sean McVay has never let one ru
 
   var railPool = [];
   live.forEach(function(s){
-    if (claimed[s.url]) return;                      // the lead or a position module has it
+    if (claimed[s.url]) return;                      // the lead already has it
     railPool.push({ date: s.date, title: s.title, url: s.url, meta: s.pos + ' · ' + fmtShort(s.date) });
   });
   railPool.sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
@@ -2089,11 +2081,10 @@ var COLUMN = [{"id":"call-2026-09-01-1","title":"Sean McVay has never let one ru
     el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
     rail.appendChild(el);
   });
-  // Early in a season the lead rotation and the position modules can between
-  // them hold every story there is, leaving nothing for the rail. A "Top
-  // Headlines" box with no headlines under it is worse than no box, so the rail
-  // leaves and the lead takes the full width rather than sitting in two thirds
-  // of a two-column grid beside a hole.
+  // Early in a season the lead rotation can hold every story there is, leaving
+  // nothing for the rail. A "Top Headlines" box with no headlines under it is
+  // worse than no box, so the rail leaves and the lead takes the full width
+  // rather than sitting in two thirds of a two-column grid beside a hole.
   if (!railItems.length) {
     var railBox = document.querySelector('.rail');
     if (railBox) railBox.hidden = true;
@@ -2102,6 +2093,27 @@ var COLUMN = [{"id":"call-2026-09-01-1","title":"Sean McVay has never let one ru
   }
 
   // ── position modules ──
+  // posAll keeps the FULL position count for the header badge. "QB 10" is a
+  // statement about the library behind the module, not about how many cards this
+  // particular module happened to draw, so it must not shrink as slots are taken.
+  var ORDER = [['QB','qb'], ['RB','rb'], ['WR','wr'], ['TE','te'], ['Market','market']];
+  var posAll = {}, posPick = {};
+  ORDER.forEach(function(pair){
+    var pos = pair[0];
+    var all = live.filter(function(s){ return s.pos === pos; });
+    posAll[pos] = all;
+    // Two per position, three on the double-width Market module — down from
+    // three and five. The library behind these keeps growing (50 live calls and
+    // counting) while the page's job does not: show the newest, say how many
+    // more there are, and send the reader to /auction-insights for the rest. The
+    // count badge beside each heading is what makes the trim honest — "QB 10"
+    // over two cards reads as a library, where ten cards read as a wall.
+    var pick = all.filter(function(s){ return !claimed[s.url]; })
+                  .slice(0, pos === 'Market' ? 3 : 2);
+    pick.forEach(function(s){ claimed[s.url] = 1; });
+    posPick[pos] = pick;
+  });
+
   var grid = document.getElementById('posGrid');
 
   // The face for a story: its first named player who has a photo. A story that
