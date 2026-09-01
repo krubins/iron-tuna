@@ -5776,3 +5776,98 @@ State: `the-pick.html` unchanged (one entry, `pick-2026-08-20`); Routine
 prompt updated twice today, 2026-09-01T12:02Z then 2026-09-01T12:14Z; next
 fire 13:03 UTC today will be the first to test both the clone path and the
 push-to-`main` path in one run.
+
+## 47. September 1: two Pick Routines exist now, and only one can be edited from here
+
+§46 fixed the checkout defect and, separately, switched publishing from a
+dated branch to a direct push to `main`. This section is what happened when
+both fires landed on the same afternoon, plus a second Routine nobody here
+created.
+
+### The rail and Position Intel fix, and why it is not part of this section
+
+Ken separately reported "Top Headlines", Position Intel and the Market card
+all stuck on Aug 20 entries. That was a front-page allocation bug, unrelated
+to The Pick or its Routine — see the `front.html` commits `dc88438` and
+`38f56ac` for the fix (every section now takes its own newest content
+independently, instead of competing for one shared, exclusively-claimed
+pool). Mentioned here only because it landed in the same session, on the
+same afternoon, and touched `front.html` the way this section's commit does
+too.
+
+### A second Pick Routine exists, created outside this session
+
+`list_triggers` this afternoon showed two enabled Routines both named for
+The Pick:
+
+| trigger | cron | git source | prompt | last run |
+|---|---|---|---|---|
+| `trig_016JAiJJMZi2jtZDmZS1QPNK` ("Iron Tuna — The Pick (daily story)") | `0 13 * * *` | none (clones itself) | push-to-`main`, updated 12:14Z | fired 13:09Z, reported SUCCEEDED, added nothing to `main` |
+| `trig_01K2obtrMAKiwGn3N4UroTEv` ("The Pick (Story) — Updated") | `0 12 * * *` | `krubins/iron-tuna` attached | push-to-branch (the pre-12:14Z text — copied before the last edit) | fired 12:18Z, SUCCEEDED, pushed `claude/the-pick-2026-09-01` |
+
+`trig_01K2obtrMAKiwGn3N4UroTEv` was created at 12:10:45Z via `created_via:
+http_api` — outside this session, almost certainly Ken pasting the
+then-current prompt into the claude.ai Routines UI and attaching the repo as
+a source, which is exactly the durable fix §46 said only that UI could do.
+It is the more robust of the two now: a real git source instead of a
+clone-on-every-run workaround. Its prompt is simply a slightly earlier draft
+of this file's, copied before the 12:14Z edit that switched the ship step
+to `main`.
+
+**This session cannot edit or disable it.** `update_trigger` refuses both a
+prompt change and `enabled=false` with the same answer: *"this routine was
+created via http_api, not by an agent. Agents can only update routines they
+created."* Only Ken, in the Routines UI, can change its prompt or turn it
+off.
+
+### What each run actually did
+
+`trig_01K2obtrMAKiwGn3N4UroTEv`'s 12:18Z run cloned `main` while it still
+sat at `55add36` (before PR #119 merged), wrote a real, well-grounded entry
+— theme "committee backfields", Jaylen Warren vs. Rico Dowdle in Pittsburgh,
+with New England's and New Orleans' own backfield splits in the same table
+as further evidence — and pushed it to `claude/the-pick-2026-09-01`, per its
+(older) branch-only prompt. Every
+number in it was checked against current `PROJECTIONS` by hand this
+afternoon and matched exactly; the Henderson/Stevenson snap-share claim
+traces to `play-caller-premium.html`'s own 2026-09-01 entry, one of this
+column's allowed sources. **Ported onto current `main` and pushed** (commit
+`26cc9f6`), since the branch's base predated today's merges and nothing was
+going to land it otherwise.
+
+`trig_016JAiJJMZi2jtZDmZS1QPNK`'s 13:09Z run — the one with the correct
+push-to-`main` prompt — reported SUCCEEDED but **`main`'s `the-pick.html`
+was unchanged by it**: still the one entry it had before this session's own
+push. Why is still open. The `git branch -r`/`git log --all` visibility this
+run's checkout may have had into the other trigger's already-pushed branch
+is one candidate (a session that lists remote branches could plausibly read
+`claude/the-pick-2026-09-01`'s `pick-2026-09-01` id and conclude a same-day
+entry already existed, even though the prompt's own de-dup check names only
+`the-pick.html` on the checkout) but this was not confirmed — this session
+had no transcript access to the run, only its `SUCCEEDED` status and
+`main`'s unchanged state. Worth watching on the next fire.
+
+### Left for Ken
+
+1. **Two Routines firing daily for one column is a standing risk** — not
+   today's collision (harmless: one produced nothing, the other's entry got
+   ported by hand), but tomorrow's, where both could write competing entries
+   with no way for either to see the other's branch-only or main-only work
+   before publishing. Pick one:
+   - Update `trig_01K2obtrMAKiwGn3N4UroTEv`'s prompt to the push-to-`main`
+     text in `tools/the-pick-routine-prompt.md` (it already has the better
+     git-source setup) and disable or delete
+     `trig_016JAiJJMZi2jtZDmZS1QPNK`; or
+   - Keep `trig_016JAiJJMZi2jtZDmZS1QPNK` and disable/delete the new one.
+   Either leaves exactly one Routine publishing straight to `main`.
+2. The stale branch `claude/the-pick-2026-09-01` is fully merged into `main`
+   and safe to delete from the GitHub UI; this session's push credentials
+   returned a 403 attempting to delete it directly.
+3. If `trig_016JAiJJMZi2jtZDmZS1QPNK` is the one kept, its no-op-despite-
+   success run is still unexplained and worth a closer look on the next
+   fire — a run that reports SUCCEEDED without writing is exactly the
+   failure mode §46 was written to close, back in a new shape.
+
+State: `the-pick.html` carries two entries (`pick-2026-08-20`,
+`pick-2026-09-01`); front page allocation fixed in the same session; two
+Pick Routines active, one Ken-created and only Ken-editable.
