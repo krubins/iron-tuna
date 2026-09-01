@@ -558,7 +558,11 @@ console.log('\nwire contract');
   // reader being quoted last month's projections. Regenerate it here and
   // compare: a forgotten `node tools/build-default-board.mjs` fails this.
   ok('the default board is in sync with the worker\u2019s projections',
-     lib.includes(board.block(board.boardLines(board.projections(worker), board.loadLibrary(lib)))),
+     (() => {
+       const pool = board.projections(worker);
+       const L = board.loadLibrary(lib);
+       return lib.includes(board.block(board.boardLines(pool, L, board.normFactors(worker, pool, L))));
+     })(),
      'run: node tools/build-default-board.mjs');
 }
 
