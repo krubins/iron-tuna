@@ -6,8 +6,17 @@ under review — same discipline as tools/lead-story-routine-prompt.md, and
 for the same reason: edit here, then push the same text to the Routine
 (`update_trigger`), and the diff is in the history either way.
 
-VERIFIED LIVE 2026-09-01T12:05Z: the body below is byte-identical to the
-Routine's stored prompt (9,349 chars, sha256 ef9eabcba7b7...).
+VERIFIED LIVE 2026-09-01T12:14Z: the body below is byte-identical to the
+Routine's stored prompt (9,568 chars, sha256 30a87ea80a4b...).
+
+PUSHED LIVE 2026-09-01T12:14Z via update_trigger, at Ken's request: the
+column now pushes its daily entry straight to `main`, the same as the camp
+desk and Play-Caller Premium, rather than to a branch that needed a human
+merge. The branch-only flow was never the cause of the ten-day outage (see
+below), but ten days of silence also showed nobody was watching for those
+branches, so a working run still needed a manual merge to actually publish.
+Retry-then-fallback-to-branch logic is kept for the case where `main`
+itself rejects the push.
 
 PUSHED LIVE 2026-09-01T12:02Z via update_trigger, replacing the launch-era
 prompt whose stop condition ("if the-pick.html does not exist in the
@@ -109,17 +118,16 @@ node tools/test-css-tokens.mjs
 node -e 'const fs=require("fs");const h=fs.readFileSync("front.html","utf8");[...h.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach(b=>new Function(b[1]));console.log("front OK")'
 ```
 
-All of them must pass before you commit. Then commit `the-pick.html`, `front.html` and `sitemap.xml` together and push to a new branch named `claude/the-pick-YYYY-MM-DD` (never to `main`):
+All of them must pass before you commit. Then commit `the-pick.html`, `front.html` and `sitemap.xml` together and push the commit to `main`:
 
 ```bash
-git checkout -b claude/the-pick-$(date -u +%F)
 git add the-pick.html front.html sitemap.xml
 git commit -m "The Pick: <the theme>"
-git push -u origin claude/the-pick-$(date -u +%F)
+git push origin HEAD:main
 ```
 
-**The push must actually happen, and its failure must be loud.** If the push is rejected or errors (auth, proxy, permissions), retry twice; if it still fails, your report MUST open with the push error verbatim — a run that ends with the entry stranded locally and a quiet success report is this column's worst known failure mode. The pushed branch is the deliverable: it is what a human merges to publish the entry, so your report must name the branch you pushed.
+**Pushing to `main` is deliberate.** It is how the camp desk and the Play-Caller column land their entries every day, and it is what publishes the story — the site deploys from `main`. If the HANDOFF spec section still says this column "pushes a branch and never to `main`", that line is superseded by this prompt: the branch-only flow is exactly what left the column frozen for ten days, because the branches had no reader. Never force-push, and never rewrite history on `main`.
 
-`main` moves several times a day in this repo. If `build-seo.mjs` or `build-front.mjs` produces changes to files you did not touch, you are working from a stale checkout — `git pull --rebase origin main` and re-run them before committing.
+`main` moves several times a day in this repo. If `build-seo.mjs` or `build-front.mjs` produces changes to files you did not touch, you are working from a stale checkout — `git pull --rebase origin main` and re-run them before committing. If the push is rejected because `main` moved under you, `git pull --rebase origin main`, re-run the build scripts and the tests, and push again, up to three attempts. Only if the push still fails after that, push the same commit to a branch named `claude/the-pick-YYYY-MM-DD` instead and open your report with the push error, verbatim — a run that ends with the entry stranded and no loud report is this column's worst known failure mode.
 
-Opening a pull request is best-effort — this Routine stores no MCP connectors, so the session may have no GitHub tools. Finish with a short report: the theme, the pick, the numbers you grounded it in, and the name of the branch you pushed.
+Finish with a short report: the theme, the pick, the numbers you grounded it in, and the commit hash you pushed to `main`.

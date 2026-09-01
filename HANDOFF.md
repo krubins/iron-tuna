@@ -2488,18 +2488,24 @@ a player called "PPR Standard Derrick Henry".
 ### The daily cadence
 
 A Claude Routine (`trig_016JAiJJMZi2jtZDmZS1QPNK`, "Iron Tuna — The Pick (daily
-story)") fires **daily at 13:00 UTC** into a fresh session and adds exactly one entry on a branch. Its
-prompt carries the markup template, the theme rule, the voice, and the same
-grounding instruction the other desks run under:
+story)") fires **daily at 13:00 UTC** into a fresh session and adds exactly one
+entry, publishing hands-off. Its prompt carries the markup template, the theme
+rule, the voice, and the same grounding instruction the other desks run under:
 
 > **Ground every current-season claim in this repo.** The roster and coaching
 > landscape here is the site's own and does not always match outside sources.
 
-It pushes a branch and never to `main`. Like §16's Routine it **stores no MCP
-connectors**, so its sessions may lack GitHub tools; the pushed branch is the
-deliverable and the PR is best-effort. Publishing nothing is an acceptable
-outcome and the prompt says so — a day with no checkable argument is better
-served by silence than by a thin entry.
+**It pushes straight to `main`, as of 2026-09-01.** Until then it pushed a
+branch and never `main`, matching a spec line that predates the outage below;
+Ken changed that so the column needs no daily human merge to appear, the same
+as §16's Routine and the camp desk. `git push origin HEAD:main` is the ship
+step; a rejected push is retried with a rebase up to three times, and only
+falls back to a `claude/the-pick-YYYY-MM-DD` branch (with a loud report) if
+`main` itself keeps refusing it. Like §16's Routine it **stores no MCP
+connectors**, so its sessions may lack GitHub tools — irrelevant now that the
+push itself is the publish step. Publishing nothing is an acceptable outcome
+and the prompt says so — a day with no checkable argument is better served by
+silence than by a thin entry.
 
 **The Routine also stores no git source — and that silently disabled the
 column for ten days.** Unlike §16's and the camp desk's Routines, whose
@@ -5742,13 +5748,31 @@ trigger.** Until then the rewritten prompt's clone path is the bridge, and
 whether it holds depends on whether a sourceless session's git proxy will
 authenticate the clone and the push — today's 13:03 UTC run is the test.
 
-### What did not change
+### What did not change, at first — and then did, an hour later
 
-The branch-per-day flow (`claude/the-pick-YYYY-MM-DD`, never `main`) stands,
-per the spec. That means a pushed entry still needs a human merge to
-publish, and ten days of silence also proves nobody was watching for those
-branches. If the column is meant to publish untouched like the camp desk
-does, that is a deliberate spec change for Ken to make, not a default.
+The branch-per-day flow (`claude/the-pick-YYYY-MM-DD`, never `main`) stood
+at first, per the spec as it read that morning. That meant a pushed entry
+still needed a human merge to publish, and ten days of silence also proved
+nobody was watching for those branches.
+
+Ken's call, put to him directly: make the column publish hands-off, the same
+as the camp desk and Play-Caller. **The prompt was updated again at
+2026-09-01T12:14Z** — same trigger, same checkout fix from the first
+rewrite, only the ship step changed. It now runs `git push origin HEAD:main`
+instead of pushing a dated branch, with the same "loud failure, never a
+quiet stranded commit" discipline: a rejected push gets a rebase and up to
+three retries, and only falls back to a `claude/the-pick-YYYY-MM-DD` branch
+(reporting the push error verbatim) if `main` itself keeps refusing it.
+`tools/the-pick-routine-prompt.md` and §23 both carry the new text; the file
+was re-verified byte-identical to the Routine's stored prompt after the
+update (9,568 chars, sha256 `30a87ea80a4b...`).
+
+This does not touch the missing-git-source defect from the first half of
+this section — that fix (clone-if-absent) is independent of where the run
+pushes to, and the durable repair (attaching the repo as a source in the
+Routines UI) is still Ken's move, not done here.
 
 State: `the-pick.html` unchanged (one entry, `pick-2026-08-20`); Routine
-prompt updated 2026-09-01T12:02Z; next fire 13:03 UTC today.
+prompt updated twice today, 2026-09-01T12:02Z then 2026-09-01T12:14Z; next
+fire 13:03 UTC today will be the first to test both the clone path and the
+push-to-`main` path in one run.
