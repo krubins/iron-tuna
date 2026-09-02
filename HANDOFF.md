@@ -2595,6 +2595,37 @@ the column sums this section exists to make true. Real leagues draft at $100 and
 up, where it does not arise.
 
 
+### September 2026: the $1 defence in "The shape of a winning $120"
+
+The shape card drew its position bars from `posCost`, which is the **starting
+lineup's** spend by position, with the bench as a row of its own. On a $120
+board that printed `DEF $1` for a roster whose default shape carries **two**
+defences (`roster.DEF.total: 2`) at a $1 minimum each. The solve was right:
+PIT at $2 starts, MIA at $1 sits on the bench, $3 for two defences on the $200
+board. But the second defence was inside the BENCH bar with nothing to say so,
+and `money(2)` at $120 is $1.20, rounded down on top of it. A story error, not
+a solver error, so the fix is in `front.html`'s render.
+
+The card (`#shapeCard`) now charts each position's whole seat count, starters
+plus bench, with the bench seats drawn as a lighter tail of the same bar and a
+`×n` body count on the label; the separate BENCH row is gone from that card.
+The spend bar and its key above it are still the starters-vs-bench ledger, now
+with `×n` counts too, so a reader can see the key's DEF is one body and the
+bench is seven. Printed dollars in the shape card are allocated per row as
+`max(bodies, floor(exact rescale))`, with the leftover handed to the largest
+remainders, so the column adds to the budget the card names and no position
+ever prints below a dollar a body (the same largest-remainder rule
+`renormalizeToBudget` uses). On the site's own $200 board that is the
+identity. At $50 the floor bites (two defences at $3 rescale to $0.75 and
+print $2) and the shortfall comes out of the biggest row, so the column still
+adds to $50.
+
+`tools/test-build-desk.mjs` asserts all of it: in the data (every position's
+bodies cost at least a dollar each; the positions, bench included, sum to the
+budget) and in the rendered sweep (a row per position, each row's count is the
+roster's, none prints below a dollar a body, the bars add to the ledger's
+budget, and the note's "stops at $X" is the ledger's starter figure).
+
 ---
 
 ## 25. August 2026: every `var(--token)` has to resolve
