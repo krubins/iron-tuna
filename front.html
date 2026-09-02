@@ -447,10 +447,14 @@ img{max-width:100%}
 .cliff-body b{color:var(--ink)}
 .cliff-drop{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:20px;color:var(--value-red);letter-spacing:.02em;white-space:nowrap}
 .bars{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-.bar-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:9px;font-size:12px}
-.bar-pos{font-weight:800;letter-spacing:.06em;color:var(--ink-2)}
+.bar-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;gap:9px;font-size:12px}
+.bar-pos{font-weight:800;letter-spacing:.06em;color:var(--ink-2);white-space:nowrap}
+.bar-pos small{font-size:10px;font-weight:600;letter-spacing:0;color:var(--ink-3);margin-left:2px}
 .bar-track{display:block;background:#eef0f3;border-radius:5px;height:10px;overflow:hidden;border:1px solid var(--line)}
 .bar-fill{display:block;height:100%;border-radius:4px;min-width:2px}
+.bar-track.stack{display:flex}
+.bar-track.stack .bar-fill:not(:last-child){border-radius:4px 0 0 4px}
+.bar-track.stack .bar-tail{border-radius:0 4px 4px 0;opacity:.4}
 .bar-val{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:17px;letter-spacing:.02em}
 .bnote{font-size:11.5px;color:var(--ink-3);line-height:1.5;margin-top:10px}
 .bcard .go,.build-main .go{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:700;color:var(--brand);letter-spacing:.04em}
@@ -2518,7 +2522,7 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
           (fullySpent ? ' &mdash; the whole <b>$' + budgetShown + '</b> is committed, with nothing left on the board' : '')
         : '') +
       '. It puts <b>' + (rb.share || 0) +
-      '% of the budget on running backs</b> and fills quarterback, tight end, kicker and defence for <b>' +
+      '% of the budget on running backs</b> and fills the starting quarterback, tight end, kicker and defence for <b>' +
       fmtMoney(cheapSide) + ' combined</b>.';
     document.getElementById('rosterStrip').innerHTML = A.lineup.map(function(l){
       return '<div class="rs" data-pos="' + esc(l.pos) + '">' +
@@ -2550,9 +2554,9 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
       ? '<span class="spend-seg" style="width:' + (bench.cost / A.budget * 100) + '%;background:' + BENCH_INK + '"></span>'
       : '');
     document.getElementById('spendKey').innerHTML = A.posCost.map(function(c){
-      return '<span><i style="background:' + (POS_INK[c.pos] || '#8b939c') + '"></i>' + esc(c.pos) + ' ' + fmtMoney(c.dollars) + ' &middot; ' + pctOf(c.share, c.dollars) + '</span>';
+      return '<span><i style="background:' + (POS_INK[c.pos] || '#8b939c') + '"></i>' + esc(c.pos) + ' &times;' + c.n + ' ' + fmtMoney(c.dollars) + ' &middot; ' + pctOf(c.share, c.dollars) + '</span>';
     }).join('') + (bench
-      ? '<span><i style="background:' + BENCH_INK + '"></i>Bench (' + bench.seats + ') $' + benchShown + ' &middot; ' + pctOf(bench.share, bench.cost) + '</span>'
+      ? '<span><i style="background:' + BENCH_INK + '"></i>Bench &times;' + bench.seats + ' $' + benchShown + ' &middot; ' + pctOf(bench.share, bench.cost) + '</span>'
       : '');
     document.getElementById('buildMeta').innerHTML =
       '<span>' + A.playerCount + ' players considered</span><span>' + A.teams + '-team &middot; $' + budgetShown +
@@ -2580,6 +2584,49 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
       '<span class="unit">pts / game</span></div><p>Drop the FLEX and re-solve and the lineup falls from ' +
       A.ppg + ' to ' + A.noFlexPpg + ' a game.</p></div>';
 
+    // ── the shape card: the whole roster, position by position ──────────────
+    // `posCost` is the STARTING LINEUP's spend by position, and the bench is a
+    // row of its own in the spend bar and its key above. That is the ledger,
+    // and it is right. Drawn the same way in this card, the DEF bar read "$1"
+    // on a $120 board, for a roster that has to carry two defences at a $1
+    // minimum each. The second defence was real and paid for: it was sitting
+    // inside the BENCH bar with nothing to say so, and the $2 starter rescaled
+    // to $1.20 rounded down on top of it. So this card charts each position's
+    // whole seat count, starters plus bench (the bench as a lighter tail of the
+    // same bar), and allocates the printed dollars so that they add up to the
+    // budget the card names and no position ever prints below a dollar a body.
+    var shapeRows = [], shapeAt = {};
+    function shapeRow(pos) {
+      if (!shapeAt[pos]) { shapeAt[pos] = { pos: pos, starters: 0, bench: 0, n: 0 }; shapeRows.push(shapeAt[pos]); }
+      return shapeAt[pos];
+    }
+    A.posCost.forEach(function(c){ var r = shapeRow(c.pos); r.starters += c.dollars; r.n += c.n; });
+    (bench ? bench.players : []).forEach(function(b){ var r = shapeRow(b.pos); r.bench += b.price; r.n += 1; });
+    // Printed dollars: the exact rescale, floored at a dollar a body, with the
+    // dollars rounding leaves over handed to the largest remainders so the
+    // column adds to budgetShown. The same largest-remainder rule the app's own
+    // renormalizeToBudget uses; on the site's own $200 board every value is
+    // already an integer and this is the identity.
+    var shapeDollars = (function(){
+      var exact = shapeRows.map(function(r){ return (r.starters + r.bench) / A.budget * budgetShown; });
+      var vals = exact.map(function(x, i){ return Math.max(shapeRows[i].n, Math.floor(x)); });
+      var left = budgetShown - vals.reduce(function(a, b){ return a + b; }, 0);
+      var order = exact.map(function(x, i){ return i; })
+        .filter(function(i){ return vals[i] === Math.floor(exact[i]); })
+        .sort(function(a, b){ return (exact[b] - Math.floor(exact[b])) - (exact[a] - Math.floor(exact[a])); });
+      if (!order.length) order = exact.map(function(x, i){ return i; });
+      for (var k = 0; left > 0 && order.length; k++) { vals[order[k % order.length]]++; left--; }
+      // Only a budget too small to pay a dollar a body lands here: take the
+      // shortfall from the biggest rows that still have room above their floor.
+      while (left < 0) {
+        var big = -1;
+        vals.forEach(function(v, i){ if (v > shapeRows[i].n && (big < 0 || v > vals[big])) big = i; });
+        if (big < 0) break;
+        vals[big]--; left++;
+      }
+      return vals;
+    })();
+
     var maxEdge = Math.max.apply(null, A.repl.map(function(r){ return r.edge; }));
     document.getElementById('buildCards').innerHTML =
       '<div class="bcard"><h4>The cliffs</h4><p>Where the drop from one player to the next is steepest: the last seat worth paying up for.</p>' +
@@ -2598,24 +2645,21 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
             '<span class="bar-val">' + r.edge + '</span></div>';
         }).join('') + '</div>' +
         '<p class="bnote">Top player to replacement-level starter, in a ' + A.teams + '-team league. An elite defence beats a waiver defence by ' +
-        A.repl[A.repl.length - 1].edge + ' a game, which is why the build spends ' + fmtMoney(defCost) + ' there.</p></div>' +
-      '<div class="bcard"><h4>The shape of a winning $' + budgetShown + '</h4>' +
-        '<p>The optimum is not balanced. It buys <b>' + (rb.n || 0) + ' running backs for ' + fmtMoney(rb.dollars || 0) +
+        A.repl[A.repl.length - 1].edge + ' a game, which is why the build spends ' + fmtMoney(defCost) + ' on its starting defence.</p></div>' +
+      '<div class="bcard" id="shapeCard"><h4>The shape of a winning $' + budgetShown + '</h4>' +
+        '<p>The optimum is not balanced. It starts <b>' + (rb.n || 0) + ' running backs for ' + fmtMoney(rb.dollars || 0) +
         '</b> and refuses to pay retail anywhere the replacement line sits close behind.</p>' +
-        '<div class="bars">' + A.posCost.map(function(c){
-          return '<div class="bar-row"><span class="bar-pos">' + esc(c.pos) + '</span>' +
-            '<span class="bar-track"><span class="bar-fill" style="width:' + (c.dollars / A.budget * 100) + '%;background:' + (POS_INK[c.pos] || '#8b939c') + '"></span></span>' +
-            '<span class="bar-val">' + fmtMoney(c.dollars) + '</span></div>';
-        }).join('') +
+        '<div class="bars">' + shapeRows.map(function(r, i){
+          var ink = POS_INK[r.pos] || '#8b939c';
+          return '<div class="bar-row" data-pos="' + esc(r.pos) + '" data-n="' + r.n + '"><span class="bar-pos">' + esc(r.pos) + '<small>&times;' + r.n + '</small></span>' +
+            '<span class="bar-track stack"><span class="bar-fill" style="width:' + (r.starters / A.budget * 100) + '%;background:' + ink + '"></span>' +
+            (r.bench > 0 ? '<span class="bar-fill bar-tail" style="width:' + (r.bench / A.budget * 100) + '%;background:' + ink + '"></span>' : '') +
+            '</span><span class="bar-val">$' + shapeDollars[i] + '</span></div>';
+        }).join('') + '</div>' +
+        '<p class="bnote">Every bar is a position&rsquo;s whole allocation, starters and bench together, and the bars add up to the full $' + budgetShown + '. ' +
         (bench
-          ? '<div class="bar-row"><span class="bar-pos">BENCH</span>' +
-            '<span class="bar-track"><span class="bar-fill" style="width:' + (bench.cost / A.budget * 100) + '%;background:' + BENCH_INK + '"></span></span>' +
-            '<span class="bar-val">$' + benchShown + '</span></div>'
-          : '') + '</div>' +
-        (bench
-          ? '<p class="bnote">Every bar is a share of the full $' + budgetShown + '. The last one is the ' + bench.seats +
-            '-seat bench, priced at what the board will actually charge for it &mdash; which is why the starters stop where they do.</p>'
-          : '') + '</div>';
+          ? 'The lighter tail is the bench: ' + bench.seats + ' seats the roster has to fill, priced at what the board will actually charge for them and never below a dollar a body. That is why the starting lineup stops at $' + startersShown + '.'
+          : 'Nothing prints below a dollar a body.') + '</p></div>';
   }
 
   // ══════════════════ weekly preseason takeaways ══════════════════

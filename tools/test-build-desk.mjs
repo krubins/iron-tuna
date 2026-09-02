@@ -41,7 +41,16 @@ const A = JSON.parse(m[1]);
 
 ok('the bench ledger is present', !!(A.bench && A.bench.players && A.bench.players.length),
    'run node tools/build-front-analysis.mjs');
+// Every body the roster carries, per position, starters and bench together. The
+// shape card is drawn from this whole-roster view, not from posCost alone: the
+// DEF bar once read "$1" on a $120 board for a roster that carries TWO defences
+// at a $1 minimum each, because the row was the starter on its own and the
+// second defence sat inside BENCH with nothing to say so.
+const bodies = {};
+const addBody = (pos, price) => { bodies[pos] = bodies[pos] || { n: 0, dollars: 0 }; bodies[pos].n++; bodies[pos].dollars += price; };
+A.lineup.forEach(l => addBody(l.pos, l.price));
 if (A.bench) {
+  A.bench.players.forEach(b => addBody(b.pos, b.price));
   const benchCost = A.bench.players.reduce((a, b) => a + b.price, 0);
   ok('bench.cost is what the bench players cost', benchCost === A.bench.cost,
      `players sum to $${benchCost}, bench.cost says $${A.bench.cost}`);
@@ -64,6 +73,13 @@ if (A.bench) {
        Math.abs(c.share - c.dollars / A.budget * 100) <= 1,
        `$${c.dollars} of $${A.budget} is ${(c.dollars / A.budget * 100).toFixed(1)}%, printed ${c.share}%`);
   });
+  Object.entries(bodies).forEach(([pos, b]) => {
+    ok(`${pos}: ${b.n} ${b.n === 1 ? 'body costs' : 'bodies cost'} at least a dollar each`, b.dollars >= b.n,
+       `$${b.dollars} for ${b.n}`);
+  });
+  const whole = Object.values(bodies).reduce((a, b) => a + b.dollars, 0);
+  ok('the positions together, bench included, account for the whole budget', whole === A.budget,
+     `$${whole} of $${A.budget}`);
 }
 
 // ── 2. the render's invariants ──────────────────────────────────────────────
@@ -80,6 +96,12 @@ ok('the spend bar spans the budget, not the starter spend',
 ok('the bench figure is derived by subtraction, not rescaled on its own',
    /budgetShown - startersShown/.test(build) && !/fmtMoney\(bench\.cost\)/.test(build),
    'use budgetShown - startersShown; fmtMoney(bench.cost) can round to a dollar more than the budget');
+ok('the shape card charts the whole roster per position, bench tail included',
+   /id="shapeCard"/.test(build) && /bar-tail/.test(build) && /r\.starters \+ r\.bench/.test(build),
+   'a DEF bar drawn from posCost alone reads "$1" for a roster that carries two defences');
+ok('the shape card floors every position at a dollar a body',
+   /Math\.max\(shapeRows\[i\]\.n, Math\.floor\(x\)\)/.test(build),
+   'a $1 minimum bid times two defences is $2, whatever money() rounds the rescale to');
 
 // ── 3. the page as a browser draws it (skips without playwright) ────────────
 let chromium = null;
@@ -125,6 +147,11 @@ if (!chromium) {
       head: document.getElementById('buildHeadline').textContent,
       meta: document.getElementById('buildMeta').textContent,
       widths: [...document.querySelectorAll('#spendBar .spend-seg')].map(s => parseFloat(s.style.width) || 0),
+      shape: [...document.querySelectorAll('#shapeCard .bar-row')].map(r => ({
+        pos: r.dataset.pos, n: +r.dataset.n,
+        val: +(r.querySelector('.bar-val').textContent.replace(/[^0-9]/g, '')),
+      })),
+      shapeNote: (document.querySelector('#shapeCard .bnote') || { textContent: '' }).textContent,
     }));
     const label = budget == null ? 'site default' : '$' + budget;
     ok(`${label}: no page error`, !pageErr, pageErr || '');
@@ -139,6 +166,23 @@ if (!chromium) {
     const span = seen.widths.reduce((a, b) => a + b, 0);
     ok(`${label}: the spend bar spans the whole budget`, Math.abs(span - 100) < 0.01,
        `covers ${span.toFixed(2)}%`);
+    // The shape card: whole roster per position, adding to the budget, and never
+    // a position printed below a dollar a body. $50 is where the floor bites:
+    // two defences at $3 on the $200 board rescale to $0.75, and must print $2.
+    const rows = seen.shape.map(r => `${r.pos}×${r.n} $${r.val}`).join(', ');
+    ok(`${label}: the shape card has a row per position`,
+       seen.shape.length === Object.keys(bodies).length, rows);
+    ok(`${label}: every shape row counts the bodies the roster carries there`,
+       seen.shape.every(r => bodies[r.pos] && bodies[r.pos].n === r.n), rows);
+    ok(`${label}: no position prints below a dollar a body`,
+       seen.shape.length > 0 && seen.shape.every(r => r.val >= r.n), rows);
+    if (led) {
+      const bars = seen.shape.reduce((a, r) => a + r.val, 0);
+      ok(`${label}: the shape card's bars add to the budget`, bars === +led[3], `${rows} = $${bars}, budget $${led[3]}`);
+      const stops = seen.shapeNote.match(/stops at \$(\d+)/);
+      ok(`${label}: the shape note's starter figure is the ledger's`, !!stops && stops[1] === led[1],
+         `note says ${stops ? '$' + stops[1] : 'nothing'}, ledger says $${led[1]}`);
+    }
     await ctx.close();
   }
   await browser.close();
