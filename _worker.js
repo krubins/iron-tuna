@@ -235,7 +235,7 @@ const PROJECTIONS = [
   { name: "Ashton Jeanty", position: "RB", team: "LV", projectedStats: { rushYd: 1128, rushTD: 7.1, rec: 65, recYd: 496, recTD: 2, fumLost: 1.2 }},
   { name: "James Cook", position: "RB", team: "BUF", projectedStats: { rushYd: 1401, rushTD: 11, rec: 36, recYd: 302, recTD: 1.6, fumLost: 1.8 }},
   { name: "Saquon Barkley", position: "RB", team: "PHI", projectedStats: { rushYd: 1285, rushTD: 8.7, rec: 43, recYd: 371, recTD: 2.3, fumLost: 1 }},
-  { name: "Josh Jacobs", position: "RB", team: "GB", projectedStats: { rushYd: 1144, rushTD: 12.2, rec: 36, recYd: 280, recTD: 1.6, fumLost: 1.5 }},
+  { name: "Josh Jacobs", position: "RB", team: "GB", projectedStats: { rushYd: 740, rushTD: 7.9, rec: 23.3, recYd: 181, recTD: 1, fumLost: 1 }},
   { name: "Cam Skattebo", position: "RB", team: "NYG", projectedStats: { rushYd: 1007, rushTD: 6.8, rec: 45, recYd: 332, recTD: 1.5, fumLost: 1.1 }},
   { name: "Kyren Williams", position: "RB", team: "LAR", projectedStats: { rushYd: 1071, rushTD: 10.2, rec: 33, recYd: 224, recTD: 1.6, fumLost: 1.1 }},
   { name: "Breece Hall", position: "RB", team: "NYJ", projectedStats: { rushYd: 1164, rushTD: 7.6, rec: 52, recYd: 439, recTD: 2.7, fumLost: 1.4 }},
@@ -268,16 +268,16 @@ const PROJECTIONS = [
   { name: "Blake Corum", position: "RB", team: "LAR", projectedStats: { rushYd: 837, rushTD: 7.3, rec: 17, recYd: 117, recTD: 0.6, fumLost: 0.4 }},
   { name: "Woody Marks", position: "RB", team: "HOU", projectedStats: { rushYd: 581, rushTD: 3, rec: 24, recYd: 200, recTD: 1.3, fumLost: 0.7 }},
   { name: "Chris Rodriguez Jr.", position: "RB", team: "JAC", projectedStats: { rushYd: 432, rushTD: 3.4, rec: 4, recYd: 29, recTD: 0.2, fumLost: 0.3 }},
-  { name: "Zach Charbonnet", position: "RB", team: "SEA", projectedStats: { rushYd: 555, rushTD: 6.9, rec: 20, recYd: 145, recTD: 0.4, fumLost: 0.3 }},
+  { name: "Zach Charbonnet", position: "RB", team: "SEA", projectedStats: { rushYd: 424, rushTD: 5.3, rec: 15.3, recYd: 111, recTD: 0.3, fumLost: 0.2 }},
   { name: "Tyjae Spears", position: "RB", team: "TEN", projectedStats: { rushYd: 447, rushTD: 3, rec: 50, recYd: 336, recTD: 1.6, fumLost: 0.4 }},
-  { name: "Isiah Pacheco", position: "RB", team: "DET", projectedStats: { rushYd: 639, rushTD: 4.5, rec: 17, recYd: 114, recTD: 0.8, fumLost: 0.5 }},
+  { name: "Isiah Pacheco", position: "RB", team: "DET", projectedStats: { rushYd: 489, rushTD: 3.4, rec: 13, recYd: 87, recTD: 0.6, fumLost: 0.4 }},
   { name: "Jonathon Brooks", position: "RB", team: "CAR", projectedStats: { rushYd: 810, rushTD: 4.3, rec: 33, recYd: 247, recTD: 1.2, fumLost: 0.9 }},
   { name: "Kaelon Black", position: "RB", team: "SF", projectedStats: { rushYd: 311, rushTD: 2.2, rec: 8, recYd: 63, recTD: 0.4, fumLost: 0.3 }},
   { name: "Jordan James", position: "RB", team: "SF", projectedStats: { rushYd: 151, rushTD: 1, rec: 4, recYd: 31, recTD: 0.2, fumLost: 0.2 }},
-  { name: "James Conner", position: "RB", team: "ARI", projectedStats: { rushYd: 312, rushTD: 3, rec: 35, recYd: 263, recTD: 2 }},
+  { name: "James Conner", position: "RB", team: "ARI", projectedStats: { rushYd: 239, rushTD: 2.3, rec: 26.8, recYd: 201, recTD: 1.5 }},
   { name: "Justice Hill", position: "RB", team: "BAL", projectedStats: { rushYd: 223, rushTD: 1.4, rec: 39, recYd: 349, recTD: 1.7, fumLost: 0.4 }},
   { name: "Dylan Sampson", position: "RB", team: "CLE", projectedStats: { rushYd: 237, rushTD: 1.1, rec: 30, recYd: 208, recTD: 1.2, fumLost: 0.4 }},
-  { name: "Adam Randall", position: "RB", team: "BAL", projectedStats: { rushYd: 121, rushTD: 0.9, rec: 4, recYd: 29, recTD: 0.2, fumLost: 0.1 }},
+  { name: "Adam Randall", position: "RB", team: "BAL", projectedStats: { rushYd: 93, rushTD: 0.7, rec: 3.1, recYd: 22, recTD: 0.2, fumLost: 0.1 }},
   { name: "Brian Robinson Jr.", position: "RB", team: "ATL", projectedStats: { rushYd: 560, rushTD: 3.7, rec: 9, recYd: 59, recTD: 0.3, fumLost: 0.5 }},
   { name: "Malik Davis", position: "RB", team: "DAL", projectedStats: { rushYd: 136, rushTD: 1, rec: 4, recYd: 30, recTD: 0.2 }},
   { name: "Tyler Allgeier", position: "RB", team: "ARI", projectedStats: { rushYd: 385, rushTD: 3.3, rec: 18, recYd: 126, recTD: 0.4, fumLost: 0.2 }},
@@ -297,21 +297,21 @@ const PROJECTIONS = [
   { name: "Kyle Juszczyk", position: "RB", team: "SF", projectedStats: { rushYd: 19, rec: 20, recYd: 162, recTD: 0.9 }},
   { name: "Jaylen Wright", position: "RB", team: "MIA", projectedStats: { rushYd: 234, rushTD: 1.1, rec: 7, recYd: 56, recTD: 0.2, fumLost: 0.5 }},
   { name: "Brashard Smith", position: "RB", team: "KC", projectedStats: { rushYd: 182, rushTD: 0, rec: 22, recYd: 144, recTD: 0 }},
-  { name: "Devin Neal", position: "RB", team: "NO", projectedStats: { rushYd: 176, rushTD: 3, rec: 4, recYd: 30, recTD: 0 }},
+  { name: "Devin Neal", position: "RB", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0 }},
   { name: "Frank Gore Jr.", position: "RB", team: "BUF", projectedStats: { rushYd: 178, rushTD: 1, rec: 2, recYd: 29, recTD: 0 }},
   { name: "Roschon Johnson", position: "RB", team: "CHI", projectedStats: { rushYd: 120, rushTD: 2, rec: 5, recYd: 13, recTD: 0 }},
   { name: "Jerome Ford", position: "RB", team: "WAS", projectedStats: { rushYd: 194, rushTD: 2, rec: 7, recYd: 47, recTD: 1 }},
   { name: "Isaiah Davis", position: "RB", team: "NYJ", projectedStats: { rushYd: 178, rushTD: 1.3, rec: 13, recYd: 96, recTD: 0.4 }},
   { name: "Phil Mafah", position: "RB", team: "DAL", projectedStats: { rushYd: 142, rushTD: 2, rec: 2, recYd: 40, recTD: 0 }},
-  { name: "Ty Chandler", position: "RB", team: "NO", projectedStats: { rushYd: 144, rushTD: 2, rec: 13, recYd: 56, recTD: 0 }},
+  { name: "Ty Chandler", position: "RB", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0 }},
   { name: "Seth McGowan", position: "RB", team: "IND", projectedStats: { rushYd: 52, rushTD: 0.4, rec: 4, recYd: 30, recTD: 0.2 }},
   { name: "Sean Tucker", position: "RB", team: "TB", projectedStats: { rushYd: 182, rushTD: 2.4, rec: 2, recYd: 14, recTD: 0.1 }},
   { name: "Kaytron Allen", position: "RB", team: "WAS", projectedStats: { rushYd: 51, rushTD: 0.4, rec: 4, recYd: 29, recTD: 0.2 }},
   { name: "Austin Ekeler", position: "RB", team: "WAS", projectedStats: { rushYd: 151, rushTD: 1, rec: 5, recYd: 63, recTD: 0 }},
   { name: "Michael Burton", position: "RB", team: "CLE", projectedStats: { rushYd: 18, rushTD: 0.1, rec: 4, recYd: 27, recTD: 0.1 }},
   { name: "Andrew Beck", position: "RB", team: "NYJ", projectedStats: { rushYd: 0, rec: 4, recYd: 28, recTD: 0.2 }},
-  { name: "Jeremy McNichols", position: "RB", team: "WAS", projectedStats: { rushYd: 87, rushTD: 0, rec: 6, recYd: 53, recTD: 1 }},
-  { name: "Isaac Guerendo", position: "RB", team: "SF", projectedStats: { rushYd: 159, rushTD: 2, rec: 3, recYd: 34, recTD: 1 }},
+  { name: "Jeremy McNichols", position: "RB", team: "WAS", projectedStats: { rushYd: 67, rushTD: 0, rec: 4.6, recYd: 41, recTD: 0.8 }},
+  { name: "Isaac Guerendo", position: "RB", team: "SF", projectedStats: { rushYd: 122, rushTD: 1.5, rec: 2.3, recYd: 26, recTD: 0.8 }},
   { name: "Ameer Abdullah", position: "RB", team: "JAX", projectedStats: { rushYd: 74, rushTD: 1, rec: 6, recYd: 54, recTD: 0 }},
   { name: "Jam Miller", position: "RB", team: "NE", projectedStats: { rushYd: 153, rushTD: 0, rec: 4, recYd: 21, recTD: 1 }},
   { name: "Dare Ogunbowale", position: "RB", team: "HOU", projectedStats: { rushYd: 69, rushTD: 2, rec: 5, recYd: 64, recTD: 0 }},
@@ -361,9 +361,9 @@ const PROJECTIONS = [
   { name: "Michael Wilson", position: "WR", team: "ARI", projectedStats: { rushYd: 0, rushTD: 0, rec: 71, recYd: 860, recTD: 3.4, fumLost: 0.4 }},
   { name: "Brian Thomas Jr.", position: "WR", team: "JAX", projectedStats: { rushYd: 23, rushTD: 0.2, rec: 57, recYd: 861, recTD: 5.1, fumLost: 0.3 }},
   { name: "Khalil Shakir", position: "WR", team: "BUF", projectedStats: { rushYd: 13, rushTD: 0.1, rec: 70, recYd: 765, recTD: 3.7, fumLost: 0.6 }},
-  { name: "Tank Dell", position: "WR", team: "HOU", projectedStats: { rushYd: 45, rushTD: 0.2, rec: 34, recYd: 415, recTD: 2.4, fumLost: 0.4 }},
+  { name: "Tank Dell", position: "WR", team: "HOU", projectedStats: { rushYd: 34, rushTD: 0.2, rec: 26, recYd: 317, recTD: 1.8, fumLost: 0.3 }},
   { name: "Jordan Addison", position: "WR", team: "MIN", projectedStats: { rushYd: 14, rushTD: 0.1, rec: 60, recYd: 770, recTD: 5.2, fumLost: 0.4 }},
-  { name: "Jordyn Tyson", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 36, recYd: 484, recTD: 2.7, fumLost: 0.4 }},
+  { name: "Jordyn Tyson", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 19.1, recYd: 256, recTD: 1.4, fumLost: 0.2 }},
   { name: "Jayden Reed", position: "WR", team: "GB", projectedStats: { rushYd: 65, rushTD: 0.4, rec: 63, recYd: 727, recTD: 4.4, fumLost: 0.8 }},
   { name: "Romeo Doubs", position: "WR", team: "NE", projectedStats: { rushYd: 0, rushTD: 0, rec: 52, recYd: 667, recTD: 5.3, fumLost: 0.5 }},
   { name: "John Metchie III", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rec: 66, recYd: 596, recTD: 4 }},
@@ -384,9 +384,9 @@ const PROJECTIONS = [
   { name: "Rashod Bateman", position: "WR", team: "BAL", projectedStats: { rushYd: 0, rushTD: 0, rec: 38, recYd: 614, recTD: 4, fumLost: 0.3 }},
   { name: "Tre Tucker", position: "WR", team: "LV", projectedStats: { rushYd: 57, rushTD: 0.3, rec: 48, recYd: 658, recTD: 2.5, fumLost: 0.3 }},
   { name: "Rashid Shaheed", position: "WR", team: "SEA", projectedStats: { rushYd: 87, rushTD: 0.5, rec: 43, recYd: 647, recTD: 3.5, fumLost: 0.6 }},
-  { name: "Christian Kirk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 10, recYd: 129, recTD: 0.8, fumLost: 0.1 }},
+  { name: "Christian Kirk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 7.6, recYd: 99, recTD: 0.6, fumLost: 0.1 }},
   { name: "Jalen Nailor", position: "WR", team: "LV", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 44, recYd: 607, recTD: 3, fumLost: 0.4 }},
-  { name: "Jayden Higgins", position: "WR", team: "HOU", projectedStats: { rushYd: 2, rushTD: 1, rec: 53, recYd: 665, recTD: 4, fumLost: 0 }},
+  { name: "Jayden Higgins", position: "WR", team: "HOU", projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0, fumLost: 0 }},
   { name: "Omar Cooper Jr.", position: "WR", team: "NYJ", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 33, recYd: 395, recTD: 2.2, fumLost: 0.4 }},
   { name: "Antonio Williams", position: "WR", team: "WAS", projectedStats: { rushYd: 22, rushTD: 0.2, rec: 26, recYd: 344, recTD: 2.3, fumLost: 0.3 }},
   { name: "Kayshon Boutte", position: "WR", team: "NE", projectedStats: { rec: 41, recYd: 528, recTD: 2.8 }},
@@ -409,7 +409,7 @@ const PROJECTIONS = [
   { name: "Malik Washington", position: "WR", team: "MIA", projectedStats: { rushYd: 78, rushTD: 0.4, rec: 45, recYd: 475, recTD: 1.7, fumLost: 0.6 }},
   { name: "Olamide Zaccheaus", position: "WR", team: "ATL", projectedStats: { rushYd: 0, rec: 14, recYd: 142, recTD: 0.6 }},
   { name: "Jahdae Walker", position: "WR", team: "CHI", projectedStats: { rushYd: 0, rec: 3, recYd: 36, recTD: 0.3 }},
-  { name: "Calvin Austin III", position: "WR", team: "NYG", projectedStats: { rec: 31, recYd: 444, recTD: 4 }},
+  { name: "Calvin Austin III", position: "WR", team: "NYG", projectedStats: { rec: 0, recYd: 0, recTD: 0 }},
   { name: "Andrei Iosivas", position: "WR", team: "CIN", projectedStats: { rushYd: 11, rec: 21, recYd: 235, recTD: 2.1 }},
   { name: "Cedric Tillman", position: "WR", team: "CLE", projectedStats: { rushYd: 0, rec: 32, recYd: 413, recTD: 5 }},
   { name: "Ted Hurst", position: "WR", team: "TB", projectedStats: { rushYd: 0, rec: 23, recYd: 295, recTD: 2.1, fumLost: 0.2 }},
@@ -480,17 +480,17 @@ const PROJECTIONS = [
   { name: "Marlin Klein", position: "TE", team: "HOU", projectedStats: { rec: 4, recYd: 36, recTD: 0.2, fumLost: 0 }},
   { name: "Erick All", position: "TE", team: "CIN", projectedStats: { rec: 26, recYd: 235, recTD: 1.9 }},
   { name: "Daniel Bellinger", position: "TE", team: "TEN", projectedStats: { rec: 13, recYd: 113, recTD: 0.5 }},
-  { name: "Ben Sims", position: "TE", team: "MIA", projectedStats: { rec: 7, recYd: 65, recTD: 0.3 }},
+  { name: "Ben Sims", position: "TE", team: "MIA", projectedStats: { rec: 5.4, recYd: 50, recTD: 0.2 }},
   { name: "Eli Stowers", position: "TE", team: "PHI", projectedStats: { rec: 11, recYd: 107, recTD: 0.8, fumLost: 0.1 }},
   { name: "Josh Oliver", position: "TE", team: "MIN", projectedStats: { rec: 17, recYd: 151, recTD: 1.1 }},
   { name: "Davis Allen", position: "TE", team: "LAR", projectedStats: { rec: 8, recYd: 74, recTD: 0.7 }},
   { name: "Tommy Tremble", position: "TE", team: "CAR", projectedStats: { rec: 18, recYd: 177, recTD: 1.3 }},
   { name: "Adam Trautman", position: "TE", team: "DEN", projectedStats: { rec: 12, recYd: 113, recTD: 1 }},
   { name: "Ja'Tavion Sanders", position: "TE", team: "CAR", projectedStats: { rec: 20, recYd: 164, recTD: 1.1 }},
-  { name: "Luke Musgrave", position: "TE", team: "GB", projectedStats: { rec: 24, recYd: 258, recTD: 1 }},
+  { name: "Luke Musgrave", position: "TE", team: "GB", projectedStats: { rec: 18.4, recYd: 197, recTD: 0.8 }},
   { name: "Austin Hooper", position: "TE", team: "ATL", projectedStats: { rec: 21, recYd: 181, recTD: 0.8 }},
   { name: "Jeremy Ruckert", position: "TE", team: "NYJ", projectedStats: { rec: 12, recYd: 96, recTD: 0.5 }},
-  { name: "Grant Calcaterra", position: "TE", team: "PHI", projectedStats: { rec: 21, recYd: 224, recTD: 1 }},
+  { name: "Grant Calcaterra", position: "TE", team: "PHI", projectedStats: { rec: 16.1, recYd: 171, recTD: 0.8 }},
   { name: "Cole Kmet", position: "TE", team: "CHI", projectedStats: { rushYd: 0, rec: 22, recYd: 219, recTD: 1.7 }},
   { name: "Eli Raridon", position: "TE", team: "NE", projectedStats: { rec: 16, recYd: 151, recTD: 1.1, fumLost: 0.1 }},
   { name: "Nate Boerkircher", position: "TE", team: "JAX", projectedStats: { rec: 8, recYd: 74, recTD: 0.6, fumLost: 0.1 }},
@@ -570,7 +570,7 @@ const PROJECTIONS = [
   { name: "Brandon Aiyuk", position: "WR", team: "SF", projectedStats: { rushYd: 0, rushTD: 0, rec: 1, recYd: 3, recTD: 0, fumLost: 0 }},
   { name: "Tre' Harris", position: "WR", team: "LAC", projectedStats: { rushYd: 0, rushTD: 0, rec: 35, recYd: 411, recTD: 2.5, fumLost: 0.4 }},
   { name: "Tyreek Hill", position: "WR", team: "FA", projectedStats: { rushYd: 0, rushTD: 0, rec: 0, recYd: 0, recTD: 0, fumLost: 0 }},
-  { name: "Savion Williams", position: "WR", team: "GB", projectedStats: { rushYd: 47, rushTD: 0.3, rec: 20, recYd: 231, recTD: 1.7, fumLost: 0.3 }},
+  { name: "Savion Williams", position: "WR", team: "GB", projectedStats: { rushYd: 36, rushTD: 0.2, rec: 15.3, recYd: 177, recTD: 1.3, fumLost: 0.2 }},
   { name: "Chris Brazzell II", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rushTD: 0, rec: 21, recYd: 289, recTD: 3, fumLost: 0 }},
   { name: "Xavier Legette", position: "WR", team: "CAR", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 36, recYd: 418, recTD: 2.6, fumLost: 0.4 }},
 ];
@@ -1277,6 +1277,63 @@ const _oddsNorm = s => String(s || '').toLowerCase()
   .replace(/\b(jr|sr|ii|iii|iv|v)\.?$/g, '')
   .replace(/[^a-z]/g, '');
 
+// ── availability (generated by tools/apply-availability.mjs from tools/availability.json) ──
+// Players the board still prices but who cannot play a full season as of the file's
+// asOf date: injured reserve, PUP, suspension, the commissioner's exempt list. Their
+// committed PROJECTIONS rows are already pro-rated to the games they can play. This
+// table lets the request path scale the odds overlay by the same factor (the cached
+// overlay may predate the news, and the team-environment provider cannot see one
+// player's knee) and tells the client why the number is low. Keyed like the overlay:
+// _oddsNorm(name) + '|' + position. Edit tools/availability.json, not this block.
+const AVAILABILITY_GAMES = 17;
+const AVAILABILITY = {
+  "jaydenhiggins|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL in the Aug. 18 joint practice against the Raiders; out for the 2026 season.","asOf":"2026-09-02"},
+  "devinneal|RB": {"status":"IR","gamesOut":17,"note":"Hamstring; placed on injured reserve without a return designation, out for the season.","asOf":"2026-09-02"},
+  "tychandler|RB": {"status":"IR","gamesOut":17,"note":"Season-ending knee injury in the Aug. 22 preseason game against the Rams.","asOf":"2026-09-02"},
+  "calvinaustin|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL at the Aug. 25 practice; out for the 2026 season.","asOf":"2026-09-02"},
+  "joshjacobs|RB": {"status":"Exempt","gamesOut":6,"note":"Commissioner's exempt list since Aug. 30 after misdemeanor charges from a May arrest. No timeline: he stays off until the commissioner removes him, and the first court date is Nov. 17. Six games is a working estimate, revisit weekly.","asOf":"2026-09-02"},
+  "jordyntyson|WR": {"status":"IR","gamesOut":8,"note":"Recurring right hamstring; IR with a return designation, roughly two months out, Week 9 return most likely.","asOf":"2026-09-02"},
+  "jamesconner|RB": {"status":"IR","gamesOut":4,"note":"Foot complications from the 2025 injury; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "adamrandall|RB": {"status":"IR","gamesOut":4,"note":"IR with a return designation at cutdown; first eligible Week 5.","asOf":"2026-09-02"},
+  "isiahpacheco|RB": {"status":"IR","gamesOut":4,"note":"Back injury after an MCL sprain in camp; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "savionwilliams|WR": {"status":"IR","gamesOut":4,"note":"Ankle; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "lukemusgrave|TE": {"status":"PUP","gamesOut":4,"note":"Neck; reserve/PUP, misses at least the first four games and is no lock to return when eligible.","asOf":"2026-09-02"},
+  "tankdell|WR": {"status":"IR","gamesOut":4,"note":"Knee (ACL and MCL) recovery; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "bensims|TE": {"status":"IR","gamesOut":4,"note":"Waived/injured and reverted to IR; misses at least four games.","asOf":"2026-09-02"},
+  "grantcalcaterra|TE": {"status":"IR","gamesOut":4,"note":"Back; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "christiankirk|WR": {"status":"IR","gamesOut":4,"note":"Calf injury from July 26; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
+  "isaacguerendo|RB": {"status":"PUP","gamesOut":4,"note":"Pectoral; reserve/PUP, misses at least the first four games.","asOf":"2026-09-02"},
+  "zachcharbonnet|RB": {"status":"PUP","gamesOut":4,"note":"January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.","asOf":"2026-09-02"},
+  "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"}
+};
+function _availFactor(key) {
+  const a = AVAILABILITY[key];
+  if (!a) return 1;
+  return Math.max(0, Math.min(1, 1 - (Number(a.gamesOut) || 0) / AVAILABILITY_GAMES));
+}
+// Scale an overlay's market-implied totals for the players in AVAILABILITY. A
+// season-long total for a player who will not play the season is not a market
+// view of him, it is a stale row; scaling it here keeps every reader of the
+// overlay (the blend, the column, the board) on the same footing as PROJECTIONS.
+function applyAvailability(overlay) {
+  if (!overlay || typeof overlay !== 'object') return overlay;
+  let out = overlay;
+  for (const key of Object.keys(AVAILABILITY)) {
+    const v = overlay[key];
+    if (!v) continue;
+    const f = _availFactor(key);
+    if (f >= 1) continue;
+    if (out === overlay) out = { ...overlay };
+    const scaled = {};
+    for (const [k, val] of Object.entries(v)) {
+      const n = Number(val);
+      scaled[k] = Number.isFinite(n) ? _oddsRound(n * f) : val;
+    }
+    out[key] = scaled;
+  }
+  return out;
+}
+
 function _oddsImpliedProb(american) {
   const n = Number(american);
   if (!Number.isFinite(n) || n === 0) return null;
@@ -1603,10 +1660,10 @@ function buildVegasOverlay(rows) {
 // prices move; everything else is passed through untouched, so a player can
 // carry Vegas yardage next to committed TDs. That is intentional.
 function blendProjections(overlay) {
-  if (!overlay) return PROJECTIONS;
+  if (!overlay) return _availPool(PROJECTIONS);
   return PROJECTIONS.map(p => {
     const v = overlay[_oddsNorm(p.name) + '|' + p.position];
-    if (!v) return p;
+    if (!v) return _withAvailability(p);
     const stats = { ...p.projectedStats };
     // vegas[k] = [committed, marketImplied, blended] — shipped to the client so the
     // cheat sheet can flag players whose ranking the odds moved and show the numbers.
@@ -1621,8 +1678,19 @@ function blendProjections(overlay) {
       vg[k] = [before, _oddsRound(n), stats[k]];
       touched = true;
     }
-    return touched ? { ...p, projectedStats: stats, vegas: vg } : p;
+    return _withAvailability(touched ? { ...p, projectedStats: stats, vegas: vg } : p);
   });
+}
+// The client shows `status` in its injury column (and counts it in the player's
+// risk score) until /api/live answers with something fresher.
+function _withAvailability(p) {
+  const a = AVAILABILITY[_oddsNorm(p.name) + '|' + p.position];
+  return a ? { ...p, status: a.status, gamesOut: a.gamesOut, note: a.note } : p;
+}
+// The committed pool with statuses attached, or the pool itself when no row in
+// it is listed (so callers that compare by reference still see PROJECTIONS).
+function _availPool(pool) {
+  return pool.some(p => AVAILABILITY[_oddsNorm(p.name) + '|' + p.position]) ? pool.map(_withAvailability) : pool;
 }
 
 // ── §9c. "Vegas vs. Rankings & ADP" column ─────────────────────────────────
@@ -2141,7 +2209,7 @@ async function oddsCacheRead(env) {
     const row = await env.LEADS_DB.prepare('SELECT payload, provider, matched, updated_at FROM odds_overlay WHERE id=1').first();
     if (!row || !row.payload) return null;
     if (!row.updated_at || Date.now() - row.updated_at > ODDS_MAX_AGE_MS) return null;
-    return { overlay: JSON.parse(row.payload), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
+    return { overlay: applyAvailability(JSON.parse(row.payload)), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
   } catch (e) { return null; }
 }
 // The column's money-line evidence: implied points per game per team, and the

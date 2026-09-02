@@ -4263,7 +4263,7 @@ function byeOf(team) {
   t = BYE_ALIAS[t] || t;
   return BYE_WEEKS[t] || null;
 }
-const INJURIES = [[/patrick mahomes/i, 'ACL/LCL recovery, on track'], [/tucker kraft/i, 'ACL, PUP watch'], [/cam skattebo/i, 'Injury recovery']];
+const INJURIES = [[/Jayden Higgins/i, 'IR: out for the season'], [/Devin Neal/i, 'IR: out for the season'], [/Ty Chandler/i, 'IR: out for the season'], [/Calvin Austin III/i, 'IR: out for the season'], [/Josh Jacobs/i, 'Exempt: out 6+ games'], [/Jordyn Tyson/i, 'IR: out 8+ games'], [/James Conner/i, 'IR: out 4+ games'], [/Adam Randall/i, 'IR: out 4+ games'], [/Isiah Pacheco/i, 'IR: out 4+ games'], [/Savion Williams/i, 'IR: out 4+ games'], [/Luke Musgrave/i, 'PUP: out 4+ games'], [/Tank Dell/i, 'IR: out 4+ games'], [/Ben Sims/i, 'IR: out 4+ games'], [/Grant Calcaterra/i, 'IR: out 4+ games'], [/Christian Kirk/i, 'IR: out 4+ games'], [/Isaac Guerendo/i, 'PUP: out 4+ games'], [/Zach Charbonnet/i, 'PUP: out 4+ games'], [/Jeremy McNichols/i, 'IR: out 4+ games']];
 function injuryOf(player) {
   if (!player) return null;
   if (player.injuryStatus) return player.injuryStatus;
@@ -16406,7 +16406,7 @@ function PlayersRail({
 }
 const STORAGE_KEY = 'iron_tuna_draft_state_v2';
 const PROJ_KEY = 'tn$9xQ27z';
-const PROJ_VERSION = '2026.8.30'; // bumped 2026-08-30: owner-supplied 2026 projections (423-player upload)
+const PROJ_VERSION = '2026.9.2'; // bumped 2026-09-02: availability pro-rating (tools/availability.json)
 function _xb64decode(s, key) {
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
@@ -16430,6 +16430,7 @@ function buildInitialPlayers(projectionsSource) {
     team: p.team,
     projectedStats: p.projectedStats,
     vegas: p.vegas || null,
+    injuryStatus: p.status || null,
     projectedPoints: 0,
     auctionValue: 0,
     inflatedValue: 0,
