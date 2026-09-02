@@ -6154,3 +6154,170 @@ sandbox does with the worker's user agent.
 --check` and `apply-availability --check` are clean. Local dev needs
 `npm i --no-save playwright playwright-core react react-dom` for the browser
 tests; all four are gitignored.
+
+---
+
+## 50. September 2: the kicker and defence boards were outcomes, not projections
+
+Everything in §9c and §48 moves skill players. K and DEF never moved at all:
+`TEAMENV_TD_STATS` and `TEAMENV_YARD_STATS` list six offensive stats and nothing
+else, so the two positions whose entire line **is** team scoring environment were
+the two the market never touched. The committed rows were a hand-adjusted feed
+from a season ago and had drifted a long way from anything defensible.
+
+### 50a. What was actually wrong
+
+Measured against the 2026 game lines (nflverse `schedules/games.csv`, 112 of 272
+regular-season games priced as of 2 September, weeks 1-6 complete) and against
+the 64 real team-seasons in `stats_team_reg_2024.csv` / `stats_team_reg_2025.csv`:
+
+| | Committed | Market | Real seasons |
+|---|---|---|---|
+| Points allowed, SD | **61.9** | 24.4 | 49.1 / 51.6 / 60.5 |
+| Points allowed, range | 318-520 | 355-457 | 280-534 |
+| Field goals made, SD | 3.3 | — | 5.9 / 6.1 |
+| League sacks | 1390 | — | 1304 / 1278 |
+| League fumble recoveries | 303 | — | 268 / 246 |
+| League defensive TDs | **77** | — | 48 / 47 |
+
+Three separate faults, and the first is the one that matters:
+
+- **The spread was the spread of OUTCOMES.** A projection is an expectation, so
+  it has to be narrower than a season by roughly however predictable the stat
+  is. Year-over-year club correlation, 2024 -> 2025: points allowed 0.45 (and
+  **-0.03** from 2023 -> 2024), sacks 0.33, `fg_made` 0.33, interceptions 0.13,
+  **fumble recoveries 0.01**. The board shrank none of it. Regressing committed
+  points allowed on the market's view gave a slope of **2.06** — twice as spread
+  out as the people with money at risk.
+- **Level errors on three stats.** Every defence was floored at 2 defensive
+  touchdowns when real clubs average 1.5 and six to eight score none at all;
+  that alone invented about thirty touchdowns a season. Fumble recoveries ran
+  13-23% hot, sacks 7-9%, with Atlanta at 66 — a near-record for a club that had
+  57 the year before.
+- **The kicker board asserted a signal that is not in the data.** Over those 64
+  team-seasons, `pat_made` correlates with team points at **r = 0.96** and
+  `fg_made` at **r = 0.15**. A kicker on a bad offence trades touchdowns for
+  field goals and the two effects cancel. The committed board spread field goals
+  22 to 36 anyway, which is 42 fantasy points of noise.
+
+And four clubs were pointing at the wrong man entirely (Miami, New Orleans,
+Washington, the Jets all listed a kicker who is on another roster or a practice
+squad), while **Cleveland and the Giants had no kicker at all** — 30 rows for a
+32-club league.
+
+### 50b. The ratings fit, and why an average would not do
+
+Books post lines a few weeks out. Averaging the priced games and multiplying by
+17 judges a club on whoever it drew in September, which is exactly the schedule
+bias a points-allowed line must not inherit. So both copies fit
+
+```
+points(offence i vs defence j, at home h) = mu + off_i + def_j + hfa*h
+```
+
+over every priced side of every priced game, then project the ratings across the
+**whole** schedule — `games.csv` carries all 272 fixtures whether or not a line
+has been posted. Ridge 0.25 on the club terms only; `mu` and `hfa` are never
+penalised, because shrinking the intercept drags the league's scoring level down
+with it. On the real file the fit lands at **0.59 points per game RMSE** and a
+home field of **0.77**.
+
+Unpriced fixtures are **kept**. They carry no price and they are what makes a
+full-season projection possible. A junk line (total outside 20-80, spread over
+30) loses its price and keeps its fixture.
+
+### 50c. Where the code lives
+
+Two copies of the same maths, for the usual no-bundler reason, and one test that
+fails if they drift:
+
+| File | What it is |
+|---|---|
+| `tools/team-market.mjs` | the ratings fit and the schedule-complete projection, offline |
+| `tools/k-def-model.mjs` | the K/DEF model, with every constant next to the measurement behind it |
+| `_worker.js` "team market ratings" | the same two, on the daily cron |
+| `tools/test-team-market.mjs` | runs both against one 16-club fixture; **this is the drift alarm** |
+| `tools/rebaseline-k-def.mjs` | rewrites the committed rows; writes `tools/team-market.json` |
+| `tools/test-k-def.mjs` | guards what it wrote |
+
+`tools/team-market.json` is the snapshot the committed rows were built from.
+`test-k-def.mjs` checks each row still sits within tolerance of it — shrinkage is
+not idempotent, so re-running the blend is **not** the check; distance from the
+snapshot is.
+
+### 50d. Two paths out of one input
+
+`buildTeamEnvOverlay` now splits:
+
+- **Skill players** keep the ratio treatment of §9c, because the committed
+  projections already have an opinion about which offences are good and scaling
+  by raw Vegas points would apply it twice.
+- **Kickers and defences do not.** Their line is team environment and nothing
+  else, so the market's implied points go in as the estimate itself, exactly as a
+  player prop would. A kicker gets `fgMade`/`fgMissed`/`xpMade`/`xpMissed`; a
+  defence gets `ptsAllowed` **and nothing else** — sacks, interceptions and
+  fumble recoveries are nobody's market, and inventing an opinion about them
+  would be worse than saying nothing.
+
+Because the committed rows were built from the same model, the blend is a no-op
+on a day the lines have not moved and tracks the market on a day they have.
+
+The four kicker stats and `ptsAllowed` have entries in `ODDS_BANDS` but
+**deliberately none in `ODDS_CV`**. `buildVegasOverlay` gates on `ODDS_CV`, so a
+props response claiming to price `ptsAllowed` is still rejected while the
+team-environment path can emit it.
+
+### 50e. The provider's shape changed
+
+`fetchTeamEnvNflverse` returned `{ TEAM: impliedPointsPerGame }` and now returns
+`{ TEAM: { pf, pa, games } }`, a schedule-complete season. Callers that wanted a
+per-game number divide at the boundary — `runOddsRefresh` does exactly that
+before `oddsCtxWrite`, so the Vegas column's dateline still prints the per-game
+figure a reader has always seen. `tools/test-worker-availability.mjs` and
+`tools/test-player-odds.mjs` build the new shape in their fixtures.
+
+### 50f. What the reader sees
+
+Points allowed SD is **61.9 -> 28.9**; the kicker board's top-to-bottom spread is
+**63 -> 32** fantasy points and the defence board's **61 -> 40**. Three clubs are
+new to the top twelve kickers and four to the top twelve defences. Both position
+groups lose points in absolute terms (the phantom defensive touchdowns are gone),
+which correctly makes K and DEF cost less against the skill positions in an
+auction.
+
+The player card's K/DEF panel used to say no book prices these positions. That is
+now only half true and the copy says the true half: no book posts a market on an
+individual kicker or defence, the projection is still market-driven because the
+game lines price the club, and the odds column ranks the four skill positions
+because that is where there is an auction price to disagree about.
+
+### 50g. What this does not do
+
+- **The odds column and the auction board still cover QB/RB/WR/TE.**
+  `COLUMN_CURVE` has no K or DEF curve, so there is no price for the two boards
+  to disagree about. Extending it is a separate job.
+- **No constant here is backtested against realised 2026 results**, because the
+  season has not been played. They are fitted on 2024-25 and shrunk by measured
+  year-over-year stickiness, which is the best available and not the same thing.
+- **`fumRec` still carries a little spread** (`fumRecKeep` 0.35) on a stat whose
+  year-over-year correlation is 0.01. Statistically it should be flat. It is left
+  slightly live so a genuine roster view can show; if you want it honest, set the
+  constant to 0.
+- **`defTD` lands in a 1.4-1.8 band**, narrower than the 1-2 the analysis called
+  for, because the takeaway index it tilts on is itself now shrunk. That is
+  internally consistent — we cannot claim to know who returns touchdowns when we
+  have just admitted we cannot predict takeaways — but it is worth knowing.
+
+### 50h. Re-running it
+
+```bash
+node tools/rebaseline-k-def.mjs --dry     # see the diff first, always
+node tools/rebaseline-k-def.mjs
+node tools/build-front.mjs                # player-search.js, for any new kicker
+node tools/build-default-board.mjs
+node tools/test-k-def.mjs tools/test-team-market.mjs
+```
+
+Kicker names come from the nflverse `rosters/roster_<season>.csv` release, one
+active kicker per club. A club with none, or more than one, keeps the committed
+spelling and the run says so rather than guessing.

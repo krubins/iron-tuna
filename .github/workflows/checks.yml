@@ -235,6 +235,19 @@ jobs:
       - name: Odds pipeline tests (worker, incl. worker/tool sync)
         run: node tools/test-worker-odds.mjs
 
+      # The team ratings fit and the kicker/defence model live in _worker.js AND
+      # in tools/, for the same no-bundler reason. This runs both against one
+      # fixture, so a change to one copy fails here.
+      - name: Team market ratings (worker/tool sync)
+        run: node tools/test-team-market.mjs
+
+      # The committed K and DEF rows themselves: coverage (a kicker for every
+      # club), the market snapshot they were built from, and the shape a
+      # projection has to have — spread narrower than a season of outcomes, and
+      # league totals that match what the NFL actually produces.
+      - name: Committed kicker and defence rows
+        run: node tools/test-k-def.mjs
+
       # Everything else with assertions in tools/. These are plain node, no
       # network beyond what the odds suites already pull, and they cover the
       # pieces most likely to drift: the reader's own-league pricing, the Vegas

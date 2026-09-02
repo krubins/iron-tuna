@@ -498,70 +498,72 @@ const PROJECTIONS = [
   { name: "Matthew Hibner", position: "TE", team: "BAL", projectedStats: { rec: 3, recYd: 36, recTD: 0.3 }},
   { name: "Elijah Higgins", position: "TE", team: "ARI", projectedStats: { rec: 21, recYd: 182, recTD: 0.7, fumLost: 0.2 }},
   { name: "Nate Adkins", position: "TE", team: "DEN", projectedStats: { rec: 8, recYd: 69, recTD: 0.7 }},
-  // ── K (CBS/SportsLine 2026, adjusted) ──
-  { name: "Harrison Mevis", position: "K", team: "LAR", projectedStats: { fgMade: 30, fgMissed: 4, xpMade: 55, xpMissed: 1 }},
-  { name: "Jake Bates", position: "K", team: "DET", projectedStats: { fgMade: 28, fgMissed: 4, xpMade: 49, xpMissed: 2 }},
-  { name: "Jason Myers", position: "K", team: "SEA", projectedStats: { fgMade: 33, fgMissed: 5, xpMade: 43, xpMissed: 0 }},
-  { name: "Spencer Shrader", position: "K", team: "IND", projectedStats: { fgMade: 34, fgMissed: 5, xpMade: 51, xpMissed: 2 }},
-  { name: "Brandon Aubrey", position: "K", team: "DAL", projectedStats: { fgMade: 35, fgMissed: 5, xpMade: 46, xpMissed: 1 }},
-  { name: "Nick Folk", position: "K", team: "ATL", projectedStats: { fgMade: 35, fgMissed: 3, xpMade: 47, xpMissed: 0 }},
-  { name: "Cam Little", position: "K", team: "JAX", projectedStats: { fgMade: 30, fgMissed: 4, xpMade: 40, xpMissed: 1 }},
-  { name: "Tyler Loop", position: "K", team: "BAL", projectedStats: { fgMade: 29, fgMissed: 5, xpMade: 44, xpMissed: 2 }},
-  { name: "Cairo Santos", position: "K", team: "CHI", projectedStats: { fgMade: 30, fgMissed: 4, xpMade: 40, xpMissed: 1 }},
-  { name: "Evan McPherson ", position: "K", team: "CIN", projectedStats: { fgMade: 30, fgMissed: 4, xpMade: 47, xpMissed: 3 }},
-  { name: "Wil Lutz", position: "K", team: "DEN", projectedStats: { fgMade: 30, fgMissed: 6, xpMade: 44, xpMissed: 1 }},
-  { name: "Tyler Bass", position: "K", team: "BUF", projectedStats: { fgMade: 26, fgMissed: 5, xpMade: 46, xpMissed: 3 }},
-  { name: "Andres Borregales", position: "K", team: "NE", projectedStats: { fgMade: 27, fgMissed: 5, xpMade: 44, xpMissed: 1 }},
-  { name: "Will Reichard", position: "K", team: "MIN", projectedStats: { fgMade: 31, fgMissed: 4, xpMade: 34, xpMissed: 1 }},
-  { name: "Jake Moody", position: "K", team: "WAS", projectedStats: { fgMade: 28, fgMissed: 6, xpMade: 43, xpMissed: 2 }},
-  { name: "Chase McLaughlin", position: "K", team: "TB", projectedStats: { fgMade: 31, fgMissed: 3, xpMade: 35, xpMissed: 0 }},
-  { name: "Jake Elliott", position: "K", team: "PHI", projectedStats: { fgMade: 26, fgMissed: 7, xpMade: 41, xpMissed: 2 }},
-  { name: "Ka'imi Fairbairn", position: "K", team: "HOU", projectedStats: { fgMade: 36, fgMissed: 4, xpMade: 31, xpMissed: 1 }},
-  { name: "Cameron Dicker", position: "K", team: "LAC", projectedStats: { fgMade: 34, fgMissed: 4, xpMade: 41, xpMissed: 1 }},
-  { name: "Charlie Smyth", position: "K", team: "NO", projectedStats: { fgMade: 30, fgMissed: 6, xpMade: 37, xpMissed: 1 }},
-  { name: "Chad Ryland", position: "K", team: "ARI", projectedStats: { fgMade: 26, fgMissed: 7, xpMade: 37, xpMissed: 1 }},
-  { name: "Chris Boswell", position: "K", team: "PIT", projectedStats: { fgMade: 31, fgMissed: 4, xpMade: 32, xpMissed: 0 }},
-  { name: "Zane Gonzalez", position: "K", team: "MIA", projectedStats: { fgMade: 27, fgMissed: 4, xpMade: 37, xpMissed: 2 }},
-  { name: "Trey Smack", position: "K", team: "GB", projectedStats: { fgMade: 28, fgMissed: 6, xpMade: 38, xpMissed: 5 }},
-  { name: "Eddy Pineiro", position: "K", team: "SF", projectedStats: { fgMade: 32, fgMissed: 4, xpMade: 42, xpMissed: 1 }},
-  { name: "Matt Gay", position: "K", team: "LV", projectedStats: { fgMade: 23, fgMissed: 8, xpMade: 33, xpMissed: 1 }},
-  { name: "Jason Sanders", position: "K", team: "NYJ", projectedStats: { fgMade: 29, fgMissed: 5, xpMade: 35, xpMissed: 3 }},
-  { name: "Harrison Butker", position: "K", team: "KC", projectedStats: { fgMade: 31, fgMissed: 5, xpMade: 41, xpMissed: 1 }},
-  { name: "Joey Slye", position: "K", team: "TEN", projectedStats: { fgMade: 28, fgMissed: 5, xpMade: 32, xpMissed: 2 }},
-  { name: "Ryan Fitzgerald", position: "K", team: "CAR", projectedStats: { fgMade: 22, fgMissed: 5, xpMade: 30, xpMissed: 3 }},
-  // ── DEF (CBS/SportsLine 2026, adjusted) ──
-  { name: "Houston Texans", position: "DEF", team: "HOU", projectedStats: { sacks: 42, fumRec: 11, ints: 12, defTD: 2, safety: 0, ptsAllowed: 322 }},
-  { name: "Denver Broncos", position: "DEF", team: "DEN", projectedStats: { sacks: 45, fumRec: 7, ints: 13, defTD: 2, safety: 0, ptsAllowed: 318 }},
-  { name: "Seattle Seahawks", position: "DEF", team: "SEA", projectedStats: { sacks: 42, fumRec: 7, ints: 13, defTD: 3, safety: 0, ptsAllowed: 331 }},
-  { name: "Los Angeles Rams", position: "DEF", team: "LAR", projectedStats: { sacks: 44, fumRec: 8, ints: 12, defTD: 2, safety: 0, ptsAllowed: 332 }},
-  { name: "Minnesota Vikings", position: "DEF", team: "MIN", projectedStats: { sacks: 38, fumRec: 9, ints: 11, defTD: 2, safety: 0, ptsAllowed: 380 }},
-  { name: "Philadelphia Eagles", position: "DEF", team: "PHI", projectedStats: { sacks: 39, fumRec: 7, ints: 12, defTD: 2, safety: 0, ptsAllowed: 333 }},
-  { name: "Detroit Lions", position: "DEF", team: "DET", projectedStats: { sacks: 39, fumRec: 9, ints: 13, defTD: 2, safety: 0, ptsAllowed: 336 }},
-  { name: "Pittsburgh Steelers", position: "DEF", team: "PIT", projectedStats: { sacks: 44, fumRec: 10, ints: 12, defTD: 2, safety: 0, ptsAllowed: 319 }},
-  { name: "Los Angeles Chargers", position: "DEF", team: "LAC", projectedStats: { sacks: 40, fumRec: 8, ints: 13, defTD: 2, safety: 0, ptsAllowed: 371 }},
-  { name: "Buffalo Bills", position: "DEF", team: "BUF", projectedStats: { sacks: 46, ints: 16, fumRec: 11, defTD: 3, safety: 0, ptsAllowed: 396 }},
-  { name: "Baltimore Ravens", position: "DEF", team: "BAL", projectedStats: { sacks: 44, fumRec: 8, ints: 12, defTD: 2, safety: 0, ptsAllowed: 330 }},
-  { name: "Chicago Bears", position: "DEF", team: "CHI", projectedStats: { sacks: 44, ints: 16, fumRec: 13, defTD: 3, safety: 0, ptsAllowed: 393 }},
-  { name: "Atlanta Falcons", position: "DEF", team: "ATL", projectedStats: { sacks: 66, ints: 15, fumRec: 10, defTD: 3, safety: 0, ptsAllowed: 416 }},
-  { name: "New England Patriots", position: "DEF", team: "NE", projectedStats: { sacks: 41, fumRec: 6, ints: 13, defTD: 2, safety: 0, ptsAllowed: 353 }},
-  { name: "Indianapolis Colts", position: "DEF", team: "IND", projectedStats: { sacks: 40, ints: 13, fumRec: 11, defTD: 3, safety: 0, ptsAllowed: 401 }},
-  { name: "New Orleans Saints", position: "DEF", team: "NO", projectedStats: { sacks: 54, ints: 14, fumRec: 12, defTD: 3, safety: 0, ptsAllowed: 431 }},
-  { name: "Green Bay Packers", position: "DEF", team: "GB", projectedStats: { sacks: 41, fumRec: 7, ints: 12, defTD: 2, safety: 0, ptsAllowed: 369 }},
-  { name: "Kansas City Chiefs", position: "DEF", team: "KC", projectedStats: { sacks: 41, fumRec: 7, ints: 12, defTD: 2, safety: 0, ptsAllowed: 359 }},
-  { name: "Jacksonville Jaguars", position: "DEF", team: "JAX", projectedStats: { sacks: 41, fumRec: 7, ints: 13, defTD: 2, safety: 0, ptsAllowed: 388 }},
-  { name: "Cleveland Browns", position: "DEF", team: "CLE", projectedStats: { sacks: 41, fumRec: 7, ints: 11, defTD: 2, safety: 0, ptsAllowed: 341 }},
-  { name: "Cincinnati Bengals", position: "DEF", team: "CIN", projectedStats: { sacks: 47, ints: 13, fumRec: 13, defTD: 3, safety: 0, ptsAllowed: 447 }},
-  { name: "Miami Dolphins", position: "DEF", team: "MIA", projectedStats: { sacks: 52, ints: 10, fumRec: 13, defTD: 3, safety: 0, ptsAllowed: 474 }},
-  { name: "Las Vegas Raiders", position: "DEF", team: "LV", projectedStats: { sacks: 46, ints: 11, fumRec: 13, defTD: 2, safety: 0, ptsAllowed: 474 }},
-  { name: "Tampa Bay Buccaneers", position: "DEF", team: "TB", projectedStats: { sacks: 42, fumRec: 5, ints: 12, defTD: 2, safety: 0, ptsAllowed: 363 }},
-  { name: "Washington Commanders", position: "DEF", team: "WAS", projectedStats: { sacks: 48, ints: 11, fumRec: 9, defTD: 3, safety: 0, ptsAllowed: 455 }},
-  { name: "New York Giants", position: "DEF", team: "NYG", projectedStats: { sacks: 40, ints: 11, fumRec: 11, defTD: 3, safety: 0, ptsAllowed: 468 }},
-  { name: "Carolina Panthers", position: "DEF", team: "CAR", projectedStats: { sacks: 43, ints: 13, fumRec: 9, defTD: 2, safety: 0, ptsAllowed: 421 }},
-  { name: "Tennessee Titans", position: "DEF", team: "TEN", projectedStats: { sacks: 53, ints: 10, fumRec: 12, defTD: 3, safety: 0, ptsAllowed: 520 }},
-  { name: "San Francisco 49ers", position: "DEF", team: "SF", projectedStats: { sacks: 33, ints: 11, fumRec: 12, defTD: 3, safety: 0, ptsAllowed: 409 }},
-  { name: "Dallas Cowboys", position: "DEF", team: "DAL", projectedStats: { sacks: 44, ints: 9, fumRec: 11, defTD: 2, safety: 0, ptsAllowed: 497 }},
-  { name: "Arizona Cardinals", position: "DEF", team: "ARI", projectedStats: { sacks: 35, ints: 12, fumRec: 12, defTD: 2, safety: 0, ptsAllowed: 520 }},
-  { name: "New York Jets", position: "DEF", team: "NYJ", projectedStats: { sacks: 35, ints: 12, fumRec: 8, defTD: 3, safety: 0, ptsAllowed: 492 }},
+  // ── K (2026 game lines as of 2026-09-02, tools/rebaseline-k-def.mjs) ──
+  { name: "Ka'imi Fairbairn", position: "K", team: "HOU", projectedStats: { fgMade: 31.4, fgMissed: 4.8, xpMade: 34.9, xpMissed: 1.5 }},
+  { name: "Wil Lutz", position: "K", team: "DEN", projectedStats: { fgMade: 29.2, fgMissed: 5.4, xpMade: 37.6, xpMissed: 1.6 }},
+  { name: "Jason Myers", position: "K", team: "SEA", projectedStats: { fgMade: 30.8, fgMissed: 5.2, xpMade: 41.8, xpMissed: 1.8 }},
+  { name: "Harrison Mevis", position: "K", team: "LAR", projectedStats: { fgMade: 30.2, fgMissed: 4.9, xpMade: 48.5, xpMissed: 2.1 }},
+  { name: "Will Reichard", position: "K", team: "MIN", projectedStats: { fgMade: 29.7, fgMissed: 4.7, xpMade: 36.4, xpMissed: 1.6 }},
+  { name: "Jake Elliott", position: "K", team: "PHI", projectedStats: { fgMade: 28.2, fgMissed: 5.8, xpMade: 39.9, xpMissed: 1.7 }},
+  { name: "Jake Bates", position: "K", team: "DET", projectedStats: { fgMade: 29.4, fgMissed: 4.8, xpMade: 46.3, xpMissed: 2 }},
+  { name: "Chris Boswell", position: "K", team: "PIT", projectedStats: { fgMade: 29.4, fgMissed: 4.7, xpMade: 33.3, xpMissed: 1.5 }},
+  { name: "Cameron Dicker", position: "K", team: "LAC", projectedStats: { fgMade: 31, fgMissed: 4.8, xpMade: 39.7, xpMissed: 1.7 }},
+  { name: "Tyler Bass", position: "K", team: "BUF", projectedStats: { fgMade: 28.7, fgMissed: 5.2, xpMade: 45.3, xpMissed: 2 }},
+  { name: "Tyler Loop", position: "K", team: "BAL", projectedStats: { fgMade: 29.7, fgMissed: 5.2, xpMade: 44.3, xpMissed: 1.9 }},
+  { name: "Cairo Santos", position: "K", team: "CHI", projectedStats: { fgMade: 29.8, fgMissed: 4.8, xpMade: 41.6, xpMissed: 1.8 }},
+  { name: "Nick Folk", position: "K", team: "ATL", projectedStats: { fgMade: 30.8, fgMissed: 4.4, xpMade: 37.2, xpMissed: 1.6 }},
+  { name: "Andy Borregales", position: "K", team: "NE", projectedStats: { fgMade: 28.6, fgMissed: 5.1, xpMade: 41, xpMissed: 1.8 }},
+  { name: "Spencer Shrader", position: "K", team: "IND", projectedStats: { fgMade: 30.9, fgMissed: 5.1, xpMade: 41.4, xpMissed: 1.8 }},
+  { name: "Daniel Carlson", position: "K", team: "NO", projectedStats: { fgMade: 29.2, fgMissed: 5.4, xpMade: 35.4, xpMissed: 1.6 }},
+  { name: "Trey Smack", position: "K", team: "GB", projectedStats: { fgMade: 29, fgMissed: 5.5, xpMade: 40.4, xpMissed: 1.8 }},
+  { name: "Harrison Butker", position: "K", team: "KC", projectedStats: { fgMade: 30.1, fgMissed: 5.1, xpMade: 40.9, xpMissed: 1.8 }},
+  { name: "Cam Little", position: "K", team: "JAX", projectedStats: { fgMade: 29.5, fgMissed: 4.7, xpMade: 39, xpMissed: 1.7 }},
+  { name: "Andre Szmyt", position: "K", team: "CLE", projectedStats: { fgMade: 28.4, fgMissed: 5, xpMade: 27.9, xpMissed: 1.2 }},
+  { name: "Evan McPherson", position: "K", team: "CIN", projectedStats: { fgMade: 30, fgMissed: 4.8, xpMade: 45.3, xpMissed: 2 }},
+  { name: "Riley Patterson", position: "K", team: "MIA", projectedStats: { fgMade: 27.5, fgMissed: 4.6, xpMade: 30.6, xpMissed: 1.3 }},
+  { name: "Matt Gay", position: "K", team: "LV", projectedStats: { fgMade: 26.1, fgMissed: 5.7, xpMade: 29.7, xpMissed: 1.3 }},
+  { name: "Chase McLaughlin", position: "K", team: "TB", projectedStats: { fgMade: 29.9, fgMissed: 4.4, xpMade: 37.9, xpMissed: 1.7 }},
+  { name: "Drew Stevens", position: "K", team: "WAS", projectedStats: { fgMade: 28.8, fgMissed: 5.4, xpMade: 39.4, xpMissed: 1.7 }},
+  { name: "Dominic Zvada", position: "K", team: "NYG", projectedStats: { fgMade: 29.1, fgMissed: 5.1, xpMade: 35.8, xpMissed: 1.6 }},
+  { name: "Ryan Fitzgerald", position: "K", team: "CAR", projectedStats: { fgMade: 26.2, fgMissed: 5.1, xpMade: 32.1, xpMissed: 1.4 }},
+  { name: "Joey Slye", position: "K", team: "TEN", projectedStats: { fgMade: 28.2, fgMissed: 5, xpMade: 32.1, xpMissed: 1.4 }},
+  { name: "Eddy Pineiro", position: "K", team: "SF", projectedStats: { fgMade: 30.6, fgMissed: 4.8, xpMade: 43, xpMissed: 1.9 }},
+  { name: "Brandon Aubrey", position: "K", team: "DAL", projectedStats: { fgMade: 31.7, fgMissed: 5.2, xpMade: 44.4, xpMissed: 1.9 }},
+  { name: "Chad Ryland", position: "K", team: "ARI", projectedStats: { fgMade: 27.1, fgMissed: 5.6, xpMade: 29.9, xpMissed: 1.3 }},
+  { name: "Blake Grupe", position: "K", team: "NYJ", projectedStats: { fgMade: 28.2, fgMissed: 4.9, xpMade: 29.6, xpMissed: 1.3 }},
+  // ── DEF (2026 game lines as of 2026-09-02, tools/rebaseline-k-def.mjs) ──
+  { name: "Houston Texans", position: "DEF", team: "HOU", projectedStats: { sacks: 39.9, ints: 12, fumRec: 8.5, defTD: 1.5, safety: 0, ptsAllowed: 350 }},
+  { name: "Denver Broncos", position: "DEF", team: "DEN", projectedStats: { sacks: 40.9, ints: 13, fumRec: 7.1, defTD: 1.5, safety: 0, ptsAllowed: 351 }},
+  { name: "Seattle Seahawks", position: "DEF", team: "SEA", projectedStats: { sacks: 39.9, ints: 13, fumRec: 7.1, defTD: 1.5, safety: 0, ptsAllowed: 352 }},
+  { name: "Los Angeles Rams", position: "DEF", team: "LAR", projectedStats: { sacks: 40.6, ints: 12, fumRec: 7.5, defTD: 1.5, safety: 0, ptsAllowed: 363 }},
+  { name: "Minnesota Vikings", position: "DEF", team: "MIN", projectedStats: { sacks: 38.5, ints: 11, fumRec: 7.8, defTD: 1.4, safety: 0, ptsAllowed: 383 }},
+  { name: "Philadelphia Eagles", position: "DEF", team: "PHI", projectedStats: { sacks: 38.8, ints: 12, fumRec: 7.1, defTD: 1.4, safety: 0, ptsAllowed: 356 }},
+  { name: "Detroit Lions", position: "DEF", team: "DET", projectedStats: { sacks: 38.8, ints: 13, fumRec: 7.8, defTD: 1.6, safety: 0, ptsAllowed: 383 }},
+  { name: "Pittsburgh Steelers", position: "DEF", team: "PIT", projectedStats: { sacks: 40.6, ints: 12, fumRec: 8.2, defTD: 1.5, safety: 0, ptsAllowed: 364 }},
+  { name: "Los Angeles Chargers", position: "DEF", team: "LAC", projectedStats: { sacks: 39.2, ints: 13, fumRec: 7.5, defTD: 1.5, safety: 0, ptsAllowed: 372 }},
+  { name: "Buffalo Bills", position: "DEF", team: "BUF", projectedStats: { sacks: 41.3, ints: 16, fumRec: 8.5, defTD: 1.8, safety: 0, ptsAllowed: 386 }},
+  { name: "Baltimore Ravens", position: "DEF", team: "BAL", projectedStats: { sacks: 40.6, ints: 12, fumRec: 7.5, defTD: 1.5, safety: 0, ptsAllowed: 364 }},
+  { name: "Chicago Bears", position: "DEF", team: "CHI", projectedStats: { sacks: 40.6, ints: 16, fumRec: 9.2, defTD: 1.8, safety: 0, ptsAllowed: 395 }},
+  { name: "Atlanta Falcons", position: "DEF", team: "ATL", projectedStats: { sacks: 48.3, ints: 15, fumRec: 8.2, defTD: 1.7, safety: 0, ptsAllowed: 415 }},
+  { name: "New England Patriots", position: "DEF", team: "NE", projectedStats: { sacks: 39.5, ints: 13, fumRec: 6.8, defTD: 1.5, safety: 0, ptsAllowed: 364 }},
+  { name: "Indianapolis Colts", position: "DEF", team: "IND", projectedStats: { sacks: 39.2, ints: 13, fumRec: 8.5, defTD: 1.6, safety: 0, ptsAllowed: 415 }},
+  { name: "New Orleans Saints", position: "DEF", team: "NO", projectedStats: { sacks: 44.1, ints: 14, fumRec: 8.9, defTD: 1.7, safety: 0, ptsAllowed: 404 }},
+  { name: "Green Bay Packers", position: "DEF", team: "GB", projectedStats: { sacks: 39.5, ints: 12, fumRec: 7.1, defTD: 1.4, safety: 0, ptsAllowed: 381 }},
+  { name: "Kansas City Chiefs", position: "DEF", team: "KC", projectedStats: { sacks: 39.5, ints: 12, fumRec: 7.1, defTD: 1.4, safety: 0, ptsAllowed: 362 }},
+  { name: "Jacksonville Jaguars", position: "DEF", team: "JAX", projectedStats: { sacks: 39.5, ints: 13, fumRec: 7.1, defTD: 1.5, safety: 0, ptsAllowed: 384 }},
+  { name: "Cleveland Browns", position: "DEF", team: "CLE", projectedStats: { sacks: 39.5, ints: 11, fumRec: 7.1, defTD: 1.4, safety: 0, ptsAllowed: 384 }},
+  { name: "Cincinnati Bengals", position: "DEF", team: "CIN", projectedStats: { sacks: 41.6, ints: 13, fumRec: 9.2, defTD: 1.6, safety: 0, ptsAllowed: 402 }},
+  { name: "Miami Dolphins", position: "DEF", team: "MIA", projectedStats: { sacks: 43.4, ints: 10, fumRec: 9.2, defTD: 1.5, safety: 0, ptsAllowed: 445 }},
+  { name: "Las Vegas Raiders", position: "DEF", team: "LV", projectedStats: { sacks: 41.3, ints: 11, fumRec: 9.2, defTD: 1.5, safety: 0, ptsAllowed: 412 }},
+  { name: "Tampa Bay Buccaneers", position: "DEF", team: "TB", projectedStats: { sacks: 39.9, ints: 12, fumRec: 6.4, defTD: 1.4, safety: 0, ptsAllowed: 397 }},
+  { name: "Washington Commanders", position: "DEF", team: "WAS", projectedStats: { sacks: 42, ints: 11, fumRec: 7.8, defTD: 1.4, safety: 0, ptsAllowed: 428 }},
+  { name: "New York Giants", position: "DEF", team: "NYG", projectedStats: { sacks: 39.2, ints: 11, fumRec: 8.5, defTD: 1.5, safety: 0, ptsAllowed: 419 }},
+  { name: "Carolina Panthers", position: "DEF", team: "CAR", projectedStats: { sacks: 40.2, ints: 13, fumRec: 7.8, defTD: 1.6, safety: 0, ptsAllowed: 401 }},
+  { name: "Tennessee Titans", position: "DEF", team: "TEN", projectedStats: { sacks: 43.7, ints: 10, fumRec: 8.9, defTD: 1.4, safety: 0, ptsAllowed: 426 }},
+  { name: "San Francisco 49ers", position: "DEF", team: "SF", projectedStats: { sacks: 36.7, ints: 11, fumRec: 8.9, defTD: 1.5, safety: 0, ptsAllowed: 387 }},
+  { name: "Dallas Cowboys", position: "DEF", team: "DAL", projectedStats: { sacks: 40.6, ints: 9, fumRec: 8.5, defTD: 1.4, safety: 0, ptsAllowed: 432 }},
+  { name: "Arizona Cardinals", position: "DEF", team: "ARI", projectedStats: { sacks: 37.4, ints: 12, fumRec: 8.9, defTD: 1.6, safety: 0, ptsAllowed: 467 }},
+  { name: "New York Jets", position: "DEF", team: "NYJ", projectedStats: { sacks: 37.4, ints: 12, fumRec: 7.5, defTD: 1.5, safety: 0, ptsAllowed: 410 }},
 
   { name: "Alvin Kamara", position: "RB", team: "NO", projectedStats: { rushYd: 451, rushTD: 2.1, rec: 33, recYd: 222, recTD: 0.9, fumLost: 0.6 }},
   { name: "Chris Bell", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 27, recYd: 357, recTD: 1.3, fumLost: 0.3 }},
@@ -1270,7 +1272,15 @@ const ODDS_BANDS = {
   passYd: [1200, 6500], passTD: [4, 60], passInt: [0, 30],
   rushYd: [150, 2600], rushTD: [0, 30],
   recYd: [150, 2300], recTD: [0, 30], rec: [10, 160],
-  scrimmageTD: [0, 40]
+  scrimmageTD: [0, 40],
+  // Kicker and defence lines come from the team-environment provider, never
+  // from a book feed, and deliberately have NO entry in ODDS_CV above:
+  // buildVegasOverlay gates on that table, so a props response claiming to
+  // price "ptsAllowed" is rejected while buildTeamEnvOverlay can still emit it.
+  // Widest real seasons since 2024: 18-48 field goals, 18-64 extra points,
+  // 280-534 points allowed.
+  fgMade: [8, 50], fgMissed: [0, 20], xpMade: [5, 80], xpMissed: [0, 15],
+  ptsAllowed: [180, 650]
 };
 
 const _oddsNorm = s => String(s || '').toLowerCase()
@@ -1604,7 +1614,7 @@ const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIA
 // team's factor is damped before it touches yards. Judgement call, not a fit.
 const TEAMENV_YARD_EXP = 0.5;
 const TEAMENV_CLAMP = [0.85, 1.18];   // a data glitch must not rewrite a roster
-const TEAMENV_MIN_GAMES = 3;          // too few priced games -> leave the team alone
+const TEAMENV_MIN_GAMES = 3;          // too few SCHEDULED games -> leave the club alone
 const TEAMENV_TD_STATS = ['passTD', 'rushTD', 'recTD'];
 const TEAMENV_YARD_STATS = ['passYd', 'rushYd', 'recYd'];
 
@@ -1627,7 +1637,94 @@ function _csvSplit(line) {
   return out;
 }
 
-// Returns { TEAM: impliedPointsPerGame } for the newest season that has lines.
+// ── team market ratings ────────────────────────────────────────────────────
+// HAND-SYNCED with tools/team-market.mjs, which runs the same fit offline to
+// rebaseline the committed K and DEF rows. There is no build step in this repo.
+// Change one, change both; tools/test-team-market.mjs runs the two against one
+// fixture and fails if they disagree.
+//
+// Books post lines a few weeks out, so in September only the front of the season
+// is priced. Averaging those games and multiplying by 17 judges a club on
+// whoever it happened to draw in September, which is exactly the schedule bias a
+// points-allowed projection must not inherit. Fitting
+//
+//     points(offence i vs defence j, at home h) = mu + off_i + def_j + hfa*h
+//
+// separates "this offence is good" from "those first six defences were bad", and
+// the ratings then project across the WHOLE schedule, which games.csv carries in
+// full whether or not a line has been posted for a fixture yet.
+//
+// A small ridge keeps the fit stable while a club has only a handful of priced
+// games. mu and hfa are never penalised: shrinking the intercept would drag the
+// league's entire scoring level down with it.
+const MARKET_RIDGE = 0.25;
+const MARKET_MIN_PRICED = 48;         // priced SIDES, so 24 games: fewer is not a season
+
+// Dense Gaussian elimination with partial pivoting. The system is 2n+2 wide —
+// an offence and a defence rating per club, plus mu and hfa, so 66 today.
+function _mktSolve(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => Array.from(row).concat([b[i]]));
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (!(Math.abs(M[p][c]) > 1e-12)) throw new Error('team market: singular system');
+    [M[c], M[p]] = [M[p], M[c]];
+    const d = M[c][c];
+    for (let j = c; j <= n; j++) M[c][j] /= d;
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = M[r][c];
+      if (!f) continue;
+      for (let j = c; j <= n; j++) M[r][j] -= f * M[c][j];
+    }
+  }
+  return M.map(r => r[n]);
+}
+
+// Fixtures (priced or not) -> { TEAM: { pf, pa, games } } over the full schedule.
+function marketSeasonTotals(games, ridge = MARKET_RIDGE) {
+  const teams = [...new Set(games.flatMap(g => [g.home, g.away]))].sort();
+  const idx = Object.fromEntries(teams.map((t, i) => [t, i]));
+  const n = teams.length;
+  const obs = [];
+  for (const g of games) {
+    if (!g.priced) continue;
+    // spread_line is the HOME margin, so the pair splits the total into the two
+    // sides' implied points.
+    obs.push({ off: idx[g.home], def: idx[g.away], home: 1, y: g.total / 2 + g.spread / 2 });
+    obs.push({ off: idx[g.away], def: idx[g.home], home: -1, y: g.total / 2 - g.spread / 2 });
+  }
+  if (obs.length < MARKET_MIN_PRICED) throw new Error('team market: only ' + (obs.length / 2) + ' priced games');
+  const P = 2 * n + 2;
+  const A = Array.from({ length: P }, () => new Float64Array(P));
+  const b = new Float64Array(P);
+  for (const o of obs) {
+    const at = [o.off, n + o.def, 2 * n, 2 * n + 1];
+    const val = [1, 1, o.home, 1];
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) A[at[i]][at[j]] += val[i] * val[j];
+      b[at[i]] += val[i] * o.y;
+    }
+  }
+  for (let i = 0; i < 2 * n; i++) A[i][i] += ridge;
+  const x = _mktSolve(A, b);
+  const off = {}, def = {};
+  teams.forEach((t, i) => { off[t] = x[i]; def[t] = x[n + i]; });
+  const hfa = x[2 * n], mu = x[2 * n + 1];
+  const out = {};
+  for (const t of teams) out[t] = { pf: 0, pa: 0, games: 0 };
+  for (const g of games) {
+    const hp = mu + off[g.home] + def[g.away] + hfa;
+    const ap = mu + off[g.away] + def[g.home] - hfa;
+    out[g.home].pf += hp; out[g.home].pa += ap; out[g.home].games++;
+    out[g.away].pf += ap; out[g.away].pa += hp; out[g.away].games++;
+  }
+  return out;
+}
+
+// Returns { TEAM: { pf, pa, games } }, a schedule-complete season of implied
+// points for and against, for the newest season in the file that carries lines.
 async function fetchTeamEnvNflverse(env) {
   const r = await fetch(NFLVERSE_GAMES_URL, { cf: { cacheTtl: 3600 } });
   if (!r.ok) throw new Error('nflverse ' + r.status);
@@ -1636,7 +1733,7 @@ async function fetchTeamEnvNflverse(env) {
   if (lines.length < 2) throw new Error('nflverse: empty');
   const head = _csvSplit(lines[0]);
   const col = {};
-  ['season', 'week', 'home_team', 'away_team', 'spread_line', 'total_line'].forEach(k => { col[k] = head.indexOf(k); });
+  ['season', 'game_type', 'home_team', 'away_team', 'spread_line', 'total_line'].forEach(k => { col[k] = head.indexOf(k); });
   for (const k of Object.keys(col)) if (col[k] < 0) throw new Error('nflverse: missing column ' + k);
 
   // game_id is the first field and starts with the season, so the newest season
@@ -1649,32 +1746,99 @@ async function fetchTeamEnvNflverse(env) {
   if (!season) throw new Error('nflverse: no season found');
   const prefix = season + '_';
 
-  const acc = {};
-  const add = (t, pts) => { const k = teamKey(t); (acc[k] = acc[k] || []).push(pts); };
+  // Unpriced fixtures are KEPT: the schedule is what makes a full-season
+  // projection possible once the ratings are fitted on the games that do carry
+  // a line. A junk line is worse than a missing one, so it loses its price and
+  // keeps its fixture.
+  const games = [];
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].startsWith(prefix)) continue;
     const f = _csvSplit(lines[i]);
+    if (f[col.game_type] !== 'REG') continue;
     const spread = parseFloat(f[col.spread_line]);
     const total = parseFloat(f[col.total_line]);
-    if (!Number.isFinite(spread) || !Number.isFinite(total)) continue;   // unpriced game
-    if (total < 20 || total > 80 || Math.abs(spread) > 30) continue;     // junk row
-    // spread_line is the HOME margin, so the pair splits the total into the two
-    // sides' implied points: home = total/2 + spread/2, away = total/2 - spread/2.
-    add(f[col.home_team], total / 2 + spread / 2);
-    add(f[col.away_team], total / 2 - spread / 2);
+    const priced = Number.isFinite(spread) && Number.isFinite(total)
+      && total >= 20 && total <= 80 && Math.abs(spread) <= 30;
+    games.push({ home: teamKey(f[col.home_team]), away: teamKey(f[col.away_team]), spread, total, priced });
   }
-  const ppg = {};
-  for (const [t, arr] of Object.entries(acc)) {
-    if (arr.length < TEAMENV_MIN_GAMES) continue;
-    ppg[t] = arr.reduce((a, b) => a + b, 0) / arr.length;
-  }
-  if (Object.keys(ppg).length < 16) throw new Error('nflverse: only ' + Object.keys(ppg).length + ' teams priced');
-  return ppg;
+  const totals = marketSeasonTotals(games);
+  const full = Object.fromEntries(Object.entries(totals).filter(([, v]) => v.games >= TEAMENV_MIN_GAMES));
+  if (Object.keys(full).length < 16) throw new Error('nflverse: only ' + Object.keys(full).length + ' teams priced');
+  return full;
+}
+
+// ── kickers and defences ───────────────────────────────────────────────────
+// HAND-SYNCED with tools/k-def-model.mjs, which carries the same constants and
+// the measurements behind them. Change one, change both.
+//
+// No book posts a season-long PLAYER market for either position, which is why
+// neither used to move at all here. But neither position is really a player
+// market: a kicker's volume and a defence's points allowed are made almost
+// entirely of team scoring environment, and the game lines price that directly.
+// So the same file that moves a running back's touchdowns moves these too.
+//
+// Fitted over the 64 real team-seasons in nflverse stats_team_reg_2024/2025,
+// against each club's actual points scored:
+//
+//   pat_made = -17.0 + 0.1396 * points     r = 0.96
+//   fg_made  =  24.3 + 0.0126 * points     r = 0.15
+//
+// Extra points are very nearly a restatement of the team total. FIELD GOALS ARE
+// NOT: a kicker on a bad offence trades touchdowns for field goals, so the two
+// effects cancel. Year-over-year club correlation, 2024 -> 2025, sets how much
+// of a committed line survives: points allowed 0.45, sacks 0.33, fg_made 0.33,
+// interceptions 0.13, fumble recoveries 0.01. A projection is an EXPECTATION,
+// so its spread has to be narrower than the spread of outcomes by roughly that
+// factor.
+const KDEF_LEAGUE = { points: 391, fgMade: 29.5, fgPct: 0.85, xpPct: 0.958,
+                      sacks: 40.4, fumRec: 8.0, defTD: 1.5, takeaways: 20.0 };
+const K_MODEL = { xpA: -17.0, xpB: 0.1396, fgA: 24.3, fgB: 0.0126,
+                  xpOwnView: 0.25, fgOwnView: 0.35,
+                  pctOwnView: 0.35, pctMin: 0.82, pctMax: 0.90 };
+const D_MODEL = { paOwnView: 0.15, sackKeep: 0.35, fumRecKeep: 0.35,
+                  tdTilt: 0.8, tdMin: 1.0, tdMax: 2.2 };
+const _kdClamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function marketKicker(impliedPoints) {
+  return { fgMade: Math.max(0, K_MODEL.fgA + K_MODEL.fgB * impliedPoints),
+           xpMade: Math.max(0, K_MODEL.xpA + K_MODEL.xpB * impliedPoints) };
+}
+function blendKicker(committed, impliedPoints) {
+  const m = marketKicker(impliedPoints);
+  const c = committed || null;
+  const cAtt = c ? (c.fgMade || 0) + (c.fgMissed || 0) : 0;
+  const cPct = cAtt > 0 ? c.fgMade / cAtt : KDEF_LEAGUE.fgPct;
+  const xpMade = c ? m.xpMade + K_MODEL.xpOwnView * ((c.xpMade || 0) - m.xpMade) : m.xpMade;
+  // Field goals shrink toward the LEAGUE mean, not the market's own curve,
+  // because that curve is nearly flat anyway.
+  const fgMade = c ? m.fgMade + K_MODEL.fgOwnView * ((c.fgMade || 0) - KDEF_LEAGUE.fgMade) : m.fgMade;
+  // A projected make rate is an expectation, and no starting kicker's
+  // expectation is a 74% season.
+  const pct = _kdClamp(KDEF_LEAGUE.fgPct + K_MODEL.pctOwnView * (cPct - KDEF_LEAGUE.fgPct),
+                       K_MODEL.pctMin, K_MODEL.pctMax);
+  return { fgMade: _oddsRound(fgMade), fgMissed: _oddsRound(Math.max(0, fgMade / pct - fgMade)),
+           xpMade: _oddsRound(xpMade), xpMissed: _oddsRound(Math.max(0, xpMade / KDEF_LEAGUE.xpPct - xpMade)) };
+}
+// Points allowed is the one defensive stat the market prices directly and the
+// one that dominates the fantasy line, so it is the only one this overlay emits.
+// Sacks, interceptions and fumble recoveries are nobody's market; the committed
+// rows already carry them shrunk by their own measured stickiness, and inventing
+// a market opinion about them here would be worse than saying nothing.
+function blendDefense(committed, impliedAgainst) {
+  const c = committed || {};
+  const pa = impliedAgainst + D_MODEL.paOwnView * ((c.ptsAllowed ?? impliedAgainst) - impliedAgainst);
+  return { ptsAllowed: Math.round(pa) };
 }
 
 // Turn Vegas implied team scoring into per-player stat adjustments.
 //
-// The trap here is DOUBLE COUNTING: the committed projections already have an
+// TWO PATHS OUT OF ONE INPUT. Skill players are adjusted by a RATIO, because the
+// committed projections already have an opinion about which offences are good.
+// Kickers and defences are not: their line is team environment and nothing else,
+// so the market's implied points go in as the estimate itself (see blendKicker
+// and blendDefense above).
+//
+// The trap on the skill path is DOUBLE COUNTING: the committed projections already have an
 // opinion about which offenses are good, so scaling by raw Vegas points would
 // apply that opinion twice. Instead both sides are reduced to a league-relative
 // index and the adjustment is the RATIO of the two — if Vegas and the
@@ -1692,10 +1856,12 @@ async function fetchTeamEnvNflverse(env) {
 // passing touchdown, so counting both would double every passing score. Teams
 // with no kicker in the pool borrow the league-average kicking contribution
 // rather than being scored as if they never kick.
-function buildTeamEnvOverlay(vegasPPG) {
+function buildTeamEnvOverlay(marketTotals) {
   const EMPTY = { overlay: {}, matched: 0, teams: 0, factors: {} };
-  const teams = Object.keys(vegasPPG || {});
+  const teams = Object.keys(marketTotals || {});
   if (teams.length < 16) return EMPTY;
+  const pointsFor = t => (marketTotals[t] || {}).pf;
+  const pointsAgainst = t => (marketTotals[t] || {}).pa;
 
   const td = {}, kick = {};
   for (const p of PROJECTIONS) {
@@ -1705,7 +1871,7 @@ function buildTeamEnvOverlay(vegasPPG) {
     td[t] = (td[t] || 0) + (st.passTD || 0) + (st.rushTD || 0);
     kick[t] = (kick[t] || 0) + (st.xpMade || 0) + (st.fgMade || 0) * 3;
   }
-  const common = teams.filter(t => td[t] > 0);
+  const common = teams.filter(t => td[t] > 0 && Number.isFinite(pointsFor(t)));
   if (common.length < 16) return EMPTY;
 
   const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -1714,31 +1880,21 @@ function buildTeamEnvOverlay(vegasPPG) {
   const projPoints = {};
   for (const t of common) projPoints[t] = td[t] * 6 + (kick[t] > 0 ? kick[t] : kMean);
 
-  const vMean = mean(common.map(t => vegasPPG[t]));
+  const vMean = mean(common.map(t => pointsFor(t)));
   const pMean = mean(common.map(t => projPoints[t]));
   if (!(vMean > 0) || !(pMean > 0)) return EMPTY;
 
   const factors = {};
   for (const t of common) {
-    const f = (vegasPPG[t] / vMean) / (projPoints[t] / pMean);
+    const f = (pointsFor(t) / vMean) / (projPoints[t] / pMean);
     if (!Number.isFinite(f) || f <= 0) continue;
     factors[t] = Math.min(TEAMENV_CLAMP[1], Math.max(TEAMENV_CLAMP[0], f));
   }
 
   const overlay = {};
   for (const p of PROJECTIONS) {
-    const f = factors[teamKey(p.team)];
-    if (!f) continue;
+    const t = teamKey(p.team);
     const st = p.projectedStats || {};
-    // A committed row on the availability list is already pro-rated (§48). The
-    // market view stored here is a FULL-SEASON line, so the row is un-rated
-    // first and applyAvailability puts the factor back exactly once on the way
-    // out — otherwise the same factor would land twice on every listed player.
-    // A zeroed row (out for the year) has no season line left to recover and
-    // is skipped; there is nothing for the market to say about him.
-    const committed = AVAILABILITY[_oddsNorm(p.name) + '|' + p.position];
-    const af = committed ? _availF(committed.gamesOut) : 1;
-    if (af <= 0) continue;
     const out = {};
     const put = (k, v) => {
       if (!Number.isFinite(v) || v < 0) return;
@@ -1746,8 +1902,33 @@ function buildTeamEnvOverlay(vegasPPG) {
       if (band && (v < band[0] || v > band[1])) return;   // never emit an implausible total
       out[k] = _oddsRound(v);
     };
-    for (const k of TEAMENV_TD_STATS) if (st[k] > 0) put(k, st[k] / af * f);
-    for (const k of TEAMENV_YARD_STATS) if (st[k] > 0) put(k, st[k] / af * Math.pow(f, TEAMENV_YARD_EXP));
+    // A committed row on the availability list is already pro-rated (§48). Every
+    // market view stored here is a FULL-SEASON line, so the row is un-rated
+    // before it is read and applyAvailability puts the factor back exactly once
+    // on the way out — otherwise the same factor would land twice on every
+    // listed player. A zeroed row (out for the year) has no season line left to
+    // recover and is skipped; there is nothing for the market to say about him.
+    const listed = AVAILABILITY[_oddsNorm(p.name) + '|' + p.position];
+    const af = listed ? _availF(listed.gamesOut) : 1;
+    if (af <= 0) continue;
+    const full = af < 1
+      ? Object.fromEntries(Object.entries(st).map(([k, v]) => [k, Number.isFinite(v) ? v / af : v]))
+      : st;
+    // Kickers and defences are not scaled by the offensive factor: their whole
+    // line is team environment, so the market's implied points ARE the estimate
+    // and go in directly, exactly as a player prop would. When the committed row
+    // was built from the same lines the two agree and the blend is a no-op; when
+    // the lines have moved since, this is what moves them.
+    if (p.position === 'K' && Number.isFinite(pointsFor(t))) {
+      for (const [k, v] of Object.entries(blendKicker(full, pointsFor(t)))) if (k in st) put(k, v);
+    } else if (p.position === 'DEF' && Number.isFinite(pointsAgainst(t))) {
+      for (const [k, v] of Object.entries(blendDefense(full, pointsAgainst(t)))) if (k in st) put(k, v);
+    } else {
+      const f = factors[t];
+      if (!f) continue;
+      for (const k of TEAMENV_TD_STATS) if (full[k] > 0) put(k, full[k] * f);
+      for (const k of TEAMENV_YARD_STATS) if (full[k] > 0) put(k, full[k] * Math.pow(f, TEAMENV_YARD_EXP));
+    }
     if (Object.keys(out).length) overlay[_oddsNorm(p.name) + '|' + p.position] = out;
   }
   return { overlay, matched: Object.keys(overlay).length, teams: common.length, factors };
@@ -2357,9 +2538,11 @@ function playerOddsFrom(board, digest, name, position) {
   const want = _oddsNorm(name);
   if (!want) return { ok: true, player: null, reason: 'no_player', digest };
   if (!COLUMN_POSITIONS.includes(pos)) {
-    // Kickers and defences are on the board and in the lookup, and no book
-    // prices a season-long market this site models for either. Saying so is a
-    // real answer; hiding the section reads as a bug.
+    // Kickers and defences are on the board and in the lookup. Their
+    // PROJECTIONS do move with the odds — buildTeamEnvOverlay prices both off
+    // the clubs' implied points — but this column ranks a player against an
+    // auction price, and COLUMN_CURVE covers the four skill positions. The card
+    // says so; hiding the section reads as a bug.
     return { ok: true, player: null, reason: 'unpriced_position', digest };
   }
   const hit = board.rows.filter(r => r.position === pos && _oddsNorm(r.name) === want);
@@ -2481,9 +2664,17 @@ async function runOddsRefresh(env) {
         overlay = r.overlay;
         info = { teams: r.teams, matched: r.matched };
         // Keep the implied team points behind the overlay: the Vegas column
-        // quotes them as the money-line evidence for a call. Best effort — the
-        // overlay itself must never fail to write because this did.
-        try { await oddsCtxWrite(env, raw); } catch (e) { console.error('odds ctx write failed:', e && e.message); }
+        // quotes them as the money-line evidence for a call. The provider works
+        // in season totals now; the column has always printed a per-game number,
+        // so it is divided here rather than changing what a reader sees. Best
+        // effort — the overlay itself must never fail to write because this did.
+        try {
+          const ppg = {};
+          for (const [t, v] of Object.entries(raw || {})) {
+            if (v && v.games > 0 && Number.isFinite(v.pf)) ppg[t] = v.pf / v.games;
+          }
+          await oddsCtxWrite(env, ppg);
+        } catch (e) { console.error('odds ctx write failed:', e && e.message); }
       } else {
         const r = buildVegasOverlay(raw);
         overlay = r.overlay;

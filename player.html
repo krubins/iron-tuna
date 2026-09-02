@@ -523,16 +523,21 @@ var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a to
         doc.getElementById('pcOddsHead').textContent = 'The rankings vs. the odds on ' + p.n;
 
         if (!d.player) {
-          // The one "no" worth printing. Kickers and defences are on this site's
-          // board and no book prices a season-long market for either that the
-          // site models, so the card says so instead of hiding a section the
-          // rest of the position group has.
+          // The one "no" worth printing. Kickers and defences ARE priced off the
+          // odds — the game lines carry each club's implied points, and that is
+          // what a kicker's volume and a defence's points allowed are made of.
+          // What they have no place in is this section, which ranks a player
+          // against an auction price, and the auction curve covers the four
+          // skill positions. Saying that is a real answer; hiding a section the
+          // rest of the board has reads as a bug.
           if (d.reason !== 'unpriced_position') return;
-          pcSay(box, 'No sportsbook posts a season-long market for ' +
-            (p.p === 'K' ? 'kickers' : 'team defences') + ' that this site models, so there is ' +
-            'nothing here to hold a consensus ranking up against. The ' +
-            '<a href="/#vegas">odds column</a> covers quarterbacks, running backs, receivers and ' +
-            'tight ends, and the cheat sheet prices him the same way it always has.');
+          pcSay(box, 'No sportsbook posts a season-long market on individual ' +
+            (p.p === 'K' ? 'kickers' : 'team defences') + ', so there is no line here to hold a ' +
+            'consensus ranking up against. The projection is still market-driven: the game lines ' +
+            'price every club\'s implied points, and ' + (p.p === 'K' ? 'a kicker\'s' : 'a defence\'s') +
+            ' whole line is made of that. The ' +
+            '<a href="/#vegas">odds column</a> ranks quarterbacks, running backs, receivers and ' +
+            'tight ends, where the board has an auction price to disagree about.');
           sec.hidden = false;
           return;
         }

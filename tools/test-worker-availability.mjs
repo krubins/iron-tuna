@@ -304,7 +304,11 @@ console.log('\nthe pro-rating is applied once');
   // points model: touchdowns x 6, no kickers in this pool) -> every factor is 1.
   const ppg = {};
   for (const p of pool) ppg[p.team] = (ppg[p.team] || 0) + ((p.projectedStats.passTD || 0) + (p.projectedStats.rushTD || 0)) * 6;
-  const built = T.buildTeamEnvOverlay(ppg);
+  // The provider hands over a schedule-complete season per club now, not a
+  // per-game number. Points against ride along at the league level; only the
+  // kicker and defence paths read them, and this pool has neither.
+  const built = T.buildTeamEnvOverlay(Object.fromEntries(
+    Object.entries(ppg).map(([t, pf]) => [t, { pf, pa: 391, games: 17 }])));
   ok('agreement gives a unit factor everywhere', Object.values(built.factors).every(f => near(f, 1)));
   const ovP = built.overlay[partialKey];
   ok('a committed (pro-rated) row is un-rated into a full-season market line',
