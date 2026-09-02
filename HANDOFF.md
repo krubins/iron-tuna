@@ -5871,3 +5871,85 @@ had no transcript access to the run, only its `SUCCEEDED` status and
 State: `the-pick.html` carries two entries (`pick-2026-08-20`,
 `pick-2026-09-01`); front page allocation fixed in the same session; two
 Pick Routines active, one Ken-created and only Ken-editable.
+
+## 48. September 2: the board never heard about the injuries
+
+Ken reported two symptoms: Jayden Higgins still priced on the board two weeks
+after his season-ending ACL tear, and Josh Jacobs still RB9 three days after the
+league put him on the commissioner's exempt list. They are one bug.
+
+**Why the rankings were stale.** A rank on this site is nothing but the
+`PROJECTIONS` stat lines in `_worker.js` scored at the reader's settings, and
+nothing that runs on a schedule can change a single player's line:
+
+- The daily projections routine (§9) fetches ESPN, SportsLine and NFL.com
+  projection feeds and merges them. Every one of those hosts is blocked from the
+  sandbox it runs in (`espn fantasy 000`, `sleeper 000`, checked 2026-09-02), so
+  the routine's fail-safe skips every day. The last change to the projection set
+  was the owner-supplied 423-player file on 2026-08-30 (§41), which was itself a
+  full-season line for every player including the ones already lost.
+- The odds refresh (§9b) is the nflverse game-line provider, a per-TEAM scoring
+  factor between 0.85 and 1.18. It scales a player's own projection; it cannot
+  see that he will not play. And because the overlay is cached in D1 and blended
+  at 3:1, a fix to `PROJECTIONS` alone would have had the stale overlay blending
+  three quarters of the old line back in until the next 11:00Z cron.
+- The client's Sleeper status (`/api/live`) shows a badge and adds 0.15 to the
+  risk score. It never touches points or rank. Its fallback list `INJURIES` in
+  `index.html` was three hand-written entries from July.
+- The news desk knew. Auction Watch carried Higgins' ACL on 08-22 and 08-25 and
+  Jacobs' exempt-list placement on 08-31 and 09-02, and the compare-post on X
+  says "Iron Tuna re-prices 408 players live" over the Higgins news. Nothing
+  connects a story to a row.
+
+**What changed.** `tools/availability.json` is the list of board players who
+cannot play a full season as of its `asOf` date, with a status, the games
+expected missed, a note and a source per entry. `tools/apply-availability.mjs`
+pro-rates each committed row to `season x (17 - gamesOut) / 17` (rounded the way
+`merge-projections.mjs` rounds), captures the full-season line into the file the
+first time so it can be restored, regenerates an `AVAILABILITY` block in
+`_worker.js`, regenerates the client `INJURIES` fallback, and bumps
+`PROJ_VERSION`. `--check` is a CI step now; `--fetch` reads ESPN's public
+injury feed (reachable from here) and prints board players it lists as IR, PUP,
+suspended or exempt who are not in the file, and file entries it no longer
+lists.
+
+In the worker, `oddsCacheRead` runs the overlay through `applyAvailability`
+so every reader of it (the blend, the Vegas column, `/api/board`) sees the
+same factor the rows carry, and `blendProjections` attaches `status`, `gamesOut`
+and `note` so the client's injury column reads "IR" before Sleeper answers.
+`buildInitialPlayers` in `index.html` carries that status as `injuryStatus`.
+
+**Applied 2026-09-02, 18 players.** Out for the season (line zeroed, player kept
+on the board at the bottom of his position because every generated index and
+story test expects the roster fixed): Jayden Higgins, Devin Neal, Ty Chandler,
+Calvin Austin III. Josh Jacobs at 6 games out: there is no timeline on the
+exempt list, his first court date is Nov. 17, and six is a working number to
+revisit weekly. Jordyn Tyson 8. The IR-with-designation and reserve/PUP group
+at the 4-game minimum: James Conner, Adam Randall, Isiah Pacheco, Savion
+Williams, Luke Musgrave, Tank Dell, Ben Sims, Grant Calcaterra, Christian Kirk,
+Isaac Guerendo, Zach Charbonnet, Jeremy McNichols. On the committed default
+board (no odds) Jacobs went RB16, 245 points, to RB36, 160; the RB9 Ken saw was
+the served board, where Green Bay's 1.137 team factor had lifted him further.
+Higgins went WR52 to zero points, the bottom of the WR list in the app and off
+the `it-league.js` fallback board, which drops zero-point rows.
+
+Left alone on purpose: anyone ESPN lists only as Questionable for Week 1
+(Kamara's MCL, Love's ankle, Jeanty, Kraft, Mahomes). A one-game absence is not
+a season line change, and the book still prices those players.
+
+**Knock-ons.** `pick-2026-08-20` printed RB ranks with Jacobs at RB9 above the
+players it names; the rank cells and the two prose ranks were moved up one to
+match the pool, which `test-the-pick.mjs` now requires. One assertion in
+`test-it-league.mjs` had a hard-coded "$3" for Jadarian Price that was really a
+function of the default board; it now derives the figure the way its neighbours
+do. `it-league.js` DEFAULT_BOARD, `front.html`, `player.html`, `auction-watch.html`
+and `sitemap.xml` were regenerated with the repo's own tools (the last two were
+already a build behind from the 09-02 camp report).
+
+**What this does not fix.** The projection feeds are still unreachable, so
+season-long numbers still only move by hand or by the owner's upload. And the
+list is hand-kept: run `node tools/apply-availability.mjs --fetch` at least
+weekly, act on what it prints, and re-run without flags. A weekly Routine that
+does exactly that and opens a PR is the obvious next step; it was not built
+here because it needs the same Routine plumbing §46 and §47 are still sorting
+out.

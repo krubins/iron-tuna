@@ -214,6 +214,16 @@ jobs:
           fi
           echo "LEAD_FACES is up to date"
 
+      # PROJECTIONS is a full-season line per player and the board's rank is those
+      # lines scored, so a player who tore an ACL in August kept his August rank
+      # until 2026-09-02 (HANDOFF.md §48): no projection feed is reachable from the
+      # daily routine's sandbox, and the odds refresh is a per-team factor that
+      # cannot see one player's knee. tools/availability.json is the hand-kept
+      # list of who cannot play a full season; this holds the committed rows, the
+      # worker's AVAILABILITY block and the client's injury fallback to it.
+      - name: Pro-rated projections agree with tools/availability.json
+        run: node tools/apply-availability.mjs --check
+
       # The odds math is duplicated between _worker.js and tools/ because there is
       # no bundler; test-worker-odds.mjs lifts the worker's copy out of the source
       # and asserts the two still agree, so drift fails here instead of quietly
