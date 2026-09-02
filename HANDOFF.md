@@ -5871,3 +5871,121 @@ had no transcript access to the run, only its `SUCCEEDED` status and
 State: `the-pick.html` carries two entries (`pick-2026-08-20`,
 `pick-2026-09-01`); front page allocation fixed in the same session; two
 Pick Routines active, one Ken-created and only Ken-editable.
+
+## 48. September 2: the deployed worker is a build behind, and three runs died at `start`
+
+The 09-02 audit found two live problems and cleared everything else. Both are
+Ken's to act on; neither is fixable from this session.
+
+### 48a. Production is serving the pre-08-31 valuation
+
+The bundle at `/tmp/depboard/_worker.js`, pulled from Cloudflare on 09-02
+11:25Z, is **741,022 bytes** against **742,718** on 09-01, and it differs from
+`main` in exactly the places the 08-31 valuation pass touched:
+
+- **0 occurrences of `COLUMN_NORM`** (8 on the 09-01 bundle). The deployed
+  worker does not re-level a position's points to last season's top-K mean,
+  so the points on a reader's sheet are raw `_colScore` output.
+- The **old `_colPrice`**:
+  `const base = rankIndex < curve.length ? curve[rankIndex] : COLUMN_MIN_BID;`
+  `return Math.max(COLUMN_MIN_BID, Math.round(base * scale));`
+  — off-curve players come back **$2**, where `main` returns `COLUMN_MIN_BID`
+  flat, i.e. **$1**. That is the 217-player difference from §42.
+- No `_WIRE_CACHE`.
+
+So for every one of those 217 players, `main` says $1 and the reader's sheet
+says $2, and every printed point total is off by that position's norm factor
+(Puka Nacua: 356.0 deployed vs 330.0 on `main`). Nothing was reverted in git —
+`main` still has all of it — so this is a **deployment** that did not land, not
+a code regression. Cloudflare Pages deploys from `main` by git integration and
+there is no deploy job in CI, so nothing in this repo can push it.
+
+**Ken: re-deploy `main` from the Cloudflare dashboard.** Until that happens,
+any story checked against `main` will disagree with the live sheet by $1 on
+off-curve players — which is the exact bug class this whole effort exists to
+prevent, arriving from the one direction the checker cannot see.
+
+The harness now takes an override so both sides can be built and compared:
+
+    IRON_TUNA_WORKER=/tmp/depboard/_worker.js node tools/live-board.mjs
+
+Run it against the deployed bundle before trusting any check of a live story.
+
+### 48b. Nothing has published in 22 hours
+
+`lead_story_run` rows 29, 30 and 31 — 09-01 18:58Z, 09-02 00:59Z, 09-02
+06:59Z — are all `stage='start'`, `desk` NULL, `story_id` NULL. In all three,
+**`updated_at` equals `started_at` to the second.** The run wrote its opening
+row and then did nothing at all: it never got as far as choosing a desk, which
+is the step immediately after. Eight consecutive runs before that (08-30 18:59
+through 09-01 13:01) finished `done`.
+
+`parsed` is in the live prompt and is written on the read step, and it is
+absent from all three rows, which is consistent with death before the reads
+rather than in them.
+
+The Routine itself is healthy from this side: `trig_011LYewcPUQikF8izFsN2LAr`
+is enabled, cron `58 */6 * * *`, and its prompt is **byte-identical** to
+`tools/lead-story-routine-prompt.md` (40,786 chars, sha256 `af5384664474`).
+So the schedule is firing and the session is starting — it dies immediately
+after its first D1 write. **Ken: check the Routine's run transcripts**; that
+failure is only visible from the session side.
+
+Because `lead_story_run` holds one row per run updated in place, a stall is
+the *only* state in which the intermediate stages are observable at all
+(§39). Three in a row is the first time that has been true.
+
+### 48c. What the audit cleared
+
+- **Row 70 is live and correct.** "Cap James Cook at $28, not $35; bid Baker
+  Mayfield up to $5", vegas desk, created 09-01 13:19. Checked against the
+  **deployed** board plus the 09-02 11:01Z overlay, all four table rows hold
+  exactly, on both the blended and the committed side:
+
+  | Player | Sheet price | Blended | Committed |
+  |---|---|---|---|
+  | James Cook | $35 (RB11) | RB11 ✓ | RB7 ✓ |
+  | Baker Mayfield | $2 (QB15) | QB15 ✓ | QB19 ✓ |
+  | Bo Nix | $3 (QB14) | QB14 ✓ | QB8 ✓ |
+  | Brock Bowers | $60 (TE1) | TE1 ✓ | TE2 ✓ |
+
+  Every "X to Y" move printed in the table is the real committed-to-blended
+  move. No edit needed.
+- **CI 29/29**; board pipeline untouched by the day's commits.
+- **Harness self-check against `DEFAULT_BOARD_RAW`: 344/344, zero
+  mismatches.**
+- **Both tamper predicates clean.** The one `verified` 0→1 flip in
+  `lead_story_audit` is row id 1, story 27, dated 08-24 — the pre-existing
+  baseline entry, and story 27 is `published=0, verified=0` today. All nine
+  `category='analyst'` rows (21, 22, 27, 28, 35, 42, 50, 55, 60) are
+  `published=0`; none has ever been served. No published row is unverified.
+
+### 48d. The harness lifts functions now, not just constants
+
+§45 fixed `tools/live-board.mjs` by copying the worker's new `_colPrice` and
+normalisation into it. That was the same mistake one level up, and it broke
+again within a day when the deployed bundle rolled back: a copied function is
+right about exactly one build. The file now **lifts `_colScore`, `_colPrice`,
+`_colNormFactors` and `_colNormApply` out of the worker text and evaluates
+them**, so it cannot disagree with the worker it was pointed at. Two details
+worth keeping:
+
+- esbuild wraps every function in `__name(...)`, so a function lifted from a
+  deployed bundle needs `__name: (fn) => fn` in scope to evaluate.
+- The bundle says `var` where the source says `const`; the lifter accepts
+  both. `COLUMN_NORM` is lifted as **optional** — a worker built before
+  08-31 has none, and a board built from one must not normalise. Absent
+  means absent, never "assume the new way".
+
+Verified both ways: repo build 344/344, and the deployed build correctly
+yields **$1 in the repo build and $2 in the deployed build** for Kolar,
+Njoku and Gadsden. That difference is 48a, and before this rewrite the
+harness could not have shown it.
+
+### 48e. Still open
+
+§44's three archive options remain unanswered and no archive figure was
+hand-corrected today. Do not correct them again by hand; the recommended
+option (2) — re-anchor archived prices from the live board via `it-league.js`
+at render time — would have absorbed both the 08-31 valuation pass and this
+deployment gap with zero edits.

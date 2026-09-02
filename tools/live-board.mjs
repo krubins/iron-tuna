@@ -1,14 +1,28 @@
-// Verification harness. Every constant is READ from _worker.js at run time --
-// nothing is hand-copied, because a hand-copied curve is exactly how a checker
-// goes stale without noticing (PR #105 re-cut the curve by 1.125x on 2026-08-25).
+// Verification harness. Every constant AND every scoring/pricing function is
+// READ from the worker at run time -- nothing is hand-copied, because a
+// hand-copied curve is exactly how a checker goes stale without noticing
+// (PR #105 re-cut the curve by 1.125x on 2026-08-25).
+//
+// Copying the FUNCTIONS was the same mistake one level up, and it bit twice:
+// on 2026-08-31 the valuation pass changed _colPrice (off-curve players $2 to
+// $1) and added season normalisation, and this file kept reporting the old
+// numbers with CI green. So _colScore, _colPrice and the normalisation are now
+// lifted and evaluated, not reimplemented. If the worker changes them again,
+// this file changes with it or throws.
+//
+// Point it at a different worker with IRON_TUNA_WORKER=/path/to/_worker.js --
+// that is how a DEPLOYED bundle gets checked against the repo, and the bundle
+// says `var` where the source says `const`, so both are accepted.
 import fs from 'fs';
-const WORKER = new URL('../_worker.js', import.meta.url).pathname;
+const WORKER = process.env.IRON_TUNA_WORKER
+  || new URL('../_worker.js', import.meta.url).pathname;
 const W = fs.readFileSync(WORKER, 'utf8');
+export const WORKER_PATH = WORKER;
 
-function lift(name) {                       // pull a top-level const out of the worker
-  const re = new RegExp('const ' + name + '\\s*=\\s*');
+function lift(name, optional = false) {     // pull a top-level const out of the worker
+  const re = new RegExp('(?:const|var|let) ' + name + '\\s*=\\s*');
   const m = re.exec(W);
-  if (!m) throw new Error('missing ' + name + ' in _worker.js');
+  if (!m) { if (optional) return null; throw new Error('missing ' + name + ' in ' + WORKER); }
   const from = m.index + m[0].length;
   let depth = 0, q = null, end = -1;
   for (let i = from; i < W.length; i++) {
@@ -30,48 +44,40 @@ export const MIN_BID = lift('COLUMN_MIN_BID');
 export const VEGAS_WEIGHT = lift('VEGAS_WEIGHT');
 // The worker re-levels each position's points to last season's top-K mean
 // before it serves them (COLUMN_NORM / _colNormFactors in _worker.js §9d), so
-// the points on a reader's sheet are NOT raw stat-line scores. Lifted, not
-// copied, for the same reason as every other constant here.
-export const NORM = lift('COLUMN_NORM');
-const round = v => Math.round(v * 10) / 10;
-function score(stats, position) {
-  const s = SCORING;
-  const yd = (y, per, thr) => (y < thr || !(per > 0)) ? 0 : y / per;
-  let p = 0;
-  p += yd(stats.passYd || 0, s.passingYardsPerPoint, s.passingYardsThreshold);
-  p += (stats.passTD || 0) * s.passingTD;
-  p += (stats.passInt || 0) * s.passingInt;
-  p += yd(stats.rushYd || 0, s.rushingYardsPerPoint, s.rushingYardsThreshold);
-  p += (stats.rushTD || 0) * s.rushingTD;
-  p += yd(stats.recYd || 0, s.receivingYardsPerPoint, s.receivingYardsThreshold);
-  p += (stats.recTD || 0) * s.receivingTD;
-  p += (stats.rec || 0) * (position === 'RB' ? s.rbReceptionPoints : s.receptionPoints);
-  p += (stats.fumLost || 0) * s.fumbleLost;
-  return p;
-}
-export function price(pos, rankIndex) {
-  const c = CURVE[pos] || [];
-  // Mirrors _colPrice: only curve prices scale with the budget. Past the end of
-  // the curve the room pays the min bid flat — scaling it there put every
-  // off-curve player at $2 instead of $1.
-  if (rankIndex >= c.length) return MIN_BID;
-  return Math.max(MIN_BID, Math.round(c[rankIndex] * (LEAGUE_BUDGET / CURVE_BUDGET)));
-}
+// the points on a reader's sheet are NOT raw stat-line scores. OPTIONAL: a
+// worker built before 2026-08-31 has no such constant, and a board built from
+// one must not normalise. Absent means absent, never "assume the new way".
+export const NORM = lift('COLUMN_NORM', true);
 
-// _colNormFactors, mirrored: top-K projected mean against last year's, only
-// positive scores, skipped inside a 2% dead zone. Flat per position, so ranks
-// and prices never move; only the printed points do.
-export function normFactor(pos, ptsList) {
-  const cfg = NORM[pos];
-  if (!cfg) return 1;
-  const arr = ptsList.filter(v => v > 0).sort((a, b) => b - a);
-  if (arr.length < 3) return 1;
-  const K = Math.max(3, Math.min(cfg.k, arr.length));
-  const projMean = arr.slice(0, K).reduce((a, b) => a + b, 0) / K;
-  if (!(projMean > 0)) return 1;
-  const f = cfg.mean / projMean;
-  return (f >= 0.98 && f <= 1.02) ? 1 : f;
+// ── the worker's own functions, lifted ─────────────────────────────────────
+function liftFn(name, deps) {
+  const i = W.indexOf('function ' + name + '(');
+  if (i < 0) throw new Error('missing function ' + name + ' in ' + WORKER);
+  let depth = 0, q = null, end = -1;
+  for (let j = W.indexOf('{', i); j < W.length; j++) {
+    const c = W[j];
+    if (q) { if (c === '\\') j++; else if (c === q) q = null; continue; }
+    if (c === '"' || c === "'" || c === '`') { q = c; continue; }
+    if (c === '{') depth++;
+    else if (c === '}') { if (--depth === 0) { end = j + 1; break; } }
+  }
+  const names = Object.keys(deps), vals = Object.values(deps);
+  return new Function(...names, W.slice(i, end) + '; return ' + name + ';')(...vals);
 }
+const DEPS = {
+  COLUMN_SCORING: SCORING, COLUMN_CURVE: CURVE, COLUMN_CURVE_BUDGET: CURVE_BUDGET,
+  COLUMN_LEAGUE_BUDGET: LEAGUE_BUDGET, COLUMN_MIN_BID: MIN_BID, COLUMN_NORM: NORM,
+  // esbuild wraps every function in __name() for stack traces; a lifted
+  // function from a deployed bundle needs it in scope to evaluate.
+  __name: (fn) => fn
+};
+const _colScore = liftFn('_colScore', DEPS);
+const _colPrice = liftFn('_colPrice', DEPS);
+const _colNormFactors = NORM ? liftFn('_colNormFactors', DEPS) : null;
+const _colNormApply = NORM ? liftFn('_colNormApply', DEPS) : null;
+const round = v => Math.round(v * 10) / 10;
+const score = (stats, position) => _colScore(stats, position);
+export const price = (pos, rankIndex) => _colPrice(pos, rankIndex);
 const norm = s => String(s).toLowerCase().normalize('NFD')
   .replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '').replace(/(jr|sr|ii|iii|iv|v)$/, '');
 export function board(overlayPath, useOdds = true) {
@@ -91,9 +97,13 @@ export function board(overlayPath, useOdds = true) {
       }
       return { n: p.name, team: p.team, raw: score(st, pos), rec: st.rec || 0 };
     });
-    // Score, then normalise, then round, then sort — the worker's order.
-    const f = normFactor(pos, rows.map(r => r.raw));
-    for (const r of rows) { r.pts = round(r.raw > 0 ? r.raw * f : r.raw); delete r.raw; }
+    // Score, then normalise, then round, then sort — the worker's order. A
+    // worker without COLUMN_NORM does not normalise at all.
+    const f = _colNormFactors ? _colNormFactors({ [pos]: rows.map(r => r.raw) })[pos] : 1;
+    for (const r of rows) {
+      r.pts = round(_colNormApply ? _colNormApply(r.raw, f) : r.raw);
+      delete r.raw;
+    }
     rows.sort((a, b) => b.pts - a.pts);
     lists[pos] = rows;
     rows.forEach((p, i) => map.set(p.n, { pos, team: p.team, rank: i + 1, v: price(pos, i), pts: p.pts, rec: p.rec }));
