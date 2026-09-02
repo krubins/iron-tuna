@@ -45,6 +45,8 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
            buildVegasOverlay, blendProjections, runOddsRefresh, projectionsPayload,
            VEGAS_WEIGHT, ODDS_MIN_MATCHED, ODDS_PROVIDERS, fetchOddsTheOddsApi,
            _csvSplit, fetchTeamEnvNflverse, buildTeamEnvOverlay,
+           marketSeasonTotals, marketKicker, blendKicker, blendDefense,
+           KDEF_LEAGUE, K_MODEL, D_MODEL,
            get encCalls() { return _PROJ_ENC; } };
 `);
 let encoded = null;
@@ -264,16 +266,19 @@ console.log('\nteam-env overlay maths');
   const kMean = kv.reduce((a, b) => a + b, 0) / kv.length;
   const projTD = {};
   for (const t of commonT) projTD[t] = td[t] * 6 + (kick[t] > 0 ? kick[t] : kMean);
-  // Vegas agreeing exactly with the projections must move nothing.
-  const agree = { ...projTD };
+  // Vegas agreeing exactly with the projections must move nothing. The provider
+  // now hands over a schedule-complete season per club, so pa rides along at the
+  // league level: the skill-player factor never reads it.
+  const totals = o => Object.fromEntries(Object.entries(o).map(([t, pf]) => [t, { pf, pa: 391, games: 17 }]));
+  const agree = totals(projTD);
   const r = R.buildTeamEnvOverlay(agree);
   const off = Object.entries(r.factors).filter(([, f]) => Math.abs(f - 1) > 1e-9);
   ok('agreement with the projections is a no-op', off.length === 0, JSON.stringify(off.slice(0, 3)));
 
-  const skew = { ...agree };
+  const skew = { ...projTD };
   const target = Object.keys(projTD).sort()[0];
-  skew[target] = agree[target] * 3;
-  const r2 = R.buildTeamEnvOverlay(skew);
+  skew[target] = projTD[target] * 3;
+  const r2 = R.buildTeamEnvOverlay(totals(skew));
   ok('a team Vegas likes more than the projections gets a factor > 1', r2.factors[target] > 1, String(r2.factors[target]));
   ok('the factor is clamped, not unbounded', r2.factors[target] <= 1.18 + 1e-9, String(r2.factors[target]));
   ok('every factor stays inside the clamp band',
@@ -287,7 +292,69 @@ console.log('\nteam-env overlay maths');
     ok('yardage is damped relative to touchdowns', ydLift <= tdLift + 1e-6, 'td ' + tdLift.toFixed(3) + ' yd ' + ydLift.toFixed(3));
   }
   ok('too few priced teams yields nothing rather than garbage',
-    R.buildTeamEnvOverlay({ BUF: 25, KC: 24 }).matched === 0);
+    R.buildTeamEnvOverlay({ BUF: { pf: 425, pa: 390 }, KC: { pf: 408, pa: 380 } }).matched === 0);
+
+  // ── kickers and defences ────────────────────────────────────────────────
+  // Neither is scaled by the offensive factor: the market's implied points ARE
+  // the estimate, so a club the market and the projections already agree about
+  // still gets a line here — and only on the stats each position really has.
+  {
+    const kd = R.buildTeamEnvOverlay(agree).overlay;
+    const kRows = realPool.filter(p => p.position === 'K');
+    const dRows = realPool.filter(p => p.position === 'DEF');
+    const kOv = kRows.map(p => kd[R._oddsNorm(p.name) + '|K']);
+    const dOv = dRows.map(p => kd[R._oddsNorm(p.name) + '|DEF']);
+    ok('every kicker in the pool is priced', kOv.every(Boolean), String(kOv.filter(Boolean).length) + '/' + kRows.length);
+    ok('every defence in the pool is priced', dOv.every(Boolean), String(dOv.filter(Boolean).length) + '/' + dRows.length);
+    ok('a kicker gets exactly the four stats a kicker line has',
+      kOv.every(o => Object.keys(o).sort().join(',') === 'fgMade,fgMissed,xpMade,xpMissed'),
+      JSON.stringify(kOv[0]));
+    ok('a defence gets points allowed and nothing a book has no opinion about',
+      dOv.every(o => Object.keys(o).join(',') === 'ptsAllowed'), JSON.stringify(dOv[0]));
+    ok('no projected make rate falls under the model floor',
+      kOv.every(o => o.fgMade / (o.fgMade + o.fgMissed) >= R.K_MODEL.pctMin - 1e-9),
+      String(Math.min(...kOv.map(o => o.fgMade / (o.fgMade + o.fgMissed))).toFixed(3)));
+    // Every club in `agree` carries the same 391 points against, so the market
+    // side is identical and only the committed row can separate two defences.
+    const spread = Math.max(...dOv.map(o => o.ptsAllowed)) - Math.min(...dOv.map(o => o.ptsAllowed));
+    const commSpread = Math.max(...dRows.map(p => p.projectedStats.ptsAllowed))
+                     - Math.min(...dRows.map(p => p.projectedStats.ptsAllowed));
+    ok('points allowed anchors on the market, not on the committed row',
+      spread < commSpread * (R.D_MODEL.paOwnView + 1e-9), spread + ' vs ' + commSpread);
+  }
+  {
+    // A club the provider never priced keeps its committed line untouched.
+    const target = realPool.find(p => p.position === 'DEF');
+    const thin = { ...agree };
+    delete thin[target.team === 'LAR' ? 'LA' : target.team];
+    const kd = R.buildTeamEnvOverlay(thin).overlay;
+    ok('a club the market did not price is left alone',
+      !kd[R._oddsNorm(target.name) + '|DEF'], target.team);
+  }
+}
+
+console.log('\nkicker and defence model');
+{
+  // pat_made = -17.0 + 0.1396 * points, fg_made = 24.3 + 0.0126 * points.
+  const m = R.marketKicker(400);
+  ok('extra points come off the fitted line', near(m.xpMade, -17.0 + 0.1396 * 400, 1e-9), String(m.xpMade));
+  ok('field goals barely move with the team total',
+    Math.abs(R.marketKicker(460).fgMade - R.marketKicker(320).fgMade) < 2,
+    String(R.marketKicker(460).fgMade - R.marketKicker(320).fgMade));
+  // committed 44 xp, market 37.6, own view 0.25 -> 39.2.
+  const k = R.blendKicker({ fgMade: 23, fgMissed: 8, xpMade: 44, xpMissed: 2 }, 391);
+  ok('the blend keeps a quarter of the committed extra points', near(k.xpMade, 39.2, 0.06), String(k.xpMade));
+  ok('a 74% committed make rate is floored at 82%',
+    near(k.fgMade / (k.fgMade + k.fgMissed), R.K_MODEL.pctMin, 0.005),
+    String((k.fgMade / (k.fgMade + k.fgMissed)).toFixed(3)));
+  ok('a club with no committed kicker still gets a full line',
+    (() => { const n = R.blendKicker(null, 391); return n.fgMade > 20 && n.xpMade > 20 && n.fgMissed > 0; })(),
+    JSON.stringify(R.blendKicker(null, 391)));
+  // 391 implied against, committed 520, own view 0.15 -> 391 + 19.35 = 410.
+  ok('points allowed anchors on the market', R.blendDefense({ ptsAllowed: 520 }, 391).ptsAllowed === 410,
+    String(R.blendDefense({ ptsAllowed: 520 }, 391).ptsAllowed));
+  ok('and moves with the market, not with the committed row',
+    R.blendDefense({ ptsAllowed: 520 }, 430).ptsAllowed > R.blendDefense({ ptsAllowed: 520 }, 391).ptsAllowed);
 }
 
 console.log('\nprovider merge order');
@@ -308,14 +375,29 @@ try {
   const res = await fetch('https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv');
   if (!res.ok) throw new Error('http ' + res.status);
   fetchBody = await res.text();
-  const ppg = await R.fetchTeamEnvNflverse({});
-  const n = Object.keys(ppg).length;
+  const totals = await R.fetchTeamEnvNflverse({});
+  const n = Object.keys(totals).length;
   ok('hit the nflverse release asset', /nflverse-data\/releases/.test(fetchUrl), fetchUrl);
   ok('priced all 32 teams', n === 32, 'got ' + n);
-  const vals = Object.values(ppg);
-  ok('implied points per game are plausible', Math.min(...vals) > 12 && Math.max(...vals) < 34,
-    Math.min(...vals).toFixed(1) + '..' + Math.max(...vals).toFixed(1));
-  const built = R.buildTeamEnvOverlay(ppg);
+  const pf = Object.values(totals).map(v => v.pf / 17);
+  const pa = Object.values(totals).map(v => v.pa / 17);
+  ok('implied points per game are plausible', Math.min(...pf) > 12 && Math.max(...pf) < 34,
+    Math.min(...pf).toFixed(1) + '..' + Math.max(...pf).toFixed(1));
+  // Scored and conceded are the same pool of points seen from the two ends, so
+  // the league means have to agree. They diverging is the signature of a fit
+  // that has drifted (a penalised intercept, a half-parsed schedule).
+  ok('points for and against balance across the league',
+    Math.abs(pf.reduce((a, b) => a + b, 0) - pa.reduce((a, b) => a + b, 0)) < 1,
+    (pf.reduce((a, b) => a + b, 0) / n).toFixed(2) + ' vs ' + (pa.reduce((a, b) => a + b, 0) / n).toFixed(2));
+  // Defences are the point of the schedule-complete fit: a spread as wide as a
+  // season of OUTCOMES would mean the ratings had not shrunk anything.
+  const paSd = (a => { const m = a.reduce((x, y) => x + y, 0) / a.length;
+    return Math.sqrt(a.reduce((x, v) => x + (v - m) ** 2, 0) / a.length); })(Object.values(totals).map(v => v.pa));
+  ok('the market view of points allowed is tighter than a season of outcomes',
+    paSd > 8 && paSd < 40, 'sd ' + paSd.toFixed(1));
+  ok('every club is projected over a full schedule',
+    Object.values(totals).every(v => v.games === 17), JSON.stringify(Object.values(totals).map(v => v.games).slice(0, 4)));
+  const built = R.buildTeamEnvOverlay(totals);
   ok('overlay covers most of the pool', built.matched > 300, String(built.matched));
   const fv = Object.values(built.factors);
   ok('factors cluster near 1 rather than sprawling',
