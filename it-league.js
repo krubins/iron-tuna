@@ -77,7 +77,7 @@
   // to reprice. Which curve applies is qbPremium below, the same rule as the
   // client's qbIsPremium. Kept OUTSIDE the `var CURVE = {` ... `var MIN_BID`
   // span that tools/test-curve-budget.mjs parses the 1-QB mirror out of.
-  var SUPERFLEX_QB_CURVE = [44, 39, 34, 32, 28, 25, 20, 17, 11, 9, 9, 6, 3, 2, 2, 2];
+  var SUPERFLEX_QB_CURVE = [44, 40, 37, 34, 31, 29, 27, 25, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1];
   // Default per-team roster totals (the site's default league), used to size a
   // superflex board for the renormalisation in price(). A saved league's own
   // roster shape overrides these per position.

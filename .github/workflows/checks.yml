@@ -316,6 +316,25 @@ jobs:
       - name: The cheat sheet's dollars add up
         run: node tools/test-curve-budget.mjs
 
+      # VALUE is re-solved on the board that is LEFT once picks are logged:
+      # replacement level, VORP and the dollar share all move with the remaining
+      # pool, the remaining demand and the money still in the room. Pick zero
+      # must reproduce the pre-draft column exactly. No browser, no network.
+      - name: VALUE re-baselines during the draft
+        run: node tools/test-live-value.mjs
+
+      # The plan for the reader's team prices its targets at what the room will
+      # make them pay, the handcuff to a starter they own carries his cover, and
+      # a bye they already have costs the second hole. No browser, no network.
+      - name: Plan pricing, handcuffs and byes
+        run: node tools/test-plan-pricing.mjs
+
+      # The worker keeps the availability list current from ESPN's injury feed
+      # (IR / PUP / suspended / exempt), merged over the committed block with the
+      # pro-rating applied exactly once. Skips the live pull without network.
+      - name: Worker availability refresh
+        run: node tools/test-worker-availability.mjs
+
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one
       # computation — this fails if they ever start disagreeing.
