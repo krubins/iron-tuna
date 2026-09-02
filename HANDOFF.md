@@ -5953,3 +5953,173 @@ weekly, act on what it prints, and re-run without flags. A weekly Routine that
 does exactly that and opens a PR is the obvious next step; it was not built
 here because it needs the same Routine plumbing §46 and §47 are still sorting
 out.
+
+## 49. September 2: the auction engine, re-cut for the draft it is actually in
+
+Ken asked for every change that would make the site better at drafting the best
+team: the quality of the rankings and the efficiency of the dollar allocation.
+This section is what shipped, what each change does to a number the reader sees,
+and what it deliberately does not claim.
+
+### 49a. VALUE re-solves on the board that is left
+
+Before this, VALUE was built once from the whole pool and the whole league's
+starter demand, and during the draft it was only ever **scaled** by one
+inflation factor. The gaps between players — the thing a replacement level
+exists to set — never moved. Six teams could hoard three running backs each and
+the sheet still priced RB19 against a replacement who had been off the board for
+an hour.
+
+`applyInflation` now calls **`revalueRemaining`** (next to it in `index.html`):
+`remainingDemand(teams, config)` sums what every team still has to buy (open
+starter slots per position, open roster spots per position, open FLEX slots,
+counting a flex used by a surplus RB as used), then the same pipeline runs over
+the undrafted pool — `calculateReplacementLevels(byPos, config, demand)` →
+`calculateVORP` → `calculateAuctionValues(players, config, {demand, budget,
+spots})` → `renormalizeToBudget(players, config, {budget, rosteredCounts,
+keys: ['auctionValue']})` — against the money actually left in the room. The
+three functions gained an optional last argument for this; with it omitted they
+are the pre-draft board, unchanged. `inflatedValue` is the live figure, and it
+now carries `liveReplacement` and `liveVorp` beside it. The reader's tier
+instructions ("value elite RBs 20% more") survive the re-solve through
+`valueAdjustMultipliers`. The cheat sheet's Value column, the board colour and
+the plan premium's replacement all read the live figure once picks are logged.
+
+With nothing drafted the result is `auctionValue` to the dollar, by
+construction. `tools/test-live-value.mjs` (no browser, in CI) pins that, pins
+the column still adding up to the money left and never rising down a position,
+and shows the point of it: 18 RBs hoarded by six teams lifts the next twelve RBs
+and drops the RB replacement level; one RB a team leaves it exactly where it was.
+
+### 49b. One risk discount, written down
+
+VALUE carried the same haircut twice under two names: `POS_RELIABILITY` inside
+`effVorp` and `POSITION_PREDICTABILITY` multiplied onto the finished dollar. A
+running back was 0.90 × 0.90 = 0.81 against a receiver at 0.97 — a 16% relative
+discount nobody had stated. `applyPredictability` and its table are gone; the
+one table is `POS_RELIABILITY` (QB 0.99, RB 0.86, WR 0.97, TE 0.90, K 0.19, DEF
+0.28), with the rank decay as named constants beside it. RB/WR sits at 0.887
+(was 0.835 stacked, 0.928 single); K/DEF keep their stacked products so they
+still price at the $1–3 a roster pays for them.
+
+**These are not fitted, and the comment on the table says so.** There is no
+ex-ante preseason projection set in the repo — `PROJ_2025` sits within 1.5% of
+`ACT_2025` and is not one. `tools/backtest-projections.mjs` is the fit: drop
+`tools/sources/preseason-<year>.json` and `actuals-<year>.json` in (the
+merge-projections schema) and it prints the ex-ante level factor per position,
+the realised-over-projected VORP share (which is what a reliability factor is),
+the rank decay by bucket, and the concavity that best matches projected dollar
+shares to realised ones. Until then it exits 0 with a message. Move what it
+prints into the table by hand and note the year.
+
+### 49c. The last-year calibration compares like with like
+
+`normalizeToLastYear` scaled each position so its projected top-K mean matched
+last season's **realised** top-K — a top-13 slice at QB and TE against top-31
+at RB and WR. A realised top-K is the set that got lucky as well as good, so
+the comparison is biased by construction and by a different amount per
+position. It now runs over the full depth of the tables (32 a position, the
+same everywhere), applies half the measured gap, and never more than 8%. On the
+committed board the factors moved QB 1.000 → 0.946, RB 0.960 → 0.978, WR 0.927
+→ 0.963, TE unchanged; top-12 QB VALUE fell $207 → $192 on a $229 Proj, which is
+the 1.19x premium §9h calibrated to, restored.
+
+### 49d. The plan prices what the room will make you pay
+
+`buildOptimalPlan` priced every candidate at Proj and `switchPrice` assumed the
+rest of the plan could be bought at exactly that. **`expectedPlanPrices`**
+measures, per undrafted player, the contest for him — rivals who still have an
+open slot he fits (`teamNeedsPosition`, dedicated and flex) and can afford his
+price, over comparable players still on the board — against the same ratio on
+the pre-draft board, on a log scale, capped 0.90–1.12. Pre-draft the map is
+empty and Proj stands, because the curve already priced a full room; the $1–4
+tail is never touched. It feeds `buildOptimalPlan` through `opts.expectedPrice`
+and `switchPrice` through a new trailing `opts`, for **your** team's plan and
+the You column only. Proj on the sheet is untouched; the row carries
+`expectedPrice` so the cell can say so.
+
+### 49e. Handcuffs and byes are in the dollars
+
+- **`handcuffsOf` / `handcuffDollars`.** The backup to a lead RB **you own**
+  (same 1.3x rule as the board's H chip) is worth his own bid plus the cover: 3
+  games missed × (80% of the lead's per-game production − replacement level),
+  turned into dollars at the board's own `dollarsPerPoint`. Only the team that
+  owns the starter gets it; a rival's starter makes his backup worth $1 to you,
+  which is the $1 endgame the guides describe and the sheet never priced. He is
+  exempt from the You no-rise clamp — the one legitimate inversion.
+- **`byeStackDollars`.** A starter sharing a bye with one you already have at
+  the same slot group costs the second hole (the bench covers one, the waiver
+  body covers the other, 15% under). Usually a dollar. The row carries
+  `handcuffOf`, `handcuffPrem` and `byeClash`.
+
+`tools/test-plan-pricing.mjs` (no browser, in CI) covers all three on a
+synthetic league.
+
+### 49f. Smaller things that moved a price
+
+- **K/DEF You** was VALUE and read above Proj ($31 vs $24 at K, §9j). It is now
+  `min(Value, Proj)`: paying over the room for a kicker is a pure leak.
+- **`SUPERFLEX_QB_CURVE`** was the old 1-QB shape at a higher level — sixteen
+  entries, $3 at QB13, in a format where QB13 starts. It runs thirty deep now,
+  double digits through QB16, mirrored in `it-league.js`. On the default board
+  superflex prices QB1 $60 against RB1 $65, QB7 $37. A judgement of shape, stated
+  as such; `test-qb-curve.mjs` pins the invariants.
+- **The planner's stranded money** (§19's residual) is gone: `buildOptimalPlan`
+  solves twice when the Starters-vs-Depth knob withholds more than the bench can
+  absorb, handing the difference back to the starters. At the Depth end of the
+  slider the unspent figure is now $0–6 across the nine models (was up to $19);
+  the whole-dollar bench floors account for the rest. `test-planner-budget.mjs`
+  reports it.
+- **`marketAdjustedPrice` is deleted.** It moved a "recommended price" DOWN when
+  a position ran hot while inflation and positional demand moved Proj UP, and
+  nothing on the page read its output. `computeMarketState` and the heat strip
+  stay.
+- **Dead code removed:** `applyTierShaping` (with its hand-written per-player
+  multipliers from July), `applyQbActuals`, `applyBaselineRankFixes`,
+  `computePersonalValue`, `recommendBid`, `buildReasoning` and the unused
+  `FORMATS.auction.recommend`. None was reachable.
+
+### 49g. The worker keeps the injury list itself
+
+§48 left the availability list hand-kept. `runAvailabilityRefresh(env)` in
+`_worker.js` now pulls ESPN's public injury feed on the same 11:00Z cron as the
+odds, maps IR / IR-R / PUP-R / NFI-R / RESERVE-SUS / RESERVE-CEL / Out-with-a-date
+to a `gamesOut` with the same rules as `apply-availability.mjs --fetch` (reserve
+lists floor at 4, season-ending text or ≥17 weeks → 17, Questionable/Doubtful
+ignored), and stores it as row 3 of `odds_overlay` (`provider='espn-injuries'`).
+`availabilityMerge` unions it over the committed `AVAILABILITY` block: the live
+row wins status, note and source, `gamesOut` is `max(live, committed)` because
+the feed's return dates are placeholders (it says Jacobs 2 where the file says
+6) and a pure overlay-wins would silently reinstate players. Reinstatement stays
+manual. Fail-safe like the odds: bad feed, fewer than 5 matched, fewer than 28
+teams, or a row older than 14 days means the previous table stands.
+`/api/admin/odds-status?...&availability=1` reports; `&availability=refresh`
+pulls now.
+
+Two things this forced out into the open: `buildTeamEnvOverlay` was building
+the market line from already pro-rated rows and `oddsCacheRead` scaled them
+again, so the nflverse provider double-applied the injury factor for every
+listed player; and `blendProjections` now applies availability before the
+blend so a fresh IR reads as an injury rather than a market fade. The cached
+overlay in production corrects itself at the next pull. `tools/test-worker-
+availability.mjs` (101 assertions, in CI, live feed when reachable) covers the
+mapping, the merge, the once-only factor and the fail-safes. Not verified from
+here: that Cloudflare's egress gets the same 200 from ESPN's edge that this
+sandbox does with the worker's user agent.
+
+### 49h. What this does not do, and why
+
+- **Projection feeds are still not pulled.** ESPN's fantasy API and Sleeper are
+  unreachable from this sandbox (checked 2026-09-02), so a worker-side feed
+  refresh could not be validated and was not written. Season lines still move
+  only by upload.
+- **The snake tool's survival odds still run on the site's own rank**, not a
+  market ADP (`attachProvisionalAdp`). That is the biggest snake-side gap and
+  is out of this section's auction scope.
+- **No constant here is backtested.** 49b says how to fix that.
+
+`node tools/build-front-analysis.mjs` was re-run (The Build now reads $186 at
+122.4 pts/gm + $14 bench); `build-front`, `build-seo --check`, `build-chrome
+--check` and `apply-availability --check` are clean. Local dev needs
+`npm i --no-save playwright playwright-core react react-dom` for the browser
+tests; all four are gitignored.

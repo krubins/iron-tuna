@@ -101,7 +101,7 @@ console.log('\nthe rule the renderer and the export both follow');
   ok('the graded value comes from boardValue', src.includes('const graded = boardValue(p, value, config)'));
   // The CSV/AI flag and the on-screen colour must agree, or a reader gets two
   // different answers to "why is he red".
-  ok('the export grades with the same function', src.includes('const _b = boardValue(p, p.auctionValue, config)'));
+  ok('the export grades with the same function', src.includes('const _b = boardValue(p, p.inflatedValue != null ? p.inflatedValue : p.auctionValue, config)'));
   ok('the export no longer talks about You', !/Proj (above|below) You/.test(src));
   // The premium's own definition, in the memo that has the plan and the pool.
   ok('the plan premium is capped at 10% of the budget',

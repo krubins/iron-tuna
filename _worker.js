@@ -1306,19 +1306,173 @@ const AVAILABILITY = {
   "zachcharbonnet|RB": {"status":"PUP","gamesOut":4,"note":"January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.","asOf":"2026-09-02"},
   "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"}
 };
-function _availFactor(key) {
-  const a = AVAILABILITY[key];
-  if (!a) return 1;
-  return Math.max(0, Math.min(1, 1 - (Number(a.gamesOut) || 0) / AVAILABILITY_GAMES));
+// ── live availability (ESPN's public injury report, pulled by the 11:00Z cron) ──
+// The committed block above is only as current as the last hand edit, and the
+// whole of HANDOFF §48 was that nothing on a schedule could change one player's
+// line. So the cron pulls ESPN's injury report, keeps the board players it has on
+// a reserve list (IR, reserve/PUP, reserve/NFI, suspension, the exempt list) as
+// row 3 of odds_overlay in D1, and the request path serves the UNION of the
+// committed block and that row:
+//   - a player in both: the live entry wins (status, note, source), except that
+//     games missed never drop below the committed number. Fewer games out is a
+//     reinstatement, and reinstatement stays a hand edit to tools/availability.json
+//     (the feed's return dates are placeholders — Jacobs' exempt-list entry says
+//     Week 3 while the file's considered number is six).
+//   - a player only in the committed block: kept as is. The feed dropping him is
+//     not evidence he plays; ESPN clears reserve designations in bulk.
+//   - a player only in the live row: a placement the file has not caught up
+//     with. His committed PROJECTIONS row is still the full-season line, so it is
+//     pro-rated on the way out (_withAvailability) and the odds overlay by the
+//     same factor (applyAvailability). Each side carries the factor exactly once:
+//     the committed rows already carry the committed factor, so only the
+//     difference between the live and committed numbers is applied to a row.
+// FAIL-SAFE like the odds pull (§9b): a provider error, unparseable JSON, a feed
+// missing most of the league, or fewer than AVAIL_MIN_MATCHED board players on
+// reserve lists never writes a row; a row older than AVAIL_MAX_AGE_MS or not in
+// the shape written here is ignored on read. Either way the previous good row,
+// or the committed block alone, stays in force.
+const AVAIL_FEED_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries';
+const AVAIL_MIN_MATCHED = 5;            // fewer board players on reserve lists than this = broken pull
+const AVAIL_MIN_TEAMS = 28;             // a feed carrying fewer teams is truncated, not quiet
+const AVAIL_MAX_AGE_MS = 14 * 86400000; // a live row older than this is ignored, like the overlay
+const AVAIL_MEMO_MS = 900000;           // per-isolate memo of the merged table (one D1 read behind it)
+const AVAIL_MIN_GAMES = 2;              // a one-game absence is not a season line change (§48)
+const AVAIL_RESERVE_MIN = 4;            // IR / reserve-PUP / reserve-NFI: at least four games by rule
+const AVAIL_SEASON_ENDING = /season-ending|out for the (rest of the )?(season|year)|(rest|remainder) of the (\d{4} )?season|(entire|whole) (\d{4} )?season/i;
+
+const _availF = g => Math.max(0, Math.min(1, 1 - (Number(g) || 0) / AVAILABILITY_GAMES));
+// Feed status -> the vocabulary tools/availability.json uses. ESPN's top-level
+// `status` is coarse ("Out" covers reserve/PUP, reserve/NFI and the exempt list
+// alike), so the fantasyStatus under `details` says which list and is read
+// first. Week-to-week entries (Questionable, Doubtful, Probable, Day-To-Day,
+// Active, active/PUP) are not season line changes and map to nothing, exactly
+// as §48 left them alone by hand.
+function _availStatusOf(entry) {
+  const fsx = ((entry && entry.details) || {}).fantasyStatus || {};
+  const fs = String(fsx.abbreviation || fsx.description || '').toUpperCase();
+  const st = String((entry && entry.status) || '');
+  if (/^IR(-R)?$/.test(fs) || /Injured Reserve/i.test(st)) return { status: 'IR', min: AVAIL_RESERVE_MIN, reserve: true };
+  if (fs === 'PUP-R' || /Physically Unable/i.test(st)) return { status: 'PUP', min: AVAIL_RESERVE_MIN, reserve: true };
+  if (fs === 'NFI-R' || /Non-Football/i.test(st)) return { status: 'NFI', min: AVAIL_RESERVE_MIN, reserve: true };
+  if (fs === 'RESERVE-CEL' || /Exempt/i.test(st)) return { status: 'Exempt', min: AVAIL_MIN_GAMES, reserve: false };
+  if (fs === 'RESERVE-SUS' || /Suspen/i.test(st)) return { status: 'Suspended', min: AVAIL_MIN_GAMES, reserve: false };
+  if (/^Out$/i.test(st) && fs !== 'PUP-P') return { status: 'Out', min: AVAIL_MIN_GAMES, reserve: false, needsDate: true };
+  return null;
 }
-// Scale an overlay's market-implied totals for the players in AVAILABILITY. A
-// season-long total for a player who will not play the season is not a market
-// view of him, it is a stale row; scaling it here keeps every reader of the
-// overlay (the blend, the column, the board) on the same footing as PROJECTIONS.
+// Week 1 kicks off on the Thursday after Labor Day (the first Monday of September).
+function _availKickoff(year) {
+  const first = new Date(Date.UTC(year, 8, 1)).getUTCDay();
+  return Date.UTC(year, 8, 1 + ((8 - first) % 7) + 3);
+}
+// Games missed: whole weeks between kickoff and ESPN's return date, never below
+// the list's own minimum, 17 when the return date is past the season or the
+// comment says season-ending. Bye weeks are ignored on purpose — the file's
+// own convention is "first eligible Week 5" = 4. Returns 0 to say "not a
+// season line change" (a return inside AVAIL_MIN_GAMES, or a plain "Out" with
+// no date to go on).
+function _availGamesOut(entry, kickoff, m) {
+  const text = String((entry && entry.shortComment) || '') + ' ' + String((entry && entry.longComment) || '');
+  if (AVAIL_SEASON_ENDING.test(text)) return AVAILABILITY_GAMES;
+  const ret = Date.parse(String(((entry && entry.details) || {}).returnDate || ''));
+  const weeks = Number.isFinite(ret) ? Math.floor((ret - kickoff) / (7 * 86400000)) : null;
+  if (weeks === null) return m.needsDate ? 0 : m.min;
+  if (weeks >= AVAILABILITY_GAMES) return AVAILABILITY_GAMES;
+  if (m.reserve) return Math.max(m.min, weeks);
+  return weeks >= m.min ? weeks : 0;
+}
+// name + position, the way tools/availability.json and the block above are
+// keyed. A name at two positions is dropped rather than guessed, as the odds
+// matcher does.
+function _availBoardIndex() {
+  const idx = new Map();
+  for (const p of PROJECTIONS) {
+    const k = _oddsNorm(p.name) + '|' + p.position;
+    idx.set(k, idx.has(k) ? null : { name: p.name, position: p.position, team: p.team });
+  }
+  return idx;
+}
+// The feed, reduced to board players on a reserve list. Same shape per entry as
+// a tools/availability.json row, keyed like AVAILABILITY.
+function buildAvailabilityOverlay(feed) {
+  const teams = feed && Array.isArray(feed.injuries) ? feed.injuries : [];
+  const stamp = Date.parse(String((feed && feed.timestamp) || ''));
+  const asOf = new Date(Number.isFinite(stamp) ? stamp : Date.now()).toISOString();
+  const year = Number(feed && feed.season && feed.season.year) || Number(asOf.slice(0, 4));
+  const kickoff = _availKickoff(year);
+  const board = _availBoardIndex();
+  const players = {};
+  const skipped = { unlisted: 0, weekToWeek: 0, short: 0 };
+  let entries = 0;
+  for (const t of teams) for (const e of (t && Array.isArray(t.injuries)) ? t.injuries : []) {
+    entries++;
+    const a = (e && e.athlete) || {};
+    const pos = String((a.position || {}).abbreviation || '').toUpperCase().replace(/^PK$/, 'K');
+    const key = _oddsNorm(a.displayName) + '|' + pos;
+    const p = board.get(key);
+    if (!p) { skipped.unlisted++; continue; }
+    const m = _availStatusOf(e);
+    if (!m) { skipped.weekToWeek++; continue; }
+    const gamesOut = _availGamesOut(e, kickoff, m);
+    if (!gamesOut) { skipped.short++; continue; }
+    if (players[key] && players[key].gamesOut >= gamesOut) continue;   // two entries for one man: the longer absence
+    const type = String((e.details || {}).type || '').trim();
+    const note = ((type && !/^(Undisclosed|Suspension|Personal)$/i.test(type) ? type + ': ' : '') + String(e.shortComment || '').trim()).slice(0, 160);
+    players[key] = { name: p.name, position: p.position, team: p.team, status: m.status, gamesOut, note,
+                     source: 'ESPN injury feed ' + asOf.slice(0, 10), asOf: asOf.slice(0, 10) };
+  }
+  return { players, matched: Object.keys(players).length, teams: teams.length, entries, skipped, asOf };
+}
+// committed ∪ live, live winning per player except downward on gamesOut (see the
+// note at the top of this block). Every entry records the committed number so
+// the row factor can be the DIFFERENCE, not the whole factor twice.
+function availabilityMerge(committed, live) {
+  const out = {};
+  for (const [k, c] of Object.entries(committed || {})) out[k] = { ...c, committedGamesOut: Number(c.gamesOut) || 0 };
+  for (const [k, l] of Object.entries(live || {})) {
+    const cg = out[k] ? out[k].committedGamesOut : 0;
+    out[k] = { status: l.status, gamesOut: Math.max(Number(l.gamesOut) || 0, cg), note: l.note || '',
+               asOf: l.asOf || '', source: l.source || '', live: true, committedGamesOut: cg };
+  }
+  return out;
+}
+let _AVAIL_TABLE = availabilityMerge(AVAILABILITY, null);   // what every sync reader below sees
+let _AVAIL_AT = 0;        // when the memo was last loaded from D1 (0 = never)
+let _AVAIL_LIVE_AT = 0;   // updated_at of the live row behind it (0 = committed block only)
+let _AVAIL_KICK_AT = 0;
+function _availTable() { return _AVAIL_TABLE; }
+// The merged table, loaded once per isolate-quarter-hour. oddsCacheRead calls
+// this first, so every path that reads the overlay has the live list in place
+// before blendProjections / applyAvailability run.
+async function availabilityTable(env) {
+  if (_AVAIL_AT && Date.now() - _AVAIL_AT < AVAIL_MEMO_MS) return _AVAIL_TABLE;
+  const live = await availabilityCacheRead(env);
+  _AVAIL_TABLE = availabilityMerge(AVAILABILITY, live && live.players);
+  _AVAIL_LIVE_AT = live ? live.updatedAt : 0;
+  _AVAIL_AT = Date.now();
+  return _AVAIL_TABLE;
+}
+// The factor a market (full-season) line takes for this player.
+function _availFactor(key) {
+  const a = _availTable()[key];
+  return a ? _availF(a.gamesOut) : 1;
+}
+// The factor his COMMITTED row still needs: the row already carries the
+// committed pro-rating, so only what the live list adds on top is applied.
+function _availRowFactor(key) {
+  const a = _availTable()[key];
+  if (!a) return 1;
+  const fc = _availF('committedGamesOut' in a ? a.committedGamesOut : a.gamesOut);
+  const f = _availF(a.gamesOut);
+  return fc > 0 ? Math.min(1, f / fc) : 1;
+}
+// Scale an overlay's market-implied totals for the players on the availability
+// list. A season-long total for a player who will not play the season is not a
+// market view of him, it is a stale row; scaling it here keeps every reader of
+// the overlay (the blend, the column, the board) on the same footing as PROJECTIONS.
 function applyAvailability(overlay) {
   if (!overlay || typeof overlay !== 'object') return overlay;
   let out = overlay;
-  for (const key of Object.keys(AVAILABILITY)) {
+  for (const key of Object.keys(_availTable())) {
     const v = overlay[key];
     if (!v) continue;
     const f = _availFactor(key);
@@ -1576,6 +1730,15 @@ function buildTeamEnvOverlay(vegasPPG) {
     const f = factors[teamKey(p.team)];
     if (!f) continue;
     const st = p.projectedStats || {};
+    // A committed row on the availability list is already pro-rated (§48). The
+    // market view stored here is a FULL-SEASON line, so the row is un-rated
+    // first and applyAvailability puts the factor back exactly once on the way
+    // out — otherwise the same factor would land twice on every listed player.
+    // A zeroed row (out for the year) has no season line left to recover and
+    // is skipped; there is nothing for the market to say about him.
+    const committed = AVAILABILITY[_oddsNorm(p.name) + '|' + p.position];
+    const af = committed ? _availF(committed.gamesOut) : 1;
+    if (af <= 0) continue;
     const out = {};
     const put = (k, v) => {
       if (!Number.isFinite(v) || v < 0) return;
@@ -1583,8 +1746,8 @@ function buildTeamEnvOverlay(vegasPPG) {
       if (band && (v < band[0] || v > band[1])) return;   // never emit an implausible total
       out[k] = _oddsRound(v);
     };
-    for (const k of TEAMENV_TD_STATS) if (st[k] > 0) put(k, st[k] * f);
-    for (const k of TEAMENV_YARD_STATS) if (st[k] > 0) put(k, st[k] * Math.pow(f, TEAMENV_YARD_EXP));
+    for (const k of TEAMENV_TD_STATS) if (st[k] > 0) put(k, st[k] / af * f);
+    for (const k of TEAMENV_YARD_STATS) if (st[k] > 0) put(k, st[k] / af * Math.pow(f, TEAMENV_YARD_EXP));
     if (Object.keys(out).length) overlay[_oddsNorm(p.name) + '|' + p.position] = out;
   }
   return { overlay, matched: Object.keys(overlay).length, teams: common.length, factors };
@@ -1661,9 +1824,13 @@ function buildVegasOverlay(rows) {
 // carry Vegas yardage next to committed TDs. That is intentional.
 function blendProjections(overlay) {
   if (!overlay) return _availPool(PROJECTIONS);
-  return PROJECTIONS.map(p => {
+  return PROJECTIONS.map(p0 => {
+    // Availability first, blend second: the row is brought to the games he can
+    // play, the overlay was already scaled the same way in applyAvailability,
+    // and the blend of two pro-rated lines is pro-rated once.
+    const p = _withAvailability(p0);
     const v = overlay[_oddsNorm(p.name) + '|' + p.position];
-    if (!v) return _withAvailability(p);
+    if (!v) return p;
     const stats = { ...p.projectedStats };
     // vegas[k] = [committed, marketImplied, blended] — shipped to the client so the
     // cheat sheet can flag players whose ranking the odds moved and show the numbers.
@@ -1678,19 +1845,34 @@ function blendProjections(overlay) {
       vg[k] = [before, _oddsRound(n), stats[k]];
       touched = true;
     }
-    return _withAvailability(touched ? { ...p, projectedStats: stats, vegas: vg } : p);
+    return touched ? { ...p, projectedStats: stats, vegas: vg } : p;
   });
 }
 // The client shows `status` in its injury column (and counts it in the player's
-// risk score) until /api/live answers with something fresher.
+// risk score) until /api/live answers with something fresher. A player the live
+// list knows more about than the committed row does is pro-rated here by the
+// difference (_availRowFactor); a row that already carries its factor is
+// passed through by reference.
 function _withAvailability(p) {
-  const a = AVAILABILITY[_oddsNorm(p.name) + '|' + p.position];
-  return a ? { ...p, status: a.status, gamesOut: a.gamesOut, note: a.note } : p;
+  const key = _oddsNorm(p.name) + '|' + p.position;
+  const a = _availTable()[key];
+  if (!a) return p;
+  const rf = _availRowFactor(key);
+  let stats = p.projectedStats;
+  if (rf < 1) {
+    stats = {};
+    for (const [k, v] of Object.entries(p.projectedStats || {})) {
+      const n = Number(v);
+      stats[k] = Number.isFinite(n) ? _oddsRound(n * rf) : v;
+    }
+  }
+  return { ...p, projectedStats: stats, status: a.status, gamesOut: a.gamesOut, note: a.note };
 }
 // The committed pool with statuses attached, or the pool itself when no row in
 // it is listed (so callers that compare by reference still see PROJECTIONS).
 function _availPool(pool) {
-  return pool.some(p => AVAILABILITY[_oddsNorm(p.name) + '|' + p.position]) ? pool.map(_withAvailability) : pool;
+  const t = _availTable();
+  return pool.some(p => t[_oddsNorm(p.name) + '|' + p.position]) ? pool.map(_withAvailability) : pool;
 }
 
 // ── §9c. "Vegas vs. Rankings & ADP" column ─────────────────────────────────
@@ -1860,11 +2042,12 @@ let _BOARD_CACHE = null, _BOARD_AT = 0;
 async function boardPayload(env) {
   const now = Date.now();
   if (_BOARD_CACHE && now - _BOARD_AT < 900000) return _BOARD_CACHE;
-  let pool = PROJECTIONS, asOf = 0;
+  let pool = null, asOf = 0;
   try {
     const cached = await oddsCacheRead(env);
     if (cached && cached.overlay) { pool = blendProjections(cached.overlay); asOf = cached.updatedAt || 0; }
   } catch (e) { /* the committed pool is a worse board, not a broken one */ }
+  if (!pool) pool = blendProjections(null);    // committed rows, availability still applied
   const byPos = {};
   for (const p of pool) {
     if (COLUMN_POSITIONS.indexOf(p.position) < 0) continue;
@@ -1970,7 +2153,9 @@ function buildVegasBoard(overlay, ctx) {
   if (!overlay || typeof overlay !== 'object') return { ok: false, error: 'no_overlay', rows: [] };
   const projTeamRank = _colTeamProjRank();
   const byPos = {};
-  for (const p of PROJECTIONS) {
+  // The consensus side is the pool the app ships (availability applied), so a
+  // man the live list just put on IR reads as an injury, not as a market fade.
+  for (const p of _availPool(PROJECTIONS)) {
     if (!COLUMN_POSITIONS.includes(p.position)) continue;
     const st = p.projectedStats || {};
     const veg = _colVegasStats(p, overlay);
@@ -2205,6 +2390,10 @@ async function oddsCacheInit(env) {
 }
 async function oddsCacheRead(env) {
   if (!env || !env.LEADS_DB) return null;
+  // The live availability list has to be in place before the overlay is scaled
+  // by it (and before blendProjections reads it); a failure here means the
+  // committed block alone, never a missing overlay.
+  try { await availabilityTable(env); } catch (e) {}
   try {
     const row = await env.LEADS_DB.prepare('SELECT payload, provider, matched, updated_at FROM odds_overlay WHERE id=1').first();
     if (!row || !row.payload) return null;
@@ -2239,6 +2428,41 @@ async function oddsCacheWrite(env, overlay, provider, matched) {
   await env.LEADS_DB.prepare(
     'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (1, ?, ?, ?, ?)'
   ).bind(JSON.stringify(overlay), provider, matched, Date.now()).run();
+}
+// The live availability list: row 3 of the same table, same lifecycle, no
+// migration. payload = { asOf, players: { "<norm>|<POS>": { name, position,
+// team, status, gamesOut, note, source, asOf } } }, provider 'espn-injuries',
+// matched = the number of board players listed, updated_at = when it was pulled.
+async function availabilityCacheWrite(env, built) {
+  await oddsCacheInit(env);
+  await env.LEADS_DB.prepare(
+    'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (3, ?, ?, ?, ?)'
+  ).bind(JSON.stringify({ asOf: built.asOf, players: built.players }), 'espn-injuries', built.matched, Date.now()).run();
+}
+// Strict on the way back: a row that is not exactly the shape written above is
+// not used at all, rather than half-used.
+function _availValidPlayers(players) {
+  if (!players || typeof players !== 'object' || Array.isArray(players)) return null;
+  const out = {};
+  for (const [k, v] of Object.entries(players)) {
+    if (!/^[a-z]*\|[A-Z]{1,4}$/.test(k) || !v || typeof v !== 'object') return null;
+    const g = Number(v.gamesOut);
+    if (typeof v.status !== 'string' || !v.status || !Number.isFinite(g) || g < 1 || g > AVAILABILITY_GAMES) return null;
+    out[k] = { ...v, gamesOut: g };
+  }
+  return out;
+}
+async function availabilityCacheRead(env) {
+  if (!env || !env.LEADS_DB) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, provider, matched, updated_at FROM odds_overlay WHERE id=3').first();
+    if (!row || !row.payload) return null;
+    if (!row.updated_at || Date.now() - row.updated_at > AVAIL_MAX_AGE_MS) return null;
+    const j = JSON.parse(row.payload);
+    const players = _availValidPlayers(j && j.players);
+    if (!players) return null;
+    return { players, asOf: String(j.asOf || ''), provider: row.provider, matched: row.matched, updatedAt: row.updated_at };
+  } catch (e) { return null; }
 }
 
 // ── orchestration ──────────────────────────────────────────────────────────
@@ -2291,6 +2515,68 @@ async function runOddsRefresh(env) {
   _COLUMN_CACHE = null; _COLUMN_AT = 0;
   _PODDS_BOARD = null; _PODDS_BOARD_AT = 0;
   return { ok: true, provider: used.join('+'), matched, tried };
+}
+
+// ESPN's public injury report. Keyless; the same feed tools/apply-availability.mjs
+// --fetch reads. ESPN's edge refuses browser-looking user agents from
+// non-browsers, and accepts a plain product token, so the token is fixed here.
+async function fetchInjuriesEspn() {
+  const r = await fetch(AVAIL_FEED_URL, { headers: { 'user-agent': 'iron-tuna-availability/1.0', 'accept': 'application/json' } });
+  if (!r.ok) throw new Error('espn injuries http ' + r.status);
+  let j;
+  try { j = await r.json(); } catch (e) { throw new Error('espn injuries: unparseable response'); }
+  if (!j || !Array.isArray(j.injuries)) throw new Error('espn injuries: unexpected shape');
+  return j;
+}
+// The availability counterpart of runOddsRefresh: pull, reduce to board players
+// on reserve lists, refuse anything thin, write row 3. Nothing here ever edits
+// the committed block; the request path unions the two (availabilityMerge).
+async function runAvailabilityRefresh(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  let feed;
+  try { feed = await fetchInjuriesEspn(); }
+  catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+  let built;
+  try { built = buildAvailabilityOverlay(feed); }
+  catch (e) { return { ok: false, error: 'build failed: ' + ((e && e.message) || 'failed') }; }
+  const info = { teams: built.teams, entries: built.entries, matched: built.matched, skipped: built.skipped, asOf: built.asOf };
+  if (built.teams < AVAIL_MIN_TEAMS) return { ok: false, error: 'thin_feed', ...info };
+  if (built.matched < AVAIL_MIN_MATCHED) return { ok: false, error: 'insufficient_coverage', ...info };
+  await availabilityCacheWrite(env, built);
+  // The merged table, the encoded pool and everything ranked off it are now
+  // describing yesterday's list; drop them the way runOddsRefresh does.
+  _AVAIL_AT = 0;
+  _PROJ_ENC = null; _PROJ_BLEND_AT = 0;
+  _COLUMN_CACHE = null; _COLUMN_AT = 0;
+  _PODDS_BOARD = null; _PODDS_BOARD_AT = 0;
+  _BOARD_CACHE = null; _BOARD_AT = 0;
+  return { ok: true, provider: 'espn-injuries', ...info,
+           added: Object.keys(built.players).filter(k => !AVAILABILITY[k]),
+           notInFeed: Object.keys(AVAILABILITY).filter(k => !built.players[k]) };
+}
+// What /api/admin/odds-status?availability=1 prints: the live row's age and
+// size, and every player the merged list touches, with the number each side
+// contributed and the factor his served row carries.
+async function availabilityReport(env) {
+  const table = await availabilityTable(env);
+  const live = await availabilityCacheRead(env);
+  const byKey = _availBoardIndex();
+  const affected = Object.entries(table).map(([key, a]) => {
+    const p = byKey.get(key) || {};
+    return { key, name: p.name || key.split('|')[0], position: p.position || key.split('|')[1], team: p.team || '',
+             status: a.status, gamesOut: a.gamesOut, committedGamesOut: a.committedGamesOut,
+             from: a.live ? 'live' : 'committed', asOf: a.asOf || '',
+             factor: +_availF(a.gamesOut).toFixed(3), rowFactor: +_availRowFactor(key).toFixed(3), note: a.note || '' };
+  }).sort((x, y) => x.position.localeCompare(y.position) || x.name.localeCompare(y.name));
+  return {
+    feed: AVAIL_FEED_URL,
+    live: live ? { asOf: live.asOf, matched: live.matched, updatedAt: live.updatedAt, ageHours: +((Date.now() - live.updatedAt) / 3600000).toFixed(1) } : null,
+    serving: live ? 'committed block + live row (union, live wins, never fewer games out)' : 'committed block only (no usable live row)',
+    committed: Object.keys(AVAILABILITY).length,
+    merged: affected.length,
+    addedByLive: affected.filter(a => a.from === 'live' && !a.committedGamesOut).map(a => a.name),
+    affected
+  };
 }
 
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
@@ -2577,12 +2863,13 @@ function leadSlug(n) {
 async function projectionsPayload(env, ctx) {
   const fresh = Date.now() - _PROJ_BLEND_AT < 300000;
   if (_PROJ_ENC && fresh) return _PROJ_ENC;
-  let pool = PROJECTIONS;
+  let pool = null;
   let overlayAt = 0;
   try {
     const cached = await oddsCacheRead(env);
     if (cached && cached.overlay) { pool = blendProjections(cached.overlay); overlayAt = cached.updatedAt || 0; }
   } catch (e) { /* fall back to the committed pool */ }
+  if (!pool) pool = blendProjections(null);    // committed rows, availability still applied
   // Self-healing: a missing or day-stale overlay means the 11:00 UTC cron failed or never
   // ran. Kick at most one background refresh per isolate-hour off this request; the
   // response itself never waits on the sportsbook and still serves whatever it has.
@@ -2593,6 +2880,16 @@ async function projectionsPayload(env, ctx) {
         console.log('odds self-heal:', JSON.stringify(r && { ok: r.ok, matched: r.matched, error: r.error }));
         if (r && r.ok) { _PROJ_ENC = null; _PROJ_BLEND_AT = 0; }
       }).catch(e => console.error('odds self-heal failed:', e && e.message)));
+    } catch (e) {}
+  }
+  // Same self-healing for the injury list: no live row, or one the cron has not
+  // replaced in a day, means the pull failed or never ran.
+  if (ctx && Date.now() - _AVAIL_LIVE_AT > 26 * 3600000 && Date.now() - _AVAIL_KICK_AT > 3600000) {
+    _AVAIL_KICK_AT = Date.now();
+    try {
+      ctx.waitUntil(runAvailabilityRefresh(env).then(r => {
+        console.log('availability self-heal:', JSON.stringify(r && { ok: r.ok, matched: r.matched, error: r.error }));
+      }).catch(e => console.error('availability self-heal failed:', e && e.message)));
     } catch (e) {}
   }
   _PROJ_ENC = _xb64encode(JSON.stringify(pool), PROJ_KEY);
@@ -3463,6 +3760,18 @@ export default {
       if (url.searchParams.get('refresh') === '1') {
         try { ran = await runOddsRefresh(env); } catch (e) { ran = { ok: false, error: (e && e.message) || 'failed' }; }
       }
+      // ?availability=1 reports the live injury list (age, size, the players it
+      // touches); ?availability=refresh pulls ESPN now, then reports.
+      const availParam = url.searchParams.get('availability') || '';
+      let availability = null;
+      if (availParam) {
+        let availRan = null;
+        if (availParam === 'refresh') {
+          try { availRan = await runAvailabilityRefresh(env); } catch (e) { availRan = { ok: false, error: (e && e.message) || 'failed' }; }
+        }
+        try { availability = { ...(await availabilityReport(env)), ran: availRan }; }
+        catch (e) { availability = { ok: false, error: (e && e.message) || 'failed', ran: availRan }; }
+      }
       const cached = await oddsCacheRead(env);
       // ?sample=1 shows what the blend actually did to a few players, so a bad
       // pull is visible without decoding /api/projections by hand.
@@ -3481,7 +3790,7 @@ export default {
         vegasWeight: VEGAS_WEIGHT,
         cached: cached ? { provider: cached.provider, matched: cached.matched, updatedAt: cached.updatedAt, ageHours: +((Date.now() - cached.updatedAt) / 3600000).toFixed(1) } : null,
         serving: cached ? 'vegas-blended' : 'committed projections (no usable overlay)',
-        ran, sample
+        ran, sample, availability
       }, 200, c);
     }
     if (url.pathname === '/api/admin/x-post-now') {
@@ -3994,6 +4303,10 @@ export default {
       ctx.waitUntil(runOddsRefresh(env)
         .then(r => console.log('odds refresh:', JSON.stringify(r)))
         .catch(e => console.error('odds refresh failed:', e && e.message)));
+      // The injury list, same daily cadence, same fail-safe (HANDOFF §48).
+      ctx.waitUntil(runAvailabilityRefresh(env)
+        .then(r => console.log('availability refresh:', JSON.stringify(r)))
+        .catch(e => console.error('availability refresh failed:', e && e.message)));
       ctx.waitUntil(pruneAnalytics(env, 180)
         .then(r => console.log('analytics prune:', JSON.stringify(r)))
         .catch(e => console.error('analytics prune failed:', e && e.message)));

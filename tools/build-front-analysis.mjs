@@ -12,7 +12,7 @@
 //
 // WHY IT DRIVES A BROWSER
 // The authoritative values live in index.html's valuation pipeline (scorePlayer ->
-// applyQbActuals -> buildValuations -> applyPredictability -> renormalizeToBudget),
+// normalizeToLastYear -> buildValuations -> renormalizeToBudget),
 // which is one big in-page script with no module boundary. Re-implementing the scoring
 // here would drift from what users actually see, so instead this script serves the repo,
 // loads the real app in headless Chromium, and reads the app's own computed players and
