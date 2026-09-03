@@ -63,7 +63,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // the browser either way. tools/test-asset-routing.mjs and tools/test-seo.mjs
 // both read this set, so a page added to the section cannot be left ungated or
 // advertised in the sitemap while the gate is shut.
-const POST_DRAFT_PAGES = new Set(['/faab', '/weekly-intel', '/rankings', '/vegas-edge',
+const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk']);
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
@@ -8755,6 +8755,16 @@ export default {
       if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
       return handleCoach(request, env, c);
     }
+    // The Trade Finder's screenshot reader: images (or a messy paste) in, the
+    // teams and player names the model can read out. Names only — the page
+    // resolves them against the board and prices them itself, so the model
+    // never gets to invent a projection.
+    if (url.pathname === '/api/roster-read') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+      return handleRosterRead(request, env, c);
+    }
     // Serve static assets, but tell browsers to revalidate HTML every load so
     // updates show up without a hard refresh (the app is a single index.html).
     // ── scheduled insight drops (per-format pages): 302 to the format index until 9am ET (13:00 UTC) on their date ──
@@ -8801,11 +8811,11 @@ export default {
       // root because the chrome and SEO generators walk the root. Extensionless
       // target, as above. The gate below sees the SAME name, so a section page
       // cannot be reached ungated by adding the prefix.
-      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|dfs|my-league)\/?$/.test(url.pathname)
+      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|dfs|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
       }
-      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|dfs|my-league)\/?$/.test(url.pathname)) {
+      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|dfs|my-league)\/?$/.test(url.pathname)) {
         __assetReq = new Request(new URL('/post-draft', url).toString(), request);
       }
       else if (/^\/in-season\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/post-draft', url).toString(), request);
@@ -8918,6 +8928,114 @@ function originAllowed(request, env) {
   const o = request.headers.get('Origin');
   return o && allow.includes(o);
 }
+
+// ── the roster reader ──────────────────────────────────────────────────────
+// /trade-finder takes a league's rosters as text or as screenshots. Text is
+// parsed in the browser by it-trade.js and never leaves it. A screenshot has
+// to be read, and the only reader on this site is the LLM proxy the coach
+// already uses — so this is that proxy with the coach's guards (origin, key,
+// size, Turnstile, rate limit) and a much narrower job: transcribe the team
+// names and player names in these images as JSON. It returns NAMES ONLY. The
+// page resolves each one against the board and prices it there, which is what
+// keeps a model from inventing a player or a projection; a name it misreads
+// simply fails to resolve and is shown to the reader to fix.
+const ROSTER_READ_MAX_IMAGES = 8;
+const ROSTER_READ_MAX_BYTES = 9 * 1024 * 1024;     // the whole request, base64 included
+const ROSTER_READ_IMAGE_BYTES = 4 * 1024 * 1024;   // one image, base64
+const ROSTER_READ_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const ROSTER_READ_SYSTEM = `You transcribe fantasy football rosters from screenshots or pasted text.
+Return ONLY a JSON object, no prose, no markdown fence, in exactly this shape:
+{"teams":[{"name":"<team name as shown, or empty>","players":[{"name":"<player full name>","pos":"<QB|RB|WR|TE|K|DEF or empty>","team":"<NFL club abbreviation or empty>"}]}]}
+Rules: one entry per fantasy team visible; every player on it, starters and bench, in the order shown.
+Copy names exactly as printed; do not correct, expand, or invent a name, a position or a club you cannot see.
+A slot label (QB, RB, FLEX, BN, IR), a bye week, a projection or a score is not a player.
+A team defence is a player: name it "<City> <Nickname>" with pos "DEF" if the image shows it.
+If an image shows a league page with several teams, return every team. If it shows nothing readable, return {"teams":[]}.`;
+function rosterReadParse(text) {
+  let t = String(text || '');
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1];
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return { ok: false, error: 'no_json' };
+  let j;
+  try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return { ok: false, error: 'bad_json' }; }
+  const POS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DST']);
+  const teams = [];
+  for (const raw of (Array.isArray(j && j.teams) ? j.teams : []).slice(0, 24)) {
+    if (!raw || !Array.isArray(raw.players)) continue;
+    const players = [];
+    for (const p of raw.players.slice(0, 40)) {
+      if (!p || typeof p.name !== 'string') continue;
+      const name = p.name.replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (!name) continue;
+      let pos = String(p.pos || p.position || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+      if (pos === 'DST') pos = 'DEF';
+      if (!POS.has(pos)) pos = '';
+      const team = String(p.team || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+      players.push({ name, pos, team });
+    }
+    if (!players.length) continue;
+    const name = (typeof raw.name === 'string' ? raw.name.replace(/\s+/g, ' ').trim().slice(0, 80) : '') || ('Team ' + (teams.length + 1));
+    teams.push({ name, players });
+  }
+  if (!teams.length) return { ok: false, error: 'no_teams' };
+  return { ok: true, teams };
+}
+async function handleRosterRead(request, env, c) {
+  if (!originAllowed(request, env)) return json({ ok: false, error: 'Origin not allowed' }, 403, c);
+  if (!env.LLM_API_KEY) return json({ ok: false, error: 'Server missing LLM_API_KEY' }, 500, c);
+  if (Number(request.headers.get('content-length') || 0) > ROSTER_READ_MAX_BYTES) return json({ ok: false, error: 'Payload too large' }, 413, c);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ ok: false, error: 'Bad JSON' }, 400, c); }
+  const images = [];
+  for (const im of (Array.isArray(body.images) ? body.images : []).slice(0, ROSTER_READ_MAX_IMAGES)) {
+    if (!im || typeof im.data !== 'string' || !ROSTER_READ_TYPES.has(String(im.media_type || ''))) continue;
+    const data = im.data.replace(/^data:[^,]*,/, '');
+    if (!data || data.length > ROSTER_READ_IMAGE_BYTES || /[^A-Za-z0-9+/=]/.test(data)) continue;
+    images.push({ media_type: im.media_type, data });
+  }
+  const text = String(body.text || '').slice(0, 20000);
+  if (!images.length && !text.trim()) return json({ ok: false, error: 'Nothing to read' }, 400, c);
+
+  if (env.TURNSTILE_SECRET) {
+    const okT = await verifyTurnstile(env.TURNSTILE_SECRET, body.turnstile, request.headers.get('cf-connecting-ip'));
+    if (!okT) return json({ ok: false, error: 'Verification failed' }, 403, c);
+  }
+  if (env.RATE_KV) {
+    // Its own bucket, tighter than the coach's: a screenshot is a bigger
+    // request than a chat turn, and nobody reads a league forty times an hour.
+    const ip = request.headers.get('cf-connecting-ip') || 'anon';
+    const k = 'rr:' + ip;
+    const n = parseInt((await env.RATE_KV.get(k)) || '0', 10);
+    if (n >= parseInt(env.ROSTER_READ_MAX || '20', 10)) return json({ ok: false, error: 'Rate limit — give it a moment.' }, 429, c);
+    await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 600 });
+  }
+
+  const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
+  const model = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
+  const ask = images.length
+    ? 'Transcribe every fantasy team roster in ' + (images.length === 1 ? 'this image' : 'these ' + images.length + ' images') + '.' + (text.trim() ? ' Notes from the reader: ' + text.trim() : '')
+    : 'Transcribe every fantasy team roster in this text:\n\n' + text;
+  const content = provider === 'anthropic'
+    ? [...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })), { type: 'text', text: ask }]
+    : [...images.map(im => ({ type: 'image_url', image_url: { url: 'data:' + im.media_type + ';base64,' + im.data } })), { type: 'text', text: ask }];
+  const ctrl = new AbortController();
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 60000);
+  try {
+    const r = provider === 'anthropic'
+      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 4000, system: ROSTER_READ_SYSTEM, messages: [{ role: 'user', content }] }) })
+      : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0, max_tokens: 4000, messages: [{ role: 'system', content: ROSTER_READ_SYSTEM }, { role: 'user', content }] }) });
+    if (!r.ok) return json({ ok: false, error: 'The reader did not answer (' + r.status + ').' }, 502, c);
+    const j = await r.json();
+    const out = provider === 'anthropic' ? ((j.content && j.content[0] && j.content[0].text) || '') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const parsed = rosterReadParse(out);
+    if (!parsed.ok) return json({ ok: false, error: parsed.error === 'no_teams' ? 'Nothing readable in that image.' : 'The reader answered in a shape this page cannot use.' }, 200, c);
+    return json({ ok: true, teams: parsed.teams, images: images.length, model }, 200, c);
+  } catch (e) {
+    return json({ ok: false, error: 'The reader timed out.' }, 504, c);
+  } finally { clearTimeout(to); }
+}
+// ── /the roster reader ─────────────────────────────────────────────────────
 
 async function handleCoach(request, env, c) {
   if (!originAllowed(request, env)) return json({ error: 'Origin not allowed' }, 403, c);
