@@ -7051,3 +7051,126 @@ words and its next Eastern hour.
 `tools/test-jobs.mjs` pins the table against the spec, the DST behaviour
 (7 AM Eastern is 11:00Z in September and 12:00Z in December), the phase
 order, the override validation, and the tick.
+
+## 61. September 3: the Trade Finder, and the FAAB Advisor by hand
+
+**The brief.** Two more in-season tools. A Trade Finder: the reader has
+already set their scoring; let them paste the league's rosters (text or a
+screenshot) and get trades recommended, with a slider from "even" to
+"benefit me" but a baseline that both teams improve, and the option to score
+one side short-term (chasing a playoff spot) and the other on the fantasy
+playoffs (already clinched). And a FAAB Advisor that takes the reader's own
+budget and the other budgets typed in, plus what the league has bid before.
+
+### 61a. `it-trade.js`: one engine, tested in node
+
+Everything the Trade Finder computes lives in **`it-trade.js`**, a UMD file
+(browser global `ITTrade`, `require()`-able in node) so `tools/test-trade-finder.mjs`
+runs the exact code the page ships. Three parts:
+
+- **Names.** `makePool(players)` indexes a board; `resolve(line, pool, posHint)`
+  turns one pasted line into one board row or nothing. It handles the shapes a
+  league site actually produces: "Ja'Marr Chase WR - CIN", "Chase, Ja'Marr",
+  "J. Chase", "Marvin Harrison Jr", "AJ Brown" against "A.J. Brown", "St. Brown",
+  "Smith-Njigba", "Bills D/ST", "BUF DEF", "Tucker K BAL", a unique surname
+  alone. An ambiguous surname ("Brown") resolves to **nothing** and is shown to
+  the reader to fix; the engine never guesses. `parseRosters(text, pool)` walks a
+  whole paste: a line is a player, noise (slot labels, "QB - BUF (3)", "Bye: 7",
+  "Proj 118.4"), or a team name. A team name opens a new team once the current
+  one has a player; before that the first name is kept, so "Team Awesome /
+  Owner: Ken / Josh Allen" is one team. A player listed under two teams stays
+  with the first and is reported.
+- **Lineups.** `lineupValue(players, slots, pts)` fills the league's own slots
+  (QB/RB/WR/TE, FLEX over RB/WR/TE, SFLEX over all four) greedily by points,
+  named slots first then flex, which is optimal for this slot shape. The bench
+  counts at 0.25 / 0.15 / 0.08 for the three best non-starters, and a backup QB
+  in a one-QB league at 0.3 of that. Kickers and defences are parsed (so they
+  do not become team names) and ignored.
+- **Trades.** `findTrades(teams, opts)` tries every 1-, 2- and 3-player package
+  between the reader's team and each other roster (or every pair, for the
+  commissioner view) and keeps only swaps where **both** lineups gain at least
+  `minGain` (0.75) points **per week on their own horizon**. `opts.horizon(i)`
+  names the horizon per team and `opts.weeks(h)` its length, so a team on
+  weeks 15-17 and a team on the next three are on one scale. The `tilt` slider
+  only reorders survivors: 0 ranks by the smaller gain, 1 by the reader's gain
+  alone. **The floor never moves.** The list is diversified: at most two trades
+  per headline pair and four per partner.
+
+Points come from the caller as `points(player, horizonKey)`; the engine never
+sees a stat line, so the scoring is whatever `it-league.js` says the reader
+plays and there is no second copy of the scorer.
+
+### 61b. `/trade-finder`
+
+The page fetches `/api/boards?horizon=<h>&pos=ALL&scoring=ppr` per horizon
+(week, next3, ros, playoffs) and re-scores every stat line with
+`ITLeague.score()` at the reader's saved scoring or a preset, exactly as
+`/rankings` does. Starting slots prefill from the draft app's saved roster
+shape. The board (Iron Tuna / consensus / Vegas) is selectable.
+
+**Screenshots.** `POST /api/roster-read` is the coach proxy with the coach's
+guards (origin, key, size, Turnstile, its own `RATE_KV` bucket `rr:<ip>`,
+`ROSTER_READ_MAX` default 20 per 10 minutes) and a narrower job: the model is
+asked for JSON of team names and player names, **names only**. The page shrinks
+each image to 1600px JPEG in the browser first (a phone screenshot is 3-4 MB
+and the reader needs none of it), posts up to 8, and resolves every returned
+name against the board **locally** with the same `resolve()`. A misread name
+fails to resolve and is offered to fix; nothing the model read can become a
+projection. `rosterReadParse()` in the worker is the part `test-trade-finder.mjs`
+covers without a model: fenced JSON, upper-cased positions, missing clubs,
+capped counts, prose or an empty list as clean failures. The same route accepts
+`{text}` for a paste the local parser could not untangle.
+
+State is `localStorage` `it_trade_v1`: the paste, the teams as board ids, the
+reader's team, both horizons, tilt, package size, preset, slots. Gated with the
+section (`POST_DRAFT_PAGES`, and the `/in-season/<page>` rewrite, which also
+gained `faab` so `/in-season/faab` resolves).
+
+### 61c. The FAAB Advisor by hand, and the bid history
+
+`/faab` has a third step, **"Or enter the league by hand"**: teams, budget,
+the reader's FAAB left, week (prefilled from `/api/season`), starting slots,
+rivals' budgets (one per line, name then dollars), the reader's roster, the
+free agents being weighed, what the league has already paid, and optionally
+every roster in the league. It builds the same structures Sleeper would have
+supplied (rosters with `waiver_budget_used`, a league with `roster_positions`,
+a pool keyed by id) and calls the **same `render()`**, so the model runs once
+and cannot disagree with itself. With every roster pasted (parsed by
+`ITTrade.parseRosters` against the default board) the wire and every rival's
+hole are exact; without them each rival is assumed to have a hole at the
+position (the going rate leans high, and the footnote says so) and the wire is
+the named players plus the board below the depth a league that size rosters
+(`DEPTH`: QB 1.4, RB 4.2, WR 5, TE 1.4 per team).
+
+**Calibration.** Both paths now feed settled bids into `calibrate()`: Sleeper's
+transaction log is read for every week so far **before** the table renders
+(one `Promise.all`, no longer a backwards walk racing the table), and the
+manual form parses typed lines ("Week 3: Bijan Robinson $34", "wk 4 - Allgeier -
+12"). Each bid becomes an exchange rate, FAAB dollars per draft dollar of the
+player's rest-of-season value **at the time**; the median is the room's rate.
+The model's going rate is blended toward `rate × ros`, weighted `n / (n + 3)`,
+so three settled claims count as much as the model and thirty swamp it, and
+capped at the richest solvent rival's money. Two rules keep it honest: a player
+no rival would rationally bid on is **not** rescued by the history (the first
+cut surfaced forty $1 rows on a flat wire, the exact failure §28b describes),
+and the obs box prints the rate and how many bids it rests on.
+
+### 61d. Tests
+
+- `node tools/test-trade-finder.mjs` (76 assertions, plain node): the resolver
+  on every awkward name shape, the parser on a three-team paste with headers,
+  slot rows, a defence, a duplicate and an ambiguous surname, the lineup fill
+  and bench weights, and the search: both sides gain, gains equal the
+  independently recomputed lineup deltas, tilt never lowers the reader's gain
+  or drops the partner's floor, a playoff specialist surfaces only when the
+  reader is scored on the playoff weeks, every-pair mode, identical rosters
+  produce nothing. Plus `rosterReadParse`. **In CI.**
+- `node tools/test-trade-finder-page.mjs` (50 assertions, playwright-core,
+  self-skips): the page against a stubbed `/api/boards` fixture built from
+  `tools/faab-fixture-names.json`: the paste lands as four teams, the stubbed
+  reader's names resolve and its misread one is offered to fix, the search
+  gains both sides, the slider and the per-side horizons reach it, a reload
+  keeps everything; then the FAAB manual form, the room, the bounds, the
+  unrecognised-name note, and the history moving the going rate up while
+  staying under the richest rival. `IT_SHOT=/tmp/tf.png` writes both pages.
+- `tools/test-faab.mjs` still passes unchanged on the Sleeper path.
