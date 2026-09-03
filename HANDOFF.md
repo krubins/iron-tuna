@@ -6500,3 +6500,193 @@ first at 32px in the preseason, three cards, no page errors.
 comment markers; the hero renderer sits **above** that slice on purpose, so the
 harness does not evaluate code that reaches for `window`. The same suite checks
 the column contract pair, which is why both numbers moved together.
+
+## 53. September 3: the data layer (Steps 4 to 8), and the release review that followed
+
+Five things landed as one build, then were reviewed as a release checkpoint
+before anything further. What was found in the review is in §53g, because the
+findings say more about the shape of the code than the build does.
+
+### 53a. The provider layer
+
+Nothing above `PROVIDERS` in `_worker.js` knows a vendor's name. Application
+code asks for a KIND of data; the registry decides who answers and in what
+order; every adapter normalises into Iron Tuna's schema before returning.
+
+| Kind | Adapters (in order) | Needs |
+|---|---|---|
+| `schedule` | nflverse games.csv, ESPN scoreboard | nothing |
+| `odds` | The Odds API v4 (per-event player props), nflverse game lines | `ODDS_API_KEY` for the first |
+| `projection` | the committed board | nothing |
+| `consensus` | the committed board, scored odds-blind | nothing |
+| `stats` / `snaps` | nflverse `stats_player_week_<yr>.csv`, `snap_counts_<yr>.csv` | nothing |
+| `injury` | ESPN injuries (the existing pull) | nothing |
+| `dfs` | a licensed feed, **interface only** | `DFS_SALARY_API` + `DFS_SALARY_API_KEY` |
+
+Keys are read off `env` and nowhere else; `providerReport` publishes whether a
+key is PRESENT and never its value, and `tools/test-market.mjs` feeds it a
+known string and asserts the string does not come back. Nothing scrapes: the
+test also walks every host the adapter block names. DFS salaries are declared
+and not implemented on purpose, because neither DraftKings nor FanDuel has a
+documented public salary API and the undocumented contest endpoints are
+scraping by another name. `PROVIDER_UNAVAILABLE` names every field no source
+can supply (routes, route participation, red-zone touches, pace, pass rate,
+DFS salary) so a surface says "unavailable" instead of printing a blank a
+reader will take for zero.
+
+### 53b. The scoring engine
+
+`scoreStats(stats, position, rules)` is now the ONE implementation, and
+`_colScore` delegates to it. The other two copies (`it-league.js`'s `score()`,
+`index.html`'s `scoreSkillPlayer`) are unchanged and are held to it by
+`tools/test-scoring.mjs` on 400 randomised stat lines rather than a handful of
+chosen ones. Every category the brief names is asserted one at a time against
+an empty line, so a term that silently contributed zero would fail on its own.
+Presets differ ONLY in receptions, which the test also pins: a preset that
+quietly moved passing touchdowns would be lying about which knob was turned.
+
+`/rankings` carries the four buttons (Standard, Half PPR, PPR, My League) and
+scores IN THE BROWSER off `/api/rankings`, which ships stat lines rather than
+points: a round trip per button would be a worse product than an instant
+re-order. My League is the default whenever `it-league.js` has a saved league
+and is disabled, with a tooltip, when it does not, so a reader is never shown
+a stranger's league labelled as theirs. Verified in Chromium: Standard puts
+the touchdown back first and PPR puts the catch-heavy back first, on the same
+four fixture players.
+
+### 53c. The market engine
+
+`buildMarketRecords` assembles one record per player per week with four
+blocks kept apart on purpose: `fantasy`, `vegas`, `usage`, `context`. A field
+with no source is `null` and is named in the block's `unavailable` list. It
+reads the whole week's markets in ONE query (`marketHistoryWeek`); the first
+cut issued one per player, which on a request path is not a slow version of
+the same thing but a different order of cost. Served at `/api/market`,
+memoised per isolate on the exact query for the length of its edge cache.
+
+Usage is real and public: targets, target share, air yards and air-yards
+share, carries, receptions, attempts from the weekly file; offensive snaps and
+snap share from the snap file. Both are ~10MB together and are pulled by the
+11:00 cron into `odds_overlay` row 5, never on a request. **As of this commit
+no 2026 file exists because no game has been played**; the adapter treats a
+404 as "no games yet" and the engine says so per player. Confirmed on the
+2025 files: 2025 weekly rows normalise to Iron Tuna's keys, snap rows carry
+`snapPct`, and the 2026 pull returns zero rows without throwing.
+
+### 53d. The historical betting store
+
+`odds_snapshots` is append-only. A pull that finds a book's line unchanged
+writes nothing, and "unchanged" means line AND both prices: juice moving from
+-110 to -135 at the same number IS a move, because the de-vigged probability
+moved. Every row written is a change; "it did not move" is recorded by the
+absence of a row between two timestamps.
+
+**The opening line is the opening consensus**, not the median of whatever each
+book happened to post first. A book that starts quoting on Friday has an
+"open" that is a mid-week number, and folding it in drags the opener toward
+the current line and understates the move. The opener is the median of the
+books quoting at the market's first recorded pull; a late arrival counts
+toward `current` and the book count and cannot rewrite history. This was a
+test catch (§53g). The brief's example reads back as written: open 60,
+current 67.5, movement +7.5, 12.5%, three books, two moved.
+
+**The subject is Iron Tuna's key**, `_oddsNorm(name)`, the same join the season
+overlay uses; the book's own spelling is kept in `raw_subject` for audit,
+never for lookup. Lookups accept the board's spelling, the book's spelling or
+the key. An ambiguous name (two board players, one key) gets no props at all
+in the engine, the rule `_oddsProjectionIndex` already applied to the season
+path. Also a test catch (§53g).
+
+The snapshot pull runs on all four cron slots, because a store that sampled
+once a day would record a Sunday-morning steam move as a single overnight
+jump. Rows older than 200 days are pruned daily.
+
+### 53e. Sportsbook markets into fantasy projections
+
+`vegasProjection(markets, position, rules, ctx)` is the WEEKLY path and quotes
+no projection feed at all. Three rules it will not break: vig comes out before
+anything is believed (`_oddsDevigOver`, the existing pair); the MEDIAN across
+books, not the mean, so one stale book cannot drag the consensus; and a market
+nobody priced is reported missing, never invented. `VEGAS_MARKETS` names each
+position's core and extra markets; no core market priced returns
+`{ status: 'unavailable', label: 'Vegas projection unavailable' }`, some
+returns `partial` with `Partial Vegas projection`, all returns `full`.
+
+An anytime-TD price is a PROBABILITY of at least one score, not an expected
+count, so it is worth `p x points-per-TD` and is added as points rather than
+smuggled in as a fractional touchdown; where a book prices a TD COUNT market
+that is used instead, because a count carries the multi-score games a binary
+cannot. Confidence is a DEMOTION model, not a sum: one serious problem (a core
+market unpriced, a single book, books disagreeing, lines over 36 hours old)
+means not HIGH; two mean LOW; a player the injury feed has ruled out is LOW on
+his own. The first cut was a sum and let a projection stay HIGH while carrying
+a defect the other inputs outvoted -- exactly backwards, and a test catch.
+
+### 53f. The Odds API adapter, rewritten
+
+The pre-existing adapter called the bulk `/odds` endpoint with player-prop
+market keys. v4 does not serve player props there (only h2h, spreads, totals),
+and the keys it asked for are PER-GAME props, which `buildVegasOverlay` was
+treating as season lines -- they would have fallen outside `ODDS_BANDS` and
+been dropped, so the path had silently never done anything. It now lists
+`/events` and asks `/events/{id}/odds` per event, adds `player_anytime_td`,
+`player_rush_attempts` and the TD-count markets, tags every row
+`scope: 'game'`, and `buildVegasOverlay` refuses game-scoped rows by that tag.
+The market list is overridable with `ODDS_API_MARKETS` so a renamed key on
+their side is a config change. `parseOddsApiEvent` is pure and is driven by a
+fixture in both `test-worker-odds.mjs` and `test-market.mjs`.
+
+**Written to the published v4 documentation and NOT run against the live
+service**: no key is configured and `the-odds-api.com` is blocked from this
+sandbox by organisation policy. The first live pull should be watched via
+`/api/admin/market-status?snapshot=1` and `/api/admin/providers?run=odds`.
+
+### 53g. What the release review found
+
+The checkpoint ran every suite in `checks.yml` plus the six Chromium suites
+(with playwright-core, react and react-dom installed locally), `wrangler
+deploy --dry-run` (820 KiB, gzip 193 KiB, builds clean once `.git` is in
+`.assetsignore`), and a credential scan. Findings, all fixed unless noted:
+
+1. **Join key mismatch.** Snapshots were keyed by the book's spelling and
+   looked up by the board's. Fixed as §53d; `test-market.mjs` now stores
+   "Ja'Marr Chase" and finds it by three spellings.
+2. **A per-player D1 query in the market engine.** Fixed; one query per week.
+3. **A late-arriving book rewrote the opening line.** Fixed as §53d.
+4. **Confidence was a sum that a single defect could not pull down.** Fixed.
+5. **The Odds API adapter was calling the wrong endpoint.** Rewritten, §53f.
+6. **Provider convention leaking into pages.** `game-intel.html` and `dfs.html`
+   computed implied totals from the spread and had to know that nflverse signs
+   it as the home margin. `/api/season` now carries `impliedHome` and
+   `impliedAway` on every game and the pages read those.
+7. **Duplicated week-view logic** in `nflSeasonState` and `nflSeasonWeek`,
+   collapsed into `_seasonWeekView`.
+8. **The game-line provider re-downloaded games.csv** minutes after the
+   schedule refresh had; it reads the cached row first now.
+9. **`INKEY` in `_worker.js`** looks like a secret and is not: it is the
+   IndexNow site-verification key, which the protocol requires to be public
+   (the matching `<key>.txt` is served from the root). Pre-existing, left.
+10. **`tools/test-position-lens.mjs` fails two assertions** ("written in draft
+    slots", "priced in their own dollars"). Both fail identically on `7b7639d`,
+    the commit before this session, so they are pre-existing and not in this
+    change set. Not fixed here; noted so the next person does not chase them
+    into the new code.
+
+Not found: no credential in any deployed file (the scan covers `sk-`, `AKIA`,
+bearer tokens, hex keys), no scraping, no player key built any way other than
+`_oddsNorm(name) + '|' + position`, no team entering from a feed without
+`teamKey`.
+
+### 53h. The environment
+
+Nothing new is REQUIRED; the site runs on the free providers with no key at
+all, as it does today. Optional:
+
+| Name | Enables |
+|---|---|
+| `ODDS_API_KEY` | per-player props: the weekly Vegas projection, the snapshot store's player markets, the TD edge |
+| `ODDS_API_MARKETS` | narrows the prop markets requested (comma-separated v4 keys) |
+| `DFS_SALARY_API`, `DFS_SALARY_API_KEY` | a licensed salary feed for `/dfs` |
+
+All in the Cloudflare dashboard as secrets. None is in the repo, `.dev.vars`
+is gitignored, and `providerReport` will never print one.

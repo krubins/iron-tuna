@@ -246,6 +246,20 @@ jobs:
       - name: The NFL season and week service
         run: node tools/test-season.mjs
 
+      # One scoring engine, three copies (worker, it-league.js, index.html),
+      # checked against each other on 400 randomised stat lines rather than a
+      # handful of chosen ones. A drift here means the same player is worth
+      # different points on the cheat sheet, in a story and in the rankings.
+      - name: The scoring engine agrees with itself in every file
+        run: node tools/test-scoring.mjs
+
+      # The provider registry (no credential in any payload, no scraping), the
+      # append-only betting-line store (the open is never rewritten by a book
+      # that starts quoting late), and the Vegas-implied projection (median not
+      # mean, de-vigged, and "unavailable" rather than invented).
+      - name: Providers, line history and the Vegas projection
+        run: node tools/test-market.mjs
+
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
 

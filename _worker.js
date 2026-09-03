@@ -1562,60 +1562,89 @@ function _oddsExpectedTotal(line, pOver, market) {
 // or throws. Add a provider by writing one of these and listing it below.
 
 // The Odds API — documented, stable schema. Used whenever ODDS_API_KEY is set.
+// The Odds API v4. WRITTEN TO THE PUBLISHED v4 DOCUMENTATION AND NOT YET RUN
+// AGAINST THE LIVE SERVICE: no key is configured, and the host is unreachable
+// from the sandbox this repo is developed in. Two things about v4 shape this:
+//   1. Player props are served PER EVENT (/events/{id}/odds), never from the
+//      bulk /odds endpoint, which only knows h2h, spreads and totals.
+//   2. Every player market is a GAME line, not a season line. They feed the
+//      weekly Vegas projection and the snapshot store; buildVegasOverlay is
+//      the season path and must never see them, which `scope: 'game'` is for.
+// The market list is overridable with ODDS_API_MARKETS (comma-separated) so a
+// renamed key on their side is a config change here, not a deploy.
+const ODDS_API_BASE = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl';
 const ODDS_API_MARKET_MAP = {
   player_pass_yds: 'passYd', player_pass_tds: 'passTD', player_pass_interceptions: 'passInt',
-  player_rush_yds: 'rushYd', player_rush_tds: 'rushTD',
+  player_rush_yds: 'rushYd', player_rush_attempts: 'rushAtt', player_rush_tds: 'rushTD',
   player_reception_yds: 'recYd', player_receptions: 'rec', player_reception_tds: 'recTD',
-  player_tds_over: 'scrimmageTD'
+  player_anytime_td: 'anytimeTD'
 };
-async function fetchOddsTheOddsApi(env) {
-  const key = env.ODDS_API_KEY;
-  if (!key) throw new Error('no ODDS_API_KEY');
-  const markets = Object.keys(ODDS_API_MARKET_MAP).join(',');
-  const base = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds';
-  const u = `${base}?apiKey=${encodeURIComponent(key)}&regions=us&oddsFormat=american&markets=${encodeURIComponent(markets)}`;
-  const r = await fetch(u, { cf: { cacheTtl: 0 } });
-  if (!r.ok) throw new Error('odds-api ' + r.status);
-  const data = await r.json();
+const ODDS_API_MAX_EVENTS = 20;           // a week is 13-16 games; never more than that
+function _oddsApiMarkets(env) {
+  const raw = String((env && env.ODDS_API_MARKETS) || '').trim();
+  const list = raw ? raw.split(',').map(x => x.trim()).filter(x => ODDS_API_MARKET_MAP[x]) : Object.keys(ODDS_API_MARKET_MAP);
+  return list.length ? list : Object.keys(ODDS_API_MARKET_MAP);
+}
+// One event's markets into rows. Pure, so a fixture can drive it in tests
+// without the network. Outcomes arrive as Over/Under pairs (or Yes/No for an
+// anytime-TD) keyed by `description`, which is the player.
+function parseOddsApiEvent(ev) {
   const rows = [];
-  for (const ev of Array.isArray(data) ? data : []) {
-    for (const bk of ev.bookmakers || []) {
-      for (const mk of bk.markets || []) {
-        const stat = ODDS_API_MARKET_MAP[mk.key];
-        if (!stat) continue;
-        // Outcomes come in Over/Under pairs keyed by `description` (the player).
-        const byPlayer = new Map();
-        for (const oc of mk.outcomes || []) {
-          const who = oc.description || oc.participant;
-          if (!who) continue;
-          if (!byPlayer.has(who)) byPlayer.set(who, {});
-          const side = String(oc.name || '').toLowerCase();
-          if (side === 'over') byPlayer.get(who).over = oc;
-          else if (side === 'under') byPlayer.get(who).under = oc;
-        }
-        for (const [who, pair] of byPlayer) {
-          const line = pair.over?.point ?? pair.under?.point;
-          if (line == null) continue;
-          rows.push({
-            player: who, position: null, team: null, market: stat, line,
-            overOdds: pair.over?.price ?? null, underOdds: pair.under?.price ?? null
-          });
-        }
+  const ts = Date.now();
+  for (const bk of (ev && ev.bookmakers) || []) {
+    for (const mk of bk.markets || []) {
+      const stat = ODDS_API_MARKET_MAP[mk.key];
+      if (!stat) continue;
+      const byPlayer = new Map();
+      for (const oc of mk.outcomes || []) {
+        const who = oc.description || oc.participant;
+        if (!who) continue;
+        if (!byPlayer.has(who)) byPlayer.set(who, {});
+        const side = String(oc.name || '').toLowerCase();
+        if (side === 'over' || side === 'yes') byPlayer.get(who).over = oc;
+        else if (side === 'under' || side === 'no') byPlayer.get(who).under = oc;
+      }
+      for (const [who, pair] of byPlayer) {
+        const line = pair.over && pair.over.point != null ? pair.over.point
+                   : pair.under && pair.under.point != null ? pair.under.point : null;
+        // An anytime-TD has no line; every other market must have one.
+        if (line == null && stat !== 'anytimeTD') continue;
+        if (!pair.over && !pair.under) continue;
+        rows.push({
+          player: who, position: null, team: null, market: stat,
+          line: stat === 'anytimeTD' ? 1 : line,
+          overOdds: pair.over ? pair.over.price : null, underOdds: pair.under ? pair.under.price : null,
+          book: bk.key || bk.title || 'unknown',
+          gameId: ev.id || null, commence: ev.commence_time || null,
+          home: teamKey(ev.home_team), away: teamKey(ev.away_team),
+          scope: 'game', ts
+        });
       }
     }
   }
   return rows;
 }
+async function fetchOddsTheOddsApi(env) {
+  const key = env && env.ODDS_API_KEY;
+  if (!key) throw new Error('no ODDS_API_KEY');
+  const q = new URLSearchParams({ apiKey: key });
+  const er = await fetch(ODDS_API_BASE + '/events?' + q.toString(), { cf: { cacheTtl: 0 } });
+  if (!er.ok) throw new Error('odds-api events ' + er.status);
+  const events = await er.json();
+  const list = (Array.isArray(events) ? events : []).slice(0, ODDS_API_MAX_EVENTS);
+  const markets = _oddsApiMarkets(env).join(',');
+  const rows = [];
+  for (const ev of list) {
+    if (!ev || !ev.id) continue;
+    const p = new URLSearchParams({ apiKey: key, regions: 'us', oddsFormat: 'american', markets });
+    const r = await fetch(ODDS_API_BASE + '/events/' + encodeURIComponent(ev.id) + '/odds?' + p.toString(), { cf: { cacheTtl: 0 } });
+    if (!r.ok) continue;                      // one event failing must not lose the slate
+    const data = await r.json();
+    for (const row of parseOddsApiEvent(data)) rows.push(row);
+  }
+  return rows;
+}
 
-// nflverse game lines — FREE, no key, no subscription, CC BY 4.0 (attribution
-// only), served from GitHub. This is the provider that actually runs: it needs
-// no credentials, so the Vegas blend is live out of the box.
-//
-// It carries GAME lines (spread + total), not player props. Those still say
-// plenty about a player: the pair implies each team's expected points, which is
-// the scoring environment every skill player on that roster inherits. See
-// buildTeamEnvOverlay for how that becomes a stat adjustment without
-// double-counting what the projections already believe.
 const NFLVERSE_GAMES_URL = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
 const TEAM_ALIAS = { LAR: 'LA', JAC: 'JAX', WSH: 'WAS', LVR: 'LV', OAK: 'LV', SD: 'LAC', STL: 'LA' };
 const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u; };
@@ -1972,6 +2001,9 @@ function buildVegasOverlay(rows) {
   const per = new Map();
   const skipped = { unmatched: 0, unknownMarket: 0, outOfBand: 0, unusable: 0 };
   for (const row of rows || []) {
+    // A game line is not a season line. The weekly projection and the snapshot
+    // store read those; this builds the SEASON overlay and must not.
+    if (row && row.scope === 'game') { skipped.gameScoped = (skipped.gameScoped || 0) + 1; continue; }
     const stat = row.market;
     if (!ODDS_CV[stat]) { skipped.unknownMarket++; continue; }
     const target = idx.get(_oddsNorm(row.player));
@@ -2081,6 +2113,113 @@ function _availPool(pool) {
 // scoreSkillPlayer/yardageScore/countScore. There is no build step. If you
 // change scoring or the curve on the client, change it here too —
 // tools/test-worker-column.mjs asserts the two stay in agreement.
+// ── the scoring engine ─────────────────────────────────────────────────────
+// ONE implementation of "what is this stat line worth", used by the Vegas
+// column, the in-season rankings, the market engine and anything else that
+// turns stats into points. It is deliberately a SUPERSET of the three copies
+// this repo already carries -- scoreSkillPlayer in index.html, score() in
+// it-league.js, and the _colScore this replaces -- rather than a fourth
+// variant: same order of operations, same yardage thresholds, same bonus
+// arrays, same position-specific reception rule. tools/test-scoring.mjs runs
+// this against the it-league.js copy on randomised stat lines and fails if the
+// two ever disagree, which is the drift §9c already learned to test for.
+//
+// Everything is optional and defaulted. A league that does not score two-point
+// conversions simply has 0 in those fields; nothing here needs a caller to know
+// which fields their league uses.
+const SCORING_BASE = {
+  passingYardsPerPoint: 25, passingYardsThreshold: 125, passingYardBonuses: [],
+  passingTD: 4, passingInt: -2, passing2pt: 2,
+  rushingYardsPerPoint: 10, rushingYardsThreshold: 0, rushingYardBonuses: [],
+  rushingTD: 6, rushing2pt: 2,
+  receivingYardsPerPoint: 10, receivingYardsThreshold: 0, receivingYardBonuses: [],
+  receivingTD: 6, receiving2pt: 2,
+  receptionPoints: 1, receptionBonuses: [],
+  rbReceptionPoints: 1, rbReceptionBonuses: [],
+  fumbleLost: -2, fumble2pt: 2,
+  individualFumbleRecoveryTD: 6, individualKickReturnTD: 6, individualPuntReturnTD: 6
+};
+// The three presets the rankings page offers, plus the reader's own. Only the
+// reception fields differ -- that IS what standard/half/full PPR means, and a
+// preset that quietly changed passing touchdowns as well would be lying about
+// which knob the reader turned.
+const SCORING_PRESETS = {
+  standard: { receptionPoints: 0, rbReceptionPoints: 0 },
+  half: { receptionPoints: 0.5, rbReceptionPoints: 0.5 },
+  ppr: { receptionPoints: 1, rbReceptionPoints: 1 }
+};
+const SCORING_PRESET_LABEL = { standard: 'Standard', half: 'Half PPR', ppr: 'PPR', custom: 'My League' };
+
+// A caller's rules, made safe. A blanked input in the app saves NaN
+// (parseFloat('')), and a NaN divisor would poison every number downstream, so
+// every field falls back to the base rather than propagating.
+function scoringRules(preset, custom) {
+  const out = { ...SCORING_BASE, ...(SCORING_PRESETS[preset] || {}) };
+  if (custom && typeof custom === 'object') {
+    for (const k of Object.keys(SCORING_BASE)) {
+      const v = custom[k];
+      if (Array.isArray(SCORING_BASE[k])) {
+        if (Array.isArray(v)) {
+          out[k] = v.filter(b => b && Number.isFinite(Number(b.at)) && Number.isFinite(Number(b.points)))
+                    .map(b => ({ at: Number(b.at), points: Number(b.points) }));
+        }
+      } else if (Number.isFinite(Number(v))) {
+        out[k] = Number(v);
+      }
+    }
+  }
+  return out;
+}
+function _scYards(yards, perPoint, threshold, bonuses) {
+  if (yards < threshold) return 0;
+  let pts = perPoint > 0 ? yards / perPoint : 0;
+  for (const b of bonuses || []) if (yards >= b.at) pts += b.points;
+  return pts;
+}
+function _scCount(count, perEvent, bonuses) {
+  if (!count) return 0;
+  let pts = count * perEvent;
+  for (const b of bonuses || []) if (count >= b.at) pts += b.points;
+  return pts;
+}
+// Stat keys are Iron Tuna's internal names throughout: passYd passTD passInt
+// pass2pt rushYd rushTD rush2pt recYd recTD rec2pt rec fumLost fum2pt fumRecTD
+// krTD prTD. Every provider adapter normalises INTO these, so nothing
+// downstream ever sees a vendor's field names.
+function scoreStats(stats, position, rules) {
+  const s = rules || SCORING_BASE;
+  const st = stats || {};
+  let pts = 0;
+  pts += _scYards(st.passYd || 0, s.passingYardsPerPoint, s.passingYardsThreshold, s.passingYardBonuses);
+  pts += (st.passTD || 0) * s.passingTD;
+  pts += (st.passInt || 0) * s.passingInt;
+  pts += (st.pass2pt || 0) * s.passing2pt;
+  pts += _scYards(st.rushYd || 0, s.rushingYardsPerPoint, s.rushingYardsThreshold, s.rushingYardBonuses);
+  pts += (st.rushTD || 0) * s.rushingTD;
+  pts += (st.rush2pt || 0) * s.rushing2pt;
+  pts += _scYards(st.recYd || 0, s.receivingYardsPerPoint, s.receivingYardsThreshold, s.receivingYardBonuses);
+  pts += (st.recTD || 0) * s.receivingTD;
+  pts += (st.rec2pt || 0) * s.receiving2pt;
+  // Position-specific reception scoring, exactly as the app already supports
+  // it: a league can price a back's catch differently from a receiver's.
+  if (position === 'RB') pts += _scCount(st.rec || 0, s.rbReceptionPoints, s.rbReceptionBonuses);
+  else pts += _scCount(st.rec || 0, s.receptionPoints, s.receptionBonuses);
+  pts += (st.fumLost || 0) * s.fumbleLost;
+  pts += (st.fum2pt || 0) * s.fumble2pt;
+  pts += (st.fumRecTD || 0) * s.individualFumbleRecoveryTD;
+  pts += (st.krTD || 0) * s.individualKickReturnTD;
+  pts += (st.prTD || 0) * s.individualPuntReturnTD;
+  return pts;
+}
+// What one touchdown is worth to this league, which is what turns an anytime-TD
+// probability into fantasy points (§ the Vegas projection below). A receiving
+// touchdown for a back and a rushing one are usually both 6, but a league is
+// free to price them apart, so the position decides which is quoted.
+function tdPointsFor(position, rules) {
+  const s = rules || SCORING_BASE;
+  return position === 'QB' ? s.rushingTD : (position === 'RB' ? s.rushingTD : s.receivingTD);
+}
+
 const COLUMN_SCORING = {
   passingYardsPerPoint: 25, passingYardsThreshold: 125, passingTD: 4, passingInt: -2,
   rushingYardsPerPoint: 10, rushingYardsThreshold: 0, rushingTD: 6,
@@ -2123,20 +2262,15 @@ const COLUMN_AGREE_MAX_RANK = 24;     // and only worth printing near the top of
 // Faithful port of the client's skill-player scoring. Only the stats the site
 // actually projects are read, and only skill positions are scored — K and DEF
 // carry no market lines, so they are never column material.
+// The column's own scoring is the site's default league, run through the one
+// engine above rather than through a fourth private copy of the arithmetic.
+// COLUMN_SCORING carries no bonus arrays and no two-point fields, so the extra
+// terms are all multiplied by an absent stat and contribute nothing -- the
+// numbers this returns are identical to the hand-rolled version it replaces,
+// which tools/test-worker-column.mjs pins to the digit.
+const _COL_RULES = scoringRules(null, COLUMN_SCORING);
 function _colScore(stats, position) {
-  const s = COLUMN_SCORING;
-  const yd = (yards, per, threshold) => (yards < threshold || !(per > 0)) ? 0 : yards / per;
-  let pts = 0;
-  pts += yd(stats.passYd || 0, s.passingYardsPerPoint, s.passingYardsThreshold);
-  pts += (stats.passTD || 0) * s.passingTD;
-  pts += (stats.passInt || 0) * s.passingInt;
-  pts += yd(stats.rushYd || 0, s.rushingYardsPerPoint, s.rushingYardsThreshold);
-  pts += (stats.rushTD || 0) * s.rushingTD;
-  pts += yd(stats.recYd || 0, s.receivingYardsPerPoint, s.receivingYardsThreshold);
-  pts += (stats.recTD || 0) * s.receivingTD;
-  pts += (stats.rec || 0) * (position === 'RB' ? s.rbReceptionPoints : s.receptionPoints);
-  pts += (stats.fumLost || 0) * s.fumbleLost;
-  return pts;
+  return scoreStats(stats, position, _COL_RULES);
 }
 
 // ── season normalisation, mirrored from the client ─────────────────────────
@@ -3061,6 +3195,47 @@ function _seasonBucketEnd(b) {
   if (!live.length) return b.endsAt;
   return Math.max(...live.map(g => g.kickoff)) + SEASON_GAME_MS;
 }
+// One game, with its state and its implied points. The implied totals live
+// HERE, on the payload, so no page has to know which way a feed signs its
+// spread: nflverse writes spread_line as the home margin, and that convention
+// stops at this function.
+function _seasonDecorate(g, at) {
+  const s = seasonGameStatus(g, at);
+  const imp = (g.total != null && g.spread != null)
+    ? { home: _oddsRound(g.total / 2 + g.spread / 2), away: _oddsRound(g.total / 2 - g.spread / 2) }
+    : { home: null, away: null };
+  return {
+    id: g.id, type: g.type, week: g.week, kickoff: g.kickoff,
+    home: g.home, away: g.away, homeScore: g.homeScore, awayScore: g.awayScore,
+    spread: g.spread == null ? null : g.spread, total: g.total == null ? null : g.total,
+    impliedHome: imp.home, impliedAway: imp.away,
+    status: s.status, statusSource: s.source
+  };
+}
+// A week's games, counts and byes. Shared by the current-week and the
+// named-week paths so the two cannot drift apart.
+function _seasonWeekView(all, bucket, at) {
+  const games = bucket.games.map(g => _seasonDecorate(g, at));
+  const counts = { upcoming: 0, inProgress: 0, completed: 0, other: 0 };
+  for (const g of games) {
+    if (g.status === 'upcoming') counts.upcoming++;
+    else if (g.status === 'in_progress') counts.inProgress++;
+    else if (g.status === 'completed') counts.completed++;
+    else counts.other++;
+  }
+  // Byes are a property of the regular season only: every club plays in the
+  // preseason and only the survivors play in January, so "who is off" is a
+  // question that means nothing outside REG.
+  const league = new Set();
+  for (const g of all) if (g.type === 'REG') { league.add(g.home); league.add(g.away); }
+  let byes = [];
+  if (bucket.type === 'REG' && league.size >= 30) {
+    const playing = new Set();
+    for (const g of bucket.games) { playing.add(g.home); playing.add(g.away); }
+    byes = [...league].filter(t => !playing.has(t)).sort();
+  }
+  return { games, counts, byes };
+}
 function nflSeasonState(cache, now) {
   const at = Number.isFinite(now) ? now : Date.now();
   const all = ((cache && cache.games) || []).filter(g => g && Number.isFinite(g.kickoff));
@@ -3082,35 +3257,8 @@ function nflSeasonState(cache, now) {
     : SEASON_PHASE[cur.type] || 'regular';
   const weekStatus = at < cur.first ? 'upcoming' : at < cur.endsAt ? 'active' : 'complete';
 
-  const decorate = g => {
-    const s = seasonGameStatus(g, at);
-    return {
-      id: g.id, type: g.type, week: g.week, kickoff: g.kickoff,
-      home: g.home, away: g.away, homeScore: g.homeScore, awayScore: g.awayScore,
-      spread: g.spread == null ? null : g.spread, total: g.total == null ? null : g.total,
-      status: s.status, statusSource: s.source
-    };
-  };
-  const games = cur.games.map(decorate);
-  const counts = { upcoming: 0, inProgress: 0, completed: 0, other: 0 };
-  for (const g of games) {
-    if (g.status === 'upcoming') counts.upcoming++;
-    else if (g.status === 'in_progress') counts.inProgress++;
-    else if (g.status === 'completed') counts.completed++;
-    else counts.other++;
-  }
-
-  // Byes are a property of the regular season only: every club plays in the
-  // preseason and only the survivors play in January, so "who is off" is a
-  // question that means nothing outside REG.
-  const league = new Set();
-  for (const g of all) if (g.type === 'REG') { league.add(g.home); league.add(g.away); }
-  let byes = [];
-  if (cur.type === 'REG' && league.size >= 30) {
-    const playing = new Set();
-    for (const g of cur.games) { playing.add(g.home); playing.add(g.away); }
-    byes = [...league].filter(t => !playing.has(t)).sort();
-  }
+  const decorate = g => _seasonDecorate(g, at);
+  const { games, counts, byes } = _seasonWeekView(all, cur, at);
 
   const upcomingAll = all.filter(g => seasonGameStatus(g, at).status === 'upcoming')
     .sort((a, b) => a.kickoff - b.kickoff);
@@ -3163,28 +3311,7 @@ function nflSeasonWeek(cache, now, type, number) {
   for (const b of buckets) b.endsAt = _seasonBucketEnd(b);
   const hit = buckets.find(b => b.type === want && (!Number.isFinite(n) || b.week === n));
   if (!hit) return { ...state, requested: { type: want, number: Number.isFinite(n) ? n : null, found: false } };
-  const decorate = g => {
-    const s = seasonGameStatus(g, at);
-    return { id: g.id, type: g.type, week: g.week, kickoff: g.kickoff, home: g.home, away: g.away,
-             homeScore: g.homeScore, awayScore: g.awayScore, spread: g.spread, total: g.total,
-             status: s.status, statusSource: s.source };
-  };
-  const games = hit.games.map(decorate);
-  const counts = { upcoming: 0, inProgress: 0, completed: 0, other: 0 };
-  for (const g of games) {
-    if (g.status === 'upcoming') counts.upcoming++;
-    else if (g.status === 'in_progress') counts.inProgress++;
-    else if (g.status === 'completed') counts.completed++;
-    else counts.other++;
-  }
-  const league = new Set();
-  for (const g of all) if (g.type === 'REG') { league.add(g.home); league.add(g.away); }
-  let byes = [];
-  if (hit.type === 'REG' && league.size >= 30) {
-    const playing = new Set();
-    for (const g of hit.games) { playing.add(g.home); playing.add(g.away); }
-    byes = [...league].filter(t => !playing.has(t)).sort();
-  }
+  const { games, counts, byes } = _seasonWeekView(all, hit, at);
   return {
     ...state,
     requested: {
@@ -3248,6 +3375,1154 @@ async function seasonPayload(env, opts) {
   return o.type || o.week != null
     ? nflSeasonWeek(cache, Date.now(), o.type, o.week)
     : nflSeasonState(cache, Date.now());
+}
+
+// ── the provider layer ─────────────────────────────────────────────────────
+// NOTHING ABOVE THIS LINE KNOWS A VENDOR'S NAME. Application code asks for a
+// KIND of data; the registry decides who answers and in what order, and every
+// adapter normalises its vendor's output into Iron Tuna's own schema before it
+// is returned. Swapping The Odds API for another book feed, or adding a paid
+// projection feed, is a new entry in this table and nothing else.
+//
+// CREDENTIALS LIVE IN THE ENVIRONMENT AND NOWHERE ELSE. Every adapter that
+// needs a key reads it off `env` and declares `needs(env)`; a provider whose
+// key is unset is skipped and reported as "not configured" rather than failing
+// the run. No key is ever written to the repo, to a log line, or into a cached
+// payload -- `providerReport` below deliberately reports only WHETHER a key is
+// present. The free providers are the default path, so the site works with no
+// keys at all, which is what it does in production today.
+//
+// EVERY SOURCE HERE IS A PUBLISHED DATA FEED OR A DOCUMENTED API. Nothing
+// scrapes a website. Where the only route to a field would be scraping (routes
+// run, route participation, DFS salaries), the field is reported as
+// unavailable instead -- see PROVIDER_UNAVAILABLE at the bottom of this block.
+//
+// THE SEVEN KINDS, and the internal record each normalises to:
+//
+//   schedule    { id, type, week, kickoff, home, away, homeScore, awayScore,
+//                 spread, total, status }
+//   odds        { book, subjectType, subject, market, line, overOdds,
+//                 underOdds, gameId, ts }
+//   projection  { name, position, team, stats }          stats in IT stat keys
+//   consensus   { name, position, team, rank, points, source }
+//   stats       { name, position, team, season, week, stats, usage }
+//   injury      { name, position, team, status, gamesOut, note, asOf }
+//   dfs         { name, position, team, site, slate, salary, gameId }
+//
+// Stat keys are Iron Tuna's throughout (passYd, rushTD, rec, ...). A vendor's
+// column names stop at the adapter.
+const PROVIDER_KINDS = ['schedule', 'odds', 'projection', 'consensus', 'stats', 'injury', 'dfs'];
+
+const NFLVERSE_BASE = 'https://github.com/nflverse/nflverse-data/releases/download';
+const NFLVERSE_WEEKLY_STATS = s => `${NFLVERSE_BASE}/stats_player/stats_player_week_${s}.csv`;
+const NFLVERSE_SNAPS = s => `${NFLVERSE_BASE}/snap_counts/snap_counts_${s}.csv`;
+const PROVIDER_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
+
+// A header-indexed CSV reader. Returns a row accessor rather than objects,
+// because these files run to five figures of rows and building an object per
+// row for columns nobody reads is the difference between comfortable and
+// tight inside a Worker's memory.
+function _provCsv(text, wanted) {
+  const lines = text.split('\n');
+  if (lines.length < 2) return { rows: [], col: {} };
+  const head = _csvSplit(lines[0]);
+  const col = {};
+  for (const w of wanted) col[w] = head.indexOf(w);
+  return { lines, col, head };
+}
+const _provNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+
+// ── schedule ───────────────────────────────────────────────────────────────
+// Both adapters already exist and are used by the season service; they are
+// registered here so the schedule is reachable through the same door as
+// everything else rather than only by direct call.
+const PROVIDER_SCHEDULE = [
+  { name: 'nflverse-schedule', free: true,
+    fetch: async () => (await fetchScheduleNflverse()).games },
+  { name: 'espn-scoreboard', free: true,
+    fetch: async (env, ctx) => await fetchScheduleEspn((ctx && ctx.season) || new Date().getUTCFullYear()) }
+];
+
+// ── odds ───────────────────────────────────────────────────────────────────
+// The Odds API is the only per-player book feed, and it is the one paid
+// upgrade. Without it the game-line provider still prices every club's scoring
+// environment, which is what the site runs on today.
+const PROVIDER_ODDS = [
+  { name: 'the-odds-api', free: false, needs: env => !!(env && env.ODDS_API_KEY),
+    subjectType: 'player',
+    fetch: async (env) => (await fetchOddsTheOddsApi(env)).map(r => ({
+      book: r.book || 'unknown', subjectType: 'player', subject: r.player,
+      market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
+      gameId: r.gameId || null, ts: Date.now()
+    })) },
+  { name: 'nflverse-gamelines', free: true, subjectType: 'game',
+    fetch: async (env) => {
+      // The schedule refresh already pulled this file minutes ago; read the
+      // row it wrote rather than downloading 2MB again. Falls back to the
+      // fetch only when there is no row to read.
+      const cached = await scheduleCacheRead(env);
+      const games = cached ? cached.games : (await fetchScheduleNflverse()).games;
+      const out = [];
+      for (const g of games) {
+        if (g.spread != null) out.push({ book: 'consensus', subjectType: 'game', subject: g.id,
+          market: 'spread', line: g.spread, overOdds: null, underOdds: null, gameId: g.id, ts: Date.now() });
+        if (g.total != null) out.push({ book: 'consensus', subjectType: 'game', subject: g.id,
+          market: 'total', line: g.total, overOdds: null, underOdds: null, gameId: g.id, ts: Date.now() });
+      }
+      return out;
+    } }
+];
+
+// ── projection ─────────────────────────────────────────────────────────────
+// The committed board is a provider like any other. Saying so is what lets the
+// market engine treat "what the analysts think" and "what the book thinks" as
+// two inputs to compare rather than one baseline and one adjustment.
+const PROVIDER_PROJECTION = [
+  { name: 'iron-tuna-committed', free: true,
+    fetch: async () => _availPool(PROJECTIONS).map(p => ({
+      name: p.name, position: p.position, team: teamKey(p.team),
+      stats: { ...(p.projectedStats || {}) }
+    })) }
+];
+
+// ── consensus ranking ──────────────────────────────────────────────────────
+// The odds-BLIND board: the committed projections scored and ranked, which is
+// what a normal ranking or ADP list is built on. Kept separate from the
+// projection provider because a rank and a stat line are different questions
+// and the Vegas Edge product is exactly the gap between the two boards.
+const PROVIDER_CONSENSUS = [
+  { name: 'iron-tuna-consensus', free: true,
+    fetch: async (env, ctx) => {
+      const rules = (ctx && ctx.rules) || _COL_RULES;
+      const byPos = {};
+      for (const p of _availPool(PROJECTIONS)) {
+        if (!PROVIDER_POSITIONS.has(p.position)) continue;
+        (byPos[p.position] = byPos[p.position] || []).push({
+          name: p.name, position: p.position, team: teamKey(p.team),
+          points: _oddsRound(scoreStats(p.projectedStats, p.position, rules))
+        });
+      }
+      const out = [];
+      for (const pos of Object.keys(byPos)) {
+        byPos[pos].sort((a, b) => b.points - a.points || (a.name < b.name ? -1 : 1));
+        byPos[pos].forEach((r, i) => out.push({ ...r, rank: i + 1, source: 'iron-tuna-consensus' }));
+      }
+      return out;
+    } }
+];
+
+// ── weekly stats and usage ─────────────────────────────────────────────────
+// nflverse publishes a weekly player file the day after games are played. It
+// carries the usage columns that are genuinely public -- targets, target share,
+// air yards and air-yards share, carries, receptions, attempts -- and a second
+// file carries offensive snaps and snap share. Routes run and route
+// participation are NOT in either; they are charting products, and this returns
+// null for them rather than a derived stand-in dressed up as a measurement.
+async function fetchStatsNflverseWeekly(season) {
+  const r = await fetch(NFLVERSE_WEEKLY_STATS(season), { cf: { cacheTtl: 3600 } });
+  if (r.status === 404) return [];          // no games played yet this season
+  if (!r.ok) throw new Error('nflverse weekly ' + r.status);
+  const WANT = ['player_display_name', 'player_name', 'position', 'season', 'week', 'season_type',
+    'team', 'opponent_team', 'attempts', 'completions', 'passing_yards', 'passing_tds',
+    'passing_interceptions', 'passing_2pt_conversions', 'carries', 'rushing_yards', 'rushing_tds',
+    'rushing_2pt_conversions', 'rushing_fumbles_lost', 'sack_fumbles_lost', 'receiving_fumbles_lost',
+    'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_2pt_conversions',
+    'receiving_air_yards', 'target_share', 'air_yards_share', 'special_teams_tds'];
+  const { lines, col } = _provCsv(await r.text(), WANT);
+  if (col.player_display_name < 0 || col.week < 0) throw new Error('nflverse weekly: unexpected columns');
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    const f = _csvSplit(lines[i]);
+    const pos = String(f[col.position] || '').toUpperCase();
+    if (!PROVIDER_POSITIONS.has(pos)) continue;
+    const n = k => _provNum(f[col[k]]);
+    const fum = (n('rushing_fumbles_lost') || 0) + (n('sack_fumbles_lost') || 0) + (n('receiving_fumbles_lost') || 0);
+    out.push({
+      name: f[col.player_display_name] || f[col.player_name],
+      position: pos, team: teamKey(f[col.team]),
+      season: n('season'), week: n('week'), seasonType: f[col.season_type] || 'REG',
+      opponent: teamKey(f[col.opponent_team]),
+      stats: {
+        passYd: n('passing_yards') || 0, passTD: n('passing_tds') || 0,
+        passInt: n('passing_interceptions') || 0, pass2pt: n('passing_2pt_conversions') || 0,
+        rushYd: n('rushing_yards') || 0, rushTD: n('rushing_tds') || 0,
+        rush2pt: n('rushing_2pt_conversions') || 0,
+        recYd: n('receiving_yards') || 0, recTD: n('receiving_tds') || 0,
+        rec: n('receptions') || 0, rec2pt: n('receiving_2pt_conversions') || 0,
+        fumLost: fum
+      },
+      usage: {
+        passAttempts: n('attempts'), completions: n('completions'),
+        carries: n('carries'), targets: n('targets'), receptions: n('receptions'),
+        targetShare: n('target_share'), airYards: n('receiving_air_yards'),
+        airYardsShare: n('air_yards_share')
+      }
+    });
+  }
+  return out;
+}
+async function fetchSnapsNflverse(season) {
+  const r = await fetch(NFLVERSE_SNAPS(season), { cf: { cacheTtl: 3600 } });
+  if (r.status === 404) return [];
+  if (!r.ok) throw new Error('nflverse snaps ' + r.status);
+  const WANT = ['season', 'week', 'game_type', 'player', 'position', 'team', 'offense_snaps', 'offense_pct'];
+  const { lines, col } = _provCsv(await r.text(), WANT);
+  if (col.player < 0 || col.offense_snaps < 0) throw new Error('nflverse snaps: unexpected columns');
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    const f = _csvSplit(lines[i]);
+    const pos = String(f[col.position] || '').toUpperCase();
+    if (!PROVIDER_POSITIONS.has(pos)) continue;
+    out.push({
+      name: f[col.player], position: pos, team: teamKey(f[col.team]),
+      season: _provNum(f[col.season]), week: _provNum(f[col.week]),
+      seasonType: f[col.game_type] || 'REG',
+      snaps: _provNum(f[col.offense_snaps]), snapPct: _provNum(f[col.offense_pct])
+    });
+  }
+  return out;
+}
+const PROVIDER_STATS = [
+  { name: 'nflverse-weekly', free: true,
+    fetch: async (env, ctx) => await fetchStatsNflverseWeekly((ctx && ctx.season) || new Date().getUTCFullYear()) }
+];
+const PROVIDER_SNAPS = [
+  { name: 'nflverse-snaps', free: true,
+    fetch: async (env, ctx) => await fetchSnapsNflverse((ctx && ctx.season) || new Date().getUTCFullYear()) }
+];
+
+// ── injuries ───────────────────────────────────────────────────────────────
+// The existing ESPN pull, normalised. buildAvailabilityOverlay already turns
+// the feed into the site's own availability shape; this exposes it through the
+// registry so the market engine reads injuries the same way it reads odds.
+const PROVIDER_INJURY = [
+  { name: 'espn-injuries', free: true,
+    fetch: async () => {
+      const built = buildAvailabilityOverlay(await fetchInjuriesEspn());
+      return Object.entries(built.players || {}).map(([key, v]) => ({
+        key, name: v.name, position: v.position, team: teamKey(v.team),
+        status: v.status, gamesOut: v.gamesOut, note: v.note || '', asOf: v.asOf || built.asOf
+      }));
+    } }
+];
+
+// ── DFS salaries ───────────────────────────────────────────────────────────
+// DECLARED, NOT IMPLEMENTED, ON PURPOSE. Neither DraftKings nor FanDuel
+// publishes a documented public salary API, and the routes that exist are
+// undocumented endpoints behind a contest page -- taking them would be
+// scraping, which this repo does not do. The interface is here so a licensed
+// feed is a config change rather than a refactor: set DFS_SALARY_API and
+// DFS_SALARY_API_KEY and the adapter below carries the response into the same
+// normalised record every other provider returns. Until then the kind reports
+// "not configured" and /dfs shows the scoring environment it can actually
+// source, with no salary column invented to fill the gap.
+const PROVIDER_DFS = [
+  { name: 'licensed-salary-feed', free: false,
+    needs: env => !!(env && env.DFS_SALARY_API && env.DFS_SALARY_API_KEY),
+    fetch: async (env, ctx) => {
+      const u = new URL(env.DFS_SALARY_API);
+      if (ctx && ctx.season) u.searchParams.set('season', String(ctx.season));
+      if (ctx && ctx.week) u.searchParams.set('week', String(ctx.week));
+      const r = await fetch(u.toString(), { headers: { authorization: 'Bearer ' + env.DFS_SALARY_API_KEY } });
+      if (!r.ok) throw new Error('dfs ' + r.status);
+      const j = await r.json();
+      const rows = Array.isArray(j) ? j : (j && j.salaries) || [];
+      return rows.map(x => ({
+        name: x.name || x.player || '', position: String(x.position || '').toUpperCase(),
+        team: teamKey(x.team), site: x.site || 'unknown', slate: x.slate || null,
+        salary: _provNum(x.salary), gameId: x.gameId || null
+      })).filter(x => x.name && x.salary != null);
+    } }
+];
+
+const PROVIDERS = {
+  schedule: PROVIDER_SCHEDULE, odds: PROVIDER_ODDS, projection: PROVIDER_PROJECTION,
+  consensus: PROVIDER_CONSENSUS, stats: PROVIDER_STATS, snaps: PROVIDER_SNAPS,
+  injury: PROVIDER_INJURY, dfs: PROVIDER_DFS
+};
+
+// Fields no source in this registry can supply. Named here rather than left as
+// silent nulls, so a surface can SAY a number is unavailable instead of
+// printing a blank a reader will read as zero, and so adding a feed that does
+// carry them is a visible change to one list.
+const PROVIDER_UNAVAILABLE = {
+  routes: 'charting product; no free feed publishes routes run',
+  routeParticipation: 'derived from routes run, which is unavailable',
+  redZoneTouches: 'play-by-play only; the file is ~100MB and cannot be pulled per refresh',
+  redZoneTargets: 'play-by-play only, as above',
+  goalLineCarries: 'play-by-play only, as above',
+  pace: 'play-by-play only, as above',
+  passRate: 'play-by-play only, as above',
+  dfsSalary: 'no documented public salary API; needs a licensed feed (DFS_SALARY_API)'
+};
+
+// Run every configured provider of a kind, in registry order, and hand back
+// what each returned plus a report. Callers merge; this does not, because what
+// "earlier wins" means is different for a stat line and a game row.
+async function providerRun(env, kind, ctx) {
+  const list = PROVIDERS[kind];
+  if (!list) return { ok: false, error: 'unknown_kind', kind, results: [] };
+  const results = [];
+  for (const p of list) {
+    if (p.needs && !p.needs(env)) { results.push({ provider: p.name, skipped: 'not configured', rows: [] }); continue; }
+    try {
+      const rows = await p.fetch(env, ctx || {});
+      results.push({ provider: p.name, rows: Array.isArray(rows) ? rows : [], count: Array.isArray(rows) ? rows.length : 0 });
+    } catch (e) {
+      results.push({ provider: p.name, error: (e && e.message) || 'failed', rows: [] });
+    }
+  }
+  return { ok: results.some(r => r.count > 0), kind, results };
+}
+// What is wired up, and whether each key is present. Never the key itself.
+function providerReport(env) {
+  const out = {};
+  for (const kind of Object.keys(PROVIDERS)) {
+    out[kind] = PROVIDERS[kind].map(p => ({
+      name: p.name, free: !!p.free, configured: !p.needs || p.needs(env)
+    }));
+  }
+  return { providers: out, unavailable: PROVIDER_UNAVAILABLE };
+}
+
+// -- historical betting markets --------------------------------------------
+// A LINE IS NEVER OVERWRITTEN. The overlay in row 1 answers "what does the
+// market say now"; this table answers "what did it say, and when", which is a
+// different product. Opening 59.5 and current 67.5 is a fact about eight yards
+// of money moving toward a receiver, and it is invisible to anything that
+// keeps only the latest value.
+//
+// Append-only, with ONE exception that is not an exception: a refresh that
+// finds a book's line unchanged writes nothing. Four pulls a day against ~30
+// books and thousands of markets would otherwise add six figures of identical
+// rows a week, and "the line did not move" is already recorded by the absence
+// of a new row between two timestamps. Every row that IS written is a change.
+const SNAP_DDL = [
+  'CREATE TABLE IF NOT EXISTS odds_snapshots (' +
+    'id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, season INTEGER, week INTEGER, ' +
+    'book TEXT NOT NULL, subject_type TEXT NOT NULL, subject TEXT NOT NULL, market TEXT NOT NULL, ' +
+    'line REAL, over_odds INTEGER, under_odds INTEGER, game_id TEXT, raw_subject TEXT)',
+  'CREATE INDEX IF NOT EXISTS ix_snap_subject ON odds_snapshots (subject, market, ts)',
+  'CREATE INDEX IF NOT EXISTS ix_snap_latest ON odds_snapshots (subject, market, book, ts)',
+  'CREATE INDEX IF NOT EXISTS ix_snap_week ON odds_snapshots (season, week, ts)'
+];
+// Additive migrations for a table that may already exist. Each is a no-op
+// once applied and is allowed to fail (D1 raises on a duplicate column).
+const SNAP_MIGRATIONS = ['ALTER TABLE odds_snapshots ADD COLUMN raw_subject TEXT'];
+let _SNAP_READY = false;
+async function snapshotReady(env) {
+  if (_SNAP_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { await env.LEADS_DB.batch(SNAP_DDL.map(q => env.LEADS_DB.prepare(q))); }
+  catch (e) { try { for (const q of SNAP_DDL) await env.LEADS_DB.prepare(q).run(); } catch (e2) { return false; } }
+  for (const q of SNAP_MIGRATIONS) { try { await env.LEADS_DB.prepare(q).run(); } catch (e) {} }
+  _SNAP_READY = true;
+  return true;
+}
+// THE JOIN KEY. A book writes "Ja'Marr Chase"; the board writes what it
+// writes; the store keys on neither spelling but on the site's own normalised
+// name, the same key the season overlay joins on. The book's spelling is kept
+// beside it for audit, never for lookup. A game subject is its game id.
+function snapshotSubject(r) {
+  if (r.subjectType === 'game') return String(r.subject || '');
+  return _oddsNorm(r.subject);
+}
+const SNAP_KEEP_DAYS = 200;                 // a season plus the playoffs, then it goes
+const _snapKey = r => r.book + ' ' + r.subjectType + ' ' + snapshotSubject(r) + ' ' + r.market;
+// Two lines are "the same" when the number AND both prices match. A line that
+// holds at 67.5 while the juice moves from -110 to -135 has moved in the only
+// sense that matters to a projection, because the de-vigged probability moved.
+function _snapSame(a, b) {
+  if (!a || !b) return false;
+  const n = v => (v == null ? null : Number(v));
+  return n(a.line) === n(b.line) && n(a.over_odds) === n(b.overOdds) && n(a.under_odds) === n(b.underOdds);
+}
+async function snapshotWrite(env, rows, ctx) {
+  if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
+  const list = (rows || []).filter(r => r && r.book && r.subject && r.market && Number.isFinite(Number(r.line)) && snapshotSubject(r));
+  if (!list.length) return { ok: true, seen: 0, written: 0, unchanged: 0 };
+  // The latest row per (book, subject, market) already held, so an unchanged
+  // line is recognised without a query per row.
+  const latest = new Map();
+  try {
+    const q = await env.LEADS_DB.prepare(
+      'SELECT book, subject_type, subject, market, line, over_odds, under_odds, MAX(ts) AS ts ' +
+      'FROM odds_snapshots GROUP BY book, subject_type, subject, market').all();
+    for (const r of (q.results || [])) {
+      latest.set(r.book + ' ' + r.subject_type + ' ' + r.subject + ' ' + r.market, r);
+    }
+  } catch (e) {}
+  const season = (ctx && ctx.season) || null, week = (ctx && ctx.week) || null;
+  const ts = (ctx && ctx.ts) || Date.now();
+  const fresh = [];
+  const seenNow = new Set();
+  for (const r of list) {
+    const k = _snapKey(r);
+    if (seenNow.has(k)) continue;            // one row per market per pull
+    seenNow.add(k);
+    if (_snapSame(latest.get(k), r)) continue;
+    fresh.push(r);
+  }
+  let written = 0;
+  const stmt = env.LEADS_DB.prepare(
+    'INSERT INTO odds_snapshots (ts, season, week, book, subject_type, subject, market, line, over_odds, under_odds, game_id, raw_subject) ' +
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  for (let i = 0; i < fresh.length; i += 50) {
+    const chunk = fresh.slice(i, i + 50).map(r => stmt.bind(
+      ts, season, week, String(r.book), String(r.subjectType || 'player'), snapshotSubject(r),
+      String(r.market), Number(r.line),
+      r.overOdds == null ? null : Math.round(Number(r.overOdds)),
+      r.underOdds == null ? null : Math.round(Number(r.underOdds)),
+      r.gameId == null ? null : String(r.gameId),
+      String(r.subject).slice(0, 80)));
+    try { await env.LEADS_DB.batch(chunk); written += chunk.length; }
+    catch (e) { for (const st of chunk) { try { await st.run(); written++; } catch (e2) {} } }
+  }
+  return { ok: true, seen: list.length, written, unchanged: list.length - fresh.length };
+}
+async function snapshotPrune(env, keepDays) {
+  if (!(await snapshotReady(env))) return { ok: false };
+  const cutoff = Date.now() - (keepDays || SNAP_KEEP_DAYS) * 86400000;
+  try {
+    const r = await env.LEADS_DB.prepare('DELETE FROM odds_snapshots WHERE ts < ?').bind(cutoff).run();
+    return { ok: true, deleted: (r.meta && r.meta.changes) || 0 };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+}
+
+const _median = arr => {
+  const a = (arr || []).filter(Number.isFinite).slice().sort((x, y) => x - y);
+  if (!a.length) return null;
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+};
+// How far apart the books are, as a number between 0 and 1: the share of books
+// whose current line sits within a tolerance of the median -- 5% of the line,
+// floored at half a point so a half-reception spread is not counted as
+// disagreement. One book is not agreement with anybody, so it reports null
+// rather than a confident 1.
+const MARKET_AGREE_TOL_PCT = 0.05;
+const MARKET_AGREE_TOL_MIN = 0.5;
+function marketAgreement(lines) {
+  const a = (lines || []).filter(Number.isFinite);
+  if (a.length < 2) return null;
+  const med = _median(a);
+  if (med == null) return null;
+  const tol = Math.max(MARKET_AGREE_TOL_MIN, Math.abs(med) * MARKET_AGREE_TOL_PCT);
+  return a.filter(x => Math.abs(x - med) <= tol).length / a.length;
+}
+// One market's history: where it opened, where it is, how far it moved, how
+// many books moved it, and how much they agree now. "Open" is each book's OWN
+// first recorded line, then the median across books -- taking the earliest row
+// in the table instead would make the opener whichever book happened to post
+// first, which is a fact about that book and not about the market.
+function marketHistoryFrom(rows) {
+  const list = (rows || []).filter(r => Number.isFinite(Number(r.line)))
+    .map(r => ({ ...r, ts: Number(r.ts), line: Number(r.line) }))
+    .sort((a, b) => a.ts - b.ts);
+  if (!list.length) return null;
+  const byBook = new Map();
+  for (const r of list) {
+    if (!byBook.has(r.book)) byBook.set(r.book, { open: r, current: r });
+    else byBook.get(r.book).current = r;
+  }
+  const books = [...byBook.entries()].map(([book, v]) => ({
+    book, open: v.open.line, current: v.current.line,
+    movement: _oddsRound(v.current.line - v.open.line),
+    overOdds: v.current.over_odds == null ? null : Number(v.current.over_odds),
+    underOdds: v.current.under_odds == null ? null : Number(v.current.under_odds),
+    openedAt: v.open.ts, updatedAt: v.current.ts
+  }));
+  // THE OPENING LINE IS THE OPENING CONSENSUS, not the median of whatever each
+  // book happened to post first. Books enter a market at different times: one
+  // that starts quoting on Friday has an "open" that is really a mid-week
+  // number, and folding it in drags the opener toward the current line and
+  // understates the move. So the opener is the median of the books that were
+  // quoting at this market's FIRST recorded pull -- a late arrival counts
+  // toward `current` and toward the book count, and cannot rewrite history.
+  const firstTs = list[0].ts;
+  const openSlate = list.filter(r => r.ts === firstTs).map(r => r.line);
+  const open = openSlate.length ? _median(openSlate) : _median(books.map(b => b.open));
+  const current = _median(books.map(b => b.current));
+  const movement = (open == null || current == null) ? null : _oddsRound(current - open);
+  return {
+    market: list[0].market, subject: list[0].subject,
+    subjectType: list[0].subject_type || list[0].subjectType || 'player',
+    open, current, movement,
+    percentChange: (open && movement != null) ? Math.round((movement / Math.abs(open)) * 1000) / 10 : null,
+    books: books.length,
+    booksAtOpen: openSlate.length,
+    booksMoved: books.filter(b => b.movement !== 0).length,
+    booksUp: books.filter(b => b.movement > 0).length,
+    booksDown: books.filter(b => b.movement < 0).length,
+    agreement: marketAgreement(books.map(b => b.current)),
+    median: current,
+    firstSeen: list[0].ts, lastSeen: list[list.length - 1].ts,
+    perBook: books
+  };
+}
+// A caller may hand in the board's spelling, the book's spelling, or the key;
+// all three resolve to the key. A game id is left alone.
+const _snapLookup = subject => /^\d{4}_\d{2}_[A-Z]+_[A-Z]+$/.test(String(subject || '')) ? String(subject) : _oddsNorm(subject);
+async function marketHistory(env, subject, market) {
+  if (!(await snapshotReady(env))) return null;
+  try {
+    const q = await env.LEADS_DB.prepare(
+      'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
+      'FROM odds_snapshots WHERE subject = ? AND market = ? ORDER BY ts ASC LIMIT 2000')
+      .bind(_snapLookup(subject), String(market)).all();
+    return marketHistoryFrom(q.results || []);
+  } catch (e) { return null; }
+}
+// Every market a subject has, in one query -- what a player card or a market
+// record needs, rather than one round trip per stat.
+async function marketHistoryAll(env, subject) {
+  if (!(await snapshotReady(env))) return {};
+  try {
+    const q = await env.LEADS_DB.prepare(
+      'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
+      'FROM odds_snapshots WHERE subject = ? ORDER BY ts ASC LIMIT 6000').bind(_snapLookup(subject)).all();
+    const byMarket = {};
+    for (const r of (q.results || [])) (byMarket[r.market] = byMarket[r.market] || []).push(r);
+    const out = {};
+    for (const [m, rows] of Object.entries(byMarket)) out[m] = marketHistoryFrom(rows);
+    return out;
+  } catch (e) { return {}; }
+}
+// Every subject's history for one week, in ONE query. The market engine builds
+// sixty-odd records at a time and a per-player round trip would be sixty D1
+// reads on a request path -- which is not a slow version of this, it is a
+// different order of cost. Bounded hard: a week of four pulls a day across
+// every book is comfortably inside the limit, and a run that hit it would be
+// truncating the OLDEST rows, so the cap is applied to the newest instead.
+const MARKET_WEEK_ROW_CAP = 40000;
+async function marketHistoryWeek(env, season, week) {
+  if (!(await snapshotReady(env))) return {};
+  try {
+    const q = await env.LEADS_DB.prepare(
+      'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds ' +
+      'FROM odds_snapshots WHERE season IS ? AND week IS ? ORDER BY ts ASC LIMIT ?')
+      .bind(season == null ? null : Number(season), week == null ? null : Number(week), MARKET_WEEK_ROW_CAP).all();
+    const bySubject = {};
+    for (const r of (q.results || [])) {
+      const b = bySubject[r.subject] || (bySubject[r.subject] = {});
+      (b[r.market] = b[r.market] || []).push(r);
+    }
+    const out = {};
+    for (const [subject, markets] of Object.entries(bySubject)) {
+      out[subject] = {};
+      for (const [m, rows] of Object.entries(markets)) out[subject][m] = marketHistoryFrom(rows);
+    }
+    return out;
+  } catch (e) { return {}; }
+}
+// One player's markets, shaped for vegasProjection, out of a history object
+// that is already in memory. Pure: no DB, so the engine can build every record
+// off a single read.
+function marketPropsFrom(hist) {
+  const props = {}, movement = {};
+  let asOf = 0;
+  for (const [m, h] of Object.entries(hist || {})) {
+    if (!h) continue;
+    props[m] = (h.perBook || []).map(b => ({ book: b.book, line: b.current,
+      overOdds: b.overOdds, underOdds: b.underOdds }));
+    movement[m] = { open: h.open, current: h.current, movement: h.movement,
+      percentChange: h.percentChange, books: h.books, booksAtOpen: h.booksAtOpen,
+      booksMoved: h.booksMoved, booksUp: h.booksUp, booksDown: h.booksDown,
+      agreement: h.agreement, median: h.median, lastSeen: h.lastSeen };
+    if (h.lastSeen > asOf) asOf = h.lastSeen;
+  }
+  return { props, movement, asOf: asOf || null };
+}
+async function snapshotStatus(env) {
+  if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
+  try {
+    const tot = await env.LEADS_DB.prepare(
+      'SELECT COUNT(*) AS rows, COUNT(DISTINCT subject) AS subjects, COUNT(DISTINCT book) AS books, ' +
+      'COUNT(DISTINCT market) AS markets, MIN(ts) AS first, MAX(ts) AS last FROM odds_snapshots').first();
+    return { ok: true, ...tot, keepDays: SNAP_KEEP_DAYS };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+}
+
+// -- sportsbook markets into fantasy projections ----------------------------
+// The season-long path (buildVegasOverlay) averages every book into one number
+// and blends it into the committed projection. This is the WEEKLY path, and it
+// answers a different question: what would this player score if the only thing
+// you knew were the prices? It quotes no projection feed at all.
+//
+// THREE RULES IT WILL NOT BREAK.
+//   1. Vig comes out before anything is believed. Both sides of a total carry
+//      juice, so the raw implied probabilities sum to more than one; each pair
+//      is normalised to sum to one, which is the market's honest P(over).
+//   2. The MEDIAN across books, not the mean. One book hanging a stale line is
+//      an outlier, and a mean lets it drag the consensus; a median does not.
+//   3. A market nobody priced is NOT invented. Missing yardage is reported
+//      missing and the projection says PARTIAL or UNAVAILABLE. There is no
+//      fallback to a projection feed hidden inside a number labelled Vegas.
+//
+// What each position is expected to have priced. `core` are the markets
+// without which a Vegas projection is not a projection; `extra` improve it.
+const VEGAS_MARKETS = {
+  QB: { core: ['passYd', 'passTD'], extra: ['passInt', 'rushYd', 'anytimeTD', 'rushTD'] },
+  RB: { core: ['rushYd', 'anytimeTD'], extra: ['rushAtt', 'rec', 'recYd', 'rushTD', 'recTD'] },
+  WR: { core: ['recYd', 'rec'], extra: ['anytimeTD', 'recTD', 'rushYd'] },
+  TE: { core: ['recYd', 'rec'], extra: ['anytimeTD', 'recTD', 'rushYd'] }
+};
+// A yardage/count market is turned into an expected value; an anytimeTD market
+// is a probability and is handled on its own path below.
+const VEGAS_COUNT_MARKETS = ['passYd', 'passTD', 'passInt', 'rushYd', 'rushTD', 'rushAtt',
+                            'recYd', 'recTD', 'rec'];
+// Weekly coefficients of variation. A single game is far noisier than a season,
+// so these sit well above the season-long ODDS_CV; they only bite when a book
+// prices one side hard, because at a balanced price the mean IS the line.
+const VEGAS_WEEK_CV = {
+  passYd: 0.32, passTD: 0.60, passInt: 0.85, rushYd: 0.55, rushTD: 0.90, rushAtt: 0.35,
+  recYd: 0.60, recTD: 0.90, rec: 0.40
+};
+// Plausible weekly bands. A line outside these is a feed error, not a market
+// view, and is dropped rather than projected from.
+const VEGAS_WEEK_BANDS = {
+  passYd: [50, 500], passTD: [0.5, 6], passInt: [0.5, 3], rushYd: [1, 250], rushTD: [0.5, 4],
+  rushAtt: [1, 40], recYd: [1, 220], recTD: [0.5, 4], rec: [0.5, 16]
+};
+
+// American odds to a probability, then a pair de-vigged. Both already exist for
+// the season path and are reused rather than rewritten -- the arithmetic must
+// not fork.
+function _vegasDevig(over, under) { return _oddsDevigOver(over, under); }
+// A single-sided price (anytime TD is usually posted as one side, sometimes
+// with a 'No' beside it). With both sides the pair is de-vigged properly. With
+// only one, the raw implied probability is returned AND the caller is told it
+// carries vig, which costs a confidence grade rather than being silently used
+// as though it were clean.
+function vegasTdProbability(rows) {
+  const per = [];
+  for (const r of rows || []) {
+    const yes = Number(r.overOdds);
+    if (!Number.isFinite(yes)) continue;
+    const no = Number(r.underOdds);
+    if (Number.isFinite(no)) {
+      const p = _oddsDevigOver(yes, no);
+      if (p != null && p > 0 && p < 1) per.push({ p, devigged: true, book: r.book });
+    } else {
+      const p = _oddsImpliedProb(yes);
+      if (p != null && p > 0 && p < 1) per.push({ p, devigged: false, book: r.book });
+    }
+  }
+  if (!per.length) return null;
+  return {
+    probability: _median(per.map(x => x.p)),
+    books: new Set(per.map(x => x.book)).size,
+    devigged: per.every(x => x.devigged),
+    agreement: marketAgreement(per.map(x => x.p * 100))
+  };
+}
+// One count market across every book that priced it: de-vig each, convert each
+// to a mean, then take the median of the means.
+function vegasCountMarket(market, rows) {
+  const band = VEGAS_WEEK_BANDS[market];
+  const cv = VEGAS_WEEK_CV[market];
+  if (!band || !cv) return null;
+  const per = [];
+  for (const r of rows || []) {
+    const line = Number(r.line);
+    if (!Number.isFinite(line) || line < band[0] || line > band[1]) continue;
+    const p = _vegasDevig(r.overOdds, r.underOdds);
+    // No prices at all means the line is taken at face value, which is exactly
+    // right: with no juice to read, the market's median IS its best estimate.
+    const pOver = p == null ? 0.5 : p;
+    const mean = line + cv * line * _oddsProbit(pOver);
+    if (!Number.isFinite(mean) || mean < 0) continue;
+    per.push({ book: r.book, line, mean });
+  }
+  if (!per.length) return null;
+  return {
+    market,
+    line: _median(per.map(x => x.line)),
+    expected: _oddsRound(_median(per.map(x => x.mean))),
+    books: new Set(per.map(x => x.book)).size,
+    agreement: marketAgreement(per.map(x => x.line))
+  };
+}
+
+// Confidence. Five inputs, and it is a DEMOTION model rather than a sum,
+// because a sum lets a projection stay HIGH while carrying a serious defect
+// that the other four inputs outvote -- which is exactly backwards. One
+// serious problem means it is not HIGH. Two mean it is LOW. A player the
+// injury feed has ruled out is LOW on his own, however well priced he is,
+// because the market has not caught up with a decision already made.
+const VEGAS_CONF_FRESH_HOURS = 12;
+const VEGAS_CONF_STALE_HOURS = 36;
+const VEGAS_CONF_MIN_BOOKS = 2;
+const VEGAS_CONF_MIN_AGREE = 0.6;
+const VEGAS_OUT_RE = /\b(out|ir|doubtful|susp|suspended|exempt|pup|nfi|dnr)\b/i;
+function vegasConfidence(f) {
+  const reasons = [];
+  const demote = (why) => { reasons.push(why); };
+
+  if (f.coreMissing > 0) {
+    demote(f.coreMissing === 1 ? 'a core market is unpriced' : f.coreMissing + ' core markets are unpriced');
+  }
+  if (!(f.books >= VEGAS_CONF_MIN_BOOKS)) {
+    demote(f.books === 1 ? 'only one book priced him' : 'no book priced him');
+  } else if (f.agreement == null) {
+    demote('agreement cannot be measured');
+  } else if (f.agreement < VEGAS_CONF_MIN_AGREE) {
+    demote('the books disagree with each other');
+  }
+  if (f.ageHours == null) demote('the pull has no timestamp');
+  else if (f.ageHours > VEGAS_CONF_STALE_HOURS) demote('the lines are more than a day and a half old');
+
+  // Not a demotion, but worth saying: fresh-ish rather than fresh.
+  const soft = [];
+  if (f.ageHours != null && f.ageHours > VEGAS_CONF_FRESH_HOURS && f.ageHours <= VEGAS_CONF_STALE_HOURS) {
+    soft.push('the lines are over half a day old');
+  }
+  if (f.marketCount < 3) soft.push('only ' + f.marketCount + ' market' + (f.marketCount === 1 ? '' : 's') + ' priced');
+
+  // The injury clause. A questionable tag is a caution; a ruled-out tag is not
+  // a caution, it is the answer.
+  let ruledOut = false;
+  if (f.injuryStatus) {
+    if (VEGAS_OUT_RE.test(String(f.injuryStatus))) { ruledOut = true; reasons.push('he is listed ' + f.injuryStatus); }
+    else soft.push('he is listed ' + f.injuryStatus);
+  }
+
+  const level = ruledOut ? 'LOW'
+    : reasons.length === 0 ? 'HIGH'
+    : reasons.length === 1 ? 'MEDIUM'
+    : 'LOW';
+  return { level, demotions: reasons.length, ruledOut, reasons: reasons.concat(soft) };
+}
+// The projection itself. `markets` is { market: [ {book, line, overOdds,
+// underOdds}, ... ] } -- whatever the odds provider actually returned for this
+// player this week, already keyed to Iron Tuna's stat names by the adapter.
+function vegasProjection(markets, position, rules, ctx) {
+  const pos = String(position || '').toUpperCase();
+  const spec = VEGAS_MARKETS[pos];
+  const c = ctx || {};
+  if (!spec) return { ok: false, status: 'unavailable', reason: 'unpriced_position', position: pos };
+  const priced = {};
+  const books = new Set();
+  const agrees = [];
+  for (const m of VEGAS_COUNT_MARKETS) {
+    const got = vegasCountMarket(m, (markets || {})[m]);
+    if (!got) continue;
+    priced[m] = got;
+    for (const r of markets[m]) if (r && r.book) books.add(r.book);
+    if (got.agreement != null) agrees.push(got.agreement);
+  }
+  const td = vegasTdProbability((markets || {}).anytimeTD);
+  if (td) { for (const r of markets.anytimeTD) if (r && r.book) books.add(r.book); if (td.agreement != null) agrees.push(td.agreement); }
+
+  const have = new Set(Object.keys(priced));
+  if (td) have.add('anytimeTD');
+  const coreMissing = spec.core.filter(m => !have.has(m));
+  // Nothing at all, or no core market priced: say so. A projection assembled
+  // from one extra market and silence is not a partial projection, it is a
+  // guess with a Vegas label on it.
+  if (!have.size || coreMissing.length === spec.core.length) {
+    return { ok: false, status: 'unavailable', position: pos,
+             label: 'Vegas projection unavailable',
+             reason: !have.size ? 'no_markets' : 'no_core_market',
+             missing: spec.core.filter(m => !have.has(m)), priced: [...have] };
+  }
+
+  // Stats, in Iron Tuna's own keys, from priced markets ONLY.
+  const stats = {};
+  const src = {};
+  for (const [m, v] of Object.entries(priced)) {
+    if (m === 'rushAtt') continue;              // usage, not a scoring stat
+    stats[m] = v.expected;
+    src[m] = { line: v.line, books: v.books, agreement: v.agreement };
+  }
+  // The touchdown. A book's anytime-TD price is a PROBABILITY of at least one,
+  // not an expected count, so it is worth p x (points per TD) and is added as
+  // fantasy points rather than smuggled in as a fractional touchdown -- the two
+  // differ whenever a player can score twice, and calling them the same thing
+  // is the error this comment exists to prevent.
+  const r = rules || SCORING_BASE;
+  let tdPoints = 0, tdBlock = null;
+  if (td && td.probability != null) {
+    const perTd = tdPointsFor(pos, r);
+    tdPoints = td.probability * perTd;
+    tdBlock = { probability: Math.round(td.probability * 1000) / 10, pointsPerTd: perTd,
+                expectedPoints: _oddsRound(tdPoints), books: td.books, devigged: td.devigged,
+                source: 'anytime-td-market' };
+  }
+  // A priced rushTD/recTD market is an expected COUNT and scores normally; if
+  // an anytime-TD price is also present the count markets win, because a count
+  // carries multi-score games that a binary cannot.
+  const hasCountTd = stats.rushTD != null || stats.recTD != null;
+  const base = scoreStats(stats, pos, r);
+  const points = _oddsRound(base + (hasCountTd ? 0 : tdPoints));
+
+  const agreement = agrees.length ? agrees.reduce((a, b) => a + b, 0) / agrees.length : null;
+  const ageHours = c.asOf ? Math.max(0, (Date.now() - c.asOf) / 3600000) : null;
+  const confidence = vegasConfidence({
+    coreMissing: coreMissing.length, marketCount: have.size, books: books.size,
+    agreement, ageHours, injuryStatus: c.injuryStatus || null
+  });
+  const partial = coreMissing.length > 0;
+  return {
+    ok: true,
+    status: partial ? 'partial' : 'full',
+    label: partial ? 'Partial Vegas projection' : 'Vegas projection',
+    position: pos, stats, points,
+    td: tdBlock,
+    tdCountedFromMarket: hasCountTd,
+    markets: src,
+    priced: [...have].sort(),
+    missing: coreMissing.concat(spec.extra.filter(m => !have.has(m))),
+    missingCore: coreMissing,
+    books: books.size,
+    agreement: agreement == null ? null : Math.round(agreement * 100) / 100,
+    asOf: c.asOf || null,
+    ageHours: ageHours == null ? null : Math.round(ageHours * 10) / 10,
+    confidence: confidence.level,
+    confidenceDemotions: confidence.demotions,
+    confidenceReasons: confidence.reasons
+  };
+}
+
+// -- the Iron Tuna Market Engine -------------------------------------------
+// ONE record per player per week, assembled from every provider kind, in one
+// shape. Everything in the in-season section reads this rather than each
+// surface joining odds to projections to injuries its own way -- which is how
+// two pages end up disagreeing about the same player on the same afternoon.
+//
+// The record has four blocks and they are kept apart on purpose:
+//   fantasy  what the projections say, scored at the caller's rules
+//   vegas    what the money says: game line, team totals, player props, the
+//            props-only projection, and how the market has MOVED
+//   usage    what actually happened on the field, where a feed publishes it
+//   context  injury, opponent, game state -- the things that decide whether
+//            the other three blocks are worth reading at all
+//
+// A FIELD WITH NO SOURCE IS null AND IS NAMED IN `unavailable`. It is never a
+// zero and never an estimate. Reading a null as "he had no targets" is the
+// mistake this costs one list to prevent.
+const MARKET_CONTRACT = 1;
+let _MARKET_MEMO = { key: '', at: 0, out: null };
+const MARKET_ROW = 5;                       // odds_overlay row 5: the usage overlay
+const MARKET_MAX_AGE_MS = 14 * 86400000;
+const MARKET_MEMO_MS = 300000;
+
+// Implied points for both sides of a game, from the spread and the total. The
+// favourite gets half the total plus half the margin. nflverse writes
+// spread_line as the HOME margin, so a positive number is the home side.
+function marketImplied(game) {
+  if (!game) return { home: null, away: null };
+  if (game.impliedHome != null || game.impliedAway != null) return { home: game.impliedHome, away: game.impliedAway };
+  return _seasonDecorate(game, Date.now()).impliedHome == null ? { home: null, away: null }
+       : { home: _seasonDecorate(game, Date.now()).impliedHome, away: _seasonDecorate(game, Date.now()).impliedAway };
+}
+
+// The usage overlay: one D1 row holding the latest weekly line for every
+// player the stats feed carries. Built by the cron, because the weekly file is
+// ~9MB and the snaps file ~2.5MB and neither belongs on a request path.
+async function usageCacheWrite(env, payload) {
+  await oddsCacheInit(env);
+  await env.LEADS_DB.prepare(
+    'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)'
+  ).bind(MARKET_ROW, JSON.stringify(payload), 'nflverse-usage',
+         Object.keys(payload.players || {}).length, Date.now()).run();
+}
+let _USAGE_CACHE = null, _USAGE_AT = 0;
+async function usageCacheRead(env) {
+  if (_USAGE_CACHE && Date.now() - _USAGE_AT < MARKET_MEMO_MS) return _USAGE_CACHE;
+  if (!env || !env.LEADS_DB) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, updated_at FROM odds_overlay WHERE id=?')
+      .bind(MARKET_ROW).first();
+    if (!row || !row.payload) return null;
+    if (!row.updated_at || Date.now() - row.updated_at > MARKET_MAX_AGE_MS) return null;
+    const j = JSON.parse(row.payload);
+    if (!j || !j.players) return null;
+    _USAGE_CACHE = { ...j, updatedAt: row.updated_at };
+    _USAGE_AT = Date.now();
+    return _USAGE_CACHE;
+  } catch (e) { return null; }
+}
+// Pull the weekly stats and the snap counts, keep the LATEST week each player
+// appears in, and index by the site's own player key. Season-to-date totals
+// ride along so a surface can say "he has averaged 6 targets" without a second
+// pass over 9MB of CSV.
+async function runUsageRefresh(env, season) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const yr = season || (await scheduleCacheRead(env) || {}).season || new Date().getUTCFullYear();
+  let weekly = [], snaps = [], err = null;
+  try { weekly = await fetchStatsNflverseWeekly(yr); }
+  catch (e) { err = 'weekly: ' + ((e && e.message) || 'failed'); }
+  try { snaps = await fetchSnapsNflverse(yr); } catch (e) { err = (err ? err + '; ' : '') + 'snaps: ' + ((e && e.message) || 'failed'); }
+  // No games played yet is not a failure. It is September.
+  if (!weekly.length && !snaps.length) {
+    return { ok: true, season: yr, players: 0, weeks: 0, note: 'no weekly stats published yet', error: err };
+  }
+  const players = {};
+  const key = (n, p) => _oddsNorm(n) + '|' + p;
+  let maxWeek = 0;
+  for (const r of weekly) {
+    if (r.seasonType !== 'REG' || !r.week) continue;
+    if (r.week > maxWeek) maxWeek = r.week;
+    const k = key(r.name, r.position);
+    const rec = players[k] || (players[k] = { name: r.name, position: r.position, team: r.team,
+      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, points: 0 } });
+    rec.team = r.team;
+    rec.season.games++;
+    rec.season.targets += r.usage.targets || 0;
+    rec.season.carries += r.usage.carries || 0;
+    rec.season.receptions += r.usage.receptions || 0;
+    rec.season.airYards += r.usage.airYards || 0;
+    if (!rec.latest || r.week > rec.latest.week) {
+      rec.latest = { week: r.week, opponent: r.opponent, stats: r.stats, usage: r.usage };
+    }
+  }
+  for (const s of snaps) {
+    if (s.seasonType !== 'REG' || !s.week) continue;
+    const k = key(s.name, s.position);
+    const rec = players[k];
+    if (!rec || !rec.latest || rec.latest.week !== s.week) continue;
+    rec.latest.usage = { ...rec.latest.usage, snaps: s.snaps, snapPct: s.snapPct };
+  }
+  const payload = { season: yr, throughWeek: maxWeek, players, builtAt: Date.now() };
+  await usageCacheWrite(env, payload);
+  _USAGE_CACHE = null; _USAGE_AT = 0;
+  return { ok: true, season: yr, players: Object.keys(players).length, throughWeek: maxWeek,
+           weekly: weekly.length, snaps: snaps.length, error: err };
+}
+
+// Player props, grouped per player per market, straight out of the snapshot
+// store so the engine reads ONE source for both the current line and its
+// history. Falls back to nothing rather than to the season overlay: a season
+// prop is not a week's prop, and pretending otherwise is the single most
+// tempting mistake available here.
+async function marketPropsFor(env, subject) {
+  return marketPropsFrom(await marketHistoryAll(env, subject));
+}
+
+// Build the records. `opts`: { week, position, limit, preset, custom }.
+async function buildMarketRecords(env, opts) {
+  const o = opts || {};
+  const rules = scoringRules(o.preset, o.custom);
+  const sched = await scheduleCacheRead(env);
+  if (!sched) return { ok: false, error: 'no_schedule', contract: MARKET_CONTRACT };
+  const state = nflSeasonState(sched, Date.now());
+  const week = Number.isFinite(o.week) ? o.week : (state.ok ? state.week.number : null);
+  const type = o.type || (state.ok ? state.week.type : 'REG');
+  const wk = nflSeasonWeek(sched, Date.now(), type, week);
+  const games = (wk.ok && wk.games) || [];
+  // Which club plays whom, and where each game stands.
+  const byTeam = new Map();
+  for (const g of games) {
+    const imp = marketImplied(g);
+    byTeam.set(g.home, { game: g, opponent: g.away, home: true, implied: imp.home, opponentImplied: imp.away });
+    byTeam.set(g.away, { game: g, opponent: g.home, home: false, implied: imp.away, opponentImplied: imp.home });
+  }
+  const usage = await usageCacheRead(env);
+  const avail = await availabilityTable(env);
+  const overlay = await oddsCacheRead(env);
+  const pool = _availPool(PROJECTIONS);
+  // ONE read for the whole week's markets. Sixty records used to mean sixty D1
+  // queries; this is one, grouped in memory.
+  const weekMarkets = await marketHistoryWeek(env, sched.season, wk.ok && wk.requested ? wk.requested.number : week);
+  const nameIndex = _oddsProjectionIndex();
+  const wantPos = o.position ? String(o.position).toUpperCase() : null;
+
+  // The consensus rank per position, at the caller's scoring, so the record's
+  // rank means what the caller's league means by it.
+  const scored = [];
+  for (const p of pool) {
+    if (!PROVIDER_POSITIONS.has(p.position)) continue;
+    scored.push({ p, points: scoreStats(p.projectedStats, p.position, rules) });
+  }
+  const rankBy = {};
+  for (const pos of PROVIDER_POSITIONS) {
+    const at = scored.filter(x => x.p.position === pos).sort((a, b) => b.points - a.points || (a.p.name < b.p.name ? -1 : 1));
+    at.forEach((x, i) => { rankBy[_oddsNorm(x.p.name) + '|' + pos] = i + 1; });
+  }
+
+  const out = [];
+  const limit = Math.min(Math.max(1, Number(o.limit) || 60), 400);
+  const ordered = scored.filter(x => !wantPos || x.p.position === wantPos)
+    .sort((a, b) => b.points - a.points).slice(0, limit);
+  for (const { p, points } of ordered) {
+    const k = _oddsNorm(p.name) + '|' + p.position;
+    const team = teamKey(p.team);
+    const slot = byTeam.get(team) || null;
+    const a = avail[k] || null;
+    const u = usage && usage.players ? usage.players[k] : null;
+    // Joined on the normalised name, the same rule the season overlay uses,
+    // and an AMBIGUOUS name (two board players, one key) gets no props at all:
+    // a prop on the wrong man is worse than no prop.
+    const nk = _oddsNorm(p.name);
+    const mk = nameIndex.get(nk) === null ? { props: {}, movement: {}, asOf: null, ambiguous: true }
+             : marketPropsFrom(weekMarkets[nk]);
+    const vp = vegasProjection(mk.props, p.position, rules,
+      { asOf: mk.asOf, injuryStatus: a ? a.status : null });
+    // Season-long odds view of this player, which the site already computes.
+    // Kept beside the weekly one and clearly labelled: they answer different
+    // questions and a reader must never see one under the other's heading.
+    const seasonOdds = overlay && overlay.overlay ? overlay.overlay[k] || null : null;
+    out.push({
+      player: { name: p.name, position: p.position, team, key: k },
+      season: sched.season, week: wk.ok && wk.requested ? wk.requested.number : week,
+      weekType: type,
+      fantasy: {
+        projection: { stats: { ...(p.projectedStats || {}) }, points: _oddsRound(points), basis: 'season-long' },
+        consensusRank: rankBy[k] || null,
+        scoring: { preset: o.preset || (o.custom ? 'custom' : 'ppr'), rules: undefined }
+      },
+      vegas: {
+        game: slot ? { id: slot.game.id, spread: slot.game.spread, total: slot.game.total,
+                       kickoff: slot.game.kickoff, status: slot.game.status } : null,
+        teamImplied: slot ? slot.implied : null,
+        opponentImplied: slot ? slot.opponentImplied : null,
+        props: mk.props,
+        movement: mk.movement,
+        projection: vp,
+        confidence: vp.ok ? vp.confidence : 'LOW',
+        seasonOverlay: seasonOdds
+      },
+      usage: u ? {
+        throughWeek: usage.throughWeek, latestWeek: u.latest ? u.latest.week : null,
+        snaps: u.latest && u.latest.usage.snaps != null ? u.latest.usage.snaps : null,
+        snapPct: u.latest && u.latest.usage.snapPct != null ? u.latest.usage.snapPct : null,
+        targets: u.latest ? u.latest.usage.targets : null,
+        targetShare: u.latest ? u.latest.usage.targetShare : null,
+        airYards: u.latest ? u.latest.usage.airYards : null,
+        airYardsShare: u.latest ? u.latest.usage.airYardsShare : null,
+        carries: u.latest ? u.latest.usage.carries : null,
+        receptions: u.latest ? u.latest.usage.receptions : null,
+        passAttempts: u.latest ? u.latest.usage.passAttempts : null,
+        seasonTotals: u.season,
+        // Named, not silently absent. See PROVIDER_UNAVAILABLE.
+        unavailable: ['routes', 'routeParticipation', 'redZoneTouches', 'redZoneTargets',
+                      'goalLineCarries', 'pace', 'passRate']
+      } : { unavailable: ['snaps', 'snapPct', 'targets', 'targetShare', 'airYards', 'airYardsShare',
+                          'carries', 'receptions', 'passAttempts', 'routes', 'routeParticipation',
+                          'redZoneTouches', 'redZoneTargets', 'goalLineCarries', 'pace', 'passRate'],
+            note: 'no weekly usage published for this player yet' },
+      context: {
+        opponent: slot ? slot.opponent : null,
+        home: slot ? slot.home : null,
+        gameStatus: slot ? slot.game.status : null,
+        kickoff: slot ? slot.game.kickoff : null,
+        onBye: !slot && type === 'REG',
+        injuryStatus: a ? a.status : null,
+        gamesOut: a ? a.gamesOut : null,
+        injuryNote: a ? (a.note || '') : '',
+        depthChart: null,
+        lineupChange: null,
+        unavailable: ['depthChart', 'lineupChange']
+      }
+    });
+  }
+  return {
+    ok: true, contract: MARKET_CONTRACT,
+    season: sched.season, week: wk.ok && wk.requested ? wk.requested.number : week, weekType: type,
+    scoring: { preset: o.preset || (o.custom ? 'custom' : 'ppr'),
+               label: SCORING_PRESET_LABEL[o.preset || (o.custom ? 'custom' : 'ppr')] || 'PPR' },
+    sources: { schedule: sched.provider, odds: overlay ? overlay.provider : null,
+               usage: usage ? 'nflverse-usage' : null,
+               usageThroughWeek: usage ? usage.throughWeek : null },
+    records: out
+  };
+}
+
+// -- the rankings payload ---------------------------------------------------
+// Ships STAT LINES, not points. The rankings page has four scoring buttons and
+// the reader expects the board to re-order the instant one is pressed, so the
+// scoring has to happen in the browser -- a round trip per button press is a
+// worse product and a pointless load. it-league.js already carries the same
+// engine as scoreStats above (tools/test-scoring.mjs pins the two together),
+// so the client can score these lines at Standard, Half PPR, PPR or the
+// reader's own saved rules and get exactly what the server would have said.
+//
+// Three lines per player, because the whole point of the product is the gap:
+// what the projections say, what the odds alone say, and what the site ships.
+const RANKINGS_CONTRACT = 1;
+let _RANK_CACHE = null, _RANK_AT = 0;
+async function rankingsPayload(env) {
+  if (_RANK_CACHE && Date.now() - _RANK_AT < 900000) return _RANK_CACHE;
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const cached = await oddsCacheRead(env);
+  const tctx = cached ? await oddsCtxRead(env) : null;
+  const board = cached && cached.overlay ? buildVegasBoard(cached.overlay, tctx) : { ok: false, rows: [] };
+  const avail = await availabilityTable(env);
+  // Who plays whom this week, so a ranking can say the opponent and the bye
+  // without a second call.
+  const byTeam = new Map();
+  if (state.ok) {
+    for (const g of state.games || []) {
+      const imp = marketImplied(g);
+      byTeam.set(g.home, { opponent: g.away, home: true, implied: imp.home, against: imp.away, status: g.status, kickoff: g.kickoff });
+      byTeam.set(g.away, { opponent: g.home, home: false, implied: imp.away, against: imp.home, status: g.status, kickoff: g.kickoff });
+    }
+  }
+  const rowByKey = new Map();
+  for (const r of (board.rows || [])) rowByKey.set(_oddsNorm(r.name) + '|' + r.position, r);
+  const players = [];
+  for (const p of _availPool(PROJECTIONS)) {
+    if (!PROVIDER_POSITIONS.has(p.position)) continue;
+    const k = _oddsNorm(p.name) + '|' + p.position;
+    const r = rowByKey.get(k);
+    const team = teamKey(p.team);
+    const slot = byTeam.get(team) || null;
+    const a = avail[k] || null;
+    players.push({
+      name: p.name, position: p.position, team,
+      statsConsensus: r ? r.statsConsensus : _colStatLine(p.projectedStats),
+      statsMarket: r ? r.statsMarket : null,
+      statsIronTuna: r ? r.statsIronTuna : _colStatLine(p.projectedStats),
+      priced: r ? !!r.priced : false,
+      opponent: slot ? slot.opponent : null,
+      home: slot ? slot.home : null,
+      teamImplied: slot ? slot.implied : null,
+      opponentImplied: slot ? slot.against : null,
+      gameStatus: slot ? slot.status : null,
+      onBye: !slot && state.ok && state.week.type === 'REG',
+      injuryStatus: a ? a.status : null,
+      gamesOut: a ? a.gamesOut : null
+    });
+  }
+  const out = {
+    ok: players.length > 0, contract: RANKINGS_CONTRACT,
+    season: sched ? sched.season : null,
+    week: state.ok ? { label: state.week.label, number: state.week.number, type: state.week.type,
+                       status: state.week.status, byes: state.week.byes } : null,
+    phase: state.ok ? state.phase : null,
+    presets: Object.keys(SCORING_PRESET_LABEL).map(k => ({ key: k, label: SCORING_PRESET_LABEL[k] })),
+    defaults: SCORING_BASE,
+    oddsAsOf: cached ? cached.updatedAt : null,
+    oddsProvider: cached ? cached.provider : null,
+    marketBoard: !!(board && board.ok),
+    players
+  };
+  _RANK_CACHE = out; _RANK_AT = Date.now();
+  return out;
+}
+
+// The odds pull, snapshotted. Runs the odds providers through the registry and
+// appends every changed line to the history table. Separate from
+// runOddsRefresh, which builds the season overlay: that one wants a consensus,
+// this one wants every book's own number, and merging them would lose exactly
+// the per-book detail line movement is made of.
+async function runMarketSnapshot(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : null;
+  const ctx = { season: sched ? sched.season : null,
+                week: state && state.ok ? state.week.number : null, ts: Date.now() };
+  const run = await providerRun(env, 'odds', ctx);
+  const rows = [];
+  for (const r of run.results) for (const x of r.rows || []) rows.push(x);
+  const wrote = await snapshotWrite(env, rows, ctx);
+  return { ok: !!wrote.ok, ...ctx, providers: run.results.map(r => ({
+    provider: r.provider, rows: r.count || 0, skipped: r.skipped || null, error: r.error || null })),
+    ...wrote };
 }
 
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
@@ -3744,6 +5019,52 @@ export default {
     // actually shows, odds and all, rather than a static copy that stopped
     // tracking the feed. Public and cacheable: it is the same board for every
     // reader, and the numbers are already published on the cheat sheet.
+    // -- the in-season data routes -----------------------------------------
+    // Stat lines for the rankings page, which scores them in the browser so a
+    // scoring button re-orders the board with no round trip. See
+    // rankingsPayload for why points are not shipped.
+    if (url.pathname === '/api/rankings') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const out = await rankingsPayload(env);
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=900' });
+    }
+    // One record per player per week: projections, the money, usage and
+    // context in one shape. Every in-season surface reads this rather than
+    // joining the four itself.
+    if (url.pathname === '/api/market') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const w = url.searchParams.get('week');
+      const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
+      // Memoised per isolate on the exact query, for as long as the edge cache
+      // header below: a Sunday afternoon must not rebuild sixty records per hit.
+      const mkey = [w, url.searchParams.get('type'), url.searchParams.get('pos'), url.searchParams.get('limit'), preset].join('|');
+      if (_MARKET_MEMO.key === mkey && Date.now() - _MARKET_MEMO.at < 300000) {
+        return json(_MARKET_MEMO.out, _MARKET_MEMO.out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
+      }
+      const out = await buildMarketRecords(env, {
+        week: w && /^\d{1,2}$/.test(w) ? parseInt(w, 10) : null,
+        type: (url.searchParams.get('type') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || null,
+        position: url.searchParams.get('pos'),
+        limit: url.searchParams.get('limit'),
+        preset: SCORING_PRESETS[preset] ? preset : null
+      });
+      _MARKET_MEMO = { key: mkey, at: Date.now(), out };
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    // Line movement for one market. `subject` is the player's name as the book
+    // published it, or a game id; `market` is an Iron Tuna stat key.
+    if (url.pathname === '/api/market/movement') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const subject = String(url.searchParams.get('subject') || '').slice(0, 80);
+      const market = String(url.searchParams.get('market') || '').slice(0, 24);
+      if (!subject) return json({ ok: false, error: 'no_subject' }, 400, c);
+      const out = market ? { ok: true, history: await marketHistory(env, subject, market) }
+                         : { ok: true, markets: await marketHistoryAll(env, subject) };
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=300' });
+    }
     // ── the NFL clock ─────────────────────────────────────────────────────────
     // What week is it, and where does every game in it stand. Every in-season
     // surface reads this ONE answer instead of deriving its own from the
@@ -4518,6 +5839,48 @@ export default {
         ran
       }, 200, c);
     }
+    // Which providers are wired up, and whether each one's key is present.
+    // NEVER the key itself -- providerReport reports presence only.
+    if (url.pathname === '/api/admin/providers') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const kind = url.searchParams.get('run');
+      let ran = null;
+      if (kind && PROVIDERS[kind]) {
+        const sched = await scheduleCacheRead(env);
+        const r = await providerRun(env, kind, { season: sched ? sched.season : null });
+        ran = { kind, results: r.results.map(x => ({ provider: x.provider, count: x.count || 0,
+          skipped: x.skipped || null, error: x.error || null, sample: (x.rows || [])[0] || null })) };
+      }
+      return json({ ok: true, ...providerReport(env), kinds: Object.keys(PROVIDERS), ran }, 200, c);
+    }
+    // The market engine's own plumbing: the snapshot store, the usage overlay,
+    // and a sample record. ?snapshot=1 pulls the books now; ?usage=1 rebuilds
+    // the usage overlay now.
+    if (url.pathname === '/api/admin/market-status') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      let snapRan = null, usageRan = null;
+      if (url.searchParams.get('snapshot') === '1') {
+        try { snapRan = await runMarketSnapshot(env); } catch (e) { snapRan = { ok: false, error: (e && e.message) || 'failed' }; }
+      }
+      if (url.searchParams.get('usage') === '1') {
+        try { usageRan = await runUsageRefresh(env); } catch (e) { usageRan = { ok: false, error: (e && e.message) || 'failed' }; }
+      }
+      const usage = await usageCacheRead(env);
+      let sample = null;
+      if (url.searchParams.get('sample') === '1') {
+        try { const m = await buildMarketRecords(env, { limit: 1 }); sample = (m.records || [])[0] || null; }
+        catch (e) { sample = { error: (e && e.message) || 'failed' }; }
+      }
+      return json({ ok: true,
+        snapshots: await snapshotStatus(env),
+        usage: usage ? { season: usage.season, throughWeek: usage.throughWeek,
+                         players: Object.keys(usage.players || {}).length, updatedAt: usage.updatedAt } : null,
+        scoring: { presets: Object.keys(SCORING_PRESETS), base: SCORING_BASE },
+        unavailable: PROVIDER_UNAVAILABLE,
+        snapRan, usageRan, sample }, 200, c);
+    }
     if (url.pathname === '/api/admin/x-post-now') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
@@ -5039,6 +6402,19 @@ export default {
       ctx.waitUntil(runScheduleRefresh(env)
         .then(r => console.log("schedule refresh:", JSON.stringify(r)))
         .catch(e => console.error("schedule refresh failed:", e && e.message)));
+      // The market engine's two feeds. The snapshot pull appends every CHANGED
+      // book line to the history table (nothing is overwritten); the usage
+      // refresh rebuilds the weekly stats/snaps overlay, which is a ~12MB pull
+      // and belongs nowhere near a request path. Both fail closed.
+      ctx.waitUntil(runMarketSnapshot(env)
+        .then(r => console.log('market snapshot:', JSON.stringify(r)))
+        .catch(e => console.error('market snapshot failed:', e && e.message)));
+      ctx.waitUntil(runUsageRefresh(env)
+        .then(r => console.log('usage refresh:', JSON.stringify(r)))
+        .catch(e => console.error('usage refresh failed:', e && e.message)));
+      ctx.waitUntil(snapshotPrune(env, SNAP_KEEP_DAYS)
+        .then(r => console.log('snapshot prune:', JSON.stringify(r)))
+        .catch(e => console.error('snapshot prune failed:', e && e.message)));
       ctx.waitUntil(pruneAnalytics(env, 180)
         .then(r => console.log('analytics prune:', JSON.stringify(r)))
         .catch(e => console.error('analytics prune failed:', e && e.message)));
@@ -5048,6 +6424,11 @@ export default {
     // posting slots are the only three times a day the worker wakes, so they are
     // where in-week score and status freshness comes from.
     ctx.waitUntil(runScheduleRefresh(env).catch(e => console.error("schedule refresh failed:", e && e.message)));
+    // Lines move all week, and a snapshot store that only sampled once a day
+    // would record a Sunday morning steam move as a single overnight jump. The
+    // three posting slots are the only other times the worker wakes, so they
+    // are where in-week line movement comes from.
+    ctx.waitUntil(runMarketSnapshot(env).catch(e => console.error('market snapshot failed:', e && e.message)));
     const slots = slotsByCron[event.cron];
     ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },

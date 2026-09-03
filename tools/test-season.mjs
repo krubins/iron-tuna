@@ -53,13 +53,13 @@ function _csvSplit(line) {
   out.push(cur); return out;
 }
 
-const harness = new Function('etOffsetHours', 'teamKey', '_csvSplit', 'NFLVERSE_GAMES_URL', 'oddsCacheInit', 'fetch', `
+const harness = new Function('etOffsetHours', 'teamKey', '_csvSplit', 'NFLVERSE_GAMES_URL', 'oddsCacheInit', 'fetch', '_oddsRound', `
   ${section}
   return { _seasonEtToUtc, _seasonBuckets, seasonGameStatus, nflSeasonState, nflSeasonWeek,
            mergeSchedule, fetchScheduleNflverse, _espnGame, SEASON_GAME_MS, SEASON_ROUND_LABEL };
 `);
 const NFLVERSE = 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv';
-const W = harness(etOffsetHours, teamKey, _csvSplit, NFLVERSE, async () => {}, globalThis.fetch);
+const W = harness(etOffsetHours, teamKey, _csvSplit, NFLVERSE, async () => {}, globalThis.fetch, v => Math.round(v * 10) / 10);
 
 // ── the ET conversion ──────────────────────────────────────────────────────
 // games.csv gives an Eastern date and an Eastern wall clock in two columns with
@@ -244,6 +244,21 @@ console.log('\nbrowsing another week never rewrites the clock');
     missing.requested && missing.requested.found === false);
   const round = W.nflSeasonWeek(CACHE, now, 'SB', null);
   ok('a round can be asked for by name', round.requested.found && round.requested.label === 'Super Bowl');
+}
+
+console.log('\nimplied points ride on every game');
+{
+  // The sign convention of the feed stops in the worker: a page reads
+  // impliedHome / impliedAway and never touches the spread.
+  const games = [ { ...g('imp', 'REG', 1, '2026-09-13', '13:00', 'AAA', 'BBB'), spread: 3.5, total: 44.5 },
+                  g('noline', 'REG', 1, '2026-09-13', '16:25', 'CCC', 'DDD') ];
+  const st = W.nflSeasonState({ season: 2026, games, updatedAt: Date.now() }, at('2026-09-13', '12:00'));
+  const a = st.games.find(x => x.id === 'imp'), b = st.games.find(x => x.id === 'noline');
+  ok('a favoured home side gets half the total plus half the margin', a.impliedHome === 24 && a.impliedAway === 20.5,
+     JSON.stringify([a.impliedHome, a.impliedAway]));
+  ok('an unpriced game carries nulls, not zeros', b.impliedHome === null && b.impliedAway === null);
+  const asked = W.nflSeasonWeek({ season: 2026, games, updatedAt: Date.now() }, at('2026-09-13', '12:00'), 'REG', 1);
+  ok('the named-week path carries the same fields', asked.games.find(x => x.id === 'imp').impliedHome === 24);
 }
 
 console.log('\nthe season index');

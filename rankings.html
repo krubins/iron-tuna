@@ -40,6 +40,20 @@ p{color:var(--sec);margin:0 0 16px}
 .btn:hover{filter:brightness(1.06);text-decoration:none}
 .btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+.rk-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:20px 0 10px}
+.rk-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--panel)}
+.rk-seg button{appearance:none;border:0;background:transparent;color:var(--sec);font:inherit;font-size:14px;font-weight:700;padding:9px 15px;cursor:pointer;border-left:1px solid var(--line)}
+.rk-seg button:first-child{border-left:0}
+.rk-seg button:hover{background:var(--elev);color:var(--text)}
+.rk-seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.rk-seg button[disabled]{opacity:.45;cursor:not-allowed}
+.rk-seg.rk-pos button{padding:9px 13px;font-size:13px}
+.rk-table td.p b{color:var(--text)}
+.rk-table td.p span{display:block;font-size:12px;color:var(--muted);letter-spacing:.03em}
+.rk-table td.gap.up{color:var(--teal);font-weight:700}
+.rk-table td.gap.dn{color:var(--danger);font-weight:700}
+.rk-table tr.bye td{opacity:.6}
+.rk-inj{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--danger);margin-left:6px}
 </style>
 </head>
 <body>
@@ -68,15 +82,31 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="is-lede">Half PPR moves running backs. Six-point passing touchdowns move quarterbacks past every other position. A tight-end premium re-cuts a whole tier. Iron Tuna re-scores and re-ranks the board at your settings rather than publishing one list for everybody.</p>
 <div class="its-strip" data-season-strip></div>
 
-<h2>Your league</h2>
-<div id="rkLeague"></div>
-
-<h2>What ranks here</h2>
-<div class="is-grid">
-  <div class="is-card"><h3>Rest of season</h3><p>The full-season board re-scored at your settings and blended toward the market, which is what the cheat sheet already prices your draft from.</p></div>
-  <div class="is-card"><h3>This week</h3><p>The season line divided by the games left, scaled by the scoring environment the market prices for each club’s week. Landing with the weekly projection set.</p></div>
-  <div class="is-card"><h3>Positional tiers</h3><p>Where the cliff is at your scoring, which is a different place from where it is at somebody else’s.</p></div>
+<div class="rk-controls">
+  <div class="rk-seg" id="rkScoring" role="group" aria-label="Scoring settings">
+    <button type="button" data-preset="standard">Standard</button>
+    <button type="button" data-preset="half">Half PPR</button>
+    <button type="button" data-preset="ppr">PPR</button>
+    <button type="button" data-preset="custom" id="rkMine">My League</button>
+  </div>
+  <div class="rk-seg rk-pos" id="rkPos" role="group" aria-label="Position">
+    <button type="button" data-pos="ALL">All</button>
+    <button type="button" data-pos="QB">QB</button>
+    <button type="button" data-pos="RB">RB</button>
+    <button type="button" data-pos="WR">WR</button>
+    <button type="button" data-pos="TE">TE</button>
+  </div>
 </div>
+<p class="is-note" id="rkScoringNote"></p>
+
+<div class="is-scroll"><table class="is-table rk-table" id="rkTable" hidden>
+  <thead><tr>
+    <th>#</th><th>Player</th><th>Opp</th>
+    <th class="num">Consensus</th><th class="num">Vegas</th><th class="num">Iron Tuna</th><th class="num">Gap</th>
+  </tr></thead>
+  <tbody id="rkBody"></tbody>
+</table></div>
+<p class="is-empty" id="rkEmpty">Reading the board&hellip;</p>
 
 <h2>The rest of the section</h2>
 <div class="is-grid">
@@ -158,20 +188,132 @@ p{color:var(--sec);margin:0 0 16px}
 <script src="/it-league.js" defer></script>
 <script>
 (function () {
-  document.addEventListener('DOMContentLoaded', function () {
-    var el = document.getElementById('rkLeague');
+  // THE SCORING IS DONE IN THE BROWSER, on stat lines the API ships. Four
+  // buttons that each cost a round trip would be a worse product than one that
+  // re-orders instantly, and it-league.js already carries the same engine the
+  // worker scores with -- tools/test-scoring.mjs pins the two together on
+  // randomised lines, so a button press here gives exactly what the server
+  // would have said.
+  var data = null, preset = null, pos = 'ALL';
+  var e = function (v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  };
+  function rules() {
     var L = window.ITLeague;
-    if (!L || !L.has) {
-      el.innerHTML = '<p class="is-empty">You have not set a league up yet, so every number on this site is being shown at the default: 12 teams, $200, full PPR. ' +
-        'Set your scoring once and it holds on every page.</p>' +
-        '<div class="cta-row"><a class="btn" href="/auctiondraft?screen=cheat">Customize my scoring</a></div>';
-      return;
+    var base = (L && L.defaults && L.defaults.scoring) || {};
+    if (preset === 'custom' && L && L.has && L.config && L.config.scoring) return L.config.scoring;
+    var rec = preset === 'standard' ? 0 : preset === 'half' ? 0.5 : 1;
+    var out = {};
+    for (var k in base) out[k] = base[k];
+    out.receptionPoints = rec;
+    out.rbReceptionPoints = rec;
+    return out;
+  }
+  function score(stats, position) {
+    if (!stats) return null;
+    var L = window.ITLeague;
+    if (!L || !L.score) return null;
+    return L.score(stats, position, rules());
+  }
+  function setPressed(host, attr, val) {
+    [].forEach.call(host.querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false');
+    });
+  }
+  function note() {
+    var L = window.ITLeague;
+    var el = document.getElementById('rkScoringNote');
+    if (preset === 'custom') {
+      el.innerHTML = 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' +
+        (L && L.scoringLabel ? ' &middot; ' + e(L.scoringLabel()) : '') + '.';
+    } else {
+      var lbl = preset === 'standard' ? 'Standard (no points per reception)'
+              : preset === 'half' ? 'Half PPR (0.5 per reception)' : 'PPR (1 per reception)';
+      el.innerHTML = 'Scored at <b>' + lbl + '</b>.' +
+        ((L && L.has) ? ' Your own league is one button away.'
+                      : ' Set your league up and every page on this site restates its numbers in it.');
     }
-    el.innerHTML = '<div class="is-grid">' +
-      '<div class="is-card"><span class="is-tag is-live">Saved</span><h3>' + ITSeason.esc(L.label()) + '</h3>' +
-      '<p>' + ITSeason.esc(L.scoringLabel ? L.scoringLabel() : '') + '</p></div></div>' +
-      '<div class="cta-row"><a class="btn alt" href="/auctiondraft?screen=cheat">Change my scoring</a></div>';
-  });
+  }
+  function render() {
+    if (!data) return;
+    var rows = data.players.filter(function (p) { return pos === 'ALL' || p.position === pos; });
+    rows = rows.map(function (p) {
+      return { p: p, c: score(p.statsConsensus, p.position), m: score(p.statsMarket, p.position),
+               i: score(p.statsIronTuna, p.position) };
+    }).filter(function (r) { return r.i != null; });
+    rows.sort(function (a, b) { return b.i - a.i || (a.p.name < b.p.name ? -1 : 1); });
+    // Rank within the position when a position is selected; overall otherwise.
+    var byPos = {};
+    var html = rows.slice(0, 150).map(function (r, ix) {
+      byPos[r.p.position] = (byPos[r.p.position] || 0) + 1;
+      var rank = pos === 'ALL' ? (ix + 1) : byPos[r.p.position];
+      var gap = (r.c != null && r.i != null) ? r.i - r.c : null;
+      var g = gap == null ? '' : (gap > 0 ? 'up' : gap < 0 ? 'dn' : '');
+      var n = function (v) { return v == null ? '\u2014' : (Math.round(v * 10) / 10).toFixed(1); };
+      var opp = r.p.onBye ? '<span class="is-status">BYE</span>'
+              : r.p.opponent ? e((r.p.home ? 'vs ' : 'at ') + r.p.opponent) : '\u2014';
+      return '<tr' + (r.p.onBye ? ' class="bye"' : '') + '>' +
+        '<td class="num">' + rank + '</td>' +
+        '<td class="p"><b>' + e(r.p.name) + '</b>' +
+        (r.p.injuryStatus ? '<span class="rk-inj">' + e(r.p.injuryStatus) + '</span>' : '') +
+        '<span>' + e(r.p.position + ' \u00b7 ' + r.p.team) + '</span></td>' +
+        '<td>' + opp + '</td>' +
+        '<td class="num">' + n(r.c) + '</td>' +
+        '<td class="num">' + (r.p.priced ? n(r.m) : '<span class="is-status">unpriced</span>') + '</td>' +
+        '<td class="num">' + n(r.i) + '</td>' +
+        '<td class="num gap ' + g + '">' + (gap == null ? '\u2014' : (gap > 0 ? '+' : '') + n(gap)) + '</td>' +
+        '</tr>';
+    }).join('');
+    document.getElementById('rkBody').innerHTML = html;
+    document.getElementById('rkTable').hidden = !html;
+    document.getElementById('rkEmpty').hidden = !!html;
+    if (!html) document.getElementById('rkEmpty').textContent = 'No player at that position on the board.';
+    note();
+  }
+  function boot() {
+    var L = window.ITLeague;
+    var mine = document.getElementById('rkMine');
+    // MY LEAGUE IS THE DEFAULT when there is a league to use. A reader who has
+    // set their scoring up should never have to press a button to see their own
+    // numbers; a reader who has not must not be shown a stranger's league
+    // labelled as theirs, so they land on PPR and are told so.
+    var hasLeague = !!(L && L.has);
+    if (!hasLeague) { mine.disabled = true; mine.title = 'Set your league up in the draft app first'; }
+    preset = hasLeague ? 'custom' : 'ppr';
+    setPressed(document.getElementById('rkScoring'), 'data-preset', preset);
+    setPressed(document.getElementById('rkPos'), 'data-pos', pos);
+    note();
+
+    document.getElementById('rkScoring').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (!b || b.disabled) return;
+      preset = b.getAttribute('data-preset');
+      setPressed(this, 'data-preset', preset);
+      render();
+    });
+    document.getElementById('rkPos').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (!b) return;
+      pos = b.getAttribute('data-pos');
+      setPressed(this, 'data-pos', pos);
+      render();
+    });
+
+    fetch('/api/rankings').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok || !j.players || !j.players.length) {
+        document.getElementById('rkEmpty').textContent =
+          'The board did not answer. Nothing is shown rather than a stale ranking.';
+        return;
+      }
+      data = j;
+      render();
+    }).catch(function () {
+      document.getElementById('rkEmpty').textContent = 'The board did not answer.';
+    });
+  }
+  // it-league.js is deferred, so it is parsed before DOMContentLoaded fires.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
 </script>
 <!--chrome:navjs--><script>

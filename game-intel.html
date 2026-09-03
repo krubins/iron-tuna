@@ -161,10 +161,9 @@ p{color:var(--sec);margin:0 0 16px}
       if (!s || !s.games || !s.games.length) { empty.textContent = 'The schedule feed has not answered, so no game is listed rather than a guessed one.'; return; }
       document.getElementById('giHead').textContent = s.week.label + (s.week.byes && s.week.byes.length ? ' \u00b7 ' + s.week.byes.length + ' on bye' : '');
       document.getElementById('giBody').innerHTML = s.games.map(function (g) {
-        // nflverse writes spread_line as the HOME margin: positive means the
-        // home side is favoured by that many, which is what splits the total.
-        var ia = null, ih = null;
-        if (g.total != null && g.spread != null) { ih = g.total / 2 + g.spread / 2; ia = g.total / 2 - g.spread / 2; }
+        // The implied totals come off the payload. Which way a feed signs its
+        // spread is the worker's business, not this page's.
+        var ia = g.impliedAway, ih = g.impliedHome;
         var score = (g.awayScore != null && g.homeScore != null)
           ? ' <span class="is-status final">' + g.awayScore + '\u2013' + g.homeScore + '</span>' : '';
         var cls = g.status === 'in_progress' ? 'live' : g.status === 'completed' ? 'final' : '';

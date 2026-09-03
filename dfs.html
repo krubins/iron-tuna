@@ -169,9 +169,11 @@ p{color:var(--sec);margin:0 0 16px}
       if (!s || !s.games) { empty.textContent = 'The schedule feed has not answered.'; return; }
       var rows = [];
       s.games.forEach(function (g) {
-        if (g.total == null || g.spread == null) return;
-        rows.push({ team: g.home, opp: g.away, at: 'vs', imp: g.total / 2 + g.spread / 2, tot: g.total });
-        rows.push({ team: g.away, opp: g.home, at: 'at', imp: g.total / 2 - g.spread / 2, tot: g.total });
+        // Implied points come off the payload; the page does not know or
+        // care how the feed signs its spread.
+        if (g.impliedHome == null || g.impliedAway == null) return;
+        rows.push({ team: g.home, opp: g.away, at: 'vs', imp: g.impliedHome, tot: g.total });
+        rows.push({ team: g.away, opp: g.home, at: 'at', imp: g.impliedAway, tot: g.total });
       });
       if (!rows.length) { empty.textContent = 'No fixture on this slate carries a posted line yet. Books price the week a few days out.'; return; }
       rows.sort(function (a, b) { return b.imp - a.imp; });
