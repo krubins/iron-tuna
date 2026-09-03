@@ -7079,3 +7079,156 @@ hand-corrected today. Do not correct them again by hand; the recommended
 option (2) — re-anchor archived prices from the live board via `it-league.js`
 at render time — would have absorbed both the 08-31 valuation pass and this
 deployment gap with zero edits.
+
+## 60. September 3: a wrong price got published, and the checker that would have caught it was off
+
+The 09-03 audit cleared §59a and §59b and then found the thing both were
+hiding: **a published lead quoted a price that was never on the board.** Not
+stale — wrong at publication.
+
+### 60a. Row 73 had Tony Pollard at RB28 and $5. The sheet said RB29 and $3.
+
+The live lead was "Bid Tyjae Spears to $5, not $2; cap Tony Pollard at $3"
+(preseason desk, created 09-03 07:16Z). Its table, headed "Iron Tuna sheet,
+September 2", printed:
+
+| Player | Story said | Live board | |
+|---|---|---|---|
+| Tyjae Spears | $2, RB38 | RB37 $2 | rank drifted one after the 11:00Z refresh |
+| **Tony Pollard** | **$5, RB28** | **RB29 $3** | **wrong when published** |
+| Carnell Tate | $10, WR24 | WR25 $10 | rank drifted one |
+| Wan'Dale Robinson | $3, WR39 | WR38 $3 | rank drifted one |
+
+Also checked and correct: Tate's pre-odds WR29 $8, Cam Ward QB26 $1, Gunnar
+Helm TE24 $1.
+
+Pollard is not a drift. Every board the audit could rebuild puts him at $3:
+
+    09-02 worker + 09-02 overlay   Spears RB40 $2   Pollard RB30 $3
+    09-03 worker + 09-02 overlay   Spears RB38 $2   Pollard RB29 $3   <- what the run saw
+    09-03 worker + 09-03 overlay   Spears RB37 $2   Pollard RB29 $3   <- live now
+
+The middle row is the board at 07:16Z, and it reproduces the story's Spears
+cell exactly (RB38 $2) while giving Pollard **RB29 $3**. Merging the live ESPN
+injury feed (`odds_overlay` id 3, 18 rows) changes none of the four — the
+committed AVAILABILITY block already carries the same `gamesOut`, so the row
+factor is 1.
+
+**RB28 at $5 is the slot above Pollard, and it belongs to Jaylen Warren.** The
+run read a rank slot's price and attached it to the player one row down. That
+also explains the story's arithmetic: it believed inserting Spears at RB28
+pushed Pollard from RB28 to RB29, when Pollard was already RB29.
+
+The damage was the whole second half of the story. "Cap Pollard at $3" reads
+as a markdown off $5; the sheet was already charging $3, so there was nothing
+to cap. The Spears half — out-snapped Pollard, priced $2, worth $5 — is sound
+and was re-verified.
+
+**Corrected in place** (row 73 is live, and §standing instruction from Ken is
+that nothing inaccurate stays up): all four sheet cells re-anchored to the
+September 3 board, table re-dated, Pollard's row now `$3, RB29 / $3 / no
+move`, the dek's "still says Pollard $5" removed, the body's "slides one place
+to RB29" fixed, the headline's second clause changed from "cap Tony Pollard at
+$3" to "the sheet already has Pollard at $3", and a reader-facing
+`<p class="correction">` added at the foot. `method` carries a CORRECTION
+paragraph naming the error and its cause. `verified` and `published` were not
+touched, so no audit row was written by the fix.
+
+### 60b. Why nothing caught it
+
+The run's own `method` says both halves of the failure out loud:
+
+> "FIGURES VERIFIED. Every price and rank printed was re-checked against that
+> build: Pollard RB28 and $5 ..."
+
+> "The build was not checked against DEFAULT_BOARD_RAW or the static block in
+> it-league.js, neither of which has seen an odds refresh."
+
+So the run re-checked its figures against its own hand-built board — which is
+no check at all, because the same mistake is in both — and explicitly skipped
+the one **independent** oracle it had. `it-league.js` is generated from the
+worker by a different tool; it disagrees with a hand-build the moment the
+hand-build is wrong. The reason given for skipping it (it has not seen an odds
+refresh) is true and irrelevant: it would still have shown Pollard on the
+committed board at RB29 $3, one slot and two dollars from what the story
+printed.
+
+The prompt's blend self-test passed for the same reason it always will: it
+only asks the committed and blended boards to **disagree** about Chuba
+Hubbard. Disagreement proves the blend ran. It proves nothing about whether
+either board is right.
+
+### 60c. The harness broke again, and again the suite was green
+
+`_worker.js` changed twice today in ways that go straight through the board:
+
+- `_colScore` now delegates to `scoreStats(stats, position, _COL_RULES)` (the
+  one scoring engine from §53).
+- `blendProjections` applies availability before blending
+  (`_withAvailability`, `_availPool`) — the §48 injury fix.
+
+`tools/live-board.mjs` lifted `_colScore` **by name** and evaluated it, so it
+threw `ReferenceError: scoreStats is not defined` on the first call. Every
+check of a published dollar figure runs through that file, and **all 46 tests
+passed anyway**, because nothing in the suite imported it. That is the third
+consecutive day the checker was broken with CI green (08-31, 09-02, 09-03).
+
+Two changes close it:
+
+1. **The lift is transitive.** Ask for the entry points; catch
+   `X is not defined`; pull `X` out of the worker; retry, up to 80 times.
+   Declarations are concatenated in file order so `const` initialisers still
+   see what they need. A refactor that moves scoring into a helper is now
+   followed automatically instead of throwing. `blendProjections` is lifted
+   and *used*, so availability and the odds blend are the worker's, not a
+   second opinion — the harness board now shows Josh Jacobs at RB36 $2 and
+   Jayden Higgins at 0 points, exactly as the sheet does.
+   - The smoke that drives the loop must call `blendProjections({})` as well
+     as `(null)`: the no-overlay path returns early and never reaches
+     `_oddsNorm`, so a null-only smoke stops one symbol short and throws on
+     the first real overlay instead.
+   - esbuild wraps every function in `__name()`, so a bundle needs it in
+     scope; the bundle says `var` where the source says `const`, so both are
+     accepted; `COLUMN_NORM` and the availability table are optional, because
+     an older worker has neither and a board built from one must not invent
+     them.
+2. **`tools/test-live-board.mjs` exists.** It imports the harness, builds a
+   board, matches every row against `DEFAULT_BOARD_RAW` (340/340, the five
+   extras all zero-point players the sheet drops), checks the floor and the
+   monotonic curve, and then **mutates the worker** — rewrites
+   `COLUMN_MIN_BID` to 7 in a temp copy and requires the harness to report 7.
+   A file that hard-codes anything passes everything else and fails there.
+
+   Mutation-verified both ways: yesterday's harness against today's worker
+   exits 1, and a one-line edit hard-coding `MIN_BID` fails the mutation
+   check specifically.
+
+### 60d. §59a and §59b both cleared
+
+- **Deployment caught up.** The bundle is 963,377 bytes (741,022 yesterday)
+  and carries `COLUMN_NORM`, `_WIRE_CACHE`, the flat `COLUMN_MIN_BID` return
+  past the curve, `scoreStats`, `_availPool` and `_withAvailability`. Built
+  both boards through the harness and compared player by player: **345 rows,
+  0 differences.** Repo and production agree exactly.
+- **Publishing resumed.** The outage was four runs, not three — 29, 30, 31 and
+  **32** (09-01 18:58Z through 09-02 12:59Z), all `stage='start'` with
+  `updated_at == started_at`. Run 33 (09-02 18:58Z) completed and 34 and 35
+  followed. Roughly 24 hours, self-resolved, cause still unexplained; the
+  session transcripts are the only place it is visible.
+
+### 60e. Also clean
+
+CI 47/47 after the merge. Tamper predicates clean: no `verified` 0→1 flip
+beyond the 08-24 baseline row, no `analyst` row published, no published row
+unverified, exactly one published row. The Routine is enabled on `58 */6 * * *`
+and its prompt is still byte-identical to `tools/lead-story-routine-prompt.md`
+below the header marker (40,786 chars, sha256 `af5384664474`).
+
+### 60f. What this says about the open archive question
+
+§44 asked whether archived prices should be re-anchored from the live board at
+render time. Today is an argument that the same idea belongs *upstream*, in
+the Routine: a story should not be allowed to print a dollar figure it
+computed itself. It should print the number the sheet is serving, looked up by
+player, and a run that cannot look one up should say so rather than derive it.
+Every failure in §60a is a derivation error that a lookup could not have made.

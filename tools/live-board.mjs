@@ -1,14 +1,28 @@
-// Verification harness. Every constant AND every scoring/pricing function is
-// READ from the worker at run time -- nothing is hand-copied, because a
-// hand-copied curve is exactly how a checker goes stale without noticing
-// (PR #105 re-cut the curve by 1.125x on 2026-08-25).
+// Verification harness: the board a reader actually sees, rebuilt outside the
+// worker so a story's dollar figures can be checked against it.
 //
-// Copying the FUNCTIONS was the same mistake one level up, and it bit twice:
-// on 2026-08-31 the valuation pass changed _colPrice (off-curve players $2 to
-// $1) and added season normalisation, and this file kept reporting the old
-// numbers with CI green. So _colScore, _colPrice and the normalisation are now
-// lifted and evaluated, not reimplemented. If the worker changes them again,
-// this file changes with it or throws.
+// NOTHING here is hand-copied from _worker.js. Every constant AND every
+// function is READ from the worker at run time, because a copy is right about
+// exactly one build and goes stale silently:
+//
+//   2026-08-25  PR #105 re-cut the curve by 1.125x   -> copied CURVE was wrong
+//   2026-08-31  _colPrice off-curve $2 -> $1, and     -> copied functions were
+//               COLUMN_NORM added                        wrong, CI still green
+//   2026-09-02  the deployed bundle rolled back       -> wrong the OTHER way
+//   2026-09-03  _colScore refactored to scoreStats,   -> lifting by NAME broke:
+//               blendProjections gained availability     ReferenceError, and
+//                                                        again CI stayed green
+//
+// So the lift is now TRANSITIVE. Ask for the entry points; anything they
+// reference is pulled in after it throws, and so on, until the worker's own
+// code runs. A refactor that moves scoring into a helper, or teaches the blend
+// about injuries, is followed automatically instead of silently ignored.
+//
+// The pipeline below is the worker's boardCompute (§9d), in its order:
+//   blendProjections(overlay) -> _colScore -> _colNormFactors/_colNormApply
+//   -> round -> sort -> rank -> _colPrice
+// blendProjections is the worker's own, so availability pro-rating and the
+// odds blend are whatever the worker says they are, not a second opinion.
 //
 // Point it at a different worker with IRON_TUNA_WORKER=/path/to/_worker.js --
 // that is how a DEPLOYED bundle gets checked against the repo, and the bundle
@@ -19,94 +33,189 @@ const WORKER = process.env.IRON_TUNA_WORKER
 const W = fs.readFileSync(WORKER, 'utf8');
 export const WORKER_PATH = WORKER;
 
-function lift(name, optional = false) {     // pull a top-level const out of the worker
-  const re = new RegExp('(?:const|var|let) ' + name + '\\s*=\\s*');
-  const m = re.exec(W);
-  if (!m) { if (optional) return null; throw new Error('missing ' + name + ' in ' + WORKER); }
-  const from = m.index + m[0].length;
-  let depth = 0, q = null, end = -1;
-  for (let i = from; i < W.length; i++) {
-    const c = W[i];
-    if (q) { if (c === '\\') i++; else if (c === q) q = null; continue; }
-    if (c === '"' || c === "'" || c === '`') { q = c; continue; }
-    if (c === '[' || c === '{') depth++;
-    else if (c === ']' || c === '}') { if (--depth === 0) { end = i + 1; break; } }
-    else if (depth === 0 && (c === ';' || c === '\n')) { end = i; break; }
+// ── transitive lift ────────────────────────────────────────────────────────
+// Where a top-level declaration starts and ends. Line-anchored first, because
+// `function _colScore(` also appears inside comments and in nested scopes;
+// unanchored is the fallback for a minified bundle that lost its newlines.
+function declRange(name) {
+  const pats = [
+    new RegExp('^(?:async )?function ' + name + '\\s*\\(', 'm'),
+    new RegExp('^(?:const|var|let) ' + name + '\\s*=', 'm'),
+    new RegExp('(?:^|[;}\\n])(?:async )?function ' + name + '\\s*\\('),
+    new RegExp('(?:^|[;}\\n])(?:const|var|let) ' + name + '\\s*=')
+  ];
+  for (const re of pats) {
+    const m = re.exec(W);
+    if (!m) continue;
+    const start = m.index + (/^[;}\n]/.test(m[0]) ? 1 : 0);
+    return { start, end: endOfDecl(start), name };
   }
-  return new Function('return (' + W.slice(from, end) + ');')();
+  return null;
 }
-export const PROJECTIONS = lift('PROJECTIONS');
-export const SCORING = lift('COLUMN_SCORING');
-export const CURVE = lift('COLUMN_CURVE');
-export const CURVE_BUDGET = lift('COLUMN_CURVE_BUDGET');
-export const LEAGUE_BUDGET = lift('COLUMN_LEAGUE_BUDGET');
-export const MIN_BID = lift('COLUMN_MIN_BID');
-export const VEGAS_WEIGHT = lift('VEGAS_WEIGHT');
-// The worker re-levels each position's points to last season's top-K mean
-// before it serves them (COLUMN_NORM / _colNormFactors in _worker.js §9d), so
-// the points on a reader's sheet are NOT raw stat-line scores. OPTIONAL: a
-// worker built before 2026-08-31 has no such constant, and a board built from
-// one must not normalise. Absent means absent, never "assume the new way".
-export const NORM = lift('COLUMN_NORM', true);
-
-// ── the worker's own functions, lifted ─────────────────────────────────────
-function liftFn(name, deps) {
-  const i = W.indexOf('function ' + name + '(');
-  if (i < 0) throw new Error('missing function ' + name + ' in ' + WORKER);
-  let depth = 0, q = null, end = -1;
-  for (let j = W.indexOf('{', i); j < W.length; j++) {
-    const c = W[j];
-    if (q) { if (c === '\\') j++; else if (c === q) q = null; continue; }
+// A declaration ends at the close of its first balanced brace/bracket, or at
+// the statement end for a scalar. Quote- and comment-aware, because the worker
+// is full of both and a `}` inside a string would truncate the slice.
+function endOfDecl(start) {
+  let depth = 0, q = null, line = false, block = false, seen = false;
+  for (let i = start; i < W.length; i++) {
+    const c = W[i], n = W[i + 1];
+    if (line) { if (c === '\n') line = false; continue; }
+    if (block) { if (c === '*' && n === '/') { block = false; i++; } continue; }
+    if (q) {
+      if (c === '\\') i++;
+      else if (c === q) q = null;
+      else if (q === '`' && c === '$' && n === '{') { i++; depth++; }   // template hole
+      continue;
+    }
+    if (c === '/' && n === '/') { line = true; i++; continue; }
+    if (c === '/' && n === '*') { block = true; i++; continue; }
+    if (c === '"' || c === "'" || c === '`') { q = c; continue; }
+    if (c === '(' || c === '[' || c === '{') { depth++; seen = true; continue; }
+    if (c === ')' || c === ']' || c === '}') { if (--depth === 0 && seen && W[start] !== 'c' && W[start] !== 'v' && W[start] !== 'l') return i + 1; continue; }
+    if (depth === 0 && seen && (c === ';' || c === '\n')) return i;
+    if (depth === 0 && !seen && (c === ';' || c === '\n')) return i;
+  }
+  return W.length;
+}
+// A function declaration ends at its closing brace; a const ends at the
+// statement. endOfDecl above handles the const case by falling through to the
+// `;`/newline test once the initialiser's brackets are balanced, but a
+// multi-line arrow body would end early, so functions get their own scan.
+function endOfFunction(start) {
+  let depth = 0, q = null, line = false, block = false;
+  for (let i = W.indexOf('{', start); i < W.length; i++) {
+    const c = W[i], n = W[i + 1];
+    if (line) { if (c === '\n') line = false; continue; }
+    if (block) { if (c === '*' && n === '/') { block = false; i++; } continue; }
+    if (q) { if (c === '\\') i++; else if (c === q) q = null; continue; }
+    if (c === '/' && n === '/') { line = true; i++; continue; }
+    if (c === '/' && n === '*') { block = true; i++; continue; }
     if (c === '"' || c === "'" || c === '`') { q = c; continue; }
     if (c === '{') depth++;
-    else if (c === '}') { if (--depth === 0) { end = j + 1; break; } }
+    else if (c === '}' && --depth === 0) return i + 1;
   }
-  const names = Object.keys(deps), vals = Object.values(deps);
-  return new Function(...names, W.slice(i, end) + '; return ' + name + ';')(...vals);
+  return W.length;
 }
-const DEPS = {
-  COLUMN_SCORING: SCORING, COLUMN_CURVE: CURVE, COLUMN_CURVE_BUDGET: CURVE_BUDGET,
-  COLUMN_LEAGUE_BUDGET: LEAGUE_BUDGET, COLUMN_MIN_BID: MIN_BID, COLUMN_NORM: NORM,
-  // esbuild wraps every function in __name() for stack traces; a lifted
-  // function from a deployed bundle needs it in scope to evaluate.
-  __name: (fn) => fn
-};
-const _colScore = liftFn('_colScore', DEPS);
-const _colPrice = liftFn('_colPrice', DEPS);
-const _colNormFactors = NORM ? liftFn('_colNormFactors', DEPS) : null;
-const _colNormApply = NORM ? liftFn('_colNormApply', DEPS) : null;
-const round = v => Math.round(v * 10) / 10;
-const score = (stats, position) => _colScore(stats, position);
-export const price = (pos, rankIndex) => _colPrice(pos, rankIndex);
-const norm = s => String(s).toLowerCase().normalize('NFD')
-  .replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '').replace(/(jr|sr|ii|iii|iv|v)$/, '');
-export function board(overlayPath, useOdds = true) {
-  const OV = overlayPath ? JSON.parse(fs.readFileSync(overlayPath, 'utf8')) : {};
-  const map = new Map(), lists = {};
-  for (const pos of ['QB', 'RB', 'WR', 'TE']) {
-    const rows = PROJECTIONS.filter(p => p.position === pos).map(p => {
-      const st = { ...p.projectedStats };
-      if (useOdds) {
-        const v = OV[norm(p.name) + '|' + pos];
-        if (v) for (const [k, val] of Object.entries(v)) {
-          if (!(k in st)) continue;
-          const n = Number(val);
-          if (!Number.isFinite(n) || n < 0) continue;
-          st[k] = round((st[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
-        }
-      }
-      return { n: p.name, team: p.team, raw: score(st, pos), rec: st.rec || 0 };
-    });
-    // Score, then normalise, then round, then sort — the worker's order. A
-    // worker without COLUMN_NORM does not normalise at all.
-    const f = _colNormFactors ? _colNormFactors({ [pos]: rows.map(r => r.raw) })[pos] : 1;
-    for (const r of rows) {
-      r.pts = round(_colNormApply ? _colNormApply(r.raw, f) : r.raw);
-      delete r.raw;
+const declCache = new Map();
+function decl(name) {
+  if (declCache.has(name)) return declCache.get(name);
+  let d = declRange(name);
+  if (d && /^(?:async )?function/.test(W.slice(d.start, d.start + 15))) d.end = endOfFunction(d.start);
+  declCache.set(name, d);
+  return d;
+}
+const has = name => !!decl(name);
+
+// The entry points the board needs. Everything else arrives by ReferenceError.
+const ENTRY = ['PROJECTIONS', 'COLUMN_SCORING', 'COLUMN_CURVE', 'COLUMN_CURVE_BUDGET',
+  'COLUMN_LEAGUE_BUDGET', 'COLUMN_MIN_BID', 'VEGAS_WEIGHT', 'COLUMN_POSITIONS',
+  '_colScore', '_colPrice', '_oddsRound'];
+const OPTIONAL = ['COLUMN_NORM', '_colNormFactors', '_colNormApply', 'blendProjections',
+  '_AVAIL_TABLE', 'availabilityMerge', 'AVAILABILITY'];
+
+function build(extra) {
+  const want = [...ENTRY, ...OPTIONAL.filter(has), ...extra].filter(has);
+  const parts = [...new Set(want)].map(decl).sort((a, b) => a.start - b.start);
+  const src = parts.map(p => W.slice(p.start, p.end)).join('\n;\n');
+  const give = [...new Set([...ENTRY, ...OPTIONAL])].filter(has);
+  const setAvail = has('_AVAIL_TABLE') && has('availabilityMerge') && has('AVAILABILITY')
+    ? ', __setAvail: function (live) { _AVAIL_TABLE = availabilityMerge(AVAILABILITY, live); }' : '';
+  // esbuild wraps every function in __name() for stack traces, so a bundle
+  // needs it in scope; the unbundled source never calls it.
+  return new Function('__name', src + '\nreturn {' + give.join(',') + setAvail + '};')(fn => fn);
+}
+// Build, exercise, and on "X is not defined" pull X in and try again. The cap
+// is a guard against a symbol the worker genuinely does not declare (a runtime
+// global, say) turning this into a loop.
+function resolve() {
+  const extra = new Set();
+  for (let i = 0; i < 80; i++) {
+    let S;
+    try {
+      S = build(extra);
+      smoke(S);
+      return S;
+    } catch (e) {
+      const m = /^(\w+) is not defined$/.exec(e.message || '');
+      if (m && !extra.has(m[1]) && has(m[1])) { extra.add(m[1]); continue; }
+      throw new Error('cannot rebuild the board from ' + WORKER + ': ' + e.message
+        + (m ? '\n  ' + m[1] + ' is referenced but not declared there.' : ''));
     }
-    rows.sort((a, b) => b.pts - a.pts);
-    lists[pos] = rows;
-    rows.forEach((p, i) => map.set(p.n, { pos, team: p.team, rank: i + 1, v: price(pos, i), pts: p.pts, rec: p.rec }));
+  }
+  throw new Error('cannot rebuild the board from ' + WORKER + ': lift did not converge');
+}
+// Enough of the pipeline to surface a call-time ReferenceError, which is the
+// only way a refactor inside a function body shows up at all.
+function smoke(S) {
+  // BOTH blend paths. blendProjections returns early when there is no overlay,
+  // so a null-only smoke never reaches _oddsNorm and the lift stops one symbol
+  // short -- which then throws on the first real overlay, far from here.
+  const pool = S.blendProjections ? S.blendProjections(null) : S.PROJECTIONS;
+  if (S.blendProjections) S.blendProjections({});
+  const p = pool[0];
+  const pts = S._colScore(p.projectedStats || {}, p.position);
+  if (S._colNormFactors) S._colNormApply(pts, S._colNormFactors({ [p.position]: [pts] })[p.position]);
+  S._colPrice(p.position, 0);
+  S._oddsRound(pts);
+}
+const S = resolve();
+
+export const PROJECTIONS = S.PROJECTIONS;
+export const SCORING = S.COLUMN_SCORING;
+export const CURVE = S.COLUMN_CURVE;
+export const CURVE_BUDGET = S.COLUMN_CURVE_BUDGET;
+export const LEAGUE_BUDGET = S.COLUMN_LEAGUE_BUDGET;
+export const MIN_BID = S.COLUMN_MIN_BID;
+export const VEGAS_WEIGHT = S.VEGAS_WEIGHT;
+// The worker re-levels each position's points to last season's top-K mean
+// before it serves them, so the points on a reader's sheet are NOT raw
+// stat-line scores. OPTIONAL: a worker built before 2026-08-31 has no such
+// constant, and a board built from one must not normalise. Absent means
+// absent, never "assume the new way".
+export const NORM = S.COLUMN_NORM || null;
+export const price = (pos, rankIndex) => S._colPrice(pos, rankIndex);
+
+// The live injury list, when the caller has one. Without it the board carries
+// only the committed AVAILABILITY block, which is what a repo checkout serves
+// -- the deployed worker merges a live feed on top, so a player the league
+// listed today is pro-rated there and not here. Pass it in to compare like
+// with like.
+export function setAvailability(live) {
+  if (!S.__setAvail) throw new Error(WORKER + ' has no availability table');
+  S.__setAvail(live || null);
+}
+export const hasAvailability = !!S.__setAvail;
+
+// The worker's boardCompute, step for step (§9d).
+export function board(overlayPath, useOdds = true) {
+  const OV = (useOdds && overlayPath) ? JSON.parse(fs.readFileSync(overlayPath, 'utf8')) : null;
+  const pool = S.blendProjections ? S.blendProjections(OV) : S.PROJECTIONS;
+  const positions = S.COLUMN_POSITIONS || ['QB', 'RB', 'WR', 'TE'];
+  const byPos = {}, meta = new Map();
+  for (const p of pool) {
+    if (positions.indexOf(p.position) < 0) continue;
+    (byPos[p.position] = byPos[p.position] || []).push({
+      n: p.name, pos: p.position, pts: S._colScore(p.projectedStats || {}, p.position)
+    });
+    meta.set(p.name, { team: p.team, rec: (p.projectedStats || {}).rec || 0, status: p.status || '' });
+  }
+  if (S._colNormFactors) {
+    const normF = S._colNormFactors(Object.fromEntries(
+      Object.entries(byPos).map(([pos, list]) => [pos, list.map(p => p.pts)])));
+    for (const pos of Object.keys(byPos)) {
+      for (const p of byPos[pos]) p.pts = S._oddsRound(S._colNormApply(p.pts, normF[pos]));
+    }
+  } else {
+    for (const pos of Object.keys(byPos)) for (const p of byPos[pos]) p.pts = S._oddsRound(p.pts);
+  }
+  const map = new Map(), lists = {};
+  for (const pos of positions) {
+    const list = (byPos[pos] || []).sort((a, b) => b.pts - a.pts);
+    lists[pos] = list.map(p => ({ n: p.n, pts: p.pts, team: (meta.get(p.n) || {}).team }));
+    list.forEach((p, i) => {
+      const m = meta.get(p.n) || {};
+      map.set(p.n, { pos, team: m.team, rank: i + 1, v: S._colPrice(pos, i), pts: p.pts, rec: m.rec, status: m.status });
+    });
   }
   return { map, lists };
 }
