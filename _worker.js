@@ -64,7 +64,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // both read this set, so a page added to the section cannot be left ungated or
 // advertised in the sitemap while the gate is shut.
 const POST_DRAFT_PAGES = new Set(['/faab', '/weekly-intel', '/rankings', '/vegas-edge',
-  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel']);
+  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk']);
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
@@ -3138,6 +3138,8 @@ function mergeSchedule(spine, live) {
     if (best >= 0) {
       const t = games[best];
       t.kickoff = g.kickoff;                       // the feed's instant is exact; ours is converted
+      // The event id is what the box score is fetched by after the game.
+      if (g.id && /^espn-/.test(g.id)) t.espnId = g.id.slice(5);
       if (g.status) t.status = g.status;
       if (g.homeScore != null) t.homeScore = g.homeScore;
       if (g.awayScore != null) t.awayScore = g.awayScore;
@@ -3148,7 +3150,7 @@ function mergeSchedule(spine, live) {
       // game with no match is left out rather than guessed into a round, since
       // the spine gains the bracket within a day of it being set.
       if (g.type !== 'PRE') continue;
-      games.push({ ...g });
+      games.push({ ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null });
       added++;
     }
   }
@@ -5550,6 +5552,720 @@ async function playerIntelPayload(env, name, position, opts) {
   };
 }
 
+// -- the content desk ------------------------------------------------------------
+// The weekly cadence (Steps 18 to 25): a set of PIECES, each with a rule for when
+// it is due and a rule for when its data is READY, a builder that assembles a
+// structured BRIEF from the engines above and the box scores below, a writer
+// that turns the brief into prose under a grounding contract, and a validator
+// that holds any draft naming a player or a number the brief does not contain.
+//
+// GAME COMPLETION, NOT THE CLOCK, DECIDES PUBLICATION. "Due" is the earliest
+// moment a piece may appear; "ready" is whether the games it is about are final
+// in the schedule service. A Sunday 8pm piece written while the late window is
+// still on says which games it covers and which it does not. An hourly tick
+// re-evaluates every piece that is due and not yet produced, so a game that
+// runs long delays its piece by an hour rather than forcing a guess.
+//
+// THE MODEL EXPLAINS; IT DOES NOT REPORT. Every fact a piece may state is in
+// its brief, and the brief is built by arithmetic over feeds: ESPN's box score
+// (targets, carries, receptions, yards, scores, and the drives, from which red-
+// zone and goal-line touches are counted), the depth charts, the injury list,
+// the usage overlay, the boards, the snapshot store. A draft that names a
+// player who is not in the brief, or a number that is not, is HELD, not
+// published, and the page shows the brief's own data instead. No key, no prose:
+// the data view still publishes.
+const CONTENT_CONTRACT = 1;
+const CONTENT_DDL = [
+  'CREATE TABLE IF NOT EXISTS content_pieces (id INTEGER PRIMARY KEY AUTOINCREMENT, season INTEGER, week INTEGER, kind TEXT NOT NULL, slug TEXT NOT NULL, title TEXT, status TEXT NOT NULL, brief TEXT, body TEXT, violations TEXT, model TEXT, created_at INTEGER NOT NULL, published_at INTEGER)',
+  'CREATE INDEX IF NOT EXISTS ix_content_kw ON content_pieces (kind, season, week)',
+  'CREATE TABLE IF NOT EXISTS game_summaries (espn_id TEXT PRIMARY KEY, game_id TEXT, season INTEGER, week INTEGER, final INTEGER NOT NULL, payload TEXT NOT NULL, fetched_at INTEGER NOT NULL)'
+];
+let _CONTENT_READY = false;
+async function contentReady(env) {
+  if (_CONTENT_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { for (const q of CONTENT_DDL) await env.LEADS_DB.prepare(q).run(); _CONTENT_READY = true; return true; } catch (e) { return false; }
+}
+
+// ── ESPN box score ─────────────────────────────────────────────────────────
+const ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=';
+const ESPN_DEPTH = t => 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + encodeURIComponent(t) + '/depthcharts';
+const RED_ZONE_YARDS = 20, GOAL_LINE_YARDS = 5;
+async function fetchGameSummaryEspn(eventId) {
+  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { cf: { cacheTtl: 120 } });
+  if (!r.ok) throw new Error('espn summary ' + r.status);
+  return await r.json();
+}
+const _abbr = s => { const m = /^([A-Z])[a-z'.-]*\s+([A-Za-z'.-]+)/.exec(String(s || '').trim()); return m ? (m[1] + '.' + m[2]).toLowerCase() : ''; };
+// The box score into one record per player, position resolved against the
+// site's board (the box score carries none), and the drives walked for red-zone
+// and goal-line touches. Every count here is a count; nothing is estimated.
+function normalizeGameSummary(raw, nameIndex) {
+  const comp = (((raw || {}).header || {}).competitions || [])[0] || {};
+  const st = ((comp.status || {}).type || {}).name || '';
+  const final = /FINAL/.test(st);
+  const sides = {};
+  for (const c of comp.competitors || []) sides[c.homeAway] = { team: teamKey(c.team && c.team.abbreviation), score: Number(c.score) };
+  const players = new Map();
+  const get = (name, team) => {
+    const k = _oddsNorm(name);
+    if (!players.has(k)) {
+      const hit = nameIndex ? nameIndex.get(k) : null;
+      players.set(k, { name, key: k, team, position: hit ? hit.position : null,
+        pass: { att: 0, cmp: 0, yd: 0, td: 0, int: 0 }, rush: { att: 0, yd: 0, td: 0 }, rec: { tgt: 0, rec: 0, yd: 0, td: 0 },
+        fumLost: 0, rzTouches: 0, rzTargets: 0, glCarries: 0, tds: [] });
+    }
+    return players.get(k);
+  };
+  const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
+  for (const t of ((raw || {}).boxscore || {}).players || []) {
+    const team = teamKey(t.team && t.team.abbreviation);
+    for (const s of t.statistics || []) {
+      const keys = s.keys || [];
+      for (const a of s.athletes || []) {
+        const name = a.athlete && a.athlete.displayName; if (!name) continue;
+        const p = get(name, team);
+        const v = {}; keys.forEach((k, i) => { v[k] = (a.stats || [])[i]; });
+        if (s.name === 'passing') {
+          const ca = String(v['completions/passingAttempts'] || '').split('/');
+          p.pass.cmp += n(ca[0]); p.pass.att += n(ca[1]); p.pass.yd += n(v.passingYards); p.pass.td += n(v.passingTouchdowns); p.pass.int += n(v.interceptions);
+        } else if (s.name === 'rushing') {
+          p.rush.att += n(v.rushingAttempts); p.rush.yd += n(v.rushingYards); p.rush.td += n(v.rushingTouchdowns);
+        } else if (s.name === 'receiving') {
+          p.rec.tgt += n(v.receivingTargets); p.rec.rec += n(v.receptions); p.rec.yd += n(v.receivingYards); p.rec.td += n(v.receivingTouchdowns);
+        } else if (s.name === 'fumbles') {
+          p.fumLost += n(v.fumblesLost);
+        }
+      }
+    }
+  }
+  // Red zone and goal line, off the plays. The play text names the ball
+  // carrier as "J.Williams"; it is matched to the box-score list for the
+  // offence's side by initial and surname, and left uncounted when ambiguous.
+  const byAbbr = new Map();
+  for (const p of players.values()) {
+    const k = p.team + '|' + _abbr(p.name);
+    byAbbr.set(k, byAbbr.has(k) ? null : p);       // null = ambiguous
+  }
+  const teamIdToAbbr = {};
+  for (const c of comp.competitors || []) if (c.team) teamIdToAbbr[String(c.team.id)] = teamKey(c.team.abbreviation);
+  for (const d of (((raw || {}).drives || {}).previous) || []) {
+    const off = teamKey(d.team && d.team.abbreviation);
+    for (const pl of d.plays || []) {
+      const yte = pl.start && Number(pl.start.yardsToEndzone);
+      if (!(yte <= RED_ZONE_YARDS)) continue;
+      const type = String((pl.type && pl.type.text) || '');
+      const text = String(pl.text || '');
+      const side = off || teamIdToAbbr[String(pl.start && pl.start.team && pl.start.team.id)] || '';
+      let who = null, kind = null;
+      if (/rush/i.test(type) || /(left|right|up the middle|scrambles)/.test(text) && !/pass/i.test(text)) {
+        const m = /(?:\(Shotgun\)\s*|\(No Huddle\)\s*|\(No Huddle, Shotgun\)\s*)?([A-Z]\.[A-Za-z'.-]+)\s+(left|right|up|scrambles)/.exec(text);
+        if (m) { who = m[1]; kind = 'rush'; }
+      } else if (/pass/i.test(type) || /pass/i.test(text)) {
+        const m = /(?:to|for)\s+([A-Z]\.[A-Za-z'.-]+)/.exec(text.replace(/\(.*?\)/g, ''));
+        if (m) { who = m[1]; kind = 'target'; }
+      }
+      if (!who || !kind) continue;
+      const p = byAbbr.get(side + '|' + who.toLowerCase());
+      if (!p) continue;
+      p.rzTouches++;
+      if (kind === 'target') p.rzTargets++;
+      if (kind === 'rush' && yte <= GOAL_LINE_YARDS) p.glCarries++;
+    }
+  }
+  for (const s of (raw || {}).scoringPlays || []) {
+    const text = String(s.text || '');
+    const m = /^([A-Z][A-Za-z'.-]+(?:\s[A-Z][A-Za-z'.-]+)?)\s+(\d+)\s+Yd\s+(Rush|Pass)/i.exec(text) || /pass from|Pass from/.test(text) ? /^([A-Z][A-Za-z'.-]+(?:\s[A-Z][A-Za-z'.-]+)?)\s+(\d+)\s+Yd/.exec(text) : null;
+    if (!m) continue;
+    const p = players.get(_oddsNorm(m[1]));
+    if (p) p.tds.push({ yards: Number(m[2]), text });
+  }
+  const injuries = [];
+  for (const t of (raw || {}).injuries || []) {
+    for (const i of t.injuries || []) {
+      injuries.push({ team: teamKey(t.team && t.team.abbreviation), name: i.athlete && i.athlete.displayName,
+        position: i.athlete && i.athlete.position && i.athlete.position.abbreviation, status: i.status, type: i.details && i.details.type, returnDate: i.details && i.details.returnDate });
+    }
+  }
+  return { espnId: comp.id || null, status: st, final, kickoff: comp.date ? Date.parse(comp.date) : null,
+           home: sides.home || null, away: sides.away || null,
+           players: [...players.values()].filter(p => p.pass.att || p.rush.att || p.rec.tgt),
+           injuries };
+}
+// Team-level shares from a game's players: who owned the targets and the
+// carries, and how the red zone was split.
+function gameUsageByTeam(game) {
+  const out = {};
+  for (const p of game.players || []) {
+    const t = out[p.team] || (out[p.team] = { team: p.team, targets: 0, carries: 0, rzTouches: 0, players: [] });
+    t.targets += p.rec.tgt; t.carries += p.rush.att; t.rzTouches += p.rzTouches; t.players.push(p);
+  }
+  for (const t of Object.values(out)) {
+    for (const p of t.players) {
+      p.targetShare = t.targets ? Math.round(p.rec.tgt / t.targets * 100) : 0;
+      p.carryShare = t.carries ? Math.round(p.rush.att / t.carries * 100) : 0;
+      p.touches = p.rush.att + p.rec.tgt;
+    }
+    t.targetLeaders = t.players.filter(p => p.rec.tgt).sort((a, b) => b.rec.tgt - a.rec.tgt).slice(0, 5).map(p => ({ name: p.name, position: p.position, targets: p.rec.tgt, share: p.targetShare, receptions: p.rec.rec, yards: p.rec.yd, td: p.rec.td, rzTargets: p.rzTargets }));
+    t.backfield = t.players.filter(p => p.rush.att).sort((a, b) => b.rush.att - a.rush.att).slice(0, 4).map(p => ({ name: p.name, position: p.position, carries: p.rush.att, share: p.carryShare, yards: p.rush.yd, td: p.rush.td, targets: p.rec.tgt, glCarries: p.glCarries, rzTouches: p.rzTouches }));
+    t.redZone = t.players.filter(p => p.rzTouches).sort((a, b) => b.rzTouches - a.rzTouches).slice(0, 5).map(p => ({ name: p.name, position: p.position, rzTouches: p.rzTouches, rzTargets: p.rzTargets, glCarries: p.glCarries, tds: p.tds.length }));
+    t.scorers = t.players.filter(p => p.tds.length).map(p => ({ name: p.name, tds: p.tds }));
+  }
+  return out;
+}
+
+// ── depth charts ───────────────────────────────────────────────────────────
+const DEPTH_ROW = 6;
+const DEPTH_MAX_AGE_MS = 7 * 86400000;
+async function fetchDepthChartEspn(team) {
+  const r = await fetch(ESPN_DEPTH(team), { cf: { cacheTtl: 3600 } });
+  if (!r.ok) throw new Error('espn depth ' + r.status);
+  const j = await r.json();
+  const groups = Array.isArray(j.depthchart) ? j.depthchart : [];
+  const off = groups.find(g => g.positions && (g.positions.qb || g.positions.rb)) || null;
+  const out = { team: teamKey(team), asOf: j.timestamp || null, offense: {} };
+  if (!off) return out;
+  const take = (slot) => { const p = off.positions[slot]; if (!p) return []; return (p.athletes || []).slice().sort((a, b) => (a.rank || 0) - (b.rank || 0)).map(a => a.displayName || (a.athlete && a.athlete.displayName)).filter(Boolean); };
+  out.offense.QB = take('qb'); out.offense.RB = take('rb'); out.offense.TE = take('te');
+  out.offense.WR = [].concat(take('wr1'), take('wr2'), take('wr3'), take('wr'));
+  return out;
+}
+async function runDepthChartRefresh(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const sched = await scheduleCacheRead(env);
+  const clubs = new Set();
+  for (const g of (sched && sched.games) || []) if (g.type === 'REG') { clubs.add(g.home); clubs.add(g.away); }
+  const teams = {}; let failed = 0;
+  for (const t of clubs) {
+    try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; }
+  }
+  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed };
+  await oddsCacheInit(env);
+  await env.LEADS_DB.prepare('INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)')
+    .bind(DEPTH_ROW, JSON.stringify({ asOf: Date.now(), teams }), 'espn-depth', Object.keys(teams).length, Date.now()).run();
+  return { ok: true, teams: Object.keys(teams).length, failed };
+}
+async function depthChartsRead(env) {
+  if (!env || !env.LEADS_DB) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, updated_at FROM odds_overlay WHERE id=?').bind(DEPTH_ROW).first();
+    if (!row || !row.payload || Date.now() - row.updated_at > DEPTH_MAX_AGE_MS) return null;
+    return JSON.parse(row.payload);
+  } catch (e) { return null; }
+}
+
+// ── the calendar ───────────────────────────────────────────────────────────
+function etParts(ms) {
+  try {
+    const f = new Intl.DateTimeFormat('en-US', { timeZone: LEAD_TZ, weekday: 'short', hour: 'numeric', hour12: false }).formatToParts(new Date(ms));
+    const get = t => (f.find(p => p.type === t) || {}).value || '';
+    return { dow: get('weekday'), hour: parseInt(get('hour'), 10) % 24 };
+  } catch (e) {
+    const d = new Date(ms + etOffsetHours(ms) * 3600000);
+    return { dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()], hour: d.getUTCHours() };
+  }
+}
+const _etDow = (ms) => etParts(ms).dow;
+// The most recent regular-season week in which a game has been played, which
+// is what a retrospective piece is about. Monday morning that is still the
+// week that has a Monday game left in it; Tuesday morning it is the week that
+// finished last night, even though the clock has already turned to the next.
+function lastPlayedWeek(state, now) {
+  if (!state || !state.ok) return null;
+  const played = (state.weeks || []).filter(w => w.type === 'REG' && w.firstKickoff <= now);
+  return played.length ? played[played.length - 1].number : null;
+}
+// A week's games, by their ET weekday, from the schedule cache.
+// `now` is the instant being asked about, never the wall clock: the gating
+// rules are evaluated for a moment, and a test has to be able to name it.
+function weekGames(sched, week, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  return ((sched && sched.games) || []).filter(g => g.type === 'REG' && g.week === week)
+    .map(g => ({ ...g, dow: _etDow(g.kickoff), state: seasonGameStatus(g, at) }));
+}
+const CONTENT_KINDS = {
+  'team-recaps':          { title: 'Team-by-Team Recaps', day: 'Mon', hour: 6, retro: true,
+                            targets: (gs) => gs.filter(g => g.dow !== 'Mon') },
+  'mnf-breakdown':        { title: 'Monday Night: What We Learned', day: 'Tue', hour: 0, retro: true,
+                            targets: (gs) => gs.filter(g => g.dow === 'Mon'), optional: true },
+  'what-they-arent-telling-you': { title: "What They Aren't Telling You", day: 'Tue', hour: 6, retro: true,
+                            targets: (gs) => gs },
+  'opportunity-report':   { title: 'The Opportunity Report', day: 'Wed', hour: 6, retro: true, targets: (gs) => gs },
+  'rankings-update':      { title: 'Forward-Looking Rankings Update', day: 'Wed', hour: 7, retro: false, targets: () => [] },
+  'final-read':           { title: 'The Final Read', day: 'Thu', hour: 6, retro: false, targets: () => [] },
+  'tnf-preview':          { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, retro: false,
+                            targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true, preview: true },
+  'tnf-aftermath':        { title: 'Thursday Night Aftermath', day: 'Fri', hour: 0, retro: false,
+                            targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true },
+  'weekend-game-plan':    { title: 'The Weekend Game Plan', day: 'Fri', hour: 6, retro: false,
+                            targets: (gs) => gs.filter(g => g.dow !== 'Thu'), preview: true },
+  'what-changed-today':   { title: 'What Changed Today?', day: 'Sun', hour: 20, retro: true,
+                            targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'), partial: true },
+  'snf-what-we-learned':  { title: 'Sunday Night: What We Learned', day: 'Mon', hour: 0, retro: true,
+                            targets: (gs) => { const sun = gs.filter(g => g.dow === 'Sun'); if (!sun.length) return []; const last = Math.max(...sun.map(g => g.kickoff)); return sun.filter(g => g.kickoff === last && etParts(g.kickoff).hour >= 19); }, optional: true }
+};
+const DOW_N = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+// Is a piece due, and is it ready? Pure. `state` is the season service's
+// answer; `sched` the schedule cache; `now` the instant asked about.
+function contentDue(kind, now, state, sched) {
+  const K = CONTENT_KINDS[kind];
+  if (!K) return { due: false, ready: false, reason: 'unknown_kind' };
+  if (!state || !state.ok || state.phase !== 'regular') return { due: false, ready: false, reason: 'not_regular_season' };
+  const et = etParts(now);
+  const week = K.retro ? lastPlayedWeek(state, now) : (state.week.type === 'REG' ? state.week.number : null);
+  if (week == null) return { due: false, ready: false, reason: 'no_week' };
+  // Due: on or after the piece's weekday and hour, within the same ET week.
+  // A retrospective piece keys off the week that was played, so a Monday
+  // recap of Week 3 is due the Monday after Week 3's Sunday, which is the
+  // first Monday whose date is after that Sunday's kickoff.
+  const gs = weekGames(sched, week, now);
+  if (!gs.length) return { due: false, ready: false, reason: 'no_games', week };
+  const anchor = K.retro ? Math.max(...gs.map(g => g.kickoff)) : Math.min(...gs.map(g => g.kickoff));
+  // The first instant >= (the Monday 00:00 ET of the week the anchor game belongs to) matching day/hour.
+  const dueAt = _contentDueAt(K, anchor);
+  const due = now >= dueAt;
+  const targets = K.targets(gs);
+  if (K.optional && !targets.length) return { due, ready: false, reason: 'no_such_game', week, skip: true };
+  // FINAL MEANS THE FEED SAID FINAL. The season service's clock infers that a
+  // game is over three and three-quarter hours after kickoff, which is right
+  // for "what week is it" and wrong for "may I write about this game": a
+  // game that ran long is not over because a timer says so. Only ESPN's own
+  // status counts here, and the hourly tick refreshes it before evaluating.
+  const feedFinal = g => g.status === 'final';
+  let ready = true, reason = 'ready';
+  if (K.preview) {
+    ready = targets.every(g => g.state.status === 'upcoming');
+    if (!ready) reason = 'game_already_started';
+  } else if (K.partial) {
+    ready = targets.length > 0;
+    if (!ready) reason = 'nothing_final_yet';
+  } else {
+    const notFinal = targets.filter(g => !feedFinal(g));
+    ready = notFinal.length === 0;
+    if (!ready) reason = 'games_not_final:' + notFinal.map(g => g.away + '@' + g.home).join(',');
+  }
+  return { due, ready, reason, week, dueAt, targets: targets.map(g => g.id),
+           excluded: K.partial ? gs.filter(g => g.dow === 'Sun' && !feedFinal(g)).map(g => g.away + '@' + g.home) : [] };
+}
+// The due instant: the first occurrence of the piece's ET weekday and hour at
+// or after a start point taken from the anchor game. A retrospective piece
+// anchors on the LAST game of the week it is about and looks back 36 hours,
+// so a Monday-morning recap of a week that ends with Monday night finds the
+// Monday 6am BEFORE that game, not the one a week later; a forward piece
+// anchors on the FIRST game of the week it is about and looks back six days,
+// so a Wednesday update lands the Wednesday before a Thursday opener. Walked
+// hour by hour and capped at nine days, so a malformed schedule cannot loop.
+function _nextEt(day, hour, fromMs) {
+  let t = Math.floor(fromMs / 3600000) * 3600000;
+  for (let i = 0; i < 24 * 9; i++, t += 3600000) {
+    const p = etParts(t);
+    if (p.dow === day && p.hour === hour) return t;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+function _contentDueAt(K, anchorMs) {
+  return _nextEt(K.day, K.hour, anchorMs - (K.retro ? 36 : 6 * 24) * 3600000);
+}
+
+// ── box scores, stored ─────────────────────────────────────────────────────
+async function gameSummaryFor(env, game, nameIndex) {
+  if (!(await contentReady(env))) return null;
+  const espnId = game.espnId;
+  if (!espnId) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, final FROM game_summaries WHERE espn_id = ?').bind(String(espnId)).first();
+    if (row && row.final) return JSON.parse(row.payload);
+  } catch (e) {}
+  const raw = await fetchGameSummaryEspn(espnId);
+  const norm = normalizeGameSummary(raw, nameIndex);
+  norm.gameId = game.id; norm.week = game.week;
+  try {
+    await env.LEADS_DB.prepare('INSERT OR REPLACE INTO game_summaries (espn_id, game_id, season, week, final, payload, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(String(espnId), game.id, null, game.week, norm.final ? 1 : 0, JSON.stringify(norm), Date.now()).run();
+  } catch (e) {}
+  return norm;
+}
+
+// ── the briefs ─────────────────────────────────────────────────────────────
+// Structured, deterministic, and the ONLY thing the writer sees. Every brief
+// also carries `allowed`: the names and numbers the validator will accept.
+function _numsOf(obj, set) {
+  if (obj == null) return set;
+  if (typeof obj === 'number' && Number.isFinite(obj)) { set.add(String(obj)); set.add(String(Math.round(obj * 10) / 10)); set.add(String(Math.round(obj))); return set; }
+  if (typeof obj === 'string') { for (const m of obj.matchAll(/-?\d+(?:\.\d+)?/g)) set.add(m[0]); return set; }
+  if (Array.isArray(obj)) { for (const x of obj) _numsOf(x, set); return set; }
+  if (typeof obj === 'object') { for (const v of Object.values(obj)) _numsOf(v, set); }
+  return set;
+}
+function _namesOf(obj, set) {
+  if (obj == null) return set;
+  if (typeof obj === 'string') { if (/^[A-Z][A-Za-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2}$/.test(obj)) set.add(obj); return set; }
+  if (Array.isArray(obj)) { for (const x of obj) _namesOf(x, set); return set; }
+  if (typeof obj === 'object') { for (const [k, v] of Object.entries(obj)) if (/name|player|team|opponent|game|title/i.test(k) || typeof v === 'object') _namesOf(v, set); }
+  return set;
+}
+function _finishBrief(b) {
+  b.allowed = { names: [..._namesOf(b, new Set())], numbers: [..._numsOf(b, new Set())] };
+  return b;
+}
+// What we already knew about a club's usage, before the game: the depth
+// chart, the season-to-date shares, the board's own projection shares.
+function _priorFor(team, ctx) {
+  const dc = ctx.depth && ctx.depth.teams && ctx.depth.teams[team] ? ctx.depth.teams[team].offense : null;
+  const U = ctx.usage && ctx.usage.players ? Object.values(ctx.usage.players).filter(u => u.team === team && u.season && u.season.games) : [];
+  const seasonShares = U.map(u => ({ name: u.name, position: u.position, games: u.season.games,
+    targetsPerGame: _oddsRound(u.season.targets / u.season.games), carriesPerGame: _oddsRound(u.season.carries / u.season.games) }))
+    .filter(x => x.targetsPerGame >= 2 || x.carriesPerGame >= 3).sort((a, b) => (b.targetsPerGame + b.carriesPerGame) - (a.targetsPerGame + a.carriesPerGame)).slice(0, 8);
+  const board = (ctx.week && ctx.week.players || []).filter(p => p.team === team && p.pos !== 'K' && p.pos !== 'DEF')
+    .sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, 8)
+    .map(p => ({ name: p.name, position: p.position, ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, injury: p.injury ? p.injury.status : null }));
+  return { depthChart: dc, seasonUsage: seasonShares, board };
+}
+function _teamSection(team, usage, ctx) {
+  const prior = _priorFor(team, ctx);
+  const u = usage[team] || null;
+  const learned = u ? { targetLeaders: u.targetLeaders, backfield: u.backfield, redZone: u.redZone, scorers: u.scorers, teamTargets: u.targets, teamCarries: u.carries } : null;
+  // Open questions are FLAGS, computed: a split with two backs within ten
+  // points of share, a target leader on a single game of evidence, an injury
+  // listed during the game, a red-zone role nobody converted.
+  const open = [];
+  if (u) {
+    const bf = u.backfield;
+    if (bf.length >= 2 && Math.abs(bf[0].share - bf[1].share) <= 10) open.push({ question: 'backfield split', detail: bf[0].name + ' ' + bf[0].share + '% vs ' + bf[1].name + ' ' + bf[1].share + '% of carries' });
+    const gl = bf.filter(b => b.glCarries);
+    if (gl.length >= 2) open.push({ question: 'goal-line role', detail: gl.map(b => b.name + ' ' + b.glCarries).join(', ') + ' goal-line carries' });
+    if (u.targetLeaders[0] && u.targetLeaders[0].share >= 30 && (!prior.seasonUsage.length || prior.seasonUsage[0].games <= 1)) open.push({ question: 'target concentration on one game', detail: u.targetLeaders[0].name + ' ' + u.targetLeaders[0].share + '% of targets' });
+    const rz = u.redZone.filter(r => r.rzTouches >= 3 && !r.tds);
+    for (const r of rz) open.push({ question: 'red-zone work without a score', detail: r.name + ' ' + r.rzTouches + ' red-zone touches, 0 touchdowns' });
+  }
+  const inj = (ctx.injuriesByTeam && ctx.injuriesByTeam[team]) || [];
+  for (const i of inj) open.push({ question: 'injury', detail: i.name + ' (' + (i.position || '') + ') ' + i.status + (i.type ? ', ' + i.type : '') });
+  return { team, alreadyKnew: prior, learned, stillDontKnow: open, injuries: inj, played: !!u };
+}
+function _marketFor(team, ctx) {
+  const rows = (ctx.week && ctx.week.players || []).filter(p => p.team === team && p.marketDelta && p.marketDelta.significant)
+    .map(p => ({ name: p.name, position: p.position, classification: p.marketDelta.classification, rankDelta: p.marketDelta.rank, pointsDelta: p.marketDelta.points, basis: p.vegas.basis, why: p.why ? p.why.summary : '' }));
+  const nxt = (ctx.next && ctx.next.players || []).filter(p => p.team === team).sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, 4)
+    .map(p => ({ name: p.name, position: p.position, nextWeekIronTunaRank: p.ironTuna.rank, nextWeekOpponent: p.weeks[0] ? p.weeks[0].opponent : null, nextWeekEnv: p.weeks[0] && p.weeks[0].env ? p.weeks[0].env.factor : null, basis: p.vegas.basis }));
+  return { thisWeekDeltas: rows, nextWeek: nxt };
+}
+function _waiverFor(team, usage, ctx) {
+  const u = usage[team]; if (!u) return [];
+  const board = new Map((ctx.week && ctx.week.players || []).map(p => [p.key, p]));
+  const out = [];
+  for (const p of u.players) {
+    if (p.touches < 6) continue;
+    const row = board.get(p.key);
+    const rank = row ? row.ironTuna.rank : null;
+    const deep = rank == null || (p.position === 'RB' && rank > 30) || (p.position === 'WR' && rank > 40) || (p.position === 'TE' && rank > 14) || (p.position === 'QB' && rank > 18);
+    if (deep) out.push({ name: p.name, position: p.position, team, touches: p.touches, targets: p.rec.tgt, carries: p.rush.att, targetShare: p.targetShare, carryShare: p.carryShare, rzTouches: p.rzTouches, boardRank: rank });
+  }
+  return out.sort((a, b) => b.touches - a.touches).slice(0, 4);
+}
+// One game, three sections and the lists (winners, losers, usage changes,
+// market, waivers). Used by the MNF, TNF, SNF and Sunday pieces.
+function briefForGames(kind, games, summaries, ctx) {
+  const teams = [];
+  const usageAll = {};
+  for (const s of summaries) Object.assign(usageAll, gameUsageByTeam(s));
+  const scores = summaries.map(s => ({ game: s.away.team + ' at ' + s.home.team, away: s.away, home: s.home, final: s.final }));
+  const winners = [], losers = [], changes = [];
+  for (const s of summaries) {
+    for (const t of [s.home.team, s.away.team]) {
+      const sec = _teamSection(t, usageAll, ctx); teams.push(sec);
+      const u = usageAll[t]; if (!u) continue;
+      const board = new Map((ctx.week && ctx.week.players || []).map(p => [p.key, p]));
+      for (const p of u.players) {
+        const row = board.get(p.key);
+        const exp = row ? row.ironTuna.points : null;
+        const pts = _oddsRound(scoreStats({ passYd: p.pass.yd, passTD: p.pass.td, passInt: p.pass.int, rushYd: p.rush.yd, rushTD: p.rush.td, recYd: p.rec.yd, recTD: p.rec.td, rec: p.rec.rec, fumLost: p.fumLost }, p.position || 'WR', ctx.rules));
+        const line = { name: p.name, position: p.position, team: t, points: pts, projected: exp, touches: p.touches, targets: p.rec.tgt, carries: p.rush.att, targetShare: p.targetShare, carryShare: p.carryShare, rzTouches: p.rzTouches, glCarries: p.glCarries };
+        if (exp != null && pts >= exp * 1.6 && pts >= 12) winners.push(line);
+        else if (exp != null && pts <= exp * 0.5 && exp >= 8) losers.push(line);
+        const prior = (ctx.usage && ctx.usage.players && ctx.usage.players[p.key]) || null;
+        if (prior && prior.season && prior.season.games >= 2) {
+          const avg = (prior.season.targets + prior.season.carries) / prior.season.games;
+          if (avg >= 4 && (p.touches >= avg * 1.4 || p.touches <= avg * 0.6)) changes.push({ ...line, seasonAvgTouches: _oddsRound(avg), direction: p.touches > avg ? 'up' : 'down' });
+        }
+      }
+    }
+  }
+  const market = {}; const waivers = [];
+  for (const s of summaries) for (const t of [s.home.team, s.away.team]) { market[t] = _marketFor(t, ctx); waivers.push(..._waiverFor(t, usageAll, ctx)); }
+  return _finishBrief({ kind, week: ctx.weekNumber, games: scores, teams, winners: winners.sort((a, b) => b.points - a.points).slice(0, 8),
+    losers: losers.sort((a, b) => (a.points - a.projected) - (b.points - b.projected)).slice(0, 8), usageChanges: changes.slice(0, 10),
+    market, waivers: waivers.slice(0, 8), excluded: ctx.excluded || [], unavailable: ['routes', 'snap counts until the weekly file publishes', 'red-zone counts are derived from play descriptions'] });
+}
+function briefTeamRecaps(games, summaries, ctx) {
+  const usageAll = {};
+  for (const s of summaries) Object.assign(usageAll, gameUsageByTeam(s));
+  const clubs = new Set();
+  for (const g of (ctx.sched.games || [])) if (g.type === 'REG') { clubs.add(g.home); clubs.add(g.away); }
+  const teams = [...clubs].sort().map(t => {
+    const sec = _teamSection(t, usageAll, ctx);
+    const g = games.find(x => x.home === t || x.away === t);
+    return { ...sec, game: g ? (g.away + ' at ' + g.home) : null, pending: g && !usageAll[t] ? 'plays later this week' : null, bye: !g };
+  });
+  return _finishBrief({ kind: 'team-recaps', week: ctx.weekNumber, teams, unavailable: ['routes', 'snap counts until the weekly file publishes', 'red-zone counts are derived from play descriptions'] });
+}
+// The Tuesday feature: candidates from the insight engine, quality-gated.
+const WTATY_MIN = 8, WTATY_MAX = 15;
+function briefWtaty(ctx) {
+  const sig = ctx.signals && ctx.signals.insights || [];
+  const board = new Map((ctx.week && ctx.week.players || []).map(p => [p.key, p]));
+  const items = [];
+  for (const i of sig) {
+    if (i.confidence === 'LOW') continue;
+    if (i.type === 'vegas_above_consensus' || i.type === 'vegas_below_consensus') { if (Math.abs(i.data.rankDelta || 0) < 5) continue; }
+    const p = i.subject.key ? board.get(i.subject.key) : null;
+    items.push({
+      subject: i.subject, type: i.type, label: i.label, confidence: i.confidence, magnitude: i.magnitude,
+      everyoneSees: p ? { consensusRank: p.consensus.rank, ironTunaRank: p.ironTuna.rank } : null,
+      dataSays: i.data,
+      vegasSays: p ? { vegasRank: p.vegas.rank, basis: p.vegas.basis, confidence: p.vegas.confidence, delta: p.marketDelta } : (i.type === 'game_script_change' ? i.data : null),
+      whyItMatters: i.type === 'line_movement' ? 'the market moved with money on it' : i.type === 'game_script_change' ? 'the whole game is being re-priced' : /consolidation|role/.test(i.type) ? 'usage precedes points' : /production/.test(i.type) ? 'opportunity, not results, predicts next week' : 'a priced market disagrees with an unpriced list'
+    });
+  }
+  items.sort((a, b) => (_confScore[b.confidence] - _confScore[a.confidence]) || b.magnitude - a.magnitude);
+  const seen = new Set(); const picked = [];
+  for (const it of items) { const k = it.subject.key || it.subject.team; if (seen.has(k)) continue; seen.add(k); picked.push(it); if (picked.length >= WTATY_MAX) break; }
+  return _finishBrief({ kind: 'what-they-arent-telling-you', week: ctx.weekNumber, count: picked.length, target: WTATY_MIN + ' to ' + WTATY_MAX,
+    note: picked.length < WTATY_MIN ? 'Fewer than ' + WTATY_MIN + ' observations cleared the bar this week; ' + picked.length + ' are published rather than padding the list.' : null, items: picked });
+}
+function briefOpportunity(ctx) {
+  const U = ctx.usage && ctx.usage.players ? Object.values(ctx.usage.players) : [];
+  const board = new Map((ctx.week && ctx.week.players || []).map(p => [p.key, p]));
+  const rows = U.filter(u => u.latest && u.season && u.season.games >= 1).map(u => {
+    const t = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0);
+    const avg = u.season.games > 1 ? ((u.season.targets + u.season.carries) - t) / (u.season.games - 1) : null;
+    const key = _oddsNorm(u.name) + '|' + u.position; const p = board.get(key);
+    return { name: u.name, position: u.position, team: u.team, week: u.latest.week, touches: t, priorAvgTouches: avg == null ? null : _oddsRound(avg),
+      targets: u.latest.usage.targets, targetShare: u.latest.usage.targetShare == null ? null : Math.round(u.latest.usage.targetShare * 100), carries: u.latest.usage.carries, snapPct: u.latest.usage.snapPct == null ? null : Math.round(u.latest.usage.snapPct * 100),
+      points: _oddsRound(scoreStats(u.latest.stats, u.position, ctx.rules)), marketDelta: p ? p.marketDelta : null, vegasBasis: p ? p.vegas.basis : null };
+  });
+  const withPrior = rows.filter(r => r.priorAvgTouches != null && r.priorAvgTouches >= 3);
+  const risers = withPrior.filter(r => r.touches >= r.priorAvgTouches * 1.3).sort((a, b) => (b.touches - b.priorAvgTouches) - (a.touches - a.priorAvgTouches)).slice(0, 10);
+  const fallers = withPrior.filter(r => r.touches <= r.priorAvgTouches * 0.7).sort((a, b) => (a.touches - a.priorAvgTouches) - (b.touches - b.priorAvgTouches)).slice(0, 10);
+  const targets = rows.filter(r => r.targets >= 7).sort((a, b) => b.targets - a.targets).slice(0, 12);
+  const backfield = rows.filter(r => r.position === 'RB' && r.carries >= 8).sort((a, b) => b.carries - a.carries).slice(0, 12);
+  const confirm = rows.filter(r => r.marketDelta && r.marketDelta.significant && (risers.some(x => x.name === r.name) || fallers.some(x => x.name === r.name)))
+    .map(r => ({ name: r.name, position: r.position, team: r.team, usageDirection: risers.some(x => x.name === r.name) ? 'up' : 'down', market: r.marketDelta.classification, basis: r.vegasBasis, agrees: (risers.some(x => x.name === r.name) && r.marketDelta.points > 0) || (fallers.some(x => x.name === r.name) && r.marketDelta.points < 0) }));
+  return _finishBrief({ kind: 'opportunity-report', week: ctx.weekNumber, throughWeek: ctx.usage ? ctx.usage.throughWeek : null,
+    risers, fallers, targetOpportunity: targets, backfieldControl: backfield,
+    redZoneReality: { note: 'Red-zone counts are derived from play descriptions in the box scores; routes are not published by any free feed.', players: (ctx.redZoneWeek || []).slice(0, 12) },
+    marketConfirmation: confirm.slice(0, 12), question: 'Whose value is changing before the fantasy box score makes it obvious?' });
+}
+function briefFinalRead(ctx) {
+  const W = (ctx.week && ctx.week.players || []).filter(p => p.pos !== 'K' && p.pos !== 'DEF');
+  const sig = W.filter(p => p.marketDelta.significant);
+  const line = { QB: 12, RB: 24, WR: 36, TE: 12 };
+  const pressure = W.filter(p => Math.abs(p.ironTuna.rank - line[p.position]) <= 6 && p.marketDelta.significant).slice(0, 12);
+  const inj = ctx.injuriesList || [];
+  const injuredTeams = new Set(inj.filter(i => /out|doubtful|ir/i.test(i.status)).map(i => i.team));
+  const oppo = W.filter(p => injuredTeams.has(p.team) && p.roleTrend && p.roleTrend.label !== 'down').sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, 10);
+  const brief = p => ({ name: p.name, position: p.position, team: p.team, ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, delta: p.marketDelta, basis: p.vegas.basis, confidence: p.vegas.confidence, why: p.why ? p.why.summary : '', opponent: p.weeks[0] ? p.weeks[0].opponent : null });
+  return _finishBrief({ kind: 'final-read', week: ctx.weekNumber,
+    marketVsConsensus: sig.sort((a, b) => Math.abs(b.marketDelta.rank || 0) - Math.abs(a.marketDelta.rank || 0)).slice(0, 12).map(brief),
+    injuryDrivenOpportunity: oppo.map(brief), injuries: inj.slice(0, 30),
+    startSitPressure: pressure.map(brief),
+    ironTunaHigher: W.filter(p => p.consensus.rank - p.ironTuna.rank >= 4).sort((a, b) => (b.consensus.rank - b.ironTuna.rank) - (a.consensus.rank - a.ironTuna.rank)).slice(0, 10).map(brief),
+    ironTunaLower: W.filter(p => p.ironTuna.rank - p.consensus.rank >= 4).sort((a, b) => (b.ironTuna.rank - b.consensus.rank) - (a.ironTuna.rank - a.consensus.rank)).slice(0, 10).map(brief),
+    whatCouldChange: inj.filter(i => /questionable|doubtful/i.test(i.status)).slice(0, 15) });
+}
+function _gameCard(g, ctx) {
+  const inGame = (ctx.week && ctx.week.players || []).filter(p => (p.team === g.home || p.team === g.away) && p.pos !== 'K' && p.pos !== 'DEF');
+  const top = inGame.slice().sort((a, b) => b.ironTuna.points - a.ironTuna.points)[0] || null;
+  const edge = inGame.filter(p => p.marketDelta.significant).sort((a, b) => Math.abs(b.marketDelta.rank || 0) - Math.abs(a.marketDelta.rank || 0))[0] || null;
+  const mv = ctx.gameMarkets && ctx.gameMarkets[g.id];
+  const env = g.total == null ? 'unpriced' : g.total >= 50 ? 'shootout' : g.total >= 45 ? 'above average' : g.total >= 41 ? 'average' : 'low-scoring';
+  const q = (ctx.signals && ctx.signals.insights || []).filter(i => i.subject.team === g.home || i.subject.team === g.away || (i.subject.game && i.subject.game === g.away + ' at ' + g.home)).slice(0, 2);
+  const props = [];
+  for (const p of inGame) if (/^props/.test(p.vegas.basis)) props.push({ name: p.name, position: p.position, priced: p.weeks[0] && p.weeks[0].vegasProjection ? p.weeks[0].vegasProjection.priced : [] });
+  return { game: g.away + ' at ' + g.home, home: g.home, away: g.away, kickoff: g.kickoff, spread: g.spread, total: g.total, impliedHome: g.impliedHome, impliedAway: g.impliedAway,
+    favourite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, environment: env,
+    movement: mv ? { spread: mv.spread ? _oddsRound((mv.spread.current || 0) - (mv.spread.open || 0)) : null, total: mv.total ? _oddsRound((mv.total.current || 0) - (mv.total.open || 0)) : null } : null,
+    biggestEdge: edge ? { name: edge.name, position: edge.position, team: edge.team, classification: edge.marketDelta.classification, rankDelta: edge.marketDelta.rank, why: edge.why ? edge.why.summary : '' } : null,
+    mostImportant: top ? { name: top.name, position: top.position, team: top.team, ironTunaRank: top.ironTuna.rank, projected: top.ironTuna.points } : null,
+    rankings: inGame.slice().sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, 8).map(p => ({ name: p.name, position: p.position, team: p.team, ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, vegasRank: p.vegas.rank })),
+    props: props.slice(0, 10), keyQuestions: q.map(i => ({ type: i.type, subject: i.subject.name || i.subject.game, data: i.data })) };
+}
+function briefGamePlan(kind, games, ctx) {
+  return _finishBrief({ kind, week: ctx.weekNumber, cards: games.map(g => _gameCard(g, ctx)) });
+}
+
+// ── the writer ─────────────────────────────────────────────────────────────
+async function llmText(env, system, user, maxTokens) {
+  if (!env || !env.LLM_API_KEY) return { ok: false, error: 'no_key' };
+  const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
+  const model = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
+  const ctrl = new AbortController(); const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 60000);
+  try {
+    const r = provider === 'anthropic'
+      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, system, messages: [{ role: 'user', content: user }] }) })
+      : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0.3, max_tokens: maxTokens || 3000, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }) });
+    if (!r.ok) return { ok: false, error: 'provider_' + r.status };
+    const j = await r.json();
+    const text = provider === 'anthropic' ? ((j.content && j.content[0] && j.content[0].text) || '') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    return { ok: !!text, text, model };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+  finally { clearTimeout(to); }
+}
+const CONTENT_SECTIONS = {
+  'team-recaps': ['teams'],
+  'mnf-breakdown': ['alreadyKnew', 'learned', 'stillDontKnow', 'fantasyWinners', 'fantasyLosers', 'usageChanges', 'marketImplications', 'waiverImplications'],
+  'tnf-aftermath': ['alreadyKnew', 'learned', 'stillDontKnow', 'winners', 'losers', 'usageChanges', 'marketImplications'],
+  'snf-what-we-learned': ['alreadyKnew', 'learned', 'stillDontKnow', 'winners', 'losers', 'usageChanges', 'injuryImplications', 'earlyMarketReaction'],
+  'what-changed-today': ['roleChanges', 'injuries', 'misleadingBoxScores', 'surprisingUsage', 'biggestValueChanges', 'firstIndicationsForNextWeek'],
+  'what-they-arent-telling-you': ['insights'],
+  'opportunity-report': ['opportunityRisers', 'opportunityFallers', 'targetRouteOpportunity', 'backfieldControl', 'redZoneReality', 'marketConfirmation'],
+  'rankings-update': ['next3Weeks', 'restOfSeason', 'fantasyPlayoffs', 'majorMovers'],
+  'final-read': ['marketVsConsensus', 'injuryDrivenOpportunity', 'startSitPressurePoints', 'ironTunaHigher', 'ironTunaLower', 'whatCouldStillChange'],
+  'tnf-preview': ['lines', 'gameEnvironment', 'props', 'marketDelta', 'rankings', 'keyQuestions', 'fantasyApproach'],
+  'weekend-game-plan': ['cards']
+};
+const WRITER_SYSTEM = `You write short, plain fantasy-football analysis for Iron Tuna, a site that prices players against the betting market.
+THE ONE RULE: you may state only facts that appear in the BRIEF you are given. Every player name, team, number, rank, share, line and injury status must come from the brief. If the brief does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. Do not describe the score or the game flow. Concentrate on usage, roles, target hierarchy, backfield split, red-zone work, injuries, depth-chart implications and what the market says.
+Write in short sentences. No hype, no hedging padding, no em dashes. Never invent a reason: if the brief has no cause for a change, say the cause is not known.
+OUTPUT: a single JSON object with exactly the section keys requested, each an array of strings (one paragraph or bullet per string; a "teams" or "cards" or "insights" section is an array of objects with the fields requested). No prose outside the JSON.`;
+function _sectionSpec(kind) {
+  const secs = CONTENT_SECTIONS[kind] || [];
+  if (kind === 'team-recaps') return '{"teams":[{"team":"ABBR","whatWeAlreadyKnew":["..."],"whatWeLearned":["..."],"whatWeStillDontKnow":["..."]}]} (one object per team in the brief; a team on bye or still to play gets one sentence saying so)';
+  if (kind === 'what-they-arent-telling-you') return '{"insights":[{"headline":"...","whatEveryoneSees":"...","whatTheDataSays":"...","whatVegasSays":"...","whyItMatters":"...","confidence":"HIGH|MEDIUM|LOW"}]} (one per item in the brief, in order; never more than the brief has)';
+  if (kind === 'weekend-game-plan') return '{"cards":[{"game":"AWAY at HOME","fantasyEnvironment":"...","whatVegasIsTellingUs":"...","biggestVegasEdge":"...","mostImportantPlayer":"...","keyQuestion":"...","ironTunaApproach":"..."}]} (one per card in the brief)';
+  return '{' + secs.map(s => '"' + s + '":["..."]').join(',') + '}';
+}
+// Every capitalised two-or-three-word name and every number in the draft must
+// be in the brief. Small integers are allowed (ordinals, counts of things).
+function validateDraft(text, allowed) {
+  const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
+  const bad = { names: [], numbers: [] };
+  const OK_WORDS = new Set(['Iron Tuna', 'Market Delta', 'Monday Night', 'Sunday Night', 'Thursday Night', 'Red Zone', 'Vegas Edge', 'What We', 'Fantasy Playoffs', 'Rest Of', 'Next Three', 'Week One']);
+  for (const m of String(text).matchAll(/\b([A-Z][a-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2})\b/g)) {
+    const n = m[1];
+    if (names.has(n) || OK_WORDS.has(n)) continue;
+    if ([...names].some(x => x.includes(n) || n.includes(x))) continue;
+    if (/^(What|Why|The|This|That|His|Their|A|An|In|On|At|For|With|And|But|Not|No|He|She|It|They|We|Both)\b/.test(n)) continue;
+    bad.names.push(n);
+  }
+  for (const m of String(text).matchAll(/-?\d+(?:\.\d+)?/g)) {
+    const v = m[0]; const num = Number(v);
+    if (nums.has(v) || (Number.isInteger(num) && Math.abs(num) <= 20)) continue;
+    bad.numbers.push(v);
+  }
+  bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
+  return { ok: !bad.names.length && !bad.numbers.length, ...bad };
+}
+async function writePiece(env, kind, brief) {
+  const spec = _sectionSpec(kind);
+  const user = 'KIND: ' + kind + '\nSECTIONS AND SHAPE: ' + spec + '\n\nBRIEF (the only source of facts):\n' + JSON.stringify(brief, null, 0).slice(0, 60000);
+  let attempt = await llmText(env, WRITER_SYSTEM, user, 4000);
+  if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
+  const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
+  let body = parse(attempt.text);
+  let v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] };
+  if (!v.ok) {
+    const fix = user + '\n\nYOUR PREVIOUS DRAFT NAMED THINGS THE BRIEF DOES NOT CONTAIN. Remove or replace them; do not add anything new. Names not in the brief: ' + v.names.join(', ') + '. Numbers not in the brief: ' + v.numbers.join(', ') + '.';
+    attempt = await llmText(env, WRITER_SYSTEM, fix, 4000);
+    if (attempt.ok) { body = parse(attempt.text); v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] }; }
+  }
+  return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.names.concat(v.numbers), model: attempt.model || null };
+}
+
+// ── storage, tick, payloads ────────────────────────────────────────────────
+const _slugOf = (kind, season, week) => kind + '-' + season + '-w' + week;
+async function contentExists(env, kind, season, week) {
+  try { return !!(await env.LEADS_DB.prepare('SELECT 1 FROM content_pieces WHERE kind = ? AND season = ? AND week = ?').bind(kind, season, week).first()); } catch (e) { return false; }
+}
+async function contentStore(env, rec) {
+  await env.LEADS_DB.prepare('INSERT INTO content_pieces (season, week, kind, slug, title, status, brief, body, violations, model, created_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(rec.season, rec.week, rec.kind, rec.slug, rec.title, rec.status, JSON.stringify(rec.brief || null), JSON.stringify(rec.body || null), JSON.stringify(rec.violations || []), rec.model || null, Date.now(), rec.status === 'published' ? Date.now() : null).run();
+}
+async function contentContext(env, weekNumber, opts) {
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const preset = 'ppr';
+  const [week, next, depth, usage, injuries] = await Promise.all([
+    boardsPayload(env, { horizon: 'week', position: 'ALL', preset }),
+    boardsPayload(env, { horizon: 'next3', position: 'ALL', preset }),
+    depthChartsRead(env), usageCacheRead(env), availabilityReport(env).catch(() => null)
+  ]);
+  const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  const [weekMarkets, gameMarkets] = await Promise.all([
+    curWeek != null && sched ? marketHistoryWeek(env, sched.season, curWeek) : {},
+    marketHistoryGames(env, (state.ok ? state.games : []).map(g => g.id))
+  ]);
+  const signals = detectInsights({ week: week.ok ? week : null, usage, weekMarkets, gameMarkets, state, rules: scoringRules(preset) });
+  const injuriesList = injuries && injuries.affected ? injuries.affected.map(a => ({ name: a.name, position: a.position, team: a.team, status: a.status, gamesOut: a.gamesOut, note: a.note })) : [];
+  const injuriesByTeam = {}; for (const i of injuriesList) (injuriesByTeam[i.team] = injuriesByTeam[i.team] || []).push(i);
+  return { sched, state, week: week.ok ? week : null, next: next.ok ? next : null, depth, usage, signals, gameMarkets, weekMarkets,
+           injuriesList, injuriesByTeam, weekNumber, rules: scoringRules(preset), nameIndex: _oddsProjectionIndex(), ...(opts || {}) };
+}
+async function produceContent(env, kind, opts) {
+  const o = opts || {};
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const d = contentDue(kind, Date.now(), state, sched);
+  if (!o.force && (!d.due || !d.ready)) return { ok: false, kind, ...d };
+  if (d.week == null) return { ok: false, kind, error: 'no_week' };
+  const season = sched.season, week = d.week, K = CONTENT_KINDS[kind];
+  if (!o.force && await contentExists(env, kind, season, week)) return { ok: false, kind, week, error: 'exists' };
+  if (d.skip) { await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null }); return { ok: true, kind, week, status: 'skipped' }; }
+  const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
+  const games = weekGames(sched, week, Date.now()).filter(g => (d.targets || []).includes(g.id));
+  let brief = null;
+  if (['mnf-breakdown', 'tnf-aftermath', 'snf-what-we-learned', 'what-changed-today', 'team-recaps'].includes(kind)) {
+    const summaries = [];
+    for (const g of games) { try { const s = await gameSummaryFor(env, g, ctx.nameIndex); if (s) summaries.push(s); } catch (e) {} }
+    // The schedule said final; the box score is the second opinion. A summary
+    // that is not final is not written from, whatever the schedule said.
+    const notFinal = summaries.filter(s => !s.final);
+    if (notFinal.length && !o.force) return { ok: false, kind, week, error: 'box_score_not_final', games: notFinal.map(s => s.away.team + '@' + s.home.team) };
+    if (!summaries.length && !o.force) return { ok: false, kind, week, error: 'no_box_scores' };
+    brief = kind === 'team-recaps' ? briefTeamRecaps(games, summaries, ctx) : briefForGames(kind, games, summaries, ctx);
+  } else if (kind === 'what-they-arent-telling-you') brief = briefWtaty(ctx);
+  else if (kind === 'opportunity-report') brief = briefOpportunity(ctx);
+  else if (kind === 'rankings-update') brief = _finishBrief({ kind, week, ...(await rosUpdatePayload(env, {})) });
+  else if (kind === 'final-read') brief = briefFinalRead(ctx);
+  else if (kind === 'tnf-preview' || kind === 'weekend-game-plan') brief = briefGamePlan(kind, games, ctx);
+  if (!brief) return { ok: false, kind, week, error: 'no_brief' };
+  const written = await writePiece(env, kind, brief);
+  const title = K.title + ' · Week ' + week;
+  await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status: written.status, brief, body: written.body, violations: written.violations, model: written.model });
+  return { ok: true, kind, week, status: written.status, violations: written.violations, sections: written.body ? Object.keys(written.body) : [] };
+}
+async function runContentTick(env) {
+  const out = [];
+  for (const kind of Object.keys(CONTENT_KINDS)) {
+    try { out.push(await produceContent(env, kind)); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); }
+  }
+  return { ok: true, at: Date.now(), results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
+}
+async function contentListPayload(env, season, week) {
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  try {
+    const q = week != null
+      ? await env.LEADS_DB.prepare('SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE season = ? AND week = ? ORDER BY created_at DESC').bind(season, week).all()
+      : await env.LEADS_DB.prepare('SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces ORDER BY created_at DESC LIMIT 60').all();
+    return { ok: true, contract: CONTENT_CONTRACT, kinds: Object.entries(CONTENT_KINDS).map(([k, v]) => ({ kind: k, title: v.title, day: v.day, hour: v.hour })), pieces: q.results || [] };
+  } catch (e) { return { ok: false, error: 'unavailable' }; }
+}
+async function contentPiecePayload(env, kind, season, week) {
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  try {
+    const row = week != null
+      ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
+      : await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
+    if (!row) return { ok: false, error: 'not_found', kind };
+    const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
+    // A held piece ships its BRIEF and not its draft: the data is right by
+    // construction, the prose was not.
+    return { ok: true, contract: CONTENT_CONTRACT, kind, title: row.title, status: row.status, week: row.week, season: row.season,
+             createdAt: row.created_at, publishedAt: row.published_at, sections: CONTENT_SECTIONS[kind] || [],
+             body: row.status === 'published' ? parse(row.body) : null, brief: parse(row.brief), violations: row.status === 'held' ? parse(row.violations) : null };
+  } catch (e) { return { ok: false, error: 'unavailable' }; }
+}
+
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
 // read at most once per isolate, and zero reads once warm.
 let _PROJ_BLEND_AT = 0;
@@ -6092,6 +6808,23 @@ export default {
         preset: SCORING_PRESETS[preset] ? preset : null
       });
       _MARKET_MEMO = { key: mkey, at: Date.now(), out };
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    // The desk: the week's pieces, and one piece.
+    if (url.pathname === '/api/content' || url.pathname === '/api/content/piece') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const sched = await scheduleCacheRead(env);
+      const season = sched ? sched.season : null;
+      const wk = url.searchParams.get('week');
+      const week = wk && /^\d{1,2}$/.test(wk) ? parseInt(wk, 10) : null;
+      if (url.pathname === '/api/content/piece') {
+        const kind = String(url.searchParams.get('kind') || '').replace(/[^a-z-]/g, '');
+        if (!CONTENT_KINDS[kind]) return json({ ok: false, error: 'unknown_kind' }, 404, c);
+        const out = await contentPiecePayload(env, kind, season, week);
+        return json(out, out.ok ? 200 : 404, { ...c, 'cache-control': 'public, max-age=300' });
+      }
+      const out = await contentListPayload(env, season, week);
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // Vegas Edge, the signals behind it, the Wednesday update, and one player.
@@ -6929,6 +7662,25 @@ export default {
       }
       return json({ ok: true, ...providerReport(env), kinds: Object.keys(PROVIDERS), ran }, 200, c);
     }
+    // The desk's plumbing. ?tick=1 runs the hourly evaluation now; ?run=<kind>
+    // produces one piece now if it is due and ready; &force=1 produces it
+    // regardless (for a look at the pipeline before the season); ?depth=1
+    // refreshes the depth charts; ?due=1 reports every kind's due/ready state.
+    if (url.pathname === '/api/admin/content') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const out = { ok: true };
+      if (url.searchParams.get('depth') === '1') { try { out.depth = await runDepthChartRefresh(env); } catch (e) { out.depth = { ok: false, error: (e && e.message) || 'failed' }; } }
+      if (url.searchParams.get('tick') === '1') { try { out.tick = await runContentTick(env); } catch (e) { out.tick = { ok: false, error: (e && e.message) || 'failed' }; } }
+      const run = String(url.searchParams.get('run') || '').replace(/[^a-z-]/g, '');
+      if (run && CONTENT_KINDS[run]) { try { out.ran = await produceContent(env, run, { force: url.searchParams.get('force') === '1' }); } catch (e) { out.ran = { ok: false, error: (e && e.message) || 'failed' }; } }
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      out.due = Object.fromEntries(Object.keys(CONTENT_KINDS).map(k => [k, contentDue(k, Date.now(), state, sched)]));
+      out.et = etParts(Date.now());
+      out.llm = !!env.LLM_API_KEY;
+      return json(out, 200, c);
+    }
     // The market engine's own plumbing: the snapshot store, the usage overlay,
     // and a sample record. ?snapshot=1 pulls the books now; ?usage=1 rebuilds
     // the usage overlay now.
@@ -7406,6 +8158,12 @@ export default {
         __assetReq = new Request(new URL('/post-draft', url).toString(), request);
       }
       else if (/^\/in-season\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/post-draft', url).toString(), request);
+      // /in-season/desk, /in-season/desk/<kind>, /in-season/desk/<kind>/<week>:
+      // one shell for the week's pieces, reading kind and week off the path.
+      else if (/^\/in-season\/desk(\/[a-z-]+(\/\d{1,2})?)?\/?$/.test(url.pathname)) {
+        const open = POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request);
+        __assetReq = new Request(new URL(open ? '/desk' : '/post-draft', url).toString(), request);
+      }
       // /in-season/player/<slug>: one shell for every player, like /player/<slug>,
       // gated with the rest of the section.
       else if (/^\/in-season\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) {
@@ -7510,6 +8268,10 @@ export default {
       ctx.waitUntil(runUsageRefresh(env)
         .then(r => console.log('usage refresh:', JSON.stringify(r)))
         .catch(e => console.error('usage refresh failed:', e && e.message)));
+      // Depth charts, daily, for the recaps' "what we already knew".
+      ctx.waitUntil(runDepthChartRefresh(env)
+        .then(r => console.log('depth charts:', JSON.stringify(r)))
+        .catch(e => console.error('depth charts failed:', e && e.message)));
       // The Wednesday rest-of-season update. 11:00Z is 7am in New York during
       // daylight time and 6am after it ends; either is before anyone is
       // setting a lineup. Runs AFTER the schedule, odds and usage pulls above
@@ -7536,6 +8298,16 @@ export default {
     // three posting slots are the only other times the worker wakes, so they
     // are where in-week line movement comes from.
     ctx.waitUntil(runMarketSnapshot(env).catch(e => console.error('market snapshot failed:', e && e.message)));
+    // The hourly desk tick: refresh the schedule (game status is what gates a
+    // piece), then produce whatever is due and ready. Idempotent: a piece is
+    // produced once per kind per week, so the 11:00 overlap with the daily job
+    // costs nothing.
+    if (event.cron === '0 * * * *') {
+      ctx.waitUntil(runScheduleRefresh(env).catch(() => null).then(() => runContentTick(env))
+        .then(r => console.log('content tick:', JSON.stringify(r)))
+        .catch(e => console.error('content tick failed:', e && e.message)));
+      return;
+    }
     const slots = slotsByCron[event.cron];
     ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },
