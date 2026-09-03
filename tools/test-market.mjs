@@ -323,7 +323,8 @@ console.log('\nthe touchdown market');
 {
   const both = M.vegasTdProbability([{ book: 'dk', overOdds: -110, underOdds: -110 }]);
   ok('a two-sided TD price de-vigs', both.devigged === true && near(both.probability, 0.5, 1e-9));
-  const one = M.vegasTdProbability([{ book: 'dk', overOdds: +120 }]);
+  const one = M.vegasTdProbability([{ book: 'dk', overOdds: +120, underOdds: null }]);
+  ok('a null "No" side is a missing side, not a zero', one !== null && one.devigged === false);
   ok('a one-sided price is used but flagged as carrying vig', one.devigged === false);
   ok('and it is the raw implied probability', near(one.probability, 1 / 2.2, 1e-9), String(one.probability));
   ok('no price at all is null', M.vegasTdProbability([]) === null);

@@ -260,6 +260,13 @@ jobs:
       - name: Providers, line history and the Vegas projection
         run: node tools/test-market.mjs
 
+      # The three boards (consensus / Vegas / Iron Tuna) across four horizons,
+      # Market Delta and its thresholds, and the structured "why". The fixture
+      # season posts lines for fourteen weeks and not the last four, so a
+      # horizon reaching past them has to say "ratings" and grade LOW.
+      - name: The three boards, Market Delta and the explainer
+        run: node tools/test-boards.mjs
+
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
 
