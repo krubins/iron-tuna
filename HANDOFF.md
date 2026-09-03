@@ -6902,3 +6902,62 @@ has a Sept 2 entry and two would break "one entry per day"; the
 adopt-fix takes effect on the next fire (`trig_016JAiJJMZi2jtZDmZS1QPNK`
 next runs 2026-09-03T13:03Z, `trig_01K2obtrMAKiwGn3N4UroTEv` around
 12:00Z the same day).
+
+## 58. September 3: DFS (Steps 26 to 28)
+
+`/in-season/dfs` (root `dfs.html`) is five sections on one slate: Dashboard,
+Vegas Values, Lineup Builder, Game Stacks, TD Board, with a DraftKings /
+FanDuel switch. Everything on it is the week board (`buildBoards`, horizon
+`week`) re-scored under the site's rules and priced by the site's salaries.
+
+**Salaries.** `dfs_salaries` in D1 (append-only; the newest `fetched_at` for a
+site, season and week is the slate). Three ways in: the lobby CSV of either
+site pasted into `/admin` (POST `/api/admin/dfs` with `{site, csv, week?}`,
+parsed by `parseDfsCsv`, which refuses the other site's format), the site
+feeds (`fetchDraftKingsSalaries` needs `DK_DRAFT_GROUP_ID`;
+`fetchFanDuelSalaries` needs `FD_FIXTURE_LIST_ID` and `FD_API_KEY`; both are
+UNVERIFIED from this sandbox, which cannot reach either host, and both fail
+closed), and `runDfsRefresh` on the 11:00 UTC cron, which only runs the feeds
+whose variables are set. No salaries for the week means `/api/dfs` answers
+`ok:false` with the reason and the page says so; it never invents a price.
+
+**Site scoring.** `SCORING_SITE.dk` and `.fd` are overrides on the Iron Tuna
+scoring engine (`scoringRules(preset, override)`): DK is full PPR with the
+300/100/100-yard bonuses and minus one per fumble; FD is half PPR, no bonus,
+minus two per fumble. Kickers are not on either slate; DST is.
+
+**The slate** (`buildDfsSlate`) matches each salary row to the board by
+normalised name plus position (a DST by club), and gives every matched player
+`salary`, the Vegas, Iron Tuna and consensus projections under the site's
+scoring, `marketDelta`, `tdProbability` with its `tdBasis` (`anytime-td-market`
+when a book priced it, otherwise `derived` from the projected touchdowns),
+`teamTotal` with `teamTotalPosted`, and `siteName` (the site's spelling).
+**Vegas Value Score** is Vegas points per $1,000 of salary indexed to the
+slate median (100 = an ordinary dollar). The four boards: Best Vegas Values
+(top VVS), TD Upside (TD probability per $1K), Volume Values (implied touches
+per $1K), Expensive Fades (salary in the top third and the market below the
+consensus). `buildDfsStacks` ranks the slate's games by total and prices each
+side's QB + two catchers with a bring-back from the other side.
+
+**The optimizer** is `dfs-optimizer.js`, a shared script (browser and node)
+with no network code at all: `tools/test-dfs.mjs` greps it for `fetch`,
+`XMLHttpRequest` and `submit` and fails if any appears. **Nothing submits an
+entry.** `ITDfs.build(players, {mode, cap, slots, flex, lock, exclude, stack,
+stackSize, bringBack, maxPerTeam, lineups, seed})` runs a randomised greedy
+fill (thinnest slot first, budget-aware from the cheapest legal fill of the
+open slots) and then climbs single and pair swaps on the projection minus a
+heavy penalty per broken constraint, so a fill that lands over the cap or
+short of its stack is repaired rather than discarded. On the test slate it
+matches an exhaustive enumeration exactly; on a real slate it is a very good
+lineup in milliseconds, not a proof. Modes: IRON TUNA OPTIMAL, VEGAS OPTIMAL,
+CONSENSUS OPTIMAL, VEGAS EDGE (Vegas points plus any positive Market Delta).
+A cap no roster can meet returns `ok:false` and a note, never a lineup over
+the cap. The page locks and excludes by clicking a player in the pool.
+
+Routes: `/api/dfs?site=dk|fd` (public, five-minute cache) and
+`/api/admin/dfs?key=…` (GET status, POST import, `&refresh=1` runs the
+feeds). Tests: `tools/test-dfs.mjs` (46) covers both CSV formats, the site
+scoring, the slate, the boards, the stacks and every optimizer constraint.
+
+Known small thing, site-wide and older than this work: at a 390px viewport
+the chrome's nav toggle sits 2 to 3px past the right edge on every page.
