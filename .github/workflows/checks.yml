@@ -286,6 +286,11 @@ jobs:
         run: node tools/test-health.mjs
       - name: The job schedule in New York time
         run: node tools/test-jobs.mjs
+      # Whole paths, no network: brief -> writer -> validator -> store; the
+      # scheduled tick -> job log -> health; the 2026 schedule fixture -> week
+      # board -> priced slate -> the shipped optimizer.
+      - name: In-season integration
+        run: node tools/test-integration.mjs
 
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
@@ -434,7 +439,8 @@ jobs:
 
       # NOT run here: tools/test-position-lens.mjs, tools/test-you-column.mjs,
       # tools/test-market-anchors.mjs, tools/test-vegas-slider.mjs,
-      # tools/test-qb-curve.mjs and tools/test-faab.mjs.
+      # tools/test-qb-curve.mjs, tools/test-faab.mjs and tools/test-in-season-ui.mjs
+      # (the in-season pages: rankings, player, Vegas Edge, DFS, desk, clock, hero).
       # All drive real Chromium and self-skip without playwright-core plus a
       # browser binary. Adding them without installing those would give a green
       # step that never actually ran, which is worse than not claiming coverage.

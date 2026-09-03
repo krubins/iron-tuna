@@ -7051,3 +7051,57 @@ words and its next Eastern hour.
 `tools/test-jobs.mjs` pins the table against the spec, the DST behaviour
 (7 AM Eastern is 11:00Z in September and 12:00Z in December), the phase
 order, the override validation, and the tick.
+
+## 61. September 3: the in-season test matrix (Step 31)
+
+Three layers, each a plain node script under `tools/`, each printing
+`ok`/`FAIL` lines and exiting non-zero on any failure.
+
+**Unit** (all in CI): `test-season` (the week from the games), `test-scoring`
+(the engine, K and DST, the presets), `test-market` (snapshots, de-vig, the
+Vegas projection and its confidence, the market records), `test-boards` (the
+three boards, Market Delta, the horizons), `test-signals` (the twelve
+detectors), `test-content` (the calendar, the box-score adapter on a stored
+2025 game, the briefs, the validator), `test-dfs` (both lobby CSVs, site
+scoring, the slate, the stacks, every optimizer constraint against an
+exhaustive answer), `test-health` (the job log, the assessment rules, the
+editorial actions), `test-jobs` (the schedule table, daylight saving, the
+override, the tick), `test-worker-odds` (the Odds API v4 adapter).
+
+**Integration** (`test-integration`, in CI, no network): article generation
+end to end (brief to writer to validator to store to public payload: a
+compliant draft publishes; a draft that invents a name gets one corrective
+retry then is held with the violation; no key holds with the brief; a
+non-final box score refuses; the tick produces once a week); the scheduled
+tick end to end (JOB_SCHEDULE to job_runs rows to the board to the health
+payload, with a job that throws); and DFS end to end from the stored 2026
+schedule (`tools/fixtures/games-2026.csv`, the nflverse rows for the season)
+through the week board and a priced slate to legal lineups from the shipped
+optimizer in every mode. The scripted D1 in that file (`memDb`) answers the
+handful of statements those paths use and logs every one.
+
+**UI** (`test-in-season-ui`, Chromium, self-skips in CI like the other
+browser suites; run locally with `CHROMIUM_PATH=… node
+tools/test-in-season-ui.mjs`): the shipped engine builds the payloads from
+the schedule fixture, a local server serves the real pages against them,
+and the browser drives every control. Rankings: the scoring selector changes
+a receiver's points without a reload, My League is disabled with a reason
+when nothing is saved, positions, FLEX, DST, the Vegas board, sort, search,
+a bye shown as BYE, ROS without Week 18, the playoff CTA, next-three counts,
+and a phone width with no sideways scroll and the table scrolling inside its
+container. The player page: the slug resolves, the three projections with
+rank and confidence, the Market Delta, the Take, four horizon rows with the
+Vegas basis on each, an unavailable market called unavailable (that state is
+stubbed on the payload, since the fixture has no missing market; the
+rendering is what is tested), an unknown slug. Vegas Edge: every board
+renders. DFS: the no-salary state shows no price, a slate fills the boards,
+the builder produces nine-man lineups under the cap, a lock is honoured, no
+button submits anything. The desk: the list, a published piece's prose, a
+held piece as data with its violations. The NFL clock: Week 3 from the
+schedule; the feed down says unavailable, never a calendar guess. The front
+hero: the specified copy and buttons, cards withheld with the reason when
+the odds feed has not answered, the week on the band, intel first on a phone
+in season.
+
+The one known cosmetic, the chrome's nav toggle 2 to 3px past the right edge
+at 390px, is tolerated by the overflow assertions (`<= 4`) and noted in §58.
