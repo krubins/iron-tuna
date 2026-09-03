@@ -64,7 +64,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // both read this set, so a page added to the section cannot be left ungated or
 // advertised in the sitemap while the gate is shut.
 const POST_DRAFT_PAGES = new Set(['/faab', '/weekly-intel', '/rankings', '/vegas-edge',
-  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league']);
+  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel']);
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
@@ -3966,6 +3966,24 @@ function marketPropsFrom(hist) {
   }
   return { props, movement, asOf: asOf || null };
 }
+// Game lines for a set of games, whatever week they were first written in: a
+// Week 3 line is posted during Week 1 and its OPEN is in a row tagged week 1,
+// so the game id, not the week column, is the key here.
+async function marketHistoryGames(env, gameIds) {
+  const ids = (gameIds || []).map(String).filter(Boolean).slice(0, 40);
+  if (!ids.length || !(await snapshotReady(env))) return {};
+  try {
+    const q = await env.LEADS_DB.prepare(
+      'SELECT ts, book, subject, subject_type, market, line, over_odds, under_odds FROM odds_snapshots ' +
+      'WHERE subject_type = ? AND subject IN (' + ids.map(() => '?').join(',') + ') ORDER BY ts ASC LIMIT 20000')
+      .bind('game', ...ids).all();
+    const by = {};
+    for (const r of (q.results || [])) ((by[r.subject] = by[r.subject] || {})[r.market] = by[r.subject][r.market] || []).push(r);
+    const out = {};
+    for (const [g, mk] of Object.entries(by)) { out[g] = {}; for (const [m, rows] of Object.entries(mk)) out[g][m] = marketHistoryFrom(rows); }
+    return out;
+  } catch (e) { return {}; }
+}
 async function snapshotStatus(env) {
   if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
   try {
@@ -4236,6 +4254,7 @@ function vegasProjection(markets, position, rules, ctx) {
 // mistake this costs one list to prevent.
 const MARKET_CONTRACT = 1;
 let _MARKET_MEMO = { key: '', at: 0, out: null };
+let _EDGE_MEMO = { key: '', at: 0, out: null };
 const MARKET_ROW = 5;                       // odds_overlay row 5: the usage overlay
 const MARKET_MAX_AGE_MS = 14 * 86400000;
 const MARKET_MEMO_MS = 300000;
@@ -4299,13 +4318,14 @@ async function runUsageRefresh(env, season) {
     if (r.week > maxWeek) maxWeek = r.week;
     const k = key(r.name, r.position);
     const rec = players[k] || (players[k] = { name: r.name, position: r.position, team: r.team,
-      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, points: 0 } });
+      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, tds: 0, points: 0 } });
     rec.team = r.team;
     rec.season.games++;
     rec.season.targets += r.usage.targets || 0;
     rec.season.carries += r.usage.carries || 0;
     rec.season.receptions += r.usage.receptions || 0;
     rec.season.airYards += r.usage.airYards || 0;
+    rec.season.tds += (r.stats.rushTD || 0) + (r.stats.recTD || 0);
     if (!rec.latest || r.week > rec.latest.week) {
       rec.latest = { week: r.week, opponent: r.opponent, stats: r.stats, usage: r.usage };
     }
@@ -4845,8 +4865,12 @@ function explainDelta(row, movement, env, delta) {
       : 'The market and the consensus agree on him this week.';
   } else if (dir === 'flat') {
     summary = 'Markets have moved in both directions and the net effect on his projection is small.';
+  } else if (side.length && side.every(d => d.kind === 'environment')) {
+    // Nothing player-specific moved. Say so, then say what did.
+    summary = 'No player market has moved for him. The gap is the game environment: the club\'s implied total is '
+      + (dir === 'up' ? 'up' : 'down') + ' ' + Math.abs(side[0].delta) + ' points on its season average.';
   } else {
-    const n = side.length;
+    const n = side.filter(d => d.kind !== 'environment').length;
     const opener = n >= 2 ? n + ' independent markets have moved ' + (dir === 'up' ? 'upward' : 'downward') + '.'
                           : 'One market has moved ' + (dir === 'up' ? 'upward' : 'downward') + '.';
     let strongest = '';
@@ -5065,6 +5089,465 @@ async function boardsPayload(env, opts) {
   if (_BOARDS_MEMO.size > 40) _BOARDS_MEMO = new Map();
   _BOARDS_MEMO.set(key, { at: Date.now(), out });
   return out;
+}
+
+// -- the insight detection engine ------------------------------------------
+// DETERMINISTIC RULES FIRST. Every insight here is found by arithmetic over
+// the boards, the line history and the usage overlay, carries the numbers it
+// was found from, and is stamped with when. An explainer (a template below,
+// or a model later) may put words to an insight that exists; nothing may
+// conjure one. A rule whose data no source can supply (goal-line role) is
+// listed and returns nothing, with the reason, rather than being quietly
+// absent -- so the list of rules is the list of rules.
+const INSIGHT_RULES = {
+  vegas_above_consensus: { label: 'Vegas above consensus', needs: 'boards' },
+  vegas_below_consensus: { label: 'Vegas below consensus', needs: 'boards' },
+  line_movement: { label: 'Meaningful line movement', needs: 'snapshots' },
+  production_below_opportunity: { label: 'Production below opportunity', needs: 'usage' },
+  production_above_opportunity: { label: 'Production above opportunity', needs: 'usage' },
+  role_increase: { label: 'Role increase', needs: 'usage' },
+  role_decrease: { label: 'Role decrease', needs: 'usage' },
+  target_consolidation: { label: 'Target consolidation', needs: 'usage' },
+  backfield_consolidation: { label: 'Backfield consolidation', needs: 'usage' },
+  goal_line_role_change: { label: 'Goal-line role change', needs: 'play-by-play', unavailable: PROVIDER_UNAVAILABLE.goalLineCarries },
+  td_regression: { label: 'Touchdown regression', needs: 'usage' },
+  game_script_change: { label: 'Game-script change', needs: 'snapshots' }
+};
+// Thresholds, all in one place.
+const INSIGHT_T = {
+  lineMovePct: 8, lineMoveBooks: 1,          // a prop that moved >= 8% at >= 1 book
+  tdMovePoints: 4,                            // anytime-TD probability moved >= 4 points
+  spreadMove: 2.5, totalMove: 2.5,            // a game line that moved >= 2.5 points
+  roleMinGames: ROLE_MIN_GAMES, rolePct: 25,  // touches vs season average
+  oppRatio: 0.7, oppRatioHigh: 1.4,           // points vs opportunity-implied points
+  shareLead: 0.32, shareRise: 0.08,           // a team's leading share, and how much it rose
+  tdRegressionRatio: 1.6, tdRegressionLow: 0.5, tdMinGames: 4
+};
+const _insight = (type, subject, data, magnitude, confidence, ts) =>
+  ({ id: type + ':' + (subject.key || subject.team || subject.name), type, label: INSIGHT_RULES[type].label,
+     subject, data, magnitude: _oddsRound(magnitude), confidence, ts: ts || Date.now() });
+
+function detectInsights(input) {
+  const { week, usage, weekMarkets, gameMarkets, state, rules } = input;
+  const ts = Date.now();
+  const out = [];
+  const unavailable = [];
+  for (const [k, r] of Object.entries(INSIGHT_RULES)) if (r.unavailable) unavailable.push({ rule: k, reason: r.unavailable });
+  const subj = p => ({ key: p.key, name: p.name, position: p.position, team: p.team });
+
+  // 1. Vegas vs consensus, off the week board's Market Delta.
+  for (const p of (week && week.players) || []) {
+    const d = p.marketDelta;
+    if (!d || !d.significant) continue;
+    const type = d.points > 0 ? 'vegas_above_consensus' : 'vegas_below_consensus';
+    out.push(_insight(type, subj(p), {
+      consensusPoints: p.consensus.points, vegasPoints: p.vegas.points, ironTunaPoints: p.ironTuna.points,
+      consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, ironTunaRank: p.ironTuna.rank,
+      pointsDelta: d.points, rankDelta: d.rank, classification: d.classification,
+      basis: p.vegas.basis, drivers: p.why ? p.why.drivers : [], summary: p.why ? p.why.summary : ''
+    }, Math.abs(d.rank != null ? d.rank : (d.pct || 0)), p.vegas.confidence, ts));
+  }
+
+  // 2. Line movement, per player market, off the snapshot store.
+  const byKey = new Map(((week && week.players) || []).map(p => [_oddsNorm(p.name), p]));
+  for (const [nk, hist] of Object.entries(weekMarkets || {})) {
+    const p = byKey.get(nk);
+    if (!p) continue;
+    for (const [m, h] of Object.entries(hist || {})) {
+      if (!h) continue;
+      if (m === 'anytimeTD') {
+        if (h.tdOpenProbability == null || h.tdCurrentProbability == null) continue;
+        const mv = h.tdCurrentProbability - h.tdOpenProbability;
+        if (Math.abs(mv) < INSIGHT_T.tdMovePoints) continue;
+        out.push(_insight('line_movement', subj(p), { market: m, label: 'Anytime TD',
+          openProbability: h.tdOpenProbability, currentProbability: h.tdCurrentProbability,
+          openOdds: _americanFromProb(h.tdOpenProbability / 100), currentOdds: _americanFromProb(h.tdCurrentProbability / 100),
+          books: h.books, booksMoved: h.booksMoved, direction: mv > 0 ? 'up' : 'down' }, Math.abs(mv), h.books >= 3 ? 'HIGH' : h.books === 2 ? 'MEDIUM' : 'LOW', h.lastSeen || ts));
+        continue;
+      }
+      if (h.percentChange == null || Math.abs(h.percentChange) < INSIGHT_T.lineMovePct || h.booksMoved < INSIGHT_T.lineMoveBooks) continue;
+      out.push(_insight('line_movement', subj(p), { market: m, label: WHY_MARKET_LABEL[m] || m,
+        open: h.open, current: h.current, movement: h.movement, percentChange: h.percentChange,
+        books: h.books, booksMoved: h.booksMoved, agreement: h.agreement, direction: h.movement > 0 ? 'up' : 'down' },
+        Math.abs(h.percentChange), h.books >= 3 && h.agreement >= 0.75 ? 'HIGH' : h.books >= 2 ? 'MEDIUM' : 'LOW', h.lastSeen || ts));
+    }
+  }
+
+  // 3. Usage rules. All of these need games to have been played; before Week 1
+  // the overlay is empty and every rule here returns nothing, correctly.
+  const U = usage && usage.players ? usage.players : null;
+  if (U) {
+    const r = rules || SCORING_BASE;
+    // Points per touch across the league, so 'opportunity' has a price.
+    let touchSum = 0, ptsSum = 0;
+    for (const u of Object.values(U)) {
+      if (!u.latest || u.position === 'QB') continue;
+      const t = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0);
+      touchSum += t; ptsSum += scoreStats(u.latest.stats, u.position, r);
+    }
+    const perTouch = touchSum > 0 ? ptsSum / touchSum : null;
+    // Team shares in the latest week, for consolidation.
+    const teamWeek = {};
+    for (const [k, u] of Object.entries(U)) {
+      if (!u.latest) continue;
+      const t = teamWeek[u.team] || (teamWeek[u.team] = { week: 0, targets: 0, carries: 0, players: [] });
+      if (u.latest.week > t.week) { t.week = u.latest.week; t.targets = 0; t.carries = 0; t.players = []; }
+      if (u.latest.week !== t.week) continue;
+      t.targets += u.latest.usage.targets || 0; t.carries += u.latest.usage.carries || 0;
+      t.players.push({ key: k, u });
+    }
+    for (const [k, u] of Object.entries(U)) {
+      if (!u.latest || !u.season) continue;
+      const p = byKey.get(k.split('|')[0]);
+      const s = p ? subj(p) : { key: k, name: u.name, position: u.position, team: u.team };
+      const role = roleTrendFrom(u);
+      // Role
+      if (role.games >= INSIGHT_T.roleMinGames && role.pct != null && Math.abs(role.pct) >= INSIGHT_T.rolePct) {
+        out.push(_insight(role.pct > 0 ? 'role_increase' : 'role_decrease', s,
+          { latestWeek: u.latest.week, latestTouches: role.latestTouches, seasonAvgTouches: role.avgTouches, pct: role.pct, games: role.games,
+            targets: u.latest.usage.targets, carries: u.latest.usage.carries, snapPct: u.latest.usage.snapPct },
+          Math.abs(role.pct), role.games >= 6 ? 'HIGH' : 'MEDIUM', ts));
+      }
+      // Production against opportunity, latest week
+      if (perTouch && u.position !== 'QB') {
+        const touches = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0);
+        if (touches >= 8) {
+          const expected = touches * perTouch;
+          const actual = scoreStats(u.latest.stats, u.position, r);
+          const ratio = expected > 0 ? actual / expected : null;
+          if (ratio != null && ratio <= INSIGHT_T.oppRatio) {
+            out.push(_insight('production_below_opportunity', s, { week: u.latest.week, touches, expectedPoints: _oddsRound(expected), actualPoints: _oddsRound(actual), ratio: _oddsRound(ratio * 100) / 100, leaguePointsPerTouch: _oddsRound(perTouch * 100) / 100 }, (1 - ratio) * 100, 'MEDIUM', ts));
+          } else if (ratio != null && ratio >= INSIGHT_T.oppRatioHigh) {
+            out.push(_insight('production_above_opportunity', s, { week: u.latest.week, touches, expectedPoints: _oddsRound(expected), actualPoints: _oddsRound(actual), ratio: _oddsRound(ratio * 100) / 100, leaguePointsPerTouch: _oddsRound(perTouch * 100) / 100 }, (ratio - 1) * 100, 'MEDIUM', ts));
+          }
+        }
+      }
+      // Touchdown regression: season TDs per game against the projection's rate
+      if (p && u.season.games >= INSIGHT_T.tdMinGames && p.pos !== 'QB') {
+        const projPerGame = ((p.consensus.stats.rushTD || 0) + (p.consensus.stats.recTD || 0)) / Math.max(1, p.games);
+        const actualTds = (u.season.tds != null) ? u.season.tds : null;
+        if (actualTds != null && projPerGame > 0) {
+          const actualPerGame = actualTds / u.season.games;
+          const ratio = actualPerGame / projPerGame;
+          if (ratio >= INSIGHT_T.tdRegressionRatio || ratio <= INSIGHT_T.tdRegressionLow) {
+            out.push(_insight('td_regression', s, { games: u.season.games, actualTdsPerGame: _oddsRound(actualPerGame * 100) / 100, projectedTdsPerGame: _oddsRound(projPerGame * 100) / 100, ratio: _oddsRound(ratio * 100) / 100, direction: ratio > 1 ? 'negative' : 'positive' }, Math.abs(ratio - 1) * 100, u.season.games >= 8 ? 'HIGH' : 'MEDIUM', ts));
+          }
+        }
+      }
+    }
+    // Consolidation: a club's leading share, and whether it rose.
+    for (const [team, t] of Object.entries(teamWeek)) {
+      for (const [kind, total, field] of [['target_consolidation', t.targets, 'targets'], ['backfield_consolidation', t.carries, 'carries']]) {
+        if (!(total > 0)) continue;
+        const lead = t.players.map(({ key, u }) => ({ key, u, share: (u.latest.usage[field] || 0) / total,
+          seasonShare: u.season.games > 0 && (field === 'targets' ? u.season.targets : u.season.carries) > 0
+            ? ((field === 'targets' ? u.season.targets : u.season.carries) / u.season.games) / (total) : null }))
+          .filter(x => kind === 'target_consolidation' ? x.u.position !== 'QB' : x.u.position === 'RB')
+          .sort((a, b) => b.share - a.share)[0];
+        if (!lead || lead.share < INSIGHT_T.shareLead || lead.seasonShare == null || lead.share - lead.seasonShare < INSIGHT_T.shareRise) continue;
+        const p = byKey.get(lead.key.split('|')[0]);
+        out.push(_insight(kind, p ? subj(p) : { key: lead.key, name: lead.u.name, position: lead.u.position, team },
+          { week: t.week, team, share: _oddsRound(lead.share * 100), seasonShare: _oddsRound(lead.seasonShare * 100), teamTotal: total, latest: lead.u.latest.usage[field] },
+          (lead.share - lead.seasonShare) * 100, lead.u.season.games >= 4 ? 'MEDIUM' : 'LOW', ts));
+      }
+    }
+  }
+
+  // 4. Game-script change, off the GAME lines in the snapshot store: a spread
+  // that moved toward the favourite by INSIGHT_T.spreadMove or a total that
+  // moved, with any player prop on the same game that agrees.
+  const games = (state && state.ok && state.games) || [];
+  for (const g of games) {
+    const gm = gameMarkets && gameMarkets[g.id];
+    if (!gm) continue;
+    const sp = gm.spread, tot = gm.total;
+    const spMove = sp && sp.open != null && sp.current != null ? sp.current - sp.open : 0;
+    const totMove = tot && tot.open != null && tot.current != null ? tot.current - tot.open : 0;
+    if (Math.abs(spMove) < INSIGHT_T.spreadMove && Math.abs(totMove) < INSIGHT_T.totalMove) continue;
+    // spread is the HOME margin: rising means the home side is more favoured.
+    const favouredMore = spMove > 0 ? g.home : spMove < 0 ? g.away : null;
+    const corroborating = [];
+    for (const p of (week && week.players) || []) {
+      if (p.team !== g.home && p.team !== g.away) continue;
+      const h = weekMarkets && weekMarkets[_oddsNorm(p.name)];
+      if (!h) continue;
+      for (const m of ['rushYd', 'rushAtt', 'passYd', 'rec']) {
+        const x = h[m]; if (!x || x.movement == null || x.movement === 0) continue;
+        corroborating.push({ name: p.name, position: p.position, team: p.team, market: m, movement: x.movement, percentChange: x.percentChange });
+      }
+    }
+    const runLean = favouredMore && corroborating.some(c => c.team === favouredMore && (c.market === 'rushYd' || c.market === 'rushAtt') && c.movement > 0);
+    const passDrop = favouredMore && corroborating.some(c => c.team === favouredMore && c.market === 'passYd' && c.movement < 0);
+    const story = favouredMore && (runLean || passDrop)
+      ? 'The betting market is increasingly pricing a run-favourable game script for ' + favouredMore + '.'
+      : totMove >= INSIGHT_T.totalMove ? 'The market expects more scoring in this game than it did when the line opened.'
+      : totMove <= -INSIGHT_T.totalMove ? 'The market expects less scoring in this game than it did when the line opened.'
+      : 'The spread has moved without a matching move in the player markets.';
+    out.push(_insight('game_script_change', { key: g.id, team: favouredMore || g.home, game: g.away + ' at ' + g.home, home: g.home, away: g.away },
+      { spreadOpen: sp ? sp.open : null, spreadCurrent: sp ? sp.current : null, spreadMove: _oddsRound(spMove),
+        totalOpen: tot ? tot.open : null, totalCurrent: tot ? tot.current : null, totalMove: _oddsRound(totMove),
+        favouredMore, corroborating, interpretation: story },
+      Math.max(Math.abs(spMove), Math.abs(totMove)), corroborating.length >= 2 ? 'HIGH' : corroborating.length ? 'MEDIUM' : 'LOW', ts));
+  }
+
+  out.sort((a, b) => (_confScore[b.confidence] - _confScore[a.confidence]) || b.magnitude - a.magnitude);
+  return { ok: true, count: out.length, insights: out, rules: Object.keys(INSIGHT_RULES), unavailable, thresholds: INSIGHT_T, ts };
+}
+
+// -- Vegas Edge ---------------------------------------------------------------
+// The primary product: what the money says this week, in six boards, each one
+// a plain sort over data the engine already holds. `basis` on every board says
+// whether a number is a quoted market or derived from the game lines, because
+// on a week with no player props (today) every player board is the latter.
+const EDGE_CONTRACT = 1;
+function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
+  const players = (week && week.players) || [];
+  const hasProps = players.some(p => /^props/.test(p.vegas.basis));
+  // Skill positions only. A defence's rank swings twenty slots on a game total
+  // because its whole line IS the environment; that is not a disagreement
+  // about a player, and it would crowd every real one off the board.
+  const sig = players.filter(p => p.marketDelta && p.marketDelta.significant && p.pos !== 'K' && p.pos !== 'DEF');
+  const brief = p => ({ name: p.name, position: p.position, team: p.team, key: p.key,
+    consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, ironTunaRank: p.ironTuna.rank,
+    consensusPoints: p.consensus.points, vegasPoints: p.vegas.points, ironTunaPoints: p.ironTuna.points,
+    delta: p.marketDelta, confidence: p.vegas.confidence, basis: p.vegas.basis, why: p.why ? p.why.summary : '' });
+  const vsExperts = {
+    buys: sig.filter(p => p.marketDelta.points > 0).sort((a, b) => (b.marketDelta.rank || 0) - (a.marketDelta.rank || 0) || b.marketDelta.points - a.marketDelta.points).slice(0, 12).map(brief),
+    fades: sig.filter(p => p.marketDelta.points < 0).sort((a, b) => (a.marketDelta.rank || 0) - (b.marketDelta.rank || 0) || a.marketDelta.points - b.marketDelta.points).slice(0, 12).map(brief)
+  };
+  // Movers: every player market with a real move, biggest first.
+  const movers = [];
+  const byKey = new Map(players.map(p => [_oddsNorm(p.name), p]));
+  for (const [nk, hist] of Object.entries(weekMarkets || {})) {
+    const p = byKey.get(nk); if (!p) continue;
+    for (const [m, h] of Object.entries(hist || {})) {
+      if (!h) continue;
+      if (m === 'anytimeTD') {
+        if (h.tdOpenProbability == null || h.tdCurrentProbability == null || h.tdOpenProbability === h.tdCurrentProbability) continue;
+        movers.push({ name: p.name, position: p.position, team: p.team, market: m, label: 'Anytime TD', openOdds: _americanFromProb(h.tdOpenProbability / 100), currentOdds: _americanFromProb(h.tdCurrentProbability / 100),
+          openProbability: h.tdOpenProbability, currentProbability: h.tdCurrentProbability, movement: _oddsRound(h.tdCurrentProbability - h.tdOpenProbability), percentChange: h.tdOpenProbability ? Math.round((h.tdCurrentProbability - h.tdOpenProbability) / h.tdOpenProbability * 1000) / 10 : null, books: h.books, booksMoved: h.booksMoved });
+        continue;
+      }
+      if (!h.movement) continue;
+      movers.push({ name: p.name, position: p.position, team: p.team, market: m, label: WHY_MARKET_LABEL[m] || m, open: h.open, current: h.current, movement: h.movement, percentChange: h.percentChange, books: h.books, booksMoved: h.booksMoved, agreement: h.agreement });
+    }
+  }
+  movers.sort((a, b) => Math.abs(b.percentChange || 0) - Math.abs(a.percentChange || 0));
+  // TD board: a quoted anytime-TD probability where a book posted one, else
+  // derived from the blended weekly TD line (Poisson), and labelled.
+  const tdBoard = players.filter(p => p.pos !== 'K' && p.pos !== 'DEF' && p.games > 0).map(p => {
+    const q = p.vegas.td;
+    const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0) + (p.pos === 'QB' ? 0 : 0);
+    const derived = Math.round((1 - Math.exp(-lam)) * 1000) / 10;
+    return { name: p.name, position: p.position, team: p.team, probability: q ? q.probability : derived, basis: q ? 'anytime-td-market' : 'derived',
+             books: q ? q.books : null, expectedTds: _oddsRound(lam * 100) / 100, opponent: p.weeks[0] && p.weeks[0].opponent };
+  }).sort((a, b) => b.probability - a.probability).slice(0, 40);
+  // Volume board: market-implied touches. Props where present, else the
+  // environment-scaled line, labelled.
+  const volumeBoard = players.filter(p => p.pos !== 'K' && p.pos !== 'DEF' && p.pos !== 'QB' && p.games > 0).map(p => {
+    const s = p.vegas.stats;
+    const touches = (s.rec || 0) + (s.rushAtt != null ? s.rushAtt : (s.rushYd || 0) / 4.3);
+    return { name: p.name, position: p.position, team: p.team, receptions: _oddsRound(s.rec || 0), rushAttempts: s.rushAtt != null ? _oddsRound(s.rushAtt) : null,
+             rushYards: _oddsRound(s.rushYd || 0), recYards: _oddsRound(s.recYd || 0), impliedTouches: _oddsRound(touches), basis: /^props/.test(p.vegas.basis) ? 'props' : 'derived from game lines' };
+  }).sort((a, b) => b.impliedTouches - a.impliedTouches).slice(0, 40);
+  // Game environments, with movement off the game snapshots.
+  const gameEnvironments = ((state && state.ok && state.games) || []).map(g => {
+    const gm = gameMarkets && gameMarkets[g.id];
+    const mv = gm ? { spread: gm.spread ? _oddsRound((gm.spread.current || 0) - (gm.spread.open || 0)) : null, total: gm.total ? _oddsRound((gm.total.current || 0) - (gm.total.open || 0)) : null } : null;
+    return { id: g.id, game: g.away + ' at ' + g.home, home: g.home, away: g.away, kickoff: g.kickoff, status: g.status,
+             total: g.total, spread: g.spread, impliedHome: g.impliedHome, impliedAway: g.impliedAway,
+             favourite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, movement: mv };
+  }).filter(g => g.total != null).sort((a, b) => b.total - a.total);
+  const hidden = (insights && insights.insights || []).filter(i => i.type === 'game_script_change');
+  return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
+           note: hasProps ? null : 'No sportsbook has a player prop on this board yet. Every player number here is derived from the posted game lines; the game board is quoted.',
+           vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard, gameEnvironments, hiddenSignals: hidden };
+}
+
+// -- the Wednesday rest-of-season update ---------------------------------------
+// Once a week the ROS board is frozen into its own table so next week's can be
+// compared to it: that is where risers and fallers come from, and it is the
+// only way 'previous ROS rank' can be a fact rather than a memory. Runs inside
+// the daily 11:00Z job when it is Wednesday in New York (7am EDT, 6am EST), and
+// on demand from /api/admin/market-status?ros=1.
+const ROS_DDL = 'CREATE TABLE IF NOT EXISTS ros_rankings (id INTEGER PRIMARY KEY AUTOINCREMENT, season INTEGER, week INTEGER, built_at INTEGER NOT NULL, horizon TEXT NOT NULL, payload TEXT NOT NULL)';
+const ROS_TOP_PER_POS = 80;
+let _ROS_READY = false;
+async function rosReady(env) {
+  if (_ROS_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { await env.LEADS_DB.prepare(ROS_DDL).run(); _ROS_READY = true; return true; } catch (e) { return false; }
+}
+function _rosSlim(board) {
+  const byPos = {};
+  for (const p of board.players) (byPos[p.position] = byPos[p.position] || []).push(p);
+  const rows = [];
+  for (const list of Object.values(byPos)) {
+    list.sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, ROS_TOP_PER_POS).forEach(p => rows.push({
+      key: p.key, name: p.name, position: p.position, team: p.team,
+      rank: p.ironTuna.rank, points: p.ironTuna.points, ppg: p.games ? _oddsRound(p.ironTuna.points / p.games) : null,
+      consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, confidence: p.ironTuna.confidence, vegasBasis: p.vegas.basis,
+      games: p.games, byes: p.byes, injury: p.injury, roleTrend: p.roleTrend ? { label: p.roleTrend.label, pct: p.roleTrend.pct } : null,
+      scheduleDifficulty: p.scheduleDifficulty, delta: p.marketDelta ? { points: p.marketDelta.points, rank: p.marketDelta.rank, classification: p.marketDelta.classification } : null
+    }));
+  }
+  return rows;
+}
+async function runRosSnapshot(env, opts) {
+  if (!(await rosReady(env))) return { ok: false, error: 'no_db' };
+  const o = opts || {};
+  const sched = await scheduleCacheRead(env);
+  if (!sched) return { ok: false, error: 'no_schedule' };
+  const state = nflSeasonState(sched, Date.now());
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  if (week == null) return { ok: false, error: 'not_regular_season' };
+  const out = {};
+  for (const hz of ['ros', 'next3', 'playoffs']) {
+    const board = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: 'ppr', through: o.through || null });
+    if (!board.ok) continue;
+    const rows = _rosSlim(board);
+    await env.LEADS_DB.prepare('INSERT INTO ros_rankings (season, week, built_at, horizon, payload) VALUES (?, ?, ?, ?, ?)')
+      .bind(sched.season, week, Date.now(), hz, JSON.stringify({ weeks: board.horizon.weeks, rows })).run();
+    out[hz] = rows.length;
+  }
+  return { ok: true, season: sched.season, week, stored: out };
+}
+async function rosSnapshots(env, horizon, limit) {
+  if (!(await rosReady(env))) return [];
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT season, week, built_at, payload FROM ros_rankings WHERE horizon = ? ORDER BY built_at DESC LIMIT ?')
+      .bind(horizon, limit || 2).all();
+    return (q.results || []).map(r => ({ season: r.season, week: r.week, builtAt: r.built_at, ...JSON.parse(r.payload) }));
+  } catch (e) { return []; }
+}
+// Why a rank moved, from the two rows themselves. Every reason is a field
+// that differs between then and now; nothing else is a reason.
+function rosMoveReasons(prev, cur) {
+  const r = [];
+  if ((prev.injury && prev.injury.status) !== (cur.injury && cur.injury.status)) {
+    r.push(cur.injury ? 'now listed ' + cur.injury.status + (cur.injury.gamesOut ? ' (' + cur.injury.gamesOut + ' games)' : '') : 'off the injury list');
+  } else if (prev.injury && cur.injury && prev.injury.gamesOut !== cur.injury.gamesOut) {
+    r.push('expected absence ' + prev.injury.gamesOut + ' to ' + cur.injury.gamesOut + ' games');
+  }
+  if (prev.roleTrend && cur.roleTrend && prev.roleTrend.label !== cur.roleTrend.label && cur.roleTrend.label !== 'no data') r.push('role trend ' + cur.roleTrend.label + (cur.roleTrend.pct != null ? ' (' + (cur.roleTrend.pct > 0 ? '+' : '') + cur.roleTrend.pct + '% touches)' : ''));
+  if (prev.games !== cur.games) r.push('games remaining ' + prev.games + ' to ' + cur.games);
+  if (prev.delta && cur.delta && prev.delta.classification !== cur.delta.classification) r.push('market delta now ' + cur.delta.classification.toLowerCase());
+  if (prev.scheduleDifficulty && cur.scheduleDifficulty && prev.scheduleDifficulty.label !== cur.scheduleDifficulty.label) r.push('schedule now ' + cur.scheduleDifficulty.label.toLowerCase());
+  if (prev.ppg != null && cur.ppg != null && Math.abs(cur.ppg - prev.ppg) >= 0.5) r.push('projected ' + (cur.ppg > prev.ppg ? '+' : '') + _oddsRound(cur.ppg - prev.ppg) + ' points per game');
+  if (!r.length) r.push('other players moved around him');
+  return r;
+}
+async function rosUpdatePayload(env, opts) {
+  const o = opts || {};
+  const snaps = await rosSnapshots(env, 'ros', 2);
+  const cur = snaps[0] || null, prev = snaps[1] || null;
+  const live = await boardsPayload(env, { horizon: 'ros', position: 'ALL', preset: o.preset || 'ppr', through: o.through || null });
+  const movers = { risers: [], fallers: [] };
+  if (cur && prev) {
+    const pm = new Map(prev.rows.map(r => [r.key, r]));
+    for (const c of cur.rows) {
+      const p = pm.get(c.key); if (!p || p.rank === c.rank) continue;
+      const row = { name: c.name, position: c.position, team: c.team, previousRank: p.rank, currentRank: c.rank, move: p.rank - c.rank, reasons: rosMoveReasons(p, c) };
+      (c.rank < p.rank ? movers.risers : movers.fallers).push(row);
+    }
+    movers.risers.sort((a, b) => b.move - a.move); movers.fallers.sort((a, b) => a.move - b.move);
+    movers.risers = movers.risers.slice(0, 15); movers.fallers = movers.fallers.slice(0, 15);
+  }
+  // Market vs ROS: only where a market genuinely exists for the week -- a
+  // priced prop or a posted line -- does the week's Market Delta get to say
+  // whether it supports the longer-term rank. Fitted weeks are not a market.
+  const week = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: o.preset || 'ppr' });
+  const marketVsRos = [];
+  if (live.ok && week.ok) {
+    const wk = new Map(week.players.map(p => [p.key, p]));
+    for (const p of live.players) {
+      const w = wk.get(p.key); if (!w || !w.marketDelta || !w.marketDelta.significant) continue;
+      if (!(/^props/.test(w.vegas.basis) || w.vegas.basis === 'gamelines')) continue;
+      const supports = (w.marketDelta.points > 0 && p.ironTuna.rank <= p.consensus.rank) || (w.marketDelta.points < 0 && p.ironTuna.rank >= p.consensus.rank);
+      marketVsRos.push({ name: p.name, position: p.position, team: p.team, rosRank: p.ironTuna.rank, rosConsensusRank: p.consensus.rank,
+        weekDelta: w.marketDelta, weekBasis: w.vegas.basis, weekConfidence: w.vegas.confidence, verdict: supports ? 'supports' : 'contradicts' });
+    }
+    marketVsRos.sort((a, b) => Math.abs(b.weekDelta.rank || 0) - Math.abs(a.weekDelta.rank || 0));
+  }
+  return { ok: live.ok, contract: 1, season: live.season, currentWeek: live.currentWeek,
+           featured: { builtAt: cur ? cur.builtAt : null, week: cur ? cur.week : null, previousWeek: prev ? prev.week : null },
+           choices: [
+             { horizon: 'next3', title: 'Next 3 Weeks', blurb: 'For managers making immediate lineup, trade and roster decisions.' },
+             { horizon: 'ros', title: 'Rest of Season', blurb: 'Overall player value for the remainder of the fantasy season.' },
+             { horizon: 'playoffs', title: 'Fantasy Playoffs: Weeks 15-17', blurb: 'Players ranked specifically for the fantasy playoffs.' } ],
+           risers: movers.risers, fallers: movers.fallers, marketVsRos: marketVsRos.slice(0, 20),
+           snapshotNote: cur && prev ? null : cur ? 'One weekly snapshot exists; risers and fallers appear once a second Wednesday has run.' : 'No Wednesday snapshot has run yet.' };
+}
+
+// -- the player intel payload --------------------------------------------------
+// One player, every horizon, the props behind him, and a take assembled only
+// from fields that exist. The take is a template, not a model: it can point at
+// numbers, it cannot invent a reason.
+function buildTake(rows, props, usage) {
+  const s = [];
+  const w = rows.week, r = rows.ros, pf = rows.playoffs;
+  const pos = (w || r || pf || {}).position || '';
+  if (w) {
+    s.push(`This week Iron Tuna has him ${pos}${w.ironTuna.rank}; the consensus says ${pos}${w.consensus.rank} and the market ${pos}${w.vegas.rank} (${w.vegas.basis}, ${w.vegas.confidence.toLowerCase()} confidence).`);
+    if (w.marketDelta && w.marketDelta.significant) {
+      s.push(`Market Delta ${w.marketDelta.points > 0 ? '+' : ''}${w.marketDelta.points} points, ${w.marketDelta.rank > 0 ? '+' : ''}${w.marketDelta.rank} slots: ${w.marketDelta.classification.toLowerCase()}.`);
+      if (w.why && w.why.summary) s.push(w.why.summary);
+    } else {
+      s.push('The market and the consensus agree on him this week.');
+    }
+    if (w.injury && w.injury.status) s.push(`He is listed ${w.injury.status}${w.injury.gamesOut ? ', expected to miss ' + w.injury.gamesOut + ' game' + (w.injury.gamesOut === 1 ? '' : 's') : ''}.`);
+  }
+  if (usage && usage.latest && usage.season && usage.season.games >= 1) {
+    const u = usage.latest.usage;
+    const bits = [];
+    if (u.targets != null) bits.push(`${u.targets} targets`);
+    if (u.carries) bits.push(`${u.carries} carries`);
+    if (u.snapPct != null) bits.push(`${Math.round(u.snapPct * 100)}% of snaps`);
+    if (bits.length) s.push(`Week ${usage.latest.week} usage: ${bits.join(', ')}` + (rows.week && rows.week.roleTrend && rows.week.roleTrend.label !== 'no data' && rows.week.roleTrend.label !== 'flat' ? `, a role trending ${rows.week.roleTrend.label} (${rows.week.roleTrend.pct > 0 ? '+' : ''}${rows.week.roleTrend.pct}% on his season average).` : '.'));
+  }
+  if (r) {
+    s.push(`Rest of season: ${pos}${r.ironTuna.rank} against a consensus ${pos}${r.consensus.rank}, ${r.games} games left${r.byes.length ? ', bye week ' + r.byes.join(' and ') : ''}, ${r.ironTuna.confidence.toLowerCase()} confidence` + (r.scheduleDifficulty ? `, ${r.scheduleDifficulty.label.toLowerCase()} schedule.` : '.'));
+  }
+  if (pf) {
+    s.push(`Fantasy playoffs (Weeks 15-17): ${pos}${pf.ironTuna.rank}, ${pf.games} games` + (pf.scheduleDifficulty ? `, ${pf.scheduleDifficulty.label.toLowerCase()} schedule` : '') + `, ${pf.vegas.basis === 'ratings' ? 'no book has posted those games yet' : pf.vegas.basis}.`);
+  }
+  const propsN = Object.keys(props || {}).length;
+  if (!propsN && w) s.push('No sportsbook has a prop on him this week; his Vegas number is the game line\'s scoring environment applied to his line.');
+  return s.join(' ');
+}
+async function playerIntelPayload(env, name, position, opts) {
+  const o = opts || {};
+  const pos = String(position || '').toUpperCase().replace('DST', 'DEF');
+  const key = _oddsNorm(name) + '|' + pos;
+  const rows = {};
+  for (const hz of Object.keys(HORIZONS)) {
+    const b = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: o.preset || 'ppr', through: o.through || null });
+    if (!b.ok) continue;
+    const row = b.players.find(p => p.key === key);
+    if (row) rows[hz] = row;
+  }
+  if (!Object.keys(rows).length) return { ok: false, error: 'off_board', name, position: pos };
+  const hist = await marketHistoryAll(env, name);
+  const mk = marketPropsFrom(hist);
+  const usage = await usageCacheRead(env);
+  const u = usage && usage.players ? usage.players[key] : null;
+  const w = rows.week || null;
+  return {
+    ok: true, contract: 1,
+    player: { name: (w || rows.ros || rows.playoffs || rows.next3).name, position: pos === 'DEF' ? 'DST' : pos, team: (w || rows.ros || rows.playoffs || rows.next3).team, key },
+    horizons: rows,
+    thisWeek: w ? {
+      ironTuna: w.ironTuna, consensus: w.consensus, vegas: w.vegas, marketDelta: w.marketDelta, why: w.why,
+      opponent: w.weeks[0] ? w.weeks[0].opponent : null, home: w.weeks[0] ? w.weeks[0].home : null,
+      environment: w.weeks[0] ? w.weeks[0].env : null, kickoff: w.weeks[0] ? w.weeks[0].kickoff : null, gameStatus: w.weeks[0] ? w.weeks[0].status : null,
+      vegasProjection: w.weeks[0] ? w.weeks[0].vegasProjection : null, injury: w.injury, roleTrend: w.roleTrend
+    } : null,
+    props: mk.props, movement: mk.movement, propsAsOf: mk.asOf,
+    tdProbability: w && w.vegas.td ? { probability: w.vegas.td.probability, basis: 'anytime-td-market', books: w.vegas.td.books }
+      : w ? { probability: Math.round((1 - Math.exp(-((w.ironTuna.stats.rushTD || 0) + (w.ironTuna.stats.recTD || 0)))) * 1000) / 10, basis: 'derived' } : null,
+    usage: u ? { latest: u.latest, season: u.season, throughWeek: usage.throughWeek } : null,
+    take: buildTake(rows, mk.props, u)
+  };
 }
 
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
@@ -5610,6 +6093,40 @@ export default {
       });
       _MARKET_MEMO = { key: mkey, at: Date.now(), out };
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    // Vegas Edge, the signals behind it, the Wednesday update, and one player.
+    if (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals' || url.pathname === '/api/ros-update' || url.pathname === '/api/intel/player') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
+      const o = { preset: SCORING_PRESETS[preset] ? preset : 'ppr',
+                  through: /^1[0-8]$/.test(url.searchParams.get('through') || '') ? parseInt(url.searchParams.get('through'), 10) : null };
+      if (url.pathname === '/api/intel/player') {
+        const name = String(url.searchParams.get('name') || '').slice(0, 80);
+        const pos = String(url.searchParams.get('pos') || '').slice(0, 4);
+        if (!name || !pos) return json({ ok: false, error: 'name_and_pos' }, 400, c);
+        const out = await playerIntelPayload(env, name, pos, o);
+        return json(out, out.ok ? 200 : 404, { ...c, 'cache-control': 'public, max-age=300' });
+      }
+      if (url.pathname === '/api/ros-update') {
+        const out = await rosUpdatePayload(env, o);
+        return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=600' });
+      }
+      const ek = url.pathname + '|' + o.preset;
+      if (_EDGE_MEMO.key === ek && Date.now() - _EDGE_MEMO.at < 300000) return json(_EDGE_MEMO.out, 200, { ...c, 'cache-control': 'public, max-age=300' });
+      const week = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: o.preset });
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const [weekMarkets, gameMarkets, usage] = await Promise.all([
+        curWeek != null && sched ? marketHistoryWeek(env, sched.season, curWeek) : {},
+        marketHistoryGames(env, (state.ok ? state.games : []).map(g => g.id)),
+        usageCacheRead(env)
+      ]);
+      const signals = detectInsights({ week: week.ok ? week : null, usage, weekMarkets, gameMarkets, state, rules: scoringRules(o.preset) });
+      const out = url.pathname === '/api/signals' ? signals : buildVegasEdge(week.ok ? week : null, weekMarkets, gameMarkets, state, signals);
+      _EDGE_MEMO = { key: ek, at: Date.now(), out };
+      return json(out, 200, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // Line movement for one market. `subject` is the player's name as the book
     // published it, or a game id; `market` is an Iron Tuna stat key.
@@ -6425,6 +6942,10 @@ export default {
       if (url.searchParams.get('usage') === '1') {
         try { usageRan = await runUsageRefresh(env); } catch (e) { usageRan = { ok: false, error: (e && e.message) || 'failed' }; }
       }
+      let rosRan = null;
+      if (url.searchParams.get('ros') === '1') {
+        try { rosRan = await runRosSnapshot(env); } catch (e) { rosRan = { ok: false, error: (e && e.message) || 'failed' }; }
+      }
       const usage = await usageCacheRead(env);
       let sample = null;
       if (url.searchParams.get('sample') === '1') {
@@ -6437,7 +6958,8 @@ export default {
                          players: Object.keys(usage.players || {}).length, updatedAt: usage.updatedAt } : null,
         scoring: { presets: Object.keys(SCORING_PRESETS), base: SCORING_BASE },
         unavailable: PROVIDER_UNAVAILABLE,
-        snapRan, usageRan, sample }, 200, c);
+        ros: { snapshots: (await rosSnapshots(env, 'ros', 3)).map(x => ({ season: x.season, week: x.week, builtAt: x.builtAt, rows: x.rows.length })) },
+        snapRan, usageRan, rosRan, sample }, 200, c);
     }
     if (url.pathname === '/api/admin/x-post-now') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -6884,6 +7406,12 @@ export default {
         __assetReq = new Request(new URL('/post-draft', url).toString(), request);
       }
       else if (/^\/in-season\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/post-draft', url).toString(), request);
+      // /in-season/player/<slug>: one shell for every player, like /player/<slug>,
+      // gated with the rest of the section.
+      else if (/^\/in-season\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) {
+        const open = POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request);
+        __assetReq = new Request(new URL(open ? '/player-intel' : '/post-draft', url).toString(), request);
+      }
       // The in-season tools are deployed but closed (see POST_DRAFT_PAGES above).
       // A closed route serves the waiting-list gate rather than redirecting to it,
       // so the reader keeps the URL they clicked and the page they were promised
@@ -6982,6 +7510,15 @@ export default {
       ctx.waitUntil(runUsageRefresh(env)
         .then(r => console.log('usage refresh:', JSON.stringify(r)))
         .catch(e => console.error('usage refresh failed:', e && e.message)));
+      // The Wednesday rest-of-season update. 11:00Z is 7am in New York during
+      // daylight time and 6am after it ends; either is before anyone is
+      // setting a lineup. Runs AFTER the schedule, odds and usage pulls above
+      // have had a moment, since it reads all three.
+      if (new Intl.DateTimeFormat('en-US', { timeZone: LEAD_TZ, weekday: 'short' }).format(new Date()) === 'Wed') {
+        ctx.waitUntil(new Promise(r => setTimeout(r, 20000)).then(() => runRosSnapshot(env))
+          .then(r => console.log('ros snapshot:', JSON.stringify(r)))
+          .catch(e => console.error('ros snapshot failed:', e && e.message)));
+      }
       ctx.waitUntil(snapshotPrune(env, SNAP_KEEP_DAYS)
         .then(r => console.log('snapshot prune:', JSON.stringify(r)))
         .catch(e => console.error('snapshot prune failed:', e && e.message)));

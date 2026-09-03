@@ -57,7 +57,7 @@ const H = new Function(
   cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' +
   cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
-  cut('// -- kickers and defences, scored', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
+  cut('// -- kickers and defences, scored', '// -- the insight detection engine') + '\n' +
   'return { scoringRules, scoreStats, scoreAny, scoreKickerStats, scoreDefenseStats, SCORING_KDEF, ' +
   'nflSeasonState, teamRatingsFrom, weekEnvironment, weeklyStats, horizonWeeks, marketDelta, MARKET_DELTA, ' +
   'explainDelta, roleTrendFrom, buildBoards, HORIZONS, IT_BLEND, marketHistoryFrom, marketPropsFrom, _oddsProjectionIndex };'

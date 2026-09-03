@@ -6690,3 +6690,43 @@ all, as it does today. Optional:
 
 All in the Cloudflare dashboard as secrets. None is in the repo, `.dev.vars`
 is gitignored, and `providerReport` will never print one.
+
+## 54. September 3: the three boards, Market Delta, Vegas Edge, and the rest of Steps 9 to 17
+
+### 54a. Three boards, four horizons (`buildBoards`)
+
+Every player carries three numbers, and the distinction is the product:
+
+| Board | What it is |
+|---|---|
+| **Consensus** | The committed projection spread over the games he can play. Odds-blind, flat across weeks. A pro-rated row (§48) is un-rated first and divided by the games he actually plays. |
+| **Vegas** | The market, in strictly descending order of evidence: a priced player prop for the week (`props`); the posted game line's implied scoring environment applied to his line (`gamelines`); the fitted team ratings for a fixture no book has posted (`ratings`, graded LOW because it is a projection *of* the market). `basis` says which, on every row. |
+| **Iron Tuna** | The blend, weighted by what the Vegas side knows (`IT_BLEND`: 0.75 / 0.6 / 0.45 by confidence), plus a bounded role nudge once three games of usage exist. |
+
+Horizons: `week`, `next3`, `ros` (through 17 by default; `?through=18` if a league says so), `playoffs` (15-17 only, never 18). Injury absences are anchored to the CURRENT week, not the horizon's first week; the first cut zeroed a Week-2 four-game absence out of the playoffs board, which `test-boards.mjs` now pins. The per-week environment factor is the posted implied total (or fitted expected points) over the club's season mean, clamped to `WEEK_ENV_CLAMP`; touchdowns follow it fully, yards at the square root, kickers fully, defences on the points-allowed factor inverted. `_mktFit` was extracted from `marketSeasonTotals` (output unchanged) so a single future fixture can be projected from the same ratings.
+
+`/api/boards?horizon=&pos=&scoring=&through=` ships stat lines AND points; `/in-season/rankings` re-scores in the browser at Standard / Half PPR / PPR / My League, re-ranks all three boards, and recomputes Market Delta with the thresholds the payload shipped. FLEX pools RB/WR/TE; K and DST score on the engine's `scoreKickerStats` / `scoreDefenseStats`, held to `index.html` and `it-league.js` (which now scores them too).
+
+### 54b. Market Delta and the why
+
+`MARKET_DELTA` is the only place a threshold lives. The primary version is points (Vegas minus consensus); the rank delta sits beside it; the classification reads both, whichever is louder, with an absolute points floor so rounding on a small line cannot read as strong. `explainDelta` lists every driver as a number (prop open to current, anytime-TD odds open to current, team implied total against season average) and assembles a sentence only from drivers that exist. An environment-only gap says "No player market has moved for him" rather than pretending one did.
+
+### 54c. Vegas Edge (`/in-season/vegas-edge`, `/api/vegas-edge`)
+
+Six boards off one payload: Vegas vs. Experts (skill positions only; a DST's rank swings twenty slots on a total because its whole line is the environment), Market Movers, TD Board, Volume Board, Game Environments (with movement off the game-line snapshots, which are keyed by game id because a Week 3 line opens during Week 1), and Hidden Market Signals (the `game_script_change` insights). Every player board says whether a number is quoted or derived; the payload carries a `note` when no prop exists on the week.
+
+### 54d. The insight engine (`detectInsights`)
+
+Twelve rules in `INSIGHT_RULES`, thresholds in `INSIGHT_T`, every insight carrying subject, type, supporting data, magnitude, confidence and timestamp. The usage rules (production vs opportunity, role change, consolidation, TD regression) return nothing until games have been played; `goal_line_role_change` is declared with its reason (play-by-play only) and returns nothing. `/api/signals`. The explainer is a template; a model may put words to an insight that exists and may not conjure one.
+
+### 54e. The Wednesday update (`runRosSnapshot`, `/api/ros-update`)
+
+Inside the daily 11:00Z job when it is Wednesday in New York (7am EDT, 6am EST), the ROS, next-3 and playoffs boards are frozen into `ros_rankings`. Risers and fallers come from the previous snapshot, with reasons that are only fields that differ between the two rows (`rosMoveReasons`). Market vs. ROS counts only weeks with a real market (a prop or a posted line), never a fitted one. On demand: `/api/admin/market-status?ros=1`. The rankings page features the three choices and the movers at the top of `/in-season/rankings`.
+
+### 54f. Player intel (`/in-season/player/<slug>`, `/api/intel/player`)
+
+One shell for every player, resolved through `player-search.js` like `/player/<slug>`. Every horizon, the props and their movement, TD probability (quoted or derived, labelled), usage, injury, environment, and an Iron Tuna Take built by `buildTake` from fields that exist.
+
+### 54g. What is derived today, and will stop being derived
+
+With no `ODDS_API_KEY`, every player number on every board is `gamelines` or `ratings`; the site says so on each row and on each page. The first live prop pull switches `basis` to `props` per player with no code change. Usage appears after Week 1.

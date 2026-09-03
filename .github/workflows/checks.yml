@@ -267,6 +267,12 @@ jobs:
       - name: The three boards, Market Delta and the explainer
         run: node tools/test-boards.mjs
 
+      # The insight rules (deterministic, data-carrying, and returning nothing
+      # from the usage rules until games have been played), Vegas Edge's six
+      # boards, and the Wednesday movers' reasons.
+      - name: Insight detection, Vegas Edge and the Wednesday update
+        run: node tools/test-signals.mjs
+
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
 

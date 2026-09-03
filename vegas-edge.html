@@ -17,11 +17,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>Vegas Edge: Where the Betting Market and the Rankings Disagree | Iron Tuna</title>
 <meta name="description" content="A sportsbook prices players with real money and corrects in public. A ranking does not. Iron Tuna prices every player against the market and publishes the players the two most disagree about.">
-<link rel="canonical" href="https://irontuna.com/vegas-edge">
+<link rel="canonical" href="https://irontuna.com/in-season/vegas-edge">
 <meta property="og:title" content="Vegas Edge">
 <meta property="og:description" content="The players the betting market rates differently from the consensus rankings, and what that is worth.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://irontuna.com/vegas-edge">
+<meta property="og:url" content="https://irontuna.com/in-season/vegas-edge">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/site.css">
@@ -40,6 +40,19 @@ p{color:var(--sec);margin:0 0 16px}
 .btn:hover{filter:brightness(1.06);text-decoration:none}
 .btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+.ve-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.ve-two h3{margin:0 0 8px;font-size:15px;color:var(--sec)}
+.ve-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.ve-card b{color:var(--text);font-size:15px} .ve-card b a{color:inherit;text-decoration:none}
+.ve-card .ve-ranks{display:flex;gap:12px;font-size:13px;color:var(--sec);margin:6px 0}
+.ve-card .ve-ranks span b{font-size:13px}
+.ve-card .ve-cls{font-size:11px;font-weight:800;letter-spacing:.06em}
+.ve-card .ve-cls.buy{color:var(--teal)} .ve-card .ve-cls.fade{color:var(--danger)}
+.ve-card p{font-size:13px;margin:6px 0 0;color:var(--sec)}
+.ve-card ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--sec)}
+.ve-sig{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:14px}
+.ve-sig b{color:var(--text)} .ve-sig ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--sec)}
+.ve-conf{font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--sec);margin-left:6px}
 </style>
 </head>
 <body>
@@ -68,13 +81,35 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="is-lede">A sportsbook posts a number with its own money behind it, and sharp bettors move it within minutes of news. A top 200 costs nothing to publish and nothing to be wrong about. These are the players where the two are furthest apart.</p>
 <div class="its-strip" data-season-strip></div>
 
-<h2>Today’s disagreements</h2>
-<div class="is-scroll"><table class="is-table" id="veTable" hidden>
-  <thead><tr><th>Player</th><th class="num">Consensus</th><th class="num">Vegas</th><th class="num">Iron Tuna</th><th class="num">Gap</th></tr></thead>
-  <tbody id="veBody"></tbody>
-</table></div>
-<p class="is-empty" id="veEmpty">Reading the board&hellip;</p>
-<p class="is-note" id="veAsOf"></p>
+<p class="is-note" id="veNote"></p>
+
+<h2>Vegas vs. Experts</h2>
+<p>The largest disagreements between the betting market and the consensus rankings this week, with the data behind each one.</p>
+<div class="ve-two">
+  <div><h3>The market is higher</h3><div id="veBuys"></div></div>
+  <div><h3>The market is lower</h3><div id="veFades"></div></div>
+</div>
+
+<h2>Market Movers</h2>
+<p>The largest meaningful prop changes since each line opened. Open to current, off the median book.</p>
+<div class="is-scroll"><table class="is-table" id="veMovers" hidden><thead><tr><th>Player</th><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Move</th><th class="num">Books</th></tr></thead><tbody></tbody></table></div>
+<p class="is-empty" id="veMoversEmpty">No player prop has moved yet this week.</p>
+
+<h2>TD Board</h2>
+<p>Players ranked by the probability of scoring at least once this week.</p>
+<div class="is-scroll"><table class="is-table" id="veTd" hidden><thead><tr><th>#</th><th>Player</th><th>Opp</th><th class="num">Anytime TD</th><th class="num">Expected TDs</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
+
+<h2>Volume Board</h2>
+<p>The strongest market-implied volume: receptions and carries the money expects.</p>
+<div class="is-scroll"><table class="is-table" id="veVol" hidden><thead><tr><th>#</th><th>Player</th><th class="num">Receptions</th><th class="num">Carries</th><th class="num">Rush yds</th><th class="num">Rec yds</th><th class="num">Implied touches</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
+
+<h2>Game Environments</h2>
+<p>Every game on the slate, ranked by total, with each side’s implied points and how the line has moved.</p>
+<div class="is-scroll"><table class="is-table" id="veGames" hidden><thead><tr><th>Game</th><th class="num">Total</th><th>Favourite</th><th class="num">Spread</th><th class="num">Implied away</th><th class="num">Implied home</th><th class="num">Total move</th><th class="num">Spread move</th></tr></thead><tbody></tbody></table></div>
+
+<h2>Hidden Market Signals</h2>
+<p>Combinations of lines telling a broader story: a spread and a player market moving together.</p>
+<div id="veHidden"><p class="is-empty">No combined move has been detected this week.</p></div>
 
 <h2>How to read a gap</h2>
 <ol>
@@ -164,36 +199,55 @@ p{color:var(--sec);margin:0 0 16px}
 <script>
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-  function rank(pos, n) { return n == null ? '\u2014' : pos + n; }
+  var $ = function (id) { return document.getElementById(id); };
+  var n1 = function (v) { return v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  var slug = function (name) { return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); };
+  var sign = function (v, unit) { return v == null ? '—' : (v > 0 ? '+' : '') + v + (unit || ''); };
+  function card(p, kind) {
+    var d = p.delta;
+    return '<div class="ve-card"><b><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '">' + e(p.name) + '</a></b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' +
+      '<div class="ve-ranks"><span>Consensus <b>' + e(p.position) + p.consensusRank + '</b></span><span>Vegas <b>' + e(p.position) + p.vegasRank + '</b></span><span>Iron Tuna <b>' + e(p.position) + p.ironTunaRank + '</b></span></div>' +
+      '<span class="ve-cls ' + kind + '">' + e(d.classification) + ' · ' + sign(d.rank, ' slots') + ' · ' + sign(d.points, ' pts') + '</span><span class="ve-conf">' + e(p.confidence) + ' · ' + e(p.basis) + '</span>' +
+      (p.why ? '<p>' + e(p.why) + '</p>' : '') + '</div>';
+  }
   document.addEventListener('DOMContentLoaded', function () {
-    fetch('/api/vegas-column').then(function (r) { return r.json(); }).then(function (j) {
-      var items = (j && j.items) || [];
-      var empty = document.getElementById('veEmpty');
-      if (!j || !j.ok || !items.length) {
-        empty.textContent = 'The odds feed has no case to make right now. That is an answer, not an error: when the market and the consensus agree, there is no edge to publish.';
-        return;
+    fetch('/api/vegas-edge').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) { $('veNote').textContent = 'The board did not answer. Nothing is shown rather than something invented.'; return; }
+      $('veNote').innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || 'Player props are priced this week; every number below says whether it is quoted or derived.');
+      $('veBuys').innerHTML = j.vsExperts.buys.length ? j.vsExperts.buys.map(function (p) { return card(p, 'buy'); }).join('') : '<p class="is-empty">No player the market rates meaningfully higher than the consensus today.</p>';
+      $('veFades').innerHTML = j.vsExperts.fades.length ? j.vsExperts.fades.map(function (p) { return card(p, 'fade'); }).join('') : '<p class="is-empty">No player the market rates meaningfully lower than the consensus today.</p>';
+      if (j.movers.length) {
+        $('veMovers').querySelector('tbody').innerHTML = j.movers.map(function (m) {
+          var td = m.market === 'anytimeTD';
+          return '<tr><td><b>' + e(m.name) + '</b> <span class="is-status">' + e(m.position + ' · ' + m.team) + '</span></td><td>' + e(m.label) + '</td>' +
+            '<td class="num">' + (td ? sign(m.openOdds) : n1(m.open)) + '</td><td class="num">' + (td ? sign(m.currentOdds) : n1(m.current)) + '</td>' +
+            '<td class="num">' + (td ? sign(m.movement, ' pts') : sign(m.movement)) + (m.percentChange != null ? ' (' + sign(m.percentChange, '%') + ')' : '') + '</td><td class="num">' + m.booksMoved + ' of ' + m.books + '</td></tr>';
+        }).join('');
+        $('veMovers').hidden = false; $('veMoversEmpty').hidden = true;
       }
-      document.getElementById('veBody').innerHTML = items.map(function (it) {
-        var gap = it.priceDelta;
-        var sign = gap > 0 ? '+' : '';
-        return '<tr><td><b>' + e(it.name) + '</b><br><span class="is-status">' + e(it.position + ' \u00b7 ' + it.team) + '</span></td>' +
-          '<td class="num">' + e(rank(it.position, it.rankConsensus)) + '</td>' +
-          '<td class="num">' + e(rank(it.position, it.rankMarket)) + '</td>' +
-          '<td class="num">' + e(rank(it.position, it.rankIronTuna)) + '</td>' +
-          '<td class="num">' + (gap == null ? '\u2014' : sign + '$' + gap) + '</td></tr>';
-      }).join('');
-      document.getElementById('veTable').hidden = false;
-      empty.hidden = true;
-      var d = j.digest;
-      if (d) {
-        document.getElementById('veAsOf').textContent =
-          d.priced + ' players were priced by a book today. The two boards disagree meaningfully about ' +
-          d.moved + ' of them: ' + d.up + ' the market rates higher, ' + d.down + ' lower, worth $' + d.dollars +
-          ' of movement across the board.';
+      if (j.tdBoard.length) {
+        $('veTd').querySelector('tbody').innerHTML = j.tdBoard.map(function (t, i) { return '<tr><td class="num">' + (i + 1) + '</td><td><b>' + e(t.name) + '</b> <span class="is-status">' + e(t.position + ' · ' + t.team) + '</span></td><td>' + e(t.opponent || '—') + '</td><td class="num"><b>' + n1(t.probability) + '%</b></td><td class="num">' + t.expectedTds + '</td><td><span class="is-status">' + e(t.basis) + '</span></td></tr>'; }).join('');
+        $('veTd').hidden = false;
       }
-    }).catch(function () {
-      document.getElementById('veEmpty').textContent = 'The board did not answer. Nothing is shown rather than something invented.';
-    });
+      if (j.volumeBoard.length) {
+        $('veVol').querySelector('tbody').innerHTML = j.volumeBoard.map(function (v, i) { return '<tr><td class="num">' + (i + 1) + '</td><td><b>' + e(v.name) + '</b> <span class="is-status">' + e(v.position + ' · ' + v.team) + '</span></td><td class="num">' + n1(v.receptions) + '</td><td class="num">' + (v.rushAttempts == null ? '—' : n1(v.rushAttempts)) + '</td><td class="num">' + n1(v.rushYards) + '</td><td class="num">' + n1(v.recYards) + '</td><td class="num"><b>' + n1(v.impliedTouches) + '</b></td><td><span class="is-status">' + e(v.basis) + '</span></td></tr>'; }).join('');
+        $('veVol').hidden = false;
+      }
+      if (j.gameEnvironments.length) {
+        $('veGames').querySelector('tbody').innerHTML = j.gameEnvironments.map(function (g) { return '<tr><td><b>' + e(g.game) + '</b></td><td class="num">' + n1(g.total) + '</td><td>' + e(g.favourite || 'PK') + '</td><td class="num">' + (g.spread == null ? '—' : Math.abs(g.spread)) + '</td><td class="num">' + n1(g.impliedAway) + '</td><td class="num">' + n1(g.impliedHome) + '</td><td class="num">' + (g.movement ? sign(g.movement.total) : '—') + '</td><td class="num">' + (g.movement ? sign(g.movement.spread) : '—') + '</td></tr>'; }).join('');
+        $('veGames').hidden = false;
+      }
+      if (j.hiddenSignals.length) {
+        $('veHidden').innerHTML = j.hiddenSignals.map(function (s) {
+          var d = s.data;
+          return '<div class="ve-sig"><b>' + e(s.subject.game) + '</b><span class="ve-conf">' + e(s.confidence) + '</span><ul>' +
+            (d.spreadOpen != null ? '<li>Spread ' + sign(d.spreadOpen) + ' → ' + sign(d.spreadCurrent) + ' (home margin)</li>' : '') +
+            (d.totalOpen != null && d.totalMove ? '<li>Total ' + n1(d.totalOpen) + ' → ' + n1(d.totalCurrent) + '</li>' : '') +
+            d.corroborating.map(function (c) { return '<li>' + e(c.name) + ' ' + e(c.market) + ' ' + sign(c.movement) + (c.percentChange != null ? ' (' + sign(c.percentChange, '%') + ')' : '') + '</li>'; }).join('') +
+            '</ul><p>' + e(d.interpretation) + '</p></div>';
+        }).join('');
+      }
+    }).catch(function () { $('veNote').textContent = 'The board did not answer.'; });
   });
 })();
 </script>
