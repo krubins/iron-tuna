@@ -282,6 +282,8 @@ jobs:
         run: node tools/test-content.mjs
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
         run: node tools/test-dfs.mjs
+      - name: The health board, the job log and the editorial actions
+        run: node tools/test-health.mjs
 
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs

@@ -6961,3 +6961,47 @@ scoring, the slate, the boards, the stacks and every optimizer constraint.
 
 Known small thing, site-wide and older than this work: at a 390px viewport
 the chrome's nav toggle sits 2 to 3px past the right edge on every page.
+
+## 59. September 3: the health board and the job log (Step 29)
+
+`/admin` now opens with **In-season health**: the current week from the
+season service, the age of every feed, the data sources and whether each has
+its key, the scheduled jobs with their last run and last success, the failed
+runs of the past seven days, what is missing or stale and why, and the desk's
+state for every piece with the editorial actions beside it.
+
+**The job log.** `job_runs` in D1, one row per run: job, trigger (the cron
+string or `admin`), started, finished, ok, error, and a short summary of what
+the job returned. `jobRun(env, name, trigger)` runs a job from `JOB_FNS` (the
+single table of runnable jobs: schedule, odds, availability, market snapshot,
+usage, DFS, depth charts, ROS snapshot, the three prunes, the content tick)
+and logs it; a job that throws or returns `ok:false` is a logged failure and
+never an unhandled rejection. Every `ctx.waitUntil` in `scheduled()` goes
+through it (the X auto-post is the one thing that does not; it is not a data
+job and is not a button anyone should press twice). `tools/test-health.mjs`
+greps the handler for a bare job. `jobBoard` reads the log back per job;
+`job-prune` keeps 45 days.
+
+**The assessment** (`healthAssess`) is pure: given the caches' timestamps,
+the sources, the log and the season state it returns `status` (ok, degraded,
+down), `missing` and `stale` with a reason each. Limits live in
+`HEALTH_STALE_H`. In season it also demands the usage overlay, depth charts,
+a Wednesday snapshot for a recent week, and salaries on at least one site;
+in preseason it does not. A kind with no configured source, and a missing
+`LLM_API_KEY`, are missing feeds with what they cost stated. No schedule is
+`down`, since every in-season surface reads it.
+
+**Editorial actions** (`contentAdmin`, POST `/api/admin/content` with
+`{action, kind, week?, body?}`): `preview` returns the latest row in full,
+held draft and violations included, which the public payload hides;
+`publish` and `unpublish` flip the latest row (an unpublished piece leaves
+`/api/content` and its page); `regenerate` produces a fresh row now, forced
+past the due/ready gate, and the page asks first; `edit` stores a person's
+body on the latest row, runs the validator and reports what the brief does
+not contain WITHOUT blocking, since a person signing a piece is the editor.
+Editing never publishes; that is its own click.
+
+Routes: `/api/admin/health?key=…[&rerun=<job>]` and the content route's POST
+form plus `?preview=<kind>[&week=N]`. The board itself is `admin.html`; the
+stale-limit and missing-feed rules, the log, the board and every action are
+pinned by `tools/test-health.mjs` (51) against a scripted D1.
