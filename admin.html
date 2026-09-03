@@ -191,7 +191,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   <div class="card">
     <h2>Scheduled jobs</h2>
     <div class="tblwrap"><table id="hlthJobs"></table></div>
-    <div class="note">Every run, cron or button, writes one row to the job log; a job that throws is a logged failure. Rerun runs the job now through the same log.</div>
+    <div class="note" id="hlthJobsNote">Every run, cron or button, writes one row to the job log; a job that throws is a logged failure. Rerun runs the job now through the same log.</div>
     <div class="result" id="hlthJobResult"><div class="msg" id="hlthJobMsg"></div></div>
   </div>
   <div class="card">
@@ -715,7 +715,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       tile('ROS rankings', r.ros ? 'week ' + r.ros.week : '—', ago(r.ros && r.ros.builtAt)) +
       tile('Failed jobs (7d)', num((j.failedJobs || []).length), (j.missing || []).length + ' missing · ' + (j.stale || []).length + ' stale');
     var prob = (j.missing || []).map(function(m){ return '<div>' + pill('MISSING', 'bad') + ' <b>' + esc(m.label) + '</b> — ' + esc(m.why) + '</div>'; })
-      .concat((j.stale || []).map(function(s){ return '<div>' + pill('STALE', 'warn') + ' <b>' + esc(s.label) + '</b> — ' + esc(s.ageHours + ' h old, limit ' + s.limitHours + ' h' + (s.note ? '; ' + s.note : '')) + '</div>'; }));
+      .concat((j.stale || []).map(function(s){ return '<div>' + pill('STALE', 'warn') + ' <b>' + esc(s.label) + '</b> — ' + esc((s.ageHours != null ? s.ageHours + ' h old, limit ' + s.limitHours + ' h' + (s.note ? '; ' : '') : '') + (s.note || '')) + '</div>'; }));
     $('hlthBadge').textContent = prob.length ? prob.length + ' issue' + (prob.length === 1 ? '' : 's') : 'clear';
     $('hlthMissing').innerHTML = prob.length ? prob.join('') : '<div class="empty">Nothing missing, nothing stale.</div>';
     var rows = [['NFL schedule', u.schedule && u.schedule.updatedAt, u.schedule ? u.schedule.games + ' games, ' + u.schedule.provider : ''],
@@ -732,8 +732,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     var src = j.sources || {}, srows = [];
     Object.keys(src).forEach(function(kind){ (src[kind] || []).forEach(function(p){ srows.push('<tr><td>' + esc(kind) + '</td><td>' + esc(p.name) + '</td><td>' + (p.configured ? pill('configured', 'ok') : pill('not configured', '')) + (p.free ? '' : ' <span style="color:var(--muted)">paid</span>') + '</td></tr>'); }); });
     $('hlthSources').innerHTML = '<tr><th>Kind</th><th>Provider</th><th>Status</th></tr>' + srows.join('') + '<tr><td>writer</td><td>LLM</td><td>' + (j.llm ? pill('configured', 'ok') : pill('no LLM_API_KEY', 'bad')) + '</td></tr>';
-    $('hlthJobs').innerHTML = '<tr><th>Job</th><th>Last run</th><th>Result</th><th>Last success</th><th></th></tr>' + (j.jobs || []).map(function(x){
-      return '<tr><td><b>' + esc(x.job) + '</b></td><td>' + ago(x.last && x.last.startedAt) + '</td><td>' + (x.last ? (x.last.ok ? pill('ok', 'ok') : pill('failed', 'bad') + ' ' + esc(x.last.error || '')) : '—') + (x.failures7d ? ' <span style="color:var(--muted)">' + x.failures7d + ' failure' + (x.failures7d === 1 ? '' : 's') + ' in 7d</span>' : '') + '</td><td>' + ago(x.lastOk) + '</td><td><button class="btn" type="button" data-rerun="' + esc(x.job) + '">Rerun</button></td></tr>'; }).join('');
+    var schedNote = j.schedule ? ('Schedule in ' + j.schedule.tz + (j.schedule.source === 'env' ? ', with JOB_SCHEDULE_JSON overrides' : '') + (j.schedule.errors && j.schedule.errors.length ? '. Ignored override: ' + j.schedule.errors.join('; ') : '') + '. ') : '';
+    $('hlthJobs').innerHTML = '<tr><th>Job</th><th>Schedule (ET)</th><th>Next</th><th>Last run</th><th>Result</th><th>Last success</th><th></th></tr>' + (j.jobs || []).map(function(x){
+      return '<tr><td><b>' + esc(x.job) + '</b>' + (x.overridden ? ' <span style="color:var(--muted)">env</span>' : '') + '</td><td style="color:var(--muted)">' + esc(x.when || '') + '</td><td>' + (x.nextAt ? esc(new Date(x.nextAt).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric' })) : '—') + '</td><td>' + ago(x.last && x.last.startedAt) + '</td><td>' + (x.last ? (x.last.ok ? pill('ok', 'ok') : pill('failed', 'bad') + ' ' + esc(x.last.error || '')) : '—') + (x.failures7d ? ' <span style="color:var(--muted)">' + x.failures7d + ' failure' + (x.failures7d === 1 ? '' : 's') + ' in 7d</span>' : '') + '</td><td>' + ago(x.lastOk) + '</td><td><button class="btn" type="button" data-rerun="' + esc(x.job) + '">Rerun</button></td></tr>'; }).join('');
+    $('hlthJobsNote').textContent = schedNote + 'Every run, cron or button, writes one row to the job log; a job that throws is a logged failure. Rerun runs the job now through the same log.';
     $('hlthFailed').innerHTML = (j.failedJobs || []).length ? '<tr><th>When</th><th>Job</th><th>Trigger</th><th>Error</th></tr>' + j.failedJobs.map(function(f){ return '<tr><td>' + esc(new Date(f.startedAt).toLocaleString()) + '</td><td>' + esc(f.job) + '</td><td>' + esc(f.trigger || '') + '</td><td>' + esc(f.error || '') + '</td></tr>'; }).join('') : '<tr><td class="empty">No failed job in the last seven days.</td></tr>';
     $('hlthEditorial').innerHTML = '<tr><th>Piece</th><th>Slot (ET)</th><th>Week</th><th>Gate</th><th>Latest</th><th></th></tr>' + (j.editorial || []).map(function(e){
       var gate = e.due && e.ready ? pill('due · ready', 'ok') : e.due ? pill('due · waiting', 'warn') + ' ' + esc(e.reason || '') : pill('not due', '') + ' ' + esc(e.reason || '');

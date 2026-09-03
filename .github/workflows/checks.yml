@@ -284,6 +284,8 @@ jobs:
         run: node tools/test-dfs.mjs
       - name: The health board, the job log and the editorial actions
         run: node tools/test-health.mjs
+      - name: The job schedule in New York time
+        run: node tools/test-jobs.mjs
 
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs

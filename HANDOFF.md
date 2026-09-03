@@ -6760,17 +6760,17 @@ that runs long delays its piece by an hour; nothing is guessed.
 
 | Kind | Due (ET) | About | Ready when |
 |---|---|---|---|
-| `team-recaps` | Mon 6am | every game of the played week except Monday's | those games final |
-| `mnf-breakdown` | Tue 12am | the Monday game | it is final; skipped if there is none |
-| `what-they-arent-telling-you` | Tue 6am | the played week | every game final |
-| `opportunity-report` | Wed 6am | the played week | every game final |
+| `team-recaps` | Mon 7am | every game of the played week except Monday's | those games final |
+| `mnf-breakdown` | Tue 7am | the Monday game | it is final; skipped if there is none |
+| `what-they-arent-telling-you` | Tue 7am | the played week | every game final |
+| `opportunity-report` | Wed 7am | the played week | every game final |
 | `rankings-update` | Wed 7am | the coming weeks | after the ROS snapshot |
-| `final-read` | Thu 6am | the coming week | always |
-| `tnf-preview` | Thu 6am | the Thursday game | it has not kicked off; skipped if none |
-| `tnf-aftermath` | Fri 12am | the Thursday game | it is final |
-| `weekend-game-plan` | Fri 6am | the games still to come | none has started |
+| `final-read` | Thu 7am | the coming week | always |
+| `tnf-preview` | Thu 7am | the Thursday game | it has not kicked off; skipped if none |
+| `tnf-aftermath` | Fri 7am | the Thursday game | it is final |
+| `weekend-game-plan` | Fri 7am | the games still to come | none has started |
 | `what-changed-today` | Sun 8pm | Sunday games final by then | at least one; the rest are NAMED as excluded |
-| `snf-what-we-learned` | Mon 12am | the Sunday night game | it is final |
+| `snf-what-we-learned` | Mon 1am | the Sunday night game | it is final |
 
 `contentDue(kind, now, state, sched)` is pure and takes the instant it is asked
 about; the first cut read game status off the wall clock inside `weekGames`,
@@ -7005,3 +7005,49 @@ Routes: `/api/admin/health?key=…[&rerun=<job>]` and the content route's POST
 form plus `?preview=<kind>[&week=N]`. The board itself is `admin.html`; the
 stale-limit and missing-feed rules, the log, the board and every action are
 pinned by `tools/test-health.mjs` (51) against a scripted D1.
+
+## 60. September 3: the job schedule, in New York time (Step 30)
+
+The data clock is one table, `JOB_SCHEDULE`, read by the hourly trigger.
+Every hour `runScheduledTick` asks `jobsDueAt` what is due in THIS Eastern
+hour and runs it through the job log (§59) phase by phase: the pulls in
+parallel, then what is derived from them, then the desk tick. Eastern
+rather than UTC so "Wednesday 7 AM" holds in September and in December; a
+fixed UTC cron drifts an hour when the clocks change. The old `0 11 * * *`
+trigger is gone from `wrangler.jsonc`; if it ever comes back it does
+nothing, and says so, because the hourly tick already fires at that minute.
+
+| Job | When (ET) | Phase |
+|---|---|---|
+| `schedule-refresh` | hourly | 1 |
+| `market-snapshot` | 1, 4, 7, 10 AM, 1, 4, 7, 10 PM; Sunday hourly 9 AM to 11 PM | 1 |
+| `odds-refresh` | daily 7 AM | 1 |
+| `availability-refresh` | daily 7 AM, 11 AM, 1 PM, 7 PM | 1 |
+| `usage-refresh` | Tue, Wed 6 AM | 1 |
+| `depth-charts` | daily 6 AM | 1 |
+| `dfs-refresh` | Tue, Thu, Sat 9 AM | 1 |
+| `ros-snapshot` (Next 3, ROS, Weeks 15 to 17) | Wed 7 AM | 2 |
+| the three prunes | Sun 4 AM | 2 |
+| `content-tick` | hourly | 3 |
+
+The desk pieces keep their own due rule (`contentDue`: game completion, not
+the clock); the tick only asks. Their slots moved to the spec's: Sunday 8 PM
+What Changed Today; Monday 1 AM the SNF piece; Monday 7 AM recaps; Tuesday
+7 AM What They Aren't Telling You and the MNF piece; Wednesday 7 AM the
+Opportunity Report and the rankings update (after the ROS snapshot, which
+is phase 2 of the same hour); Thursday 7 AM the Final Read and TNF preview;
+Friday 7 AM the TNF aftermath and the Weekend Game Plan. Rankings, injury
+and betting refreshes run on their own rows above, independent of any
+piece.
+
+**Retiming without a deploy.** `JOB_SCHEDULE_JSON`, a Worker variable, is
+an array of entries `{ job, days, hours, phase }`; each entry REPLACES the
+table's entries for the job it names. `days` is null or a list of
+`Sun`..`Sat`; `hours` is `"hourly"` or a list of 0 to 23; `phase` 1, 2 or 3.
+A bad entry is ignored and named on the health board under "Missing and
+stale", never applied. The board's jobs table shows each job's schedule in
+words and its next Eastern hour.
+
+`tools/test-jobs.mjs` pins the table against the spec, the DST behaviour
+(7 AM Eastern is 11:00Z in September and 12:00Z in December), the phase
+order, the override validation, and the tick.
