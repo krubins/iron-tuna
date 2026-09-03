@@ -196,34 +196,53 @@ console.log('\nfail-safe behaviour');
 
 console.log('\nThe Odds API adapter');
 {
+  // v4 serves player props PER EVENT: the adapter lists /events, then asks
+  // /events/{id}/odds for each. Every row it returns is a GAME line, and the
+  // season overlay must refuse them -- that is the whole point of `scope`.
+  const calls = [];
   const W6 = harness(STUB, s => 'ENC', 'k', async (u) => {
+    calls.push(u);
     if (!/api\.the-odds-api\.com/.test(u)) throw new Error('wrong host: ' + u);
     if (!/apiKey=secret/.test(u)) throw new Error('key not sent');
-    return { ok: true, json: async () => ([{
-      bookmakers: [
-        { markets: [{ key: 'player_pass_yds', outcomes: [
-          { name: 'Over', description: 'Test Quarterback', point: 4000, price: -110 },
-          { name: 'Under', description: 'Test Quarterback', point: 4000, price: -110 }
-        ] }] },
-        { markets: [{ key: 'player_pass_yds', outcomes: [
-          { name: 'Over', description: 'Test Quarterback', point: 4400, price: -110 },
-          { name: 'Under', description: 'Test Quarterback', point: 4400, price: -110 }
-        ] }] },
-        { markets: [{ key: 'player_field_goals', outcomes: [
-          { name: 'Over', description: 'Test Quarterback', point: 3, price: -110 }
-        ] }] }
-      ]
-    }]) };
+    if (/\/events\?/.test(u)) {
+      return { ok: true, json: async () => ([{ id: 'ev1', commence_time: '2026-09-13T17:00:00Z', home_team: 'B', away_team: 'A' },
+                                             { id: 'ev2', commence_time: '2026-09-13T20:25:00Z', home_team: 'D', away_team: 'C' }]) };
+    }
+    if (/\/events\/ev1\/odds/.test(u)) {
+      return { ok: true, json: async () => ({ id: 'ev1', home_team: 'B', away_team: 'A', bookmakers: [
+        { key: 'dk', markets: [{ key: 'player_pass_yds', outcomes: [
+          { name: 'Over', description: 'Test Quarterback', point: 245.5, price: -110 },
+          { name: 'Under', description: 'Test Quarterback', point: 245.5, price: -110 } ] }] },
+        { key: 'fd', markets: [{ key: 'player_pass_yds', outcomes: [
+          { name: 'Over', description: 'Test Quarterback', point: 250.5, price: -110 },
+          { name: 'Under', description: 'Test Quarterback', point: 250.5, price: -110 } ] },
+          { key: 'player_field_goals', outcomes: [ { name: 'Over', description: 'Test Quarterback', point: 3, price: -110 } ] }] }
+      ] }) };
+    }
+    if (/\/events\/ev2\/odds/.test(u)) return { ok: false, status: 500 };   // one event failing must not lose the slate
+    throw new Error('unexpected url ' + u);
   });
   const rows = await W6.fetchOddsTheOddsApi({ ODDS_API_KEY: 'secret' });
+  ok('it lists the events first, then asks each one', calls.length === 3 && /\/events\?/.test(calls[0]));
   ok('pairs Over/Under into one row per book', rows.length === 2, JSON.stringify(rows));
   ok('maps the market key to a site stat', rows.every(r => r.market === 'passYd'));
   ok('drops unmapped markets', !rows.some(r => r.market === 'player_field_goals'));
-  const { overlay } = W6.buildVegasOverlay(rows);
-  ok('books are averaged into a consensus', near(overlay['testquarterback|QB'].passYd, 4200, 1e-6));
+  ok('every row names its book and its game', rows.every(r => r.book && r.gameId === 'ev1'));
+  ok('every row is game-scoped', rows.every(r => r.scope === 'game'));
+  ok('a failing event is skipped, not fatal', rows.every(r => r.gameId !== 'ev2'));
+  const built = W6.buildVegasOverlay(rows);
+  ok('the SEASON overlay refuses game lines', built.matched === 0 && built.skipped.gameScoped === 2, JSON.stringify(built.skipped));
+  ok('the key never appears in a row', !JSON.stringify(rows).includes('secret'));
   let threw = false;
   try { await W6.fetchOddsTheOddsApi({}); } catch (e) { threw = /ODDS_API_KEY/.test(e.message); }
   ok('missing key throws rather than calling out', threw);
+  ok('the market list can be narrowed from the environment without a deploy', (() => {
+    const W7 = harness(STUB, s => 'ENC', 'k', async (u) => {
+      if (/\/events\?/.test(u)) return { ok: true, json: async () => ([{ id: 'e' }]) };
+      return { ok: /markets=player_receptions(&|$)/.test(u), json: async () => ({ bookmakers: [] }) };
+    });
+    return W7.fetchOddsTheOddsApi({ ODDS_API_KEY: 'secret', ODDS_API_MARKETS: 'player_receptions,not_a_market' }).then(r => Array.isArray(r));
+  })());
 }
 
 // ── team-environment provider, against the REAL committed pool ──────────────

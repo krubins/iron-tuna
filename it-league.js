@@ -273,9 +273,52 @@
     (bonuses || []).forEach(function (b) { if (count >= b.at) pts += b.points; });
     return pts;
   }
-  function score(stats, position, scoringOverride) {
+  // Kickers and defences, mirroring scoreKicker / scoreDefense in index.html
+  // at the app's default tiers (a saved league's own tiers win where present).
+  // HAND-SYNCED with SCORING_KDEF in _worker.js; tools/test-scoring.mjs holds
+  // all three copies together.
+  var KDEF = {
+    fieldGoalTiers: [{ min: 0, max: 24, points: 1, missPoints: -4 }, { min: 25, max: 34, points: 2, missPoints: -3 },
+                     { min: 35, max: 44, points: 3, missPoints: -2 }, { min: 45, max: 49, points: 4, missPoints: -1 },
+                     { min: 50, max: 999, points: 4, missPoints: 0 }],
+    extraPoint: 1, missedExtraPoint: -1,
+    defensiveFumbleRecovery: 2, defensiveTD: 4, interception: 2, sackPoints: 1,
+    sackBonuses: [{ at: 5, points: 1 }, { at: 10, points: 1 }], safety: 4,
+    specialTeamsTD: 6, specialTeams2pt: 2, specialTeamsSafety1pt: 1,
+    pointsAllowed: [{ min: 0, max: 0, points: 10 }, { min: 1, max: 3, points: 8 }, { min: 4, max: 6, points: 7 },
+                    { min: 7, max: 9, points: 6 }, { min: 10, max: 13, points: 5 }, { min: 14, max: 17, points: 4 },
+                    { min: 18, max: 21, points: 3 }, { min: 22, max: 27, points: 2 }, { min: 28, max: 34, points: 1 },
+                    { min: 35, max: 999, points: 0 }]
+  };
+  var K_MAKE = [0.18, 0.28, 0.32, 0.17, 0.05], K_MISS = [0.02, 0.06, 0.17, 0.25, 0.50];
+  function tierPoints(v, tiers) { for (var i = 0; i < (tiers || []).length; i++) if (v >= tiers[i].min && v <= tiers[i].max) return tiers[i].points; return 0; }
+  function scoreKicker(stats, s) {
+    var tiers = (s.fieldGoalTiers && s.fieldGoalTiers.length === 5) ? s.fieldGoalTiers : KDEF.fieldGoalTiers;
+    var pts = 0, made = stats.fgMade || 0, missed = stats.fgMissed || 0;
+    for (var i = 0; i < 5; i++) { pts += made * K_MAKE[i] * (tiers[i].points || 0); pts += missed * K_MISS[i] * (tiers[i].missPoints || 0); }
+    pts += (stats.xpMade || 0) * (isFinite(s.extraPoint) ? s.extraPoint : KDEF.extraPoint);
+    pts += (stats.xpMissed || 0) * (isFinite(s.missedExtraPoint) ? s.missedExtraPoint : KDEF.missedExtraPoint);
+    return pts;
+  }
+  function scoreDefense(stats, s, games) {
+    var g = games > 0 ? games : 17, pts = 0;
+    var v = function (k) { return isFinite(s[k]) ? s[k] : KDEF[k]; };
+    pts += countScore(stats.sacks || 0, v('sackPoints'), s.sackBonuses || KDEF.sackBonuses);
+    pts += (stats.ints || 0) * v('interception');
+    pts += (stats.fumRec || 0) * v('defensiveFumbleRecovery');
+    pts += (stats.defTD || 0) * v('defensiveTD');
+    pts += (stats.stTD || 0) * v('specialTeamsTD');
+    pts += (stats.safety || 0) * v('safety');
+    pts += (stats.st2pt || 0) * v('specialTeams2pt');
+    pts += (stats.stSafety1pt || 0) * v('specialTeamsSafety1pt');
+    if (stats.ptsAllowed !== undefined) pts += tierPoints(Math.floor(stats.ptsAllowed / g), s.pointsAllowed || KDEF.pointsAllowed) * g;
+    return pts;
+  }
+  function score(stats, position, scoringOverride, games) {
     var s = scoringOverride || (cfg && cfg.scoring) || SCORING_DEFAULTS;
     stats = stats || {};
+    if (position === 'K') return scoreKicker(stats, s);
+    if (position === 'DEF' || position === 'DST') return scoreDefense(stats, s, games);
     var pts = 0;
     pts += yardageScore(stats.passYd || 0, s.passingYardsPerPoint, s.passingYardsThreshold, s.passingYardBonuses);
     pts += (stats.passTD || 0) * s.passingTD;

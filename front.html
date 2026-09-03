@@ -619,9 +619,41 @@ img{max-width:100%}
    two buttons, a real screenshot of the thing being sold, and the three dollar
    columns underneath it. The news desk starts below. */
 .hero-band{background:linear-gradient(180deg,#122320 0%,var(--mast) 78%);color:#e9eeec;border-bottom:3px solid var(--brand)}
-.hero-band .hb-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.06fr);gap:40px;align-items:center;padding-top:46px;padding-bottom:42px}
+.hero-band .hb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px;align-items:start;padding-top:42px;padding-bottom:40px}
+/* The in-season half. A panel rather than bare copy, so the two products read
+   as two things rather than one paragraph that changed subject halfway. */
+/* min-width:0 on both halves: a grid item defaults to min-width:auto, and the
+   sheet screenshot (a percentage-width image) inside the left one then sets the
+   item's minimum to the image's 1180px, which pushed the whole band past a
+   phone's edge. minmax(0,1fr) on the track is the same guard from the other side. */
+.hb-copy{min-width:0}
+.hb-intel{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:24px 26px 22px;background:rgba(255,255,255,.035)}
+.hb-intel-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.hb-intel-top .hb-eyebrow{margin-bottom:0}
+.hb-eyebrow.intel{color:var(--gold);border-color:rgba(242,169,0,.38)}
+.hb-week{font-size:12px;letter-spacing:.04em;color:#b3c1bd}
+.hb-week b{color:#fff;font-weight:800}
+.hb-week .live{color:#ff8a80;font-weight:800}
+.hb-h2{font-size:clamp(23px,2.5vw,31px);font-weight:800;line-height:1.12;letter-spacing:-.015em;color:#fff;margin:0}
+.hb-h2 em{font-style:normal;color:var(--gold)}
+.hb-intel .hb-dek{font-size:14.5px;margin-top:12px}
+.hb-intel .hb-ctas{margin-top:18px}
+.hb-intel .hb-btn{padding:12px 20px;font-size:13.5px}
+/* The three cards. Names and ranks only; a card the digest cannot fill is not
+   drawn, which is why the grid starts hidden. */
+.hb-teasers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:20px}
+.hb-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:13px 14px;min-width:0}
+.hb-card i{font-style:normal;display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+.hb-card i.fade{color:#ff8a80}
+.hb-card i.td{color:var(--gold)}
+.hb-card b{display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;overflow-wrap:anywhere}
+.hb-card small{display:block;font-size:11px;color:#8b9c97;margin:2px 0 9px;letter-spacing:.03em}
+.hb-card .hb-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:#b3c1bd;padding:3px 0;border-top:1px solid rgba(255,255,255,.07)}
+.hb-card .hb-row span:last-child{color:#fff;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hb-card .hb-row.big span:last-child{color:var(--gold);font-size:15px}
+.hb-card .hb-basis{font-size:10.5px;color:#8b9c97;margin-top:6px;line-height:1.35}
 .hb-eyebrow{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.17em;text-transform:uppercase;color:var(--teal);border:1px solid rgba(45,212,163,.32);border-radius:3px;padding:4px 9px;margin-bottom:18px}
-.hb-copy h1{font-size:clamp(33px,4.3vw,53px);font-weight:800;line-height:1.05;letter-spacing:-.022em;color:#fff}
+.hb-copy h1{font-size:clamp(30px,3.3vw,44px);font-weight:800;line-height:1.05;letter-spacing:-.022em;color:#fff}
 .hb-copy h1 em{font-style:normal;color:var(--teal)}
 .hb-dek{margin-top:15px;font-size:16px;line-height:1.58;color:#b3c1bd;max-width:540px}
 .hb-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
@@ -631,7 +663,7 @@ img{max-width:100%}
 .hb-btn:hover{filter:brightness(1.08)}
 .hb-note{margin-top:15px;font-size:12.5px;line-height:1.5;color:#8b9c97;max-width:460px}
 .hb-note b{color:#cfd9d6}
-.hb-shot{margin:0;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.13);box-shadow:0 28px 64px rgba(0,0,0,.45)}
+.hb-shot{margin:22px 0 0;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.13);box-shadow:0 28px 64px rgba(0,0,0,.45)}
 .hb-shot img{display:block;width:100%;height:auto}
 .hb-cap{padding:9px 14px;font-size:11.5px;letter-spacing:.05em;color:#8b9c97;background:rgba(255,255,255,.04);border-top:1px solid rgba(255,255,255,.08)}
 
@@ -647,7 +679,13 @@ img{max-width:100%}
 .tr span{display:block;font-size:13px;line-height:1.5;color:#96a7a2;margin-top:7px}
 .tr span em{font-style:italic;color:#c3cfcb}
 @media(max-width:900px){
-  .hero-band .hb-grid{grid-template-columns:1fr;gap:26px;padding-top:32px;padding-bottom:30px}
+  .hero-band .hb-grid{grid-template-columns:minmax(0,1fr);gap:26px;padding-top:32px;padding-bottom:30px}
+  /* Stacked, draft first by default. In the regular season the NFL clock
+     (it-season.js, off /api/season) stamps data-season="in" on the band and the
+     week comes first: a reader on a phone in October is here for the week, not
+     for a draft that finished in August. Desktop is untouched either way. */
+  .hero-band[data-season="in"] .hb-intel{order:-1}
+  .hb-intel{padding:20px 18px 18px}
   /* The trio stacked to three full-width blocks here — 376px, a fifth of
      everything above the first section, spent on three sentences. As a
      snap-scrolling row it keeps all three intact at the height of one. The 82%
@@ -745,9 +783,17 @@ img{max-width:100%}
   <span class="dominant-rule"></span>
 </div></div>
 
-<section class="hero-band">
+<section class="hero-band" id="heroBand">
+  <!-- Two halves of the year, two equal columns. LEFT is the draft product,
+       unchanged in copy and in every call to action. RIGHT is the in-season
+       product: the week from /api/season, the two buttons, and three cards
+       read off the same day's odds digest the Vegas section below prints from.
+       The cards are REAL DATA OR NOTHING: a card whose numbers the digest does
+       not carry is not rendered, and no example name is ever shown. On a phone
+       the columns stack, draft first; in the regular season the clock flips
+       them so the week is what a reader lands on (see [data-season="in"]). -->
   <div class="wrap hb-grid">
-    <div class="hb-copy">
+    <div class="hb-copy hb-auction">
       <span class="hb-eyebrow">2026 Auction Season</span>
       <h1>Know what he&rsquo;s <em>worth</em>. Know what he&rsquo;ll <em>cost</em>. Know <em>what you should bid</em>.</h1>
       <p class="hb-dek">Every other site ranks players. An auction does not run on ranks &mdash; it runs on dollars. Iron Tuna prices all 500+ players for your teams, your budget and your scoring, and blends every number with the betting market.</p>
@@ -756,11 +802,25 @@ img{max-width:100%}
         <a class="hb-btn ghost" href="/auctiondraft?screen=board">Open the Auction Manager</a>
       </div>
       <p class="hb-note">Free values in about a minute. Full custom pricing, the live Auction Manager and the AI Value Coach are a one-time <b>$9.99</b>.</p>
+      <figure class="hb-shot">
+        <img src="/auction-sheet.webp" width="1180" height="692" alt="The Iron Tuna auction cheat sheet: quarterbacks and running backs priced in dollars, with market price, true value and what you should bid on every row. Names run green where the price sits under what he is worth and red where it sits above, and a V flags the players the betting market moved." fetchpriority="high" decoding="async">
+        <figcaption class="hb-cap">The cheat sheet, priced for a 12-team $200 auction.</figcaption>
+      </figure>
     </div>
-    <figure class="hb-shot">
-      <img src="/auction-sheet.webp" width="1180" height="692" alt="The Iron Tuna auction cheat sheet: quarterbacks and running backs priced in dollars, with market price, true value and what you should bid on every row. Names run green where the price sits under what he is worth and red where it sits above, and a V flags the players the betting market moved." fetchpriority="high" decoding="async">
-      <figcaption class="hb-cap">The cheat sheet, priced for a 12-team $200 auction.</figcaption>
-    </figure>
+    <div class="hb-copy hb-intel" id="heroIntel">
+      <div class="hb-intel-top">
+        <span class="hb-eyebrow intel">Weekly Fantasy Intel</span>
+        <span class="hb-week" id="hbWeek" hidden></span>
+      </div>
+      <h2 class="hb-h2">Rankings personalized to your league. See where fantasy experts and the betting markets <em>disagree</em>.</h2>
+      <p class="hb-dek">A sportsbook prices a player with its own money behind it and corrects in public within minutes. A ranking costs nothing to be wrong about. These are the players where the two are furthest apart today.</p>
+      <div class="hb-ctas">
+        <a class="hb-btn gold" href="/weekly-intel">View This Week&rsquo;s Intel</a>
+        <a class="hb-btn ghost" href="/auctiondraft?screen=cheat">Customize My Scoring</a>
+      </div>
+      <div class="hb-teasers" id="hbTeasers" hidden></div>
+      <p class="hb-note" id="hbTeaserNote">Reading today&rsquo;s odds&hellip;</p>
+    </div>
   </div>
   <!-- Scrolls sideways under 900px (see .trio .wrap below), so the region is
        focusable: a scroll container that only a pointer can move is unreachable
@@ -934,13 +994,14 @@ img{max-width:100%}
        highest-authority page on the site and on two pages the title tag targets
        by name. The cards go, the links stay. -->
   <nav class="foot-tools" aria-label="Tools">
-    <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/post-draft">In-Season</a>
+    <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/post-draft">In-Season</a><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/dfs">DFS</a><a href="/my-league">My League</a>
   </nav>
   <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/auction-watch">Auction Watch</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; Player photos &copy; NFL/ESPN</span>
 </div></footer>
 
 <script src="/it-league.js"></script>
+<script src="/it-season.js" defer></script>
 <script src="/player-search.js" defer></script>
 <script>
 // Player headshots for the stories below, keyed by the slug each story's `ppl`
@@ -1765,6 +1826,74 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
     return m;
   }
 
+  // ── the hero's three cards ────────────────────────────────────────────────
+  // Read off the SAME digest the dateline prints, so the top of the page and
+  // the Vegas section can never name different players for the same day. Real
+  // data or nothing: a card is drawn only when every number on it exists, and
+  // when the digest has no case the grid stays hidden and the note says so.
+  // The TD card's percentage is DERIVED (Poisson on the blended season line
+  // over the games he can play), never a quoted book price, and it is labelled
+  // that way on the card because no free feed carries an anytime-TD market.
+  function hbRank(b, key) {
+    var v = b && b[key];
+    return (typeof v === 'number' && isFinite(v)) ? esc(b.position) + v : null;
+  }
+  function hbCard(kind, label, b, rows, big) {
+    if (!b || !b.name) return '';
+    for (var i = 0; i < rows.length; i++) if (rows[i][1] == null) return '';
+    var h = '<div class="hb-card"><i class="' + kind + '">' + label + '</i><b>' + esc(b.name) + '</b>'
+          + '<small>' + esc((b.team ? b.team + ' · ' : '') + b.position) + '</small>';
+    if (big) h += '<div class="hb-row big"><span>' + big[0] + '</span><span>' + big[1] + '</span></div>';
+    rows.forEach(function (r) { h += '<div class="hb-row"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>'; });
+    if (big && big[2]) h += '<div class="hb-basis">' + big[2] + '</div>';
+    return h + '</div>';
+  }
+  function renderHeroIntel() {
+    var grid = document.getElementById('hbTeasers'), note = document.getElementById('hbTeaserNote');
+    if (!grid || !note) return;
+    var g = vsMeta && vsMeta.contract === VS_CONTRACT && vsMeta.digest;
+    var cards = '';
+    if (g) {
+      cards += hbCard('love', 'Vegas loves', g.topUp,
+        [['Consensus', hbRank(g.topUp, 'rankConsensus')], ['Vegas', hbRank(g.topUp, 'rankMarket')], ['Iron Tuna', hbRank(g.topUp, 'rankIronTuna')]]);
+      cards += hbCard('fade', 'Vegas fades', g.topDown,
+        [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
+      var t = g.topTd;
+      if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
+        cards += hbCard('td', 'TD edge', t,
+          [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
+          ['Anytime TD', t.anytimeTd + '%',
+           'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '
+           + t.tdMarket + ' against a consensus ' + t.tdConsensus + '. Not a quoted prop.']);
+      }
+    }
+    if (!cards) {
+      grid.hidden = true; grid.innerHTML = '';
+      note.hidden = false;
+      note.innerHTML = g ? 'The market and the consensus agree on today’s draftable board. No case to make, which is itself the answer.'
+                         : 'The odds feed has not answered. Nothing is shown here until it does.';
+      return;
+    }
+    grid.innerHTML = cards; grid.hidden = false;
+    note.hidden = false;
+    note.innerHTML = 'Ranks at the site’s default league. <b>Vegas</b> is the odds alone; <b>Iron Tuna</b> blends them into the projections. Recomputed off every odds pull.';
+  }
+  // The week, and the phone ordering. Regular season only, as specified: in
+  // August the draft is the product and in January neither column is live.
+  function hbClock() {
+    if (!window.ITSeason) { document.addEventListener('DOMContentLoaded', hbClock); return; }
+    ITSeason.load(function (s) {
+      var band = document.getElementById('heroBand'), wk = document.getElementById('hbWeek');
+      if (!s || !band || !wk) return;
+      if (s.phase === 'regular') band.setAttribute('data-season', 'in');
+      var w = s.week || {}, h = esc(s.phaseLabel || '');
+      if (w.label) h += ' · <b>' + esc(w.label) + '</b>';
+      if (w.status === 'active') h += ' · <span class="live">' + ((s.counts && s.counts.inProgress) ? s.counts.inProgress + ' live' : 'under way') + '</span>';
+      else if (w.status === 'upcoming' && w.firstKickoff) h += ' · kicks off ' + esc(ITSeason.kickoff(w.firstKickoff));
+      wk.innerHTML = h; wk.hidden = false;
+    });
+  }
+  hbClock();
   // ── the day's dateline ────────────────────────────────────────────────────
   // Twelve cases at one every six hours is three days of rotation, so the case
   // on screen cannot by itself tell a reader what changed TODAY. The digest
@@ -1990,7 +2119,7 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
   // so a renamed field would otherwise let a stale payload reach this renderer
   // and print "undefined" at readers until the cache expired. Asking for a
   // contract by number makes the cached copies disjoint.
-  var VS_CONTRACT = 4;
+  var VS_CONTRACT = 5;
   // Belt and braces — an item missing any field this renderer prints is dropped
   // rather than rendered with holes in it. Nothing is better than "undefined".
   var VS_REQUIRED = ['name', 'position', 'rankConsensus', 'rankIronTuna', 'rankMarket',
@@ -2014,9 +2143,10 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
       vsIdx = vsSlotIndex(vsItems.length);
       renderCase();
       renderDay();
+      renderHeroIntel();
       startCaseTick();
     })
-    .catch(function () { vsItems = []; renderCase(); });
+    .catch(function () { vsItems = []; renderCase(); renderHeroIntel(); });
 
   // ── every section shows its own newest, not whatever is left over ─────────
   // This page used to run "one story, one slot": the lead claimed its five
