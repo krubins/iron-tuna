@@ -6,8 +6,40 @@ under review — same discipline as tools/lead-story-routine-prompt.md, and
 for the same reason: edit here, then push the same text to the Routine
 (`update_trigger`), and the diff is in the history either way.
 
-VERIFIED LIVE 2026-09-01T12:14Z: the body below is byte-identical to the
-Routine's stored prompt (9,568 chars, sha256 30a87ea80a4b...).
+VERIFIED LIVE 2026-09-03T04:04Z: the body below is byte-identical to
+`trig_016JAiJJMZi2jtZDmZS1QPNK`'s stored prompt (11,318 chars, sha256
+f2e49c9f31dc...). This trigger is one of TWO Pick Routines now active —
+see HANDOFF §47 — and this file only carries the copy this session can
+edit. `trig_01K2obtrMAKiwGn3N4UroTEv` ("The Pick (Story) — Updated") is
+Ken-created and Ken-only-editable; its own prompt is a slightly earlier
+draft of this one and is not tracked here.
+
+PUSHED LIVE 2026-09-03T04:04Z via update_trigger: the previous day's fix
+(check `git ls-remote` for a same-day branch, stop if found) turned out to
+just relocate the stall. Confirmed on 2026-09-02: the earlier-firing
+Ken-created trigger pushed a "tier cliffs" entry to
+`claude/the-pick-2026-09-02` at 12:06-12:11Z; this trigger fired at
+13:07-13:12Z, did NOT stand down (the branch-check instruction existed by
+then but evidently wasn't followed that run), and wrote and pushed an
+entirely different "target concentration" entry straight to `main`. Both
+were real, well-grounded entries; only one is live, and the other is now
+permanently stranded on an unmerged branch — a second flavor of the same
+"good work nobody will ever see" failure §46 was written to close. The
+fix now has this trigger ADOPT a same-day branch's entry (merge it in,
+rebuild, retest, push to `main`) instead of just declining to write when
+it finds one, so the column still publishes exactly once a day rather than
+trading "two entries" for "zero."
+
+PUSHED LIVE 2026-09-01T13:59Z via update_trigger: the "one entry per day"
+check now also looks for a same-day branch (`git ls-remote --heads origin
+'claude/the-pick-*'`) before writing, not just `main`. Prompted by a run
+that day (13:09-13:18Z) that reported SUCCEEDED but added nothing to
+`main`, 45 minutes after the OTHER Pick trigger had already pushed a
+same-day entry to a branch. The exact cause was never confirmed (no
+session transcript access from here), but a session doing routine git
+hygiene noticing that branch and standing down, silently, is the
+best-supported explanation available, and the dedup gap it would have
+needed is real regardless: the old check only ever looked at `main`.
 
 PUSHED LIVE 2026-09-01T12:14Z via update_trigger, at Ken's request: the
 column now pushes its daily entry straight to `main`, the same as the camp
@@ -41,7 +73,15 @@ One story a day. Each entry argues ONE idea, proves it with numbers from this re
 
 The voice: the data discipline of a projections-first fantasy analyst married to a sports columnist's comic register — jokes, a digression that pays off, a line the reader repeats to their league. Funny is required. Funny *instead of* useful is not allowed: every entry ends in an instruction. Write at roughly a 10th-grade reading level. **Never name or imitate a real writer by name in the copy** — the column is bylined to Iron Tuna, like everything else on the site.
 
-**One entry per day.** If `the-pick.html` already carries an entry whose id is today's date (`pick-YYYY-MM-DD`, UTC), a run has already published today. Do not add a second; stop and say so in your report.
+**One entry per day — and more than one Routine can be trying to write it.** More than one Claude Routine is configured to publish this column (see HANDOFF §47); one of them fires roughly an hour before this one and pushes to a dated branch instead of `main`. Before you write anything:
+
+1. Check `the-pick.html` on your own checkout for an entry whose id is today's date (`pick-YYYY-MM-DD`, UTC). Found one → a run has already published today. Stop, do not write a second, say so in your report.
+2. If not, check for one having landed somewhere else first: `git ls-remote --heads origin 'claude/the-pick-*'`. If a branch matching today's date exists (`claude/the-pick-YYYY-MM-DD`), fetch it and look at the entry it carries.
+   - **If that entry is well-formed** (a `pick-YYYY-MM-DD` article for today, matching the markup shape below) — **do not write your own.** Two good entries for one day is the same failure as one good and one bad: only one can run. Instead, **adopt it**: merge just that one `<article>` into your own checkout's `the-pick.html` (top of `<div class="entries">`, same as if you had written it), run the full "Ship it" sequence below against YOUR checkout (rebuild, retest), and push the result to `main`. Say in your report which branch you adopted the entry from, and that you did not write original content this run.
+   - **If it is missing, malformed, or you cannot verify its numbers against current `PROJECTIONS`** — treat it as if it did not exist and write your own entry per the rest of this prompt. Note in your report that you found a branch and rejected its content, and why.
+3. Only if neither check finds a same-day entry do you write a new one from scratch.
+
+The point of this order is that the column publishes exactly once a day either way — a branch nobody merges is not "published," it is stranded, and standing down without adopting it just relocates the stall from "no entry" to "an entry nobody will ever see."
 
 ## Pick today's theme
 

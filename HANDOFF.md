@@ -6821,3 +6821,84 @@ fixture week, the briefs, and the validator.
 **Cron count.** `wrangler.jsonc` now carries five triggers. If the account's
 plan caps triggers below that, the deploy will say so; the hourly tick is the
 one to keep and the three posting slots the ones to fold into it.
+## 57. September 3: the mystery from §47 solved itself on repeat, and cost a real entry
+
+§47 closed with the Sept 1 collision unexplained — this trigger's 13:09Z run
+reported SUCCEEDED without touching `main`, best guess being that it
+noticed the other trigger's branch and quietly stood down. Real time moved
+on to September 3 before anyone looked again, and the extra day of data
+answered the question by repeating the pattern in the other direction.
+
+### What actually happened on September 2
+
+Both Pick triggers fired again. Ken's (12:06-12:11Z) wrote a **"tier
+cliffs"** entry (Trey McBride/Brock Bowers) and pushed it to
+`claude/the-pick-2026-09-02`, per its branch-only prompt. This trigger
+(13:07-13:12Z) did **not** stand down this time — it wrote an entirely
+different **"target concentration"** entry (Chris Olave/Zay Flowers) and
+pushed it straight to `main` (`e277f8d`), same as it should. `main` has one
+Sept 2 entry now; the other, equally real, equally grounded entry sits
+permanently on an unmerged branch nobody will read.
+
+That resolves §47's mystery about as well as it can be resolved without
+transcript access: whatever this trigger's session does when it encounters
+the other trigger's branch is **not consistent from run to run**. On
+2026-09-01 it (apparently) noticed and stood down, writing nothing. On
+2026-09-02 it didn't check, or checked and didn't act on it, and wrote a
+second entry anyway. Only one branch of that inconsistency is externally
+visible each day — either an empty slot or a stranded duplicate — so it
+read as two unrelated bugs until the same day produced both halves at
+once.
+
+### The fix, and why the first attempt (§47) was not enough
+
+§47's fix told this trigger to check `git ls-remote` for a same-day branch
+and **stop** if it found one. That would have caught 2026-09-02's
+collision — but stopping is not actually a fix, it is the outage from §46
+wearing a disguise: a same-day entry exists, on a branch nobody merges,
+and the reader still sees nothing new. Two failure shapes, one root cause
+— an entry that exists somewhere the reader's browser cannot reach counts
+as unpublished, whether the reason is a missing checkout, a branch nobody
+watches, or a later run standing down in front of one.
+
+**Rewritten again, 2026-09-03T04:04Z, live and verified byte-identical
+(11,318 chars, sha256 `f2e49c9f31dc...`).** The same-day-branch check now
+**adopts** a well-formed branch entry — merges just that `<article>` into
+its own checkout, rebuilds, retests, and pushes the result to `main` —
+instead of declining and leaving it stranded. It only falls through to
+writing original content if the branch is missing, malformed, or its
+numbers do not check out against current `PROJECTIONS`. This is the same
+operation this session did by hand for both 2026-09-01 (`26cc9f6`,
+"committee backfields") and would have done for 2026-09-02's "tier cliffs"
+had it been noticed before `main` already had a same-day entry — the fix
+makes that manual step part of the Routine instead of something a human
+has to catch.
+
+Also noted while re-verifying: `trig_016JAiJJMZi2jtZDmZS1QPNK`'s stored
+`session_request.config` now shows a `sources` entry
+(`krubins/iron-tuna`) that was not there on 2026-09-01. Whether that
+migrated on its own or was set by someone in the Routines UI is unknown
+from here; either way the clone-if-missing instructions in this prompt are
+now redundant defense-in-depth rather than the primary path, and are kept
+rather than removed since a wrong assumption about a git source costs
+nothing to guard against and a ten-day outage to get wrong.
+
+### Still true, still Ken's to resolve
+
+Two Routines publishing one column is still a standing risk even with the
+adopt-fix in place — it converts "duplicate content" into "the earlier
+trigger's prompt does the real writing and the later one just merges it in
+every day," which works but is a strange steady state for a Routine whose
+own prompt still says it writes original entries. §47's recommendation
+stands: pick one Routine, retire the other. This session still cannot
+touch `trig_01K2obtrMAKiwGn3N4UroTEv` (`update_trigger` refuses anything
+not created via this session's own `create_trigger` calls).
+
+State: `the-pick.html` on `main` carries `pick-2026-08-20`,
+`pick-2026-09-01`, `pick-2026-09-02` (no gap, no duplicate on `main`);
+`claude/the-pick-2026-09-02` sits stranded with a real, unmerged "tier
+cliffs" entry, left alone rather than force-merged since `main` already
+has a Sept 2 entry and two would break "one entry per day"; the
+adopt-fix takes effect on the next fire (`trig_016JAiJJMZi2jtZDmZS1QPNK`
+next runs 2026-09-03T13:03Z, `trig_01K2obtrMAKiwGn3N4UroTEv` around
+12:00Z the same day).
