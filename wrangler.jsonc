@@ -3,7 +3,7 @@
   "main": "_worker.js",
   "compatibility_date": "2025-05-01",
   "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": true },
-  "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6" },
+  "vars": { "LLM_PROVIDER": "anthropic", "LLM_MODEL": "claude-sonnet-4-6", "POST_DRAFT_OPEN": "1" },
   "d1_databases": [
     { "binding": "LEADS_DB", "database_name": "iron-tuna-leads", "database_id": "75f7c43a-69cc-48eb-aa78-6ecfd91af2fb" }
   ],
@@ -16,6 +16,8 @@
     //  - 19:00 day's bonus post (Mon poll, Tue/Thu snake feature, Wed auction strategy/coach,
     //    Fri best ball, per X_BONUS_DAY_POOLS). See HANDOFF.md §10.
     //  - 11:00 daily: Vegas odds refresh (posts nothing; see HANDOFF.md §9a)
-    "crons": ["0 11 * * *", "0 13 * * 1-5", "0 16 * * 1-5", "0 19 * * 1-5"]
+    //  - hourly: the desk tick (HANDOFF.md §56): refresh game status, produce
+    //    any piece that is due and whose games are final. Idempotent.
+    "crons": ["0 11 * * *", "0 13 * * 1-5", "0 16 * * 1-5", "0 19 * * 1-5", "0 * * * *"]
   }
 }

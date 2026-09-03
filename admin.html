@@ -154,6 +154,22 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div class="note">Access is granted first, then the link is sent — that order matters, because a sign-in link is only ever issued to an address that already has access. Untick "Email it to them" to get the link without sending anything, for pasting into a DM. Full access is instant either way; the link only saves them the sign-in step.</div>
   </div>
 
+  <div class="card" id="dfsCard">
+    <h2>DFS salaries</h2>
+    <p class="meta">Paste a DraftKings or FanDuel lobby CSV export for the main slate. The site's rows are stored for the current week and <a href="/in-season/dfs">the DFS page</a> reads the newest import. Nothing here submits an entry anywhere.</p>
+    <div class="field">
+      <label for="dfsSite">Site
+        <select id="dfsSite"><option value="dk">DraftKings</option><option value="fd">FanDuel</option></select>
+      </label>
+      <label for="dfsWeek">Week <input id="dfsWeek" type="number" min="1" max="18" placeholder="current" style="width:70px"></label>
+      <button class="btn" id="dfsRefresh" type="button" title="Pull from the configured site feed, if one is configured">Refresh from feed</button>
+    </div>
+    <textarea id="dfsCsv" rows="6" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;…" spellcheck="false" style="width:100%;font:12px/1.4 ui-monospace,monospace"></textarea>
+    <div class="field" style="margin-top:8px"><button class="btn primary" id="dfsBtn" type="button">Import CSV</button></div>
+    <div class="result" id="dfsResult"><div class="msg" id="dfsMsg"></div></div>
+    <div class="note" id="dfsStatus">Loading salary status…</div>
+  </div>
+
   <h1 class="sec">Traffic</h1>
   <p class="meta" id="trafMeta">Loading traffic…</p>
 
@@ -636,6 +652,40 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(f.value).then(done, function(){ try { document.execCommand('copy'); done(); } catch(err){} });
     else { try { document.execCommand('copy'); done(); } catch(err){} }
   });
+
+  // DFS salaries: the lobby CSV import and the status of both sites.
+  function dfsStatus(j){
+    var parts = [];
+    ['dk','fd'].forEach(function(site){ var v = j.sites && j.sites[site], label = site === 'dk' ? 'DraftKings' : 'FanDuel';
+      parts.push(v ? label + ': ' + v.rows + ' rows (' + esc(v.source || 'feed') + ', ' + esc(new Date(v.fetchedAt).toLocaleString()) + ')' : label + ': nothing loaded'); });
+    $('dfsStatus').textContent = 'Week ' + (j.week == null ? '—' : j.week) + '. ' + parts.join(' · ');
+    if (j.refresh) $('dfsStatus').textContent += ' Feed: ' + JSON.stringify(j.refresh).slice(0, 200);
+  }
+  function dfsLoad(refresh){
+    var key = getKey(); if (!key) return;
+    fetch('/api/admin/dfs?key=' + encodeURIComponent(key) + (refresh ? '&refresh=1' : ''))
+      .then(function(r){ return r.json(); }).then(function(j){ if (j && j.ok) dfsStatus(j); else $('dfsStatus').textContent = 'Salary status unavailable.'; })
+      .catch(function(){ $('dfsStatus').textContent = 'Salary status unavailable.'; });
+  }
+  function dfsImport(){
+    var key = getKey(), csv = $('dfsCsv').value;
+    if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    if (!csv.trim()) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Paste a CSV first.</b>'; return; }
+    var btn = $('dfsBtn'), was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
+    var body = { site: $('dfsSite').value, csv: csv };
+    if ($('dfsWeek').value) body.week = Number($('dfsWeek').value);
+    fetch('/api/admin/dfs?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok || !j.imported || !j.imported.ok) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Not imported.</b> ' + esc((j && (j.error || (j.imported && j.imported.error === 'no_db' ? 'No database is bound, so nothing can be stored.' : j.imported && j.imported.error))) || 'unknown error'); return; }
+        $('dfsResult').className = 'result ok'; $('dfsMsg').innerHTML = '<b>Imported ' + esc(j.imported.stored) + ' rows for week ' + esc(j.imported.week == null ? '—' : j.imported.week) + '.</b>'; $('dfsCsv').value = ''; dfsStatus(j);
+      })
+      .catch(function(e){ $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Network error.</b> ' + esc((e && e.message) || ''); })
+      .then(function(){ btn.disabled = false; btn.textContent = was; });
+  }
+  $('dfsBtn').addEventListener('click', dfsImport);
+  $('dfsRefresh').addEventListener('click', function(){ $('dfsStatus').textContent = 'Asking the feed…'; dfsLoad(true); });
+  dfsLoad();
 
   load();
 })();

@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<title>Weekly Fantasy Rankings for Your League’s Scoring | Iron Tuna</title>
+<meta name="description" content="Rankings are worthless at somebody else’s scoring. Iron Tuna re-ranks every player at your exact settings — PPR, passing TD value, yardage thresholds — and prices the result against the betting market.">
+<link rel="canonical" href="https://irontuna.com/in-season/rankings">
+<meta property="og:title" content="Rankings, at your scoring">
+<meta property="og:description" content="A top 200 built for a league you are not in is a list. Set your scoring and the board re-orders.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/in-season/rankings">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<style>
+body{overflow-x:hidden}
+/* Mobile masthead: one sideways-scrolling row under a pinned CTA, so the
+   header stays 52px instead of wrapping into three ragged rows. Copied from the
+   other content pages deliberately; when this moves it moves everywhere. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
+.nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
+h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
+p{color:var(--sec);margin:0 0 16px}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
+.btn:hover{filter:brightness(1.06);text-decoration:none}
+.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+.rk-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:20px 0 10px}
+.rk-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--panel)}
+.rk-seg button{appearance:none;border:0;background:transparent;color:var(--sec);font:inherit;font-size:14px;font-weight:700;padding:9px 15px;cursor:pointer;border-left:1px solid var(--line)}
+.rk-seg button:first-child{border-left:0}
+.rk-seg button:hover{background:var(--elev);color:var(--text)}
+.rk-seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.rk-seg button[disabled]{opacity:.45;cursor:not-allowed}
+.rk-seg.rk-pos button{padding:9px 13px;font-size:13px}
+.rk-table td.p b{color:var(--text)}
+.rk-table td.p span{display:block;font-size:12px;color:var(--muted);letter-spacing:.03em}
+.rk-table td.gap.up{color:var(--teal);font-weight:700}
+.rk-table td.gap.dn{color:var(--danger);font-weight:700}
+.rk-table tr.bye td{opacity:.6}
+.rk-inj{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--danger);margin-left:6px}
+.rk-filter input{font:inherit;font-size:14px;padding:8px 12px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);color:var(--text);min-width:200px}
+.rk-check{font-size:13px;color:var(--sec);display:inline-flex;align-items:center;gap:6px}
+.rk-table th{cursor:pointer;user-select:none;white-space:nowrap}
+.rk-table th[aria-sort="descending"]::after{content:" \25BE"} .rk-table th[aria-sort="ascending"]::after{content:" \25B4"}
+.rk-table td.cls{font-size:11px;font-weight:800;letter-spacing:.06em;white-space:nowrap}
+.rk-table td.cls.buy{color:var(--teal)} .rk-table td.cls.fade{color:var(--danger)} .rk-table td.cls.agree{color:var(--muted)}
+.rk-conf{font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--sec)}
+.rk-conf.HIGH{color:var(--teal);border-color:rgba(14,124,99,.4)} .rk-conf.LOW{color:var(--muted)}
+.rk-trend.up{color:var(--teal);font-weight:700} .rk-trend.down{color:var(--danger);font-weight:700}
+.rk-banner{background:var(--gold);color:#231700;border-radius:10px;padding:14px 18px;letter-spacing:.06em;margin:14px 0 6px;font-size:clamp(18px,2.4vw,24px)}
+.rk-playoff-cta{margin:8px 0 0;font-size:14px}
+.rk-wed{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:18px 0}
+.rk-wed h2{margin:6px 0 4px}
+.rk-wed .is-card{cursor:pointer}
+.rk-wed .is-card:hover{border-color:var(--teal)}
+.rk-movers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
+.rk-movers ol{margin:6px 0 0;padding-left:20px;font-size:14px;color:var(--sec)}
+.rk-movers li{margin-bottom:6px} .rk-movers b{color:var(--text)}
+.rk-movers small{display:block;color:var(--muted);font-size:12px}
+.rk-why{font-size:12px;color:var(--sec);max-width:360px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;margin-top:3px}
+.rk-table td.p a{color:var(--text);text-decoration:none} .rk-table td.p </style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0e7c63" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/the-pick">The Pick</a>
+      <a href="/play-caller-premium">Columns</a>
+      <span class="nav-dd"><a href="/post-draft">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings" aria-current="page">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
+      <a href="/faq">FAQ</a>
+    </nav>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div></header>
+<main id="main" class="wrap">
+<p class="is-eyebrow">In-Season &middot; Rankings</p>
+<h1>A ranking is only worth what your scoring says it is</h1>
+<p class="is-lede">Half PPR moves running backs. Six-point passing touchdowns move quarterbacks past every other position. A tight-end premium re-cuts a whole tier. Iron Tuna re-scores and re-ranks the board at your settings rather than publishing one list for everybody.</p>
+<div class="its-strip" data-season-strip></div>
+
+<div class="rk-wed" id="rkWed" hidden>
+  <span class="is-tag is-live">Rest of Season update</span>
+  <h2 id="rkWedTitle">Rest of Season rankings</h2>
+  <p id="rkWedSub" class="is-note"></p>
+  <div class="is-grid" id="rkWedChoices"></div>
+</div>
+
+<div class="rk-controls">
+  <div class="rk-seg" id="rkHorizon" role="group" aria-label="Horizon">
+    <button type="button" data-horizon="week">This Week</button>
+    <button type="button" data-horizon="next3">Next 3 Weeks</button>
+    <button type="button" data-horizon="ros">Rest of Season</button>
+    <button type="button" data-horizon="playoffs">Weeks 15&ndash;17</button>
+  </div>
+  <div class="rk-seg" id="rkBoard" role="group" aria-label="Board">
+    <button type="button" data-board="ironTuna">Iron Tuna</button>
+    <button type="button" data-board="consensus">Consensus</button>
+    <button type="button" data-board="vegas">Vegas</button>
+  </div>
+</div>
+<div class="rk-controls">
+  <div class="rk-seg" id="rkScoring" role="group" aria-label="Scoring settings">
+    <button type="button" data-preset="standard">Standard</button>
+    <button type="button" data-preset="half">Half PPR</button>
+    <button type="button" data-preset="ppr">PPR</button>
+    <button type="button" data-preset="custom" id="rkMine">My League</button>
+  </div>
+  <div class="rk-seg rk-pos" id="rkPos" role="group" aria-label="Position">
+    <button type="button" data-pos="QB">QB</button>
+    <button type="button" data-pos="RB">RB</button>
+    <button type="button" data-pos="WR">WR</button>
+    <button type="button" data-pos="TE">TE</button>
+    <button type="button" data-pos="FLEX">FLEX</button>
+    <button type="button" data-pos="K">K</button>
+    <button type="button" data-pos="DST">DST</button>
+  </div>
+  <label class="rk-filter"><input type="search" id="rkSearch" placeholder="Filter by player or team" aria-label="Filter by player or team"></label>
+  <label class="rk-check"><input type="checkbox" id="rkHideOut"> Hide players out this week</label>
+</div>
+<p class="is-note" id="rkScoringNote"></p>
+<p class="rk-playoff-cta" id="rkPlayoffCta" hidden>Ranking for the playoffs? <a href="#" data-goto="playoffs">See Fantasy Playoff Rankings: Weeks 15&ndash;17 &rarr;</a></p>
+<h2 class="rk-banner" id="rkBanner" hidden>FANTASY PLAYOFFS: WEEKS 15&ndash;17</h2>
+
+<div class="is-scroll"><table class="is-table rk-table" id="rkTable" hidden>
+  <thead><tr id="rkHead"></tr></thead>
+  <tbody id="rkBody"></tbody>
+</table></div>
+<p class="is-empty" id="rkEmpty">Reading the board&hellip;</p>
+<p class="is-note" id="rkFoot"></p>
+
+<h2>The rest of the section</h2>
+<div class="is-grid">
+  <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
+  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
+  <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
+  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
+  <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
+  <div class="is-card"><h3><a href="/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
+  <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
+</div>
+
+<h2>Where these numbers come from</h2>
+<p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
+<p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
+
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>Draft</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/auction-watch">Auction Watch</a></li>
+      <li><a href="/guides">Guides</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/weekly-intel">Weekly Intel</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/waivers">Waivers</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/my-league">My League</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/post-draft">In-Season</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-season.js" defer></script>
+<script src="/it-league.js" defer></script>
+<script>
+(function () {
+  // Three boards, four horizons, seven position views, four scoring settings,
+  // and every column sortable. The API ships stat lines and points at PPR;
+  // scoring at the chosen setting is done here with it-league.js (the same
+  // engine, pinned by tools/test-scoring.mjs), then the three boards are
+  // re-ranked and Market Delta recomputed with the thresholds the API shipped.
+  var data = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'RB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  var $ = function (id) { return document.getElementById(id); };
+  function rules() {
+    var L = window.ITLeague, base = (L && L.defaults && L.defaults.scoring) || {};
+    if (preset === 'custom' && L && L.has && L.config && L.config.scoring) return L.config.scoring;
+    var rec = preset === 'standard' ? 0 : preset === 'half' ? 0.5 : 1, out = {};
+    for (var k in base) out[k] = base[k];
+    out.receptionPoints = rec; out.rbReceptionPoints = rec;
+    return out;
+  }
+  function score(stats, position, games) {
+    var L = window.ITLeague; if (!L || !L.score || !stats) return null;
+    return L.score(stats, position === 'DST' ? 'DEF' : position, rules(), games);
+  }
+  function setPressed(host, attr, val) {
+    [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); });
+  }
+  function slug(name) { return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  function classify(cPts, cRank, vPts, vRank, D) {
+    var pts = (isFinite(vPts) && isFinite(cPts)) ? Math.round((vPts - cPts) * 10) / 10 : null;
+    var rank = (isFinite(vRank) && isFinite(cRank)) ? cRank - vRank : null;
+    var pct = (pts != null && cPts > 0) ? pts / cPts : null;
+    var su = (rank != null && rank >= D.strongRank) || (pct != null && pct >= D.strongPct && pts >= D.minPointsStrong);
+    var sd = (rank != null && rank <= -D.strongRank) || (pct != null && pct <= -D.strongPct && pts <= -D.minPointsStrong);
+    var lu = (rank != null && rank >= D.leanRank) || (pct != null && pct >= D.leanPct && pts >= D.minPointsLean);
+    var ld = (rank != null && rank <= -D.leanRank) || (pct != null && pct <= -D.leanPct && pts <= -D.minPointsLean);
+    var cls = D.classes[2];
+    if (su && !sd) cls = D.classes[0]; else if (sd && !su) cls = D.classes[4]; else if (lu && !ld) cls = D.classes[1]; else if (ld && !lu) cls = D.classes[3];
+    return { points: pts, rank: rank, classification: cls };
+  }
+  // Re-score and re-rank the whole board at the current rules. Returns rows
+  // with points and ranks on all three boards plus Market Delta.
+  function scored(payload) {
+    var rows = payload.players.map(function (p) {
+      var g = p.games || 1;
+      return { p: p, c: score(p.consensus.stats, p.position, g), v: score(p.vegas.stats, p.position, g), i: score(p.ironTuna.stats, p.position, g) };
+    }).filter(function (r) { return r.i != null; });
+    var groups = {};
+    rows.forEach(function (r) { (groups[r.p.position] = groups[r.p.position] || []).push(r); });
+    ['c', 'v', 'i'].forEach(function (f) {
+      Object.keys(groups).forEach(function (g) {
+        groups[g].slice().sort(function (a, b) { return b[f] - a[f] || (a.p.name < b.p.name ? -1 : 1); }).forEach(function (r, ix) { r[f + 'Rank'] = ix + 1; });
+      });
+      var flex = rows.filter(function (r) { return /^(RB|WR|TE)$/.test(r.p.position); });
+      flex.slice().sort(function (a, b) { return b[f] - a[f] || (a.p.name < b.p.name ? -1 : 1); }).forEach(function (r, ix) { r[f + 'Flex'] = ix + 1; });
+    });
+    rows.forEach(function (r) { r.delta = classify(r.c, r.cRank, r.v, r.vRank, payload.delta); });
+    return rows;
+  }
+  var COLS = {
+    week: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['opp', 'Opponent'], ['it', 'Iron Tuna proj'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury'], ['trend', 'Trend']],
+    next3: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Iron Tuna total'], ['ppg', 'Avg / week'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['conf', 'Confidence'], ['inj', 'Injury']],
+    ros: [['rank', 'ROS rank'], ['player', 'Player'], ['team', 'Team'], ['it', 'Remaining pts'], ['ppg', 'Pts / game'], ['games', 'Games'], ['byes', 'Bye'], ['sched', 'Schedule'], ['trend', 'Role trend'], ['conf', 'Risk / confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']],
+    playoffs: [['rank', '#'], ['player', 'Player'], ['team', 'Team'], ['it', 'Wks 15–17 pts'], ['ppg', 'Avg / game'], ['games', 'Games'], ['opps', 'Opponents'], ['sched', 'Schedule'], ['conf', 'Confidence'], ['crank', 'Consensus rank'], ['vrank', 'Vegas rank'], ['delta', 'Market Delta'], ['inj', 'Injury']]
+  };
+  function cell(r, key, rankField) {
+    var p = r.p, w0 = p.weeks && p.weeks.find(function (w) { return !w.bye && !w.out; });
+    switch (key) {
+      case 'rank': return '<td class="num">' + r[rankField] + '</td>';
+      case 'player': return '<td class="p"><a href="/in-season/player/' + slug(p.name) + '?pos=' + e(p.position) + '"><b>' + e(p.name) + '</b></a><span>' + e(p.position) + '</span></td>';
+      case 'team': return '<td>' + e(p.team) + '</td>';
+      case 'opp': return '<td>' + (p.byes.length && !w0 ? '<span class="is-status">BYE</span>' : w0 ? e((w0.home ? 'vs ' : 'at ') + w0.opponent) : '—') + '</td>';
+      case 'opps': return '<td>' + e(p.weeks.map(function (w) { return w.bye ? 'BYE' : w.out ? 'OUT' : (w.home ? 'vs ' : '@') + w.opponent; }).join(', ')) + '</td>';
+      case 'it': return '<td class="num"><b>' + n1(board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v) + '</b></td>';
+      case 'ppg': var pts = board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v; return '<td class="num">' + (p.games ? n1(pts / p.games) : '—') + '</td>';
+      case 'games': return '<td class="num">' + p.games + '</td>';
+      case 'byes': return '<td>' + (p.byes.length ? e(p.byes.join(', ')) : '—') + '</td>';
+      case 'sched': return '<td>' + (p.scheduleDifficulty ? e(p.scheduleDifficulty.label) + ' <span class="is-status">' + e(p.scheduleDifficulty.avgOpponentDefRank) + '</span>' : '—') + '</td>';
+      case 'crank': return '<td class="num">' + e(p.position) + r.cRank + '</td>';
+      case 'vrank': return '<td class="num">' + e(p.position) + r.vRank + ' <span class="is-status">' + e(p.vegas.basis) + '</span></td>';
+      case 'delta': var d = r.delta, cls = /BUY/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : /HIGHER/.test(d.classification) ? 'buy' : 'agree';
+        return '<td class="cls ' + cls + '">' + (d.rank == null ? '' : (d.rank > 0 ? '+' : '') + d.rank + ' slots · ') + (d.points == null ? '' : (d.points > 0 ? '+' : '') + d.points + ' pts<br>') + e(d.classification) + (p.why && p.why.summary && d.classification !== 'MARKET AGREES' ? '<div class="rk-why" title="' + e(p.why.summary) + '">' + e(p.why.summary) + '</div>' : '') + '</td>';
+      case 'conf': return '<td><span class="rk-conf ' + e(p.vegas.confidence) + '">' + e(board === 'ironTuna' ? p.ironTuna.confidence : p.vegas.confidence) + '</span></td>';
+      case 'inj': return '<td>' + (p.injury ? '<span class="rk-inj">' + e(p.injury.status) + (p.injury.gamesOut ? ' (' + p.injury.gamesOut + ')' : '') + '</span>' : '—') + '</td>';
+      case 'trend': var t = p.roleTrend; return '<td class="rk-trend ' + e(t.label) + '">' + (t.label === 'no data' ? '<span class="is-status">no usage yet</span>' : e(t.label) + (t.pct != null ? ' ' + (t.pct > 0 ? '+' : '') + t.pct + '%' : '')) + '</td>';
+    }
+    return '<td></td>';
+  }
+  function sortVal(r, key, rankField) {
+    var p = r.p;
+    switch (key) {
+      case 'rank': return r[rankField];
+      case 'player': return p.name; case 'team': return p.team; case 'opp': return (p.weeks[0] && p.weeks[0].opponent) || 'zzz';
+      case 'it': return -(board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v);
+      case 'ppg': return -((board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v) / (p.games || 1));
+      case 'games': return -p.games; case 'byes': return p.byes[0] || 99; case 'sched': return p.scheduleDifficulty ? p.scheduleDifficulty.avgOpponentDefRank : 99;
+      case 'crank': return r.cRank; case 'vrank': return r.vRank; case 'delta': return -(r.delta.rank || 0);
+      case 'conf': return ['HIGH', 'MEDIUM', 'LOW'].indexOf(p.vegas.confidence); case 'inj': return p.injury ? 0 : 1;
+      case 'trend': return -(p.roleTrend.pct || 0);
+    }
+    return 0;
+  }
+  function render() {
+    var payload = data[horizon]; if (!payload) return;
+    var rows = scored(payload);
+    var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
+    rows = rows.filter(function (r) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === pos; });
+    if (q) { var qq = q.toLowerCase(); rows = rows.filter(function (r) { return r.p.name.toLowerCase().indexOf(qq) >= 0 || r.p.team.toLowerCase() === qq; }); }
+    if (hideOut && horizon === 'week') rows = rows.filter(function (r) { return !(r.p.weeks[0] && (r.p.weeks[0].out || r.p.weeks[0].bye)); });
+    rows.sort(function (a, b) { var x = sortVal(a, sortKey, rankField), y = sortVal(b, sortKey, rankField); return (x < y ? -1 : x > y ? 1 : 0) * sortDir || a[rankField] - b[rankField]; });
+    var cols = COLS[horizon];
+    $('rkHead').innerHTML = cols.map(function (c) { return '<th data-key="' + c[0] + '"' + (c[0] === sortKey ? ' aria-sort="' + (sortDir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>'; }).join('');
+    $('rkBody').innerHTML = rows.slice(0, 200).map(function (r) { return '<tr>' + cols.map(function (c) { return cell(r, c[0], rankField); }).join('') + '</tr>'; }).join('');
+    $('rkTable').hidden = !rows.length; $('rkEmpty').hidden = !!rows.length;
+    if (!rows.length) $('rkEmpty').textContent = 'Nothing matches.';
+    $('rkBanner').hidden = horizon !== 'playoffs';
+    $('rkPlayoffCta').hidden = horizon !== 'ros';
+    var L = window.ITLeague;
+    $('rkScoringNote').innerHTML = (preset === 'custom' ? 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>' + (preset === 'standard' ? 'Standard' : preset === 'half' ? 'Half PPR' : 'PPR') + '</b>') +
+      ' &middot; ' + e(payload.horizon.label) + (payload.horizon.weeks.length ? ' (weeks ' + payload.horizon.weeks[0] + (payload.horizon.weeks.length > 1 ? '–' + payload.horizon.weeks[payload.horizon.weeks.length - 1] : '') + ')' : '') +
+      ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : 'Vegas') + '</b> board.';
+    $('rkFoot').innerHTML = 'Vegas basis: <b>props</b> is a priced player prop; <b>gamelines</b> is the posted game line’s scoring environment applied to his line; <b>ratings</b> is a fixture no book has posted yet, projected from fitted team ratings and graded LOW. ' +
+      (payload.sources && payload.sources.props ? payload.sources.props + ' players carry a prop this week.' : 'No sportsbook has posted a player prop for this week yet.') +
+      (payload.sources && payload.sources.usage ? ' Usage through week ' + payload.sources.usage + '.' : ' No weekly usage has been published yet.');
+  }
+  function load(hz) {
+    if (data[hz]) { render(); return; }
+    $('rkEmpty').hidden = false; $('rkEmpty').textContent = 'Reading the board…';
+    fetch('/api/boards?horizon=' + hz + '&pos=ALL&scoring=ppr').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) { $('rkEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
+      data[hz] = j; if (hz === horizon) render();
+    }).catch(function () { $('rkEmpty').textContent = 'The board did not answer.'; });
+  }
+  function wednesday() {
+    fetch('/api/ros-update').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) return;
+      var box = $('rkWed'); box.hidden = false;
+      $('rkWedSub').innerHTML = (j.featured && j.featured.builtAt ? 'Updated ' + e(new Date(j.featured.builtAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' })) + ', for Week ' + e(j.featured.week) + '. ' : '') + e(j.snapshotNote || 'Three forward-looking boards, recalculated every Wednesday morning from the weekend’s usage, Monday night, the injury list, and every game line a book has posted.');
+      $('rkWedChoices').innerHTML = j.choices.map(function (c) { return '<div class="is-card" data-goto="' + e(c.horizon) + '"><h3>' + e(c.title) + '</h3><p>' + e(c.blurb) + '</p></div>'; }).join('');
+      var movers = '';
+      if (j.risers.length || j.fallers.length) {
+        movers += '<div class="rk-movers"><div><h3>Biggest risers</h3><ol>' + j.risers.slice(0, 8).map(function (m) { return '<li><b>' + e(m.name) + '</b> ' + e(m.position) + ' · ' + e(m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank + '<small>' + e(m.reasons.join('; ')) + '</small></li>'; }).join('') + '</ol></div>' +
+          '<div><h3>Biggest fallers</h3><ol>' + j.fallers.slice(0, 8).map(function (m) { return '<li><b>' + e(m.name) + '</b> ' + e(m.position) + ' · ' + e(m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank + '<small>' + e(m.reasons.join('; ')) + '</small></li>'; }).join('') + '</ol></div>';
+        if (j.marketVsRos.length) movers += '<div><h3>Market vs. ROS</h3><ol>' + j.marketVsRos.slice(0, 8).map(function (m) { return '<li><b>' + e(m.name) + '</b>: this week’s market ' + e(m.verdict) + ' his ROS ' + e(m.position) + m.rosRank + ' (' + e(m.weekDelta.classification.toLowerCase()) + ', ' + e(m.weekBasis) + ')</li>'; }).join('') + '</ol></div>';
+        movers += '</div>';
+      }
+      $('rkWedChoices').insertAdjacentHTML('afterend', movers);
+    }).catch(function () {});
+  }
+  function boot() {
+    var L = window.ITLeague, mine = $('rkMine');
+    var has = !!(L && L.has);
+    if (!has) { mine.disabled = true; mine.title = 'Set your league up in the draft app first'; }
+    preset = has ? 'custom' : 'ppr';
+    var hp = (location.hash.match(/horizon=(\w+)/) || [])[1]; if (hp && /^(week|next3|ros|playoffs)$/.test(hp)) horizon = hp;
+    setPressed($('rkScoring'), 'data-preset', preset); setPressed($('rkHorizon'), 'data-horizon', horizon);
+    setPressed($('rkBoard'), 'data-board', board); setPressed($('rkPos'), 'data-pos', pos);
+    $('rkScoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); setPressed(this, 'data-preset', preset); render(); });
+    $('rkHorizon').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; horizon = b.getAttribute('data-horizon'); setPressed(this, 'data-horizon', horizon); sortKey = 'rank'; sortDir = 1; load(horizon); });
+    $('rkBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); setPressed(this, 'data-board', board); render(); });
+    $('rkPos').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; pos = b.getAttribute('data-pos'); setPressed(this, 'data-pos', pos); render(); });
+    $('rkSearch').addEventListener('input', function () { q = this.value.trim(); render(); });
+    $('rkHideOut').addEventListener('change', function () { hideOut = this.checked; render(); });
+    $('rkHead').addEventListener('click', function (ev) { var th = ev.target.closest('th'); if (!th) return; var k = th.getAttribute('data-key'); if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } render(); });
+    document.addEventListener('click', function (ev) { var g = ev.target.closest('[data-goto]'); if (!g) return; ev.preventDefault(); horizon = g.getAttribute('data-goto'); setPressed($('rkHorizon'), 'data-horizon', horizon); load(horizon); $('rkHorizon').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    load(horizon); wednesday();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

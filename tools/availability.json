@@ -1,0 +1,304 @@
+{
+  "_": [
+    "Players the board prices who cannot play a full 2026 season as of asOf: injured reserve,",
+    "PUP, suspension, the commissioner's exempt list. gamesOut is regular-season games the",
+    "player is expected to miss (17 = out for the year). `season` is the full-season stat",
+    "line captured from PROJECTIONS the first time the entry was applied; the committed row",
+    "is season x (17 - gamesOut) / 17. To reinstate a player set gamesOut to 0 and re-run",
+    "(the season line comes back), then delete the entry after the next projections merge.",
+    "Apply with `node tools/apply-availability.mjs`; CI runs it with --check."
+  ],
+  "asOf": "2026-09-02",
+  "seasonGames": 17,
+  "players": [
+    {
+      "name": "Jayden Higgins",
+      "position": "WR",
+      "team": "HOU",
+      "status": "IR",
+      "gamesOut": 17,
+      "note": "Torn ACL in the Aug. 18 joint practice against the Raiders; out for the 2026 season.",
+      "source": "ESPN, NFL.com, CBS Sports (Aug. 19-20, 2026); ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 2,
+        "rushTD": 1,
+        "rec": 53,
+        "recYd": 665,
+        "recTD": 4,
+        "fumLost": 0
+      }
+    },
+    {
+      "name": "Devin Neal",
+      "position": "RB",
+      "team": "NO",
+      "status": "IR",
+      "gamesOut": 17,
+      "note": "Hamstring; placed on injured reserve without a return designation, out for the season.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 176,
+        "rushTD": 3,
+        "rec": 4,
+        "recYd": 30,
+        "recTD": 0
+      }
+    },
+    {
+      "name": "Ty Chandler",
+      "position": "RB",
+      "team": "NO",
+      "status": "IR",
+      "gamesOut": 17,
+      "note": "Season-ending knee injury in the Aug. 22 preseason game against the Rams.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 144,
+        "rushTD": 2,
+        "rec": 13,
+        "recYd": 56,
+        "recTD": 0
+      }
+    },
+    {
+      "name": "Calvin Austin III",
+      "position": "WR",
+      "team": "NYG",
+      "status": "IR",
+      "gamesOut": 17,
+      "note": "Torn ACL at the Aug. 25 practice; out for the 2026 season.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rec": 31,
+        "recYd": 444,
+        "recTD": 4
+      }
+    },
+    {
+      "name": "Josh Jacobs",
+      "position": "RB",
+      "team": "GB",
+      "status": "Exempt",
+      "gamesOut": 6,
+      "note": "Commissioner's exempt list since Aug. 30 after misdemeanor charges from a May arrest. No timeline: he stays off until the commissioner removes him, and the first court date is Nov. 17. Six games is a working estimate, revisit weekly.",
+      "source": "ESPN, NFL.com, NBC Sports (Aug. 30, 2026); site Auction Watch 2026-08-31 and 2026-09-02",
+      "season": {
+        "rushYd": 1144,
+        "rushTD": 12.2,
+        "rec": 36,
+        "recYd": 280,
+        "recTD": 1.6,
+        "fumLost": 1.5
+      }
+    },
+    {
+      "name": "Jordyn Tyson",
+      "position": "WR",
+      "team": "NO",
+      "status": "IR",
+      "gamesOut": 8,
+      "note": "Recurring right hamstring; IR with a return designation, roughly two months out, Week 9 return most likely.",
+      "source": "ESPN injury feed 2026-09-02; site Auction Watch 2026-09-02",
+      "season": {
+        "rushYd": 0,
+        "rushTD": 0,
+        "rec": 36,
+        "recYd": 484,
+        "recTD": 2.7,
+        "fumLost": 0.4
+      }
+    },
+    {
+      "name": "James Conner",
+      "position": "RB",
+      "team": "ARI",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Foot complications from the 2025 injury; IR with a return designation, first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 312,
+        "rushTD": 3,
+        "rec": 35,
+        "recYd": 263,
+        "recTD": 2
+      }
+    },
+    {
+      "name": "Adam Randall",
+      "position": "RB",
+      "team": "BAL",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "IR with a return designation at cutdown; first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 121,
+        "rushTD": 0.9,
+        "rec": 4,
+        "recYd": 29,
+        "recTD": 0.2,
+        "fumLost": 0.1
+      }
+    },
+    {
+      "name": "Isiah Pacheco",
+      "position": "RB",
+      "team": "DET",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Back injury after an MCL sprain in camp; IR with a return designation, first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02; site Auction Watch 2026-08-27",
+      "season": {
+        "rushYd": 639,
+        "rushTD": 4.5,
+        "rec": 17,
+        "recYd": 114,
+        "recTD": 0.8,
+        "fumLost": 0.5
+      }
+    },
+    {
+      "name": "Savion Williams",
+      "position": "WR",
+      "team": "GB",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Ankle; IR with a return designation, first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 47,
+        "rushTD": 0.3,
+        "rec": 20,
+        "recYd": 231,
+        "recTD": 1.7,
+        "fumLost": 0.3
+      }
+    },
+    {
+      "name": "Luke Musgrave",
+      "position": "TE",
+      "team": "GB",
+      "status": "PUP",
+      "gamesOut": 4,
+      "note": "Neck; reserve/PUP, misses at least the first four games and is no lock to return when eligible.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rec": 24,
+        "recYd": 258,
+        "recTD": 1
+      }
+    },
+    {
+      "name": "Tank Dell",
+      "position": "WR",
+      "team": "HOU",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Knee (ACL and MCL) recovery; IR with a return designation, first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 45,
+        "rushTD": 0.2,
+        "rec": 34,
+        "recYd": 415,
+        "recTD": 2.4,
+        "fumLost": 0.4
+      }
+    },
+    {
+      "name": "Ben Sims",
+      "position": "TE",
+      "team": "MIA",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Waived/injured and reverted to IR; misses at least four games.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rec": 7,
+        "recYd": 65,
+        "recTD": 0.3
+      }
+    },
+    {
+      "name": "Grant Calcaterra",
+      "position": "TE",
+      "team": "PHI",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Back; IR with a return designation, first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rec": 21,
+        "recYd": 224,
+        "recTD": 1
+      }
+    },
+    {
+      "name": "Christian Kirk",
+      "position": "WR",
+      "team": "SF",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Calf injury from July 26; IR with a return designation, first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 0,
+        "rushTD": 0,
+        "rec": 10,
+        "recYd": 129,
+        "recTD": 0.8,
+        "fumLost": 0.1
+      }
+    },
+    {
+      "name": "Isaac Guerendo",
+      "position": "RB",
+      "team": "SF",
+      "status": "PUP",
+      "gamesOut": 4,
+      "note": "Pectoral; reserve/PUP, misses at least the first four games.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 159,
+        "rushTD": 2,
+        "rec": 3,
+        "recYd": 34,
+        "recTD": 1
+      }
+    },
+    {
+      "name": "Zach Charbonnet",
+      "position": "RB",
+      "team": "SEA",
+      "status": "PUP",
+      "gamesOut": 4,
+      "note": "January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.",
+      "source": "ESPN injury feed 2026-09-02; site Auction Watch 2026-08-31",
+      "season": {
+        "rushYd": 555,
+        "rushTD": 6.9,
+        "rec": 20,
+        "recYd": 145,
+        "recTD": 0.4,
+        "fumLost": 0.3
+      }
+    },
+    {
+      "name": "Jeremy McNichols",
+      "position": "RB",
+      "team": "WAS",
+      "status": "IR",
+      "gamesOut": 4,
+      "note": "Quadriceps; IR with a return designation, first eligible Week 5.",
+      "source": "ESPN injury feed 2026-09-02",
+      "season": {
+        "rushYd": 87,
+        "rushTD": 0,
+        "rec": 6,
+        "recYd": 53,
+        "recTD": 1
+      }
+    }
+  ]
+}

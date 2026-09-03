@@ -65,6 +65,8 @@ td.you{color:var(--goldink);font-weight:700}
 
 /* ── the in-season shelf ─────────────────────────────────────────────────── */
 .pd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:22px 0 8px}
+a.pd-card{display:block;color:inherit;text-decoration:none}
+a.pd-card:hover{border-color:var(--teal)}
 .pd-card{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:var(--panel);position:relative}
 .pd-card.lead{border-color:var(--teal);background:linear-gradient(180deg,rgba(14,124,99,.06),rgba(14,124,99,.015) 60%),var(--panel)}
 .pd-card h3{font-size:16.5px;margin:0 0 6px;letter-spacing:.01em}
@@ -97,7 +99,7 @@ td.you{color:var(--goldink);font-weight:700}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <a href="/post-draft" aria-current="page">In-Season</a>
+      <span class="nav-dd"><a href="/post-draft" aria-current="page">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
@@ -108,21 +110,26 @@ td.you{color:var(--goldink);font-weight:700}
 </div></header>
 <main id="main" class="wrap">
 <div class="art-head">
-<div class="eyebrow">After the draft</div>
+<div class="eyebrow">In-Season</div>
 <h1 class="art-h1">Your season is still an auction</h1>
 <p class="lede">Every waiver claim in a FAAB league is a blind auction, run weekly, against the same twelve people you just drafted against. It is the one part of the fantasy season that is priced in dollars, and almost nobody prices it. That is what Iron Tuna is for.</p>
 </div>
 
-<div class="card" id="pd-gate">
-  <p style="margin:0 0 4px;font-size:15px"><b>Coming soon.</b> Leave your email and we will tell you the day it opens &mdash; and it is free when it does.</p>
-  <div class="pd-form">
-    <input class="em" id="pd-email" type="email" placeholder="you@example.com" autocomplete="email" aria-label="Email address">
-    <button class="btn" id="pd-btn" type="button">Notify me &mdash; free access</button>
+<div class="card" id="pd-open">
+  <p style="margin:0 0 10px;font-size:15px"><b>The in-season section is open.</b> Eight tools, all free, all priced against the betting market and re-scored to your league.</p>
+  <div class="pd-grid">
+    <a class="pd-card" href="/in-season/rankings"><h3>Rankings</h3><p>This week, next three, rest of season, and the fantasy playoffs. Iron Tuna, consensus and Vegas side by side.</p></a>
+    <a class="pd-card" href="/in-season/vegas-edge"><h3>Vegas Edge</h3><p>Where the market and the experts disagree, what moved, and the TD and volume boards.</p></a>
+    <a class="pd-card" href="/weekly-intel"><h3>Weekly Intel</h3><p>The week, the byes, the slate.</p></a>
+    <a class="pd-card" href="/what-they-arent-telling-you"><h3>What They Aren&rsquo;t Telling You</h3><p>The disagreement, counted across the whole board.</p></a>
+    <a class="pd-card" href="/game-intel"><h3>Game Intel</h3><p>Every game with its line, total and implied points.</p></a>
+    <a class="pd-card" href="/faab"><h3>FAAB Advisor</h3><p>What to bid, and what it will take to win.</p></a>
+    <a class="pd-card" href="/dfs"><h3>DFS</h3><p>The same market read, aimed at one slate.</p></a>
+    <a class="pd-card" href="/my-league"><h3>My League</h3><p>Your settings, on every page that prints a number.</p></a>
   </div>
-  <p class="pd-note" id="pd-msg">No spam, no card. One email when it opens, then only during the season. Unsubscribe in one click.</p>
 </div>
 
-<h2>What opens</h2>
+<h2>What is here</h2>
 <div class="pd-grid">
   <div class="pd-card lead">
     <span class="pd-tag">The flagship</span>
@@ -181,9 +188,21 @@ td.you{color:var(--goldink);font-weight:700}
      </ul>
     </div>
     <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/weekly-intel">Weekly Intel</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/waivers">Waivers</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/my-league">My League</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
      <h2>Company</h2>
      <ul>
-      <li><a href="/post-draft">In-Season (soon)</a></li>
+      <li><a href="/post-draft">In-Season</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -212,6 +231,9 @@ td.you{color:var(--goldink);font-weight:700}
   var msg = document.getElementById('pd-msg');
   var btn = document.getElementById('pd-btn');
   var input = document.getElementById('pd-email');
+  // The section is open (POST_DRAFT_OPEN=1, September 2026): the waiting-list
+  // form is gone from this page and this script has nothing to bind to.
+  if (!btn || !input) return;
   // Which locked page sent them here. The worker serves this gate in place of a
   // closed tool WITHOUT redirecting, so location.pathname is still the tool the
   // reader asked for — that is what gets recorded, so the launch email can lead

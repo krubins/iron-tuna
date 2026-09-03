@@ -88,14 +88,14 @@ function endOfStatement(src, start) {
 // Declaration order matters — DEFAULT_LEAGUE_CONFIG reads VEGAS_DEFAULT_W.
 const CONST_NAMES = ['VEGAS_DEFAULT_W', 'LAST_YEAR_QB_STATS', 'LAST_YEAR_RB_STATS', 'LAST_YEAR_WR_STATS',
   'LAST_YEAR_TE_STATS', 'LAST_YEAR_K_STATS', 'LAST_YEAR_DEF_STATS', 'DEFAULT_LEAGUE_CONFIG',
-  'LEAGUE_CURVE_BUDGET', 'SUPERFLEX_QB_CURVE', 'LEAGUE_MARKET_CURVE', 'POSITION_PREDICTABILITY', 'POS_RELIABILITY'];
+  'LEAGUE_CURVE_BUDGET', 'SUPERFLEX_QB_CURVE', 'LEAGUE_MARKET_CURVE', 'POS_RELIABILITY', 'RELIABILITY_RANK_DECAY', 'RELIABILITY_RANK_FLOOR'];
 const consts = CONST_NAMES.map(n => {
   const m = new RegExp('^const\\s+' + n + '\\s*=', 'm').exec(idx);
   if (!m) throw new Error('cannot lift const ' + n);
   return idx.slice(m.index, endOfStatement(idx, m.index) + 1);
 }).join('\n');
 const fns = closure(['scorePlayer', 'applyVegasWeight', 'vegasWeightOf', 'normalizeToLastYear',
-  'marketCurveOrder', 'buildValuations', 'applyPredictability', 'renormalizeToBudget',
+  'marketCurveOrder', 'buildValuations', 'renormalizeToBudget',
   'attachProvisionalAdp', 'applyCustomRanks', 'totalLeagueBudget', 'totalRosterSpots']);
 
 // The committed projections, straight out of the worker — the same pool the app ships.
@@ -129,7 +129,7 @@ const scored = normalizeToLastYear(source.map(p => ({ ...p, projectedPoints: sco
 const marketOrder = marketCurveOrder(scored);
 const ranked = applyCustomRanks(scored, {});
 const rendered = attachProvisionalAdp(
-  renormalizeToBudget(applyPredictability(buildValuations(ranked, config, marketOrder).players, config), config), config);
+  renormalizeToBudget(buildValuations(ranked, config, marketOrder).players, config), config);
 
 // The rostered pool: exactly what renormalizeToBudget itself calls rostered.
 const byPos = {};
