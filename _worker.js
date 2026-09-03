@@ -5793,24 +5793,24 @@ function weekGames(sched, week, now) {
     .map(g => ({ ...g, dow: _etDow(g.kickoff), state: seasonGameStatus(g, at) }));
 }
 const CONTENT_KINDS = {
-  'team-recaps':          { title: 'Team-by-Team Recaps', day: 'Mon', hour: 6, retro: true,
+  'team-recaps':          { title: 'Team-by-Team Recaps', day: 'Mon', hour: 7, retro: true,
                             targets: (gs) => gs.filter(g => g.dow !== 'Mon') },
-  'mnf-breakdown':        { title: 'Monday Night: What We Learned', day: 'Tue', hour: 0, retro: true,
+  'mnf-breakdown':        { title: 'Monday Night: What We Learned', day: 'Tue', hour: 7, retro: true,
                             targets: (gs) => gs.filter(g => g.dow === 'Mon'), optional: true },
-  'what-they-arent-telling-you': { title: "What They Aren't Telling You", day: 'Tue', hour: 6, retro: true,
+  'what-they-arent-telling-you': { title: "What They Aren't Telling You", day: 'Tue', hour: 7, retro: true,
                             targets: (gs) => gs },
-  'opportunity-report':   { title: 'The Opportunity Report', day: 'Wed', hour: 6, retro: true, targets: (gs) => gs },
+  'opportunity-report':   { title: 'The Opportunity Report', day: 'Wed', hour: 7, retro: true, targets: (gs) => gs },
   'rankings-update':      { title: 'Forward-Looking Rankings Update', day: 'Wed', hour: 7, retro: false, targets: () => [] },
-  'final-read':           { title: 'The Final Read', day: 'Thu', hour: 6, retro: false, targets: () => [] },
-  'tnf-preview':          { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, retro: false,
+  'final-read':           { title: 'The Final Read', day: 'Thu', hour: 7, retro: false, targets: () => [] },
+  'tnf-preview':          { title: 'Thursday Night Football Preview', day: 'Thu', hour: 7, retro: false,
                             targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true, preview: true },
-  'tnf-aftermath':        { title: 'Thursday Night Aftermath', day: 'Fri', hour: 0, retro: false,
+  'tnf-aftermath':        { title: 'Thursday Night Aftermath', day: 'Fri', hour: 7, retro: false,
                             targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true },
-  'weekend-game-plan':    { title: 'The Weekend Game Plan', day: 'Fri', hour: 6, retro: false,
+  'weekend-game-plan':    { title: 'The Weekend Game Plan', day: 'Fri', hour: 7, retro: false,
                             targets: (gs) => gs.filter(g => g.dow !== 'Thu'), preview: true },
   'what-changed-today':   { title: 'What Changed Today?', day: 'Sun', hour: 20, retro: true,
                             targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'), partial: true },
-  'snf-what-we-learned':  { title: 'Sunday Night: What We Learned', day: 'Mon', hour: 0, retro: true,
+  'snf-what-we-learned':  { title: 'Sunday Night: What We Learned', day: 'Mon', hour: 1, retro: true,
                             targets: (gs) => { const sun = gs.filter(g => g.dow === 'Sun'); if (!sun.length) return []; const last = Math.max(...sun.map(g => g.kickoff)); return sun.filter(g => g.kickoff === last && etParts(g.kickoff).hour >= 19); }, optional: true }
 };
 const DOW_N = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -6509,7 +6509,7 @@ const JOB_FNS = {
   'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
   'analytics-prune':      env => pruneAnalytics(env, 180),
   'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
-  'content-tick':         env => runScheduleRefresh(env).catch(() => null).then(() => runContentTick(env))
+  'content-tick':         env => runContentTick(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
 // Run one job and log it. Never throws: a job that throws is a logged
@@ -6607,6 +6607,7 @@ function healthAssess(h, now) {
     if (list.length && !list.some(p => p.configured)) missing.push({ feed: 'source:' + kind, label: 'No ' + kind + ' source configured', why: list.map(p => p.name).join(', ') + ' all need a key or id that is not set' });
   }
   if (!h.llm) missing.push({ feed: 'llm', label: 'Writer', why: 'LLM_API_KEY is not set; every desk piece is held with its brief' });
+  for (const e of ((h.schedule && h.schedule.errors) || [])) stale.push({ feed: 'schedule-config', label: 'Job schedule override', ageHours: null, limitHours: null, note: e + ' (ignored; the default entry runs)' });
   // Failed jobs are a fact of the log, not a guess.
   const failed = (h.jobs && h.jobs.failed) || [];
   const status = missing.some(m => m.feed === 'schedule') ? 'down' : (missing.length || failed.length || stale.length) ? 'degraded' : 'ok';
@@ -6665,14 +6666,16 @@ async function healthPayload(env, opts) {
   };
   const report = providerReport(env);
   const editorial = await _editorialRows(env, state, sched, now);
-  const h = { state, updates, sources: report.providers, llm: !!env.LLM_API_KEY, jobs };
+  const schedule = jobScheduleReport(jobScheduleFrom(env), now);
+  const h = { state, updates, sources: report.providers, llm: !!env.LLM_API_KEY, jobs, schedule };
   const assess = healthAssess(h, now);
   return { ok: true, contract: 1, at: now, et: etParts(now),
            season: sched ? sched.season : null, phase: state.ok ? state.phase : null, phaseLabel: state.ok ? state.phaseLabel : null,
            week: state.ok ? state.week : null, counts: state.ok ? state.counts : null, nextGame: state.ok ? state.nextGame : null,
            status: assess.status, ages: assess.ages, missing: assess.missing, stale: assess.stale,
            updates, sources: report.providers, unavailable: report.unavailable, llm: !!env.LLM_API_KEY,
-           jobs: jobs.jobs, failedJobs: jobs.failed, jobNames: Object.keys(JOB_FNS), editorial, ran: o.ran || null };
+           jobs: jobs.jobs.map(j => ({ ...j, ...(schedule.jobs.find(x => x.job === j.job) || {}) })), failedJobs: jobs.failed, jobNames: Object.keys(JOB_FNS),
+           schedule: { tz: schedule.tz, source: schedule.source, errors: schedule.errors }, editorial, ran: o.ran || null };
 }
 
 // ── editorial actions ──────────────────────────────────────────────────────
@@ -6723,6 +6726,132 @@ async function contentAdmin(env, action, kind, season, week, body) {
   await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', row.id).run();
   row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor';
   return { ok: true, action, warnings, piece: full() };
+}
+
+// -- the job schedule (Step 30) --------------------------------------------------
+// One table, in New York time. The hourly trigger is the only clock: every
+// hour it asks jobsDueAt what is due in THIS ET hour and runs it through the
+// job log, phase by phase (the pulls, then what is derived from them, then
+// the desk). ET rather than UTC so "Wednesday 7 AM" is Wednesday 7 AM in
+// September and in December alike; a fixed UTC cron drifts an hour when the
+// clocks change. The content kinds keep their own due rule (contentDue),
+// which is game completion, not this clock; the tick only asks.
+//
+// Every entry: { job, days, hours, phase }. days null = every day; hours
+// 'hourly' or a list of ET hours. A job may have several entries. The env
+// var JOB_SCHEDULE_JSON (an array of entries) REPLACES the entries of each
+// job it names, so one job can be retimed without a deploy; a bad entry is
+// reported on the health board and ignored, never applied.
+const JOB_TZ = 'America/New_York';
+const JOB_SCHEDULE = [
+  // phase 1: the pulls
+  { job: 'schedule-refresh',     days: null,            hours: 'hourly',                       phase: 1 },
+  { job: 'market-snapshot',      days: null,            hours: [1, 4, 7, 10, 13, 16, 19, 22],  phase: 1 },
+  { job: 'market-snapshot',      days: ['Sun'],         hours: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], phase: 1 },
+  { job: 'odds-refresh',         days: null,            hours: [7],                            phase: 1 },
+  { job: 'availability-refresh', days: null,            hours: [7, 11, 13, 19],                phase: 1 },
+  { job: 'usage-refresh',        days: ['Tue', 'Wed'],  hours: [6],                            phase: 1 },
+  { job: 'depth-charts',         days: null,            hours: [6],                            phase: 1 },
+  { job: 'dfs-refresh',          days: ['Tue', 'Thu', 'Sat'], hours: [9],                      phase: 1 },
+  // phase 2: derived from the pulls
+  { job: 'ros-snapshot',         days: ['Wed'],         hours: [7],                            phase: 2 },
+  { job: 'snapshot-prune',       days: ['Sun'],         hours: [4],                            phase: 2 },
+  { job: 'analytics-prune',      days: ['Sun'],         hours: [4],                            phase: 2 },
+  { job: 'job-prune',            days: ['Sun'],         hours: [4],                            phase: 2 },
+  // phase 3: the desk, which reads everything above
+  { job: 'content-tick',         days: null,            hours: 'hourly',                       phase: 3 }
+];
+const JOB_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// Validate one entry. Returns the clean entry or a string saying what is wrong.
+function jobEntryCheck(e) {
+  if (!e || typeof e !== 'object') return 'not an object';
+  if (!JOB_FNS[e.job]) return 'unknown job ' + JSON.stringify(e.job);
+  let days = null;
+  if (e.days != null) {
+    if (!Array.isArray(e.days) || !e.days.length || !e.days.every(d => JOB_DOW.includes(d))) return e.job + ': days must be a list of Sun..Sat';
+    days = e.days.slice();
+  }
+  let hours;
+  if (e.hours === 'hourly') hours = 'hourly';
+  else if (Array.isArray(e.hours) && e.hours.length && e.hours.every(h => Number.isInteger(h) && h >= 0 && h <= 23)) hours = Array.from(new Set(e.hours)).sort((a, b) => a - b);
+  else return e.job + ': hours must be "hourly" or a list of 0..23';
+  const phase = e.phase == null ? 2 : e.phase;
+  if (![1, 2, 3].includes(phase)) return e.job + ': phase must be 1, 2 or 3';
+  return { job: e.job, days, hours, phase };
+}
+// The schedule in force: the table, with any env override applied.
+function jobScheduleFrom(env) {
+  const raw = env && env.JOB_SCHEDULE_JSON;
+  const errors = [];
+  let entries = JOB_SCHEDULE.map(e => ({ ...e }));
+  const overridden = [];
+  if (raw) {
+    let list = null;
+    try { list = JSON.parse(raw); } catch (e) { errors.push('JOB_SCHEDULE_JSON is not JSON'); }
+    if (list && !Array.isArray(list)) { errors.push('JOB_SCHEDULE_JSON must be an array of entries'); list = null; }
+    if (list) {
+      const clean = [];
+      for (const e of list) { const c = jobEntryCheck(e); if (typeof c === 'string') errors.push(c); else clean.push(c); }
+      const jobs = new Set(clean.map(c => c.job));
+      if (jobs.size) { entries = entries.filter(e => !jobs.has(e.job)).concat(clean); overridden.push(...jobs); }
+    }
+  }
+  entries.sort((a, b) => a.phase - b.phase);
+  return { entries, overridden, errors, source: overridden.length ? 'env' : 'default' };
+}
+function _jobEntryDue(e, et) {
+  if (e.days && !e.days.includes(et.dow)) return false;
+  return e.hours === 'hourly' || e.hours.includes(et.hour);
+}
+// What is due in the ET hour containing `now`, in run order (phase, then
+// table order), each job once.
+function jobsDueAt(entries, now) {
+  const et = etParts(now);
+  const out = [], seen = new Set();
+  for (const e of entries) if (_jobEntryDue(e, et) && !seen.has(e.job)) { seen.add(e.job); out.push({ job: e.job, phase: e.phase }); }
+  return out;
+}
+const _hhmm = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM');
+function _jobWhen(entries) {
+  return entries.map(e => {
+    const days = e.days ? e.days.join('/') : 'daily';
+    if (e.hours === 'hourly') return days + ' hourly';
+    const consecutive = e.hours.length > 2 && e.hours.every((h, i) => i === 0 || h === e.hours[i - 1] + 1);
+    if (consecutive) return days + ' ' + _hhmm(e.hours[0]) + ' to ' + _hhmm(e.hours[e.hours.length - 1]) + ' hourly';
+    return days + ' ' + e.hours.map(_hhmm).join(', ');
+  }).join('; ') + ' ET';
+}
+// Per job: when it runs, in words, and the next ET hour it is due after now.
+function jobScheduleReport(sched, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const byJob = {};
+  for (const e of sched.entries) (byJob[e.job] = byJob[e.job] || []).push(e);
+  const jobs = Object.keys(JOB_FNS).map(job => {
+    const mine = byJob[job] || [];
+    let nextAt = null;
+    if (mine.length) {
+      let t = Math.floor(at / 3600000) * 3600000 + 3600000;
+      for (let i = 0; i < 24 * 8 && nextAt == null; i++, t += 3600000) if (mine.some(e => _jobEntryDue(e, etParts(t)))) nextAt = t;
+    }
+    return { job, scheduled: mine.length > 0, when: mine.length ? _jobWhen(mine) : 'on demand only', nextAt, phase: mine.length ? Math.min(...mine.map(e => e.phase)) : null, overridden: sched.overridden.includes(job) };
+  });
+  return { tz: JOB_TZ, source: sched.source, errors: sched.errors, jobs };
+}
+// The hourly tick. Phase 1 runs in parallel and finishes before phase 2
+// starts; the desk goes last. Nothing here throws: every job is a logged
+// row, and the tick's own answer lists them.
+async function runScheduledTick(env, now, trigger) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const sched = jobScheduleFrom(env);
+  const due = jobsDueAt(sched.entries, at);
+  const ran = [];
+  for (const phase of [1, 2, 3]) {
+    const names = due.filter(d => d.phase === phase).map(d => d.job);
+    if (!names.length) continue;
+    const results = await Promise.all(names.map(n => jobRun(env, n, trigger || 'tick').then(r => ({ job: n, ok: !(r && r.ok === false), error: r && r.ok === false ? (r.error || r.reason || 'failed') : null }))));
+    ran.push(...results);
+  }
+  return { ok: true, at, et: etParts(at), due: due.map(d => d.job), ran, scheduleErrors: sched.errors };
 }
 
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
@@ -8764,60 +8893,20 @@ export default {
       '0 16 * * 1-5': ['snake'],
       '0 19 * * 1-5': ['bonus'],
     };
-    // Daily odds refresh runs on its own trigger and posts nothing.
-    if (event.cron === '0 11 * * *') {
-      // Every job runs through jobRun, which logs one row per run (HANDOFF
-      // §59) and never throws; the health board reads that log.
-      const run = name => jobRun(env, name, event.cron).then(r => console.log(name + ':', JSON.stringify(r).slice(0, 400)));
-      ctx.waitUntil(run('odds-refresh'));
-      // The injury list, same daily cadence, same fail-safe (HANDOFF §48).
-      ctx.waitUntil(run('availability-refresh'));
-      // The schedule behind /api/season. Cheap (one cached CSV plus five small
-      // ESPN calls) and required by every in-season surface, so it runs on the
-      // daily slot with the odds AND on the three posting slots below, which is
-      // what keeps Sunday scores from sitting a full day stale.
-      ctx.waitUntil(run('schedule-refresh'));
-      // The market engine's two feeds. The snapshot pull appends every CHANGED
-      // book line to the history table (nothing is overwritten); the usage
-      // refresh rebuilds the weekly stats/snaps overlay, which is a ~12MB pull
-      // and belongs nowhere near a request path. Both fail closed.
-      ctx.waitUntil(run('market-snapshot'));
-      ctx.waitUntil(run('usage-refresh'));
-      // DFS salaries from whichever site feed is configured; a no-op otherwise.
-      ctx.waitUntil(run('dfs-refresh'));
-      // Depth charts, daily, for the recaps' "what we already knew".
-      ctx.waitUntil(run('depth-charts'));
-      // The Wednesday rest-of-season update. 11:00Z is 7am in New York during
-      // daylight time and 6am after it ends; either is before anyone is
-      // setting a lineup. Runs AFTER the schedule, odds and usage pulls above
-      // have had a moment, since it reads all three.
-      if (new Intl.DateTimeFormat('en-US', { timeZone: LEAD_TZ, weekday: 'short' }).format(new Date()) === 'Wed') {
-        ctx.waitUntil(jobRun(env, 'ros-snapshot', event.cron, e => new Promise(r => setTimeout(r, 20000)).then(() => runRosSnapshot(e)))
-          .then(r => console.log('ros-snapshot:', JSON.stringify(r).slice(0, 400))));
-      }
-      ctx.waitUntil(run('snapshot-prune'));
-      ctx.waitUntil(run('analytics-prune'));
-      ctx.waitUntil(run('job-prune'));
-      return;
-    }
-    // Every other trigger also refreshes the schedule before it posts: the
-    // posting slots are the only three times a day the worker wakes, so they are
-    // where in-week score and status freshness comes from.
-    ctx.waitUntil(jobRun(env, 'schedule-refresh', event.cron));
-    // Lines move all week, and a snapshot store that only sampled once a day
-    // would record a Sunday morning steam move as a single overnight jump. The
-    // three posting slots are the only other times the worker wakes, so they
-    // are where in-week line movement comes from.
-    ctx.waitUntil(jobRun(env, 'market-snapshot', event.cron));
-    // The hourly desk tick: refresh the schedule (game status is what gates a
-    // piece), then produce whatever is due and ready. Idempotent: a piece is
-    // produced once per kind per week, so the 11:00 overlap with the daily job
-    // costs nothing.
+    // The hourly tick is the data clock (HANDOFF §60): JOB_SCHEDULE, in New
+    // York time, says what is due this hour; runScheduledTick runs it phase
+    // by phase through the job log, and the desk tick goes last.
     if (event.cron === '0 * * * *') {
-      ctx.waitUntil(jobRun(env, 'content-tick', event.cron)
-        .then(r => console.log('content-tick:', JSON.stringify(r).slice(0, 400))));
+      ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
+        .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
+        .catch(e => console.error('tick failed:', e && e.message)));
       return;
     }
+    // The old daily data trigger. It is no longer in wrangler.jsonc; if it is
+    // ever configured again it does nothing, because the hourly tick already
+    // fires at the same minute and running every pull twice would double the
+    // snapshot rows and the ROS history.
+    if (event.cron === '0 11 * * *') { console.log('legacy 11:00 trigger ignored; the hourly tick carries the schedule'); return; }
     const slots = slotsByCron[event.cron];
     ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },

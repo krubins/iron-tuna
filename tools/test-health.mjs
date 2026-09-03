@@ -158,8 +158,8 @@ console.log('\nthe editorial actions');
 console.log('\nthe worker source');
 {
   const sched = cut('  async scheduled(event, env, ctx) {', '\nfunction originAllowed(');
-  const bare = (sched.match(/ctx\.waitUntil\((run[A-Z][A-Za-z]*|snapshotPrune|pruneAnalytics)\(/g) || []).filter(x => !/runXAutoPost/.test(x));
-  ok('every scheduled job runs through the log', bare.length === 0, bare.join(','));
+  const bare = (sched.match(/ctx\.waitUntil\((run[A-Z][A-Za-z]*|snapshotPrune|pruneAnalytics)\(/g) || []).filter(x => !/runXAutoPost|runScheduledTick/.test(x));
+  ok('every scheduled job runs through the log (the tick itself runs each job through jobRun)', bare.length === 0 && /runScheduledTick\(env, Date\.now\(\), event\.cron\)/.test(sched), bare.join(','));
   ok('the X auto-post stays where it was', /runXAutoPost\(env/.test(sched));
   ok('the public content list hides unpublished pieces', /status != 'unpublished' ORDER BY created_at DESC LIMIT 60/.test(src));
   ok('the public piece payload does too', /if \(!row \|\| row\.status === 'unpublished'\) return \{ ok: false, error: 'not_found'/.test(src));
