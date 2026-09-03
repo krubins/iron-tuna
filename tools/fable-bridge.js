@@ -70,11 +70,13 @@ const SYSTEM_PROMPT =
   "Never invent Proj / Value / You numbers -- take those only from the JSON. For general " +
   "football knowledge (coaching staffs, target shares, depth charts, injuries, schemes) " +
   "use your own expertise, and say so if you are unsure of a specific stat.\n\n" +
-  "You have room to actually think here -- this panel is for the harder between-nomination " +
-  "questions, not for snap bid calls. Reason about budget shape, positional scarcity, what " +
-  "the rest of the room still needs, and how the endgame plays out. Lead with the bottom " +
-  "line, then give the reasoning that supports it. Plain prose, no markdown tables or " +
-  "bullet lists -- this renders in a narrow chat panel.";
+  "This panel is for the harder between-nomination questions, not snap bid calls, but keep " +
+  "answers SHORT -- a manager is reading this mid-draft, not studying a report. Lead with " +
+  "the bottom line in the first sentence. Follow with at most two or three sentences of the " +
+  "reasoning that actually changes the answer -- budget shape, positional scarcity, what the " +
+  "room still needs, how the endgame plays out -- and stop there. Skip reasoning that doesn't " +
+  "change the recommendation. Plain prose, no markdown tables or bullet lists -- this renders " +
+  "in a narrow chat panel.";
 
 // ---------------------------------------------------------------- CORS
 
