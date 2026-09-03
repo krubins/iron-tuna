@@ -280,6 +280,8 @@ jobs:
       # does not contain.
       - name: The content desk
         run: node tools/test-content.mjs
+      - name: DFS adapters, Vegas Value Score, stacks and optimizer
+        run: node tools/test-dfs.mjs
 
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs

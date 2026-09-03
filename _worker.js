@@ -3629,6 +3629,15 @@ const PROVIDER_INJURY = [
 // "not configured" and /dfs shows the scoring environment it can actually
 // source, with no salary column invented to fill the gap.
 const PROVIDER_DFS = [
+  // DraftKings' draftables feed (no key, needs the draft group id) and
+  // FanDuel's fixture-list players (needs the site's auth). Both written to
+  // their published shapes; neither host is reachable from the sandbox this
+  // repo is developed in, so neither has been run live. The lobby CSV each
+  // site exports is the verified path (parseDfsCsv, /api/admin/dfs).
+  { name: 'dfs-draftkings', free: true, needs: env => !!(env && env.DK_DRAFT_GROUP_ID),
+    fetch: async (env) => (await fetchDraftKingsSalaries(env)).map(r => ({ ...r, site: 'dk', slate: 'main' })) },
+  { name: 'dfs-fanduel', free: false, needs: env => !!(env && env.FD_FIXTURE_LIST_ID && env.FD_API_KEY),
+    fetch: async (env) => (await fetchFanDuelSalaries(env)).map(r => ({ ...r, site: 'fd', slate: 'main' })) },
   { name: 'licensed-salary-feed', free: false,
     needs: env => !!(env && env.DFS_SALARY_API && env.DFS_SALARY_API_KEY),
     fetch: async (env, ctx) => {
@@ -3665,7 +3674,7 @@ const PROVIDER_UNAVAILABLE = {
   goalLineCarries: 'play-by-play only, as above',
   pace: 'play-by-play only, as above',
   passRate: 'play-by-play only, as above',
-  dfsSalary: 'no documented public salary API; needs a licensed feed (DFS_SALARY_API)'
+  dfsSalary: 'no key-free documented API at FanDuel; DraftKings needs a draft group id (DK_DRAFT_GROUP_ID); either site\'s lobby CSV imports via /api/admin/dfs'
 };
 
 // Run every configured provider of a kind, in registry order, and hand back
@@ -6266,6 +6275,209 @@ async function contentPiecePayload(env, kind, season, week) {
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 
+// -- DFS -------------------------------------------------------------------------
+// The same question aimed at one slate: what does the betting market imply a
+// player will score, and what does that cost. Salaries come from the site (a
+// CSV the lobby exports, or the site's own feed where a key is configured);
+// projections come from the three boards at the SITE's scoring; the Vegas
+// Value Score is market-implied points per thousand dollars of salary, and
+// every board on the page says whether the Vegas side is a quoted prop or the
+// game line's environment.
+//
+// NOTHING HERE SUBMITS AN ENTRY. The optimizer builds lineups for a reader to
+// look at and copy; there is no path from this code to a DFS site.
+const DFS_CONTRACT = 1;
+const DFS_SITES = {
+  dk: { label: 'DraftKings', cap: 50000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'dk' },
+  fd: { label: 'FanDuel', cap: 60000, slots: ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DST'], flex: ['RB', 'WR', 'TE'], scoring: 'fd' }
+};
+// Site scoring, as published. DK: full PPR, three-point bonuses at 300
+// passing and 100 rushing or receiving yards, -1 per interception and per
+// fumble lost. FD: half PPR, -1 per interception, -2 per fumble lost, no
+// bonuses. Both are ordinary rule sets for the one scoring engine.
+const SCORING_SITE = {
+  dk: { receptionPoints: 1, rbReceptionPoints: 1, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -1,
+        passingYardBonuses: [{ at: 300, points: 3 }], rushingYardBonuses: [{ at: 100, points: 3 }], receivingYardBonuses: [{ at: 100, points: 3 }] },
+  fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2 }
+};
+const DFS_DDL = [
+  'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, source TEXT, fetched_at INTEGER NOT NULL)',
+  'CREATE INDEX IF NOT EXISTS ix_dfs_site_week ON dfs_salaries (site, season, week, fetched_at)'
+];
+let _DFS_READY = false;
+async function dfsReady(env) {
+  if (_DFS_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { for (const q of DFS_DDL) await env.LEADS_DB.prepare(q).run(); _DFS_READY = true; return true; } catch (e) { return false; }
+}
+// A DST row on either site names the club; the board names the club's
+// defence. Both resolve to the team key.
+const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DEF' || u === 'D' || u === 'D/ST' ? 'DST' : u; };
+// ── the CSV each lobby exports ─────────────────────────────────────────────
+// DraftKings: Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, TeamAbbrev, AvgPointsPerGame
+// FanDuel:    Id, Position, First Name, Nickname, Last Name, FPPG, Played, Salary, Game, Team, Opponent, Injury Indicator, Injury Details, Tier, Roster Position
+function parseDfsCsv(site, text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { rows: [], error: 'empty' };
+  const head = _csvSplit(lines[0]).map(h => h.trim());
+  const idx = k => head.findIndex(h => h.toLowerCase() === k.toLowerCase());
+  const rows = [];
+  if (site === 'dk') {
+    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info');
+    if (iPos < 0 || iName < 0 || iSal < 0) return { rows: [], error: 'not a DraftKings salary CSV' };
+    for (let i = 1; i < lines.length; i++) {
+      const f = _csvSplit(lines[i]);
+      const team = teamKey(f[iTeam]);
+      const game = String(f[iGame] || '');
+      const m = /^([A-Z]{2,3})@([A-Z]{2,3})/.exec(game);
+      const opp = m ? (teamKey(m[1]) === team ? teamKey(m[2]) : teamKey(m[1])) : null;
+      rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+    }
+  } else if (site === 'fd') {
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id');
+    if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
+    for (let i = 1; i < lines.length; i++) {
+      const f = _csvSplit(lines[i]);
+      const name = iNick >= 0 && f[iNick] ? f[iNick] : ((f[iFirst] || '') + ' ' + (f[iLast] || '')).trim();
+      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+    }
+  } else return { rows: [], error: 'unknown site' };
+  const good = rows.filter(r => r.name && r.position && Number.isFinite(r.salary) && r.salary > 0);
+  return { rows: good, error: good.length ? null : 'no usable rows' };
+}
+// The sites' own feeds. DraftKings publishes a JSON list of draftables per
+// draft group with no key; FanDuel's fixture-list players endpoint needs the
+// site's auth token. Both are WRITTEN TO THEIR PUBLISHED SHAPES AND NOT RUN
+// AGAINST THE LIVE SERVICES: both hosts are unreachable from the sandbox this
+// repo is developed in. The CSV path above is the verified one.
+async function fetchDraftKingsSalaries(env) {
+  const group = env && env.DK_DRAFT_GROUP_ID;
+  if (!group) throw new Error('no DK_DRAFT_GROUP_ID');
+  const r = await fetch('https://api.draftkings.com/draftgroups/v1/draftgroups/' + encodeURIComponent(group) + '/draftables?format=json', { cf: { cacheTtl: 900 } });
+  if (!r.ok) throw new Error('draftkings ' + r.status);
+  const j = await r.json();
+  const seen = new Set(); const rows = [];
+  for (const d of (j && j.draftables) || []) {
+    if (!d || seen.has(d.playerId)) continue; seen.add(d.playerId);
+    const comp = d.competition || {};
+    const team = teamKey(d.teamAbbreviation);
+    const opp = comp.awayTeam && comp.homeTeam ? (teamKey(comp.awayTeam.abbreviation) === team ? teamKey(comp.homeTeam.abbreviation) : teamKey(comp.awayTeam.abbreviation)) : null;
+    rows.push({ name: d.displayName, position: _dfsPos(d.position), team, opponent: opp, salary: Number(d.salary), siteId: String(d.playerId) });
+  }
+  return rows.filter(r => r.name && Number.isFinite(r.salary));
+}
+async function fetchFanDuelSalaries(env) {
+  const list = env && env.FD_FIXTURE_LIST_ID, key = env && env.FD_API_KEY;
+  if (!list || !key) throw new Error('no FD_FIXTURE_LIST_ID / FD_API_KEY');
+  const r = await fetch('https://api.fanduel.com/fixture-lists/' + encodeURIComponent(list) + '/players', { headers: { authorization: 'Basic ' + key, 'x-auth-token': env.FD_AUTH_TOKEN || '' }, cf: { cacheTtl: 900 } });
+  if (!r.ok) throw new Error('fanduel ' + r.status);
+  const j = await r.json();
+  return ((j && j.players) || []).map(p => ({ name: (p.first_name ? p.first_name + ' ' : '') + (p.last_name || ''), position: _dfsPos(p.position), team: teamKey(p.team && p.team._members ? p.team._members[0] : p.team_abbreviation), opponent: null, salary: Number(p.salary), siteId: String(p.id) })).filter(r => r.name.trim() && Number.isFinite(r.salary));
+}
+async function dfsStore(env, site, rows, meta) {
+  if (!(await dfsReady(env))) return { ok: false, error: 'no_db' };
+  const m = meta || {};
+  const ts = Date.now();
+  const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  let n = 0;
+  for (let i = 0; i < rows.length; i += 50) {
+    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, m.source || 'csv', ts));
+    try { await env.LEADS_DB.batch(chunk); n += chunk.length; } catch (e) { for (const s of chunk) { try { await s.run(); n++; } catch (e2) {} } }
+  }
+  return { ok: true, stored: n, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
+}
+async function dfsSalariesRead(env, site, season, week) {
+  if (!(await dfsReady(env))) return null;
+  try {
+    const latest = await env.LEADS_DB.prepare('SELECT MAX(fetched_at) AS ts FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ?').bind(site, season, week).first();
+    if (!latest || !latest.ts) return null;
+    const q = await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND fetched_at = ?').bind(site, season, week, latest.ts).all();
+    return { rows: q.results || [], fetchedAt: latest.ts };
+  } catch (e) { return null; }
+}
+// Pull the site's own feed where configured, else nothing: the CSV import is
+// an admin action and never runs on a cron.
+async function runDfsRefresh(env) {
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  const out = {};
+  for (const [site, fn] of [['dk', fetchDraftKingsSalaries], ['fd', fetchFanDuelSalaries]]) {
+    try { const rows = await fn(env); out[site] = await dfsStore(env, site, rows, { season: sched ? sched.season : null, week, source: 'feed' }); }
+    catch (e) { out[site] = { ok: false, skipped: /^no /.test((e && e.message) || '') ? 'not configured' : null, error: (e && e.message) || 'failed' }; }
+  }
+  return { ok: true, week, sites: out };
+}
+
+// ── the slate ──────────────────────────────────────────────────────────────
+// Salaries joined to the week board at the site's scoring. VVS is the
+// market-implied points per $1,000; `index` puts it against the slate's
+// median so 100 is an ordinary price and 130 is a bargain.
+function buildDfsSlate(site, salaries, week, opts) {
+  const S = DFS_SITES[site];
+  const rules = scoringRules('ppr', SCORING_SITE[site]);
+  const byKey = new Map();
+  for (const p of (week && week.players) || []) byKey.set(p.key, p);
+  const defByTeam = new Map();
+  for (const p of (week && week.players) || []) if (p.pos === 'DEF') defByTeam.set(p.team, p);
+  const rows = [];
+  for (const s of salaries || []) {
+    const pos = s.position;
+    const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
+    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, onBoard: false }); continue; }
+    const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
+    const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
+    const w0 = p.weeks.find(x => x.env) || null;
+    const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0);
+    rows.push({
+      name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
+      vegasPoints: v, ironTunaPoints: it, consensusPoints: c,
+      vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
+      marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
+      tdProbability: p.vegas.td ? p.vegas.td.probability : Math.round((1 - Math.exp(-lam)) * 1000) / 10, tdBasis: p.vegas.td ? 'anytime-td-market' : 'derived',
+      teamTotal: w0 && w0.env ? (w0.env.implied != null ? w0.env.implied : w0.env.expected) : null, teamTotalPosted: !!(w0 && w0.env && w0.env.posted),
+      gameTotal: null, impliedTouches: _oddsRound((p.vegas.stats.rec || 0) + (p.vegas.stats.rushAtt != null ? p.vegas.stats.rushAtt : (p.vegas.stats.rushYd || 0) / 4.3)),
+      injury: p.injury ? p.injury.status : null, why: p.why ? p.why.summary : ''
+    });
+  }
+  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0);
+  const med = _median(on.map(r => r.vegasPerK)) || 1;
+  for (const r of on) r.vegasValueScore = Math.round(r.vegasPerK / med * 100);
+  const skill = on.filter(r => r.position !== 'DST' && r.position !== 'K');
+  const boards = {
+    bestVegasValues: on.filter(r => r.salary >= 3000).sort((a, b) => b.vegasValueScore - a.vegasValueScore).slice(0, 20),
+    tdUpside: skill.sort((a, b) => (b.tdProbability / b.salary) - (a.tdProbability / a.salary)).slice(0, 20).map(r => ({ ...r, tdPerK: _oddsRound(r.tdProbability / (r.salary / 1000) * 10) / 10 })),
+    volumeValues: skill.filter(r => r.position !== 'QB').sort((a, b) => (b.impliedTouches / b.salary) - (a.impliedTouches / a.salary)).slice(0, 20).map(r => ({ ...r, touchesPerK: _oddsRound(r.impliedTouches / (r.salary / 1000) * 10) / 10 })),
+    expensiveFades: skill.filter(r => r.salary >= 6000 && r.marketDelta && r.marketDelta.points < 0).sort((a, b) => a.marketDelta.points - b.marketDelta.points).slice(0, 15)
+  };
+  return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: S.cap, slots: S.slots, flex: S.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
+           medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
+           hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No sportsbook has a player prop on this slate yet; every Vegas number is the game line’s environment applied to the player’s line.' };
+}
+// Game stacks: every game on the slate ranked by total, with each side's
+// QB and his two most-targeted pass catchers, and the bring-back on the
+// other side, priced.
+function buildDfsStacks(slate, state) {
+  const games = (state && state.ok && state.games) || [];
+  const byTeam = {};
+  for (const r of slate.players) if (r.onBoard) (byTeam[r.team] = byTeam[r.team] || []).push(r);
+  const side = t => {
+    const list = (byTeam[t] || []);
+    const qb = list.filter(r => r.position === 'QB').sort((a, b) => b.vegasPoints - a.vegasPoints)[0] || null;
+    const catchers = list.filter(r => r.position === 'WR' || r.position === 'TE').sort((a, b) => b.vegasPoints - a.vegasPoints).slice(0, 3);
+    const back = list.filter(r => r.position === 'RB').sort((a, b) => b.vegasPoints - a.vegasPoints)[0] || null;
+    return { team: t, qb, catchers, back };
+  };
+  return games.filter(g => g.total != null).sort((a, b) => b.total - a.total).map(g => {
+    const h = side(g.home), a = side(g.away);
+    const cost = (x) => (x.qb ? x.qb.salary : 0) + x.catchers.slice(0, 2).reduce((s, c) => s + c.salary, 0);
+    const pts = (x) => (x.qb ? x.qb.vegasPoints : 0) + x.catchers.slice(0, 2).reduce((s, c) => s + c.vegasPoints, 0);
+    return { game: g.away + ' at ' + g.home, kickoff: g.kickoff, total: g.total, spread: g.spread, impliedHome: g.impliedHome, impliedAway: g.impliedAway,
+             home: { ...h, stackSalary: cost(h), stackVegasPoints: _oddsRound(pts(h)) }, away: { ...a, stackSalary: cost(a), stackVegasPoints: _oddsRound(pts(a)) },
+             bringBack: { home: h.catchers[0] || null, away: a.catchers[0] || null } };
+  });
+}
+
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
 // read at most once per isolate, and zero reads once warm.
 let _PROJ_BLEND_AT = 0;
@@ -6809,6 +7021,21 @@ export default {
       });
       _MARKET_MEMO = { key: mkey, at: Date.now(), out };
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    // DFS: the slate, priced. ?site=dk|fd.
+    if (url.pathname === '/api/dfs') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const site = DFS_SITES[url.searchParams.get('site')] ? url.searchParams.get('site') : 'dk';
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
+      if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries', note: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
+      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
+      const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, {});
+      slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
+      return json(slate, 200, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // The desk: the week's pieces, and one piece.
     if (url.pathname === '/api/content' || url.pathname === '/api/content/piece') {
@@ -7662,6 +7889,31 @@ export default {
       }
       return json({ ok: true, ...providerReport(env), kinds: Object.keys(PROVIDERS), ran }, 200, c);
     }
+    // DFS salaries: GET reports what is loaded; POST { site, csv, slate? }
+    // imports a lobby CSV for the current week; ?refresh=1 pulls the configured
+    // site feeds now.
+    if (url.pathname === '/api/admin/dfs') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      const out = { ok: true, season: sched ? sched.season : null, week, sites: {} };
+      if (request.method === 'POST') {
+        let b = {}; try { b = await request.json(); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
+        const site = DFS_SITES[b.site] ? b.site : null;
+        if (!site) return json({ ok: false, error: 'site must be dk or fd' }, 400, c);
+        const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 2000000));
+        if (parsed.error) return json({ ok: false, error: parsed.error }, 400, c);
+        out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source: 'csv' });
+      }
+      if (url.searchParams.get('refresh') === '1') { try { out.refresh = await runDfsRefresh(env); } catch (e) { out.refresh = { ok: false, error: (e && e.message) || 'failed' }; } }
+      for (const site of Object.keys(DFS_SITES)) {
+        const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
+        out.sites[site] = sal ? { rows: sal.rows.length, fetchedAt: sal.fetchedAt, source: sal.rows[0] && sal.rows[0].source } : null;
+      }
+      return json(out, 200, c);
+    }
     // The desk's plumbing. ?tick=1 runs the hourly evaluation now; ?run=<kind>
     // produces one piece now if it is due and ready; &force=1 produces it
     // regardless (for a look at the pipeline before the season); ?depth=1
@@ -8268,6 +8520,10 @@ export default {
       ctx.waitUntil(runUsageRefresh(env)
         .then(r => console.log('usage refresh:', JSON.stringify(r)))
         .catch(e => console.error('usage refresh failed:', e && e.message)));
+      // DFS salaries from whichever site feed is configured; a no-op otherwise.
+      ctx.waitUntil(runDfsRefresh(env)
+        .then(r => console.log('dfs refresh:', JSON.stringify(r)))
+        .catch(e => console.error('dfs refresh failed:', e && e.message)));
       // Depth charts, daily, for the recaps' "what we already knew".
       ctx.waitUntil(runDepthChartRefresh(env)
         .then(r => console.log('depth charts:', JSON.stringify(r)))
