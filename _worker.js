@@ -6254,8 +6254,8 @@ async function contentListPayload(env, season, week) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   try {
     const q = week != null
-      ? await env.LEADS_DB.prepare('SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE season = ? AND week = ? ORDER BY created_at DESC').bind(season, week).all()
-      : await env.LEADS_DB.prepare('SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces ORDER BY created_at DESC LIMIT 60').all();
+      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
+      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 60").all();
     return { ok: true, contract: CONTENT_CONTRACT, kinds: Object.entries(CONTENT_KINDS).map(([k, v]) => ({ kind: k, title: v.title, day: v.day, hour: v.hour })), pieces: q.results || [] };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
@@ -6265,7 +6265,7 @@ async function contentPiecePayload(env, kind, season, week) {
     const row = week != null
       ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
       : await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
-    if (!row) return { ok: false, error: 'not_found', kind };
+    if (!row || row.status === 'unpublished') return { ok: false, error: 'not_found', kind };
     const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
     // A held piece ships its BRIEF and not its draft: the data is right by
     // construction, the prose was not.
@@ -6476,6 +6476,253 @@ function buildDfsStacks(slate, state) {
              home: { ...h, stackSalary: cost(h), stackVegasPoints: _oddsRound(pts(h)) }, away: { ...a, stackSalary: cost(a), stackVegasPoints: _oddsRound(pts(a)) },
              bringBack: { home: h.catchers[0] || null, away: a.catchers[0] || null } };
   });
+}
+
+// -- the job log and the health board (Step 29) --------------------------------
+// Every scheduled job runs through jobRun, which writes one row per run:
+// when it started, when it finished, whether it succeeded, the error if not,
+// and a short summary of what it returned. The health board reads that log,
+// the caches every surface reads, and the desk's due/ready state, and says in
+// one payload what is fresh, what is stale, what is missing, and why.
+const JOB_DDL = [
+  'CREATE TABLE IF NOT EXISTS job_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, job TEXT NOT NULL, trigger TEXT, started_at INTEGER NOT NULL, finished_at INTEGER, ok INTEGER, error TEXT, summary TEXT)',
+  'CREATE INDEX IF NOT EXISTS ix_job_runs ON job_runs (job, started_at)'
+];
+const JOB_KEEP_DAYS = 45;
+let _JOB_READY = false;
+async function jobReady(env) {
+  if (_JOB_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { for (const q of JOB_DDL) await env.LEADS_DB.prepare(q).run(); _JOB_READY = true; return true; } catch (e) { return false; }
+}
+// The runnable jobs, by name. The cron handler and the admin "rerun" button
+// both go through this table, so a job has one name everywhere.
+const JOB_FNS = {
+  'schedule-refresh':     env => runScheduleRefresh(env),
+  'odds-refresh':         env => runOddsRefresh(env),
+  'availability-refresh': env => runAvailabilityRefresh(env),
+  'market-snapshot':      env => runMarketSnapshot(env),
+  'usage-refresh':        env => runUsageRefresh(env),
+  'dfs-refresh':          env => runDfsRefresh(env),
+  'depth-charts':         env => runDepthChartRefresh(env),
+  'ros-snapshot':         env => runRosSnapshot(env),
+  'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
+  'analytics-prune':      env => pruneAnalytics(env, 180),
+  'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
+  'content-tick':         env => runScheduleRefresh(env).catch(() => null).then(() => runContentTick(env))
+};
+const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
+// Run one job and log it. Never throws: a job that throws is a logged
+// failure, and the caller gets { ok:false, error }.
+async function jobRun(env, name, trigger, fn) {
+  const f = fn || JOB_FNS[name];
+  if (!f) return { ok: false, error: 'unknown_job', job: name };
+  const started = Date.now();
+  let result = null, error = null;
+  try {
+    result = await f(env);
+    if (result && result.ok === false) error = String(result.error || result.reason || 'failed');
+  } catch (e) { error = (e && e.message) || 'failed'; result = { ok: false, error }; }
+  await jobLog(env, { job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
+  return result == null ? { ok: true } : result;
+}
+async function jobLog(env, r) {
+  if (!(await jobReady(env))) return false;
+  try {
+    await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(r.job, r.trigger, r.started, r.finished, r.ok, r.error, r.summary).run();
+    return true;
+  } catch (e) { return false; }
+}
+async function jobPrune(env, days) {
+  if (!(await jobReady(env))) return { ok: false, error: 'no_db' };
+  try { const r = await env.LEADS_DB.prepare('DELETE FROM job_runs WHERE started_at < ?').bind(Date.now() - days * 86400000).run(); return { ok: true, deleted: (r && r.meta && r.meta.changes) || 0 }; }
+  catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+}
+// The board: every known job with its last run and its last success, plus the
+// failures of the past seven days, newest first.
+async function jobBoard(env, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const names = Object.keys(JOB_FNS);
+  const empty = { ok: false, error: 'no_db', jobs: names.map(j => ({ job: j, last: null, lastOk: null, failures7d: 0 })), failed: [] };
+  if (!(await jobReady(env))) return empty;
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT job, trigger, started_at, finished_at, ok, error, summary FROM job_runs WHERE started_at >= ? ORDER BY started_at DESC LIMIT 2000')
+      .bind(at - 7 * 86400000).all();
+    const rows = q.results || [];
+    const older = await env.LEADS_DB.prepare('SELECT job, MAX(started_at) AS last_ok FROM job_runs WHERE ok = 1 GROUP BY job').all();
+    const lastOkAny = {}; for (const r of (older.results || [])) lastOkAny[r.job] = r.last_ok;
+    const seen = new Set(rows.map(r => r.job));
+    const all = names.concat(Array.from(seen).filter(j => !names.includes(j)));
+    return { ok: true, jobs: all.map(j => {
+      const mine = rows.filter(r => r.job === j);
+      const last = mine[0] || null, ok = mine.find(r => r.ok === 1) || null;
+      return { job: j, last: last ? _jobRow(last) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(r => r.ok === 0).length };
+    }), failed: rows.filter(r => r.ok === 0).slice(0, 40).map(_jobRow) };
+  } catch (e) { return { ...empty, error: (e && e.message) || 'failed' }; }
+}
+const _jobRow = r => ({ job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, error: r.error || null,
+                        ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null });
+
+// ── the assessment ─────────────────────────────────────────────────────────
+// Pure. Takes what the caches and the log say and returns what is missing or
+// stale and why, so the page never has to guess and a test can pin every
+// rule. Ages are in hours; a feed with no timestamp is missing, not fresh.
+const HEALTH_STALE_H = { schedule: 30, odds: 36, snapshots: 30, usage: 8 * 24, availability: 36, depthCharts: 3 * 24, dfs: 8 * 24 };
+function healthAssess(h, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const age = ts => Number.isFinite(ts) && ts > 0 ? +((at - ts) / 3600000).toFixed(1) : null;
+  const inSeason = !!(h.state && h.state.ok && h.state.phase === 'regular');
+  const missing = [], stale = [];
+  const check = (key, label, ts, why) => {
+    const a = age(ts);
+    if (a == null) { missing.push({ feed: key, label, why: why || 'never loaded' }); return null; }
+    if (a > HEALTH_STALE_H[key]) stale.push({ feed: key, label, ageHours: a, limitHours: HEALTH_STALE_H[key] });
+    return a;
+  };
+  const u = h.updates || {};
+  const ages = {
+    schedule: check('schedule', 'NFL schedule', u.schedule && u.schedule.updatedAt, 'no schedule row; every in-season surface is dark'),
+    odds: check('odds', 'Season odds overlay', u.odds && u.odds.updatedAt, 'no usable odds overlay; auction values serve committed projections'),
+    snapshots: check('snapshots', 'Betting snapshots', u.snapshots && u.snapshots.last, 'no book line has ever been recorded'),
+    availability: check('availability', 'Injury list', u.availability && u.availability.updatedAt, 'no live injury row; the committed block serves alone')
+  };
+  if (inSeason) {
+    ages.usage = check('usage', 'Weekly stats and snaps', u.usage && u.usage.updatedAt, 'no usage overlay; boards run without volume or role');
+    ages.depthCharts = check('depthCharts', 'Depth charts', u.depthCharts && u.depthCharts.updatedAt, 'no depth charts; recaps lose "what we already knew"');
+    const wk = h.state.week && h.state.week.type === 'REG' ? h.state.week.number : null;
+    const ros = u.rankings && u.rankings.ros;
+    if (!ros || !ros.builtAt) missing.push({ feed: 'rankings', label: 'Rest-of-season snapshot', why: 'no Wednesday snapshot has run; the rankings update has nothing to compare' });
+    else if (wk != null && ros.week != null && ros.week < wk - 1) stale.push({ feed: 'rankings', label: 'Rest-of-season snapshot', ageHours: age(ros.builtAt), limitHours: 8 * 24, note: 'built for week ' + ros.week + ', now week ' + wk });
+    const sites = (u.dfs && Object.keys(u.dfs).filter(s => u.dfs[s] && u.dfs[s].fetchedAt)) || [];
+    if (!sites.length) missing.push({ feed: 'dfs', label: 'DFS salaries', why: 'no salaries for the week on either site; /in-season/dfs says so' });
+    else for (const s of sites) { const a = age(u.dfs[s].fetchedAt); if (a > HEALTH_STALE_H.dfs) stale.push({ feed: 'dfs', label: 'DFS salaries (' + s + ')', ageHours: a, limitHours: HEALTH_STALE_H.dfs }); }
+    if (u.usage && u.usage.throughWeek != null && wk != null && u.usage.throughWeek < wk - 2) stale.push({ feed: 'usage', label: 'Weekly stats and snaps', ageHours: ages.usage, limitHours: HEALTH_STALE_H.usage, note: 'through week ' + u.usage.throughWeek + ', now week ' + wk });
+  }
+  // Sources: a kind with nothing configured is a missing feed, and a kind
+  // whose only configured source is a paid one is worth saying.
+  const src = h.sources || {};
+  for (const kind of Object.keys(src)) {
+    const list = src[kind] || [];
+    if (list.length && !list.some(p => p.configured)) missing.push({ feed: 'source:' + kind, label: 'No ' + kind + ' source configured', why: list.map(p => p.name).join(', ') + ' all need a key or id that is not set' });
+  }
+  if (!h.llm) missing.push({ feed: 'llm', label: 'Writer', why: 'LLM_API_KEY is not set; every desk piece is held with its brief' });
+  // Failed jobs are a fact of the log, not a guess.
+  const failed = (h.jobs && h.jobs.failed) || [];
+  const status = missing.some(m => m.feed === 'schedule') ? 'down' : (missing.length || failed.length || stale.length) ? 'degraded' : 'ok';
+  return { status, inSeason, ages, missing, stale, failedJobs: failed.length };
+}
+
+// ── the payload ────────────────────────────────────────────────────────────
+async function _overlayRowMeta(env, id) {
+  if (!env || !env.LEADS_DB) return null;
+  try { const r = await env.LEADS_DB.prepare('SELECT updated_at FROM odds_overlay WHERE id=?').bind(id).first(); return r ? { updatedAt: r.updated_at } : null; } catch (e) { return null; }
+}
+async function _editorialRows(env, state, sched, now) {
+  const season = sched ? sched.season : null;
+  const rows = [];
+  let pieces = [];
+  if (season != null && await contentReady(env)) {
+    try {
+      const q = await env.LEADS_DB.prepare('SELECT id, kind, week, status, title, created_at, published_at, violations FROM content_pieces WHERE season = ? ORDER BY created_at DESC LIMIT 200').bind(season).all();
+      pieces = q.results || [];
+    } catch (e) { pieces = []; }
+  }
+  for (const kind of Object.keys(CONTENT_KINDS)) {
+    const K = CONTENT_KINDS[kind];
+    const d = contentDue(kind, now, state, sched);
+    const wk = d.week != null ? d.week : null;
+    const latest = pieces.find(p => p.kind === kind && (wk == null || p.week === wk)) || pieces.find(p => p.kind === kind) || null;
+    let violations = 0; if (latest && latest.violations) { try { violations = (JSON.parse(latest.violations) || []).length; } catch (e) {} }
+    rows.push({ kind, title: K.title, day: K.day, hour: K.hour, optional: !!K.optional, week: wk, due: !!d.due, ready: !!d.ready, reason: d.reason || null, dueAt: d.dueAt || null,
+                piece: latest ? { id: latest.id, week: latest.week, status: latest.status, title: latest.title, createdAt: latest.created_at, publishedAt: latest.published_at, violations } : null });
+  }
+  return rows;
+}
+async function healthPayload(env, opts) {
+  const o = opts || {};
+  const now = Date.now();
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, now) : { ok: false, error: 'no_schedule' };
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  const [odds, snaps, usage, avail, depth, rosList, next3List, playoffList, dk, fd, jobs] = await Promise.all([
+    oddsCacheRead(env).catch(() => null), snapshotStatus(env).catch(() => null), usageCacheRead(env).catch(() => null),
+    availabilityCacheRead(env).catch(() => null), _overlayRowMeta(env, DEPTH_ROW),
+    rosSnapshots(env, 'ros', 1), rosSnapshots(env, 'next3', 1), rosSnapshots(env, 'playoffs', 1),
+    dfsSalariesRead(env, 'dk', sched ? sched.season : null, week).catch(() => null), dfsSalariesRead(env, 'fd', sched ? sched.season : null, week).catch(() => null),
+    jobBoard(env, now)
+  ]);
+  const snapMeta = m => m ? { season: m.season, week: m.week, builtAt: m.builtAt, rows: (m.rows || []).length } : null;
+  const updates = {
+    schedule: sched ? { updatedAt: sched.updatedAt, provider: sched.provider, season: sched.season, games: sched.games.length } : null,
+    odds: odds ? { updatedAt: odds.updatedAt, provider: odds.provider, matched: odds.matched } : null,
+    snapshots: snaps && snaps.ok ? { last: snaps.last, first: snaps.first, rows: snaps.rows, subjects: snaps.subjects, books: snaps.books } : null,
+    usage: usage ? { updatedAt: usage.updatedAt, season: usage.season, throughWeek: usage.throughWeek, players: Object.keys(usage.players || {}).length } : null,
+    availability: avail ? { updatedAt: avail.updatedAt, asOf: avail.asOf, matched: avail.matched } : null,
+    depthCharts: depth,
+    rankings: { ros: snapMeta(rosList[0]), next3: snapMeta(next3List[0]), playoffs: snapMeta(playoffList[0]) },
+    dfs: { dk: dk ? { fetchedAt: dk.fetchedAt, rows: dk.rows.length } : null, fd: fd ? { fetchedAt: fd.fetchedAt, rows: fd.rows.length } : null }
+  };
+  const report = providerReport(env);
+  const editorial = await _editorialRows(env, state, sched, now);
+  const h = { state, updates, sources: report.providers, llm: !!env.LLM_API_KEY, jobs };
+  const assess = healthAssess(h, now);
+  return { ok: true, contract: 1, at: now, et: etParts(now),
+           season: sched ? sched.season : null, phase: state.ok ? state.phase : null, phaseLabel: state.ok ? state.phaseLabel : null,
+           week: state.ok ? state.week : null, counts: state.ok ? state.counts : null, nextGame: state.ok ? state.nextGame : null,
+           status: assess.status, ages: assess.ages, missing: assess.missing, stale: assess.stale,
+           updates, sources: report.providers, unavailable: report.unavailable, llm: !!env.LLM_API_KEY,
+           jobs: jobs.jobs, failedJobs: jobs.failed, jobNames: Object.keys(JOB_FNS), editorial, ran: o.ran || null };
+}
+
+// ── editorial actions ──────────────────────────────────────────────────────
+// preview: the latest row in full, held draft and violations included (the
+// public payload hides a held body; the desk needs to see it). publish and
+// unpublish flip the latest row. regenerate produces a fresh row now. edit
+// stores a human's body on the latest row and reports, without blocking, any
+// name or number the brief does not contain: the validator is a guard on the
+// model, and a person signing a piece is the editor.
+const CONTENT_ACTIONS = ['preview', 'publish', 'unpublish', 'regenerate', 'edit'];
+async function _latestPiece(env, kind, season, week) {
+  return week != null
+    ? env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
+    : env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
+}
+async function contentAdmin(env, action, kind, season, week, body) {
+  if (!CONTENT_ACTIONS.includes(action)) return { ok: false, error: 'unknown_action' };
+  if (!CONTENT_KINDS[kind]) return { ok: false, error: 'unknown_kind' };
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
+  if (action === 'regenerate') {
+    const r = await produceContent(env, kind, { force: true });
+    return { ok: !!r.ok, action, kind, ...r };
+  }
+  let row;
+  try { row = await _latestPiece(env, kind, season, week); } catch (e) { return { ok: false, error: 'unavailable' }; }
+  if (!row) return { ok: false, error: 'not_found', kind, week };
+  const full = () => ({ id: row.id, kind, season: row.season, week: row.week, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
+                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: CONTENT_SECTIONS[kind] || [] });
+  if (action === 'preview') return { ok: true, action, piece: full() };
+  if (action === 'publish') {
+    if (!row.body || row.body === 'null') return { ok: false, error: 'no_body', note: 'This piece has no draft to publish. Regenerate it or edit one in.' };
+    await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ? WHERE id = ?').bind('published', Date.now(), row.id).run();
+    row.status = 'published'; row.published_at = Date.now();
+    return { ok: true, action, piece: full() };
+  }
+  if (action === 'unpublish') {
+    await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ? WHERE id = ?').bind('unpublished', row.id).run();
+    row.status = 'unpublished';
+    return { ok: true, action, piece: full() };
+  }
+  // edit
+  const b = body && typeof body === 'object' && !Array.isArray(body) ? body : null;
+  if (!b) return { ok: false, error: 'bad_body', note: 'Send the sections as a JSON object.' };
+  const brief = parse(row.brief);
+  const v = brief && brief.allowed ? validateDraft(JSON.stringify(b), brief.allowed) : { ok: true, names: [], numbers: [] };
+  const warnings = v.ok ? [] : v.names.concat(v.numbers);
+  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', row.id).run();
+  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor';
+  return { ok: true, action, warnings, piece: full() };
 }
 
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
@@ -7922,6 +8169,18 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
       const out = { ok: true };
+      // Editorial actions: POST { action, kind, week?, body? } with action one
+      // of preview | publish | unpublish | regenerate | edit; GET ?preview=<kind>
+      // [&week=N] is the read-only form of the first.
+      if (request.method === 'POST' || url.searchParams.get('preview')) {
+        let b = {};
+        if (request.method === 'POST') { try { b = await request.json(); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); } }
+        else b = { action: 'preview', kind: url.searchParams.get('preview'), week: url.searchParams.get('week') };
+        const schedA = await scheduleCacheRead(env);
+        const wkA = b.week != null && b.week !== '' && /^\d{1,2}$/.test(String(b.week)) ? parseInt(b.week, 10) : null;
+        const r = await contentAdmin(env, String(b.action || '').replace(/[^a-z]/g, ''), String(b.kind || '').replace(/[^a-z-]/g, ''), schedA ? schedA.season : null, wkA, b.body);
+        return json(r, r.ok ? 200 : (r.error === 'not_found' ? 404 : 400), c);
+      }
       if (url.searchParams.get('depth') === '1') { try { out.depth = await runDepthChartRefresh(env); } catch (e) { out.depth = { ok: false, error: (e && e.message) || 'failed' }; } }
       if (url.searchParams.get('tick') === '1') { try { out.tick = await runContentTick(env); } catch (e) { out.tick = { ok: false, error: (e && e.message) || 'failed' }; } }
       const run = String(url.searchParams.get('run') || '').replace(/[^a-z-]/g, '');
@@ -7932,6 +8191,17 @@ export default {
       out.et = etParts(Date.now());
       out.llm = !!env.LLM_API_KEY;
       return json(out, 200, c);
+    }
+    // The health board: the week, every feed's age, the sources, the job log,
+    // what is missing or stale and why, and the desk's state. ?rerun=<job>
+    // runs one job now through the same log the cron writes.
+    if (url.pathname === '/api/admin/health') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      let ran = null;
+      const job = String(url.searchParams.get('rerun') || '').replace(/[^a-z-]/g, '');
+      if (job) ran = JOB_FNS[job] ? { job, ...(await jobRun(env, job, 'admin')) } : { job, ok: false, error: 'unknown_job' };
+      return json(await healthPayload(env, { ran }), 200, c);
     }
     // The market engine's own plumbing: the snapshot store, the usage overlay,
     // and a sample record. ?snapshot=1 pulls the books now; ?usage=1 rebuilds
@@ -8496,72 +8766,56 @@ export default {
     };
     // Daily odds refresh runs on its own trigger and posts nothing.
     if (event.cron === '0 11 * * *') {
-      ctx.waitUntil(runOddsRefresh(env)
-        .then(r => console.log('odds refresh:', JSON.stringify(r)))
-        .catch(e => console.error('odds refresh failed:', e && e.message)));
+      // Every job runs through jobRun, which logs one row per run (HANDOFF
+      // §59) and never throws; the health board reads that log.
+      const run = name => jobRun(env, name, event.cron).then(r => console.log(name + ':', JSON.stringify(r).slice(0, 400)));
+      ctx.waitUntil(run('odds-refresh'));
       // The injury list, same daily cadence, same fail-safe (HANDOFF §48).
-      ctx.waitUntil(runAvailabilityRefresh(env)
-        .then(r => console.log('availability refresh:', JSON.stringify(r)))
-        .catch(e => console.error('availability refresh failed:', e && e.message)));
+      ctx.waitUntil(run('availability-refresh'));
       // The schedule behind /api/season. Cheap (one cached CSV plus five small
       // ESPN calls) and required by every in-season surface, so it runs on the
       // daily slot with the odds AND on the three posting slots below, which is
       // what keeps Sunday scores from sitting a full day stale.
-      ctx.waitUntil(runScheduleRefresh(env)
-        .then(r => console.log("schedule refresh:", JSON.stringify(r)))
-        .catch(e => console.error("schedule refresh failed:", e && e.message)));
+      ctx.waitUntil(run('schedule-refresh'));
       // The market engine's two feeds. The snapshot pull appends every CHANGED
       // book line to the history table (nothing is overwritten); the usage
       // refresh rebuilds the weekly stats/snaps overlay, which is a ~12MB pull
       // and belongs nowhere near a request path. Both fail closed.
-      ctx.waitUntil(runMarketSnapshot(env)
-        .then(r => console.log('market snapshot:', JSON.stringify(r)))
-        .catch(e => console.error('market snapshot failed:', e && e.message)));
-      ctx.waitUntil(runUsageRefresh(env)
-        .then(r => console.log('usage refresh:', JSON.stringify(r)))
-        .catch(e => console.error('usage refresh failed:', e && e.message)));
+      ctx.waitUntil(run('market-snapshot'));
+      ctx.waitUntil(run('usage-refresh'));
       // DFS salaries from whichever site feed is configured; a no-op otherwise.
-      ctx.waitUntil(runDfsRefresh(env)
-        .then(r => console.log('dfs refresh:', JSON.stringify(r)))
-        .catch(e => console.error('dfs refresh failed:', e && e.message)));
+      ctx.waitUntil(run('dfs-refresh'));
       // Depth charts, daily, for the recaps' "what we already knew".
-      ctx.waitUntil(runDepthChartRefresh(env)
-        .then(r => console.log('depth charts:', JSON.stringify(r)))
-        .catch(e => console.error('depth charts failed:', e && e.message)));
+      ctx.waitUntil(run('depth-charts'));
       // The Wednesday rest-of-season update. 11:00Z is 7am in New York during
       // daylight time and 6am after it ends; either is before anyone is
       // setting a lineup. Runs AFTER the schedule, odds and usage pulls above
       // have had a moment, since it reads all three.
       if (new Intl.DateTimeFormat('en-US', { timeZone: LEAD_TZ, weekday: 'short' }).format(new Date()) === 'Wed') {
-        ctx.waitUntil(new Promise(r => setTimeout(r, 20000)).then(() => runRosSnapshot(env))
-          .then(r => console.log('ros snapshot:', JSON.stringify(r)))
-          .catch(e => console.error('ros snapshot failed:', e && e.message)));
+        ctx.waitUntil(jobRun(env, 'ros-snapshot', event.cron, e => new Promise(r => setTimeout(r, 20000)).then(() => runRosSnapshot(e)))
+          .then(r => console.log('ros-snapshot:', JSON.stringify(r).slice(0, 400))));
       }
-      ctx.waitUntil(snapshotPrune(env, SNAP_KEEP_DAYS)
-        .then(r => console.log('snapshot prune:', JSON.stringify(r)))
-        .catch(e => console.error('snapshot prune failed:', e && e.message)));
-      ctx.waitUntil(pruneAnalytics(env, 180)
-        .then(r => console.log('analytics prune:', JSON.stringify(r)))
-        .catch(e => console.error('analytics prune failed:', e && e.message)));
+      ctx.waitUntil(run('snapshot-prune'));
+      ctx.waitUntil(run('analytics-prune'));
+      ctx.waitUntil(run('job-prune'));
       return;
     }
     // Every other trigger also refreshes the schedule before it posts: the
     // posting slots are the only three times a day the worker wakes, so they are
     // where in-week score and status freshness comes from.
-    ctx.waitUntil(runScheduleRefresh(env).catch(e => console.error("schedule refresh failed:", e && e.message)));
+    ctx.waitUntil(jobRun(env, 'schedule-refresh', event.cron));
     // Lines move all week, and a snapshot store that only sampled once a day
     // would record a Sunday morning steam move as a single overnight jump. The
     // three posting slots are the only other times the worker wakes, so they
     // are where in-week line movement comes from.
-    ctx.waitUntil(runMarketSnapshot(env).catch(e => console.error('market snapshot failed:', e && e.message)));
+    ctx.waitUntil(jobRun(env, 'market-snapshot', event.cron));
     // The hourly desk tick: refresh the schedule (game status is what gates a
     // piece), then produce whatever is due and ready. Idempotent: a piece is
     // produced once per kind per week, so the 11:00 overlap with the daily job
     // costs nothing.
     if (event.cron === '0 * * * *') {
-      ctx.waitUntil(runScheduleRefresh(env).catch(() => null).then(() => runContentTick(env))
-        .then(r => console.log('content tick:', JSON.stringify(r)))
-        .catch(e => console.error('content tick failed:', e && e.message)));
+      ctx.waitUntil(jobRun(env, 'content-tick', event.cron)
+        .then(r => console.log('content-tick:', JSON.stringify(r).slice(0, 400))));
       return;
     }
     const slots = slotsByCron[event.cron];
