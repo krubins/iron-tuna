@@ -628,6 +628,11 @@ img{max-width:100%}
    phone's edge. minmax(0,1fr) on the track is the same guard from the other side. */
 .hb-copy{min-width:0}
 .hb-intel{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:24px 26px 22px;background:rgba(255,255,255,.035)}
+/* The whole panel opens /weekly-intel, not only its gold button: it is the
+   in-season product's front door, and a reader taps the box they are reading.
+   Links and buttons inside it keep their own destinations (see hbPanelClick). */
+.hb-intel{cursor:pointer;transition:border-color .12s ease,background .12s ease}
+.hb-intel:hover{border-color:rgba(242,169,0,.45);background:rgba(255,255,255,.055)}
 .hb-intel-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .hb-intel-top .hb-eyebrow{margin-bottom:0}
 .hb-eyebrow.intel{color:var(--gold);border-color:rgba(242,169,0,.38)}
@@ -1894,6 +1899,22 @@ var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game run
     });
   }
   hbClock();
+  // The Weekly Fantasy Intel panel is one target. A click that lands on a
+  // link or button inside it goes where that link goes; a click anywhere else
+  // on the box opens the in-season front page, the same place the gold button
+  // does. A drag that selected text is left alone, and a modifier-click opens
+  // it the way the reader asked for.
+  (function () {
+    var panel = document.getElementById('heroIntel');
+    if (!panel) return;
+    panel.addEventListener('click', function (ev) {
+      if (ev.defaultPrevented || ev.button !== 0) return;
+      if (ev.target.closest && ev.target.closest('a,button,input,select,textarea,label')) return;
+      try { if (window.getSelection && String(window.getSelection())) return; } catch (e) {}
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey) { window.open('/weekly-intel', '_blank', 'noopener'); return; }
+      window.location.href = '/weekly-intel';
+    });
+  })();
   // ── the day's dateline ────────────────────────────────────────────────────
   // Twelve cases at one every six hours is three days of rotation, so the case
   // on screen cannot by itself tell a reader what changed TODAY. The digest

@@ -14,32 +14,237 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-<title>Weekly Fantasy Intel: This Week in the NFL | Iron Tuna</title>
-<meta name="description" content="What week it is, who is on bye, how the slate is shaping up, and every Iron Tuna in-season tool in one place. Rankings personalised to your league, priced against the betting market.">
+<meta name="theme-color" content="#0b1614">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>Weekly Fantasy Intel: Rankings, Vegas Edge &amp; the Week | Iron Tuna</title>
+<meta name="description" content="The in-season front page. Rankings personalised to your league, the players the betting market and the consensus disagree about, every game with its implied points, the waiver clock, and the week's stories.">
 <link rel="canonical" href="https://irontuna.com/weekly-intel">
-<meta property="og:title" content="Weekly Fantasy Intel">
-<meta property="og:description" content="The week, the byes, the slate, and where the betting market disagrees with the rankings.">
+<meta property="og:title" content="Weekly Fantasy Intel | Iron Tuna">
+<meta property="og:description" content="Rankings personalised to your league. See where fantasy experts and the betting markets disagree, every week.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://irontuna.com/weekly-intel">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/site.css">
 <style>
+/* Page-local tokens only. The site palette lives in site.css and is not
+   redefined here; the hero is the one dark band on the page, the same band the
+   front page opens on, and it carries its own values under a wi- prefix. */
+main#main{--wi-mast:#0b1614;--wi-teal:#2dd4a3;--wi-card:#ffffff;--wi-ink3:#6d7c86;--wi-up:#0b7a43;--wi-down:#b02020;--wi-line:#e1e7ea}
+[hidden]{display:none !important}
 body{overflow-x:hidden}
-/* Mobile masthead: one sideways-scrolling row under a pinned CTA, so the
-   header stays 52px instead of wrapping into three ragged rows. Copied from the
-   other content pages deliberately; when this moves it moves everywhere. */
+/* Mobile masthead: copied from the other content pages deliberately; when this
+   moves it moves everywhere. */
 @media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
 header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
 .nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
-h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
-h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
-p{color:var(--sec);margin:0 0 16px}
-.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
-.btn:hover{filter:brightness(1.06);text-decoration:none}
-.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
-.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+
+main#main{padding:0}
+.wi-wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+h2,h3,h4{margin:0}
+p{margin:0}
+
+/* ── the hero: the same panel the front page carries, at full width ──────── */
+.wi-hero{background:linear-gradient(180deg,#122320 0%,var(--wi-mast) 78%);color:#e9eeec;border-bottom:3px solid var(--teal)}
+.wi-hero .wi-wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:36px;align-items:start;padding-top:42px;padding-bottom:38px}
+.hb-copy{min-width:0}
+.hb-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.hb-eyebrow{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.17em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(242,169,0,.38);border-radius:3px;padding:4px 9px}
+.hb-week{font-size:12px;letter-spacing:.04em;color:#b3c1bd}
+.hb-week b{color:#fff;font-weight:800}
+.hb-week .live{color:#ff8a80;font-weight:800}
+.wi-hero h1{font-size:clamp(28px,3.1vw,42px);font-weight:800;line-height:1.08;letter-spacing:-.02em;color:#fff;margin:0}
+.wi-hero h1 em{font-style:normal;color:var(--gold)}
+.hb-dek{margin-top:15px;font-size:16px;line-height:1.58;color:#b3c1bd;max-width:560px}
+.hb-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.hb-btn{display:inline-block;font-size:14.5px;font-weight:800;letter-spacing:.02em;border-radius:6px;padding:14px 24px;text-decoration:none}
+.hb-btn.gold{background:var(--gold);color:#231700;box-shadow:0 10px 26px rgba(242,169,0,.20)}
+.hb-btn.ghost{border:1px solid rgba(255,255,255,.26);color:#fff}
+.hb-btn:hover{filter:brightness(1.08);text-decoration:none}
+.hb-note{margin-top:15px;font-size:12.5px;line-height:1.5;color:#8b9c97;max-width:520px}
+.hb-note b{color:#cfd9d6}
+.hb-note a{color:#cfd9d6;text-decoration:underline}
+.hb-panel{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:20px 22px 18px;background:rgba(255,255,255,.035);min-width:0}
+.hb-panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.hb-panel-head h2{font-family:var(--font-display);font-weight:400;font-size:22px;letter-spacing:.06em;color:#fff;line-height:1}
+.hb-panel-head a{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--wi-teal)}
+.hb-teasers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.hb-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:13px 14px;min-width:0}
+.hb-card i{font-style:normal;display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--wi-teal);margin-bottom:8px}
+.hb-card i.fade{color:#ff8a80}
+.hb-card i.td{color:var(--gold)}
+.hb-card b{display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;overflow-wrap:anywhere}
+.hb-card b a{color:inherit}
+.hb-card small{display:block;font-size:11px;color:#8b9c97;margin:2px 0 9px;letter-spacing:.03em}
+.hb-card .hb-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:#b3c1bd;padding:3px 0;border-top:1px solid rgba(255,255,255,.07)}
+.hb-card .hb-row span:last-child{color:#fff;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hb-card .hb-row.big span:last-child{color:var(--gold);font-size:15px}
+.hb-card .hb-basis{font-size:10.5px;color:#8b9c97;margin-top:6px;line-height:1.35}
+.hb-dateline{margin-top:14px;font-size:12.5px;line-height:1.5;color:#b3c1bd;border-top:1px solid rgba(255,255,255,.09);padding-top:12px}
+.hb-dateline b{color:#fff}
+.hb-teaser-note{margin-top:12px;font-size:12px;line-height:1.5;color:#8b9c97}
+.hb-teaser-note b{color:#cfd9d6}
+@media(max-width:900px){
+  .wi-hero .wi-wrap{grid-template-columns:minmax(0,1fr);gap:24px;padding-top:30px;padding-bottom:28px}
+  .hb-panel{padding:18px 16px 16px}
+}
+@media(max-width:700px){
+  .wi-hero h1{font-size:clamp(28px,7vw,38px)}
+  .hb-ctas .hb-btn{flex:1 1 100%;text-align:center}
+}
+
+/* ── the ribbon: section anchors and the player lookup ───────────────────── */
+.wi-ribbon{background:var(--bg);border-bottom:1px solid var(--line);position:sticky;top:var(--header-h);z-index:20;box-shadow:0 1px 4px rgba(16,19,23,.06)}
+.wi-ribbon .wi-wrap{display:flex;align-items:center;gap:4px;height:44px;overflow-x:auto;scrollbar-width:none}
+.wi-ribbon .wi-wrap::-webkit-scrollbar{display:none}
+.wi-ribbon a.jump{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sec);padding:12px 11px;border-bottom:3px solid transparent;white-space:nowrap;text-decoration:none}
+.wi-ribbon a.jump:hover{color:var(--text);border-bottom-color:var(--teal)}
+.wi-ribbon .rb-spacer{flex:1}
+.rb-search{position:relative;display:flex;align-items:center;gap:6px;flex:0 0 auto;margin:0;padding:0 9px;height:30px;border:1px solid var(--line);border-radius:4px;background:var(--wi-card)}
+.rb-search:focus-within{border-color:var(--teal);box-shadow:0 0 0 2px rgba(14,124,99,.14)}
+.rb-search-ico{width:14px;height:14px;flex:0 0 auto;color:var(--muted)}
+.rb-search:focus-within .rb-search-ico{color:var(--teal)}
+.rb-search input{width:168px;border:0;outline:0;background:none;font:inherit;font-size:13px;color:var(--text);padding:0;line-height:1}
+.rb-search input::placeholder{color:var(--muted)}
+.rb-search input::-webkit-search-decoration,.rb-search input::-webkit-search-cancel-button{-webkit-appearance:none}
+.pl-menu{position:fixed;z-index:60;background:var(--wi-card);border:1px solid var(--line);border-radius:6px;box-shadow:0 12px 30px rgba(16,19,23,.16);overflow:hidden;max-height:min(60vh,420px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pl-menu[hidden]{display:none}
+.pl-opt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-bottom:1px solid var(--line);background:none;font:inherit;text-align:left;cursor:pointer;color:var(--text)}
+.pl-opt:last-child{border-bottom:0}
+.pl-opt:hover,.pl-opt.on{background:rgba(14,124,99,.10)}
+.pl-meta{min-width:0}
+.pl-opt b{display:block;font-weight:700;font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-opt b em{font-style:normal;background:rgba(242,169,0,.32);border-radius:2px}
+.pl-meta span{display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:1px}
+.pl-face{flex:0 0 auto;width:30px;height:30px;border-radius:3px;background:var(--panel);overflow:hidden;position:relative;display:grid;place-items:center}
+.pl-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.pl-face i{font-style:normal;font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.02em}
+.pl-empty{padding:11px 13px;font-size:13px;color:var(--muted)}
+@media(max-width:860px){.wi-ribbon{top:52px}}
+@media(max-width:700px){.rb-search{order:-1;height:28px;padding:0 7px;margin:0 6px 0 0}.rb-search input{width:104px;font-size:12.5px}.rb-search:focus-within input{width:150px}}
+
+/* ── section furniture, the front page's ─────────────────────────────────── */
+.wi-sec{display:flex;align-items:baseline;gap:14px;margin:36px 0 12px;border-bottom:2px solid var(--text);padding-bottom:8px;position:relative;scroll-margin-top:110px}
+.wi-sec::after{content:"";position:absolute;left:0;bottom:-2px;width:64px;height:2px;background:var(--teal)}
+.wi-sec h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing:.05em;line-height:1;color:var(--text)}
+.wi-sec .sec-more{margin-left:auto;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);white-space:nowrap}
+.wi-sub{font-size:13.5px;color:var(--muted);margin:-4px 0 16px;max-width:820px;line-height:1.5}
+@media(max-width:560px){.wi-sec{flex-wrap:wrap}.wi-sec .sec-more{margin-left:0}}
+
+.wi-card{background:var(--wi-card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;min-width:0}
+.wi-card h3{font-size:var(--fs-md);font-weight:800;line-height:1.3;margin:0 0 6px}
+.wi-card h3 a{color:var(--text)}
+.wi-card h3 a:hover{color:var(--teal);text-decoration:none}
+.wi-card p{font-size:var(--fs-sm);color:var(--sec);line-height:1.5}
+.wi-card .go{display:inline-block;margin-top:10px;font-size:12.5px;font-weight:800;letter-spacing:.04em;color:var(--teal)}
+.wi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.wi-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:820px){.wi-two{grid-template-columns:1fr}}
+.wi-kick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.wi-tag{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 8px;border-radius:3px;background:#fdf4e2;color:var(--goldink);border:1px solid #f0e0b0}
+.wi-tag.pos{background:var(--panel);color:var(--sec);border-color:var(--line2)}
+.wi-tag.up{background:#e7f6ef;color:var(--wi-up);border-color:#bfe6d2}
+.wi-tag.down{background:#fbeaea;color:var(--wi-down);border-color:#f0c8c8}
+.wi-tag.split{background:#fdf5e0;color:#8a6a00;border-color:#f0e0b0}
+.wi-tag.live{background:rgba(14,124,99,.1);color:var(--teal);border-color:rgba(14,124,99,.3)}
+.wi-date{font-size:11.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:600}
+
+/* the week */
+.wk-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.wk-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.wk-card i{font-style:normal;display:block;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.wk-card b{display:block;font-size:var(--fs-lg);font-weight:800;line-height:1.15;color:var(--text)}
+.wk-card span{display:block;font-size:var(--fs-xs);color:var(--sec);margin-top:5px;line-height:1.45}
+.wk-byes{margin-top:12px;font-size:var(--fs-sm);color:var(--sec)}
+
+/* Vegas vs. Experts */
+.ve-card{background:var(--wi-card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--teal)}
+.ve-card.fade{border-left-color:var(--wi-down)}
+.ve-card b{font-size:var(--fs-md)}
+.ve-card b a{color:var(--text)}
+.ve-ranks{display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--muted);margin:8px 0 6px}
+.ve-ranks b{font-size:var(--fs-sm);color:var(--text)}
+.ve-cls{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;background:#e7f6ef;color:var(--wi-up);margin-right:8px}
+.ve-cls.fade{background:#fbeaea;color:var(--wi-down)}
+.ve-conf{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.ve-card p{font-size:var(--fs-xs);color:var(--sec);margin-top:8px;line-height:1.5}
+.ve-h{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.ve-boards{margin-top:18px}
+.ve-boards .is-table{font-size:var(--fs-xs)}
+.ve-boards .is-table th,.ve-boards .is-table td{padding:8px 10px}
+
+/* rankings */
+.rk-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.rk-bar button{font:inherit;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;border-radius:6px;border:1px solid var(--line2);background:var(--wi-card);color:var(--sec);cursor:pointer}
+.rk-bar button[aria-pressed="true"]{background:var(--text);color:#fff;border-color:var(--text)}
+.rk-note{font-size:var(--fs-xs);color:var(--muted);margin-left:auto}
+.rk-table td.p a{color:var(--text);font-weight:700}
+.rk-table td.p span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.rk-table td.cls{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.rk-table td.cls.buy{color:var(--wi-up)}
+.rk-table td.cls.fade{color:var(--wi-down)}
+.rk-table td.cls.agree{color:var(--muted)}
+.rk-movers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}
+.rk-movers h3{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.rk-movers ol{margin:0;padding-left:20px;font-size:var(--fs-sm);color:var(--sec)}
+.rk-movers li{margin-bottom:6px}
+.rk-movers li small{display:block;font-size:11.5px;color:var(--muted)}
+
+/* games */
+.tm-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
+.tm-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.tm-card i{font-style:normal;display:block;font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.tm-card i.down{color:var(--wi-down)}
+.tm-card b{display:block;font-size:var(--fs-lg);font-weight:800;color:var(--text)}
+.tm-card span{display:block;font-size:var(--fs-xs);color:var(--sec);margin-top:4px;line-height:1.45}
+
+/* the desk */
+.dk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.dk-card{display:block;background:var(--wi-card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;color:var(--text);text-decoration:none;min-width:0}
+.dk-card:hover{border-color:var(--teal);text-decoration:none}
+.dk-card .when{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.dk-card h3{font-size:var(--fs-md);font-weight:800;line-height:1.3;margin:0 0 6px}
+.dk-card .st{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.dk-card .st.published{color:var(--teal)}
+.dk-card .st.held{color:var(--goldink)}
+
+/* reads */
+.rd-band{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:900px){.rd-band{grid-template-columns:1fr}}
+.pk-lead{background:var(--wi-card);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:8px;padding:20px 22px 18px}
+.pk-lead h3{font-size:clamp(19px,2.3vw,25px);font-weight:800;line-height:1.22;letter-spacing:-.015em;margin:8px 0 10px}
+.pk-lead h3 a{color:var(--text)}
+.pk-lead h3 a:hover{color:var(--teal);text-decoration:none}
+.pk-dek{font-size:14.5px;line-height:1.5;color:var(--sec)}
+.pk-back{border:1px solid var(--line);border-radius:8px;background:var(--wi-card);padding:6px 16px 10px}
+.pk-back h4{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:10px 0 8px;border-bottom:1px solid var(--line)}
+.pk-back ul{list-style:none;margin:0;padding:0}
+.pk-back li{padding:11px 0;border-bottom:1px solid var(--line)}
+.pk-back li:last-child{border-bottom:0}
+.pk-back li .wi-tag{margin-bottom:5px;display:inline-block}
+.pk-back a{display:block;font-size:14px;font-weight:700;line-height:1.34;color:var(--text)}
+.pk-back a:hover{color:var(--teal);text-decoration:none}
+.pk-back .pk-when{font-size:11.5px;color:var(--muted);margin-top:4px}
+.pcp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+@media(max-width:620px){.pcp-grid{grid-template-columns:1fr}}
+.pcp-card{background:var(--wi-card);border:1px solid var(--line);border-radius:8px;padding:14px 16px 12px;border-top:3px solid var(--text)}
+.pcp-card.up{border-top-color:var(--wi-up)}
+.pcp-card.split{border-top-color:var(--gold)}
+.pcp-card.down{border-top-color:var(--wi-down)}
+.pcp-card a{display:block;font-size:15px;font-weight:800;line-height:1.3;color:var(--text);margin-top:6px}
+.pcp-card a:hover{color:var(--teal);text-decoration:none}
+.pcp-who{font-size:var(--fs-xs);color:var(--sec);margin-top:8px;line-height:1.5}
+.rd-more{margin-top:14px;font-size:12.5px;font-weight:800;letter-spacing:.04em}
+
+/* the closing band */
+.wi-band{margin:40px 0 0;background:var(--wi-mast);color:#e9eeec;border-radius:10px;padding:22px 26px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.wi-band .tb-text{flex:1 1 360px;font-size:14.5px;line-height:1.5;color:#b3c1bd}
+.wi-band .tb-text b{color:#fff}
+.wi-band .tb-ctas{display:flex;gap:10px;flex-wrap:wrap}
+.wi-band .hb-btn{padding:12px 20px;font-size:13.5px}
+.wi-src{margin-top:34px;max-width:820px}
+.wi-src h2{font-family:var(--font-display);font-weight:400;font-size:24px;letter-spacing:.05em;margin-bottom:8px}
+.wi-src p{color:var(--sec);margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -62,34 +267,168 @@ p{color:var(--sec);margin:0 0 16px}
     </button>
     <!--/chrome:nav-->
 </div></header>
-<main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; Weekly Intel</p>
-<h1>This week, before anyone tells you what to do about it</h1>
-<p class="is-lede">The facts of the week first: which week it is, who is off, what the market expects from every offence on the slate. The calls come after, and they come from the same numbers.</p>
-<div class="its-strip" data-season-strip></div>
+<main id="main">
 
-<h2>The week</h2>
-<div class="is-grid" id="wiCards"></div>
-<p class="is-empty" id="wiEmpty" hidden>The NFL schedule has not answered. Nothing here is dated until it does.</p>
+<!-- The hero. The left half is the front page's Weekly Fantasy Intel panel at
+     full width: the week from /api/season, the two calls to action, the pitch.
+     The right half is the three cards the front page draws off the same odds
+     digest, plus the day's count. REAL DATA OR NOTHING, exactly as on the front
+     page: a card whose numbers the digest does not carry is not rendered, and
+     no example name is ever shown in the markup. -->
+<section class="wi-hero" aria-labelledby="wiTitle">
+  <div class="wi-wrap">
+    <div class="hb-copy">
+      <div class="hb-top">
+        <span class="hb-eyebrow">Weekly Fantasy Intel</span>
+        <span class="hb-week" id="hbWeek" hidden></span>
+      </div>
+      <h1 id="wiTitle">Rankings personalized to your league. See where fantasy experts and the betting markets <em>disagree</em>.</h1>
+      <p class="hb-dek">A sportsbook prices a player with its own money behind it and corrects in public within minutes. A ranking costs nothing to be wrong about. Every number on this page reads the market first, the consensus second, and your league&rsquo;s scoring on top of both.</p>
+      <div class="hb-ctas">
+        <a class="hb-btn gold" href="/in-season/rankings">See this week&rsquo;s rankings</a>
+        <a class="hb-btn ghost" href="/auctiondraft?screen=cheat">Customize my scoring</a>
+      </div>
+      <p class="hb-note">Free, no signup. Save your league&rsquo;s teams and scoring once and <b>every board on this page re-scores itself</b> for it. <a href="/my-league">What is saved, and where it shows up &rarr;</a></p>
+    </div>
+    <div class="hb-panel" id="heroIntel">
+      <div class="hb-panel-head"><h2>Today&rsquo;s market read</h2><a href="/in-season/vegas-edge">Every case &rarr;</a></div>
+      <div class="hb-teasers" id="hbTeasers" hidden></div>
+      <p class="hb-teaser-note" id="hbTeaserNote">Reading today&rsquo;s odds&hellip;</p>
+      <p class="hb-dateline" id="hbDateline" hidden></p>
+    </div>
+  </div>
+</section>
 
-<h2>On bye</h2>
-<p id="wiByes" class="is-empty">Reading the schedule&hellip;</p>
+<!-- The ribbon stays on screen the whole way down, so a section and the player
+     lookup are always one keystroke away. Same arrangement as the front page. -->
+<div class="wi-ribbon"><div class="wi-wrap">
+  <a class="jump" href="#week">The Week</a>
+  <a class="jump" href="#edge">Vegas Edge</a>
+  <a class="jump" href="#rankings">Rankings</a>
+  <a class="jump" href="#games">Games</a>
+  <a class="jump" href="#waivers">Waivers</a>
+  <a class="jump" href="#desk">The Desk</a>
+  <a class="jump" href="#reads">Reads</a>
+  <a class="jump" href="#tools">Tools</a>
+  <span class="rb-spacer"></span>
+  <form class="rb-search" id="rbSearch" role="search" autocomplete="off" action="/player" method="get">
+    <svg class="rb-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+    <input id="rbSearchInput" name="q" type="search" placeholder="Search a player" aria-label="Search for a player"
+           role="combobox" aria-expanded="false" aria-controls="rbSearchList" aria-autocomplete="list"
+           data-player-search="weekly-intel">
+  </form>
+</div></div>
 
-<h2>The rest of the section</h2>
-<div class="is-grid">
-  <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>The board re-ranked for the week ahead, at your league’s scoring rather than a stranger’s.</p></div>
-  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
-  <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
-  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
-  <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
-  <div class="is-card"><h3><a href="/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
-  <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
+<div class="wi-wrap">
+
+  <!-- ── The week ─────────────────────────────────────────────────────── -->
+  <div class="wi-sec" id="week"><h2>The Week</h2><a class="sec-more" href="/in-season/game-intel">Every game &rarr;</a></div>
+  <p class="wi-sub">The facts first: which week it is, where it stands, who is off. A week is current until its own last game has finished, so nothing here turns over while a Monday night game is still being played.</p>
+  <div class="its-strip" data-season-strip></div>
+  <div class="wk-cards" id="wiCards"></div>
+  <p class="is-empty" id="wiEmpty" hidden>The NFL schedule has not answered. Nothing here is dated until it does.</p>
+  <p class="wk-byes" id="wiByes">Reading the schedule&hellip;</p>
+
+  <!-- ── Vegas vs. Experts ────────────────────────────────────────────── -->
+  <div class="wi-sec" id="edge"><h2>Vegas vs. Experts</h2><a class="sec-more" href="/in-season/vegas-edge">The whole edge &rarr;</a></div>
+  <p class="wi-sub">The players the betting market and the consensus rankings disagree about most this week, with the ranks on all three boards and the reason the gap exists. Every number says whether it is quoted from a prop or derived from the game line.</p>
+  <p class="is-note" id="veNote" style="margin:0 0 14px">Reading the board&hellip;</p>
+  <div class="wi-two">
+    <div><p class="ve-h">The market is higher</p><div id="veBuys"></div></div>
+    <div><p class="ve-h">The market is lower</p><div id="veFades"></div></div>
+  </div>
+  <div class="wi-two ve-boards" id="veBoards" hidden>
+    <div>
+      <p class="ve-h">TD board</p>
+      <div class="is-scroll"><table class="is-table" id="veTd"><thead><tr><th>#</th><th>Player</th><th>Opp</th><th class="num">Anytime TD</th><th class="num">Exp. TDs</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div>
+      <p class="ve-h">Volume board</p>
+      <div class="is-scroll"><table class="is-table" id="veVol"><thead><tr><th>#</th><th>Player</th><th class="num">Rec</th><th class="num">Rush yds</th><th class="num">Rec yds</th><th class="num">Touches</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ── Rankings ─────────────────────────────────────────────────────── -->
+  <div class="wi-sec" id="rankings"><h2>This Week&rsquo;s Board</h2><a class="sec-more" href="/in-season/rankings">Full rankings &rarr;</a></div>
+  <p class="wi-sub">The Iron Tuna board for the week: the consensus projection blended toward what the market knows. Scored at your league&rsquo;s settings when you have saved them, at PPR when you have not, and the page says which.</p>
+  <div class="rk-bar" id="rkPos" role="group" aria-label="Position">
+    <button type="button" data-pos="QB" aria-pressed="false">QB</button>
+    <button type="button" data-pos="RB" aria-pressed="true">RB</button>
+    <button type="button" data-pos="WR" aria-pressed="false">WR</button>
+    <button type="button" data-pos="TE" aria-pressed="false">TE</button>
+    <button type="button" data-pos="FLEX" aria-pressed="false">Flex</button>
+    <span class="rk-note" id="rkNote"></span>
+  </div>
+  <div class="is-scroll"><table class="is-table rk-table" id="rkTable" hidden>
+    <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Opp</th><th class="num">Iron Tuna proj</th><th class="num">Consensus</th><th class="num">Vegas</th><th>Market delta</th></tr></thead>
+    <tbody id="rkBody"></tbody>
+  </table></div>
+  <p class="is-empty" id="rkEmpty">Reading the board&hellip;</p>
+  <div class="rk-movers" id="rkMovers" hidden></div>
+
+  <!-- ── Games ────────────────────────────────────────────────────────── -->
+  <div class="wi-sec" id="games"><h2>The Slate</h2><a class="sec-more" href="/in-season/game-intel">Game intel &rarr;</a></div>
+  <p class="wi-sub">Every game this week, ranked by total, with the points each offence is implied to score. A spread and a total together are the scoring environment every skill player on that roster inherits.</p>
+  <div class="tm-cards" id="tmCards" hidden></div>
+  <div class="is-scroll"><table class="is-table" id="giTable" hidden>
+    <thead><tr><th>Game</th><th>Kickoff</th><th class="num">Spread</th><th class="num">Total</th><th class="num">Implied away</th><th class="num">Implied home</th><th>Status</th></tr></thead>
+    <tbody id="giBody"></tbody>
+  </table></div>
+  <p class="is-empty" id="giEmpty">Reading the schedule&hellip;</p>
+
+  <!-- ── Waivers ──────────────────────────────────────────────────────── -->
+  <div class="wi-sec" id="waivers"><h2>Waivers &amp; FAAB</h2><a class="sec-more" href="/in-season/waivers">The FAAB Advisor &rarr;</a></div>
+  <p class="wi-sub">A ranking tells you who to want. In a FAAB league what you pay is the whole decision, and a dollar under the winner buys nothing at all.</p>
+  <div class="wi-grid">
+    <div class="wi-card"><span class="wi-tag live">The clock</span><p id="wvClock">Reading the schedule&hellip;</p></div>
+    <div class="wi-card"><span class="wi-tag">Tool</span><h3><a href="/faab">FAAB Advisor</a></h3><p>Reads your Sleeper league, prices every free agent against the roster you actually have, and names the rival with the budget to outbid you.</p><a class="go" href="/faab">Open the advisor &rarr;</a></div>
+    <div class="wi-card" id="wvWatch"><span class="wi-tag">Latest report</span><h3><a href="/waiver-watch-2026-09-01">Waiver &amp; FAAB Watch: September 1, 2026</a></h3><p>This week's verified waiver-wire pickups with suggested FAAB bid ranges, from MarShawn Lloyd to Tyjae Spears.</p><a class="go" href="/waiver-watch-2026-09-01">Read the report &rarr;</a></div>
+  </div>
+
+  <!-- ── The desk ─────────────────────────────────────────────────────── -->
+  <div class="wi-sec" id="desk"><h2>The Desk</h2><a class="sec-more" href="/in-season/desk">The whole week &rarr;</a></div>
+  <p class="wi-sub">Eleven pieces a week, each published when its games are final rather than when a clock says so. Every fact in them comes from the box score, the depth chart, the injury list, the usage file or the betting market, and a piece that strayed outside that data is held with the data shown in its place.</p>
+  <div id="dkGrid"></div>
+  <p class="is-empty" id="dkEmpty">Reading the desk&hellip;</p>
+
+  <!-- ── Reads ────────────────────────────────────────────────────────── -->
+  <div class="wi-sec" id="reads"><h2>The Pick</h2><a class="sec-more" href="/the-pick">Every entry &rarr;</a></div>
+  <p class="wi-sub">One story a day, each arguing a single idea with the projection numbers that prove it and the player it points at. Read here for the usage and the scoring; the draft-day pricing is on the entry itself.</p>
+  <div class="rd-band" id="pickBand"><p class="is-empty">The Pick has not been extracted yet. <a href="/the-pick">Read the column &rarr;</a></p></div>
+
+  <div class="wi-sec"><h2>The Play-Caller Premium</h2><a class="sec-more" href="/play-caller-premium">The whole column &rarr;</a></div>
+  <p class="wi-sub">A coach is worth real production. The habits that have repeated for decades, and the exact player each one moves this season.</p>
+  <div class="pcp-grid" id="pcpGrid"></div>
+
+  <!-- ── Tools ────────────────────────────────────────────────────────── -->
+  <div class="wi-sec" id="tools"><h2>The In-Season Section</h2><a class="sec-more" href="/post-draft">Overview &rarr;</a></div>
+  <div class="wi-grid">
+    <div class="wi-card"><h3><a href="/in-season/rankings">Rankings</a></h3><p>Three boards, four horizons, at your league&rsquo;s scoring rather than a stranger&rsquo;s. Consensus, Vegas, and the Iron Tuna blend, with the Market Delta between them.</p></div>
+    <div class="wi-card"><h3><a href="/in-season/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, the movers, the TD board and the volume board.</p></div>
+    <div class="wi-card"><h3><a href="/in-season/what-they-arent-telling-you">What They Aren&rsquo;t Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
+    <div class="wi-card"><h3><a href="/in-season/game-intel">Game Intel</a></h3><p>Every game with its line, its total, and the points each offence is implied to score.</p></div>
+    <div class="wi-card"><h3><a href="/in-season/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league&rsquo;s FAAB dollars.</p></div>
+    <div class="wi-card"><h3><a href="/in-season/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
+    <div class="wi-card"><h3><a href="/in-season/desk">The Desk</a></h3><p>The week&rsquo;s pieces, from Monday&rsquo;s recaps to Sunday night&rsquo;s what changed, each built from the data it shows.</p></div>
+    <div class="wi-card"><h3><a href="/player">Player Intel</a></h3><p>Every horizon, the props and their movement, TD probability, usage, injury and environment for any player. Search from the ribbon above.</p></div>
+    <div class="wi-card"><h3><a href="/my-league">My League</a></h3><p>Your teams and scoring, and every number on this site restated in them.</p></div>
+  </div>
+
+  <div class="wi-src">
+    <h2>Where these numbers come from</h2>
+    <p>Iron Tuna reads the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
+    <p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar. Game lines and totals are the market&rsquo;s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so. Anytime-touchdown percentages without a priced prop are Poisson on the blended line and are labelled derived.</p>
+  </div>
+
+  <div class="wi-band">
+    <span class="tb-text"><b>Every board here re-scores itself for your league.</b> Save your teams and scoring once, free, and the rankings, the edge cases and the stories all read in your points instead of somebody else&rsquo;s.</span>
+    <span class="tb-ctas">
+      <a class="hb-btn gold" href="/auctiondraft?screen=cheat">Customize my scoring</a>
+      <a class="hb-btn ghost" href="/in-season/rankings">Open the rankings</a>
+    </span>
+  </div>
+
 </div>
-
-<h2>Where these numbers come from</h2>
-<p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
-<p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
-
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -151,42 +490,413 @@ p{color:var(--sec);margin:0 0 16px}
   </div>
   <!--/chrome:foot-->
 </div></footer>
+<script src="/it-league.js"></script>
 <script src="/it-season.js" defer></script>
+<script src="/player-search.js" defer></script>
+<script>
+// The Pick and the Play-Caller Premium, as published on their own pages.
+// Written here by tools/build-front.mjs from the-pick.html and
+// play-caller-premium.html, the same pass that fills front.html, so this page
+// can never quote either column differently from the front page. Only the
+// title, the theme, the position and the date are printed on this page: the
+// entries also carry a draft-day price line, and this is the in-season page.
+var PICKS = [{"id":"pick-2026-09-02","theme":"target concentration","title":"Chris Olave Owns a Smaller Slice of New Orleans Than Zay Flowers Owns of Baltimore — and Still Outscores Him by 11.5 Points","dek":"Target share tells you who won the job. It does not tell you how big the job is, and New Orleans throws the ball around a lot more than Baltimore does.","pos":"WR","team":"NO","date":"2026-09-02","who":"Chris Olave (NO, WR) at the discount a 27.7% share earns him on a skim, before the market notices the 328-catch pool it is 27.7% of. Do not pay Flowers-level money for Zay Flowers (BAL, WR)…","stat":"+10% to +16% above his current WR2-tier price","url":"/the-pick#pick-2026-09-02","ppl":["chris-olave","zay-flowers"]},{"id":"pick-2026-09-01","theme":"committee backfields","title":"Pittsburgh’s Backfield Is a Photo Finish, and Your League Is Still Betting on One Horse","dek":"Jaylen Warren and Rico Dowdle project 5.9 points apart over a full season — a coin flip wearing shoulder pads — and Pittsburgh is not even the closest committee on the board.","pos":"RB","team":"PIT","date":"2026-09-01","who":"Jaylen Warren (PIT, RB) at the discount a true committee back gets, not the discount a healthy scratch gets — his catch role is the safer half of Pittsburgh’s coin flip. If you would rather…","stat":"+9% to +15% above his current committee-back price","url":"/the-pick#pick-2026-09-01","ppl":["jaylen-warren","treveyon-henderson"]},{"id":"pick-2026-08-20","theme":"scoring settings","title":"Your league’s scoring setting moves Derrick Henry four spots, and half your room has not opened that page since 2019","dek":"The same projections produce a different board depending on what a catch is worth. Nobody prices for it, which is where the money is.","pos":"RB","team":"BAL","date":"2026-08-20","who":"Derrick Henry (BAL, RB) in any league that is not full PPR — a top‑five back at his scoring setting, priced by a room that is still reading a PPR ranking list. In full PPR, flip the entry…","stat":"+15% to +22% above his price in standard and half-PPR scoring","url":"/the-pick#pick-2026-08-20","ppl":["derrick-henry","jeremiyah-love"]}];
+var COLUMN = [{"id":"call-2026-09-02-1","title":"Zac Taylor’s passing game runs through two outside receivers only, and that leaves Cincinnati’s tight end running on fumes","pos":"WR / TE","team":"CIN","date":"2026-09-02","side":"split","label":"Two-sided","who":"Up — Tee Higgins (CIN, WR), who keeps scoring at a rate his target share alone doesn’t explain because Chase draws the coverage first. Down — Mike Gesicki (CIN…","stat":"+5% to +9% above a standard No.2-receiver price for Higgins, on touchdown rate; -8% to -12% below a receiving-TE price for Gesicki, on target share","url":"/play-caller-premium#call-2026-09-02-1","ppl":["tee-higgins","mike-gesicki"]},{"id":"call-2026-09-02-2","title":"Sean Payton has always had one big year in him from a mismatch tight end, and Denver just handed him the player to do it with","pos":"TE","team":"DEN","date":"2026-09-02","side":"up","label":"Underpriced","who":"Evan Engram (DEN, TE). He is priced like a complementary piece in a crowded passing game. Payton’s own history says a real mismatch tight end gets fed regardless of…","stat":"+8% to +13% above a standard TE2 price, on target-share upside the crowded receiver room hasn’t priced in","url":"/play-caller-premium#call-2026-09-02-2","ppl":["evan-engram"]},{"id":"call-2026-09-02-3","title":"Brian Schottenheimer already turned one Dallas running back into a 350‑touch workhorse, and Javonte Williams is stepping into the same setup","pos":"RB","team":"DAL","date":"2026-09-02","side":"up","label":"Underpriced","who":"Javonte Williams (DAL, RB). He is priced like a solid early‑down starter who gives back some work on passing downs. Schottenheimer’s own history in this building…","stat":"+9% to +14% above a standard early-down-back price, on workload share","url":"/play-caller-premium#call-2026-09-02-3","ppl":["javonte-williams"]},{"id":"call-2026-09-02-4","title":"Kevin O’Connell has always scripted easy completions to his tight end, and T.J. Hockenson is fully healthy again to cash them","pos":"TE","team":"MIN","date":"2026-09-02","side":"up","label":"Underpriced","who":"T.J. Hockenson (MIN, TE). He is still priced off two injury‑shortened seasons. O’Connell’s scheme has already shown what a fully healthy version of this role…","stat":"+7% to +12% above an injury-discounted TE price","url":"/play-caller-premium#call-2026-09-02-4","ppl":["t-j-hockenson"]},{"id":"call-2026-09-02-5","title":"A run-first team still needs one receiver who wins on his own, and Philadelphia’s is DeVonta Smith now that A.J. Brown is gone","pos":"WR","team":"PHI","date":"2026-09-02","side":"up","label":"Underpriced","who":"DeVonta Smith (PHI, WR). He is still priced like a No.&nbsp;2 receiver splitting the room with Brown. Brown is in New England now, and the whole receiver room’s…","stat":"+7% to +12% above a No.-2-receiver price, on target-share consolidation","url":"/play-caller-premium#call-2026-09-02-5","ppl":["devonta-smith"]},{"id":"call-2026-09-01-1","title":"Sean McVay has never let one running back keep the job for long, and the pattern is back with Kyren Williams and Blake Corum","pos":"RB","team":"LAR","date":"2026-09-01","side":"split","label":"Two-sided","who":"Up — Blake Corum (LAR, RB), who profiles as a genuine committee partner now, not a cheap handcuff. Down — Kyren Williams (LAR, RB), still priced by some rooms like…","stat":"+8% to +12% above a handcuff price for Corum; -6% to -10% below a workhorse price for Williams","url":"/play-caller-premium#call-2026-09-01-1","ppl":["blake-corum","kyren-williams"]},{"id":"call-2026-09-01-2","title":"Davante Adams once had the whole Green Bay passing game to himself, and Christian Watson just inherited the same empty room","pos":"WR","team":"GB","date":"2026-09-01","side":"up","label":"Underpriced","who":"Christian Watson (GB, WR). He is priced like the boom‑or‑bust field‑stretcher he used to be in a crowded room. The room is not crowded anymore.","stat":"+8% to +13% above his current price, on target-share growth the projection has not caught up to yet","url":"/play-caller-premium#call-2026-09-01-2","ppl":["christian-watson"]},{"id":"call-2026-09-01-3","title":"An undrafted rookie can still take over an NFL backfield in one camp, and Jacory Croskey-Merritt is proving it in Washington the same way James Robinson once did in Jacksonville","pos":"RB","team":"WAS","date":"2026-09-01","side":"up","label":"Underpriced","who":"Jacory Croskey-Merritt (WAS, RB). He is still priced like a seventh‑round afterthought. The depth chart already reads like a lead back’s.","stat":"+9% to +14% above a late-round price, on the lead-back role camp has already handed him","url":"/play-caller-premium#call-2026-09-01-3","ppl":["jacory-croskey-merritt"]},{"id":"call-2026-09-01-4","title":"The Marv Levy‑era Bills never let one pass-catcher run away with a season, and this year’s room is doing it to DJ Moore","pos":"WR","team":"BUF","date":"2026-09-01","side":"down","label":"Overpriced","who":"DJ Moore (BUF, WR). He is priced like a true alpha receiver. The room around him was built to make sure nobody gets to be one.","stat":"-6% to -10% below a true-No.1 price, on target diffusion across Kincaid and Knox","url":"/play-caller-premium#call-2026-09-01-4","ppl":["dj-moore"]},{"id":"call-2026-08-31-1","title":"Kevin Stefanski has never let one tight end run away with the job, and he just brought his own second option to Atlanta","pos":"TE","team":"ATL","date":"2026-08-31","side":"down","label":"Overpriced","who":"Kyle Pitts (ATL, TE). He is still priced like a true top‑five target earner at the position. Stefanski has already shown once, with a similarly talented tight end…","stat":"-8% to -12% below a 90-plus-target TE1 price, on snap and target-share dilution from the two-tight-end personnel","url":"/play-caller-premium#call-2026-08-31-1","ppl":["kyle-pitts"]},{"id":"call-2026-08-31-2","title":"An uncontested No. 1 receiver has put up monster years in far worse passing games than Baltimore’s, and Zay Flowers has zero real competition for the job","pos":"WR","team":"BAL","date":"2026-08-31","side":"up","label":"Underpriced","who":"Zay Flowers (BAL, WR). He is priced like a complementary piece in a run-first passing game. The size of his lead over the next Ravens receiver says he is the…","stat":"+6% to +10% above a run-first-offense discount price, on target-share concentration","url":"/play-caller-premium#call-2026-08-31-2","ppl":["zay-flowers"]},{"id":"call-2026-08-31-3","title":"Kevin Faulk built a decade-long career in New England on third downs alone, and Minnesota’s backfield is already splitting the same way","pos":"RB","team":"MIN","date":"2026-08-31","side":"split","label":"Two-sided","who":"Up — Aaron Jones (MIN, RB), whose receiving role gives him the safer weekly floor even if Mason wins more of the early‑down carries. Down — Jordan Mason (MIN, RB)…","stat":"+6% to +10% above a committee price for Jones, on receiving-role safety; -5% to -9% below an early-down-lead price for Mason, on the passing downs he has already lost","url":"/play-caller-premium#call-2026-08-31-3","ppl":["aaron-jones","jordan-mason"]},{"id":"call-2026-08-30-1","title":"A true mismatch tight end has always outrun a bad quarterback situation, and Trey McBride is proving it in the worst one in the league","pos":"TE","team":"ARI","date":"2026-08-30","side":"up","label":"Underpriced","who":"Trey McBride (ARI, TE). The market has already priced in Arizona’s quarterback downgrade for the receivers around him. It should not be pricing McBride the same way…","stat":"+6% to +10% above a standard TE1 price, insulated from Arizona’s other downgrades","url":"/play-caller-premium#call-2026-08-30-1","ppl":["trey-mcbride"]},{"id":"call-2026-08-30-2","title":"The receiving back is historically the safest job in a messy committee, and Denver’s crowded backfield is about to prove it again","pos":"RB","team":"DEN","date":"2026-08-30","side":"split","label":"Two-sided","who":"Up — RJ Harvey (DEN, RB), priced like the back half of an even timeshare when his receiving role alone gives him the safer weekly floor. Down — J.K. Dobbins (DEN…","stat":"+8% to +12% above a committee price for Harvey, on the safety of his receiving role; -8% to -12% below a clean lead-back price for Dobbins, on his injury history","url":"/play-caller-premium#call-2026-08-30-2","ppl":["rj-harvey","j-k-dobbins"]},{"id":"call-2026-08-29-1","title":"Klint Kubiak already turned play‑action shots off the zone run into a superstar receiver once, and Raiders camp is already showing who gets that role this time","pos":"WR","team":"LV","date":"2026-08-29","side":"split","label":"Two-sided","who":"Up — Tre Tucker (LV, WR), still priced like a committee piece even though camp has already named him the first read. Down — Jalen Nailor (LV, WR), who keeps a…","stat":"+8% to +13% above a committee-receiver price for Tucker; -5% to -9% below a full-starter price for Nailor","url":"/play-caller-premium#call-2026-08-29-1","ppl":["tre-tucker","jalen-nailor"]},{"id":"call-2026-08-29-2","title":"Mike Vrabel rode Derrick Henry as a true bell‑cow for five years in Tennessee, and New England’s backfield timeshare is already tilting toward one back","pos":"RB","team":"NE","date":"2026-08-29","side":"split","label":"Two-sided","who":"Up — TreVeyon Henderson (NE, RB), still priced like one half of an even timeshare while camp reports already show him pulling ahead. Down — Rhamondre Stevenson (NE…","stat":"+8% to +14% above a 50/50 timeshare price for Henderson; -8% to -12% below a co-starter price for Stevenson","url":"/play-caller-premium#call-2026-08-29-2","ppl":["treveyon-henderson","rhamondre-stevenson"]},{"id":"call-2026-08-29-3","title":"Andy Reid has always built one receiver to run past everybody, and this year the job is Xavier Worthy’s alone","pos":"WR","team":"KC","date":"2026-08-29","side":"up","label":"Underpriced","who":"Xavier Worthy (KC, WR). He is priced like a No. 2 receiver waiting for volume. Reid’s own history says the field‑stretcher gets fed the role the moment the other…","stat":"+9% to +15% above his price for the first six weeks, settling toward +5% to +8% after Rice returns","url":"/play-caller-premium#call-2026-08-29-3","ppl":["xavier-worthy"]},{"id":"call-2026-08-29-4","title":"Kellen Moore has fed one true No. 1 receiver everywhere he has called plays, and New Orleans just cleared the field for his","pos":"WR","team":"NO","date":"2026-08-29","side":"up","label":"Underpriced","who":"Chris Olave (NO, WR). The market has already priced in his health recovery. It has not yet priced in a play‑caller with a decade‑long habit of building his whole…","stat":"+7% to +12% above his current price, concentrated in the season’s first month","url":"/play-caller-premium#call-2026-08-29-4","ppl":["chris-olave"]},{"id":"call-2026-08-24-1","title":"The coach who built De’Von Achane’s game left for the Chargers this offseason, and his price hasn’t caught up","pos":"RB","team":"MIA","date":"2026-08-24","side":"down","label":"Overpriced","who":"De’Von Achane (MIA, RB). His price still trades on three years of scheme‑built efficiency. The coach who built it is running a different backfield now.","stat":"-6% to -11% below a 2025-usage price, mostly from yards per carry","url":"/play-caller-premium#call-2026-08-24-1","ppl":["de-von-achane"]},{"id":"call-2026-08-24-2","title":"Kyle Shanahan invented the “wide back” role for Deebo Samuel once, and San Francisco’s roster says he is rebuilding it","pos":"WR","team":"SF","date":"2026-08-24","side":"up","label":"Underpriced","who":"Deebo Samuel (SF, WR). He is priced like a fringe flex who needs target volume to matter. Shanahan’s own history says the role travels with him even at a low…","stat":"+6% to +10% above a standard flex price, concentrated in boom weeks","url":"/play-caller-premium#call-2026-08-24-2","ppl":[]},{"id":"call-2026-08-23-1","title":"Todd Bowles has kept a 1,000‑yard receiver in Tampa Bay every year he’s been the head coach — now it’s Emeka Egbuka’s turn","pos":"WR","team":"TB","date":"2026-08-23","side":"up","label":"Underpriced","who":"Emeka Egbuka (TB, WR). The room is still pricing him like a No. 2 receiver finding his footing. Bowles’s track record says whoever holds that job in Tampa Bay gets…","stat":"+7% to +12% above a No. 2 receiver price","url":"/play-caller-premium#call-2026-08-23-1","ppl":["emeka-egbuka"]},{"id":"call-2026-08-23-2","title":"Mike McDaniel’s outside‑zone scheme keeps turning ordinary backs into monster rushers, and Omarion Hampton has no committee to share it with","pos":"RB","team":"LAC","date":"2026-08-23","side":"up","label":"Underpriced","who":"Omarion Hampton (LAC, RB). He is priced like a solid early‑down back in his second year. A zone scheme that has already made two different backs into league leaders…","stat":"+6% to +11% above his price, mostly from yards per carry","url":"/play-caller-premium#call-2026-08-23-2","ppl":["omarion-hampton"]},{"id":"call-2026-08-23-3","title":"Mike LaFleur has already shown he won’t hold a job open for an injured back, and Arizona’s backfield is about to test that again","pos":"RB","team":"ARI","date":"2026-08-23","side":"split","label":"Two-sided","who":"Up — James Conner (ARI, RB), whose price still assumes he barely plays. LaFleur’s own history says the healthy back plays now, not later. Down — Jeremiyah Love…","stat":"+10% to +16% above a handcuff price for Conner in the short term; -8% to -12% off a locked-in workhorse price for Love until his timeline clears","url":"/play-caller-premium#call-2026-08-23-3","ppl":["james-conner","jeremiyah-love"]},{"id":"call-2026-08-23-4","title":"Brian Daboll turned Josh Allen into a deep‑ball weapon in Buffalo, and Cam Ward is his next reclamation project","pos":"QB","team":"TEN","date":"2026-08-23","side":"up","label":"Underpriced","who":"Cam Ward (TEN, QB). The market is still pricing him off a rookie season with almost no deep shots. Daboll has already fixed this exact issue for a different young…","stat":"+8% to +12% above his rookie-year price","url":"/play-caller-premium#call-2026-08-23-4","ppl":["cam-ward"]},{"id":"call-2026-08-22-1","title":"Kellen Moore fed Ezekiel Elliott for four years, then turned Saquon Barkley into a 2,000‑yard back — now he calls the Saints’ plays","pos":"RB","team":"NO","date":"2026-08-22","side":"up","label":"Underpriced","who":"Travis Etienne Jr. (NO, RB). The room is still pricing him for the committee that resumes the day Kamara is healthy. Moore’s track record says the back who takes…","stat":"+8% to +13% above his committee price","url":"/play-caller-premium#call-2026-08-22-1","ppl":[]},{"id":"call-2026-08-22-2","title":"Shane Steichen’s offense manufactures quarterback rushing touchdowns, and Daniel Jones is the newest one to get them","pos":"QB","team":"IND","date":"2026-08-22","side":"up","label":"Underpriced","who":"Daniel Jones (IND, QB). The market is still pricing him off his passing line, the same way it always has. Steichen’s system adds rushing touchdowns to that price…","stat":"+9% to +14% above a passing‑only price","url":"/play-caller-premium#call-2026-08-22-2","ppl":["daniel-jones"]},{"id":"call-2026-08-22-3","title":"Defensive head coaches play it safe on offense, and Aaron Glenn’s Jets already look the part","pos":"RB","team":"NYJ","date":"2026-08-22","side":"up","label":"Underpriced","who":"Breece Hall (NYJ, RB). He is priced like a complementary back in an offense that still throws plenty. A staff built to shorten games leans on its lead back more…","stat":"+6% to +10% above his price","url":"/play-caller-premium#call-2026-08-22-3","ppl":["breece-hall"]},{"id":"call-2026-08-22-4","title":"Dan Campbell never stopped daring it on fourth down, and that always creates a market for a short‑yardage back","pos":"RB","team":"DET","date":"2026-08-22","side":"up","label":"Underpriced","who":"Isiah Pacheco (DET, RB). He is priced as pure injury insurance. Campbell’s fourth‑down aggressiveness turns him into a real source of rushing touchdowns even with…","stat":"+10% to +18% above a handcuff‑only price, most of it in touchdowns rather than yards","url":"/play-caller-premium#call-2026-08-22-4","ppl":["isiah-pacheco"]},{"id":"call-2026-08-20-1","title":"Mike Vrabel already turned A.J. Brown into a target monster once, on a worse offense than this one","pos":"WR","team":"NE","date":"2026-08-20","side":"up","label":"Underpriced","who":"A.J. Brown (NE, WR). The room is still pricing him off a down finish in Philadelphia. It has not priced in the coach who already made him the focal point once.","stat":"+8% to +14% above his current price","url":"/play-caller-premium#call-2026-08-20-1","ppl":["a-j-brown"]},{"id":"call-2026-08-20-2","title":"Mike McCarthy has not built a workhorse backfield in almost two decades, and Pittsburgh is about to prove it again","pos":"RB","team":"PIT","date":"2026-08-20","side":"down","label":"Overpriced","who":"Jaylen Warren (PIT, RB) and Rico Dowdle (PIT, RB). Neither is priced like a committee back yet, and both should be. Warren catches passes, which makes him the safer…","stat":"-8% to -14% below a workhorse price, for both backs","url":"/play-caller-premium#call-2026-08-20-2","ppl":["jaylen-warren","rico-dowdle"]},{"id":"call-2026-08-20-3","title":"Dave Canales has rebuilt one quarterback’s career already, and Bryce Young is the second","pos":"QB","team":"CAR","date":"2026-08-20","side":"up","label":"Underpriced","who":"Bryce Young (CAR, QB). He is still priced like a former bust, not like a passer whose own coach has already rebuilt a career from worse.","stat":"+10% to +16% above his price","url":"/play-caller-premium#call-2026-08-20-3","ppl":["bryce-young"]},{"id":"call-2026-08-20-4","title":"Liam Coen’s one year calling plays gave Baker Mayfield the best season of his career — now he has Trevor Lawrence","pos":"QB","team":"JAX","date":"2026-08-20","side":"up","label":"Underpriced","who":"Trevor Lawrence (JAX, QB). The market remembers four up‑and‑down years under three different play‑callers. It has not yet priced in the coach who just did this…","stat":"+8% to +13% above his price","url":"/play-caller-premium#call-2026-08-20-4","ppl":["trevor-lawrence"]},{"id":"call-2026-08-19-1","title":"The zone‑scheme coaching tree has been making running backs for thirty years, and Klint Kubiak just brought it to Las Vegas","pos":"RB","team":"LV","date":"2026-08-19","side":"up","label":"Underpriced","who":"Ashton Jeanty (LV, RB). The usual knock on a back in this scheme is that anyone could do the job. Jeanty flips that: a real first‑round talent inside the system…","stat":"+6% to +10% above his price, with committee risk as the stated downside","url":"/play-caller-premium#call-2026-08-19-1","ppl":["ashton-jeanty"]},{"id":"call-2026-08-19-2","title":"Andy Reid’s lead back keeps finishing better than his price, and this year that back is Kenneth Walker","pos":"RB","team":"KC","date":"2026-08-19","side":"up","label":"Underpriced","who":"Kenneth Walker III (KC, RB). He was already one of the biggest winners of any team change on the board. The coach is the second half of that argument, and the room…","stat":"+10% to +15% above his price","url":"/play-caller-premium#call-2026-08-19-2","ppl":["kenneth-walker-iii"]},{"id":"call-2026-08-19-3","title":"Todd Monken feeds the tight end everywhere he goes, and Cleveland just hired him","pos":"TE","team":"CLE","date":"2026-08-19","side":"up","label":"Underpriced","who":"Harold Fannin Jr. (CLE, TE). A projection of about 78 catches and 816 yards is No. 1 receiver treatment, not leftover tight‑end scraps. He is priced like the scraps.","stat":"+12% to +18% above his price","url":"/play-caller-premium#call-2026-08-19-3","ppl":["harold-fannin-jr"]},{"id":"call-2026-08-19-4","title":"John Harbaugh and Matt Nagy will play heavy in New York, and that costs the wide receivers targets","pos":"TE / WR","team":"NYG","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Isaiah Likely (NYG, TE), who lands in exactly the role his new coaches like to use. Down — the second‑tier receivers, Darius Slayton and Darnell Mooney, who…","stat":"+8% to +12% for the tight end, -10% to -15% for the second-tier receivers","url":"/play-caller-premium#call-2026-08-19-4","ppl":["isaiah-likely","darius-slayton","darnell-mooney","malik-nabers"]},{"id":"call-2026-08-19-5","title":"Some play-callers answer every coverage by throwing to the same man — and San Francisco is built that way now","pos":"WR","team":"SF","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Mike Evans (SF, WR), the man they throw to. Down — everyone behind him. The other 49ers receivers are best‑ball dart throws, not weekly starters, and how…","stat":"+5% to +9% for the No. 1 receiver; treat the No. 2 and No. 3 as format calls, not bargains","url":"/play-caller-premium#call-2026-08-19-5","ppl":["mike-evans"]},{"id":"call-2026-08-19-6","title":"Drew Petzing throws to his running backs, and Detroit handed him the best one in football","pos":"RB","team":"DET","date":"2026-08-19","side":"up","label":"Underpriced","who":"Jahmyr Gibbs (DET, RB). Watch your format here. This edge comes from catches, so it is worth much more in full PPR than in standard, and more again in leagues that…","stat":"+4% to +8% above his price in full PPR","url":"/play-caller-premium#call-2026-08-19-6","ppl":["jahmyr-gibbs"]},{"id":"call-2026-08-19-7","title":"The best proof a coach matters is what happens after he leaves — Ben Johnson shows both halves","pos":"WR / RB","team":"CHI","date":"2026-08-19","side":"split","label":"Two-sided","who":"Up — Luther Burden III (CHI, WR), the most logical player to absorb those vacated targets after a rookie year that put him top five among receivers in catch rate…","stat":"+6% to +10% for the receiver, -4% to -8% for the back","url":"/play-caller-premium#call-2026-08-19-7","ppl":["luther-burden-iii","david-montgomery"]}];
+</script>
 <script>
 (function () {
-  function card(tag, h, p) {
-    return '<div class="is-card"><span class="is-tag is-live">' + tag + '</span><h3>' + h + '</h3><p>' + p + '</p></div>';
+  'use strict';
+  // Must match COLUMN_CONTRACT in _worker.js and VS_CONTRACT in front.html. A
+  // payload from another contract renders nothing, the rule the front page
+  // runs under (HANDOFF §9c).
+  var VS_CONTRACT = 5;
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  var sign = function (v, unit) { return v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + v + (unit || ''); };
+  var slug = function (name) { return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); };
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var fmtShort = function (d) { var p = String(d || '').split('-'); return p.length === 3 ? MONTHS[+p[1] - 1] + ' ' + (+p[2]) : ''; };
+  function get(url, cb) {
+    fetch(url, { credentials: 'omit' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { cb(j); })
+      .catch(function () { cb(null); });
   }
-  document.addEventListener('DOMContentLoaded', function () {
-    ITSeason.load(function (s) {
-      var wrap = document.getElementById('wiCards');
-      var byes = document.getElementById('wiByes');
-      if (!s) { document.getElementById('wiEmpty').hidden = false; byes.textContent = 'Unavailable.'; return; }
-      var w = s.week || {}, c = s.counts || {}, e = ITSeason.esc;
-      var out = [];
-      out.push(card('Where we are', e(w.label || ''), e(s.phaseLabel || '') + '. ' +
-        (w.status === 'active' ? 'Games are being played now.' :
-         w.status === 'upcoming' ? 'First kickoff ' + e(ITSeason.kickoff(w.firstKickoff)) + '.' :
-         'This week is complete.')));
-      out.push(card('The slate', (w.games || 0) + ' game' + (w.games === 1 ? '' : 's'),
-        (c.completed || 0) + ' final, ' + (c.inProgress || 0) + ' in progress, ' + (c.upcoming || 0) + ' still to come.'));
-      if (s.nextGame) {
-        out.push(card('Next kickoff', e(s.nextGame.away + ' at ' + s.nextGame.home),
-          e(ITSeason.kickoff(s.nextGame.kickoff)) + ', ' + e(ITSeason.until(s.nextGame.kickoff, s.now)) + '.'));
+  function playerLink(name, pos) {
+    return '<a href="/in-season/player/' + slug(name) + '?pos=' + e(pos) + '">' + e(name) + '</a>';
+  }
+  function whenReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn();
+  }
+
+  // ── the hero's cards: the same digest the front page draws from ──────────
+  function hbRank(b, key) {
+    var v = b && b[key];
+    return (typeof v === 'number' && isFinite(v)) ? e(b.position) + v : null;
+  }
+  function hbCard(kind, label, b, rows, big) {
+    if (!b || !b.name) return '';
+    for (var i = 0; i < rows.length; i++) if (rows[i][1] == null) return '';
+    var h = '<div class="hb-card"><i class="' + kind + '">' + label + '</i><b>' + playerLink(b.name, b.position) + '</b>'
+          + '<small>' + e((b.team ? b.team + ' · ' : '') + b.position) + '</small>';
+    if (big) h += '<div class="hb-row big"><span>' + big[0] + '</span><span>' + big[1] + '</span></div>';
+    rows.forEach(function (r) { h += '<div class="hb-row"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>'; });
+    if (big && big[2]) h += '<div class="hb-basis">' + big[2] + '</div>';
+    return h + '</div>';
+  }
+  function renderHero(j) {
+    var grid = $('hbTeasers'), note = $('hbTeaserNote'), dl = $('hbDateline');
+    if (!grid || !note) return;
+    var g = j && j.contract === VS_CONTRACT && j.digest;
+    var cards = '';
+    if (g) {
+      cards += hbCard('love', 'Vegas loves', g.topUp,
+        [['Consensus', hbRank(g.topUp, 'rankConsensus')], ['Vegas', hbRank(g.topUp, 'rankMarket')], ['Iron Tuna', hbRank(g.topUp, 'rankIronTuna')]]);
+      cards += hbCard('fade', 'Vegas fades', g.topDown,
+        [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
+      var t = g.topTd;
+      if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
+        cards += hbCard('td', 'TD edge', t,
+          [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
+          ['Anytime TD', t.anytimeTd + '%',
+           'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '
+           + t.tdMarket + ' against a consensus ' + t.tdConsensus + '. Not a quoted prop.']);
       }
-      if (s.lastCompleted && s.lastCompleted.homeScore != null) {
-        out.push(card('Last final', e(s.lastCompleted.away + ' at ' + s.lastCompleted.home),
-          e(s.lastCompleted.away + ' ' + s.lastCompleted.awayScore + ', ' + s.lastCompleted.home + ' ' + s.lastCompleted.homeScore) + '.'));
-      }
-      wrap.innerHTML = out.join('');
-      if (w.byes && w.byes.length) {
-        byes.innerHTML = '<b>' + w.byes.length + ' club' + (w.byes.length === 1 ? '' : 's') + ' off this week:</b> ' + w.byes.map(e).join(', ') + '.';
-      } else if (w.type === 'REG') {
-        byes.textContent = 'Nobody is on bye this week.';
+    }
+    if (!cards) {
+      grid.hidden = true; grid.innerHTML = '';
+      note.hidden = false;
+      note.innerHTML = g ? 'The market and the consensus agree on today’s draftable board. No case to make, which is itself the answer.'
+                         : 'The odds feed has not answered. Nothing is shown here until it does.';
+    } else {
+      grid.innerHTML = cards; grid.hidden = false;
+      note.hidden = false;
+      note.innerHTML = 'Ranks at the site’s default league. <b>Vegas</b> is the odds alone; <b>Iron Tuna</b> blends them into the projections. Recomputed off every odds pull.';
+    }
+    if (dl && g && typeof g.moved === 'number' && typeof g.draftable === 'number' && g.draftable > 0) {
+      dl.innerHTML = '<b>' + g.moved + '</b> of ' + g.draftable + ' draftable players sit on a different slot once today’s lines are priced in: '
+        + (g.up || 0) + ' up, ' + (g.down || 0) + ' down. <a href="/in-season/what-they-arent-telling-you" style="color:#cfd9d6;text-decoration:underline">The whole count &rarr;</a>';
+      dl.hidden = false;
+    }
+    renderTeams(g);
+  }
+  // The club the two boards disagree about most, in both directions. One row
+  // per team, off the same digest.
+  function renderTeams(g) {
+    var host = $('tmCards');
+    if (!host || !g) return;
+    var card = function (kind, label, t) {
+      if (!t || !t.team || t.rankMarket == null || t.rankConsensus == null) return '';
+      return '<div class="tm-card"><i class="' + kind + '">' + label + '</i><b>' + e(t.team) + '</b>'
+        + '<span>' + (t.implied != null ? n1(t.implied) + ' implied points a game. ' : '')
+        + 'The lines rank the offence <b>#' + t.rankMarket + '</b>; the consensus projections have it <b>#' + t.rankConsensus + '</b>.</span></div>';
+    };
+    var h = card('up', 'Market likes the club more', g.teamUp) + card('down', 'Market likes the club less', g.teamDown);
+    if (h) { host.innerHTML = h; host.hidden = false; }
+  }
+  get('/api/vegas-column?v=' + VS_CONTRACT, renderHero);
+
+  // ── the NFL clock: the week chip, the cards, the byes, the slate, the claim clock
+  function wkCard(tag, h, p) {
+    return '<div class="wk-card"><i>' + tag + '</i><b>' + h + '</b><span>' + p + '</span></div>';
+  }
+  function renderWeek(s) {
+    var wk = $('hbWeek'), wrap = $('wiCards'), byes = $('wiByes'), clock = $('wvClock');
+    var esc = window.ITSeason ? ITSeason.esc : e;
+    if (!s) {
+      $('wiEmpty').hidden = false;
+      byes.textContent = 'Unavailable.';
+      if (clock) clock.textContent = 'The schedule feed has not answered, so the week is not stated here.';
+      renderGames(null);
+      return;
+    }
+    var w = s.week || {}, c = s.counts || {};
+    // The chip in the hero.
+    if (wk) {
+      var h = esc(s.phaseLabel || '');
+      if (w.label) h += ' · <b>' + esc(w.label) + '</b>';
+      if (w.status === 'active') h += ' · <span class="live">' + (c.inProgress ? c.inProgress + ' live' : 'under way') + '</span>';
+      else if (w.status === 'upcoming' && w.firstKickoff) h += ' · kicks off ' + esc(ITSeason.kickoff(w.firstKickoff));
+      wk.innerHTML = h; wk.hidden = false;
+    }
+    var out = [];
+    out.push(wkCard('Where we are', esc(w.label || ''), esc(s.phaseLabel || '') + '. ' +
+      (w.status === 'active' ? 'Games are being played now.' :
+       w.status === 'upcoming' ? 'First kickoff ' + esc(ITSeason.kickoff(w.firstKickoff)) + '.' :
+       'This week is complete.')));
+    out.push(wkCard('The slate', (w.games || 0) + ' game' + (w.games === 1 ? '' : 's'),
+      (c.completed || 0) + ' final, ' + (c.inProgress || 0) + ' in progress, ' + (c.upcoming || 0) + ' still to come.'));
+    if (s.nextGame) {
+      out.push(wkCard('Next kickoff', esc(s.nextGame.away + ' at ' + s.nextGame.home),
+        esc(ITSeason.kickoff(s.nextGame.kickoff)) + ', ' + esc(ITSeason.until(s.nextGame.kickoff, s.now)) + '.'));
+    }
+    if (s.lastCompleted && s.lastCompleted.homeScore != null) {
+      out.push(wkCard('Last final', esc(s.lastCompleted.away + ' at ' + s.lastCompleted.home),
+        esc(s.lastCompleted.away + ' ' + s.lastCompleted.awayScore + ', ' + s.lastCompleted.home + ' ' + s.lastCompleted.homeScore) + '.'));
+    }
+    wrap.innerHTML = out.join('');
+    if (w.byes && w.byes.length) {
+      byes.innerHTML = '<b>' + w.byes.length + ' club' + (w.byes.length === 1 ? '' : 's') + ' on bye:</b> ' + w.byes.map(esc).join(', ') + '.';
+    } else if (w.type === 'REG') {
+      byes.textContent = 'Nobody is on bye this week.';
+    } else {
+      byes.textContent = 'Byes are a regular-season question. This is the ' + (w.label || 'off-season') + '.';
+    }
+    if (clock) {
+      if (w.status === 'complete' || (c.upcoming === 0 && c.inProgress === 0)) {
+        clock.innerHTML = '<b>' + esc(w.label) + ' is over.</b> The wire for the following week is the one that matters now, and most leagues process claims before its first kickoff.';
+      } else if (w.status === 'active') {
+        clock.innerHTML = '<b>' + esc(w.label) + ' is being played.</b> Claims made now land after the week finishes; the players worth bidding on are the ones whose value is changing while you watch.';
       } else {
-        byes.textContent = 'Byes are a regular-season question. This is the ' + (w.label || 'off-season') + '.';
+        clock.innerHTML = '<b>' + esc(w.label) + '</b> kicks off ' + esc(ITSeason.kickoff(w.firstKickoff)) + '. Claims processed before then are the last roster moves that count for it.';
       }
+    }
+    renderGames(s);
+  }
+  // Ranked by total, so the slate reads as scoring environments rather than as
+  // a TV listing. The implied totals come off the payload; which way a feed
+  // signs its spread is the worker's business, not this page's.
+  function renderGames(s) {
+    var empty = $('giEmpty'), esc = window.ITSeason ? ITSeason.esc : e;
+    if (!s || !s.games || !s.games.length) {
+      empty.textContent = 'The schedule feed has not answered, so no game is listed rather than a guessed one.';
+      return;
+    }
+    var games = s.games.slice().sort(function (a, b) {
+      var x = a.total == null ? -1 : a.total, y = b.total == null ? -1 : b.total;
+      return y - x || (a.kickoff || 0) - (b.kickoff || 0);
     });
+    $('giBody').innerHTML = games.map(function (g) {
+      var score = (g.awayScore != null && g.homeScore != null)
+        ? ' <span class="is-status final">' + g.awayScore + '–' + g.homeScore + '</span>' : '';
+      var cls = g.status === 'in_progress' ? 'live' : g.status === 'completed' ? 'final' : '';
+      return '<tr><td><b>' + esc(g.away + ' at ' + g.home) + '</b>' + score + '</td>' +
+        '<td>' + esc(ITSeason.kickoff(g.kickoff)) + '</td>' +
+        '<td class="num">' + (g.spread == null ? '—' : (g.spread > 0 ? esc(g.home) + ' -' + g.spread : g.spread < 0 ? esc(g.away) + ' -' + Math.abs(g.spread) : 'PK')) + '</td>' +
+        '<td class="num">' + n1(g.total) + '</td>' +
+        '<td class="num">' + n1(g.impliedAway) + '</td>' +
+        '<td class="num">' + n1(g.impliedHome) + '</td>' +
+        '<td><span class="is-status ' + cls + '">' + esc(ITSeason.statusLabel(g.status)) + '</span></td></tr>';
+    }).join('');
+    $('giTable').hidden = false;
+    empty.hidden = true;
+  }
+  whenReady(function () {
+    if (!window.ITSeason) { renderWeek(null); return; }
+    ITSeason.load(function (s) { renderWeek(s); });
+  });
+
+  // ── Vegas vs. Experts, off /api/vegas-edge ────────────────────────────────
+  function veCard(p, kind) {
+    var d = p.delta || {};
+    return '<div class="ve-card ' + kind + '"><b>' + playerLink(p.name, p.position) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span>' +
+      '<div class="ve-ranks"><span>Consensus <b>' + e(p.position) + p.consensusRank + '</b></span><span>Vegas <b>' + e(p.position) + p.vegasRank + '</b></span><span>Iron Tuna <b>' + e(p.position) + p.ironTunaRank + '</b></span></div>' +
+      '<span class="ve-cls ' + kind + '">' + e(d.classification || '') + '</span><span class="ve-conf">' + e(sign(d.rank, ' slots') + ' · ' + sign(d.points, ' pts') + ' · ' + (p.confidence || '') + ' · ' + (p.basis || '')) + '</span>' +
+      (p.why ? '<p>' + e(p.why) + '</p>' : '') + '</div>';
+  }
+  get('/api/vegas-edge', function (j) {
+    var note = $('veNote');
+    if (!j || !j.ok || !j.vsExperts) {
+      note.textContent = 'The board did not answer. Nothing is shown rather than something invented.';
+      $('veBuys').innerHTML = ''; $('veFades').innerHTML = '';
+      return;
+    }
+    note.innerHTML = (j.week ? '<b>' + e(j.week) + '.</b> ' : '') + e(j.note || (j.hasProps ? 'Player props are priced this week; every number below says whether it is quoted or derived.' : 'No sportsbook has posted a player prop for this week yet, so every player number is derived from the game line and labelled that way.'));
+    var buys = (j.vsExperts.buys || []).slice(0, 3), fades = (j.vsExperts.fades || []).slice(0, 3);
+    $('veBuys').innerHTML = buys.length ? buys.map(function (p) { return veCard(p, 'buy'); }).join('') : '<p class="is-empty">No player the market rates meaningfully higher than the consensus today.</p>';
+    $('veFades').innerHTML = fades.length ? fades.map(function (p) { return veCard(p, 'fade'); }).join('') : '<p class="is-empty">No player the market rates meaningfully lower than the consensus today.</p>';
+    var td = (j.tdBoard || []).slice(0, 6), vol = (j.volumeBoard || []).slice(0, 6);
+    if (td.length) {
+      $('veTd').querySelector('tbody').innerHTML = td.map(function (t, i) {
+        return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerLink(t.name, t.position) + ' <span class="is-status">' + e(t.position + ' · ' + t.team) + '</span></td><td>' + e(t.opponent || '—') + '</td>' +
+          '<td class="num"><b>' + n1(t.probability) + '%</b>' + (t.basis === 'derived' ? ' <span class="is-status">derived</span>' : '') + '</td><td class="num">' + (t.expectedTds == null ? '—' : (Math.round(t.expectedTds * 100) / 100).toFixed(2)) + '</td></tr>';
+      }).join('');
+    }
+    if (vol.length) {
+      $('veVol').querySelector('tbody').innerHTML = vol.map(function (v, i) {
+        return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerLink(v.name, v.position) + ' <span class="is-status">' + e(v.position + ' · ' + v.team) + '</span></td>' +
+          '<td class="num">' + n1(v.receptions) + '</td><td class="num">' + n1(v.rushYards) + '</td><td class="num">' + n1(v.recYards) + '</td><td class="num"><b>' + n1(v.impliedTouches) + '</b></td></tr>';
+      }).join('');
+    }
+    if (td.length || vol.length) $('veBoards').hidden = false;
+  });
+
+  // ── the week's board, off /api/boards ─────────────────────────────────────
+  // The API ships stat lines and points at PPR. A reader with a saved league
+  // is re-scored here with it-league.js (the same engine the rankings page
+  // uses, pinned by tools/test-scoring.mjs) and re-ranked; everyone else sees
+  // the PPR board and the note says so. Nothing is invented for a reader whose
+  // league is not saved.
+  var rkData = null, rkPos = 'RB';
+  function rkRules() {
+    var L = window.ITLeague;
+    if (L && L.has && L.custom && L.config && L.config.scoring) return L.config.scoring;
+    return null;
+  }
+  function classify(cPts, cRank, vPts, vRank, D) {
+    var pts = (isFinite(vPts) && isFinite(cPts)) ? Math.round((vPts - cPts) * 10) / 10 : null;
+    var rank = (isFinite(vRank) && isFinite(cRank)) ? cRank - vRank : null;
+    var pct = (pts != null && cPts > 0) ? pts / cPts : null;
+    var su = (rank != null && rank >= D.strongRank) || (pct != null && pct >= D.strongPct && pts >= D.minPointsStrong);
+    var sd = (rank != null && rank <= -D.strongRank) || (pct != null && pct <= -D.strongPct && pts <= -D.minPointsStrong);
+    var lu = (rank != null && rank >= D.leanRank) || (pct != null && pct >= D.leanPct && pts >= D.minPointsLean);
+    var ld = (rank != null && rank <= -D.leanRank) || (pct != null && pct <= -D.leanPct && pts <= -D.minPointsLean);
+    var cls = D.classes[2];
+    if (su && !sd) cls = D.classes[0]; else if (sd && !su) cls = D.classes[4]; else if (lu && !ld) cls = D.classes[1]; else if (ld && !lu) cls = D.classes[3];
+    return { points: pts, rank: rank, classification: cls };
+  }
+  function rkRows(payload) {
+    var L = window.ITLeague, rules = rkRules();
+    var custom = !!(rules && L && L.score && payload.delta && payload.delta.classes);
+    var rows = payload.players.map(function (p) {
+      var g = p.games || 1;
+      if (custom) {
+        var pos = p.position === 'DST' ? 'DEF' : p.position;
+        return { p: p, c: L.score(p.consensus.stats, pos, rules, g), v: L.score(p.vegas.stats, pos, rules, g), i: L.score(p.ironTuna.stats, pos, rules, g) };
+      }
+      return { p: p, c: p.consensus.points, v: p.vegas.points, i: p.ironTuna.points,
+               cRank: p.consensus.rank, vRank: p.vegas.rank, iRank: p.ironTuna.rank,
+               cFlex: p.consensus.flexRank, vFlex: p.vegas.flexRank, iFlex: p.ironTuna.flexRank, delta: p.marketDelta };
+    }).filter(function (r) { return r.i != null && isFinite(r.i); });
+    if (custom) {
+      var groups = {};
+      rows.forEach(function (r) { (groups[r.p.position] = groups[r.p.position] || []).push(r); });
+      ['c', 'v', 'i'].forEach(function (f) {
+        Object.keys(groups).forEach(function (g) {
+          groups[g].slice().sort(function (a, b) { return b[f] - a[f] || (a.p.name < b.p.name ? -1 : 1); }).forEach(function (r, ix) { r[f + 'Rank'] = ix + 1; });
+        });
+        rows.filter(function (r) { return /^(RB|WR|TE)$/.test(r.p.position); })
+          .sort(function (a, b) { return b[f] - a[f] || (a.p.name < b.p.name ? -1 : 1); }).forEach(function (r, ix) { r[f + 'Flex'] = ix + 1; });
+      });
+      rows.forEach(function (r) { r.delta = classify(r.c, r.cRank, r.v, r.vRank, payload.delta); });
+    }
+    return { rows: rows, custom: custom };
+  }
+  function renderBoard() {
+    if (!rkData) return;
+    var built = rkRows(rkData), rows = built.rows;
+    var rankField = rkPos === 'FLEX' ? 'iFlex' : 'iRank';
+    rows = rows.filter(function (r) { return rkPos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === rkPos; })
+      .filter(function (r) { return r[rankField] != null; })
+      .sort(function (a, b) { return a[rankField] - b[rankField]; })
+      .slice(0, 12);
+    $('rkBody').innerHTML = rows.map(function (r) {
+      var p = r.p, w0 = p.weeks && p.weeks.length ? p.weeks[0] : null;
+      var opp = !w0 ? '—' : w0.bye ? '<span class="is-status">BYE</span>' : w0.out ? '<span class="is-status">OUT</span>' : e((w0.home ? 'vs ' : 'at ') + w0.opponent);
+      var d = r.delta || {}, cls = /BUY|HIGHER/.test(d.classification || '') ? 'buy' : /FADE|LOWER/.test(d.classification || '') ? 'fade' : 'agree';
+      return '<tr><td class="num">' + r[rankField] + '</td>' +
+        '<td class="p">' + playerLink(p.name, p.position) + '<span>' + e(p.position) + (p.injury ? ' · ' + e(p.injury.status) : '') + '</span></td>' +
+        '<td>' + e(p.team) + '</td><td>' + opp + '</td>' +
+        '<td class="num"><b>' + n1(r.i) + '</b></td>' +
+        '<td class="num">' + e(p.position) + (r.cRank == null ? '—' : r.cRank) + '</td>' +
+        '<td class="num">' + e(p.position) + (r.vRank == null ? '—' : r.vRank) + ' <span class="is-status">' + e(p.vegas.basis) + '</span></td>' +
+        '<td class="cls ' + cls + '">' + (d.rank == null ? '' : sign(d.rank, ' slots') + ' · ') + (d.points == null ? '' : sign(d.points, ' pts') + '<br>') + e(d.classification || '') + '</td></tr>';
+    }).join('');
+    $('rkTable').hidden = !rows.length; $('rkEmpty').hidden = !!rows.length;
+    if (!rows.length) $('rkEmpty').textContent = 'Nothing on the board at this position yet.';
+    var L = window.ITLeague, hz = rkData.horizon || {};
+    $('rkNote').innerHTML = (built.custom ? 'Scored at <b>' + e(L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>PPR</b>')
+      + (hz.label ? ' · ' + e(hz.label) : '')
+      + (rkData.sources && rkData.sources.props ? ' · ' + rkData.sources.props + ' players carry a prop' : ' · no player prop posted yet');
+  }
+  whenReady(function () {
+    var bar = $('rkPos');
+    if (bar) bar.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-pos]');
+      if (!b) return;
+      rkPos = b.getAttribute('data-pos');
+      [].forEach.call(bar.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      renderBoard();
+    });
+  });
+  get('/api/boards?horizon=week&pos=ALL&scoring=ppr', function (j) {
+    if (!j || !j.ok || !j.players) { $('rkEmpty').textContent = 'The board did not answer. Nothing is shown rather than a stale ranking.'; return; }
+    rkData = j;
+    whenReady(renderBoard);
+    // A reader's saved board can land after the payload; repaint once on it.
+    var L = window.ITLeague;
+    if (L && L.onBoard) L.onBoard(function () { renderBoard(); });
+  });
+  // The Wednesday update: risers and fallers against the previous snapshot,
+  // with reasons that are only fields that changed between the two rows.
+  get('/api/ros-update', function (j) {
+    if (!j || !j.ok || !((j.risers && j.risers.length) || (j.fallers && j.fallers.length))) return;
+    var mover = function (m) {
+      return '<li><b>' + playerLink(m.name, m.position) + '</b> ' + e(m.position + ' · ' + m.team) + ': ' + e(m.position) + m.previousRank + ' → ' + e(m.position) + m.currentRank +
+        (m.reasons && m.reasons.length ? '<small>' + e(m.reasons.join('; ')) + '</small>' : '') + '</li>';
+    };
+    var h = '';
+    if (j.risers && j.risers.length) h += '<div><h3>Rest-of-season risers</h3><ol>' + j.risers.slice(0, 5).map(mover).join('') + '</ol></div>';
+    if (j.fallers && j.fallers.length) h += '<div><h3>Rest-of-season fallers</h3><ol>' + j.fallers.slice(0, 5).map(mover).join('') + '</ol></div>';
+    var host = $('rkMovers');
+    host.innerHTML = h; host.hidden = !h;
+  });
+
+  // ── the desk, off /api/content ────────────────────────────────────────────
+  // Published pieces newest first when the season has produced any; the
+  // schedule of kinds when it has not, so a reader in Week 0 sees what is
+  // coming and when rather than an empty box.
+  get('/api/content', function (j) {
+    var host = $('dkGrid'), empty = $('dkEmpty');
+    if (!j || !j.ok || !j.kinds) { empty.textContent = 'The desk did not answer.'; return; }
+    var pieces = (j.pieces || []).filter(function (p) { return p.status === 'published'; }).slice(0, 6);
+    var h;
+    if (pieces.length) {
+      h = pieces.map(function (p) {
+        return '<a class="dk-card" href="/in-season/desk/' + e(p.kind) + '/' + e(p.week) + '"><span class="when">Week ' + e(p.week) + (p.published_at ? ' · ' + e(fmtShort(String(p.published_at).slice(0, 10))) : '') + '</span><h3>' + e(p.title) + '</h3><span class="st published">Published</span></a>';
+      }).join('');
+    } else {
+      var latest = {};
+      (j.pieces || []).forEach(function (p) { if (!latest[p.kind]) latest[p.kind] = p; });
+      h = j.kinds.map(function (k) {
+        var p = latest[k.kind];
+        return '<a class="dk-card" href="/in-season/desk/' + e(k.kind) + '"><span class="when">' + e(k.day) + ' ' + (k.hour === 0 ? 'after the game' : k.hour + ':00 ET') + '</span><h3>' + e(k.title) + '</h3>' +
+          (p ? '<span class="st ' + e(p.status) + '">Week ' + e(p.week) + ' · ' + e(p.status) + '</span>' : '<span class="st">Not yet this season</span>') + '</a>';
+      }).join('');
+    }
+    host.innerHTML = '<div class="dk-grid">' + h + '</div>';
+    empty.hidden = true;
+  });
+
+  // ── the reads: The Pick and the coaching column ───────────────────────────
+  // Title, theme, position, team and date only. The entries also carry a
+  // draft-day price line, which belongs on the front page and not here.
+  whenReady(function () {
+    var host = $('pickBand');
+    if (host && PICKS.length) {
+      var top = PICKS[0];
+      var h = '<div class="pk-lead"><div class="wi-kick">' + (top.theme ? '<span class="wi-tag">' + e(top.theme) + '</span>' : '') +
+        (top.pos ? '<span class="wi-tag pos">' + e(top.pos) + '</span>' : '') +
+        '<span class="wi-date">' + e((top.team ? top.team + ' · ' : '') + fmtShort(top.date)) + '</span></div>' +
+        '<h3><a href="' + e(top.url) + '">' + e(top.title) + '</a></h3>' +
+        (top.dek ? '<p class="pk-dek">' + e(top.dek) + '</p>' : '') +
+        '<a class="go rd-more" href="' + e(top.url) + '">Read the entry &rarr;</a></div>';
+      var rest = PICKS.slice(1, 4);
+      if (rest.length) {
+        h += '<div class="pk-back"><h4>Earlier picks</h4><ul>' + rest.map(function (p) {
+          return '<li>' + (p.theme ? '<span class="wi-tag">' + e(p.theme) + '</span>' : '') + '<a href="' + e(p.url) + '">' + e(p.title) + '</a><p class="pk-when">' + e(fmtShort(p.date)) + '</p></li>';
+        }).join('') + '</ul></div>';
+      }
+      host.innerHTML = h;
+    }
+    var grid = $('pcpGrid');
+    if (grid && COLUMN.length) {
+      var SIDE = { up: 'Up', down: 'Down', split: 'Two-sided' };
+      grid.innerHTML = COLUMN.slice(0, 4).map(function (c) {
+        return '<div class="pcp-card' + (c.side ? ' ' + e(c.side) : '') + '"><div class="wi-kick">' +
+          (c.side ? '<span class="wi-tag ' + e(c.side) + '">' + e(SIDE[c.side] || c.side) + '</span>' : '') +
+          (c.pos ? '<span class="wi-tag pos">' + e(c.pos) + '</span>' : '') +
+          '<span class="wi-date">' + e((c.team ? c.team + ' · ' : '') + fmtShort(c.date)) + '</span></div>' +
+          '<a href="' + e(c.url) + '">' + e(c.title) + '</a>' +
+          (c.who ? '<p class="pcp-who">' + e(c.who) + '</p>' : '') + '</div>';
+      }).join('');
+    } else if (grid) {
+      grid.innerHTML = '<p class="is-empty">The column has not been extracted yet. <a href="/play-caller-premium">Read it in full &rarr;</a></p>';
+    }
+    if (window.ITPlayerSearch && window.ITPlayerSearch.linkAllPlayers) {
+      try { window.ITPlayerSearch.linkAllPlayers(grid); } catch (err) {}
+    }
   });
 })();
 </script>
