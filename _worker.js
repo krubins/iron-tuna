@@ -2102,13 +2102,15 @@ const COLUMN_MIN_BID = 1;
 const COLUMN_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
 const COLUMN_MIN_RANK_GAP = 2;        // below this the "disagreement" is noise
 const COLUMN_MIN_PRICE_GAP = 2;       // ...or a dollar of rounding
+const COLUMN_MIN_TD_GAP = 0.5;        // half a season touchdown: below that the TD case is rounding too
 // Bump on ANY change to the item shape the front page reads. The response is
 // cached publicly for 15 minutes, so without a version in the request URL a
 // renamed field means new HTML meets an old cached payload and the page prints
 // "undefined" at readers for a quarter of an hour. The client asks for ?v=N and
 // only renders items whose shape it recognises; the two together make a
 // contract change safe to deploy.
-const COLUMN_CONTRACT = 4;   // 4: the response carries the day's digest alongside the cases
+const COLUMN_CONTRACT = 5;   // 5: the digest names the biggest touchdown move, and every mover's market rank
+                             // 4: the response carries the day's digest alongside the cases
                              // 3: items carry their stat lines so a reader's own scoring can re-score them
 // The player card's own contract, versioned separately from the column's: the
 // two endpoints ship different shapes, are cached separately, and one can grow
@@ -2363,7 +2365,10 @@ function buildVegasBoard(overlay, ctx) {
       statsConsensus: st,
       statsIronTuna: veg ? _colBlendStats(st, veg.stats) : st,
       statsMarket: veg ? veg.stats : st,
-      moved: veg ? veg.moved : null
+      moved: veg ? veg.moved : null,
+      // Games he can actually play, from the availability list: the digest's
+      // per-game touchdown chance divides a season line by THIS, not by 17.
+      gamesOut: Number(p.gamesOut) || 0
     });
   }
 
@@ -2413,6 +2418,7 @@ function buildVegasBoard(overlay, ctx) {
         // needs both to be true, a card needs neither.
         priced: !!r.moved,
         draftable: iC < curveLen || iI < curveLen,
+        gamesOut: r.gamesOut,
         teamImplied: ctx && ctx.ppg && ctx.ppg[r.team] != null ? Math.round(ctx.ppg[r.team] * 10) / 10 : null,
         teamRank: ctx && ctx.rank && ctx.rank[r.team] != null ? ctx.rank[r.team] : null,
         teamRankConsensus: projTeamRank[r.team] != null ? projTeamRank[r.team] : null
@@ -2450,7 +2456,12 @@ function buildVegasDigest(board) {
   }
   const brief = r => r ? {
     name: r.name, team: r.team, position: r.position,
-    rankConsensus: r.rankConsensus, rankIronTuna: r.rankIronTuna,
+    // All three boards, because the front page prints all three side by side:
+    // where the consensus has him, where the odds alone put him, and where the
+    // site's blend lands. Two of the three would leave the reader inferring the
+    // third, and inferring it wrong.
+    rankConsensus: r.rankConsensus, rankMarket: r.rankMarket, rankIronTuna: r.rankIronTuna,
+    rankDelta: r.rankDelta,
     priceConsensus: r.priceConsensus, priceIronTuna: r.priceIronTuna, priceDelta: r.priceDelta
   } : null;
   const rises = moved.filter(r => r.priceDelta > 0).sort(_colByRise);
@@ -2470,10 +2481,35 @@ function buildVegasDigest(board) {
   const clubs = [...teams.values()];
   const teamUp = clubs.filter(t => t.gap > 0).sort((a, b) => b.gap - a.gap)[0] || null;
   const teamDown = clubs.filter(t => t.gap < 0).sort((a, b) => a.gap - b.gap)[0] || null;
+  // The touchdown case. No free feed carries an anytime-TD price, so this is
+  // NOT a quoted prop: it is the biggest gap between what the consensus
+  // projects for a skill player's touchdowns and what the game lines imply,
+  // with a per-game chance derived from the blended season line. Poisson on
+  // (season TDs / games he can play) is the standard way to turn a season total
+  // into "scores at least once this week"; it is labelled as derived so a
+  // reader never mistakes it for a book's number. Quarterbacks are excluded
+  // because their touchdowns are mostly thrown, and a thrown touchdown is not
+  // an anytime-TD.
+  const tdOf = st => (Number((st || {}).rushTD) || 0) + (Number((st || {}).recTD) || 0);
+  const tdCases = draftable
+    .filter(r => r.priced && r.position !== 'QB')
+    .map(r => ({ r, c: tdOf(r.statsConsensus), m: tdOf(r.statsMarket), i: tdOf(r.statsIronTuna) }))
+    .filter(x => x.m - x.c >= COLUMN_MIN_TD_GAP)
+    .sort((a, b) => (b.m - b.c) - (a.m - a.c) || b.r.priceDelta - a.r.priceDelta || (a.r.name < b.r.name ? -1 : 1));
+  let topTd = null;
+  if (tdCases.length) {
+    const t = tdCases[0];
+    const games = Math.max(1, AVAILABILITY_GAMES - (Number(t.r.gamesOut) || 0));
+    topTd = { ...brief(t.r),
+      tdConsensus: _oddsRound(t.c), tdMarket: _oddsRound(t.m), tdIronTuna: _oddsRound(t.i),
+      games,
+      anytimeTd: Math.round((1 - Math.exp(-t.i / games)) * 100),
+      anytimeTdBasis: 'derived' };
+  }
   return {
     scanned: board.scanned || 0, priced, draftable: draftable.length,
     moved: moved.length, up, down, dollars,
-    byPos, topUp: brief(rises[0]), topDown: brief(fades[0]), teamUp, teamDown
+    byPos, topUp: brief(rises[0]), topDown: brief(fades[0]), topTd, teamUp, teamDown
   };
 }
 // Dollars first, then points, then name — the third key only so a tie cannot

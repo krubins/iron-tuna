@@ -6440,3 +6440,63 @@ fails there rather than looking plausible. It also covers the ET/DST conversion
 in both directions, postponed games not holding a week open, byes derived from
 the slate, the round labels, the merge's 48-hour pair window, and an empty
 schedule failing closed rather than defaulting to Week 1.
+
+## 52. September 3: the hero is two products, and three cards that are real or absent
+
+The front page used to open on the draft product alone. It now opens on two
+equal columns: **2026 Auction Season** on the left, every word and every call to
+action unchanged, with the cheat-sheet screenshot moved under the copy; and
+**Weekly Fantasy Intel** on the right, a panel carrying the week from
+`/api/season`, two buttons (`/weekly-intel`, and the scoring setup at
+`/auctiondraft?screen=cheat`), and three cards.
+
+### 52a. The cards read the digest the dateline already prints
+
+**Vegas loves** is `digest.topUp`, **Vegas fades** is `digest.topDown`, and both
+now carry `rankMarket` alongside the consensus and Iron Tuna ranks, because the
+card prints all three side by side and two of the three would leave a reader
+inferring the third wrong. **TD edge** is a new `digest.topTd`: the draftable
+skill player with the largest gap between the touchdowns the consensus projects
+and the touchdowns the lines imply (at least half a season touchdown, or it is
+rounding). All three come off `buildVegasDigest`, so the top of the page and the
+Vegas section lower down can never name different players for the same day.
+`COLUMN_CONTRACT` went to 5 and `VS_CONTRACT` in `front.html` with it.
+
+**The anytime-TD percentage is derived, and the card says so.** No free feed
+carries an anytime-TD market. The number is Poisson on the blended season line
+over the games he can play (`17 - gamesOut`, which is why `buildVegasBoard` rows
+now carry `gamesOut`): `P(at least one) = 1 - e^(-TDs/games)`. It is labelled
+"Not a quoted prop" on the card itself, with the two season lines it came from,
+so it cannot be mistaken for a book's price. Quarterbacks are excluded; a thrown
+touchdown is not an anytime-TD.
+
+### 52b. Real data or nothing
+
+`renderHeroIntel` draws a card only when every number on it exists, drops any
+card that is short one, and when the digest has no case hides the grid and says
+so in the note. No example name appears anywhere in the markup. A payload from
+another contract renders nothing, the same rule the Vegas section runs under.
+
+### 52c. Phones
+
+The columns stack, draft first, by default. `it-season.js` (now loaded on the
+front page too) stamps `data-season="in"` on the band when `/api/season` says
+**regular season**, and a `@media(max-width:900px)` rule puts the intel panel
+first with `order:-1`. Regular season only, as specified: in August the draft is
+the product, and in January neither column is live. Desktop is untouched in both
+states.
+
+**One trap this shipped with and then fixed:** the sheet screenshot is a
+percentage-width image inside a grid item, and a grid item defaults to
+`min-width:auto`, so its minimum became the image's 1180px and the whole band
+ran off a phone's right edge. `.hb-copy{min-width:0}` and `minmax(0,1fr)` on the
+stacked track are the guard, from both sides. Verified in Chromium at 390px with
+the phase stubbed both ways: intel first at 32px in the regular season, draft
+first at 32px in the preseason, three cards, no page errors.
+
+### 52d. Tests
+
+`tools/test-player-odds.mjs` lifts the dateline out of `front.html` between two
+comment markers; the hero renderer sits **above** that slice on purpose, so the
+harness does not evaluate code that reaches for `window`. The same suite checks
+the column contract pair, which is why both numbers moved together.
