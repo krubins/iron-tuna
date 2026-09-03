@@ -634,6 +634,9 @@ img{max-width:100%}
 .hb-intel{cursor:pointer;transition:border-color .12s ease,background .12s ease}
 .hb-intel:hover{border-color:rgba(242,169,0,.45);background:rgba(255,255,255,.055)}
 .hb-intel-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+/* The launch date, above the eyebrow. Gold on the dark band like the eyebrow
+   itself, set apart by size so it reads as a date and not as a second label. */
+.hb-launch{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(20px,2.2vw,26px);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);line-height:1;margin:0 0 12px}
 .hb-intel-top .hb-eyebrow{margin-bottom:0}
 .hb-eyebrow.intel{color:var(--gold);border-color:rgba(242,169,0,.38)}
 .hb-week{font-size:12px;letter-spacing:.04em;color:#b3c1bd}
@@ -813,6 +816,7 @@ img{max-width:100%}
       </figure>
     </div>
     <div class="hb-copy hb-intel" id="heroIntel">
+      <p class="hb-launch">Starting Labor Day - 9/7</p>
       <div class="hb-intel-top">
         <span class="hb-eyebrow intel">Weekly Fantasy Intel</span>
         <span class="hb-week" id="hbWeek" hidden></span>
