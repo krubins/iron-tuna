@@ -6747,3 +6747,77 @@ Soon and points at `/in-season/rankings`, and the nine section URLs are in
 `sitemap.xml` with today's `lastmod`. Nothing in the gate logic changed: set the
 var back to `"0"` (or remove it) and every route closes again, which
 `tools/test-asset-routing.mjs` covers in both states.
+
+## 56. September 3: the content desk (Steps 18 to 25)
+
+Eleven weekly pieces, one engine. Each KIND in `CONTENT_KINDS` has a due
+weekday and hour in New York, a rule for which games it is about, and a rule
+for when it is READY. **Game completion, not the clock, publishes.** An
+hourly cron (`0 * * * *`, the fifth trigger in `wrangler.jsonc`) refreshes the
+schedule and then runs `runContentTick`, which evaluates every kind and
+produces any that is due, ready and not yet produced for that week. A game
+that runs long delays its piece by an hour; nothing is guessed.
+
+| Kind | Due (ET) | About | Ready when |
+|---|---|---|---|
+| `team-recaps` | Mon 6am | every game of the played week except Monday's | those games final |
+| `mnf-breakdown` | Tue 12am | the Monday game | it is final; skipped if there is none |
+| `what-they-arent-telling-you` | Tue 6am | the played week | every game final |
+| `opportunity-report` | Wed 6am | the played week | every game final |
+| `rankings-update` | Wed 7am | the coming weeks | after the ROS snapshot |
+| `final-read` | Thu 6am | the coming week | always |
+| `tnf-preview` | Thu 6am | the Thursday game | it has not kicked off; skipped if none |
+| `tnf-aftermath` | Fri 12am | the Thursday game | it is final |
+| `weekend-game-plan` | Fri 6am | the games still to come | none has started |
+| `what-changed-today` | Sun 8pm | Sunday games final by then | at least one; the rest are NAMED as excluded |
+| `snf-what-we-learned` | Mon 12am | the Sunday night game | it is final |
+
+`contentDue(kind, now, state, sched)` is pure and takes the instant it is asked
+about; the first cut read game status off the wall clock inside `weekGames`,
+which a test caught. A retrospective piece keys off `lastPlayedWeek` (the
+clock has already turned to the next week by Tuesday morning); a forward piece
+keys off the current week. The due instant is the first ET weekday/hour at or
+after the anchor game minus 36 hours (retrospective) or six days (forward),
+so a Monday recap of a week ending Monday night finds the Monday 6am before
+that game, not the one a week later.
+
+**The data.** ESPN's game summary (`fetchGameSummaryEspn`), normalised by
+`normalizeGameSummary`: targets, receptions, yards, carries, TDs, passing
+splits, fumbles, per player; scoring plays; and the DRIVES, from which red-zone
+touches (a play starting inside the 20) and goal-line carries (inside the 5)
+are counted by matching the play text's "J.Williams" to the box score's own
+list, uncounted when ambiguous. Positions come from the site's board; the box
+score carries none. Depth charts (`fetchDepthChartEspn`, daily into
+`odds_overlay` row 6) give "what we already knew". Summaries are stored in
+`game_summaries` once final, so a piece never refetches a finished game.
+Routes and route participation are not published by any free feed and every
+brief says so.
+
+**The briefs** are structured and deterministic (`briefForGames`,
+`briefTeamRecaps`, `briefWtaty`, `briefOpportunity`, `briefFinalRead`,
+`briefGamePlan`): "what we still don't know" is a list of computed flags
+(a backfield split within ten points, a red-zone role without a score, an
+in-game injury), never prose. The Tuesday feature takes only insights at
+MEDIUM confidence or better and says when fewer than eight clear the bar.
+Each brief carries `allowed`: every name and number in it.
+
+**The writer** (`writePiece`) hands the brief to the site's LLM provider
+(`llmText`, same key and provider switch as the Value Coach) under a contract
+that it may state only facts in the brief, and asks for JSON with fixed
+section keys. `validateDraft` then checks every capitalised name and every
+number in the draft against `allowed`; a violation gets one corrective retry
+and is otherwise HELD: stored, unpublished, and shown on the page as its data
+with the violations named. No `LLM_API_KEY` means every piece is held with its
+brief, and the page still publishes the data. The model explains; it does not
+report.
+
+Surfaces: `/in-season/desk` (the week's pieces), `/in-season/desk/<kind>` and
+`/<kind>/<week>` (one piece), `/api/content`, `/api/content/piece`,
+`/api/admin/content?key=…&tick=1|run=<kind>[&force=1]|depth=1|due=1`. Until
+Week 1 is played nothing is due, which `tools/test-content.mjs` asserts
+alongside the box-score adapter on a stored 2025 game, every gating rule on a
+fixture week, the briefs, and the validator.
+
+**Cron count.** `wrangler.jsonc` now carries five triggers. If the account's
+plan caps triggers below that, the deploy will say so; the hourly tick is the
+one to keep and the three posting slots the ones to fold into it.

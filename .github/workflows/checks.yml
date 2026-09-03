@@ -273,6 +273,14 @@ jobs:
       - name: Insight detection, Vegas Edge and the Wednesday update
         run: node tools/test-signals.mjs
 
+      # The content desk: the ESPN box-score adapter on a real stored game,
+      # the game-completion gating on a fixture week (Sunday 8pm names the game
+      # still on; the SNF and MNF pieces wait for their game), the briefs, and
+      # the validator that holds a draft naming a player or number the brief
+      # does not contain.
+      - name: The content desk
+        run: node tools/test-content.mjs
+
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
 
