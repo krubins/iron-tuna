@@ -6321,3 +6321,122 @@ node tools/test-k-def.mjs tools/test-team-market.mjs
 Kicker names come from the nflverse `rosters/roster_<season>.csv` release, one
 active kicker per club. A club with none, or more than one, keeps the committed
 spelling and the run says so rather than guessing.
+
+## 51. September 3: the in-season section, and a clock that reads the schedule
+
+Two things landed together: the eight-page In-Season section, and the NFL
+season/week service every page in it reads before it prints anything.
+
+### 51a. What week is it, and why the calendar cannot answer
+
+The tempting implementation is a weekday rule -- "a new week starts on Tuesday".
+It is wrong for a full day every single week: it either turns the week over
+while Monday Night Football is still being played, or leaves last week up until
+some arbitrary hour on Tuesday. It is wrong in kind for the postseason, which is
+made of rounds with no fixed weekday at all. And it has no answer for a week
+whose last game is a Sunday afternoon (Week 18, most playoff rounds), a Saturday
+doubleheader, a 9:30am ET London kickoff, or a Thursday opener.
+
+**The rule, written in exactly one place (`nflSeasonState` in `_worker.js`): a
+week is current until its own last game has finished.** Everything else on the
+payload reads off that, so nothing on the site can disagree about the week.
+
+`SEASON_GAME_MS` is 3h45m: how long a game holds its week open when no feed has
+said it is over. Deliberately generous. Turning the week over mid-broadcast is
+the failure this exists to prevent; being forty minutes late is not.
+
+### 51b. Two sources, because one of them has no preseason
+
+| Source | What it gives |
+|---|---|
+| nflverse `games.csv` | The spine. Every REG and playoff fixture months ahead, with `spread_line` and `total_line` already on it. The same file the odds overlay reads (§9b). **It carries no preseason games at all**, which is the only reason there is a second source. |
+| ESPN scoreboard | The live layer: preseason fixtures, per-game status and score, and the exact kickoff instant. |
+
+`mergeSchedule` matches the two **on the two clubs within a 48-hour window**, not
+on week number, because ESPN and nflverse number the postseason rounds
+differently and a round mismatch would put a live score on the wrong game. A
+48-hour window is also what stops a Week 14 result landing on the Week 3 meeting
+of the same two clubs. An ESPN game with no spine match is added only if it is
+preseason; an unmatched playoff game is dropped rather than guessed into a
+round, because the spine gains the bracket within a day of it being set.
+
+`games.csv` writes a fixture as an Eastern date and an Eastern wall clock in two
+columns with **no offset on either**. Converting at a fixed -5 puts every
+September and October kickoff an hour late. `_seasonEtToUtc` reads the time as if
+ET were -5, asks that instant which offset actually applies (`etOffsetHours`, the
+same function the lead story's clock uses), and corrects by the difference.
+
+### 51c. No provider is touched on a request
+
+The cron writes one D1 row (`odds_overlay` row 4, same table, same lifecycle, no
+migration); a request reads it and runs the clock against `now`. Kickoff times
+are fixed, so **the week and the upcoming / in-progress / completed split stay
+right to the minute on a day-old row**. Only scores go stale between refreshes,
+and every game reports whether its status came from the feed or from the clock
+(`statusSource`). A feed saying "final" is believed; a feed saying "scheduled" is
+not, because a row written before kickoff still says scheduled hours after the
+game ended.
+
+The refresh runs on the 11:00 daily trigger alongside the odds and injury pulls,
+**and on all three posting slots** -- those are the only other times the worker
+wakes, and they are where in-week score freshness comes from. No cron string
+changed, so `slotsByCron` did not have to move.
+
+**ESPN is not reachable from the daily-routine sandbox** (§48), and node's
+`fetch` in this repo's local tooling gets a 403 for it while `curl` succeeds.
+That is a sandbox artifact, not a defect: the worker runs at the edge, where the
+availability refresh already pulls the same host in production every day.
+`tools/test-season.mjs` therefore asserts the nflverse half against the live
+feed and self-skips the network entirely if it cannot reach it.
+
+### 51d. The routes
+
+- `GET /api/season` -- the current week: phase, week label, week status, every
+  game with its state, byes, counts, next kickoff, last final, and a 23-row
+  index of the whole season so a page can offer a week picker without a second
+  call. One minute of edge cache.
+- `GET /api/season?week=4` / `?type=WC` -- a week or round the caller names. The
+  response **still carries the real current week in `week`**, so a page browsing
+  Week 4 in Week 9 cannot render it as live.
+- `GET /api/admin/season-status?key=…` -- what the cached schedule holds and how
+  old it is; `&refresh=1` runs the pull now. Mirrors `/api/admin/odds-status`.
+
+### 51e. The section
+
+Eight pages, all **gated by the existing `POST_DRAFT_PAGES` lock** (§28c), so
+they deploy closed and serve `/post-draft` in their place until
+`POST_DRAFT_OPEN=1`. Owner preview is the same `?preview=<LEADS_EXPORT_KEY>`
+cookie. `tools/test-asset-routing.mjs` and `tools/test-seo.mjs` both read the set
+out of the worker, so none of them can be left ungated or advertised in the
+sitemap while the gate is shut.
+
+| Route | What it is | Live data today |
+|---|---|---|
+| `/weekly-intel` | The week itself, and the section's hub | `/api/season` |
+| `/rankings` | The board at the reader's own scoring | `it-league.js` |
+| `/vegas-edge` | The players the market and the consensus disagree about | `/api/vegas-column` |
+| `/what-they-arent-telling-you` | That disagreement counted across the whole board | `/api/vegas-column` digest |
+| `/game-intel` | Every game with line, total and implied points | `/api/season` |
+| `/waivers` | The FAAB Advisor, and the week's claim clock | `/api/season`, links `/faab` |
+| `/dfs` | The same market read aimed at one slate | `/api/season` |
+| `/my-league` | The reader's saved settings | `it-league.js` |
+
+`/it-season.js` is the shared clock widget: one `/api/season` read, memoized,
+auto-rendering into any `[data-season-strip]`. **It never falls back to the
+calendar.** If the API cannot answer, the strip says so, because a wrong week is
+worse than a missing one -- it silently mislabels every number under it.
+
+The nav's existing `In-Season` item became a dropdown carrying all eight, still
+pointing at `/post-draft` so the parent link works in both gate states. A fifth
+footer column carries the same set. **No draft-season link was removed.**
+
+### 51f. Tests
+
+`node tools/test-season.mjs` (59 assertions, plain node, self-skips the network).
+The fixture season is built so a weekday rule and the real rule **give different
+answers at named instants**: Monday 9:30pm mid-game, Tuesday 12:02am mid-game,
+and a week whose last game is a Sunday afternoon. A regression to a calendar rule
+fails there rather than looking plausible. It also covers the ET/DST conversion
+in both directions, postponed games not holding a week open, byes derived from
+the slate, the round labels, the merge's 48-hour pair window, and an empty
+schedule failing closed rather than defaulting to Week 1.

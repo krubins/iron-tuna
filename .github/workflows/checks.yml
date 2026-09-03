@@ -72,6 +72,12 @@ jobs:
       - name: Parse player-search.js
         run: node --check player-search.js
 
+      # /it-season.js is loaded by every in-season page and is what puts the
+      # week on them. A syntax error there leaves eight pages saying "Reading
+      # the NFL schedule..." forever, with no console anyone is watching.
+      - name: Parse it-season.js
+        run: node --check it-season.js
+
       # /admin is the only page with a form that calls an API, and it is
       # hand-written like the rest — a syntax error there breaks the dashboard
       # and the comp-access form with it, silently, since nobody browses it.
@@ -229,6 +235,17 @@ jobs:
       # and asserts the two still agree, so drift fails here instead of quietly
       # changing the numbers people draft on. It also pulls the live nflverse file
       # — that step self-skips on a network blip rather than failing the build.
+      # What week it is, which every in-season surface reads before it can say
+      # anything. The tempting implementation -- "a new week starts on Tuesday"
+      # -- is wrong for a whole day every week (it either turns the week over
+      # while Monday night is being played, or leaves last week up until some
+      # arbitrary hour) and wrong in kind for the postseason, which is made of
+      # rounds. The fixture season here is built so a weekday rule and the real
+      # rule give DIFFERENT answers at named instants, so a regression to a
+      # calendar rule fails rather than looking plausible.
+      - name: The NFL season and week service
+        run: node tools/test-season.mjs
+
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
 

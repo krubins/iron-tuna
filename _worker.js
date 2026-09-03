@@ -55,7 +55,16 @@ async function rl(env, request, bucket, max, ttlSec) {
 // leads export and the odds status route already use. It sets a short-lived
 // cookie so the owner can click around the section instead of re-appending the
 // key to every URL.
-const POST_DRAFT_PAGES = new Set(['/faab']);
+// The in-season section. Every route here is DEPLOYED but CLOSED until
+// POST_DRAFT_OPEN is set: the worker serves /post-draft in their place, so the
+// reader keeps the URL they clicked and the page that opens there later is the
+// one they were promised. The lock is here rather than in the pages because a
+// static asset locked by its own JavaScript is a suggestion; the HTML reaches
+// the browser either way. tools/test-asset-routing.mjs and tools/test-seo.mjs
+// both read this set, so a page added to the section cannot be left ungated or
+// advertised in the sitemap while the gate is shut.
+const POST_DRAFT_PAGES = new Set(['/faab', '/weekly-intel', '/rankings', '/vegas-edge',
+  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league']);
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
@@ -2770,6 +2779,441 @@ async function availabilityReport(env) {
   };
 }
 
+// ── the NFL season and week ────────────────────────────────────────────────
+// WHY THIS EXISTS. Every in-season surface has to answer one question before it
+// can say anything at all: what week is it. Taking that from the calendar --
+// "Tuesday starts a new week" -- is wrong in exactly the places readers use
+// most. Thursday night openers, the 9:30am ET international kickoffs, the
+// Saturday doubleheaders in Weeks 16 and 18, a flexed Sunday night game, a
+// Monday doubleheader, Christmas and Thanksgiving fixtures, and every postseason
+// round, which is a WEEK with three days of games in it and no fixed weekday at
+// all. A weekday rule is also wrong for a whole day every single week: it either
+// turns a week over while Monday Night Football is still being played, or leaves
+// last week up until an arbitrary hour on Tuesday.
+//
+// So the week comes from the schedule itself. THE RULE: a week is current until
+// its own last game has finished. Nothing else decides it.
+//
+// TWO SOURCES, on the same provider pattern the odds refresh already uses.
+//   nflverse games.csv  The spine. Every regular-season and playoff fixture,
+//                       months ahead, with the betting lines already on it --
+//                       the same file the odds overlay reads (HANDOFF §9b). It
+//                       carries NO preseason games at all, which is the whole
+//                       reason there is a second source.
+//   ESPN scoreboard     The live layer: the preseason fixtures nflverse omits,
+//                       per-game status and score, and playoff fixtures as the
+//                       bracket is set rather than when the CSV is republished.
+//
+// NEITHER IS FETCHED ON A REQUEST. The cron writes one D1 row; a request reads
+// that row and computes the clock against `now`. Kickoff times are fixed, so the
+// week and the upcoming / in-progress / completed split are right to the minute
+// even when the row is a day old -- only SCORES go stale between refreshes, and
+// every game says whether its status came from the feed or from the clock.
+const SEASON_CONTRACT = 1;
+const SEASON_ROW = 4;                       // odds_overlay row 4, same table, same lifecycle
+const SEASON_MAX_AGE_MS = 14 * 86400000;    // a schedule row older than this is not served
+const SEASON_MEMO_MS = 300000;              // per-isolate memo; one D1 read behind it
+// How long a game blocks its week when no feed has said the game is over. A
+// three-hour NFL broadcast plus overtime and the long reviews; deliberately
+// generous, because turning the week over while the last game is still on is the
+// failure this file exists to prevent, and being 40 minutes late is not.
+const SEASON_GAME_MS = 3.75 * 3600000;
+const SEASON_MIN_REG = 200;                 // a REG spine thinner than this is a truncated pull
+const SEASON_LEADIN_MS = 14 * 86400000;     // more than a fortnight before anything kicks off is the offseason
+const SEASON_ORDER = { PRE: 0, REG: 1, WC: 2, DIV: 3, CON: 4, SB: 5 };
+const SEASON_PHASE = { PRE: 'preseason', REG: 'regular', WC: 'postseason', DIV: 'postseason', CON: 'postseason', SB: 'postseason' };
+const SEASON_PHASE_LABEL = { offseason: 'Offseason', preseason: 'Preseason', regular: 'Regular season', postseason: 'Playoffs' };
+const SEASON_ROUND_LABEL = { WC: 'Wild Card', DIV: 'Divisional', CON: 'Conference Championships', SB: 'Super Bowl' };
+const ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
+const ESPN_SEASONTYPE = { 1: 'PRE', 2: 'REG', 3: 'POST' };
+// ESPN's own status vocabulary. Anything not listed is treated as unknown and
+// the clock decides, which is the safe direction: a status this map has not seen
+// must never be able to declare a game final.
+const ESPN_STATUS = {
+  STATUS_SCHEDULED: 'scheduled', STATUS_IN_PROGRESS: 'in_progress',
+  STATUS_HALFTIME: 'in_progress', STATUS_END_PERIOD: 'in_progress',
+  STATUS_DELAYED: 'in_progress', STATUS_FINAL: 'final',
+  STATUS_FINAL_OVERTIME: 'final', STATUS_POSTPONED: 'postponed',
+  STATUS_CANCELED: 'canceled', STATUS_SUSPENDED: 'in_progress'
+};
+
+// games.csv writes a fixture as an Eastern date and an Eastern wall clock, in
+// two columns, with no offset on either. Converting with a fixed -5 puts every
+// September and October kickoff an hour late. etOffsetHours() already knows the
+// US rule, so the conversion is: read the time as if ET were -5, ask that
+// instant which offset actually applies, and correct by the difference. No NFL
+// game has ever kicked off inside a DST transition hour, so one pass is exact.
+function _seasonEtToUtc(day, clock) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || ''));
+  if (!m) return NaN;
+  const t = /^(\d{1,2}):(\d{2})/.exec(String(clock || ''));
+  const hh = t ? +t[1] : 13, mi = t ? +t[2] : 0;   // an undated column defaults to the 1pm ET window
+  if (!(hh >= 0 && hh <= 23 && mi >= 0 && mi <= 59)) return NaN;
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], hh + 5, mi);
+  return guess - (etOffsetHours(guess) + 5) * 3600000;
+}
+
+// ── providers ──────────────────────────────────────────────────────────────
+async function fetchScheduleNflverse() {
+  const r = await fetch(NFLVERSE_GAMES_URL, { cf: { cacheTtl: 3600 } });
+  if (!r.ok) throw new Error('nflverse ' + r.status);
+  const lines = (await r.text()).split('\n');
+  if (lines.length < 2) throw new Error('nflverse: empty');
+  const head = _csvSplit(lines[0]);
+  const col = {};
+  ['game_id', 'game_type', 'week', 'gameday', 'gametime', 'away_team', 'home_team',
+   'away_score', 'home_score', 'spread_line', 'total_line'].forEach(k => { col[k] = head.indexOf(k); });
+  for (const k of Object.keys(col)) if (col[k] < 0) throw new Error('nflverse: missing column ' + k);
+  // game_id opens with the season, so the newest one is found without parsing
+  // 2MB of CSV -- the same trick the odds provider uses on this same file.
+  let season = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const u = lines[i].indexOf('_');
+    if (u > 0) { const y = +lines[i].slice(0, u); if (y > season && y < 3000) season = y; }
+  }
+  if (!season) throw new Error('nflverse: no season found');
+  const prefix = season + '_';
+  const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+  const games = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].startsWith(prefix)) continue;
+    const f = _csvSplit(lines[i]);
+    const type = String(f[col.game_type] || '').toUpperCase();
+    if (!Object.prototype.hasOwnProperty.call(SEASON_ORDER, type)) continue;
+    const kickoff = _seasonEtToUtc(f[col.gameday], f[col.gametime]);
+    if (!Number.isFinite(kickoff)) continue;
+    games.push({
+      id: f[col.game_id], type, week: parseInt(f[col.week], 10) || 0, kickoff,
+      home: teamKey(f[col.home_team]), away: teamKey(f[col.away_team]),
+      homeScore: num(f[col.home_score]), awayScore: num(f[col.away_score]),
+      spread: num(f[col.spread_line]), total: num(f[col.total_line]),
+      status: null, src: 'nflverse'
+    });
+  }
+  const reg = games.filter(g => g.type === 'REG').length;
+  if (reg < SEASON_MIN_REG) throw new Error('nflverse: only ' + reg + ' regular-season games');
+  return { season, games };
+}
+
+async function _espnEvents(qs) {
+  const r = await fetch(ESPN_SCOREBOARD + (qs ? '?' + qs : ''), { cf: { cacheTtl: 300 } });
+  if (!r.ok) throw new Error('espn ' + r.status);
+  const j = await r.json();
+  return Array.isArray(j && j.events) ? j.events : [];
+}
+function _espnGame(ev) {
+  const comp = (ev && ev.competitions || [])[0] || {};
+  const cs = comp.competitors || [];
+  const home = cs.find(c => c && c.homeAway === 'home');
+  const away = cs.find(c => c && c.homeAway === 'away');
+  if (!home || !away) return null;
+  const kickoff = Date.parse(ev.date);
+  if (!Number.isFinite(kickoff)) return null;
+  const h = teamKey(home.team && home.team.abbreviation);
+  const a = teamKey(away.team && away.team.abbreviation);
+  if (!h || !a) return null;
+  const st = (((ev.status || comp.status || {}).type) || {}).name || '';
+  const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+  return {
+    id: 'espn-' + ev.id, type: ESPN_SEASONTYPE[(ev.season || {}).type] || '',
+    week: ((ev.week || {}).number) || 0, kickoff, home: h, away: a,
+    homeScore: num(home.score), awayScore: num(away.score),
+    spread: null, total: null, status: ESPN_STATUS[st] || null, src: 'espn'
+  };
+}
+// The preseason, which the spine does not carry at all, plus whatever the
+// scoreboard is currently showing (status and score for the games being played).
+// Each call is independent: one failing week must not cost the others.
+async function fetchScheduleEspn(season) {
+  const out = [];
+  const add = evs => { for (const ev of evs) { const g = _espnGame(ev); if (g) out.push(g); } };
+  // ESPN numbers preseason weeks 1-4, week 1 being the Hall of Fame game.
+  for (let w = 1; w <= 4; w++) {
+    try { add(await _espnEvents('dates=' + season + '&seasontype=1&week=' + w)); } catch (e) {}
+  }
+  try { add(await _espnEvents('')); } catch (e) {}
+  return out;
+}
+
+// ── merge ──────────────────────────────────────────────────────────────────
+// The spine owns the fixture list and the lines; ESPN owns status, score and the
+// exact kickoff instant. Matched on the two clubs within a two-day window rather
+// than on week number, because ESPN and nflverse number the postseason rounds
+// differently and a round mismatch would put a live score on the wrong game.
+function mergeSchedule(spine, live) {
+  const games = (spine || []).map(g => ({ ...g }));
+  const byPair = new Map();
+  games.forEach((g, i) => {
+    const k = g.away + '@' + g.home;
+    if (!byPair.has(k)) byPair.set(k, []);
+    byPair.get(k).push(i);
+  });
+  const WINDOW = 2 * 86400000;
+  let updated = 0, added = 0;
+  for (const g of live || []) {
+    const cands = byPair.get(g.away + '@' + g.home) || [];
+    let best = -1, bestGap = WINDOW;
+    for (const i of cands) {
+      const gap = Math.abs(games[i].kickoff - g.kickoff);
+      if (gap < bestGap) { bestGap = gap; best = i; }
+    }
+    if (best >= 0) {
+      const t = games[best];
+      t.kickoff = g.kickoff;                       // the feed's instant is exact; ours is converted
+      if (g.status) t.status = g.status;
+      if (g.homeScore != null) t.homeScore = g.homeScore;
+      if (g.awayScore != null) t.awayScore = g.awayScore;
+      t.src = t.src + '+espn';
+      updated++;
+    } else if (g.type && Object.prototype.hasOwnProperty.call(SEASON_ORDER, g.type === 'POST' ? 'WC' : g.type)) {
+      // Only fixtures the spine genuinely cannot have: the preseason. A POST
+      // game with no match is left out rather than guessed into a round, since
+      // the spine gains the bracket within a day of it being set.
+      if (g.type !== 'PRE') continue;
+      games.push({ ...g });
+      added++;
+    }
+  }
+  games.sort((a, b) => a.kickoff - b.kickoff || (a.id < b.id ? -1 : 1));
+  return { games, updated, added };
+}
+
+// ── the clock ──────────────────────────────────────────────────────────────
+// Everything below is pure: schedule in, state out, no env, no fetch, no Date.now
+// unless it is handed one. That is what makes the week rule testable against a
+// fixture season instead of only against today.
+function _seasonBuckets(games) {
+  const by = new Map();
+  for (const g of games) {
+    const key = g.type + ':' + (g.week || 0);
+    let b = by.get(key);
+    if (!b) by.set(key, (b = { key, type: g.type, week: g.week || 0, games: [], first: Infinity, last: -Infinity }));
+    b.games.push(g);
+    if (g.kickoff < b.first) b.first = g.kickoff;
+    if (g.kickoff > b.last) b.last = g.kickoff;
+  }
+  const out = [...by.values()];
+  for (const b of out) {
+    b.games.sort((x, y) => x.kickoff - y.kickoff || (String(x.id) < String(y.id) ? -1 : 1));
+    b.endsAt = b.last + SEASON_GAME_MS;
+    b.label = b.type === 'REG' ? 'Week ' + b.week
+            : b.type === 'PRE' ? 'Preseason Week ' + b.week
+            : SEASON_ROUND_LABEL[b.type] || b.type;
+  }
+  // Calendar order first. The round tiebreak only ever matters for two buckets
+  // that open on the same instant, which no real schedule does, but a stable
+  // order is what stops the week index reshuffling between two reads.
+  out.sort((a, b) => a.first - b.first || SEASON_ORDER[a.type] - SEASON_ORDER[b.type] || a.week - b.week);
+  return out;
+}
+// A game's state, and where that state came from. The feed is believed when it
+// says a game is under way or over; "scheduled" is NOT believed, because a row
+// written before kickoff still says scheduled hours after the game ended.
+function seasonGameStatus(g, now) {
+  if (g.status === 'postponed' || g.status === 'canceled') return { status: g.status, source: 'feed' };
+  if (g.status === 'final') return { status: 'completed', source: 'feed' };
+  if (g.status === 'in_progress') return { status: 'in_progress', source: 'feed' };
+  if (now < g.kickoff) return { status: 'upcoming', source: 'clock' };
+  if (now < g.kickoff + SEASON_GAME_MS) return { status: 'in_progress', source: 'clock' };
+  return { status: 'completed', source: 'clock' };
+}
+// A postponed game still occupies its week -- it is rescheduled, not deleted --
+// but it must not hold the week open forever, so it is excluded from the "has
+// this week finished" test while staying in the week's game list.
+function _seasonBucketEnd(b) {
+  const live = b.games.filter(g => g.status !== 'postponed' && g.status !== 'canceled');
+  if (!live.length) return b.endsAt;
+  return Math.max(...live.map(g => g.kickoff)) + SEASON_GAME_MS;
+}
+function nflSeasonState(cache, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const all = ((cache && cache.games) || []).filter(g => g && Number.isFinite(g.kickoff));
+  if (!all.length) return { ok: false, error: 'no_schedule', contract: SEASON_CONTRACT };
+  const buckets = _seasonBuckets(all);
+  for (const b of buckets) b.endsAt = _seasonBucketEnd(b);
+
+  // THE WEEK RULE, and the only place it is written: the current week is the
+  // first one whose own last game has not finished. Every property below reads
+  // off that, so nothing on the site can disagree about what week it is.
+  let idx = buckets.findIndex(b => b.endsAt > at);
+  const seasonComplete = idx < 0;
+  if (seasonComplete) idx = buckets.length - 1;
+  const cur = buckets[idx];
+
+  const started = at >= buckets[0].first;
+  const phase = seasonComplete ? 'offseason'
+    : (!started && at < buckets[0].first - SEASON_LEADIN_MS) ? 'offseason'
+    : SEASON_PHASE[cur.type] || 'regular';
+  const weekStatus = at < cur.first ? 'upcoming' : at < cur.endsAt ? 'active' : 'complete';
+
+  const decorate = g => {
+    const s = seasonGameStatus(g, at);
+    return {
+      id: g.id, type: g.type, week: g.week, kickoff: g.kickoff,
+      home: g.home, away: g.away, homeScore: g.homeScore, awayScore: g.awayScore,
+      spread: g.spread == null ? null : g.spread, total: g.total == null ? null : g.total,
+      status: s.status, statusSource: s.source
+    };
+  };
+  const games = cur.games.map(decorate);
+  const counts = { upcoming: 0, inProgress: 0, completed: 0, other: 0 };
+  for (const g of games) {
+    if (g.status === 'upcoming') counts.upcoming++;
+    else if (g.status === 'in_progress') counts.inProgress++;
+    else if (g.status === 'completed') counts.completed++;
+    else counts.other++;
+  }
+
+  // Byes are a property of the regular season only: every club plays in the
+  // preseason and only the survivors play in January, so "who is off" is a
+  // question that means nothing outside REG.
+  const league = new Set();
+  for (const g of all) if (g.type === 'REG') { league.add(g.home); league.add(g.away); }
+  let byes = [];
+  if (cur.type === 'REG' && league.size >= 30) {
+    const playing = new Set();
+    for (const g of cur.games) { playing.add(g.home); playing.add(g.away); }
+    byes = [...league].filter(t => !playing.has(t)).sort();
+  }
+
+  const upcomingAll = all.filter(g => seasonGameStatus(g, at).status === 'upcoming')
+    .sort((a, b) => a.kickoff - b.kickoff);
+  const doneAll = all.filter(g => seasonGameStatus(g, at).status === 'completed')
+    .sort((a, b) => b.kickoff - a.kickoff);
+
+  return {
+    ok: true,
+    contract: SEASON_CONTRACT,
+    now: at,
+    season: (cache && cache.season) || 0,
+    phase,
+    phaseLabel: SEASON_PHASE_LABEL[phase] || phase,
+    seasonComplete,
+    week: {
+      type: cur.type, number: cur.week, label: cur.label, status: weekStatus,
+      index: idx, of: buckets.length,
+      firstKickoff: cur.first, lastKickoff: cur.last, endsAt: cur.endsAt,
+      games: games.length, byes
+    },
+    counts,
+    games,
+    nextGame: upcomingAll.length ? decorate(upcomingAll[0]) : null,
+    lastCompleted: doneAll.length ? decorate(doneAll[0]) : null,
+    // The whole season's index, so a page can offer a week picker without a
+    // second call. Games are deliberately left off: 23 rows, not 300.
+    weeks: buckets.map((b, i) => ({
+      index: i, type: b.type, number: b.week, label: b.label,
+      firstKickoff: b.first, lastKickoff: b.last, endsAt: b.endsAt, games: b.games.length,
+      status: at < b.first ? 'upcoming' : at < b.endsAt ? 'active' : 'complete',
+      current: i === idx
+    })),
+    updatedAt: (cache && cache.updatedAt) || 0,
+    provider: (cache && cache.provider) || '',
+    stale: !!(cache && cache.updatedAt && Date.now() - cache.updatedAt > SEASON_MAX_AGE_MS)
+  };
+}
+// The same state, for a week the caller names rather than the current one. The
+// clock is untouched -- `week` still reports which week it really is -- only the
+// game list and the counts move, so a reader browsing Week 4 in Week 9 is never
+// shown Week 4 as though it were live.
+function nflSeasonWeek(cache, now, type, number) {
+  const state = nflSeasonState(cache, now);
+  if (!state.ok) return state;
+  const want = String(type || 'REG').toUpperCase();
+  const n = parseInt(number, 10);
+  const at = state.now;
+  const all = ((cache && cache.games) || []).filter(g => g && Number.isFinite(g.kickoff));
+  const buckets = _seasonBuckets(all);
+  for (const b of buckets) b.endsAt = _seasonBucketEnd(b);
+  const hit = buckets.find(b => b.type === want && (!Number.isFinite(n) || b.week === n));
+  if (!hit) return { ...state, requested: { type: want, number: Number.isFinite(n) ? n : null, found: false } };
+  const decorate = g => {
+    const s = seasonGameStatus(g, at);
+    return { id: g.id, type: g.type, week: g.week, kickoff: g.kickoff, home: g.home, away: g.away,
+             homeScore: g.homeScore, awayScore: g.awayScore, spread: g.spread, total: g.total,
+             status: s.status, statusSource: s.source };
+  };
+  const games = hit.games.map(decorate);
+  const counts = { upcoming: 0, inProgress: 0, completed: 0, other: 0 };
+  for (const g of games) {
+    if (g.status === 'upcoming') counts.upcoming++;
+    else if (g.status === 'in_progress') counts.inProgress++;
+    else if (g.status === 'completed') counts.completed++;
+    else counts.other++;
+  }
+  const league = new Set();
+  for (const g of all) if (g.type === 'REG') { league.add(g.home); league.add(g.away); }
+  let byes = [];
+  if (hit.type === 'REG' && league.size >= 30) {
+    const playing = new Set();
+    for (const g of hit.games) { playing.add(g.home); playing.add(g.away); }
+    byes = [...league].filter(t => !playing.has(t)).sort();
+  }
+  return {
+    ...state,
+    requested: {
+      type: hit.type, number: hit.week, label: hit.label, found: true,
+      status: at < hit.first ? 'upcoming' : at < hit.endsAt ? 'active' : 'complete',
+      firstKickoff: hit.first, lastKickoff: hit.last, endsAt: hit.endsAt, byes
+    },
+    counts, games
+  };
+}
+
+// ── D1 cache and orchestration ─────────────────────────────────────────────
+async function scheduleCacheWrite(env, season, games, provider) {
+  await oddsCacheInit(env);
+  await env.LEADS_DB.prepare(
+    'INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)'
+  ).bind(SEASON_ROW, JSON.stringify({ season, games }), provider, games.length, Date.now()).run();
+}
+let _SEASON_CACHE = null, _SEASON_AT = 0;
+async function scheduleCacheRead(env) {
+  if (_SEASON_CACHE && Date.now() - _SEASON_AT < SEASON_MEMO_MS) return _SEASON_CACHE;
+  if (!env || !env.LEADS_DB) return null;
+  try {
+    const row = await env.LEADS_DB.prepare('SELECT payload, provider, matched, updated_at FROM odds_overlay WHERE id=?')
+      .bind(SEASON_ROW).first();
+    if (!row || !row.payload) return null;
+    if (!row.updated_at || Date.now() - row.updated_at > SEASON_MAX_AGE_MS) return null;
+    const j = JSON.parse(row.payload);
+    if (!j || !Array.isArray(j.games) || !j.games.length) return null;
+    _SEASON_CACHE = { season: j.season || 0, games: j.games, provider: row.provider, updatedAt: row.updated_at };
+    _SEASON_AT = Date.now();
+    return _SEASON_CACHE;
+  } catch (e) { return null; }
+}
+// Fail-safe by construction, the same shape as the odds refresh: the spine is
+// required, the live layer is not, and a run that cannot build a spine writes
+// nothing at all rather than replacing a good schedule with a thin one.
+async function runScheduleRefresh(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  let spine;
+  try { spine = await fetchScheduleNflverse(); }
+  catch (e) { return { ok: false, error: 'spine: ' + ((e && e.message) || 'failed') }; }
+  let live = [], liveError = null;
+  try { live = await fetchScheduleEspn(spine.season); }
+  catch (e) { liveError = (e && e.message) || 'failed'; }
+  const merged = mergeSchedule(spine.games, live);
+  const provider = 'nflverse' + (live.length ? '+espn' : '');
+  await scheduleCacheWrite(env, spine.season, merged.games, provider);
+  _SEASON_CACHE = null; _SEASON_AT = 0;
+  return {
+    ok: true, season: spine.season, provider,
+    spine: spine.games.length, live: live.length,
+    statusUpdated: merged.updated, preseasonAdded: merged.added,
+    games: merged.games.length, liveError
+  };
+}
+async function seasonPayload(env, opts) {
+  const cache = await scheduleCacheRead(env);
+  if (!cache) return { ok: false, error: 'no_schedule', contract: SEASON_CONTRACT };
+  const o = opts || {};
+  return o.type || o.week != null
+    ? nflSeasonWeek(cache, Date.now(), o.type, o.week)
+    : nflSeasonState(cache, Date.now());
+}
+
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
 // read at most once per isolate, and zero reads once warm.
 let _PROJ_BLEND_AT = 0;
@@ -3264,6 +3708,34 @@ export default {
     // actually shows, odds and all, rather than a static copy that stopped
     // tracking the feed. Public and cacheable: it is the same board for every
     // reader, and the numbers are already published on the cheat sheet.
+    // ── the NFL clock ─────────────────────────────────────────────────────────
+    // What week is it, and where does every game in it stand. Every in-season
+    // surface reads this ONE answer instead of deriving its own from the
+    // calendar; the season block above says why a weekday rule is wrong.
+    //
+    //   /api/season            the current week
+    //   /api/season?week=4     regular-season week 4
+    //   /api/season?type=WC    a round: PRE | REG | WC | DIV | CON | SB
+    //
+    // A response for a week the caller named still carries the REAL current week
+    // in `week`, so a page browsing Week 4 in Week 9 cannot render it as live.
+    // No provider is touched here: the cron writes the schedule, this reads it
+    // and runs the clock against it, which is why the upcoming / in-progress /
+    // completed split stays right to the minute on a day-old row.
+    if (url.pathname === '/api/season') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const rawWeek = url.searchParams.get('week');
+      const rawType = url.searchParams.get('type');
+      const week = rawWeek != null && /^\d{1,2}$/.test(rawWeek) ? parseInt(rawWeek, 10) : null;
+      const type = rawType ? String(rawType).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)
+                 : (week != null ? 'REG' : '');
+      const payload = await seasonPayload(env, { week, type });
+      // A minute of edge cache: long enough that a Sunday afternoon does not
+      // become a D1 read per visitor, short enough that a game going final is
+      // visible before anyone reloads twice.
+      return json(payload, payload.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=60' });
+    }
     if (url.pathname === '/api/board') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       const c = corsHeaders(request.headers.get('Origin'));
@@ -3984,6 +4456,32 @@ export default {
         ran, sample, availability
       }, 200, c);
     }
+    // The schedule behind /api/season: how old it is, what it holds, and what the
+    // clock makes of it right now. ?refresh=1 runs the pull instead of waiting
+    // for the cron, the same affordance /api/admin/odds-status has.
+    if (url.pathname === '/api/admin/season-status') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      let ran = null;
+      if (url.searchParams.get('refresh') === '1') {
+        try { ran = await runScheduleRefresh(env); } catch (e) { ran = { ok: false, error: (e && e.message) || 'failed' }; }
+      }
+      const cache = await scheduleCacheRead(env);
+      const byType = {};
+      if (cache) for (const g of cache.games) byType[g.type] = (byType[g.type] || 0) + 1;
+      return json({
+        ok: true,
+        sources: { spine: NFLVERSE_GAMES_URL, live: ESPN_SCOREBOARD },
+        cached: cache ? {
+          season: cache.season, games: cache.games.length, provider: cache.provider,
+          updatedAt: cache.updatedAt, ageHours: +((Date.now() - cache.updatedAt) / 3600000).toFixed(1),
+          byType, statusFromFeed: cache.games.filter(g => !!g.status).length
+        } : null,
+        serving: cache ? 'cached schedule + live clock' : 'nothing (no usable schedule row)',
+        state: cache ? nflSeasonState(cache, Date.now()) : { ok: false, error: 'no_schedule' },
+        ran
+      }, 200, c);
+    }
     if (url.pathname === '/api/admin/x-post-now') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
@@ -4498,11 +4996,22 @@ export default {
       ctx.waitUntil(runAvailabilityRefresh(env)
         .then(r => console.log('availability refresh:', JSON.stringify(r)))
         .catch(e => console.error('availability refresh failed:', e && e.message)));
+      // The schedule behind /api/season. Cheap (one cached CSV plus five small
+      // ESPN calls) and required by every in-season surface, so it runs on the
+      // daily slot with the odds AND on the three posting slots below, which is
+      // what keeps Sunday scores from sitting a full day stale.
+      ctx.waitUntil(runScheduleRefresh(env)
+        .then(r => console.log("schedule refresh:", JSON.stringify(r)))
+        .catch(e => console.error("schedule refresh failed:", e && e.message)));
       ctx.waitUntil(pruneAnalytics(env, 180)
         .then(r => console.log('analytics prune:', JSON.stringify(r)))
         .catch(e => console.error('analytics prune failed:', e && e.message)));
       return;
     }
+    // Every other trigger also refreshes the schedule before it posts: the
+    // posting slots are the only three times a day the worker wakes, so they are
+    // where in-week score and status freshness comes from.
+    ctx.waitUntil(runScheduleRefresh(env).catch(e => console.error("schedule refresh failed:", e && e.message)));
     const slots = slotsByCron[event.cron];
     ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },
