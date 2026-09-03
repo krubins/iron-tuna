@@ -6730,3 +6730,20 @@ One shell for every player, resolved through `player-search.js` like `/player/<s
 ### 54g. What is derived today, and will stop being derived
 
 With no `ODDS_API_KEY`, every player number on every board is `gamelines` or `ratings`; the site says so on each row and on each page. The first live prop pull switches `basis` to `props` per player with no code change. Usage appears after Week 1.
+
+## 55. September 3: the section is open
+
+`POST_DRAFT_OPEN` is `"1"` in `wrangler.jsonc` `vars`, which is where this
+project's non-secret vars live and what Workers Builds deploys from (a
+dashboard-set plain var of the same name would be overwritten on deploy, so
+the file is the source of truth). PR #125 merged as `dd4a166` with the section
+still closed; this commit opens it.
+
+What changed with the flip: `/post-draft` is the section hub rather than a
+waiting-list gate (the notify form is gone; its script now returns when it has
+nothing to bind to; `POST /api/post-draft-notify` still exists and still
+works for any other caller), the masthead's `In-Season` chip no longer says
+Soon and points at `/in-season/rankings`, and the nine section URLs are in
+`sitemap.xml` with today's `lastmod`. Nothing in the gate logic changed: set the
+var back to `"0"` (or remove it) and every route closes again, which
+`tools/test-asset-routing.mjs` covers in both states.
