@@ -7605,3 +7605,71 @@ Ken's call:
 - Routine enabled, cron `58 */6 * * *`, prompt byte-identical to
   `tools/lead-story-routine-prompt.md` below its marker (40,786 chars, sha256
   `af5384664474`).
+
+## 66. September 4: the attribution check is live
+
+Ken approved §65c. The BOARD ATTRIBUTION CHECK is in the Routine prompt as of
+2026-09-04, and the repo copy and the live prompt were verified byte-identical
+afterwards: **44,690 chars, sha256 `53007f8d8779`** (was 40,786 /
+`af5384664474`).
+
+### 66a. It had to reconcile a standing rule, not just append to one
+
+The prompt already said, in two places, **never validate against
+`DEFAULT_BOARD_RAW`** — and that rule is correct and hard-won. A run on
+2026-08-24 checked its *served* figures against that block, got "343 players
+overlap, 332 match to within 0.15 points, exact on all four", and published six
+figures the served board contradicts. `DEFAULT_BOARD_RAW` is the committed
+board, so it agrees with an unblended board perfectly; a match there cannot
+confirm anything.
+
+Appending §65c unchanged would have left the prompt holding two contradictory
+instructions, and the run would have followed whichever it read last —
+plausibly straight back into the August failure. So the ban stays, sharpened
+to **"a match there is never a pass"**, and the new use is stated as its
+inverse in the paragraph immediately after:
+
+> Because that block IS the committed board, computed from the same worker by
+> a different tool, a figure you are presenting as the SERVED board that
+> matches it exactly is almost certainly a committed figure printed in a
+> served column. There, the match is the ALARM, not the pass.
+
+Both statements now sit adjacent, and the file header carries a note to keep
+them together if either is ever edited again.
+
+### 66b. What the check actually asks for
+
+Five steps, placed right after the existing all-prices check: look every
+printed price and rank up in **both** boards and write down both; say in the
+story which board each figure is; check anything presented as served against
+`DEFAULT_BOARD_RAW`; require every "rank move" / "worth $N" cell to equal
+served minus committed, with "no move" true on both boards; and **verify by
+player name, never by curve slot**. The two incidents are named in the prompt
+as worked examples, because a rule with the failure attached survives editing
+better than a rule without one.
+
+Step 3 needed a usable recipe, since `DEFAULT_BOARD_RAW` is `Name|POS|points`
+and carries neither ranks nor prices. The prompt now states it: the block is
+sorted by points within position, so a player's index inside his position
+block is his committed rank minus one, and the curve value at that slot is his
+committed price. Zero-point players are dropped, so absence is not a signal.
+
+**Verified before shipping**, against the harness's own committed board:
+**340/340, zero mismatches**, and it returns Skattebo RB18 $15, Pollard RB29
+$3, Dart QB7 $13, Nabers WR13 $23 — so the check fires exactly on §65a
+(Skattebo's served cell matches the committed block, the alarm) and §64a is
+caught by steps 1 and 5 instead (Pollard's printed $5/RB28 matches neither
+board, and it came from reading a slot rather than a player).
+
+### 66c. Why this one is different from the rules that came before it
+
+Almost every accuracy rule in that prompt asks the run to be more careful.
+This one gives it a comparison it cannot fake: `it-league.js` is generated
+from the same worker by `tools/build-default-board.mjs`, so it cannot repeat a
+mistake the run's own build just made. Everything else in the run's
+verification is the build checking itself — which is precisely what passed on
+both 09-03 and 09-04 while wrong.
+
+Next audit should confirm the prompt hash is `53007f8d8779` and read the
+method line of the first story written under it to see whether the check ran
+and what it returned.
