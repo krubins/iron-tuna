@@ -10,12 +10,20 @@ pinned to one desk and restored 73 seconds later, and nobody could see what had
 changed or when. Edit here, then push the same text to the Routine
 (`update_trigger`), and the diff is in the history either way.
 
-VERIFIED LIVE 2026-08-30T16:54:17Z: the body below is byte-identical to the
-Routine's prompt (40,550 chars, sha256 f4a3fc0420d4...). Six desks; the analyst
-desk was retired by Ken on 2026-08-30 and its rows taken down with it.
-`lead-story-routine-prompt.live-2026-08-30.md` is the historical snapshot of
-that revision before the six accuracy edits were merged back on top. See
-HANDOFF Sections 38 and 39.
+VERIFIED LIVE 2026-09-04T11:47Z: the body below is byte-identical to the
+Routine's prompt (44,690 chars, sha256 53007f8d8779...), checked by reading the
+live prompt back after `update_trigger` and diffing it against this file. Six
+desks; the analyst desk was retired by Ken on 2026-08-30 and its rows taken
+down with it. `lead-story-routine-prompt.live-2026-08-30.md` is the historical
+snapshot of the 2026-08-30 revision (40,550 chars, sha256 f4a3fc0420d4...),
+before the six accuracy edits were merged back on top. See HANDOFF Sections 38,
+39 and 66.
+
+The 2026-09-04 revision adds the BOARD ATTRIBUTION CHECK and reconciles it with
+the standing ban on validating against `DEFAULT_BOARD_RAW`. Those two rules
+read as contradictory and are not: a match there can never CONFIRM a served
+figure, and a served figure that matches it is almost certainly the committed
+number. Keep both statements together if either is ever edited again.
 
 Everything below the marker is the prompt itself, verbatim.
 -->
