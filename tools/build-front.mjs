@@ -672,6 +672,27 @@ if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var 
 fs.writeFileSync(path.join(root, 'front.html'), front);
 console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${picks.length} picks, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
 
+// ── weekly-intel.html: the in-season front page ────────────────────────────
+// It carries The Pick and the coaching column too, and for the same reason
+// player.html carries STORIES: one extraction, so the in-season page can never
+// quote either column differently from the front page. Same single-line
+// declarations, replaced in place; the page prints only title, theme, position
+// and date off them, never the draft-day price line.
+{
+  const file = 'weekly-intel.html';
+  const src = read(file);
+  let next = src
+    .replace(/var PICKS = \[[\s\S]*?\];\n/, 'var PICKS = ' + JSON.stringify(picks) + ';\n')
+    .replace(/var COLUMN = \[[\s\S]*?\];\n/, 'var COLUMN = ' + JSON.stringify(column) + ';\n');
+  if (!/var PICKS = \[/.test(next) || !/var COLUMN = \[/.test(next)) {
+    console.error(`ABORT: could not find the PICKS/COLUMN declarations in ${file}`);
+    process.exit(1);
+  }
+  const changed = next !== src;
+  if (changed) fs.writeFileSync(path.join(root, file), next);
+  console.log(`${file}: ${picks.length} picks, ${column.length} column entries${changed ? '' : ' (no change)'}`);
+}
+
 // ── player-search.js: the lookup index ─────────────────────────────────────
 // Replaced between the same sentinels tools/build-default-board.mjs uses in
 // /it-league.js, so this only ever rewrites its own block and the hand-written

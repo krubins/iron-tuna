@@ -63,7 +63,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // the browser either way. tools/test-asset-routing.mjs and tools/test-seo.mjs
 // both read this set, so a page added to the section cannot be left ungated or
 // advertised in the sitemap while the gate is shut.
-const POST_DRAFT_PAGES = new Set(['/faab', '/weekly-intel', '/rankings', '/vegas-edge',
+const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk']);
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
@@ -5793,24 +5793,24 @@ function weekGames(sched, week, now) {
     .map(g => ({ ...g, dow: _etDow(g.kickoff), state: seasonGameStatus(g, at) }));
 }
 const CONTENT_KINDS = {
-  'team-recaps':          { title: 'Team-by-Team Recaps', day: 'Mon', hour: 6, retro: true,
+  'team-recaps':          { title: 'Team-by-Team Recaps', day: 'Mon', hour: 7, retro: true,
                             targets: (gs) => gs.filter(g => g.dow !== 'Mon') },
-  'mnf-breakdown':        { title: 'Monday Night: What We Learned', day: 'Tue', hour: 0, retro: true,
+  'mnf-breakdown':        { title: 'Monday Night: What We Learned', day: 'Tue', hour: 7, retro: true,
                             targets: (gs) => gs.filter(g => g.dow === 'Mon'), optional: true },
-  'what-they-arent-telling-you': { title: "What They Aren't Telling You", day: 'Tue', hour: 6, retro: true,
+  'what-they-arent-telling-you': { title: "What They Aren't Telling You", day: 'Tue', hour: 7, retro: true,
                             targets: (gs) => gs },
-  'opportunity-report':   { title: 'The Opportunity Report', day: 'Wed', hour: 6, retro: true, targets: (gs) => gs },
+  'opportunity-report':   { title: 'The Opportunity Report', day: 'Wed', hour: 7, retro: true, targets: (gs) => gs },
   'rankings-update':      { title: 'Forward-Looking Rankings Update', day: 'Wed', hour: 7, retro: false, targets: () => [] },
-  'final-read':           { title: 'The Final Read', day: 'Thu', hour: 6, retro: false, targets: () => [] },
-  'tnf-preview':          { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, retro: false,
+  'final-read':           { title: 'The Final Read', day: 'Thu', hour: 7, retro: false, targets: () => [] },
+  'tnf-preview':          { title: 'Thursday Night Football Preview', day: 'Thu', hour: 7, retro: false,
                             targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true, preview: true },
-  'tnf-aftermath':        { title: 'Thursday Night Aftermath', day: 'Fri', hour: 0, retro: false,
+  'tnf-aftermath':        { title: 'Thursday Night Aftermath', day: 'Fri', hour: 7, retro: false,
                             targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true },
-  'weekend-game-plan':    { title: 'The Weekend Game Plan', day: 'Fri', hour: 6, retro: false,
+  'weekend-game-plan':    { title: 'The Weekend Game Plan', day: 'Fri', hour: 7, retro: false,
                             targets: (gs) => gs.filter(g => g.dow !== 'Thu'), preview: true },
   'what-changed-today':   { title: 'What Changed Today?', day: 'Sun', hour: 20, retro: true,
                             targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'), partial: true },
-  'snf-what-we-learned':  { title: 'Sunday Night: What We Learned', day: 'Mon', hour: 0, retro: true,
+  'snf-what-we-learned':  { title: 'Sunday Night: What We Learned', day: 'Mon', hour: 1, retro: true,
                             targets: (gs) => { const sun = gs.filter(g => g.dow === 'Sun'); if (!sun.length) return []; const last = Math.max(...sun.map(g => g.kickoff)); return sun.filter(g => g.kickoff === last && etParts(g.kickoff).hour >= 19); }, optional: true }
 };
 const DOW_N = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -6254,8 +6254,8 @@ async function contentListPayload(env, season, week) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   try {
     const q = week != null
-      ? await env.LEADS_DB.prepare('SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE season = ? AND week = ? ORDER BY created_at DESC').bind(season, week).all()
-      : await env.LEADS_DB.prepare('SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces ORDER BY created_at DESC LIMIT 60').all();
+      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
+      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 60").all();
     return { ok: true, contract: CONTENT_CONTRACT, kinds: Object.entries(CONTENT_KINDS).map(([k, v]) => ({ kind: k, title: v.title, day: v.day, hour: v.hour })), pieces: q.results || [] };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
@@ -6265,7 +6265,7 @@ async function contentPiecePayload(env, kind, season, week) {
     const row = week != null
       ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
       : await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
-    if (!row) return { ok: false, error: 'not_found', kind };
+    if (!row || row.status === 'unpublished') return { ok: false, error: 'not_found', kind };
     const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
     // A held piece ships its BRIEF and not its draft: the data is right by
     // construction, the prose was not.
@@ -6476,6 +6476,382 @@ function buildDfsStacks(slate, state) {
              home: { ...h, stackSalary: cost(h), stackVegasPoints: _oddsRound(pts(h)) }, away: { ...a, stackSalary: cost(a), stackVegasPoints: _oddsRound(pts(a)) },
              bringBack: { home: h.catchers[0] || null, away: a.catchers[0] || null } };
   });
+}
+
+// -- the job log and the health board (Step 29) --------------------------------
+// Every scheduled job runs through jobRun, which writes one row per run:
+// when it started, when it finished, whether it succeeded, the error if not,
+// and a short summary of what it returned. The health board reads that log,
+// the caches every surface reads, and the desk's due/ready state, and says in
+// one payload what is fresh, what is stale, what is missing, and why.
+const JOB_DDL = [
+  'CREATE TABLE IF NOT EXISTS job_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, job TEXT NOT NULL, trigger TEXT, started_at INTEGER NOT NULL, finished_at INTEGER, ok INTEGER, error TEXT, summary TEXT)',
+  'CREATE INDEX IF NOT EXISTS ix_job_runs ON job_runs (job, started_at)'
+];
+const JOB_KEEP_DAYS = 45;
+let _JOB_READY = false;
+async function jobReady(env) {
+  if (_JOB_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { for (const q of JOB_DDL) await env.LEADS_DB.prepare(q).run(); _JOB_READY = true; return true; } catch (e) { return false; }
+}
+// The runnable jobs, by name. The cron handler and the admin "rerun" button
+// both go through this table, so a job has one name everywhere.
+const JOB_FNS = {
+  'schedule-refresh':     env => runScheduleRefresh(env),
+  'odds-refresh':         env => runOddsRefresh(env),
+  'availability-refresh': env => runAvailabilityRefresh(env),
+  'market-snapshot':      env => runMarketSnapshot(env),
+  'usage-refresh':        env => runUsageRefresh(env),
+  'dfs-refresh':          env => runDfsRefresh(env),
+  'depth-charts':         env => runDepthChartRefresh(env),
+  'ros-snapshot':         env => runRosSnapshot(env),
+  'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
+  'analytics-prune':      env => pruneAnalytics(env, 180),
+  'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
+  'content-tick':         env => runContentTick(env)
+};
+const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
+// Run one job and log it. Never throws: a job that throws is a logged
+// failure, and the caller gets { ok:false, error }.
+async function jobRun(env, name, trigger, fn) {
+  const f = fn || JOB_FNS[name];
+  if (!f) return { ok: false, error: 'unknown_job', job: name };
+  const started = Date.now();
+  let result = null, error = null;
+  try {
+    result = await f(env);
+    if (result && result.ok === false) error = String(result.error || result.reason || 'failed');
+  } catch (e) { error = (e && e.message) || 'failed'; result = { ok: false, error }; }
+  await jobLog(env, { job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
+  return result == null ? { ok: true } : result;
+}
+async function jobLog(env, r) {
+  if (!(await jobReady(env))) return false;
+  try {
+    await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(r.job, r.trigger, r.started, r.finished, r.ok, r.error, r.summary).run();
+    return true;
+  } catch (e) { return false; }
+}
+async function jobPrune(env, days) {
+  if (!(await jobReady(env))) return { ok: false, error: 'no_db' };
+  try { const r = await env.LEADS_DB.prepare('DELETE FROM job_runs WHERE started_at < ?').bind(Date.now() - days * 86400000).run(); return { ok: true, deleted: (r && r.meta && r.meta.changes) || 0 }; }
+  catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
+}
+// The board: every known job with its last run and its last success, plus the
+// failures of the past seven days, newest first.
+async function jobBoard(env, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const names = Object.keys(JOB_FNS);
+  const empty = { ok: false, error: 'no_db', jobs: names.map(j => ({ job: j, last: null, lastOk: null, failures7d: 0 })), failed: [] };
+  if (!(await jobReady(env))) return empty;
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT job, trigger, started_at, finished_at, ok, error, summary FROM job_runs WHERE started_at >= ? ORDER BY started_at DESC LIMIT 2000')
+      .bind(at - 7 * 86400000).all();
+    const rows = q.results || [];
+    const older = await env.LEADS_DB.prepare('SELECT job, MAX(started_at) AS last_ok FROM job_runs WHERE ok = 1 GROUP BY job').all();
+    const lastOkAny = {}; for (const r of (older.results || [])) lastOkAny[r.job] = r.last_ok;
+    const seen = new Set(rows.map(r => r.job));
+    const all = names.concat(Array.from(seen).filter(j => !names.includes(j)));
+    return { ok: true, jobs: all.map(j => {
+      const mine = rows.filter(r => r.job === j);
+      const last = mine[0] || null, ok = mine.find(r => r.ok === 1) || null;
+      return { job: j, last: last ? _jobRow(last) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(r => r.ok === 0).length };
+    }), failed: rows.filter(r => r.ok === 0).slice(0, 40).map(_jobRow) };
+  } catch (e) { return { ...empty, error: (e && e.message) || 'failed' }; }
+}
+const _jobRow = r => ({ job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, error: r.error || null,
+                        ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null });
+
+// ── the assessment ─────────────────────────────────────────────────────────
+// Pure. Takes what the caches and the log say and returns what is missing or
+// stale and why, so the page never has to guess and a test can pin every
+// rule. Ages are in hours; a feed with no timestamp is missing, not fresh.
+const HEALTH_STALE_H = { schedule: 30, odds: 36, snapshots: 30, usage: 8 * 24, availability: 36, depthCharts: 3 * 24, dfs: 8 * 24 };
+function healthAssess(h, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const age = ts => Number.isFinite(ts) && ts > 0 ? +((at - ts) / 3600000).toFixed(1) : null;
+  const inSeason = !!(h.state && h.state.ok && h.state.phase === 'regular');
+  const missing = [], stale = [];
+  const check = (key, label, ts, why) => {
+    const a = age(ts);
+    if (a == null) { missing.push({ feed: key, label, why: why || 'never loaded' }); return null; }
+    if (a > HEALTH_STALE_H[key]) stale.push({ feed: key, label, ageHours: a, limitHours: HEALTH_STALE_H[key] });
+    return a;
+  };
+  const u = h.updates || {};
+  const ages = {
+    schedule: check('schedule', 'NFL schedule', u.schedule && u.schedule.updatedAt, 'no schedule row; every in-season surface is dark'),
+    odds: check('odds', 'Season odds overlay', u.odds && u.odds.updatedAt, 'no usable odds overlay; auction values serve committed projections'),
+    snapshots: check('snapshots', 'Betting snapshots', u.snapshots && u.snapshots.last, 'no book line has ever been recorded'),
+    availability: check('availability', 'Injury list', u.availability && u.availability.updatedAt, 'no live injury row; the committed block serves alone')
+  };
+  if (inSeason) {
+    ages.usage = check('usage', 'Weekly stats and snaps', u.usage && u.usage.updatedAt, 'no usage overlay; boards run without volume or role');
+    ages.depthCharts = check('depthCharts', 'Depth charts', u.depthCharts && u.depthCharts.updatedAt, 'no depth charts; recaps lose "what we already knew"');
+    const wk = h.state.week && h.state.week.type === 'REG' ? h.state.week.number : null;
+    const ros = u.rankings && u.rankings.ros;
+    if (!ros || !ros.builtAt) missing.push({ feed: 'rankings', label: 'Rest-of-season snapshot', why: 'no Wednesday snapshot has run; the rankings update has nothing to compare' });
+    else if (wk != null && ros.week != null && ros.week < wk - 1) stale.push({ feed: 'rankings', label: 'Rest-of-season snapshot', ageHours: age(ros.builtAt), limitHours: 8 * 24, note: 'built for week ' + ros.week + ', now week ' + wk });
+    const sites = (u.dfs && Object.keys(u.dfs).filter(s => u.dfs[s] && u.dfs[s].fetchedAt)) || [];
+    if (!sites.length) missing.push({ feed: 'dfs', label: 'DFS salaries', why: 'no salaries for the week on either site; /in-season/dfs says so' });
+    else for (const s of sites) { const a = age(u.dfs[s].fetchedAt); if (a > HEALTH_STALE_H.dfs) stale.push({ feed: 'dfs', label: 'DFS salaries (' + s + ')', ageHours: a, limitHours: HEALTH_STALE_H.dfs }); }
+    if (u.usage && u.usage.throughWeek != null && wk != null && u.usage.throughWeek < wk - 2) stale.push({ feed: 'usage', label: 'Weekly stats and snaps', ageHours: ages.usage, limitHours: HEALTH_STALE_H.usage, note: 'through week ' + u.usage.throughWeek + ', now week ' + wk });
+  }
+  // Sources: a kind with nothing configured is a missing feed, and a kind
+  // whose only configured source is a paid one is worth saying.
+  const src = h.sources || {};
+  for (const kind of Object.keys(src)) {
+    const list = src[kind] || [];
+    if (list.length && !list.some(p => p.configured)) missing.push({ feed: 'source:' + kind, label: 'No ' + kind + ' source configured', why: list.map(p => p.name).join(', ') + ' all need a key or id that is not set' });
+  }
+  if (!h.llm) missing.push({ feed: 'llm', label: 'Writer', why: 'LLM_API_KEY is not set; every desk piece is held with its brief' });
+  for (const e of ((h.schedule && h.schedule.errors) || [])) stale.push({ feed: 'schedule-config', label: 'Job schedule override', ageHours: null, limitHours: null, note: e + ' (ignored; the default entry runs)' });
+  // Failed jobs are a fact of the log, not a guess.
+  const failed = (h.jobs && h.jobs.failed) || [];
+  const status = missing.some(m => m.feed === 'schedule') ? 'down' : (missing.length || failed.length || stale.length) ? 'degraded' : 'ok';
+  return { status, inSeason, ages, missing, stale, failedJobs: failed.length };
+}
+
+// ── the payload ────────────────────────────────────────────────────────────
+async function _overlayRowMeta(env, id) {
+  if (!env || !env.LEADS_DB) return null;
+  try { const r = await env.LEADS_DB.prepare('SELECT updated_at FROM odds_overlay WHERE id=?').bind(id).first(); return r ? { updatedAt: r.updated_at } : null; } catch (e) { return null; }
+}
+async function _editorialRows(env, state, sched, now) {
+  const season = sched ? sched.season : null;
+  const rows = [];
+  let pieces = [];
+  if (season != null && await contentReady(env)) {
+    try {
+      const q = await env.LEADS_DB.prepare('SELECT id, kind, week, status, title, created_at, published_at, violations FROM content_pieces WHERE season = ? ORDER BY created_at DESC LIMIT 200').bind(season).all();
+      pieces = q.results || [];
+    } catch (e) { pieces = []; }
+  }
+  for (const kind of Object.keys(CONTENT_KINDS)) {
+    const K = CONTENT_KINDS[kind];
+    const d = contentDue(kind, now, state, sched);
+    const wk = d.week != null ? d.week : null;
+    const latest = pieces.find(p => p.kind === kind && (wk == null || p.week === wk)) || pieces.find(p => p.kind === kind) || null;
+    let violations = 0; if (latest && latest.violations) { try { violations = (JSON.parse(latest.violations) || []).length; } catch (e) {} }
+    rows.push({ kind, title: K.title, day: K.day, hour: K.hour, optional: !!K.optional, week: wk, due: !!d.due, ready: !!d.ready, reason: d.reason || null, dueAt: d.dueAt || null,
+                piece: latest ? { id: latest.id, week: latest.week, status: latest.status, title: latest.title, createdAt: latest.created_at, publishedAt: latest.published_at, violations } : null });
+  }
+  return rows;
+}
+async function healthPayload(env, opts) {
+  const o = opts || {};
+  const now = Date.now();
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, now) : { ok: false, error: 'no_schedule' };
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  const [odds, snaps, usage, avail, depth, rosList, next3List, playoffList, dk, fd, jobs] = await Promise.all([
+    oddsCacheRead(env).catch(() => null), snapshotStatus(env).catch(() => null), usageCacheRead(env).catch(() => null),
+    availabilityCacheRead(env).catch(() => null), _overlayRowMeta(env, DEPTH_ROW),
+    rosSnapshots(env, 'ros', 1), rosSnapshots(env, 'next3', 1), rosSnapshots(env, 'playoffs', 1),
+    dfsSalariesRead(env, 'dk', sched ? sched.season : null, week).catch(() => null), dfsSalariesRead(env, 'fd', sched ? sched.season : null, week).catch(() => null),
+    jobBoard(env, now)
+  ]);
+  const snapMeta = m => m ? { season: m.season, week: m.week, builtAt: m.builtAt, rows: (m.rows || []).length } : null;
+  const updates = {
+    schedule: sched ? { updatedAt: sched.updatedAt, provider: sched.provider, season: sched.season, games: sched.games.length } : null,
+    odds: odds ? { updatedAt: odds.updatedAt, provider: odds.provider, matched: odds.matched } : null,
+    snapshots: snaps && snaps.ok ? { last: snaps.last, first: snaps.first, rows: snaps.rows, subjects: snaps.subjects, books: snaps.books } : null,
+    usage: usage ? { updatedAt: usage.updatedAt, season: usage.season, throughWeek: usage.throughWeek, players: Object.keys(usage.players || {}).length } : null,
+    availability: avail ? { updatedAt: avail.updatedAt, asOf: avail.asOf, matched: avail.matched } : null,
+    depthCharts: depth,
+    rankings: { ros: snapMeta(rosList[0]), next3: snapMeta(next3List[0]), playoffs: snapMeta(playoffList[0]) },
+    dfs: { dk: dk ? { fetchedAt: dk.fetchedAt, rows: dk.rows.length } : null, fd: fd ? { fetchedAt: fd.fetchedAt, rows: fd.rows.length } : null }
+  };
+  const report = providerReport(env);
+  const editorial = await _editorialRows(env, state, sched, now);
+  const schedule = jobScheduleReport(jobScheduleFrom(env), now);
+  const h = { state, updates, sources: report.providers, llm: !!env.LLM_API_KEY, jobs, schedule };
+  const assess = healthAssess(h, now);
+  return { ok: true, contract: 1, at: now, et: etParts(now),
+           season: sched ? sched.season : null, phase: state.ok ? state.phase : null, phaseLabel: state.ok ? state.phaseLabel : null,
+           week: state.ok ? state.week : null, counts: state.ok ? state.counts : null, nextGame: state.ok ? state.nextGame : null,
+           status: assess.status, ages: assess.ages, missing: assess.missing, stale: assess.stale,
+           updates, sources: report.providers, unavailable: report.unavailable, llm: !!env.LLM_API_KEY,
+           jobs: jobs.jobs.map(j => ({ ...j, ...(schedule.jobs.find(x => x.job === j.job) || {}) })), failedJobs: jobs.failed, jobNames: Object.keys(JOB_FNS),
+           schedule: { tz: schedule.tz, source: schedule.source, errors: schedule.errors }, editorial, ran: o.ran || null };
+}
+
+// ── editorial actions ──────────────────────────────────────────────────────
+// preview: the latest row in full, held draft and violations included (the
+// public payload hides a held body; the desk needs to see it). publish and
+// unpublish flip the latest row. regenerate produces a fresh row now. edit
+// stores a human's body on the latest row and reports, without blocking, any
+// name or number the brief does not contain: the validator is a guard on the
+// model, and a person signing a piece is the editor.
+const CONTENT_ACTIONS = ['preview', 'publish', 'unpublish', 'regenerate', 'edit'];
+async function _latestPiece(env, kind, season, week) {
+  return week != null
+    ? env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
+    : env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
+}
+async function contentAdmin(env, action, kind, season, week, body) {
+  if (!CONTENT_ACTIONS.includes(action)) return { ok: false, error: 'unknown_action' };
+  if (!CONTENT_KINDS[kind]) return { ok: false, error: 'unknown_kind' };
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
+  if (action === 'regenerate') {
+    const r = await produceContent(env, kind, { force: true });
+    return { ok: !!r.ok, action, kind, ...r };
+  }
+  let row;
+  try { row = await _latestPiece(env, kind, season, week); } catch (e) { return { ok: false, error: 'unavailable' }; }
+  if (!row) return { ok: false, error: 'not_found', kind, week };
+  const full = () => ({ id: row.id, kind, season: row.season, week: row.week, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
+                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: CONTENT_SECTIONS[kind] || [] });
+  if (action === 'preview') return { ok: true, action, piece: full() };
+  if (action === 'publish') {
+    if (!row.body || row.body === 'null') return { ok: false, error: 'no_body', note: 'This piece has no draft to publish. Regenerate it or edit one in.' };
+    await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ? WHERE id = ?').bind('published', Date.now(), row.id).run();
+    row.status = 'published'; row.published_at = Date.now();
+    return { ok: true, action, piece: full() };
+  }
+  if (action === 'unpublish') {
+    await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ? WHERE id = ?').bind('unpublished', row.id).run();
+    row.status = 'unpublished';
+    return { ok: true, action, piece: full() };
+  }
+  // edit
+  const b = body && typeof body === 'object' && !Array.isArray(body) ? body : null;
+  if (!b) return { ok: false, error: 'bad_body', note: 'Send the sections as a JSON object.' };
+  const brief = parse(row.brief);
+  const v = brief && brief.allowed ? validateDraft(JSON.stringify(b), brief.allowed) : { ok: true, names: [], numbers: [] };
+  const warnings = v.ok ? [] : v.names.concat(v.numbers);
+  await env.LEADS_DB.prepare('UPDATE content_pieces SET body = ?, violations = ?, model = ? WHERE id = ?').bind(JSON.stringify(b), JSON.stringify(warnings), 'editor', row.id).run();
+  row.body = JSON.stringify(b); row.violations = JSON.stringify(warnings); row.model = 'editor';
+  return { ok: true, action, warnings, piece: full() };
+}
+
+// -- the job schedule (Step 30) --------------------------------------------------
+// One table, in New York time. The hourly trigger is the only clock: every
+// hour it asks jobsDueAt what is due in THIS ET hour and runs it through the
+// job log, phase by phase (the pulls, then what is derived from them, then
+// the desk). ET rather than UTC so "Wednesday 7 AM" is Wednesday 7 AM in
+// September and in December alike; a fixed UTC cron drifts an hour when the
+// clocks change. The content kinds keep their own due rule (contentDue),
+// which is game completion, not this clock; the tick only asks.
+//
+// Every entry: { job, days, hours, phase }. days null = every day; hours
+// 'hourly' or a list of ET hours. A job may have several entries. The env
+// var JOB_SCHEDULE_JSON (an array of entries) REPLACES the entries of each
+// job it names, so one job can be retimed without a deploy; a bad entry is
+// reported on the health board and ignored, never applied.
+const JOB_TZ = 'America/New_York';
+const JOB_SCHEDULE = [
+  // phase 1: the pulls
+  { job: 'schedule-refresh',     days: null,            hours: 'hourly',                       phase: 1 },
+  { job: 'market-snapshot',      days: null,            hours: [1, 4, 7, 10, 13, 16, 19, 22],  phase: 1 },
+  { job: 'market-snapshot',      days: ['Sun'],         hours: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], phase: 1 },
+  { job: 'odds-refresh',         days: null,            hours: [7],                            phase: 1 },
+  { job: 'availability-refresh', days: null,            hours: [7, 11, 13, 19],                phase: 1 },
+  { job: 'usage-refresh',        days: ['Tue', 'Wed'],  hours: [6],                            phase: 1 },
+  { job: 'depth-charts',         days: null,            hours: [6],                            phase: 1 },
+  { job: 'dfs-refresh',          days: ['Tue', 'Thu', 'Sat'], hours: [9],                      phase: 1 },
+  // phase 2: derived from the pulls
+  { job: 'ros-snapshot',         days: ['Wed'],         hours: [7],                            phase: 2 },
+  { job: 'snapshot-prune',       days: ['Sun'],         hours: [4],                            phase: 2 },
+  { job: 'analytics-prune',      days: ['Sun'],         hours: [4],                            phase: 2 },
+  { job: 'job-prune',            days: ['Sun'],         hours: [4],                            phase: 2 },
+  // phase 3: the desk, which reads everything above
+  { job: 'content-tick',         days: null,            hours: 'hourly',                       phase: 3 }
+];
+const JOB_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// Validate one entry. Returns the clean entry or a string saying what is wrong.
+function jobEntryCheck(e) {
+  if (!e || typeof e !== 'object') return 'not an object';
+  if (!JOB_FNS[e.job]) return 'unknown job ' + JSON.stringify(e.job);
+  let days = null;
+  if (e.days != null) {
+    if (!Array.isArray(e.days) || !e.days.length || !e.days.every(d => JOB_DOW.includes(d))) return e.job + ': days must be a list of Sun..Sat';
+    days = e.days.slice();
+  }
+  let hours;
+  if (e.hours === 'hourly') hours = 'hourly';
+  else if (Array.isArray(e.hours) && e.hours.length && e.hours.every(h => Number.isInteger(h) && h >= 0 && h <= 23)) hours = Array.from(new Set(e.hours)).sort((a, b) => a - b);
+  else return e.job + ': hours must be "hourly" or a list of 0..23';
+  const phase = e.phase == null ? 2 : e.phase;
+  if (![1, 2, 3].includes(phase)) return e.job + ': phase must be 1, 2 or 3';
+  return { job: e.job, days, hours, phase };
+}
+// The schedule in force: the table, with any env override applied.
+function jobScheduleFrom(env) {
+  const raw = env && env.JOB_SCHEDULE_JSON;
+  const errors = [];
+  let entries = JOB_SCHEDULE.map(e => ({ ...e }));
+  const overridden = [];
+  if (raw) {
+    let list = null;
+    try { list = JSON.parse(raw); } catch (e) { errors.push('JOB_SCHEDULE_JSON is not JSON'); }
+    if (list && !Array.isArray(list)) { errors.push('JOB_SCHEDULE_JSON must be an array of entries'); list = null; }
+    if (list) {
+      const clean = [];
+      for (const e of list) { const c = jobEntryCheck(e); if (typeof c === 'string') errors.push(c); else clean.push(c); }
+      const jobs = new Set(clean.map(c => c.job));
+      if (jobs.size) { entries = entries.filter(e => !jobs.has(e.job)).concat(clean); overridden.push(...jobs); }
+    }
+  }
+  entries.sort((a, b) => a.phase - b.phase);
+  return { entries, overridden, errors, source: overridden.length ? 'env' : 'default' };
+}
+function _jobEntryDue(e, et) {
+  if (e.days && !e.days.includes(et.dow)) return false;
+  return e.hours === 'hourly' || e.hours.includes(et.hour);
+}
+// What is due in the ET hour containing `now`, in run order (phase, then
+// table order), each job once.
+function jobsDueAt(entries, now) {
+  const et = etParts(now);
+  const out = [], seen = new Set();
+  for (const e of entries) if (_jobEntryDue(e, et) && !seen.has(e.job)) { seen.add(e.job); out.push({ job: e.job, phase: e.phase }); }
+  return out;
+}
+const _hhmm = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM');
+function _jobWhen(entries) {
+  return entries.map(e => {
+    const days = e.days ? e.days.join('/') : 'daily';
+    if (e.hours === 'hourly') return days + ' hourly';
+    const consecutive = e.hours.length > 2 && e.hours.every((h, i) => i === 0 || h === e.hours[i - 1] + 1);
+    if (consecutive) return days + ' ' + _hhmm(e.hours[0]) + ' to ' + _hhmm(e.hours[e.hours.length - 1]) + ' hourly';
+    return days + ' ' + e.hours.map(_hhmm).join(', ');
+  }).join('; ') + ' ET';
+}
+// Per job: when it runs, in words, and the next ET hour it is due after now.
+function jobScheduleReport(sched, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const byJob = {};
+  for (const e of sched.entries) (byJob[e.job] = byJob[e.job] || []).push(e);
+  const jobs = Object.keys(JOB_FNS).map(job => {
+    const mine = byJob[job] || [];
+    let nextAt = null;
+    if (mine.length) {
+      let t = Math.floor(at / 3600000) * 3600000 + 3600000;
+      for (let i = 0; i < 24 * 8 && nextAt == null; i++, t += 3600000) if (mine.some(e => _jobEntryDue(e, etParts(t)))) nextAt = t;
+    }
+    return { job, scheduled: mine.length > 0, when: mine.length ? _jobWhen(mine) : 'on demand only', nextAt, phase: mine.length ? Math.min(...mine.map(e => e.phase)) : null, overridden: sched.overridden.includes(job) };
+  });
+  return { tz: JOB_TZ, source: sched.source, errors: sched.errors, jobs };
+}
+// The hourly tick. Phase 1 runs in parallel and finishes before phase 2
+// starts; the desk goes last. Nothing here throws: every job is a logged
+// row, and the tick's own answer lists them.
+async function runScheduledTick(env, now, trigger) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const sched = jobScheduleFrom(env);
+  const due = jobsDueAt(sched.entries, at);
+  const ran = [];
+  for (const phase of [1, 2, 3]) {
+    const names = due.filter(d => d.phase === phase).map(d => d.job);
+    if (!names.length) continue;
+    const results = await Promise.all(names.map(n => jobRun(env, n, trigger || 'tick').then(r => ({ job: n, ok: !(r && r.ok === false), error: r && r.ok === false ? (r.error || r.reason || 'failed') : null }))));
+    ran.push(...results);
+  }
+  return { ok: true, at, et: etParts(at), due: due.map(d => d.job), ran, scheduleErrors: sched.errors };
 }
 
 // Memoized per isolate alongside _PROJ_ENC so the hot path stays a single D1
@@ -7922,6 +8298,18 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
       const out = { ok: true };
+      // Editorial actions: POST { action, kind, week?, body? } with action one
+      // of preview | publish | unpublish | regenerate | edit; GET ?preview=<kind>
+      // [&week=N] is the read-only form of the first.
+      if (request.method === 'POST' || url.searchParams.get('preview')) {
+        let b = {};
+        if (request.method === 'POST') { try { b = await request.json(); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); } }
+        else b = { action: 'preview', kind: url.searchParams.get('preview'), week: url.searchParams.get('week') };
+        const schedA = await scheduleCacheRead(env);
+        const wkA = b.week != null && b.week !== '' && /^\d{1,2}$/.test(String(b.week)) ? parseInt(b.week, 10) : null;
+        const r = await contentAdmin(env, String(b.action || '').replace(/[^a-z]/g, ''), String(b.kind || '').replace(/[^a-z-]/g, ''), schedA ? schedA.season : null, wkA, b.body);
+        return json(r, r.ok ? 200 : (r.error === 'not_found' ? 404 : 400), c);
+      }
       if (url.searchParams.get('depth') === '1') { try { out.depth = await runDepthChartRefresh(env); } catch (e) { out.depth = { ok: false, error: (e && e.message) || 'failed' }; } }
       if (url.searchParams.get('tick') === '1') { try { out.tick = await runContentTick(env); } catch (e) { out.tick = { ok: false, error: (e && e.message) || 'failed' }; } }
       const run = String(url.searchParams.get('run') || '').replace(/[^a-z-]/g, '');
@@ -7932,6 +8320,17 @@ export default {
       out.et = etParts(Date.now());
       out.llm = !!env.LLM_API_KEY;
       return json(out, 200, c);
+    }
+    // The health board: the week, every feed's age, the sources, the job log,
+    // what is missing or stale and why, and the desk's state. ?rerun=<job>
+    // runs one job now through the same log the cron writes.
+    if (url.pathname === '/api/admin/health') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      let ran = null;
+      const job = String(url.searchParams.get('rerun') || '').replace(/[^a-z-]/g, '');
+      if (job) ran = JOB_FNS[job] ? { job, ...(await jobRun(env, job, 'admin')) } : { job, ok: false, error: 'unknown_job' };
+      return json(await healthPayload(env, { ran }), 200, c);
     }
     // The market engine's own plumbing: the snapshot store, the usage overlay,
     // and a sample record. ?snapshot=1 pulls the books now; ?usage=1 rebuilds
@@ -8356,6 +8755,16 @@ export default {
       if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
       return handleCoach(request, env, c);
     }
+    // The Trade Finder's screenshot reader: images (or a messy paste) in, the
+    // teams and player names the model can read out. Names only — the page
+    // resolves them against the board and prices them itself, so the model
+    // never gets to invent a projection.
+    if (url.pathname === '/api/roster-read') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+      return handleRosterRead(request, env, c);
+    }
     // Serve static assets, but tell browsers to revalidate HTML every load so
     // updates show up without a hard refresh (the app is a single index.html).
     // ── scheduled insight drops (per-format pages): 302 to the format index until 9am ET (13:00 UTC) on their date ──
@@ -8402,11 +8811,11 @@ export default {
       // root because the chrome and SEO generators walk the root. Extensionless
       // target, as above. The gate below sees the SAME name, so a section page
       // cannot be reached ungated by adding the prefix.
-      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|dfs|my-league)\/?$/.test(url.pathname)
+      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|dfs|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
       }
-      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|dfs|my-league)\/?$/.test(url.pathname)) {
+      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|dfs|my-league)\/?$/.test(url.pathname)) {
         __assetReq = new Request(new URL('/post-draft', url).toString(), request);
       }
       else if (/^\/in-season\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/post-draft', url).toString(), request);
@@ -8494,76 +8903,20 @@ export default {
       '0 16 * * 1-5': ['snake'],
       '0 19 * * 1-5': ['bonus'],
     };
-    // Daily odds refresh runs on its own trigger and posts nothing.
-    if (event.cron === '0 11 * * *') {
-      ctx.waitUntil(runOddsRefresh(env)
-        .then(r => console.log('odds refresh:', JSON.stringify(r)))
-        .catch(e => console.error('odds refresh failed:', e && e.message)));
-      // The injury list, same daily cadence, same fail-safe (HANDOFF §48).
-      ctx.waitUntil(runAvailabilityRefresh(env)
-        .then(r => console.log('availability refresh:', JSON.stringify(r)))
-        .catch(e => console.error('availability refresh failed:', e && e.message)));
-      // The schedule behind /api/season. Cheap (one cached CSV plus five small
-      // ESPN calls) and required by every in-season surface, so it runs on the
-      // daily slot with the odds AND on the three posting slots below, which is
-      // what keeps Sunday scores from sitting a full day stale.
-      ctx.waitUntil(runScheduleRefresh(env)
-        .then(r => console.log("schedule refresh:", JSON.stringify(r)))
-        .catch(e => console.error("schedule refresh failed:", e && e.message)));
-      // The market engine's two feeds. The snapshot pull appends every CHANGED
-      // book line to the history table (nothing is overwritten); the usage
-      // refresh rebuilds the weekly stats/snaps overlay, which is a ~12MB pull
-      // and belongs nowhere near a request path. Both fail closed.
-      ctx.waitUntil(runMarketSnapshot(env)
-        .then(r => console.log('market snapshot:', JSON.stringify(r)))
-        .catch(e => console.error('market snapshot failed:', e && e.message)));
-      ctx.waitUntil(runUsageRefresh(env)
-        .then(r => console.log('usage refresh:', JSON.stringify(r)))
-        .catch(e => console.error('usage refresh failed:', e && e.message)));
-      // DFS salaries from whichever site feed is configured; a no-op otherwise.
-      ctx.waitUntil(runDfsRefresh(env)
-        .then(r => console.log('dfs refresh:', JSON.stringify(r)))
-        .catch(e => console.error('dfs refresh failed:', e && e.message)));
-      // Depth charts, daily, for the recaps' "what we already knew".
-      ctx.waitUntil(runDepthChartRefresh(env)
-        .then(r => console.log('depth charts:', JSON.stringify(r)))
-        .catch(e => console.error('depth charts failed:', e && e.message)));
-      // The Wednesday rest-of-season update. 11:00Z is 7am in New York during
-      // daylight time and 6am after it ends; either is before anyone is
-      // setting a lineup. Runs AFTER the schedule, odds and usage pulls above
-      // have had a moment, since it reads all three.
-      if (new Intl.DateTimeFormat('en-US', { timeZone: LEAD_TZ, weekday: 'short' }).format(new Date()) === 'Wed') {
-        ctx.waitUntil(new Promise(r => setTimeout(r, 20000)).then(() => runRosSnapshot(env))
-          .then(r => console.log('ros snapshot:', JSON.stringify(r)))
-          .catch(e => console.error('ros snapshot failed:', e && e.message)));
-      }
-      ctx.waitUntil(snapshotPrune(env, SNAP_KEEP_DAYS)
-        .then(r => console.log('snapshot prune:', JSON.stringify(r)))
-        .catch(e => console.error('snapshot prune failed:', e && e.message)));
-      ctx.waitUntil(pruneAnalytics(env, 180)
-        .then(r => console.log('analytics prune:', JSON.stringify(r)))
-        .catch(e => console.error('analytics prune failed:', e && e.message)));
-      return;
-    }
-    // Every other trigger also refreshes the schedule before it posts: the
-    // posting slots are the only three times a day the worker wakes, so they are
-    // where in-week score and status freshness comes from.
-    ctx.waitUntil(runScheduleRefresh(env).catch(e => console.error("schedule refresh failed:", e && e.message)));
-    // Lines move all week, and a snapshot store that only sampled once a day
-    // would record a Sunday morning steam move as a single overnight jump. The
-    // three posting slots are the only other times the worker wakes, so they
-    // are where in-week line movement comes from.
-    ctx.waitUntil(runMarketSnapshot(env).catch(e => console.error('market snapshot failed:', e && e.message)));
-    // The hourly desk tick: refresh the schedule (game status is what gates a
-    // piece), then produce whatever is due and ready. Idempotent: a piece is
-    // produced once per kind per week, so the 11:00 overlap with the daily job
-    // costs nothing.
+    // The hourly tick is the data clock (HANDOFF §60): JOB_SCHEDULE, in New
+    // York time, says what is due this hour; runScheduledTick runs it phase
+    // by phase through the job log, and the desk tick goes last.
     if (event.cron === '0 * * * *') {
-      ctx.waitUntil(runScheduleRefresh(env).catch(() => null).then(() => runContentTick(env))
-        .then(r => console.log('content tick:', JSON.stringify(r)))
-        .catch(e => console.error('content tick failed:', e && e.message)));
+      ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
+        .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
+        .catch(e => console.error('tick failed:', e && e.message)));
       return;
     }
+    // The old daily data trigger. It is no longer in wrangler.jsonc; if it is
+    // ever configured again it does nothing, because the hourly tick already
+    // fires at the same minute and running every pull twice would double the
+    // snapshot rows and the ROS history.
+    if (event.cron === '0 11 * * *') { console.log('legacy 11:00 trigger ignored; the hourly tick carries the schedule'); return; }
     const slots = slotsByCron[event.cron];
     ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
   },
@@ -8575,6 +8928,114 @@ function originAllowed(request, env) {
   const o = request.headers.get('Origin');
   return o && allow.includes(o);
 }
+
+// ── the roster reader ──────────────────────────────────────────────────────
+// /trade-finder takes a league's rosters as text or as screenshots. Text is
+// parsed in the browser by it-trade.js and never leaves it. A screenshot has
+// to be read, and the only reader on this site is the LLM proxy the coach
+// already uses — so this is that proxy with the coach's guards (origin, key,
+// size, Turnstile, rate limit) and a much narrower job: transcribe the team
+// names and player names in these images as JSON. It returns NAMES ONLY. The
+// page resolves each one against the board and prices it there, which is what
+// keeps a model from inventing a player or a projection; a name it misreads
+// simply fails to resolve and is shown to the reader to fix.
+const ROSTER_READ_MAX_IMAGES = 8;
+const ROSTER_READ_MAX_BYTES = 9 * 1024 * 1024;     // the whole request, base64 included
+const ROSTER_READ_IMAGE_BYTES = 4 * 1024 * 1024;   // one image, base64
+const ROSTER_READ_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const ROSTER_READ_SYSTEM = `You transcribe fantasy football rosters from screenshots or pasted text.
+Return ONLY a JSON object, no prose, no markdown fence, in exactly this shape:
+{"teams":[{"name":"<team name as shown, or empty>","players":[{"name":"<player full name>","pos":"<QB|RB|WR|TE|K|DEF or empty>","team":"<NFL club abbreviation or empty>"}]}]}
+Rules: one entry per fantasy team visible; every player on it, starters and bench, in the order shown.
+Copy names exactly as printed; do not correct, expand, or invent a name, a position or a club you cannot see.
+A slot label (QB, RB, FLEX, BN, IR), a bye week, a projection or a score is not a player.
+A team defence is a player: name it "<City> <Nickname>" with pos "DEF" if the image shows it.
+If an image shows a league page with several teams, return every team. If it shows nothing readable, return {"teams":[]}.`;
+function rosterReadParse(text) {
+  let t = String(text || '');
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1];
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return { ok: false, error: 'no_json' };
+  let j;
+  try { j = JSON.parse(t.slice(a, b + 1)); } catch (e) { return { ok: false, error: 'bad_json' }; }
+  const POS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DST']);
+  const teams = [];
+  for (const raw of (Array.isArray(j && j.teams) ? j.teams : []).slice(0, 24)) {
+    if (!raw || !Array.isArray(raw.players)) continue;
+    const players = [];
+    for (const p of raw.players.slice(0, 40)) {
+      if (!p || typeof p.name !== 'string') continue;
+      const name = p.name.replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (!name) continue;
+      let pos = String(p.pos || p.position || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+      if (pos === 'DST') pos = 'DEF';
+      if (!POS.has(pos)) pos = '';
+      const team = String(p.team || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+      players.push({ name, pos, team });
+    }
+    if (!players.length) continue;
+    const name = (typeof raw.name === 'string' ? raw.name.replace(/\s+/g, ' ').trim().slice(0, 80) : '') || ('Team ' + (teams.length + 1));
+    teams.push({ name, players });
+  }
+  if (!teams.length) return { ok: false, error: 'no_teams' };
+  return { ok: true, teams };
+}
+async function handleRosterRead(request, env, c) {
+  if (!originAllowed(request, env)) return json({ ok: false, error: 'Origin not allowed' }, 403, c);
+  if (!env.LLM_API_KEY) return json({ ok: false, error: 'Server missing LLM_API_KEY' }, 500, c);
+  if (Number(request.headers.get('content-length') || 0) > ROSTER_READ_MAX_BYTES) return json({ ok: false, error: 'Payload too large' }, 413, c);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ ok: false, error: 'Bad JSON' }, 400, c); }
+  const images = [];
+  for (const im of (Array.isArray(body.images) ? body.images : []).slice(0, ROSTER_READ_MAX_IMAGES)) {
+    if (!im || typeof im.data !== 'string' || !ROSTER_READ_TYPES.has(String(im.media_type || ''))) continue;
+    const data = im.data.replace(/^data:[^,]*,/, '');
+    if (!data || data.length > ROSTER_READ_IMAGE_BYTES || /[^A-Za-z0-9+/=]/.test(data)) continue;
+    images.push({ media_type: im.media_type, data });
+  }
+  const text = String(body.text || '').slice(0, 20000);
+  if (!images.length && !text.trim()) return json({ ok: false, error: 'Nothing to read' }, 400, c);
+
+  if (env.TURNSTILE_SECRET) {
+    const okT = await verifyTurnstile(env.TURNSTILE_SECRET, body.turnstile, request.headers.get('cf-connecting-ip'));
+    if (!okT) return json({ ok: false, error: 'Verification failed' }, 403, c);
+  }
+  if (env.RATE_KV) {
+    // Its own bucket, tighter than the coach's: a screenshot is a bigger
+    // request than a chat turn, and nobody reads a league forty times an hour.
+    const ip = request.headers.get('cf-connecting-ip') || 'anon';
+    const k = 'rr:' + ip;
+    const n = parseInt((await env.RATE_KV.get(k)) || '0', 10);
+    if (n >= parseInt(env.ROSTER_READ_MAX || '20', 10)) return json({ ok: false, error: 'Rate limit — give it a moment.' }, 429, c);
+    await env.RATE_KV.put(k, String(n + 1), { expirationTtl: 600 });
+  }
+
+  const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
+  const model = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
+  const ask = images.length
+    ? 'Transcribe every fantasy team roster in ' + (images.length === 1 ? 'this image' : 'these ' + images.length + ' images') + '.' + (text.trim() ? ' Notes from the reader: ' + text.trim() : '')
+    : 'Transcribe every fantasy team roster in this text:\n\n' + text;
+  const content = provider === 'anthropic'
+    ? [...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })), { type: 'text', text: ask }]
+    : [...images.map(im => ({ type: 'image_url', image_url: { url: 'data:' + im.media_type + ';base64,' + im.data } })), { type: 'text', text: ask }];
+  const ctrl = new AbortController();
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 60000);
+  try {
+    const r = provider === 'anthropic'
+      ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 4000, system: ROSTER_READ_SYSTEM, messages: [{ role: 'user', content }] }) })
+      : await fetch(env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.LLM_API_KEY }, body: JSON.stringify({ model, temperature: 0, max_tokens: 4000, messages: [{ role: 'system', content: ROSTER_READ_SYSTEM }, { role: 'user', content }] }) });
+    if (!r.ok) return json({ ok: false, error: 'The reader did not answer (' + r.status + ').' }, 502, c);
+    const j = await r.json();
+    const out = provider === 'anthropic' ? ((j.content && j.content[0] && j.content[0].text) || '') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    const parsed = rosterReadParse(out);
+    if (!parsed.ok) return json({ ok: false, error: parsed.error === 'no_teams' ? 'Nothing readable in that image.' : 'The reader answered in a shape this page cannot use.' }, 200, c);
+    return json({ ok: true, teams: parsed.teams, images: images.length, model }, 200, c);
+  } catch (e) {
+    return json({ ok: false, error: 'The reader timed out.' }, 504, c);
+  } finally { clearTimeout(to); }
+}
+// ── /the roster reader ─────────────────────────────────────────────────────
 
 async function handleCoach(request, env, c) {
   if (!originAllowed(request, env)) return json({ error: 'Origin not allowed' }, 403, c);
