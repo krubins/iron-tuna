@@ -266,6 +266,15 @@ jobs:
       - name: Coaching staffs, against the pages that assert them
         run: node tools/test-coaching-staffs.mjs
 
+      # The four draft-day edges. The one this exists for: an injury tag has to
+      # be priced in GAMES MISSED. A player marked "out" the week of a draft
+      # loses one game of seventeen, and booking that as -100% would wreck a
+      # board over a hamstring. It also holds the nomination advice to the rule
+      # that makes it worth having -- never put up a player you want whom rivals
+      # can also afford.
+      - name: Draft-day edges (projection edits, news, rival need, nominations)
+        run: node tools/test-draft-edges.mjs
+
       # The Build desk states a budget, so it has to account for that budget.
       # It once published the starters ($183) under a headline quoting the whole
       # board ($200) and never mentioned the bench that spends the difference,
