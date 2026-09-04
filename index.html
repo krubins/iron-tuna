@@ -10717,27 +10717,31 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over what you should bid is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Sep 2, 2026',
+  updated: 'Sep 3, 2026',
   current: [
   {
-    label: 'Steelers duo only',
-    text: "Pittsburgh traded Kaleb Johnson to Green Bay and kept just Jaylen Warren and Rico Dowdle as pure RBs on the 53-man roster. Pay Warren as the lead, and add a few dollars for Dowdle as the clear No. 2."
+    label: 'Fade Jacobs, buy Lloyd',
+    text: "Josh Jacobs is on the commissioner's exempt list and cannot practice or play until reinstated. Fade Jacobs above stash pricing and grab MarShawn Lloyd, Green Bay's lead back, for a few dollars."
   },
   {
-    label: 'Jeanty not cleared',
-    text: "Ashton Jeanty is still not cleared from his sprained ankle, and the Raiders need another week to assess the September 13 opener vs Miami. Bid only at a discount that prices in a missed opener."
+    label: 'Hall modest discount',
+    text: "Breece Hall strained his groin in camp but the Jets expect him back for Week 1 at Tennessee. Groin injuries can linger, so bid one tier below his healthy price rather than paying full freight."
   },
   {
-    label: 'Lloyd frontrunner',
-    text: "With Josh Jacobs on the commissioner's exempt list, likely six weeks or more, MarShawn Lloyd leads Green Bay's backfield with Chris Brooks and Kaleb Johnson behind him. Lloyd is a cheap early-season RB3 bid."
+    label: 'Target Noel late',
+    text: "Jayden Higgins tore his ACL and is out for 2026. Jaylin Noel is the Texans wideout best positioned for those vacated targets behind Nico Collins. Add him as a late one to three dollar flier."
   },
   {
-    label: 'Tyson opens on IR',
-    text: "Saints rookie Jordyn Tyson is on IR with a hamstring injury and misses at least four games, with a Week 9 return most likely. Pay bench-dollar prices only; he cannot help you before midseason."
+    label: 'Pay up for Price',
+    text: "Zach Charbonnet opens on PUP and misses at least the first four games. Rookie first-rounder Jadarian Price leads Seattle's backfield. Pay RB2 money for Price and treat Charbonnet as a cheap stash."
+  },
+  {
+    label: 'Kittle risk pricing',
+    text: "George Kittle is practicing again about eight months after his Achilles tear and aims to play Week 1 vs the Rams in Australia. Pay elite TE money only at a discount that prices in a slow ramp."
   },
   {
     label: 'Allen floor buy',
-    text: "Keenan Allen signed a one-year Colts deal and reunites with Shane Steichen. He is a high-floor, low-ceiling WR4. Treat him as a one to three dollar flier, and shade Josh Downs down slightly."
+    text: "Keenan Allen signed a one-year Colts deal and reunites with Shane Steichen. He is a high-floor volume WR4. Treat him as a one to three dollar flier late in your auction."
   },
   ],
   library: [{
@@ -23102,51 +23106,17 @@ function App() {
     }
   }
   function handleToggleTarget(id) {
+    // Favorites are a watchlist, not a locked roster: flagging more than you
+    // can fit or afford is the point (multiple options for one slot). The
+    // plan builder (buildModel/buildOptimalPlan) already tolerates a target
+    // set bigger than the roster — it force-starts what fits and reports
+    // feasible:false with a "trim a target" hint when even that overruns
+    // budget — so this no longer evicts other favorites or refuses the add.
     const __wasOn = targets.has(id);
     setTargets(prev => {
-      if (prev.has(id)) {
-        const n = new Set(prev);
-        n.delete(id);
-        return n;
-      }
-      const mt = teams.find(t => t.isMine);
-      let order = [...prev, id];
-      if (!mt) return new Set(order);
-      const minBid = config.valuation.minBid;
-      const di = new Set(draftHistory.map(d => d.playerId));
-      const posOf = pid => {
-        const p = players.find(x => x.id === pid);
-        return p ? p.position : null;
-      };
-      const priceOf = pid => {
-        const p = personalizedPlayers.find(x => x.id === pid);
-        return p ? p.inflatedValue ?? p.auctionValue ?? minBid : minBid;
-      };
-      const newPos = posOf(id);
-      if (newPos && config.roster[newPos]) {
-        const cap = config.roster[newPos].total;
-        const draftedAtPos = mt.roster.filter(r => r.position === newPos).length;
-        const atPosCount = () => order.filter(x => !di.has(x) && posOf(x) === newPos).length;
-        while (draftedAtPos + atPosCount() > cap) {
-          const removeIdx = order.findIndex(x => x !== id && !di.has(x) && posOf(x) === newPos);
-          if (removeIdx < 0) break;
-          order.splice(removeIdx, 1);
-        }
-        if (draftedAtPos + atPosCount() > cap) return prev;
-      }
-      const affordable = ids => {
-        const live = ids.filter(x => !di.has(x));
-        const cost = live.reduce((sum, x) => sum + priceOf(x), 0);
-        if (live.length > mt.spotsRemaining) return false;
-        return cost + (mt.spotsRemaining - live.length) * minBid <= mt.budgetRemaining + 0.001;
-      };
-      while (!affordable(order) && order.length > 1) {
-        const removeIdx = order.findIndex(x => x !== id);
-        if (removeIdx < 0) break;
-        order.splice(removeIdx, 1);
-      }
-      if (!affordable(order)) return prev;
-      return new Set(order);
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
     });
     if (!__wasOn && config.format === 'snake') {
       const pl = personalizedPlayers.find(x => x.id === id);

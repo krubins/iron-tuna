@@ -6760,17 +6760,17 @@ that runs long delays its piece by an hour; nothing is guessed.
 
 | Kind | Due (ET) | About | Ready when |
 |---|---|---|---|
-| `team-recaps` | Mon 6am | every game of the played week except Monday's | those games final |
-| `mnf-breakdown` | Tue 12am | the Monday game | it is final; skipped if there is none |
-| `what-they-arent-telling-you` | Tue 6am | the played week | every game final |
-| `opportunity-report` | Wed 6am | the played week | every game final |
+| `team-recaps` | Mon 7am | every game of the played week except Monday's | those games final |
+| `mnf-breakdown` | Tue 7am | the Monday game | it is final; skipped if there is none |
+| `what-they-arent-telling-you` | Tue 7am | the played week | every game final |
+| `opportunity-report` | Wed 7am | the played week | every game final |
 | `rankings-update` | Wed 7am | the coming weeks | after the ROS snapshot |
-| `final-read` | Thu 6am | the coming week | always |
-| `tnf-preview` | Thu 6am | the Thursday game | it has not kicked off; skipped if none |
-| `tnf-aftermath` | Fri 12am | the Thursday game | it is final |
-| `weekend-game-plan` | Fri 6am | the games still to come | none has started |
+| `final-read` | Thu 7am | the coming week | always |
+| `tnf-preview` | Thu 7am | the Thursday game | it has not kicked off; skipped if none |
+| `tnf-aftermath` | Fri 7am | the Thursday game | it is final |
+| `weekend-game-plan` | Fri 7am | the games still to come | none has started |
 | `what-changed-today` | Sun 8pm | Sunday games final by then | at least one; the rest are NAMED as excluded |
-| `snf-what-we-learned` | Mon 12am | the Sunday night game | it is final |
+| `snf-what-we-learned` | Mon 1am | the Sunday night game | it is final |
 
 `contentDue(kind, now, state, sched)` is pure and takes the instant it is asked
 about; the first cut read game status off the wall clock inside `weekGames`,
@@ -6821,8 +6821,361 @@ fixture week, the briefs, and the validator.
 **Cron count.** `wrangler.jsonc` now carries five triggers. If the account's
 plan caps triggers below that, the deploy will say so; the hourly tick is the
 one to keep and the three posting slots the ones to fold into it.
+## 57. September 3: the mystery from §47 solved itself on repeat, and cost a real entry
 
-## 57. September 3: /weekly-intel is the in-season front page
+§47 closed with the Sept 1 collision unexplained — this trigger's 13:09Z run
+reported SUCCEEDED without touching `main`, best guess being that it
+noticed the other trigger's branch and quietly stood down. Real time moved
+on to September 3 before anyone looked again, and the extra day of data
+answered the question by repeating the pattern in the other direction.
+
+### What actually happened on September 2
+
+Both Pick triggers fired again. Ken's (12:06-12:11Z) wrote a **"tier
+cliffs"** entry (Trey McBride/Brock Bowers) and pushed it to
+`claude/the-pick-2026-09-02`, per its branch-only prompt. This trigger
+(13:07-13:12Z) did **not** stand down this time — it wrote an entirely
+different **"target concentration"** entry (Chris Olave/Zay Flowers) and
+pushed it straight to `main` (`e277f8d`), same as it should. `main` has one
+Sept 2 entry now; the other, equally real, equally grounded entry sits
+permanently on an unmerged branch nobody will read.
+
+That resolves §47's mystery about as well as it can be resolved without
+transcript access: whatever this trigger's session does when it encounters
+the other trigger's branch is **not consistent from run to run**. On
+2026-09-01 it (apparently) noticed and stood down, writing nothing. On
+2026-09-02 it didn't check, or checked and didn't act on it, and wrote a
+second entry anyway. Only one branch of that inconsistency is externally
+visible each day — either an empty slot or a stranded duplicate — so it
+read as two unrelated bugs until the same day produced both halves at
+once.
+
+### The fix, and why the first attempt (§47) was not enough
+
+§47's fix told this trigger to check `git ls-remote` for a same-day branch
+and **stop** if it found one. That would have caught 2026-09-02's
+collision — but stopping is not actually a fix, it is the outage from §46
+wearing a disguise: a same-day entry exists, on a branch nobody merges,
+and the reader still sees nothing new. Two failure shapes, one root cause
+— an entry that exists somewhere the reader's browser cannot reach counts
+as unpublished, whether the reason is a missing checkout, a branch nobody
+watches, or a later run standing down in front of one.
+
+**Rewritten again, 2026-09-03T04:04Z, live and verified byte-identical
+(11,318 chars, sha256 `f2e49c9f31dc...`).** The same-day-branch check now
+**adopts** a well-formed branch entry — merges just that `<article>` into
+its own checkout, rebuilds, retests, and pushes the result to `main` —
+instead of declining and leaving it stranded. It only falls through to
+writing original content if the branch is missing, malformed, or its
+numbers do not check out against current `PROJECTIONS`. This is the same
+operation this session did by hand for both 2026-09-01 (`26cc9f6`,
+"committee backfields") and would have done for 2026-09-02's "tier cliffs"
+had it been noticed before `main` already had a same-day entry — the fix
+makes that manual step part of the Routine instead of something a human
+has to catch.
+
+Also noted while re-verifying: `trig_016JAiJJMZi2jtZDmZS1QPNK`'s stored
+`session_request.config` now shows a `sources` entry
+(`krubins/iron-tuna`) that was not there on 2026-09-01. Whether that
+migrated on its own or was set by someone in the Routines UI is unknown
+from here; either way the clone-if-missing instructions in this prompt are
+now redundant defense-in-depth rather than the primary path, and are kept
+rather than removed since a wrong assumption about a git source costs
+nothing to guard against and a ten-day outage to get wrong.
+
+### Still true, still Ken's to resolve
+
+Two Routines publishing one column is still a standing risk even with the
+adopt-fix in place — it converts "duplicate content" into "the earlier
+trigger's prompt does the real writing and the later one just merges it in
+every day," which works but is a strange steady state for a Routine whose
+own prompt still says it writes original entries. §47's recommendation
+stands: pick one Routine, retire the other. This session still cannot
+touch `trig_01K2obtrMAKiwGn3N4UroTEv` (`update_trigger` refuses anything
+not created via this session's own `create_trigger` calls).
+
+State: `the-pick.html` on `main` carries `pick-2026-08-20`,
+`pick-2026-09-01`, `pick-2026-09-02` (no gap, no duplicate on `main`);
+`claude/the-pick-2026-09-02` sits stranded with a real, unmerged "tier
+cliffs" entry, left alone rather than force-merged since `main` already
+has a Sept 2 entry and two would break "one entry per day"; the
+adopt-fix takes effect on the next fire (`trig_016JAiJJMZi2jtZDmZS1QPNK`
+next runs 2026-09-03T13:03Z, `trig_01K2obtrMAKiwGn3N4UroTEv` around
+12:00Z the same day).
+
+## 58. September 3: DFS (Steps 26 to 28)
+
+`/in-season/dfs` (root `dfs.html`) is five sections on one slate: Dashboard,
+Vegas Values, Lineup Builder, Game Stacks, TD Board, with a DraftKings /
+FanDuel switch. Everything on it is the week board (`buildBoards`, horizon
+`week`) re-scored under the site's rules and priced by the site's salaries.
+
+**Salaries.** `dfs_salaries` in D1 (append-only; the newest `fetched_at` for a
+site, season and week is the slate). Three ways in: the lobby CSV of either
+site pasted into `/admin` (POST `/api/admin/dfs` with `{site, csv, week?}`,
+parsed by `parseDfsCsv`, which refuses the other site's format), the site
+feeds (`fetchDraftKingsSalaries` needs `DK_DRAFT_GROUP_ID`;
+`fetchFanDuelSalaries` needs `FD_FIXTURE_LIST_ID` and `FD_API_KEY`; both are
+UNVERIFIED from this sandbox, which cannot reach either host, and both fail
+closed), and `runDfsRefresh` on the 11:00 UTC cron, which only runs the feeds
+whose variables are set. No salaries for the week means `/api/dfs` answers
+`ok:false` with the reason and the page says so; it never invents a price.
+
+**Site scoring.** `SCORING_SITE.dk` and `.fd` are overrides on the Iron Tuna
+scoring engine (`scoringRules(preset, override)`): DK is full PPR with the
+300/100/100-yard bonuses and minus one per fumble; FD is half PPR, no bonus,
+minus two per fumble. Kickers are not on either slate; DST is.
+
+**The slate** (`buildDfsSlate`) matches each salary row to the board by
+normalised name plus position (a DST by club), and gives every matched player
+`salary`, the Vegas, Iron Tuna and consensus projections under the site's
+scoring, `marketDelta`, `tdProbability` with its `tdBasis` (`anytime-td-market`
+when a book priced it, otherwise `derived` from the projected touchdowns),
+`teamTotal` with `teamTotalPosted`, and `siteName` (the site's spelling).
+**Vegas Value Score** is Vegas points per $1,000 of salary indexed to the
+slate median (100 = an ordinary dollar). The four boards: Best Vegas Values
+(top VVS), TD Upside (TD probability per $1K), Volume Values (implied touches
+per $1K), Expensive Fades (salary in the top third and the market below the
+consensus). `buildDfsStacks` ranks the slate's games by total and prices each
+side's QB + two catchers with a bring-back from the other side.
+
+**The optimizer** is `dfs-optimizer.js`, a shared script (browser and node)
+with no network code at all: `tools/test-dfs.mjs` greps it for `fetch`,
+`XMLHttpRequest` and `submit` and fails if any appears. **Nothing submits an
+entry.** `ITDfs.build(players, {mode, cap, slots, flex, lock, exclude, stack,
+stackSize, bringBack, maxPerTeam, lineups, seed})` runs a randomised greedy
+fill (thinnest slot first, budget-aware from the cheapest legal fill of the
+open slots) and then climbs single and pair swaps on the projection minus a
+heavy penalty per broken constraint, so a fill that lands over the cap or
+short of its stack is repaired rather than discarded. On the test slate it
+matches an exhaustive enumeration exactly; on a real slate it is a very good
+lineup in milliseconds, not a proof. Modes: IRON TUNA OPTIMAL, VEGAS OPTIMAL,
+CONSENSUS OPTIMAL, VEGAS EDGE (Vegas points plus any positive Market Delta).
+A cap no roster can meet returns `ok:false` and a note, never a lineup over
+the cap. The page locks and excludes by clicking a player in the pool.
+
+Routes: `/api/dfs?site=dk|fd` (public, five-minute cache) and
+`/api/admin/dfs?key=…` (GET status, POST import, `&refresh=1` runs the
+feeds). Tests: `tools/test-dfs.mjs` (46) covers both CSV formats, the site
+scoring, the slate, the boards, the stacks and every optimizer constraint.
+
+Known small thing, site-wide and older than this work: at a 390px viewport
+the chrome's nav toggle sits 2 to 3px past the right edge on every page.
+
+## 59. September 3: the health board and the job log (Step 29)
+
+`/admin` now opens with **In-season health**: the current week from the
+season service, the age of every feed, the data sources and whether each has
+its key, the scheduled jobs with their last run and last success, the failed
+runs of the past seven days, what is missing or stale and why, and the desk's
+state for every piece with the editorial actions beside it.
+
+**The job log.** `job_runs` in D1, one row per run: job, trigger (the cron
+string or `admin`), started, finished, ok, error, and a short summary of what
+the job returned. `jobRun(env, name, trigger)` runs a job from `JOB_FNS` (the
+single table of runnable jobs: schedule, odds, availability, market snapshot,
+usage, DFS, depth charts, ROS snapshot, the three prunes, the content tick)
+and logs it; a job that throws or returns `ok:false` is a logged failure and
+never an unhandled rejection. Every `ctx.waitUntil` in `scheduled()` goes
+through it (the X auto-post is the one thing that does not; it is not a data
+job and is not a button anyone should press twice). `tools/test-health.mjs`
+greps the handler for a bare job. `jobBoard` reads the log back per job;
+`job-prune` keeps 45 days.
+
+**The assessment** (`healthAssess`) is pure: given the caches' timestamps,
+the sources, the log and the season state it returns `status` (ok, degraded,
+down), `missing` and `stale` with a reason each. Limits live in
+`HEALTH_STALE_H`. In season it also demands the usage overlay, depth charts,
+a Wednesday snapshot for a recent week, and salaries on at least one site;
+in preseason it does not. A kind with no configured source, and a missing
+`LLM_API_KEY`, are missing feeds with what they cost stated. No schedule is
+`down`, since every in-season surface reads it.
+
+**Editorial actions** (`contentAdmin`, POST `/api/admin/content` with
+`{action, kind, week?, body?}`): `preview` returns the latest row in full,
+held draft and violations included, which the public payload hides;
+`publish` and `unpublish` flip the latest row (an unpublished piece leaves
+`/api/content` and its page); `regenerate` produces a fresh row now, forced
+past the due/ready gate, and the page asks first; `edit` stores a person's
+body on the latest row, runs the validator and reports what the brief does
+not contain WITHOUT blocking, since a person signing a piece is the editor.
+Editing never publishes; that is its own click.
+
+Routes: `/api/admin/health?key=…[&rerun=<job>]` and the content route's POST
+form plus `?preview=<kind>[&week=N]`. The board itself is `admin.html`; the
+stale-limit and missing-feed rules, the log, the board and every action are
+pinned by `tools/test-health.mjs` (51) against a scripted D1.
+
+## 60. September 3: the job schedule, in New York time (Step 30)
+
+The data clock is one table, `JOB_SCHEDULE`, read by the hourly trigger.
+Every hour `runScheduledTick` asks `jobsDueAt` what is due in THIS Eastern
+hour and runs it through the job log (§59) phase by phase: the pulls in
+parallel, then what is derived from them, then the desk tick. Eastern
+rather than UTC so "Wednesday 7 AM" holds in September and in December; a
+fixed UTC cron drifts an hour when the clocks change. The old `0 11 * * *`
+trigger is gone from `wrangler.jsonc`; if it ever comes back it does
+nothing, and says so, because the hourly tick already fires at that minute.
+
+| Job | When (ET) | Phase |
+|---|---|---|
+| `schedule-refresh` | hourly | 1 |
+| `market-snapshot` | 1, 4, 7, 10 AM, 1, 4, 7, 10 PM; Sunday hourly 9 AM to 11 PM | 1 |
+| `odds-refresh` | daily 7 AM | 1 |
+| `availability-refresh` | daily 7 AM, 11 AM, 1 PM, 7 PM | 1 |
+| `usage-refresh` | Tue, Wed 6 AM | 1 |
+| `depth-charts` | daily 6 AM | 1 |
+| `dfs-refresh` | Tue, Thu, Sat 9 AM | 1 |
+| `ros-snapshot` (Next 3, ROS, Weeks 15 to 17) | Wed 7 AM | 2 |
+| the three prunes | Sun 4 AM | 2 |
+| `content-tick` | hourly | 3 |
+
+The desk pieces keep their own due rule (`contentDue`: game completion, not
+the clock); the tick only asks. Their slots moved to the spec's: Sunday 8 PM
+What Changed Today; Monday 1 AM the SNF piece; Monday 7 AM recaps; Tuesday
+7 AM What They Aren't Telling You and the MNF piece; Wednesday 7 AM the
+Opportunity Report and the rankings update (after the ROS snapshot, which
+is phase 2 of the same hour); Thursday 7 AM the Final Read and TNF preview;
+Friday 7 AM the TNF aftermath and the Weekend Game Plan. Rankings, injury
+and betting refreshes run on their own rows above, independent of any
+piece.
+
+**Retiming without a deploy.** `JOB_SCHEDULE_JSON`, a Worker variable, is
+an array of entries `{ job, days, hours, phase }`; each entry REPLACES the
+table's entries for the job it names. `days` is null or a list of
+`Sun`..`Sat`; `hours` is `"hourly"` or a list of 0 to 23; `phase` 1, 2 or 3.
+A bad entry is ignored and named on the health board under "Missing and
+stale", never applied. The board's jobs table shows each job's schedule in
+words and its next Eastern hour.
+
+`tools/test-jobs.mjs` pins the table against the spec, the DST behaviour
+(7 AM Eastern is 11:00Z in September and 12:00Z in December), the phase
+order, the override validation, and the tick.
+
+## 61. September 3: the Trade Finder, and the FAAB Advisor by hand
+
+**The brief.** Two more in-season tools. A Trade Finder: the reader has
+already set their scoring; let them paste the league's rosters (text or a
+screenshot) and get trades recommended, with a slider from "even" to
+"benefit me" but a baseline that both teams improve, and the option to score
+one side short-term (chasing a playoff spot) and the other on the fantasy
+playoffs (already clinched). And a FAAB Advisor that takes the reader's own
+budget and the other budgets typed in, plus what the league has bid before.
+
+### 61a. `it-trade.js`: one engine, tested in node
+
+Everything the Trade Finder computes lives in **`it-trade.js`**, a UMD file
+(browser global `ITTrade`, `require()`-able in node) so `tools/test-trade-finder.mjs`
+runs the exact code the page ships. Three parts:
+
+- **Names.** `makePool(players)` indexes a board; `resolve(line, pool, posHint)`
+  turns one pasted line into one board row or nothing. It handles the shapes a
+  league site actually produces: "Ja'Marr Chase WR - CIN", "Chase, Ja'Marr",
+  "J. Chase", "Marvin Harrison Jr", "AJ Brown" against "A.J. Brown", "St. Brown",
+  "Smith-Njigba", "Bills D/ST", "BUF DEF", "Tucker K BAL", a unique surname
+  alone. An ambiguous surname ("Brown") resolves to **nothing** and is shown to
+  the reader to fix; the engine never guesses. `parseRosters(text, pool)` walks a
+  whole paste: a line is a player, noise (slot labels, "QB - BUF (3)", "Bye: 7",
+  "Proj 118.4"), or a team name. A team name opens a new team once the current
+  one has a player; before that the first name is kept, so "Team Awesome /
+  Owner: Ken / Josh Allen" is one team. A player listed under two teams stays
+  with the first and is reported.
+- **Lineups.** `lineupValue(players, slots, pts)` fills the league's own slots
+  (QB/RB/WR/TE, FLEX over RB/WR/TE, SFLEX over all four) greedily by points,
+  named slots first then flex, which is optimal for this slot shape. The bench
+  counts at 0.25 / 0.15 / 0.08 for the three best non-starters, and a backup QB
+  in a one-QB league at 0.3 of that. Kickers and defences are parsed (so they
+  do not become team names) and ignored.
+- **Trades.** `findTrades(teams, opts)` tries every 1-, 2- and 3-player package
+  between the reader's team and each other roster (or every pair, for the
+  commissioner view) and keeps only swaps where **both** lineups gain at least
+  `minGain` (0.75) points **per week on their own horizon**. `opts.horizon(i)`
+  names the horizon per team and `opts.weeks(h)` its length, so a team on
+  weeks 15-17 and a team on the next three are on one scale. The `tilt` slider
+  only reorders survivors: 0 ranks by the smaller gain, 1 by the reader's gain
+  alone. **The floor never moves.** The list is diversified: at most two trades
+  per headline pair and four per partner.
+
+Points come from the caller as `points(player, horizonKey)`; the engine never
+sees a stat line, so the scoring is whatever `it-league.js` says the reader
+plays and there is no second copy of the scorer.
+
+### 61b. `/trade-finder`
+
+The page fetches `/api/boards?horizon=<h>&pos=ALL&scoring=ppr` per horizon
+(week, next3, ros, playoffs) and re-scores every stat line with
+`ITLeague.score()` at the reader's saved scoring or a preset, exactly as
+`/rankings` does. Starting slots prefill from the draft app's saved roster
+shape. The board (Iron Tuna / consensus / Vegas) is selectable.
+
+**Screenshots.** `POST /api/roster-read` is the coach proxy with the coach's
+guards (origin, key, size, Turnstile, its own `RATE_KV` bucket `rr:<ip>`,
+`ROSTER_READ_MAX` default 20 per 10 minutes) and a narrower job: the model is
+asked for JSON of team names and player names, **names only**. The page shrinks
+each image to 1600px JPEG in the browser first (a phone screenshot is 3-4 MB
+and the reader needs none of it), posts up to 8, and resolves every returned
+name against the board **locally** with the same `resolve()`. A misread name
+fails to resolve and is offered to fix; nothing the model read can become a
+projection. `rosterReadParse()` in the worker is the part `test-trade-finder.mjs`
+covers without a model: fenced JSON, upper-cased positions, missing clubs,
+capped counts, prose or an empty list as clean failures. The same route accepts
+`{text}` for a paste the local parser could not untangle.
+
+State is `localStorage` `it_trade_v1`: the paste, the teams as board ids, the
+reader's team, both horizons, tilt, package size, preset, slots. Gated with the
+section (`POST_DRAFT_PAGES`, and the `/in-season/<page>` rewrite, which also
+gained `faab` so `/in-season/faab` resolves).
+
+### 61c. The FAAB Advisor by hand, and the bid history
+
+`/faab` has a third step, **"Or enter the league by hand"**: teams, budget,
+the reader's FAAB left, week (prefilled from `/api/season`), starting slots,
+rivals' budgets (one per line, name then dollars), the reader's roster, the
+free agents being weighed, what the league has already paid, and optionally
+every roster in the league. It builds the same structures Sleeper would have
+supplied (rosters with `waiver_budget_used`, a league with `roster_positions`,
+a pool keyed by id) and calls the **same `render()`**, so the model runs once
+and cannot disagree with itself. With every roster pasted (parsed by
+`ITTrade.parseRosters` against the default board) the wire and every rival's
+hole are exact; without them each rival is assumed to have a hole at the
+position (the going rate leans high, and the footnote says so) and the wire is
+the named players plus the board below the depth a league that size rosters
+(`DEPTH`: QB 1.4, RB 4.2, WR 5, TE 1.4 per team).
+
+**Calibration.** Both paths now feed settled bids into `calibrate()`: Sleeper's
+transaction log is read for every week so far **before** the table renders
+(one `Promise.all`, no longer a backwards walk racing the table), and the
+manual form parses typed lines ("Week 3: Bijan Robinson $34", "wk 4 - Allgeier -
+12"). Each bid becomes an exchange rate, FAAB dollars per draft dollar of the
+player's rest-of-season value **at the time**; the median is the room's rate.
+The model's going rate is blended toward `rate × ros`, weighted `n / (n + 3)`,
+so three settled claims count as much as the model and thirty swamp it, and
+capped at the richest solvent rival's money. Two rules keep it honest: a player
+no rival would rationally bid on is **not** rescued by the history (the first
+cut surfaced forty $1 rows on a flat wire, the exact failure §28b describes),
+and the obs box prints the rate and how many bids it rests on.
+
+### 61d. Tests
+
+- `node tools/test-trade-finder.mjs` (76 assertions, plain node): the resolver
+  on every awkward name shape, the parser on a three-team paste with headers,
+  slot rows, a defence, a duplicate and an ambiguous surname, the lineup fill
+  and bench weights, and the search: both sides gain, gains equal the
+  independently recomputed lineup deltas, tilt never lowers the reader's gain
+  or drops the partner's floor, a playoff specialist surfaces only when the
+  reader is scored on the playoff weeks, every-pair mode, identical rosters
+  produce nothing. Plus `rosterReadParse`. **In CI.**
+- `node tools/test-trade-finder-page.mjs` (50 assertions, playwright-core,
+  self-skips): the page against a stubbed `/api/boards` fixture built from
+  `tools/faab-fixture-names.json`: the paste lands as four teams, the stubbed
+  reader's names resolve and its misread one is offered to fix, the search
+  gains both sides, the slider and the per-side horizons reach it, a reload
+  keeps everything; then the FAAB manual form, the room, the bounds, the
+  unrecognised-name note, and the history moving the going rate up while
+  staying under the richest rival. `IT_SHOT=/tmp/tf.png` writes both pages.
+- `tools/test-faab.mjs` still passes unchanged on the Sleeper path.
+
+## 62. September 3: /weekly-intel is the in-season front page
 
 The Weekly Fantasy Intel panel on the front page (§52) used to open a thin
 hub: the week, the byes, and eight links. It now opens a **front page for the

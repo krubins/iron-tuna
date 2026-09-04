@@ -78,6 +78,12 @@ jobs:
       - name: Parse it-season.js
         run: node --check it-season.js
 
+      # /it-trade.js is the Trade Finder's engine and the FAAB Advisor's roster
+      # parser. A syntax error there leaves both pages with a button that does
+      # nothing.
+      - name: Parse it-trade.js
+        run: node --check it-trade.js
+
       # /admin is the only page with a form that calls an API, and it is
       # hand-written like the rest — a syntax error there breaks the dashboard
       # and the comp-access form with it, silently, since nobody browses it.
@@ -280,6 +286,18 @@ jobs:
       # does not contain.
       - name: The content desk
         run: node tools/test-content.mjs
+      - name: DFS adapters, Vegas Value Score, stacks and optimizer
+        run: node tools/test-dfs.mjs
+      - name: The health board, the job log and the editorial actions
+        run: node tools/test-health.mjs
+      - name: The job schedule in New York time
+        run: node tools/test-jobs.mjs
+
+      # The Trade Finder: the roster parser, the lineup valuation, the trade
+      # search (both sides must gain, on their own horizons) and the worker's
+      # screenshot reader, all in plain node against the shipped it-trade.js.
+      - name: The Trade Finder engine and the roster reader
+        run: node tools/test-trade-finder.mjs
 
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
