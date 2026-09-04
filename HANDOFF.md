@@ -7174,3 +7174,55 @@ and the obs box prints the rate and how many bids it rests on.
   unrecognised-name note, and the history moving the going rate up while
   staying under the richest rival. `IT_SHOT=/tmp/tf.png` writes both pages.
 - `tools/test-faab.mjs` still passes unchanged on the Sleeper path.
+
+## 62. September 3: /weekly-intel is the in-season front page
+
+The Weekly Fantasy Intel panel on the front page (§52) used to open a thin
+hub: the week, the byes, and eight links. It now opens a **front page for the
+in-season half of the site**, built the way `/` is built and priced in nothing
+but ranks and points. No auction dollar appears on it.
+
+**The whole panel is the link.** `#heroIntel` on `front.html` navigates to
+`/weekly-intel` on any click that does not land on a link or button inside it
+(those keep their own destinations), leaves a text selection alone, and honours
+a modifier-click by opening a new tab. The gold button still goes to the same
+place, so keyboard and no-script readers lose nothing.
+
+### What is on it, and where each piece comes from
+
+Same rule as the front page throughout: **real data or nothing**. Every
+section reads a route, paints what the route carries, and says so when it
+cannot.
+
+| Section | Source | Notes |
+|---|---|---|
+| Hero: week chip, three cards, dateline | `/api/season`, `/api/vegas-column?v=5` | The identical `hbCard`/`renderHeroIntel` logic as `front.html` (§52), plus the digest's `moved / draftable / up / down` count. `priceDelta` and `dollars` are on the payload and are deliberately not printed. `VS_CONTRACT` is duplicated here; bump it with `COLUMN_CONTRACT`. |
+| The Week | `/api/season` via `it-season.js` | Cards, byes. |
+| Vegas vs. Experts | `/api/vegas-edge` | Top three each side, the TD board and the volume board, six rows each. Links every player to `/in-season/player/<slug>?pos=`. |
+| This Week's Board | `/api/boards?horizon=week`, `/api/ros-update` | Twelve rows per position, PPR off the payload; a reader with a saved **custom** league is re-scored and re-ranked with `ITLeague.score` (the same `classify` as `rankings.html`) and the note names the league. Risers and fallers under it. |
+| The Slate | `/api/season` | Ranked by total, implied points off the payload (§53g item 6). Team cards from the digest's `teamUp`/`teamDown`. |
+| Waivers & FAAB | `/api/season` | The claim clock (copied from `waivers.html`), the advisor, the latest Waiver Watch page as a static card. |
+| The Desk | `/api/content` | Published pieces newest first; the schedule of kinds until the season has produced one. |
+| The Pick, The Play-Caller Premium | `var PICKS`, `var COLUMN` | **Written by `tools/build-front.mjs`**, the same pass that fills `front.html`. Prints title, theme, position, team, date and the column's `who` line only. The `stat` line ("+10% above his price") is a draft-day figure and is not printed here. |
+
+### Conventions it keeps
+
+- Shared chrome, shared stylesheet: `build-chrome.mjs` sentinels, `site.css`
+  first, and the in-season furniture (`.is-*`, `.its-strip`). The page defines
+  its own tokens under a `--wi-` prefix on `main#main`, **not on `:root`**,
+  because `tools/test-reading-view.mjs` fails any content page that declares a
+  palette of its own (§29). The hero is the one dark band, as on `/`.
+- The ribbon is the front page's: section anchors and the `player-search.js`
+  box (`data-player-search="weekly-intel"`), sticky under the header.
+- `node tools/build-front.mjs` after a new Pick or Play-Caller entry, as before;
+  it now reports `weekly-intel.html` alongside `player.html`.
+
+### Verified
+
+Rendered in Chromium at 1280px and 390px against stubbed routes (every section
+populated, the Flex tab re-ranks, no page errors, no horizontal overflow beyond
+the shared header's 2px at 390px that every content page carries), and the
+front-page panel click observed landing on `/weekly-intel`. `test-chrome`,
+`test-seo`, `test-css-tokens`, `test-reading-view`, `test-asset-routing`,
+`test-player-odds`, `test-the-pick`, `test-content`, `test-season`,
+`test-it-league`, `build-chrome --check` and `build-seo --check` all pass.
