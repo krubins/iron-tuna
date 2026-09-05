@@ -12,7 +12,7 @@
 //
 // WHY IT DRIVES A BROWSER
 // The authoritative values live in index.html's valuation pipeline (scorePlayer ->
-// applyQbActuals -> buildValuations -> applyPredictability -> renormalizeToBudget),
+// normalizeToLastYear -> buildValuations -> renormalizeToBudget),
 // which is one big in-page script with no module boundary. Re-implementing the scoring
 // here would drift from what users actually see, so instead this script serves the repo,
 // loads the real app in headless Chromium, and reads the app's own computed players and
@@ -184,6 +184,12 @@ const data = await page.evaluate(() => {
   const planNoFlex = F.buildModel('ideal', d.myTeam, players, noFlex, d.draftedIds, d.roleOverrides, d.targets);
   const nfPpg = +(planNoFlex.slots.filter(s => s.isStarter && s.player).reduce((a, s) => a + s.player.projectedPoints, 0) / G).toFixed(1);
 
+  // `posCost` is the STARTERS' spend by position; the bench is a row of its own
+  // here and in the front page's spend bar and key. The "shape" card on that
+  // page folds the bench back into each position from `bench.players` (a
+  // roster that carries two defences must never chart DEF at one dollar), so
+  // keep `bench.players[].pos` and `.price` — that card is built from them.
+  //
   // Shares are of the WHOLE budget, and the bench is one of the rows. They used
   // to be shares of the starter spend, which meant the bar and its key added up
   // to $183 while the page around them quoted $200 — the missing ~9% read as

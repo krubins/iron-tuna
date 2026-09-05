@@ -1,0 +1,206 @@
+{
+ "season": 2026,
+ "asOf": "2026-09-02T18:49:23.807Z",
+ "source": "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv",
+ "pricedGames": 112,
+ "fixtures": 272,
+ "hfa": 0.766,
+ "mu": 23.015,
+ "rmse": 0.586,
+ "totals": {
+  "ARI": {
+   "pf": 319.4,
+   "pa": 457.1,
+   "games": 17
+  },
+  "ATL": {
+   "pf": 365.2,
+   "pa": 414.5,
+   "games": 17
+  },
+  "BAL": {
+   "pf": 439.4,
+   "pa": 370.3,
+   "games": 17
+  },
+  "BUF": {
+   "pf": 445,
+   "pa": 384.1,
+   "games": 17
+  },
+  "CAR": {
+   "pf": 356.4,
+   "pa": 397.9,
+   "games": 17
+  },
+  "CHI": {
+   "pf": 423.6,
+   "pa": 395.7,
+   "games": 17
+  },
+  "CIN": {
+   "pf": 441.8,
+   "pa": 394.1,
+   "games": 17
+  },
+  "CLE": {
+   "pf": 321.6,
+   "pa": 391.4,
+   "games": 17
+  },
+  "DAL": {
+   "pf": 436.2,
+   "pa": 421.1,
+   "games": 17
+  },
+  "DEN": {
+   "pf": 375.4,
+   "pa": 356.6,
+   "games": 17
+  },
+  "DET": {
+   "pf": 447.3,
+   "pa": 391.8,
+   "games": 17
+  },
+  "GB": {
+   "pf": 416.8,
+   "pa": 383.5,
+   "games": 17
+  },
+  "HOU": {
+   "pf": 381,
+   "pa": 355.5,
+   "games": 17
+  },
+  "IND": {
+   "pf": 395.7,
+   "pa": 416.9,
+   "games": 17
+  },
+  "JAX": {
+   "pf": 398.4,
+   "pa": 383.3,
+   "games": 17
+  },
+  "KC": {
+   "pf": 414.8,
+   "pa": 363,
+   "games": 17
+  },
+  "LA": {
+   "pf": 453.5,
+   "pa": 368.1,
+   "games": 17
+  },
+  "LAC": {
+   "pf": 402.9,
+   "pa": 372.6,
+   "games": 17
+  },
+  "LV": {
+   "pf": 326.4,
+   "pa": 401.5,
+   "games": 17
+  },
+  "MIA": {
+   "pf": 325.8,
+   "pa": 439.7,
+   "games": 17
+  },
+  "MIN": {
+   "pf": 388.7,
+   "pa": 383.5,
+   "games": 17
+  },
+  "NE": {
+   "pf": 407.9,
+   "pa": 366.4,
+   "games": 17
+  },
+  "NO": {
+   "pf": 371.2,
+   "pa": 398.9,
+   "games": 17
+  },
+  "NYG": {
+   "pf": 378.3,
+   "pa": 410.1,
+   "games": 17
+  },
+  "NYJ": {
+   "pf": 321.3,
+   "pa": 395.4,
+   "games": 17
+  },
+  "PHI": {
+   "pf": 404.8,
+   "pa": 360.3,
+   "games": 17
+  },
+  "PIT": {
+   "pf": 363.1,
+   "pa": 371.7,
+   "games": 17
+  },
+  "SEA": {
+   "pf": 418,
+   "pa": 355.8,
+   "games": 17
+  },
+  "SF": {
+   "pf": 432.2,
+   "pa": 382.9,
+   "games": 17
+  },
+  "TB": {
+   "pf": 400.5,
+   "pa": 403.5,
+   "games": 17
+  },
+  "TEN": {
+   "pf": 352.1,
+   "pa": 409,
+   "games": 17
+  },
+  "WAS": {
+   "pf": 395.6,
+   "pa": 423.8,
+   "games": 17
+  }
+ },
+ "kickers": {
+  "ATL": "Nick Folk",
+  "PIT": "Chris Boswell",
+  "CHI": "Cairo Santos",
+  "SEA": "Jason Myers",
+  "DEN": "Wil Lutz",
+  "HOU": "Ka'imi Fairbairn",
+  "KC": "Harrison Butker",
+  "PHI": "Jake Elliott",
+  "NO": "Daniel Carlson",
+  "SF": "Eddy Pineiro",
+  "TEN": "Joey Slye",
+  "LV": "Matt Gay",
+  "TB": "Chase McLaughlin",
+  "BUF": "Tyler Bass",
+  "MIA": "Riley Patterson",
+  "CIN": "Evan McPherson",
+  "LAC": "Cameron Dicker",
+  "DAL": "Brandon Aubrey",
+  "CLE": "Andre Szmyt",
+  "ARI": "Chad Ryland",
+  "NYJ": "Blake Grupe",
+  "DET": "Jake Bates",
+  "MIN": "Will Reichard",
+  "JAX": "Cam Little",
+  "LA": "Harrison Mevis",
+  "IND": "Spencer Shrader",
+  "BAL": "Tyler Loop",
+  "NE": "Andy Borregales",
+  "CAR": "Ryan Fitzgerald",
+  "GB": "Trey Smack",
+  "NYG": "Dominic Zvada",
+  "WAS": "Drew Stevens"
+ }
+}

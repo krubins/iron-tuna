@@ -437,8 +437,12 @@ console.log('\nlive nflverse pull (network)');
 {
   const L = harness(realPool, () => 'ENC', 'k', globalThis.fetch);
   try {
-    const ppg = await L.fetchTeamEnvNflverse({});
-    const built = L.buildTeamEnvOverlay(ppg);
+    const totals = await L.fetchTeamEnvNflverse({});
+    const built = L.buildTeamEnvOverlay(totals);
+    // The provider works in season totals; the column has always printed a
+    // per-game number, so runOddsRefresh divides before it stores the context
+    // and this mirrors that.
+    const ppg = Object.fromEntries(Object.entries(totals).map(([t, v]) => [t, v.pf / v.games]));
     const rank = {};
     Object.entries(ppg).sort((a, b) => b[1] - a[1]).forEach(([t], i) => { rank[t] = i + 1; });
     const ctx = { ppg, rank };

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<title>Player Weekly Intel | Iron Tuna</title>
+<meta name="description" content="One player, every horizon: Iron Tuna, consensus and Vegas ranks and projections, Market Delta, current props and line movement, TD probability, usage, injury and game environment.">
+<link rel="canonical" href="https://irontuna.com/in-season/player">
+<meta name="robots" content="noindex,follow">
+<meta property="og:title" content="Player Weekly Intel">
+<meta property="og:description" content="Iron Tuna, consensus and Vegas on one player, with the props and the line movement behind the gap.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/in-season/player">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<style>
+body{overflow-x:hidden}
+/* Mobile masthead: one sideways-scrolling row under a pinned CTA, so the
+   header stays 52px instead of wrapping into three ragged rows. Copied from the
+   other content pages deliberately; when this moves it moves everywhere. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
+.nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
+h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
+p{color:var(--sec);margin:0 0 16px}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
+.btn:hover{filter:brightness(1.06);text-decoration:none}
+.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+
+.pi-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 28px;margin:6px 0 10px}
+.pi-head h1{margin:0}
+.pi-meta{font-size:14px;color:var(--sec)}
+.pi-meta b{color:var(--text)}
+.pi-boards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
+.pi-board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.pi-board i{font-style:normal;display:block;font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.pi-board i.c{color:var(--muted)} .pi-board i.v{color:var(--goldink)}
+.pi-board b{display:block;font-size:30px;line-height:1;color:var(--text)}
+.pi-board span{display:block;font-size:13px;color:var(--sec);margin-top:4px}
+.pi-delta{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:12px;padding:14px 18px;margin:12px 0}
+.pi-delta.fade{border-left-color:var(--danger)} .pi-delta.agree{border-left-color:var(--line2)}
+.pi-delta .cls{font-size:12px;font-weight:800;letter-spacing:.08em}
+.pi-delta .cls.buy{color:var(--teal)} .pi-delta .cls.fade{color:var(--danger)} .pi-delta .cls.agree{color:var(--muted)}
+.pi-delta h3{margin:4px 0 6px}
+.pi-drivers{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+.pi-drivers td{padding:6px 10px;border-bottom:1px solid var(--line)} .pi-drivers td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pi-drivers td.up{color:var(--teal);font-weight:700} .pi-drivers td.dn{color:var(--danger);font-weight:700}
+.pi-take{background:linear-gradient(180deg,rgba(14,124,99,.07),rgba(14,124,99,.02));border:1px solid rgba(14,124,99,.3);border-radius:14px;padding:18px 22px;margin:22px 0;font-size:15.5px;line-height:1.6;color:var(--text)}
+.pi-take h2{margin:0 0 8px;font-size:18px}
+.pi-conf{font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--sec);margin-left:6px}
+.pi-conf.HIGH{color:var(--teal)} .pi-conf.LOW{color:var(--muted)}
+.pi-note{font-size:13px;color:var(--muted);line-height:1.55}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0e7c63" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/the-pick">The Pick</a>
+      <a href="/play-caller-premium">Columns</a>
+      <span class="nav-dd"><a href="/post-draft">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/trade-finder">Trade Finder</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
+      <a href="/faq">FAQ</a>
+    </nav>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div></header>
+<main id="main" class="wrap">
+<p class="is-eyebrow">In-Season &middot; Player Weekly Intel</p>
+<div class="pi-head">
+  <h1 id="piName">Player</h1>
+  <div class="pi-meta" id="piMeta"></div>
+</div>
+<div class="its-strip" data-season-strip></div>
+<p class="is-empty" id="piEmpty">Reading the boards&hellip;</p>
+<div id="piBody" hidden>
+  <div class="pi-boards" id="piBoards"></div>
+  <div id="piDelta"></div>
+  <div class="pi-take" id="piTake" hidden></div>
+
+  <h2>Every horizon</h2>
+  <div class="is-scroll"><table class="is-table" id="piHorizons"><thead><tr><th>Horizon</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th class="num">Vegas</th><th class="num">Points</th><th class="num">Games</th><th>Bye</th><th>Schedule</th><th>Confidence</th><th>Vegas basis</th></tr></thead><tbody></tbody></table></div>
+  <p class="pi-note" id="piHorizonNote"></p>
+
+  <h2>Current props and line movement</h2>
+  <div class="is-scroll"><table class="is-table" id="piProps" hidden><thead><tr><th>Market</th><th class="num">Open</th><th class="num">Current</th><th class="num">Move</th><th class="num">Books</th><th class="num">Agreement</th></tr></thead><tbody></tbody></table></div>
+  <p class="is-empty" id="piPropsEmpty"></p>
+  <div class="is-grid" id="piCards"></div>
+
+  <h2>Usage</h2>
+  <div id="piUsage" class="pi-note"></div>
+</div>
+<p class="is-note" style="margin-top:28px"><a href="/in-season/rankings">&larr; Back to the rankings</a> &middot; <a href="/in-season/vegas-edge">Vegas Edge</a></p>
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>Draft</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/auction-watch">Auction Watch</a></li>
+      <li><a href="/guides">Guides</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/weekly-intel">Weekly Intel</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/waivers">Waivers</a></li>
+      <li><a href="/trade-finder">Trade Finder</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/my-league">My League</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/post-draft">In-Season</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-season.js" defer></script>
+<script src="/it-league.js" defer></script>
+<script src="/player-search.js" defer></script>
+<script>
+(function () {
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  var sign = function (v, u) { return v == null ? '—' : (v > 0 ? '+' : '') + v + (u || ''); };
+  var LABEL = { passYd: 'Passing yards', passTD: 'Passing TDs', passInt: 'Interceptions', rushYd: 'Rushing yards', rushTD: 'Rushing TDs', rushAtt: 'Carries', recYd: 'Receiving yards', rec: 'Receptions', recTD: 'Receiving TDs', anytimeTD: 'Anytime TD' };
+  var HZ = { week: 'This week', next3: 'Next 3 weeks', ros: 'Rest of season', playoffs: 'Fantasy playoffs: weeks 15–17' };
+  function wanted() {
+    var m = location.pathname.match(/^\/in-season\/player\/([A-Za-z0-9._-]+)\/?$/);
+    var qs = new URLSearchParams(location.search);
+    return { slug: m ? decodeURIComponent(m[1]) : (qs.get('p') || ''), pos: (qs.get('pos') || '').toUpperCase(), name: qs.get('name') || '' };
+  }
+  function resolve(w) {
+    var S = window.ITPlayerSearch;
+    if (w.name && w.pos) return { n: w.name, p: w.pos };
+    if (!S) return null;
+    var hit = S.get(w.slug) || (w.slug ? S.search(w.slug.replace(/-/g, ' '), 1)[0] : null);
+    return hit ? { n: hit.n, p: w.pos || hit.p, t: hit.t } : null;
+  }
+  function score(stats, position, games) {
+    var L = window.ITLeague;
+    if (!L || !L.score || !stats) return null;
+    var rules = (L.has && L.config && L.config.scoring) ? L.config.scoring : null;
+    return rules ? L.score(stats, position === 'DST' ? 'DEF' : position, rules, games) : null;
+  }
+  function render(j) {
+    var p = j.player, w = j.thisWeek, pos = p.position;
+    document.title = p.name + ' — weekly intel | Iron Tuna';
+    $('piName').textContent = p.name;
+    $('piMeta').innerHTML = '<b>' + e(pos) + ' · ' + e(p.team) + '</b>' + (w && w.opponent ? ' · ' + e((w.home ? 'vs ' : 'at ') + w.opponent) + (w.kickoff ? ', ' + e(window.ITSeason ? ITSeason.kickoff(w.kickoff) : '') : '') : '') +
+      (w && w.injury ? ' · <span class="rk-inj" style="color:var(--danger);font-weight:800">' + e(w.injury.status) + (w.injury.gamesOut ? ' (' + w.injury.gamesOut + ' games)' : '') + '</span>' : '');
+    var L = window.ITLeague, mine = !!(L && L.has);
+    if (w) {
+      var pts = function (b) { var m = score(w[b].stats, pos, 1); return m != null ? m : w[b].points; };
+      $('piBoards').innerHTML =
+        '<div class="pi-board"><i>Iron Tuna</i><b>' + e(pos) + w.ironTuna.rank + '</b><span>' + n1(pts('ironTuna')) + ' pts <span class="pi-conf ' + e(w.ironTuna.confidence) + '">' + e(w.ironTuna.confidence) + '</span></span></div>' +
+        '<div class="pi-board"><i class="c">Consensus</i><b>' + e(pos) + w.consensus.rank + '</b><span>' + n1(pts('consensus')) + ' pts</span></div>' +
+        '<div class="pi-board"><i class="v">Vegas</i><b>' + e(pos) + w.vegas.rank + '</b><span>' + n1(pts('vegas')) + ' pts <span class="pi-conf ' + e(w.vegas.confidence) + '">' + e(w.vegas.confidence) + '</span><br><span class="is-status">' + e(w.vegas.basis) + '</span></span></div>' +
+        (j.tdProbability ? '<div class="pi-board"><i>Anytime TD</i><b>' + n1(j.tdProbability.probability) + '%</b><span>' + e(j.tdProbability.basis === 'derived' ? 'derived from the blended TD line, not a quoted price' : 'quoted across ' + j.tdProbability.books + ' books') + '</span></div>' : '') +
+        (w.environment ? '<div class="pi-board"><i>Game environment</i><b>' + n1(w.environment.implied != null ? w.environment.implied : w.environment.expected) + '</b><span>implied points for ' + e(p.team) + (w.environment.impliedDelta != null ? ', ' + sign(w.environment.impliedDelta) + ' on its season average' : '') + (w.environment.posted ? '' : ' (fitted, no line posted)') + '</span></div>' : '');
+      var d = w.marketDelta, kind = /BUY|HIGHER/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : 'agree';
+      var drivers = (w.why && w.why.drivers) || [];
+      $('piDelta').innerHTML = '<div class="pi-delta ' + kind + '"><span class="cls ' + kind + '">MARKET DELTA · ' + e(d.classification) + '</span>' +
+        '<h3>' + sign(d.points) + ' points · ' + sign(d.rank) + ' positions</h3>' +
+        (drivers.length ? '<p style="margin:0 0 4px;font-weight:700;color:var(--text)">' + (kind === 'agree' ? 'What moved' : d.points > 0 ? 'Why Vegas likes him' : 'Why Vegas is lower on him') + '</p><table class="pi-drivers">' +
+          drivers.map(function (x) { return '<tr><td>' + e(x.label) + '</td><td class="num">' + (x.from == null ? '' : (x.market === 'anytimeTD' ? sign(x.from) : n1(x.from)) + ' → ') + (x.market === 'anytimeTD' ? sign(x.to) : x.market === 'teamImplied' ? n1(x.to) : n1(x.to)) + '</td><td class="num ' + (x.delta > 0 ? 'up' : 'dn') + '">' + sign(x.delta, x.unit === 'probability points' ? ' pts' : x.unit === 'points vs season average' ? ' pts' : '') + (x.pct != null ? ' (' + sign(x.pct, '%') + ')' : '') + '</td></tr>'; }).join('') + '</table>' : '') +
+        '<p style="margin:6px 0 0">' + e(w.why ? w.why.summary : '') + '</p></div>';
+    }
+    if (j.take) { $('piTake').innerHTML = '<h2>Iron Tuna Take</h2>' + e(j.take); $('piTake').hidden = false; }
+    var rows = Object.keys(HZ).filter(function (k) { return j.horizons[k]; }).map(function (k) {
+      var r = j.horizons[k]; var m = score(r.ironTuna.stats, pos, r.games);
+      return '<tr><td><b>' + e(HZ[k]) + '</b>' + (r.weeks ? '<br><span class="is-status">' + e(r.weeks.map(function (x) { return x.bye ? 'BYE' : x.out ? 'OUT' : (x.home ? 'vs ' : '@') + x.opponent; }).join(', ')) + '</span>' : '') + '</td>' +
+        '<td class="num"><b>' + e(pos) + r.ironTuna.rank + '</b></td><td class="num">' + e(pos) + r.consensus.rank + '</td><td class="num">' + e(pos) + r.vegas.rank + '</td>' +
+        '<td class="num">' + n1(m != null ? m : r.ironTuna.points) + (r.games > 1 ? ' <span class="is-status">' + n1((m != null ? m : r.ironTuna.points) / r.games) + '/g</span>' : '') + '</td><td class="num">' + r.games + '</td><td>' + (r.byes.length ? e(r.byes.join(', ')) : '—') + '</td>' +
+        '<td>' + (r.scheduleDifficulty ? e(r.scheduleDifficulty.label) : '—') + '</td><td><span class="pi-conf ' + e(r.ironTuna.confidence) + '">' + e(r.ironTuna.confidence) + '</span></td><td><span class="is-status">' + e(r.vegas.basis) + '</span></td></tr>';
+    }).join('');
+    $('piHorizons').querySelector('tbody').innerHTML = rows;
+    $('piHorizonNote').textContent = (mine ? 'Points at your league’s scoring; ' : 'Points at PPR; ') + 'ranks at the site’s default league. A horizon is shown only where enough data exists. Vegas basis: props is a priced player prop; gamelines is the posted game line’s environment; ratings is a fixture no book has posted yet.';
+    var mk = Object.keys(j.movement || {});
+    if (mk.length) {
+      $('piProps').querySelector('tbody').innerHTML = mk.map(function (m) { var h = j.movement[m]; var td = m === 'anytimeTD';
+        return '<tr><td><b>' + e(LABEL[m] || m) + '</b></td><td class="num">' + (td ? sign(h.tdOpenProbability, '%') : n1(h.open)) + '</td><td class="num">' + (td ? sign(h.tdCurrentProbability, '%') : n1(h.current)) + '</td><td class="num">' + (td ? sign(h.tdCurrentProbability != null && h.tdOpenProbability != null ? Math.round((h.tdCurrentProbability - h.tdOpenProbability) * 10) / 10 : null, ' pts') : sign(h.movement) + (h.percentChange != null ? ' (' + sign(h.percentChange, '%') + ')' : '')) + '</td><td class="num">' + h.booksMoved + ' of ' + h.books + '</td><td class="num">' + (h.agreement == null ? '—' : Math.round(h.agreement * 100) + '%') + '</td></tr>'; }).join('');
+      $('piProps').hidden = false; $('piPropsEmpty').hidden = true;
+    } else {
+      $('piPropsEmpty').textContent = 'No sportsbook has posted a prop on him this week. His Vegas number is the game line’s scoring environment applied to his line, and it says so above.';
+    }
+    if (w && w.vegasProjection) {
+      var vp = w.vegasProjection;
+      $('piCards').innerHTML = '<div class="is-card"><span class="is-tag ' + (vp.status === 'full' ? 'is-live' : '') + '">' + e(vp.label || vp.status) + '</span><h3>Vegas projection</h3><p>' + (vp.priced ? 'Priced: ' + e(vp.priced.join(', ')) + '. ' : '') + (vp.missing && vp.missing.length ? 'Unpriced: ' + e(vp.missing.join(', ')) + '. ' : '') + (vp.reasons && vp.reasons.length ? e(vp.reasons.join('; ')) + '.' : '') + '</p></div>';
+    }
+    var u = j.usage;
+    if (u && u.latest) {
+      var lu = u.latest.usage, s = u.season;
+      $('piUsage').innerHTML = '<b>Week ' + e(u.latest.week) + ':</b> ' + [lu.snaps != null ? lu.snaps + ' snaps' + (lu.snapPct != null ? ' (' + Math.round(lu.snapPct * 100) + '%)' : '') : null, lu.targets != null ? lu.targets + ' targets' + (lu.targetShare != null ? ' (' + Math.round(lu.targetShare * 100) + '% share)' : '') : null, lu.carries ? lu.carries + ' carries' : null, lu.receptions != null ? lu.receptions + ' receptions' : null, lu.airYards ? lu.airYards + ' air yards' : null].filter(Boolean).map(e).join(' · ') +
+        (s && s.games ? '<br><b>Season:</b> ' + s.games + ' games, ' + n1(s.targets / s.games) + ' targets and ' + n1(s.carries / s.games) + ' carries a game.' : '') +
+        (w && w.roleTrend && w.roleTrend.label !== 'no data' ? ' <b>Role trend:</b> ' + e(w.roleTrend.label) + (w.roleTrend.pct != null ? ' (' + sign(w.roleTrend.pct, '%') + ' on his season average)' : '') + '.' : '') +
+        '<br><span class="is-status">Routes, route participation, red-zone touches and goal-line carries are not published by any free feed and are not shown.</span>';
+    } else {
+      $('piUsage').textContent = 'No weekly usage has been published for him yet. Targets, carries, snaps and shares appear here after his first game.';
+    }
+    $('piBody').hidden = false; $('piEmpty').hidden = true;
+  }
+  function boot() {
+    var w = wanted(), who = resolve(w);
+    if (!who) { $('piEmpty').textContent = 'No player by that name on the board.'; return; }
+    fetch('/api/intel/player?name=' + encodeURIComponent(who.n) + '&pos=' + encodeURIComponent(who.p)).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) { $('piEmpty').textContent = 'He is not on the in-season board yet.'; return; }
+      render(j);
+    }).catch(function () { $('piEmpty').textContent = 'The board did not answer.'; });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

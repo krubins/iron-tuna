@@ -39,10 +39,11 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
   let _PROJ_ENC = null;
   ${section}
   return { buildVegasColumn, _colScore, _colPrice, _colVegasStats, _colBlendStats, _oddsNorm,
-           fetchTeamEnvNflverse, buildTeamEnvOverlay,
+           fetchTeamEnvNflverse, buildTeamEnvOverlay, boardPayload,
            COLUMN_SCORING, COLUMN_CURVE, COLUMN_CURVE_BUDGET, COLUMN_LEAGUE_BUDGET,
            COLUMN_MAX_ITEMS, COLUMN_MIN_RANK_GAP, COLUMN_MIN_PRICE_GAP, COLUMN_POSITIONS,
-           COLUMN_MAX_AGREE, COLUMN_AGREE_MAX_RANK, VEGAS_WEIGHT };
+           COLUMN_MAX_AGREE, COLUMN_AGREE_MAX_RANK, VEGAS_WEIGHT,
+           COLUMN_NORM, _colNormFactors, _colNormApply, _oddsRound };
 `);
 
 const realPool = (() => {
@@ -132,14 +133,98 @@ console.log('\nscoring port matches the client function');
   ok('every real player scores identically in both copies', worst < 1e-9, `worst ${worst.toFixed(6)} on ${worstOf}`);
 }
 
+// ── 2b. the season-normalisation mirror matches the client ─────────────────
+// /api/board ships points on the SHEET's scale: the client re-levels each
+// position to last season's actual top-K mean (normalizeToLastYear) before
+// printing anything, and COLUMN_NORM mirrors that rule's constants. Recompute
+// both constants from index.html's own data — LAST_YEAR_*_STATS scored by the
+// client's own scoring function — and fail when the mirror drifts.
+console.log('\nseason normalisation mirrors the client');
+{
+  const grab = name => {
+    const i = client.indexOf('function ' + name);
+    const j = client.indexOf('\n}', i);
+    return client.slice(i, j + 2);
+  };
+  const cfgSeg = client.slice(client.indexOf('const DEFAULT_LEAGUE_CONFIG'), client.indexOf('function yardageScore'));
+  const num = k => { const m = cfgSeg.match(new RegExp('\\b' + k + ':\\s*(-?[\\d.]+)')); return m ? parseFloat(m[1]) : 0; };
+  const scoring = {};
+  for (const k of ['passingYardsPerPoint', 'passingYardsThreshold', 'passingTD', 'passingInt', 'passing2pt',
+                   'rushingYardsPerPoint', 'rushingYardsThreshold', 'rushingTD', 'rushing2pt',
+                   'receivingYardsPerPoint', 'receivingYardsThreshold', 'receivingTD', 'receiving2pt',
+                   'receptionPoints', 'rbReceptionPoints', 'fumbleLost', 'fumble2pt',
+                   'individualFumbleRecoveryTD', 'individualKickReturnTD', 'individualPuntReturnTD']) scoring[k] = num(k);
+  scoring.passingYardBonuses = []; scoring.rushingYardBonuses = []; scoring.receivingYardBonuses = [];
+  scoring.receptionBonuses = []; scoring.rbReceptionBonuses = [];
+  const clientScore = new Function(`
+    ${grab('yardageScore')}
+    ${grab('countScore')}
+    ${grab('scoreSkillPlayer')}
+    return scoreSkillPlayer;
+  `)();
+  const teams = +(cfgSeg.match(/\bteams:\s*(\d+)/) || [])[1] || 12;
+  const liftArr = name => {
+    const tag = 'const ' + name + ' = ';
+    const i = client.indexOf(tag);
+    const j = client.indexOf('];', i);
+    return i < 0 ? null : new Function('return ' + client.slice(i + tag.length, j + 1) + ';')();
+  };
+  for (const pos of Object.keys(W.COLUMN_NORM)) {
+    const last = liftArr('LAST_YEAR_' + pos + '_STATS');
+    ok(`${pos}: the client's last-year stats were found`, Array.isArray(last) && last.length >= 3);
+    if (!last) continue;
+    // startK at the default (1-QB) league, exactly as normalizeToLastYear
+    // computes it: round(teams*1.1) for QB/TE, round(teams*2.6) for RB/WR.
+    const startK = pos === 'RB' || pos === 'WR' ? Math.round(teams * 2.6) : Math.round(teams * 1.1);
+    const pts = last.map(st => clientScore(st, pos, { scoring })).filter(v => v > 0).sort((a, b) => b - a);
+    const K = Math.max(3, Math.min(startK, pts.length));
+    const mean = pts.slice(0, K).reduce((a, b) => a + b, 0) / K;
+    ok(`${pos}: COLUMN_NORM.k matches the client's startK`, W.COLUMN_NORM[pos].k === K,
+       `worker ${W.COLUMN_NORM[pos].k} vs client ${K}`);
+    ok(`${pos}: COLUMN_NORM.mean matches the client's last-year top-K mean`,
+       near(W.COLUMN_NORM[pos].mean, mean, 0.001), `worker ${W.COLUMN_NORM[pos].mean} vs client ${mean.toFixed(4)}`);
+  }
+  // The board actually ships the factor: on the committed pool, every player's
+  // served pts is his raw score times his position's factor, and the factor
+  // itself is the mirrored mean over the pool's own top-K mean (or 1 inside
+  // the client's 2% dead zone).
+  const ptsByPos = {};
+  for (const p of realPool) {
+    if (!R.COLUMN_POSITIONS.includes(p.position)) continue;
+    (ptsByPos[p.position] = ptsByPos[p.position] || []).push(R._colScore(p.projectedStats, p.position));
+  }
+  const f = R._colNormFactors(ptsByPos);
+  for (const pos of Object.keys(W.COLUMN_NORM)) {
+    const arr = (ptsByPos[pos] || []).filter(v => v > 0).sort((a, b) => b - a);
+    const K = Math.max(3, Math.min(W.COLUMN_NORM[pos].k, arr.length));
+    const projMean = arr.slice(0, K).reduce((a, b) => a + b, 0) / K;
+    const expected = W.COLUMN_NORM[pos].mean / projMean;
+    const want = expected >= 0.98 && expected <= 1.02 ? 1 : expected;
+    ok(`${pos}: the pool factor follows the client's rule`, near(f[pos], want, 1e-9),
+       `factor ${f[pos]} vs ${want}`);
+  }
+  const board = await R.boardPayload({});
+  ok('the board payload built offline', board && board.ok && board.players.length > 100, board && String(board.players.length));
+  let normBad = null;
+  const raws = new Map();
+  for (const p of realPool) raws.set(p.name + '|' + p.position, R._colScore(p.projectedStats, p.position));
+  for (const p of board.players) {
+    const raw = raws.get(p.n + '|' + p.pos);
+    if (raw == null) continue;
+    const want = R._oddsRound(R._colNormApply(raw, f[p.pos]));
+    if (p.pts !== want) { normBad = `${p.n} ${p.pts} vs ${want}`; break; }
+  }
+  ok('every served board point carries the position factor', normBad === null, normBad || '');
+}
+
 // ── 3. price curve ─────────────────────────────────────────────────────────
 console.log('\nprice curve');
 {
   ok('rank 1 RB prices off the top of the curve', W._colPrice('RB', 0) === Math.round(48 * (W.COLUMN_LEAGUE_BUDGET / W.COLUMN_CURVE_BUDGET)));
-  // The client scales the min bid by the league/curve ratio too, so the floor is
-  // not literally $1 in a 12x$200 league. Matching that exactly is the point.
-  const floor = Math.max(1, Math.round(1 * (W.COLUMN_LEAGUE_BUDGET / W.COLUMN_CURVE_BUDGET)));
-  ok('past the end of the curve everyone pays the scaled floor', W._colPrice('TE', 999) === floor, String(W._colPrice('TE', 999)));
+  // The client does NOT scale the min bid: past the curve the room pays $1
+  // whatever the budget (calculateMarketValues). Matching that exactly is the
+  // point — the scaled floor used to quote the deep tail at $2 in a $200 league.
+  ok('past the end of the curve everyone pays the min bid', W._colPrice('TE', 999) === 1, String(W._colPrice('TE', 999)));
   ok('the floor is never above an in-curve price', W._colPrice('TE', 999) <= W._colPrice('TE', 0));
   ok('prices are monotonically non-increasing down the curve',
      W.COLUMN_CURVE.WR.every((_, i) => i === 0 || W._colPrice('WR', i) <= W._colPrice('WR', i - 1)));

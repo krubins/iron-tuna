@@ -111,7 +111,18 @@ table.fa .mine{color:var(--teal);font-weight:800}
 .method h3{font-size:15px;margin:0 0 8px}
 .method p{font-size:13px;color:var(--muted);line-height:1.65;margin:0 0 9px}
 .method b{color:var(--sec)}
-@media(max-width:560px){.fa-bar{gap:8px 16px}.fa-bar .v{font-size:16px}}
+.fm-grid{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 4px}
+.fm-grid label{display:inline-flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--sec)}
+.fm-grid input{width:96px;font:inherit;padding:7px 9px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}
+.fm-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.fm-area{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:700;color:var(--text)}
+.fm-area span{font-size:12px;font-weight:400;color:var(--muted)}
+.fm-area textarea{min-height:96px;padding:10px 12px;border-radius:8px;border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:13.5px;line-height:1.45;resize:vertical}
+.fm-area textarea:focus,.fm-grid input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,99,.12)}
+.fm-wide{grid-column:1 / -1}
+.fm-wide textarea{min-height:140px}
+.fa-obs .rate{font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.55}
+@media(max-width:560px){.fa-bar{gap:8px 16px}.fa-bar .v{font-size:16px}.fm-cols{grid-template-columns:1fr}}
 </style></head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -124,7 +135,7 @@ table.fa .mine{color:var(--teal);font-weight:800}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <a href="/post-draft">In-Season</a>
+      <span class="nav-dd"><a href="/post-draft">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/trade-finder">Trade Finder</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
@@ -158,6 +169,40 @@ table.fa .mine{color:var(--teal);font-weight:800}
   <div class="fa-step" id="step-team" hidden>
     <h3>3. Which team is yours?</h3>
     <div class="fa-pick" id="fa-teams"></div>
+  </div>
+  <div class="fa-step" id="step-manual">
+    <h3>Or enter the league by hand</h3>
+    <p class="sub">Not on Sleeper, or running a what-if? Give it the budgets and the wire and it prices the claim the same way. Paste every roster and the wire is exact; skip that and each rival is assumed to have a hole at the position.</p>
+    <button class="btn alt" id="fa-manual-btn" type="button">Enter it by hand</button>
+    <div id="fa-manual" hidden>
+      <div class="fm-grid">
+        <label>Teams<input id="fm-teams" type="number" min="4" max="20" value="12"></label>
+        <label>FAAB budget<input id="fm-budget" type="number" min="1" max="10000" value="100"></label>
+        <label>Your FAAB left<input id="fm-left" type="number" min="0" max="10000" value="100"></label>
+        <label>Week<input id="fm-week" type="number" min="1" max="17" value="1"></label>
+      </div>
+      <div class="fm-grid">
+        <label>QB starters<input id="fm-qb" type="number" min="0" max="3" value="1"></label>
+        <label>RB<input id="fm-rb" type="number" min="0" max="4" value="2"></label>
+        <label>WR<input id="fm-wr" type="number" min="0" max="5" value="2"></label>
+        <label>TE<input id="fm-te" type="number" min="0" max="3" value="1"></label>
+        <label>Flex<input id="fm-flex" type="number" min="0" max="4" value="1"></label>
+      </div>
+      <div class="fm-cols">
+        <label class="fm-area">Rivals&rsquo; FAAB left <span>one per line: team name, then dollars</span><textarea id="fm-rivals" placeholder="The Hammers $64
+Ken's Team 40
+Rival 3 $0" spellcheck="false"></textarea></label>
+        <label class="fm-area">Free agents you are weighing <span>one per line; list everyone worth a look, not just the one you want</span><textarea id="fm-wire" placeholder="Tyler Allgeier RB
+Jauan Jennings
+Bo Nix QB" spellcheck="false"></textarea></label>
+        <label class="fm-area">Your roster <span>one player per line, so the bar he has to clear is your real one</span><textarea id="fm-mine" spellcheck="false"></textarea></label>
+        <label class="fm-area">What the league has already paid <span>optional: week, player, winning bid &mdash; it calibrates the going rate</span><textarea id="fm-hist" placeholder="Week 3: Bijan Robinson $34
+Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
+        <label class="fm-area fm-wide">Every roster in the league <span>optional: paste them all, team name above each, and the wire and every rival&rsquo;s hole are exact</span><textarea id="fm-rosters" spellcheck="false"></textarea></label>
+      </div>
+      <div class="cta-row"><button class="btn" id="fm-go" type="button">Price the wire</button></div>
+      <p class="fa-err" id="fm-err" hidden></p>
+    </div>
   </div>
 </div>
 
@@ -205,9 +250,22 @@ table.fa .mine{color:var(--teal);font-weight:800}
      </ul>
     </div>
     <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/weekly-intel">Weekly Intel</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/waivers">Waivers</a></li>
+      <li><a href="/trade-finder">Trade Finder</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/my-league">My League</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
      <h2>Company</h2>
      <ul>
-      <li><a href="/post-draft">In-Season (soon)</a></li>
+      <li><a href="/post-draft">In-Season</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -229,12 +287,15 @@ table.fa .mine{color:var(--teal);font-weight:800}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js"></script>
+<script src="/it-trade.js"></script>
 <script>
 
 (function () {
   'use strict';
   var S = 'https://api.sleeper.app';
   var KEY = 'it_faab_v1';
+  var MKEY = 'it_faab_manual_v1';
+  var HIST_PRIOR = 3;            // settled bids it takes to outweigh the model's own going rate
   var FANTASY_END = 17;          // the last week most leagues actually play
   var ADDS_PER_WEEK = 0.7;       // meaningful claims a manager makes per week
   var BENCH_FLOOR = 0.2;         // a free agent who cracks nobody's lineup is still worth holding
@@ -287,6 +348,84 @@ table.fa .mine{color:var(--teal);font-weight:800}
   function lookup(name, pos) {
     var hit = byName[normName(name)];
     return (hit && (!pos || hit.pos === pos)) ? hit : null;
+  }
+  // The same board as a pool for it-trade.js's resolver, so a pasted roster
+  // line ("J. Chase WR CIN", "Chase, Ja'Marr") lands on the same row the
+  // Sleeper path prices. Every position is in it — a "Bills D/ST" line must
+  // resolve to something, or the parser would read it as a team name.
+  var tradePool = null;
+  function poolFor() {
+    if (tradePool || !L || !window.ITTrade) return tradePool;
+    tradePool = window.ITTrade.makePool((L.defaultBoard() || []).map(function (p) { return { name: p.n, pos: p.pos, team: '', id: normName(p.n) + '|' + p.pos }; }));
+    return tradePool;
+  }
+  function resolveName(text) {
+    var pool = poolFor();
+    var row = pool ? window.ITTrade.resolve(text, pool, null) : null;
+    return row ? { name: row.name, pos: row.pos } : null;
+  }
+
+  // ── what the league has already paid ─────────────────────────────────────
+  // A settled bid is the best evidence of a room's going rate there is, and
+  // both paths supply them: Sleeper publishes the transaction log, and the
+  // manual form takes them typed. Each is turned into an exchange rate — FAAB
+  // dollars paid per draft dollar of the player's rest-of-season value AT THE
+  // TIME — and the median of those is the league's rate. The model's going
+  // rate is then blended toward rate × value, weighted by how many bids there
+  // are: three settled claims count as much as the model, thirty swamp it.
+  function calibrate(history, week) {
+    var ratios = [];
+    (history || []).forEach(function (h) {
+      var b = lookup(h.name, h.pos);
+      if (!b || !(h.bid > 0)) return;
+      var w = Math.max(1, Math.min(FANTASY_END, h.w || week));
+      var rosThen = b.v * (FANTASY_END - w + 1) / FANTASY_END;
+      if (rosThen < 1) return;
+      ratios.push(h.bid / rosThen);
+    });
+    if (!ratios.length) return { n: 0, rate: 0 };
+    ratios.sort(function (a, b) { return a - b; });
+    var mid = Math.floor(ratios.length / 2);
+    return { n: ratios.length, rate: ratios.length % 2 ? ratios[mid] : (ratios[mid - 1] + ratios[mid]) / 2 };
+  }
+  // "Week 3: Bijan Robinson $34", "wk 4 - Allgeier - 12", "$7 Jauan Jennings week 2".
+  function parseHistory(text, budget) {
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (line) {
+      var t = line.trim();
+      if (!t) return;
+      var w = null, bid = null;
+      t = t.replace(/\b(?:week|wk|w)\s*\.?\s*(\d{1,2})\b/i, function (m, n) { w = +n; return ' '; });
+      t = t.replace(/\$\s*(\d+(?:\.\d+)?)/, function (m, n) { bid = +n; return ' '; });
+      if (bid == null) {
+        // No dollar sign: the last bare number that could be a bid.
+        var nums = t.match(/\b\d+(?:\.\d+)?\b/g) || [];
+        for (var i = nums.length - 1; i >= 0; i--) { if (+nums[i] <= (budget || 1e9)) { bid = +nums[i]; t = t.replace(new RegExp('\\b' + nums[i] + '\\b'), ' '); break; } }
+      }
+      var name = t.replace(/[:;|,\-\u2013\u2014]+/g, ' ').replace(/\b(on|for|paid|bid|won|went|by|to)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+      var p = name ? resolveName(name) : null;
+      if (p && bid != null) out.push({ w: w, bid: bid, name: p.name, pos: p.pos });
+    });
+    return out;
+  }
+  // Sleeper's log, every week so far at once. Only completed FAAB claims.
+  function fetchHistory(leagueId, week, pool) {
+    var reqs = [];
+    for (var w = 1; w <= week; w++) reqs.push(getJSON('/v1/league/' + leagueId + '/transactions/' + w).catch(function () { return []; }));
+    return Promise.all(reqs).then(function (weeks) {
+      var out = [];
+      weeks.forEach(function (tx, i) {
+        (tx || []).forEach(function (t) {
+          var bid = t && t.settings && t.settings.waiver_bid;
+          if (!t || t.status !== 'complete' || !bid || !t.adds) return;
+          Object.keys(t.adds).forEach(function (id) {
+            var m = pool[id];
+            if (m) out.push({ w: i + 1, bid: bid, name: m[0], pos: m[1] });
+          });
+        });
+      });
+      return out;
+    });
   }
 
   // ── step 1: the account ──────────────────────────────────────────────────
@@ -382,7 +521,11 @@ table.fa .mine{color:var(--teal);font-weight:800}
       getJSON('/v1/league/' + st.lg + '/users'),
       fetch('/api/faab/players').then(function (r) { return r.json(); }).catch(function () { return { players: {} }; })
     ]).then(function (res) {
-      render(st, res[0], res[1], res[2] || [], res[3] || [], (res[4] && res[4].players) || {});
+      var nfl = res[0], pool = (res[4] && res[4].players) || {};
+      var week = Math.max(1, Math.min(FANTASY_END, (nfl && (nfl.display_week || nfl.week)) || 1));
+      return fetchHistory(st.lg, week, pool).catch(function () { return []; }).then(function (history) {
+        render(st, nfl, res[1], res[2] || [], res[3] || [], pool, { history: history });
+      });
     }).catch(function () {
       $('fa-loading').hidden = true;
       $('fa-connect').hidden = false;
@@ -390,8 +533,11 @@ table.fa .mine{color:var(--teal);font-weight:800}
     });
   }
 
-  function render(st, nfl, lg, rosters, users, pool) {
+  function render(st, nfl, lg, rosters, users, pool, opts) {
+    opts = opts || {};
+    var manual = !!opts.manual;
     var week = Math.max(1, Math.min(FANTASY_END, (nfl && (nfl.display_week || nfl.week)) || 1));
+    var cal = calibrate(opts.history || [], week);
     var left = Math.max(1, FANTASY_END - week + 1);
     var W = left / FANTASY_END;
     var budget = ((lg.settings || {}).waiver_budget) || 100;
@@ -519,10 +665,12 @@ table.fa .mine{color:var(--teal);font-weight:800}
     $('fa-reset').addEventListener('click', function (e) {
       e.preventDefault();
       try { localStorage.removeItem(KEY); } catch (err) {}
+      try { var m = readManual(); if (m) { m.ran = false; writeManual(m); } } catch (err) {}
       $('fa-advisor').hidden = true;
       $('fa-connect').hidden = false;
       $('step-league').hidden = true;
       $('step-team').hidden = true;
+      if (manual) { $('fa-manual').hidden = false; $('step-manual').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     });
 
     // ── the room ─────────────────────────────────────────────────────────────
@@ -554,7 +702,16 @@ table.fa .mine{color:var(--teal);font-weight:800}
         if (!top || bid > top.bid) top = { name: r.name, bid: bid, left: r.left };
       });
       var going = top ? top.bid : 0;
+      // A player nobody would rationally bid on is not rescued by the history:
+      // the calibration moves a going rate that exists, it does not invent one.
       if (myMax < 1 && going < 1) return;
+      // What this league has actually paid, blended in. Capped at the richest
+      // rival's money: history can say the room overpays, not that it can
+      // spend what it does not have.
+      if (cal.n > 0 && top && solvent.length) {
+        var hist = Math.min(solvent[0].left, Math.round(cal.rate * fa.ros));
+        going = top.bid = Math.round((going * HIST_PRIOR + hist * cal.n) / (HIST_PRIOR + cal.n));
+      }
       shown++;
       var call, cls;
       if (myMax >= going + 1) { call = 'Bid ' + money(going + 1); cls = 'bid'; }
@@ -574,41 +731,141 @@ table.fa .mine{color:var(--teal);font-weight:800}
     $('fa-rows').innerHTML = rows || '<tr><td colspan="6" style="color:var(--muted)">No free agent in this league is worth a bid right now. That is a real answer: save the budget.</td></tr>';
     $('fa-note').innerHTML = shown + ' free agent' + (shown === 1 ? ' is' : 's are') + ' worth a bid in a ' + esc(String(lg.total_rosters || rosters.length))
       + '-team league with ' + left + ' week' + (left === 1 ? '' : 's') + ' to play'
-      + (L && L.custom ? ' and your own saved scoring.' : '. Values come from the default board — <a href="/auctiondraft?screen=cheat">build your free sheet</a> and these re-price to your exact settings.');
+      + (L && L.custom ? ' and your own saved scoring.' : '. Values come from the default board — <a href="/auctiondraft?screen=cheat">build your free sheet</a> and these re-price to your exact settings.')
+      + (manual && !opts.rostersKnown ? ' Rivals&rsquo; rosters were not given, so each is assumed to have a hole at the position: the going rate leans high.' : '')
+      + (manual && !opts.wireKnown ? ' The wire is the players you listed plus the board below the depth a league this size rosters; list more of it and the shares sharpen.' : '');
 
     // ── what the league has actually paid ────────────────────────────────────
     // The single best guide to a room's going rate is what that room has already
-    // settled, and Sleeper publishes it. Read backwards from the current week so
-    // a quiet Tuesday still shows the last time money moved.
-    var obs = [];
-    var wk = week;
-    (function nextWeek() {
-      if (wk < 1 || obs.length >= 6) return done();
-      getJSON('/v1/league/' + st.lg + '/transactions/' + wk).then(function (tx) {
-        (tx || []).forEach(function (t) {
-          var bid = t && t.settings && t.settings.waiver_bid;
-          if (t.status !== 'complete' || !bid || !t.adds) return;
-          Object.keys(t.adds).forEach(function (id) {
-            var m = pool[id];
-            if (m && obs.length < 6) obs.push({ w: wk, bid: bid, name: m[0], pos: m[1] });
-          });
-        });
-        wk--; nextWeek();
-      }).catch(function () { wk--; nextWeek(); });
-    })();
-    function done() {
-      if (!obs.length) return;
-      obs.sort(function (a, b) { return b.bid - a.bid; });
+    // settled. Sleeper publishes it; the manual form takes it typed. Every bid
+    // went into the calibration above; the biggest few are shown, most recent
+    // first among equals, with the rate they add up to.
+    var obs = (opts.history || []).slice().sort(function (a, b) { return b.bid - a.bid || (b.w || 0) - (a.w || 0); });
+    if (obs.length) {
       $('fa-obs').innerHTML = '<h3>What this league has actually paid</h3><ul>'
-        + obs.map(function (o) { return '<li><b>' + money(o.bid) + '</b> on ' + esc(o.name) + ' (' + esc(o.pos) + ') in week ' + o.w + '</li>'; }).join('')
-        + '</ul>';
+        + obs.slice(0, 6).map(function (o) { return '<li><b>' + money(o.bid) + '</b> on ' + esc(o.name) + ' (' + esc(o.pos) + ')' + (o.w ? ' in week ' + o.w : '') + '</li>'; }).join('')
+        + '</ul>'
+        + (cal.n ? '<p class="rate">From ' + cal.n + ' settled bid' + (cal.n === 1 ? '' : 's') + ', this room pays about <b>$' + (Math.round(cal.rate * 100) / 100).toFixed(2) + ' of FAAB per $1</b> of a player&rsquo;s rest-of-season value. The going rates above are the model&rsquo;s figure moved toward that rate, ' + (cal.n >= HIST_PRIOR ? 'and the history now carries at least as much weight as the model.' : 'lightly, since there are only ' + cal.n + ' to go on.') + '</p>' : '');
       $('fa-obs').hidden = false;
-    }
+    } else $('fa-obs').hidden = true;
 
     $('fa-loading').hidden = true;
     $('fa-advisor').hidden = false;
     try { if (typeof gtag === 'function') gtag('event', 'faab_view', { teams: rosters.length }); } catch (e) {}
   }
+
+  // ── by hand ──────────────────────────────────────────────────────────────
+  // The same render(), fed a league built from the form. Everything Sleeper
+  // would have supplied is synthesised in the same shape — rosters with a
+  // waiver_budget_used, a league with roster_positions, a pool keyed by id —
+  // so the model runs once, here, and cannot disagree with itself.
+  function readManual() { try { return JSON.parse(localStorage.getItem(MKEY) || 'null'); } catch (e) { return null; } }
+  function writeManual(v) { try { localStorage.setItem(MKEY, JSON.stringify(v)); } catch (e) {} }
+  var FM = ['teams', 'budget', 'left', 'week', 'qb', 'rb', 'wr', 'te', 'flex', 'rivals', 'wire', 'mine', 'hist', 'rosters'];
+  function manualForm() { var o = {}; FM.forEach(function (k) { o[k] = $('fm-' + k).value; }); return o; }
+  function fillManual(o) { FM.forEach(function (k) { if (o[k] != null) $('fm-' + k).value = o[k]; }); }
+  // Typical rostered depth per position, so a wire given without the league's
+  // rosters still has a realistic tail under the players the reader named.
+  var DEPTH = { QB: 1.4, RB: 4.2, WR: 5, TE: 1.4 };
+
+  function manualBoot() {
+    var err = $('fm-err'); err.hidden = true;
+    var f = manualForm();
+    var teams = Math.max(2, parseInt(f.teams, 10) || 12), budget = Math.max(1, parseInt(f.budget, 10) || 100);
+    var myLeft = Math.max(0, Math.min(budget, parseInt(f.left, 10) || 0));
+    var week = Math.max(1, Math.min(FANTASY_END, parseInt(f.week, 10) || 1));
+    var pool = {}, nextId = 1, idOf = {};
+    function idFor(p) {
+      var k = normName(p.name) + '|' + p.pos;
+      if (!idOf[k]) { idOf[k] = 'm' + (nextId++); pool[idOf[k]] = [p.name, p.pos, '', '']; }
+      return idOf[k];
+    }
+    function names(text) {
+      var out = [], miss = [];
+      String(text || '').split(/\r?\n/).forEach(function (line) {
+        var t = line.trim(); if (!t) return;
+        var p = resolveName(t);
+        if (p) out.push(p); else miss.push(t);
+      });
+      return { hit: out, miss: miss };
+    }
+    var wire = names(f.wire), mineR = names(f.mine);
+    var parsed = null;
+    if (String(f.rosters || '').trim() && poolFor()) parsed = window.ITTrade.parseRosters(f.rosters, poolFor());
+    var rostersKnown = !!(parsed && parsed.teams.length >= 2);
+    if (!wire.hit.length && !rostersKnown) { fail(err, 'Name at least one free agent the board knows' + (wire.miss.length ? ' (not recognised: ' + wire.miss.slice(0, 3).join(', ') + ')' : '') + ', or paste every roster.'); return; }
+
+    // The rivals: name and dollars, one per line.
+    var rivals = [];
+    String(f.rivals || '').split(/\r?\n/).forEach(function (line) {
+      var t = line.trim(); if (!t) return;
+      var m = t.match(/\$?\s*(\d+)\s*$/) || t.match(/^\$?\s*(\d+)\b/);
+      var left = m ? Math.max(0, Math.min(budget, +m[1])) : budget;
+      var name = t.replace(m ? m[0] : '', '').replace(/[:,\-\u2013\u2014$]+\s*$/, '').trim() || ('Rival ' + (rivals.length + 1));
+      rivals.push({ name: name, left: left });
+    });
+    if (!rivals.length && !rostersKnown) { fail(err, 'List the other teams and how much FAAB each has left.'); return; }
+
+    var rosters = [], users = [];
+    var mineIds = mineR.hit.map(idFor);
+    var fold = window.ITTrade ? window.ITTrade.fold : function (x) { return String(x).toLowerCase(); };
+    if (rostersKnown) {
+      // Every roster given: rivals are the pasted teams, budgets matched by
+      // name, unmatched budgets handed out in order, the rest at full budget.
+      var byName2 = {}, spare = rivals.slice();
+      rivals.forEach(function (r) { byName2[fold(r.name)] = r; });
+      var mineTeam = null;
+      parsed.teams.forEach(function (t) {
+        var ids = t.players.map(function (row) { return idFor({ name: row.name, pos: row.pos }); });
+        var overlap = mineIds.length ? ids.filter(function (id) { return mineIds.indexOf(id) >= 0; }).length : 0;
+        if (!mineTeam && mineIds.length && overlap >= Math.max(1, Math.ceil(mineIds.length / 2))) { mineTeam = { name: t.name, ids: ids }; return; }
+        var r = byName2[fold(t.name)];
+        if (r) spare.splice(spare.indexOf(r), 1); else r = spare.length ? spare.shift() : { name: t.name, left: budget };
+        rosters.push({ roster_id: rosters.length + 2, owner_id: 'u' + (rosters.length + 2), players: ids, settings: { waiver_budget_used: budget - r.left } });
+        users.push({ user_id: 'u' + (rosters.length + 1), display_name: t.name, metadata: { team_name: t.name } });
+      });
+      if (mineTeam) mineIds = mineTeam.ids;
+      else if (!mineIds.length) { fail(err, 'Paste your own roster too, so the advisor knows which of those teams is yours.'); return; }
+      // Everyone the board knows and nobody rosters is on the wire.
+      (L.defaultBoard() || []).forEach(function (p) { if (POS[p.pos]) idFor({ name: p.n, pos: p.pos }); });
+    } else {
+      rivals.forEach(function (r, i) {
+        rosters.push({ roster_id: i + 2, owner_id: 'u' + (i + 2), players: [], settings: { waiver_budget_used: budget - r.left } });
+        users.push({ user_id: 'u' + (i + 2), display_name: r.name, metadata: { team_name: r.name } });
+      });
+      // The tail of the wire: the board below the depth this league rosters.
+      var counts = {};
+      (L.defaultBoard() || []).slice().sort(function (a, b) { return (b.pts || 0) - (a.pts || 0); }).forEach(function (p) {
+        if (!POS[p.pos]) return;
+        counts[p.pos] = (counts[p.pos] || 0) + 1;
+        if (counts[p.pos] > Math.round(DEPTH[p.pos] * teams) && counts[p.pos] <= Math.round(DEPTH[p.pos] * teams) + 12) idFor({ name: p.n, pos: p.pos });
+      });
+    }
+    wire.hit.forEach(idFor);
+    rosters.unshift({ roster_id: 1, owner_id: 'u1', players: mineIds, settings: { waiver_budget_used: budget - myLeft } });
+    users.unshift({ user_id: 'u1', display_name: 'You', metadata: { team_name: 'Your team' } });
+    var positions = [];
+    [['QB', 'qb'], ['RB', 'rb'], ['WR', 'wr'], ['TE', 'te'], ['FLEX', 'flex']].forEach(function (s) {
+      for (var i = 0; i < Math.max(0, parseInt(f[s[1]], 10) || 0); i++) positions.push(s[0]);
+    });
+    var lg = { name: 'Your league', total_rosters: rosters.length, roster_positions: positions, settings: { waiver_budget: budget, waiver_type: 2 } };
+    var history = parseHistory(f.hist, budget);
+    var saved = manualForm(); saved.ran = true; writeManual(saved);
+    $('fa-connect').hidden = true;
+    render({ manual: true, ro: 1 }, { week: week }, lg, rosters, users, pool, { manual: true, history: history, rostersKnown: rostersKnown, wireKnown: rostersKnown });
+    if (wire.miss.length || mineR.miss.length) {
+      $('fa-note').innerHTML += ' Not recognised and left out: ' + esc(wire.miss.concat(mineR.miss).slice(0, 6).join(', ')) + '.';
+    }
+  }
+  $('fa-manual-btn').addEventListener('click', function () {
+    $('fa-manual').hidden = !$('fa-manual').hidden;
+    if (!$('fa-manual').hidden) $('fm-rivals').focus();
+  });
+  $('fm-go').addEventListener('click', manualBoot);
+  // The week, from the site's own clock, unless the reader has typed one.
+  fetch('/api/season', { credentials: 'omit' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    if (j && j.ok && j.week && j.week.type === 'REG' && j.week.number && !(readManual() || {}).week) $('fm-week').value = j.week.number;
+  }).catch(function () {});
 
   // ── go ───────────────────────────────────────────────────────────────────
   buildBoard();
@@ -620,7 +877,10 @@ table.fa .mine{color:var(--teal);font-weight:800}
     if (e.key === 'Enter') { var v = (e.target.value || '').trim(); if (v) findLeagues(v); }
   });
   var saved = readState();
+  var savedManual = readManual();
+  if (savedManual) fillManual(savedManual);
   if (saved && saved.lg && saved.ro) boot(saved);
+  else if (savedManual && savedManual.ran) { $('fa-manual').hidden = false; manualBoot(); }
 })();
 
 </script>

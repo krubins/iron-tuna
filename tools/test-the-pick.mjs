@@ -18,8 +18,13 @@
 //   2. ROSTER. Every player the pick line commits to is on the board in
 //      PROJECTIONS, and every "Name (TEAM)" in a table is on that team.
 //   3. NUMBERS. A table column headed "Points" is checked against the PPR total
-//      computed from PROJECTIONS. This is the check that makes the column's
-//      tables worth printing: a number a reader can verify on their own sheet.
+//      computed from PROJECTIONS, and a column headed with a scoring setting
+//      ("Full PPR", "Half PPR", "Standard") or plain "Rank" has its RB9/WR12
+//      cells checked against the rank that setting actually produces. This is
+//      the check that makes the column's tables worth printing: a number a
+//      reader can verify on their own sheet. Ranks went unchecked until
+//      2026-08-31, and pick-2026-08-20 sat with 16 of 18 rank cells wrong and a
+//      headline to match, because the only table it prints is a rank table.
 //   4. TRANSLATION. /it-league.js turns each statline into the reader's own
 //      dollars, but only if the statline quotes a percentage range AND one of
 //      the players it is about is named in the headline or the pick line. Fail
@@ -70,11 +75,15 @@ function literalAfter(src, name) {
 
 const PROJECTIONS = literalAfter(worker, 'PROJECTIONS');
 
-// Full PPR, the scoring the column's method box says its points are quoted in.
-const pprOf = (s) => (s.passYd || 0) / 25 + (s.passTD || 0) * 4 - (s.passInt || 0) * 2
+// One scoring formula, parameterised by what a catch is worth, because the
+// column argues about scoring settings and a second copy would drift from this
+// one the first time the site changed a coefficient.
+const scoreOf = (s, perRec) => (s.passYd || 0) / 25 + (s.passTD || 0) * 4 - (s.passInt || 0) * 2
   + (s.rushYd || 0) / 10 + (s.rushTD || 0) * 6
-  + (s.recYd || 0) / 10 + (s.recTD || 0) * 6 + (s.rec || 0)
+  + (s.recYd || 0) / 10 + (s.recTD || 0) * 6 + (s.rec || 0) * perRec
   - (s.fumLost || 0) * 2;
+// Full PPR, the scoring the column's method box says its points are quoted in.
+const pprOf = (s) => scoreOf(s, 1);
 
 const unesc = (t) => String(t)
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -94,6 +103,44 @@ for (const p of PROJECTIONS) {
   const k = keyOf(p.name);
   if (!byName.has(k)) byName.set(k, []);
   byName.get(k).push(p);
+}
+
+// ── ranks, the way the site produces them ─────────────────────────────────
+// The board scores, rounds to a tenth, then sorts (see _colScore and
+// tools/live-board.mjs), so this does too. Sorting raw and sorting rounded can
+// disagree on a tie, and the rank a reader sees comes off the rounded one.
+const r1 = (n) => Math.round(n * 10) / 10;
+const ladders = new Map();                    // perRec -> Map(position -> sorted names)
+function ladderFor(perRec) {
+  const key = String(perRec);
+  if (!ladders.has(key)) {
+    const byPos = new Map();
+    for (const p of PROJECTIONS) {
+      if (!byPos.has(p.position)) byPos.set(p.position, []);
+      byPos.get(p.position).push({ name: p.name, pts: r1(scoreOf(p.projectedStats, perRec)) });
+    }
+    for (const [, list] of byPos) list.sort((a, b) => b.pts - a.pts);
+    ladders.set(key, byPos);
+  }
+  return ladders.get(key);
+}
+const rankOf = (name, position, perRec) => {
+  const list = ladderFor(perRec).get(position) || [];
+  const i = list.findIndex((p) => keyOf(p.name) === keyOf(name));
+  return i < 0 ? null : i + 1;
+};
+
+// A rank only means something once you know what a catch is worth in it, so a
+// column is only checked when its header says. "Full PPR" and "Standard" are
+// the column's own words for the two ends; a bare "Rank" is the site's own
+// model, which has been full PPR since 2026-08-22. Anything else — "Max bid",
+// "Rank move" — is left alone, because it is an argument rather than a fact.
+function perRecOf(head) {
+  if (/\bfull ppr\b/.test(head)) return 1;
+  if (/\bhalf[- ]?ppr\b/.test(head)) return 0.5;
+  if (/\bstandard\b|\bnon-?ppr\b/.test(head)) return 0;
+  if (/^(our |projected |iron tuna )?rank$/.test(head)) return 1;
+  return null;
 }
 
 // Every "Name (TEAM)" in an entry, read one text node at a time. Flattening the
@@ -183,32 +230,60 @@ console.log('\nthe column names players who are actually on the board');
 }
 
 // ── 3. the numbers in the tables ──────────────────────────────────────────
-console.log('\na table headed "Points" agrees with the projection set');
+console.log('\nthe points and ranks in the tables agree with the projection set');
 {
   const wrong = [], checked = [];
+  const wrongRank = [], checkedRank = [];
   for (const e of entries) {
     for (const t of e.html.matchAll(/<table>([\s\S]*?)<\/table>/g)) {
       const heads = [...(t[1].match(/<thead>[\s\S]*?<\/thead>/) || [''])[0].matchAll(/<th>([\s\S]*?)<\/th>/g)]
         .map((m) => norm(m[1]).toLowerCase());
       const col = heads.indexOf('points');
-      if (col < 0) continue;
+      const rankCols = heads.map((h, i) => [i, perRecOf(h)]).filter(([, r]) => r !== null);
+      if (col < 0 && rankCols.length === 0) continue;
       for (const row of t[1].matchAll(/<tr[^>]*>((?:\s*<td[^>]*>[\s\S]*?<\/td>)+)\s*<\/tr>/g)) {
         const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => norm(m[1]));
         const who = cells.find((c) => /\([A-Z]{2,3}\)/.test(c));
-        if (!who || cells[col] === undefined) continue;
-        const rows = byName.get(keyOf(who.replace(/\s*\([^)]*\)\s*/, '')));
+        if (!who) continue;
+        const bare = who.replace(/\s*\([^)]*\)\s*/, '');
+        const rows = byName.get(keyOf(bare));
         if (!rows) continue; // already reported by the roster check above
-        const want = Math.round(pprOf(rows[0].projectedStats) * 10) / 10;
-        const got = Number(cells[col]);
-        checked.push(who);
-        if (!Number.isFinite(got) || Math.abs(got - want) > 0.05) {
-          wrong.push(`${e.id}: ${who} prints ${cells[col]}, projections say ${want}`);
+
+        if (col >= 0 && cells[col] !== undefined) {
+          const want = Math.round(pprOf(rows[0].projectedStats) * 10) / 10;
+          const got = Number(cells[col]);
+          checked.push(who);
+          if (!Number.isFinite(got) || Math.abs(got - want) > 0.05) {
+            wrong.push(`${e.id}: ${who} prints ${cells[col]}, projections say ${want}`);
+          }
+        }
+
+        // A rank cell is exactly "RB9". Anything wordier is prose or an
+        // argument ("RB8 to RB6"), and this is not the file that grades those.
+        for (const [i, perRec] of rankCols) {
+          const m = cells[i] && /^([A-Z]{2})(\d+)$/.exec(cells[i]);
+          if (!m) continue;
+          checkedRank.push(`${e.id}: ${who}`);
+          if (m[1] !== rows[0].position) {
+            wrongRank.push(`${e.id}: ${who} prints ${cells[i]}, but he is a ${rows[0].position}`);
+            continue;
+          }
+          const want = rankOf(bare, rows[0].position, perRec);
+          if (want !== Number(m[2])) {
+            wrongRank.push(`${e.id}: ${who} prints ${cells[i]} under "${heads[i]}", projections say ${rows[0].position}${want}`);
+          }
         }
       }
     }
   }
-  ok('at least one entry prints checkable point totals', checked.length > 0, String(checked.length));
+  // The coverage guard is what stops the two checks below passing on an empty
+  // set. It counts ranks as well as points because a rank table is just as
+  // checkable, and holding out for a "Points" column is what let
+  // pick-2026-08-20 go unchecked entirely.
+  ok('at least one entry prints a checkable number', checked.length + checkedRank.length > 0,
+    `${checked.length} points, ${checkedRank.length} ranks`);
   ok('every printed point total matches PROJECTIONS', wrong.length === 0, wrong.join('; '));
+  ok('every printed position rank matches PROJECTIONS', wrongRank.length === 0, wrongRank.join('; '));
 }
 
 // ── 4. the reader's own league ────────────────────────────────────────────

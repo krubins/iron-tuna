@@ -77,7 +77,24 @@ const NAV = [
   },
   { label: 'The Pick', href: '/the-pick' },
   { label: 'Columns', href: '/play-caller-premium' },
-  { label: 'In-Season', href: '/post-draft' },
+  // The in-season section. The parent still points at /post-draft, which is the
+  // section's landing page AND the gate the eight tools serve behind while
+  // POST_DRAFT_OPEN is unset — so the link works in both states and nothing has
+  // to change here when the section opens. The draft links above are untouched:
+  // both halves of the year are reachable from every page, all season.
+  {
+    label: 'In-Season', href: '/post-draft', children: [
+      { label: 'Weekly Intel', href: '/weekly-intel' },
+      { label: 'Rankings', href: '/rankings' },
+      { label: 'Vegas Edge', href: '/vegas-edge' },
+      { label: "What They Aren't Telling You", href: '/what-they-arent-telling-you' },
+      { label: 'Game Intel', href: '/game-intel' },
+      { label: 'Waivers', href: '/waivers' },
+      { label: 'Trade Finder', href: '/trade-finder' },
+      { label: 'DFS', href: '/dfs' },
+      { label: 'My League', href: '/my-league' },
+    ],
+  },
   { label: 'FAQ', href: '/faq' },
   { label: 'Free cheat sheet', href: '{app}', cta: true },
 ];
@@ -103,8 +120,20 @@ const FOOT_COLS = [
     ],
   },
   {
+    h: 'In-Season', links: [
+      { label: 'Weekly Intel', href: '/weekly-intel' },
+      { label: 'Rankings', href: '/rankings' },
+      { label: 'Vegas Edge', href: '/vegas-edge' },
+      { label: 'Game Intel', href: '/game-intel' },
+      { label: 'Waivers', href: '/waivers' },
+      { label: 'Trade Finder', href: '/trade-finder' },
+      { label: 'DFS', href: '/dfs' },
+      { label: 'My League', href: '/my-league' },
+    ],
+  },
+  {
     h: 'Company', links: [
-      { label: 'In-Season (soon)', href: '/post-draft' },
+      { label: 'In-Season', href: '/post-draft' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Support', href: '/support' },
       { label: 'Creators & affiliates', href: '/creators' },

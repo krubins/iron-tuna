@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<title>DFS: The Market Read, Aimed at One Slate | Iron Tuna</title>
+<meta name="description" content="Daily fantasy is one slate, one set of game lines, and a salary cap. Iron Tuna reads the same betting market its season-long board is priced from, aimed at the games being played this week.">
+<link rel="canonical" href="https://irontuna.com/dfs">
+<meta property="og:title" content="DFS">
+<meta property="og:description" content="The same market read that prices the season-long board, aimed at a single slate.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/dfs">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<style>
+body{overflow-x:hidden}
+/* Mobile masthead: one sideways-scrolling row under a pinned CTA, so the
+   header stays 52px instead of wrapping into three ragged rows. Copied from the
+   other content pages deliberately; when this moves it moves everywhere. */
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
+.nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:6px 0 14px}
+h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
+p{color:var(--sec);margin:0 0 16px}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer}
+.btn:hover{filter:brightness(1.06);text-decoration:none}
+.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+.rk-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0 10px}
+.rk-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--panel)}
+.rk-seg button{appearance:none;border:0;background:transparent;color:var(--sec);font:inherit;font-size:14px;font-weight:700;padding:9px 14px;cursor:pointer;border-left:1px solid var(--line)}
+.rk-seg button:first-child{border-left:0} .rk-seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.rk-check{font-size:13px;color:var(--sec);display:inline-flex;align-items:center;gap:6px}
+.rk-check input[type=number]{font:inherit;padding:5px 6px;border:1px solid var(--line2);border-radius:6px}
+.df-lineup{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0}
+.df-lineup h3{margin:0 0 6px;font-size:15px} .df-lineup table{font-size:14px}
+.df-lock{color:var(--teal);font-weight:800} .df-excl{color:var(--danger);font-weight:800;text-decoration:line-through}
+#dfPool td.p{cursor:pointer} #dfPool td.p:hover{text-decoration:underline}
+.df-stack{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
+.df-stack h3{margin:0 0 6px} .df-stack .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:14px}
+.df-stack b{color:var(--text)} .df-stack .is-status{display:inline}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0e7c63" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/the-pick">The Pick</a>
+      <a href="/play-caller-premium">Columns</a>
+      <span class="nav-dd"><a href="/post-draft">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/trade-finder">Trade Finder</a><a href="/dfs" aria-current="page">DFS</a><a href="/my-league">My League</a></span></span>
+      <a href="/faq">FAQ</a>
+    </nav>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div></header>
+<main id="main" class="wrap">
+<p class="is-eyebrow">In-Season &middot; DFS</p>
+<h1>One slate, one set of lines, one cap</h1>
+<p class="is-lede">Daily fantasy is the purest version of the thing this site already does. There is no rest of season to project, only the games on the board and what the market expects out of them, and a salary cap that is an auction budget by another name.</p>
+<div class="its-strip" data-season-strip></div>
+
+<div class="rk-controls">
+  <div class="rk-seg" id="dfSite" role="group" aria-label="Site"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button></div>
+  <div class="rk-seg" id="dfNav" role="group" aria-label="Section"><button type="button" data-sec="dash">Dashboard</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="builder">Lineup Builder</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button></div>
+</div>
+<p class="is-note" id="dfNote"></p>
+
+<section id="sec-dash">
+  <h2>DFS Dashboard</h2>
+  <div class="is-grid" id="dfCards"></div>
+  <h3>This week’s scoring environment</h3>
+  <div class="is-scroll"><table class="is-table" id="dfTable" hidden><thead><tr><th>Club</th><th>Opponent</th><th class="num">Implied points</th><th class="num">Game total</th></tr></thead><tbody id="dfBody"></tbody></table></div>
+  <p class="is-empty" id="dfEmpty">Reading the slate&hellip;</p>
+</section>
+
+<section id="sec-values" hidden>
+  <h2>Vegas Values</h2>
+  <p>The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate’s median: 100 is an ordinary price, 130 is a bargain. Every row carries the salary, the three projections, Market Delta, the TD probability and the team total.</p>
+  <div class="rk-seg" id="dfBoard" role="group"><button type="button" data-board="bestVegasValues">Best Vegas Values</button><button type="button" data-board="tdUpside">TD Upside</button><button type="button" data-board="volumeValues">Volume Values</button><button type="button" data-board="expensiveFades">Expensive Fades</button></div>
+  <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Vegas</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="sec-builder" hidden>
+  <h2>Lineup Builder</h2>
+  <p class="is-note">Builds lineups to look at and copy. Nothing on this page can enter a contest.</p>
+  <div class="rk-controls">
+    <div class="rk-seg" id="dfMode" role="group"><button type="button" data-mode="ironTuna">Iron Tuna optimal</button><button type="button" data-mode="vegas">Vegas optimal</button><button type="button" data-mode="consensus">Consensus optimal</button><button type="button" data-mode="vegasEdge">Vegas Edge</button></div>
+    <label class="rk-check"><input type="checkbox" id="dfStack"> QB stack</label>
+    <label class="rk-check"><input type="checkbox" id="dfBring"> Bring-back</label>
+    <label class="rk-check">Max per team <input type="number" id="dfMaxTeam" min="1" max="9" value="4" style="width:52px"></label>
+    <label class="rk-check">Cap $<input type="number" id="dfCap" min="10000" step="100" style="width:80px"></label>
+    <label class="rk-check">Lineups <input type="number" id="dfN" min="1" max="20" value="3" style="width:52px"></label>
+    <button class="btn" type="button" id="dfBuild">Build</button>
+  </div>
+  <p class="is-note">Lock or exclude a player from the pool below (click a name once to lock, twice to exclude, again to clear).</p>
+  <div id="dfLineups"></div>
+  <div class="is-scroll"><table class="is-table" id="dfPool"><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section id="sec-stacks" hidden>
+  <h2>Game Stacks</h2>
+  <p>Every game on the slate by total, each side’s QB with his best-priced pass catchers, and the bring-back from the other side.</p>
+  <div id="dfStacks"></div>
+</section>
+
+<section id="sec-td" hidden>
+  <h2>TD Board</h2>
+  <p>Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labelled either way.</p>
+  <div class="is-scroll"><table class="is-table" id="dfTd" hidden><thead><tr><th>#</th><th>Player</th><th class="num">Salary</th><th class="num">Anytime TD</th><th class="num">TD % per $1K</th><th class="num">Team total</th><th>Basis</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<h2>The rest of the section</h2>
+<div class="is-grid">
+  <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
+  <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>The board re-ranked for the week ahead, at your league’s scoring rather than a stranger’s.</p></div>
+  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
+  <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
+  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
+  <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
+  <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
+</div>
+
+<h2>Where these numbers come from</h2>
+<p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
+<p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
+
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>Draft</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/auction-watch">Auction Watch</a></li>
+      <li><a href="/guides">Guides</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/weekly-intel">Weekly Intel</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/waivers">Waivers</a></li>
+      <li><a href="/trade-finder">Trade Finder</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/my-league">My League</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/post-draft">In-Season</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-season.js" defer></script>
+<script src="/dfs-optimizer.js" defer></script>
+<script>
+(function () {
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  var money = function (v) { return v == null ? '—' : '$' + Number(v).toLocaleString('en-US'); };
+  var site = 'dk', sec = 'dash', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
+  function press(host, attr, val) { [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
+  function show() { ['dash', 'values', 'builder', 'stacks', 'td'].forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
+  function delta(d) { if (!d) return '—'; var cls = /BUY|HIGHER/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : 'agree'; return '<span class="rk-conf" style="' + (cls === 'buy' ? 'color:var(--teal)' : cls === 'fade' ? 'color:var(--danger)' : '') + '">' + e(d.classification) + (d.points != null ? ' ' + (d.points > 0 ? '+' : '') + d.points : '') + '</span>'; }
+  function envTable(s) {
+    var rows = []; var seen = {}; var totals = {};
+    (s.stacks || []).forEach(function (g) { if (g.home && g.home.team) totals[g.home.team] = g.total; if (g.away && g.away.team) totals[g.away.team] = g.total; });
+    (s.players || []).forEach(function (p) { if (!p.onBoard || !p.teamTotal || seen[p.team]) return; seen[p.team] = 1; rows.push({ team: p.team, opp: p.opponent, at: p.home === false ? 'at' : 'vs', imp: p.teamTotal, posted: p.teamTotalPosted, total: totals[p.team] }); });
+    rows.sort(function (a, b) { return b.imp - a.imp; });
+    $('dfBody').innerHTML = rows.map(function (r) { return '<tr><td><b>' + e(r.team) + '</b></td><td>' + e((r.at || '') + ' ' + (r.opp || '')) + '</td><td class="num">' + n1(r.imp) + (r.posted ? '' : ' <span class="is-status">fitted</span>') + '</td><td class="num">' + n1(r.total) + '</td></tr>'; }).join('');
+    $('dfTable').hidden = !rows.length; $('dfEmpty').hidden = !!rows.length;
+  }
+  function dashboard(s) {
+    var on = s.players.filter(function (p) { return p.onBoard; });
+    var card = function (t, h, p) { return '<div class="is-card"><span class="is-tag is-live">' + t + '</span><h3>' + h + '</h3><p>' + p + '</p></div>'; };
+    var out = [card('Slate', e(s.label) + ' · Week ' + e(s.week), on.length + ' priced players on the board, cap ' + money(s.cap) + '.'),
+      card('Median value', n1(s.medianVegasPerK) + ' pts / $1K', 'What the market implies an ordinary dollar buys on this slate.'),
+      s.boards.bestVegasValues[0] ? card('Best value', e(s.boards.bestVegasValues[0].name), 'VVS ' + s.boards.bestVegasValues[0].vegasValueScore + ' at ' + money(s.boards.bestVegasValues[0].salary) + '.') : '',
+      s.boards.expensiveFades[0] ? card('Expensive fade', e(s.boards.expensiveFades[0].name), money(s.boards.expensiveFades[0].salary) + ', ' + e(s.boards.expensiveFades[0].marketDelta.classification.toLowerCase()) + '.') : ''];
+    $('dfCards').innerHTML = out.join('');
+  }
+  function values(s) {
+    var list = s.boards[board] || [];
+    $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td><b>' + e(p.name) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.vegasPoints) + '</b> <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
+    $('dfValues').hidden = !list.length; press($('dfBoard'), 'data-board', board);
+  }
+  function pool(s) {
+    var on = s.players.filter(function (p) { return p.onBoard; });
+    $('dfPool').querySelector('tbody').innerHTML = on.map(function (p) { var m = marks[p.key] || ''; return '<tr><td class="p" data-key="' + e(p.key) + '"><b class="' + (m === 'lock' ? 'df-lock' : m === 'excl' ? 'df-excl' : '') + '">' + e(p.name) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + n1(p.vegasPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + (m === 'lock' ? 'locked' : m === 'excl' ? 'excluded' : '') + '</td></tr>'; }).join('');
+  }
+  function build() {
+    if (!slate || !window.ITDfs) return;
+    var players = slate.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
+    var lock = [], excl = []; for (var k in marks) { if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
+    var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || slate.cap, slots: slate.slots, flex: slate.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: Date.now() % 100000 });
+    if (!r.ok) { $('dfLineups').innerHTML = '<p class="is-empty">No lineup satisfies those constraints under that cap.</p>'; return; }
+    $('dfLineups').innerHTML = r.lineups.map(function (l, i) { return '<div class="df-lineup"><h3>Lineup ' + (i + 1) + ' · ' + e(r.mode) + ' · ' + n1(l.points) + ' pts · ' + money(l.salary) + ' (' + money(l.remaining) + ' left)</h3><table class="is-table"><tbody>' + l.players.map(function (p) { return '<tr><td><span class="is-status">' + e(p.slot) + '</span></td><td><b>' + e(p.name) + '</b> ' + e(p.team) + (p.opponent ? ' ' + e('v ' + p.opponent) : '') + '</td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.points) + '</td></tr>'; }).join('') + '</tbody></table></div>'; }).join('') + (r.note ? '<p class="is-note">' + e(r.note) + '</p>' : '');
+  }
+  function stacks(s) {
+    $('dfStacks').innerHTML = (s.stacks || []).map(function (g) {
+      var sideHtml = function (x, label) { return '<div><b>' + e(x.team) + '</b> <span class="is-status">' + label + '</span><br>QB: ' + (x.qb ? e(x.qb.name) + ' ' + money(x.qb.salary) + ' · ' + n1(x.qb.vegasPoints) : '—') + '<br>Catchers: ' + x.catchers.map(function (c) { return e(c.name) + ' ' + money(c.salary) + ' · ' + n1(c.vegasPoints); }).join('; ') + '<br>Back: ' + (x.back ? e(x.back.name) + ' ' + money(x.back.salary) : '—') + '<br><b>QB + 2 stack:</b> ' + money(x.stackSalary) + ' for ' + n1(x.stackVegasPoints) + ' Vegas pts</div>'; };
+      return '<div class="df-stack"><h3>' + e(g.game) + ' · total ' + n1(g.total) + ' · implied ' + n1(g.impliedAway) + '–' + n1(g.impliedHome) + '</h3><div class="side">' + sideHtml(g.away, 'away') + sideHtml(g.home, 'home') + '</div><p class="is-note">Bring-back: ' + (g.bringBack.home ? e(g.bringBack.home.name) : '—') + ' for an away stack, ' + (g.bringBack.away ? e(g.bringBack.away.name) : '—') + ' for a home stack.</p></div>';
+    }).join('') || '<p class="is-empty">No game on this slate carries a posted total yet.</p>';
+  }
+  function tdBoard(s) {
+    var list = s.players.filter(function (p) { return p.onBoard && p.position !== 'DST'; }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
+    $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td><b>' + e(p.name) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
+    $('dfTd').hidden = !list.length;
+  }
+  function render() { if (!slate) return; dashboard(slate); envTable(slate); values(slate); pool(slate); stacks(slate); tdBoard(slate); $('dfCap').value = slate.cap; }
+  function load() {
+    press($('dfSite'), 'data-site', site);
+    fetch('/api/dfs?site=' + site).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) { slate = null; $('dfNote').textContent = (j && j.note) || 'No salaries are loaded for this week.'; $('dfEmpty').textContent = 'No ' + ((j && j.label) || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.'; $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true; $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = ''; return; }
+      slate = j; $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + 'Salaries as of ' + e(new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + ' ET.'; render();
+    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    press($('dfMode'), 'data-mode', mode); show();
+    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; load(); });
+    $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
+    $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
+    $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); });
+    $('dfBuild').addEventListener('click', build);
+    $('dfPool').addEventListener('click', function (ev) { var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); });
+    load();
+  });
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

@@ -254,3 +254,61 @@ footer.site a:hover { color: var(--text) }
 .foot-note { border-top: 1px solid var(--line); padding-top: var(--space-4); font-size: var(--fs-xs); line-height: 1.6 }
 .foot-note p { margin: 0 0 var(--space-2) }
 .foot-legal { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center }
+
+/* ── the NFL clock strip ────────────────────────────────────────────────────
+   Rendered by /it-season.js on every in-season page from one /api/season read,
+   so no two pages can disagree about what week it is. The "unavailable" state
+   is deliberately visible rather than hidden: a page that quietly drops the
+   week reads as though it never had one, and the numbers under it are dated by
+   a week the reader can no longer see. */
+.its-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4); margin: var(--space-4) 0 var(--space-5);
+  font-size: var(--fs-sm); color: var(--sec);
+}
+.its-strip .its-phase {
+  font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--teal);
+}
+.its-strip .its-phase.its-off { color: var(--muted) }
+.its-strip .its-week { font-weight: 800; color: var(--text); font-size: var(--fs-md) }
+.its-strip .its-state { color: var(--text) }
+.its-strip .its-state.its-live { color: var(--danger); font-weight: 700 }
+.its-strip .its-counts, .its-strip .its-next, .its-strip .its-note {
+  color: var(--muted); font-size: var(--fs-xs);
+}
+.its-strip .its-next { margin-left: auto }
+
+/* ── the in-season section ─────────────────────────────────────────────────
+   Shared by the eight tools under /weekly-intel … /my-league. Each page owns
+   its own content; this is only the furniture they have in common, kept here
+   rather than inlined eight times, which is how the chrome drifted before. */
+.is-eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-xs);
+  letter-spacing: .18em; text-transform: uppercase; color: var(--teal); margin: var(--space-6) 0 var(--space-2);
+}
+.is-lede { font-size: var(--fs-lg); color: var(--sec); margin: 0 0 var(--space-5); max-width: 720px; line-height: 1.5 }
+.is-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4) }
+.is-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+}
+.is-card h3 { margin: 0 0 var(--space-2); font-size: var(--fs-md) }
+.is-card p { margin: 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.55 }
+.is-tag {
+  display: inline-block; font-size: var(--fs-3xs); font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--goldink); background: #fdf4e2;
+  border: 1px solid #f0e0b0; border-radius: 3px; padding: 2px 8px; margin-bottom: var(--space-2);
+}
+.is-tag.is-live { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .3) }
+.is-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm) }
+.is-table th, .is-table td { padding: var(--space-3); border-bottom: 1px solid var(--line); text-align: left }
+.is-table th { color: var(--muted); font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .08em }
+.is-table td.num { text-align: right; font-variant-numeric: tabular-nums }
+.is-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch }
+.is-status { font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+.is-status.live { color: var(--danger) }
+.is-status.final { color: var(--text) }
+.is-note { font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; margin: var(--space-4) 0 0 }
+.is-empty { color: var(--muted); font-size: var(--fs-sm); margin: var(--space-4) 0 }

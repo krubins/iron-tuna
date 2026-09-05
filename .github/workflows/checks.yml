@@ -72,6 +72,18 @@ jobs:
       - name: Parse player-search.js
         run: node --check player-search.js
 
+      # /it-season.js is loaded by every in-season page and is what puts the
+      # week on them. A syntax error there leaves eight pages saying "Reading
+      # the NFL schedule..." forever, with no console anyone is watching.
+      - name: Parse it-season.js
+        run: node --check it-season.js
+
+      # /it-trade.js is the Trade Finder's engine and the FAAB Advisor's roster
+      # parser. A syntax error there leaves both pages with a button that does
+      # nothing.
+      - name: Parse it-trade.js
+        run: node --check it-trade.js
+
       # /admin is the only page with a form that calls an API, and it is
       # hand-written like the rest — a syntax error there breaks the dashboard
       # and the comp-access form with it, silently, since nobody browses it.
@@ -214,16 +226,97 @@ jobs:
           fi
           echo "LEAD_FACES is up to date"
 
+      # PROJECTIONS is a full-season line per player and the board's rank is those
+      # lines scored, so a player who tore an ACL in August kept his August rank
+      # until 2026-09-02 (HANDOFF.md §48): no projection feed is reachable from the
+      # daily routine's sandbox, and the odds refresh is a per-team factor that
+      # cannot see one player's knee. tools/availability.json is the hand-kept
+      # list of who cannot play a full season; this holds the committed rows, the
+      # worker's AVAILABILITY block and the client's injury fallback to it.
+      - name: Pro-rated projections agree with tools/availability.json
+        run: node tools/apply-availability.mjs --check
+
       # The odds math is duplicated between _worker.js and tools/ because there is
       # no bundler; test-worker-odds.mjs lifts the worker's copy out of the source
       # and asserts the two still agree, so drift fails here instead of quietly
       # changing the numbers people draft on. It also pulls the live nflverse file
       # — that step self-skips on a network blip rather than failing the build.
+      # What week it is, which every in-season surface reads before it can say
+      # anything. The tempting implementation -- "a new week starts on Tuesday"
+      # -- is wrong for a whole day every week (it either turns the week over
+      # while Monday night is being played, or leaves last week up until some
+      # arbitrary hour) and wrong in kind for the postseason, which is made of
+      # rounds. The fixture season here is built so a weekday rule and the real
+      # rule give DIFFERENT answers at named instants, so a regression to a
+      # calendar rule fails rather than looking plausible.
+      - name: The NFL season and week service
+        run: node tools/test-season.mjs
+
+      # One scoring engine, three copies (worker, it-league.js, index.html),
+      # checked against each other on 400 randomised stat lines rather than a
+      # handful of chosen ones. A drift here means the same player is worth
+      # different points on the cheat sheet, in a story and in the rankings.
+      - name: The scoring engine agrees with itself in every file
+        run: node tools/test-scoring.mjs
+
+      # The provider registry (no credential in any payload, no scraping), the
+      # append-only betting-line store (the open is never rewritten by a book
+      # that starts quoting late), and the Vegas-implied projection (median not
+      # mean, de-vigged, and "unavailable" rather than invented).
+      - name: Providers, line history and the Vegas projection
+        run: node tools/test-market.mjs
+
+      # The three boards (consensus / Vegas / Iron Tuna) across four horizons,
+      # Market Delta and its thresholds, and the structured "why". The fixture
+      # season posts lines for fourteen weeks and not the last four, so a
+      # horizon reaching past them has to say "ratings" and grade LOW.
+      - name: The three boards, Market Delta and the explainer
+        run: node tools/test-boards.mjs
+
+      # The insight rules (deterministic, data-carrying, and returning nothing
+      # from the usage rules until games have been played), Vegas Edge's six
+      # boards, and the Wednesday movers' reasons.
+      - name: Insight detection, Vegas Edge and the Wednesday update
+        run: node tools/test-signals.mjs
+
+      # The content desk: the ESPN box-score adapter on a real stored game,
+      # the game-completion gating on a fixture week (Sunday 8pm names the game
+      # still on; the SNF and MNF pieces wait for their game), the briefs, and
+      # the validator that holds a draft naming a player or number the brief
+      # does not contain.
+      - name: The content desk
+        run: node tools/test-content.mjs
+      - name: DFS adapters, Vegas Value Score, stacks and optimizer
+        run: node tools/test-dfs.mjs
+      - name: The health board, the job log and the editorial actions
+        run: node tools/test-health.mjs
+      - name: The job schedule in New York time
+        run: node tools/test-jobs.mjs
+
+      # The Trade Finder: the roster parser, the lineup valuation, the trade
+      # search (both sides must gain, on their own horizons) and the worker's
+      # screenshot reader, all in plain node against the shipped it-trade.js.
+      - name: The Trade Finder engine and the roster reader
+        run: node tools/test-trade-finder.mjs
+
       - name: Odds pipeline tests (build-time tools)
         run: node tools/test-vegas.mjs
 
       - name: Odds pipeline tests (worker, incl. worker/tool sync)
         run: node tools/test-worker-odds.mjs
+
+      # The team ratings fit and the kicker/defence model live in _worker.js AND
+      # in tools/, for the same no-bundler reason. This runs both against one
+      # fixture, so a change to one copy fails here.
+      - name: Team market ratings (worker/tool sync)
+        run: node tools/test-team-market.mjs
+
+      # The committed K and DEF rows themselves: coverage (a kicker for every
+      # club), the market snapshot they were built from, and the shape a
+      # projection has to have — spread narrower than a season of outcomes, and
+      # league totals that match what the NFL actually produces.
+      - name: Committed kicker and defence rows
+        run: node tools/test-k-def.mjs
 
       # Everything else with assertions in tools/. These are plain node, no
       # network beyond what the odds suites already pull, and they cover the
@@ -235,6 +328,9 @@ jobs:
 
       - name: The generated lead story and its admin desk
         run: node tools/test-lead-story.mjs
+
+      - name: Just Posted mirrors the X insight rotation onto the site
+        run: node tools/test-posted-insights.mjs
 
       # The worker rewrites a few routes onto other assets ("/" -> front.html,
       # /lead/<slug> -> lead.html). Cloudflare's default html_handling answers a
@@ -323,6 +419,25 @@ jobs:
       # quoted WR1 at $42 against a sheet reading $50. No browser, no network.
       - name: The cheat sheet's dollars add up
         run: node tools/test-curve-budget.mjs
+
+      # VALUE is re-solved on the board that is LEFT once picks are logged:
+      # replacement level, VORP and the dollar share all move with the remaining
+      # pool, the remaining demand and the money still in the room. Pick zero
+      # must reproduce the pre-draft column exactly. No browser, no network.
+      - name: VALUE re-baselines during the draft
+        run: node tools/test-live-value.mjs
+
+      # The plan for the reader's team prices its targets at what the room will
+      # make them pay, the handcuff to a starter they own carries his cover, and
+      # a bye they already have costs the second hole. No browser, no network.
+      - name: Plan pricing, handcuffs and byes
+        run: node tools/test-plan-pricing.mjs
+
+      # The worker keeps the availability list current from ESPN's injury feed
+      # (IR / PUP / suspended / exempt), merged over the committed block with the
+      # pro-rating applied exactly once. Skips the live pull without network.
+      - name: Worker availability refresh
+        run: node tools/test-worker-availability.mjs
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one

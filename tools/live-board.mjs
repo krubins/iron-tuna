@@ -28,6 +28,11 @@ export const CURVE_BUDGET = lift('COLUMN_CURVE_BUDGET');
 export const LEAGUE_BUDGET = lift('COLUMN_LEAGUE_BUDGET');
 export const MIN_BID = lift('COLUMN_MIN_BID');
 export const VEGAS_WEIGHT = lift('VEGAS_WEIGHT');
+// The worker re-levels each position's points to last season's top-K mean
+// before it serves them (COLUMN_NORM / _colNormFactors in _worker.js §9d), so
+// the points on a reader's sheet are NOT raw stat-line scores. Lifted, not
+// copied, for the same reason as every other constant here.
+export const NORM = lift('COLUMN_NORM');
 const round = v => Math.round(v * 10) / 10;
 function score(stats, position) {
   const s = SCORING;
@@ -46,8 +51,26 @@ function score(stats, position) {
 }
 export function price(pos, rankIndex) {
   const c = CURVE[pos] || [];
-  const base = rankIndex < c.length ? c[rankIndex] : MIN_BID;
-  return Math.max(MIN_BID, Math.round(base * (LEAGUE_BUDGET / CURVE_BUDGET)));
+  // Mirrors _colPrice: only curve prices scale with the budget. Past the end of
+  // the curve the room pays the min bid flat — scaling it there put every
+  // off-curve player at $2 instead of $1.
+  if (rankIndex >= c.length) return MIN_BID;
+  return Math.max(MIN_BID, Math.round(c[rankIndex] * (LEAGUE_BUDGET / CURVE_BUDGET)));
+}
+
+// _colNormFactors, mirrored: top-K projected mean against last year's, only
+// positive scores, skipped inside a 2% dead zone. Flat per position, so ranks
+// and prices never move; only the printed points do.
+export function normFactor(pos, ptsList) {
+  const cfg = NORM[pos];
+  if (!cfg) return 1;
+  const arr = ptsList.filter(v => v > 0).sort((a, b) => b - a);
+  if (arr.length < 3) return 1;
+  const K = Math.max(3, Math.min(cfg.k, arr.length));
+  const projMean = arr.slice(0, K).reduce((a, b) => a + b, 0) / K;
+  if (!(projMean > 0)) return 1;
+  const f = cfg.mean / projMean;
+  return (f >= 0.98 && f <= 1.02) ? 1 : f;
 }
 const norm = s => String(s).toLowerCase().normalize('NFD')
   .replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '').replace(/(jr|sr|ii|iii|iv|v)$/, '');
@@ -66,8 +89,12 @@ export function board(overlayPath, useOdds = true) {
           st[k] = round((st[k] + VEGAS_WEIGHT * n) / (1 + VEGAS_WEIGHT));
         }
       }
-      return { n: p.name, team: p.team, pts: round(score(st, pos)), rec: st.rec || 0 };
-    }).sort((a, b) => b.pts - a.pts);
+      return { n: p.name, team: p.team, raw: score(st, pos), rec: st.rec || 0 };
+    });
+    // Score, then normalise, then round, then sort — the worker's order.
+    const f = normFactor(pos, rows.map(r => r.raw));
+    for (const r of rows) { r.pts = round(r.raw > 0 ? r.raw * f : r.raw); delete r.raw; }
+    rows.sort((a, b) => b.pts - a.pts);
     lists[pos] = rows;
     rows.forEach((p, i) => map.set(p.n, { pos, team: p.team, rank: i + 1, v: price(pos, i), pts: p.pts, rec: p.rec }));
   }

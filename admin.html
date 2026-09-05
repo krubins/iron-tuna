@@ -154,6 +154,66 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <div class="note">Access is granted first, then the link is sent — that order matters, because a sign-in link is only ever issued to an address that already has access. Untick "Email it to them" to get the link without sending anything, for pasting into a DM. Full access is instant either way; the link only saves them the sign-in step.</div>
   </div>
 
+  <div class="card" id="dfsCard">
+    <h2>DFS salaries</h2>
+    <p class="meta">Paste a DraftKings or FanDuel lobby CSV export for the main slate. The site's rows are stored for the current week and <a href="/in-season/dfs">the DFS page</a> reads the newest import. Nothing here submits an entry anywhere.</p>
+    <div class="field">
+      <label for="dfsSite">Site
+        <select id="dfsSite"><option value="dk">DraftKings</option><option value="fd">FanDuel</option></select>
+      </label>
+      <label for="dfsWeek">Week <input id="dfsWeek" type="number" min="1" max="18" placeholder="current" style="width:70px"></label>
+      <button class="btn" id="dfsRefresh" type="button" title="Pull from the configured site feed, if one is configured">Refresh from feed</button>
+    </div>
+    <textarea id="dfsCsv" rows="6" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;…" spellcheck="false" style="width:100%;font:12px/1.4 ui-monospace,monospace"></textarea>
+    <div class="field" style="margin-top:8px"><button class="btn primary" id="dfsBtn" type="button">Import CSV</button></div>
+    <div class="result" id="dfsResult"><div class="msg" id="dfsMsg"></div></div>
+    <div class="note" id="dfsStatus">Loading salary status…</div>
+  </div>
+
+  <h1 class="sec">In-season health</h1>
+  <p class="meta" id="hlthMeta">Loading the health board…</p>
+  <div class="tiles" id="hlthTiles"></div>
+  <div class="card" id="hlthProblems">
+    <h2>Missing and stale <span class="badge" id="hlthBadge"></span></h2>
+    <div id="hlthMissing"><div class="empty">Nothing missing.</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>Last updates</h2>
+      <div class="tblwrap"><table id="hlthUpdates"></table></div>
+    </div>
+    <div class="card">
+      <h2>Data sources</h2>
+      <div class="tblwrap"><table id="hlthSources"></table></div>
+      <div class="note">Presence of a key or id only. The key itself never leaves the environment.</div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Scheduled jobs</h2>
+    <div class="tblwrap"><table id="hlthJobs"></table></div>
+    <div class="note" id="hlthJobsNote">Every run, cron or button, writes one row to the job log; a job that throws is a logged failure. Rerun runs the job now through the same log.</div>
+    <div class="result" id="hlthJobResult"><div class="msg" id="hlthJobMsg"></div></div>
+  </div>
+  <div class="card">
+    <h2>Failed jobs, last 7 days</h2>
+    <div class="tblwrap"><table id="hlthFailed"></table></div>
+  </div>
+  <div class="card" id="hlthDesk">
+    <h2>Editorial</h2>
+    <div class="tblwrap"><table id="hlthEditorial"></table></div>
+    <div class="note">Due and ready come from the schedule and the box scores, not the clock. Regenerate forces a fresh draft now, past that gate; it is for a look at the pipeline, not for publishing a piece about games that have not finished. Preview shows a held draft the public page hides.</div>
+    <div class="result" id="hlthPieceResult"><div class="msg" id="hlthPieceMsg"></div></div>
+    <div id="hlthEditor" hidden>
+      <h2 id="hlthEditorTitle" style="margin-top:14px"></h2>
+      <div class="meta" id="hlthEditorMeta"></div>
+      <textarea id="hlthEditorBody" rows="18" spellcheck="false" style="width:100%;font:12px/1.45 ui-monospace,monospace"></textarea>
+      <div class="field" style="margin-top:8px">
+        <button class="btn primary" id="hlthEditorSave" type="button">Save edit</button>
+        <button class="btn" id="hlthEditorClose" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <h1 class="sec">Traffic</h1>
   <p class="meta" id="trafMeta">Loading traffic…</p>
 
@@ -636,6 +696,153 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(f.value).then(done, function(){ try { document.execCommand('copy'); done(); } catch(err){} });
     else { try { document.execCommand('copy'); done(); } catch(err){} }
   });
+
+  // ── the health board ──────────────────────────────────────────────────
+  var HLTH = null, hlthOpen = null;
+  var ago = function(ts){ if (!ts) return '<span style="color:var(--muted)">never</span>'; var h = (Date.now() - ts) / 3600000; return esc(h < 1 ? Math.round(h * 60) + ' min ago' : h < 48 ? h.toFixed(1) + ' h ago' : Math.round(h / 24) + ' d ago') + ' <span style="color:var(--muted)">' + esc(new Date(ts).toLocaleString()) + '</span>'; };
+  var pill = function(t, kind){ return '<span class="badge" style="' + (kind === 'ok' ? 'background:#e6f4ee;color:#0e6b4a' : kind === 'bad' ? 'background:#fde8e8;color:#9b1c1c' : kind === 'warn' ? 'background:#fff4d6;color:#8a5a00' : '') + '">' + esc(t) + '</span>'; };
+  function hlthRender(j){
+    HLTH = j;
+    var st = j.status === 'ok' ? pill('OK', 'ok') : j.status === 'down' ? pill('DOWN', 'bad') : pill('DEGRADED', 'warn');
+    $('hlthMeta').innerHTML = st + ' ' + esc(new Date(j.at).toLocaleString()) + ' · ' + esc((j.et && j.et.dow) || '') + ' ' + esc(j.et ? j.et.hour + ':00 ET' : '') + (j.ran ? ' · ran ' + esc(j.ran.job) + ': ' + (j.ran.ok ? 'ok' : 'FAILED ' + esc(j.ran.error || '')) : '');
+    var wk = j.week ? (j.week.label || (j.week.type + ' ' + j.week.number)) + ' · ' + j.week.status : 'no schedule';
+    var u = j.updates || {}, r = u.rankings || {};
+    $('hlthTiles').innerHTML =
+      tile('Current week', esc(wk), esc(j.phaseLabel || '') + (j.counts ? ' · ' + j.counts.completed + ' final, ' + j.counts.inProgress + ' live, ' + j.counts.upcoming + ' to play' : ''), true) +
+      tile('Season odds', u.odds ? esc(u.odds.provider) : '—', ago(u.odds && u.odds.updatedAt)) +
+      tile('Betting snapshots', u.snapshots ? num(u.snapshots.rows) + ' rows' : '—', ago(u.snapshots && u.snapshots.last)) +
+      tile('Weekly stats', u.usage ? 'through wk ' + u.usage.throughWeek : '—', ago(u.usage && u.usage.updatedAt)) +
+      tile('ROS rankings', r.ros ? 'week ' + r.ros.week : '—', ago(r.ros && r.ros.builtAt)) +
+      tile('Failed jobs (7d)', num((j.failedJobs || []).length), (j.missing || []).length + ' missing · ' + (j.stale || []).length + ' stale');
+    var prob = (j.missing || []).map(function(m){ return '<div>' + pill('MISSING', 'bad') + ' <b>' + esc(m.label) + '</b> — ' + esc(m.why) + '</div>'; })
+      .concat((j.stale || []).map(function(s){ return '<div>' + pill('STALE', 'warn') + ' <b>' + esc(s.label) + '</b> — ' + esc((s.ageHours != null ? s.ageHours + ' h old, limit ' + s.limitHours + ' h' + (s.note ? '; ' : '') : '') + (s.note || '')) + '</div>'; }));
+    $('hlthBadge').textContent = prob.length ? prob.length + ' issue' + (prob.length === 1 ? '' : 's') : 'clear';
+    $('hlthMissing').innerHTML = prob.length ? prob.join('') : '<div class="empty">Nothing missing, nothing stale.</div>';
+    var rows = [['NFL schedule', u.schedule && u.schedule.updatedAt, u.schedule ? u.schedule.games + ' games, ' + u.schedule.provider : ''],
+      ['Season odds overlay', u.odds && u.odds.updatedAt, u.odds ? u.odds.matched + ' matched' : ''],
+      ['Betting snapshots', u.snapshots && u.snapshots.last, u.snapshots ? u.snapshots.subjects + ' subjects, ' + u.snapshots.books + ' books' : ''],
+      ['Weekly stats and snaps', u.usage && u.usage.updatedAt, u.usage ? u.usage.players + ' players' : ''],
+      ['Injury list', u.availability && u.availability.updatedAt, u.availability ? 'as of ' + u.availability.asOf : ''],
+      ['Depth charts', u.depthCharts && u.depthCharts.updatedAt, ''],
+      ['Rankings: rest of season', r.ros && r.ros.builtAt, r.ros ? 'week ' + r.ros.week + ', ' + r.ros.rows + ' rows' : ''],
+      ['Rankings: next 3 weeks', r.next3 && r.next3.builtAt, ''], ['Rankings: weeks 15–17', r.playoffs && r.playoffs.builtAt, ''],
+      ['DFS salaries: DraftKings', u.dfs && u.dfs.dk && u.dfs.dk.fetchedAt, u.dfs && u.dfs.dk ? u.dfs.dk.rows + ' rows' : ''],
+      ['DFS salaries: FanDuel', u.dfs && u.dfs.fd && u.dfs.fd.fetchedAt, u.dfs && u.dfs.fd ? u.dfs.fd.rows + ' rows' : '']];
+    $('hlthUpdates').innerHTML = '<tr><th>Feed</th><th>Last update</th><th></th></tr>' + rows.map(function(x){ return '<tr><td>' + esc(x[0]) + '</td><td>' + ago(x[1]) + '</td><td style="color:var(--muted)">' + esc(x[2]) + '</td></tr>'; }).join('');
+    var src = j.sources || {}, srows = [];
+    Object.keys(src).forEach(function(kind){ (src[kind] || []).forEach(function(p){ srows.push('<tr><td>' + esc(kind) + '</td><td>' + esc(p.name) + '</td><td>' + (p.configured ? pill('configured', 'ok') : pill('not configured', '')) + (p.free ? '' : ' <span style="color:var(--muted)">paid</span>') + '</td></tr>'); }); });
+    $('hlthSources').innerHTML = '<tr><th>Kind</th><th>Provider</th><th>Status</th></tr>' + srows.join('') + '<tr><td>writer</td><td>LLM</td><td>' + (j.llm ? pill('configured', 'ok') : pill('no LLM_API_KEY', 'bad')) + '</td></tr>';
+    var schedNote = j.schedule ? ('Schedule in ' + j.schedule.tz + (j.schedule.source === 'env' ? ', with JOB_SCHEDULE_JSON overrides' : '') + (j.schedule.errors && j.schedule.errors.length ? '. Ignored override: ' + j.schedule.errors.join('; ') : '') + '. ') : '';
+    $('hlthJobs').innerHTML = '<tr><th>Job</th><th>Schedule (ET)</th><th>Next</th><th>Last run</th><th>Result</th><th>Last success</th><th></th></tr>' + (j.jobs || []).map(function(x){
+      return '<tr><td><b>' + esc(x.job) + '</b>' + (x.overridden ? ' <span style="color:var(--muted)">env</span>' : '') + '</td><td style="color:var(--muted)">' + esc(x.when || '') + '</td><td>' + (x.nextAt ? esc(new Date(x.nextAt).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric' })) : '—') + '</td><td>' + ago(x.last && x.last.startedAt) + '</td><td>' + (x.last ? (x.last.ok ? pill('ok', 'ok') : pill('failed', 'bad') + ' ' + esc(x.last.error || '')) : '—') + (x.failures7d ? ' <span style="color:var(--muted)">' + x.failures7d + ' failure' + (x.failures7d === 1 ? '' : 's') + ' in 7d</span>' : '') + '</td><td>' + ago(x.lastOk) + '</td><td><button class="btn" type="button" data-rerun="' + esc(x.job) + '">Rerun</button></td></tr>'; }).join('');
+    $('hlthJobsNote').textContent = schedNote + 'Every run, cron or button, writes one row to the job log; a job that throws is a logged failure. Rerun runs the job now through the same log.';
+    $('hlthFailed').innerHTML = (j.failedJobs || []).length ? '<tr><th>When</th><th>Job</th><th>Trigger</th><th>Error</th></tr>' + j.failedJobs.map(function(f){ return '<tr><td>' + esc(new Date(f.startedAt).toLocaleString()) + '</td><td>' + esc(f.job) + '</td><td>' + esc(f.trigger || '') + '</td><td>' + esc(f.error || '') + '</td></tr>'; }).join('') : '<tr><td class="empty">No failed job in the last seven days.</td></tr>';
+    $('hlthEditorial').innerHTML = '<tr><th>Piece</th><th>Slot (ET)</th><th>Week</th><th>Gate</th><th>Latest</th><th></th></tr>' + (j.editorial || []).map(function(e){
+      var gate = e.due && e.ready ? pill('due · ready', 'ok') : e.due ? pill('due · waiting', 'warn') + ' ' + esc(e.reason || '') : pill('not due', '') + ' ' + esc(e.reason || '');
+      var p = e.piece, latest = p ? (p.status === 'published' ? pill('published', 'ok') : p.status === 'held' ? pill('held', 'warn') + ' ' + p.violations + ' violation' + (p.violations === 1 ? '' : 's') : pill(p.status, '')) + ' <span style="color:var(--muted)">wk ' + p.week + ', ' + esc(new Date(p.createdAt).toLocaleString()) + '</span>' : '<span style="color:var(--muted)">none</span>';
+      var b = function(act, label){ return '<button class="btn" type="button" data-act="' + act + '" data-kind="' + esc(e.kind) + '" data-week="' + (p ? p.week : (e.week == null ? '' : e.week)) + '">' + label + '</button> '; };
+      var acts = (p ? b('preview', 'Preview') + b('edit', 'Edit') + (p.status === 'published' ? b('unpublish', 'Unpublish') : b('publish', 'Publish')) : '') + b('regenerate', p ? 'Regenerate' : 'Generate');
+      return '<tr><td><b>' + esc(e.title) + '</b>' + (e.optional ? ' <span style="color:var(--muted)">optional</span>' : '') + '</td><td>' + esc(e.day + ' ' + e.hour + ':00') + '</td><td>' + (e.week == null ? '—' : e.week) + '</td><td>' + gate + '</td><td>' + latest + '</td><td style="white-space:nowrap">' + acts + '</td></tr>'; }).join('');
+  }
+  function hlthLoad(q){
+    var key = getKey(); if (!key) return;
+    fetch('/api/admin/health?key=' + encodeURIComponent(key) + (q || ''))
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.ok) hlthRender(j); else $('hlthMeta').textContent = 'The health board did not answer: ' + ((j && j.error) || 'unknown'); })
+      .catch(function(e){ $('hlthMeta').textContent = 'Network error: ' + ((e && e.message) || ''); });
+  }
+  function hlthMsg(id, kind, html){ $(id).className = 'result ' + kind; $(id).querySelector('.msg').innerHTML = html; }
+  function hlthAction(act, kind, week, body){
+    var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return Promise.resolve(null); }
+    var payload = { action: act, kind: kind };
+    if (week !== '' && week != null) payload.week = Number(week);
+    if (body) payload.body = body;
+    return fetch('/api/admin/content?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }).then(function(r){ return r.json(); });
+  }
+  function hlthOpenEditor(piece){
+    hlthOpen = piece;
+    $('hlthEditor').hidden = false;
+    $('hlthEditorTitle').textContent = piece.title + ' · ' + piece.status;
+    $('hlthEditorMeta').textContent = 'Sections: ' + (piece.sections || []).join(', ') + (piece.violations && piece.violations.length ? ' · not in the brief: ' + piece.violations.join(', ') : '') + (piece.model ? ' · ' + piece.model : '');
+    $('hlthEditorBody').value = JSON.stringify(piece.body || {}, null, 2);
+    $('hlthEditor').scrollIntoView({ block: 'nearest' });
+  }
+  $('hlthJobs').addEventListener('click', function(ev){
+    var b = ev.target.closest('button[data-rerun]'); if (!b) return;
+    var was = b.textContent; b.disabled = true; b.textContent = 'Running…';
+    hlthMsg('hlthJobResult', '', 'Running ' + esc(b.getAttribute('data-rerun')) + '…');
+    var key = getKey();
+    fetch('/api/admin/health?key=' + encodeURIComponent(key) + '&rerun=' + encodeURIComponent(b.getAttribute('data-rerun')))
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.ok) { hlthRender(j); hlthMsg('hlthJobResult', j.ran && j.ran.ok ? 'ok' : 'bad', '<b>' + esc(j.ran.job) + '</b> ' + (j.ran.ok ? 'ran.' : 'failed: ' + esc(j.ran.error || ''))); } else hlthMsg('hlthJobResult', 'bad', 'The rerun did not answer.'); })
+      .catch(function(e){ hlthMsg('hlthJobResult', 'bad', 'Network error: ' + esc((e && e.message) || '')); })
+      .then(function(){ b.disabled = false; b.textContent = was; });
+  });
+  $('hlthEditorial').addEventListener('click', function(ev){
+    var b = ev.target.closest('button[data-act]'); if (!b) return;
+    var act = b.getAttribute('data-act'), kind = b.getAttribute('data-kind'), week = b.getAttribute('data-week');
+    if (act === 'regenerate' && !confirm('Generate a fresh draft of ' + kind + ' now, past the due/ready gate? This calls the writer and stores a new row.')) return;
+    if (act === 'unpublish' && !confirm('Take ' + kind + ' (week ' + week + ') off the public desk?')) return;
+    var was = b.textContent; b.disabled = true; b.textContent = 'Working…';
+    hlthMsg('hlthPieceResult', '', esc(act) + ' ' + esc(kind) + '…');
+    hlthAction(act, kind, week).then(function(j){
+      if (!j) return;
+      if (!j.ok) { hlthMsg('hlthPieceResult', 'bad', '<b>' + esc(act) + ' failed.</b> ' + esc(j.note || j.error || j.reason || '')); return; }
+      if (act === 'preview' || act === 'edit') { hlthOpenEditor(j.piece); hlthMsg('hlthPieceResult', 'ok', '<b>' + esc(j.piece.title) + '</b> loaded below.'); }
+      else if (act === 'regenerate') hlthMsg('hlthPieceResult', 'ok', '<b>Generated</b> ' + esc(kind) + ' for week ' + esc(j.week) + ': ' + esc(j.status) + (j.violations && j.violations.length ? ' (' + esc(j.violations.join(', ')) + ')' : '') + '.');
+      else hlthMsg('hlthPieceResult', 'ok', '<b>' + esc(j.piece.title) + '</b> is now ' + esc(j.piece.status) + '.');
+      if (act !== 'preview') hlthLoad();
+    }).catch(function(e){ hlthMsg('hlthPieceResult', 'bad', 'Network error: ' + esc((e && e.message) || '')); })
+      .then(function(){ b.disabled = false; b.textContent = was; });
+  });
+  $('hlthEditorSave').addEventListener('click', function(){
+    if (!hlthOpen) return;
+    var body; try { body = JSON.parse($('hlthEditorBody').value); } catch(e){ hlthMsg('hlthPieceResult', 'bad', '<b>Not saved.</b> The body is not valid JSON: ' + esc(e.message)); return; }
+    hlthAction('edit', hlthOpen.kind, hlthOpen.week, body).then(function(j){
+      if (!j) return;
+      if (!j.ok) { hlthMsg('hlthPieceResult', 'bad', '<b>Not saved.</b> ' + esc(j.note || j.error || '')); return; }
+      hlthOpen = j.piece;
+      hlthMsg('hlthPieceResult', j.warnings.length ? 'bad' : 'ok', '<b>Saved.</b> ' + (j.warnings.length ? 'Not in the brief: ' + esc(j.warnings.join(', ')) + '. The piece keeps its status; publish it when you are satisfied.' : 'Every name and number is in the brief. ' + (j.piece.status === 'published' ? 'It is live.' : 'Publish it when ready.')));
+      $('hlthEditorMeta').textContent = 'Sections: ' + (j.piece.sections || []).join(', ') + (j.warnings.length ? ' · not in the brief: ' + j.warnings.join(', ') : '') + ' · editor';
+      hlthLoad();
+    });
+  });
+  $('hlthEditorClose').addEventListener('click', function(){ $('hlthEditor').hidden = true; hlthOpen = null; });
+  hlthLoad();
+
+  // DFS salaries: the lobby CSV import and the status of both sites.
+  function dfsStatus(j){
+    var parts = [];
+    ['dk','fd'].forEach(function(site){ var v = j.sites && j.sites[site], label = site === 'dk' ? 'DraftKings' : 'FanDuel';
+      parts.push(v ? label + ': ' + v.rows + ' rows (' + esc(v.source || 'feed') + ', ' + esc(new Date(v.fetchedAt).toLocaleString()) + ')' : label + ': nothing loaded'); });
+    $('dfsStatus').textContent = 'Week ' + (j.week == null ? '—' : j.week) + '. ' + parts.join(' · ');
+    if (j.refresh) $('dfsStatus').textContent += ' Feed: ' + JSON.stringify(j.refresh).slice(0, 200);
+  }
+  function dfsLoad(refresh){
+    var key = getKey(); if (!key) return;
+    fetch('/api/admin/dfs?key=' + encodeURIComponent(key) + (refresh ? '&refresh=1' : ''))
+      .then(function(r){ return r.json(); }).then(function(j){ if (j && j.ok) dfsStatus(j); else $('dfsStatus').textContent = 'Salary status unavailable.'; })
+      .catch(function(){ $('dfsStatus').textContent = 'Salary status unavailable.'; });
+  }
+  function dfsImport(){
+    var key = getKey(), csv = $('dfsCsv').value;
+    if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    if (!csv.trim()) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Paste a CSV first.</b>'; return; }
+    var btn = $('dfsBtn'), was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
+    var body = { site: $('dfsSite').value, csv: csv };
+    if ($('dfsWeek').value) body.week = Number($('dfsWeek').value);
+    fetch('/api/admin/dfs?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok || !j.imported || !j.imported.ok) { $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Not imported.</b> ' + esc((j && (j.error || (j.imported && j.imported.error === 'no_db' ? 'No database is bound, so nothing can be stored.' : j.imported && j.imported.error))) || 'unknown error'); return; }
+        $('dfsResult').className = 'result ok'; $('dfsMsg').innerHTML = '<b>Imported ' + esc(j.imported.stored) + ' rows for week ' + esc(j.imported.week == null ? '—' : j.imported.week) + '.</b>'; $('dfsCsv').value = ''; dfsStatus(j);
+      })
+      .catch(function(e){ $('dfsResult').className = 'result bad'; $('dfsMsg').innerHTML = '<b>Network error.</b> ' + esc((e && e.message) || ''); })
+      .then(function(){ btn.disabled = false; btn.textContent = was; });
+  }
+  $('dfsBtn').addEventListener('click', dfsImport);
+  $('dfsRefresh').addEventListener('click', function(){ $('dfsStatus').textContent = 'Asking the feed…'; dfsLoad(true); });
+  dfsLoad();
 
   load();
 })();

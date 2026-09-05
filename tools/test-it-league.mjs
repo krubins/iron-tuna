@@ -558,7 +558,11 @@ console.log('\nwire contract');
   // reader being quoted last month's projections. Regenerate it here and
   // compare: a forgotten `node tools/build-default-board.mjs` fails this.
   ok('the default board is in sync with the worker\u2019s projections',
-     lib.includes(board.block(board.boardLines(board.projections(worker), board.loadLibrary(lib)))),
+     (() => {
+       const pool = board.projections(worker);
+       const L = board.loadLibrary(lib);
+       return lib.includes(board.block(board.boardLines(pool, L, board.normFactors(worker, pool, L))));
+     })(),
      'run: node tools/build-default-board.mjs');
 }
 
@@ -799,8 +803,9 @@ console.log('\na dollar figure belongs to the player it is bound to');
      new RegExp('McMillan to \\$' + mcm).test(title) && new RegExp('\\$' + mcm + ' on Tetairoa McMillan').test(dek), title + ' || ' + dek);
   ok('"and" joins two bindings rather than extending one',
      new RegExp('\\$' + jeff + ' on Justin Jefferson').test(dek), dek);
+  const dob = restate(12, 'J.K. Dobbins'), pri = restate(13, 'Jadarian Price');
   ok('a name-first figure still belongs to the name before it',
-     /Dobbins at \$4 and Jadarian Price at \$3/.test(dek), dek);
+     new RegExp('Dobbins at \\$' + dob + ' and Jadarian Price at \\$' + pri).test(dek), dek);
 
   // "Cap Drake London at $29, Garrett Wilson at $26" is the case the backward
   // rule exists for, and it has to keep winning over the forward one.

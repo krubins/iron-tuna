@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18397866361"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18397866361');
+  gtag('config', 'G-KLBZBZSJ25');
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<title>Trade Finder: Fantasy Football Trades Both Sides Say Yes To | Iron Tuna</title>
+<meta name="description" content="Paste your league's rosters or drop in screenshots. Iron Tuna scores every lineup at your scoring and finds the trades that make both teams better, each on its own horizon: this week, the next three, the rest of the season, or the fantasy playoffs.">
+<link rel="canonical" href="https://irontuna.com/trade-finder">
+<meta property="og:title" content="Trade Finder: Trades Both Sides Say Yes To">
+<meta property="og:description" content="Paste the rosters, set your scoring, and get the trades that improve both lineups. Tilt the balance, or score each side on a different horizon.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://irontuna.com/trade-finder">
+<meta property="og:image" content="https://irontuna.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/site.css">
+<style>
+body{overflow-x:hidden}
+@media(max-width:640px){header.site header.site .nav::-webkit-scrollbar{display:none}
+header.site header.site .nav:has(> a.cta) > a:nth-last-child(2){display:none}}
+.nav a.cta:hover{filter:brightness(1.07);text-decoration:none}
+h1{font-size:clamp(29px,5vw,45px);line-height:1.1;letter-spacing:.01em;margin:38px 0 14px}
+h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
+.lede{font-size:clamp(18px,2.2vw,21px);color:var(--sec);margin:0 0 26px;max-width:680px}
+p{color:var(--sec);margin:0 0 16px}
+.eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:42px}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-weight:700;border-radius:26px;padding:13px 26px;letter-spacing:.02em;border:none;cursor:pointer;box-shadow:0 8px 26px rgba(191,145,0,.28);font:inherit;font-weight:700}
+.btn:hover{filter:brightness(1.06);text-decoration:none}
+.btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal);box-shadow:none}
+.btn.small{padding:8px 16px;font-size:13.5px;box-shadow:none}
+.btn[disabled]{opacity:.5;cursor:default;filter:none}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:16px 0 8px}
+.wrap.wide{max-width:1080px}
+
+/* ── the finder ─────────────────────────────────────────────────────────── */
+.tf-step{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:var(--panel);margin:18px 0}
+.tf-step h3{margin:0 0 4px;font-size:16px}
+.tf-step p.sub{margin:0 0 12px;font-size:13.5px;color:var(--muted)}
+.tf-row{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.tf-seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:#fff}
+.tf-seg button{appearance:none;border:0;background:transparent;color:var(--sec);font:inherit;font-size:13.5px;font-weight:700;padding:8px 13px;cursor:pointer;border-left:1px solid var(--line)}
+.tf-seg button:first-child{border-left:0} .tf-seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.tf-seg button[disabled]{opacity:.45;cursor:default}
+.tf-lab{font-size:12.5px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-right:2px}
+.tf-slots{display:flex;gap:8px;flex-wrap:wrap}
+.tf-slots label{font-size:12.5px;color:var(--sec);display:inline-flex;flex-direction:column;gap:3px;font-weight:700}
+.tf-slots input{width:56px;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--text)}
+textarea.tf-paste{width:100%;min-height:200px;padding:12px 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--text);font:inherit;font-size:14px;line-height:1.5;resize:vertical}
+textarea.tf-paste:focus,.tf-fix input:focus,.tf-team input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,99,.12)}
+.tf-drop{border:2px dashed var(--line2);border-radius:10px;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:#fff;cursor:pointer}
+.tf-drop.over{border-color:var(--teal);background:rgba(14,124,99,.05)}
+.tf-drop input{display:none}
+.tf-drop b{color:var(--text)}
+.tf-status{font-size:13px;color:var(--muted);margin:8px 0 0;min-height:1.2em}
+.tf-status.err{color:var(--danger)}
+.tf-teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
+.tf-team{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;position:relative}
+.tf-team.mine{border-color:var(--teal);box-shadow:0 0 0 2px rgba(14,124,99,.15)}
+.tf-team input.nm{width:100%;font:inherit;font-weight:800;font-size:14.5px;border:1px solid transparent;border-radius:6px;padding:4px 6px;margin:-4px -6px 6px;background:transparent;color:var(--text)}
+.tf-team input.nm:hover{border-color:var(--line2);background:#fff}
+.tf-chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:12px;border:1px solid var(--line2);border-radius:999px;padding:3px 8px 3px 9px;background:var(--panel);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.chip i{font-style:normal;color:var(--muted);font-size:10.5px}
+.chip button{appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;font:inherit;line-height:1;padding:0 2px}
+.chip button:hover{color:var(--danger)}
+.chip.ignored{opacity:.55}
+.tf-fix{margin-top:8px;font-size:12.5px;color:var(--danger)}
+.tf-fix div{display:flex;gap:6px;align-items:center;margin-top:4px}
+.tf-fix span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tf-fix input{width:140px;font:inherit;font-size:12.5px;padding:4px 6px;border:1px solid var(--line2);border-radius:6px;color:var(--text)}
+.tf-team .mine-btn{margin-top:10px;font-size:12px;color:var(--teal);background:transparent;border:1px solid var(--teal);border-radius:999px;padding:3px 10px;cursor:pointer;font-weight:700}
+.tf-team.mine .mine-btn{background:var(--teal);color:#fff}
+.tf-team .kill{position:absolute;top:8px;right:10px;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+.tf-team .kill:hover{color:var(--danger)}
+.tf-team .cnt{font-size:11.5px;color:var(--muted);margin-top:8px}
+.tf-slider{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tf-slider input[type=range]{width:220px;accent-color:var(--teal)}
+.tf-slider .end{font-size:12.5px;color:var(--muted);font-weight:700}
+select.tf-sel{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--text);max-width:100%}
+.tf-bar{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;padding:14px 18px;background:var(--panel);margin:18px 0 10px}
+.tf-bar .k{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);display:block}
+.tf-bar .v{font-size:17px;font-weight:700;line-height:1.2}
+.tf-trades{display:grid;gap:14px;margin-top:14px}
+.tf-trade{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:#fff}
+.tf-trade h3{margin:0 0 10px;font-size:15.5px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.tf-trade h3 .with{font-weight:400;color:var(--muted);font-size:13px}
+.tf-sides{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tf-side{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel)}
+.tf-side .who{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.tf-side .gain{font-size:19px;font-weight:800;color:var(--teal);margin:2px 0 6px}
+.tf-side .gain small{font-size:12px;font-weight:400;color:var(--muted)}
+.tf-side .give{font-size:13px;color:var(--sec);margin:6px 0 0;line-height:1.55}
+.tf-side .give b{color:var(--text)}
+.tf-side .lines{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.tf-note{font-size:12.5px;color:var(--muted);margin:10px 0 0;line-height:1.6}
+.tf-empty{color:var(--muted);font-size:14px;border:1px dashed var(--line2);border-radius:10px;padding:16px;margin-top:14px}
+.method{border-top:1px solid var(--line);margin-top:30px;padding-top:16px}
+.method h3{font-size:15px;margin:0 0 8px}
+.method p{font-size:13px;color:var(--muted);line-height:1.65;margin:0 0 9px}
+.method b{color:var(--sec)}
+@media(max-width:640px){.tf-sides{grid-template-columns:1fr}.tf-slider input[type=range]{width:160px}}
+</style></head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site"><div class="wrap">
+  <a class="brand" href="/" aria-label="Iron Tuna home"><svg class="brand-logo" viewBox="0 0 418.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3d4c57"/><stop offset="20%" stop-color="#243039"/><stop offset="44%" stop-color="#131c24"/><stop offset="50%" stop-color="#0d151b"/><stop offset="55%" stop-color="#101d22"/><stop offset="74%" stop-color="#1d2831"/><stop offset="100%" stop-color="#39474f"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0e7c63" flood-opacity="0.16"/></filter></defs><image href="/tuna.webp" x="2" y="0.50" width="95" height="54.23" preserveAspectRatio="xMidYMid meet"/><g transform="translate(122,0)"><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
+  <!--chrome:nav-->
+    <nav class="nav" id="sitenav" aria-label="Main">
+      <a href="/fantasy-football-auction-values">Auction Values</a>
+      <a href="/guides">Strategy</a>
+      <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
+      <a href="/the-pick">The Pick</a>
+      <a href="/play-caller-premium">Columns</a>
+      <span class="nav-dd"><a href="/post-draft">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/trade-finder" aria-current="page">Trade Finder</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
+      <a href="/faq">FAQ</a>
+    </nav>
+    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+      <span class="nav-toggle-bars"><span></span></span>Menu
+    </button>
+    <!--/chrome:nav-->
+</div></header>
+<main id="main" class="wrap wide">
+<div class="art-head">
+<div class="eyebrow">In-season &middot; Trade Finder</div>
+<h1 class="art-h1">Trades both sides say yes to</h1>
+<p class="lede">Paste your league&rsquo;s rosters, or drop in screenshots. Every lineup is scored at your scoring, and the only trades offered are the ones that make <em>both</em> teams better &mdash; each on the horizon it is actually playing for.</p>
+</div>
+
+<div class="tf-step" id="tf-league">
+  <h3>1. Your league</h3>
+  <p class="sub">Scoring and starting slots. A saved league fills these in; otherwise pick a preset and set the lineup.</p>
+  <div class="tf-row"><span class="tf-lab">Scoring</span>
+    <div class="tf-seg" id="tf-scoring" role="group" aria-label="Scoring">
+      <button type="button" data-preset="custom" id="tf-mine">Your league</button>
+      <button type="button" data-preset="ppr">PPR</button>
+      <button type="button" data-preset="half">Half PPR</button>
+      <button type="button" data-preset="standard">Standard</button>
+    </div>
+    <span class="tf-lab">Board</span>
+    <div class="tf-seg" id="tf-board" role="group" aria-label="Board">
+      <button type="button" data-board="ironTuna">Iron Tuna</button>
+      <button type="button" data-board="consensus">Consensus</button>
+      <button type="button" data-board="vegas">Vegas</button>
+    </div>
+  </div>
+  <div class="tf-row"><span class="tf-lab">Starters</span>
+    <div class="tf-slots" id="tf-slots">
+      <label>QB<input type="number" min="0" max="3" data-slot="QB" value="1"></label>
+      <label>RB<input type="number" min="0" max="4" data-slot="RB" value="2"></label>
+      <label>WR<input type="number" min="0" max="5" data-slot="WR" value="2"></label>
+      <label>TE<input type="number" min="0" max="3" data-slot="TE" value="1"></label>
+      <label>Flex<input type="number" min="0" max="4" data-slot="FLEX" value="1"></label>
+      <label>Superflex<input type="number" min="0" max="2" data-slot="SFLEX" value="0"></label>
+    </div>
+  </div>
+  <p class="tf-status" id="tf-league-note"></p>
+</div>
+
+<div class="tf-step" id="tf-rosters">
+  <h3>2. The rosters</h3>
+  <p class="sub">Copy every team&rsquo;s roster from your league site and paste it here, one team after another with the team name above its players. Slot labels, byes and projections are ignored. Or drop in screenshots of each roster page.</p>
+  <textarea class="tf-paste" id="tf-text" placeholder="Team Awesome (Ken)
+QB  Josh Allen  BUF
+RB  Bijan Robinson  ATL
+WR  Ja'Marr Chase  CIN
+...
+
+The Hammers
+Lamar Jackson
+Derrick Henry
+..." spellcheck="false" aria-label="League rosters"></textarea>
+  <div class="cta-row">
+    <button class="btn" id="tf-parse" type="button">Read the paste</button>
+    <label class="tf-drop" id="tf-drop" for="tf-files"><b>Drop screenshots here</b> or tap to choose &mdash; one roster page per image, up to 8<input id="tf-files" type="file" accept="image/*" multiple></label>
+  </div>
+  <p class="tf-status" id="tf-read-status"></p>
+  <div class="tf-teams" id="tf-teams"></div>
+  <div class="cta-row" id="tf-teams-actions" hidden>
+    <button class="btn alt small" id="tf-add" type="button">Add an empty team</button>
+    <button class="btn alt small" id="tf-clear" type="button">Clear the rosters</button>
+    <button class="btn alt small" id="tf-llm-text" type="button" hidden>Messy paste? Let the reader untangle it</button>
+  </div>
+</div>
+
+<div class="tf-step" id="tf-goal">
+  <h3>3. What each side is playing for</h3>
+  <p class="sub">A team chasing a playoff spot needs the next three weeks. A team that has clinched needs weeks 15&ndash;17. Score each side on its own clock and a trade can be right for both at once.</p>
+  <div class="tf-row"><span class="tf-lab">Your team</span><select class="tf-sel" id="tf-mine-sel"><option value="">Any two teams (commissioner view)</option></select></div>
+  <div class="tf-row"><span class="tf-lab">Your horizon</span>
+    <div class="tf-seg" id="tf-hA" role="group" aria-label="Your horizon">
+      <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+    </div>
+  </div>
+  <div class="tf-row"><span class="tf-lab">Their horizon</span>
+    <div class="tf-seg" id="tf-hB" role="group" aria-label="Their horizon">
+      <button type="button" data-h="week">This week</button><button type="button" data-h="next3">Next 3 weeks</button><button type="button" data-h="ros">Rest of season</button><button type="button" data-h="playoffs">Fantasy playoffs</button>
+    </div>
+  </div>
+  <div class="tf-row"><span class="tf-lab">Balance</span>
+    <div class="tf-slider"><span class="end">Even</span><input type="range" id="tf-tilt" min="0" max="100" value="0" aria-label="Balance between even and in your favour"><span class="end">In my favour</span><span id="tf-tilt-note" style="font-size:12.5px;color:var(--muted)"></span></div>
+  </div>
+  <div class="tf-row"><span class="tf-lab">Package</span>
+    <div class="tf-seg" id="tf-size" role="group" aria-label="Package size">
+      <button type="button" data-size="1">1-for-1 only</button><button type="button" data-size="2">Up to 2-for-2</button><button type="button" data-size="3">Up to 3-for-3</button>
+    </div>
+  </div>
+  <div class="cta-row"><button class="btn" id="tf-find" type="button">Find trades</button><span class="tf-status" id="tf-find-status"></span></div>
+</div>
+
+<div id="tf-results" hidden>
+  <div class="tf-bar" id="tf-bar"></div>
+  <div class="tf-trades" id="tf-trades"></div>
+  <p class="tf-note" id="tf-results-note"></p>
+</div>
+
+<div class="method">
+  <h3>How these trades are found</h3>
+  <p><b>A roster is worth what it starts.</b> Every player is projected at your scoring from the same board the rankings use, and each team&rsquo;s lineup is filled the way your league fills it: the named slots first, then flex and superflex from whoever is left. The bench counts a little, as insurance, and a backup quarterback in a one-QB league counts for almost nothing. Kickers and defences are left out.</p>
+  <p><b>Both sides must gain.</b> The engine tries every one-, two- and three-player package between two rosters and keeps only the swaps where both starting lineups get better by at least three quarters of a point a week. That floor never moves. The balance slider decides which of the surviving trades come first: at <em>Even</em> the trade is ranked by the smaller of the two gains, and at <em>In my favour</em> by yours alone. It cannot surface a trade the other manager should refuse.</p>
+  <p><b>Horizons are per team.</b> A gain is measured on the weeks that team is playing for &mdash; this week, the next three, the rest of the season, or the fantasy playoffs &mdash; and stated per week so a three-week horizon and a twelve-week one are on the same scale. A player who is ordinary over the season and excellent in weeks 15&ndash;17 is exactly the player a clinched team should buy from a bubble team.</p>
+  <p><b>What it does not know.</b> It cannot see your league&rsquo;s roster limits, its trade deadline, who is on injured reserve, or which manager is unreachable. A two-for-one leaves the other side needing a roster spot; the card says so. Screenshots are read by a model into names only, and every name is then matched to the board here in your browser, so nothing it read can become a projection on its own.</p>
+</div>
+</main>
+<footer class="site"><div class="wrap">
+  <!--chrome:foot-->
+  <div class="foot-cols">
+    <div class="foot-col">
+     <h2>Draft</h2>
+     <ul>
+      <li><a href="/fantasy-football-auction-values">Auction values</a></li>
+      <li><a href="https://irontuna.com/auctiondraft?screen=board">Auction Manager</a></li>
+      <li><a href="/superflex-auction-values">Superflex &amp; 2QB</a></li>
+      <li><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a></li>
+      <li><a href="https://irontuna.com/snakedraft">Snake board</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Read</h2>
+     <ul>
+      <li><a href="/auction-insights">Auction insights</a></li>
+      <li><a href="/the-pick">The Pick</a></li>
+      <li><a href="/auction-watch">Auction Watch</a></li>
+      <li><a href="/guides">Guides</a></li>
+      <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/insights-vault">Insight Vault</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>In-Season</h2>
+     <ul>
+      <li><a href="/weekly-intel">Weekly Intel</a></li>
+      <li><a href="/rankings">Rankings</a></li>
+      <li><a href="/vegas-edge">Vegas Edge</a></li>
+      <li><a href="/game-intel">Game Intel</a></li>
+      <li><a href="/waivers">Waivers</a></li>
+      <li><a href="/trade-finder">Trade Finder</a></li>
+      <li><a href="/dfs">DFS</a></li>
+      <li><a href="/my-league">My League</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Company</h2>
+     <ul>
+      <li><a href="/post-draft">In-Season</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/support">Support</a></li>
+      <li><a href="/creators">Creators &amp; affiliates</a></li>
+     </ul>
+    </div>
+    <div class="foot-col">
+     <h2>Legal</h2>
+     <ul>
+      <li><a href="/privacy">Privacy</a></li>
+      <li><a href="/terms">Terms</a></li>
+     </ul>
+    </div>
+  </div>
+  <div class="foot-note">
+   <p>Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+    <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
+  </div>
+  <!--/chrome:foot-->
+</div></footer>
+<script src="/it-league.js"></script>
+<script src="/it-trade.js"></script>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'it_trade_v1';
+  var HORIZONS = { week: 'This week', next3: 'Next 3 weeks', ros: 'Rest of season', playoffs: 'Fantasy playoffs' };
+  var L = window.ITLeague || null, TR = window.ITTrade;
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function n1(v) { return (Math.round(v * 10) / 10).toFixed(1); }
+  function readState() { try { return JSON.parse(localStorage.getItem(KEY) || 'null') || {}; } catch (e) { return {}; } }
+  function writeState(patch) { try { var s = readState(); for (var k in patch) s[k] = patch[k]; localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+  function setPressed(host, attr, val) {
+    [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); });
+  }
+  var st = readState();
+
+  // ── settings ─────────────────────────────────────────────────────────────
+  var preset = st.preset || (L && L.has ? 'custom' : 'ppr');
+  var board = st.board || 'ironTuna';
+  var hA = st.hA || 'ros', hB = st.hB || 'ros', tilt = isFinite(st.tilt) ? st.tilt : 0, size = st.size || 2;
+  var slots = st.slots || savedSlots();
+  function savedSlots() {
+    // The draft app's saved roster shape, if there is one.
+    try {
+      var cfg = (JSON.parse(localStorage.getItem('iron_tuna_draft_state_v2') || 'null') || {}).config;
+      if (cfg && cfg.roster) {
+        var g = function (p) { return (cfg.roster[p] && cfg.roster[p].starters) || 0; };
+        var flex = cfg.flex || {};
+        var sf = (flex.count || 0) > 0 && (flex.eligible || []).indexOf('QB') >= 0;
+        return { QB: g('QB'), RB: g('RB'), WR: g('WR'), TE: g('TE'), FLEX: sf ? 0 : (flex.count || 0), SFLEX: sf ? (flex.count || 0) : 0 };
+      }
+    } catch (e) {}
+    return { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 0 };
+  }
+  function rules() {
+    var base = (L && L.defaults && L.defaults.scoring) || {};
+    if (preset === 'custom' && L && L.has && L.config && L.config.scoring) return L.config.scoring;
+    var rec = preset === 'standard' ? 0 : preset === 'half' ? 0.5 : 1, out = {};
+    for (var k in base) out[k] = base[k];
+    out.receptionPoints = rec; out.rbReceptionPoints = rec;
+    return out;
+  }
+  function paintSettings() {
+    setPressed($('tf-scoring'), 'data-preset', preset);
+    setPressed($('tf-board'), 'data-board', board);
+    setPressed($('tf-hA'), 'data-h', hA); setPressed($('tf-hB'), 'data-h', hB);
+    setPressed($('tf-size'), 'data-size', String(size));
+    $('tf-tilt').value = String(Math.round(tilt * 100));
+    tiltNote();
+    [].forEach.call($('tf-slots').querySelectorAll('input'), function (i) { i.value = slots[i.getAttribute('data-slot')] || 0; });
+    $('tf-league-note').innerHTML = (L && L.has)
+      ? 'Saved league: <b>' + esc(L.label()) + '</b>' + (L.scoringLabel ? ' &middot; ' + esc(L.scoringLabel()) : '') + '. <a href="/auctiondraft?screen=cheat">Change it</a>.'
+      : 'No saved league. Presets only &mdash; <a href="/auctiondraft?screen=cheat">set your league up</a> and every player is scored at your exact settings.';
+  }
+  function tiltNote() {
+    $('tf-tilt-note').textContent = tilt < 0.15 ? 'ranked by the smaller gain' : tilt > 0.85 ? 'ranked by your gain; theirs still has to be real' : 'leaning your way';
+  }
+
+  // ── the board ────────────────────────────────────────────────────────────
+  // One fetch per horizon, memoised. The pool for the parser is the union of
+  // every player any horizon carries (they are the same pool; a player out for
+  // the year is absent from all four).
+  var data = {}, pool = null, players = {}, loadError = null;
+  function loadHorizon(h) {
+    if (data[h]) return Promise.resolve(data[h]);
+    return fetch('/api/boards?horizon=' + h + '&pos=ALL&scoring=ppr', { credentials: 'omit' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.ok) throw new Error('board');
+        data[h] = j;
+        j.players.forEach(function (row) {
+          var pos = row.pos || (row.position === 'DST' ? 'DEF' : row.position);
+          var p = players[row.key] || (players[row.key] = { id: row.key, name: row.name, pos: pos, team: row.team, rows: {} });
+          p.rows[h] = row;
+        });
+        pool = TR.makePool(Object.keys(players).map(function (k) { return players[k]; }));
+        return j;
+      });
+  }
+  function points(p, h) {
+    var row = p.rows[h]; if (!row || !L || !L.score) return 0;
+    var side = row[board] || row.ironTuna;
+    if (!side || !side.stats) return 0;
+    return L.score(side.stats, p.pos, rules(), row.games) || 0;
+  }
+  function weeksOf(h) { var d = data[h]; return d && d.horizon && d.horizon.weeks ? Math.max(1, d.horizon.weeks.length) : 1; }
+
+  // ── the rosters ──────────────────────────────────────────────────────────
+  var teams = [];        // [{ name, players: [player], unresolved: [line] }]
+  var mine = st.mine == null ? '' : String(st.mine);
+  function persistTeams() {
+    writeState({ teams: teams.map(function (t) { return { name: t.name, ids: t.players.map(function (p) { return p.id; }), unresolved: t.unresolved }; }), mine: mine });
+  }
+  function restoreTeams() {
+    if (!st.teams || !pool) return;
+    teams = st.teams.map(function (t) {
+      return { name: t.name, players: (t.ids || []).map(function (id) { return players[id]; }).filter(Boolean), unresolved: t.unresolved || [] };
+    }).filter(function (t) { return t.players.length || t.unresolved.length; });
+  }
+  function status(el, msg, err) { el.textContent = msg || ''; el.classList.toggle('err', !!err); }
+
+  function parseText() {
+    var text = $('tf-text').value;
+    if (!text.trim()) { status($('tf-read-status'), 'Paste the rosters first.', true); return; }
+    var r = TR.parseRosters(text, pool);
+    if (!r.teams.length) { status($('tf-read-status'), 'No player the board knows was found in that paste. Check the names, or let the reader untangle it.', true); $('tf-llm-text').hidden = false; $('tf-teams-actions').hidden = false; return; }
+    mergeTeams(r.teams.map(function (t) { return { name: t.name, players: t.players.map(function (row) { return row.p; }), unresolved: t.unresolved }; }));
+    var placed = 0, missing = 0;
+    teams.forEach(function (t) { placed += t.players.length; missing += t.unresolved.length; });
+    status($('tf-read-status'), teams.length + ' team' + (teams.length === 1 ? '' : 's') + ', ' + placed + ' players placed'
+      + (missing ? ', ' + missing + ' line' + (missing === 1 ? '' : 's') + ' not recognised (fix them below)' : '')
+      + (r.duplicates.length ? '. ' + r.duplicates.length + ' listed twice, kept with the first team' : '') + '.');
+    $('tf-llm-text').hidden = !(missing > placed / 3);
+    writeState({ text: text });
+    renderTeams();
+  }
+  // Names from the reader or a second paste join the teams already here: a
+  // team with the same name gains the new players, a new name is a new team.
+  function mergeTeams(incoming) {
+    var have = {};
+    teams.forEach(function (t) { t.players.forEach(function (p) { have[p.id] = t; }); });
+    incoming.forEach(function (it) {
+      var key = TR.fold(it.name);
+      var t = null;
+      teams.forEach(function (x) { if (!t && TR.fold(x.name) === key) t = x; });
+      if (!t) { t = { name: it.name, players: [], unresolved: [] }; teams.push(t); }
+      it.players.forEach(function (p) { if (!have[p.id]) { t.players.push(p); have[p.id] = t; } });
+      (it.unresolved || []).forEach(function (u) { if (t.unresolved.indexOf(u) < 0) t.unresolved.push(u); });
+    });
+    if (mine !== '' && !teams[Number(mine)]) mine = '';
+  }
+  function renderTeams() {
+    var host = $('tf-teams');
+    host.innerHTML = teams.map(function (t, i) {
+      var starters = t.players.filter(function (p) { return p.pos !== 'K' && p.pos !== 'DEF'; }).length;
+      return '<div class="tf-team' + (String(i) === mine ? ' mine' : '') + '" data-i="' + i + '">'
+        + '<button class="kill" type="button" title="Remove this team" data-kill="' + i + '">&times;</button>'
+        + '<input class="nm" value="' + esc(t.name) + '" data-name="' + i + '" aria-label="Team name">'
+        + '<div class="tf-chips">' + t.players.map(function (p, k) {
+            return '<span class="chip' + (p.pos === 'K' || p.pos === 'DEF' ? ' ignored' : '') + '">' + esc(p.name) + ' <i>' + esc(p.pos) + '</i><button type="button" title="Remove" data-rm="' + i + ':' + k + '">&times;</button></span>';
+          }).join('') + '</div>'
+        + (t.unresolved.length ? '<div class="tf-fix">Not recognised:' + t.unresolved.map(function (u, k) {
+            return '<div><span title="' + esc(u) + '">' + esc(u) + '</span><input placeholder="type the name" data-fix="' + i + ':' + k + '" aria-label="Fix this name"><button type="button" class="btn alt small" data-drop="' + i + ':' + k + '">drop</button></div>';
+          }).join('') + '</div>' : '')
+        + '<div class="cnt">' + starters + ' tradeable' + (t.players.length !== starters ? ' (kickers and defences ignored)' : '') + '</div>'
+        + '<button class="mine-btn" type="button" data-mine="' + i + '">' + (String(i) === mine ? 'Your team' : 'This is my team') + '</button>'
+        + '</div>';
+    }).join('');
+    $('tf-teams-actions').hidden = !teams.length;
+    var sel = $('tf-mine-sel');
+    sel.innerHTML = '<option value="">Any two teams (commissioner view)</option>' + teams.map(function (t, i) { return '<option value="' + i + '"' + (String(i) === mine ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('');
+    persistTeams();
+  }
+  $('tf-teams').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    var v;
+    if ((v = b.getAttribute('data-kill')) != null) { teams.splice(Number(v), 1); if (mine === v) mine = ''; else if (mine !== '' && Number(mine) > Number(v)) mine = String(Number(mine) - 1); renderTeams(); }
+    else if ((v = b.getAttribute('data-rm'))) { var a = v.split(':'); teams[+a[0]].players.splice(+a[1], 1); renderTeams(); }
+    else if ((v = b.getAttribute('data-drop'))) { var d = v.split(':'); teams[+d[0]].unresolved.splice(+d[1], 1); renderTeams(); }
+    else if ((v = b.getAttribute('data-mine')) != null) { mine = v; renderTeams(); }
+  });
+  $('tf-teams').addEventListener('change', function (ev) {
+    var i = ev.target.getAttribute('data-name');
+    if (i != null) { teams[+i].name = ev.target.value.trim() || ('Team ' + (+i + 1)); renderTeams(); return; }
+    var f = ev.target.getAttribute('data-fix');
+    if (f) {
+      var a = f.split(':'), t = teams[+a[0]];
+      var row = TR.resolve(ev.target.value, pool, null);
+      if (!row) { ev.target.style.borderColor = 'var(--danger)'; return; }
+      var taken = teams.some(function (x) { return x.players.indexOf(row.p) >= 0; });
+      if (!taken) t.players.push(row.p);
+      t.unresolved.splice(+a[1], 1);
+      renderTeams();
+    }
+  });
+  $('tf-parse').addEventListener('click', parseText);
+  $('tf-add').addEventListener('click', function () { teams.push({ name: 'Team ' + (teams.length + 1), players: [], unresolved: [] }); renderTeams(); });
+  $('tf-clear').addEventListener('click', function () { teams = []; mine = ''; $('tf-text').value = ''; writeState({ text: '' }); status($('tf-read-status'), ''); renderTeams(); $('tf-results').hidden = true; });
+
+  // ── screenshots ──────────────────────────────────────────────────────────
+  // Each image is shrunk in the browser before it goes anywhere: a phone
+  // screenshot is 3-4 MB and the reader needs nothing like that to read a
+  // name. JPEG at 1600px on the long side is a few hundred KB.
+  function shrink(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        try {
+          var MAX = 1600, s = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+          resolve({ media_type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).replace(/^data:[^,]*,/, '') });
+        } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
+      img.src = url;
+    });
+  }
+  function readImages(files) {
+    var list = [].slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); }).slice(0, 8);
+    if (!list.length) { status($('tf-read-status'), 'Those are not images.', true); return; }
+    status($('tf-read-status'), 'Reading ' + list.length + ' screenshot' + (list.length === 1 ? '' : 's') + '…');
+    Promise.all(list.map(shrink)).then(function (images) {
+      return fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ images: images }) })
+        .then(function (r) { return r.json(); });
+    }).then(adoptRead).catch(function () { status($('tf-read-status'), 'The reader did not answer. Paste the rosters as text instead.', true); });
+  }
+  function readText() {
+    status($('tf-read-status'), 'Reading the paste…');
+    fetch('/api/roster-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: $('tf-text').value.slice(0, 20000) }) })
+      .then(function (r) { return r.json(); }).then(adoptRead)
+      .catch(function () { status($('tf-read-status'), 'The reader did not answer.', true); });
+  }
+  // Names only come back. Each is resolved against the board HERE, so a name
+  // the model misread fails to resolve and is shown to fix, never priced.
+  function adoptRead(j) {
+    if (!j || !j.ok) { status($('tf-read-status'), (j && j.error) || 'The reader could not read that.', true); return; }
+    var placed = 0, missing = 0;
+    var incoming = j.teams.map(function (t) {
+      var out = { name: t.name, players: [], unresolved: [] };
+      t.players.forEach(function (p) {
+        var row = TR.resolve(p.name + (p.pos ? ' ' + p.pos : ''), pool, p.pos || null) || TR.resolve(p.name, pool, null);
+        if (row) { out.players.push(row.p); placed++; } else { out.unresolved.push(p.name + (p.pos ? ' ' + p.pos : '') + (p.team ? ' ' + p.team : '')); missing++; }
+      });
+      return out;
+    });
+    mergeTeams(incoming);
+    status($('tf-read-status'), 'Read ' + j.teams.length + ' team' + (j.teams.length === 1 ? '' : 's') + ': ' + placed + ' players placed' + (missing ? ', ' + missing + ' not recognised (fix them below)' : '') + '.');
+    renderTeams();
+  }
+  $('tf-files').addEventListener('change', function () { readImages(this.files); this.value = ''; });
+  var drop = $('tf-drop');
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files) readImages(e.dataTransfer.files); });
+  $('tf-llm-text').addEventListener('click', readText);
+
+  // ── settings events ──────────────────────────────────────────────────────
+  $('tf-scoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); writeState({ preset: preset }); paintSettings(); });
+  $('tf-board').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); writeState({ board: board }); paintSettings(); });
+  $('tf-hA').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hA = b.getAttribute('data-h'); writeState({ hA: hA }); paintSettings(); });
+  $('tf-hB').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; hB = b.getAttribute('data-h'); writeState({ hB: hB }); paintSettings(); });
+  $('tf-size').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; size = +b.getAttribute('data-size'); writeState({ size: size }); paintSettings(); });
+  $('tf-tilt').addEventListener('input', function () { tilt = (+this.value) / 100; writeState({ tilt: tilt }); tiltNote(); });
+  $('tf-slots').addEventListener('change', function () {
+    [].forEach.call($('tf-slots').querySelectorAll('input'), function (i) { slots[i.getAttribute('data-slot')] = Math.max(0, parseInt(i.value, 10) || 0); });
+    writeState({ slots: slots });
+  });
+  $('tf-mine-sel').addEventListener('change', function () { mine = this.value; renderTeams(); });
+
+  // ── the search ───────────────────────────────────────────────────────────
+  function find() {
+    if (teams.filter(function (t) { return t.players.length; }).length < 2) { status($('tf-find-status'), 'Two teams with players are the minimum.', true); return; }
+    status($('tf-find-status'), 'Scoring the lineups…');
+    var need = mine === '' ? [hA] : [hA, hB];
+    Promise.all(need.map(loadHorizon)).then(function () {
+      var mi = mine === '' ? null : Number(mine);
+      var res = TR.findTrades(teams, {
+        slots: slots, points: points, weeks: weeksOf,
+        horizon: function (i) { return mi == null ? hA : (i === mi ? hA : hB); },
+        mine: mi, tilt: tilt, maxSize: size, minGain: 0.75, limit: 12
+      });
+      status($('tf-find-status'), '');
+      renderResults(res, mi);
+      try { if (typeof gtag === 'function') gtag('event', 'trade_finder', { teams: teams.length, trades: res.trades.length }); } catch (e) {}
+    }).catch(function () { status($('tf-find-status'), 'The board did not answer, so nothing is scored. Try again in a moment.', true); });
+  }
+  function chips(list, h) {
+    return list.map(function (p) { return '<b>' + esc(p.name) + '</b> <span style="color:var(--muted)">' + esc(p.pos) + (h ? ' &middot; ' + n1(points(p, h) / weeksOf(h)) + '/wk' : '') + '</span>'; }).join(', ');
+  }
+  function sideCard(who, name, give, get, gain, h, lines, needsSpot) {
+    var starts = lines.startsNow.map(function (s) { return esc(s.p.name) + ' at ' + esc(s.slot); });
+    var stops = lines.stopsStarting.map(function (s) { return esc(s.p.name); });
+    return '<div class="tf-side"><div class="who">' + who + ' &middot; ' + esc(name) + '</div>'
+      + '<div class="gain">+' + n1(gain) + ' <small>pts / week &middot; ' + esc(HORIZONS[h] || h) + '</small></div>'
+      + '<div class="give">Sends ' + chips(give, h) + '<br>Gets ' + chips(get, h) + '</div>'
+      + '<div class="lines">' + (starts.length ? 'Starts: ' + starts.join(', ') + '. ' : '') + (stops.length ? 'To the bench: ' + stops.join(', ') + '. ' : '') + (needsSpot ? 'Needs a roster spot opened.' : '') + '</div></div>';
+  }
+  function renderResults(res, mi) {
+    var host = $('tf-results');
+    host.hidden = false;
+    var T = res.teams;
+    $('tf-bar').innerHTML = (mi == null
+        ? '<span><span class="k">View</span><span class="v">Every pair of teams</span></span>'
+        : '<span><span class="k">Your team</span><span class="v">' + esc(T[mi].name) + '</span></span><span><span class="k">Your lineup</span><span class="v">' + n1(T[mi].perWeek) + ' <span style="font-size:12px;color:var(--muted);font-weight:400">pts/wk, ' + esc(HORIZONS[T[mi].horizon]) + '</span></span></span>')
+      + '<span><span class="k">Scoring</span><span class="v">' + esc(preset === 'custom' && L && L.label ? L.label() : preset === 'half' ? 'Half PPR' : preset === 'standard' ? 'Standard' : 'PPR') + '</span></span>'
+      + '<span><span class="k">Balance</span><span class="v">' + (tilt < 0.15 ? 'Even' : tilt > 0.85 ? 'In your favour' : Math.round(tilt * 100) + '% your way') + '</span></span>';
+    if (!res.trades.length) {
+      $('tf-trades').innerHTML = '<div class="tf-empty">No trade improves both lineups by at least three quarters of a point a week' + (mi == null ? ' between any two teams' : '') + '. That is a real answer: the rosters are already sorted, or the two horizons want the same players. Try a different partner horizon, or allow bigger packages.</div>';
+    } else {
+      $('tf-trades').innerHTML = res.trades.map(function (t, i) {
+        var A = T[t.a], B = T[t.b];
+        var youAreA = mi == null || t.a === mi;
+        var first = youAreA ? sideCard(mi == null ? 'Team' : 'You', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, t.giveB.length > t.giveA.length)
+                            : sideCard('You', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, t.giveA.length > t.giveB.length);
+        var second = youAreA ? sideCard(mi == null ? 'Team' : 'Them', B.name, t.giveB, t.giveA, t.gainB, t.hB, t.linesB, t.giveA.length > t.giveB.length)
+                             : sideCard('Them', A.name, t.giveA, t.giveB, t.gainA, t.hA, t.linesA, t.giveB.length > t.giveA.length);
+        var label = (youAreA ? t.giveA : t.giveB).map(function (p) { return p.name; }).join(' + ') + ' for ' + (youAreA ? t.giveB : t.giveA).map(function (p) { return p.name; }).join(' + ');
+        return '<div class="tf-trade"><h3>' + (i + 1) + '. ' + esc(label) + '<span class="with">' + (mi == null ? esc(A.name) + ' and ' + esc(B.name) : 'with ' + esc(youAreA ? B.name : A.name)) + '</span></h3><div class="tf-sides">' + first + second + '</div></div>';
+      }).join('');
+    }
+    $('tf-results-note').innerHTML = res.considered + ' swap' + (res.considered === 1 ? '' : 's') + ' improved both sides out of everything tried; the ' + res.trades.length + ' above are the strongest, no more than four with one partner. '
+      + (preset === 'custom' ? 'Scored at your saved league.' : 'Scored at ' + esc(preset === 'half' ? 'half PPR' : preset === 'standard' ? 'standard' : 'PPR') + ' &mdash; <a href="/auctiondraft?screen=cheat">save your league</a> and these re-score to your exact settings.')
+      + ' Points are the ' + esc(board === 'ironTuna' ? 'Iron Tuna' : board) + ' board over each side&rsquo;s horizon, stated per week.';
+    host.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  $('tf-find').addEventListener('click', find);
+
+  // ── go ───────────────────────────────────────────────────────────────────
+  if (!(L && L.has)) { $('tf-mine').disabled = true; $('tf-mine').title = 'Set your league up in the draft app first'; if (preset === 'custom') preset = 'ppr'; }
+  paintSettings();
+  if (st.text) $('tf-text').value = st.text;
+  status($('tf-read-status'), 'Reading the board…');
+  loadHorizon('ros').then(function () {
+    status($('tf-read-status'), '');
+    restoreTeams();
+    if (teams.length) renderTeams();
+  }).catch(function () {
+    loadError = true;
+    status($('tf-read-status'), 'The board did not answer, so names cannot be matched yet. Reload in a moment.', true);
+  });
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>

@@ -325,8 +325,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .snake-rail-dock { display: none; }
 @media (min-width: 761px) {
   .has-snake-rail .main-content { padding-left: 390px; }
-  .snake-rail-dock { display: block; position: fixed; left: 12px; top: 92px; width: 366px; max-height: calc(100vh - 110px); z-index: 60; }
-  .snake-rail-dock .players-rail { width: 100%; max-width: 366px; max-height: calc(100vh - 110px); overflow-y: auto; }
+  /* The dock lives inside .main-content, which is zoomed by the font-scale
+     control (--fs). zoom multiplies rendered lengths, so viewport-derived
+     offsets must be divided by --fs to land where 100vh actually is —
+     otherwise at 70% the rail stops ~60% down the screen. */
+  .snake-rail-dock { display: block; position: fixed; left: 12px; top: calc(92px / var(--fs, 1)); width: 366px; height: calc((100vh - 110px) / var(--fs, 1)); z-index: 60; }
+  .snake-rail-dock .players-rail { width: 100%; max-width: 366px; height: 100%; max-height: none; overflow-y: auto; }
 }
 .mtab-bar { display: none; }
 .mobile-coach-view { padding: 8px 10px 0; }
@@ -1104,6 +1108,7 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-cost { color: #6a6a6a !important; font-size: 8px; }
   .cheat-val { color: #111 !important; font-size: 8.5px; font-weight: 700; }
   .cheat-you { color: #111 !important; font-size: 8.5px; font-weight: 700; }
+  span.cheat-you.you-shift-up, span.cheat-you.you-shift-down { color: #111 !important; }
   .cheat-ppg { color: #1a4a7a !important; font-size: 8.5px; font-weight: 700; }
   .cheat-you.cy-up { color: #0a7a3f !important; } .cheat-you.cy-down { color: #6a6a6a !important; font-weight: 400; }
   .cheat-name { color: #111 !important; }
@@ -1146,6 +1151,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-cost.price-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
 .cheat-cost.price-shift-up { color: #e0a83c !important; }
 .cheat-cost.price-shift-down { color: #5aa9ff !important; }
+/* You moved because of the last pick (planner re-balance, not a market move) —
+   hover the cell for the why. Blue down / green up on purpose: a lower max bid
+   is not bad news, so it must not read as red. */
+.cheat-you.you-shift-up, .rr-c.you.you-shift-up { color: #46d39a !important; }
+.cheat-you.you-shift-down, .rr-c.you.you-shift-down { color: #5aa9ff !important; }
 .col-toggle.price-clear { color: var(--gold-text); border-color: var(--gold-text); }
 .cheat-ppg.proj-override { color: var(--positive) !important; text-decoration: underline dotted; font-weight: 700; }
 .cheat-ppg.proj-override-down { color: #ff8d4a !important; text-decoration: underline dotted; font-weight: 700; }
@@ -1332,6 +1342,15 @@ input:focus, select:focus { border-color: var(--accent); }
 .fable-dot.off { background: #f87171; box-shadow: 0 0 6px #f87171; }
 .fable-headbtns button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; margin-left: 9px; }
 .fable-headbtns button:hover { color: var(--text-primary); }
+.fable-headbtns button.on { color: #b9a6ff; }
+.fable-cfg { padding: 9px 12px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-base); display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+.fable-cfg label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.fable-cfg-row { display: flex; gap: 6px; }
+.fable-cfg-row input { flex: 1; min-width: 0; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 9px; color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; }
+.fable-cfg-row button { border-radius: 8px; padding: 0 12px; background: #7c5cff; color: #fff; border: none; font-weight: 600; cursor: pointer; }
+.fable-cfg-row button:disabled { opacity: 0.45; cursor: default; }
+.fable-cfg p { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--text-muted); }
+.fable-cfg-reset { background: none; border: none; padding: 0; color: #b9a6ff; cursor: pointer; font: inherit; text-decoration: underline; }
 .fable-body { flex: 1 1 auto; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 9px; min-height: 0; }
 .fable-msg { font-size: 13.5px; line-height: 1.5; padding: 9px 12px; border-radius: 11px; max-width: 92%; white-space: pre-wrap; word-break: break-word; }
 .fable-msg.bot { background: var(--bg-elev); color: var(--text-secondary); align-self: flex-start; border-bottom-left-radius: 3px; }
@@ -2575,11 +2594,10 @@ function healRosterPositions(cfg) {
 const FORMATS = {
   auction: {
     label: 'Auction',
-    columns: [['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'], ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'], ['you', 'You', 'What you should bid, the most you should pay given your roster, budget, and needs.'], ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.']],
+    columns: [['proj', 'Proj', 'Projected market price, what this player will likely cost in your auction.'], ['value', 'Value', 'True value (VBD), what the player is actually worth at your league settings.'], ['you', 'You', 'What you should bid, the most you should pay given your roster, budget, and needs. Re-balances after every pick as budgets and slots change; a tinted number moved on the last pick — hover it for why.'], ['ppg', 'PPG', 'Projected fantasy points per game at your scoring.']],
     valuePlayers: (players) => players,
     progress: (draftHistory, players, config) => computeMarketState(draftHistory, players, config),
     planFills: (myTeam, players, config, draftedIds) => buildOptimalPlan(myTeam, players, config, draftedIds),
-    recommend: (player, team, config, marketState, marketAdjusted) => recommendBid(player, team, config, marketState, marketAdjusted)
   },
   snake: {
     label: 'Snake',
@@ -2890,10 +2908,19 @@ function scoreKicker(stats = {}, config) {
     pts += fgMade * dist[3] * s.fieldGoalTiers[3].points;
     pts += fgMade * dist[4] * s.fieldGoalTiers[4].points;
     const fgMissed = stats.fgMissed || 0;
-    pts += fgMissed * dist[0] * s.fieldGoalTiers[0].missPoints;
-    pts += fgMissed * dist[1] * s.fieldGoalTiers[1].missPoints;
-    pts += fgMissed * dist[2] * s.fieldGoalTiers[2].missPoints;
-    pts += fgMissed * dist[3] * s.fieldGoalTiers[3].missPoints;
+    // Misses do NOT follow the make-distance mix above: NFL kickers convert
+    // ~97% inside 35 yards, so the misses pile up on the long attempts, where
+    // the miss penalty is mildest. Spreading misses across the MAKE profile
+    // billed each miss at ~-2.4 pts instead of ~-1.0 and put a spurious
+    // ~14-pt spread across the top kickers — enough to reorder K1-K8. This
+    // profile is the league-wide miss mix by distance, and it sums to 1 so
+    // the 50+ tier's share is no longer silently dropped.
+    const missDist = [0.02, 0.06, 0.17, 0.25, 0.50];
+    pts += fgMissed * missDist[0] * s.fieldGoalTiers[0].missPoints;
+    pts += fgMissed * missDist[1] * s.fieldGoalTiers[1].missPoints;
+    pts += fgMissed * missDist[2] * s.fieldGoalTiers[2].missPoints;
+    pts += fgMissed * missDist[3] * s.fieldGoalTiers[3].missPoints;
+    pts += fgMissed * missDist[4] * (s.fieldGoalTiers[4].missPoints || 0);
   }
   pts += (stats.xpMade || 0) * s.extraPoint;
   pts += (stats.xpMissed || 0) * s.missedExtraPoint;
@@ -3128,7 +3155,10 @@ function scorePlayer(player, config) {
       return 0;
   }
 }
-function calculateReplacementLevels(playersByPosition, config) {
+// `demand` is optional: { starters: {pos: n}, flexSlots: n } for a league that is
+// PART-WAY through its draft (see remainingDemand). Without it the demand is the
+// whole league's, which is the pre-draft board.
+function calculateReplacementLevels(playersByPosition, config, demand) {
   const {
     teams,
     roster,
@@ -3141,9 +3171,9 @@ function calculateReplacementLevels(playersByPosition, config) {
   }
   const starterDemand = {};
   for (const [pos, cfg] of Object.entries(roster)) {
-    starterDemand[pos] = cfg.starters * teams;
+    starterDemand[pos] = demand ? (demand.starters[pos] || 0) : cfg.starters * teams;
   }
-  const totalFlexSlots = flex.count * teams;
+  const totalFlexSlots = demand ? demand.flexSlots : flex.count * teams;
   const flexAllocation = {};
   flex.eligible.forEach(pos => flexAllocation[pos] = 0);
   const flexCandidates = [];
@@ -3175,26 +3205,51 @@ function calculateVORP(players, replacement) {
     vorp: Math.max(0, p.projectedPoints - (replacement[p.position] || 0))
   }));
 }
+// ── the ONE risk discount VALUE carries ────────────────────────────────────
+// A projection is a mean; a season is a draw. VALUE pays for the mean, so the
+// draw's downside is taken off here, per position, ONCE. Until September 2026
+// this discount was applied twice under two names — POS_RELIABILITY inside
+// effVorp AND a second table (POSITION_PREDICTABILITY) multiplied onto the
+// finished dollar figure — so running backs carried 0.90 x 0.90 = 0.81 against
+// receivers at 0.97, a ~16% relative haircut that nobody had written down as a
+// number. The two tables are folded into this one. The figures below sit
+// between the single-layer and the stacked values (RB/WR 0.887, was 0.835
+// stacked and 0.928 single); K/DEF keep their stacked products so they still
+// price at the $1-3 a roster actually pays for them.
+//
+// NOT FITTED. There is no ex-ante preseason projection set in the repo (the
+// PROJ_2025 table is within 1.5% of ACT_2025 and is not one), so these are
+// judgement calls stated as such. tools/backtest-projections.mjs reports the
+// fitted values as soon as tools/sources/preseason-<year>.json exists; move
+// these to what it prints and say so here.
 const POS_RELIABILITY = {
-  QB: 1.0,
-  RB: 0.90,
+  QB: 0.99,
+  RB: 0.86,
   WR: 0.97,
-  TE: 0.93,
-  K: 0.35,
-  DEF: 0.55
+  TE: 0.90,
+  K: 0.19,
+  DEF: 0.28
 };
+// Deeper into a position the projection is a smaller edge over the field, so the
+// discount steepens 0.6% a rank, floored at 0.82 (rank 30 and below).
+const RELIABILITY_RANK_DECAY = 0.006;
+const RELIABILITY_RANK_FLOOR = 0.82;
 function reliabilityFactor(pos, rank) {
   const base = POS_RELIABILITY[pos] != null ? POS_RELIABILITY[pos] : 1;
-  const tier = Math.max(0.82, 1 - 0.006 * Math.max(0, rank));
+  const tier = Math.max(RELIABILITY_RANK_FLOOR, 1 - RELIABILITY_RANK_DECAY * Math.max(0, rank));
   return base * tier;
 }
-function calculateAuctionValues(players, config) {
+// `live` is optional: { demand, budget, spots } for a league part-way through its
+// draft — the money still in the room, the seats still open, and the roster
+// spots still to fill at each position (see revalueRemaining). Without it the
+// whole league is priced, which is the pre-draft board.
+function calculateAuctionValues(players, config, live) {
   const {
     teams,
     valuation
   } = config;
   const minBid = valuation.minBid;
-  const totalBudget = totalLeagueBudget(config);
+  const totalBudget = live ? live.budget : totalLeagueBudget(config);
   const totalSpots = totalRosterSpots(config);
   const byPos = {};
   players.forEach(p => {
@@ -3204,7 +3259,7 @@ function calculateAuctionValues(players, config) {
   Object.keys(byPos).forEach(pos => byPos[pos].sort((a, b) => b.projectedPoints - a.projectedPoints));
   const rostered = new Set();
   Object.entries(config.roster).forEach(([pos, cfg]) => {
-    const n = cfg.total * teams;
+    const n = live ? (live.demand.totals[pos] || 0) : cfg.total * teams;
     (byPos[pos] || []).slice(0, n).forEach(p => rostered.add(p.id));
   });
   const rankMap = {};
@@ -3214,7 +3269,7 @@ function calculateAuctionValues(players, config) {
   const VORP_CONCAVITY = 0.75;
   const effVorp = p => Math.pow(Math.max(0, p.vorp || 0), VORP_CONCAVITY) * reliabilityFactor(p.position, rankMap[p.id] || 0);
   const totalVORP = players.filter(p => rostered.has(p.id)).reduce((sum, p) => sum + effVorp(p), 0);
-  const budgetAboveMins = totalBudget - teams * totalSpots * minBid;
+  const budgetAboveMins = totalBudget - (live ? live.spots : teams * totalSpots) * minBid;
   return players.map(p => {
     if (!rostered.has(p.id) || p.vorp <= 0 || totalVORP <= 0) {
       return {
@@ -3229,22 +3284,101 @@ function calculateAuctionValues(players, config) {
     };
   });
 }
-function applyInflation(players, draftedPlayerIds, teamBudgets, config) {
+// ── the league that is LEFT ─────────────────────────────────────────────────
+// What every team still has to buy, summed: open starter slots at each position,
+// open roster spots at each position, and open FLEX slots. A team that already
+// holds three running backs against two RB starters has used one flex slot on
+// them, so it no longer needs a flex body; a team with one RB still needs an RB
+// starter. This is the demand side of the replacement level once the draft is
+// under way, and it is what makes VALUE move when a position empties.
+function remainingDemand(teams, config) {
+  const starters = {}, totals = {};
+  let flexSlots = 0;
+  const flexElig = (config.flex && config.flex.eligible) || [];
+  const flexN = (config.flex && config.flex.count) || 0;
+  Object.keys(config.roster).forEach(pos => { starters[pos] = 0; totals[pos] = 0; });
+  (teams || []).forEach(t => {
+    const cnt = {};
+    (t.roster || []).forEach(r => { cnt[r.position] = (cnt[r.position] || 0) + 1; });
+    let flexUsed = 0;
+    Object.entries(config.roster).forEach(([pos, c]) => {
+      const have = cnt[pos] || 0;
+      starters[pos] += Math.max(0, (c.starters || 0) - have);
+      totals[pos] += Math.max(0, (c.total || 0) - have);
+      if (flexElig.includes(pos)) flexUsed += Math.max(0, have - (c.starters || 0));
+    });
+    flexSlots += Math.max(0, flexN - Math.min(flexN, flexUsed));
+  });
+  return { starters, totals, flexSlots };
+}
+// ── VALUE, re-solved on the board that is left ──────────────────────────────
+// Before the draft VALUE is a player's share of the league's money, above a
+// replacement level set by the whole league's starter demand. Once the draft is
+// under way both of those have changed: the money is what is still in the room
+// and the replacement level is the best player still on the board past the
+// starter slots still open. A static VALUE column with an inflation multiplier
+// on top keeps the PRE-DRAFT ordering and gaps and merely scales them — so when
+// the twelve best running backs are gone it still prices RB13 against a
+// replacement who has been off the board for an hour. This runs the same
+// pipeline (replacement -> VORP -> dollars -> whole-dollar renormalisation) over
+// the undrafted pool and the remaining demand, so the gaps re-open where the
+// board has thinned and close where it is deep.
+//
+// `valueMult` carries the reader's own tier adjustments (applyValueAdjust) so a
+// "value RBs 10% more" instruction survives the re-solve. With nothing drafted
+// the result is auctionValue exactly, by construction.
+function revalueRemaining(players, draftedPlayerIds, teams, config, valueMult) {
+  const minBid = config.valuation.minBid;
+  const undrafted = players.filter(p => !draftedPlayerIds.has(p.id));
+  const demand = remainingDemand(teams, config);
+  const budget = (teams || []).reduce((sum, t) => sum + Math.max(0, t.budgetRemaining || 0), 0);
+  const spots = (teams || []).reduce((sum, t) => sum + Math.max(0, t.spotsRemaining || 0), 0);
+  const byPos = {};
+  undrafted.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  const replacement = calculateReplacementLevels(byPos, config, demand);
+  const withVorp = calculateVORP(undrafted, replacement);
+  const valued = calculateAuctionValues(withVorp, config, { demand, budget, spots });
+  const settled = renormalizeToBudget(valued, config, { budget, rosteredCounts: demand.totals, keys: ['auctionValue'] });
+  const out = new Map();
+  settled.forEach(p => {
+    const m = valueMult && valueMult.get(p.id) || 1;
+    out.set(p.id, {
+      value: Math.max(minBid, Math.round(Math.max(minBid, p.auctionValue) * m)),
+      replacement: replacement[p.position] || 0,
+      vorp: p.vorp
+    });
+  });
+  return out;
+}
+function applyInflation(players, draftedPlayerIds, teamBudgets, config, valueMult) {
   const undrafted = players.filter(p => !draftedPlayerIds.has(p.id));
   const totalSpotsRemaining = teamBudgets.reduce((sum, t) => sum + t.spotsRemaining, 0);
   const totalBudgetRemaining = teamBudgets.reduce((sum, t) => sum + t.budgetRemaining, 0);
-  const totalBaseValueRemaining = undrafted.reduce((sum, p) => sum + p.auctionValue, 0);
   const totalMinBidsReserved = totalSpotsRemaining * config.valuation.minBid;
   const effectiveBudget = totalBudgetRemaining - totalMinBidsReserved;
-  const baseAboveMins = Math.max(1, totalBaseValueRemaining - undrafted.length * config.valuation.minBid);
-  const inflation = Math.max(0.1, effectiveBudget / baseAboveMins);
+  // VALUE is re-solved on the remaining pool and the remaining demand (see
+  // revalueRemaining) rather than scaled by one inflation factor: the factor
+  // kept the pre-draft gaps, and the gaps are the thing that changes.
+  const live = draftedPlayerIds.size ? revalueRemaining(players, draftedPlayerIds, teamBudgets, config, valueMult) : null;
+  // The market column inflates against ITS OWN baseline. The market curve is
+  // more top-heavy than VALUE, so a room paying exactly the predicted prices
+  // read as "overpaying" when the factor was measured off VALUE, and PROJ
+  // deflated ~10% mid-draft in a perfectly normal draft. Measured against the
+  // market column's own remainder, picks at the predicted price leave the
+  // remaining predictions exactly where they were (factor 1.0), and only a
+  // genuinely hot or cold room moves them.
+  const totalMarketRemaining = undrafted.reduce((sum, p) => sum + (p.marketValue ?? p.auctionValue), 0);
+  const marketAboveMins = Math.max(1, totalMarketRemaining - undrafted.length * config.valuation.minBid);
+  const marketInflation = Math.max(0.1, effectiveBudget / marketAboveMins);
   return players.map(p => {
     if (draftedPlayerIds.has(p.id)) return p;
-    const adjusted = config.valuation.minBid + (p.auctionValue - config.valuation.minBid) * inflation;
-    const adjMarket = config.valuation.minBid + ((p.marketValue ?? p.auctionValue) - config.valuation.minBid) * inflation;
+    const lv = live ? live.get(p.id) : null;
+    const adjMarket = config.valuation.minBid + ((p.marketValue ?? p.auctionValue) - config.valuation.minBid) * marketInflation;
     return {
       ...p,
-      inflatedValue: Math.max(config.valuation.minBid, Math.round(adjusted)),
+      inflatedValue: lv ? lv.value : Math.max(config.valuation.minBid, Math.round(p.auctionValue)),
+      liveReplacement: lv ? lv.replacement : p.replacement,
+      liveVorp: lv ? lv.vorp : p.vorp,
       marketValue: Math.max(config.valuation.minBid, Math.round(adjMarket))
     };
   });
@@ -3339,7 +3473,10 @@ function applyPositionalDemand(players, teams, config, draftedIds) {
     });
     return out;
   };
-  const spots0 = POS.reduce((s, pos) => s + capTotal(pos), 0) + flexCount;
+  // A full roster is the sum of the per-position totals; the flex STARTER is
+  // drawn from those totals, not an extra seat (totalRosterSpots agrees, and
+  // it is what seeds every real team's spotsRemaining).
+  const spots0 = totalRosterSpots(config);
   const fresh = teams.map(() => ({
     budgetRemaining: config.budget,
     spotsRemaining: spots0,
@@ -3489,7 +3626,21 @@ const LEAGUE_CURVE_BUDGET = 1440;
 // tools/test-it-league.mjs read the first `QB: [...]` after `const LEAGUE_MARKET_CURVE`
 // to check the worker's and the library's mirrors, and those two price the site's
 // default 1-QB league.
-const SUPERFLEX_QB_CURVE = [44, 39, 34, 32, 28, 25, 20, 17, 11, 9, 9, 6, 3, 2, 2, 2];
+//
+// Re-cut September 2026. The old row ([44, 39, 34, 32, 28, 25, 20, 17, 11, 9, 9,
+// 6, 3, 2, 2, 2]) was the historical 1-QB curve at a higher level: sixteen
+// entries, single digits from QB9, $3 at QB13. In a twelve-team superflex room
+// twenty-four quarterbacks START, so QB13 is a starter, not a bench body, and
+// the drop from QB1 to QB12 has to be shallow for the same reason the 1-QB
+// drop is steep — the number of startable passers against the number of slots.
+// This row runs thirty deep and keeps double digits through QB16 (§9h in
+// HANDOFF.md records the 1-QB argument this inverts). Drawn on the same
+// $120-a-team scale as LEAGUE_MARKET_CURVE; renormalizeToBudget rescales the
+// whole board, so what matters is the shape and its level against RB/WR, not
+// the raw total. No superflex auction data lives in the repo — this is a
+// judgement of shape, stated as such; tools/test-qb-curve.mjs pins the two
+// invariants (dearer than 1-QB at QB1 and QB7, and still a falling row).
+const SUPERFLEX_QB_CURVE = [44, 40, 37, 34, 31, 29, 27, 25, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1];
 // The premium curve is OPT-IN: a league is priced as 1-QB unless it says otherwise.
 // "Otherwise" means a QB can actually fill a second STARTING slot — superflex (QB in
 // the flex, and a flex slot to put him in) or straight 2-QB. Only the QB-format
@@ -3552,8 +3703,12 @@ function calculateMarketValues(players, config, marketOrder) {
     const hint = new Map();
     list.forEach((p, i) => hint.set(p.id, marketOrder && marketOrder[p.id] != null ? marketOrder[p.id] : i));
     list.slice().sort((a, b) => (hint.get(a.id) - hint.get(b.id)) || ((b.projectedPoints || 0) - (a.projectedPoints || 0))).forEach((p, i) => {
-      const base = i < curve.length ? curve[i] : minBid;
-      priceById.set(p.id, Math.max(minBid, Math.round(base * scale)));
+      // Only CURVE prices scale with the league's budget; past the end of the
+      // curve the room pays the min bid, full stop. Scaling the fallback put
+      // every deep-tail player at $2 in a $200 league — 215 phantom dollars on
+      // a board whose spendable money is fixed, which read as ~9% deflation
+      // the moment anything measured the column against the real budget.
+      priceById.set(p.id, i < curve.length ? Math.max(minBid, Math.round(curve[i] * scale)) : minBid);
     });
   });
   return players.map(p => ({
@@ -3659,36 +3814,28 @@ function blendedVegasMarketPrices(players, config, projOverrides) {
   });
   return out;
 }
-const POSITION_PREDICTABILITY = {
-  WR: 1.00,
-  QB: 0.98,
-  TE: 0.93,
-  RB: 0.90,
-  K: 0.55,
-  DEF: 0.50
-};
-function applyPredictability(players, config) {
+// The risk discount is VALUE-only and lives in POS_RELIABILITY above, applied
+// inside calculateAuctionValues. PROJ (marketValue) is the empirical
+// LEAGUE_MARKET_CURVE — what rooms actually pay — and the room does not discount
+// its own bids for a position's predictability, so discounting it there made
+// PROJ disagree with the worker's /api/board and it-league.js, which publish the
+// raw curve (118 of 407 players, Nacua $83 in-app vs $78 published).
+// `opts` is optional: { budget, rosteredCounts: {pos: n}, keys: [...] } prices a
+// league part-way through its draft against the money actually left in the room
+// (see revalueRemaining). Without it the whole league budget is spread over the
+// whole rostered pool, which is the pre-draft board.
+function renormalizeToBudget(players, config, opts) {
+  opts = opts || {};
   const minBid = config.valuation && config.valuation.minBid || 1;
-  return players.map(p => {
-    const f = POSITION_PREDICTABILITY[p.position];
-    if (f == null || f >= 1) return p;
-    const out = {
-      ...p
-    };
-    if (typeof out.auctionValue === 'number') out.auctionValue = Math.max(minBid, Math.round(out.auctionValue * f));
-    if (typeof out.marketValue === 'number') out.marketValue = Math.max(minBid, Math.round(out.marketValue * f));
-    return out;
-  });
-}
-function renormalizeToBudget(players, config) {
-  const minBid = config.valuation && config.valuation.minBid || 1;
-  const budget = totalLeagueBudget(config);
+  const budget = opts.budget != null ? opts.budget : totalLeagueBudget(config);
+  const keys = opts.keys || ['auctionValue', 'marketValue'];
   const byPos = {};
   players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
   Object.keys(byPos).forEach(pos => byPos[pos].sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)));
   const rostered = new Set();
   Object.entries(config.roster).forEach(([pos, cfg]) => {
-    (byPos[pos] || []).slice(0, cfg.total * config.teams).forEach(p => rostered.add(p.id));
+    const n = opts.rosteredCounts ? (opts.rosteredCounts[pos] || 0) : cfg.total * config.teams;
+    (byPos[pos] || []).slice(0, n).forEach(p => rostered.add(p.id));
   });
   if (!rostered.size) return players;
   const target = budget - rostered.size * minBid;
@@ -3747,8 +3894,8 @@ function renormalizeToBudget(players, config) {
     }
     return new Map(slots.map(s => [s.id, s.val]));
   };
-  const priceA = settle('auctionValue', fA),
-    priceM = settle('marketValue', fM);
+  const priceA = keys.includes('auctionValue') ? settle('auctionValue', fA) : new Map(),
+    priceM = keys.includes('marketValue') ? settle('marketValue', fM) : new Map();
   return players.map(p => {
     if (!rostered.has(p.id)) return p;
     const out = {
@@ -3816,27 +3963,6 @@ function computeMarketState(draftHistory, players, config) {
     }
   });
   return state;
-}
-function marketAdjustedPrice(player, marketState, config) {
-  const base = player.inflatedValue ?? player.auctionValue ?? config.valuation.minBid;
-  const s = marketState[player.position];
-  if (!s || s.sampleSize < 2) return {
-    recommendedPrice: base,
-    marketAdjustment: 0,
-    basis: 'base'
-  };
-  const rawDelta = s.ratio - 1.0;
-  const damping = Math.min(1, s.sampleSize / 8);
-  const adjustmentPct = -rawDelta * 0.5 * damping;
-  const adjusted = base * (1 + adjustmentPct);
-  const final = Math.max(config.valuation.minBid, Math.round(adjusted));
-  let basis = 'neutral';
-  if (adjustmentPct < -0.05) basis = 'fade';else if (adjustmentPct > 0.05) basis = 'push';
-  return {
-    recommendedPrice: final,
-    marketAdjustment: final - base,
-    basis
-  };
 }
 function riskScore(p) {
   let r = {
@@ -4189,111 +4315,6 @@ function rosterBalance(team) {
   const top3Spent = top3.reduce((s, r) => s + r.price, 0);
   return 1 - top3Spent / totalSpent;
 }
-function computePersonalValue(player, team, config, marketState, marketPrice) {
-  const pos = player.position;
-  const rosterCfg = config.roster[pos] || {
-    total: 1,
-    starters: 1
-  };
-  const rostered = team.roster.filter(r => r.position === pos);
-  const rosteredCount = rostered.length;
-  const slotIndex = rosteredCount;
-  const slider = 1 - (config.strategy?.allocation ?? 0.55);
-  let positionalMultiplier;
-  if (slotIndex < rosterCfg.starters) {
-    positionalMultiplier = 1.0;
-  } else if (slotIndex < rosterCfg.total) {
-    const benchSlotIdx = slotIndex - rosterCfg.starters;
-    const benchSlots = rosterCfg.total - rosterCfg.starters;
-    const positionThroughBench = benchSlots > 0 ? benchSlotIdx / benchSlots : 0;
-    const benchDiscount = 1 - slider * 0.7 * (0.5 + 0.5 * positionThroughBench);
-    positionalMultiplier = benchDiscount;
-  } else {
-    positionalMultiplier = 0;
-  }
-  const flexEligible = (config.flex?.eligible || []).includes(pos);
-  const flexSlots = config.flex?.count || 0;
-  if (flexEligible && positionalMultiplier < 1) {
-    let flexFillers = 0;
-    for (const [p, cfg] of Object.entries(config.roster)) {
-      if (!(config.flex?.eligible || []).includes(p)) continue;
-      const teamCnt = team.roster.filter(r => r.position === p).length;
-      flexFillers += Math.max(0, teamCnt - cfg.starters);
-    }
-    if (flexFillers < flexSlots) {
-      positionalMultiplier = Math.max(positionalMultiplier, 0.65);
-    }
-  }
-  let personalValue = marketPrice * positionalMultiplier;
-  if (rosteredCount < rosterCfg.starters && marketState[pos]?.remainingCount > 0) {
-    const startersLeft = rosterCfg.starters - rosteredCount;
-    const needBoost = 1 + Math.min(0.25, 0.05 * startersLeft);
-    personalValue *= needBoost;
-  }
-  return Math.max(config.valuation.minBid, Math.round(personalValue));
-}
-function recommendBid(player, team, config, marketState, marketAdjusted) {
-  const fairValue = player.auctionValue;
-  const marketPrice = marketAdjusted.recommendedPrice;
-  const personalValue = computePersonalValue(player, team, config, marketState, marketPrice);
-  const hardMax = Math.max(config.valuation.minBid, team.budgetRemaining - (team.spotsRemaining - 1) * config.valuation.minBid);
-  const suggested = Math.min(personalValue, hardMax);
-  const reasoning = buildReasoning({
-    player,
-    team,
-    config,
-    marketState,
-    marketAdjusted,
-    fairValue,
-    marketPrice,
-    personalValue,
-    suggested,
-    hardMax
-  });
-  return {
-    fairValue,
-    marketPrice,
-    personalValue,
-    suggested,
-    hardMax,
-    reasoning,
-    marketAdjustment: marketAdjusted.marketAdjustment,
-    basis: marketAdjusted.basis
-  };
-}
-function buildReasoning(ctx) {
-  const {
-    player,
-    team,
-    config,
-    marketState,
-    marketAdjusted,
-    fairValue,
-    marketPrice,
-    personalValue
-  } = ctx;
-  const lines = [];
-  const s = marketState[player.position];
-  if (s && s.sampleSize >= 3) {
-    if (s.heat === 'hot') lines.push(`${player.position} market running hot, ${Math.round((s.ratio - 1) * 100)}% over fair across ${s.sampleSize} picks.`);else if (s.heat === 'cold') lines.push(`${player.position} market running cold, ${Math.round((1 - s.ratio) * 100)}% under fair across ${s.sampleSize} picks.`);
-  }
-  if (marketPrice < fairValue) lines.push(`Market $${marketPrice} is $${fairValue - marketPrice} below fair value.`);else if (marketPrice > fairValue) lines.push(`Market $${marketPrice} is $${marketPrice - fairValue} above fair value, opportunity.`);
-  const rostered = team.roster.filter(r => r.position === player.position).length;
-  const rosterCfg = config.roster[player.position] || {
-    starters: 1,
-    total: 1
-  };
-  const slotIdx = rostered;
-  if (slotIdx < rosterCfg.starters) {
-    lines.push(`Fills starting ${player.position}${rosterCfg.starters > 1 ? ` #${slotIdx + 1}` : ''} slot for you.`);
-  } else if (slotIdx < rosterCfg.total) {
-    const discountPct = Math.round((1 - personalValue / Math.max(1, marketPrice)) * 100);
-    if (discountPct >= 5) lines.push(`You already have ${rostered} ${player.position}${rostered > 1 ? 's' : ''}, bench slot, valued at ${100 - discountPct}% of market for you.`);else lines.push(`Would be a bench ${player.position} (you have ${rostered} starters).`);
-  } else {
-    lines.push(`No roster room, you cannot add another ${player.position}.`);
-  }
-  return lines;
-}
 const SLEEPER_BASE = 'https://api.sleeper.app';
 const FANTASY_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
 const BYE_WEEKS = {
@@ -4356,7 +4377,7 @@ function byeOf(team) {
   t = BYE_ALIAS[t] || t;
   return BYE_WEEKS[t] || null;
 }
-const INJURIES = [[/patrick mahomes/i, 'ACL/LCL recovery, on track'], [/tucker kraft/i, 'ACL, PUP watch'], [/cam skattebo/i, 'Injury recovery']];
+const INJURIES = [[/Jayden Higgins/i, 'IR: out for the season'], [/Devin Neal/i, 'IR: out for the season'], [/Ty Chandler/i, 'IR: out for the season'], [/Calvin Austin III/i, 'IR: out for the season'], [/Josh Jacobs/i, 'Exempt: out 6+ games'], [/Jordyn Tyson/i, 'IR: out 8+ games'], [/James Conner/i, 'IR: out 4+ games'], [/Adam Randall/i, 'IR: out 4+ games'], [/Isiah Pacheco/i, 'IR: out 4+ games'], [/Savion Williams/i, 'IR: out 4+ games'], [/Luke Musgrave/i, 'PUP: out 4+ games'], [/Tank Dell/i, 'IR: out 4+ games'], [/Ben Sims/i, 'IR: out 4+ games'], [/Grant Calcaterra/i, 'IR: out 4+ games'], [/Christian Kirk/i, 'IR: out 4+ games'], [/Isaac Guerendo/i, 'PUP: out 4+ games'], [/Zach Charbonnet/i, 'PUP: out 4+ games'], [/Jeremy McNichols/i, 'IR: out 4+ games']];
 function injuryOf(player) {
   if (!player) return null;
   if (player.injuryStatus) return player.injuryStatus;
@@ -6254,10 +6275,10 @@ function Header({
   }, React.createElement("button", {
     className: view === 'prep' ? 'active' : '',
     onClick: () => setView('prep')
-  }, "Cheat Sheet"), (config && (config.format || 'auction') === 'auction') && React.createElement("button", { className: view === 'mock' ? 'active' : '', onClick: () => setView('mock') }, "Mock Auction"), (config && config.format && config.format !== 'auction') && React.createElement("button", { className: view === 'mockdraft' ? 'active' : '', onClick: () => setView('mockdraft') }, "Mock Draft"), React.createElement("button", {
+  }, "Cheat Sheet"), React.createElement("button", {
     className: view === 'board' || view === 'split' ? 'active' : '',
     onClick: () => setView('board')
-  }, ((config && config.format && config.format !== 'auction') ? "Draft Board" : "Auction Board")), React.createElement("button", {
+  }, ((config && config.format && config.format !== 'auction') ? "Draft Board" : "Auction Board")), (config && (config.format || 'auction') === 'auction') && React.createElement("button", { className: view === 'mock' ? 'active' : '', onClick: () => setView('mock') }, "Mock Auction"), (config && config.format && config.format !== 'auction') && React.createElement("button", { className: view === 'mockdraft' ? 'active' : '', onClick: () => setView('mockdraft') }, "Mock Draft"), React.createElement("button", {
     className: view === 'settings' ? 'active' : '',
     onClick: () => setView('settings')
   }, "Your League"), React.createElement("button", {
@@ -10929,48 +10950,32 @@ const BIDDING_NOTES = [{
   text: 'The willingness to walk at $1 over what you should bid is your single biggest edge at the table.'
 }];
 const PERF_NOTES = {
-  updated: 'Aug 21, 2026',
+  updated: 'Sep 3, 2026',
   current: [
   {
-    label: 'Diggs lands in Washington',
-    text: "Stefon Diggs signed a one-year deal worth up to $12 million with Washington on August 5, giving Jayden Daniels a proven second option behind Terry McLaurin. A modest WR3/flex price is fair; do not pay for his old Buffalo ceiling."
+    label: 'Fade Jacobs, buy Lloyd',
+    text: "Josh Jacobs is on the commissioner's exempt list and cannot practice or play until reinstated. Fade Jacobs above stash pricing and grab MarShawn Lloyd, Green Bay's lead back, for a few dollars."
   },
   {
-    label: 'Pearsall out for the year',
-    text: "The 49ers ruled Ricky Pearsall out for 2026; he will have season-ending PCL surgery. He is off the board entirely, and with Kittle still on PUP the remaining San Francisco pass catchers get only a modest bump."
+    label: 'Hall modest discount',
+    text: "Breece Hall strained his groin in camp but the Jets expect him back for Week 1 at Tennessee. Groin injuries can linger, so bid one tier below his healthy price rather than paying full freight."
   },
   {
-    label: 'Nabers discount nearly gone',
-    text: "Malik Nabers has strung together full-speed team drills at Giants camp, still in a red non-contact jersey, and is tracking toward Week 1. The ACL-risk discount is close to gone; bid at sheet price, and confirm he has shed the red jersey before draft day."
+    label: 'Target Noel late',
+    text: "Jayden Higgins tore his ACL and is out for 2026. Jaylin Noel is the Texans wideout best positioned for those vacated targets behind Nico Collins. Add him as a late one to three dollar flier."
   },
   {
-    label: 'McLaurin glued to Daniels',
-    text: "Terry McLaurin has run a route on every Jayden Daniels pass play this preseason and is tied for the team target lead at 27 percent. Usage that clean is worth sheet price with confidence."
+    label: 'Pay up for Price',
+    text: "Zach Charbonnet opens on PUP and misses at least the first four games. Rookie first-rounder Jadarian Price leads Seattle's backfield. Pay RB2 money for Price and treat Charbonnet as a cheap stash."
   },
   {
-    label: 'Maye ceiling raised',
-    text: "The Patriots' June trade for A.J. Brown gives Drake Maye a true alpha receiver, and Maye's price is climbing. Pay up a tier for Maye if you want a top-six QB finish at a non-elite cost."
+    label: 'Kittle risk pricing',
+    text: "George Kittle is practicing again about eight months after his Achilles tear and aims to play Week 1 vs the Rams in Australia. Pay elite TE money only at a discount that prices in a slow ramp."
   },
   {
-    label: 'Brooks value window closing',
-    text: "Jonathon Brooks took his first game action since the 2024 ACL tear on August 15, working with Carolina's first team, and Chuba Hubbard is week to week with a hamstring. A back who may open the season leading a backfield is still priced near RB34. Buy before the market moves."
+    label: 'Allen floor buy',
+    text: "Keenan Allen signed a one-year Colts deal and reunites with Shane Steichen. He is a high-floor volume WR4. Treat him as a one to three dollar flier late in your auction."
   },
-  {
-    label: 'Burden out for the preseason',
-    text: "Luther Burden III strained his groin on August 8 and will miss the rest of the preseason, though Chicago expects him back for the September 13 opener against Carolina. You are buying a projection with no confirming reps, so take the discount and leave room for the groin to linger."
-  },
-  {
-    label: 'Love ankle clouds Arizona',
-    text: "Jeremiyah Love's high ankle sprain in the August 13 preseason opener has ended his exhibition work, and Arizona will not promise Week 1. High ankle sprains drag. Do not pay a rookie premium for a locked-in role, and keep James Conner in range for the opening month."
-  },
-  {
-    label: 'Kamara sprains his MCL',
-    text: "Alvin Kamara sprained his MCL in the August 18 joint practice with Dallas and is expected to miss at least a month, per ESPN. The September 13 opener at Detroit is in doubt and Travis Etienne inherits the early work. Buy Kamara as a late dollar stash, not at an RB2 or flex price."
-  },
-  {
-    label: 'LaPorta hip is a Week 1 risk',
-    text: "Sam LaPorta's hip flared up in practice and Dan Campbell is resting it, saying he does not know whether it affects Week 1 against New Orleans. That is real absence risk sitting on a TE1 price. Bid a discount that already assumes a missed opener, and line up a bridge tight end."
-  }
   ],
   library: [{
     label: 'Volume is king',
@@ -12643,7 +12648,9 @@ function Cheatsheet({
     const drafted = !!(draftedIds && draftedIds.has(p.id));
     const dinfo = draftInfoMap[p.id];
     const cost = p.marketValue != null ? p.marketValue : p.auctionValue;
-    const value = p.auctionValue;
+    // Live VALUE once the draft is under way (re-solved on the remaining board —
+    // see revalueRemaining); the pre-draft figure before it starts.
+    const value = p.inflatedValue != null ? p.inflatedValue : p.auctionValue;
     const youBase = p.personalValue != null ? p.personalValue : value;
     let you = youBase,
       youDir = 'flat';
@@ -12805,8 +12812,8 @@ function Cheatsheet({
       title: "Value (VBD)"
     }, "$", value) : k === 'you' ? React.createElement("span", {
       key: k,
-      className: `cheat-you cy-${youDir}`,
-      title: "What you should bid"
+      className: `cheat-you cy-${youDir}${p.youShift ? p.youShift > 0 ? ' you-shift-up' : ' you-shift-down' : ''}`,
+      title: p.youShift ? `${p.youShift > 0 ? 'Up' : 'Down'} $${Math.abs(p.youShift)} since ${p.youShiftPick}. That pick changed the budgets, the open slots, or the pool, so the planner re-balanced the most YOU should pay — the market didn't move (his Proj and Value are untouched).` : "What you should bid"
     }, "$", you) : k === 'ppg' ? React.createElement("span", {
       key: k,
       className: "cheat-ppg" + (p.projOverride ? p.projOverride.pct >= 0 ? ' proj-override' : ' proj-override-down' : ''),
@@ -15547,7 +15554,12 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   overrides = overrides || {};
   const minBid = config.valuation.minBid;
   const R = myTeam.budgetRemaining;
-  const priceOf = p => Math.max(minBid, p.marketValue ?? p.inflatedValue ?? p.auctionValue ?? minBid);
+  // What a candidate is expected to cost: Proj, unless the caller measured the
+  // contest for him (opts.expectedPrice, from expectedPlanPrices) — the plan
+  // for YOUR team should not assume it buys a player seven rich rivals still
+  // need at the curve price.
+  const expected = opts.expectedPrice || null;
+  const priceOf = p => Math.max(minBid, expected && expected.has(p.id) ? expected.get(p.id) : (p.marketValue ?? p.inflatedValue ?? p.auctionValue ?? minBid));
   const pmap = new Map(players.map(p => [p.id, p]));
   const myPlayers = myTeam.roster.map(r => {
     const p = pmap.get(r.playerId);
@@ -15596,10 +15608,11 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
     }));
     return best;
   }
-  function cheapestFor(elig) {
+  function cheapestFor(elig, usedSet) {
+    const u = usedSet || used;
     let best = null;
     elig.forEach(pos => (byPos[pos] || []).forEach(p => {
-      if (used.has(p.id)) return;
+      if (u.has(p.id)) return;
       if (!best || priceOf(p) < priceOf(best) || priceOf(p) === priceOf(best) && p.projectedPoints > best.projectedPoints) best = p;
     }));
     return best;
@@ -15688,158 +15701,190 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   const conc = config.strategy?.concentration ?? 0.5;
   const perCap = opts.noCap ? Infinity : 0.30 + conc * 0.55;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);
-  let budgetForStarters = Math.max(freeSlots.length * minBid, R - reserveBench - overrideCost - forcedCost - extraBench);
-  const priceCap = perCap === Infinity ? Infinity : perCap * budgetForStarters + 0.001;
-  const bestSet = bestStarterSet(freeSlots, byPos, used, priceOf, budgetForStarters, priceCap);
-  if (bestSet) {
-    freeSlots.forEach(s => {
-      const pl = bestSet.picks[s.label];
-      if (pl) {
-        used.add(pl.id);
-        plan[s.label] = pl;
-      }
-    });
-  } else {
-    // Budget cannot cover even the cheapest legal set: show the cheapest one so
-    // the planner still renders, and let feasible:false flag the shortfall.
-    freeSlots.forEach(s => {
-      const c = cheapestFor(s.eligible);
-      if (c) {
-        used.add(c.id);
-        plan[s.label] = c;
-      }
-    });
-  }
-  const plannedStarterCost = remainingStarterSlots.reduce((sum, s) => sum + (fixed[s.label] != null ? fixed[s.label] : plan[s.label] ? priceOf(plan[s.label]) : 0), 0);
-  const benchTargets = [];
-  {
-    const posMax = {};
-    players.forEach(p => {
-      posMax[p.position] = Math.max(posMax[p.position] || 0, p.projectedPoints || 0);
-    });
-    const starterPtsByPos = {};
-    slotDefs.forEach(sd => {
-      const pl = filled[sd.label] || plan[sd.label];
-      if (pl) starterPtsByPos[pl.position] = Math.max(starterPtsByPos[pl.position] || 0, pl.projectedPoints || 0);
-    });
-    const weightByPos = {};
-    const depthBase = Math.max(0, alloc - 0.55) / 0.45 * 6;
-    const needScale = alloc < 0.45 ? 0 : 12;
-    const backupCap = {};
-    Object.keys(config.roster).forEach(pos => {
-      const mx = posMax[pos] || 0;
-      const def = mx > 0 ? Math.max(0, (mx - (starterPtsByPos[pos] || 0)) / mx) : 0;
-      weightByPos[pos] = 1 + Math.min(1, def) * 2.5;
-      backupCap[pos] = minBid + Math.round(Math.min(1, def) * needScale) + Math.round(depthBase);
-    });
-    const draftedByPos = {};
-    myPlayers.forEach(p => {
-      draftedByPos[p.position] = (draftedByPos[p.position] || 0) + 1;
-    });
-    const starterBuysByPos = {};
-    remainingStarterSlots.forEach(s => {
-      const pl = plan[s.label];
-      if (pl) starterBuysByPos[pl.position] = (starterBuysByPos[pl.position] || 0) + 1;
-    });
-    const benchSlotPos = [];
-    Object.entries(config.roster).forEach(([pos, c]) => {
-      const benchN = Math.max(0, c.total - (draftedByPos[pos] || 0) - (starterBuysByPos[pos] || 0));
-      for (let i = 0; i < benchN; i++) benchSlotPos.push(pos);
-    });
-    const benchBudget = R - plannedStarterCost;
-    // The bench is BILLED at max(floor, priceOf) further down, but it used to be
-    // budgeted at the raw priceOf. A plan could therefore bill past benchBudget
-    // and still report feasible: true — the Ideal Team was $7 over a $200 board.
-    // One definition of what a bench seat costs, used for both.
-    const benchPrice = (pos, pl) => {
-      const floorP = applyFloors ? pos === 'QB' ? 2 : pos === 'RB' ? 4 : minBid : minBid;
-      return Math.max(floorP, priceOf(pl));
-    };
-    const benchPlan = benchSlotPos.map(pos => {
-      const cand = cheapestFor([pos]);
-      if (cand) used.add(cand.id);
-      return {
-        pos,
-        player: cand || null
+  // ── one solve: the starters, then the bench ──────────────────────────────
+  // Everything from here to the slot list is a function of how much the
+  // Starters-vs-Depth knob withholds for the bench (`extra`). The knob can
+  // withhold more than the bench is allowed to spend (backupCap caps every
+  // seat), and the difference used to go to nobody: up to $19 stranded at the
+  // Depth end of the slider on a $200 board (HANDOFF §19, "the one known
+  // residual"). So the solve runs TWICE when that happens — the first pass
+  // measures what the bench left on the table, the second hands it back to the
+  // starters, and the better lineup is kept. Each pass works on its own copy of
+  // the claimed-player set so the two cannot contaminate each other.
+  const solve = extra => {
+    const usedS = new Set(used);
+    const planS = Object.assign({}, plan);
+    const budgetForStarters = Math.max(freeSlots.length * minBid, R - reserveBench - overrideCost - forcedCost - extra);
+    const priceCap = perCap === Infinity ? Infinity : perCap * budgetForStarters + 0.001;
+    const bestSet = bestStarterSet(freeSlots, byPos, usedS, priceOf, budgetForStarters, priceCap);
+    if (bestSet) {
+      freeSlots.forEach(s => {
+        const pl = bestSet.picks[s.label];
+        if (pl) {
+          usedS.add(pl.id);
+          planS[s.label] = pl;
+        }
+      });
+    } else {
+      // Budget cannot cover even the cheapest legal set: show the cheapest one so
+      // the planner still renders, and let feasible:false flag the shortfall.
+      freeSlots.forEach(s => {
+        const c = cheapestFor(s.eligible, usedS);
+        if (c) {
+          usedS.add(c.id);
+          planS[s.label] = c;
+        }
+      });
+    }
+    const plannedStarterCost = remainingStarterSlots.reduce((sum, s) => sum + (fixed[s.label] != null ? fixed[s.label] : planS[s.label] ? priceOf(planS[s.label]) : 0), 0);
+    const benchTargets = [];
+    let benchSpentOut = 0;
+    {
+      const posMax = {};
+      players.forEach(p => {
+        posMax[p.position] = Math.max(posMax[p.position] || 0, p.projectedPoints || 0);
+      });
+      const starterPtsByPos = {};
+      slotDefs.forEach(sd => {
+        const pl = filled[sd.label] || planS[sd.label];
+        if (pl) starterPtsByPos[pl.position] = Math.max(starterPtsByPos[pl.position] || 0, pl.projectedPoints || 0);
+      });
+      const weightByPos = {};
+      const depthBase = Math.max(0, alloc - 0.55) / 0.45 * 6;
+      const needScale = alloc < 0.45 ? 0 : 12;
+      const backupCap = {};
+      Object.keys(config.roster).forEach(pos => {
+        const mx = posMax[pos] || 0;
+        const def = mx > 0 ? Math.max(0, (mx - (starterPtsByPos[pos] || 0)) / mx) : 0;
+        weightByPos[pos] = 1 + Math.min(1, def) * 2.5;
+        backupCap[pos] = minBid + Math.round(Math.min(1, def) * needScale) + Math.round(depthBase);
+      });
+      const draftedByPos = {};
+      myPlayers.forEach(p => {
+        draftedByPos[p.position] = (draftedByPos[p.position] || 0) + 1;
+      });
+      const starterBuysByPos = {};
+      remainingStarterSlots.forEach(s => {
+        const pl = planS[s.label];
+        if (pl) starterBuysByPos[pl.position] = (starterBuysByPos[pl.position] || 0) + 1;
+      });
+      const benchSlotPos = [];
+      Object.entries(config.roster).forEach(([pos, c]) => {
+        const benchN = Math.max(0, c.total - (draftedByPos[pos] || 0) - (starterBuysByPos[pos] || 0));
+        for (let i = 0; i < benchN; i++) benchSlotPos.push(pos);
+      });
+      const benchBudget = R - plannedStarterCost;
+      // The bench is BILLED at max(floor, priceOf) further down, but it used to be
+      // budgeted at the raw priceOf. A plan could therefore bill past benchBudget
+      // and still report feasible: true — the Ideal Team was $7 over a $200 board.
+      // One definition of what a bench seat costs, used for both.
+      const benchPrice = (pos, pl) => {
+        const floorP = applyFloors ? pos === 'QB' ? 2 : pos === 'RB' ? 4 : minBid : minBid;
+        return Math.max(floorP, priceOf(pl));
       };
-    });
-    let benchSpent = benchPlan.reduce((sum, b) => sum + (b.player ? benchPrice(b.pos, b.player) : 0), 0);
-    let bg = 0;
-    while (bg++ < 3000) {
-      let best = null;
-      benchPlan.forEach((b, idx) => {
-        const curPts = b.player ? b.player.projectedPoints : 0;
-        const curPrice = b.player ? benchPrice(b.pos, b.player) : 0;
-        (byPos[b.pos] || []).forEach(c => {
-          if (used.has(c.id)) return;
-          const gain = c.projectedPoints - curPts;
-          if (gain <= 0) return;
-          // The cap is on the player's own price; the budget check is on what the
-          // seat is billed. Those are different questions and were conflated.
-          if (priceOf(c) > (backupCap[b.pos] || minBid) + 0.001) return;
-          if (benchSpent - curPrice + benchPrice(b.pos, c) > benchBudget + 0.001) return;
-          const dCost = benchPrice(b.pos, c) - curPrice;
-          const eff = dCost <= 0 ? Infinity : gain * (weightByPos[b.pos] || 1) / dCost;
-          if (!best || eff > best.eff || eff === best.eff && gain > best.gain) best = {
-            idx,
-            cand: c,
-            eff,
-            gain,
-            dCost,
-            curId: b.player ? b.player.id : null
-          };
-        });
+      const benchPlan = benchSlotPos.map(pos => {
+        const cand = cheapestFor([pos], usedS);
+        if (cand) usedS.add(cand.id);
+        return {
+          pos,
+          player: cand || null
+        };
       });
-      if (!best) break;
-      if (best.curId) used.delete(best.curId);
-      used.add(best.cand.id);
-      benchSpent += best.dCost;
-      benchPlan[best.idx].player = best.cand;
-    }
-    // A last pass so overspend is structurally impossible rather than merely
-    // unlikely. `reserveBench` above estimates the bench's composition from the
-    // roster shape, and a model that forces starters (eliteTE takes both top
-    // tight ends) can shift it, leaving the bench a seat more expensive than the
-    // estimate paid for. Downgrading here costs a bench point or two; billing
-    // past the budget while reporting feasible: true is a plan a drafter cannot
-    // execute, which is worse.
-    let guard = 0;
-    while (benchSpent > benchBudget + 0.001 && guard++ < 200) {
-      let worst = null;
-      benchPlan.forEach((b, idx) => {
-        if (!b.player) return;
-        const cur = benchPrice(b.pos, b.player);
-        // The cheapest still-available body at this position, or nothing.
-        let alt = null;
-        (byPos[b.pos] || []).forEach(c => {
-          if (used.has(c.id) && c.id !== b.player.id) return;
-          if (c.id === b.player.id) return;
-          if (!alt || benchPrice(b.pos, c) < benchPrice(b.pos, alt)) alt = c;
+      let benchSpent = benchPlan.reduce((sum, b) => sum + (b.player ? benchPrice(b.pos, b.player) : 0), 0);
+      let bg = 0;
+      while (bg++ < 3000) {
+        let best = null;
+        benchPlan.forEach((b, idx) => {
+          const curPts = b.player ? b.player.projectedPoints : 0;
+          const curPrice = b.player ? benchPrice(b.pos, b.player) : 0;
+          (byPos[b.pos] || []).forEach(c => {
+            if (usedS.has(c.id)) return;
+            const gain = c.projectedPoints - curPts;
+            if (gain <= 0) return;
+            // The cap is on the player's own price; the budget check is on what the
+            // seat is billed. Those are different questions and were conflated.
+            if (priceOf(c) > (backupCap[b.pos] || minBid) + 0.001) return;
+            if (benchSpent - curPrice + benchPrice(b.pos, c) > benchBudget + 0.001) return;
+            const dCost = benchPrice(b.pos, c) - curPrice;
+            const eff = dCost <= 0 ? Infinity : gain * (weightByPos[b.pos] || 1) / dCost;
+            if (!best || eff > best.eff || eff === best.eff && gain > best.gain) best = {
+              idx,
+              cand: c,
+              eff,
+              gain,
+              dCost,
+              curId: b.player ? b.player.id : null
+            };
+          });
         });
-        const next = alt ? benchPrice(b.pos, alt) : 0;
-        const saving = cur - next;
-        if (saving <= 0) return;
-        const loss = (b.player.projectedPoints || 0) - (alt ? alt.projectedPoints || 0 : 0);
-        // Shed the dollar that costs the fewest points.
-        const ratio = loss <= 0 ? -Infinity : loss / saving;
-        if (!worst || ratio < worst.ratio) worst = { idx, alt, saving, ratio, curId: b.player.id };
-      });
-      if (!worst) break;
-      used.delete(worst.curId);
-      if (worst.alt) used.add(worst.alt.id);
-      benchSpent -= worst.saving;
-      benchPlan[worst.idx].player = worst.alt;
-    }
-    benchPlan.forEach(b => {
-      if (b.player) {
-        benchTargets.push({
-          position: b.pos,
-          playerId: b.player.id,
-          price: benchPrice(b.pos, b.player)
-        });
+        if (!best) break;
+        if (best.curId) usedS.delete(best.curId);
+        usedS.add(best.cand.id);
+        benchSpent += best.dCost;
+        benchPlan[best.idx].player = best.cand;
       }
-    });
+      // A last pass so overspend is structurally impossible rather than merely
+      // unlikely. `reserveBench` above estimates the bench's composition from the
+      // roster shape, and a model that forces starters (eliteTE takes both top
+      // tight ends) can shift it, leaving the bench a seat more expensive than the
+      // estimate paid for. Downgrading here costs a bench point or two; billing
+      // past the budget while reporting feasible: true is a plan a drafter cannot
+      // execute, which is worse.
+      let guard = 0;
+      while (benchSpent > benchBudget + 0.001 && guard++ < 200) {
+        let worst = null;
+        benchPlan.forEach((b, idx) => {
+          if (!b.player) return;
+          const cur = benchPrice(b.pos, b.player);
+          // The cheapest still-available body at this position, or nothing.
+          let alt = null;
+          (byPos[b.pos] || []).forEach(c => {
+            if (usedS.has(c.id) && c.id !== b.player.id) return;
+            if (c.id === b.player.id) return;
+            if (!alt || benchPrice(b.pos, c) < benchPrice(b.pos, alt)) alt = c;
+          });
+          const next = alt ? benchPrice(b.pos, alt) : 0;
+          const saving = cur - next;
+          if (saving <= 0) return;
+          const loss = (b.player.projectedPoints || 0) - (alt ? alt.projectedPoints || 0 : 0);
+          // Shed the dollar that costs the fewest points.
+          const ratio = loss <= 0 ? -Infinity : loss / saving;
+          if (!worst || ratio < worst.ratio) worst = { idx, alt, saving, ratio, curId: b.player.id };
+        });
+        if (!worst) break;
+        usedS.delete(worst.curId);
+        if (worst.alt) usedS.add(worst.alt.id);
+        benchSpent -= worst.saving;
+        benchPlan[worst.idx].player = worst.alt;
+      }
+      benchSpentOut = benchSpent;
+      benchPlan.forEach(b => {
+        if (b.player) {
+          benchTargets.push({
+            position: b.pos,
+            playerId: b.player.id,
+            price: benchPrice(b.pos, b.player)
+          });
+        }
+      });
+    }
+    const starterPoints = slotDefs.reduce((sum, sd) => {
+      const pl = filled[sd.label] || planS[sd.label];
+      return sum + (pl && pl.projectedPoints || 0);
+    }, 0);
+    return { plan: planS, plannedStarterCost, benchTargets, benchSpent: benchSpentOut, starterPoints };
+  };
+  let res = solve(extraBench);
+  if (!noBench && extraBench > 0) {
+    const stranded = R - res.plannedStarterCost - res.benchSpent;
+    if (stranded >= 1) {
+      const again = solve(Math.max(0, extraBench - stranded));
+      if (again.starterPoints >= res.starterPoints && again.plannedStarterCost + again.benchSpent <= R + 0.001) res = again;
+    }
   }
+  Object.assign(plan, res.plan);
+  const plannedStarterCost = res.plannedStarterCost;
+  const benchTargets = res.benchTargets;
   const slots = slotDefs.map(s => {
     if (filled[s.label]) return {
       label: s.label,
@@ -15887,7 +15932,141 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
     feasible: plannedStarterCost <= R - reserveBench + 0.001
   };
 }
-function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds, roleOverrides, targets) {
+// ── what the plan should EXPECT to pay, player by player ─────────────────────
+// buildOptimalPlan prices every candidate at Proj — the room's likely price —
+// and switchPrice assumes the rest of the plan can be bought at exactly that.
+// Proj is a curve slot; it does not know that, right now, seven rivals with
+// money still need a running back and there are two of this one left, or that
+// every team but yours has filled the position and the next one will go for
+// less. That is the contest for him, and it moves what he will actually cost.
+//
+// contest = (rivals who still have an open slot he fits AND can afford his
+// price) / (comparable players still on the board, himself included). It is
+// measured against the SAME ratio on the pre-draft board (everyone needs
+// everyone, everyone can afford everyone), so at the start the factor is
+// exactly 1 and Proj stands: the curve already priced a full room. Only the
+// change in contest as the draft runs moves the expectation, on a log scale so
+// doubling and halving are the same-sized move, capped either way. The result
+// feeds the plan's cost assumptions only — Proj on the sheet is untouched.
+const CONTEST_SLOPE = 0.05;   // a doubling of contest moves the expectation ~3.5%
+const CONTEST_MIN = 0.90, CONTEST_MAX = 1.12;
+const CONTEST_COMPARABLE = 0.92;  // "comparable": within 8% of his projection
+function teamNeedsPosition(team, pos, config) {
+  const cnt = {};
+  (team.roster || []).forEach(r => { cnt[r.position] = (cnt[r.position] || 0) + 1; });
+  const c = config.roster[pos];
+  if (!c) return false;
+  if ((cnt[pos] || 0) < (c.starters || 0)) return true;
+  const flex = config.flex || {};
+  const elig = flex.eligible || [];
+  if (!elig.includes(pos) || !(flex.count > 0)) return false;
+  let flexUsed = 0;
+  elig.forEach(ep => { const cc = config.roster[ep]; if (cc) flexUsed += Math.max(0, (cnt[ep] || 0) - (cc.starters || 0)); });
+  return flexUsed < flex.count;
+}
+function expectedPlanPrices(players, teams, myTeam, config, draftedIds) {
+  const out = new Map();
+  if (!draftedIds || !draftedIds.size || !teams || !myTeam) return out;   // pre-draft: Proj stands
+  const minBid = config.valuation.minBid;
+  const rivals = teams.filter(t => !t.isMine && (t.spotsRemaining || 0) > 0);
+  const rivalsAtStart = Math.max(1, teams.filter(t => !t.isMine).length);
+  const tmax = t => Math.max(0, (t.budgetRemaining || 0) - ((t.spotsRemaining || 0) - 1) * minBid);
+  const byPos = {};
+  players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  Object.keys(byPos).forEach(pos => {
+    if (pos === 'K' || pos === 'DEF') return;
+    const all = byPos[pos];
+    const left = all.filter(p => !draftedIds.has(p.id));
+    const needers = rivals.filter(t => teamNeedsPosition(t, pos, config));
+    left.forEach(p => {
+      const price = Math.max(minBid, p.marketValue ?? p.auctionValue ?? minBid);
+      if (price < 5) return;                       // the $1-4 tail is not contested
+      const pts = p.projectedPoints || 0;
+      const comp0 = all.filter(q => (q.projectedPoints || 0) >= pts * CONTEST_COMPARABLE && (q.projectedPoints || 0) <= pts / CONTEST_COMPARABLE).length;
+      const comp = left.filter(q => (q.projectedPoints || 0) >= pts * CONTEST_COMPARABLE && (q.projectedPoints || 0) <= pts / CONTEST_COMPARABLE).length;
+      const bidders = needers.filter(t => tmax(t) >= price).length;
+      const contest0 = rivalsAtStart / Math.max(1, comp0);
+      const contest = bidders / Math.max(1, comp);
+      if (!(contest0 > 0)) return;
+      const f = Math.max(CONTEST_MIN, Math.min(CONTEST_MAX, 1 + CONTEST_SLOPE * Math.log2(Math.max(0.01, contest) / contest0)));
+      const exp = Math.max(minBid, Math.round(price * f));
+      if (exp !== price) out.set(p.id, exp);
+    });
+  });
+  return out;
+}
+// ── the handcuff you actually own ────────────────────────────────────────────
+// A backup running back is worth his own projection to everyone, plus, to the
+// ONE team that owns his starter, the starter's production on the weeks the
+// starter misses. That second term is conditional and it is not in any
+// projection, which is why the handcuff is the classic $1 endgame buy for the
+// team that needs him and a $1 pass for everyone else. Sized honestly: a lead
+// back misses about three games a season on average (HANDCUFF_MISS_GAMES), the
+// backup inherits most but not all of the role (HANDCUFF_SHARE), and what he
+// replaces in your lineup on those weeks is the replacement level, not zero.
+const HANDCUFF_MISS_GAMES = 3;
+const HANDCUFF_SHARE = 0.8;
+const HANDCUFF_LEAD_RATIO = 1.3;   // same rule the board's H chip uses
+function handcuffsOf(players, myTeam) {
+  const out = new Map();
+  if (!myTeam) return out;
+  const mine = new Set((myTeam.roster || []).map(r => r.playerId));
+  const byTeam = {};
+  players.forEach(p => { if (p.position === 'RB' && p.team) (byTeam[p.team] = byTeam[p.team] || []).push(p); });
+  Object.values(byTeam).forEach(arr => {
+    arr.sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+    const lead = arr[0], bup = arr[1];
+    if (!lead || !bup || !mine.has(lead.id)) return;
+    if ((lead.projectedPoints || 0) < (bup.projectedPoints || 0) * HANDCUFF_LEAD_RATIO) return;
+    out.set(bup.id, lead);
+  });
+  return out;
+}
+// Dollars per point on this board: the league's money above the min bids over
+// the VORP it buys, read off the players that carry both. Used to turn a
+// points argument (a handcuff's cover, a bye clash) into a bid adjustment on
+// the same scale as every other dollar on the sheet.
+function dollarsPerPoint(players, config) {
+  const minBid = config.valuation.minBid;
+  const rows = players.filter(p => (p.vorp || 0) > 0 && (p.auctionValue || 0) > minBid);
+  if (!rows.length) return null;
+  const ratios = rows.map(p => (p.auctionValue - minBid) / p.vorp).sort((a, b) => a - b);
+  return ratios[Math.floor(ratios.length / 2)];
+}
+function handcuffDollars(bup, lead, players, config, games) {
+  const dpp = dollarsPerPoint(players, config);
+  if (!dpp || !lead) return 0;
+  const G = games || 17;
+  const repl = (bup.liveReplacement != null ? bup.liveReplacement : bup.replacement) || 0;
+  const cover = HANDCUFF_MISS_GAMES * (HANDCUFF_SHARE * (lead.projectedPoints || 0) / G - repl / G);
+  return cover > 0 ? Math.round(cover * dpp) : 0;
+}
+// ── a bye you already have ───────────────────────────────────────────────────
+// Season projections already exclude the bye week, so a bye costs nothing by
+// itself. Two starters sharing one costs something: the bench can cover one
+// hole at replacement level, the second hole gets a waiver body. The cost is
+// the gap between the two on one week, per extra starter sharing the bye —
+// usually a dollar, occasionally two. Small, real, and otherwise invisible.
+const BYE_SECOND_HOLE = 0.15;   // the waiver fill is ~15% under the bench fill
+function byeStackDollars(p, myTeam, players, config, games) {
+  if (!myTeam || !p.team) return 0;
+  const bye = byeOf(p.team);
+  if (!bye) return 0;
+  const flexElig = (config.flex && config.flex.eligible) || [];
+  const shares = pos => pos === p.position || (flexElig.includes(pos) && flexElig.includes(p.position));
+  const pmap = new Map(players.map(x => [x.id, x]));
+  const clashes = (myTeam.roster || []).filter(r => {
+    const q = pmap.get(r.playerId);
+    return q && shares(q.position) && byeOf(q.team) === bye && (q.projectedPoints || 0) > 0;
+  }).length;
+  if (!clashes) return 0;
+  const dpp = dollarsPerPoint(players, config);
+  if (!dpp) return 0;
+  const G = games || 17;
+  const repl = ((p.liveReplacement != null ? p.liveReplacement : p.replacement) || 0) / G;
+  return Math.round(clashes * repl * BYE_SECOND_HOLE * dpp);
+}
+function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds, roleOverrides, targets, opts) {
   const minBid = config.valuation.minBid;
   const maxBid = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
   if (maxBid < minBid) return null;
@@ -15895,7 +16074,7 @@ function switchPrice(player, baselinePoints, myTeam, players, config, draftedIds
   const ptsAt = P => {
     const pl = buildOptimalPlan(myTeam, players, config, draftedIds, undefined, new Set([...forcedBase, player.id]), roleOverrides, true, {
       [player.id]: P
-    }, true);
+    }, true, opts);
     return pl && pl.feasible ? pl.starterPoints : -Infinity;
   };
   if (ptsAt(minBid) <= baselinePoints + 1e-6) return null;
@@ -16657,8 +16836,8 @@ function PlayersRail({
         className: "rr-c",
         title: (config && config.format === 'bestball') ? "Ceiling, per game (upside-weighted)" : (config && config.format === 'snake') ? "Projected points per game" : "Value, VBD fair value"
       }, (config && config.format === 'bestball') ? ((p.ceiling != null ? p.ceiling : p.projectedPoints) != null ? ((p.ceiling != null ? p.ceiling : p.projectedPoints) / games).toFixed(1) : '\u2014') : (config && config.format === 'snake') ? (p.projectedPoints != null ? (p.projectedPoints / games).toFixed(1) : '\u2014') : ('$' + valVal)), React.createElement("span", {
-        className: "rr-c you",
-        title: (config && config.format !== 'auction') ? "Positional rank by projection (e.g. WR5)" : "You, what you should be willing to pay"
+        className: `rr-c you${(config && config.format === 'auction') && p.youShift ? p.youShift > 0 ? ' you-shift-up' : ' you-shift-down' : ''}`,
+        title: (config && config.format !== 'auction') ? "Positional rank by projection (e.g. WR5)" : p.youShift ? `You, what you should be willing to pay. ${p.youShift > 0 ? 'Up' : 'Down'} $${Math.abs(p.youShift)} since ${p.youShiftPick}. That pick changed the budgets, the open slots, or the pool, so the planner re-balanced the most YOU should pay — the market didn't move (his Proj and Value are untouched).` : "You, what you should be willing to pay"
       }, (config && config.format !== 'auction') ? (p.position + (posRankMap[p.id] || '')) : ('$' + youVal))), React.createElement("div", {
         className: "rr-l2"
       }, React.createElement("span", {
@@ -16709,7 +16888,7 @@ function PlayersRail({
 }
 const STORAGE_KEY = 'iron_tuna_draft_state_v2';
 const PROJ_KEY = 'tn$9xQ27z';
-const PROJ_VERSION = '2026.8.30'; // bumped 2026-08-30: owner-supplied 2026 projections (423-player upload)
+const PROJ_VERSION = '2026.9.2'; // bumped 2026-09-02: availability pro-rating (tools/availability.json)
 function _xb64decode(s, key) {
   const bin = atob(s);
   const bytes = new Uint8Array(bin.length);
@@ -16733,6 +16912,7 @@ function buildInitialPlayers(projectionsSource) {
     team: p.team,
     projectedStats: p.projectedStats,
     vegas: p.vegas || null,
+    injuryStatus: p.status || null,
     projectedPoints: 0,
     auctionValue: 0,
     inflatedValue: 0,
@@ -18040,59 +18220,6 @@ const LAST_YEAR_DEF_STATS = [{
   safety: 1,
   ptsAllowed: 497
 }];
-function applyQbActuals(scored, config) {
-  const m = new Map();
-  const assign = (pos, arr) => {
-    const ps = scored.filter(p => p.position === pos).slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
-    ps.forEach((p, i) => m.set(p.id, arr[Math.min(i, arr.length - 1)]));
-  };
-  assign('QB', LAST_YEAR_QB_STATS);
-  assign('RB', LAST_YEAR_RB_STATS);
-  assign('WR', LAST_YEAR_WR_STATS);
-  assign('TE', LAST_YEAR_TE_STATS);
-  assign('K', LAST_YEAR_K_STATS);
-  assign('DEF', LAST_YEAR_DEF_STATS);
-  if (!m.size) return scored;
-  return scored.map(p => {
-    if (!m.has(p.id)) return p;
-    if (p.position === 'K' || p.position === 'DEF') {
-      const stats = {
-        ...m.get(p.id)
-      };
-      return {
-        ...p,
-        projectedStats: stats,
-        projectedPoints: scorePlayer({
-          ...p,
-          projectedStats: stats
-        }, config)
-      };
-    }
-    const proj = p.projectedStats || {};
-    const act = m.get(p.id) || {};
-    const stats = {
-      ...proj
-    };
-    Object.keys(act).forEach(k => {
-      const a = act[k],
-        pj = proj[k];
-      stats[k] = typeof a === 'number' && typeof pj === 'number' ? (a + pj) / 2 : a;
-    });
-    const projPts = typeof p.projectedPoints === 'number' ? p.projectedPoints : scorePlayer(p, config);
-    const actPts = scorePlayer({
-      ...p,
-      projectedStats: {
-        ...proj,
-        ...act
-      }
-    }, config);
-    return {
-      ...p,
-      projectedStats: stats,
-      projectedPoints: (projPts + actPts) / 2
-    };
-  });
-}
 // ── your own read on a player, in the currency the whole engine speaks ─────
 // A price override (applyPriceOverrides) only changes what you will PAY. It
 // never reaches projectedPoints, so the tier cliffs, the optimal plan's
@@ -18212,16 +18339,33 @@ function normalizeToLastYear(scored, config) {
     K: LAST_YEAR_K_STATS,
     DEF: LAST_YEAR_DEF_STATS
   };
-  const teams = config && config.teams || 12;
-  const sflex = !!(config && config.flex && config.flex.eligible && config.flex.eligible.includes('QB'));
-  const startK = {
-    QB: Math.round(teams * (sflex ? 1.8 : 1.1)),
-    RB: Math.round(teams * 2.6),
-    WR: Math.round(teams * 2.6),
-    TE: Math.round(teams * 1.1),
-    K: teams,
-    DEF: teams
-  };
+  // What this step is for: the level of each position under the reader's
+  // scoring, so that a scoring rule the projection feeds were not built for
+  // (a TE premium, 6-point passing TDs) still lands the positions against each
+  // other where a real season puts them.
+  //
+  // What it must not do: inflate the top of a position because last year's top
+  // players scored more than this year's top players are PROJECTED to. It did.
+  // The realised top-K of a season is the set that got lucky as well as good —
+  // every projection is a mean, every actual is a draw, and the K best draws
+  // always beat the K best means. Comparing the two told every position it was
+  // "projected too low", and by different amounts: a top-13 slice at QB and TE
+  // against a top-31 slice at RB and WR, so the shallow, high-variance
+  // positions were lifted most and the ratio between positions moved with the
+  // luck of one season. VORP scales with the lift, so VALUE moved too.
+  //
+  // The honest calibration compares last year's ACTUALS for the players who
+  // were PROJECTED top-K before that season — ex-ante, not ex-post — and that
+  // needs a preseason projection set the repo does not hold
+  // (tools/backtest-projections.mjs prints it once one exists). Until then two
+  // things take most of the bias out: the comparison runs over the whole depth
+  // of the table (32 a position, the same depth everywhere, so no position is
+  // sliced shallower than another), and only half the remaining gap is
+  // applied, inside a band. Selection bias shrinks as the slice deepens and is
+  // the same sign at every position, so halving it is a partial-pooling
+  // estimate, not a tuning knob.
+  const LEVEL_SHRINK = 0.5;   // apply this share of the measured gap
+  const LEVEL_BAND = 0.08;    // and never more than this, either way
   const out = scored.map(p => ({
     ...p
   }));
@@ -18234,11 +18378,12 @@ function normalizeToLastYear(scored, config) {
     }, config)).filter(v => v > 0).sort((a, b) => b - a);
     const players = out.filter(p => p.position === pos && (p.projectedPoints || 0) > 0).sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
     if (lastPts.length < 3 || players.length < 3) return;
-    const K = Math.max(3, Math.min(startK[pos] || teams, lastPts.length, players.length));
+    const K = Math.max(3, Math.min(lastPts.length, players.length));
     const lastMean = lastPts.slice(0, K).reduce((s, v) => s + v, 0) / K;
     const projMean = players.slice(0, K).reduce((s, p) => s + (p.projectedPoints || 0), 0) / K;
     if (!(projMean > 0) || !(lastMean > 0)) return;
-    const f = lastMean / projMean;
+    const raw = lastMean / projMean;
+    const f = Math.max(1 - LEVEL_BAND, Math.min(1 + LEVEL_BAND, 1 + (raw - 1) * LEVEL_SHRINK));
     if (f >= 0.98 && f <= 1.02) return;
     players.forEach(p => {
       p.projectedPoints = (p.projectedPoints || 0) * f;
@@ -18246,92 +18391,30 @@ function normalizeToLastYear(scored, config) {
   });
   return out;
 }
-function applyTierShaping(scored) {
-  const out = scored.map(p => ({
-    ...p
-  }));
-  const NEWS = [[/malik nabers/i, 0.85], [/rashee rice/i, 0.88], [/zach charbonnet/i, 0.80], [/de.?von achane/i, 0.92], [/josh jacobs/i, 0.92], [/(^|\b)(rj|r\.j\.) harvey/i, 0.88], [/bucky irving/i, 0.92], [/a\.?\s?j\.?\s?brown/i, 1.08], [/jaylen waddle/i, 1.08], [/d\.?\s?j\.?\s?moore/i, 1.06], [/kenneth walker/i, 1.08], [/treveyon henderson/i, 1.10], [/aaron rodgers/i, 1.06], [/jeremiyah love/i, 1.10], [/carnell tate/i, 1.08]];
-  out.forEach(p => {
-    const nm = p.name || '';
-    for (let k = 0; k < NEWS.length; k++) {
-      if (NEWS[k][0].test(nm)) {
-        p.projectedPoints = (p.projectedPoints || 0) * NEWS[k][1];
-        break;
-      }
-    }
-  });
-  const byPos = {};
-  out.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
-  const sortPos = pos => (byPos[pos] || []).slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
-  const moveToIndex = (pos, matcher, targetIdx) => {
-    const arr = sortPos(pos);
-    if (arr.length < 2) return;
-    const ladder = arr.map(p => p.projectedPoints || 0);
-    const order = arr.slice();
-    const i = order.findIndex(p => matcher(p.name || ''));
-    if (i < 0) return;
-    const j = Math.max(0, Math.min(order.length - 1, targetIdx));
-    if (i === j) return;
-    const [pl] = order.splice(i, 1);
-    order.splice(j, 0, pl);
-    order.forEach((p, k) => {
-      p.projectedPoints = ladder[k];
-    });
-  };
-  const moveAbove = (pos, matcherA, matcherB) => {
-    const arr = sortPos(pos);
-    const ia = arr.findIndex(p => matcherA(p.name || ''));
-    const ib = arr.findIndex(p => matcherB(p.name || ''));
-    if (ia < 0 || ib < 0 || ia <= ib) return;
-    moveToIndex(pos, matcherA, ib);
-  };
-  moveToIndex('WR', n => /amon[ -]?ra/i.test(n) || /st\.?\s*brown/i.test(n), 3);
-  moveAbove('QB', n => /stafford/i.test(n), n => /dart/i.test(n));
-  moveToIndex('QB', n => /caleb williams/i.test(n), 14);
-  const narrow = (pos, ranges, f = 0.6) => {
-    const arr = sortPos(pos);
-    ranges.forEach(([a, b]) => {
-      const grp = arr.slice(a - 1, b).filter(Boolean);
-      if (grp.length < 2) return;
-      const mean = grp.reduce((s, p) => s + (p.projectedPoints || 0), 0) / grp.length;
-      grp.forEach(p => {
-        p.projectedPoints = mean + ((p.projectedPoints || 0) - mean) * (1 - f);
-      });
-    });
-  };
-  narrow('QB', [[1, 3], [4, 7]]);
-  narrow('RB', [[1, 2], [3, 5]]);
-  narrow('WR', [[1, 3], [4, 5]]);
-  narrow('TE', [[1, 2], [3, 7], [8, 12]]);
-  return out;
-}
-function applyBaselineRankFixes(scored) {
-  const qbs = scored.filter(p => p.position === 'QB').slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
-  if (qbs.length < 2) return scored;
-  const ladder = qbs.map(p => p.projectedPoints);
-  const order = qbs.slice();
-  const move = (matcher, delta) => {
-    const i = order.findIndex(p => matcher(p.name || ''));
-    if (i < 0) return;
-    const j = Math.max(0, Math.min(order.length - 1, i + delta));
-    const [pl] = order.splice(i, 1);
-    order.splice(j, 0, pl);
-  };
-  move(n => /prescott/i.test(n), 1);
-  move(n => /stafford/i.test(n), -2);
-  const pts = new Map();
-  order.forEach((p, i) => pts.set(p.id, ladder[i]));
-  return scored.map(p => pts.has(p.id) ? {
-    ...p,
-    projectedPoints: pts.get(p.id)
-  } : p);
-}
 function detectPositions(c) {
   const map = [['QB', /\b(qb|qbs|quarter ?backs?)\b/], ['RB', /\b(rb|rbs|running ?backs?)\b/], ['WR', /\b(wr|wrs|wide ?receivers?|receivers?)\b/], ['TE', /\b(te|tes|tight ?ends?)\b/], ['K', /\b(k|ks|kickers?)\b/], ['DEF', /\b(def|dst|d\/st|defen[cs]es?|defenders?)\b/]];
   return map.filter(([pos, re]) => re.test(c)).map(([pos]) => pos);
 }
 function valueAdjustTier(rank) {
   return rank < 8 ? 'elite' : rank < 24 ? 'mid' : 'repl';
+}
+// The per-player multiplier a reader's tier instruction ("value elite RBs 15%
+// more") applies, keyed by id, so the live re-solve (revalueRemaining) can
+// honour it on values it computes fresh. Null when there is nothing to apply.
+function valueAdjustMultipliers(players, valueAdjust) {
+  if (!valueAdjust || !Object.keys(valueAdjust).length) return null;
+  const byPos = {};
+  players.forEach(p => (byPos[p.position] = byPos[p.position] || []).push(p));
+  const out = new Map();
+  Object.values(byPos).forEach(arr => {
+    arr.slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).forEach((p, i) => {
+      const adj = valueAdjust[p.position];
+      if (!adj) return;
+      const m = (adj.all || 1) * (adj[valueAdjustTier(i)] || 1);
+      if (Math.abs(m - 1) >= 0.001) out.set(p.id, m);
+    });
+  });
+  return out.size ? out : null;
 }
 function applyValueAdjust(players, valueAdjust, config) {
   if (!valueAdjust || !Object.keys(valueAdjust).length) return players;
@@ -19405,7 +19488,7 @@ function buildCoachContext(q, ctx) {
     flag: (() => {
       // The same number the board colours the name with, so the export and the
       // screen can never disagree about why a player is red.
-      const _b = boardValue(p, p.auctionValue, config);
+      const _b = boardValue(p, p.inflatedValue != null ? p.inflatedValue : p.auctionValue, config);
       if (p.marketValue == null || _b == null) return 'fair';
       return p.marketValue - _b > 1 ? 'RED, overpay, Proj above Value' : _b - p.marketValue > 1 ? 'GREEN, value, Proj below Value' : 'fair';
     })()
@@ -20081,7 +20164,7 @@ function buildCoachInsights(ctx) {
 }
 /*
  * FableDock — admin-only side panel that routes draft questions to Fable via a
- * local bridge (tools/fable-bridge.js, kept out of this repo) so answers run on
+ * local bridge (tools/fable-bridge.js) so answers run on
  * the operator's own Claude subscription rather than the metered /api/coach
  * path. Double-gated: IT_FABLE (?fable=1) hides it from everyone else, and it
  * talks only to 127.0.0.1, which does not exist for a normal visitor.
@@ -20121,6 +20204,17 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
   const [elapsed, setElapsed] = useState(0);
   const [health, setHealth] = useState(null);
   const [last, setLast] = useState(null);
+  const [showCfg, setShowCfg] = useState(false);
+  const [cfgVal, setCfgVal] = useState(() => loadFableDock().bridge || FABLE_BRIDGE_DEFAULT);
+  // Committed on Save rather than per keystroke: st.bridge is a dependency of the
+  // health check, so binding the input straight to it would fire a probe at every
+  // half-typed URL.
+  const applyCfg = () => {
+    const v = String(cfgVal || '').trim().replace(/\/+$/, '') || FABLE_BRIDGE_DEFAULT;
+    setCfgVal(v);
+    setHealth(null);
+    setSt(s => ({ ...s, bridge: v }));
+  };
   const bodyRef = useRef(null);
   const abortRef = useRef(null);
   const idRef = useRef(1);
@@ -20239,7 +20333,7 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       } else {
         setHealth(false);
         put({
-          text: 'Could not reach the bridge at ' + base() + '. Start it by double-clicking Start-Fable.bat.\n\n(' + e.message + ')',
+          text: 'Could not reach the bridge at ' + base() + '.\n\nStart it by double-clicking Start-Fable.bat. If it is already running on a different port, set that with Bridge in this panel\'s header.\n\n(' + e.message + ')',
           err: true
         });
       }
@@ -20266,12 +20360,35 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       React.createElement("span", { className: "fable-title" },
         React.createElement("span", {
           className: "fable-dot " + (health === true ? 'on' : health === false ? 'off' : ''),
-          title: health === true ? 'Bridge connected' : health === false ? 'Bridge offline — run Start-Fable.bat' : 'Checking bridge…'
+          title: health === true ? 'Bridge connected at ' + base() : health === false ? 'No bridge at ' + base() + ' — run Start-Fable.bat, or set the URL with Bridge' : 'Checking bridge…'
         }),
         "FABLE"),
       React.createElement("span", { className: "fable-headbtns" },
+        React.createElement("button", {
+          className: showCfg ? 'on' : '',
+          title: "Set the bridge URL",
+          onClick: () => setShowCfg(v => !v)
+        }, "Bridge"),
         msgs.length ? React.createElement("button", { onClick: () => { setMsgs([]); setLast(null); } }, "Clear") : null,
         React.createElement("button", { onClick: () => setSt(s => ({ ...s, open: false })) }, "Hide"))),
+    showCfg ? React.createElement("div", { className: "fable-cfg" },
+      React.createElement("label", null, "Bridge URL"),
+      React.createElement("div", { className: "fable-cfg-row" },
+        React.createElement("input", {
+          type: "text",
+          value: cfgVal,
+          spellCheck: false,
+          placeholder: FABLE_BRIDGE_DEFAULT,
+          onChange: e => setCfgVal(e.target.value),
+          onKeyDown: e => { if (e.key === 'Enter') { e.preventDefault(); applyCfg(); } }
+        }),
+        React.createElement("button", { onClick: applyCfg, disabled: !String(cfgVal || '').trim() }, "Save")),
+      React.createElement("p", null,
+        "Change this if the bridge is on another port, which happens when 8787 was taken and you started it with FABLE_BRIDGE_PORT. ",
+        React.createElement("button", {
+          className: "fable-cfg-reset",
+          onClick: () => { setCfgVal(FABLE_BRIDGE_DEFAULT); setHealth(null); setSt(s => ({ ...s, bridge: FABLE_BRIDGE_DEFAULT })); }
+        }, "Reset to default"))) : null,
     React.createElement("div", { className: "fable-body", ref: bodyRef },
       msgs.length ? msgs.map(m => React.createElement("div", {
         key: m._id,
@@ -20279,7 +20396,7 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       }, m.pending ? (elapsed ? 'Thinking… ' + elapsed + 's' : 'Thinking…') : m.text))
         : React.createElement("div", { className: "fable-empty" },
           health === false
-            ? "Bridge offline. Double-click Start-Fable.bat, then reopen this panel."
+            ? "Bridge offline. Double-click Start-Fable.bat, then reopen this panel. If it is running on a port other than the default, set that with Bridge above."
             : "Fable sees your live board — budgets, rosters, prices, who's gone. Ask the slower questions here: budget shape, whether you're about to get squeezed at a position, how the endgame plays out. Answers take 20–60s.")),
     React.createElement("div", { className: "fable-input" },
       React.createElement("textarea", {
@@ -22677,7 +22794,7 @@ function App() {
     // and keep the plain slot prices buildValuations just set.
     const blended = blendedVegasMarketPrices(players, config, projOverrides);
     if (blended) valued = valued.map(p => blended.has(p.id) ? { ...p, marketValue: blended.get(p.id) } : p);
-    return attachProvisionalAdp(renormalizeToBudget(applyPredictability(valued, config), config), config);
+    return attachProvisionalAdp(renormalizeToBudget(valued, config), config);
   }, [players, config, rankOrder, rankMode, projOverrides]);
   useEffect(() => {
     try {
@@ -22720,7 +22837,7 @@ function App() {
   const valuedPlayers = useMemo(() => {
     const adjusted = applyValueAdjust(baseValued, valueAdjust, config);
     const draftedIds = new Set(draftHistory.map(d => d.playerId));
-    const inflated = applyInflation(adjusted, draftedIds, teams, config);
+    const inflated = applyInflation(adjusted, draftedIds, teams, config, valueAdjustMultipliers(baseValued, valueAdjust));
     const withOverrides = applyPriceOverrides(inflated, priceOverrides, draftedIds, config);
     return applyPositionalDemand(withOverrides, teams, config, draftedIds);
   }, [baseValued, valueAdjust, config, draftHistory, teams, priceOverrides]);
@@ -22742,9 +22859,14 @@ function App() {
     const draftedIds = new Set(draftHistory.map(d => d.playerId));
     const minBid = config.valuation.minBid;
     const maxBid = Math.max(minBid, myTeam.budgetRemaining - (myTeam.spotsRemaining - 1) * minBid);
-    const basePlan = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true);
+    // The plan for MY team prices its targets at what the room is likely to make
+    // me pay for them, given who still needs them and who can still afford them
+    // (expectedPlanPrices). Pre-draft this map is empty and Proj stands.
+    const planOpts = { expectedPrice: expectedPlanPrices(valuedPlayers, teams, myTeam, config, draftedIds) };
+    const basePlan = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, undefined, planOpts);
     const baselinePoints = basePlan ? basePlan.starterPoints : 0;
-    const switchBaseline = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, true);
+    const switchBaseline = buildOptimalPlan(myTeam, valuedPlayers, config, draftedIds, undefined, targets, roleOverrides, true, undefined, true, planOpts);
+    const myHandcuffs = handcuffsOf(valuedPlayers, myTeam);
     const switchBasePts = switchBaseline ? switchBaseline.starterPoints : baselinePoints;
     const planTargetIds = new Set();
     (basePlan && basePlan.remainingStarterSlots || []).forEach(s => {
@@ -22783,7 +22905,7 @@ function App() {
         // not already claimed for another slot. Those are spoken for.
         const rep = arr.slice(idx + 1).find(pl => !planTargetIds.has(pl.id));
         if (!rep) return;
-        const repAsk = priceOfP(rep), repVal = rep.auctionValue;
+        const repAsk = priceOfP(rep), repVal = rep.inflatedValue != null ? rep.inflatedValue : rep.auctionValue;
         if (repAsk == null || repVal == null) return;
         const prem = Math.max(0, Math.min(cap, Math.round(repAsk - repVal)));
         if (prem > 0) planPremium.set(id, { prem, repName: rep.name, repAsk: Math.round(repAsk), repVal: Math.round(repVal) });
@@ -22810,14 +22932,13 @@ function App() {
     // scaled by the discount at the edge, and never allowed to exceed the
     // cheapest player the optimiser actually priced.
     const _pre = valuedPlayers.map(p => {
-      const adj = marketAdjustedPrice(p, marketState, config);
       let worthPrice = null;
       let personalValue = null;                      // null = the optimiser never saw them
       if (!draftedIds.has(p.id) && p.position !== 'K' && p.position !== 'DEF' && relevant.has(p.id)) {
-        worthPrice = switchPrice(p, switchBasePts, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets);
+        worthPrice = switchPrice(p, switchBasePts, myTeam, valuedPlayers, config, draftedIds, roleOverrides, targets, planOpts);
         if (worthPrice != null) personalValue = Math.max(minBid, Math.min(maxBid, Math.round(worthPrice)));
       }
-      return { p, adj, worthPrice, personalValue };
+      return { p, worthPrice, personalValue };
     });
     // Per position: how much the optimiser discounted the cheapest players it
     // priced, and what it priced them at. The median over the bottom of the
@@ -22840,7 +22961,7 @@ function App() {
         cap: arr.length ? Math.min(...arr.map(x => x.pv)) : null
       };
     });
-    return _pre.map(({ p, adj, worthPrice, personalValue }) => {
+    const _rows = _pre.map(({ p, worthPrice, personalValue }) => {
       let pv = personalValue;
       if (pv == null) {
         const e = _edge[p.position];
@@ -22851,23 +22972,70 @@ function App() {
         if (e && e.cap != null) pv = Math.min(pv, e.cap);
         pv = Math.max(minBid, pv);
       }
+      // Kickers and defenses skip the optimiser (they are a starter each and the
+      // gap between K1 and K12 is noise), so You fell back to VALUE there and read
+      // ABOVE the going rate — $31 against a $24 Proj at K. Paying over the room
+      // for a kicker is a pure leak: You is the going rate or VALUE, whichever
+      // is lower, and never more than a starter's worth of money.
+      if ((p.position === 'K' || p.position === 'DEF') && !draftedIds.has(p.id)) {
+        const going = p.marketValue != null ? p.marketValue : pv;
+        pv = Math.max(minBid, Math.min(pv, going));
+      }
+      // The handcuff to a starter you own carries his cover on top of his own
+      // worth (handcuffsOf / handcuffDollars); a starter who shares a bye with
+      // one you already have costs the second hole (byeStackDollars). Both are
+      // points arguments turned into dollars on this board's own scale, and
+      // both are recorded on the row so the cell can say why.
+      let handcuffOf = null, handcuffPrem = 0, byeClash = 0;
+      if (!draftedIds.has(p.id) && p.position !== 'K' && p.position !== 'DEF') {
+        const lead = myHandcuffs.get(p.id);
+        if (lead) {
+          handcuffPrem = handcuffDollars(p, lead, valuedPlayers, config, SEASON_GAMES);
+          if (handcuffPrem > 0) { handcuffOf = lead.name; pv = Math.min(maxBid, pv + handcuffPrem); }
+        }
+        byeClash = byeStackDollars(p, myTeam, valuedPlayers, config, SEASON_GAMES);
+        if (byeClash > 0) pv = Math.max(minBid, pv - byeClash);
+      }
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : isTgt ? 'target' : needEligPos.has(p.position) ? 'open' : 'fade';
       const _fl = p.position === 'K' || p.position === 'DEF' || draftedIds.has(p.id) ? null : scarMap.get(p.id);
       return {
         ...p,
-        marketPrice: adj.recommendedPrice,
-        marketBasis: adj.basis,
         planTarget: isTgt,
         fit,
         worthPrice,
         scarce: _fl || null,
         planPrem: isTgt ? planPremium.get(p.id) || null : null,
+        handcuffOf,
+        handcuffPrem: handcuffPrem || 0,
+        byeClash: byeClash || 0,
+        expectedPrice: planOpts.expectedPrice.get(p.id) || null,
         personalValue: pv
       };
     });
-  }, [valuedPlayers, teams, config, marketState, draftHistory, targets, roleOverrides]);
-  const personalizedPlayers = useMemo(() => {
+    // You must never rise as you read down a position, same rule as every other
+    // dollar column. It cannot legitimately: at the same position, forcing the
+    // higher-projected player at any price P yields at least the plan the
+    // lower-projected one does (same slots fit, same budget spent), so his
+    // indifference price is at least as high. Any inversion is solver wobble —
+    // the integer binary search and the bench greedy can wobble a dollar — so
+    // clamp reading down the board, skipping drafted rows.
+    {
+      const lastAt = {};
+      _rows.slice().sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)).forEach(r => {
+        if (draftedIds.has(r.id) || r.personalValue == null) return;
+        // The handcuff to a starter you own is the one legitimate inversion: he
+        // is worth more to YOU than the better back above him because he covers
+        // your starter. Leave him out of the clamp and out of its running max.
+        if (r.handcuffOf) return;
+        const prev = lastAt[r.position];
+        if (prev != null && r.personalValue > prev) r.personalValue = prev;
+        lastAt[r.position] = r.personalValue;
+      });
+    }
+    return _rows;
+  }, [valuedPlayers, teams, config, draftHistory, targets, roleOverrides]);
+  const _starPersonalized = useMemo(() => {
     const arr = _basePersonalized;
     if ((config.format || 'auction') !== 'snake' || !starred || !starred.size) return arr;
     const di = new Set(draftHistory.map(d => d.playerId));
@@ -22889,6 +23057,53 @@ function App() {
       return Object.assign({}, p, { personalValue: pv, planSuppressed: true });
     });
   }, [_basePersonalized, starred, draftHistory, teams, config]);
+  // You is the planner's max bid, so a logged pick legitimately moves it for
+  // players who were never nominated — and with no explanation the board reads
+  // as if the market repriced itself (it didn't: Proj and Value hold still on a
+  // fair pick). Remember every You as it stood before the latest pick and pin
+  // the delta plus the pick that caused it on each moved player, so the cell
+  // itself can say why. An undo, like any retreat in pick count, clears it.
+  const [youShifts, setYouShifts] = useState(null);
+  const _youPrevRef = useRef({ picks: draftHistory.length, vals: null });
+  useEffect(() => {
+    const ref = _youPrevRef.current;
+    const picks = draftHistory.length;
+    const vals = new Map();
+    _starPersonalized.forEach(p => { if (p.personalValue != null) vals.set(p.id, p.personalValue); });
+    if (picks !== ref.picks) {
+      let shifts = null;
+      const last = picks > ref.picks ? draftHistory[picks - 1] : null;
+      if (last && ref.vals) {
+        const di = new Set(draftHistory.map(d => d.playerId));
+        const map = {};
+        let moved = 0;
+        vals.forEach((v, id) => {
+          const prev = ref.vals.get(id);
+          if (prev == null || v === prev || di.has(id)) return;
+          map[id] = v - prev;
+          moved++;
+        });
+        if (moved) {
+          const pl = _starPersonalized.find(p => p.id === last.playerId);
+          const tm = teams.find(t => t.id === last.teamId);
+          shifts = {
+            map,
+            pick: `${pl ? pl.name : 'the last pick'} → ${tm ? tm.name : 'a team'}${last.price ? ` for $${last.price}` : ''}`
+          };
+        }
+      }
+      setYouShifts(shifts);
+      ref.picks = picks;
+    }
+    ref.vals = vals;
+  }, [_starPersonalized, draftHistory, teams]);
+  const personalizedPlayers = useMemo(() => {
+    if (!youShifts) return _starPersonalized;
+    return _starPersonalized.map(p => {
+      const d = youShifts.map[p.id];
+      return d ? Object.assign({}, p, { youShift: d, youShiftPick: youShifts.pick }) : p;
+    });
+  }, [_starPersonalized, youShifts]);
   const modelFitIds = useMemo(() => {
     if (!draftModel) return null;
     const myTeam = teams.find(t => t.isMine);
@@ -23375,7 +23590,12 @@ function App() {
       const order = {
         ...prev
       };
-      let arr = order[pos] ? [...order[pos]] : players.filter(x => x.position === pos).map(x => ({
+      // Seed from the order the reader is LOOKING AT: the board scores off the
+      // vegas-blended stats at their slider setting, so seeding from the raw
+      // pool would silently permute players they never touched the moment they
+      // reorder anyone. (normalizeToLastYear is a flat per-position factor, so
+      // the blend is the only stage that can change the order.)
+      let arr = order[pos] ? [...order[pos]] : applyVegasWeight(players.filter(x => x.position === pos), vegasWeightOf(config)).map(x => ({
         id: x.id,
         pts: scorePlayer(x, config)
       })).sort((a, b) => b.pts - a.pts).map(x => x.id);
@@ -23403,7 +23623,9 @@ function App() {
       const order = {
         ...prev
       };
-      let arr = order[pos] ? [...order[pos]] : players.filter(x => x.position === pos).map(x => ({
+      // Same seeding rule as handleRankMove: the reader's blended order, not
+      // the raw pool's.
+      let arr = order[pos] ? [...order[pos]] : applyVegasWeight(players.filter(x => x.position === pos), vegasWeightOf(config)).map(x => ({
         id: x.id,
         pts: scorePlayer(x, config)
       })).sort((m, n) => n.pts - m.pts).map(x => x.id);
@@ -24191,7 +24413,8 @@ function App() {
   }, "reset")), React.createElement("div", {
     className: "main-content",
     style: {
-      zoom: fontScale
+      zoom: fontScale,
+      '--fs': fontScale
     }
   }, boardLocked ? React.createElement("div", {
     className: "board-lock"

@@ -226,8 +226,11 @@ ok('the news desk rides on the line with its percent',
 ok('a manual projection edit is not an injury', injuryLine({ name: 'X', projOverride: { src: 'manual', pct: 12 } }) === undefined);
 const both = injuryLine({ name: 'X', injuryStatus: 'Out', injuryBodyPart: 'Knee', projOverride: { src: 'news', pct: -100, label: 'Out for the season', note: '' } });
 ok('feed and news desk both show, feed first', both === 'Out, Knee; news desk: Out for the season (-100% to his projection)', both);
+// Whoever the hand-kept table lists first today; the table turns over, the rule does not.
+const handKept = (idx.match(/^const INJURIES = \[\[\/([^/]+)\/i, '([^']+)'\]/m) || []);
 ok('the hand-kept INJURIES note fills in for a player the feed has not tagged',
-  /ACL/.test(injuryLine({ name: 'Patrick Mahomes', position: 'QB' }) || ''));
+  handKept.length === 3 && injuryLine({ name: handKept[1], position: 'RB' }) === handKept[2],
+  handKept.length === 3 ? `${handKept[1]} -> ${injuryLine({ name: handKept[1], position: 'RB' })}` : 'INJURIES table not found');
 
 // ── the report reaches the prompt, and the prompt says what a missing field means ──
 ok('each slim player carries the whole injury line', /injury: injuryLine\(p\),/.test(ctxBody));
