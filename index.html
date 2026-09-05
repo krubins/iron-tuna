@@ -603,6 +603,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .rail-row { padding: 6px 8px; border-radius: var(--radius-sm); border-left: 3px solid transparent; margin-bottom: 4px; background: var(--bg-elev); }
 .rail-row.ideal { border-left-color: #2ec85f; background: rgba(46,200,95,0.16); }
 .rail-row.reserve { border-left-color: var(--gold); background: rgba(245,184,0,0.10); }
+/* "Highlight recommended players" (the models box). The model's own buys get a
+   heavier name, half a point of type and a wash of the model's gold; the $1-$2
+   endgame shortlist gets a sky bar of its own, because it is a different claim.
+   Both are declared before .rail-target so a favourite still wins the row. */
+.rail-row.rail-rec { background: rgba(227,181,58,0.13); box-shadow: inset 0 0 0 1px rgba(227,181,58,0.30); }
+.rail-row.rail-rec .rr-name { font-weight: 700; font-size: 15px; }
+.rail-row.rail-upside { border-left-color: #7dd3fc; background: rgba(125,211,252,0.15); }
+.rail-row.rail-upside .rr-name { font-weight: 700; }
 .rail-row.rail-target { border-left-color: var(--positive); background: rgba(45,212,163,0.20); box-shadow: inset 0 0 0 1px rgba(45,212,163,0.35); }
 .rr-l1 { display: flex; align-items: center; gap: 6px; }
 .target-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--text-muted); background: transparent; padding: 0; flex: 0 0 auto; cursor: pointer; }
@@ -1139,6 +1147,10 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-hl .cheat-rank::before { content: '\2605'; color: #b8860b; margin-right: 1px; }
   .cheat-row.cheat-target { background: #eafaf3 !important; border-left: 3px solid #0a7a3f; }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 8px; }
+  .cheat-row.cheat-rec { background: #fdf4dd !important; }
+  .cheat-row.cheat-rec .cheat-name { font-weight: 700; }
+  .cheat-row.cheat-upside { background: #e8f4fd !important; border-left: 3px solid #1a6a9a; }
+  .cheat-upside-tag { color: #1a6a9a !important; border-color: #1a6a9a !important; }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 7.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
   body.print-onepage .cheat-print-head, body.print-onepage .cheat-print-foot { display: none !important; }
   body.print-onepage .cheat-col-mobhide { display: block !important; }
@@ -1208,6 +1220,17 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-stack { box-shadow: inset 3px 0 0 #a78bfa; background: rgba(167,139,250,0.10); }
 .cheat-row.cheat-stack .cheat-name::after { content: "STACK"; margin-left: 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: #c4b1ff; border: 1px solid rgba(167,139,250,0.6); border-radius: 4px; padding: 0 4px; vertical-align: middle; }
 .cheat-row.cheat-stack.cheat-modelfit { box-shadow: inset 3px 0 0 #a78bfa; }
+/* "Highlight recommended players" (the models box). Checked, the model's own
+   buys get a heavier name, half a point of type and a wash of the model's gold
+   — enough to pull the eye, not enough to take the sheet over. The $1-$2
+   endgame shortlist gets its own sky bar because it answers a different
+   question. Both sit before .cheat-target so a favourite still wins its green. */
+.cheat-row.cheat-rec { background: rgba(227,181,58,0.10); }
+.cheat-row.cheat-rec .cheat-name { font-weight: 700; font-size: 1.045em; }
+.cheat-row.cheat-rec .cheat-val, .cheat-row.cheat-rec .cheat-ppg { font-weight: 700; }
+.cheat-row.cheat-upside { background: rgba(125,211,252,0.13); box-shadow: inset 3px 0 0 #7dd3fc; }
+.cheat-row.cheat-upside .cheat-name { font-weight: 700; }
+.cheat-upside-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: #7dd3fc; border: 1px solid rgba(125,211,252,0.55); border-radius: 4px; padding: 0 4px; margin-left: 7px; vertical-align: middle; }
 /* A target lights its whole line and stays lit until he is assigned or the flag
    comes off. It sits after model-fit and stack because those repaint the row
    background and left bar underneath it. */
@@ -1289,6 +1312,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .hm-tab.active { border-color: var(--positive); color: var(--positive); background: rgba(45,212,163,0.12); }
 .hm-pts { font-size: 12px; color: var(--text-muted); }
 .hm-tab.active .hm-pts { color: var(--positive); }
+.hm-rec { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: normal; text-transform: none; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 3px 9px; }
+.hm-rec:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.hm-rec input { margin: 0; cursor: pointer; accent-color: var(--gold-text); }
+.hm-rec.on { color: var(--gold-text); border-color: var(--gold-text); background: rgba(227,181,58,0.10); }
+.bm2-models .hm-rec { grid-column: 1 / -1; justify-content: center; margin-top: 4px; }
 .header-league { background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 16px; padding: 5px 14px; font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); cursor: pointer; white-space: nowrap; letter-spacing: 0.02em; }
 .header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
@@ -11532,7 +11560,9 @@ function CheatHeader({
   whatIfAnchors,
   onSetAnchors,
   onUpdateStrategy,
-  coachEl
+  coachEl,
+  highlightRecs,
+  onToggleHighlightRecs
 }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
@@ -11757,7 +11787,7 @@ function CheatHeader({
     className: `hm-tab ${wiOpen ? 'active' : ''}`,
     onClick: () => setWiOpen(o => !o),
     title: "What if you win specific players at set prices? Pin up to 3, then click any model to see its lineup and projected points rebuilt around those picks."
-  }, "What if?"), onClearTargets && React.createElement("button", {
+  }, "What if?"), myTeam && onToggleHighlightRecs && recHighlightToggle(highlightRecs, onToggleHighlightRecs, config), onClearTargets && React.createElement("button", {
     className: "hm-tab",
     style: {
       marginLeft: 'auto'
@@ -12343,7 +12373,11 @@ function Cheatsheet({
   whatIfAnchors,
   onSetAnchors,
   onUpdateStrategy,
-  coachEl
+  coachEl,
+  highlightRecs,
+  onToggleHighlightRecs,
+  recFitIds,
+  upsideIds
 }) {
   // Odds impact per row: computed once for the whole pool, not per player,
   // because a rank is only meaningful against the same board.
@@ -12734,7 +12768,9 @@ function Cheatsheet({
     whatIfAnchors: whatIfAnchors,
     onSetAnchors: onSetAnchors,
     onUpdateStrategy: onUpdateStrategy,
-    coachEl: coachEl
+    coachEl: coachEl,
+    highlightRecs: highlightRecs,
+    onToggleHighlightRecs: onToggleHighlightRecs
   }), highlight && React.createElement("div", {
     className: "cheat-strat-desc no-print"
   }, STRAT[highlight].desc, React.createElement("button", {
@@ -12903,7 +12939,7 @@ function Cheatsheet({
       "data-pos": pos,
       "data-tierband": undefined,
       title: drafted ? dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool' : undefined,
-      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) && !drafted ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''} ${(config && config.format === 'bestball' && !drafted && _fmtMyRoster.length && typeof bestballStackBoost === 'function' && bestballStackBoost(p, _fmtMyRoster, 1) > 0) ? 'cheat-stack' : ''}`,
+      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) && !drafted ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${highlightRecs && !drafted && recFitIds && recFitIds.has(p.id) ? 'cheat-rec' : ''} ${highlightRecs && !drafted && upsideIds && upsideIds.has(p.id) ? 'cheat-upside' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''} ${(config && config.format === 'bestball' && !drafted && _fmtMyRoster.length && typeof bestballStackBoost === 'function' && bestballStackBoost(p, _fmtMyRoster, 1) > 0) ? 'cheat-stack' : ''}`,
       onPointerDown: e => startDrag(e, p.id, pos),
       style: {
         touchAction: 'pan-y',
@@ -12941,7 +12977,10 @@ function Cheatsheet({
     }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, !drafted && p.scarce ? React.createElement("span", {
       className: "cheat-scarce" + (p.scarce.count <= 1 ? " scarce-last" : ""),
       title: `${p.scarce.count === 1 ? `The last ${pos} above` : `One of ${p.scarce.count} ${pos}s above`} a ${Math.round(p.scarce.gapPts || 0)}-point drop${p.scarce.demand ? `, with ${p.scarce.demand} team${p.scarce.demand === 1 ? '' : 's'} still needing one` : ''}.`
-    }, p.scarce.count <= 1 ? "LAST" : p.scarce.count + " LEFT") : null, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
+    }, p.scarce.count <= 1 ? "LAST" : p.scarce.count + " LEFT") : null, (!drafted && highlightRecs && upsideIds && upsideIds.get(p.id)) ? React.createElement("span", {
+      className: "cheat-upside-tag",
+      title: upsideTitle(p, upsideIds.get(p.id))
+    }, "UPSIDE") : null, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
       className: "cheat-hctag",
       title: `Handcuff to ${handcuffMap.get(p.id)}`
     }, React.createElement("svg", {
@@ -16243,6 +16282,130 @@ function handcuffDollars(bup, lead, players, config, games) {
   const cover = HANDCUFF_MISS_GAMES * (HANDCUFF_SHARE * (lead.projectedPoints || 0) / G - repl / G);
   return cover > 0 ? Math.round(cover * dpp) : 0;
 }
+// ── the $1-$2 endgame: which cheap man is worth the last dollar ─────────────
+// Late in an auction the only players a manager can still afford cost a dollar
+// or two, and their projections sit inside the noise of one another. Sorting
+// that pool by points per game re-sorts the noise, and it sorts it the wrong
+// way: the capped veteran with a defined six-point role outranks the backup who
+// is one snap from fourteen. What separates the last men on the board is the
+// size of the role they inherit if something breaks their way — and none of
+// that is in a projection, because a projection is the average over the seasons
+// where nothing does.
+//
+// upsideScores prices that conditional role and returns the points ABOVE the
+// projection, never the projection itself. That is what makes it rank
+// differently from the board.
+const UPSIDE_INHERIT = 0.72;                                       // of the man ahead's role, if the job opens
+const UPSIDE_JOB_OPENS = { RB: 0.34, TE: 0.26, WR: 0.24, QB: 0.20 }; // odds it opens across a season
+const UPSIDE_BREAKOUT = { RB: 0.40, WR: 0.42, TE: 0.38, QB: 0.25 }; // what a young player's projection leaves out
+function upsideScores(players, myTeam, games) {
+  const G = games || 17;
+  const out = new Map();
+  const pool = (players || []).filter(p => p && p.position !== 'K' && p.position !== 'DEF');
+  if (!pool.length) return out;
+  // The man ahead of him: the highest-projected player at his own team and
+  // position. That role is the whole argument for buying the man behind it.
+  const best = new Map();
+  pool.forEach(p => {
+    if (!p.team) return;
+    const k = p.team + '|' + p.position;
+    const cur = best.get(k);
+    if (!cur || (p.projectedPoints || 0) > (cur.projectedPoints || 0)) best.set(k, p);
+  });
+  // A bench body on a good offence is playing for more points than the same
+  // body on a bad one, whatever his own projection says.
+  const teamPts = {};
+  pool.forEach(p => { if (p.team) teamPts[p.team] = (teamPts[p.team] || 0) + (p.projectedPoints || 0); });
+  const ranked = Object.keys(teamPts).sort((a, b) => teamPts[b] - teamPts[a]);
+  const offRank = new Map(ranked.map((t, i) => [t, i + 1]));
+  const topOff = Math.max(4, Math.round(ranked.length / 3));
+  const mine = new Set(((myTeam && myTeam.roster) || []).map(r => r.playerId));
+  pool.forEach(p => {
+    const pos = p.position;
+    const own = p.projectedPoints || 0;
+    const why = [];
+    let pts = 0;
+    const ahead = p.team ? best.get(p.team + '|' + pos) : null;
+    if (ahead && ahead.id !== p.id) {
+      const lead = ahead.projectedPoints || 0;
+      // Only a role worth inheriting counts. A committee's number two is
+      // already being paid for the touches he has.
+      if (lead >= own * 1.35) {
+        let chance = UPSIDE_JOB_OPENS[pos] != null ? UPSIDE_JOB_OPENS[pos] : 0.2;
+        const leadInj = typeof injuryOf === 'function' ? injuryOf(ahead) : null;
+        const leadAge = typeof ageFlag === 'function' ? ageFlag(ahead) : null;
+        const gain = UPSIDE_INHERIT * lead - own;
+        if (gain > 0) {
+          if (leadInj) chance = Math.min(0.75, chance * 1.8);
+          if (leadAge) chance = Math.min(0.75, chance * 1.25);
+          pts += chance * gain;
+          why.push('one snap from ' + ahead.name + "'s role");
+          if (leadInj) why.push(ahead.name.split(' ').slice(-1)[0] + ' is hurt (' + leadInj + ')');
+          if (leadAge) why.push(ahead.name.split(' ').slice(-1)[0] + ' is ' + leadAge.t.toLowerCase());
+          if (mine.has(ahead.id)) { pts *= 1.25; why.push('handcuffs a starter you already own'); }
+        }
+      }
+    }
+    // The breakout window. A young player's projection is the average over the
+    // seasons where the job does not grow; the one where it does is not in it.
+    const yrs = typeof p.yearsExp === 'number' ? p.yearsExp : null;
+    const age = typeof ageOf === 'function' ? ageOf(p) : null;
+    if (own > 0 && ((yrs != null && yrs <= 2) || (yrs == null && age != null && age <= 24))) {
+      pts += own * (UPSIDE_BREAKOUT[pos] != null ? UPSIDE_BREAKOUT[pos] : 0.3);
+      why.push(yrs === 0 ? 'a rookie' : yrs != null ? 'year ' + (yrs + 1) + ', the breakout window' : 'age ' + age + ', still climbing');
+    }
+    const r = offRank.get(p.team);
+    if (own > 0 && r != null && r <= topOff) { pts += own * 0.16; why.push('on a top-' + topOff + ' offence'); }
+    const soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(p.team, pos) : null;
+    if (own > 0 && soft && soft.late) { pts += own * 0.10; why.push('soft in Weeks 15-17'); }
+    // What cuts it back: his own age cliff, and his own injury. Both make the
+    // good outcome less likely, not the projection smaller.
+    if (typeof ageFlag === 'function' && ageFlag(p)) pts *= 0.5;
+    if (typeof injuryOf === 'function' && injuryOf(p)) pts *= 0.7;
+    if (pts > 0) out.set(p.id, { pts: pts, ppg: pts / G, why: why });
+  });
+  return out;
+}
+// The most this manager can still bid on any ONE player: every remaining seat
+// has to be filled, so each other open seat is already spoken for at the
+// minimum bid.
+function maxSingleBid(myTeam, config) {
+  if (!myTeam || !config || !config.valuation) return null;
+  const minBid = config.valuation.minBid;
+  const spots = myTeam.spotsRemaining;
+  if (!spots || spots <= 0) return null;
+  return Math.max(minBid, (myTeam.budgetRemaining || 0) - (spots - 1) * minBid);
+}
+// The endgame shortlist. Null until the manager is actually down to dollar and
+// two-dollar players, then the handful of affordable names with the most
+// conditional upside — a shortlist, not a re-ranking, because past about a
+// dozen the emphasis stops meaning anything.
+const ENDGAME_SHORTLIST = 12;
+// Why this man and not the one above him on points. Always says what the
+// claim is worth, because "upside" with no number is a horoscope.
+function upsideTitle(p, row) {
+  if (!row) return '';
+  const why = (row.why || []).slice(0, 3).join('; ');
+  return (p && p.name ? p.name + ': ' : '') + '+' + row.ppg.toFixed(1) + ' pts/game of upside above his projection' + (why ? ' \u2014 ' + why : '') + '. Endgame flag: the cheap men with the most room to grow, not the most points per game.';
+}
+function endgameUpsideIds(players, myTeam, config, draftedIds, games) {
+  if (!config || (config.format || 'auction') !== 'auction') return null;
+  const cap = maxSingleBid(myTeam, config);
+  if (cap == null) return null;
+  const minBid = config.valuation.minBid;
+  if (cap > 2 * minBid) return null;
+  const scores = upsideScores(players, myTeam, games);
+  const priceOf = p => p.inflatedValue != null ? p.inflatedValue : p.auctionValue != null ? p.auctionValue : minBid;
+  const rows = (players || [])
+    .filter(p => !(draftedIds && draftedIds.has(p.id)) && scores.has(p.id) && priceOf(p) <= cap)
+    .map(p => Object.assign({ id: p.id }, scores.get(p.id)))
+    .sort((a, b) => b.pts - a.pts);
+  if (!rows.length) return null;
+  const floor = Math.max(10, rows[0].pts * 0.45);
+  const out = new Map();
+  rows.slice(0, ENDGAME_SHORTLIST).forEach(r => { if (r.pts >= floor) out.set(r.id, r); });
+  return out.size ? out : null;
+}
 // ── a bye you already have ───────────────────────────────────────────────────
 // Season projections already exclude the bye week, so a bye costs nothing by
 // itself. Two starters sharing one costs something: the bench can cover one
@@ -16670,7 +16833,10 @@ function PlayersRail({
   boardSortKey,
   setBoardSortKey,
   focusPlayer,
-  onCollapse
+  onCollapse,
+  highlightRecs,
+  recFitIds,
+  upsideIds
 }) {
   // Odds impact per row: computed once for the whole pool, not per player,
   // because a rank is only meaningful against the same board.
@@ -16983,6 +17149,8 @@ function PlayersRail({
       const _rage = typeof ageFlag === 'function' ? ageFlag(p) : null;
       const _rinj = typeof injuryOf === 'function' ? injuryOf(p) : null;
       const _railChips = [];
+      const _rup = (highlightRecs && upsideIds) ? upsideIds.get(p.id) : null;
+      if (_rup) _railChips.push(['UPSIDE', '#7dd3fc', upsideTitle(p, _rup)]);
       if (_rinj) _railChips.push(['✚', '#ff6b6b', 'Injury: ' + _rinj]);
       if (_rvol) _railChips.push([_rvol.t, _rvol.tone === 'good' ? '#46d39a' : '#ff6b6b', _rvol.title]);
       if (_rol) _railChips.push([_rol.t, _rol.tone === 'good' ? '#46d39a' : '#ff6b6b', _rol.title]);
@@ -17003,7 +17171,7 @@ function PlayersRail({
             pos: p.position
           };else delete rowRefs.current[p.id];
         },
-        className: `rail-row ${cls}${targets && targets.has(p.id) ? ' rail-target' : ''}`,
+        className: `rail-row ${cls}${highlightRecs && recFitIds && recFitIds.has(p.id) ? ' rail-rec' : ''}${highlightRecs && upsideIds && upsideIds.has(p.id) ? ' rail-upside' : ''}${targets && targets.has(p.id) ? ' rail-target' : ''}`,
         onPointerDown: e => startRankDrag(e, p.id, p.position),
         style: {
           cursor: 'grab',
@@ -22103,6 +22271,38 @@ function teamTaunt(team, players, config, games, idx, draftHistory) {
   if (idx != null) return jabs[(idx % jabs.length + jabs.length) % jabs.length];
   return jabs[Math.floor(Math.random() * Math.min(5, jabs.length))];
 }
+// ── who the model is actually pointing at ───────────────────────────────────
+// The undrafted players the given model would have this manager buy, or in a
+// snake take round by round. One function because three callers ask the same
+// question: the gold model-fit bar on the cheat sheet, the "highlight
+// recommended players" emphasis on the sheet and the rail, and the tests.
+function modelTargetIds(modelKey, myTeam, players, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors) {
+  if (!modelKey || !myTeam) return null;
+  const dIds = new Set((draftHistory || []).map(d => d.playerId));
+  if (config && config.format === 'snake') {
+    // Snake: one pick per round. Box the round-by-round path (never multiple players from the same round/tier).
+    const ids = new Set();
+    if (modelKey === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
+    const _focus = (MODEL_FOCUS[modelKey] && MODEL_FOCUS[modelKey].focus) || [];
+    const _vb = _focus.length ? (p => _focus.indexOf(p.position) >= 0 ? 0.35 : 0) : null;
+    let _sp = null;
+    try { _sp = buildSnakePlan(myTeam, players, config, dIds, _vb ? { valueBoost: _vb } : undefined); } catch (e) {}
+    if (_sp && _sp.byRound) _sp.byRound.forEach(b => { if (b.player && !dIds.has(b.player.id)) ids.add(b.player.id); });
+    return ids;
+  }
+  const plan = buildModel(modelKey, myTeam, players, config, dIds, roleOverrides, targets, customForcedIds, whatIfAnchors);
+  const ids = new Set();
+  if (plan && plan.slots) plan.slots.forEach(s => {
+    if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id);
+  });
+  if (plan && plan.benchTargets) plan.benchTargets.forEach(bt => {
+    if (!dIds.has(bt.playerId)) ids.add(bt.playerId);
+  });
+  if (modelKey === 'targets') (targets || new Set()).forEach(id => {
+    if (!dIds.has(id)) ids.add(id);
+  });
+  return ids;
+}
 function HeaderModelTabs({
   myTeam,
   players,
@@ -22112,7 +22312,9 @@ function HeaderModelTabs({
   seasonGames,
   model,
   onSelectModel,
-  targets
+  targets,
+  highlightRecs,
+  onToggleHighlightRecs
 }) {
   const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const games = seasonGames || 17;
@@ -22140,7 +22342,22 @@ function HeaderModelTabs({
     onClick: () => onSelectModel(model === k ? null : k)
   }, lbl, modelPts[k] != null && (k !== 'custom' || typeof customForced !== 'undefined' && customForced && customForced.size > 0) ? React.createElement("span", {
     className: "hm-pts"
-  }, (modelPts[k] / games).toFixed(1)) : null)));
+  }, (modelPts[k] / games).toFixed(1)) : null)).concat(onToggleHighlightRecs ? [recHighlightToggle(highlightRecs, onToggleHighlightRecs, config)] : []));
+}
+// The one control, rendered the same way in both models boxes: the one on the
+// draft board and the one on the cheat sheet.
+function recHighlightToggle(on, onToggle, config) {
+  const auction = (config && config.format || 'auction') === 'auction';
+  return React.createElement("label", {
+    key: "rec-highlight",
+    className: "hm-rec" + (on ? " on" : ""),
+    title: "Lift the model's own buys on the cheat sheet and the draft board \u2014 a heavier name and a light gold wash, nothing louder." + (auction ? " Once you are down to $1 and $2 players it also flags the cheap men with the most upside, which is not the same as the most points per game." : ""),
+    onPointerDown: e => e.stopPropagation()
+  }, React.createElement("input", {
+    type: "checkbox",
+    checked: !!on,
+    onChange: onToggle
+  }), "Highlight recommended");
 }
 function Coachmark({
   flag,
@@ -23056,6 +23273,10 @@ function App() {
   }, [baseValued, valueAdjust, config, draftHistory, teams, priceOverrides]);
   const marketState = useMemo(() => computeMarketState(draftHistory, valuedPlayers, config), [draftHistory, valuedPlayers, config]);
   const [draftModel, setDraftModel] = useState(null);
+  // The models box's own checkbox. It survives a reload because a manager who
+  // turned it on before the draft wants it on during the draft.
+  const [highlightRecs, setHighlightRecs] = useState(() => { try { return localStorage.getItem('it_hl_recs') === '1'; } catch (e) { return false; } });
+  const toggleHighlightRecs = () => setHighlightRecs(v => { const n = !v; try { localStorage.setItem('it_hl_recs', n ? '1' : '0'); } catch (e) {} return n; });
   const _basePersonalized = useMemo(() => {
     const myTeam = teams.find(t => t.isMine);
     const scarMap = scarcityFlags(valuedPlayers, new Set(draftHistory.map(d => d.playerId)), config, teams);
@@ -23343,35 +23564,16 @@ function App() {
       return d ? Object.assign({}, p, { youShift: d, youShiftPick: youShifts.pick }) : p;
     });
   }, [_starPersonalized, youShifts]);
-  const modelFitIds = useMemo(() => {
-    if (!draftModel) return null;
-    const myTeam = teams.find(t => t.isMine);
-    if (!myTeam) return null;
-    const dIds = new Set(draftHistory.map(d => d.playerId));
-    if (config && config.format === 'snake') {
-      // Snake: one pick per round. Box the round-by-round path (never multiple players from the same round/tier).
-      const ids = new Set();
-      if (draftModel === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
-      const _focus = (MODEL_FOCUS[draftModel] && MODEL_FOCUS[draftModel].focus) || [];
-      const _vb = _focus.length ? (p => _focus.indexOf(p.position) >= 0 ? 0.35 : 0) : null;
-      let _sp = null;
-      try { _sp = buildSnakePlan(myTeam, personalizedPlayers, config, dIds, _vb ? { valueBoost: _vb } : undefined); } catch (e) {}
-      if (_sp && _sp.byRound) _sp.byRound.forEach(b => { if (b.player && !dIds.has(b.player.id)) ids.add(b.player.id); });
-      return ids;
-    }
-    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets, customForcedIds, whatIfAnchors);
-    const ids = new Set();
-    if (plan && plan.slots) plan.slots.forEach(s => {
-      if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id);
-    });
-    if (plan && plan.benchTargets) plan.benchTargets.forEach(bt => {
-      if (!dIds.has(bt.playerId)) ids.add(bt.playerId);
-    });
-    if (draftModel === 'targets') (targets || new Set()).forEach(id => {
-      if (!dIds.has(id)) ids.add(id);
-    });
-    return ids;
-  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
+  const modelFitIds = useMemo(() => modelTargetIds(draftModel, teams.find(t => t.isMine), personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors),
+    [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
+  // What "highlight recommended players" emphasises. With no model picked the
+  // models box already shows the Ideal Team, so the emphasis follows what the
+  // box is showing rather than going blank and reading as a broken checkbox.
+  const recFitIds = useMemo(() => {
+    if (!highlightRecs) return null;
+    if (draftModel) return modelFitIds;
+    return modelTargetIds('ideal', teams.find(t => t.isMine), personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors);
+  }, [highlightRecs, draftModel, modelFitIds, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
   useEffect(() => {
     if (remoteApplyRef.current) {
       remoteApplyRef.current = false;
@@ -24128,6 +24330,11 @@ function App() {
   const cliffRows = useMemo(() => cliffWatch(personalizedPlayers, teams, config, draftedIds, myTeam), [personalizedPlayers, teams, config, draftedIds, myTeam]);
   const nomNext = useMemo(() => nominationBoard(personalizedPlayers, teams, myTeam, plan, config, draftedIds, 4), [personalizedPlayers, teams, myTeam, plan, config, draftedIds]);
   const nomInsight = useMemo(() => liveNomination ? nominationInsight(liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState, SEASON_GAMES) : null, [liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState]);
+  // The $1-$2 endgame shortlist. Null until the manager is down to it.
+  const upsideIds = useMemo(() => {
+    if (!highlightRecs) return null;
+    return endgameUpsideIds(personalizedPlayers, teams.find(t => t.isMine), config, draftedIds, SEASON_GAMES);
+  }, [highlightRecs, personalizedPlayers, teams, config, draftedIds]);
   const planHighlights = useMemo(() => {
     const greenS = new Set(),
       yellowS = new Set();
@@ -24283,6 +24490,10 @@ function App() {
       onOpenNews: () => setNewsOpen(true),
       mode: "live",
       modelFitIds: modelFitIds,
+      highlightRecs: highlightRecs,
+      onToggleHighlightRecs: toggleHighlightRecs,
+      recFitIds: recFitIds,
+      upsideIds: upsideIds,
       draftedIds: draftedIds,
       onAssignPlayer: setAssignPlayer,
       onUnassignPlayer: handleUnassignPlayer,
@@ -24429,6 +24640,9 @@ function App() {
       yellow: (planHighlights && planHighlights.yellow) || new Set(),
       targets: targets,
       onToggleTarget: handleToggleTarget,
+      highlightRecs: highlightRecs,
+      recFitIds: recFitIds,
+      upsideIds: upsideIds,
       starred: starred,
       onToggleStar: handleToggleStar,
       customOrder: customOrder,
@@ -24480,7 +24694,7 @@ function App() {
         className: "panel-toggle bm2-hide",
         onClick: function () { setBoardModelsOpen(false); },
         title: "Minimize the draft models"
-      }, "📐 Draft Models ▾"), React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
+      }, "📐 Draft Models ▾"), React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets, highlightRecs: highlightRecs, onToggleHighlightRecs: toggleHighlightRecs })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
     })(), React.createElement("div", {
       className: "board-layout board-norail"
     }, React.createElement(TeamsBoard, {

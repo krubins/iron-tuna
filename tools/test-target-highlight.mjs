@@ -68,6 +68,12 @@ function cheatClasses({ targeted, drafted, mine }) {
     config: { format: 'auction' },
     _fmtMyRoster: [],
     bestballStackBoost: undefined,
+    // The models box's "highlight recommended players" toggle, off here — this
+    // test is about the target flag, and tools/test-recommended-highlight.mjs
+    // covers the emphasis.
+    highlightRecs: false,
+    recFitIds: null,
+    upsideIds: null,
     p: { id }
   };
   const keys = Object.keys(scope);
@@ -98,6 +104,9 @@ function railClasses({ targeted, plan }) {
   const scope = {
     cls: plan || '',
     targets: targeted ? new Set([id]) : new Set(),
+    highlightRecs: false,
+    recFitIds: null,
+    upsideIds: null,
     p: { id }
   };
   const keys = Object.keys(scope);
