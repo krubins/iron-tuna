@@ -1361,10 +1361,6 @@ input:focus, select:focus { border-color: var(--accent); }
 .fable-input textarea { flex: 1; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: 10px; padding: 9px 12px; color: var(--text-primary); font-size: 14px; font-family: inherit; line-height: 1.4; resize: none; min-height: 44px; max-height: 120px; box-sizing: border-box; }
 .fable-input button { border-radius: 10px; padding: 0 15px; min-height: 44px; background: #7c5cff; color: #fff; border: none; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .fable-input button:disabled { opacity: 0.45; cursor: default; }
-.fable-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 7px 8px 0; flex: 0 0 auto; }
-.fable-chip { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.03em; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: 11px; padding: 3px 9px; color: var(--text-secondary); cursor: pointer; }
-.fable-chip:hover:not(:disabled) { border-color: #7c5cff; color: #b9a6ff; }
-.fable-chip:disabled { opacity: 0.4; cursor: default; }
 .fable-foot { padding: 5px 12px 7px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; color: var(--text-muted); border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; gap: 8px; flex: 0 0 auto; }
 .fable-grip { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 6; touch-action: none; }
 .fable-grip::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 7px; height: 7px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); }
@@ -5747,17 +5743,9 @@ function _liveNorm(s) {
 // The last /api/live payload, kept at module level so the Value Coach can read
 // the depth charts off it without threading a prop through every render site.
 let LIVE_STATUS = null;
-// The feed's shape version, and it has to be in the URL: /api/live is served
-// with a six-hour public cache that Cloudflare's edge AND the browser honour,
-// so bumping the worker's own cache key (the same number, in _worker.js) left
-// every reader on the pre-depth-chart payload for up to six hours -- injury
-// tags present, slots absent, and the coach saying the chart "did not load".
-// A new URL is a new object to both caches. Bump both numbers together;
-// tools/test-depth-charts.mjs holds them equal.
-const LIVE_FEED_VERSION = 3;
 async function fetchLiveStatus() {
   try {
-    const r = await fetch('/api/live?v=' + LIVE_FEED_VERSION);
+    const r = await fetch('/api/live');
     if (!r.ok) return null;
     const d = await r.json();
     const out = d && d.players ? d.players : null;
@@ -19475,9 +19463,7 @@ function buildCoachContext(q, ctx) {
     plan,
     marketState,
     games,
-    depthCharts,
-    draftHistory,
-    onTheBlock
+    depthCharts
   } = ctx;
   const di = draftedIds || new Set();
   const g = games || 17;
@@ -19522,25 +19508,14 @@ function buildCoachContext(q, ctx) {
       });
     }
   } catch (e) {}
-  // What a player actually costs is set by the runner-up bidder, not by the
-  // richest team in the room, and opponentCompetition already works that out for
-  // the insight strip. Attaching it here is the difference between "he is worth
-  // $34" and "he is worth $34 and the runner-up caps at $19, so open at $12".
-  const withComp = p => {
-    const s = slim(p);
-    if ((config.format || 'auction') === 'auction') {
-      try { s.competition = opponentCompetition(p, teams, myTeam, config); } catch (e) {}
-    }
-    return s;
-  };
   const named = [];
   try {
     const f1 = findPlayer(stripEval(q), evalPlayers);
-    if (f1.player) named.push(withComp(f1.player));
+    if (f1.player) named.push(slim(f1.player));
   } catch (e) {}
   try {
     const f2 = findPlayerInText(q, evalPlayers);
-    if (f2.player && !named.find(n => n.name === f2.player.name)) named.push(withComp(f2.player));
+    if (f2.player && !named.find(n => n.name === f2.player.name)) named.push(slim(f2.player));
   } catch (e) {}
   const minBid = config.valuation && config.valuation.minBid || 1;
   const _cfmt = config.format || 'auction';
@@ -19557,66 +19532,6 @@ function buildCoachContext(q, ctx) {
       drafted: di.has(p.id) || undefined,
       injury: line
     }));
-  const _auc = _cfmt === 'auction';
-  // The rest of the room. Both coaches used to see nothing but the league size,
-  // which left them unable to answer what an auction actually turns on: who else
-  // needs this position, and who can still outbid me. The insight strip has had
-  // all of it since generateTeamInsights was written; it just never reached the
-  // model, so the panel beside the coach was better informed than the coach.
-  const _tmax = t => Math.max(minBid, (t.budgetRemaining || 0) - Math.max(0, (t.spotsRemaining || 0) - 1) * minBid);
-  const _rivals = (teams || []).filter(t => !t.isMine).map(t => {
-    const needs = {};
-    Object.keys(config.roster).forEach(pos => {
-      if (positionFull(t, pos, config)) return;
-      const n = openStarterNeed(t, pos, config);
-      if (n.base > 0) needs[pos] = n.base + ' starter' + (n.base === 1 ? '' : 's') + (n.flex > 0 ? ' + flex' : '');
-      else if (n.flex > 0) needs[pos] = 'flex only';
-    });
-    return {
-      team: t.name,
-      spotsRemaining: t.spotsRemaining,
-      budgetRemaining: _auc ? t.budgetRemaining : undefined,
-      // The most this team can still put on one player and finish its roster at
-      // the $1 minimum, i.e. the ceiling it could reach if it wanted to.
-      maxBid: _auc ? ((t.spotsRemaining || 0) > 0 ? _tmax(t) : 0) : undefined,
-      openStarterNeeds: Object.keys(needs).length ? needs : undefined,
-      roster: (t.roster || []).map(r => {
-        const p = (evalPlayers || []).find(x => x.id === r.playerId);
-        return (p ? p.name : r.playerId) + ' ' + r.position + (_auc ? ' $' + r.price : '');
-      })
-    };
-  });
-  // What the room has actually paid per position against this app's own Value.
-  const _market = _auc && marketState ? Object.keys(marketState).reduce((o, pos) => {
-    const st = marketState[pos];
-    if (!st || !st.sampleSize) return o;
-    o[pos] = {
-      drafted: st.drafted,
-      paidVsValue: +(st.ratio || 1).toFixed(2),
-      avgOverpay: Math.round(st.avgDelta || 0),
-      heat: st.heat,
-      valueLeftOnBoard: Math.round(st.remainingFairValue || 0)
-    };
-    return o;
-  }, {}) : null;
-  // The last dozen results, newest first. Aggregate inflation does not tell you
-  // that the three running backs before this one all went 30% over, and that is
-  // the read the manager wants when he asks whether to push.
-  const _recent = (draftHistory || []).slice(-12).reverse().map(d => {
-    const p = (evalPlayers || []).find(x => x.id === d.playerId);
-    const t = (teams || []).find(x => x.id === d.teamId);
-    return {
-      name: p ? p.name : d.playerId,
-      pos: d.position || (p ? p.position : undefined),
-      to: t ? t.name : undefined,
-      paid: _auc ? d.price : undefined,
-      value: _auc && p ? p.auctionValue : undefined
-    };
-  });
-  // The player up for bid right now. Without this the coach only knows about a
-  // player the manager troubled to type out, which mid-bid is nobody.
-  let _block = null;
-  try { if (onTheBlock) _block = withComp(onTheBlock); } catch (e) {}
   return {
     format: _cfmt,
     formatInfo: _cfmt === 'snake' ? {
@@ -19673,13 +19588,6 @@ function buildCoachContext(q, ctx) {
     // or a news-desk entry; absent when nobody is, so the prompt's "no field
     // means healthy as far as the feed knows" holds for the whole list too.
     injuryReport: injuryReport.length ? injuryReport : undefined,
-    // Every other manager's money and holes, the player up for bid, what the
-    // room has been paying, and the last dozen results. See legendRoom.
-    rivals: _rivals.length ? _rivals : undefined,
-    onTheBlock: _block || undefined,
-    marketHeat: _market && Object.keys(_market).length ? _market : undefined,
-    recentPicks: _recent.length ? _recent : undefined,
-    legendRoom: 'rivals is every other team in the league: spotsRemaining, budgetRemaining, the starter holes it still has (openStarterNeeds), its roster so far, and maxBid, the most it could still put on ONE player and still fill its remaining slots at the $' + minBid + ' minimum. onTheBlock is the player up for bid this second, when there is one. competition on a player reads the bidding you face for him: bidders = rival teams that both need him and can afford him, runnerUp = the maxBid of the SECOND-best of those. An English auction settles a dollar over the runner-up, not over the richest team, so runnerUp is what he should actually cost you; runnerUp 0 with bidders 1 means nobody can push you and you can open near the minimum. marketHeat is what the room has actually paid per position: paidVsValue above 1 means they are overpaying there, so the players left at that position are cheap against the sheet, and below 1 means the discounts have already been taken. recentPicks is the last dozen players won, newest first, with what they went for against their Value. Answer who-needs-what, can-I-be-outbid, what-should-I-nominate and how-hot-is-the-room from these fields, and never state a rival budget, bidder count or sale price that is not in them.',
     legend: 'Proj = likely market/auction price. Value = VBD worth in a vacuum. You = the most THIS manager can pay before his starting lineup stops improving, an indifference price, which normally sits at or BELOW Value and is a bidding ceiling rather than a grade. On the draft board and cheat sheet a player name is colored by Proj against his Value plus a scarcity premium: the premium is added only when the optimal plan puts him in an open starting slot AND there is a real points cliff behind him at his position, and it is the size of that drop. RED when Proj is above that number (the room will likely overpay), GREEN when Proj is below it (a buy). The per-player flag field encodes this color. If asked why a player is red or green, explain it from his Proj against Value, and mention the scarcity premium when he has one; never claim it is another tool doing the coloring, you ARE the tool. Do not grade a player by his You number: a star can be worth buying well above You, because You only measures the point at which he stops improving your lineup.',
   };
 }
@@ -19762,12 +19670,7 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   // and collected into injuryReport. The model is told what a missing field
   // means so it neither invents a designation nor calls a tagged player healthy.
   const _injuryCtx = " INJURY REPORT: the injuryReport field in the JSON below lists every player on the board carrying an injury designation, a roster status other than Active, or a news-desk entry, best projection first, and every player elsewhere in the data carries the same text in his injury field. The designations (Questionable, Doubtful, Out, IR, PUP, Sus) come from the same live feed as the depth charts and override your memory; the body part and note are the feed's, and the updated date says how fresh the designation is. A news desk entry is news this manager pasted in themselves, already priced into his projection by the percent shown, and when it disagrees with the feed the news desk wins. A player with no injury field is healthy as far as the feed knows: never assert an injury the data does not show, and if asked about one you cannot see, say the report does not show it. The risk field already counts an injury designation, so do not double-penalise. When an injured starter comes up, use the depth chart to name who benefits."
-  // The room: rival budgets and holes, who can outbid the manager on a given
-  // player, positional inflation, and what just sold. All of it used to be
-  // dropped on the floor by buildCoachContext, which left the coach answering
-  // "can I be outbid?" from nothing but the league size.
-  const _roomCtx = contextObj && contextObj.rivals ? " THE ROOM: the JSON below carries rivals, every other manager with his remaining budget, open spots, unfilled starter holes and maxBid (the most that team could still put on ONE player and still fill its roster at the minimum); onTheBlock, the player up for bid right now when there is one; marketHeat, what the room has actually paid per position against Value; and recentPicks, the last dozen players won, newest first, with the price and the Value. A player in playersInQuestion or onTheBlock also carries competition: bidders is how many rivals both need him and can afford him, and runnerUp is the maxBid of the SECOND-best of those. An English auction settles a dollar over the runner-up, not over the richest team, so runnerUp is what he should actually cost, and bidders 1 with runnerUp 0 means nobody can push you, so open near the minimum. This is also how you answer what to nominate: a player at a position you are full at, that several funded rivals still need, drains their money; a player you want that almost nobody can outbid you on is one to float early. Quote the numbers in these fields and never invent a rival budget, a bidder count or a sale price." : "";
-  const sys = _coachId + _seasonCtx + _staffCtx + _depthCtx + _injuryCtx + _roomCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager can pay before the player stops improving his starting lineup. You is an indifference ceiling, not a grade, and it normally sits at or below Value, so never argue a player is a bad buy because his Proj is above his You. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value plus any scarcity premium, and GREEN when Proj is below it; each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. A player earns a scarcity premium only when the optimal plan needs him in an open starting slot and there is a real points cliff behind him at his position, and the premium is the size of that drop, which is why such a player can be priced above Value and still read GREEN. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED player is NOT automatically a pass. Paying above Value can be correct when his points-per-game edge over a replacement at his position is bigger than what the same dollars buy elsewhere, so weigh his positional edge and any scarcity premium, not the Proj-vs-Value gap alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, except for who coaches whom, which comes from the staff list above and nowhere else. If you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  const sys = _coachId + _seasonCtx + _staffCtx + _depthCtx + _injuryCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager can pay before the player stops improving his starting lineup. You is an indifference ceiling, not a grade, and it normally sits at or below Value, so never argue a player is a bad buy because his Proj is above his You. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value plus any scarcity premium, and GREEN when Proj is below it; each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. A player earns a scarcity premium only when the optimal plan needs him in an open starting slot and there is a real points cliff behind him at his position, and the premium is the size of that drop, which is why such a player can be priced above Value and still read GREEN. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED player is NOT automatically a pass. Paying above Value can be correct when his points-per-game edge over a replacement at his position is bigger than what the same dollars buy elsewhere, so weigh his positional edge and any scarcity premium, not the Proj-vs-Value gap alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, except for who coaches whom, which comes from the staff list above and nowhere else. If you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).filter(m => m.text && m.text !== '…' && m.text !== '(no response)' && !m.intro).slice(-6).map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
     content: m.text
@@ -20293,7 +20196,7 @@ function loadFableDock() {
   } catch (e) {}
   return def;
 }
-function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, seasonGames, draftHistory, currentNomination }) {
+function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, seasonGames }) {
   const [st, setSt] = useState(loadFableDock);
   const [msgs, setMsgs] = useState([]);
   const [q, setQ] = useState('');
@@ -20316,8 +20219,6 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
   const abortRef = useRef(null);
   const idRef = useRef(1);
   const base = () => String(st.bridge || FABLE_BRIDGE_DEFAULT).replace(/\/+$/, '');
-  // Snake and best ball have no bidding, so the quick asks change wording.
-  const _fAuc = ((config && config.format) || 'auction') === 'auction';
 
   useEffect(() => {
     try { localStorage.setItem(FABLE_DOCK_KEY, JSON.stringify(st)); } catch (e) {}
@@ -20369,10 +20270,10 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
     window.addEventListener('pointerup', up);
   }
 
-  async function send(override) {
-    const text = String(override != null ? override : (q || '')).trim();
+  async function send() {
+    const text = (q || '').trim();
     if (!text || busy) return;
-    if (override == null) setQ('');
+    setQ('');
     const uid = idRef.current++, bid = idRef.current++;
     const priorMsgs = msgs;
     setMsgs(m => [...m, { role: 'user', text, _id: uid }, { role: 'bot', text: '', _id: bid, pending: true }]);
@@ -20388,11 +20289,7 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
     try {
       const state = buildCoachContext(text, {
         evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, games: seasonGames,
-        depthCharts: depthChartsFromLive(LIVE_STATUS),
-        // Rebuilt on every ask, so each assignment logged on the board is already
-        // in the next answer: rivals carry the winner's roster and new budget,
-        // recentPicks carries the sale price.
-        draftHistory, onTheBlock: currentNomination
+        depthCharts: depthChartsFromLive(LIVE_STATUS)
       });
       const r = await fetch(base() + '/ask', {
         method: 'POST',
@@ -20500,32 +20397,7 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
         : React.createElement("div", { className: "fable-empty" },
           health === false
             ? "Bridge offline. Double-click Start-Fable.bat, then reopen this panel. If it is running on a port other than the default, set that with Bridge above."
-            : "Fable sees your live board — every manager's budget and roster holes, who can still outbid you, what the room has been paying, and the player on the block. Ask the slower questions here: budget shape, whether you're about to get squeezed at a position, how the endgame plays out. Answers take 20–60s.")),
-    // One tap beats typing a name while the bidding is live, which is the whole
-    // reason the player on the block is now in the context.
-    React.createElement("div", { className: "fable-chips" },
-      currentNomination ? React.createElement("button", {
-        className: "fable-chip", disabled: busy,
-        onClick: () => send(_fAuc
-          ? 'Should I bid on ' + currentNomination.name + ', and up to what? Who am I bidding against?'
-          : 'Should I take ' + currentNomination.name + ' here?')
-      }, "↑ " + currentNomination.name) : null,
-      React.createElement("button", {
-        className: "fable-chip", disabled: busy,
-        onClick: () => send(_fAuc
-          ? 'Which teams can still outbid me, and on which positions?'
-          : 'Which positions are about to get picked clean before my next pick?')
-      }, _fAuc ? "Who can outbid me?" : "What runs next?"),
-      React.createElement("button", {
-        className: "fable-chip", disabled: busy,
-        onClick: () => send(_fAuc
-          ? 'Who should I nominate next, and why?'
-          : 'Who should I be targeting from here?')
-      }, _fAuc ? "What to nominate?" : "Who do I target?"),
-      React.createElement("button", {
-        className: "fable-chip", disabled: busy,
-        onClick: () => send('How is the room pricing things so far, and where does that leave my budget?')
-      }, "Read the room")),
+            : "Fable sees your live board — budgets, rosters, prices, who's gone. Ask the slower questions here: budget shape, whether you're about to get squeezed at a position, how the endgame plays out. Answers take 20–60s.")),
     React.createElement("div", { className: "fable-input" },
       React.createElement("textarea", {
         value: q,
@@ -20537,13 +20409,10 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       }),
       busy
         ? React.createElement("button", { onClick: () => { try { abortRef.current && abortRef.current.abort(); } catch (e) {} } }, "Stop")
-        : React.createElement("button", { onClick: () => send(), disabled: !q.trim() }, "Ask")),
+        : React.createElement("button", { onClick: send, disabled: !q.trim() }, "Ask")),
     React.createElement("div", { className: "fable-foot" },
       React.createElement("span", null, busy ? 'fable · ' + elapsed + 's' : health === false ? 'bridge offline' : 'fable · subscription'),
-      // Standing proof the panel is current: every assignment on the board bumps
-      // this, and the same picks ride into the next answer.
-      React.createElement("span", null, ((draftHistory || []).length ? (draftHistory.length + ' picks in') : 'no picks yet')
-        + (last ? ' · ' + (Math.round(last.ms / 100) / 10) + 's' : ''))),
+      React.createElement("span", null, last ? (Math.round(last.ms / 100) / 10) + 's' : '')),
     React.createElement("div", { className: "fable-grip", onPointerDown: startResize }));
 }
 function ValueCoach({
@@ -20568,9 +20437,7 @@ function ValueCoach({
   onSaveAi,
   onOpenChange,
   embed,
-  onBeforeAsk,
-  draftHistory,
-  currentNomination
+  onBeforeAsk
 }) {
   const [open, setOpen] = useState(() => {
     if (locked) return false;
@@ -20700,11 +20567,7 @@ function ValueCoach({
         plan,
         marketState,
         games: seasonGames,
-        depthCharts: depthChartsFromLive(LIVE_STATUS),
-        // Rebuilt on every ask, so a player assigned a second ago is already in
-        // the next answer, both as a sale price and as the winner's new budget.
-        draftHistory,
-        onTheBlock: currentNomination
+        depthCharts: depthChartsFromLive(LIVE_STATUS)
       });
       const onDelta = ai.format === 'proxy' ? full => setMsgs(m => m.map(x => x._id === tid ? {
         role: 'bot',
@@ -24064,8 +23927,6 @@ function App() {
   function renderMainContent() {
     if (view === 'coach') {
       return React.createElement("div", { className: "mobile-coach-view" }, React.createElement(ValueCoach, {
-    draftHistory: draftHistory,
-    currentNomination: currentNomination,
     valueAdjust: valueAdjust,
     onApply: setValueAdjust,
     config: config,
@@ -24134,8 +23995,6 @@ function App() {
       });
     }
     const coachEl = !showSplash && !currentNomination && !assignPlayer && (view === 'prep' || view === 'split') ? React.createElement(ValueCoach, {
-      draftHistory: draftHistory,
-      currentNomination: currentNomination,
       valueAdjust: valueAdjust,
       onApply: setValueAdjust,
       config: config,
@@ -24285,8 +24144,6 @@ function App() {
     }), (view === 'board' && !showSplash) && React.createElement("div", {
       className: "board-coach-inline no-print"
     }, React.createElement(ValueCoach, {
-    draftHistory: draftHistory,
-    currentNomination: currentNomination,
     valueAdjust: valueAdjust,
     onApply: setValueAdjust,
     config: config,
@@ -24631,8 +24488,6 @@ function App() {
       window.requestAnimationFrame(sync);
     }
   }, React.createElement(ValueCoach, {
-    draftHistory: draftHistory,
-    currentNomination: currentNomination,
     valueAdjust: valueAdjust,
     onApply: setValueAdjust,
     config: config,
@@ -24746,8 +24601,6 @@ function App() {
     text: shareText,
     onClose: () => setOverlay(null)
   }), IT_FABLE && !showSplash && React.createElement(FableDock, {
-    draftHistory: draftHistory,
-    currentNomination: currentNomination,
     evalPlayers: personalizedPlayers,
     myTeam: myTeam,
     teams: teams,
