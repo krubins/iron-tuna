@@ -7352,3 +7352,127 @@ desk (§ draft-day edges) remains the only way either becomes points, and the
 coach is told which of its lines already did. And it is only as current as
 Sleeper's chart plus the six-hour edge cache, which the prompt does not claim
 otherwise.
+
+---
+
+## 64. September 2026: positional scarcity in the bid, not just in the colour
+
+A reader's account of the failure this fixes, which is the clearest statement
+of it: *"there were six good quarterbacks and it was clear that to have an
+elite team you had to have one of them. All six ended up going for above value
+and I got the sixth one, but had to pay a premium to avoid falling off the
+cliff."*
+
+The board could not see that. Two separate things were wrong.
+
+### 1. The detector only counted a cliff one or two players deep
+
+`scarcityFlags` broke at the **first** gap that qualified and then discarded it
+unless `cliffIdx <= 2`. A tier six deep was invisible by construction, and the
+first-gap break meant a single outlier at the top of a position hid everything
+under him: on the live board Josh Allen stands 43.6 points clear, so the five
+quarterbacks behind him sitting above a 12.8-point drop of their own were never
+flagged at all.
+
+It now takes the **room** (`teams`) and reads:
+
+| | before | now |
+|---|---|---|
+| how deep a cliff can be | 2, always | the demand — teams that still have to start one, capped at 12 |
+| how many cliffs it looks at | the first | every one in the window |
+| which cliff a player is priced against | the first one found | the most binding one still in front of *him* |
+| a position every team has filled | still flagged | no flag: nothing to be scarce for |
+
+"Most binding" is `gap × cliffSqueeze(idx, demand)`. So Allen is priced against
+his own 43-point drop and the five behind him against the 12.8 under them,
+which is what each of them would actually fall off.
+
+`positionDemand(pos, teams, config)` is the demand side: teams whose roster is
+short of `starters` at the position, or the league's own shape when no room is
+handed over. **Passing `teams` is what turns all of this on.** Without it the
+old blind window of two is kept exactly, so any caller that has no room to
+measure against prices as it always did.
+
+`cliffSqueeze(count, demand)` is the one reading everything else is built on:
+the share of the room the stack can no longer cover, 0 to 1. One player left
+for a full room is 1; a stack as deep as the room is nearly 0. **Every player
+who leaves the board pushes it up**, which is what makes the premium and the
+alert escalate as the cliff gets closer, rather than arriving after it.
+
+### 2. You $ ignored scarcity entirely
+
+`switchPrice` is an indifference price computed against a plan it assumes can be
+rebuilt from the pool **at the prices on the board**. That assumption is exactly
+what a run breaks: the teams that miss do not buy the seventh quarterback at his
+price, they bid the sixth past his. A ceiling that ignores that is a ceiling you
+lose at.
+
+So `_basePersonalized` now adds a cliff premium to `personalValue`, gated on
+`needEligPos` — a position where the optimal plan still has a starting slot
+open. A cliff you are already past is somebody else's problem and pays nothing.
+The row carries `cliffPrem` so the cell can explain itself.
+
+**What the premium is.** Given the board's own `dollarsPerPoint`, it needs no
+tuned constant: falling off the cliff costs `gapPts`, the board says what a
+point is worth, so the drop has a price — weighted by the squeeze, because you
+only pay for the part of it the room can actually take from you. Same argument
+and same shape as `handcuffDollars` and `byeStackDollars`. Capped at 15% of the
+budget, because a ceiling that can eat a sixth of the roster's money is not a
+ceiling.
+
+`scarcityPremium(fl, budget, dpp)` keeps its old two-argument behaviour for
+`boardValue`, which only ever sees the config and has no pool to convert
+against. That path is unchanged except that a known room now moves its rate.
+
+**This does not reopen §20.** That section's rule — *do not grade the name
+against You* — still holds and is still tested. The colour asks "is this price
+fair"; You answers "what may I pay". Nothing about the colour changed here.
+
+On the live board, pre-draft: Allen's You goes $44 → $62 against a $47 market,
+the four behind him get $1 to $3, and QB6 gets nothing. Log four quarterbacks
+and Hurts becomes the last man above a now 15-point drop: the banner turns
+critical and his You is $27 against a $23 Value.
+
+### 3. The alert
+
+`AlertsBox` was **dead code** — defined, never rendered, and its `.alert-crit`
+class never existed in the CSS. It is gone. `cliffWatch()` + `CliffWatch` render
+in its place, at the top of the draft board, one row per position, loudest
+first, at most three:
+
+| level | when | how it reads |
+|---|---|---|
+| `critical` | one left, or squeeze ≥ 0.85 — **and picks have started** | red, pulsing, ⚠ |
+| `urgent` | squeeze ≥ 0.6, or one left pre-draft | amber, still |
+| `watch` | a live cliff further out | gold rule |
+| `info` | you already start one — never rendered | — |
+
+The pre-draft hold on `critical` is deliberate: four positions are thin on any
+untouched board, and four pulsing rows there teach the reader to ignore the
+banner by the time one of them means something. Dismissal is keyed to
+`pos:count`, so waving off "6 QBs left" does not silence "2 QBs left" ten picks
+later.
+
+The same reading also appears on the row itself — a `LAST` / `n LEFT` chip on
+the name (reviving the orphaned `.cheat-scarce` CSS), the You figure tinted
+amber with a ▲ and a tooltip naming the drop and the buyers — and in
+`draftAlerts`, whose cliff branch was capped at `remaining <= 3` and now measures
+against demand the same way.
+
+### Tests
+
+`node tools/test-cliff-premium.mjs` — 52 assertions, no browser, no network,
+wired into `checks.yml`. It lifts the real functions out of `index.html` by
+brace matching (the harness is `tools/test-plan-pricing.mjs`) and pins: the six
+-deep tier flagging all six, the four-team room flagging none, the teamless
+fallback, nested cliffs pricing each player against his own drop, the premium
+rising monotonically as a tier drains, the cap, the points-times-dollars shape,
+the banner's levels and copy, and the four source lines that put the premium on
+the bid. `tools/test-board-colour.mjs` still pins the colour contract (its
+`START` marker moved with the signature).
+
+`tools/test-you-column.mjs` and `tools/test-market-anchors.mjs` both still pass
+in Chromium, which is the check that matters most here: the premium is added
+before the monotonic clamp, and a column that climbs as you read down it is the
+one defect this feature could plausibly have introduced. It does not, because
+the premium is constant across the players above a cliff and zero below it.

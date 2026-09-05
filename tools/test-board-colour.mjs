@@ -36,7 +36,7 @@ const ok = (name, cond, extra = '') => {
 const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
 // ── lift the two pure functions out of the app ─────────────────────────────
-const START = 'function scarcityPremium(fl, budget) {';
+const START = 'function scarcityPremium(fl, budget, dpp) {';
 const END = 'function costColor(price, value) {';
 const a = src.indexOf(START), b = src.indexOf(END, a);
 if (a < 0 || b < 0) { console.error('FAIL: could not locate the grading helpers in index.html'); process.exit(1); }
@@ -61,6 +61,13 @@ console.log('\nwhat the cliff premium is worth');
      scarcityPremium({ count: 1, gapPts: 100000 }, 200) <= 30);
   ok('it scales with the budget, not with dollars',
      scarcityPremium({ count: 1, gapPts: 30 }, 400) > scarcityPremium({ count: 1, gapPts: 30 }, 200));
+  // The colour path has no pool to convert points against, so it keeps the
+  // budget-share reading. The BID does have one, and prices the drop itself —
+  // see tools/test-cliff-premium.mjs. Both are capped the same way.
+  ok('with the board\'s dollars per point it prices the drop, not a share of the budget',
+     scarcityPremium({ count: 1, gapPts: 30, demand: 12 }, 200, 0.5) === 15);
+  ok('the cap holds on that path too',
+     scarcityPremium({ count: 1, gapPts: 300, demand: 12 }, 200, 0.5) <= 30);
 }
 
 console.log('\nwhat the board grades a name against');

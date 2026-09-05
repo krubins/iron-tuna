@@ -395,6 +395,14 @@ jobs:
       - name: What the board grades a player name against
         run: node tools/test-board-colour.mjs
 
+      # Positional scarcity in the BID, not just the colour. The detector used
+      # to see a cliff only when one or two players stood above it, so a tier of
+      # six elite quarterbacks in a twelve-team room — the case where every one
+      # of them goes over value and the team that waits pays the most — was
+      # invisible to it. No browser, no network.
+      - name: The cliff premium on You, and the alert that precedes it
+        run: node tools/test-cliff-premium.mjs
+
       # The ribbon's player lookup and the /player/<slug> card it lands on. The
       # index is generated from PROJECTIONS, so a projections update that skips
       # tools/build-front.mjs leaves the box unable to find a player the site is
