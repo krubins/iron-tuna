@@ -15145,9 +15145,15 @@ function BudgetSliders({
   onChange
 }) {
   const alloc = strategy && strategy.allocation != null ? strategy.allocation : 0.55;
-  const conc = strategy && strategy.concentration != null ? strategy.concentration : 0.5;
+  // Concentration is a CAP, not a strategy: it can forbid plans, it cannot find
+  // better ones (see perCap in buildOptimalPlan). Left un-dragged it must
+  // therefore forbid nothing, or the board quietly hands you a worse team than
+  // the planner already found. Default 1 = Auto = no cap; dragging toward Even
+  // tightens it.
+  const conc = strategy && strategy.concentration != null ? strategy.concentration : 1;
   const benchPct = Math.round(alloc * 35);
-  const top3Pct = Math.round(40 + conc * 45);
+  const capPct = Math.round((0.30 + conc * 0.70) * 100);
+  const auto = conc >= 0.995;
   return React.createElement("div", {
     className: "budgetsliders",
     onPointerDown: e => e.stopPropagation()
@@ -15155,9 +15161,9 @@ function BudgetSliders({
     className: "bs-row"
   }, React.createElement("span", {
     className: "bs-cap"
-  }, "Concentration · ", React.createElement("b", null, "Among Starters")), React.createElement("span", {
+  }, "Concentration · ", React.createElement("b", null, auto ? 'Auto' : 'Capped')), React.createElement("span", {
     className: "bs-edge"
-  }, "Top-heavy"), React.createElement("input", {
+  }, "Auto"), React.createElement("input", {
     type: "range",
     min: "0",
     max: "1",
@@ -15166,12 +15172,12 @@ function BudgetSliders({
     onChange: e => onChange({
       concentration: 1 - parseFloat(e.target.value)
     }),
-    title: "Load up on a few elite starters vs spread starter spend evenly"
+    title: "Auto lets the planner buy whatever maximizes projected points. Drag right to forbid any one starter from eating a big share of the budget."
   }), React.createElement("span", {
     className: "bs-edge"
   }, "Even")), React.createElement("div", {
     className: "bs-cap2"
-  }, "~", React.createElement("b", null, top3Pct, "%"), " of your starter budget concentrated on your top 3 starters."), React.createElement("div", {
+  }, auto ? React.createElement(React.Fragment, null, React.createElement("b", null, "Auto"), " — the planner spends whatever maximizes your projected starter points, with no per-player limit. Drag right to force a more even spread.") : React.createElement(React.Fragment, null, "No single starter may cost more than ~", React.createElement("b", null, capPct, "%"), " of your starter budget — a flatter, lower-variance build, at some cost in projected points.")), React.createElement("div", {
     className: "bs-row"
   }, React.createElement("span", {
     className: "bs-cap"
@@ -15710,8 +15716,21 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   // and above it the withholding rises in step with the bench's own cap.
   const benchShare = Math.max(0, alloc - 0.55) / 0.45 * 0.35;
   const extraBench = noBench ? 0 : Math.round(benchShare * R);
-  const conc = config.strategy?.concentration ?? 0.5;
-  const perCap = opts.noCap ? Infinity : 0.30 + conc * 0.55;
+  // A ceiling on what any ONE starter may cost, as a share of the starter
+  // budget. It only ever shrinks the set bestStarterSet is allowed to search,
+  // so it can never improve a plan: every notch below Auto trades projected
+  // points for a flatter spend. It therefore defaults to non-binding — conc 1
+  // puts the ceiling at the whole starter budget, which no legal set can
+  // exceed anyway.
+  //
+  // The old default (0.5 -> 0.575) looked harmless because it was measured
+  // against the budget EARLY, when it was slack: 57.5% of ~$190 is ~$109 and
+  // nothing costs that. But the share scales against the budget that is LEFT,
+  // so it tightened as you spent and bit hardest at the end, on the biggest
+  // decisions — $80 left across 2 starter slots capped a man at $46 and routed
+  // you off the $60 stud the DP had already found. Nobody asked it to.
+  const conc = config.strategy?.concentration ?? 1;
+  const perCap = opts.noCap ? Infinity : 0.30 + conc * 0.70;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);
   // ── one solve: the starters, then the bench ──────────────────────────────
   // Everything from here to the slot list is a function of how much the
