@@ -5743,9 +5743,17 @@ function _liveNorm(s) {
 // The last /api/live payload, kept at module level so the Value Coach can read
 // the depth charts off it without threading a prop through every render site.
 let LIVE_STATUS = null;
+// The feed's shape version, and it has to be in the URL: /api/live is served
+// with a six-hour public cache that Cloudflare's edge AND the browser honour,
+// so bumping the worker's own cache key (the same number, in _worker.js) left
+// every reader on the pre-depth-chart payload for up to six hours -- injury
+// tags present, slots absent, and the coach saying the chart "did not load".
+// A new URL is a new object to both caches. Bump both numbers together;
+// tools/test-depth-charts.mjs holds them equal.
+const LIVE_FEED_VERSION = 3;
 async function fetchLiveStatus() {
   try {
-    const r = await fetch('/api/live');
+    const r = await fetch('/api/live?v=' + LIVE_FEED_VERSION);
     if (!r.ok) return null;
     const d = await r.json();
     const out = d && d.players ? d.players : null;

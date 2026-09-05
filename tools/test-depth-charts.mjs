@@ -122,6 +122,15 @@ ok('/api/live carries depth_chart_position and depth_chart_order as d',
 ok('/api/live leaves team defences without a slot', /p\.position !== 'DEF' && p\.depth_chart_position/.test(liveBody));
 ok('/api/live bumped its edge-cache key past the shape without d',
   /'\/api\/live\?v=3'/.test(liveBody) && !/'\/api\/live\?v=2'/.test(liveBody));
+// The worker's key only clears the worker's cache. The edge and the browser
+// cache the URL, so the client has to ask for the same version in the URL or
+// readers keep the old payload for six hours -- which is exactly how the
+// depth charts "did not take" on launch day.
+const workerV = (liveBody.match(/'\/api\/live\?v=(\d+)'/) || [])[1];
+const clientV = (idx.match(/const LIVE_FEED_VERSION = (\d+);/) || [])[1];
+ok('the client requests /api/live with the same version the worker keys on',
+  !!workerV && workerV === clientV && /fetch\('\/api\/live\?v=' \+ LIVE_FEED_VERSION\)/.test(idx),
+  `worker v=${workerV}, client v=${clientV}`);
 ok('/api/live carries the body part, the note and the freshness of a designation',
   /rec\.b = String\(p\.injury_body_part\)/.test(liveBody) && /rec\.n = String\(p\.injury_notes\)/.test(liveBody) && /rec\.u = \+p\.news_updated/.test(liveBody));
 ok('/api/live only sends injury detail for a player with a designation', /if \(inj\) \{\s*if \(p\.injury_body_part\)/.test(liveBody));
