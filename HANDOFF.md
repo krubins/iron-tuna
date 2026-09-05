@@ -7476,3 +7476,116 @@ in Chromium, which is the check that matters most here: the premium is added
 before the monotonic clamp, and a column that climbs as you read down it is the
 one defect this feature could plausibly have introduced. It does not, because
 the premium is constant across the players above a cliff and zero below it.
+
+## 65. September 2026: the models box highlights the players it recommends
+
+The models box already knew which players the selected model wanted to buy. It
+just did not say so anywhere the reader was looking. A three-pixel gold bar on
+the left edge of a cheat-sheet row (`.cheat-modelfit`) was the whole signal, and
+on the auction board's rail there was none at all — so a manager who picked Hero
+RB then had to hold ten names in his head while scanning a 409-row rail.
+
+There is now a checkbox in the models box: **Highlight recommended**. Checked,
+the model's own buys are lifted on the cheat sheet *and* the auction board.
+
+### What "lifted" means, exactly
+
+Deliberately small. Half a point of type, a heavier name, and a faint wash of
+the model's own gold:
+
+| | plain row | recommended |
+|---|---|---|
+| cheat sheet name | 13.5px / 400 | 14.1px / 700 |
+| rail name | 14px / 600 | 15px / 700 |
+| row background | panel | `rgba(227,181,58,0.10)` |
+
+Enough to pull the eye down a column, not enough to repaint the sheet. A
+favourite's green still outranks it — `.cheat-target` and `.rail-target` are
+declared *after* the new rules, because a decision the manager made beats a
+recommendation the model made. The printed sheet keeps the emphasis too; a
+manager who prints the sheet and takes it to the draft would otherwise lose the
+one thing he turned on.
+
+Off by default, remembered in `localStorage` under `it_hl_recs`, and hidden
+until a team is marked on the board, since without one there is no plan to
+recommend from and the box would be a control that does nothing.
+
+### One control, two models boxes
+
+There are two of them — `.bm2-models` on the draft board and `.ch-models` on the
+cheat sheet — and they now render the same checkbox from one function,
+`recHighlightToggle()`, against one piece of state. They cannot drift into
+saying different things about the same setting.
+
+The set they emphasise is `recFitIds`. **With no model picked it follows the
+Ideal Team**, because that is already what the models pane displays; going blank
+there would read as a broken checkbox. With a model picked it reuses
+`modelFitIds` rather than re-solving the same plan.
+
+That whole question — *who is this model buying* — moved out of the `modelFitIds`
+memo into a top-level `modelTargetIds(modelKey, myTeam, …)`, so the gold bar,
+the new emphasis and the tests all read one implementation. Behaviour is
+unchanged; it is the same body with `draftModel` as a parameter.
+
+### The $1–$2 endgame
+
+The second half of the feature, and the more interesting one. Once the manager
+is down to dollar and two-dollar players, the same checkbox starts flagging the
+cheap men with the most **upside** — which is emphatically not the men with the
+most points per game.
+
+**When it arrives.** `maxSingleBid(myTeam, config)` is the most he can still bid
+on any ONE player: the budget minus a minimum bid for every other seat he still
+has to fill. At `$6` across five open seats that is `$2`. The shortlist is null
+until that number is at or under twice the minimum bid, and null in a snake or
+best-ball draft, which have no dollars for it to be about.
+
+**Why not points per game.** At a dollar every remaining projection sits inside
+the noise of every other. Sorting that pool by PPG re-sorts the noise, and it
+sorts it the wrong way: the capped veteran with a defined six-point role
+outranks the backup who is one snap from fourteen. A projection is the average
+over the seasons where nothing happens; the season where something does is the
+only reason to spend the last dollar.
+
+So `upsideScores()` prices the conditional role and returns the points **above**
+the projection, never the projection itself. Four terms:
+
+| term | what it reads |
+|---|---|
+| inherited role | `UPSIDE_JOB_OPENS[pos] × (UPSIDE_INHERIT × the man ahead − his own)`, only where the man ahead out-projects him by 35%+ |
+| the man ahead is hurt or past his age cliff | the odds the job opens, ×1.8 / ×1.25 (capped at 0.75) |
+| the breakout window | `yearsExp <= 2`, or age ≤ 24 with no experience on file |
+| the offence and the playoff schedule | a top-third offence, and soft Weeks 15–17 |
+
+Cut back by his own age cliff (×0.5) and his own injury (×0.7). Handcuffing a
+starter this manager already owns is worth another 25%, because that cover is
+only worth anything to the one team that needs it — the same argument
+`handcuffDollars` makes in dollars (§ the handcuff block in `index.html`).
+
+The flag is a **shortlist, not a re-ranking**: at most twelve names, and only
+those within 45% of the best score on the board. Past about a dozen the emphasis
+stops meaning anything. Each one carries an `UPSIDE` chip whose tooltip says
+what the claim is worth in points per game and why him — "one snap from
+Workhorse's role; handcuffs a starter you already own" — because *upside* with
+no number is a horoscope.
+
+### Tests
+
+`node tools/test-recommended-highlight.mjs` — 40 assertions, no browser, no
+network, wired into `checks.yml`. It lifts the real functions out of
+`index.html` by brace matching and the row `className` expressions by backtick
+matching, so it exercises the shipped source. It pins the two silent failures
+this feature could plausibly have: an emphasis the checkbox does not actually
+gate (the sheet stays repainted after it is turned off, and nothing errors), and
+an endgame shortlist that quietly re-sorts points per game (the board again in a
+different colour). Its fixture makes the second one concrete — an understudy
+projecting 40 against a veteran projecting 70, where the shortlist has to take
+the understudy.
+
+`tools/test-target-highlight.mjs` gained the three new scope variables its
+lifted row expressions now read, and was wired into `checks.yml` at the same
+time; it had been written before that job existed and had never run in CI.
+
+Verified in Chromium against the live board: 16 of 234 cheat-sheet rows and 16
+of 409 rail rows light for the Ideal Team, the same 16 in both, and unchecking
+the box clears every one.

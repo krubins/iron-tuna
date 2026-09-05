@@ -403,6 +403,21 @@ jobs:
       - name: The cliff premium on You, and the alert that precedes it
         run: node tools/test-cliff-premium.mjs
 
+      # The models box's "highlight recommended players" checkbox. Two separate
+      # silent failures live here: an emphasis that never clears (a class the
+      # checkbox does not gate, so the sheet stays repainted after it is turned
+      # off) and an endgame shortlist that quietly re-sorts points per game,
+      # which would make it the board again in a different colour. Neither shows
+      # up as an error. Also pins the two models boxes to one shared control, so
+      # the board and the sheet cannot drift apart on the same setting.
+      - name: Highlighting the model's own buys, and the $1 endgame shortlist
+        run: node tools/test-recommended-highlight.mjs
+
+      # The target flag's whole-line highlight, which the row-class expressions
+      # above share. It was written before this job existed and never wired in.
+      - name: The target highlight on the sheet and the rail
+        run: node tools/test-target-highlight.mjs
+
       # The ribbon's player lookup and the /player/<slug> card it lands on. The
       # index is generated from PROJECTIONS, so a projections update that skips
       # tools/build-front.mjs leaves the box unable to find a player the site is
