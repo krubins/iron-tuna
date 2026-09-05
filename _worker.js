@@ -1723,6 +1723,24 @@ function _colPrice(position, rankIndex) {
   return Math.max(COLUMN_MIN_BID, Math.round(base * scale));
 }
 
+// The blended board's price: the two WORLDS' slot prices interpolated at the
+// shipped weight, mirroring the app's blendedVegasMarketPrices (index.html).
+// Pricing the blend's own rank off the curve made price a step function, and a
+// mid-blend rank can be worse than on BOTH pure boards — the sheet stopped
+// doing that (Aug 2026), so a price printed here must be built the same way or
+// off-app copy quotes the slot walk the sheet no longer shows.
+//
+// Taking the two RANKS rather than two dollar figures is deliberate: every
+// consumer that restates a price into a reader's league (it-league.js
+// blendPrice, front.html myCase) re-runs this exact recipe from the ranks it
+// already carries, which no single blended dollar figure would allow.
+// HAND-SYNCED with it-league.js blendPrice; change both together.
+function _colBlendPrice(position, rankConsensusIdx, rankMarketIdx) {
+  const w = VEGAS_WEIGHT / (1 + VEGAS_WEIGHT);
+  const a = _colPrice(position, rankConsensusIdx), b = _colPrice(position, rankMarketIdx);
+  return Math.max(COLUMN_MIN_BID, Math.round(a + (b - a) * w));
+}
+
 // ── §9d. the site's own board, served ──────────────────────────────────────
 // The board /it-league.js quotes to a reader with no league of their own used
 // to be a STATIC block generated from the committed PROJECTIONS. The app is
@@ -1752,16 +1770,52 @@ async function boardPayload(env) {
   const byPos = {};
   for (const p of pool) {
     if (COLUMN_POSITIONS.indexOf(p.position) < 0) continue;
+    const st = p.projectedStats || {};
+    // The two odds worlds, rebuilt from the triples blendProjections wrote:
+    // vegas[k] = [committed, marketImplied, blended]. A pool with no overlay
+    // carries no triples, so both worlds equal the blend and the lerp below
+    // reproduces the plain slot walk.
+    const w0 = { ...st }, w1 = { ...st };
+    if (p.vegas) for (const k in p.vegas) {
+      const a = p.vegas[k];
+      if (!Array.isArray(a) || a.length < 3 || !(k in st)) continue;
+      if (typeof a[0] === 'number' && isFinite(a[0])) w0[k] = a[0];
+      if (typeof a[1] === 'number' && isFinite(a[1])) w1[k] = a[1];
+    }
     (byPos[p.position] = byPos[p.position] || []).push({
-      n: p.name, pos: p.position, pts: _oddsRound(_colScore(p.projectedStats || {}, p.position))
+      n: p.name, pos: p.position,
+      pts: _oddsRound(_colScore(st, p.position)),
+      pts0: _colScore(w0, p.position), pts1: _colScore(w1, p.position)
     });
   }
+  // Priced the way the sheet prices it (blendedVegasMarketPrices, index.html):
+  // slot-price each world at its own rank, interpolate the two dollar figures
+  // at the shipped weight, then restore never-rises-down-the-column with the
+  // upper envelope — a running max walked up from the bottom of the blend
+  // order, which lifts a cheaper neighbour to a book favourite's money rather
+  // than ever pushing a player below his own line. Pricing the blend's rank
+  // off the curve directly is what made a mid-slider price dip below both of
+  // its extremes on the sheet, and this board must quote the sheet.
+  const wBlend = VEGAS_WEIGHT / (1 + VEGAS_WEIGHT);
   const players = [];
   for (const pos of COLUMN_POSITIONS) {
     const list = (byPos[pos] || []).sort((a, b) => b.pts - a.pts);
-    // Rank within position IS the curve slot, exactly as calculateMarketValues
-    // does it on the client. `v` is Market Price, the column a story means.
-    list.forEach((p, i) => players.push({ n: p.n, pos: p.pos, v: _colPrice(pos, i), pts: p.pts }));
+    const slotOf = key => {
+      const m = new Map();
+      list.map((r, i) => i).sort((a, b) => list[b][key] - list[a][key]).forEach((src, rank) => m.set(src, rank));
+      return m;
+    };
+    const s0 = slotOf('pts0'), s1 = slotOf('pts1');
+    let floor = COLUMN_MIN_BID;
+    const priced = list.map((p, i) => {
+      const a = _colPrice(pos, s0.get(i)), b = _colPrice(pos, s1.get(i));
+      return { p, lerp: a + (b - a) * wBlend };
+    });
+    for (let i = priced.length - 1; i >= 0; i--) {
+      floor = Math.max(floor, priced[i].lerp);
+      priced[i].v = Math.max(COLUMN_MIN_BID, Math.round(floor));
+    }
+    priced.forEach(({ p, v }) => players.push({ n: p.n, pos: p.pos, v, pts: p.pts }));
   }
   _BOARD_CACHE = { ok: players.length > 0, contract: BOARD_CONTRACT, asOf,
                    teams: 12, budget: 200, players };
@@ -1886,7 +1940,9 @@ function buildVegasBoard(overlay, ctx) {
     for (let li = 0; li < list.length; li++) {
       const r = list[li];
       const iC = rCon.get(li), iI = rIT.get(li), iM = rMkt.get(li);
-      const priceConsensus = _colPrice(pos, iC), priceIronTuna = _colPrice(pos, iI);
+      // iI still names the blend board's SLOT (rank chips, draftable); the
+      // blend board's PRICE is the two worlds interpolated — see _colBlendPrice.
+      const priceConsensus = _colPrice(pos, iC), priceIronTuna = _colBlendPrice(pos, iC, iM);
       const rankDelta = iC - iI;                       // + => Iron Tuna rates them higher
       const priceDelta = priceIronTuna - priceConsensus;
       rows.push({

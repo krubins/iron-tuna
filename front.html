@@ -1711,7 +1711,12 @@ var COLUMN = [{"id":"call-2026-08-30-1","title":"A true mismatch tight end has a
       if (!m.rankIronTuna || !m.rankConsensus || !m.rankMarket) return null;
     }
     m.priceConsensus = L.price(pos, m.rankConsensus - 1);
-    m.priceIronTuna = L.price(pos, m.rankIronTuna - 1);
+    // The blend's price is the two worlds interpolated at the reader's weight
+    // (L.blendPrice), never the blend rank's own curve slot — the sheet stopped
+    // pricing that way (Aug 2026). The slot walk stays only as the fallback for
+    // a stale cached library that predates blendPrice.
+    m.priceIronTuna = L.blendPrice ? L.blendPrice(pos, m.rankConsensus - 1, m.rankMarket - 1)
+                                   : L.price(pos, m.rankIronTuna - 1);
     m.priceDelta = m.priceIronTuna - m.priceConsensus;
     m.ptsDelta = r1(m.ptsIronTuna - m.ptsConsensus);
     return m;
