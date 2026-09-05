@@ -619,8 +619,11 @@ console.log('\nend to end: the library rebuilds the worker’s own numbers');
     if (!it.statsConsensus || !it.statsIronTuna || !it.statsMarket) { missing = it.name; break; }
     if (r1(L.score(it.statsConsensus, it.position)) !== it.ptsConsensus) { ptsBad = `${it.name} consensus ${r1(L.score(it.statsConsensus, it.position))} vs ${it.ptsConsensus}`; break; }
     if (r1(L.score(it.statsIronTuna, it.position)) !== it.ptsIronTuna) { ptsBad = `${it.name} iron tuna ${r1(L.score(it.statsIronTuna, it.position))} vs ${it.ptsIronTuna}`; break; }
+    // priceIronTuna is the two worlds' slot prices interpolated at the shipped
+    // weight (_colBlendPrice), never the blend rank's own slot — restating it
+    // into a reader's league is L.blendPrice over the same two ranks.
     if (L.price(it.position, it.rankConsensus - 1) !== it.priceConsensus ||
-        L.price(it.position, it.rankIronTuna - 1) !== it.priceIronTuna) { priceBad = it.name; break; }
+        L.blendPrice(it.position, it.rankConsensus - 1, it.rankMarket - 1) !== it.priceIronTuna) { priceBad = it.name; break; }
   }
   ok('every item carries all three stat lines', missing === null, missing || '');
   ok('re-scoring the stat lines reproduces the printed points', ptsBad === null, ptsBad || '');
@@ -1075,8 +1078,12 @@ console.log('\nthe front page and /lead restate before they paint');
                           worker.indexOf('// Where the RANKINGS put each team'));
   ok('and builds it from the odds-blended pool, not the committed one',
      /blendProjections\(cached\.overlay\)/.test(bp), bp.slice(0, 200));
-  ok('and prices it with the same curve the cheat sheet uses',
-     /_colPrice\(pos, i\)/.test(bp));
+  ok('and prices each world with the same curve the cheat sheet uses',
+     /_colPrice\(pos, s0\.get\(i\)\)/.test(bp) && /_colPrice\(pos, s1\.get\(i\)\)/.test(bp));
+  ok('and interpolates the two worlds at the shipped weight',
+     /VEGAS_WEIGHT \/ \(1 \+ VEGAS_WEIGHT\)/.test(bp));
+  ok('and restores the falling column with the upper envelope, never an average',
+     /floor = Math\.max\(floor, priced\[i\]\.lerp\)/.test(bp));
   ok('and ranks within position by points, which is the curve slot',
      /sort\(\(a, b\) => b\.pts - a\.pts\)/.test(bp));
   ok('and ships prices only, so no second valuation can grow in it',

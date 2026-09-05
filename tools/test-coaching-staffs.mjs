@@ -88,28 +88,7 @@ ok('every coach the corpus names appears in STAFFS_2026',
 // The coaching column is the one place that pairs a coach with a team chip in
 // markup, which makes it mechanically checkable. Every other page states the
 // pairing in prose, so it is covered by the phrase scan below instead.
-const column = fs.readFileSync(path.join(ROOT, 'play-caller-premium.html'), 'utf8');
-for (const art of column.match(/<article class="call"[\s\S]*?<\/article>/g) || []) {
-  const id = (art.match(/id="([^"]+)"/) || [])[1];
-  const team = (art.match(/class="cteam">([A-Z]+)</) || [])[1];
-  const head = (art.match(/<h2>([\s\S]*?)<\/h2>/) || [])[1] || '';
-  // The headline names the coach the entry is about; the body is free to cite
-  // his previous stops, so only the headline is checked against the chip.
-  for (const c of COACHES) {
-    if (!head.includes(c)) continue;
-    ok(`${id}: ${c} matches its ${team} chip`, teamOf.get(c) === team,
-      `table says ${teamOf.get(c)}`);
-  }
-}
-
-// A page introducing a coach as a team's current coach, for a team the table
-// gives to someone else, is the same misattribution written into static copy.
-// The patterns stay deliberately narrow: this column's whole method is citing a
-// coach's PREVIOUS stops ("Daboll's Giants offenses", "Moore left for
-// Philadelphia in 2024"), so anything that reads as career history has to pass.
-// Only an explicit present-tense introduction counts, and the team name has to
-// sit right on top of it rather than somewhere earlier in the sentence — an
-// opponent named a clause away is not a job title.
+// Each team's names as the pages write them, used by both scans below.
 // Los Angeles and New York are each shared by two clubs, so those four go by
 // nickname only -- "Los Angeles head coach X" cannot be pinned to a team.
 const NAMES = {
@@ -125,6 +104,39 @@ const NAMES = {
   TB: ['Buccaneers', 'Bucs', 'Tampa Bay'], TEN: ['Titans', 'Tennessee'],
   WAS: ['Commanders', 'Washington'],
 };
+const column = fs.readFileSync(path.join(ROOT, 'play-caller-premium.html'), 'utf8');
+for (const art of column.match(/<article class="call"[\s\S]*?<\/article>/g) || []) {
+  const id = (art.match(/id="([^"]+)"/) || [])[1];
+  const team = (art.match(/class="cteam">([A-Z]+)</) || [])[1];
+  const head = (art.match(/<h2>([\s\S]*?)<\/h2>/) || [])[1] || '';
+  // The headline names the coach the entry is about; the body is free to cite
+  // his previous stops, so only the headline is checked against the chip.
+  //
+  // One shape is allowed to differ: an entry about a coach LEAVING. Its chip is
+  // the roster he left, because that is where the player it prices still plays
+  // ("Monken took his tight-end offense to Cleveland, and Baltimore never
+  // replaced the coach who built it" is a Mark Andrews call, chip BAL), and its
+  // headline names where he went. That is the table's own row stated from the
+  // other side, so it passes when the headline names his table team; a
+  // headline that names the coach and only the wrong team still fails.
+  const plain = head.replace(/&rsquo;|&#x27;|&#39;/g, "'").replace(/&#8209;|\u2011/g, '-');
+  for (const c of COACHES) {
+    if (!plain.includes(c)) continue;
+    const home = teamOf.get(c);
+    const namesHome = (NAMES[home] || []).some(w => plain.includes(w));
+    ok(`${id}: ${c} matches its ${team} chip${home !== team && namesHome ? ' (a leaving entry that names ' + home + ')' : ''}`,
+      home === team || namesHome, `table says ${home}`);
+  }
+}
+
+// A page introducing a coach as a team's current coach, for a team the table
+// gives to someone else, is the same misattribution written into static copy.
+// The patterns stay deliberately narrow: this column's whole method is citing a
+// coach's PREVIOUS stops ("Daboll's Giants offenses", "Moore left for
+// Philadelphia in 2024"), so anything that reads as career history has to pass.
+// Only an explicit present-tense introduction counts, and the team name has to
+// sit right on top of it rather than somewhere earlier in the sentence — an
+// opponent named a clause away is not a job title.
 const TITLE = '(?:head coach|Head coach|HC|new coach|new head coach)';
 const pages = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'));
 const clashes = [];

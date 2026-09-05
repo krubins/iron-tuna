@@ -7227,12 +7227,138 @@ front-page panel click observed landing on `/weekly-intel`. `test-chrome`,
 `test-player-odds`, `test-the-pick`, `test-content`, `test-season`,
 `test-it-league`, `build-chrome --check` and `build-seo --check` all pass.
 
-## 63. September 2: the deployed worker is a build behind, and three runs died at `start`
+---
+
+## 63. September 2026: the Value Coach reads the depth charts and the injury report
+
+`/api/coach`'s system prompt invites the model to answer backfield and target
+questions from its own football knowledge, and §16 records what that produced
+for coaching staffs: a stale name in the confident register of a right one.
+Depth charts were the same hole. "Who's behind Bijan?" was answered from
+whatever roster the training data last saw, and nothing in the app could
+contradict it, because the app never had a depth chart to hand over.
+
+### The data
+
+Sleeper's `/v1/players/nfl` feed, which `/api/live` already mirrors for the
+injury overlay, carries two more fields per player: `depth_chart_position` (a
+slot: `QB`, `RB`, `TE`, or `LWR`/`RWR`/`SWR` for receivers) and
+`depth_chart_order` (his rank within the position group). **Receiver ranks run
+across all three slots** — Philadelphia reads LWR1, RWR2, SWR3, SWR4, RWR5,
+LWR6 — so the merge is a sort on rank, never a sort within a slot.
+
+`/api/live` now emits them as `d: [slot, rank]` on each record, for players
+with a team and a slot, defences excluded. For a player carrying a designation
+it also emits the rest of the feed's injury line: `b` the body part, `n` the
+feed's note (rare: 19 of 157 tagged players had one), and `u` the
+`news_updated` timestamp, which is the only freshness signal the feed has —
+`injury_start_date` and the practice fields were empty across the whole feed
+in the preseason. The edge-cache key moved from `?v=2` to `?v=3` so no
+reader is served the old shape for six hours. On the day this shipped the
+payload was 66 KB, 974 records, 583 with a slot, 157 with a designation.
+
+### The fold
+
+`depthChartsFromLive(live)` in `index.html` turns the payload into one row
+per team, `{QB, RB, WR, TE}`, each an array of names in starting order, cut to
+QB2 / RB4 / WR5 / TE2 (`DEPTH_KEEP`), with the injury status abbreviated on
+the name (`DEPTH_TAG`: `Q`, `D`, `O`, `IR`, `PUP`, `SUS`, …). It is
+memoised by payload identity, so the fold runs once per session, not once per
+question. Names are Sleeper's, not the board's — a player the projection set
+never priced still shows in his slot, and a name the board spells differently
+does not break anything, because the table is keyed by team, not matched to
+players.
+
+The last payload sits in a module-level `LIVE_STATUS` so the coach can reach
+it without a prop threaded through the five places `ValueCoach` is rendered.
+`applyLiveStatus` also stamps `depthPos` / `depthOrder` on each matched
+board player, and `buildCoachContext`'s `slim()` reports those as `depth:
+"RB2"` / `injury: "Questionable"` on every player it ships, receivers as
+`WRn` rather than the raw `SWRn`.
+
+### The prompt
+
+`buildCoachContext` puts the whole table on the state as `depthCharts`; both
+call sites (the chat coach and the admin Fable dock) pass
+`depthChartsFromLive(LIVE_STATUS)`. `callLLM` adds `_depthCtx` after the
+staff block, and it has two branches on purpose:
+
+- **Table present:** the table is the current depth chart, it overrides the
+  model's memory on who starts and who backs up whom, the tags mean what they
+  mean, an IR/PUP/NFI name is not the backup, and a team or position missing
+  from it gets "not loaded" rather than a guess.
+- **Table absent** (`/api/live` never answered — every localhost run, and any
+  edge outage): the model is told the depth charts did not load and to say so
+  before answering from projections. Without this branch the missing table is
+  exactly the gap the model fills from memory.
+
+The table is about 8.6k characters of the 40k-character system cap the worker
+enforces; the rest of the state was well under 20k before it.
+
+### The injury report
+
+Injuries were the same hole as depth charts, with a twist: the app already had
+five separate places that knew something about a player's health and the coach
+saw one word of it. `injuryLine(p)` in `index.html` folds them into one
+string, in this order:
+
+1. the feed's designation with body part, note and freshness —
+   `Questionable, Knee - ACL: Surgery (updated Aug 29)`;
+2. failing a designation, the hand-kept `INJURIES` table's note (`injuryOf`),
+   the three players the site tracks by hand;
+3. a roster status other than Active (`roster status Injured Reserve`), from
+   Sleeper's `status`, which `applyLiveStatus` now keeps as `rosterStatus`;
+4. the news desk (§ draft-day edges): `news desk: Out, hamstring (-6% to his
+   projection)` — what THIS manager pasted, already priced into his points.
+   A manual projection edit is not an injury and stays off the line.
+
+A healthy player gets `undefined`, not `"none"`, deliberately: the prompt
+tells the model that a missing field means healthy as far as the feed knows,
+and a literal "none" reads to a model as a claim of health the feed never
+made.
+
+`buildCoachContext` reports the line as each player's `injury` field (it
+used to be the bare status word) and collects every board player with a line,
+drafted or not, into `injuryReport`, best projection first, capped at 60. The
+cap is for the preseason, when a couple of hundred deep-bench names carry
+Questionable tags; on the day this shipped a proxy of the top two slots at
+each position had 46 lines, about 5k characters. `_injuryCtx` follows the
+depth block in the prompt and says: the designations override memory, the
+updated date says how fresh, the news desk beats the feed when they disagree,
+never assert an injury the data does not show, the risk field already counts
+a designation so do not double-penalise, and use the depth chart to name who
+benefits from an injured starter. The depth-chart tags carry the body part too
+(`Tank Bigsby (Q, hamstring)`), so the two tables agree.
+
+### The test
+
+`node tools/test-depth-charts.mjs`, wired into `checks.yml` beside the
+coaching-staffs guard. It lifts the real `depthChartsFromLive` and
+`applyLiveStatus` out of `index.html` by brace-matching and pins: the
+cross-slot receiver merge, the rank sort, the trim, the tags, the skips (no
+slot, no team, unparseable rank), memoisation, `null` for an empty fold; the
+worker's `d` field and bumped cache key; and every phrase of the prompt the
+grounding depends on, both branches. The same file pins the injury line: the
+worker's `b`/`n`/`u` gated on a designation, `applyLiveStatus` carrying
+them, `injuryLine` for each source alone and together, `undefined` for a
+healthy player, `injuryReport`'s build, cap and order, and the prompt's
+missing-field rule.
+
+### What it does not do
+
+It does not move a single dollar. A depth-chart change or a feed designation
+is information for the coach's answer, not an input to projections; the news
+desk (§ draft-day edges) remains the only way either becomes points, and the
+coach is told which of its lines already did. And it is only as current as
+Sleeper's chart plus the six-hour edge cache, which the prompt does not claim
+otherwise.
+
+## 64. September 2: the deployed worker is a build behind, and three runs died at `start`
 
 The 09-02 audit found two live problems and cleared everything else. Both are
 Ken's to act on; neither is fixable from this session.
 
-### 63a. Production is serving the pre-08-31 valuation
+### 64a. Production is serving the pre-08-31 valuation
 
 The bundle at `/tmp/depboard/_worker.js`, pulled from Cloudflare on 09-02
 11:25Z, is **741,022 bytes** against **742,718** on 09-01, and it differs from
@@ -7266,7 +7392,7 @@ The harness now takes an override so both sides can be built and compared:
 
 Run it against the deployed bundle before trusting any check of a live story.
 
-### 63b. Nothing has published in 22 hours
+### 64b. Nothing has published in 22 hours
 
 `lead_story_run` rows 29, 30 and 31 — 09-01 18:58Z, 09-02 00:59Z, 09-02
 06:59Z — are all `stage='start'`, `desk` NULL, `story_id` NULL. In all three,
@@ -7290,7 +7416,7 @@ Because `lead_story_run` holds one row per run updated in place, a stall is
 the *only* state in which the intermediate stages are observable at all
 (§39). Three in a row is the first time that has been true.
 
-### 63c. What the audit cleared
+### 64c. What the audit cleared
 
 - **Row 70 is live and correct.** "Cap James Cook at $28, not $35; bid Baker
   Mayfield up to $5", vegas desk, created 09-01 13:19. Checked against the
@@ -7315,7 +7441,7 @@ the *only* state in which the intermediate stages are observable at all
   `category='analyst'` rows (21, 22, 27, 28, 35, 42, 50, 55, 60) are
   `published=0`; none has ever been served. No published row is unverified.
 
-### 63d. The harness lifts functions now, not just constants
+### 64d. The harness lifts functions now, not just constants
 
 §45 fixed `tools/live-board.mjs` by copying the worker's new `_colPrice` and
 normalisation into it. That was the same mistake one level up, and it broke
@@ -7337,7 +7463,7 @@ yields **$1 in the repo build and $2 in the deployed build** for Kolar,
 Njoku and Gadsden. That difference is 48a, and before this rewrite the
 harness could not have shown it.
 
-### 63e. Still open
+### 64e. Still open
 
 §44's three archive options remain unanswered and no archive figure was
 hand-corrected today. Do not correct them again by hand; the recommended
@@ -7345,13 +7471,13 @@ option (2) — re-anchor archived prices from the live board via `it-league.js`
 at render time — would have absorbed both the 08-31 valuation pass and this
 deployment gap with zero edits.
 
-## 64. September 3: a wrong price got published, and the checker that would have caught it was off
+## 65. September 3: a wrong price got published, and the checker that would have caught it was off
 
-The 09-03 audit cleared §63a and §63b and then found the thing both were
+The 09-03 audit cleared §64a and §64b and then found the thing both were
 hiding: **a published lead quoted a price that was never on the board.** Not
 stale — wrong at publication.
 
-### 64a. Row 73 had Tony Pollard at RB28 and $5. The sheet said RB29 and $3.
+### 65a. Row 73 had Tony Pollard at RB28 and $5. The sheet said RB29 and $3.
 
 The live lead was "Bid Tyjae Spears to $5, not $2; cap Tony Pollard at $3"
 (preseason desk, created 09-03 07:16Z). Its table, headed "Iron Tuna sheet,
@@ -7399,7 +7525,7 @@ $3" to "the sheet already has Pollard at $3", and a reader-facing
 paragraph naming the error and its cause. `verified` and `published` were not
 touched, so no audit row was written by the fix.
 
-### 64b. Why nothing caught it
+### 65b. Why nothing caught it
 
 The run's own `method` says both halves of the failure out loud:
 
@@ -7423,7 +7549,7 @@ only asks the committed and blended boards to **disagree** about Chuba
 Hubbard. Disagreement proves the blend ran. It proves nothing about whether
 either board is right.
 
-### 64c. The harness broke again, and again the suite was green
+### 65c. The harness broke again, and again the suite was green
 
 `_worker.js` changed twice today in ways that go straight through the board:
 
@@ -7468,7 +7594,7 @@ Two changes close it:
    exits 1, and a one-line edit hard-coding `MIN_BID` fails the mutation
    check specifically.
 
-### 64d. §63a and §63b both cleared
+### 65d. §64a and §64b both cleared
 
 - **Deployment caught up.** The bundle is 963,377 bytes (741,022 yesterday)
   and carries `COLUMN_NORM`, `_WIRE_CACHE`, the flat `COLUMN_MIN_BID` return
@@ -7481,7 +7607,7 @@ Two changes close it:
   followed. Roughly 24 hours, self-resolved, cause still unexplained; the
   session transcripts are the only place it is visible.
 
-### 64e. Also clean
+### 65e. Also clean
 
 CI 47/47 after the merge. Tamper predicates clean: no `verified` 0→1 flip
 beyond the 08-24 baseline row, no `analyst` row published, no published row
@@ -7489,22 +7615,22 @@ unverified, exactly one published row. The Routine is enabled on `58 */6 * * *`
 and its prompt is still byte-identical to `tools/lead-story-routine-prompt.md`
 below the header marker (40,786 chars, sha256 `af5384664474`).
 
-### 64f. What this says about the open archive question
+### 65f. What this says about the open archive question
 
 §44 asked whether archived prices should be re-anchored from the live board at
 render time. Today is an argument that the same idea belongs *upstream*, in
 the Routine: a story should not be allowed to print a dollar figure it
 computed itself. It should print the number the sheet is serving, looked up by
 player, and a run that cannot look one up should say so rather than derive it.
-Every failure in §64a is a derivation error that a lookup could not have made.
+Every failure in §65a is a derivation error that a lookup could not have made.
 
-## 65. September 4: the same failure again, one board over
+## 66. September 4: the same failure again, one board over
 
 Second consecutive day a published lead quoted a price the reader's sheet
-contradicts, from the same root cause and a different surface. §64 was a
+contradicts, from the same root cause and a different surface. §65 was a
 neighbouring rank slot's price; today it is the neighbouring *board*.
 
-### 65a. Row 77 printed Cam Skattebo's committed price in the served column
+### 66a. Row 77 printed Cam Skattebo's committed price in the served column
 
 The live lead was "Bid Jaxson Dart to $27, not $13; cap Cam Skattebo at $12"
 (play-caller desk, 09-04 07:15Z). Its table is headed **"Iron Tuna board,
@@ -7535,7 +7661,7 @@ against a board that says $13. Corrected — table row now
 The `$12` recommendation itself stands, and "backs ranked 20 to 22 cost $12"
 was checked and is exactly right. `verified` and `published` untouched.
 
-### 65b. The run's method got better and still could not catch it
+### 66b. The run's method got better and still could not catch it
 
 Yesterday's run rebuilt the pipeline by hand. Today's did the right thing:
 
@@ -7562,9 +7688,9 @@ So the defect is not arithmetic and no longer even reconstruction. It is
 **attribution**: two boards in hand, and no check that ties each printed
 figure to the right one.
 
-### 65c. What would actually close it
+### 66c. What would actually close it
 
-§64f asked for lookup instead of derivation. Today sharpens it: the run
+§65f asked for lookup instead of derivation. Today sharpens it: the run
 already derives correctly. What it lacks is a check that *distinguishes the
 two boards*. `it-league.js` (`DEFAULT_BOARD_RAW`) is generated from the worker
 by a different tool and carries the **committed** board — so comparing every
@@ -7586,7 +7712,7 @@ Ken's call:
 > the wrong board: fix it or do not print it. If the two boards agree for that
 > player, say so explicitly rather than leaving the rank-move cell blank.
 
-### 65d. Everything else clean
+### 66d. Everything else clean
 
 - CI **51/51** after merging 18 commits from main; `tools/test-live-board.mjs`
   passes all 13 checks.
@@ -7606,14 +7732,14 @@ Ken's call:
   `tools/lead-story-routine-prompt.md` below its marker (40,786 chars, sha256
   `af5384664474`).
 
-## 66. September 4: the attribution check is live
+## 67. September 4: the attribution check is live
 
-Ken approved §65c. The BOARD ATTRIBUTION CHECK is in the Routine prompt as of
+Ken approved §66c. The BOARD ATTRIBUTION CHECK is in the Routine prompt as of
 2026-09-04, and the repo copy and the live prompt were verified byte-identical
 afterwards: **44,690 chars, sha256 `53007f8d8779`** (was 40,786 /
 `af5384664474`).
 
-### 66a. It had to reconcile a standing rule, not just append to one
+### 67a. It had to reconcile a standing rule, not just append to one
 
 The prompt already said, in two places, **never validate against
 `DEFAULT_BOARD_RAW`** — and that rule is correct and hard-won. A run on
@@ -7623,7 +7749,7 @@ figures the served board contradicts. `DEFAULT_BOARD_RAW` is the committed
 board, so it agrees with an unblended board perfectly; a match there cannot
 confirm anything.
 
-Appending §65c unchanged would have left the prompt holding two contradictory
+Appending §66c unchanged would have left the prompt holding two contradictory
 instructions, and the run would have followed whichever it read last —
 plausibly straight back into the August failure. So the ban stays, sharpened
 to **"a match there is never a pass"**, and the new use is stated as its
@@ -7637,7 +7763,7 @@ inverse in the paragraph immediately after:
 Both statements now sit adjacent, and the file header carries a note to keep
 them together if either is ever edited again.
 
-### 66b. What the check actually asks for
+### 67b. What the check actually asks for
 
 Five steps, placed right after the existing all-prices check: look every
 printed price and rank up in **both** boards and write down both; say in the
@@ -7656,12 +7782,12 @@ committed price. Zero-point players are dropped, so absence is not a signal.
 
 **Verified before shipping**, against the harness's own committed board:
 **340/340, zero mismatches**, and it returns Skattebo RB18 $15, Pollard RB29
-$3, Dart QB7 $13, Nabers WR13 $23 — so the check fires exactly on §65a
-(Skattebo's served cell matches the committed block, the alarm) and §64a is
+$3, Dart QB7 $13, Nabers WR13 $23 — so the check fires exactly on §66a
+(Skattebo's served cell matches the committed block, the alarm) and §65a is
 caught by steps 1 and 5 instead (Pollard's printed $5/RB28 matches neither
 board, and it came from reading a slot rather than a player).
 
-### 66c. Why this one is different from the rules that came before it
+### 67c. Why this one is different from the rules that came before it
 
 Almost every accuracy rule in that prompt asks the run to be more careful.
 This one gives it a comparison it cannot fake: `it-league.js` is generated

@@ -396,6 +396,23 @@
     return p;
   }
 
+  // The price of the site's odds blend, in THIS reader's league. The sheet no
+  // longer prices the blended board's own rank off the curve — a mid-blend rank
+  // can be worse than on BOTH pure boards, which printed a price below both of
+  // its extremes — it slot-prices the two worlds and interpolates at the
+  // reader's slider weight (blendedVegasMarketPrices, index.html). So restating
+  // a blended price needs both world RANKS, not one: same recipe, this league's
+  // scale, this reader's weight — a reader who dragged the slider to
+  // "projections only" is quoted the consensus-world price, exactly as their
+  // sheet shows it. The worker's _colBlendPrice is the same computation at the
+  // default league and the shipped weight. HAND-SYNCED; change both together.
+  function blendPrice(position, rankConsensusIndex, rankMarketIndex) {
+    var w = cfg ? cfg.vegasWeight : VEGAS_DEFAULT_W;
+    var a = price(position, rankConsensusIndex);
+    var b = price(position, rankMarketIndex);
+    return Math.max(MIN_BID, Math.round(a + (b - a) * w));
+  }
+
   // A dollar figure written about a MANAGER'S OWN money in the site's default
   // $200 league, restated in the reader's: "how to spend the $200" becomes "how
   // to spend the $300", and a $40 stud in that prose becomes a $60 one.
@@ -1230,6 +1247,7 @@
     defaults: { teams: DEFAULT_TEAMS, budget: DEFAULT_BUDGET, scoring: SCORING_DEFAULTS, curve: CURVE, curveBudget: CURVE_BUDGET },
     score: score,
     price: price,
+    blendPrice: blendPrice,
     money: money,
     rankOf: rankOf,
     findPlayer: findPlayer,
