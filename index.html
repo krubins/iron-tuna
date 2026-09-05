@@ -15322,8 +15322,22 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   Object.entries(config.roster).forEach(([pos, c]) => {
     const ord = orderForTeam && orderForTeam[pos];
     const entries = (byPos[pos] || []).slice();
-    if (ord && ord.length) {
-      entries.sort((a, b) => {
+    // Owned players must never be dropped to make room for planned targets, and if a team
+    // holds more than c.total at a position the surplus overflows into extra rows rather
+    // than vanishing, so the room left for plan rows is what the owned ones do not take.
+    const owned = entries.filter(e => e.drafted);
+    const planned = entries.filter(e => !e.drafted).sort((a, b) => b.pts - a.pts);
+    const room = Math.max(c.total, owned.length);
+    const arr = owned.concat(planned.slice(0, Math.max(0, room - owned.length)));
+    // The row a player holds is his rank at the position on THIS team, counted against the
+    // plan rows as well as the bought ones: a $1 receiver into an empty corps lands at WR3
+    // or WR4 under the two the plan still buys, and every later buy reshuffles the block so
+    // the man projected to score the most holds the top row. A tie goes to the bought row.
+    arr.sort((a, b) => (b.pts - a.pts) || (a.drafted === b.drafted ? 0 : a.drafted ? -1 : 1));
+    // A hand-dragged order only ever reorders the owned rows against each other. It keeps
+    // the rows projection gave them and changes which player sits in each.
+    if (ord && ord.length && owned.length > 1) {
+      const byHand = arr.filter(e => e.drafted).sort((a, b) => {
         const ia = a.id != null ? ord.indexOf(a.id) : -1;
         const ib = b.id != null ? ord.indexOf(b.id) : -1;
         if (ia !== -1 && ib !== -1) return ia - ib;
@@ -15331,15 +15345,9 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
         if (ib !== -1) return 1;
         return b.pts - a.pts;
       });
-    } else {
-      entries.sort((a, b) => b.pts - a.pts);
+      let h = 0;
+      for (let i = 0; i < arr.length; i++) if (arr[i].drafted) arr[i] = byHand[h++];
     }
-    // Owned players must never be dropped to make room for planned targets, and if a team
-    // holds more than c.total at a position the surplus overflows into extra rows rather
-    // than vanishing. Keep drafted entries first (in their sorted order), then planned/bench.
-    const owned = entries.filter(e => e.drafted);
-    const planned = entries.filter(e => !e.drafted);
-    const arr = owned.concat(planned).slice(0, Math.max(c.total, owned.length));
     while (arr.length < c.total) arr.push({
       empty: true,
       pts: 0
