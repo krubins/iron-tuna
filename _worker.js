@@ -2835,7 +2835,7 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       try {
         const cache = caches.default;
-        const key = new Request(url.origin + '/api/live?v=2');
+        const key = new Request(url.origin + '/api/live?v=3');
         const hit = await cache.match(key);
         if (hit) { const r = new Response(hit.body, hit); for (const [k, v] of Object.entries(c)) r.headers.set(k, v); return r; }
         const up = await fetch('https://api.sleeper.app/v1/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } });
@@ -2853,7 +2853,21 @@ export default {
           const inj = (injRaw && REAL.has(injRaw)) ? injRaw : null;
           const team = p.team || null;
           if (!inj && !team) continue;
-          out[name] = { t: team, i: inj, s: p.status || null };
+          const rec = { t: team, i: inj, s: p.status || null };
+          // The rest of the injury line, only for a player carrying a status:
+          // body part, the feed's note, and when the feed last touched him, so
+          // the Value Coach can say how fresh a designation is.
+          if (inj) {
+            if (p.injury_body_part) rec.b = String(p.injury_body_part).slice(0, 40);
+            if (p.injury_notes) rec.n = String(p.injury_notes).slice(0, 120);
+            if (p.news_updated) rec.u = +p.news_updated;
+          }
+          // Sleeper's depth chart rides along: a slot (QB, RB, TE, or LWR/RWR/
+          // SWR for receivers) and a rank within the position group, where the
+          // receiver ranks run across all three slots. index.html's
+          // depthChartsFromLive folds these into the table the Value Coach reads.
+          if (team && p.position !== 'DEF' && p.depth_chart_position && p.depth_chart_order != null) rec.d = [p.depth_chart_position, p.depth_chart_order];
+          out[name] = rec;
         }
         const body = JSON.stringify({ updated: Date.now(), players: out });
         const store = new Response(body, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=21600' } });

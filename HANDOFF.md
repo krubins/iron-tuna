@@ -5338,3 +5338,129 @@ from it.*
 State: live and verified **63**; `published_rows=1`; Recent insights **15**;
 /analyst-desk 0. Overlay unchanged at `1788087628630`, 16,901 bytes. Live prompt
 still byte-identical to the repo canonical.
+
+---
+
+## 41. September 2026: the Value Coach reads the depth charts and the injury report
+
+`/api/coach`'s system prompt invites the model to answer backfield and target
+questions from its own football knowledge, and §16 records what that produced
+for coaching staffs: a stale name in the confident register of a right one.
+Depth charts were the same hole. "Who's behind Bijan?" was answered from
+whatever roster the training data last saw, and nothing in the app could
+contradict it, because the app never had a depth chart to hand over.
+
+### The data
+
+Sleeper's `/v1/players/nfl` feed, which `/api/live` already mirrors for the
+injury overlay, carries two more fields per player: `depth_chart_position` (a
+slot: `QB`, `RB`, `TE`, or `LWR`/`RWR`/`SWR` for receivers) and
+`depth_chart_order` (his rank within the position group). **Receiver ranks run
+across all three slots** — Philadelphia reads LWR1, RWR2, SWR3, SWR4, RWR5,
+LWR6 — so the merge is a sort on rank, never a sort within a slot.
+
+`/api/live` now emits them as `d: [slot, rank]` on each record, for players
+with a team and a slot, defences excluded. For a player carrying a designation
+it also emits the rest of the feed's injury line: `b` the body part, `n` the
+feed's note (rare: 19 of 157 tagged players had one), and `u` the
+`news_updated` timestamp, which is the only freshness signal the feed has —
+`injury_start_date` and the practice fields were empty across the whole feed
+in the preseason. The edge-cache key moved from `?v=2` to `?v=3` so no
+reader is served the old shape for six hours. On the day this shipped the
+payload was 66 KB, 974 records, 583 with a slot, 157 with a designation.
+
+### The fold
+
+`depthChartsFromLive(live)` in `index.html` turns the payload into one row
+per team, `{QB, RB, WR, TE}`, each an array of names in starting order, cut to
+QB2 / RB4 / WR5 / TE2 (`DEPTH_KEEP`), with the injury status abbreviated on
+the name (`DEPTH_TAG`: `Q`, `D`, `O`, `IR`, `PUP`, `SUS`, …). It is
+memoised by payload identity, so the fold runs once per session, not once per
+question. Names are Sleeper's, not the board's — a player the projection set
+never priced still shows in his slot, and a name the board spells differently
+does not break anything, because the table is keyed by team, not matched to
+players.
+
+The last payload sits in a module-level `LIVE_STATUS` so the coach can reach
+it without a prop threaded through the five places `ValueCoach` is rendered.
+`applyLiveStatus` also stamps `depthPos` / `depthOrder` on each matched
+board player, and `buildCoachContext`'s `slim()` reports those as `depth:
+"RB2"` / `injury: "Questionable"` on every player it ships, receivers as
+`WRn` rather than the raw `SWRn`.
+
+### The prompt
+
+`buildCoachContext` puts the whole table on the state as `depthCharts`; both
+call sites (the chat coach and the admin Fable dock) pass
+`depthChartsFromLive(LIVE_STATUS)`. `callLLM` adds `_depthCtx` after the
+staff block, and it has two branches on purpose:
+
+- **Table present:** the table is the current depth chart, it overrides the
+  model's memory on who starts and who backs up whom, the tags mean what they
+  mean, an IR/PUP/NFI name is not the backup, and a team or position missing
+  from it gets "not loaded" rather than a guess.
+- **Table absent** (`/api/live` never answered — every localhost run, and any
+  edge outage): the model is told the depth charts did not load and to say so
+  before answering from projections. Without this branch the missing table is
+  exactly the gap the model fills from memory.
+
+The table is about 8.6k characters of the 40k-character system cap the worker
+enforces; the rest of the state was well under 20k before it.
+
+### The injury report
+
+Injuries were the same hole as depth charts, with a twist: the app already had
+five separate places that knew something about a player's health and the coach
+saw one word of it. `injuryLine(p)` in `index.html` folds them into one
+string, in this order:
+
+1. the feed's designation with body part, note and freshness —
+   `Questionable, Knee - ACL: Surgery (updated Aug 29)`;
+2. failing a designation, the hand-kept `INJURIES` table's note (`injuryOf`),
+   the three players the site tracks by hand;
+3. a roster status other than Active (`roster status Injured Reserve`), from
+   Sleeper's `status`, which `applyLiveStatus` now keeps as `rosterStatus`;
+4. the news desk (§ draft-day edges): `news desk: Out, hamstring (-6% to his
+   projection)` — what THIS manager pasted, already priced into his points.
+   A manual projection edit is not an injury and stays off the line.
+
+A healthy player gets `undefined`, not `"none"`, deliberately: the prompt
+tells the model that a missing field means healthy as far as the feed knows,
+and a literal "none" reads to a model as a claim of health the feed never
+made.
+
+`buildCoachContext` reports the line as each player's `injury` field (it
+used to be the bare status word) and collects every board player with a line,
+drafted or not, into `injuryReport`, best projection first, capped at 60. The
+cap is for the preseason, when a couple of hundred deep-bench names carry
+Questionable tags; on the day this shipped a proxy of the top two slots at
+each position had 46 lines, about 5k characters. `_injuryCtx` follows the
+depth block in the prompt and says: the designations override memory, the
+updated date says how fresh, the news desk beats the feed when they disagree,
+never assert an injury the data does not show, the risk field already counts
+a designation so do not double-penalise, and use the depth chart to name who
+benefits from an injured starter. The depth-chart tags carry the body part too
+(`Tank Bigsby (Q, hamstring)`), so the two tables agree.
+
+### The test
+
+`node tools/test-depth-charts.mjs`, wired into `checks.yml` beside the
+coaching-staffs guard. It lifts the real `depthChartsFromLive` and
+`applyLiveStatus` out of `index.html` by brace-matching and pins: the
+cross-slot receiver merge, the rank sort, the trim, the tags, the skips (no
+slot, no team, unparseable rank), memoisation, `null` for an empty fold; the
+worker's `d` field and bumped cache key; and every phrase of the prompt the
+grounding depends on, both branches. The same file pins the injury line: the
+worker's `b`/`n`/`u` gated on a designation, `applyLiveStatus` carrying
+them, `injuryLine` for each source alone and together, `undefined` for a
+healthy player, `injuryReport`'s build, cap and order, and the prompt's
+missing-field rule.
+
+### What it does not do
+
+It does not move a single dollar. A depth-chart change or a feed designation
+is information for the coach's answer, not an input to projections; the news
+desk (§ draft-day edges) remains the only way either becomes points, and the
+coach is told which of its lines already did. And it is only as current as
+Sleeper's chart plus the six-hour edge cache, which the prompt does not claim
+otherwise.

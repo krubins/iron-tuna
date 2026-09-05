@@ -5719,12 +5719,17 @@ async function loadSleeperData(season) {
 function _liveNorm(s) {
   return (s || '').toLowerCase().replace(/[^a-z]/g, '');
 }
+// The last /api/live payload, kept at module level so the Value Coach can read
+// the depth charts off it without threading a prop through every render site.
+let LIVE_STATUS = null;
 async function fetchLiveStatus() {
   try {
     const r = await fetch('/api/live');
     if (!r.ok) return null;
     const d = await r.json();
-    return d && d.players ? d.players : null;
+    const out = d && d.players ? d.players : null;
+    if (out) LIVE_STATUS = out;
+    return out;
   } catch (e) {
     return null;
   }
@@ -5739,10 +5744,90 @@ function applyLiveStatus(players, live) {
     const np = {
       ...p
     };
-    if (L.i) np.injuryStatus = L.i;
-    if (L.t && p.position !== 'DEF' && L.t !== p.team) np.team = L.t;
+    if (L.i) {
+      np.injuryStatus = L.i;
+      if (L.b) np.injuryBodyPart = L.b;
+      if (L.n) np.injuryNotes = L.n;
+      if (L.u) np.injuryUpdated = L.u;
+    }
+    // Sleeper's roster status (Active, Inactive, Injured Reserve, PUP, ...); only
+    // the non-Active ones ever get shown, see injuryLine.
+    if (L.s) np.rosterStatus = L.s;
+    if (L.d && p.position !== 'DEF') {
+      np.depthPos = L.d[0];
+      np.depthOrder = L.d[1];
+    }
     return np;
   });
+}
+// ── the depth charts, for the Value Coach ─────────────────────────────────
+// Sleeper publishes every team's depth chart on the feed /api/live already
+// mirrors: a slot (QB, RB, TE, or LWR/RWR/SWR for receivers) and a rank within
+// the position group. This folds it into one table per team: the three receiver
+// slots merged into a single WR order, the injury tag carried on the name, and
+// cut to the depth a draft question ever reaches (QB2, RB4, WR5, TE2). The Value
+// Coach used to answer "who's behind Bijan?" from its training data, a roster or
+// two stale; this table is handed to it as authoritative instead, the same way
+// STAFFS_2026 settles who coaches whom. Names are Sleeper's, not the board's, so
+// a player the projection set never priced still shows in his slot.
+const DEPTH_KEEP = { QB: 2, RB: 4, WR: 5, TE: 2 };
+const DEPTH_TAG = { Questionable: 'Q', Doubtful: 'D', Out: 'O', IR: 'IR', PUP: 'PUP', Sus: 'SUS', Suspended: 'SUS', COV: 'COV', NFI: 'NFI', DNR: 'DNR' };
+let _depthCache = { src: null, out: null };
+function depthChartsFromLive(live) {
+  if (!live) return null;
+  if (_depthCache.src === live) return _depthCache.out;
+  const teams = {};
+  for (const name in live) {
+    const L = live[name];
+    if (!L || !L.t || !L.d) continue;
+    const pos = /WR$/.test(L.d[0]) ? 'WR' : L.d[0];
+    if (!DEPTH_KEEP[pos]) continue;
+    const order = +L.d[1];
+    if (!isFinite(order)) continue;
+    const t = teams[L.t] = teams[L.t] || {};
+    (t[pos] = t[pos] || []).push({ name, order, tag: DEPTH_TAG[L.i] || '', part: L.b ? String(L.b).toLowerCase() : '' });
+  }
+  const out = {};
+  Object.keys(teams).sort().forEach(tm => {
+    const row = {};
+    ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+      const list = (teams[tm][pos] || []).sort((a, b) => a.order - b.order).slice(0, DEPTH_KEEP[pos]);
+      if (list.length) row[pos] = list.map(e => e.name + (e.tag ? ' (' + e.tag + (e.part ? ', ' + e.part : '') + ')' : ''));
+    });
+    if (Object.keys(row).length) out[tm] = row;
+  });
+  _depthCache = { src: live, out: Object.keys(out).length ? out : null };
+  return _depthCache.out;
+}
+// Everything the app knows about a player's health, as one line for the Value
+// Coach: the live feed's designation with body part, note and freshness; a
+// roster status other than Active; the hand-kept INJURIES note for a player
+// the feed has not tagged; and the news desk, which is what THIS manager pasted
+// and has already moved his projection. Undefined when there is nothing, so a
+// healthy player carries no field rather than a "none" the model might read as
+// a claim.
+function injuryLine(p) {
+  if (!p) return undefined;
+  const bits = [];
+  if (p.injuryStatus) {
+    let s = String(p.injuryStatus);
+    if (p.injuryBodyPart) s += ', ' + p.injuryBodyPart;
+    if (p.injuryNotes) s += ': ' + p.injuryNotes;
+    if (p.injuryUpdated) {
+      try { s += ' (updated ' + new Date(p.injuryUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ')'; } catch (e) {}
+    }
+    bits.push(s);
+  } else {
+    const n = typeof injuryOf === 'function' ? injuryOf(p) : null;
+    if (n) bits.push(n);
+  }
+  if (p.rosterStatus && !/^active$/i.test(p.rosterStatus)) bits.push('roster status ' + p.rosterStatus);
+  const o = p.projOverride;
+  if (o && o.src === 'news') {
+    const pct = typeof o.pct === 'number' && isFinite(o.pct) ? ' (' + (o.pct > 0 ? '+' : '') + Math.round(o.pct) + '% to his projection)' : '';
+    bits.push('news desk: ' + (o.label || 'note') + (o.note ? ', ' + o.note : '') + pct);
+  }
+  return bits.length ? bits.join('; ') : undefined;
 }
 function parseProjectionsCSV(csvText) {
   const lines = csvText.trim().split(/\r?\n/);
@@ -18046,8 +18131,8 @@ function applyProjOverrides(scored, overrides) {
   });
 }
 // ── the news desk the board never had ─────────────────────────────────────
-// /api/live carries an injury status and a team and nothing else, and there is
-// no wire behind the projections. Between the last projection update and a
+// /api/live carries an injury status, a team and a depth-chart slot and nothing
+// else, and there is no wire behind the projections. Between the last projection update and a
 // draft, practice reports and depth-chart moves are the most valuable
 // information in the room, and the board cannot see any of it. This is the
 // manual path in: paste what you know, and it becomes points.
@@ -19294,7 +19379,8 @@ function buildCoachContext(q, ctx) {
     draftedIds,
     plan,
     marketState,
-    games
+    games,
+    depthCharts
   } = ctx;
   const di = draftedIds || new Set();
   const g = games || 17;
@@ -19311,6 +19397,11 @@ function buildCoachContext(q, ctx) {
     value: p.auctionValue,
     you: p.personalValue,
     risk: riskLabel(riskScore(p)),
+    // His depth-chart slot and injury tag from /api/live, when it loaded. WR
+    // ranks already run across Sleeper's three receiver slots, so "WR3" is the
+    // team's third receiver, not the third left-side one.
+    depth: p.depthPos ? (/WR$/.test(p.depthPos) ? 'WR' : p.depthPos) + (p.depthOrder != null ? p.depthOrder : '') : undefined,
+    injury: injuryLine(p),
     flag: (() => {
       // The same number the board colours the name with, so the export and the
       // screen can never disagree about why a player is red.
@@ -19345,6 +19436,19 @@ function buildCoachContext(q, ctx) {
   } catch (e) {}
   const minBid = config.valuation && config.valuation.minBid || 1;
   const _cfmt = config.format || 'auction';
+  // Every player on the board with anything on his injury line, drafted or not,
+  // best projection first. Capped so a preseason full of Questionable tags on
+  // deep bench names cannot crowd out the draft state.
+  const injuryReport = (evalPlayers || []).map(p => ({ p, line: injuryLine(p) })).filter(x => x.line)
+    .sort((a, b) => (b.p.projectedPoints || 0) - (a.p.projectedPoints || 0)).slice(0, 60)
+    .map(({ p, line }) => ({
+      name: p.name,
+      pos: p.position,
+      team: p.team,
+      ppg: +((p.projectedPoints || 0) / g).toFixed(1),
+      drafted: di.has(p.id) || undefined,
+      injury: line
+    }));
   return {
     format: _cfmt,
     formatInfo: _cfmt === 'snake' ? {
@@ -19394,6 +19498,13 @@ function buildCoachContext(q, ctx) {
     } : null,
     topAvailableByPosition: top,
     playersInQuestion: named,
+    // Every team's current depth chart (QB, RB, WR, TE, in order), or absent when
+    // /api/live never loaded; the prompt tells the model which case it is in.
+    depthCharts: depthCharts || undefined,
+    // Everyone on the board carrying a designation, a non-Active roster status,
+    // or a news-desk entry; absent when nobody is, so the prompt's "no field
+    // means healthy as far as the feed knows" holds for the whole list too.
+    injuryReport: injuryReport.length ? injuryReport : undefined,
     legend: 'Proj = likely market/auction price. Value = VBD worth in a vacuum. You = the most THIS manager can pay before his starting lineup stops improving, an indifference price, which normally sits at or BELOW Value and is a bidding ceiling rather than a grade. On the draft board and cheat sheet a player name is colored by Proj against his Value plus a scarcity premium: the premium is added only when the optimal plan puts him in an open starting slot AND there is a real points cliff behind him at his position, and it is the size of that drop. RED when Proj is above that number (the room will likely overpay), GREEN when Proj is below it (a buy). The per-player flag field encodes this color. If asked why a player is red or green, explain it from his Proj against Value, and mention the scarcity premium when he has one; never claim it is another tool doing the coloring, you ARE the tool. Do not grade a player by his You number: a star can be worth buying well above You, because You only measures the point at which he stops improving your lineup.',
   };
 }
@@ -19464,7 +19575,19 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   const _staffCtx = " COACHING STAFFS for " + _seasonYr + ", authoritative, overrides your memory on every team named: "
     + Object.keys(STAFFS_2026).map(t => t + ' ' + STAFFS_2026[t]).join('; ')
     + ". Several of these jobs changed hands after your training data was collected, so never answer with the coach you remember for a team on this list. For a team NOT on this list, say you are not certain who is running that staff this season rather than naming anyone, and answer the rest of the question normally."
-  const sys = _coachId + _seasonCtx + _staffCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager can pay before the player stops improving his starting lineup. You is an indifference ceiling, not a grade, and it normally sits at or below Value, so never argue a player is a bad buy because his Proj is above his You. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value plus any scarcity premium, and GREEN when Proj is below it; each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. A player earns a scarcity premium only when the optimal plan needs him in an open starting slot and there is a real points cliff behind him at his position, and the premium is the size of that drop, which is why such a player can be priced above Value and still read GREEN. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED player is NOT automatically a pass. Paying above Value can be correct when his points-per-game edge over a replacement at his position is bigger than what the same dollars buy elsewhere, so weigh his positional edge and any scarcity premium, not the Proj-vs-Value gap alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, except for who coaches whom, which comes from the staff list above and nowhere else. If you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  // Depth charts are the next worst thing to leave to memory: "who's behind
+  // Bijan?" was answered from a roster or two ago. The live table comes off
+  // /api/live (Sleeper, refreshed every six hours) and rides in the JSON below;
+  // when it never loaded the model is told so, so it does not fill the gap.
+  const _depthCtx = contextObj && contextObj.depthCharts
+    ? " DEPTH CHARTS: the depthCharts field in the JSON below is the current NFL depth chart for every team listed, QB, RB, WR and TE each in starting order, top of the list first. A tag after a name is his injury status: Q questionable, D doubtful, O out, IR, PUP, SUS suspended. It comes from the live player feed and overrides your memory on who starts and who backs up whom, so answer backup, handcuff, committee and starting-job questions from it and name the slot as it reads there, like RB2 or WR3; each player in the draft data also carries his own depth slot. A name tagged IR, PUP or NFI still holds his slot in the feed but is not available, so the next untagged name is the working backup. For a team or position not in the table, say the depth chart is not loaded for them rather than guessing from memory."
+    : " DEPTH CHARTS: the live depth charts did not load this session. For any question about who starts or who backs up whom, say you cannot see the current depth chart, then answer from what the draft data's projections imply.";
+  // Injuries: the same feed's designation, body part, note and freshness, the
+  // roster status, and the manager's own news desk, all on one line per player
+  // and collected into injuryReport. The model is told what a missing field
+  // means so it neither invents a designation nor calls a tagged player healthy.
+  const _injuryCtx = " INJURY REPORT: the injuryReport field in the JSON below lists every player on the board carrying an injury designation, a roster status other than Active, or a news-desk entry, best projection first, and every player elsewhere in the data carries the same text in his injury field. The designations (Questionable, Doubtful, Out, IR, PUP, Sus) come from the same live feed as the depth charts and override your memory; the body part and note are the feed's, and the updated date says how fresh the designation is. A news desk entry is news this manager pasted in themselves, already priced into his projection by the percent shown, and when it disagrees with the feed the news desk wins. A player with no injury field is healthy as far as the feed knows: never assert an injury the data does not show, and if asked about one you cannot see, say the report does not show it. The risk field already counts an injury designation, so do not double-penalise. When an injured starter comes up, use the depth chart to name who benefits."
+  const sys = _coachId + _seasonCtx + _staffCtx + _depthCtx + _injuryCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager can pay before the player stops improving his starting lineup. You is an indifference ceiling, not a grade, and it normally sits at or below Value, so never argue a player is a bad buy because his Proj is above his You. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value plus any scarcity premium, and GREEN when Proj is below it; each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. A player earns a scarcity premium only when the optimal plan needs him in an open starting slot and there is a real points cliff behind him at his position, and the premium is the size of that drop, which is why such a player can be priced above Value and still read GREEN. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED player is NOT automatically a pass. Paying above Value can be correct when his points-per-game edge over a replacement at his position is bigger than what the same dollars buy elsewhere, so weigh his positional edge and any scarcity premium, not the Proj-vs-Value gap alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, except for who coaches whom, which comes from the staff list above and nowhere else. If you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).filter(m => m.text && m.text !== '…' && m.text !== '(no response)' && !m.intro).slice(-6).map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
     content: m.text
@@ -20071,7 +20194,8 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
     const put = (patch) => setMsgs(m => m.map(x => x._id === bid ? { ...x, pending: false, ...patch } : x));
     try {
       const state = buildCoachContext(text, {
-        evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, games: seasonGames
+        evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, games: seasonGames,
+        depthCharts: depthChartsFromLive(LIVE_STATUS)
       });
       const r = await fetch(base() + '/ask', {
         method: 'POST',
@@ -20325,7 +20449,8 @@ function ValueCoach({
         draftedIds,
         plan,
         marketState,
-        games: seasonGames
+        games: seasonGames,
+        depthCharts: depthChartsFromLive(LIVE_STATUS)
       });
       const onDelta = ai.format === 'proxy' ? full => setMsgs(m => m.map(x => x._id === tid ? {
         role: 'bot',

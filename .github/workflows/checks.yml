@@ -266,6 +266,18 @@ jobs:
       - name: Coaching staffs, against the pages that assert them
         run: node tools/test-coaching-staffs.mjs
 
+      # The depth charts are handed to the Value Coach the same way, as
+      # authoritative over its memory, so the fold from Sleeper's slots has to be
+      # right: receivers rank ACROSS the three slots, an IR name keeps his slot,
+      # and the prompt must say when the table never loaded. This lifts the real
+      # depthChartsFromLive out of index.html and pins the worker's field and
+      # cache key, so a shape change upstream cannot quietly serve an empty table.
+      # The injury line rides on the same feed and is pinned here too: body part,
+      # note and freshness from the worker, every source folded by injuryLine,
+      # and the prompt's rule that a missing field means healthy, never "none".
+      - name: Depth charts and injuries, from the live feed to the coach's prompt
+        run: node tools/test-depth-charts.mjs
+
       # The four draft-day edges. The one this exists for: an injury tag has to
       # be priced in GAMES MISSED. A player marked "out" the week of a draft
       # loses one game of seventeen, and booking that as -100% would wreck a
