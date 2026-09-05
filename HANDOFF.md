@@ -7799,3 +7799,164 @@ both 09-03 and 09-04 while wrong.
 Next audit should confirm the prompt hash is `53007f8d8779` and read the
 method line of the first story written under it to see whether the check ran
 and what it returned.
+
+## 68. September 5: the pricing model changed, and the check could not see it
+
+The BOARD ATTRIBUTION CHECK from §67 **ran on the live lead, reported a pass,
+and the story was still wrong.** Not because the run skipped a step — it ran
+the check thoroughly and wrote it up — but because the board's pricing changed
+on 2026-09-04 and the check tests a model of the board that no longer holds.
+
+### 68a. What changed in the board
+
+Commit `5eb7071` ("Price the board as the two odds worlds interpolated at the
+slider"). A served price is **no longer the blended rank's own curve slot**.
+Instead:
+
+1. each of the two odds worlds (projections-only and market-only) is
+   slot-priced at **its own** rank,
+2. the two dollar figures are interpolated at `VEGAS_WEIGHT / (1 + VEGAS_WEIGHT)`
+   = 0.75,
+3. an **upper envelope** — a running max walked up from the bottom of the blend
+   order — restores a column that never rises as you read down it,
+4. and only then is the number rounded, with the `$1` floor.
+
+The reason for the change: pricing the blend's own rank off the curve let a
+mid-slider price sit **below both of its extremes**, which a reader reported.
+
+The consequence for a story is that a served price can now differ from **both**
+of a player's own world prices. It is no longer "one of two boards".
+
+### 68b. Row 81: the recommendation read backwards
+
+The live lead was "Bid Travis Etienne to $21, not $17: the next back down is 15
+points worse" (market desk, 09-05 07:12Z).
+
+| Player | Story said | Live board | |
+|---|---|---|---|
+| **Travis Etienne** | **$17, RB16** | **$27, RB16** | **wrong** |
+| **Quinshon Judkins** | $15, **RB17** | $15, **RB18** | rank wrong |
+| Justin Herbert | $7, QB11, from QB14, worth $4 | exact | ✓ |
+| Joe Burrow | $20, QB6, either way, worth $2 | exact | ✓ |
+| Ladd McConkey | $12, WR20, no move, worth $0 | exact | ✓ |
+| Jaylen Waddle | $11, WR24, from WR23, worth -$1 | exact | ✓ |
+
+Also checked and correct: Chase Brown RB10 $39, Mahomes QB8 $9, the WR20–25
+$11/$12 band, and TE12 and below at $3 or less.
+
+$17 is Etienne's **projections-only** price. On the served board he is **$27**,
+because Josh Jacobs sits one rank below him and interpolates to **$26.75** —
+the odds have Jacobs RB11 while the projections have him RB36 — so the envelope
+lifts Etienne, Javonte Williams, Omarion Hampton and Saquon Barkley all to $27.
+**Five backs share one price, RB13 through RB17, and then it falls to $15 at
+Judkins.**
+
+So the story's central finding — "$2 buys 15.3 more points, the last $2 you
+should ever save" — was off by six times: the real gap is **$12**. And "bid up
+to $21" was **$6 under** the board, not $4 over it. The headline told readers
+to bid up to a number below what their own sheet was already asking.
+
+**Corrected in place**: title now "Cap Travis Etienne at $21, not the board's
+$27: five backs share that price"; the running-back section rewritten to the
+real numbers and to why the $27 is Jacobs's money rather than Etienne's; the
+table's two cells and its date; three point totals refreshed to the September 5
+board. A reader-facing correction and a `method` CORRECTION were added.
+`verified` and `published` untouched.
+
+### 68c. Why the check passed it
+
+From the row's own method:
+
+> "Five printed figures coincide with their committed values and were checked
+> rather than assumed: Travis Etienne (RB16, $17 on both) ... In each case the
+> blended points differ from the committed points, so the odds do move the
+> player; they do not move him across a step in the price curve."
+
+That is the alarm firing and being reasoned away — using the escape clause §67
+put in the prompt for exactly the benign case:
+
+> "(A player the odds do not move will legitimately match — confirm that from
+> your own two boards ...)"
+
+The run did confirm it from its own two boards. Both agreed. Both were built
+with the **retired** recipe, so agreement proved nothing. The check is
+structurally incapable of catching this: "which of two boards did this come
+from" has no right answer when the served price comes from neither.
+
+**The check needs rewriting for the new pricing, not merely re-running.** Not
+changed here; the prompt is live and autonomous, and this is Ken's call. The
+replacement is a different question — not "which board", but **"can you
+reproduce this exact number from the two world RANKS?"**:
+
+> BOARD ATTRIBUTION CHECK. A served price is not a curve slot any more. For
+> every price you print, write down the player's rank in BOTH odds worlds,
+> slot-price each rank, interpolate at 0.75, then apply the upper envelope: a
+> running max of those interpolated figures walked up from the bottom of the
+> position. Round last. If the number you are about to print is not what that
+> produces, it is not the served price. A figure that equals the player's own
+> projections-only or odds-only price is the most likely way to get this wrong,
+> because the envelope routinely lifts a player above both.
+
+### 68d. My own harness was silently wrong for three days
+
+The board a reader sees is what everything here is checked against, so this
+belongs in the record. `tools/live-board.mjs` lifts declarations out of the
+worker by scanning to the end of the statement, and it treated a **newline** at
+depth zero as the end. `_oddsNorm` is a three-line arrow chain:
+
+    const _oddsNorm = s => String(s || '').toLowerCase()
+      .replace(/\b(jr|sr|ii|iii|iv|v)\.?$/g, '')
+      .replace(/[^a-z]/g, '');
+
+so the lift stopped after `.toLowerCase()` and produced a function returning
+`"josh allen"` instead of `"joshallen"`. **Every overlay lookup missed, and the
+repo-side board silently did not blend** — no error, and identical to the
+committed board.
+
+It survived from the 09-02 rewrite because nothing exercised it: the 09-03 and
+09-04 repo-vs-deployed comparisons were run with **no overlay**, and every
+story check was run against the deployed *bundle*, where esbuild's formatting
+kept the chain liftable. No published figure was mis-verified as a result — but
+the checker was wrong and the suite was green, for the third distinct reason in
+five days.
+
+Fixed: a newline now ends a declaration only if the next line does not continue
+the expression (leading `.?:+-*/&|,)]}=`, with `//` and `/*` excluded). And the
+test now covers the blended path, which is what would have caught it:
+
+- `oddsKey('Tyrone Tracy Jr.', 'RB')` must be `tyronetracy|RB` — a direct
+  regression test for a truncated multi-line lift;
+- a **synthetic overlay** built from `PROJECTIONS` must produce a board that
+  differs from the committed one (nothing blending is now a failure);
+- the served column must never rise as you read down a position;
+- every price must equal the two worlds interpolated at 0.75, cross-checked
+  against `it-league.js`'s `blendPrice`, an independent implementation;
+- and the envelope must match the running max exactly.
+
+Mutation-verified: restoring the old newline rule fails
+`the overlay key is a complete function` with `tyrone tracy jr.|RB`.
+
+The harness also now exposes `r0`, `r1` and `lerp` per player — the two world
+ranks and the pre-envelope interpolation — because under the new pricing a
+checker cannot explain a price without them.
+
+### 68e. The rest of the audit
+
+- CI **53/53** after merging 12 commits from main.
+- **Board pipeline functions unchanged** since 09-04 main (`_colScore`,
+  `_colPrice`, `_colNormFactors`, `_colNormApply`, `blendProjections`,
+  `scoreStats`, `_withAvailability`, `_availPool` all hash identically) — the
+  pricing change is in `boardPayload`'s inline block and in the new
+  `_colBlendPrice`, which is why a function-hash diff alone did not flag it.
+  **Hash the board assembly, not only the functions it calls.**
+- **Repo vs deployed: 1380 player-rows across four boards (committed plus QB,
+  RB and WR blended), 0 differences.** The blended comparisons are new; before
+  today this check only ever ran on the committed board.
+- Publishing healthy: runs 39–43 all `done`.
+- Tamper predicates clean; exactly one published row.
+- Routine enabled, `58 */6 * * *`, prompt still 44,690 chars / `53007f8d8779`,
+  byte-identical to the repo copy.
+- Four stories have run under the new prompt (78–81). Three name the attribution
+  check in `method`; row 78, the first, references `DEFAULT_BOARD_RAW` without
+  naming the check. So it is being run — it is the rule that is now wrong, not
+  the compliance.
