@@ -433,6 +433,13 @@ jobs:
       - name: Plan pricing, handcuffs and byes
         run: node tools/test-plan-pricing.mjs
 
+      # A team card's WR2 has to mean the second-best receiver on that roster.
+      # The card used to stack every bought player above the plan's rows, so a $1
+      # receiver into an empty corps read as WR1 while the two the plan still
+      # meant to buy sat under him. No browser, no network.
+      - name: Team card rows rank players within the position
+        run: node tools/test-roster-slots.mjs
+
       # The worker keeps the availability list current from ESPN's injury feed
       # (IR / PUP / suspended / exempt), merged over the committed block with the
       # pro-rating applied exactly once. Skips the live pull without network.
