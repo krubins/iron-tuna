@@ -203,8 +203,16 @@ ok('an unmatched player is untouched', !('depthPos' in board[3]));
 
 // ── 3 & 4. the table reaches the prompt, and the prompt says what it is ───
 const ctxStart = idx.indexOf('function buildCoachContext(');
-const ctxBody = idx.slice(ctxStart, ctxStart + 8000);
-ok('buildCoachContext takes depthCharts off its ctx', /games,\s*depthCharts\s*\} = ctx;/.test(ctxBody));
+// A fixed byte window silently stops covering the function as it grows: the room
+// fields (rivals, onTheBlock, marketHeat, recentPicks) pushed the return object
+// past 8000 chars, and three checks below started passing on absence instead.
+const ctxBody = (() => {
+  const rest = idx.slice(ctxStart + 1);
+  const end = rest.search(/^function /m);
+  return idx.slice(ctxStart, end < 0 ? idx.length : ctxStart + 1 + end);
+})();
+// The point is that depthCharts comes off ctx, not what happens to sit beside it.
+ok('buildCoachContext takes depthCharts off its ctx', /const \{[^}]*\bdepthCharts\b[^}]*\} = ctx;/.test(ctxBody));
 ok('buildCoachContext ships depthCharts with the state', /depthCharts: depthCharts \|\| undefined/.test(ctxBody));
 ok('each slim player carries his depth slot', /depth: p\.depthPos \?/.test(ctxBody));
 ok('a receiver\'s slot is reported as WRn, not LWRn',

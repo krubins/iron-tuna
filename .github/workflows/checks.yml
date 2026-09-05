@@ -383,6 +383,15 @@ jobs:
       - name: Draft-day edges (projection edits, news, rival need, nominations)
         run: node tools/test-draft-edges.mjs
 
+      # What the two coaches can SEE. buildCoachContext used to drop `teams` and
+      # `marketState` on the floor, so the Value Coach and the Fable panel knew the
+      # league size and nothing else about the other managers while the insight
+      # strip beside them had every budget and roster hole. This holds the room
+      # fields to their meaning -- above all that runnerUp tracks the SECOND-best
+      # able bidder, since that is where an English auction actually settles.
+      - name: The coaches can see the rest of the room
+        run: node tools/test-coach-room.mjs
+
       # The Build desk states a budget, so it has to account for that budget.
       # It once published the starters ($183) under a headline quoting the whole
       # board ($200) and never mentioned the bench that spends the difference,
