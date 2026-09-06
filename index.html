@@ -12978,7 +12978,13 @@ function Cheatsheet({
       // green — including the scarcity premium — was invisible. It leads now,
       // and the bye week rides along behind it.
       title: nameTitle + (byeOf(p.team) ? ` Bye week ${byeOf(p.team)}.` : ' Bye week: TBD.')
-    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, !drafted && p.scarce ? React.createElement("span", {
+      // The scarcity chip only earns its space when the tier is about to run
+      // out. Firing on every player above any cliff put a badge at the top of
+      // every column that never changed and never asked for a decision. Two or
+      // fewer left is where waiting actually costs you the tier, which is the
+      // only thing the badge is for. Pricing is untouched: the premium still
+      // reads every cliff, the badge just stops narrating them.
+    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, !drafted && p.scarce && p.scarce.count <= 2 ? React.createElement("span", {
       className: "cheat-scarce" + (p.scarce.count <= 1 ? " scarce-last" : ""),
       title: `${p.scarce.count === 1 ? `The last ${pos} above` : `One of ${p.scarce.count} ${pos}s above`} a ${Math.round(p.scarce.gapPts || 0)}-point drop${p.scarce.demand ? `, with ${p.scarce.demand} team${p.scarce.demand === 1 ? '' : 's'} still needing one` : ''}.`
     }, p.scarce.count <= 1 ? "LAST" : p.scarce.count + " LEFT") : null, (!drafted && highlightRecs && upsideIds && upsideIds.get(p.id)) ? React.createElement("span", {
