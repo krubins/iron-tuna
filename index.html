@@ -748,7 +748,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .nomination-alert .na-x { margin-left: auto; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
 .nom-next { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px; }
 .nom-next .nn-head { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-text); margin-bottom: 6px; }
-.nom-next .nn-row { display: grid; grid-template-columns: 54px minmax(120px, auto) minmax(0, 1fr); gap: 10px; align-items: baseline; width: 100%; text-align: left; background: none; border: none; border-top: 1px solid var(--border-subtle); padding: 7px 0; cursor: pointer; font-family: var(--font-body); }
+.nom-next .nn-item { display: flex; align-items: stretch; border-top: 1px solid var(--border-subtle); }
+.nom-next .nn-x { flex: 0 0 auto; align-self: center; background: none; border: none; color: var(--text-muted); font-size: 17px; line-height: 1; cursor: pointer; padding: 4px 2px 4px 10px; }
+.nom-next .nn-x:hover { color: var(--text-primary); }
+.nom-next .nn-row { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 54px minmax(120px, auto) minmax(0, 1fr); gap: 10px; align-items: baseline; width: 100%; text-align: left; background: none; border: none; padding: 7px 0; cursor: pointer; font-family: var(--font-body); }
 .nom-next .nn-row:hover { background: var(--bg-hover); }
 .nom-next .nn-tag { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; color: #ff8d4a; border: 1px solid rgba(255,107,94,0.5); border-radius: 3px; padding: 1px 4px; text-align: center; }
 .nom-next .nn-bargain .nn-tag { color: var(--positive); border-color: rgba(45,212,163,0.5); }
@@ -19641,8 +19644,9 @@ function strategyPivot(players, myTeam, plan, config, draftedIds, games) {
 //
 // A player you want and rivals can pay for is the one nomination that can only
 // cost you money, so he is never recommended.
-function nominationBoard(players, teams, myTeam, plan, config, draftedIds, limit) {
+function nominationBoard(players, teams, myTeam, plan, config, draftedIds, limit, demotions) {
   if (!myTeam || !teams || teams.length < 2 || !config) return [];
+  const demOf = id => demotions && demotions.get ? demotions.get(id) || 0 : 0;
   const di = draftedIds || new Set();
   const minBid = config.valuation.minBid;
   const avail = (players || []).filter(p => !di.has(p.id) && (p.projectedPoints || 0) > 0);
@@ -19714,21 +19718,31 @@ function nominationBoard(players, teams, myTeam, plan, config, draftedIds, limit
     }
   });
   const byScore = (a, b) => b.score - a.score;
-  const bargains = rows.filter(r => r.kind === 'bargain').sort(byScore).slice(0, 2);
-  const drains = rows.filter(r => r.kind === 'drain').sort(byScore).slice(0, limit || 4);
+  // Passing on a suggestion does not make it wrong, only wrong for now. Each
+  // pass drops him ten places down the queue instead of deleting him, so he
+  // comes back around once the names ahead of him are off the board.
+  const demote = list => list.map((r, i) => ({
+    r,
+    rank: i + 10 * demOf(r.player.id)
+  })).sort((a, b) => a.rank - b.rank).map(x => x.r);
+  const bargains = demote(rows.filter(r => r.kind === 'bargain').sort(byScore)).slice(0, 2);
+  const drains = demote(rows.filter(r => r.kind === 'drain').sort(byScore)).slice(0, limit || 4);
   return bargains.concat(drains);
 }
 function NominateNext({
   rows,
-  onNominate
+  onNominate,
+  onPass
 }) {
   if (!rows || !rows.length) return null;
   return React.createElement("div", {
     className: "nom-next no-print"
   }, React.createElement("div", {
     className: "nn-head"
-  }, "Nominate next"), rows.map(r => React.createElement("button", {
+  }, "Nominate next"), rows.map(r => React.createElement("div", {
     key: r.player.id,
+    className: "nn-item"
+  }, React.createElement("button", {
     className: "nn-row" + (r.kind === 'bargain' ? ' nn-bargain' : ''),
     onClick: () => onNominate && onNominate(r.player),
     title: "Put him on the block"
@@ -19740,7 +19754,15 @@ function NominateNext({
     className: "nn-meta"
   }, " ", r.player.position, " \u00b7 $", r.price)), React.createElement("span", {
     className: "nn-why"
-  }, r.why))));
+  }, r.why)), React.createElement("button", {
+    className: "nn-x",
+    title: "Not now \u2014 drops him ten places down the queue",
+    "aria-label": "Pass on " + r.player.name + " for now",
+    onClick: e => {
+      e.stopPropagation();
+      onPass && onPass(r.player);
+    }
+  }, "\u00d7"))));
 }
 function nominationInsight(player, players, myTeam, teams, plan, config, draftedIds, marketState, games) {
   if (!player) return null;
@@ -24479,10 +24501,14 @@ function App() {
   }, [teams, personalizedPlayers, config, draftedIds, targets, roleOverrides]);
   const [dismissedAlert, setDismissedAlert] = useState(null);
   const [dismissedCliffs, setDismissedCliffs] = useState(() => new Set());
+  // Players you have waved off the nomination queue, and how many times. Not a
+  // blacklist: each pass costs him ten places, so a name you skipped early comes
+  // back up once the board above him clears.
+  const [nomPassed, setNomPassed] = useState(() => new Map());
   const draftAlert = useMemo(() => draftAlerts(personalizedPlayers, myTeam, plan, config, draftedIds, SEASON_GAMES, teams), [personalizedPlayers, myTeam, plan, config, draftedIds, teams]);
   // The positions about to run out, read off the same flags that lift You $.
   const cliffRows = useMemo(() => cliffWatch(personalizedPlayers, teams, config, draftedIds, myTeam), [personalizedPlayers, teams, config, draftedIds, myTeam]);
-  const nomNext = useMemo(() => nominationBoard(personalizedPlayers, teams, myTeam, plan, config, draftedIds, 4), [personalizedPlayers, teams, myTeam, plan, config, draftedIds]);
+  const nomNext = useMemo(() => nominationBoard(personalizedPlayers, teams, myTeam, plan, config, draftedIds, 4, nomPassed), [personalizedPlayers, teams, myTeam, plan, config, draftedIds, nomPassed]);
   const nomInsight = useMemo(() => liveNomination ? nominationInsight(liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState, SEASON_GAMES) : null, [liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState]);
   // The $1-$2 endgame shortlist. Null until the manager is down to it.
   const upsideIds = useMemo(() => {
@@ -24759,7 +24785,12 @@ function App() {
       onClick: () => setDismissedAlert(draftAlert.text)
     }, "\u00d7")), (view === 'board' && !showSplash && !currentNomination) && React.createElement(NominateNext, {
       rows: nomNext,
-      onNominate: setCurrentNomination
+      onNominate: setCurrentNomination,
+      onPass: p => setNomPassed(prev => {
+        const next = new Map(prev);
+        next.set(p.id, (next.get(p.id) || 0) + 1);
+        return next;
+      })
     }), (view === 'board' && !showSplash) && React.createElement("div", {
       className: "board-coach-inline no-print"
     }, React.createElement(ValueCoach, {
