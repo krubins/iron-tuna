@@ -436,12 +436,25 @@ input:focus, select:focus { border-color: var(--accent); }
 .insight-headline { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.03em; color: var(--text-primary); margin-bottom: 4px; }
 .insight-detail { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
 .insight-action { font-size: 13px; color: var(--text-primary); line-height: 1.5; padding: 8px; background: var(--bg-base); border-radius: var(--radius-sm); }
-.alerts-box { margin-top: 14px; border: 1px solid rgba(255,107,94,0.35); border-radius: var(--radius-md); padding: 10px 12px; background: rgba(255,107,94,0.05); }
-.alerts-h { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: #ff6b5e; margin-bottom: 8px; }
-.alert-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
-.alert-row:last-child { margin-bottom: 0; }
-.alert-text { flex: 1; }
-.alert-empty { font-size: 12px; color: var(--text-muted); }
+/* The cliff banner. Loud on purpose: a run on a tier has to be visible before
+   you are the last team bidding into it. */
+.cliff-watch { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.cw-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); border-left-width: 4px; background: var(--bg-panel); font-family: var(--font-body); animation: alertIn 0.3s ease-out; }
+.cw-row.cw-watch { border-left-color: var(--gold-text); }
+.cw-row.cw-urgent { border-left-color: #ff9f43; background: linear-gradient(90deg, rgba(255,159,67,0.12), transparent 60%); }
+.cw-row.cw-critical { border-left-color: var(--danger); background: linear-gradient(90deg, rgba(239,68,68,0.18), transparent 60%); animation: alertIn 0.3s ease-out, cliffPulse 1.7s ease-in-out infinite; }
+@keyframes cliffPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } 50% { box-shadow: 0 0 0 3px rgba(239,68,68,0.22); } }
+@media (prefers-reduced-motion: reduce) { .cw-row.cw-critical { animation: none; box-shadow: 0 0 0 2px rgba(239,68,68,0.28); } }
+.cw-tag { flex: none; }
+.cw-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cw-head { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-primary); }
+.cw-row.cw-critical .cw-head { color: #ff6b5e; }
+.cw-row.cw-urgent .cw-head { color: #ff9f43; }
+.cw-detail { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+.cw-prem { flex: none; display: flex; flex-direction: column; align-items: flex-end; font-family: var(--font-mono); font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.cw-prem-sub { font-family: var(--font-body); font-size: 10px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.cw-x { flex: none; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
+@media (max-width: 640px) { .cw-row { flex-wrap: wrap; gap: 8px; } .cw-head { font-size: 14px; } .cw-prem { font-size: 15px; } }
 .ch-models-hint { flex-basis: 100%; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 .tier-grid { display: flex; flex-direction: column; gap: 14px; }
 .tier-block { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-panel); overflow: hidden; }
@@ -590,6 +603,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .rail-row { padding: 6px 8px; border-radius: var(--radius-sm); border-left: 3px solid transparent; margin-bottom: 4px; background: var(--bg-elev); }
 .rail-row.ideal { border-left-color: #2ec85f; background: rgba(46,200,95,0.16); }
 .rail-row.reserve { border-left-color: var(--gold); background: rgba(245,184,0,0.10); }
+/* "Highlight recommended players" (the models box). The model's own buys get a
+   heavier name, half a point of type and a wash of the model's gold; the $1-$2
+   endgame shortlist gets a sky bar of its own, because it is a different claim.
+   Both are declared before .rail-target so a favourite still wins the row. */
+.rail-row.rail-rec { background: rgba(227,181,58,0.13); box-shadow: inset 0 0 0 1px rgba(227,181,58,0.30); }
+.rail-row.rail-rec .rr-name { font-weight: 700; font-size: 15px; }
+.rail-row.rail-upside { border-left-color: #7dd3fc; background: rgba(125,211,252,0.15); }
+.rail-row.rail-upside .rr-name { font-weight: 700; }
 .rail-row.rail-target { border-left-color: var(--positive); background: rgba(45,212,163,0.20); box-shadow: inset 0 0 0 1px rgba(45,212,163,0.35); }
 .rr-l1 { display: flex; align-items: center; gap: 6px; }
 .target-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--text-muted); background: transparent; padding: 0; flex: 0 0 auto; cursor: pointer; }
@@ -718,8 +739,12 @@ input:focus, select:focus { border-color: var(--accent); }
 .nomination-alert { display: flex; align-items: center; gap: 11px; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-left: 3px solid var(--positive); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); animation: alertIn 0.3s ease-out; }
 .nomination-alert.tone-good { border-left-color: var(--positive); }
 .nomination-alert.tone-info { border-left-color: var(--gold-text); }
+.nomination-alert.tone-warn { border-left-color: #ff9f43; }
+.nomination-alert.tone-bad { border-left-color: var(--danger); background: linear-gradient(90deg, rgba(239,68,68,0.12), var(--bg-panel) 55%); }
 .na-label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.07em; font-size: 14px; color: var(--positive); white-space: nowrap; }
 .nomination-alert.tone-info .na-label { color: var(--gold-text); }
+.nomination-alert.tone-warn .na-label { color: #ff9f43; }
+.nomination-alert.tone-bad .na-label { color: #ff6b5e; }
 .nomination-alert .na-x { margin-left: auto; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
 .nom-next { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px; }
 .nom-next .nn-head { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-text); margin-bottom: 6px; }
@@ -1053,6 +1078,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-col-lbl:hover { color: var(--text-secondary); text-decoration-color: var(--positive); }
 .cheat-you { font-family: var(--font-mono); font-size: 12px; text-align: right; min-width: 20px; font-weight: 700; color: var(--text-secondary); }
 .cheat-you.cy-up { color: var(--text-secondary); }
+.cheat-you.cy-cliff { color: #ff9f43; }
+.cy-cliff-mark { font-size: 8px; margin-left: 2px; vertical-align: 2px; color: #ff9f43; }
 .cheat-you.cy-down { color: var(--text-secondary); font-weight: 700; }
 .cheat-tilt { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
 .cheat-tilt input[type=range] { width: 88px; accent-color: var(--positive); cursor: pointer; }
@@ -1120,6 +1147,10 @@ input:focus, select:focus { border-color: var(--accent); }
   .cheat-row.cheat-hl .cheat-rank::before { content: '\2605'; color: #b8860b; margin-right: 1px; }
   .cheat-row.cheat-target { background: #eafaf3 !important; border-left: 3px solid #0a7a3f; }
   .cheat-row.cheat-target .cheat-name::before { content: '\25CF'; color: #0a7a3f; margin-right: 3px; font-size: 8px; }
+  .cheat-row.cheat-rec { background: #fdf4dd !important; }
+  .cheat-row.cheat-rec .cheat-name { font-weight: 700; }
+  .cheat-row.cheat-upside { background: #e8f4fd !important; border-left: 3px solid #1a6a9a; }
+  .cheat-upside-tag { color: #1a6a9a !important; border-color: #1a6a9a !important; }
   .cheat-print-foot { display: block; position: fixed; bottom: 0; left: 0; right: 0; font-size: 7.5px; color: #8a94a0; text-align: center; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; border-top: 1px solid #d4dade; font-family: Arial, sans-serif; background: #fff; }
   body.print-onepage .cheat-print-head, body.print-onepage .cheat-print-foot { display: none !important; }
   body.print-onepage .cheat-col-mobhide { display: block !important; }
@@ -1189,6 +1220,17 @@ input:focus, select:focus { border-color: var(--accent); }
 .cheat-row.cheat-stack { box-shadow: inset 3px 0 0 #a78bfa; background: rgba(167,139,250,0.10); }
 .cheat-row.cheat-stack .cheat-name::after { content: "STACK"; margin-left: 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: #c4b1ff; border: 1px solid rgba(167,139,250,0.6); border-radius: 4px; padding: 0 4px; vertical-align: middle; }
 .cheat-row.cheat-stack.cheat-modelfit { box-shadow: inset 3px 0 0 #a78bfa; }
+/* "Highlight recommended players" (the models box). Checked, the model's own
+   buys get a heavier name, half a point of type and a wash of the model's gold
+   — enough to pull the eye, not enough to take the sheet over. The $1-$2
+   endgame shortlist gets its own sky bar because it answers a different
+   question. Both sit before .cheat-target so a favourite still wins its green. */
+.cheat-row.cheat-rec { background: rgba(227,181,58,0.10); }
+.cheat-row.cheat-rec .cheat-name { font-weight: 700; font-size: 1.045em; }
+.cheat-row.cheat-rec .cheat-val, .cheat-row.cheat-rec .cheat-ppg { font-weight: 700; }
+.cheat-row.cheat-upside { background: rgba(125,211,252,0.13); box-shadow: inset 3px 0 0 #7dd3fc; }
+.cheat-row.cheat-upside .cheat-name { font-weight: 700; }
+.cheat-upside-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.05em; color: #7dd3fc; border: 1px solid rgba(125,211,252,0.55); border-radius: 4px; padding: 0 4px; margin-left: 7px; vertical-align: middle; }
 /* A target lights its whole line and stays lit until he is assigned or the flag
    comes off. It sits after model-fit and stack because those repaint the row
    background and left bar underneath it. */
@@ -1270,6 +1312,11 @@ input:focus, select:focus { border-color: var(--accent); }
 .hm-tab.active { border-color: var(--positive); color: var(--positive); background: rgba(45,212,163,0.12); }
 .hm-pts { font-size: 12px; color: var(--text-muted); }
 .hm-tab.active .hm-pts { color: var(--positive); }
+.hm-rec { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: normal; text-transform: none; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 3px 9px; }
+.hm-rec:hover { color: var(--text-primary); border-color: var(--border-strong); }
+.hm-rec input { margin: 0; cursor: pointer; accent-color: var(--gold-text); }
+.hm-rec.on { color: var(--gold-text); border-color: var(--gold-text); background: rgba(227,181,58,0.10); }
+.bm2-models .hm-rec { grid-column: 1 / -1; justify-content: center; margin-top: 4px; }
 .header-league { background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: 16px; padding: 5px 14px; font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); cursor: pointer; white-space: nowrap; letter-spacing: 0.02em; }
 .header-league:hover { border-color: var(--gold-text); color: var(--text-primary); }
 .header-league .hl-k { color: var(--gold-text); font-family: var(--font-display); letter-spacing: 0.06em; margin-right: 4px; }
@@ -6787,42 +6834,47 @@ function InsightsPanel({
     }
   }, "Strategy"), ins.action))));
 }
-function AlertsBox({
-  players,
-  draftedIds,
-  config
+// The cliff banner. It sits at the top of the draft board and it is meant to be
+// impossible to miss: the whole point of the feature is that a run on a tier is
+// obvious BEFORE you are the fourth team bidding on the last man in it.
+//
+// One row per position, loudest first. A critical row pulses; an urgent one is
+// amber and still. Dismissal is keyed to the position AND the count left, so
+// waving off "6 QBs left" does not silence "2 QBs left" ten picks later.
+function CliffWatch({
+  rows,
+  dismissed,
+  onDismiss
 }) {
-  const di = draftedIds instanceof Set ? draftedIds : new Set(draftedIds || []);
-  const flags = scarcityFlags(players, di, config);
-  const byPos = {};
-  flags.forEach((fl, id) => {
-    const pl = (players || []).find(p => p.id === id);
-    if (pl) {
-      (byPos[fl.pos] = byPos[fl.pos] || {
-        count: fl.count,
-        names: []
-      }).names.push(pl.name);
-    }
-  });
-  const alerts = Object.entries(byPos).map(([pos, info]) => ({
-    pos,
-    count: info.count,
-    names: info.names
-  }));
+  const live = (rows || []).filter(r => r.need && r.level !== 'info' && !(dismissed && dismissed.has(r.pos + ':' + r.count))).slice(0, 3);
+  if (!live.length) return null;
   return React.createElement("div", {
-    className: "alerts-box"
-  }, React.createElement("div", {
-    className: "alerts-h"
-  }, "Alerts"), alerts.length ? alerts.map(a => React.createElement("div", {
-    key: a.pos,
-    className: `alert-row ${a.count === 1 ? 'alert-crit' : ''}`
-  }, React.createElement("span", {
-    className: `position-tag ${a.pos}`
-  }, a.pos), React.createElement("span", {
-    className: "alert-text"
-  }, a.count === 1 ? `Last startable ${a.pos} before a tier cliff: ${a.names.join(', ')}. Steep dropoff after him.` : `Only 2 startable ${a.pos} left before a cliff: ${a.names.join(', ')}.`))) : React.createElement("div", {
-    className: "alert-empty"
-  }, "No scarcity alerts right now."));
+    className: "cliff-watch no-print"
+  }, live.map(r => {
+    const t = cliffWatchText(r);
+    return React.createElement("div", {
+      key: r.pos,
+      className: "cw-row cw-" + r.level,
+      title: r.names.join(', ')
+    }, React.createElement("span", {
+      className: "cw-tag position-tag " + r.pos
+    }, r.pos), React.createElement("span", {
+      className: "cw-body"
+    }, React.createElement("span", {
+      className: "cw-head"
+    }, r.level === 'critical' ? '\u26a0 ' : '', t.head), React.createElement("span", {
+      className: "cw-detail"
+    }, t.body)), r.prem > 0 && React.createElement("span", {
+      className: "cw-prem",
+      title: "Your You $ at this position already carries this premium. It is the most the cliff is worth paying, not a licence to chase."
+    }, "+$", r.prem, React.createElement("span", {
+      className: "cw-prem-sub"
+    }, "in You $")), React.createElement("button", {
+      className: "cw-x",
+      title: "Dismiss until this tier gets thinner",
+      onClick: () => onDismiss && onDismiss(r.pos + ':' + r.count)
+    }, "\u00d7"));
+  }));
 }
 function buildRosterSlots(team, config, valuedPlayers) {
   const playerMap = new Map();
@@ -7527,7 +7579,15 @@ function QuickDraftModal({
   const playerFact = (() => {
     const mv = player.marketValue,
       av = player.auctionValue;
-    if (player.scarce) return 'His tier is thin, only a few comparable starters remain, so he is worth a small premium before the drop.';
+    if (player.scarce) {
+      const _c = player.scarce.count, _d = player.scarce.demand;
+      const _pr = player.cliffPrem > 0 ? ` Your You $ already carries $${player.cliffPrem} of cliff premium.` : '';
+      return (_c === 1
+        ? `He is the last ${player.position} above the drop`
+        : `Only ${_c} ${player.position}s are left above the drop`) +
+        (_d ? `, and ${_d} team${_d === 1 ? '' : 's'} still need${_d === 1 ? 's' : ''} one` : '') +
+        `, so paying a premium inside the tier beats buying after it.` + _pr;
+    }
     if (mv != null && av != null) {
       if (mv >= av * 1.15) return `The room may push him near $${mv}, above his $${av} value, so let someone else overpay.`;
       if (av >= mv * 1.15) return `Profiles as a value: worth about $${av} but often goes for around $${mv}.`;
@@ -8974,14 +9034,41 @@ function SettingsModal({
   }, "Save Settings"))));
 }
 // What standing above a positional cliff is worth, in dollars. `fl` is a
-// scarcityFlags() entry: how many players sit above the cliff, and how many
-// points the drop is. A lone player above a 30-point cliff is worth more than
-// one of three above a 12-point one, and the premium is capped so scarcity can
-// never run away with the budget.
-function scarcityPremium(fl, budget) {
+// scarcityFlags() entry: how many players sit above the cliff, how many points
+// the drop is, and how many teams still have to buy from that stack.
+//
+// Given `dpp` — this board's own dollars per point, from dollarsPerPoint() —
+// the answer needs no tuned constant at all. Falling off the cliff costs you
+// `gapPts`, and the board already says what a point is worth in dollars, so the
+// drop has a price. What you should actually pay for standing above it is that
+// price weighted by how likely the room is to take the spot away from you: the
+// squeeze. Six quarterbacks against twelve buyers pays most of it; a tier as
+// deep as the room pays almost none of it. Same argument, same shape, as
+// handcuffDollars and byeStackDollars — a points claim turned into dollars on
+// this board's own scale.
+//
+// Without `dpp` the caller has no pool to convert against (boardValue only ever
+// sees the config), so it falls back to a share of the budget: the same rate the
+// colour has always used, now moved by the squeeze where a room is known.
+//
+// Either way it is capped at 15% of the budget, because a bidding ceiling that
+// can eat a sixth of the roster's money is not a ceiling.
+function scarcityPremium(fl, budget, dpp) {
   if (!fl) return 0;
+  const squeeze = fl.demand ? cliffSqueeze(fl.count, fl.demand) : null;
+  if (dpp > 0) return Math.min(budget * 0.15, Math.round((fl.gapPts || 0) * dpp * (squeeze == null ? 1 : squeeze)));
   const g = Math.min(1.3, Math.max(0.4, (fl.gapPts || 0) / 25));
-  return Math.min(budget * 0.15, Math.round(budget * (fl.count === 1 ? 0.10 : 0.06) * g));
+  const count = Math.max(1, fl.count || 1);
+  const rate = squeeze == null ? (count === 1 ? 0.10 : 0.06) : 0.04 + 0.09 * squeeze;
+  return Math.min(budget * 0.15, Math.round(budget * rate * g));
+}
+// How tight a stack of `count` players is against `demand` buyers, 0 to 1. One
+// player for a room full of buyers is 1; a stack as deep as the room is barely
+// above 0. Each player who leaves the board pushes it up, which is what makes
+// both the premium and the alert escalate as the cliff gets closer.
+function cliffSqueeze(count, demand) {
+  if (!demand || demand <= 0) return 1;
+  return Math.max(0, Math.min(1, (demand - Math.max(1, count) + 1) / demand));
 }
 // What a player is worth on YOUR board for colouring purposes: his Value, plus
 // the cliff premium when the optimal plan actually wants him in an open
@@ -10786,7 +10873,33 @@ function playerNews(player, players, config) {
   const outlook = (story || `${first} is a steady contributor at ${pos}.`) + (value ? ' ' + value : '');
   return outlook.trim();
 }
-function scarcityFlags(players, draftedIds, config) {
+// How many teams still have to start someone at a position. This is the demand
+// side of a tier cliff, and it is what decides whether a cliff matters: six
+// startable quarterbacks is plenty in a room of four and a bidding war in a room
+// of twelve. Live rosters when they are known, the league's own shape otherwise.
+function positionDemand(pos, teams, config) {
+  const starters = config && config.roster && config.roster[pos] && config.roster[pos].starters || 0;
+  if (!starters) return 0;
+  if (teams && teams.length) {
+    return teams.filter(t => (t.roster || []).filter(r => r.position === pos).length < starters).length;
+  }
+  return Math.max(1, (config && config.teams) || 12) * starters;
+}
+// The players standing above a positional cliff, and how tight that stack is
+// against the room that still has to buy from it.
+//
+// The window used to be hard-coded at two: a cliff only counted when one or two
+// players stood above it. That threw away the case this whole feature exists
+// for — a tier of six elite quarterbacks in a twelve-team room, where every one
+// of them goes above value because four teams are going to miss. The window is
+// now the demand itself, so a stack of six with twelve buyers is scarce and a
+// stack of six with four buyers is not.
+//
+// `demand` rides on every entry so scarcityPremium can price the squeeze rather
+// than guess at it. Passing `teams` is what turns the demand side on; without
+// it the old blind window of two is kept, because a stack cannot be measured
+// against a room that was never handed over.
+function scarcityFlags(players, draftedIds, config, teams) {
   const map = new Map();
   const byPos = {};
   (players || []).forEach(p => {
@@ -10800,25 +10913,120 @@ function scarcityFlags(players, draftedIds, config) {
     const gaps = [];
     for (let i = 1; i < pts.length; i++) gaps.push(pts[i - 1] - pts[i]);
     const avg = gaps.reduce((s, x) => s + x, 0) / gaps.length;
-    let cliffIdx = -1,
-      cliffGap = 0;
-    for (let i = 1; i < pts.length; i++) {
+    const demand = teams && teams.length ? positionDemand(pos, teams, config) : 0;
+    // Nobody left to buy one means there is nothing to be scarce for.
+    if (teams && teams.length && demand <= 0) return;
+    const window = demand > 0 ? Math.min(demand, 12) : 2;
+    // EVERY cliff in the window, not just the first one. Stopping at the first
+    // was the second half of the same blindness: on the live board one
+    // quarterback stands 43 points clear of the field, so a detector that stops
+    // there reports "one left" and never sees the five behind him sitting above
+    // a drop of their own. Both are real, and they are real for different
+    // players.
+    const cliffs = [];
+    for (let i = 1; i <= Math.min(window, pts.length - 1); i++) {
       const g = pts[i - 1] - pts[i];
-      if (g >= Math.max(avg * 1.8, 10)) {
-        cliffIdx = i;
-        cliffGap = g;
-        break;
-      }
+      if (g >= Math.max(avg * 1.8, 10)) cliffs.push({
+        idx: i,
+        gap: g,
+        // What missing this tier costs: the size of the drop, weighted by how
+        // likely the room is to take it away from you.
+        score: g * cliffSqueeze(i, demand)
+      });
     }
-    if (cliffIdx >= 1 && cliffIdx <= 2 && arr.length > cliffIdx) {
-      for (let i = 0; i < cliffIdx; i++) map.set(arr[i].id, {
-        count: cliffIdx,
-        gapPts: cliffGap,
-        pos
+    if (!cliffs.length) return;
+    // A player is priced against the cliff HE would fall off — the most binding
+    // one still in front of him. The 43-point drop is the quarterback at the
+    // top of the board's problem; the five behind him are pricing the smaller
+    // drop underneath them, and they should not be sold his.
+    for (let i = 0; i < Math.min(window, arr.length); i++) {
+      let best = null;
+      cliffs.forEach(c => {
+        if (c.idx <= i) return;
+        if (!best || c.score > best.score) best = c;
+      });
+      if (!best || arr.length <= best.idx) continue;
+      map.set(arr[i].id, {
+        count: best.idx,
+        gapPts: best.gap,
+        pos,
+        demand: demand || null,
+        score: best.score
       });
     }
   });
   return map;
+}
+// One row per position that is about to run out of startable players, ranked by
+// how tight it is. This is the alert side of the same reading the bid uses, so
+// the banner and the You column can never disagree about how bad it is.
+//
+// `need` is whether YOUR lineup still has a starting slot at the position: a
+// cliff you are already past is information, not an emergency, and only a
+// position you still have to fill is allowed to shout.
+function cliffWatch(players, teams, config, draftedIds, myTeam) {
+  const di = draftedIds instanceof Set ? draftedIds : new Set(draftedIds || []);
+  const flags = scarcityFlags(players, di, config, teams);
+  if (!flags.size) return [];
+  // A position can carry more than one live cliff (see scarcityFlags). The row
+  // speaks for the most binding of them, and the names are simply the players
+  // standing above it, so a row that says six never lists five.
+  const best = new Map();
+  flags.forEach(fl => {
+    const cur = best.get(fl.pos);
+    if (!cur || (fl.score || 0) > (cur.score || 0)) best.set(fl.pos, fl);
+  });
+  const pool = {};
+  (players || []).forEach(p => {
+    if (!di.has(p.id)) (pool[p.position] = pool[p.position] || []).push(p);
+  });
+  Object.values(pool).forEach(arr => arr.sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0)));
+  const budget = config && config.budget || 200;
+  const dpp = dollarsPerPoint((players || []).filter(p => !di.has(p.id)), config);
+  const started = di.size > 0;
+  const out = [];
+  best.forEach((fl, pos) => {
+    const starters = config && config.roster && config.roster[pos] && config.roster[pos].starters || 0;
+    const have = myTeam ? (myTeam.roster || []).filter(x => x.position === pos).length : 0;
+    const need = myTeam ? have < starters : true;
+    const squeeze = cliffSqueeze(fl.count, fl.demand);
+    out.push({
+      pos,
+      count: fl.count,
+      gapPts: fl.gapPts,
+      demand: fl.demand || 0,
+      names: (pool[pos] || []).slice(0, fl.count).map(p => p.name),
+      need,
+      squeeze,
+      prem: scarcityPremium({ count: fl.count, gapPts: fl.gapPts, demand: fl.demand }, budget, dpp),
+      // Three steps, because "act in the next few nominations" and "this is your
+      // last one" are different instructions and a single tone says neither.
+      //
+      // Before a single nomination, every thin tier on the board is thin at
+      // once, and four pulsing red rows on an untouched board teach the reader
+      // to ignore the banner by the time it means something. Pre-draft the same
+      // rows are planning information, so the top step is held back until picks
+      // are actually coming off the board.
+      level: !need ? 'info' : (fl.count <= 1 || squeeze >= 0.85) && started ? 'critical' : squeeze >= 0.6 || fl.count <= 1 ? 'urgent' : 'watch'
+    });
+  });
+  const ORDER = { critical: 0, urgent: 1, watch: 2, info: 3 };
+  out.sort((a, b) => ORDER[a.level] - ORDER[b.level] || b.squeeze - a.squeeze);
+  return out;
+}
+// The sentence a cliff row says out loud. Kept next to the data so the banner,
+// the player card and the coach all quote the same wording.
+function cliffWatchText(r) {
+  const pos = r.pos;
+  const buyers = r.demand ? `${r.demand} team${r.demand === 1 ? '' : 's'} still need${r.demand === 1 ? 's' : ''} one` : 'the room still needs one';
+  const head = r.count === 1
+    ? `Last startable ${pos} before the drop`
+    : `${r.count} ${pos}s left before the drop, ${buyers}`;
+  const drop = Math.round(r.gapPts || 0);
+  const body = r.need
+    ? `Bid up to $${r.prem} over Value to land one. After the cliff you pay similar money for about ${drop} fewer points.`
+    : `You are past this one, you already start a ${pos}. Let the room fight over the rest.`;
+  return { head, body };
 }
 function computeTierBreaks(list, pos) {
   const breaks = new Set();
@@ -11356,7 +11564,9 @@ function CheatHeader({
   whatIfAnchors,
   onSetAnchors,
   onUpdateStrategy,
-  coachEl
+  coachEl,
+  highlightRecs,
+  onToggleHighlightRecs
 }) {
   const isBoard = mode === 'live';
   const games = seasonGames || 17;
@@ -11581,7 +11791,7 @@ function CheatHeader({
     className: `hm-tab ${wiOpen ? 'active' : ''}`,
     onClick: () => setWiOpen(o => !o),
     title: "What if you win specific players at set prices? Pin up to 3, then click any model to see its lineup and projected points rebuilt around those picks."
-  }, "What if?"), onClearTargets && React.createElement("button", {
+  }, "What if?"), myTeam && onToggleHighlightRecs && recHighlightToggle(highlightRecs, onToggleHighlightRecs, config), onClearTargets && React.createElement("button", {
     className: "hm-tab",
     style: {
       marginLeft: 'auto'
@@ -12167,7 +12377,11 @@ function Cheatsheet({
   whatIfAnchors,
   onSetAnchors,
   onUpdateStrategy,
-  coachEl
+  coachEl,
+  highlightRecs,
+  onToggleHighlightRecs,
+  recFitIds,
+  upsideIds
 }) {
   // Odds impact per row: computed once for the whole pool, not per player,
   // because a rank is only meaningful against the same board.
@@ -12558,7 +12772,9 @@ function Cheatsheet({
     whatIfAnchors: whatIfAnchors,
     onSetAnchors: onSetAnchors,
     onUpdateStrategy: onUpdateStrategy,
-    coachEl: coachEl
+    coachEl: coachEl,
+    highlightRecs: highlightRecs,
+    onToggleHighlightRecs: onToggleHighlightRecs
   }), highlight && React.createElement("div", {
     className: "cheat-strat-desc no-print"
   }, STRAT[highlight].desc, React.createElement("button", {
@@ -12699,7 +12915,7 @@ function Cheatsheet({
         const _pp = p.planPrem;
         _why = _pp && value + _pp.prem >= graded
           ? ` That includes a $${_prem} scarcity premium: your plan needs him in a starting slot, and the next ${pos} you would settle for, ${_pp.repName}, is going for $${_pp.repAsk} against a $${_pp.repVal} value.`
-          : ` That includes a $${_prem} scarcity premium: he stands above a ${Math.round((p.scarce && p.scarce.gapPts) || 0)}-point drop at ${pos}.`;
+          : ` That includes a $${_prem} scarcity premium: he stands above a ${Math.round((p.scarce && p.scarce.gapPts) || 0)}-point drop at ${pos}${p.scarce && p.scarce.demand ? `, with ${p.scarce.count} left and ${p.scarce.demand} team${p.scarce.demand === 1 ? '' : 's'} still needing one` : ''}.`;
       }
       nameTitle = (sign === 'under' ? `Good buy: the $${cost} price is about $${tgap} under the $${graded} he is worth on your board.` : sign === 'over' ? `Overpay: the $${cost} price is about $${cost - graded} above the $${graded} he is worth on your board.` : `Priced about at what he is worth on your board ($${graded}).`) + _why;
       if (p.fit === 'target') nameTitle += ' Your plan also targets him for an open starting slot.';
@@ -12727,7 +12943,7 @@ function Cheatsheet({
       "data-pos": pos,
       "data-tierband": undefined,
       title: drafted ? dinfo ? `Drafted by ${dinfo.team} for $${dinfo.price} · click to unassign` : 'Click to put back in the pool' : undefined,
-      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) && !drafted ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''} ${(config && config.format === 'bestball' && !drafted && _fmtMyRoster.length && typeof bestballStackBoost === 'function' && bestballStackBoost(p, _fmtMyRoster, 1) > 0) ? 'cheat-stack' : ''}`,
+      className: `cheat-row ${hlSet.has(p.id) ? 'cheat-hl' : ''} ${targets && targets.has(p.id) && !drafted ? 'cheat-target' : ''} ${modelFitIds && modelFitIds.has(p.id) ? 'cheat-modelfit' : ''} ${highlightRecs && !drafted && recFitIds && recFitIds.has(p.id) ? 'cheat-rec' : ''} ${highlightRecs && !drafted && upsideIds && upsideIds.has(p.id) ? 'cheat-upside' : ''} ${tierBreaksByPos[pos] && tierBreaksByPos[pos].has(i) ? 'cheat-tier-top' : ''} ${drafted ? 'cheat-drafted' : ''} ${drafted && dinfo && dinfo.mine ? 'cheat-drafted-mine' : ''} ${_tb && _tb.cliff ? 'cheat-cliff' : ''} ${(config && config.format === 'bestball' && !drafted && _fmtMyRoster.length && typeof bestballStackBoost === 'function' && bestballStackBoost(p, _fmtMyRoster, 1) > 0) ? 'cheat-stack' : ''}`,
       onPointerDown: e => startDrag(e, p.id, pos),
       style: {
         touchAction: 'pan-y',
@@ -12762,7 +12978,13 @@ function Cheatsheet({
       // green — including the scarcity premium — was invisible. It leads now,
       // and the bye week rides along behind it.
       title: nameTitle + (byeOf(p.team) ? ` Bye week ${byeOf(p.team)}.` : ' Bye week: TBD.')
-    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
+    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, !drafted && p.scarce ? React.createElement("span", {
+      className: "cheat-scarce" + (p.scarce.count <= 1 ? " scarce-last" : ""),
+      title: `${p.scarce.count === 1 ? `The last ${pos} above` : `One of ${p.scarce.count} ${pos}s above`} a ${Math.round(p.scarce.gapPts || 0)}-point drop${p.scarce.demand ? `, with ${p.scarce.demand} team${p.scarce.demand === 1 ? '' : 's'} still needing one` : ''}.`
+    }, p.scarce.count <= 1 ? "LAST" : p.scarce.count + " LEFT") : null, (!drafted && highlightRecs && upsideIds && upsideIds.get(p.id)) ? React.createElement("span", {
+      className: "cheat-upside-tag",
+      title: upsideTitle(p, upsideIds.get(p.id))
+    }, "UPSIDE") : null, showCols.handcuff && handcuffMap.get(p.id) ? React.createElement("span", {
       className: "cheat-hctag",
       title: `Handcuff to ${handcuffMap.get(p.id)}`
     }, React.createElement("svg", {
@@ -12824,9 +13046,12 @@ function Cheatsheet({
       title: "Value (VBD)"
     }, "$", value) : k === 'you' ? React.createElement("span", {
       key: k,
-      className: `cheat-you cy-${youDir}${p.youShift ? p.youShift > 0 ? ' you-shift-up' : ' you-shift-down' : ''}`,
-      title: p.youShift ? `${p.youShift > 0 ? 'Up' : 'Down'} $${Math.abs(p.youShift)} since ${p.youShiftPick}. That pick changed the budgets, the open slots, or the pool, so the planner re-balanced the most YOU should pay — the market didn't move (his Proj and Value are untouched).` : "What you should bid"
-    }, "$", you) : k === 'ppg' ? React.createElement("span", {
+      className: `cheat-you cy-${youDir}${p.cliffPrem > 0 ? ' cy-cliff' : ''}${p.youShift ? p.youShift > 0 ? ' you-shift-up' : ' you-shift-down' : ''}`,
+      title: p.youShift ? `${p.youShift > 0 ? 'Up' : 'Down'} $${Math.abs(p.youShift)} since ${p.youShiftPick}. That pick changed the budgets, the open slots, or the pool, so the planner re-balanced the most YOU should pay — the market didn't move (his Proj and Value are untouched).` : p.cliffPrem > 0 ? `Includes a $${p.cliffPrem} cliff premium: ${p.scarce && p.scarce.count === 1 ? `he is the last ${pos} above` : `he is one of ${p.scarce ? p.scarce.count : ''} ${pos}s above`} a ${Math.round(p.scarce && p.scarce.gapPts || 0)}-point drop${p.scarce && p.scarce.demand ? `, and ${p.scarce.demand} team${p.scarce.demand === 1 ? '' : 's'} still need${p.scarce.demand === 1 ? 's' : ''} one` : ''}. Paying it beats falling off the cliff — it is a ceiling, not a target.` : "What you should bid"
+    }, "$", you, p.cliffPrem > 0 ? React.createElement("span", {
+      className: "cy-cliff-mark",
+      "aria-hidden": "true"
+    }, "\u25b2") : null) : k === 'ppg' ? React.createElement("span", {
       key: k,
       className: "cheat-ppg" + (p.projOverride ? p.projOverride.pct >= 0 ? ' proj-override' : ' proj-override-down' : ''),
       title: p.projOverride ? `Your edit: ${p.projOverride.pct > 0 ? '+' : ''}${p.projOverride.pct}% ${p.projOverride.label ? '(' + p.projOverride.label + ')' : ''}${p.projOverride.note ? ' — ' + p.projOverride.note : ''}. Click to change, leave blank to reset.` : "Projected points per game. Click to move his projection by a percent — value, rank, tier and price all move with it.",
@@ -15332,8 +15557,22 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   Object.entries(config.roster).forEach(([pos, c]) => {
     const ord = orderForTeam && orderForTeam[pos];
     const entries = (byPos[pos] || []).slice();
-    if (ord && ord.length) {
-      entries.sort((a, b) => {
+    // Owned players must never be dropped to make room for planned targets, and if a team
+    // holds more than c.total at a position the surplus overflows into extra rows rather
+    // than vanishing, so the room left for plan rows is what the owned ones do not take.
+    const owned = entries.filter(e => e.drafted);
+    const planned = entries.filter(e => !e.drafted).sort((a, b) => b.pts - a.pts);
+    const room = Math.max(c.total, owned.length);
+    const arr = owned.concat(planned.slice(0, Math.max(0, room - owned.length)));
+    // The row a player holds is his rank at the position on THIS team, counted against the
+    // plan rows as well as the bought ones: a $1 receiver into an empty corps lands at WR3
+    // or WR4 under the two the plan still buys, and every later buy reshuffles the block so
+    // the man projected to score the most holds the top row. A tie goes to the bought row.
+    arr.sort((a, b) => (b.pts - a.pts) || (a.drafted === b.drafted ? 0 : a.drafted ? -1 : 1));
+    // A hand-dragged order only ever reorders the owned rows against each other. It keeps
+    // the rows projection gave them and changes which player sits in each.
+    if (ord && ord.length && owned.length > 1) {
+      const byHand = arr.filter(e => e.drafted).sort((a, b) => {
         const ia = a.id != null ? ord.indexOf(a.id) : -1;
         const ib = b.id != null ? ord.indexOf(b.id) : -1;
         if (ia !== -1 && ib !== -1) return ia - ib;
@@ -15341,15 +15580,9 @@ function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
         if (ib !== -1) return 1;
         return b.pts - a.pts;
       });
-    } else {
-      entries.sort((a, b) => b.pts - a.pts);
+      let h = 0;
+      for (let i = 0; i < arr.length; i++) if (arr[i].drafted) arr[i] = byHand[h++];
     }
-    // Owned players must never be dropped to make room for planned targets, and if a team
-    // holds more than c.total at a position the surplus overflows into extra rows rather
-    // than vanishing. Keep drafted entries first (in their sorted order), then planned/bench.
-    const owned = entries.filter(e => e.drafted);
-    const planned = entries.filter(e => !e.drafted);
-    const arr = owned.concat(planned).slice(0, Math.max(c.total, owned.length));
     while (arr.length < c.total) arr.push({
       empty: true,
       pts: 0
@@ -16072,6 +16305,130 @@ function handcuffDollars(bup, lead, players, config, games) {
   const cover = HANDCUFF_MISS_GAMES * (HANDCUFF_SHARE * (lead.projectedPoints || 0) / G - repl / G);
   return cover > 0 ? Math.round(cover * dpp) : 0;
 }
+// ── the $1-$2 endgame: which cheap man is worth the last dollar ─────────────
+// Late in an auction the only players a manager can still afford cost a dollar
+// or two, and their projections sit inside the noise of one another. Sorting
+// that pool by points per game re-sorts the noise, and it sorts it the wrong
+// way: the capped veteran with a defined six-point role outranks the backup who
+// is one snap from fourteen. What separates the last men on the board is the
+// size of the role they inherit if something breaks their way — and none of
+// that is in a projection, because a projection is the average over the seasons
+// where nothing does.
+//
+// upsideScores prices that conditional role and returns the points ABOVE the
+// projection, never the projection itself. That is what makes it rank
+// differently from the board.
+const UPSIDE_INHERIT = 0.72;                                       // of the man ahead's role, if the job opens
+const UPSIDE_JOB_OPENS = { RB: 0.34, TE: 0.26, WR: 0.24, QB: 0.20 }; // odds it opens across a season
+const UPSIDE_BREAKOUT = { RB: 0.40, WR: 0.42, TE: 0.38, QB: 0.25 }; // what a young player's projection leaves out
+function upsideScores(players, myTeam, games) {
+  const G = games || 17;
+  const out = new Map();
+  const pool = (players || []).filter(p => p && p.position !== 'K' && p.position !== 'DEF');
+  if (!pool.length) return out;
+  // The man ahead of him: the highest-projected player at his own team and
+  // position. That role is the whole argument for buying the man behind it.
+  const best = new Map();
+  pool.forEach(p => {
+    if (!p.team) return;
+    const k = p.team + '|' + p.position;
+    const cur = best.get(k);
+    if (!cur || (p.projectedPoints || 0) > (cur.projectedPoints || 0)) best.set(k, p);
+  });
+  // A bench body on a good offence is playing for more points than the same
+  // body on a bad one, whatever his own projection says.
+  const teamPts = {};
+  pool.forEach(p => { if (p.team) teamPts[p.team] = (teamPts[p.team] || 0) + (p.projectedPoints || 0); });
+  const ranked = Object.keys(teamPts).sort((a, b) => teamPts[b] - teamPts[a]);
+  const offRank = new Map(ranked.map((t, i) => [t, i + 1]));
+  const topOff = Math.max(4, Math.round(ranked.length / 3));
+  const mine = new Set(((myTeam && myTeam.roster) || []).map(r => r.playerId));
+  pool.forEach(p => {
+    const pos = p.position;
+    const own = p.projectedPoints || 0;
+    const why = [];
+    let pts = 0;
+    const ahead = p.team ? best.get(p.team + '|' + pos) : null;
+    if (ahead && ahead.id !== p.id) {
+      const lead = ahead.projectedPoints || 0;
+      // Only a role worth inheriting counts. A committee's number two is
+      // already being paid for the touches he has.
+      if (lead >= own * 1.35) {
+        let chance = UPSIDE_JOB_OPENS[pos] != null ? UPSIDE_JOB_OPENS[pos] : 0.2;
+        const leadInj = typeof injuryOf === 'function' ? injuryOf(ahead) : null;
+        const leadAge = typeof ageFlag === 'function' ? ageFlag(ahead) : null;
+        const gain = UPSIDE_INHERIT * lead - own;
+        if (gain > 0) {
+          if (leadInj) chance = Math.min(0.75, chance * 1.8);
+          if (leadAge) chance = Math.min(0.75, chance * 1.25);
+          pts += chance * gain;
+          why.push('one snap from ' + ahead.name + "'s role");
+          if (leadInj) why.push(ahead.name.split(' ').slice(-1)[0] + ' is hurt (' + leadInj + ')');
+          if (leadAge) why.push(ahead.name.split(' ').slice(-1)[0] + ' is ' + leadAge.t.toLowerCase());
+          if (mine.has(ahead.id)) { pts *= 1.25; why.push('handcuffs a starter you already own'); }
+        }
+      }
+    }
+    // The breakout window. A young player's projection is the average over the
+    // seasons where the job does not grow; the one where it does is not in it.
+    const yrs = typeof p.yearsExp === 'number' ? p.yearsExp : null;
+    const age = typeof ageOf === 'function' ? ageOf(p) : null;
+    if (own > 0 && ((yrs != null && yrs <= 2) || (yrs == null && age != null && age <= 24))) {
+      pts += own * (UPSIDE_BREAKOUT[pos] != null ? UPSIDE_BREAKOUT[pos] : 0.3);
+      why.push(yrs === 0 ? 'a rookie' : yrs != null ? 'year ' + (yrs + 1) + ', the breakout window' : 'age ' + age + ', still climbing');
+    }
+    const r = offRank.get(p.team);
+    if (own > 0 && r != null && r <= topOff) { pts += own * 0.16; why.push('on a top-' + topOff + ' offence'); }
+    const soft = typeof scheduleSoftness === 'function' ? scheduleSoftness(p.team, pos) : null;
+    if (own > 0 && soft && soft.late) { pts += own * 0.10; why.push('soft in Weeks 15-17'); }
+    // What cuts it back: his own age cliff, and his own injury. Both make the
+    // good outcome less likely, not the projection smaller.
+    if (typeof ageFlag === 'function' && ageFlag(p)) pts *= 0.5;
+    if (typeof injuryOf === 'function' && injuryOf(p)) pts *= 0.7;
+    if (pts > 0) out.set(p.id, { pts: pts, ppg: pts / G, why: why });
+  });
+  return out;
+}
+// The most this manager can still bid on any ONE player: every remaining seat
+// has to be filled, so each other open seat is already spoken for at the
+// minimum bid.
+function maxSingleBid(myTeam, config) {
+  if (!myTeam || !config || !config.valuation) return null;
+  const minBid = config.valuation.minBid;
+  const spots = myTeam.spotsRemaining;
+  if (!spots || spots <= 0) return null;
+  return Math.max(minBid, (myTeam.budgetRemaining || 0) - (spots - 1) * minBid);
+}
+// The endgame shortlist. Null until the manager is actually down to dollar and
+// two-dollar players, then the handful of affordable names with the most
+// conditional upside — a shortlist, not a re-ranking, because past about a
+// dozen the emphasis stops meaning anything.
+const ENDGAME_SHORTLIST = 12;
+// Why this man and not the one above him on points. Always says what the
+// claim is worth, because "upside" with no number is a horoscope.
+function upsideTitle(p, row) {
+  if (!row) return '';
+  const why = (row.why || []).slice(0, 3).join('; ');
+  return (p && p.name ? p.name + ': ' : '') + '+' + row.ppg.toFixed(1) + ' pts/game of upside above his projection' + (why ? ' \u2014 ' + why : '') + '. Endgame flag: the cheap men with the most room to grow, not the most points per game.';
+}
+function endgameUpsideIds(players, myTeam, config, draftedIds, games) {
+  if (!config || (config.format || 'auction') !== 'auction') return null;
+  const cap = maxSingleBid(myTeam, config);
+  if (cap == null) return null;
+  const minBid = config.valuation.minBid;
+  if (cap > 2 * minBid) return null;
+  const scores = upsideScores(players, myTeam, games);
+  const priceOf = p => p.inflatedValue != null ? p.inflatedValue : p.auctionValue != null ? p.auctionValue : minBid;
+  const rows = (players || [])
+    .filter(p => !(draftedIds && draftedIds.has(p.id)) && scores.has(p.id) && priceOf(p) <= cap)
+    .map(p => Object.assign({ id: p.id }, scores.get(p.id)))
+    .sort((a, b) => b.pts - a.pts);
+  if (!rows.length) return null;
+  const floor = Math.max(10, rows[0].pts * 0.45);
+  const out = new Map();
+  rows.slice(0, ENDGAME_SHORTLIST).forEach(r => { if (r.pts >= floor) out.set(r.id, r); });
+  return out.size ? out : null;
+}
 // ── a bye you already have ───────────────────────────────────────────────────
 // Season projections already exclude the bye week, so a bye costs nothing by
 // itself. Two starters sharing one costs something: the bench can cover one
@@ -16499,7 +16856,10 @@ function PlayersRail({
   boardSortKey,
   setBoardSortKey,
   focusPlayer,
-  onCollapse
+  onCollapse,
+  highlightRecs,
+  recFitIds,
+  upsideIds
 }) {
   // Odds impact per row: computed once for the whole pool, not per player,
   // because a rank is only meaningful against the same board.
@@ -16812,6 +17172,8 @@ function PlayersRail({
       const _rage = typeof ageFlag === 'function' ? ageFlag(p) : null;
       const _rinj = typeof injuryOf === 'function' ? injuryOf(p) : null;
       const _railChips = [];
+      const _rup = (highlightRecs && upsideIds) ? upsideIds.get(p.id) : null;
+      if (_rup) _railChips.push(['UPSIDE', '#7dd3fc', upsideTitle(p, _rup)]);
       if (_rinj) _railChips.push(['✚', '#ff6b6b', 'Injury: ' + _rinj]);
       if (_rvol) _railChips.push([_rvol.t, _rvol.tone === 'good' ? '#46d39a' : '#ff6b6b', _rvol.title]);
       if (_rol) _railChips.push([_rol.t, _rol.tone === 'good' ? '#46d39a' : '#ff6b6b', _rol.title]);
@@ -16832,7 +17194,7 @@ function PlayersRail({
             pos: p.position
           };else delete rowRefs.current[p.id];
         },
-        className: `rail-row ${cls}${targets && targets.has(p.id) ? ' rail-target' : ''}`,
+        className: `rail-row ${cls}${highlightRecs && recFitIds && recFitIds.has(p.id) ? ' rail-rec' : ''}${highlightRecs && upsideIds && upsideIds.has(p.id) ? ' rail-upside' : ''}${targets && targets.has(p.id) ? ' rail-target' : ''}`,
         onPointerDown: e => startRankDrag(e, p.id, p.position),
         style: {
           cursor: 'grab',
@@ -19144,7 +19506,7 @@ function coachWhyPlan(q, ctx) {
   L.push(`If you'd rather force a premium ${pos || 'player'} anyway, click the dot to the left of his name to target him and I'll re-solve the rest of your budget around that.`);
   return L.join(' ');
 }
-function draftAlerts(players, myTeam, plan, config, draftedIds, games) {
+function draftAlerts(players, myTeam, plan, config, draftedIds, games, teams) {
   if (!myTeam || !plan) return null;
   const pivot = strategyPivot(players, myTeam, plan, config, draftedIds, games);
   if (pivot) return {
@@ -19174,11 +19536,22 @@ function draftAlerts(players, myTeam, plan, config, draftedIds, games) {
     const cliff = findTierCliff(list, g);
     if (!cliff) return;
     const remaining = cliff.idx;
-    if (cliff.drop >= 1.5 && remaining <= 3) {
+    // A tier is only urgent against the room that still has to buy from it.
+    // Three left was the old bar and it missed the case that costs the most: six
+    // startable quarterbacks and twelve teams needing one is a run waiting to
+    // happen, and every team that waits pays for it.
+    const demand = positionDemand(pos, teams, config);
+    const squeeze = cliffSqueeze(remaining, demand);
+    if (cliff.drop >= 1.5 && (remaining <= 3 || (demand > 0 && remaining <= demand))) {
       alerts.push({
         pos,
-        urgency: cliff.drop * (4 - remaining),
-        text: remaining <= 2 ? `Last ${remaining === 1 ? 'startable' : remaining} ${pos}${remaining === 1 ? '' : 's'} at this tier, grab one now. Waiting drops your starting lineup about ${cliff.drop} pts/gm.` : `${remaining} ${pos}s left before the tier breaks. Waiting drops your starting lineup about ${cliff.drop} pts/gm.`
+        urgency: cliff.drop * (1 + 3 * squeeze),
+        tone: squeeze >= 0.85 || remaining <= 1 ? 'bad' : squeeze >= 0.6 ? 'warn' : 'good',
+        text: remaining <= 2
+          ? `Last ${remaining === 1 ? 'startable' : remaining} ${pos}${remaining === 1 ? '' : 's'} at this tier, grab one now. Waiting drops your starting lineup about ${cliff.drop} pts/gm.`
+          : demand > 0 && remaining <= demand
+            ? `${remaining} ${pos}s left before the tier breaks and ${demand} team${demand === 1 ? '' : 's'} still need${demand === 1 ? 's' : ''} one. ${Math.max(0, demand - remaining)} of them will miss, so pay up inside the tier rather than after it. Waiting drops your starting lineup about ${cliff.drop} pts/gm.`
+            : `${remaining} ${pos}s left before the tier breaks. Waiting drops your starting lineup about ${cliff.drop} pts/gm.`
       });
     }
   });
@@ -22046,6 +22419,38 @@ function teamTaunt(team, players, config, games, idx, draftHistory) {
   if (idx != null) return jabs[(idx % jabs.length + jabs.length) % jabs.length];
   return jabs[Math.floor(Math.random() * Math.min(5, jabs.length))];
 }
+// ── who the model is actually pointing at ───────────────────────────────────
+// The undrafted players the given model would have this manager buy, or in a
+// snake take round by round. One function because three callers ask the same
+// question: the gold model-fit bar on the cheat sheet, the "highlight
+// recommended players" emphasis on the sheet and the rail, and the tests.
+function modelTargetIds(modelKey, myTeam, players, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors) {
+  if (!modelKey || !myTeam) return null;
+  const dIds = new Set((draftHistory || []).map(d => d.playerId));
+  if (config && config.format === 'snake') {
+    // Snake: one pick per round. Box the round-by-round path (never multiple players from the same round/tier).
+    const ids = new Set();
+    if (modelKey === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
+    const _focus = (MODEL_FOCUS[modelKey] && MODEL_FOCUS[modelKey].focus) || [];
+    const _vb = _focus.length ? (p => _focus.indexOf(p.position) >= 0 ? 0.35 : 0) : null;
+    let _sp = null;
+    try { _sp = buildSnakePlan(myTeam, players, config, dIds, _vb ? { valueBoost: _vb } : undefined); } catch (e) {}
+    if (_sp && _sp.byRound) _sp.byRound.forEach(b => { if (b.player && !dIds.has(b.player.id)) ids.add(b.player.id); });
+    return ids;
+  }
+  const plan = buildModel(modelKey, myTeam, players, config, dIds, roleOverrides, targets, customForcedIds, whatIfAnchors);
+  const ids = new Set();
+  if (plan && plan.slots) plan.slots.forEach(s => {
+    if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id);
+  });
+  if (plan && plan.benchTargets) plan.benchTargets.forEach(bt => {
+    if (!dIds.has(bt.playerId)) ids.add(bt.playerId);
+  });
+  if (modelKey === 'targets') (targets || new Set()).forEach(id => {
+    if (!dIds.has(id)) ids.add(id);
+  });
+  return ids;
+}
 function HeaderModelTabs({
   myTeam,
   players,
@@ -22055,7 +22460,9 @@ function HeaderModelTabs({
   seasonGames,
   model,
   onSelectModel,
-  targets
+  targets,
+  highlightRecs,
+  onToggleHighlightRecs
 }) {
   const models = [['ideal', 'Ideal Team'], ['balanced', 'Balanced'], ['targets', 'Favorites'], ['heroRB', 'Hero RB'], ['heroWR', 'Hero WR'], ['heroQB', 'Hero QB'], ['zeroRB', 'Zero RB'], ['robustRB', 'Robust RB'], ['robustWR', 'Robust WR'], ['eliteTE', 'Elite TE']];
   const games = seasonGames || 17;
@@ -22083,7 +22490,22 @@ function HeaderModelTabs({
     onClick: () => onSelectModel(model === k ? null : k)
   }, lbl, modelPts[k] != null && (k !== 'custom' || typeof customForced !== 'undefined' && customForced && customForced.size > 0) ? React.createElement("span", {
     className: "hm-pts"
-  }, (modelPts[k] / games).toFixed(1)) : null)));
+  }, (modelPts[k] / games).toFixed(1)) : null)).concat(onToggleHighlightRecs ? [recHighlightToggle(highlightRecs, onToggleHighlightRecs, config)] : []));
+}
+// The one control, rendered the same way in both models boxes: the one on the
+// draft board and the one on the cheat sheet.
+function recHighlightToggle(on, onToggle, config) {
+  const auction = (config && config.format || 'auction') === 'auction';
+  return React.createElement("label", {
+    key: "rec-highlight",
+    className: "hm-rec" + (on ? " on" : ""),
+    title: "Lift the model's own buys on the cheat sheet and the draft board \u2014 a heavier name and a light gold wash, nothing louder." + (auction ? " Once you are down to $1 and $2 players it also flags the cheap men with the most upside, which is not the same as the most points per game." : ""),
+    onPointerDown: e => e.stopPropagation()
+  }, React.createElement("input", {
+    type: "checkbox",
+    checked: !!on,
+    onChange: onToggle
+  }), "Highlight recommended");
 }
 function Coachmark({
   flag,
@@ -22999,9 +23421,13 @@ function App() {
   }, [baseValued, valueAdjust, config, draftHistory, teams, priceOverrides]);
   const marketState = useMemo(() => computeMarketState(draftHistory, valuedPlayers, config), [draftHistory, valuedPlayers, config]);
   const [draftModel, setDraftModel] = useState(null);
+  // The models box's own checkbox. It survives a reload because a manager who
+  // turned it on before the draft wants it on during the draft.
+  const [highlightRecs, setHighlightRecs] = useState(() => { try { return localStorage.getItem('it_hl_recs') === '1'; } catch (e) { return false; } });
+  const toggleHighlightRecs = () => setHighlightRecs(v => { const n = !v; try { localStorage.setItem('it_hl_recs', n ? '1' : '0'); } catch (e) {} return n; });
   const _basePersonalized = useMemo(() => {
     const myTeam = teams.find(t => t.isMine);
-    const scarMap = scarcityFlags(valuedPlayers, new Set(draftHistory.map(d => d.playerId)), config);
+    const scarMap = scarcityFlags(valuedPlayers, new Set(draftHistory.map(d => d.playerId)), config, teams);
     const scarBoost = (pv, fl, cap) => Math.min(cap, pv + scarcityPremium(fl, config.budget));
     if (!myTeam) return valuedPlayers.map(p => {
       const base = p.marketValue ?? p.auctionValue ?? config.valuation.minBid;
@@ -23117,6 +23543,9 @@ function App() {
         cap: arr.length ? Math.min(...arr.map(x => x.pv)) : null
       };
     });
+    // What a point is worth in dollars on this board, so the cliff premium can be
+    // the price of the drop rather than a share of the budget.
+    const _dpp = dollarsPerPoint(valuedPlayers, config);
     const _rows = _pre.map(({ p, worthPrice, personalValue }) => {
       let pv = personalValue;
       if (pv == null) {
@@ -23155,12 +23584,35 @@ function App() {
       const isTgt = planTargetIds.has(p.id);
       const fit = draftedIds.has(p.id) ? null : isTgt ? 'target' : needEligPos.has(p.position) ? 'open' : 'fade';
       const _fl = p.position === 'K' || p.position === 'DEF' || draftedIds.has(p.id) ? null : scarMap.get(p.id);
+      // ── the cliff premium, on the bid itself ────────────────────────────
+      // switchPrice is an indifference price: the most he can cost before he
+      // stops improving the lineup, computed against a plan it assumes can be
+      // rebuilt from the pool at the prices on the board. That assumption is
+      // exactly what breaks in a run. When six quarterbacks stand above a cliff
+      // and twelve teams still need one, the four teams that miss do not buy
+      // the seventh at his price, they bid the sixth past his, and a bidding
+      // ceiling that ignores that is a ceiling you lose at.
+      //
+      // So the stack's squeeze is paid on top of You, but only where missing it
+      // actually costs points: a position with a starting slot still open on
+      // the plan. If the slot is filled, the cliff is somebody else's problem
+      // and the premium is correctly zero.
+      //
+      // It is the same premium the board colours with (scarcityPremium), which
+      // keeps the number the row is graded against and the number you are told
+      // to bid telling one story.
+      let cliffPrem = 0;
+      if (_fl && needEligPos.has(p.position)) {
+        cliffPrem = scarcityPremium(_fl, config.budget || 200, _dpp);
+        if (cliffPrem > 0) pv = Math.min(maxBid, pv + cliffPrem);
+      }
       return {
         ...p,
         planTarget: isTgt,
         fit,
         worthPrice,
         scarce: _fl || null,
+        cliffPrem: cliffPrem || 0,
         planPrem: isTgt ? planPremium.get(p.id) || null : null,
         handcuffOf,
         handcuffPrem: handcuffPrem || 0,
@@ -23260,35 +23712,16 @@ function App() {
       return d ? Object.assign({}, p, { youShift: d, youShiftPick: youShifts.pick }) : p;
     });
   }, [_starPersonalized, youShifts]);
-  const modelFitIds = useMemo(() => {
-    if (!draftModel) return null;
-    const myTeam = teams.find(t => t.isMine);
-    if (!myTeam) return null;
-    const dIds = new Set(draftHistory.map(d => d.playerId));
-    if (config && config.format === 'snake') {
-      // Snake: one pick per round. Box the round-by-round path (never multiple players from the same round/tier).
-      const ids = new Set();
-      if (draftModel === 'targets') (targets || new Set()).forEach(id => { if (!dIds.has(id)) ids.add(id); });
-      const _focus = (MODEL_FOCUS[draftModel] && MODEL_FOCUS[draftModel].focus) || [];
-      const _vb = _focus.length ? (p => _focus.indexOf(p.position) >= 0 ? 0.35 : 0) : null;
-      let _sp = null;
-      try { _sp = buildSnakePlan(myTeam, personalizedPlayers, config, dIds, _vb ? { valueBoost: _vb } : undefined); } catch (e) {}
-      if (_sp && _sp.byRound) _sp.byRound.forEach(b => { if (b.player && !dIds.has(b.player.id)) ids.add(b.player.id); });
-      return ids;
-    }
-    const plan = buildModel(draftModel, myTeam, personalizedPlayers, config, dIds, roleOverrides, targets, customForcedIds, whatIfAnchors);
-    const ids = new Set();
-    if (plan && plan.slots) plan.slots.forEach(s => {
-      if (s.player && s.status !== 'filled' && !dIds.has(s.player.id)) ids.add(s.player.id);
-    });
-    if (plan && plan.benchTargets) plan.benchTargets.forEach(bt => {
-      if (!dIds.has(bt.playerId)) ids.add(bt.playerId);
-    });
-    if (draftModel === 'targets') (targets || new Set()).forEach(id => {
-      if (!dIds.has(id)) ids.add(id);
-    });
-    return ids;
-  }, [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
+  const modelFitIds = useMemo(() => modelTargetIds(draftModel, teams.find(t => t.isMine), personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors),
+    [draftModel, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
+  // What "highlight recommended players" emphasises. With no model picked the
+  // models box already shows the Ideal Team, so the emphasis follows what the
+  // box is showing rather than going blank and reading as a broken checkbox.
+  const recFitIds = useMemo(() => {
+    if (!highlightRecs) return null;
+    if (draftModel) return modelFitIds;
+    return modelTargetIds('ideal', teams.find(t => t.isMine), personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors);
+  }, [highlightRecs, draftModel, modelFitIds, teams, personalizedPlayers, config, draftHistory, roleOverrides, targets, customForcedIds, whatIfAnchors]);
   useEffect(() => {
     if (remoteApplyRef.current) {
       remoteApplyRef.current = false;
@@ -24039,9 +24472,17 @@ function App() {
     return buildOptimalPlan(mt, personalizedPlayers, config, draftedIds, undefined, targets, roleOverrides, true);
   }, [teams, personalizedPlayers, config, draftedIds, targets, roleOverrides]);
   const [dismissedAlert, setDismissedAlert] = useState(null);
-  const draftAlert = useMemo(() => draftAlerts(personalizedPlayers, myTeam, plan, config, draftedIds, SEASON_GAMES), [personalizedPlayers, myTeam, plan, config, draftedIds]);
+  const [dismissedCliffs, setDismissedCliffs] = useState(() => new Set());
+  const draftAlert = useMemo(() => draftAlerts(personalizedPlayers, myTeam, plan, config, draftedIds, SEASON_GAMES, teams), [personalizedPlayers, myTeam, plan, config, draftedIds, teams]);
+  // The positions about to run out, read off the same flags that lift You $.
+  const cliffRows = useMemo(() => cliffWatch(personalizedPlayers, teams, config, draftedIds, myTeam), [personalizedPlayers, teams, config, draftedIds, myTeam]);
   const nomNext = useMemo(() => nominationBoard(personalizedPlayers, teams, myTeam, plan, config, draftedIds, 4), [personalizedPlayers, teams, myTeam, plan, config, draftedIds]);
   const nomInsight = useMemo(() => liveNomination ? nominationInsight(liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState, SEASON_GAMES) : null, [liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState]);
+  // The $1-$2 endgame shortlist. Null until the manager is down to it.
+  const upsideIds = useMemo(() => {
+    if (!highlightRecs) return null;
+    return endgameUpsideIds(personalizedPlayers, teams.find(t => t.isMine), config, draftedIds, SEASON_GAMES);
+  }, [highlightRecs, personalizedPlayers, teams, config, draftedIds]);
   const planHighlights = useMemo(() => {
     const greenS = new Set(),
       yellowS = new Set();
@@ -24201,6 +24642,10 @@ function App() {
       onOpenNews: () => setNewsOpen(true),
       mode: "live",
       modelFitIds: modelFitIds,
+      highlightRecs: highlightRecs,
+      onToggleHighlightRecs: toggleHighlightRecs,
+      recFitIds: recFitIds,
+      upsideIds: upsideIds,
       draftedIds: draftedIds,
       onAssignPlayer: setAssignPlayer,
       onUnassignPlayer: handleUnassignPlayer,
@@ -24290,7 +24735,15 @@ function App() {
       className: "nomination-alert no-print tone-" + (nomInsight.tone || 'info')
     }, React.createElement("span", {
       className: "na-label"
-    }, "On the block"), React.createElement("span", null, nomInsight.text)), (view === 'board' && !showSplash && draftAlert && dismissedAlert !== draftAlert.text) && React.createElement("div", {
+    }, "On the block"), React.createElement("span", null, nomInsight.text)), (view === 'board' && !showSplash) && React.createElement(CliffWatch, {
+      rows: cliffRows,
+      dismissed: dismissedCliffs,
+      onDismiss: k => setDismissedCliffs(prev => {
+        const next = new Set(prev);
+        next.add(k);
+        return next;
+      })
+    }), (view === 'board' && !showSplash && draftAlert && dismissedAlert !== draftAlert.text) && React.createElement("div", {
       className: "nomination-alert no-print tone-" + (draftAlert.tone || 'good')
     }, React.createElement("span", {
       className: "na-label"
@@ -24341,6 +24794,9 @@ function App() {
       yellow: (planHighlights && planHighlights.yellow) || new Set(),
       targets: targets,
       onToggleTarget: handleToggleTarget,
+      highlightRecs: highlightRecs,
+      recFitIds: recFitIds,
+      upsideIds: upsideIds,
       starred: starred,
       onToggleStar: handleToggleStar,
       customOrder: customOrder,
@@ -24392,7 +24848,7 @@ function App() {
         className: "panel-toggle bm2-hide",
         onClick: function () { setBoardModelsOpen(false); },
         title: "Minimize the draft models"
-      }, "📐 Draft Models ▾"), React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
+      }, "📐 Draft Models ▾"), React.createElement(HeaderModelTabs, { model: draftModel, onSelectModel: setDraftModel, myTeam: myTeam, players: personalizedPlayers, config: config, draftedIds: draftedIds, roleOverrides: roleOverrides, seasonGames: SEASON_GAMES, targets: targets, highlightRecs: highlightRecs, onToggleHighlightRecs: toggleHighlightRecs })), React.createElement("div", { className: "bm2-plan" }, React.createElement("div", { className: "bm2-plan-h" }, lbl + (isSnake ? " — ideal by round" : " — target buys")), right));
     })(), React.createElement("div", {
       className: "board-layout board-norail"
     }, React.createElement(TeamsBoard, {

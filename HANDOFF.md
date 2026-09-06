@@ -7352,3 +7352,240 @@ desk (§ draft-day edges) remains the only way either becomes points, and the
 coach is told which of its lines already did. And it is only as current as
 Sleeper's chart plus the six-hour edge cache, which the prompt does not claim
 otherwise.
+
+---
+
+## 64. September 2026: positional scarcity in the bid, not just in the colour
+
+A reader's account of the failure this fixes, which is the clearest statement
+of it: *"there were six good quarterbacks and it was clear that to have an
+elite team you had to have one of them. All six ended up going for above value
+and I got the sixth one, but had to pay a premium to avoid falling off the
+cliff."*
+
+The board could not see that. Two separate things were wrong.
+
+### 1. The detector only counted a cliff one or two players deep
+
+`scarcityFlags` broke at the **first** gap that qualified and then discarded it
+unless `cliffIdx <= 2`. A tier six deep was invisible by construction, and the
+first-gap break meant a single outlier at the top of a position hid everything
+under him: on the live board Josh Allen stands 43.6 points clear, so the five
+quarterbacks behind him sitting above a 12.8-point drop of their own were never
+flagged at all.
+
+It now takes the **room** (`teams`) and reads:
+
+| | before | now |
+|---|---|---|
+| how deep a cliff can be | 2, always | the demand — teams that still have to start one, capped at 12 |
+| how many cliffs it looks at | the first | every one in the window |
+| which cliff a player is priced against | the first one found | the most binding one still in front of *him* |
+| a position every team has filled | still flagged | no flag: nothing to be scarce for |
+
+"Most binding" is `gap × cliffSqueeze(idx, demand)`. So Allen is priced against
+his own 43-point drop and the five behind him against the 12.8 under them,
+which is what each of them would actually fall off.
+
+`positionDemand(pos, teams, config)` is the demand side: teams whose roster is
+short of `starters` at the position, or the league's own shape when no room is
+handed over. **Passing `teams` is what turns all of this on.** Without it the
+old blind window of two is kept exactly, so any caller that has no room to
+measure against prices as it always did.
+
+`cliffSqueeze(count, demand)` is the one reading everything else is built on:
+the share of the room the stack can no longer cover, 0 to 1. One player left
+for a full room is 1; a stack as deep as the room is nearly 0. **Every player
+who leaves the board pushes it up**, which is what makes the premium and the
+alert escalate as the cliff gets closer, rather than arriving after it.
+
+### 2. You $ ignored scarcity entirely
+
+`switchPrice` is an indifference price computed against a plan it assumes can be
+rebuilt from the pool **at the prices on the board**. That assumption is exactly
+what a run breaks: the teams that miss do not buy the seventh quarterback at his
+price, they bid the sixth past his. A ceiling that ignores that is a ceiling you
+lose at.
+
+So `_basePersonalized` now adds a cliff premium to `personalValue`, gated on
+`needEligPos` — a position where the optimal plan still has a starting slot
+open. A cliff you are already past is somebody else's problem and pays nothing.
+The row carries `cliffPrem` so the cell can explain itself.
+
+**What the premium is.** Given the board's own `dollarsPerPoint`, it needs no
+tuned constant: falling off the cliff costs `gapPts`, the board says what a
+point is worth, so the drop has a price — weighted by the squeeze, because you
+only pay for the part of it the room can actually take from you. Same argument
+and same shape as `handcuffDollars` and `byeStackDollars`. Capped at 15% of the
+budget, because a ceiling that can eat a sixth of the roster's money is not a
+ceiling.
+
+`scarcityPremium(fl, budget, dpp)` keeps its old two-argument behaviour for
+`boardValue`, which only ever sees the config and has no pool to convert
+against. That path is unchanged except that a known room now moves its rate.
+
+**This does not reopen §20.** That section's rule — *do not grade the name
+against You* — still holds and is still tested. The colour asks "is this price
+fair"; You answers "what may I pay". Nothing about the colour changed here.
+
+On the live board, pre-draft: Allen's You goes $44 → $62 against a $47 market,
+the four behind him get $1 to $3, and QB6 gets nothing. Log four quarterbacks
+and Hurts becomes the last man above a now 15-point drop: the banner turns
+critical and his You is $27 against a $23 Value.
+
+### 3. The alert
+
+`AlertsBox` was **dead code** — defined, never rendered, and its `.alert-crit`
+class never existed in the CSS. It is gone. `cliffWatch()` + `CliffWatch` render
+in its place, at the top of the draft board, one row per position, loudest
+first, at most three:
+
+| level | when | how it reads |
+|---|---|---|
+| `critical` | one left, or squeeze ≥ 0.85 — **and picks have started** | red, pulsing, ⚠ |
+| `urgent` | squeeze ≥ 0.6, or one left pre-draft | amber, still |
+| `watch` | a live cliff further out | gold rule |
+| `info` | you already start one — never rendered | — |
+
+The pre-draft hold on `critical` is deliberate: four positions are thin on any
+untouched board, and four pulsing rows there teach the reader to ignore the
+banner by the time one of them means something. Dismissal is keyed to
+`pos:count`, so waving off "6 QBs left" does not silence "2 QBs left" ten picks
+later.
+
+The same reading also appears on the row itself — a `LAST` / `n LEFT` chip on
+the name (reviving the orphaned `.cheat-scarce` CSS), the You figure tinted
+amber with a ▲ and a tooltip naming the drop and the buyers — and in
+`draftAlerts`, whose cliff branch was capped at `remaining <= 3` and now measures
+against demand the same way.
+
+### Tests
+
+`node tools/test-cliff-premium.mjs` — 52 assertions, no browser, no network,
+wired into `checks.yml`. It lifts the real functions out of `index.html` by
+brace matching (the harness is `tools/test-plan-pricing.mjs`) and pins: the six
+-deep tier flagging all six, the four-team room flagging none, the teamless
+fallback, nested cliffs pricing each player against his own drop, the premium
+rising monotonically as a tier drains, the cap, the points-times-dollars shape,
+the banner's levels and copy, and the four source lines that put the premium on
+the bid. `tools/test-board-colour.mjs` still pins the colour contract (its
+`START` marker moved with the signature).
+
+`tools/test-you-column.mjs` and `tools/test-market-anchors.mjs` both still pass
+in Chromium, which is the check that matters most here: the premium is added
+before the monotonic clamp, and a column that climbs as you read down it is the
+one defect this feature could plausibly have introduced. It does not, because
+the premium is constant across the players above a cliff and zero below it.
+
+## 65. September 2026: the models box highlights the players it recommends
+
+The models box already knew which players the selected model wanted to buy. It
+just did not say so anywhere the reader was looking. A three-pixel gold bar on
+the left edge of a cheat-sheet row (`.cheat-modelfit`) was the whole signal, and
+on the auction board's rail there was none at all — so a manager who picked Hero
+RB then had to hold ten names in his head while scanning a 409-row rail.
+
+There is now a checkbox in the models box: **Highlight recommended**. Checked,
+the model's own buys are lifted on the cheat sheet *and* the auction board.
+
+### What "lifted" means, exactly
+
+Deliberately small. Half a point of type, a heavier name, and a faint wash of
+the model's own gold:
+
+| | plain row | recommended |
+|---|---|---|
+| cheat sheet name | 13.5px / 400 | 14.1px / 700 |
+| rail name | 14px / 600 | 15px / 700 |
+| row background | panel | `rgba(227,181,58,0.10)` |
+
+Enough to pull the eye down a column, not enough to repaint the sheet. A
+favourite's green still outranks it — `.cheat-target` and `.rail-target` are
+declared *after* the new rules, because a decision the manager made beats a
+recommendation the model made. The printed sheet keeps the emphasis too; a
+manager who prints the sheet and takes it to the draft would otherwise lose the
+one thing he turned on.
+
+Off by default, remembered in `localStorage` under `it_hl_recs`, and hidden
+until a team is marked on the board, since without one there is no plan to
+recommend from and the box would be a control that does nothing.
+
+### One control, two models boxes
+
+There are two of them — `.bm2-models` on the draft board and `.ch-models` on the
+cheat sheet — and they now render the same checkbox from one function,
+`recHighlightToggle()`, against one piece of state. They cannot drift into
+saying different things about the same setting.
+
+The set they emphasise is `recFitIds`. **With no model picked it follows the
+Ideal Team**, because that is already what the models pane displays; going blank
+there would read as a broken checkbox. With a model picked it reuses
+`modelFitIds` rather than re-solving the same plan.
+
+That whole question — *who is this model buying* — moved out of the `modelFitIds`
+memo into a top-level `modelTargetIds(modelKey, myTeam, …)`, so the gold bar,
+the new emphasis and the tests all read one implementation. Behaviour is
+unchanged; it is the same body with `draftModel` as a parameter.
+
+### The $1–$2 endgame
+
+The second half of the feature, and the more interesting one. Once the manager
+is down to dollar and two-dollar players, the same checkbox starts flagging the
+cheap men with the most **upside** — which is emphatically not the men with the
+most points per game.
+
+**When it arrives.** `maxSingleBid(myTeam, config)` is the most he can still bid
+on any ONE player: the budget minus a minimum bid for every other seat he still
+has to fill. At `$6` across five open seats that is `$2`. The shortlist is null
+until that number is at or under twice the minimum bid, and null in a snake or
+best-ball draft, which have no dollars for it to be about.
+
+**Why not points per game.** At a dollar every remaining projection sits inside
+the noise of every other. Sorting that pool by PPG re-sorts the noise, and it
+sorts it the wrong way: the capped veteran with a defined six-point role
+outranks the backup who is one snap from fourteen. A projection is the average
+over the seasons where nothing happens; the season where something does is the
+only reason to spend the last dollar.
+
+So `upsideScores()` prices the conditional role and returns the points **above**
+the projection, never the projection itself. Four terms:
+
+| term | what it reads |
+|---|---|
+| inherited role | `UPSIDE_JOB_OPENS[pos] × (UPSIDE_INHERIT × the man ahead − his own)`, only where the man ahead out-projects him by 35%+ |
+| the man ahead is hurt or past his age cliff | the odds the job opens, ×1.8 / ×1.25 (capped at 0.75) |
+| the breakout window | `yearsExp <= 2`, or age ≤ 24 with no experience on file |
+| the offence and the playoff schedule | a top-third offence, and soft Weeks 15–17 |
+
+Cut back by his own age cliff (×0.5) and his own injury (×0.7). Handcuffing a
+starter this manager already owns is worth another 25%, because that cover is
+only worth anything to the one team that needs it — the same argument
+`handcuffDollars` makes in dollars (§ the handcuff block in `index.html`).
+
+The flag is a **shortlist, not a re-ranking**: at most twelve names, and only
+those within 45% of the best score on the board. Past about a dozen the emphasis
+stops meaning anything. Each one carries an `UPSIDE` chip whose tooltip says
+what the claim is worth in points per game and why him — "one snap from
+Workhorse's role; handcuffs a starter you already own" — because *upside* with
+no number is a horoscope.
+
+### Tests
+
+`node tools/test-recommended-highlight.mjs` — 40 assertions, no browser, no
+network, wired into `checks.yml`. It lifts the real functions out of
+`index.html` by brace matching and the row `className` expressions by backtick
+matching, so it exercises the shipped source. It pins the two silent failures
+this feature could plausibly have: an emphasis the checkbox does not actually
+gate (the sheet stays repainted after it is turned off, and nothing errors), and
+an endgame shortlist that quietly re-sorts points per game (the board again in a
+different colour). Its fixture makes the second one concrete — an understudy
+projecting 40 against a veteran projecting 70, where the shortlist has to take
+the understudy.
+
+`tools/test-target-highlight.mjs` gained the three new scope variables its
+lifted row expressions now read, and was wired into `checks.yml` at the same
+time; it had been written before that job existed and had never run in CI.
+
+Verified in Chromium against the live board: 16 of 234 cheat-sheet rows and 16
+of 409 rail rows light for the Ideal Team, the same 16 in both, and unchecking
+the box clears every one.
