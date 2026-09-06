@@ -213,6 +213,16 @@ const kindOf = (r, label) => (r.needs.find(n => n.label === label) || {}).kind;
   ok('the money each has left is printed', txt.includes('$60') && txt.includes('$100') && txt.includes('$5'), txt);
   ok('the max bid is printed alongside it', txt.includes('$' + rowFor(intel(teams), 'Untouched').maxBid), txt);
   ok('the slot labels reach the panel, not just the position', txt.includes('RB2') && txt.includes('WR1'), txt);
+  // A column counting the holes said exactly what the chip list beside it
+  // already said. What is left over per hole does not, and it is the number
+  // that separates a manager holding $10 for one starter from one holding $10
+  // for eleven bench bodies.
+  const broke = rowFor(intel(teams), 'Broke');
+  let head = null;
+  (function findHead(n) { if (!n || typeof n !== 'object' || head) return; if (n.props && n.props.className === 'bi-head') { head = n; return; } (n.children || []).forEach(findHead); })(el);
+  ok('the head row no longer carries a bare slot count', head && !/slot(s|\b)/i.test(textOf(head).replace('$/slot', '')), head ? textOf(head) : 'no head row');
+  ok('what is left per hole is printed instead', txt.includes('$/slot') && txt.includes('$' + broke.perSlot.toFixed(1)), txt);
+  ok('a manager stretched under a dollar a slot is flagged', classes.includes('bi-num bi-perslot thin'), classes.join(' '));
   ok('the reader is told the slot is an estimate', /estimate/i.test(txt), txt.slice(-160));
   ok('the panel never prints', classes.some(c => c.includes('no-print')));
 }

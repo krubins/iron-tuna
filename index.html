@@ -1360,6 +1360,8 @@ input:focus, select:focus { border-color: var(--accent); }
 .bi-num { font-family: var(--font-mono); font-size: 12.5px; text-align: right; }
 .bi-money { color: var(--positive); }
 .bi-max { color: var(--gold-text); font-weight: 700; }
+.bi-perslot { color: var(--text-muted); }
+.bi-perslot.thin { color: var(--warning); }
 .bi-needs { display: flex; flex-wrap: wrap; gap: 4px; }
 .bi-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 700; border-radius: 3px; padding: 1px 5px; border: 1px solid transparent; white-space: nowrap; }
 .bi-chip.bi-starter { color: var(--gold-text); background: var(--gold-soft); border-color: rgba(245,184,0,0.45); }
@@ -1383,7 +1385,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .bi-flexnote { font-size: 11.5px; color: var(--accent-text); margin-top: 6px; }
 .bi-foot { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-top: 10px; }
 @media (max-width: 760px) {
-  .bi-head, .bi-row { grid-template-columns: var(--bi-cols-m, 1.2fr 0.7fr 0.7fr 0.4fr); row-gap: 4px; }
+  .bi-head, .bi-row { grid-template-columns: var(--bi-cols-m, 1.2fr 0.7fr 0.7fr 0.7fr); row-gap: 4px; }
   .bi-needs { grid-column: 1 / -1; }
   .bi-head span:last-child { display: none; }
 }
@@ -11770,9 +11772,9 @@ function BiddingIntelModal({
     style: {
       // The money columns only exist in an auction, so the grid has to lose
       // them too or every needs cell slides two columns to the right.
-      '--bi-cols': isAuction ? '1.5fr 0.8fr 0.8fr 0.5fr 3fr' : '1.5fr 0.5fr 3fr',
+      '--bi-cols': isAuction ? '1.4fr 0.8fr 0.8fr 0.8fr 3fr' : '1.2fr 4fr',
       // On a phone the needs wrap onto their own full-width row underneath.
-      '--bi-cols-m': isAuction ? '1.2fr 0.7fr 0.7fr 0.4fr' : '1.2fr 0.4fr'
+      '--bi-cols-m': isAuction ? '1.2fr 0.7fr 0.7fr 0.7fr' : '1fr'
     }
   }, React.createElement("div", {
     className: "bi-head"
@@ -11781,9 +11783,10 @@ function BiddingIntelModal({
   }, "Money left"), isAuction && React.createElement("span", {
     className: "bi-num",
     title: "The most this manager could put on ONE player and still fill every other open slot at the $" + (config.valuation && config.valuation.minBid || 1) + " minimum. Nobody can bid past his own number."
-  }, "Max bid"), React.createElement("span", {
-    className: "bi-num"
-  }, "Slots"), React.createElement("span", null, "Remaining needs")), rows.map(r => {
+  }, "Max bid"), isAuction && React.createElement("span", {
+    className: "bi-num",
+    title: "What is left divided by the slots still to fill. A manager under a couple of dollars a slot is filling out a bench at the minimum whatever his total says; one well above it can still concentrate money on a starter."
+  }, "$/slot"), React.createElement("span", null, "Remaining needs")), rows.map(r => {
     const isOpen = openId === r.id;
     const shown = r.needs.slice(0, 7);
     const more = r.needs.length - shown.length;
@@ -11803,9 +11806,10 @@ function BiddingIntelModal({
       className: "bi-num bi-money"
     }, "$", r.budgetRemaining), isAuction && React.createElement("span", {
       className: "bi-num bi-max"
-    }, r.done ? "—" : "$" + r.maxBid), React.createElement("span", {
-      className: "bi-num"
-    }, r.spotsRemaining), React.createElement("span", {
+    }, r.done ? "—" : "$" + r.maxBid), isAuction && React.createElement("span", {
+      className: "bi-num bi-perslot" + (!r.done && r.perSlot < 2 ? " thin" : ""),
+      title: r.done ? "Nothing left to fill" : "$" + r.budgetRemaining + " left over " + r.spotsRemaining + " slot" + (r.spotsRemaining === 1 ? "" : "s")
+    }, r.done ? "—" : "$" + r.perSlot.toFixed(1)), React.createElement("span", {
       className: "bi-needs"
     }, r.done ? React.createElement("span", {
       className: "bi-full"
@@ -11818,9 +11822,12 @@ function BiddingIntelModal({
       className: "bi-full"
     }, "Nothing left to fill"))), isOpen && React.createElement("div", {
       className: "bi-detail"
-    }, isAuction && React.createElement("div", {
+    }, React.createElement("div", {
+      // The one place the raw spot count belongs: the summary row above says
+      // which slots are open, one chip each, so a column repeating how many
+      // there were said nothing the chips had not.
       className: "bi-detail-money"
-    }, "Spent ", React.createElement("b", null, "$", r.spent), " · ", React.createElement("b", null, "$", r.budgetRemaining), " left over ", React.createElement("b", null, r.spotsRemaining), " slot", r.spotsRemaining === 1 ? "" : "s", r.spotsRemaining > 0 ? React.createElement(React.Fragment, null, " (~$", r.perSlot.toFixed(1), " a slot)") : null, r.done ? "" : " · can bid up to ", r.done ? null : React.createElement("b", null, "$", r.maxBid)), r.groups.map(g => React.createElement("div", {
+    }, isAuction ? React.createElement(React.Fragment, null, "Spent ", React.createElement("b", null, "$", r.spent), " · ", React.createElement("b", null, "$", r.budgetRemaining), " left to fill ") : "Still to fill ", React.createElement("b", null, r.spotsRemaining), " slot", r.spotsRemaining === 1 ? "" : "s", isAuction && !r.done ? React.createElement(React.Fragment, null, " · can bid up to ", React.createElement("b", null, "$", r.maxBid)) : null), r.groups.map(g => React.createElement("div", {
       key: g.pos,
       className: "bi-grp"
     }, React.createElement("span", {
