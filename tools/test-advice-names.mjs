@@ -47,6 +47,14 @@ const PERF_NOTES = literalAfter(client, 'PERF_NOTES');
 const BIDDING_NOTES = literalAfter(client, 'BIDDING_NOTES');
 const { strayNames } = proseNames(PROJECTIONS);
 
+// The fixtures at the bottom are the cards that shipped wrong, kept verbatim.
+// tools/add-players.mjs has since given all three of those players rows, which
+// would turn every "still catches it" fixture green for the exact opposite of
+// the right reason. So they are scanned against the board minus the rows added
+// to fix them: the rule is what is under test, not today's roster.
+const ADDED = new Set(JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/roster-additions.json'), 'utf8')).players.map(p => p.name));
+const asShipped = proseNames(PROJECTIONS.filter(p => !ADDED.has(p.name))).strayNames;
+
 // ── what counts as an instruction ─────────────────────────────────────────
 // Verbs that tell the reader to end up holding the player. Listed as the exact
 // tokens the prose uses, normalised the way the matcher normalises, so "Add",
@@ -91,11 +99,12 @@ function instructionIn(text) {
 const noteText = note => `${note.label || ''}. ${note.text || ''}`;
 
 // The complaint list for one note. Empty means either "not an instruction" or
-// "every name in the body is on the board".
-function unactionableNames(note) {
+// "every name in the body is on the board". `strays` is the matcher to read the
+// body with, so the fixtures can ask the same question of an older board.
+function unactionableNames(note, strays = strayNames) {
   const verb = instructionIn(noteText(note));
   if (!verb) return [];
-  return strayNames(note.text || '').map(h => `"${h.text}" is not on the board, but the note says ${verb}`);
+  return strays(note.text || '').map(h => `"${h.text}" is not on the board, but the note says ${verb}`);
 }
 
 // ── the notes that ship ───────────────────────────────────────────────────
@@ -136,7 +145,7 @@ const CAUGHT = [
   }]
 ];
 for (const [what, note] of CAUGHT) {
-  ok(`still catches ${what}`, unactionableNames(note).length > 0, 'came back clean');
+  ok(`still catches ${what}`, unactionableNames(note, asShipped).length > 0, 'came back clean');
 }
 
 // ── and what it must leave alone ──────────────────────────────────────────
@@ -161,7 +170,7 @@ const ALLOWED = [
   }]
 ];
 for (const [what, note] of ALLOWED) {
-  const bad = unactionableNames(note);
+  const bad = unactionableNames(note, asShipped);
   ok(`leaves ${what} alone`, bad.length === 0, bad.join('; '));
 }
 

@@ -78,7 +78,11 @@ const ENTRY_YEAR = {
 // tools/prose-names.mjs. `scan` walks a sentence claiming the longest run of
 // words that names somebody on the board; `strayNames` returns the capitalised
 // pairs it could not claim.
-const { scan, strayNames } = proseNames(PROJECTIONS);
+// The rules come back bound to a pool. The notes that ship are held to the
+// board that ships; the fixtures at the bottom are held to the board as it was
+// when they were written (see AS_SHIPPED below).
+function rulesFor(pool) {
+const { scan, strayNames } = proseNames(pool);
 
 // ── the three rules ───────────────────────────────────────────────────────
 // Each returns the complaints it found, so a clean note returns nothing. They
@@ -132,6 +136,19 @@ function badExperienceClaim(note) {
   return out;
 }
 
+return { namesOffTheBoard, wrongTeam, badExperienceClaim };
+}
+const { namesOffTheBoard, wrongTeam, badExperienceClaim } = rulesFor(PROJECTIONS);
+
+// The fixtures below are notes that shipped wrong, kept verbatim. Some name
+// players tools/add-players.mjs has since put on the board — MarShawn Lloyd was
+// added on 2026-09-06 — which would turn a "this rule still catches it" fixture
+// green for the exact opposite of the right reason. So they run against the
+// board minus the rows that were added after they were written. What is under
+// test is the rule, not today's roster.
+const ADDED = new Set(JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/roster-additions.json'), 'utf8')).players.map(p => p.name));
+const AS_SHIPPED = rulesFor(PROJECTIONS.filter(p => !ADDED.has(p.name)));
+
 // ── 1. the libraries are intact ───────────────────────────────────────────
 console.log('\ninsight libraries');
 const SETS = [
@@ -179,27 +196,27 @@ for (const note of PERF_NOTES.current) {
 // has to come back flagged.
 console.log('\nthe checks still catch the notes that shipped wrong');
 const CAUGHT = [
-  ['a rookie claim a season past its rookie', badExperienceClaim, {
+  ['a rookie claim a season past its rookie', AS_SHIPPED.badExperienceClaim, {
     label: 'Pair: Broncos backfield',
     text: 'J.K. Dobbins carries injury risk and RJ Harvey is an explosive rookie behind him. A dollar on each covers the Denver lead job.'
   }],
-  ['a player who changed teams', wrongTeam, {
+  ['a player who changed teams', AS_SHIPPED.wrongTeam, {
     label: 'Pair: Seahawks backfield',
     text: "Kenneth Walker's durability and Zach Charbonnet's knee make Seattle wide open. A dollar on each backs the side that ends up healthy and featured."
   }],
-  ['two players who both left', wrongTeam, {
+  ['two players who both left', AS_SHIPPED.wrongTeam, {
     label: 'Pair: Jaguars backfield',
     text: 'Travis Etienne and Tank Bigsby have flip-flopped for two years. The committee is cheap, and the winner is a weekly starter.'
   }],
-  ['a player off the board entirely', namesOffTheBoard, {
+  ['a player off the board entirely', AS_SHIPPED.namesOffTheBoard, {
     label: 'Pair: Cardinals backfield',
     text: "James Conner's age and injury history make Trey Benson the cheapest path to a featured back. Pair them for a dollar or two."
   }],
-  ['a handcuff who is no longer rostered', namesOffTheBoard, {
+  ['a handcuff who is no longer rostered', AS_SHIPPED.namesOffTheBoard, {
     label: 'Pair: Packers handcuff',
     text: 'Josh Jacobs leads Green Bay, but MarShawn Lloyd at a dollar is a league-winner if Jacobs misses time. Stash the upside.'
   }],
-  ['a back who slid off the depth chart', namesOffTheBoard, {
+  ['a back who slid off the depth chart', AS_SHIPPED.namesOffTheBoard, {
     label: 'Pair: Steelers backfield',
     text: 'Jaylen Warren (pass downs) and Kaleb Johnson (early downs) is a true split. Roster both and you hold whoever the job tilts toward.'
   }]
@@ -211,23 +228,23 @@ for (const [what, rule, note] of CAUGHT) {
 // The other half of a useful checker: what it must leave alone.
 console.log('\nand leaves sound notes alone');
 const ALLOWED = [
-  ['generic advice about rookies', badExperienceClaim, {
+  ['generic advice about rookies', AS_SHIPPED.badExperienceClaim, {
     label: 'Rookie RBs hit',
     text: 'Running back is the one spot where rookies routinely produce right away, so never auto-fade a rookie with a lead role.'
   }],
-  ['a city that reads like a name', namesOffTheBoard, {
+  ['a city that reads like a name', AS_SHIPPED.namesOffTheBoard, {
     label: 'Pair: Packers handcuff',
     text: 'Josh Jacobs leads Green Bay with Christopher Brooks the only back behind him.'
   }],
-  ['a coach the prose names', namesOffTheBoard, {
+  ['a coach the prose names', AS_SHIPPED.namesOffTheBoard, {
     label: 'Pair: Saints backfield',
     text: 'Travis Etienne leads New Orleans, but Kellen Moore keeps Alvin Kamara in the rotation.'
   }],
-  ['a sentence boundary between two capitals', namesOffTheBoard, {
+  ['a sentence boundary between two capitals', AS_SHIPPED.namesOffTheBoard, {
     label: 'Pair: Vikings backfield',
     text: 'Aaron Jones and Jordan Mason both tend to go cheap in Minnesota. Buy both ends of the committee.'
   }],
-  ['a former team named in passing', wrongTeam, {
+  ['a former team named in passing', AS_SHIPPED.wrongTeam, {
     label: 'Pair: Saints backfield',
     text: 'Travis Etienne left Jacksonville on a four-year deal, and Alvin Kamara stayed in New Orleans.'
   }]

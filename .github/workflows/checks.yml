@@ -212,6 +212,15 @@ jobs:
       - name: Insight prose against the player pool
         run: node tools/test-insights.mjs
 
+      # The other half of that. test-insights deliberately lets a DATED note name
+      # a player who just left the board — reporting that he is gone is the note
+      # working. It was never meant to cover an instruction, and on 2026-09-05 the
+      # top card said "grab MarShawn Lloyd for a few dollars" while Lloyd had no
+      # row, no rank and no price at all. This fails when a note says buy, grab,
+      # add, stash, draft, bid or pay about somebody the board cannot price.
+      - name: Buy advice names players the board can price
+        run: node tools/test-advice-names.mjs
+
       # LEAD_FACES in _worker.js is generated from tools/nfl-headshots.json and the
       # PROJECTIONS pool. A projections update that adds or moves a player leaves
       # it stale, and the symptom is a missing or wrongly-captioned face on the
@@ -235,6 +244,14 @@ jobs:
       # worker's AVAILABILITY block and the client's injury fallback to it.
       - name: Pro-rated projections agree with tools/availability.json
         run: node tools/apply-availability.mjs --check
+
+      # Every other path into PROJECTIONS refuses to change WHO is on the board
+      # (merge-projections is "existing roster only"; the availability pull drops
+      # unmatched feed entries), so a player the upload never carried could never
+      # get a row however much the desk wrote about him. tools/roster-additions.json
+      # is the way in; this holds the board to it.
+      - name: Roster additions are on the board
+        run: node tools/add-players.mjs --check
 
       # The odds math is duplicated between _worker.js and tools/ because there is
       # no bundler; test-worker-odds.mjs lifts the worker's copy out of the source

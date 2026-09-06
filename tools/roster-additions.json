@@ -1,0 +1,77 @@
+{
+  "_": [
+    "Players the board must price who the projection upload never carried. PROJECTIONS is",
+    "roster-frozen everywhere else (merge-projections.mjs is 'existing roster only', the",
+    "availability pull drops unmatched feed entries, apply-availability.mjs keeps even a",
+    "zeroed player on the board), so this file is the only way onto it.",
+    "",
+    "Each entry needs a `source` and either an explicit full-season `stats` line or a",
+    "`basis` naming a comparable already on the board at the same position, optionally",
+    "scaled. A `basis` line is an ESTIMATE standing in until a real projection arrives —",
+    "it is not a feed number and must not be described as one. Replace it by writing a",
+    "`stats` block, which always wins.",
+    "",
+    "On first apply a derived line is captured into `stats` so it stops moving when the",
+    "comparable moves. After that the row belongs to the board and apply-availability.mjs",
+    "may pro-rate it or move a share of an absent team-mate's line onto it.",
+    "",
+    "Apply with `node tools/add-players.mjs`; CI runs it with --check. Confirm team and",
+    "position against ESPN's live rosters with --verify."
+  ],
+  "asOf": "2026-09-06",
+  "players": [
+    {
+      "name": "MarShawn Lloyd",
+      "position": "RB",
+      "team": "GB",
+      "basis": {
+        "like": "Christopher Brooks"
+      },
+      "source": "ESPN Packers roster (checked 2026-09-06) lists Lloyd at RB. Baseline only: the site's own Auction Watch of 2026-08-28 and 2026-08-31 calls him the Green Bay frontrunner, and Christopher Brooks is the only other Green Bay back the board prices, so Brooks' line is the honest stand-in for a Packers back who is not Jacobs. The lift from Jacobs' exempt-list absence is NOT in this number — it belongs to tools/availability.json, which reallocates it.",
+      "why": "PERF_NOTES said 'grab MarShawn Lloyd, Green Bay's lead back, for a few dollars' while he had no row.",
+      "stats": {
+        "rushYd": 548,
+        "rushTD": 3,
+        "rec": 13,
+        "recYd": 108,
+        "recTD": 1,
+        "fumLost": 1
+      }
+    },
+    {
+      "name": "Jaylin Noel",
+      "position": "WR",
+      "team": "HOU",
+      "basis": {
+        "like": "Xavier Hutchinson"
+      },
+      "source": "ESPN Texans roster (checked 2026-09-06) lists Noel at WR. Baseline only: Hutchinson is the Houston depth receiver the board already prices behind Nico Collins, and Tank Dell's row is pro-rated for IR so it cannot serve as the comparable. The targets vacated by Jayden Higgins' season-ending ACL are NOT in this number — they belong to tools/availability.json.",
+      "why": "PERF_NOTES said 'Add him as a late one to three dollar flier' while he had no row.",
+      "stats": {
+        "rushYd": 12,
+        "rec": 19,
+        "recYd": 230,
+        "recTD": 1.1
+      }
+    },
+    {
+      "name": "Keenan Allen",
+      "position": "WR",
+      "team": "IND",
+      "basis": {
+        "like": "Josh Downs",
+        "scale": 0.6
+      },
+      "source": "ESPN Colts roster (checked 2026-09-06) lists Allen at WR, confirming the one-year deal the 2026-09-03 card describes. Baseline only: Downs is the Indianapolis slot receiver the board prices, and 0.6 puts Allen at the 'high-floor volume WR4' the card itself calls him, behind Downs and Alec Pierce. This is a comparable, not a projection — replace it with a feed line when one is reachable.",
+      "why": "PERF_NOTES said 'Treat him as a one to three dollar flier late in your auction' while he had no row.",
+      "stats": {
+        "rushYd": 7,
+        "rushTD": 0.1,
+        "rec": 42,
+        "recYd": 418,
+        "recTD": 1.6,
+        "fumLost": 0.4
+      }
+    }
+  ]
+}
