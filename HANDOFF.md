@@ -7589,3 +7589,104 @@ time; it had been written before that job existed and had never run in CI.
 Verified in Chromium against the live board: 16 of 234 cheat-sheet rows and 16
 of 409 rail rows light for the Ideal Team, the same 16 in both, and unchecking
 the box clears every one.
+
+## 66. September 6: the board could not price the players it told you to buy
+
+Ken asked why MarShawn Lloyd was not ranked to reflect Josh Jacobs' exempt-list
+placement. Two separate gaps, and the first is why nothing was there to look at.
+
+**Lloyd had no row.** He has never been in `PROJECTIONS`. Every path into that
+array refuses to change who is on it: `tools/merge-projections.mjs` is "existing
+roster only, no players are added or removed", `buildAvailabilityOverlay` counts
+an unmatched feed entry as `skipped.unlisted` and drops it, and §48 keeps even a
+zeroed player on the board because the generated indexes and story tests expect
+the roster fixed. All deliberate, and together it meant a player the 2026-08-30
+upload did not carry could never get a row however much the desk wrote about him.
+
+The desk wrote plenty. Auction Watch on 08-28 and 08-31 called Lloyd the Green
+Bay frontrunner, `waiver-watch-2026-09-01` led the FAAB Watch with him, and the
+top `PERF_NOTES` card said "grab MarShawn Lloyd, Green Bay's lead back, for a
+few dollars". Same for Jaylin Noel ("Add him as a late one to three dollar
+flier") and Keenan Allen. Three cards told the reader to buy players the site
+could not price. This is §48's "nothing connects a story to a row" in the mirror.
+
+**Nothing moved the vacated line.** `tools/apply-availability.mjs` only ever
+subtracted. Jacobs' six games came off his row and landed nowhere: Christopher
+Brooks still carried the row he was given on 08-30, when Jacobs was projected
+for a full season.
+
+### What changed
+
+`tools/test-advice-names.mjs` is the check that was missing.
+`tools/test-insights.mjs` deliberately exempts `PERF_NOTES` from its roster rule,
+and is right to — a dated note is allowed to name a player *because* he just
+left the board. That licence was written for reporting. This file draws the line
+at instructions: the moment a note says buy, grab, add, stash, draft, bid or pay,
+every player in its body must be one the board can price. Note-level, because
+the verb and the name are routinely in different sentences with a pronoun
+between them. The matcher moved to `tools/prose-names.mjs` so both files hold
+prose to the board the same way; extracting it turned up two bugs, a
+sentence-initial verb reading as a first name ("Fade Jacobs") and an unknown
+coach.
+
+`tools/roster-additions.json` + `tools/add-players.mjs` are the way onto the
+board. Nothing invents a projection: an entry carries either an explicit stat
+line or a `basis` naming a comparable already on the board at the same position,
+optionally scaled, and a `source` either way. A derived line is captured on
+first apply so it stops moving when the comparable moves. `--verify` confirms
+team and position against ESPN's team roster feed, which IS reachable from here
+even though the projection feeds are not; `--check` is a CI step. All three
+lines shipped are comparables and say so in the file — replace them the moment
+a real projection is reachable.
+
+Beneficiaries are the other half of §48. An availability entry may carry
+`beneficiaries`, and the vacated line — `season x gamesOut / seasonGames`, the
+exact complement of the donor's own pro-rating — is split by share and added to
+each beneficiary's row. Shares must be positive, must not sum past 1, and must
+be on the donor's team; a player may not be both absent and a beneficiary. Bases
+are captured in `beneficiaryBases` so it is idempotent and reversible. Only stat
+keys the beneficiary already has are added to, because giving a back a receiving
+line he never had is a projection, not arithmetic.
+
+The worker's generated `BENEFICIARIES` block carries the `boost` each row now
+sits at over its base, and `applyAvailability` scales a beneficiary's cached
+overlay up by it in the same pass it scales a listed player's down.
+`buildTeamEnvOverlay` un-rates by it through the new shared `_rowCarried`. §48's
+lesson was that a stale overlay blends the pre-news line back in; that is just
+as true when the number goes up.
+
+**Applied 2026-09-06.** Board 409 to 412. Shares are set only where the site's
+own copy already names the beneficiary, each citing its story: Jacobs to Lloyd
+55% and Brooks 25%, Higgins to Noel 35% and Nico Collins 15%, Charbonnet to
+Jadarian Price 60%. The unclaimed remainder is workload the board prices
+nowhere, which is the honest answer for a roster it does not fully carry. The
+other 15 availability entries have no beneficiary and are unchanged. Lloyd is
+RB41, above Brooks at RB45 and below Jacobs at RB36; Noel WR79, Allen WR82,
+Collins WR7, Price RB20.
+
+Ran `--fetch` while here, as §48 asks weekly: no new long-term absences among
+board players, and the two entries ESPN no longer lists are the bulk clearing
+the code already documents. `asOf` dated 09-06 on that re-check.
+
+**Deliberately committed-only.** The live pull can lengthen a donor's absence
+and that moves the donor's row, not a beneficiary's. Who inherits a job is a
+judgement about a depth chart, not something an injury feed states, so it stays
+a hand edit — the same reasoning that keeps reinstatement one.
+
+**What this does not fix.** The projection feeds are still unreachable, so the
+three added lines are comparables rather than projections and every share is a
+hand judgement. A beneficiary's boost is spread across all 17 games rather than
+concentrated in the weeks the donor actually misses, which is the same coarse
+season-total convention §48 used for the absent player and is wrong in the same
+way for a weekly view. And the roster is still frozen apart from this file: run
+`node tools/add-players.mjs --verify` when adding to it.
+
+### Tests
+
+`tools/test-advice-names.mjs` (96 assertions) and `node tools/add-players.mjs
+--check` are wired into `checks.yml`. `tools/test-worker-availability.mjs` gained
+14 assertions covering the boost against whatever the file declares, and
+self-skips if it declares none. The historical fixtures in both prose tests now
+run against the board MINUS the rows added to fix them — all three named players
+are on it today, which would have turned every "this rule still catches it"
+fixture green for the opposite of the right reason.
