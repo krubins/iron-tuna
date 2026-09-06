@@ -16898,30 +16898,47 @@ function PlayersRail({
     }, 90);
     return () => clearTimeout(t);
   }, [focusPlayer]);
+  // A rail row is both a click target (opens the card) and a drag handle
+  // (re-ranks the player). The drag only *begins* once the pointer has really
+  // travelled: anything shorter stays a plain click, so the browser fires its
+  // own click event and the card opens. Beginning the drag on pointerdown is
+  // what used to eat the click - a few pixels of hand jitter and the card
+  // never came up.
+  const suppressRowClick = useRef(false);
   function startRankDrag(e, id, pos) {
+    suppressRowClick.current = false;
     if (e.button !== undefined && e.button !== 0) return;
     if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
     if (e.target.closest && e.target.closest('.rr-name')) return;
     const info = rowRefs.current[id];
     if (!info || !info.el) return;
-    e.preventDefault();
     const el = info.el;
     const startY = e.clientY;
-    let moved = false;
+    const startX = e.clientX;
+    let dragging = false;
     const container = el.closest('.players-rail');
-    el.style.transition = 'none';
-    el.style.position = 'relative';
-    el.style.zIndex = '50';
-    el.style.opacity = '0.92';
-    el.style.boxShadow = '0 8px 22px rgba(0,0,0,0.55)';
-    el.style.cursor = 'grabbing';
     const st = {
       targetId: null,
       lastHi: null
     };
+    const begin = ev => {
+      dragging = true;
+      ev.preventDefault();
+      el.style.transition = 'none';
+      el.style.position = 'relative';
+      el.style.zIndex = '50';
+      el.style.opacity = '0.92';
+      el.style.boxShadow = '0 8px 22px rgba(0,0,0,0.55)';
+      el.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    };
     const onMove = ev => {
-      if (Math.abs(ev.clientY - startY) > 4) moved = true;
+      if (!dragging) {
+        // 8px, not a pixel or two: a click with a shaky hand still has to read as a click.
+        if (Math.abs(ev.clientY - startY) < 8 && Math.abs(ev.clientX - startX) < 8) return;
+        begin(ev);
+      }
       el.style.transform = `translateY(${ev.clientY - startY}px)`;
       if (container) {
         const cr = container.getBoundingClientRect();
@@ -16946,6 +16963,8 @@ function PlayersRail({
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
       document.removeEventListener('pointercancel', onUp);
+      // Never dragged: leave it alone and let the click through to the row.
+      if (!dragging) return;
       el.style.transform = '';
       el.style.transition = '';
       el.style.position = '';
@@ -16953,8 +16972,11 @@ function PlayersRail({
       el.style.opacity = '';
       el.style.boxShadow = '';
       el.style.cursor = '';
+      document.body.style.userSelect = '';
       if (st.lastHi && rowRefs.current[st.lastHi]) rowRefs.current[st.lastHi].el.classList.remove('rank-drop');
-      if (st.targetId && st.targetId !== id) { onRankReorder(id, st.targetId); } else if (!moved) { const __pl = (players || []).find(x => x.id === id); if (__pl) setQuick(__pl); }
+      // A finished drag still fires a click on the row; don't open the card on it.
+      suppressRowClick.current = true;
+      if (st.targetId && st.targetId !== id) onRankReorder(id, st.targetId);
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
@@ -17205,6 +17227,11 @@ function PlayersRail({
         },
         className: `rail-row ${cls}${highlightRecs && recFitIds && recFitIds.has(p.id) ? ' rail-rec' : ''}${highlightRecs && upsideIds && upsideIds.has(p.id) ? ' rail-upside' : ''}${targets && targets.has(p.id) ? ' rail-target' : ''}`,
         onPointerDown: e => startRankDrag(e, p.id, p.position),
+        onClick: e => {
+          if (suppressRowClick.current) { suppressRowClick.current = false; return; }
+          if (e.target.closest && (e.target.closest('button') || e.target.closest('.rr-name'))) return;
+          setQuick(p);
+        },
         style: {
           cursor: 'grab',
           touchAction: 'pan-y'
