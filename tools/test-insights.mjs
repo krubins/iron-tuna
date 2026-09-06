@@ -35,6 +35,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+// The name matcher lives in tools/prose-names.mjs so this file and
+// tools/test-advice-names.mjs hold the prose to the board the same way.
+import { literalAfter, proseNames, norm, words, TEAMS, NOT_PEOPLE, teamInLabel } from './prose-names.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -47,31 +50,7 @@ const client = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const worker = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
 
 // ── lifting the real declarations out of the real files ───────────────────
-// Scans the literal after `const NAME =` bracket by bracket rather than slicing
-// to whatever happens to be declared next, so moving a declaration around does
-// not quietly turn a check into a no-op.
-function literalAfter(src, name) {
-  const decl = new RegExp(`const\\s+${name}\\s*=\\s*`).exec(src);
-  if (!decl) throw new Error(`${name} not found — did it get renamed?`);
-  const from = decl.index + decl[0].length;
-  const open = src[from];
-  if (open !== '[' && open !== '{') throw new Error(`${name} is not an array or object literal`);
-  const close = open === '[' ? ']' : '}';
-  let depth = 0, quote = null;
-  for (let i = from; i < src.length; i++) {
-    const c = src[i];
-    if (quote) {
-      if (c === '\\') i++;
-      else if (c === quote) quote = null;
-      continue;
-    }
-    if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
-    if (c === open) depth++;
-    else if (c === close && --depth === 0) return new Function(`return (${src.slice(from, i + 1)});`)();
-  }
-  throw new Error(`${name} literal never closed`);
-}
-
+// literalAfter scans the literal bracket by bracket (see tools/prose-names.mjs).
 const PROJECTIONS = literalAfter(worker, 'PROJECTIONS');
 const FANTASY_FACTS = literalAfter(client, 'FANTASY_FACTS');
 const PERF_NOTES = literalAfter(client, 'PERF_NOTES');
@@ -95,105 +74,21 @@ const ENTRY_YEAR = {
 };
 
 // ── reading names out of prose ────────────────────────────────────────────
-// One normaliser for both sides, so "A.J. Brown", "RJ Harvey" and "Brown's"
-// reduce the same way whether they come from the pool or from a sentence.
-// Words, not characters: matching on token runs is what keeps "Love" from
-// landing inside "Loveland" and "Rookie Jadarian" from reading as a name.
-const norm = w => String(w).toLowerCase().replace(/[’']s$/, '').replace(/[^a-z]/g, '');
-const words = text => String(text).split(/\s+/).filter(Boolean);
-const keyOf = ws => ws.map(norm).filter(Boolean).join(' ');
-const SUFFIX = /\s(jr|sr|ii|iii|iv|v)$/;
-
-// Every pool name, indexed with and without its suffix so prose that says
-// "Tyrone Tracy" still finds "Tyrone Tracy Jr." on the board.
-const byName = new Map();
-for (const p of PROJECTIONS) {
-  const full = keyOf(words(p.name));
-  for (const k of new Set([full, full.replace(SUFFIX, '')])) {
-    if (!byName.has(k)) byName.set(k, []);
-    byName.get(k).push(p);
-  }
-}
-const LONGEST = Math.max(...[...byName.keys()].map(k => k.split(' ').length));
-
-// Walks the sentence claiming the longest run of words that names somebody on
-// the board. Returns each hit with the word it started at, which is what rule 3
-// uses to tell which name a claim is attached to.
-function scan(text) {
-  const ws = words(text);
-  const found = [], claimed = new Set();
-  for (let i = 0; i < ws.length; i++) {
-    for (let n = Math.min(LONGEST, ws.length - i); n >= 2; n--) {
-      const entries = byName.get(keyOf(ws.slice(i, i + n)));
-      if (!entries) continue;
-      found.push({ at: i, span: n, name: entries[0].name, entries });
-      for (let j = i; j < i + n; j++) claimed.add(j);
-      i += n - 1;
-      break;
-    }
-  }
-  return { ws, found, claimed };
-}
-
-const TEAMS = {
-  Cardinals: 'ARI', Falcons: 'ATL', Ravens: 'BAL', Bills: 'BUF', Panthers: 'CAR',
-  Bears: 'CHI', Bengals: 'CIN', Browns: 'CLE', Cowboys: 'DAL', Broncos: 'DEN',
-  Lions: 'DET', Packers: 'GB', Texans: 'HOU', Colts: 'IND', Jaguars: 'JAX',
-  Chiefs: 'KC', Raiders: 'LV', Chargers: 'LAC', Rams: 'LAR', Dolphins: 'MIA',
-  Vikings: 'MIN', Patriots: 'NE', Saints: 'NO', Giants: 'NYG', Jets: 'NYJ',
-  Eagles: 'PHI', Steelers: 'PIT', '49ers': 'SF', Seahawks: 'SEA',
-  Buccaneers: 'TB', Titans: 'TEN', Commanders: 'WAS', Washington: 'WAS'
-};
-// Capitalised words that are not people. Cities read exactly like names
-// ("Green Bay", "New Orleans"), and the coaches are the ones this prose names —
-// a coach the list has not met is reported until somebody adds him, which is
-// the right way round for a check that is looking for names it does not know.
-const NOT_PEOPLE = new Set([
-  ...Object.keys(TEAMS),
-  'Arizona', 'Atlanta', 'Baltimore', 'Buffalo', 'Carolina', 'Chicago', 'Cincinnati',
-  'Cleveland', 'Dallas', 'Denver', 'Detroit', 'Green', 'Bay', 'Houston', 'Indianapolis',
-  'Jacksonville', 'Kansas', 'City', 'Las', 'Vegas', 'Los', 'Angeles', 'Miami',
-  'Minnesota', 'New', 'England', 'Orleans', 'York', 'Philadelphia', 'Pittsburgh',
-  'San', 'Francisco', 'Seattle', 'Tampa', 'Tennessee',
-  'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-  'September', 'October', 'November', 'December',
-  'Kellen', 'Moore', 'Liam', 'Coen', 'Dave', 'Canales', 'Mike', 'McCarthy', 'Andy', 'Reid'
-].map(norm));
-
-const teamInLabel = label => {
-  for (const [word, code] of Object.entries(TEAMS)) {
-    if (new RegExp(`\\b${word}\\b`).test(label)) return { word, code };
-  }
-  return null;
-};
+// norm/words/scan/strayNames, the TEAMS map and the NOT_PEOPLE list all live in
+// tools/prose-names.mjs. `scan` walks a sentence claiming the longest run of
+// words that names somebody on the board; `strayNames` returns the capitalised
+// pairs it could not claim.
+const { scan, strayNames } = proseNames(PROJECTIONS);
 
 // ── the three rules ───────────────────────────────────────────────────────
 // Each returns the complaints it found, so a clean note returns nothing. They
 // are functions rather than inline assertions so the fixtures at the bottom can
 // re-run them against the notes that shipped wrong.
 
-// Two capitalised words in a row that the pool did not claim. Initials ("A.J.")
-// and all-caps first names ("RJ") count; a full stop between them does not, so
-// "Minnesota. Buy both" stays a sentence boundary rather than becoming a person.
-// Internal capitals are ordinary in these names — MarShawn, TreVeyon, McCaffrey
-// — so the shape is "starts capitalised", not "capitalised then lower case".
-const CAPPED = /^(?:(?:[A-Z]\.){1,3}|[A-Z][A-Za-z’'-]*)$/;
-// A surname carries lower case somewhere, which is what separates "Lloyd" and
-// "McCaffrey" from the abbreviations this prose is full of — RB, PPR, TE.
-const SURNAME = /^[A-Z][A-Za-z’'-]*[a-z]/;
-const ENDS_SENTENCE = /[.!?]$/;
+// A note may not name somebody the board cannot price. The shared matcher does
+// the work; this keeps the bare-string shape the fixtures at the bottom assert.
 function namesOffTheBoard(note) {
-  const { ws, claimed } = scan(note.text);
-  const out = [];
-  for (let i = 0; i + 1 < ws.length; i++) {
-    if (claimed.has(i) || claimed.has(i + 1)) continue;
-    const a = ws[i].replace(/[,;:]$/, ''), b = ws[i + 1].replace(/[,;:.]$/, '');
-    if (!CAPPED.test(a) || !SURNAME.test(b)) continue;
-    if (ENDS_SENTENCE.test(a) && !/^(?:[A-Z]\.){1,3}$/.test(a)) continue;
-    if (NOT_PEOPLE.has(norm(a)) || NOT_PEOPLE.has(norm(b))) continue;
-    out.push(`${a} ${b}`);
-  }
-  return out;
+  return strayNames(note.text).map(h => h.text);
 }
 
 function wrongTeam(note) {
