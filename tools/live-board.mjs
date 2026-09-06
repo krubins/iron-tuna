@@ -127,7 +127,7 @@ const ENTRY = ['PROJECTIONS', 'COLUMN_SCORING', 'COLUMN_CURVE', 'COLUMN_CURVE_BU
   'COLUMN_LEAGUE_BUDGET', 'COLUMN_MIN_BID', 'VEGAS_WEIGHT', 'COLUMN_POSITIONS',
   '_colScore', '_colPrice', '_oddsRound', '_oddsNorm'];
 const OPTIONAL = ['COLUMN_NORM', '_colNormFactors', '_colNormApply', 'blendProjections',
-  '_colBlendPrice',
+  '_colBlendPrice', 'applyAvailability', '_availTable',
   '_AVAIL_TABLE', 'availabilityMerge', 'AVAILABILITY'];
 
 function build(extra) {
@@ -169,6 +169,10 @@ function smoke(S) {
   // short -- which then throws on the first real overlay, far from here.
   const pool = S.blendProjections ? S.blendProjections(null) : S.PROJECTIONS;
   if (S.blendProjections) S.blendProjections({});
+  // applyAvailability looks each availability-table key up IN the overlay and
+  // skips what is missing, so an empty object never reaches _availFactor. A
+  // proxy that answers every key does, which is what makes the lift complete.
+  if (S.applyAvailability) S.applyAvailability(new Proxy({}, { get: () => ({ recYd: 1 }) }));
   const p = pool[0];
   const pts = S._colScore(p.projectedStats || {}, p.position);
   if (S._colNormFactors) S._colNormApply(pts, S._colNormFactors({ [p.position]: [pts] })[p.position]);
@@ -205,7 +209,14 @@ export const hasAvailability = !!S.__setAvail;
 
 // The worker's boardCompute, step for step (§9d).
 export function board(overlayPath, useOdds = true) {
-  const OV = (useOdds && overlayPath) ? JSON.parse(fs.readFileSync(overlayPath, 'utf8')) : null;
+  // oddsCacheRead does NOT hand blendProjections the raw payload: it runs
+  // applyAvailability over it first, scaling a listed player's market line by
+  // the games he can play. Skipping that inflates every player on the list --
+  // and because the norm factor is a mean over the position, it moves the
+  // printed points of everybody else in it too. Zach Charbonnet came out at
+  // 116.6 instead of 99.8, and Jadarian Price's points moved a rank.
+  const raw = (useOdds && overlayPath) ? JSON.parse(fs.readFileSync(overlayPath, 'utf8')) : null;
+  const OV = (raw && S.applyAvailability) ? S.applyAvailability(raw) : raw;
   const pool = S.blendProjections ? S.blendProjections(OV) : S.PROJECTIONS;
   const positions = S.COLUMN_POSITIONS || ['QB', 'RB', 'WR', 'TE'];
   const byPos = {}, meta = new Map();
@@ -285,3 +296,7 @@ export function board(overlayPath, useOdds = true) {
 // is a multi-line arrow chain, and a lifter that stops at the first newline
 // returns a half function that silently matches nothing.
 export const oddsKey = (name, position) => S._oddsNorm(name) + '|' + position;
+
+// Who the availability table lists, so a caller can tell a pro-rated player
+// from a healthy one. Empty when the worker has no such table.
+export const availabilityKeys = () => (S._availTable ? Object.keys(S._availTable()) : []);

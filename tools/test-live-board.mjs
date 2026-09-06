@@ -10,7 +10,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { board, price, MIN_BID, NORM, WORKER_PATH, hasAvailability, oddsKey, PROJECTIONS, VEGAS_WEIGHT } from './live-board.mjs';
+import { board, price, MIN_BID, NORM, WORKER_PATH, hasAvailability, oddsKey, PROJECTIONS, VEGAS_WEIGHT, availabilityKeys } from './live-board.mjs';
 
 let failed = 0;
 const ok = (name, cond, detail = '') => {
@@ -89,6 +89,46 @@ ok('a synthetic overlay produces a DIFFERENT board', !!blended &&
     const a = map.get(n), b = blended.map.get(n);
     return a && b && (a.rank !== b.rank || a.v !== b.v);
   }), 'blended board is identical to the committed one, so nothing blended');
+
+// 3c. The overlay must be run through applyAvailability BEFORE it is blended.
+//     oddsCacheRead does that in the worker; a harness that hands
+//     blendProjections the raw payload inflates every listed player, and
+//     because the norm factor is a mean over the position it moves everyone
+//     else's printed points too. That mistake made three correct stories look
+//     wrong on 2026-09-03, 09-04 and 09-05.
+const listed = new Set(availabilityKeys());
+ok('the worker exposes an availability table', listed.size > 0, listed.size + ' entries');
+if (listed.size) {
+  // Triple every market line. A healthy player's points should climb hard; a
+  // listed player's climb must be damped by the games he cannot play.
+  const big = {};
+  for (const p of PROJECTIONS) {
+    const st = p.projectedStats || {};
+    const row = {};
+    for (const k of ['passYd', 'passTD', 'rushYd', 'rushTD', 'recYd', 'recTD']) {
+      if (k in st && st[k] > 0) row[k] = Math.round(st[k] * 3 * 10) / 10;
+    }
+    if (Object.keys(row).length) big[oddsKey(p.name, p.position)] = row;
+  }
+  const tmp2 = path.join(os.tmpdir(), 'live-board-avail-' + process.pid + '.json');
+  let hot = null;
+  try { fs.writeFileSync(tmp2, JSON.stringify(big)); hot = board(tmp2); }
+  finally { try { fs.unlinkSync(tmp2); } catch (e) { /* best effort */ } }
+  const ratio = (p) => {
+    const a = map.get(p.name), b = hot && hot.map.get(p.name);
+    return (a && b && a.pts > 0) ? b.pts / a.pts : null;
+  };
+  const pool = PROJECTIONS.filter(p => ['QB', 'RB', 'WR', 'TE'].includes(p.position));
+  const damped = pool.filter(p => listed.has(oddsKey(p.name, p.position))).map(ratio).filter(Boolean);
+  const free = pool.filter(p => !listed.has(oddsKey(p.name, p.position))).map(ratio).filter(Boolean);
+  const maxDamped = Math.max(...damped, 0);
+  const medFree = free.sort((a, b) => a - b)[Math.floor(free.length / 2)];
+  ok('there are listed players to check', damped.length > 0, damped.length + ' listed with a market line');
+  ok('a listed player\'s market line is scaled before it is blended',
+    damped.length > 0 && maxDamped < medFree,
+    `listed players rose up to ${maxDamped.toFixed(3)}x, typical player ${medFree ? medFree.toFixed(3) : '?'}x` +
+    ' -- applyAvailability was probably skipped');
+}
 
 // The served column must never rise as you read down it. That is what the
 // upper envelope in the 2026-09-04 pricing exists to guarantee, and it is the

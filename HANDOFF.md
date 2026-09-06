@@ -8197,3 +8197,128 @@ checker cannot explain a price without them.
   check in `method`; row 78, the first, references `DEFAULT_BOARD_RAW` without
   naming the check. So it is being run — it is the rule that is now wrong, not
   the compliance.
+
+## 71. September 6: I was wrong three times, and the stories were right
+
+The 09-06 audit found no defect in the column. It found one in me. **All three
+"corrections" made on 09-03, 09-04 and 09-05 were wrong**, the published stories
+were right in every particular, and all three have been restored to what they
+originally said.
+
+### 71a. The defect: the harness never scaled the overlay for availability
+
+The worker does not hand `blendProjections` the raw odds payload.
+`oddsCacheRead` runs **`applyAvailability(overlay)`** over it first, scaling a
+listed player's market line by the games he can actually play — the committed
+`PROJECTIONS` row is already pro-rated, so the market side must be too, or the
+blend of a pro-rated line and a full-season one over-counts.
+
+`tools/live-board.mjs` skipped that step. Consequences:
+
+- every player on the availability list was **inflated** on the served board;
+- and because `_colNormFactors` re-levels a position to a **mean**, one
+  inflated player moved the printed points of **everyone else in that
+  position** — so ranks drifted for healthy players too.
+
+That is why my boards kept disagreeing with the column by a rank here and a
+dollar there, always in the served column and never in the committed one.
+
+### 71b. What each story actually said, checked with the fixed harness
+
+| Row | Story printed | True served board | My "correction" |
+|---|---|---|---|
+| 73 (09-03) | Tony Pollard **$5, RB28** | **RB28 $5** ✓ | RB29 $3 ✗ |
+| 77 (09-04) | Cam Skattebo **$15, RB18** | **RB18 $15** ✓ | RB19 $13 ✗ |
+| 81 (09-05) | Travis Etienne **$17, RB16**; Judkins RB17 | **RB16 $17**, Judkins **RB17** ✓ | $27, RB18 ✗ |
+
+Row 81's whole surrounding arithmetic checks out on the September 4 board too:
+Chase Brown RB10 $39, Javonte Williams RB15 $20, the $22 over six ranks, the
+18.5 points, the 15.3-point gap to Judkins for $2, Purdy/Nix/Herbert all $7
+within **0.6**, Mahomes $9 beating Herbert by **5.4**, Burrow by **21.4**. Every
+figure I "refreshed" was already right; my refreshed values were the wrong ones.
+
+The Etienne case is the sharpest. Without availability scaling, Josh Jacobs —
+on the commissioner's exempt list — kept a full-season market line, which put
+him at market-world RB11 and interpolated him to $26.75, and the upper envelope
+then lifted the four backs above him to $27. **That $27 was an artefact of my
+own bug.** With the scaling applied Jacobs falls out of that band entirely and
+Etienne is $17, exactly as published.
+
+**Restored**: rows 73, 77 and 81 now carry their original titles, deks, tables,
+bodies and `method` text. The reader-facing correction notes I added have been
+removed, as has each `CORRECTION` paragraph in `method`. Row 73's
+`DEVIATIONS. None.` line, which my 09-03 edit had displaced, is back.
+`verified` and `published` were never touched by any of it, and all three rows
+were already retired from the front page by later runs before today.
+
+### 71c. What I should have done differently
+
+Three things, in order of how much they would have helped:
+
+1. **A disagreement between the column and my board is not evidence about the
+   column.** It is evidence that one of two builds is wrong, and mine is the
+   one with no independent check on it. Every time, the run's `method` was
+   internally consistent, named its data, and reproduced the worker's own
+   functions. I treated my reconstruction as the oracle because it was mine.
+2. **The audit had a step for this and I skipped it.** The 09-05 check-in said
+   "pull the injury feed from id 3 and feed it to `setAvailability()`". I ran
+   `setAvailability` yesterday and today, found it changed nothing for the
+   players I was looking at, and concluded availability was not in play. It was
+   in play — just on the **overlay**, not on the committed rows, and
+   `setAvailability` does not touch the overlay.
+3. **The escalation was backwards.** Rewriting a published headline is the
+   heaviest possible action and I took it on the strength of the lightest
+   possible evidence: a single tool I had rewritten four times that week. The
+   bar for editing a story should be higher than the bar for reporting a
+   discrepancy, and it was lower.
+
+### 71d. The test that would have caught it
+
+`tools/test-live-board.mjs` now triples every market line in a synthetic
+overlay and requires that a player on the availability table climbs **less**
+than a typical player does. Skipping `applyAvailability` fails it:
+
+    FAIL a listed player's market line is scaled before it is blended --
+    listed players rose up to 1.067x, typical player 1.001x
+
+Mutation-verified. The harness also exposes `availabilityKeys()` so a caller
+can tell a pro-rated player from a healthy one, and the lift's smoke now drives
+`applyAvailability` through a proxy overlay — an empty object never reaches
+`_availFactor`, so the symbol was not pulled in and the first real call threw.
+
+### 71e. The live lead is correct
+
+Row 84, "Bid Jadarian Price to $14 and cap Carnell Tate at $8; the board says
+$11 for both" (preseason desk, 09-06 07:12Z). Every figure verifies exactly on
+the September 5 board it names:
+
+| Player | Consensus | Served | Move |
+|---|---|---|---|
+| Jadarian Price | RB25 $7 ✓ | RB23 $11 ✓ | +2, $4 ✓ |
+| Carnell Tate | WR29 $8 ✓ | WR25 $11 ✓ | +4, $3 ✓ |
+| Zach Charbonnet | RB47 $2 ✓ | RB48 $2 ✓ | −1, $0 ✓ |
+
+Its table now carries **both** boards as separate columns, and its `method`
+records looking each player up "in both boards by name and never by ladder
+slot". §69's attribution check is doing what it was written to do. The run also
+reports its own cross-check against `DEFAULT_BOARD_RAW`: 339 of 340 matching,
+the exception being Garrett Wilson at WR12 where the static block says $27 and
+the live build $28 — nobody named in the story depends on it, and it is worth
+a look on a future run.
+
+### 71f. The rest
+
+- CI **56/56** after merging 9 commits.
+- Board pipeline unchanged, **and `boardPayload` itself hashes identically** to
+  09-05 main — the §70e check, which exists because the 09-04 pricing change
+  lived inside that function and a function-list diff missed it.
+- Repo vs deployed: **1380 player-rows across four boards, 0 differences.**
+- One stalled run: id 44, 09-05 12:58Z, `stage='start'` with
+  `updated_at == started_at`. Runs 45, 46 and 47 completed. First stall since
+  the 09-01/09-02 outage; worth watching, not yet a pattern.
+- Tamper predicates clean; exactly one published row.
+- Routine enabled, `58 */6 * * *`, prompt 44,690 chars / `53007f8d8779`,
+  byte-identical to the repo copy.
+- §70c's proposed replacement for the attribution check is **withdrawn**. It
+  was written to fix a failure that did not happen. The check as it stands
+  produced exactly the right behaviour in row 84.
