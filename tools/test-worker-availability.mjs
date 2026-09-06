@@ -39,6 +39,7 @@ const harness = new Function('PROJECTIONS', '_xb64encode', 'PROJ_KEY', 'fetch', 
            AVAIL_FEED_URL, _oddsNorm, _oddsRound, _availF, _availStatusOf, _availKickoff, _availGamesOut,
            _availBoardIndex, buildAvailabilityOverlay, availabilityMerge, availabilityTable, _availTable,
            _availFactor, _availRowFactor, applyAvailability, blendProjections, _withAvailability, _availPool,
+           BENEFICIARIES, _benBoost, _rowCarried,
            availabilityCacheRead, availabilityCacheWrite, runAvailabilityRefresh, availabilityReport,
            fetchInjuriesEspn, oddsCacheRead, projectionsPayload, boardPayload, buildTeamEnvOverlay,
            buildVegasBoard, VEGAS_WEIGHT,
@@ -56,6 +57,12 @@ const partialKey = committedKeys.find(k => probe.AVAILABILITY[k].gamesOut > 0 &&
 const seasonKey = committedKeys.find(k => probe.AVAILABILITY[k].gamesOut >= G);
 if (!partialKey || !seasonKey) { console.error('FAIL: the committed block needs one partial and one out-for-season entry for these tests'); process.exit(1); }
 const partial = probe.AVAILABILITY[partialKey], season = probe.AVAILABILITY[seasonKey];
+// A real beneficiary key too, so the boost half runs against whatever
+// tools/availability.json declares today rather than a frozen copy. The file may
+// legitimately declare none, in which case that block self-skips.
+const benKeys = Object.keys(probe.BENEFICIARIES);
+const benKey = benKeys[0] || null;
+const benBoost = benKey ? probe.BENEFICIARIES[benKey].boost : 1;
 const fPartial = 1 - partial.gamesOut / G;
 // A normalized key maps back onto a name that normalizes to itself.
 const nameOf = k => k.split('|')[0], posOf = k => k.split('|')[1];
@@ -76,7 +83,8 @@ const STUB = [
   { name: 'Dup Name', position: 'RB', team: 'III', projectedStats: { rushYd: 400, rushTD: 2 } },
   { name: 'Dup Name', position: 'RB', team: 'JJJ', projectedStats: { rushYd: 300, rushTD: 1 } },
   { name: nameOf(partialKey), position: posOf(partialKey), team: 'GGG', projectedStats: scaleRow(FULL, fPartial) },
-  { name: nameOf(seasonKey), position: posOf(seasonKey), team: 'HHH', projectedStats: scaleRow(FULL, 0) }
+  { name: nameOf(seasonKey), position: posOf(seasonKey), team: 'HHH', projectedStats: scaleRow(FULL, 0) },
+  ...(benKey ? [{ name: nameOf(benKey), position: posOf(benKey), team: 'KKK', projectedStats: scaleRow(FULL, benBoost) }] : [])
 ];
 const W = harness(STUB, str => 'ENC:' + str.length, 'k', noNet);
 
@@ -343,6 +351,52 @@ const goodFeed = () => feedOf([
   entry('Other Position', 'RB', 'Out', 'RESERVE-CEL', iso(kickoff + 17 * day)),
   entry(nameOf(partialKey), posOf(partialKey), 'Injured Reserve', 'IR-R', iso(kickoff + 31 * day))
 ]);
+
+console.log('\nthe other direction: a beneficiary\'s boost');
+{
+  // A beneficiary's committed row is already ABOVE the base it was built from,
+  // because tools/apply-availability.mjs moved a share of an absent team-mate's
+  // vacated line onto it. The boost is what the overlay has to carry so the
+  // cached, pre-news market line cannot blend the un-boosted row back in — the
+  // mirror of the pro-rating above, and the same "exactly once" rule.
+  ok('no player is both listed and a beneficiary',
+    benKeys.every(k => !probe.AVAILABILITY[k]),
+    benKeys.filter(k => probe.AVAILABILITY[k]).join(', '));
+  ok('every declared boost is above 1', benKeys.every(k => Number(probe.BENEFICIARIES[k].boost) > 1),
+    benKeys.filter(k => !(Number(probe.BENEFICIARIES[k].boost) > 1)).join(', '));
+  ok('every beneficiary says who he inherits from',
+    benKeys.every(k => /\binherits\b/i.test(String(probe.BENEFICIARIES[k].note || ''))));
+  ok('_benBoost is 1 for a player nobody vacated anything to', W._benBoost('healthyback|RB') === 1);
+  ok('_rowCarried reads the availability factor for a listed player', near(W._rowCarried(partialKey), fPartial));
+  ok('_rowCarried is 1 for an unlisted, unboosted player', W._rowCarried('healthyback|RB') === 1);
+
+  if (!benKey) {
+    console.log('  --   tools/availability.json declares no beneficiaries; boost paths not exercised');
+  } else {
+    ok('_benBoost reads the declared boost', near(W._benBoost(benKey), benBoost));
+    ok('_rowCarried reads the boost for a beneficiary', near(W._rowCarried(benKey), benBoost));
+    // The overlay side, the mirror of the listed player above.
+    const ov = W.applyAvailability({ [benKey]: { rushYd: 1000 }, 'healthyback|RB': { rushYd: 1000 } });
+    ok('applyAvailability scales a beneficiary\'s market line UP by his boost',
+      near(ov[benKey].rushYd, W._oddsRound(1000 * benBoost)), `${ov[benKey].rushYd} vs ${W._oddsRound(1000 * benBoost)}`);
+    ok('...and still leaves an unlisted player alone', ov['healthyback|RB'].rushYd === 1000);
+    ok('...and still scales a listed player DOWN in the same pass',
+      near(W.applyAvailability({ [partialKey]: { rushYd: 1000 } })[partialKey].rushYd, W._oddsRound(1000 * fPartial)));
+    // The row side: the row already carries it, so nothing here may touch it.
+    const orig = STUB.find(p => p.name === nameOf(benKey));
+    const bp = W.blendProjections(null).find(p => p.name === nameOf(benKey));
+    ok('a beneficiary row is passed through unscaled — it already carries the boost',
+      bp.projectedStats === orig.projectedStats);
+    ok('a beneficiary carries a note and his boost, but no injury status',
+      bp.note === probe.BENEFICIARIES[benKey].note && near(bp.boost, benBoost) && bp.status === undefined,
+      JSON.stringify({ note: bp.note, boost: bp.boost, status: bp.status }));
+    // And the factor lands exactly once through the blend, as it does for a fade.
+    const blended = W.blendProjections(ov).find(p => p.name === nameOf(benKey));
+    const expect = W._oddsRound((orig.projectedStats.rushYd + W.VEGAS_WEIGHT * ov[benKey].rushYd) / (1 + W.VEGAS_WEIGHT));
+    ok('the blend of two boosted lines is boosted once', near(blended.projectedStats.rushYd, expect),
+      `${blended.projectedStats.rushYd} vs ${expect}`);
+  }
+}
 
 console.log('\nfail-safe: the pull');
 {

@@ -6,9 +6,17 @@
     "line captured from PROJECTIONS the first time the entry was applied; the committed row",
     "is season x (17 - gamesOut) / 17. To reinstate a player set gamesOut to 0 and re-run",
     "(the season line comes back), then delete the entry after the next projections merge.",
-    "Apply with `node tools/apply-availability.mjs`; CI runs it with --check."
+    "Apply with `node tools/apply-availability.mjs`; CI runs it with --check.",
+    "",
+    "An entry may carry `beneficiaries`: the players who inherit the line it takes off the",
+    "board. vacated = season x gamesOut / seasonGames, split by share and ADDED to each",
+    "beneficiary's own row. Shares must be above 0, must not sum past 1, and the beneficiary",
+    "must be on the same team; what is left unclaimed is workload the board prices nowhere.",
+    "Each beneficiary's own line is captured into `beneficiaryBases` on first apply so the",
+    "arithmetic is idempotent and deleting a share restores him. A player may not be both",
+    "absent and a beneficiary."
   ],
-  "asOf": "2026-09-02",
+  "asOf": "2026-09-06",
   "seasonGames": 17,
   "players": [
     {
@@ -26,7 +34,20 @@
         "recYd": 665,
         "recTD": 4,
         "fumLost": 0
-      }
+      },
+      "beneficiaries": [
+        {
+          "name": "Jaylin Noel",
+          "position": "WR",
+          "share": 0.35
+        },
+        {
+          "name": "Nico Collins",
+          "position": "WR",
+          "share": 0.15
+        }
+      ],
+      "beneficiaryNote": "The 2026-09-03 card: 'Jaylin Noel is the Texans wideout best positioned for those vacated targets behind Nico Collins.' Half the vacated line is left unclaimed — a season-ending absence in August is absorbed across a roster, not handed to two men."
     },
     {
       "name": "Devin Neal",
@@ -89,7 +110,20 @@
         "recYd": 280,
         "recTD": 1.6,
         "fumLost": 1.5
-      }
+      },
+      "beneficiaries": [
+        {
+          "name": "MarShawn Lloyd",
+          "position": "RB",
+          "share": 0.55
+        },
+        {
+          "name": "Christopher Brooks",
+          "position": "RB",
+          "share": 0.25
+        }
+      ],
+      "beneficiaryNote": "Auction Watch 2026-08-28 and 2026-08-31 call Lloyd the Green Bay frontrunner; Brooks is the only other Packers back the board prices. The 20% nobody claims is workload the board has no row for."
     },
     {
       "name": "Jordyn Tyson",
@@ -282,7 +316,15 @@
         "recYd": 145,
         "recTD": 0.4,
         "fumLost": 0.3
-      }
+      },
+      "beneficiaries": [
+        {
+          "name": "Jadarian Price",
+          "position": "RB",
+          "share": 0.6
+        }
+      ],
+      "beneficiaryNote": "The 2026-09-03 card: 'Rookie first-rounder Jadarian Price leads Seattle's backfield.'"
     },
     {
       "name": "Jeremy McNichols",
@@ -300,5 +342,65 @@
         "recTD": 1
       }
     }
-  ]
+  ],
+  "beneficiaryBases": {
+    "jaylinnoel|WR": {
+      "name": "Jaylin Noel",
+      "position": "WR",
+      "stats": {
+        "rushYd": 12,
+        "rec": 19,
+        "recYd": 230,
+        "recTD": 1.1
+      }
+    },
+    "nicocollins|WR": {
+      "name": "Nico Collins",
+      "position": "WR",
+      "stats": {
+        "rushYd": 12,
+        "rushTD": 0.1,
+        "rec": 87,
+        "recYd": 1203,
+        "recTD": 6.7,
+        "fumLost": 0.7
+      }
+    },
+    "marshawnlloyd|RB": {
+      "name": "MarShawn Lloyd",
+      "position": "RB",
+      "stats": {
+        "rushYd": 548,
+        "rushTD": 3,
+        "rec": 13,
+        "recYd": 108,
+        "recTD": 1,
+        "fumLost": 1
+      }
+    },
+    "christopherbrooks|RB": {
+      "name": "Christopher Brooks",
+      "position": "RB",
+      "stats": {
+        "rushYd": 548,
+        "rushTD": 3,
+        "rec": 13,
+        "recYd": 108,
+        "recTD": 1,
+        "fumLost": 1
+      }
+    },
+    "jadarianprice|RB": {
+      "name": "Jadarian Price",
+      "position": "RB",
+      "stats": {
+        "rushYd": 922,
+        "rushTD": 7.9,
+        "rec": 27,
+        "recYd": 212,
+        "recTD": 1.3,
+        "fumLost": 1
+      }
+    }
+  }
 }

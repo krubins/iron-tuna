@@ -261,7 +261,7 @@ const PROJECTIONS = [
   { name: "Quinshon Judkins", position: "RB", team: "CLE", projectedStats: { rushYd: 1249, rushTD: 7.4, rec: 32, recYd: 223, recTD: 0.7, fumLost: 0.7 }},
   { name: "RJ Harvey", position: "RB", team: "DEN", projectedStats: { rushYd: 316, rushTD: 2.9, rec: 49, recYd: 367, recTD: 2.6, fumLost: 0.4 }},
   { name: "Jaylen Warren", position: "RB", team: "PIT", projectedStats: { rushYd: 791, rushTD: 4.5, rec: 46, recYd: 320, recTD: 1.5, fumLost: 0.9 }},
-  { name: "Jadarian Price", position: "RB", team: "SEA", projectedStats: { rushYd: 922, rushTD: 7.9, rec: 27, recYd: 212, recTD: 1.3, fumLost: 1 }},
+  { name: "Jadarian Price", position: "RB", team: "SEA", projectedStats: { rushYd: 1000, rushTD: 8.9, rec: 29.8, recYd: 232, recTD: 1.4, fumLost: 1 }},
   { name: "David Montgomery", position: "RB", team: "HOU", projectedStats: { rushYd: 932, rushTD: 7, rec: 31, recYd: 229, recTD: 0.6, fumLost: 1 }},
   { name: "Rhamondre Stevenson", position: "RB", team: "NE", projectedStats: { rushYd: 740, rushTD: 6.8, rec: 42, recYd: 350, recTD: 2.1, fumLost: 1.2 }},
   { name: "Tony Pollard", position: "RB", team: "TEN", projectedStats: { rushYd: 1044, rushTD: 5.4, rec: 30, recYd: 183, recTD: 0.5, fumLost: 1.2 }},
@@ -294,7 +294,7 @@ const PROJECTIONS = [
   { name: "Ty Johnson", position: "RB", team: "BUF", projectedStats: { rushYd: 219, rushTD: 2.1, rec: 22, recYd: 208, recTD: 1.3 }},
   { name: "Braelon Allen", position: "RB", team: "NYJ", projectedStats: { rushYd: 348, rushTD: 2.9, rec: 13, recYd: 90, recTD: 0.4, fumLost: 0.4 }},
   { name: "Emanuel Wilson", position: "RB", team: "SEA", projectedStats: { rushYd: 48, rushTD: 0.4, rec: 1, recYd: 10, recTD: 0.1, fumLost: 0 }},
-  { name: "Christopher Brooks", position: "RB", team: "GB", projectedStats: { rushYd: 548, rushTD: 3, rec: 13, recYd: 108, recTD: 1, fumLost: 1 }},
+  { name: "Christopher Brooks", position: "RB", team: "GB", projectedStats: { rushYd: 649, rushTD: 4.1, rec: 16.2, recYd: 133, recTD: 1.1, fumLost: 1.1 }},
   { name: "AJ Dillon", position: "RB", team: "CAR", projectedStats: { rushYd: 497, rushTD: 4, rec: 15, recYd: 130, recTD: 2, fumLost: 5 }},
   { name: "Jawhar Jordan", position: "RB", team: "HOU", projectedStats: { rushYd: 54, rushTD: 0.3, rec: 0, recYd: 0, recTD: 0, fumLost: 0 }},
   { name: "Samaje Perine", position: "RB", team: "CIN", projectedStats: { rushYd: 441, rushTD: 3.3, rec: 19, recYd: 139, recTD: 0.7, fumLost: 0.8 }},
@@ -337,7 +337,7 @@ const PROJECTIONS = [
   { name: "Chris Olave", position: "WR", team: "NO", projectedStats: { rushYd: 0, rushTD: 0, rec: 91, recYd: 1197, recTD: 6.7, fumLost: 0.6 }},
   { name: "A.J. Brown", position: "WR", team: "NE", projectedStats: { rushYd: 0, rushTD: 0, rec: 86, recYd: 1216, recTD: 7, fumLost: 0.6 }},
   { name: "CeeDee Lamb", position: "WR", team: "DAL", projectedStats: { rushYd: 13, rushTD: 0.1, rec: 103, recYd: 1376, recTD: 8.6, fumLost: 0.7 }},
-  { name: "Nico Collins", position: "WR", team: "HOU", projectedStats: { rushYd: 12, rushTD: 0.1, rec: 87, recYd: 1203, recTD: 6.7, fumLost: 0.7 }},
+  { name: "Nico Collins", position: "WR", team: "HOU", projectedStats: { rushYd: 12, rushTD: 0.3, rec: 95, recYd: 1303, recTD: 7.3, fumLost: 0.7 }},
   { name: "Zay Flowers", position: "WR", team: "BAL", projectedStats: { rushYd: 57, rushTD: 0.4, rec: 82, recYd: 1171, recTD: 5.5, fumLost: 1 }},
   { name: "Justin Jefferson", position: "WR", team: "MIN", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 111, recYd: 1376, recTD: 7.4, fumLost: 0.7 }},
   { name: "Tee Higgins", position: "WR", team: "CIN", projectedStats: { rushYd: 0, rushTD: 0, rec: 73, recYd: 956, recTD: 8.4, fumLost: 0.4 }},
@@ -575,7 +575,7 @@ const PROJECTIONS = [
   { name: "New York Jets", position: "DEF", team: "NYJ", projectedStats: { sacks: 37.4, ints: 12, fumRec: 7.5, defTD: 1.5, safety: 0, ptsAllowed: 410 }},
 
   { name: "Alvin Kamara", position: "RB", team: "NO", projectedStats: { rushYd: 451, rushTD: 2.1, rec: 33, recYd: 222, recTD: 0.9, fumLost: 0.6 }},
-  { name: "MarShawn Lloyd", position: "RB", team: "GB", projectedStats: { rushYd: 548, rushTD: 3, rec: 13, recYd: 108, recTD: 1, fumLost: 1 }},
+  { name: "MarShawn Lloyd", position: "RB", team: "GB", projectedStats: { rushYd: 770, rushTD: 5.4, rec: 20, recYd: 162, recTD: 1.3, fumLost: 1.3 }},
   { name: "Chris Bell", position: "WR", team: "MIA", projectedStats: { rushYd: 0, rushTD: 0, rec: 27, recYd: 357, recTD: 1.3, fumLost: 0.3 }},
   { name: "Stefon Diggs", position: "WR", team: "WAS", projectedStats: { rushYd: 0, rushTD: 0, rec: 71, recYd: 726, recTD: 3.4, fumLost: 0.5 }},
   { name: "Jack Bech", position: "WR", team: "LV", projectedStats: { rushYd: 0, rushTD: 0, rec: 28, recYd: 315, recTD: 1.2, fumLost: 0.3 }},
@@ -585,7 +585,7 @@ const PROJECTIONS = [
   { name: "Savion Williams", position: "WR", team: "GB", projectedStats: { rushYd: 36, rushTD: 0.2, rec: 15.3, recYd: 177, recTD: 1.3, fumLost: 0.2 }},
   { name: "Chris Brazzell II", position: "WR", team: "CAR", projectedStats: { rushYd: 0, rushTD: 0, rec: 21, recYd: 289, recTD: 3, fumLost: 0 }},
   { name: "Xavier Legette", position: "WR", team: "CAR", projectedStats: { rushYd: 11, rushTD: 0.1, rec: 36, recYd: 418, recTD: 2.6, fumLost: 0.4 }},
-  { name: "Jaylin Noel", position: "WR", team: "HOU", projectedStats: { rushYd: 12, rec: 19, recYd: 230, recTD: 1.1 }},
+  { name: "Jaylin Noel", position: "WR", team: "HOU", projectedStats: { rushYd: 13, rec: 37.6, recYd: 463, recTD: 2.5 }},
   { name: "Keenan Allen", position: "WR", team: "IND", projectedStats: { rushYd: 7, rushTD: 0.1, rec: 42, recYd: 418, recTD: 1.6, fumLost: 0.4 }}
 ];
 
@@ -1309,25 +1309,72 @@ const _oddsNorm = s => String(s || '').toLowerCase()
 // _oddsNorm(name) + '|' + position. Edit tools/availability.json, not this block.
 const AVAILABILITY_GAMES = 17;
 const AVAILABILITY = {
-  "jaydenhiggins|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL in the Aug. 18 joint practice against the Raiders; out for the 2026 season.","asOf":"2026-09-02"},
-  "devinneal|RB": {"status":"IR","gamesOut":17,"note":"Hamstring; placed on injured reserve without a return designation, out for the season.","asOf":"2026-09-02"},
-  "tychandler|RB": {"status":"IR","gamesOut":17,"note":"Season-ending knee injury in the Aug. 22 preseason game against the Rams.","asOf":"2026-09-02"},
-  "calvinaustin|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL at the Aug. 25 practice; out for the 2026 season.","asOf":"2026-09-02"},
-  "joshjacobs|RB": {"status":"Exempt","gamesOut":6,"note":"Commissioner's exempt list since Aug. 30 after misdemeanor charges from a May arrest. No timeline: he stays off until the commissioner removes him, and the first court date is Nov. 17. Six games is a working estimate, revisit weekly.","asOf":"2026-09-02"},
-  "jordyntyson|WR": {"status":"IR","gamesOut":8,"note":"Recurring right hamstring; IR with a return designation, roughly two months out, Week 9 return most likely.","asOf":"2026-09-02"},
-  "jamesconner|RB": {"status":"IR","gamesOut":4,"note":"Foot complications from the 2025 injury; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
-  "adamrandall|RB": {"status":"IR","gamesOut":4,"note":"IR with a return designation at cutdown; first eligible Week 5.","asOf":"2026-09-02"},
-  "isiahpacheco|RB": {"status":"IR","gamesOut":4,"note":"Back injury after an MCL sprain in camp; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
-  "savionwilliams|WR": {"status":"IR","gamesOut":4,"note":"Ankle; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
-  "lukemusgrave|TE": {"status":"PUP","gamesOut":4,"note":"Neck; reserve/PUP, misses at least the first four games and is no lock to return when eligible.","asOf":"2026-09-02"},
-  "tankdell|WR": {"status":"IR","gamesOut":4,"note":"Knee (ACL and MCL) recovery; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
-  "bensims|TE": {"status":"IR","gamesOut":4,"note":"Waived/injured and reverted to IR; misses at least four games.","asOf":"2026-09-02"},
-  "grantcalcaterra|TE": {"status":"IR","gamesOut":4,"note":"Back; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
-  "christiankirk|WR": {"status":"IR","gamesOut":4,"note":"Calf injury from July 26; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"},
-  "isaacguerendo|RB": {"status":"PUP","gamesOut":4,"note":"Pectoral; reserve/PUP, misses at least the first four games.","asOf":"2026-09-02"},
-  "zachcharbonnet|RB": {"status":"PUP","gamesOut":4,"note":"January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.","asOf":"2026-09-02"},
-  "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-02"}
+  "jaydenhiggins|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL in the Aug. 18 joint practice against the Raiders; out for the 2026 season.","asOf":"2026-09-06"},
+  "devinneal|RB": {"status":"IR","gamesOut":17,"note":"Hamstring; placed on injured reserve without a return designation, out for the season.","asOf":"2026-09-06"},
+  "tychandler|RB": {"status":"IR","gamesOut":17,"note":"Season-ending knee injury in the Aug. 22 preseason game against the Rams.","asOf":"2026-09-06"},
+  "calvinaustin|WR": {"status":"IR","gamesOut":17,"note":"Torn ACL at the Aug. 25 practice; out for the 2026 season.","asOf":"2026-09-06"},
+  "joshjacobs|RB": {"status":"Exempt","gamesOut":6,"note":"Commissioner's exempt list since Aug. 30 after misdemeanor charges from a May arrest. No timeline: he stays off until the commissioner removes him, and the first court date is Nov. 17. Six games is a working estimate, revisit weekly.","asOf":"2026-09-06"},
+  "jordyntyson|WR": {"status":"IR","gamesOut":8,"note":"Recurring right hamstring; IR with a return designation, roughly two months out, Week 9 return most likely.","asOf":"2026-09-06"},
+  "jamesconner|RB": {"status":"IR","gamesOut":4,"note":"Foot complications from the 2025 injury; IR with a return designation, first eligible Week 5.","asOf":"2026-09-06"},
+  "adamrandall|RB": {"status":"IR","gamesOut":4,"note":"IR with a return designation at cutdown; first eligible Week 5.","asOf":"2026-09-06"},
+  "isiahpacheco|RB": {"status":"IR","gamesOut":4,"note":"Back injury after an MCL sprain in camp; IR with a return designation, first eligible Week 5.","asOf":"2026-09-06"},
+  "savionwilliams|WR": {"status":"IR","gamesOut":4,"note":"Ankle; IR with a return designation, first eligible Week 5.","asOf":"2026-09-06"},
+  "lukemusgrave|TE": {"status":"PUP","gamesOut":4,"note":"Neck; reserve/PUP, misses at least the first four games and is no lock to return when eligible.","asOf":"2026-09-06"},
+  "tankdell|WR": {"status":"IR","gamesOut":4,"note":"Knee (ACL and MCL) recovery; IR with a return designation, first eligible Week 5.","asOf":"2026-09-06"},
+  "bensims|TE": {"status":"IR","gamesOut":4,"note":"Waived/injured and reverted to IR; misses at least four games.","asOf":"2026-09-06"},
+  "grantcalcaterra|TE": {"status":"IR","gamesOut":4,"note":"Back; IR with a return designation, first eligible Week 5.","asOf":"2026-09-06"},
+  "christiankirk|WR": {"status":"IR","gamesOut":4,"note":"Calf injury from July 26; IR with a return designation, first eligible Week 5.","asOf":"2026-09-06"},
+  "isaacguerendo|RB": {"status":"PUP","gamesOut":4,"note":"Pectoral; reserve/PUP, misses at least the first four games.","asOf":"2026-09-06"},
+  "zachcharbonnet|RB": {"status":"PUP","gamesOut":4,"note":"January ACL tear; reserve/PUP, misses at least the first four games and is described as still far from returning.","asOf":"2026-09-06"},
+  "jeremymcnichols|RB": {"status":"IR","gamesOut":4,"note":"Quadriceps; IR with a return designation, first eligible Week 5.","asOf":"2026-09-06"}
 };
+// ── beneficiaries (generated by tools/apply-availability.mjs from tools/availability.json) ──
+// The other half of an absence. tools/apply-availability.mjs pro-rates the row
+// of a player who cannot play a full season; the workload he vacates does not
+// evaporate, and until 2026-09-06 nothing moved it anywhere. Josh Jacobs went to
+// the exempt list and his six games came off his row, while every other Green
+// Bay back kept the line he had when Jacobs was projected for a full season.
+//
+// A beneficiary's COMMITTED row already carries his share: the tool computes
+// base + share x (the donor's vacated line) and writes the result. `boost` here
+// is what that row carries relative to the base it was built from — the mirror
+// of _availF for a number that went UP — and it exists for exactly the reason
+// the availability factor does. The odds overlay is cached in D1 and blended
+// against the committed row, so an overlay built before the news would blend
+// the un-boosted line back in and swallow most of the change (§48 hit this from
+// the other direction). Scaling the overlay by the same figure keeps each side
+// carrying the factor exactly once.
+//
+// DELIBERATELY COMMITTED-ONLY. The live ESPN pull can lengthen a donor's
+// absence, and that moves the DONOR's row; it does not move a beneficiary's.
+// Who inherits a job is a judgement about a depth chart, not something an
+// injury feed states, so it stays a hand edit in tools/availability.json — the
+// same reasoning that keeps reinstatement a hand edit.
+//
+// Keyed like AVAILABILITY: _oddsNorm(name) + '|' + position.
+const BENEFICIARIES = {
+  "christopherbrooks|RB": {"name":"Christopher Brooks","position":"RB","team":"GB","boost":1.194,"note":"Inherits 25% of Josh Jacobs' 6 missed games.","asOf":"2026-09-06"},
+  "jadarianprice|RB": {"name":"Jadarian Price","position":"RB","team":"SEA","boost":1.087,"note":"Inherits 60% of Zach Charbonnet's 4 missed games.","asOf":"2026-09-06"},
+  "jaylinnoel|WR": {"name":"Jaylin Noel","position":"WR","team":"HOU","boost":1.969,"note":"Inherits 35% of Jayden Higgins' 17 missed games.","asOf":"2026-09-06"},
+  "marshawnlloyd|RB": {"name":"MarShawn Lloyd","position":"RB","team":"GB","boost":1.425,"note":"Inherits 55% of Josh Jacobs' 6 missed games.","asOf":"2026-09-06"},
+  "nicocollins|WR": {"name":"Nico Collins","position":"WR","team":"HOU","boost":1.083,"note":"Inherits 15% of Jayden Higgins' 17 missed games.","asOf":"2026-09-06"}
+};
+// The factor a beneficiary's committed row carries over its own base line, or 1
+// for everybody else. Never below 1: this table only ever adds work.
+function _benBoost(key) {
+  const b = BENEFICIARIES[key];
+  const n = b ? Number(b.boost) : 1;
+  return Number.isFinite(n) && n > 1 ? n : 1;
+}
+// What a committed row already carries relative to the full-season line it was
+// built from, whichever direction it moved. Below 1 for a player on the
+// availability list, above 1 for a beneficiary, 1 for everybody else. A player
+// is never both — tools/apply-availability.mjs refuses to write that.
+function _rowCarried(key) {
+  const a = AVAILABILITY[key];
+  return a ? _availF(a.gamesOut) : _benBoost(key);
+}
+
 // ── live availability (ESPN's public injury report, pulled by the 11:00Z cron) ──
 // The committed block above is only as current as the last hand edit, and the
 // whole of HANDOFF §48 was that nothing on a schedule could change one player's
@@ -1494,11 +1541,16 @@ function _availRowFactor(key) {
 function applyAvailability(overlay) {
   if (!overlay || typeof overlay !== 'object') return overlay;
   let out = overlay;
-  for (const key of Object.keys(_availTable())) {
+  // Both directions, one pass: a listed player's market total is scaled DOWN to
+  // the games he can play, a beneficiary's UP by the share of an absent
+  // team-mate's line his committed row now carries. Same reason in both cases —
+  // the overlay is cached and would otherwise blend the pre-news line back in.
+  const factors = new Map();
+  for (const key of Object.keys(_availTable())) factors.set(key, _availFactor(key));
+  for (const key of Object.keys(BENEFICIARIES)) if (!factors.has(key)) factors.set(key, _benBoost(key));
+  for (const [key, f] of factors) {
     const v = overlay[key];
-    if (!v) continue;
-    const f = _availFactor(key);
-    if (f >= 1) continue;
+    if (!v || f === 1) continue;
     if (out === overlay) out = { ...overlay };
     const scaled = {};
     for (const [k, val] of Object.entries(v)) {
@@ -1957,10 +2009,9 @@ function buildTeamEnvOverlay(marketTotals) {
     // on the way out — otherwise the same factor would land twice on every
     // listed player. A zeroed row (out for the year) has no season line left to
     // recover and is skipped; there is nothing for the market to say about him.
-    const listed = AVAILABILITY[_oddsNorm(p.name) + '|' + p.position];
-    const af = listed ? _availF(listed.gamesOut) : 1;
+    const af = _rowCarried(_oddsNorm(p.name) + '|' + p.position);
     if (af <= 0) continue;
-    const full = af < 1
+    const full = af !== 1
       ? Object.fromEntries(Object.entries(st).map(([k, v]) => [k, Number.isFinite(v) ? v / af : v]))
       : st;
     // Kickers and defences are not scaled by the offensive factor: their whole
@@ -2089,7 +2140,13 @@ function blendProjections(overlay) {
 function _withAvailability(p) {
   const key = _oddsNorm(p.name) + '|' + p.position;
   const a = _availTable()[key];
-  if (!a) return p;
+  // A beneficiary's row already carries his share, so there is nothing to scale
+  // here — only the note that says why the number moved, which the client shows
+  // next to the number the way it shows an injury status.
+  if (!a) {
+    const b = BENEFICIARIES[key];
+    return b ? { ...p, boost: _benBoost(key), note: b.note || '' } : p;
+  }
   const rf = _availRowFactor(key);
   let stats = p.projectedStats;
   if (rf < 1) {
@@ -2105,7 +2162,8 @@ function _withAvailability(p) {
 // it is listed (so callers that compare by reference still see PROJECTIONS).
 function _availPool(pool) {
   const t = _availTable();
-  return pool.some(p => t[_oddsNorm(p.name) + '|' + p.position]) ? pool.map(_withAvailability) : pool;
+  return pool.some(p => { const k = _oddsNorm(p.name) + '|' + p.position; return t[k] || BENEFICIARIES[k]; })
+    ? pool.map(_withAvailability) : pool;
 }
 
 // ── §9c. "Vegas vs. Rankings & ADP" column ─────────────────────────────────
