@@ -46,8 +46,8 @@ function closure(roots) {
   }
   return [...picked.values()].join('\n');
 }
-const fns = closure(['buildBiddingIntel']);
-const lib = new Function(fns + '\nreturn { buildBiddingIntel };')();
+const fns = closure(['buildBiddingIntel', 'projectTeamStarters', 'snakeSlotMap']);
+const lib = new Function(fns + '\nreturn { buildBiddingIntel, projectTeamStarters, snakeSlotMap };')();
 
 // ── a small synthetic league: 4 teams, $100, 2 RB / 2 WR starters, 1 FLEX ───
 const config = {
@@ -184,21 +184,41 @@ const kindOf = (r, label) => (r.needs.find(n => n.label === label) || {}).kind;
 // three of its own on top of whatever the rows carry.
 const r1Chips = () => 3;
 
-// ── 8b. projected points per game, off the starters already bought ────────
+// ── 8b. Proj. PPG is the team card's number, off the same function ────────
 {
-  // Three bought, no flex candidate spare: QB 400 + RB 300 + WR 280 = 980.
-  const r = intel([mgr('t1', 'Started', [['qbA', 20], ['rbA', 40], ['wrA', 35]])])[0];
-  ok('ppg counts only the starting slots a manager has filled', Math.abs(r.ppg - 980 / 17) < 0.01, String(r.ppg));
-  ok('the filled-over-total starter count comes back with it', r.filledStarters === 3 && r.totalStarters === 7, r.filledStarters + '/' + r.totalStarters);
-  // Two backs start, the third takes the FLEX rather than being ignored.
-  const flexed = intel([mgr('t2', 'Three backs', [['rbA', 10], ['rbB', 10], ['rbC', 10]])])[0];
-  ok('a surplus back is scored in the flex, not dropped', Math.abs(flexed.ppg - (300 + 240 + 120) / 17) < 0.01, String(flexed.ppg));
-  // An untouched roster has banked nothing, and saying otherwise would invent
-  // a forecast this panel does not make.
-  const empty = intel([mgr('t3', 'Empty', [])])[0];
-  ok('an untouched roster reads zero rather than a projection', empty.ppg === 0 && empty.filledStarters === 0);
-  const short = lib.buildBiddingIntel([mgr('t4', 'Short season', [['qbA', 20]])], players, config, 10)[0];
-  ok('a league with a shorter season divides by its own game count', Math.abs(short.ppg - 40) < 0.01, String(short.ppg));
+  // The panel must not carry a second implementation of the card's pts/gm. It
+  // reads projectTeamStarters, so the test's job is the wiring: the right
+  // arguments reach it for every team, including the slot map and the house
+  // allocation a rival is planned at.
+  const teams = [
+    mgr('t1', 'Mine', [['rbA', 40]], { isMine: true }),
+    mgr('t2', 'Rival', [['wrA', 30]]),
+    mgr('t3', 'Untouched', [])
+  ];
+  const optsIn = { draftedIds: new Set(['rbA', 'wrA']), roleOverrides: {}, model: 'balanced', targets: [] };
+  const rows = lib.buildBiddingIntel(teams, players, config, 17, optsIn);
+  const slots = lib.snakeSlotMap(teams, config);
+  teams.forEach(t => {
+    const card = lib.projectTeamStarters(t, players, config, { ...optsIn, draftSlot: slots.get(t.id) });
+    const row = rowFor(rows, t.name);
+    ok('the panel matches the card for ' + t.name, Math.abs(row.ppg - card.starterPoints / 17) < 1e-9,
+      row.ppg + ' vs ' + card.starterPoints / 17);
+  });
+  // A forecast, not a tally: the plan for the money still in hand counts, so a
+  // manager who has bought nothing is not a zero.
+  ok('an untouched roster still projects a real number', rowFor(rows, 'Untouched').ppg > 0, String(rowFor(rows, 'Untouched').ppg));
+  ok('the season length is the divisor', Math.abs(lib.buildBiddingIntel(teams, players, config, 10, optsIn)[0].ppg
+    - rows.find(r => r.id === lib.buildBiddingIntel(teams, players, config, 10, optsIn)[0].id).ppg * 17 / 10) < 1e-9);
+  // The reader's own draft model steers HIS plan and nobody else's. Handing it
+  // to a rival would move a rival's projection every time the reader changed
+  // his mind about his own build.
+  const other = lib.buildBiddingIntel(teams, players, config, 17, { ...optsIn, model: 'zeroRB' });
+  ok('a rival projection ignores the model the reader picked for himself',
+    rowFor(other, 'Rival').ppg === rowFor(rows, 'Rival').ppg,
+    rowFor(other, 'Rival').ppg + ' vs ' + rowFor(rows, 'Rival').ppg);
+  ok('the filled-over-total starter count comes back with it',
+    rowFor(rows, 'Mine').totalStarters === 7 && rowFor(rows, 'Untouched').filledStarters === 0,
+    rowFor(rows, 'Mine').filledStarters + '/' + rowFor(rows, 'Mine').totalStarters);
 }
 // ── 8c. a flex mark is one slot the manager has several ways to spend ─────
 {

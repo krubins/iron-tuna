@@ -4162,9 +4162,11 @@ function openStarterNeed(team, pos, config) {
 // n+1. It is an estimate of intent, not a promise — a manager can always take a
 // falling star into a bench row — but it is the same rule the team cards use to
 // label a roster, so the panel and the cards never disagree.
-function buildBiddingIntel(teams, players, config, games) {
+function buildBiddingIntel(teams, players, config, games, opts) {
   if (!teams || !teams.length || !config || !config.roster) return [];
   const g = games || 17;
+  const o = opts || {};
+  const slotMap = snakeSlotMap(teams, config);
   const minBid = config.valuation && config.valuation.minBid || 1;
   const isAuction = (config.format || 'auction') === 'auction';
   const pmap = new Map((players || []).map(p => [p.id, p]));
@@ -4250,16 +4252,22 @@ function buildBiddingIntel(teams, players, config, games) {
       g.open = g.open.filter(o => keptLabels.has(o.label));
     });
     const openOther = Math.max(0, spots - kept.length);
-    // What the starters he has ALREADY bought score, per game. Not a forecast
-    // of a finished roster — an empty roster reads 0.0 and should — but the
-    // running answer to who is actually building a team with the money he is
-    // spending, off the same starter assignment the team cards use.
+    // The team card's pts/gm, off the one function that works it out, so the
+    // panel and the card cannot drift apart. It is a forecast: what his
+    // starters score once the plan for the money and slots he has left lands,
+    // which is why a manager who has bought nothing still reads a real number.
     let ppg = 0, filledStarters = 0, totalStarters = 0;
     try {
-      const cs = computeTeamStarters(t, players || [], config);
-      ppg = (cs.starterPoints || 0) / g;
-      filledStarters = cs.filledStarters;
-      totalStarters = cs.totalStarters;
+      const pr = projectTeamStarters(t, players || [], config, {
+        draftedIds: o.draftedIds,
+        roleOverrides: o.roleOverrides,
+        model: o.model,
+        targets: o.targets,
+        draftSlot: slotMap.get(t.id)
+      });
+      ppg = (pr.starterPoints || 0) / g;
+      filledStarters = pr.filledStarters;
+      totalStarters = pr.totalStarters;
     } catch (e) {}
     return {
       id: t.id,
@@ -9449,39 +9457,27 @@ function TeamsBoard({
   const projByTeam = useMemo(() => {
     const m = new Map();
     const di = draftedIds || new Set();
-    const _T = config.teams || teams.length;
-    const _mySlot = config.snake && config.snake.draftSlot || 1;
-    const _remSlots = [];
-    for (let _s = 1; _s <= _T; _s++) if (_s !== _mySlot) _remSlots.push(_s);
-    let _ri = 0;
-    const _snakeSlotMap = new Map();
-    teams.forEach(t => { _snakeSlotMap.set(t.id, t.isMine ? _mySlot : (_remSlots[_ri++ % (_remSlots.length || 1)] || _mySlot)); });
+    // The projection itself lives in projectTeamStarters, which the Bidding
+    // Status Intel panel on the cheat sheet reads too — the card's pts/gm and
+    // the panel's Proj. PPG are the same number by construction, not by two
+    // implementations happening to agree.
+    const _snakeSlotMap = snakeSlotMap(teams, config);
     teams.forEach(t => {
-      const tc = t.isMine ? config : {
-        ...config,
-        strategy: {
-          ...(config.strategy || {}),
-          allocation: 0.55
-        }
-      };
-      const ro = t.isMine ? roleOverrides : {};
-      const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, { noCap: true });
-      const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
-      let _snakePlanT = null;
-      const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; _snakePlanT = buildSnakePlan(t, players, _tcS, di); return _snakePlanT.projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
-      const rosterPoints = t.roster.reduce((s, r) => {
-        const p = playerMap.get(r.playerId);
-        return s + (p ? p.projectedPoints || 0 : 0);
-      }, 0);
+      const pr = projectTeamStarters(t, players, config, {
+        draftedIds: di,
+        roleOverrides: roleOverrides,
+        model: model,
+        targets: targets,
+        draftSlot: _snakeSlotMap.get(t.id)
+      });
       m.set(t.id, {
-        filledStarters: cur.filledStarters,
-        totalStarters: cur.totalStarters,
-        starterPoints: _projSP,
-        draftedStarterPoints: cur.starterPoints,
-        rosterPoints,
-        grid,
-        snakePicks: _snakePlanT && _snakePlanT.byRound ? _snakePlanT.byRound : []
+        filledStarters: pr.filledStarters,
+        totalStarters: pr.totalStarters,
+        starterPoints: pr.starterPoints,
+        draftedStarterPoints: pr.draftedStarterPoints,
+        rosterPoints: pr.rosterPoints,
+        grid: buildTeamRosterGrid(t, pr.plan, players, pr.tc, slotOrder && slotOrder[t.id]),
+        snakePicks: pr.snakePlan && pr.snakePlan.byRound ? pr.snakePlan.byRound : []
       });
     });
     return m;
@@ -11765,10 +11761,21 @@ function BiddingIntelModal({
   players,
   config,
   seasonGames,
+  draftedIds,
+  roleOverrides,
+  model,
+  targets,
   onClose
 }) {
   const isAuction = (config.format || 'auction') === 'auction';
-  const rows = useMemo(() => buildBiddingIntel(teams, players, config, seasonGames), [teams, players, config, seasonGames]);
+  // Same inputs the board hands its own projection: a rival's forecast must not
+  // move because the reader picked a draft model for himself.
+  const rows = useMemo(() => buildBiddingIntel(teams, players, config, seasonGames, {
+    draftedIds,
+    roleOverrides,
+    model,
+    targets
+  }), [teams, players, config, seasonGames, draftedIds, roleOverrides, model, targets]);
   const [openId, setOpenId] = useState(null);
   useEffect(() => {
     const onKey = e => {
@@ -11835,7 +11842,7 @@ function BiddingIntelModal({
     title: "What is left divided by the slots still to fill. A manager under a couple of dollars a slot is filling out a bench at the minimum whatever his total says; one well above it can still concentrate money on a starter."
   }, "$/slot"), React.createElement("span", {
     className: "bi-num",
-    title: "Points per game from the starters this manager has ALREADY bought. An untouched roster reads 0.0 and should — this is what he has banked, not a forecast of the team he ends up with."
+    title: "The same projected points per game the team cards on the board show: what this manager's starters score once the plan for the money and slots he has left lands. A forecast of the finished roster, not a tally of what he has bought."
   }, "Proj. PPG"), React.createElement("span", {
     className: "bi-needs-h"
   }, "Remaining needs")), rows.map(r => {
@@ -12133,6 +12140,10 @@ function CheatHeader({
     players: players,
     config: config,
     seasonGames: games,
+    draftedIds: draftedIds,
+    roleOverrides: roleOverrides,
+    model: model,
+    targets: targets,
     onClose: () => setIntelOpen(false)
   }), hasCustomRanks && rankMode && onRankMode && React.createElement("span", {
     className: "ch-rankmode",
@@ -15905,6 +15916,81 @@ function computeTeamStarters(team, players, config, roleOverrides) {
     filledStarters: count,
     totalStarters: slotDefs.length
   };
+}
+// The number behind a team card's "pts/gm", and the only place it is worked
+// out. It is a FORECAST, not a tally: what a manager's starters score once the
+// plan for the money and the slots he has left lands, so a manager who has
+// bought nothing still reads a real figure rather than zero.
+//
+// The rules the cards established and every reader of this has to keep:
+// a rival is planned at the house allocation (0.55) rather than whatever the
+// reader has dialled in for himself, and only the reader's own role overrides,
+// draft model and favourites steer his own plan. Snake and best ball answer
+// from a draft plan off the team's own slot instead of a budget.
+//
+// Returns the plan and the config it was built against as well, because the
+// roster grid on the card has to be built from the same two.
+function projectTeamStarters(team, players, config, opts) {
+  const o = opts || {};
+  const di = o.draftedIds || new Set();
+  const isNonAuction = !!(config.format && config.format !== 'auction');
+  const tc = team.isMine ? config : {
+    ...config,
+    strategy: {
+      ...(config.strategy || {}),
+      allocation: 0.55
+    }
+  };
+  const ro = team.isMine ? o.roleOverrides || {} : {};
+  const cur = computeTeamStarters(team, players, tc, ro);
+  const plan = team.isMine ? buildModel(o.model || 'ideal', team, players, tc, di, ro, o.targets) : buildOptimalPlan(team, players, tc, di, undefined, undefined, ro, true, undefined, true, {
+    noCap: true
+  });
+  let snakePlan = null;
+  const starterPoints = isNonAuction ? (() => {
+    try {
+      const tcS = {
+        ...config,
+        snake: {
+          ...(config.snake || {}),
+          draftSlot: o.draftSlot || config.snake && config.snake.draftSlot || 1
+        }
+      };
+      snakePlan = buildSnakePlan(team, players, tcS, di);
+      return snakePlan.projectedStarterPoints;
+    } catch (e) {
+      return plan.starterPoints;
+    }
+  })() : plan.starterPoints;
+  const pmap = new Map((players || []).map(p => [p.id, p]));
+  const rosterPoints = (team.roster || []).reduce((s, r) => {
+    const p = pmap.get(r.playerId);
+    return s + (p ? p.projectedPoints || 0 : 0);
+  }, 0);
+  return {
+    filledStarters: cur.filledStarters,
+    totalStarters: cur.totalStarters,
+    starterPoints,
+    draftedStarterPoints: cur.starterPoints,
+    rosterPoints,
+    plan,
+    snakePlan,
+    tc
+  };
+}
+// Which snake slot each rival is treated as holding. The reader keeps the slot
+// he set; everyone else is dealt the rest in team order. Shared so a projection
+// made off the board and one made off the cheat sheet cannot disagree about who
+// picks where.
+function snakeSlotMap(teams, config) {
+  const T = config.teams || (teams || []).length;
+  const mySlot = config.snake && config.snake.draftSlot || 1;
+  const rem = [];
+  for (let s = 1; s <= T; s++) if (s !== mySlot) rem.push(s);
+  let ri = 0;
+  const m = new Map();
+  (teams || []).forEach(t => m.set(t.id, t.isMine ? mySlot : rem[ri++ % (rem.length || 1)] || mySlot));
+  return m;
 }
 function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   const pmap = new Map(players.map(p => [p.id, p]));
