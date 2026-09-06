@@ -7353,12 +7353,249 @@ coach is told which of its lines already did. And it is only as current as
 Sleeper's chart plus the six-hour edge cache, which the prompt does not claim
 otherwise.
 
-## 64. September 2: the deployed worker is a build behind, and three runs died at `start`
+---
+
+## 64. September 2026: positional scarcity in the bid, not just in the colour
+
+A reader's account of the failure this fixes, which is the clearest statement
+of it: *"there were six good quarterbacks and it was clear that to have an
+elite team you had to have one of them. All six ended up going for above value
+and I got the sixth one, but had to pay a premium to avoid falling off the
+cliff."*
+
+The board could not see that. Two separate things were wrong.
+
+### 1. The detector only counted a cliff one or two players deep
+
+`scarcityFlags` broke at the **first** gap that qualified and then discarded it
+unless `cliffIdx <= 2`. A tier six deep was invisible by construction, and the
+first-gap break meant a single outlier at the top of a position hid everything
+under him: on the live board Josh Allen stands 43.6 points clear, so the five
+quarterbacks behind him sitting above a 12.8-point drop of their own were never
+flagged at all.
+
+It now takes the **room** (`teams`) and reads:
+
+| | before | now |
+|---|---|---|
+| how deep a cliff can be | 2, always | the demand — teams that still have to start one, capped at 12 |
+| how many cliffs it looks at | the first | every one in the window |
+| which cliff a player is priced against | the first one found | the most binding one still in front of *him* |
+| a position every team has filled | still flagged | no flag: nothing to be scarce for |
+
+"Most binding" is `gap × cliffSqueeze(idx, demand)`. So Allen is priced against
+his own 43-point drop and the five behind him against the 12.8 under them,
+which is what each of them would actually fall off.
+
+`positionDemand(pos, teams, config)` is the demand side: teams whose roster is
+short of `starters` at the position, or the league's own shape when no room is
+handed over. **Passing `teams` is what turns all of this on.** Without it the
+old blind window of two is kept exactly, so any caller that has no room to
+measure against prices as it always did.
+
+`cliffSqueeze(count, demand)` is the one reading everything else is built on:
+the share of the room the stack can no longer cover, 0 to 1. One player left
+for a full room is 1; a stack as deep as the room is nearly 0. **Every player
+who leaves the board pushes it up**, which is what makes the premium and the
+alert escalate as the cliff gets closer, rather than arriving after it.
+
+### 2. You $ ignored scarcity entirely
+
+`switchPrice` is an indifference price computed against a plan it assumes can be
+rebuilt from the pool **at the prices on the board**. That assumption is exactly
+what a run breaks: the teams that miss do not buy the seventh quarterback at his
+price, they bid the sixth past his. A ceiling that ignores that is a ceiling you
+lose at.
+
+So `_basePersonalized` now adds a cliff premium to `personalValue`, gated on
+`needEligPos` — a position where the optimal plan still has a starting slot
+open. A cliff you are already past is somebody else's problem and pays nothing.
+The row carries `cliffPrem` so the cell can explain itself.
+
+**What the premium is.** Given the board's own `dollarsPerPoint`, it needs no
+tuned constant: falling off the cliff costs `gapPts`, the board says what a
+point is worth, so the drop has a price — weighted by the squeeze, because you
+only pay for the part of it the room can actually take from you. Same argument
+and same shape as `handcuffDollars` and `byeStackDollars`. Capped at 15% of the
+budget, because a ceiling that can eat a sixth of the roster's money is not a
+ceiling.
+
+`scarcityPremium(fl, budget, dpp)` keeps its old two-argument behaviour for
+`boardValue`, which only ever sees the config and has no pool to convert
+against. That path is unchanged except that a known room now moves its rate.
+
+**This does not reopen §20.** That section's rule — *do not grade the name
+against You* — still holds and is still tested. The colour asks "is this price
+fair"; You answers "what may I pay". Nothing about the colour changed here.
+
+On the live board, pre-draft: Allen's You goes $44 → $62 against a $47 market,
+the four behind him get $1 to $3, and QB6 gets nothing. Log four quarterbacks
+and Hurts becomes the last man above a now 15-point drop: the banner turns
+critical and his You is $27 against a $23 Value.
+
+### 3. The alert
+
+`AlertsBox` was **dead code** — defined, never rendered, and its `.alert-crit`
+class never existed in the CSS. It is gone. `cliffWatch()` + `CliffWatch` render
+in its place, at the top of the draft board, one row per position, loudest
+first, at most three:
+
+| level | when | how it reads |
+|---|---|---|
+| `critical` | one left, or squeeze ≥ 0.85 — **and picks have started** | red, pulsing, ⚠ |
+| `urgent` | squeeze ≥ 0.6, or one left pre-draft | amber, still |
+| `watch` | a live cliff further out | gold rule |
+| `info` | you already start one — never rendered | — |
+
+The pre-draft hold on `critical` is deliberate: four positions are thin on any
+untouched board, and four pulsing rows there teach the reader to ignore the
+banner by the time one of them means something. Dismissal is keyed to
+`pos:count`, so waving off "6 QBs left" does not silence "2 QBs left" ten picks
+later.
+
+The same reading also appears on the row itself — a `LAST` / `n LEFT` chip on
+the name (reviving the orphaned `.cheat-scarce` CSS), the You figure tinted
+amber with a ▲ and a tooltip naming the drop and the buyers — and in
+`draftAlerts`, whose cliff branch was capped at `remaining <= 3` and now measures
+against demand the same way.
+
+### Tests
+
+`node tools/test-cliff-premium.mjs` — 52 assertions, no browser, no network,
+wired into `checks.yml`. It lifts the real functions out of `index.html` by
+brace matching (the harness is `tools/test-plan-pricing.mjs`) and pins: the six
+-deep tier flagging all six, the four-team room flagging none, the teamless
+fallback, nested cliffs pricing each player against his own drop, the premium
+rising monotonically as a tier drains, the cap, the points-times-dollars shape,
+the banner's levels and copy, and the four source lines that put the premium on
+the bid. `tools/test-board-colour.mjs` still pins the colour contract (its
+`START` marker moved with the signature).
+
+`tools/test-you-column.mjs` and `tools/test-market-anchors.mjs` both still pass
+in Chromium, which is the check that matters most here: the premium is added
+before the monotonic clamp, and a column that climbs as you read down it is the
+one defect this feature could plausibly have introduced. It does not, because
+the premium is constant across the players above a cliff and zero below it.
+
+## 65. September 2026: the models box highlights the players it recommends
+
+The models box already knew which players the selected model wanted to buy. It
+just did not say so anywhere the reader was looking. A three-pixel gold bar on
+the left edge of a cheat-sheet row (`.cheat-modelfit`) was the whole signal, and
+on the auction board's rail there was none at all — so a manager who picked Hero
+RB then had to hold ten names in his head while scanning a 409-row rail.
+
+There is now a checkbox in the models box: **Highlight recommended**. Checked,
+the model's own buys are lifted on the cheat sheet *and* the auction board.
+
+### What "lifted" means, exactly
+
+Deliberately small. Half a point of type, a heavier name, and a faint wash of
+the model's own gold:
+
+| | plain row | recommended |
+|---|---|---|
+| cheat sheet name | 13.5px / 400 | 14.1px / 700 |
+| rail name | 14px / 600 | 15px / 700 |
+| row background | panel | `rgba(227,181,58,0.10)` |
+
+Enough to pull the eye down a column, not enough to repaint the sheet. A
+favourite's green still outranks it — `.cheat-target` and `.rail-target` are
+declared *after* the new rules, because a decision the manager made beats a
+recommendation the model made. The printed sheet keeps the emphasis too; a
+manager who prints the sheet and takes it to the draft would otherwise lose the
+one thing he turned on.
+
+Off by default, remembered in `localStorage` under `it_hl_recs`, and hidden
+until a team is marked on the board, since without one there is no plan to
+recommend from and the box would be a control that does nothing.
+
+### One control, two models boxes
+
+There are two of them — `.bm2-models` on the draft board and `.ch-models` on the
+cheat sheet — and they now render the same checkbox from one function,
+`recHighlightToggle()`, against one piece of state. They cannot drift into
+saying different things about the same setting.
+
+The set they emphasise is `recFitIds`. **With no model picked it follows the
+Ideal Team**, because that is already what the models pane displays; going blank
+there would read as a broken checkbox. With a model picked it reuses
+`modelFitIds` rather than re-solving the same plan.
+
+That whole question — *who is this model buying* — moved out of the `modelFitIds`
+memo into a top-level `modelTargetIds(modelKey, myTeam, …)`, so the gold bar,
+the new emphasis and the tests all read one implementation. Behaviour is
+unchanged; it is the same body with `draftModel` as a parameter.
+
+### The $1–$2 endgame
+
+The second half of the feature, and the more interesting one. Once the manager
+is down to dollar and two-dollar players, the same checkbox starts flagging the
+cheap men with the most **upside** — which is emphatically not the men with the
+most points per game.
+
+**When it arrives.** `maxSingleBid(myTeam, config)` is the most he can still bid
+on any ONE player: the budget minus a minimum bid for every other seat he still
+has to fill. At `$6` across five open seats that is `$2`. The shortlist is null
+until that number is at or under twice the minimum bid, and null in a snake or
+best-ball draft, which have no dollars for it to be about.
+
+**Why not points per game.** At a dollar every remaining projection sits inside
+the noise of every other. Sorting that pool by PPG re-sorts the noise, and it
+sorts it the wrong way: the capped veteran with a defined six-point role
+outranks the backup who is one snap from fourteen. A projection is the average
+over the seasons where nothing happens; the season where something does is the
+only reason to spend the last dollar.
+
+So `upsideScores()` prices the conditional role and returns the points **above**
+the projection, never the projection itself. Four terms:
+
+| term | what it reads |
+|---|---|
+| inherited role | `UPSIDE_JOB_OPENS[pos] × (UPSIDE_INHERIT × the man ahead − his own)`, only where the man ahead out-projects him by 35%+ |
+| the man ahead is hurt or past his age cliff | the odds the job opens, ×1.8 / ×1.25 (capped at 0.75) |
+| the breakout window | `yearsExp <= 2`, or age ≤ 24 with no experience on file |
+| the offence and the playoff schedule | a top-third offence, and soft Weeks 15–17 |
+
+Cut back by his own age cliff (×0.5) and his own injury (×0.7). Handcuffing a
+starter this manager already owns is worth another 25%, because that cover is
+only worth anything to the one team that needs it — the same argument
+`handcuffDollars` makes in dollars (§ the handcuff block in `index.html`).
+
+The flag is a **shortlist, not a re-ranking**: at most twelve names, and only
+those within 45% of the best score on the board. Past about a dozen the emphasis
+stops meaning anything. Each one carries an `UPSIDE` chip whose tooltip says
+what the claim is worth in points per game and why him — "one snap from
+Workhorse's role; handcuffs a starter you already own" — because *upside* with
+no number is a horoscope.
+
+### Tests
+
+`node tools/test-recommended-highlight.mjs` — 40 assertions, no browser, no
+network, wired into `checks.yml`. It lifts the real functions out of
+`index.html` by brace matching and the row `className` expressions by backtick
+matching, so it exercises the shipped source. It pins the two silent failures
+this feature could plausibly have: an emphasis the checkbox does not actually
+gate (the sheet stays repainted after it is turned off, and nothing errors), and
+an endgame shortlist that quietly re-sorts points per game (the board again in a
+different colour). Its fixture makes the second one concrete — an understudy
+projecting 40 against a veteran projecting 70, where the shortlist has to take
+the understudy.
+
+`tools/test-target-highlight.mjs` gained the three new scope variables its
+lifted row expressions now read, and was wired into `checks.yml` at the same
+time; it had been written before that job existed and had never run in CI.
+
+Verified in Chromium against the live board: 16 of 234 cheat-sheet rows and 16
+of 409 rail rows light for the Ideal Team, the same 16 in both, and unchecking
+the box clears every one.
+
+## 66. September 2: the deployed worker is a build behind, and three runs died at `start`
 
 The 09-02 audit found two live problems and cleared everything else. Both are
 Ken's to act on; neither is fixable from this session.
 
-### 64a. Production is serving the pre-08-31 valuation
+### 66a. Production is serving the pre-08-31 valuation
 
 The bundle at `/tmp/depboard/_worker.js`, pulled from Cloudflare on 09-02
 11:25Z, is **741,022 bytes** against **742,718** on 09-01, and it differs from
@@ -7392,7 +7629,7 @@ The harness now takes an override so both sides can be built and compared:
 
 Run it against the deployed bundle before trusting any check of a live story.
 
-### 64b. Nothing has published in 22 hours
+### 66b. Nothing has published in 22 hours
 
 `lead_story_run` rows 29, 30 and 31 — 09-01 18:58Z, 09-02 00:59Z, 09-02
 06:59Z — are all `stage='start'`, `desk` NULL, `story_id` NULL. In all three,
@@ -7416,7 +7653,7 @@ Because `lead_story_run` holds one row per run updated in place, a stall is
 the *only* state in which the intermediate stages are observable at all
 (§39). Three in a row is the first time that has been true.
 
-### 64c. What the audit cleared
+### 66c. What the audit cleared
 
 - **Row 70 is live and correct.** "Cap James Cook at $28, not $35; bid Baker
   Mayfield up to $5", vegas desk, created 09-01 13:19. Checked against the
@@ -7441,7 +7678,7 @@ the *only* state in which the intermediate stages are observable at all
   `category='analyst'` rows (21, 22, 27, 28, 35, 42, 50, 55, 60) are
   `published=0`; none has ever been served. No published row is unverified.
 
-### 64d. The harness lifts functions now, not just constants
+### 66d. The harness lifts functions now, not just constants
 
 §45 fixed `tools/live-board.mjs` by copying the worker's new `_colPrice` and
 normalisation into it. That was the same mistake one level up, and it broke
@@ -7463,7 +7700,7 @@ yields **$1 in the repo build and $2 in the deployed build** for Kolar,
 Njoku and Gadsden. That difference is 48a, and before this rewrite the
 harness could not have shown it.
 
-### 64e. Still open
+### 66e. Still open
 
 §44's three archive options remain unanswered and no archive figure was
 hand-corrected today. Do not correct them again by hand; the recommended
@@ -7471,13 +7708,13 @@ option (2) — re-anchor archived prices from the live board via `it-league.js`
 at render time — would have absorbed both the 08-31 valuation pass and this
 deployment gap with zero edits.
 
-## 65. September 3: a wrong price got published, and the checker that would have caught it was off
+## 67. September 3: a wrong price got published, and the checker that would have caught it was off
 
-The 09-03 audit cleared §64a and §64b and then found the thing both were
+The 09-03 audit cleared §66a and §66b and then found the thing both were
 hiding: **a published lead quoted a price that was never on the board.** Not
 stale — wrong at publication.
 
-### 65a. Row 73 had Tony Pollard at RB28 and $5. The sheet said RB29 and $3.
+### 67a. Row 73 had Tony Pollard at RB28 and $5. The sheet said RB29 and $3.
 
 The live lead was "Bid Tyjae Spears to $5, not $2; cap Tony Pollard at $3"
 (preseason desk, created 09-03 07:16Z). Its table, headed "Iron Tuna sheet,
@@ -7525,7 +7762,7 @@ $3" to "the sheet already has Pollard at $3", and a reader-facing
 paragraph naming the error and its cause. `verified` and `published` were not
 touched, so no audit row was written by the fix.
 
-### 65b. Why nothing caught it
+### 67b. Why nothing caught it
 
 The run's own `method` says both halves of the failure out loud:
 
@@ -7549,7 +7786,7 @@ only asks the committed and blended boards to **disagree** about Chuba
 Hubbard. Disagreement proves the blend ran. It proves nothing about whether
 either board is right.
 
-### 65c. The harness broke again, and again the suite was green
+### 67c. The harness broke again, and again the suite was green
 
 `_worker.js` changed twice today in ways that go straight through the board:
 
@@ -7594,7 +7831,7 @@ Two changes close it:
    exits 1, and a one-line edit hard-coding `MIN_BID` fails the mutation
    check specifically.
 
-### 65d. §64a and §64b both cleared
+### 67d. §66a and §66b both cleared
 
 - **Deployment caught up.** The bundle is 963,377 bytes (741,022 yesterday)
   and carries `COLUMN_NORM`, `_WIRE_CACHE`, the flat `COLUMN_MIN_BID` return
@@ -7607,7 +7844,7 @@ Two changes close it:
   followed. Roughly 24 hours, self-resolved, cause still unexplained; the
   session transcripts are the only place it is visible.
 
-### 65e. Also clean
+### 67e. Also clean
 
 CI 47/47 after the merge. Tamper predicates clean: no `verified` 0→1 flip
 beyond the 08-24 baseline row, no `analyst` row published, no published row
@@ -7615,22 +7852,22 @@ unverified, exactly one published row. The Routine is enabled on `58 */6 * * *`
 and its prompt is still byte-identical to `tools/lead-story-routine-prompt.md`
 below the header marker (40,786 chars, sha256 `af5384664474`).
 
-### 65f. What this says about the open archive question
+### 67f. What this says about the open archive question
 
 §44 asked whether archived prices should be re-anchored from the live board at
 render time. Today is an argument that the same idea belongs *upstream*, in
 the Routine: a story should not be allowed to print a dollar figure it
 computed itself. It should print the number the sheet is serving, looked up by
 player, and a run that cannot look one up should say so rather than derive it.
-Every failure in §65a is a derivation error that a lookup could not have made.
+Every failure in §67a is a derivation error that a lookup could not have made.
 
-## 66. September 4: the same failure again, one board over
+## 68. September 4: the same failure again, one board over
 
 Second consecutive day a published lead quoted a price the reader's sheet
-contradicts, from the same root cause and a different surface. §65 was a
+contradicts, from the same root cause and a different surface. §67 was a
 neighbouring rank slot's price; today it is the neighbouring *board*.
 
-### 66a. Row 77 printed Cam Skattebo's committed price in the served column
+### 68a. Row 77 printed Cam Skattebo's committed price in the served column
 
 The live lead was "Bid Jaxson Dart to $27, not $13; cap Cam Skattebo at $12"
 (play-caller desk, 09-04 07:15Z). Its table is headed **"Iron Tuna board,
@@ -7661,7 +7898,7 @@ against a board that says $13. Corrected — table row now
 The `$12` recommendation itself stands, and "backs ranked 20 to 22 cost $12"
 was checked and is exactly right. `verified` and `published` untouched.
 
-### 66b. The run's method got better and still could not catch it
+### 68b. The run's method got better and still could not catch it
 
 Yesterday's run rebuilt the pipeline by hand. Today's did the right thing:
 
@@ -7688,9 +7925,9 @@ So the defect is not arithmetic and no longer even reconstruction. It is
 **attribution**: two boards in hand, and no check that ties each printed
 figure to the right one.
 
-### 66c. What would actually close it
+### 68c. What would actually close it
 
-§65f asked for lookup instead of derivation. Today sharpens it: the run
+§67f asked for lookup instead of derivation. Today sharpens it: the run
 already derives correctly. What it lacks is a check that *distinguishes the
 two boards*. `it-league.js` (`DEFAULT_BOARD_RAW`) is generated from the worker
 by a different tool and carries the **committed** board — so comparing every
@@ -7712,7 +7949,7 @@ Ken's call:
 > the wrong board: fix it or do not print it. If the two boards agree for that
 > player, say so explicitly rather than leaving the rank-move cell blank.
 
-### 66d. Everything else clean
+### 68d. Everything else clean
 
 - CI **51/51** after merging 18 commits from main; `tools/test-live-board.mjs`
   passes all 13 checks.
@@ -7732,14 +7969,14 @@ Ken's call:
   `tools/lead-story-routine-prompt.md` below its marker (40,786 chars, sha256
   `af5384664474`).
 
-## 67. September 4: the attribution check is live
+## 69. September 4: the attribution check is live
 
-Ken approved §66c. The BOARD ATTRIBUTION CHECK is in the Routine prompt as of
+Ken approved §68c. The BOARD ATTRIBUTION CHECK is in the Routine prompt as of
 2026-09-04, and the repo copy and the live prompt were verified byte-identical
 afterwards: **44,690 chars, sha256 `53007f8d8779`** (was 40,786 /
 `af5384664474`).
 
-### 67a. It had to reconcile a standing rule, not just append to one
+### 69a. It had to reconcile a standing rule, not just append to one
 
 The prompt already said, in two places, **never validate against
 `DEFAULT_BOARD_RAW`** — and that rule is correct and hard-won. A run on
@@ -7749,7 +7986,7 @@ figures the served board contradicts. `DEFAULT_BOARD_RAW` is the committed
 board, so it agrees with an unblended board perfectly; a match there cannot
 confirm anything.
 
-Appending §66c unchanged would have left the prompt holding two contradictory
+Appending §68c unchanged would have left the prompt holding two contradictory
 instructions, and the run would have followed whichever it read last —
 plausibly straight back into the August failure. So the ban stays, sharpened
 to **"a match there is never a pass"**, and the new use is stated as its
@@ -7763,7 +8000,7 @@ inverse in the paragraph immediately after:
 Both statements now sit adjacent, and the file header carries a note to keep
 them together if either is ever edited again.
 
-### 67b. What the check actually asks for
+### 69b. What the check actually asks for
 
 Five steps, placed right after the existing all-prices check: look every
 printed price and rank up in **both** boards and write down both; say in the
@@ -7782,12 +8019,12 @@ committed price. Zero-point players are dropped, so absence is not a signal.
 
 **Verified before shipping**, against the harness's own committed board:
 **340/340, zero mismatches**, and it returns Skattebo RB18 $15, Pollard RB29
-$3, Dart QB7 $13, Nabers WR13 $23 — so the check fires exactly on §66a
-(Skattebo's served cell matches the committed block, the alarm) and §65a is
+$3, Dart QB7 $13, Nabers WR13 $23 — so the check fires exactly on §68a
+(Skattebo's served cell matches the committed block, the alarm) and §67a is
 caught by steps 1 and 5 instead (Pollard's printed $5/RB28 matches neither
 board, and it came from reading a slot rather than a player).
 
-### 67c. Why this one is different from the rules that came before it
+### 69c. Why this one is different from the rules that came before it
 
 Almost every accuracy rule in that prompt asks the run to be more careful.
 This one gives it a comparison it cannot fake: `it-league.js` is generated
@@ -7800,14 +8037,14 @@ Next audit should confirm the prompt hash is `53007f8d8779` and read the
 method line of the first story written under it to see whether the check ran
 and what it returned.
 
-## 68. September 5: the pricing model changed, and the check could not see it
+## 70. September 5: the pricing model changed, and the check could not see it
 
-The BOARD ATTRIBUTION CHECK from §67 **ran on the live lead, reported a pass,
+The BOARD ATTRIBUTION CHECK from §69 **ran on the live lead, reported a pass,
 and the story was still wrong.** Not because the run skipped a step — it ran
 the check thoroughly and wrote it up — but because the board's pricing changed
 on 2026-09-04 and the check tests a model of the board that no longer holds.
 
-### 68a. What changed in the board
+### 70a. What changed in the board
 
 Commit `5eb7071` ("Price the board as the two odds worlds interpolated at the
 slider"). A served price is **no longer the blended rank's own curve slot**.
@@ -7827,7 +8064,7 @@ mid-slider price sit **below both of its extremes**, which a reader reported.
 The consequence for a story is that a served price can now differ from **both**
 of a player's own world prices. It is no longer "one of two boards".
 
-### 68b. Row 81: the recommendation read backwards
+### 70b. Row 81: the recommendation read backwards
 
 The live lead was "Bid Travis Etienne to $21, not $17: the next back down is 15
 points worse" (market desk, 09-05 07:12Z).
@@ -7863,7 +8100,7 @@ table's two cells and its date; three point totals refreshed to the September 5
 board. A reader-facing correction and a `method` CORRECTION were added.
 `verified` and `published` untouched.
 
-### 68c. Why the check passed it
+### 70c. Why the check passed it
 
 From the row's own method:
 
@@ -7872,7 +8109,7 @@ From the row's own method:
 > blended points differ from the committed points, so the odds do move the
 > player; they do not move him across a step in the price curve."
 
-That is the alarm firing and being reasoned away — using the escape clause §67
+That is the alarm firing and being reasoned away — using the escape clause §69
 put in the prompt for exactly the benign case:
 
 > "(A player the odds do not move will legitimately match — confirm that from
@@ -7897,7 +8134,7 @@ reproduce this exact number from the two world RANKS?"**:
 > projections-only or odds-only price is the most likely way to get this wrong,
 > because the envelope routinely lifts a player above both.
 
-### 68d. My own harness was silently wrong for three days
+### 70d. My own harness was silently wrong for three days
 
 The board a reader sees is what everything here is checked against, so this
 belongs in the record. `tools/live-board.mjs` lifts declarations out of the
@@ -7940,7 +8177,7 @@ The harness also now exposes `r0`, `r1` and `lerp` per player — the two world
 ranks and the pre-envelope interpolation — because under the new pricing a
 checker cannot explain a price without them.
 
-### 68e. The rest of the audit
+### 70e. The rest of the audit
 
 - CI **53/53** after merging 12 commits from main.
 - **Board pipeline functions unchanged** since 09-04 main (`_colScore`,
