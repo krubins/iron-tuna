@@ -184,6 +184,37 @@ const kindOf = (r, label) => (r.needs.find(n => n.label === label) || {}).kind;
 // three of its own on top of whatever the rows carry.
 const r1Chips = () => 3;
 
+// ── 8b. projected points per game, off the starters already bought ────────
+{
+  // Three bought, no flex candidate spare: QB 400 + RB 300 + WR 280 = 980.
+  const r = intel([mgr('t1', 'Started', [['qbA', 20], ['rbA', 40], ['wrA', 35]])])[0];
+  ok('ppg counts only the starting slots a manager has filled', Math.abs(r.ppg - 980 / 17) < 0.01, String(r.ppg));
+  ok('the filled-over-total starter count comes back with it', r.filledStarters === 3 && r.totalStarters === 7, r.filledStarters + '/' + r.totalStarters);
+  // Two backs start, the third takes the FLEX rather than being ignored.
+  const flexed = intel([mgr('t2', 'Three backs', [['rbA', 10], ['rbB', 10], ['rbC', 10]])])[0];
+  ok('a surplus back is scored in the flex, not dropped', Math.abs(flexed.ppg - (300 + 240 + 120) / 17) < 0.01, String(flexed.ppg));
+  // An untouched roster has banked nothing, and saying otherwise would invent
+  // a forecast this panel does not make.
+  const empty = intel([mgr('t3', 'Empty', [])])[0];
+  ok('an untouched roster reads zero rather than a projection', empty.ppg === 0 && empty.filledStarters === 0);
+  const short = lib.buildBiddingIntel([mgr('t4', 'Short season', [['qbA', 20]])], players, config, 10)[0];
+  ok('a league with a shorter season divides by its own game count', Math.abs(short.ppg - 40) < 0.01, String(short.ppg));
+}
+// ── 8c. a flex mark is one slot the manager has several ways to spend ─────
+{
+  // Two backs, two receivers, one tight end: every starting slot but QB is
+  // filled and one flex is open, so the next back and the next receiver could
+  // each take it. TE is one deep in this league, so it has no bench row to
+  // offer — which is the point: eligibility is not enough, the row has to
+  // exist.
+  const r = intel([mgr('t1', 'Flex open', [['rbA', 10], ['rbB', 10], ['wrA', 10], ['wrB', 10], ['teA', 10]])])[0];
+  const flexed = r.needs.filter(n => n.kind === 'flex').map(n => n.label);
+  ok('every eligible position with a row left is marked while the flex is open', flexed.join(',') === 'RB3,WR3', flexed.join(','));
+  ok('a position with no row left is not offered as a flex', !flexed.some(l => l.startsWith('TE')), flexed.join(','));
+  ok('the mark never claims he has more than one flex', r.flexOpen === 1, String(r.flexOpen));
+  ok('only the first bench row at a position carries it', !r.needs.some(n => n.kind === 'flex' && n.slot > 3), flexed.join(','));
+}
+
 // ── 9. the panel itself renders, with the numbers in it ────────────────────
 // The panel is hand-written React.createElement, so a missing argument or a
 // stray comma is a blank modal at the moment a manager clicks the button
@@ -228,6 +259,8 @@ const r1Chips = () => 3;
   ok('what is left per hole is printed instead', txt.includes('$/slot') && txt.includes('$' + broke.perSlot.toFixed(1)), txt);
   ok('a manager stretched under a dollar a slot is flagged', classes.includes('bi-num bi-perslot thin'), classes.join(' '));
   ok('the reader is told the slot is an estimate', /estimate/i.test(txt), txt.slice(-160));
+  ok('the projected points column is on the panel', /Proj\. PPG/.test(txt) && txt.includes(rowFor(intel(teams), 'Mine').ppg.toFixed(1)), txt);
+  ok('the legend says a flex mark is a maybe, not a second flex', /could take the flex/.test(txt), txt.slice(0, 520));
   // Two readings ride on one chip: the hue says which position, the border and
   // weight say how urgent. Emitting one class without the other silently drops
   // half of that, and the panel still looks fine.
