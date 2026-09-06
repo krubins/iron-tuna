@@ -1338,7 +1338,74 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-sb-toggle { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; white-space: nowrap; }
 .cheat-header.ch-simple .ch-sb-toggle { animation: chSbGlow 2.4s ease-in-out infinite; }
 .ch-sb-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); animation: none; transform: none; }
-.ch-sb-right { display: flex; align-items: center; gap: 8px; }
+.ch-sb-right { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.ch-sb-intel { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--gold-text); background: var(--gold-soft); border: 1px solid rgba(245,184,0,0.5); border-radius: var(--radius-sm); padding: 6px 11px; cursor: pointer; white-space: nowrap; }
+.ch-sb-intel:hover { background: rgba(245,184,0,0.18); border-color: var(--gold-text); }
+.bi-modal { max-width: 820px; }
+.bi-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: -4px 0 12px; }
+.bi-totals { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bi-total { font-size: 12px; color: var(--text-secondary); background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px 9px; }
+.bi-total b { color: var(--text-primary); font-family: var(--font-mono); }
+.bi-legend { font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.bi-table { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+.bi-head, .bi-row { display: grid; grid-template-columns: var(--bi-cols, 1.5fr 0.8fr 0.8fr 0.5fr 3fr); align-items: center; gap: 8px; padding: 7px 10px; text-align: left; width: 100%; }
+.bi-head { background: var(--bg-elev); font-family: var(--font-body); font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); }
+.bi-rowwrap { border-top: 1px solid var(--border-subtle); }
+.bi-rowwrap.mine { background: rgba(245,184,0,0.06); }
+.bi-rowwrap.done { opacity: 0.55; }
+.bi-row { background: transparent; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.bi-row:hover { background: var(--bg-hover); }
+.bi-name { font-weight: 700; color: var(--text-primary); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bi-caret { color: var(--text-muted); margin-right: 5px; font-size: 10px; }
+.bi-num { font-family: var(--font-mono); font-size: 12.5px; text-align: right; }
+.bi-money { color: var(--positive); }
+.bi-max { color: var(--gold-text); font-weight: 700; }
+.bi-perslot { color: var(--text-muted); }
+.bi-perslot.thin { color: var(--warning); }
+.bi-needs { display: flex; flex-wrap: wrap; gap: 4px; }
+/* A needs chip carries two things at once. Hue is the POSITION, on the same
+   palette as .position-tag so RB is the same teal here as on every board in the
+   app; the border and the weight carry how URGENT the hole is. A position the
+   league config invents that has no colour here still renders as a chip, just
+   in the neutral base. */
+.bi-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 600; border-radius: 3px; padding: 1px 5px; border: 1px solid transparent; white-space: nowrap; background: var(--bg-elev); color: var(--text-secondary); }
+.bi-chip.bi-p-QB  { background: rgba(217, 70, 239, 0.15); color: var(--pos-qb); }
+.bi-chip.bi-p-RB  { background: rgba(20, 184, 166, 0.15); color: var(--pos-rb); }
+.bi-chip.bi-p-WR  { background: rgba(59, 130, 246, 0.15); color: var(--pos-wr); }
+.bi-chip.bi-p-TE  { background: rgba(249, 115, 22, 0.15); color: var(--pos-te); }
+.bi-chip.bi-p-K   { background: rgba(132, 204, 22, 0.15); color: var(--pos-k); }
+.bi-chip.bi-p-DEF { background: rgba(168, 85, 247, 0.15); color: var(--pos-def); }
+.bi-chip.bi-starter { border-color: currentColor; font-weight: 700; }
+.bi-chip.bi-flex { border-color: currentColor; border-style: dashed; }
+.bi-chip.bi-bench { opacity: 0.5; }
+.bi-more, .bi-full { font-size: 11.5px; color: var(--text-muted); }
+.bi-detail { padding: 8px 12px 12px; background: var(--bg-base); border-top: 1px dashed var(--border-subtle); }
+.bi-detail-money { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.bi-detail-money b { color: var(--text-primary); font-family: var(--font-mono); }
+.bi-grp { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
+.bi-grp-pos { flex: 0 0 34px; font-family: var(--font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: var(--text-muted); padding-top: 2px; }
+.bi-grp-slots { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.bi-slot { font-size: 11.5px; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--border-subtle); white-space: nowrap; }
+.bi-slot b { font-family: var(--font-mono); font-size: 10.5px; margin-right: 3px; }
+.bi-slot.filled { color: var(--text-secondary); background: var(--bg-elev); }
+.bi-slot.filled b { color: var(--text-muted); }
+.bi-slot.open { color: var(--text-muted); border-style: dashed; }
+.bi-slot.open.bi-p-QB  { color: var(--pos-qb); }
+.bi-slot.open.bi-p-RB  { color: var(--pos-rb); }
+.bi-slot.open.bi-p-WR  { color: var(--pos-wr); }
+.bi-slot.open.bi-p-TE  { color: var(--pos-te); }
+.bi-slot.open.bi-p-K   { color: var(--pos-k); }
+.bi-slot.open.bi-p-DEF { color: var(--pos-def); }
+.bi-slot.open.bi-starter { border-color: currentColor; font-weight: 600; }
+.bi-slot.open.bi-bench { opacity: 0.6; }
+.bi-slot.none { color: var(--text-faint); border-color: transparent; }
+.bi-flexnote { font-size: 11.5px; color: var(--accent-text); margin-top: 6px; }
+.bi-foot { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-top: 10px; }
+@media (max-width: 760px) {
+  .bi-head, .bi-row { grid-template-columns: var(--bi-cols-m, 1.2fr 0.7fr 0.7fr 0.7fr); row-gap: 4px; }
+  .bi-needs { grid-column: 1 / -1; }
+  .bi-head span:last-child { display: none; }
+}
 .ch-sb-undo { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--positive, #2dd4a3); background: rgba(45,212,163,0.10); border: 1px solid rgba(45,212,163,0.45); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
 .ch-sb-undo:hover { background: rgba(45,212,163,0.20); border-color: var(--positive, #2dd4a3); }
 .ch-sb-pdf { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
@@ -4070,6 +4137,123 @@ function openStarterNeed(team, pos, config) {
   if (!elig.includes(pos) || flexN <= 0) return { base, flex: 0 };
   const flexUsed = elig.reduce((s, q) => s + Math.max(0, cnt(q) - starters(q)), 0);
   return { base, flex: Math.max(0, flexN - flexUsed) };
+}
+// One read on where every manager in the room actually stands: the money he has
+// left, the most he could still put on ONE player, and — the part a
+// position-only read misses — WHICH slot each hole is. A manager with no backs
+// is shopping for an RB1 and will pay whatever it takes; a manager with three is
+// shopping for an RB4 and will not go past a dollar or two. Same position,
+// opposite bidding behaviour, so the slot number IS the intel.
+//
+// The slot a hole carries is the row the next player bought there would take:
+// owned players hold slots 1..n ordered by projection, so the first open slot is
+// n+1. It is an estimate of intent, not a promise — a manager can always take a
+// falling star into a bench row — but it is the same rule the team cards use to
+// label a roster, so the panel and the cards never disagree.
+function buildBiddingIntel(teams, players, config) {
+  if (!teams || !teams.length || !config || !config.roster) return [];
+  const minBid = config.valuation && config.valuation.minBid || 1;
+  const isAuction = (config.format || 'auction') === 'auction';
+  const pmap = new Map((players || []).map(p => [p.id, p]));
+  const posOrder = Object.keys(config.roster);
+  const posIx = {};
+  posOrder.forEach((p, i) => posIx[p] = i);
+  const flexElig = config.flex && config.flex.eligible || [];
+  const flexN = config.flex && config.flex.count || 0;
+  const totalSpots = totalRosterSpots(config);
+  const kindRank = k => k === 'starter' ? 0 : k === 'flex' ? 1 : 2;
+  const rows = teams.map(t => {
+    const roster = t.roster || [];
+    const cnt = q => roster.filter(r => r.position === q).length;
+    const starters = q => config.roster[q] && config.roster[q].starters || 0;
+    const capOf = q => config.roster[q] && config.roster[q].total || 0;
+    // A flex only counts as open once every eligible position has its own
+    // starters filled; surplus at an eligible position is charged to it, the
+    // same rule openStarterNeed uses, so the two never contradict each other.
+    const flexUsed = flexElig.reduce((s, q) => s + Math.max(0, cnt(q) - starters(q)), 0);
+    const flexOpen = Math.max(0, flexN - flexUsed);
+    const spots = Math.max(0, t.spotsRemaining != null ? t.spotsRemaining : totalSpots - roster.length);
+    const budget = Math.max(0, t.budgetRemaining || 0);
+    // The ceiling nobody in this seat can bid past: everything left over once
+    // every other open slot is covered at the league minimum.
+    const maxBid = spots > 0 ? Math.max(minBid, budget - (spots - 1) * minBid) : 0;
+    const needs = [];
+    const groups = [];
+    posOrder.forEach(pos => {
+      const have = cnt(pos),
+        cap = capOf(pos),
+        st = starters(pos);
+      const owned = roster.filter(r => r.position === pos).map(r => {
+        const p = pmap.get(r.playerId);
+        return {
+          id: r.playerId,
+          name: p ? p.name : r.playerId,
+          pts: p ? p.projectedPoints || 0 : 0,
+          price: r.price
+        };
+      }).sort((a, b) => b.pts - a.pts).map((e, i) => ({
+        ...e,
+        slot: i + 1,
+        label: pos + (i + 1)
+      }));
+      const open = [];
+      for (let k = have + 1; k <= cap; k++) {
+        // The first non-starter row at a flex-eligible position is the one the
+        // flex would take, so it is worth real money; everything under it is a
+        // bench body and goes for the minimum.
+        const kind = k <= st ? 'starter' : flexElig.includes(pos) && flexOpen > 0 && k === st + 1 ? 'flex' : 'bench';
+        const need = {
+          pos,
+          slot: k,
+          label: pos + k,
+          kind
+        };
+        open.push(need);
+        needs.push(need);
+      }
+      groups.push({
+        pos,
+        starters: st,
+        total: cap,
+        have,
+        owned,
+        open
+      });
+    });
+    needs.sort((a, b) => kindRank(a.kind) - kindRank(b.kind) || posIx[a.pos] - posIx[b.pos] || a.slot - b.slot);
+    // Under "any" bench positions a manager can stack past a position's cap, and
+    // the spot that fifth back took has to come out of somewhere. Counting every
+    // unfilled row would hand him more holes than he has seats, so the list is
+    // cut to the seats he actually has — from the bottom, since the sort has
+    // already put the starting slots he must fill above the bench bodies he need
+    // not. The reverse case, a spot no position can claim, is counted as loose.
+    const kept = needs.length > spots ? needs.slice(0, spots) : needs;
+    const keptLabels = new Set(kept.map(n => n.label));
+    if (kept.length !== needs.length) groups.forEach(g => {
+      g.open = g.open.filter(o => keptLabels.has(o.label));
+    });
+    const openOther = Math.max(0, spots - kept.length);
+    return {
+      id: t.id,
+      name: t.name,
+      isMine: !!t.isMine,
+      budgetRemaining: isAuction ? budget : null,
+      spent: isAuction ? Math.max(0, (config.budget || 0) - budget) : null,
+      spotsRemaining: spots,
+      maxBid: isAuction ? maxBid : null,
+      perSlot: isAuction && spots > 0 ? budget / spots : 0,
+      starterHoles: kept.filter(n => n.kind === 'starter').length,
+      flexOpen,
+      openOther,
+      needs: kept,
+      groups,
+      done: spots <= 0
+    };
+  });
+  // Most dangerous bidder first: the man who can still outbid you is the one you
+  // are planning around. Full rosters sink to the bottom — they cannot bid.
+  rows.sort((a, b) => Number(a.done) - Number(b.done) || (isAuction ? (b.maxBid || 0) - (a.maxBid || 0) : (b.spotsRemaining || 0) - (a.spotsRemaining || 0)) || a.name.localeCompare(b.name));
+  return rows;
 }
 function opponentCompetition(player, teams, myTeam, config) {
   const minBid = config.valuation.minBid;
@@ -11541,6 +11725,148 @@ const FANTASY_FACTS = [{
   label: 'Volume over highlights',
   text: 'One huge game on a few touches is far less predictive than steady, heavy usage. Chase volume and role; let your leaguemates chase the highlight plays.'
 }];
+// The permanent panel behind "Bidding Status Intel" on the cheat sheet. Every
+// manager in one table: money left, the ceiling of his next bid, and the roster
+// slots he still has to fill, named by slot rather than by position, because RB1
+// and RB4 are the same position and nothing like the same auction.
+function BiddingIntelModal({
+  teams,
+  players,
+  config,
+  onClose
+}) {
+  const isAuction = (config.format || 'auction') === 'auction';
+  const rows = useMemo(() => buildBiddingIntel(teams, players, config), [teams, players, config]);
+  const [openId, setOpenId] = useState(null);
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const money = rows.reduce((s, r) => s + (r.budgetRemaining || 0), 0);
+  const slots = rows.reduce((s, r) => s + r.spotsRemaining, 0);
+  const holes = rows.reduce((s, r) => s + r.starterHoles, 0);
+  const kindTitle = n => n.label + " — " + (n.kind === 'starter' ? "an open STARTING slot; expect real money here" : n.kind === 'flex' ? "the FLEX slot; worth a mid-range bid" : "a bench slot; usually goes at the minimum");
+  // Hue is the position and nothing else, so a row of chips reads as a shape
+  // before it reads as text — the same palette the position tags use, so RB is
+  // the same teal here as everywhere else on the board. How urgent the hole is
+  // rides on the border and the weight instead: a solid edge is a starting
+  // slot, a dashed one the flex, a faded chip a bench body.
+  const chip = n => React.createElement("span", {
+    key: n.label,
+    className: "bi-chip bi-p-" + n.pos + " bi-" + n.kind,
+    title: kindTitle(n)
+  }, n.label);
+  return React.createElement("div", {
+    className: "modal-bg no-print",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "modal bi-modal",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("button", {
+    className: "modal-close",
+    onClick: onClose,
+    "aria-label": "Close bidding status intel"
+  }, "×"), React.createElement("div", {
+    className: "section-title"
+  }, "Bidding Status Intel"), React.createElement("div", {
+    className: "bi-sub"
+  }, isAuction ? "What every manager can still spend, the most he could put on one player, and the roster slots he has left to fill. A hole is named by the row the next player he buys would take, so RB1 is a manager with nothing at the position and RB4 is one filling out a bench." : "What every manager has left to fill, named by the row the next player he takes would hold, so RB1 is a manager with nothing at the position and RB4 is one filling out a bench."), React.createElement("div", {
+    className: "bi-totals"
+  }, isAuction && React.createElement("span", {
+    className: "bi-total"
+  }, React.createElement("b", null, "$", money), " still in the room"), React.createElement("span", {
+    className: "bi-total"
+  }, React.createElement("b", null, slots), " roster spot", slots === 1 ? "" : "s", " left"), React.createElement("span", {
+    className: "bi-total"
+  }, React.createElement("b", null, holes), " starting slot", holes === 1 ? "" : "s", " still open")), React.createElement("div", {
+    className: "bi-legend"
+  }, "Colour is the position · ", chip({ label: "RB2", pos: "RB", kind: "starter" }), " starter · ", chip({ label: "WR3", pos: "WR", kind: "flex" }), " flex · ", chip({ label: "RB4", pos: "RB", kind: "bench" }), " bench"), React.createElement("div", {
+    className: "bi-table",
+    style: {
+      // The money columns only exist in an auction, so the grid has to lose
+      // them too or every needs cell slides two columns to the right.
+      '--bi-cols': isAuction ? '1.4fr 0.8fr 0.8fr 0.8fr 3fr' : '1.2fr 4fr',
+      // On a phone the needs wrap onto their own full-width row underneath.
+      '--bi-cols-m': isAuction ? '1.2fr 0.7fr 0.7fr 0.7fr' : '1fr'
+    }
+  }, React.createElement("div", {
+    className: "bi-head"
+  }, React.createElement("span", null, "Manager"), isAuction && React.createElement("span", {
+    className: "bi-num"
+  }, "Money left"), isAuction && React.createElement("span", {
+    className: "bi-num",
+    title: "The most this manager could put on ONE player and still fill every other open slot at the $" + (config.valuation && config.valuation.minBid || 1) + " minimum. Nobody can bid past his own number."
+  }, "Max bid"), isAuction && React.createElement("span", {
+    className: "bi-num",
+    title: "What is left divided by the slots still to fill. A manager under a couple of dollars a slot is filling out a bench at the minimum whatever his total says; one well above it can still concentrate money on a starter."
+  }, "$/slot"), React.createElement("span", null, "Remaining needs")), rows.map(r => {
+    const isOpen = openId === r.id;
+    const shown = r.needs.slice(0, 7);
+    const more = r.needs.length - shown.length;
+    return React.createElement("div", {
+      key: r.id,
+      className: "bi-rowwrap" + (r.isMine ? " mine" : "") + (r.done ? " done" : "")
+    }, React.createElement("button", {
+      className: "bi-row" + (isOpen ? " open" : ""),
+      onClick: () => setOpenId(o => o === r.id ? null : r.id),
+      "aria-expanded": isOpen ? "true" : "false",
+      title: "Show every slot on this roster"
+    }, React.createElement("span", {
+      className: "bi-name"
+    }, React.createElement("span", {
+      className: "bi-caret"
+    }, isOpen ? "▾" : "▸"), r.isMine ? "★ " : "", r.name), isAuction && React.createElement("span", {
+      className: "bi-num bi-money"
+    }, "$", r.budgetRemaining), isAuction && React.createElement("span", {
+      className: "bi-num bi-max"
+    }, r.done ? "—" : "$" + r.maxBid), isAuction && React.createElement("span", {
+      className: "bi-num bi-perslot" + (!r.done && r.perSlot < 2 ? " thin" : ""),
+      title: r.done ? "Nothing left to fill" : "$" + r.budgetRemaining + " left over " + r.spotsRemaining + " slot" + (r.spotsRemaining === 1 ? "" : "s")
+    }, r.done ? "—" : "$" + r.perSlot.toFixed(1)), React.createElement("span", {
+      className: "bi-needs"
+    }, r.done ? React.createElement("span", {
+      className: "bi-full"
+    }, "Roster full · out of the bidding") : shown.length ? React.createElement(React.Fragment, null, shown.map(chip), more > 0 && React.createElement("span", {
+      className: "bi-more"
+    }, "+", more, " more"), r.openOther > 0 && React.createElement("span", {
+      className: "bi-more",
+      title: "Spots this manager can fill at any position"
+    }, "+", r.openOther, " any")) : React.createElement("span", {
+      className: "bi-full"
+    }, "Nothing left to fill"))), isOpen && React.createElement("div", {
+      className: "bi-detail"
+    }, React.createElement("div", {
+      // The one place the raw spot count belongs: the summary row above says
+      // which slots are open, one chip each, so a column repeating how many
+      // there were said nothing the chips had not.
+      className: "bi-detail-money"
+    }, isAuction ? React.createElement(React.Fragment, null, "Spent ", React.createElement("b", null, "$", r.spent), " · ", React.createElement("b", null, "$", r.budgetRemaining), " left to fill ") : "Still to fill ", React.createElement("b", null, r.spotsRemaining), " slot", r.spotsRemaining === 1 ? "" : "s", isAuction && !r.done ? React.createElement(React.Fragment, null, " · can bid up to ", React.createElement("b", null, "$", r.maxBid)) : null), r.groups.map(g => React.createElement("div", {
+      key: g.pos,
+      className: "bi-grp"
+    }, React.createElement("span", {
+      className: "bi-grp-pos"
+    }, g.pos), React.createElement("span", {
+      className: "bi-grp-slots"
+    }, g.owned.map(o => React.createElement("span", {
+      key: o.label,
+      className: "bi-slot filled",
+      title: o.name + (isAuction && o.price != null ? " — $" + o.price : "")
+    }, React.createElement("b", null, o.label), " ", o.name)), g.open.map(o => React.createElement("span", {
+      key: o.label,
+      className: "bi-slot open bi-p-" + o.pos + " bi-" + o.kind,
+      title: kindTitle(o)
+    }, React.createElement("b", null, o.label), " ", o.kind === 'starter' ? "starter" : o.kind === 'flex' ? "flex" : "bench")), !g.owned.length && !g.open.length && React.createElement("span", {
+      className: "bi-slot none"
+    }, "—")))), r.flexOpen > 0 && React.createElement("div", {
+      className: "bi-flexnote"
+    }, r.flexOpen, " flex slot", r.flexOpen === 1 ? "" : "s", " open (", ((config.flex && config.flex.eligible || []).join(" / ")) || "—", ")")));
+  })), React.createElement("div", {
+    className: "bi-foot"
+  }, "Slots are an estimate: a manager's owned players hold rows 1 to N at their position, best projection first, so the next one he buys lands in row N+1. It is the same rule the team cards use to label a roster.")));
+}
 function CheatHeader({
   myTeam,
   players,
@@ -11720,6 +12046,10 @@ function CheatHeader({
   const colsRef = useRef(null);
   const [pdfOpen, setPdfOpen] = useState(false);
   const pdfRef = useRef(null);
+  // Bidding Status Intel sits in the simple bar, not behind the tools toggle:
+  // who can still outbid you and for which slot is the read a manager wants on
+  // every nomination, so it is one click away at all times.
+  const [intelOpen, setIntelOpen] = useState(false);
 
   useEffect(() => {
     if (!colsOpen) return;
@@ -11751,7 +12081,16 @@ function CheatHeader({
   }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("div", {
     className: "ch-sb-right",
     ref: pdfRef
-  }, hasCustomRanks && rankMode && onRankMode && React.createElement("span", {
+  }, React.createElement("button", {
+    className: "ch-sb-intel",
+    onClick: () => setIntelOpen(true),
+    title: "Every manager's money left, the most he could bid on one player, and which roster slot each of his open holes is"
+  }, "\ud83d\udd0e Bidding Status Intel"), intelOpen && React.createElement(BiddingIntelModal, {
+    teams: teams,
+    players: players,
+    config: config,
+    onClose: () => setIntelOpen(false)
+  }), hasCustomRanks && rankMode && onRankMode && React.createElement("span", {
     className: "ch-rankmode",
     title: "When projections update: follow the new rankings, or keep your custom order pinned. Your reorder is saved either way."
   }, React.createElement("span", { className: "ch-rm-label" }, "Ranks"), React.createElement("button", {
