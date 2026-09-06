@@ -1363,10 +1363,21 @@ input:focus, select:focus { border-color: var(--accent); }
 .bi-perslot { color: var(--text-muted); }
 .bi-perslot.thin { color: var(--warning); }
 .bi-needs { display: flex; flex-wrap: wrap; gap: 4px; }
-.bi-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 700; border-radius: 3px; padding: 1px 5px; border: 1px solid transparent; white-space: nowrap; }
-.bi-chip.bi-starter { color: var(--gold-text); background: var(--gold-soft); border-color: rgba(245,184,0,0.45); }
-.bi-chip.bi-flex { color: var(--accent-text); background: var(--accent-soft); border-color: rgba(76,125,255,0.45); }
-.bi-chip.bi-bench { color: var(--text-muted); background: var(--bg-elev); border-color: var(--border-subtle); }
+/* A needs chip carries two things at once. Hue is the POSITION, on the same
+   palette as .position-tag so RB is the same teal here as on every board in the
+   app; the border and the weight carry how URGENT the hole is. A position the
+   league config invents that has no colour here still renders as a chip, just
+   in the neutral base. */
+.bi-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 600; border-radius: 3px; padding: 1px 5px; border: 1px solid transparent; white-space: nowrap; background: var(--bg-elev); color: var(--text-secondary); }
+.bi-chip.bi-p-QB  { background: rgba(217, 70, 239, 0.15); color: var(--pos-qb); }
+.bi-chip.bi-p-RB  { background: rgba(20, 184, 166, 0.15); color: var(--pos-rb); }
+.bi-chip.bi-p-WR  { background: rgba(59, 130, 246, 0.15); color: var(--pos-wr); }
+.bi-chip.bi-p-TE  { background: rgba(249, 115, 22, 0.15); color: var(--pos-te); }
+.bi-chip.bi-p-K   { background: rgba(132, 204, 22, 0.15); color: var(--pos-k); }
+.bi-chip.bi-p-DEF { background: rgba(168, 85, 247, 0.15); color: var(--pos-def); }
+.bi-chip.bi-starter { border-color: currentColor; font-weight: 700; }
+.bi-chip.bi-flex { border-color: currentColor; border-style: dashed; }
+.bi-chip.bi-bench { opacity: 0.5; }
 .bi-more, .bi-full { font-size: 11.5px; color: var(--text-muted); }
 .bi-detail { padding: 8px 12px 12px; background: var(--bg-base); border-top: 1px dashed var(--border-subtle); }
 .bi-detail-money { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
@@ -1379,8 +1390,14 @@ input:focus, select:focus { border-color: var(--accent); }
 .bi-slot.filled { color: var(--text-secondary); background: var(--bg-elev); }
 .bi-slot.filled b { color: var(--text-muted); }
 .bi-slot.open { color: var(--text-muted); border-style: dashed; }
-.bi-slot.open.bi-starter { color: var(--gold-text); border-color: rgba(245,184,0,0.45); }
-.bi-slot.open.bi-flex { color: var(--accent-text); border-color: rgba(76,125,255,0.45); }
+.bi-slot.open.bi-p-QB  { color: var(--pos-qb); }
+.bi-slot.open.bi-p-RB  { color: var(--pos-rb); }
+.bi-slot.open.bi-p-WR  { color: var(--pos-wr); }
+.bi-slot.open.bi-p-TE  { color: var(--pos-te); }
+.bi-slot.open.bi-p-K   { color: var(--pos-k); }
+.bi-slot.open.bi-p-DEF { color: var(--pos-def); }
+.bi-slot.open.bi-starter { border-color: currentColor; font-weight: 600; }
+.bi-slot.open.bi-bench { opacity: 0.6; }
 .bi-slot.none { color: var(--text-faint); border-color: transparent; }
 .bi-flexnote { font-size: 11.5px; color: var(--accent-text); margin-top: 6px; }
 .bi-foot { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-top: 10px; }
@@ -11732,9 +11749,14 @@ function BiddingIntelModal({
   const slots = rows.reduce((s, r) => s + r.spotsRemaining, 0);
   const holes = rows.reduce((s, r) => s + r.starterHoles, 0);
   const kindTitle = n => n.label + " — " + (n.kind === 'starter' ? "an open STARTING slot; expect real money here" : n.kind === 'flex' ? "the FLEX slot; worth a mid-range bid" : "a bench slot; usually goes at the minimum");
+  // Hue is the position and nothing else, so a row of chips reads as a shape
+  // before it reads as text — the same palette the position tags use, so RB is
+  // the same teal here as everywhere else on the board. How urgent the hole is
+  // rides on the border and the weight instead: a solid edge is a starting
+  // slot, a dashed one the flex, a faded chip a bench body.
   const chip = n => React.createElement("span", {
     key: n.label,
-    className: "bi-chip bi-" + n.kind,
+    className: "bi-chip bi-p-" + n.pos + " bi-" + n.kind,
     title: kindTitle(n)
   }, n.label);
   return React.createElement("div", {
@@ -11761,13 +11783,7 @@ function BiddingIntelModal({
     className: "bi-total"
   }, React.createElement("b", null, holes), " starting slot", holes === 1 ? "" : "s", " still open")), React.createElement("div", {
     className: "bi-legend"
-  }, React.createElement("span", {
-    className: "bi-chip bi-starter"
-  }, "RB2"), " starter · ", React.createElement("span", {
-    className: "bi-chip bi-flex"
-  }, "WR3"), " flex · ", React.createElement("span", {
-    className: "bi-chip bi-bench"
-  }, "RB4"), " bench"), React.createElement("div", {
+  }, "Colour is the position · ", chip({ label: "RB2", pos: "RB", kind: "starter" }), " starter · ", chip({ label: "WR3", pos: "WR", kind: "flex" }), " flex · ", chip({ label: "RB4", pos: "RB", kind: "bench" }), " bench"), React.createElement("div", {
     className: "bi-table",
     style: {
       // The money columns only exist in an auction, so the grid has to lose
@@ -11840,7 +11856,7 @@ function BiddingIntelModal({
       title: o.name + (isAuction && o.price != null ? " — $" + o.price : "")
     }, React.createElement("b", null, o.label), " ", o.name)), g.open.map(o => React.createElement("span", {
       key: o.label,
-      className: "bi-slot open bi-" + o.kind,
+      className: "bi-slot open bi-p-" + o.pos + " bi-" + o.kind,
       title: kindTitle(o)
     }, React.createElement("b", null, o.label), " ", o.kind === 'starter' ? "starter" : o.kind === 'flex' ? "flex" : "bench")), !g.owned.length && !g.open.length && React.createElement("span", {
       className: "bi-slot none"

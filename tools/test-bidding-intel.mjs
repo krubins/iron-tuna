@@ -180,6 +180,10 @@ const kindOf = (r, label) => (r.needs.find(n => n.label === label) || {}).kind;
     r.groups.find(g => g.pos === 'WR').open.map(o => o.label).join(','));
 }
 
+// The legend draws real chips rather than describing them, so it contributes
+// three of its own on top of whatever the rows carry.
+const r1Chips = () => 3;
+
 // ── 9. the panel itself renders, with the numbers in it ────────────────────
 // The panel is hand-written React.createElement, so a missing argument or a
 // stray comma is a blank modal at the moment a manager clicks the button
@@ -224,6 +228,19 @@ const kindOf = (r, label) => (r.needs.find(n => n.label === label) || {}).kind;
   ok('what is left per hole is printed instead', txt.includes('$/slot') && txt.includes('$' + broke.perSlot.toFixed(1)), txt);
   ok('a manager stretched under a dollar a slot is flagged', classes.includes('bi-num bi-perslot thin'), classes.join(' '));
   ok('the reader is told the slot is an estimate', /estimate/i.test(txt), txt.slice(-160));
+  // Two readings ride on one chip: the hue says which position, the border and
+  // weight say how urgent. Emitting one class without the other silently drops
+  // half of that, and the panel still looks fine.
+  const chips = classes.filter(c => c.startsWith('bi-chip'));
+  ok('every needs chip is tagged with its position', chips.length > 0 && chips.every(c => /\bbi-p-[A-Z]+\b/.test(c)), chips.join(' | '));
+  ok('every needs chip still says how urgent the hole is', chips.every(c => /\bbi-(starter|flex|bench)\b/.test(c)), chips.join(' | '));
+  ok('the legend shows the coding rather than only naming it', chips.length >= r1Chips(el) && /Colour is the position/.test(txt), txt.slice(0, 500));
+  // A position the stylesheet has no colour for renders in the neutral base and
+  // nobody notices — so the palette is checked against the positions the app
+  // actually ships, not against whatever this fixture happens to use.
+  const css = idx.slice(idx.indexOf('<style>'), idx.indexOf('</style>'));
+  const unstyled = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter(pos => !css.includes('.bi-chip.bi-p-' + pos));
+  ok('every position the app ships has a chip colour', unstyled.length === 0, 'missing: ' + unstyled.join(','));
   ok('the panel never prints', classes.some(c => c.includes('no-print')));
 }
 
