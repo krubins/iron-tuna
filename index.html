@@ -9748,8 +9748,8 @@ function TeamsBoard({
         color: 'var(--text-muted)',
         marginTop: 2
       },
-      title: "Total projected points per game of every player this team has bought, starters and bench — the sum of the pts/gm on the rows below."
-    }, "Rostered ", ((proj.rosterPoints || 0) / games).toFixed(1), " pts/gm"), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
+      title: "Every player this team has bought, starters and bench, totalled in points per game — the sum of the pts/gm on the rows below. The Starters line above counts only the starting slots."
+    }, "All ", team.roster.length, " · ", ((proj.rosterPoints || 0) / games).toFixed(1), " pts/gm"), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
       style: {
         fontSize: 12,
         color: 'var(--text-muted)',
