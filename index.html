@@ -9749,7 +9749,7 @@ function TeamsBoard({
         marginTop: 2
       },
       title: "Every player this team has bought, starters and bench, totalled in points per game — the sum of the pts/gm on the rows below. The Starters line above counts only the starting slots."
-    }, "All ", team.roster.length, " · ", ((proj.rosterPoints || 0) / games).toFixed(1), " pts/gm"), React.createElement("div", {
+    }, "All ", team.roster.length, " · ", ((proj.rosterPoints || 0) / games).toFixed(1)), React.createElement("div", {
       style: {
         fontSize: 12,
         fontFamily: 'var(--font-mono)',
@@ -9757,7 +9757,7 @@ function TeamsBoard({
         marginTop: 2
       },
       title: "The players not in a starting slot, totalled in points per game. Starters in hand plus bench is the All line above; the gold Starters line is a forecast and does not add up with these."
-    }, "Bench ", Math.max(0, team.roster.length - proj.filledStarters), " · ", (Math.max(0, (proj.rosterPoints || 0) - (proj.draftedStarterPoints || 0)) / games).toFixed(1), " pts/gm"), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
+    }, "Bench ", Math.max(0, team.roster.length - proj.filledStarters), " · ", (Math.max(0, (proj.rosterPoints || 0) - (proj.draftedStarterPoints || 0)) / games).toFixed(1)), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
       style: {
         fontSize: 12,
         color: 'var(--text-muted)',
