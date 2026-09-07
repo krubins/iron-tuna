@@ -3685,15 +3685,11 @@ const PROVIDER_INJURY = [
 // "not configured" and /dfs shows the scoring environment it can actually
 // source, with no salary column invented to fill the gap.
 const PROVIDER_DFS = [
-  // DraftKings' draftables feed (no key, needs the draft group id) and
-  // FanDuel's fixture-list players (needs the site's auth). Both written to
-  // their published shapes; neither host is reachable from the sandbox this
-  // repo is developed in, so neither has been run live. The lobby CSV each
-  // site exports is the verified path (parseDfsCsv, /api/admin/dfs).
-  { name: 'dfs-draftkings', free: true, needs: env => !!(env && env.DK_DRAFT_GROUP_ID),
-    fetch: async (env) => (await fetchDraftKingsSalaries(env)).map(r => ({ ...r, site: 'dk', slate: 'main' })) },
-  { name: 'dfs-fanduel', free: false, needs: env => !!(env && env.FD_FIXTURE_LIST_ID && env.FD_API_KEY),
-    fetch: async (env) => (await fetchFanDuelSalaries(env)).map(r => ({ ...r, site: 'fd', slate: 'main' })) },
+  // DraftKings' and FanDuel's own salary endpoints are deliberately absent.
+  // That is the operators' data, their terms prohibit systematic retrieval,
+  // and Iron Tuna is a commercial product with a public face. Salaries come
+  // from the lobby CSV the contest entrant exports themselves (parseDfsCsv,
+  // /api/admin/dfs), or from a licensed feed. See docs/data-sources.md.
   { name: 'licensed-salary-feed', free: false,
     needs: env => !!(env && env.DFS_SALARY_API && env.DFS_SALARY_API_KEY),
     fetch: async (env, ctx) => {
@@ -3730,7 +3726,7 @@ const PROVIDER_UNAVAILABLE = {
   goalLineCarries: 'play-by-play only, as above',
   pace: 'play-by-play only, as above',
   passRate: 'play-by-play only, as above',
-  dfsSalary: 'no key-free documented API at FanDuel; DraftKings needs a draft group id (DK_DRAFT_GROUP_ID); either site\'s lobby CSV imports via /api/admin/dfs'
+  dfsSalary: 'operator salary endpoints are off-limits (docs/data-sources.md); salaries come from a lobby CSV export via /api/admin/dfs, or from a licensed feed'
 };
 
 // Run every configured provider of a kind, in registry order, and hand back
@@ -6401,35 +6397,6 @@ function parseDfsCsv(site, text) {
   const good = rows.filter(r => r.name && r.position && Number.isFinite(r.salary) && r.salary > 0);
   return { rows: good, error: good.length ? null : 'no usable rows' };
 }
-// The sites' own feeds. DraftKings publishes a JSON list of draftables per
-// draft group with no key; FanDuel's fixture-list players endpoint needs the
-// site's auth token. Both are WRITTEN TO THEIR PUBLISHED SHAPES AND NOT RUN
-// AGAINST THE LIVE SERVICES: both hosts are unreachable from the sandbox this
-// repo is developed in. The CSV path above is the verified one.
-async function fetchDraftKingsSalaries(env) {
-  const group = env && env.DK_DRAFT_GROUP_ID;
-  if (!group) throw new Error('no DK_DRAFT_GROUP_ID');
-  const r = await fetch('https://api.draftkings.com/draftgroups/v1/draftgroups/' + encodeURIComponent(group) + '/draftables?format=json', { cf: { cacheTtl: 900 } });
-  if (!r.ok) throw new Error('draftkings ' + r.status);
-  const j = await r.json();
-  const seen = new Set(); const rows = [];
-  for (const d of (j && j.draftables) || []) {
-    if (!d || seen.has(d.playerId)) continue; seen.add(d.playerId);
-    const comp = d.competition || {};
-    const team = teamKey(d.teamAbbreviation);
-    const opp = comp.awayTeam && comp.homeTeam ? (teamKey(comp.awayTeam.abbreviation) === team ? teamKey(comp.homeTeam.abbreviation) : teamKey(comp.awayTeam.abbreviation)) : null;
-    rows.push({ name: d.displayName, position: _dfsPos(d.position), team, opponent: opp, salary: Number(d.salary), siteId: String(d.playerId) });
-  }
-  return rows.filter(r => r.name && Number.isFinite(r.salary));
-}
-async function fetchFanDuelSalaries(env) {
-  const list = env && env.FD_FIXTURE_LIST_ID, key = env && env.FD_API_KEY;
-  if (!list || !key) throw new Error('no FD_FIXTURE_LIST_ID / FD_API_KEY');
-  const r = await fetch('https://api.fanduel.com/fixture-lists/' + encodeURIComponent(list) + '/players', { headers: { authorization: 'Basic ' + key, 'x-auth-token': env.FD_AUTH_TOKEN || '' }, cf: { cacheTtl: 900 } });
-  if (!r.ok) throw new Error('fanduel ' + r.status);
-  const j = await r.json();
-  return ((j && j.players) || []).map(p => ({ name: (p.first_name ? p.first_name + ' ' : '') + (p.last_name || ''), position: _dfsPos(p.position), team: teamKey(p.team && p.team._members ? p.team._members[0] : p.team_abbreviation), opponent: null, salary: Number(p.salary), siteId: String(p.id) })).filter(r => r.name.trim() && Number.isFinite(r.salary));
-}
 async function dfsStore(env, site, rows, meta) {
   if (!(await dfsReady(env))) return { ok: false, error: 'no_db' };
   const m = meta || {};
@@ -6450,19 +6417,6 @@ async function dfsSalariesRead(env, site, season, week) {
     const q = await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND fetched_at = ?').bind(site, season, week, latest.ts).all();
     return { rows: q.results || [], fetchedAt: latest.ts };
   } catch (e) { return null; }
-}
-// Pull the site's own feed where configured, else nothing: the CSV import is
-// an admin action and never runs on a cron.
-async function runDfsRefresh(env) {
-  const sched = await scheduleCacheRead(env);
-  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
-  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
-  const out = {};
-  for (const [site, fn] of [['dk', fetchDraftKingsSalaries], ['fd', fetchFanDuelSalaries]]) {
-    try { const rows = await fn(env); out[site] = await dfsStore(env, site, rows, { season: sched ? sched.season : null, week, source: 'feed' }); }
-    catch (e) { out[site] = { ok: false, skipped: /^no /.test((e && e.message) || '') ? 'not configured' : null, error: (e && e.message) || 'failed' }; }
-  }
-  return { ok: true, week, sites: out };
 }
 
 // ── the slate ──────────────────────────────────────────────────────────────
@@ -6559,7 +6513,6 @@ const JOB_FNS = {
   'availability-refresh': env => runAvailabilityRefresh(env),
   'market-snapshot':      env => runMarketSnapshot(env),
   'usage-refresh':        env => runUsageRefresh(env),
-  'dfs-refresh':          env => runDfsRefresh(env),
   'depth-charts':         env => runDepthChartRefresh(env),
   'ros-snapshot':         env => runRosSnapshot(env),
   'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
@@ -6808,7 +6761,6 @@ const JOB_SCHEDULE = [
   { job: 'availability-refresh', days: null,            hours: [7, 11, 13, 19],                phase: 1 },
   { job: 'usage-refresh',        days: ['Tue', 'Wed'],  hours: [6],                            phase: 1 },
   { job: 'depth-charts',         days: null,            hours: [6],                            phase: 1 },
-  { job: 'dfs-refresh',          days: ['Tue', 'Thu', 'Sat'], hours: [9],                      phase: 1 },
   // phase 2: derived from the pulls
   { job: 'ros-snapshot',         days: ['Wed'],         hours: [7],                            phase: 2 },
   { job: 'snapshot-prune',       days: ['Sun'],         hours: [4],                            phase: 2 },
@@ -8353,7 +8305,6 @@ export default {
         if (parsed.error) return json({ ok: false, error: parsed.error }, 400, c);
         out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source: 'csv' });
       }
-      if (url.searchParams.get('refresh') === '1') { try { out.refresh = await runDfsRefresh(env); } catch (e) { out.refresh = { ok: false, error: (e && e.message) || 'failed' }; } }
       for (const site of Object.keys(DFS_SITES)) {
         const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
         out.sites[site] = sal ? { rows: sal.rows.length, fetchedAt: sal.fetchedAt, source: sal.rows[0] && sal.rows[0].source } : null;

@@ -293,6 +293,13 @@ jobs:
       - name: The job schedule in New York time
         run: node tools/test-jobs.mjs
 
+      # The data-licensing boundary (docs/data-sources.md, Addendum §14). Every
+      # external host the worker can reach is named in an allowlist with the
+      # reason it is allowed, so adding a source is a deliberate edit rather
+      # than a stray fetch, and the red-listed hosts cannot come back.
+      - name: Data sources, licences and the red list
+        run: node tools/test-data-sources.mjs
+
       # The Trade Finder: the roster parser, the lineup valuation, the trade
       # search (both sides must gain, on their own horizons) and the worker's
       # screenshot reader, all in plain node against the shipped it-trade.js.
@@ -383,6 +390,15 @@ jobs:
       - name: Draft-day edges (projection edits, news, rival need, nominations)
         run: node tools/test-draft-edges.mjs
 
+      # What the two coaches can SEE. buildCoachContext used to drop `teams` and
+      # `marketState` on the floor, so the Value Coach and the Fable panel knew the
+      # league size and nothing else about the other managers while the insight
+      # strip beside them had every budget and roster hole. This holds the room
+      # fields to their meaning -- above all that runnerUp tracks the SECOND-best
+      # able bidder, since that is where an English auction actually settles.
+      - name: The coaches can see the rest of the room
+        run: node tools/test-coach-room.mjs
+
       # The Build desk states a budget, so it has to account for that budget.
       # It once published the starters ($183) under a headline quoting the whole
       # board ($200) and never mentioned the bench that spends the difference,
@@ -462,6 +478,24 @@ jobs:
       # meant to buy sat under him. No browser, no network.
       - name: Team card rows rank players within the position
         run: node tools/test-roster-slots.mjs
+
+      # Bidding Status Intel is the cheat sheet's permanent read on the room, and
+      # a manager acts on it mid-nomination: an overstated max bid talks him out
+      # of a player nobody could have taken from him, and a hole labelled RB1
+      # when the rival is really filling an RB4 has him bracing for a bidding war
+      # that was never coming. No browser, no network.
+      - name: Bidding intel names the right slot and the right ceiling
+        run: node tools/test-bidding-intel.mjs
+
+      # A team card's pts/gm and the Bidding Status Intel panel's Proj. PPG are
+      # one number behind one function — but they were two, and nothing failed:
+      # the panel counted only the players a manager had already bought while
+      # the card counted what his remaining money would buy, and both were
+      # defensible readings of "projected ppg". This drives the real TeamsBoard
+      # and the real panel and reads the rendered text off each, so they cannot
+      # drift apart again. No browser, no network.
+      - name: The card's pts/gm and the panel's Proj. PPG are one number
+        run: node tools/test-card-ppg.mjs
 
       # The worker keeps the availability list current from ESPN's injury feed
       # (IR / PUP / suspended / exempt), merged over the committed block with the

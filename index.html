@@ -366,9 +366,16 @@ input:focus, select:focus { border-color: var(--accent); }
 
 @media (max-width: 1100px) { .coach-beside.coach-board { width: 300px; max-width: 80vw; height: 380px; } }
 @media (max-width: 900px) { .coach-beside { position: fixed; left: auto; right: 8px; bottom: 8px; top: auto; transform: none; width: auto; max-width: 92vw; height: 300px; } }
-.modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); max-width: 900px; max-height: 85vh; max-height: 85svh; width: 90%; overflow-y: auto; padding: 28px; position: relative; }
+.modal { background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); max-width: 900px; max-height: 92vh; max-height: 92svh; width: 90%; overflow-y: auto; padding: 28px; position: relative; }
 .modal-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elev); font-size: 19px; color: var(--text-muted); }
 .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+/* The player card is the one modal whose body can outrun the viewport on a
+   desktop screen, and the block it ends with — team, price, Confirm — is the
+   whole act of assigning him.
+   Pin it to the card's bottom edge so it is on screen the moment the card opens
+   instead of a scroll away. The negative bottom/margin cancels the 28px padding
+   `.modal` carries here, the same trick the <=768px block below plays with 18px. */
+@media (min-width: 769px) { .qd-foot { position: sticky; bottom: -28px; margin-bottom: -28px; padding: 12px 0 28px; background: var(--bg-panel); border-top: 1px solid var(--border-strong); box-shadow: 0 -12px 16px -12px rgba(0,0,0,0.75); z-index: 3; } }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
 .settings-row { display: grid; grid-template-columns: 1fr 100px; align-items: center; gap: 12px; padding: 6px 0; font-size: 14px; }
 .settings-row label { color: var(--text-secondary); }
@@ -748,7 +755,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .nomination-alert .na-x { margin-left: auto; background: none; border: none; color: var(--text-muted); font-size: 17px; cursor: pointer; line-height: 1; }
 .nom-next { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px; }
 .nom-next .nn-head { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold-text); margin-bottom: 6px; }
-.nom-next .nn-row { display: grid; grid-template-columns: 54px minmax(120px, auto) minmax(0, 1fr); gap: 10px; align-items: baseline; width: 100%; text-align: left; background: none; border: none; border-top: 1px solid var(--border-subtle); padding: 7px 0; cursor: pointer; font-family: var(--font-body); }
+.nom-next .nn-item { display: flex; align-items: stretch; border-top: 1px solid var(--border-subtle); }
+.nom-next .nn-x { flex: 0 0 auto; align-self: center; background: none; border: none; color: var(--text-muted); font-size: 17px; line-height: 1; cursor: pointer; padding: 4px 2px 4px 10px; }
+.nom-next .nn-x:hover { color: var(--text-primary); }
+.nom-next .nn-row { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 54px minmax(120px, auto) minmax(0, 1fr); gap: 10px; align-items: baseline; width: 100%; text-align: left; background: none; border: none; padding: 7px 0; cursor: pointer; font-family: var(--font-body); }
 .nom-next .nn-row:hover { background: var(--bg-hover); }
 .nom-next .nn-tag { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; color: #ff8d4a; border: 1px solid rgba(255,107,94,0.5); border-radius: 3px; padding: 1px 4px; text-align: center; }
 .nom-next .nn-bargain .nn-tag { color: var(--positive); border-color: rgba(45,212,163,0.5); }
@@ -1328,7 +1338,86 @@ input:focus, select:focus { border-color: var(--accent); }
 .ch-sb-toggle { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; white-space: nowrap; }
 .cheat-header.ch-simple .ch-sb-toggle { animation: chSbGlow 2.4s ease-in-out infinite; }
 .ch-sb-toggle:hover { border-color: var(--gold-text); color: var(--gold-text); animation: none; transform: none; }
-.ch-sb-right { display: flex; align-items: center; gap: 8px; }
+.ch-sb-right { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.ch-sb-intel { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--gold-text); background: var(--gold-soft); border: 1px solid rgba(245,184,0,0.5); border-radius: var(--radius-sm); padding: 6px 11px; cursor: pointer; white-space: nowrap; }
+.ch-sb-intel:hover { background: rgba(245,184,0,0.18); border-color: var(--gold-text); }
+.bi-modal { max-width: 940px; }
+.bi-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: -4px 0 12px; }
+.bi-totals { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bi-total { font-size: 12px; color: var(--text-secondary); background: var(--bg-elev); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px 9px; }
+.bi-total b { color: var(--text-primary); font-family: var(--font-mono); }
+.bi-legend { font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.bi-table { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+.bi-head, .bi-row { display: grid; grid-template-columns: var(--bi-cols, 1.5fr 0.72fr 0.72fr 0.66fr 0.72fr 2.7fr); align-items: center; gap: 10px; padding: 7px 10px; text-align: left; width: 100%; }
+.bi-head { background: var(--bg-elev); font-family: var(--font-body); font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); white-space: nowrap; }
+/* The needs column is left-aligned against a right-aligned number, so without
+   its own padding the two run together into one word. */
+.bi-needs-h, .bi-needs { padding-left: 4px; }
+.bi-num[data-lbl]::before { display: none; }
+.bi-rowwrap { border-top: 1px solid var(--border-subtle); }
+.bi-rowwrap.mine { background: rgba(245,184,0,0.06); }
+.bi-rowwrap.done { opacity: 0.55; }
+.bi-row { background: transparent; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.bi-row:hover { background: var(--bg-hover); }
+.bi-name { font-weight: 700; color: var(--text-primary); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bi-caret { color: var(--text-muted); margin-right: 5px; font-size: 10px; }
+.bi-num { font-family: var(--font-mono); font-size: 12.5px; text-align: right; }
+.bi-money { color: var(--positive); }
+.bi-max { color: var(--gold-text); font-weight: 700; }
+.bi-perslot { color: var(--text-muted); }
+.bi-perslot.thin { color: var(--warning); }
+.bi-needs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.bi-ppg { color: var(--text-secondary); }
+/* A needs chip carries two things at once. Hue is the POSITION, on the same
+   palette as .position-tag so RB is the same teal here as on every board in the
+   app; the border and the weight carry how URGENT the hole is. A position the
+   league config invents that has no colour here still renders as a chip, just
+   in the neutral base. */
+.bi-chip { font-family: var(--font-mono); font-size: 11px; font-weight: 600; border-radius: 3px; padding: 1px 5px; border: 1px solid transparent; white-space: nowrap; background: var(--bg-elev); color: var(--text-secondary); }
+.bi-chip.bi-p-QB  { background: rgba(217, 70, 239, 0.15); color: var(--pos-qb); }
+.bi-chip.bi-p-RB  { background: rgba(20, 184, 166, 0.15); color: var(--pos-rb); }
+.bi-chip.bi-p-WR  { background: rgba(59, 130, 246, 0.15); color: var(--pos-wr); }
+.bi-chip.bi-p-TE  { background: rgba(249, 115, 22, 0.15); color: var(--pos-te); }
+.bi-chip.bi-p-K   { background: rgba(132, 204, 22, 0.15); color: var(--pos-k); }
+.bi-chip.bi-p-DEF { background: rgba(168, 85, 247, 0.15); color: var(--pos-def); }
+.bi-chip.bi-starter { border-color: currentColor; font-weight: 700; }
+.bi-chip.bi-flex { border-color: currentColor; border-style: dashed; }
+.bi-chip.bi-bench { opacity: 0.5; }
+.bi-more, .bi-full { font-size: 11.5px; color: var(--text-muted); }
+.bi-detail { padding: 8px 12px 12px; background: var(--bg-base); border-top: 1px dashed var(--border-subtle); }
+.bi-detail-money { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.bi-detail-money b { color: var(--text-primary); font-family: var(--font-mono); }
+.bi-grp { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
+.bi-grp-pos { flex: 0 0 34px; font-family: var(--font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: var(--text-muted); padding-top: 2px; }
+.bi-grp-slots { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.bi-slot { font-size: 11.5px; border-radius: 3px; padding: 1px 6px; border: 1px solid var(--border-subtle); white-space: nowrap; }
+.bi-slot b { font-family: var(--font-mono); font-size: 10.5px; margin-right: 3px; }
+.bi-slot.filled { color: var(--text-secondary); background: var(--bg-elev); }
+.bi-slot.filled b { color: var(--text-muted); }
+.bi-slot.open { color: var(--text-muted); }
+.bi-slot.open.bi-p-QB  { color: var(--pos-qb); }
+.bi-slot.open.bi-p-RB  { color: var(--pos-rb); }
+.bi-slot.open.bi-p-WR  { color: var(--pos-wr); }
+.bi-slot.open.bi-p-TE  { color: var(--pos-te); }
+.bi-slot.open.bi-p-K   { color: var(--pos-k); }
+.bi-slot.open.bi-p-DEF { color: var(--pos-def); }
+.bi-slot.open.bi-starter { border-color: currentColor; font-weight: 600; }
+.bi-slot.open.bi-flex { border-color: currentColor; border-style: dashed; }
+.bi-slot.open.bi-bench { opacity: 0.6; border-color: transparent; }
+.bi-slot.none { color: var(--text-faint); border-color: transparent; }
+.bi-flexnote { font-size: 11.5px; color: var(--accent-text); margin-top: 6px; }
+.bi-foot { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-top: 10px; }
+@media (max-width: 760px) {
+  /* Six columns will not fit a phone, and shrinking them truncates the manager
+     names. The row stacks instead: name, then the numbers in a strip carrying
+     their own labels since the header is gone, then the needs. */
+  .bi-head { display: none; }
+  .bi-row { grid-template-columns: repeat(4, 1fr); row-gap: 6px; }
+  .bi-name, .bi-needs { grid-column: 1 / -1; }
+  .bi-num { text-align: left; }
+  .bi-needs { padding-left: 0; }
+  .bi-num[data-lbl]::before { display: block; content: attr(data-lbl); font-family: var(--font-body); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 1px; }
+}
 .ch-sb-undo { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--positive, #2dd4a3); background: rgba(45,212,163,0.10); border: 1px solid rgba(45,212,163,0.45); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
 .ch-sb-undo:hover { background: rgba(45,212,163,0.20); border-color: var(--positive, #2dd4a3); }
 .ch-sb-pdf { font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--text-secondary); background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 10px; cursor: pointer; white-space: nowrap; }
@@ -1408,6 +1497,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .fable-input textarea { flex: 1; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: 10px; padding: 9px 12px; color: var(--text-primary); font-size: 14px; font-family: inherit; line-height: 1.4; resize: none; min-height: 44px; max-height: 120px; box-sizing: border-box; }
 .fable-input button { border-radius: 10px; padding: 0 15px; min-height: 44px; background: #7c5cff; color: #fff; border: none; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .fable-input button:disabled { opacity: 0.45; cursor: default; }
+.fable-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 7px 8px 0; flex: 0 0 auto; }
+.fable-chip { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.03em; background: var(--bg-base); border: 1px solid var(--border-strong); border-radius: 11px; padding: 3px 9px; color: var(--text-secondary); cursor: pointer; }
+.fable-chip:hover:not(:disabled) { border-color: #7c5cff; color: #b9a6ff; }
+.fable-chip:disabled { opacity: 0.4; cursor: default; }
 .fable-foot { padding: 5px 12px 7px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; color: var(--text-muted); border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; gap: 8px; flex: 0 0 auto; }
 .fable-grip { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 6; touch-action: none; }
 .fable-grip::after { content: ''; position: absolute; right: 3px; bottom: 3px; width: 7px; height: 7px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); }
@@ -4056,6 +4149,150 @@ function openStarterNeed(team, pos, config) {
   if (!elig.includes(pos) || flexN <= 0) return { base, flex: 0 };
   const flexUsed = elig.reduce((s, q) => s + Math.max(0, cnt(q) - starters(q)), 0);
   return { base, flex: Math.max(0, flexN - flexUsed) };
+}
+// One read on where every manager in the room actually stands: the money he has
+// left, the most he could still put on ONE player, and — the part a
+// position-only read misses — WHICH slot each hole is. A manager with no backs
+// is shopping for an RB1 and will pay whatever it takes; a manager with three is
+// shopping for an RB4 and will not go past a dollar or two. Same position,
+// opposite bidding behaviour, so the slot number IS the intel.
+//
+// The slot a hole carries is the row the next player bought there would take:
+// owned players hold slots 1..n ordered by projection, so the first open slot is
+// n+1. It is an estimate of intent, not a promise — a manager can always take a
+// falling star into a bench row — but it is the same rule the team cards use to
+// label a roster, so the panel and the cards never disagree.
+function buildBiddingIntel(teams, players, config, games, opts) {
+  if (!teams || !teams.length || !config || !config.roster) return [];
+  const g = games || 17;
+  const o = opts || {};
+  const slotMap = snakeSlotMap(teams, config);
+  const minBid = config.valuation && config.valuation.minBid || 1;
+  const isAuction = (config.format || 'auction') === 'auction';
+  const pmap = new Map((players || []).map(p => [p.id, p]));
+  const posOrder = Object.keys(config.roster);
+  const posIx = {};
+  posOrder.forEach((p, i) => posIx[p] = i);
+  const flexElig = config.flex && config.flex.eligible || [];
+  const flexN = config.flex && config.flex.count || 0;
+  const totalSpots = totalRosterSpots(config);
+  const kindRank = k => k === 'starter' ? 0 : k === 'flex' ? 1 : 2;
+  const rows = teams.map(t => {
+    const roster = t.roster || [];
+    const cnt = q => roster.filter(r => r.position === q).length;
+    const starters = q => config.roster[q] && config.roster[q].starters || 0;
+    const capOf = q => config.roster[q] && config.roster[q].total || 0;
+    // A flex only counts as open once every eligible position has its own
+    // starters filled; surplus at an eligible position is charged to it, the
+    // same rule openStarterNeed uses, so the two never contradict each other.
+    const flexUsed = flexElig.reduce((s, q) => s + Math.max(0, cnt(q) - starters(q)), 0);
+    const flexOpen = Math.max(0, flexN - flexUsed);
+    const spots = Math.max(0, t.spotsRemaining != null ? t.spotsRemaining : totalSpots - roster.length);
+    const budget = Math.max(0, t.budgetRemaining || 0);
+    // The ceiling nobody in this seat can bid past: everything left over once
+    // every other open slot is covered at the league minimum.
+    const maxBid = spots > 0 ? Math.max(minBid, budget - (spots - 1) * minBid) : 0;
+    const needs = [];
+    const groups = [];
+    posOrder.forEach(pos => {
+      const have = cnt(pos),
+        cap = capOf(pos),
+        st = starters(pos);
+      const owned = roster.filter(r => r.position === pos).map(r => {
+        const p = pmap.get(r.playerId);
+        return {
+          id: r.playerId,
+          name: p ? p.name : r.playerId,
+          pts: p ? p.projectedPoints || 0 : 0,
+          price: r.price
+        };
+      }).sort((a, b) => b.pts - a.pts).map((e, i) => ({
+        ...e,
+        slot: i + 1,
+        label: pos + (i + 1)
+      }));
+      const open = [];
+      for (let k = have + 1; k <= cap; k++) {
+        // A flex is one slot, and the manager has not decided yet which
+        // position fills it: with a flex open, the first non-starter row at
+        // EVERY eligible position could be the one that takes it. So the mark
+        // is flex-eligible, not "this is the flex" — three rows carrying it
+        // does not mean he has three flexes, it means he has one and three
+        // ways to spend it, and each is worth more than the bench body under
+        // it. flexOpen carries the actual count.
+        const kind = k <= st ? 'starter' : flexElig.includes(pos) && flexOpen > 0 && k === st + 1 ? 'flex' : 'bench';
+        const need = {
+          pos,
+          slot: k,
+          label: pos + k,
+          kind
+        };
+        open.push(need);
+        needs.push(need);
+      }
+      groups.push({
+        pos,
+        starters: st,
+        total: cap,
+        have,
+        owned,
+        open
+      });
+    });
+    needs.sort((a, b) => kindRank(a.kind) - kindRank(b.kind) || posIx[a.pos] - posIx[b.pos] || a.slot - b.slot);
+    // Under "any" bench positions a manager can stack past a position's cap, and
+    // the spot that fifth back took has to come out of somewhere. Counting every
+    // unfilled row would hand him more holes than he has seats, so the list is
+    // cut to the seats he actually has — from the bottom, since the sort has
+    // already put the starting slots he must fill above the bench bodies he need
+    // not. The reverse case, a spot no position can claim, is counted as loose.
+    const kept = needs.length > spots ? needs.slice(0, spots) : needs;
+    const keptLabels = new Set(kept.map(n => n.label));
+    if (kept.length !== needs.length) groups.forEach(g => {
+      g.open = g.open.filter(o => keptLabels.has(o.label));
+    });
+    const openOther = Math.max(0, spots - kept.length);
+    // The team card's pts/gm, off the one function that works it out, so the
+    // panel and the card cannot drift apart. It is a forecast: what his
+    // starters score once the plan for the money and slots he has left lands,
+    // which is why a manager who has bought nothing still reads a real number.
+    let ppg = 0, filledStarters = 0, totalStarters = 0;
+    try {
+      const pr = projectTeamStarters(t, players || [], config, {
+        draftedIds: o.draftedIds,
+        roleOverrides: o.roleOverrides,
+        model: o.model,
+        targets: o.targets,
+        draftSlot: slotMap.get(t.id)
+      });
+      ppg = (pr.starterPoints || 0) / g;
+      filledStarters = pr.filledStarters;
+      totalStarters = pr.totalStarters;
+    } catch (e) {}
+    return {
+      id: t.id,
+      name: t.name,
+      isMine: !!t.isMine,
+      ppg,
+      filledStarters,
+      totalStarters,
+      budgetRemaining: isAuction ? budget : null,
+      spent: isAuction ? Math.max(0, (config.budget || 0) - budget) : null,
+      spotsRemaining: spots,
+      maxBid: isAuction ? maxBid : null,
+      perSlot: isAuction && spots > 0 ? budget / spots : 0,
+      starterHoles: kept.filter(n => n.kind === 'starter').length,
+      flexOpen,
+      openOther,
+      needs: kept,
+      groups,
+      done: spots <= 0
+    };
+  });
+  // Most dangerous bidder first: the man who can still outbid you is the one you
+  // are planning around. Full rosters sink to the bottom — they cannot bid.
+  rows.sort((a, b) => Number(a.done) - Number(b.done) || (isAuction ? (b.maxBid || 0) - (a.maxBid || 0) : (b.spotsRemaining || 0) - (a.spotsRemaining || 0)) || a.name.localeCompare(b.name));
+  return rows;
 }
 function opponentCompetition(player, teams, myTeam, config) {
   const minBid = config.valuation.minBid;
@@ -7837,7 +8074,7 @@ function QuickDraftModal({
       fontSize: 17,
       color: 'var(--text-secondary)'
     }
-  }, ppg))), React.createElement("label", {
+  }, ppg))), React.createElement("div", { className: "qd-foot" }, React.createElement("label", {
     style: {
       display: 'block',
       fontSize: 12,
@@ -7903,7 +8140,7 @@ function QuickDraftModal({
     },
     disabled: (config.format || 'auction') === 'auction' ? overMax || noSpots || posFull || priceNum < 1 : noSpots || posFull,
     onClick: () => onConfirm(teamId, (config.format || 'auction') === 'auction' ? priceNum : 0)
-  }, "Confirm"))));
+  }, "Confirm")))));
 }
 function AddPlayerModal({
   onAdd,
@@ -9220,39 +9457,27 @@ function TeamsBoard({
   const projByTeam = useMemo(() => {
     const m = new Map();
     const di = draftedIds || new Set();
-    const _T = config.teams || teams.length;
-    const _mySlot = config.snake && config.snake.draftSlot || 1;
-    const _remSlots = [];
-    for (let _s = 1; _s <= _T; _s++) if (_s !== _mySlot) _remSlots.push(_s);
-    let _ri = 0;
-    const _snakeSlotMap = new Map();
-    teams.forEach(t => { _snakeSlotMap.set(t.id, t.isMine ? _mySlot : (_remSlots[_ri++ % (_remSlots.length || 1)] || _mySlot)); });
+    // The projection itself lives in projectTeamStarters, which the Bidding
+    // Status Intel panel on the cheat sheet reads too — the card's pts/gm and
+    // the panel's Proj. PPG are the same number by construction, not by two
+    // implementations happening to agree.
+    const _snakeSlotMap = snakeSlotMap(teams, config);
     teams.forEach(t => {
-      const tc = t.isMine ? config : {
-        ...config,
-        strategy: {
-          ...(config.strategy || {}),
-          allocation: 0.55
-        }
-      };
-      const ro = t.isMine ? roleOverrides : {};
-      const cur = computeTeamStarters(t, players, tc, ro);
-      const plan = t.isMine ? buildModel(model || 'ideal', t, players, tc, di, ro, targets) : buildOptimalPlan(t, players, tc, di, undefined, undefined, ro, true, undefined, true, { noCap: true });
-      const grid = buildTeamRosterGrid(t, plan, players, tc, slotOrder && slotOrder[t.id]);
-      let _snakePlanT = null;
-      const _projSP = isNonAuction ? (() => { try { const _ts = _snakeSlotMap.get(t.id) || _mySlot; const _tcS = { ...config, snake: { ...(config.snake || {}), draftSlot: _ts } }; _snakePlanT = buildSnakePlan(t, players, _tcS, di); return _snakePlanT.projectedStarterPoints; } catch (e) { return plan.starterPoints; } })() : plan.starterPoints;
-      const rosterPoints = t.roster.reduce((s, r) => {
-        const p = playerMap.get(r.playerId);
-        return s + (p ? p.projectedPoints || 0 : 0);
-      }, 0);
+      const pr = projectTeamStarters(t, players, config, {
+        draftedIds: di,
+        roleOverrides: roleOverrides,
+        model: model,
+        targets: targets,
+        draftSlot: _snakeSlotMap.get(t.id)
+      });
       m.set(t.id, {
-        filledStarters: cur.filledStarters,
-        totalStarters: cur.totalStarters,
-        starterPoints: _projSP,
-        draftedStarterPoints: cur.starterPoints,
-        rosterPoints,
-        grid,
-        snakePicks: _snakePlanT && _snakePlanT.byRound ? _snakePlanT.byRound : []
+        filledStarters: pr.filledStarters,
+        totalStarters: pr.totalStarters,
+        starterPoints: pr.starterPoints,
+        draftedStarterPoints: pr.draftedStarterPoints,
+        rosterPoints: pr.rosterPoints,
+        grid: buildTeamRosterGrid(t, pr.plan, players, pr.tc, slotOrder && slotOrder[t.id]),
+        snakePicks: pr.snakePlan && pr.snakePlan.byRound ? pr.snakePlan.byRound : []
       });
     });
     return m;
@@ -9516,7 +9741,15 @@ function TeamsBoard({
         color: 'var(--gold-text)',
         marginTop: 4
       }
-    }, "Starters ", proj.filledStarters, "/", proj.totalStarters, " · ", (isNonAuction ? ((proj.draftedStarterPoints / games).toFixed(1) + " now \u2192 " + ((proj.starterPoints || 0) / games).toFixed(1) + " best pts/gm") : (((proj.starterPoints || 0) / games).toFixed(1) + " pts/gm"))), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
+    }, "Starters ", proj.filledStarters, "/", proj.totalStarters, " · ", (isNonAuction ? ((proj.draftedStarterPoints / games).toFixed(1) + " now \u2192 " + ((proj.starterPoints || 0) / games).toFixed(1) + " best pts/gm") : (((proj.starterPoints || 0) / games).toFixed(1) + " pts/gm"))), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontFamily: 'var(--font-mono)',
+        color: 'var(--text-muted)',
+        marginTop: 2
+      },
+      title: "Every player this team has bought, starters and bench, totalled in points per game — the sum of the pts/gm on the rows below. The Starters line above counts only the starting slots."
+    }, "All ", team.roster.length, " · ", ((proj.rosterPoints || 0) / games).toFixed(1), " pts/gm"), !isCollapsed && React.createElement(React.Fragment, null, !isNonAuction && React.createElement("div", {
       style: {
         fontSize: 12,
         color: 'var(--text-muted)',
@@ -9649,7 +9882,7 @@ function TeamsBoard({
         className: "rg-price"
       }, showAsOpen ? '' : slot.est ? `~$${slot.est}` : ''), React.createElement("span", {
         className: "rg-pts"
-      }, oppHide || slot.empty ? '' : (slot.pts / games).toFixed(1)));
+      }, slot.empty || (!slot.drafted && oppHide) ? '' : (slot.pts / games).toFixed(1)));
     })))), !team.isMine && React.createElement("button", {
       className: "btn-secondary",
       style: {
@@ -11527,6 +11760,171 @@ const FANTASY_FACTS = [{
   label: 'Volume over highlights',
   text: 'One huge game on a few touches is far less predictive than steady, heavy usage. Chase volume and role; let your leaguemates chase the highlight plays.'
 }];
+// The permanent panel behind "Bidding Status Intel" on the cheat sheet. Every
+// manager in one table: money left, the ceiling of his next bid, and the roster
+// slots he still has to fill, named by slot rather than by position, because RB1
+// and RB4 are the same position and nothing like the same auction.
+function BiddingIntelModal({
+  teams,
+  players,
+  config,
+  seasonGames,
+  draftedIds,
+  roleOverrides,
+  model,
+  targets,
+  onClose
+}) {
+  const isAuction = (config.format || 'auction') === 'auction';
+  // Same inputs the board hands its own projection: a rival's forecast must not
+  // move because the reader picked a draft model for himself.
+  const rows = useMemo(() => buildBiddingIntel(teams, players, config, seasonGames, {
+    draftedIds,
+    roleOverrides,
+    model,
+    targets
+  }), [teams, players, config, seasonGames, draftedIds, roleOverrides, model, targets]);
+  const [openId, setOpenId] = useState(null);
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const money = rows.reduce((s, r) => s + (r.budgetRemaining || 0), 0);
+  const slots = rows.reduce((s, r) => s + r.spotsRemaining, 0);
+  const holes = rows.reduce((s, r) => s + r.starterHoles, 0);
+  const flexWord = (config.flex && config.flex.eligible || []).join(" / ");
+  const kindTitle = n => n.label + " — " + (n.kind === 'starter' ? "an open STARTING slot; expect real money here" : n.kind === 'flex' ? "could take the FLEX (" + flexWord + "), so it is worth more than a bench body. Every eligible position carries this mark while a flex is open; the manager only has one to spend." : "a bench slot; usually goes at the minimum");
+  // Hue is the position and nothing else, so a row of chips reads as a shape
+  // before it reads as text — the same palette the position tags use, so RB is
+  // the same teal here as everywhere else on the board. How urgent the hole is
+  // rides on the border and the weight instead: a solid edge is a starting
+  // slot, a dashed one the flex, a faded chip a bench body.
+  const chip = n => React.createElement("span", {
+    key: n.label,
+    className: "bi-chip bi-p-" + n.pos + " bi-" + n.kind,
+    title: kindTitle(n)
+  }, n.label);
+  return React.createElement("div", {
+    className: "modal-bg no-print",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "modal bi-modal",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("button", {
+    className: "modal-close",
+    onClick: onClose,
+    "aria-label": "Close bidding status intel"
+  }, "×"), React.createElement("div", {
+    className: "section-title"
+  }, "Bidding Status Intel"), React.createElement("div", {
+    className: "bi-sub"
+  }, isAuction ? "What every manager can still spend, the most he could put on one player, and the roster slots he has left to fill. A hole is named by the row the next player he buys would take, so RB1 is a manager with nothing at the position and RB4 is one filling out a bench." : "What every manager has left to fill, named by the row the next player he takes would hold, so RB1 is a manager with nothing at the position and RB4 is one filling out a bench."), React.createElement("div", {
+    className: "bi-totals"
+  }, isAuction && React.createElement("span", {
+    className: "bi-total"
+  }, React.createElement("b", null, "$", money), " still in the room"), React.createElement("span", {
+    className: "bi-total"
+  }, React.createElement("b", null, slots), " roster spot", slots === 1 ? "" : "s", " left"), React.createElement("span", {
+    className: "bi-total"
+  }, React.createElement("b", null, holes), " starting slot", holes === 1 ? "" : "s", " still open")), React.createElement("div", {
+    className: "bi-legend"
+  }, "Colour is the position · ", chip({ label: "RB2", pos: "RB", kind: "starter" }), " starter · ", chip({ label: "WR3", pos: "WR", kind: "flex" }), " could take the flex · ", chip({ label: "RB4", pos: "RB", kind: "bench" }), " bench"), React.createElement("div", {
+    className: "bi-table",
+    style: {
+      // The money columns only exist in an auction, so the grid has to lose
+      // them too or every needs cell slides two columns to the right.
+      '--bi-cols': isAuction ? '1.5fr 0.72fr 0.72fr 0.66fr 0.72fr 2.7fr' : '1.4fr 0.8fr 3.4fr'
+    }
+  }, React.createElement("div", {
+    className: "bi-head"
+  }, React.createElement("span", null, "Manager"), isAuction && React.createElement("span", {
+    className: "bi-num"
+  }, "Money left"), isAuction && React.createElement("span", {
+    className: "bi-num",
+    title: "The most this manager could put on ONE player and still fill every other open slot at the $" + (config.valuation && config.valuation.minBid || 1) + " minimum. Nobody can bid past his own number."
+  }, "Max bid"), isAuction && React.createElement("span", {
+    className: "bi-num",
+    title: "What is left divided by the slots still to fill. A manager under a couple of dollars a slot is filling out a bench at the minimum whatever his total says; one well above it can still concentrate money on a starter."
+  }, "$/slot"), React.createElement("span", {
+    className: "bi-num",
+    title: "The same projected points per game the team cards on the board show: what this manager's starters score once the plan for the money and slots he has left lands. A forecast of the finished roster, not a tally of what he has bought."
+  }, "Proj. PPG"), React.createElement("span", {
+    className: "bi-needs-h"
+  }, "Remaining needs")), rows.map(r => {
+    const isOpen = openId === r.id;
+    const shown = r.needs.slice(0, 7);
+    const more = r.needs.length - shown.length;
+    return React.createElement("div", {
+      key: r.id,
+      className: "bi-rowwrap" + (r.isMine ? " mine" : "") + (r.done ? " done" : "")
+    }, React.createElement("button", {
+      className: "bi-row" + (isOpen ? " open" : ""),
+      onClick: () => setOpenId(o => o === r.id ? null : r.id),
+      "aria-expanded": isOpen ? "true" : "false",
+      title: "Show every slot on this roster"
+    }, React.createElement("span", {
+      className: "bi-name"
+    }, React.createElement("span", {
+      className: "bi-caret"
+    }, isOpen ? "▾" : "▸"), r.isMine ? "★ " : "", r.name), isAuction && React.createElement("span", {
+      className: "bi-num bi-money",
+      "data-lbl": "Money left"
+    }, "$", r.budgetRemaining), isAuction && React.createElement("span", {
+      className: "bi-num bi-max",
+      "data-lbl": "Max bid"
+    }, r.done ? "—" : "$" + r.maxBid), isAuction && React.createElement("span", {
+      className: "bi-num bi-perslot" + (!r.done && r.perSlot < 2 ? " thin" : ""),
+      "data-lbl": "$/slot",
+      title: r.done ? "Nothing left to fill" : "$" + r.budgetRemaining + " left over " + r.spotsRemaining + " slot" + (r.spotsRemaining === 1 ? "" : "s")
+    }, r.done ? "—" : "$" + r.perSlot.toFixed(1)), React.createElement("span", {
+      className: "bi-num bi-ppg",
+      "data-lbl": "Proj. PPG",
+      title: r.filledStarters + " of " + r.totalStarters + " starting slots filled"
+    }, r.ppg.toFixed(1)), React.createElement("span", {
+      className: "bi-needs"
+    }, r.done ? React.createElement("span", {
+      className: "bi-full"
+    }, "Roster full · out of the bidding") : shown.length ? React.createElement(React.Fragment, null, shown.map(chip), more > 0 && React.createElement("span", {
+      className: "bi-more"
+    }, "+", more, " more"), r.openOther > 0 && React.createElement("span", {
+      className: "bi-more",
+      title: "Spots this manager can fill at any position"
+    }, "+", r.openOther, " any")) : React.createElement("span", {
+      className: "bi-full"
+    }, "Nothing left to fill"))), isOpen && React.createElement("div", {
+      className: "bi-detail"
+    }, React.createElement("div", {
+      // The one place the raw spot count belongs: the summary row above says
+      // which slots are open, one chip each, so a column repeating how many
+      // there were said nothing the chips had not.
+      className: "bi-detail-money"
+    }, isAuction ? React.createElement(React.Fragment, null, "Spent ", React.createElement("b", null, "$", r.spent), " · ", React.createElement("b", null, "$", r.budgetRemaining), " left to fill ") : "Still to fill ", React.createElement("b", null, r.spotsRemaining), " slot", r.spotsRemaining === 1 ? "" : "s", isAuction && !r.done ? React.createElement(React.Fragment, null, " · can bid up to ", React.createElement("b", null, "$", r.maxBid)) : null), r.groups.map(g => React.createElement("div", {
+      key: g.pos,
+      className: "bi-grp"
+    }, React.createElement("span", {
+      className: "bi-grp-pos"
+    }, g.pos), React.createElement("span", {
+      className: "bi-grp-slots"
+    }, g.owned.map(o => React.createElement("span", {
+      key: o.label,
+      className: "bi-slot filled",
+      title: o.name + (isAuction && o.price != null ? " — $" + o.price : "")
+    }, React.createElement("b", null, o.label), " ", o.name)), g.open.map(o => React.createElement("span", {
+      key: o.label,
+      className: "bi-slot open bi-p-" + o.pos + " bi-" + o.kind,
+      title: kindTitle(o)
+    }, React.createElement("b", null, o.label), " ", o.kind === 'starter' ? "starter" : o.kind === 'flex' ? "flex" : "bench")), !g.owned.length && !g.open.length && React.createElement("span", {
+      className: "bi-slot none"
+    }, "—")))), r.flexOpen > 0 && React.createElement("div", {
+      className: "bi-flexnote"
+    }, r.flexOpen, " flex slot", r.flexOpen === 1 ? "" : "s", " open (", ((config.flex && config.flex.eligible || []).join(" / ")) || "—", ")")));
+  })), React.createElement("div", {
+    className: "bi-foot"
+  }, "Slots are an estimate: a manager's owned players hold rows 1 to N at their position, best projection first, so the next one he buys lands in row N+1. It is the same rule the team cards use to label a roster.")));
+}
 function CheatHeader({
   myTeam,
   players,
@@ -11706,6 +12104,10 @@ function CheatHeader({
   const colsRef = useRef(null);
   const [pdfOpen, setPdfOpen] = useState(false);
   const pdfRef = useRef(null);
+  // Bidding Status Intel sits in the simple bar, not behind the tools toggle:
+  // who can still outbid you and for which slot is the read a manager wants on
+  // every nomination, so it is one click away at all times.
+  const [intelOpen, setIntelOpen] = useState(false);
 
   useEffect(() => {
     if (!colsOpen) return;
@@ -11737,7 +12139,21 @@ function CheatHeader({
   }, adv ? "All tools shown — hide them for a clean sheet" : "Star to target · drag to rerank · click a price to edit"), React.createElement("div", {
     className: "ch-sb-right",
     ref: pdfRef
-  }, hasCustomRanks && rankMode && onRankMode && React.createElement("span", {
+  }, React.createElement("button", {
+    className: "ch-sb-intel",
+    onClick: () => setIntelOpen(true),
+    title: "Every manager's money left, the most he could bid on one player, and which roster slot each of his open holes is"
+  }, "\ud83d\udd0e Bidding Status Intel"), intelOpen && React.createElement(BiddingIntelModal, {
+    teams: teams,
+    players: players,
+    config: config,
+    seasonGames: games,
+    draftedIds: draftedIds,
+    roleOverrides: roleOverrides,
+    model: model,
+    targets: targets,
+    onClose: () => setIntelOpen(false)
+  }), hasCustomRanks && rankMode && onRankMode && React.createElement("span", {
     className: "ch-rankmode",
     title: "When projections update: follow the new rankings, or keep your custom order pinned. Your reorder is saved either way."
   }, React.createElement("span", { className: "ch-rm-label" }, "Ranks"), React.createElement("button", {
@@ -12974,7 +13390,13 @@ function Cheatsheet({
       // green — including the scarcity premium — was invisible. It leads now,
       // and the bye week rides along behind it.
       title: nameTitle + (byeOf(p.team) ? ` Bye week ${byeOf(p.team)}.` : ' Bye week: TBD.')
-    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, !drafted && p.scarce ? React.createElement("span", {
+      // The scarcity chip only earns its space when the tier is about to run
+      // out. Firing on every player above any cliff put a badge at the top of
+      // every column that never changed and never asked for a decision. Two or
+      // fewer left is where waiting actually costs you the tier, which is the
+      // only thing the badge is for. Pricing is untouched: the premium still
+      // reads every cliff, the badge just stops narrating them.
+    }, _verdict ? React.createElement("span", { className: "gverdict " + _verdict.c, title: _verdict.title }, _verdict.t) : null, vegasFlagEl(p, config), vegasRankEl(p, vegasShifts, config), p.name, !drafted && p.scarce && p.scarce.count <= 2 ? React.createElement("span", {
       className: "cheat-scarce" + (p.scarce.count <= 1 ? " scarce-last" : ""),
       title: `${p.scarce.count === 1 ? `The last ${pos} above` : `One of ${p.scarce.count} ${pos}s above`} a ${Math.round(p.scarce.gapPts || 0)}-point drop${p.scarce.demand ? `, with ${p.scarce.demand} team${p.scarce.demand === 1 ? '' : 's'} still needing one` : ''}.`
     }, p.scarce.count <= 1 ? "LAST" : p.scarce.count + " LEFT") : null, (!drafted && highlightRecs && upsideIds && upsideIds.get(p.id)) ? React.createElement("span", {
@@ -15366,9 +15788,15 @@ function BudgetSliders({
   onChange
 }) {
   const alloc = strategy && strategy.allocation != null ? strategy.allocation : 0.55;
-  const conc = strategy && strategy.concentration != null ? strategy.concentration : 0.5;
+  // Concentration is a CAP, not a strategy: it can forbid plans, it cannot find
+  // better ones (see perCap in buildOptimalPlan). Left un-dragged it must
+  // therefore forbid nothing, or the board quietly hands you a worse team than
+  // the planner already found. Default 1 = Auto = no cap; dragging toward Even
+  // tightens it.
+  const conc = strategy && strategy.concentration != null ? strategy.concentration : 1;
   const benchPct = Math.round(alloc * 35);
-  const top3Pct = Math.round(40 + conc * 45);
+  const capPct = Math.round((0.30 + conc * 0.70) * 100);
+  const auto = conc >= 0.995;
   return React.createElement("div", {
     className: "budgetsliders",
     onPointerDown: e => e.stopPropagation()
@@ -15376,9 +15804,9 @@ function BudgetSliders({
     className: "bs-row"
   }, React.createElement("span", {
     className: "bs-cap"
-  }, "Concentration · ", React.createElement("b", null, "Among Starters")), React.createElement("span", {
+  }, "Concentration · ", React.createElement("b", null, auto ? 'Auto' : 'Capped')), React.createElement("span", {
     className: "bs-edge"
-  }, "Top-heavy"), React.createElement("input", {
+  }, "Auto"), React.createElement("input", {
     type: "range",
     min: "0",
     max: "1",
@@ -15387,12 +15815,12 @@ function BudgetSliders({
     onChange: e => onChange({
       concentration: 1 - parseFloat(e.target.value)
     }),
-    title: "Load up on a few elite starters vs spread starter spend evenly"
+    title: "Auto lets the planner buy whatever maximizes projected points. Drag right to forbid any one starter from eating a big share of the budget."
   }), React.createElement("span", {
     className: "bs-edge"
   }, "Even")), React.createElement("div", {
     className: "bs-cap2"
-  }, "~", React.createElement("b", null, top3Pct, "%"), " of your starter budget concentrated on your top 3 starters."), React.createElement("div", {
+  }, auto ? React.createElement(React.Fragment, null, React.createElement("b", null, "Auto"), " — the planner spends whatever maximizes your projected starter points, with no per-player limit. Drag right to force a more even spread.") : React.createElement(React.Fragment, null, "No single starter may cost more than ~", React.createElement("b", null, capPct, "%"), " of your starter budget — a flatter, lower-variance build, at some cost in projected points.")), React.createElement("div", {
     className: "bs-row"
   }, React.createElement("span", {
     className: "bs-cap"
@@ -15496,6 +15924,81 @@ function computeTeamStarters(team, players, config, roleOverrides) {
     filledStarters: count,
     totalStarters: slotDefs.length
   };
+}
+// The number behind a team card's "pts/gm", and the only place it is worked
+// out. It is a FORECAST, not a tally: what a manager's starters score once the
+// plan for the money and the slots he has left lands, so a manager who has
+// bought nothing still reads a real figure rather than zero.
+//
+// The rules the cards established and every reader of this has to keep:
+// a rival is planned at the house allocation (0.55) rather than whatever the
+// reader has dialled in for himself, and only the reader's own role overrides,
+// draft model and favourites steer his own plan. Snake and best ball answer
+// from a draft plan off the team's own slot instead of a budget.
+//
+// Returns the plan and the config it was built against as well, because the
+// roster grid on the card has to be built from the same two.
+function projectTeamStarters(team, players, config, opts) {
+  const o = opts || {};
+  const di = o.draftedIds || new Set();
+  const isNonAuction = !!(config.format && config.format !== 'auction');
+  const tc = team.isMine ? config : {
+    ...config,
+    strategy: {
+      ...(config.strategy || {}),
+      allocation: 0.55
+    }
+  };
+  const ro = team.isMine ? o.roleOverrides || {} : {};
+  const cur = computeTeamStarters(team, players, tc, ro);
+  const plan = team.isMine ? buildModel(o.model || 'ideal', team, players, tc, di, ro, o.targets) : buildOptimalPlan(team, players, tc, di, undefined, undefined, ro, true, undefined, true, {
+    noCap: true
+  });
+  let snakePlan = null;
+  const starterPoints = isNonAuction ? (() => {
+    try {
+      const tcS = {
+        ...config,
+        snake: {
+          ...(config.snake || {}),
+          draftSlot: o.draftSlot || config.snake && config.snake.draftSlot || 1
+        }
+      };
+      snakePlan = buildSnakePlan(team, players, tcS, di);
+      return snakePlan.projectedStarterPoints;
+    } catch (e) {
+      return plan.starterPoints;
+    }
+  })() : plan.starterPoints;
+  const pmap = new Map((players || []).map(p => [p.id, p]));
+  const rosterPoints = (team.roster || []).reduce((s, r) => {
+    const p = pmap.get(r.playerId);
+    return s + (p ? p.projectedPoints || 0 : 0);
+  }, 0);
+  return {
+    filledStarters: cur.filledStarters,
+    totalStarters: cur.totalStarters,
+    starterPoints,
+    draftedStarterPoints: cur.starterPoints,
+    rosterPoints,
+    plan,
+    snakePlan,
+    tc
+  };
+}
+// Which snake slot each rival is treated as holding. The reader keeps the slot
+// he set; everyone else is dealt the rest in team order. Shared so a projection
+// made off the board and one made off the cheat sheet cannot disagree about who
+// picks where.
+function snakeSlotMap(teams, config) {
+  const T = config.teams || (teams || []).length;
+  const mySlot = config.snake && config.snake.draftSlot || 1;
+  const rem = [];
+  for (let s = 1; s <= T; s++) if (s !== mySlot) rem.push(s);
+  let ri = 0;
+  const m = new Map();
+  (teams || []).forEach(t => m.set(t.id, t.isMine ? mySlot : rem[ri++ % (rem.length || 1)] || mySlot));
+  return m;
 }
 function buildTeamRosterGrid(team, plan, players, config, orderForTeam) {
   const pmap = new Map(players.map(p => [p.id, p]));
@@ -15939,8 +16442,21 @@ function buildOptimalPlan(myTeam, players, config, draftedIds, overrides, forced
   // and above it the withholding rises in step with the bench's own cap.
   const benchShare = Math.max(0, alloc - 0.55) / 0.45 * 0.35;
   const extraBench = noBench ? 0 : Math.round(benchShare * R);
-  const conc = config.strategy?.concentration ?? 0.5;
-  const perCap = opts.noCap ? Infinity : 0.30 + conc * 0.55;
+  // A ceiling on what any ONE starter may cost, as a share of the starter
+  // budget. It only ever shrinks the set bestStarterSet is allowed to search,
+  // so it can never improve a plan: every notch below Auto trades projected
+  // points for a flatter spend. It therefore defaults to non-binding — conc 1
+  // puts the ceiling at the whole starter budget, which no legal set can
+  // exceed anyway.
+  //
+  // The old default (0.5 -> 0.575) looked harmless because it was measured
+  // against the budget EARLY, when it was slack: 57.5% of ~$190 is ~$109 and
+  // nothing costs that. But the share scales against the budget that is LEFT,
+  // so it tightened as you spent and bit hardest at the end, on the biggest
+  // decisions — $80 left across 2 starter slots capped a man at $46 and routed
+  // you off the $60 stud the DP had already found. Nobody asked it to.
+  const conc = config.strategy?.concentration ?? 1;
+  const perCap = opts.noCap ? Infinity : 0.30 + conc * 0.70;
   const freeSlots = remainingStarterSlots.filter(s => fixed[s.label] == null);
   // ── one solve: the starters, then the bench ──────────────────────────────
   // Everything from here to the slot list is a function of how much the
@@ -16866,30 +17382,47 @@ function PlayersRail({
     }, 90);
     return () => clearTimeout(t);
   }, [focusPlayer]);
+  // A rail row is both a click target (opens the card) and a drag handle
+  // (re-ranks the player). The drag only *begins* once the pointer has really
+  // travelled: anything shorter stays a plain click, so the browser fires its
+  // own click event and the card opens. Beginning the drag on pointerdown is
+  // what used to eat the click - a few pixels of hand jitter and the card
+  // never came up.
+  const suppressRowClick = useRef(false);
   function startRankDrag(e, id, pos) {
+    suppressRowClick.current = false;
     if (e.button !== undefined && e.button !== 0) return;
     if (e.pointerType === 'touch') return;
     if (e.target.closest && e.target.closest('button')) return;
     if (e.target.closest && e.target.closest('.rr-name')) return;
     const info = rowRefs.current[id];
     if (!info || !info.el) return;
-    e.preventDefault();
     const el = info.el;
     const startY = e.clientY;
-    let moved = false;
+    const startX = e.clientX;
+    let dragging = false;
     const container = el.closest('.players-rail');
-    el.style.transition = 'none';
-    el.style.position = 'relative';
-    el.style.zIndex = '50';
-    el.style.opacity = '0.92';
-    el.style.boxShadow = '0 8px 22px rgba(0,0,0,0.55)';
-    el.style.cursor = 'grabbing';
     const st = {
       targetId: null,
       lastHi: null
     };
+    const begin = ev => {
+      dragging = true;
+      ev.preventDefault();
+      el.style.transition = 'none';
+      el.style.position = 'relative';
+      el.style.zIndex = '50';
+      el.style.opacity = '0.92';
+      el.style.boxShadow = '0 8px 22px rgba(0,0,0,0.55)';
+      el.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    };
     const onMove = ev => {
-      if (Math.abs(ev.clientY - startY) > 4) moved = true;
+      if (!dragging) {
+        // 8px, not a pixel or two: a click with a shaky hand still has to read as a click.
+        if (Math.abs(ev.clientY - startY) < 8 && Math.abs(ev.clientX - startX) < 8) return;
+        begin(ev);
+      }
       el.style.transform = `translateY(${ev.clientY - startY}px)`;
       if (container) {
         const cr = container.getBoundingClientRect();
@@ -16914,6 +17447,8 @@ function PlayersRail({
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
       document.removeEventListener('pointercancel', onUp);
+      // Never dragged: leave it alone and let the click through to the row.
+      if (!dragging) return;
       el.style.transform = '';
       el.style.transition = '';
       el.style.position = '';
@@ -16921,8 +17456,11 @@ function PlayersRail({
       el.style.opacity = '';
       el.style.boxShadow = '';
       el.style.cursor = '';
+      document.body.style.userSelect = '';
       if (st.lastHi && rowRefs.current[st.lastHi]) rowRefs.current[st.lastHi].el.classList.remove('rank-drop');
-      if (st.targetId && st.targetId !== id) { onRankReorder(id, st.targetId); } else if (!moved) { const __pl = (players || []).find(x => x.id === id); if (__pl) setQuick(__pl); }
+      // A finished drag still fires a click on the row; don't open the card on it.
+      suppressRowClick.current = true;
+      if (st.targetId && st.targetId !== id) onRankReorder(id, st.targetId);
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
@@ -17173,6 +17711,11 @@ function PlayersRail({
         },
         className: `rail-row ${cls}${highlightRecs && recFitIds && recFitIds.has(p.id) ? ' rail-rec' : ''}${highlightRecs && upsideIds && upsideIds.has(p.id) ? ' rail-upside' : ''}${targets && targets.has(p.id) ? ' rail-target' : ''}`,
         onPointerDown: e => startRankDrag(e, p.id, p.position),
+        onClick: e => {
+          if (suppressRowClick.current) { suppressRowClick.current = false; return; }
+          if (e.target.closest && (e.target.closest('button') || e.target.closest('.rr-name'))) return;
+          setQuick(p);
+        },
         style: {
           cursor: 'grab',
           touchAction: 'pan-y'
@@ -19612,8 +20155,9 @@ function strategyPivot(players, myTeam, plan, config, draftedIds, games) {
 //
 // A player you want and rivals can pay for is the one nomination that can only
 // cost you money, so he is never recommended.
-function nominationBoard(players, teams, myTeam, plan, config, draftedIds, limit) {
+function nominationBoard(players, teams, myTeam, plan, config, draftedIds, limit, demotions) {
   if (!myTeam || !teams || teams.length < 2 || !config) return [];
+  const demOf = id => demotions && demotions.get ? demotions.get(id) || 0 : 0;
   const di = draftedIds || new Set();
   const minBid = config.valuation.minBid;
   const avail = (players || []).filter(p => !di.has(p.id) && (p.projectedPoints || 0) > 0);
@@ -19685,21 +20229,31 @@ function nominationBoard(players, teams, myTeam, plan, config, draftedIds, limit
     }
   });
   const byScore = (a, b) => b.score - a.score;
-  const bargains = rows.filter(r => r.kind === 'bargain').sort(byScore).slice(0, 2);
-  const drains = rows.filter(r => r.kind === 'drain').sort(byScore).slice(0, limit || 4);
+  // Passing on a suggestion does not make it wrong, only wrong for now. Each
+  // pass drops him ten places down the queue instead of deleting him, so he
+  // comes back around once the names ahead of him are off the board.
+  const demote = list => list.map((r, i) => ({
+    r,
+    rank: i + 10 * demOf(r.player.id)
+  })).sort((a, b) => a.rank - b.rank).map(x => x.r);
+  const bargains = demote(rows.filter(r => r.kind === 'bargain').sort(byScore)).slice(0, 2);
+  const drains = demote(rows.filter(r => r.kind === 'drain').sort(byScore)).slice(0, limit || 4);
   return bargains.concat(drains);
 }
 function NominateNext({
   rows,
-  onNominate
+  onNominate,
+  onPass
 }) {
   if (!rows || !rows.length) return null;
   return React.createElement("div", {
     className: "nom-next no-print"
   }, React.createElement("div", {
     className: "nn-head"
-  }, "Nominate next"), rows.map(r => React.createElement("button", {
+  }, "Nominate next"), rows.map(r => React.createElement("div", {
     key: r.player.id,
+    className: "nn-item"
+  }, React.createElement("button", {
     className: "nn-row" + (r.kind === 'bargain' ? ' nn-bargain' : ''),
     onClick: () => onNominate && onNominate(r.player),
     title: "Put him on the block"
@@ -19711,7 +20265,15 @@ function NominateNext({
     className: "nn-meta"
   }, " ", r.player.position, " \u00b7 $", r.price)), React.createElement("span", {
     className: "nn-why"
-  }, r.why))));
+  }, r.why)), React.createElement("button", {
+    className: "nn-x",
+    title: "Not now \u2014 drops him ten places down the queue",
+    "aria-label": "Pass on " + r.player.name + " for now",
+    onClick: e => {
+      e.stopPropagation();
+      onPass && onPass(r.player);
+    }
+  }, "\u00d7"))));
 }
 function nominationInsight(player, players, myTeam, teams, plan, config, draftedIds, marketState, games) {
   if (!player) return null;
@@ -19844,7 +20406,9 @@ function buildCoachContext(q, ctx) {
     plan,
     marketState,
     games,
-    depthCharts
+    depthCharts,
+    draftHistory,
+    onTheBlock
   } = ctx;
   const di = draftedIds || new Set();
   const g = games || 17;
@@ -19889,14 +20453,25 @@ function buildCoachContext(q, ctx) {
       });
     }
   } catch (e) {}
+  // What a player actually costs is set by the runner-up bidder, not by the
+  // richest team in the room, and opponentCompetition already works that out for
+  // the insight strip. Attaching it here is the difference between "he is worth
+  // $34" and "he is worth $34 and the runner-up caps at $19, so open at $12".
+  const withComp = p => {
+    const s = slim(p);
+    if ((config.format || 'auction') === 'auction') {
+      try { s.competition = opponentCompetition(p, teams, myTeam, config); } catch (e) {}
+    }
+    return s;
+  };
   const named = [];
   try {
     const f1 = findPlayer(stripEval(q), evalPlayers);
-    if (f1.player) named.push(slim(f1.player));
+    if (f1.player) named.push(withComp(f1.player));
   } catch (e) {}
   try {
     const f2 = findPlayerInText(q, evalPlayers);
-    if (f2.player && !named.find(n => n.name === f2.player.name)) named.push(slim(f2.player));
+    if (f2.player && !named.find(n => n.name === f2.player.name)) named.push(withComp(f2.player));
   } catch (e) {}
   const minBid = config.valuation && config.valuation.minBid || 1;
   const _cfmt = config.format || 'auction';
@@ -19913,6 +20488,66 @@ function buildCoachContext(q, ctx) {
       drafted: di.has(p.id) || undefined,
       injury: line
     }));
+  const _auc = _cfmt === 'auction';
+  // The rest of the room. Both coaches used to see nothing but the league size,
+  // which left them unable to answer what an auction actually turns on: who else
+  // needs this position, and who can still outbid me. The insight strip has had
+  // all of it since generateTeamInsights was written; it just never reached the
+  // model, so the panel beside the coach was better informed than the coach.
+  const _tmax = t => Math.max(minBid, (t.budgetRemaining || 0) - Math.max(0, (t.spotsRemaining || 0) - 1) * minBid);
+  const _rivals = (teams || []).filter(t => !t.isMine).map(t => {
+    const needs = {};
+    Object.keys(config.roster).forEach(pos => {
+      if (positionFull(t, pos, config)) return;
+      const n = openStarterNeed(t, pos, config);
+      if (n.base > 0) needs[pos] = n.base + ' starter' + (n.base === 1 ? '' : 's') + (n.flex > 0 ? ' + flex' : '');
+      else if (n.flex > 0) needs[pos] = 'flex only';
+    });
+    return {
+      team: t.name,
+      spotsRemaining: t.spotsRemaining,
+      budgetRemaining: _auc ? t.budgetRemaining : undefined,
+      // The most this team can still put on one player and finish its roster at
+      // the $1 minimum, i.e. the ceiling it could reach if it wanted to.
+      maxBid: _auc ? ((t.spotsRemaining || 0) > 0 ? _tmax(t) : 0) : undefined,
+      openStarterNeeds: Object.keys(needs).length ? needs : undefined,
+      roster: (t.roster || []).map(r => {
+        const p = (evalPlayers || []).find(x => x.id === r.playerId);
+        return (p ? p.name : r.playerId) + ' ' + r.position + (_auc ? ' $' + r.price : '');
+      })
+    };
+  });
+  // What the room has actually paid per position against this app's own Value.
+  const _market = _auc && marketState ? Object.keys(marketState).reduce((o, pos) => {
+    const st = marketState[pos];
+    if (!st || !st.sampleSize) return o;
+    o[pos] = {
+      drafted: st.drafted,
+      paidVsValue: +(st.ratio || 1).toFixed(2),
+      avgOverpay: Math.round(st.avgDelta || 0),
+      heat: st.heat,
+      valueLeftOnBoard: Math.round(st.remainingFairValue || 0)
+    };
+    return o;
+  }, {}) : null;
+  // The last dozen results, newest first. Aggregate inflation does not tell you
+  // that the three running backs before this one all went 30% over, and that is
+  // the read the manager wants when he asks whether to push.
+  const _recent = (draftHistory || []).slice(-12).reverse().map(d => {
+    const p = (evalPlayers || []).find(x => x.id === d.playerId);
+    const t = (teams || []).find(x => x.id === d.teamId);
+    return {
+      name: p ? p.name : d.playerId,
+      pos: d.position || (p ? p.position : undefined),
+      to: t ? t.name : undefined,
+      paid: _auc ? d.price : undefined,
+      value: _auc && p ? p.auctionValue : undefined
+    };
+  });
+  // The player up for bid right now. Without this the coach only knows about a
+  // player the manager troubled to type out, which mid-bid is nobody.
+  let _block = null;
+  try { if (onTheBlock) _block = withComp(onTheBlock); } catch (e) {}
   return {
     format: _cfmt,
     formatInfo: _cfmt === 'snake' ? {
@@ -19969,6 +20604,13 @@ function buildCoachContext(q, ctx) {
     // or a news-desk entry; absent when nobody is, so the prompt's "no field
     // means healthy as far as the feed knows" holds for the whole list too.
     injuryReport: injuryReport.length ? injuryReport : undefined,
+    // Every other manager's money and holes, the player up for bid, what the
+    // room has been paying, and the last dozen results. See legendRoom.
+    rivals: _rivals.length ? _rivals : undefined,
+    onTheBlock: _block || undefined,
+    marketHeat: _market && Object.keys(_market).length ? _market : undefined,
+    recentPicks: _recent.length ? _recent : undefined,
+    legendRoom: 'rivals is every other team in the league: spotsRemaining, budgetRemaining, the starter holes it still has (openStarterNeeds), its roster so far, and maxBid, the most it could still put on ONE player and still fill its remaining slots at the $' + minBid + ' minimum. onTheBlock is the player up for bid this second, when there is one. competition on a player reads the bidding you face for him: bidders = rival teams that both need him and can afford him, runnerUp = the maxBid of the SECOND-best of those. An English auction settles a dollar over the runner-up, not over the richest team, so runnerUp is what he should actually cost you; runnerUp 0 with bidders 1 means nobody can push you and you can open near the minimum. marketHeat is what the room has actually paid per position: paidVsValue above 1 means they are overpaying there, so the players left at that position are cheap against the sheet, and below 1 means the discounts have already been taken. recentPicks is the last dozen players won, newest first, with what they went for against their Value. Answer who-needs-what, can-I-be-outbid, what-should-I-nominate and how-hot-is-the-room from these fields, and never state a rival budget, bidder count or sale price that is not in them.',
     legend: 'Proj = likely market/auction price. Value = VBD worth in a vacuum. You = the most THIS manager can pay before his starting lineup stops improving, an indifference price, which normally sits at or BELOW Value and is a bidding ceiling rather than a grade. On the draft board and cheat sheet a player name is colored by Proj against his Value plus a scarcity premium: the premium is added only when the optimal plan puts him in an open starting slot AND there is a real points cliff behind him at his position, and it is the size of that drop. RED when Proj is above that number (the room will likely overpay), GREEN when Proj is below it (a buy). The per-player flag field encodes this color. If asked why a player is red or green, explain it from his Proj against Value, and mention the scarcity premium when he has one; never claim it is another tool doing the coloring, you ARE the tool. Do not grade a player by his You number: a star can be worth buying well above You, because You only measures the point at which he stops improving your lineup.',
   };
 }
@@ -20051,7 +20693,12 @@ async function callLLM(userMsg, contextObj, ai, history, onDelta) {
   // and collected into injuryReport. The model is told what a missing field
   // means so it neither invents a designation nor calls a tagged player healthy.
   const _injuryCtx = " INJURY REPORT: the injuryReport field in the JSON below lists every player on the board carrying an injury designation, a roster status other than Active, or a news-desk entry, best projection first, and every player elsewhere in the data carries the same text in his injury field. The designations (Questionable, Doubtful, Out, IR, PUP, Sus) come from the same live feed as the depth charts and override your memory; the body part and note are the feed's, and the updated date says how fresh the designation is. A news desk entry is news this manager pasted in themselves, already priced into his projection by the percent shown, and when it disagrees with the feed the news desk wins. A player with no injury field is healthy as far as the feed knows: never assert an injury the data does not show, and if asked about one you cannot see, say the report does not show it. The risk field already counts an injury designation, so do not double-penalise. When an injured starter comes up, use the depth chart to name who benefits."
-  const sys = _coachId + _seasonCtx + _staffCtx + _depthCtx + _injuryCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager can pay before the player stops improving his starting lineup. You is an indifference ceiling, not a grade, and it normally sits at or below Value, so never argue a player is a bad buy because his Proj is above his You. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value plus any scarcity premium, and GREEN when Proj is below it; each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. A player earns a scarcity premium only when the optimal plan needs him in an open starting slot and there is a real points cliff behind him at his position, and the premium is the size of that drop, which is why such a player can be priced above Value and still read GREEN. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED player is NOT automatically a pass. Paying above Value can be correct when his points-per-game edge over a replacement at his position is bigger than what the same dollars buy elsewhere, so weigh his positional edge and any scarcity premium, not the Proj-vs-Value gap alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, except for who coaches whom, which comes from the staff list above and nowhere else. If you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
+  // The room: rival budgets and holes, who can outbid the manager on a given
+  // player, positional inflation, and what just sold. All of it used to be
+  // dropped on the floor by buildCoachContext, which left the coach answering
+  // "can I be outbid?" from nothing but the league size.
+  const _roomCtx = contextObj && contextObj.rivals ? " THE ROOM: the JSON below carries rivals, every other manager with his remaining budget, open spots, unfilled starter holes and maxBid (the most that team could still put on ONE player and still fill its roster at the minimum); onTheBlock, the player up for bid right now when there is one; marketHeat, what the room has actually paid per position against Value; and recentPicks, the last dozen players won, newest first, with the price and the Value. A player in playersInQuestion or onTheBlock also carries competition: bidders is how many rivals both need him and can afford him, and runnerUp is the maxBid of the SECOND-best of those. An English auction settles a dollar over the runner-up, not over the richest team, so runnerUp is what he should actually cost, and bidders 1 with runnerUp 0 means nobody can push you, so open near the minimum. This is also how you answer what to nominate: a player at a position you are full at, that several funded rivals still need, drains their money; a player you want that almost nobody can outbid you on is one to float early. Quote the numbers in these fields and never invent a rival budget, a bidder count or a sale price." : "";
+  const sys = _coachId + _seasonCtx + _staffCtx + _depthCtx + _injuryCtx + _roomCtx + " Answer like a sharp friend who knows ball: decisive and helpful. You can and should answer ANY football question, including coaching tendencies, backfield and target situations, schemes, snap and touch shares, injuries, depth charts, rookies, and general NFL knowledge, using your football expertise. For draft value and price questions, ground your answer in the live draft data provided below; for everything else, just answer the football question well.\n\nFORMAT, this matters, your reply shows in a narrow chat panel that does NOT render markdown:\n- Plain conversational sentences only. NO markdown: no tables, no pipes, no asterisks or bold, no headers, no numbered or bulleted lists.\n- Keep it to 2-4 short sentences, ~80 words max. Lead with the bottom-line call in the first sentence.\n- Mention at most 2-3 key players, each with one number inline, like: Lamar (26.3 pts/gm, ~$39).\n- No preamble (skip \"Great question\"). Only go longer if the user explicitly asks for depth or a full breakdown.\n\nWhen relevant use the three-number system: Proj = likely market price, Value = VBD worth in a vacuum, You = the most THIS manager can pay before the player stops improving his starting lineup. You is an indifference ceiling, not a grade, and it normally sits at or below Value, so never argue a player is a bad buy because his Proj is above his You. On the draft board and cheat sheet a player name shows RED when his Proj is above his Value plus any scarcity premium, and GREEN when Proj is below it; each player flag field encodes this, so answer any red/green question from his Proj-vs-Value gap. A player earns a scarcity premium only when the optimal plan needs him in an open starting slot and there is a real points cliff behind him at his position, and the premium is the size of that drop, which is why such a player can be priced above Value and still read GREEN. You ARE the draft tool doing the coloring, never say the red/green comes from some other software. IMPORTANT: a RED player is NOT automatically a pass. Paying above Value can be correct when his points-per-game edge over a replacement at his position is bigger than what the same dollars buy elsewhere, so weigh his positional edge and any scarcity premium, not the Proj-vs-Value gap alone. Do not fabricate the app's value numbers (Proj, Value, You); take those only from the provided data. For general football facts, use your knowledge, except for who coaches whom, which comes from the staff list above and nowhere else. If you are unsure of a specific number, say so rather than inventing a precise stat.\n\nLIVE DRAFT STATE (JSON):\n" + JSON.stringify(contextObj);
   const hist = (history || []).filter(m => m.text && m.text !== '…' && m.text !== '(no response)' && !m.intro).slice(-6).map(m => ({
     role: m.role === 'bot' ? 'assistant' : 'user',
     content: m.text
@@ -20577,7 +21224,7 @@ function loadFableDock() {
   } catch (e) {}
   return def;
 }
-function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, seasonGames }) {
+function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, seasonGames, draftHistory, currentNomination }) {
   const [st, setSt] = useState(loadFableDock);
   const [msgs, setMsgs] = useState([]);
   const [q, setQ] = useState('');
@@ -20600,6 +21247,8 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
   const abortRef = useRef(null);
   const idRef = useRef(1);
   const base = () => String(st.bridge || FABLE_BRIDGE_DEFAULT).replace(/\/+$/, '');
+  // Snake and best ball have no bidding, so the quick asks change wording.
+  const _fAuc = ((config && config.format) || 'auction') === 'auction';
 
   useEffect(() => {
     try { localStorage.setItem(FABLE_DOCK_KEY, JSON.stringify(st)); } catch (e) {}
@@ -20651,10 +21300,10 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
     window.addEventListener('pointerup', up);
   }
 
-  async function send() {
-    const text = (q || '').trim();
+  async function send(override) {
+    const text = String(override != null ? override : (q || '')).trim();
     if (!text || busy) return;
-    setQ('');
+    if (override == null) setQ('');
     const uid = idRef.current++, bid = idRef.current++;
     const priorMsgs = msgs;
     setMsgs(m => [...m, { role: 'user', text, _id: uid }, { role: 'bot', text: '', _id: bid, pending: true }]);
@@ -20670,7 +21319,11 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
     try {
       const state = buildCoachContext(text, {
         evalPlayers, myTeam, teams, config, draftedIds, plan, marketState, games: seasonGames,
-        depthCharts: depthChartsFromLive(LIVE_STATUS)
+        depthCharts: depthChartsFromLive(LIVE_STATUS),
+        // Rebuilt on every ask, so each assignment logged on the board is already
+        // in the next answer: rivals carry the winner's roster and new budget,
+        // recentPicks carries the sale price.
+        draftHistory, onTheBlock: currentNomination
       });
       const r = await fetch(base() + '/ask', {
         method: 'POST',
@@ -20778,7 +21431,32 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
         : React.createElement("div", { className: "fable-empty" },
           health === false
             ? "Bridge offline. Double-click Start-Fable.bat, then reopen this panel. If it is running on a port other than the default, set that with Bridge above."
-            : "Fable sees your live board — budgets, rosters, prices, who's gone. Ask the slower questions here: budget shape, whether you're about to get squeezed at a position, how the endgame plays out. Answers take 20–60s.")),
+            : "Fable sees your live board — every manager's budget and roster holes, who can still outbid you, what the room has been paying, and the player on the block. Ask the slower questions here: budget shape, whether you're about to get squeezed at a position, how the endgame plays out. Answers take 20–60s.")),
+    // One tap beats typing a name while the bidding is live, which is the whole
+    // reason the player on the block is now in the context.
+    React.createElement("div", { className: "fable-chips" },
+      currentNomination ? React.createElement("button", {
+        className: "fable-chip", disabled: busy,
+        onClick: () => send(_fAuc
+          ? 'Should I bid on ' + currentNomination.name + ', and up to what? Who am I bidding against?'
+          : 'Should I take ' + currentNomination.name + ' here?')
+      }, "↑ " + currentNomination.name) : null,
+      React.createElement("button", {
+        className: "fable-chip", disabled: busy,
+        onClick: () => send(_fAuc
+          ? 'Which teams can still outbid me, and on which positions?'
+          : 'Which positions are about to get picked clean before my next pick?')
+      }, _fAuc ? "Who can outbid me?" : "What runs next?"),
+      React.createElement("button", {
+        className: "fable-chip", disabled: busy,
+        onClick: () => send(_fAuc
+          ? 'Who should I nominate next, and why?'
+          : 'Who should I be targeting from here?')
+      }, _fAuc ? "What to nominate?" : "Who do I target?"),
+      React.createElement("button", {
+        className: "fable-chip", disabled: busy,
+        onClick: () => send('How is the room pricing things so far, and where does that leave my budget?')
+      }, "Read the room")),
     React.createElement("div", { className: "fable-input" },
       React.createElement("textarea", {
         value: q,
@@ -20790,10 +21468,13 @@ function FableDock({ evalPlayers, myTeam, teams, config, draftedIds, plan, marke
       }),
       busy
         ? React.createElement("button", { onClick: () => { try { abortRef.current && abortRef.current.abort(); } catch (e) {} } }, "Stop")
-        : React.createElement("button", { onClick: send, disabled: !q.trim() }, "Ask")),
+        : React.createElement("button", { onClick: () => send(), disabled: !q.trim() }, "Ask")),
     React.createElement("div", { className: "fable-foot" },
       React.createElement("span", null, busy ? 'fable · ' + elapsed + 's' : health === false ? 'bridge offline' : 'fable · subscription'),
-      React.createElement("span", null, last ? (Math.round(last.ms / 100) / 10) + 's' : '')),
+      // Standing proof the panel is current: every assignment on the board bumps
+      // this, and the same picks ride into the next answer.
+      React.createElement("span", null, ((draftHistory || []).length ? (draftHistory.length + (draftHistory.length === 1 ? ' pick in' : ' picks in')) : 'no picks yet')
+        + (last ? ' · ' + (Math.round(last.ms / 100) / 10) + 's' : ''))),
     React.createElement("div", { className: "fable-grip", onPointerDown: startResize }));
 }
 function ValueCoach({
@@ -20818,7 +21499,9 @@ function ValueCoach({
   onSaveAi,
   onOpenChange,
   embed,
-  onBeforeAsk
+  onBeforeAsk,
+  draftHistory,
+  currentNomination
 }) {
   const [open, setOpen] = useState(() => {
     if (locked) return false;
@@ -20948,7 +21631,11 @@ function ValueCoach({
         plan,
         marketState,
         games: seasonGames,
-        depthCharts: depthChartsFromLive(LIVE_STATUS)
+        depthCharts: depthChartsFromLive(LIVE_STATUS),
+        // Rebuilt on every ask, so a player assigned a second ago is already in
+        // the next answer, both as a sale price and as the winner's new budget.
+        draftHistory,
+        onTheBlock: currentNomination
       });
       const onDelta = ai.format === 'proxy' ? full => setMsgs(m => m.map(x => x._id === tid ? {
         role: 'bot',
@@ -24325,10 +25012,14 @@ function App() {
   }, [teams, personalizedPlayers, config, draftedIds, targets, roleOverrides]);
   const [dismissedAlert, setDismissedAlert] = useState(null);
   const [dismissedCliffs, setDismissedCliffs] = useState(() => new Set());
+  // Players you have waved off the nomination queue, and how many times. Not a
+  // blacklist: each pass costs him ten places, so a name you skipped early comes
+  // back up once the board above him clears.
+  const [nomPassed, setNomPassed] = useState(() => new Map());
   const draftAlert = useMemo(() => draftAlerts(personalizedPlayers, myTeam, plan, config, draftedIds, SEASON_GAMES, teams), [personalizedPlayers, myTeam, plan, config, draftedIds, teams]);
   // The positions about to run out, read off the same flags that lift You $.
   const cliffRows = useMemo(() => cliffWatch(personalizedPlayers, teams, config, draftedIds, myTeam), [personalizedPlayers, teams, config, draftedIds, myTeam]);
-  const nomNext = useMemo(() => nominationBoard(personalizedPlayers, teams, myTeam, plan, config, draftedIds, 4), [personalizedPlayers, teams, myTeam, plan, config, draftedIds]);
+  const nomNext = useMemo(() => nominationBoard(personalizedPlayers, teams, myTeam, plan, config, draftedIds, 4, nomPassed), [personalizedPlayers, teams, myTeam, plan, config, draftedIds, nomPassed]);
   const nomInsight = useMemo(() => liveNomination ? nominationInsight(liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState, SEASON_GAMES) : null, [liveNomination, personalizedPlayers, myTeam, teams, plan, config, draftedIds, marketState]);
   // The $1-$2 endgame shortlist. Null until the manager is down to it.
   const upsideIds = useMemo(() => {
@@ -24376,6 +25067,8 @@ function App() {
   function renderMainContent() {
     if (view === 'coach') {
       return React.createElement("div", { className: "mobile-coach-view" }, React.createElement(ValueCoach, {
+    draftHistory: draftHistory,
+    currentNomination: currentNomination,
     valueAdjust: valueAdjust,
     onApply: setValueAdjust,
     config: config,
@@ -24444,6 +25137,8 @@ function App() {
       });
     }
     const coachEl = !showSplash && !currentNomination && !assignPlayer && (view === 'prep' || view === 'split') ? React.createElement(ValueCoach, {
+      draftHistory: draftHistory,
+      currentNomination: currentNomination,
       valueAdjust: valueAdjust,
       onApply: setValueAdjust,
       config: config,
@@ -24601,10 +25296,17 @@ function App() {
       onClick: () => setDismissedAlert(draftAlert.text)
     }, "\u00d7")), (view === 'board' && !showSplash && !currentNomination) && React.createElement(NominateNext, {
       rows: nomNext,
-      onNominate: setCurrentNomination
+      onNominate: setCurrentNomination,
+      onPass: p => setNomPassed(prev => {
+        const next = new Map(prev);
+        next.set(p.id, (next.get(p.id) || 0) + 1);
+        return next;
+      })
     }), (view === 'board' && !showSplash) && React.createElement("div", {
       className: "board-coach-inline no-print"
     }, React.createElement(ValueCoach, {
+    draftHistory: draftHistory,
+    currentNomination: currentNomination,
     valueAdjust: valueAdjust,
     onApply: setValueAdjust,
     config: config,
@@ -24952,6 +25654,8 @@ function App() {
       window.requestAnimationFrame(sync);
     }
   }, React.createElement(ValueCoach, {
+    draftHistory: draftHistory,
+    currentNomination: currentNomination,
     valueAdjust: valueAdjust,
     onApply: setValueAdjust,
     config: config,
@@ -25065,6 +25769,8 @@ function App() {
     text: shareText,
     onClose: () => setOverlay(null)
   }), IT_FABLE && !showSplash && React.createElement(FableDock, {
+    draftHistory: draftHistory,
+    currentNomination: currentNomination,
     evalPlayers: personalizedPlayers,
     myTeam: myTeam,
     teams: teams,

@@ -64,7 +64,7 @@ console.log('\nthe job log');
   const soft = await H.jobRun(env, 'availability-refresh', 'admin');
   ok('a job that returns ok:false is a failure too', soft.ok === false && db.log.filter(x => /INSERT INTO job_runs/.test(x.sql))[2].args[5] === 'espn 403');
   ok('an unknown job is refused', (await H.jobRun(env, 'reboot-the-moon', 'admin')).error === 'unknown_job');
-  ok('every job the cron runs is in the table', ['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'snapshot-prune', 'analytics-prune', 'content-tick'].every(j => H.JOB_FNS[j]));
+  ok('every job the cron runs is in the table', ['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'depth-charts', 'ros-snapshot', 'snapshot-prune', 'analytics-prune', 'content-tick'].every(j => H.JOB_FNS[j]));
   ok('no database means no log and no crash', (await H.jobRun({}, 'schedule-refresh', 'x')).ok === true);
   const now = Date.now();
   const rows = [{ job: 'odds-refresh', trigger: 'cron', started_at: now - 3600000, finished_at: now - 3599000, ok: 0, error: 'boom', summary: null },
