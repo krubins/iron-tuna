@@ -480,6 +480,16 @@ jobs:
       - name: Bidding intel names the right slot and the right ceiling
         run: node tools/test-bidding-intel.mjs
 
+      # A team card's pts/gm and the Bidding Status Intel panel's Proj. PPG are
+      # one number behind one function — but they were two, and nothing failed:
+      # the panel counted only the players a manager had already bought while
+      # the card counted what his remaining money would buy, and both were
+      # defensible readings of "projected ppg". This drives the real TeamsBoard
+      # and the real panel and reads the rendered text off each, so they cannot
+      # drift apart again. No browser, no network.
+      - name: The card's pts/gm and the panel's Proj. PPG are one number
+        run: node tools/test-card-ppg.mjs
+
       # The worker keeps the availability list current from ESPN's injury feed
       # (IR / PUP / suspended / exempt), merged over the committed block with the
       # pro-rating applied exactly once. Skips the live pull without network.

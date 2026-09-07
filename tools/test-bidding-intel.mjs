@@ -46,8 +46,8 @@ function closure(roots) {
   }
   return [...picked.values()].join('\n');
 }
-const fns = closure(['buildBiddingIntel']);
-const lib = new Function(fns + '\nreturn { buildBiddingIntel };')();
+const fns = closure(['buildBiddingIntel', 'projectTeamStarters', 'snakeSlotMap']);
+const lib = new Function(fns + '\nreturn { buildBiddingIntel, projectTeamStarters, snakeSlotMap };')();
 
 // ── a small synthetic league: 4 teams, $100, 2 RB / 2 WR starters, 1 FLEX ───
 const config = {
@@ -184,6 +184,57 @@ const kindOf = (r, label) => (r.needs.find(n => n.label === label) || {}).kind;
 // three of its own on top of whatever the rows carry.
 const r1Chips = () => 3;
 
+// ── 8b. Proj. PPG is the team card's number, off the same function ────────
+{
+  // The panel must not carry a second implementation of the card's pts/gm. It
+  // reads projectTeamStarters, so the test's job is the wiring: the right
+  // arguments reach it for every team, including the slot map and the house
+  // allocation a rival is planned at.
+  const teams = [
+    mgr('t1', 'Mine', [['rbA', 40]], { isMine: true }),
+    mgr('t2', 'Rival', [['wrA', 30]]),
+    mgr('t3', 'Untouched', [])
+  ];
+  const optsIn = { draftedIds: new Set(['rbA', 'wrA']), roleOverrides: {}, model: 'balanced', targets: [] };
+  const rows = lib.buildBiddingIntel(teams, players, config, 17, optsIn);
+  const slots = lib.snakeSlotMap(teams, config);
+  teams.forEach(t => {
+    const card = lib.projectTeamStarters(t, players, config, { ...optsIn, draftSlot: slots.get(t.id) });
+    const row = rowFor(rows, t.name);
+    ok('the panel matches the card for ' + t.name, Math.abs(row.ppg - card.starterPoints / 17) < 1e-9,
+      row.ppg + ' vs ' + card.starterPoints / 17);
+  });
+  // A forecast, not a tally: the plan for the money still in hand counts, so a
+  // manager who has bought nothing is not a zero.
+  ok('an untouched roster still projects a real number', rowFor(rows, 'Untouched').ppg > 0, String(rowFor(rows, 'Untouched').ppg));
+  ok('the season length is the divisor', Math.abs(lib.buildBiddingIntel(teams, players, config, 10, optsIn)[0].ppg
+    - rows.find(r => r.id === lib.buildBiddingIntel(teams, players, config, 10, optsIn)[0].id).ppg * 17 / 10) < 1e-9);
+  // The reader's own draft model steers HIS plan and nobody else's. Handing it
+  // to a rival would move a rival's projection every time the reader changed
+  // his mind about his own build.
+  const other = lib.buildBiddingIntel(teams, players, config, 17, { ...optsIn, model: 'zeroRB' });
+  ok('a rival projection ignores the model the reader picked for himself',
+    rowFor(other, 'Rival').ppg === rowFor(rows, 'Rival').ppg,
+    rowFor(other, 'Rival').ppg + ' vs ' + rowFor(rows, 'Rival').ppg);
+  ok('the filled-over-total starter count comes back with it',
+    rowFor(rows, 'Mine').totalStarters === 7 && rowFor(rows, 'Untouched').filledStarters === 0,
+    rowFor(rows, 'Mine').filledStarters + '/' + rowFor(rows, 'Mine').totalStarters);
+}
+// ── 8c. a flex mark is one slot the manager has several ways to spend ─────
+{
+  // Two backs, two receivers, one tight end: every starting slot but QB is
+  // filled and one flex is open, so the next back and the next receiver could
+  // each take it. TE is one deep in this league, so it has no bench row to
+  // offer — which is the point: eligibility is not enough, the row has to
+  // exist.
+  const r = intel([mgr('t1', 'Flex open', [['rbA', 10], ['rbB', 10], ['wrA', 10], ['wrB', 10], ['teA', 10]])])[0];
+  const flexed = r.needs.filter(n => n.kind === 'flex').map(n => n.label);
+  ok('every eligible position with a row left is marked while the flex is open', flexed.join(',') === 'RB3,WR3', flexed.join(','));
+  ok('a position with no row left is not offered as a flex', !flexed.some(l => l.startsWith('TE')), flexed.join(','));
+  ok('the mark never claims he has more than one flex', r.flexOpen === 1, String(r.flexOpen));
+  ok('only the first bench row at a position carries it', !r.needs.some(n => n.kind === 'flex' && n.slot > 3), flexed.join(','));
+}
+
 // ── 9. the panel itself renders, with the numbers in it ────────────────────
 // The panel is hand-written React.createElement, so a missing argument or a
 // stray comma is a blank modal at the moment a manager clicks the button
@@ -228,6 +279,8 @@ const r1Chips = () => 3;
   ok('what is left per hole is printed instead', txt.includes('$/slot') && txt.includes('$' + broke.perSlot.toFixed(1)), txt);
   ok('a manager stretched under a dollar a slot is flagged', classes.includes('bi-num bi-perslot thin'), classes.join(' '));
   ok('the reader is told the slot is an estimate', /estimate/i.test(txt), txt.slice(-160));
+  ok('the projected points column is on the panel', /Proj\. PPG/.test(txt) && txt.includes(rowFor(intel(teams), 'Mine').ppg.toFixed(1)), txt);
+  ok('the legend says a flex mark is a maybe, not a second flex', /could take the flex/.test(txt), txt.slice(0, 520));
   // Two readings ride on one chip: the hue says which position, the border and
   // weight say how urgent. Emitting one class without the other silently drops
   // half of that, and the panel still looks fine.
