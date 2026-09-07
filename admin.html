@@ -162,7 +162,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
         <select id="dfsSite"><option value="dk">DraftKings</option><option value="fd">FanDuel</option></select>
       </label>
       <label for="dfsWeek">Week <input id="dfsWeek" type="number" min="1" max="18" placeholder="current" style="width:70px"></label>
-      <button class="btn" id="dfsRefresh" type="button" title="Pull from the configured site feed, if one is configured">Refresh from feed</button>
     </div>
     <textarea id="dfsCsv" rows="6" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;…" spellcheck="false" style="width:100%;font:12px/1.4 ui-monospace,monospace"></textarea>
     <div class="field" style="margin-top:8px"><button class="btn primary" id="dfsBtn" type="button">Import CSV</button></div>
@@ -814,13 +813,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   function dfsStatus(j){
     var parts = [];
     ['dk','fd'].forEach(function(site){ var v = j.sites && j.sites[site], label = site === 'dk' ? 'DraftKings' : 'FanDuel';
-      parts.push(v ? label + ': ' + v.rows + ' rows (' + esc(v.source || 'feed') + ', ' + esc(new Date(v.fetchedAt).toLocaleString()) + ')' : label + ': nothing loaded'); });
+      parts.push(v ? label + ': ' + v.rows + ' rows (' + esc(v.source || 'csv') + ', ' + esc(new Date(v.fetchedAt).toLocaleString()) + ')' : label + ': nothing loaded'); });
     $('dfsStatus').textContent = 'Week ' + (j.week == null ? '—' : j.week) + '. ' + parts.join(' · ');
-    if (j.refresh) $('dfsStatus').textContent += ' Feed: ' + JSON.stringify(j.refresh).slice(0, 200);
   }
-  function dfsLoad(refresh){
+  function dfsLoad(){
     var key = getKey(); if (!key) return;
-    fetch('/api/admin/dfs?key=' + encodeURIComponent(key) + (refresh ? '&refresh=1' : ''))
+    fetch('/api/admin/dfs?key=' + encodeURIComponent(key))
       .then(function(r){ return r.json(); }).then(function(j){ if (j && j.ok) dfsStatus(j); else $('dfsStatus').textContent = 'Salary status unavailable.'; })
       .catch(function(){ $('dfsStatus').textContent = 'Salary status unavailable.'; });
   }
@@ -841,7 +839,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       .then(function(){ btn.disabled = false; btn.textContent = was; });
   }
   $('dfsBtn').addEventListener('click', dfsImport);
-  $('dfsRefresh').addEventListener('click', function(){ $('dfsStatus').textContent = 'Asking the feed…'; dfsLoad(true); });
   dfsLoad();
 
   load();

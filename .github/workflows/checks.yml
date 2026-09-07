@@ -293,6 +293,13 @@ jobs:
       - name: The job schedule in New York time
         run: node tools/test-jobs.mjs
 
+      # The data-licensing boundary (docs/data-sources.md, Addendum §14). Every
+      # external host the worker can reach is named in an allowlist with the
+      # reason it is allowed, so adding a source is a deliberate edit rather
+      # than a stray fetch, and the red-listed hosts cannot come back.
+      - name: Data sources, licences and the red list
+        run: node tools/test-data-sources.mjs
+
       # The Trade Finder: the roster parser, the lineup valuation, the trade
       # search (both sides must gain, on their own horizons) and the worker's
       # screenshot reader, all in plain node against the shipped it-trade.js.
