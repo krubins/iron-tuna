@@ -1271,7 +1271,12 @@ img{max-width:100%}
     </div>
   </div>
 
-  <div class="tools-band">
+  <!-- "Drafting soon?" is a draft-lane pitch, so it belongs to the fantasy lane
+       and goes with it. It stays at the foot of the page rather than moving up
+       inside #laneFantasy: the method band and the closing band are the page's
+       own furniture and this is the last word after them, which is where the
+       band was written to sit. data-lane is how the lane switch reaches it. -->
+  <div class="tools-band" data-lane="fantasy">
     <span class="tb-text" id="tbText"><b>Drafting soon?</b> Free expert values in 60 seconds — or unlock your league&rsquo;s full custom values, the live Auction Manager, and the AI Value Coach for a one-time $9.99.</span>
     <span class="tb-ctas">
       <a class="tb-btn gold" href="/auctiondraft?screen=cheat">Build my free cheat sheet</a>
@@ -3192,6 +3197,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     lane = next;
     panes.fantasy.hidden = next !== 'fantasy';
     panes.dfs.hidden = next !== 'dfs';
+    // Anything else in the main column that belongs to one lane — the "Drafting
+    // soon?" band at the foot of the page — goes with it. The bands with no
+    // data-lane (the method, the closing band) are the page's own furniture and
+    // stay on both.
+    [].forEach.call(document.querySelectorAll('main [data-lane]'), function (el) {
+      el.hidden = el.getAttribute('data-lane') !== next;
+    });
     tabs.forEach(function (t) {
       var on = t.getAttribute('data-lane') === next;
       t.setAttribute('aria-selected', on ? 'true' : 'false');

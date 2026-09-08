@@ -7612,9 +7612,14 @@ Desk: **Weekly Fantasy** and **DFS**, half the screen each.
   it a ribbon jump lands with the section head behind the two bands.
 - **The panes** are two siblings inside `<main>`: `#laneFantasy` (everything
   that was already there) and `#laneDfs`. `[hidden]` is `display:none !important`
-  on this page, so hiding a pane is one attribute. The method band, the closing
-  band and the tools band sit outside both — they are site furniture, not a
-  lane.
+  on this page, so hiding a pane is one attribute. The method band and the
+  closing band sit outside both — they are the page's own furniture, not a
+  lane. The tools band at the foot of the page is not: it pitches the draft
+  product, so it carries `data-lane="fantasy"` and the lane switch hides it
+  with the pane. It stays at the foot rather than moving up inside
+  `#laneFantasy`, because it is written as the last word after those two bands.
+  Anything else that turns out to belong to one lane gets the same attribute —
+  the switch reads `main [data-lane]`.
 - **The ribbon carries one anchor set per lane.** Each anchor is tagged
   `data-lane`, the ribbon element carries `data-lane`, and CSS hides the other
   lane's links. It cannot use the `hidden` attribute: `setSectionVisible()`
