@@ -169,7 +169,7 @@ ok('the card is not advertised in the sitemap',
 // ── the box is on the front page, and stays on screen ──────────────────────
 console.log('\nthe box lives in the sticky ribbon');
 ok('front.html has the search box in the ribbon',
-   /<div class="ribbon">[\s\S]*?class="rb-search"[\s\S]*?<\/div><\/div>/.test(front));
+   /<div class="ribbon"[^>]*>[\s\S]*?class="rb-search"[\s\S]*?<\/div><\/div>/.test(front));
 ok('the ribbon is still sticky', /\.ribbon\{[^}]*position:sticky/.test(front));
 ok('front.html loads the lookup', front.includes('src="/player-search.js"'));
 ok('the box opts in by attribute, so both pages mount the same widget',
