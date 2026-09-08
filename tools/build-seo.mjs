@@ -87,14 +87,14 @@ const COLUMN_PAGES = {
     // <article class="call pick" id="pick-YYYY-MM-DD"> ... <h2>headline</h2>
     entry: /<article class="call pick" id="(pick-(\d{4}-\d{2}-\d{2})[^"]*)">[\s\S]*?<h2>([\s\S]*?)<\/h2>/g,
   },
-  'not-seeing-yet.html': {
-    section: 'What You\u2019re Not Seeing Yet',
-    // <article class="call nsy" id="nsy-YYYY-MM-DD-N" data-players="..."> ... <h2>headline</h2>
+  'the-tell.html': {
+    section: 'The Tell',
+    // <article class="call tell" id="tell-YYYY-MM-DD-N" data-players="..."> ... <h2>headline</h2>
     // The trailing [^>]* is not optional: tools/build-front.mjs stamps
     // data-players onto these articles, so an id-then-close regex (which is all
     // The Pick needs) silently matches nothing here and the Blog ships with no
     // blogPost list at all.
-    entry: /<article class="call nsy" id="(nsy-(\d{4}-\d{2}-\d{2})[^"]*)"[^>]*>[\s\S]*?<h2>([\s\S]*?)<\/h2>/g,
+    entry: /<article class="call nsy" id="(tell-(\d{4}-\d{2}-\d{2})[^"]*)"[^>]*>[\s\S]*?<h2>([\s\S]*?)<\/h2>/g,
   },
 };
 

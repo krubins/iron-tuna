@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Tests for "What You're Not Seeing Yet", the weekly column at /not-seeing-yet
+// Tests for "The Tell", the weekly column at /the-tell
 // that leads the front page's Weekly Fantasy lane.
-//   node tools/test-not-seeing-yet.mjs
+//   node tools/test-the-tell.mjs
 //
 // This column is different from the other two in one way that matters here: it
 // does not argue from prose, it argues from THREE NUMBERS PER ENTRY, printed in
@@ -30,7 +30,7 @@
 //      the players it is about is named in the headline or the tell line. Fail
 //      either and the "Your league" line simply never appears — no error, no
 //      symptom, just a missing feature on a page that looks fine.
-//   7. THE FRONT PAGE. The embedded NOTSEEING array is the extraction of this
+//   7. THE FRONT PAGE. The embedded TELL array is the extraction of this
 //      page, so it must name the same entries in the same order.
 
 import fs from 'fs';
@@ -45,7 +45,7 @@ const ok = (name, cond, extra = '') => {
 };
 
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-const page = read('not-seeing-yet.html');
+const page = read('the-tell.html');
 const front = read('front.html');
 const worker = read('_worker.js');
 
@@ -143,7 +143,7 @@ const offense = (() => {
 const offenseOf = (abbr) => offense.get(TEAM_ALIAS[abbr] || abbr) || null;
 
 // ── the entries ───────────────────────────────────────────────────────────
-const entries = [...page.matchAll(/<article class="call nsy" id="([^"]+)"[^>]*>([\s\S]*?)<\/article>/g)]
+const entries = [...page.matchAll(/<article class="call tell" id="([^"]+)"[^>]*>([\s\S]*?)<\/article>/g)]
   .map(([, id, block]) => {
     const chip = block.match(/<span class="chip ([a-z]+)">([^<]*)<\/span>/) || [];
     const pick = (re) => { const m = block.match(re); return m ? norm(m[1]) : ''; };
@@ -168,9 +168,9 @@ console.log('\nthe column has entries and they are shaped the way the site reads
 ok('the page has entries', entries.length >= 1, String(entries.length));
 {
   const ids = entries.map((e) => e.id);
-  ok('every id is nsy-YYYY-MM-DD-N',
-     ids.every((i) => /^nsy-\d{4}-\d{2}-\d{2}-\d+$/.test(i)),
-     ids.filter((i) => !/^nsy-\d{4}-\d{2}-\d{2}-\d+$/.test(i)).join(', '));
+  ok('every id is tell-YYYY-MM-DD-N',
+     ids.every((i) => /^tell-\d{4}-\d{2}-\d{2}-\d+$/.test(i)),
+     ids.filter((i) => !/^tell-\d{4}-\d{2}-\d{2}-\d+$/.test(i)).join(', '));
   ok('no id is used twice', new Set(ids).size === ids.length);
   const VERDICTS = { up: 'Beats his rank', down: 'Misses his rank', split: 'The rank is an artifact' };
   const badChip = entries.filter((e) => VERDICTS[e.side] !== e.label);
@@ -300,7 +300,7 @@ console.log('\nevery statline can be restated in the reader\'s league');
 
 console.log('\nthe front page quotes the column rather than keeping a second copy');
 {
-  const m = front.match(/^var NOTSEEING = (\[[\s\S]*?\]);$/m);
+  const m = front.match(/^var TELL = (\[[\s\S]*?\]);$/m);
   ok('front.html carries the extracted array', !!m);
   if (m) {
     const band = JSON.parse(m[1]);
@@ -313,11 +313,11 @@ console.log('\nthe front page quotes the column rather than keeping a second cop
     const noNums = band.filter((b) => !b.nums || b.nums.length < 2);
     ok('the band carries the evidence row, not just the verdict',
        noNums.length === 0, noNums.map((b) => b.id).join(', '));
-    const bad = band.filter((b) => !/^\/not-seeing-yet#/.test(b.url));
+    const bad = band.filter((b) => !/^\/the-tell#/.test(b.url));
     ok('every card links back into the column', bad.length === 0, bad.map((b) => b.id).join(', '));
   }
-  ok('the lane band and its ribbon jump exist', front.includes('id="nsyBand"')
-     && front.includes('href="#notseeing"'));
+  ok('the lane band and its ribbon jump exist', front.includes('id="tellBand"')
+     && front.includes('href="#thetell"'));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

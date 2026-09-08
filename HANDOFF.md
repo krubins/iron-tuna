@@ -7670,7 +7670,7 @@ no table, and the page throws nothing on either lane.
 
 ---
 
-## 67. September 2026: "What You're Not Seeing Yet", the weekly column that leads the fantasy lane
+## 67. September 2026: The Tell, the weekly column under The Desk
 
 The Weekly Fantasy lane opened with The Desk — a lead story generated every six
 hours out of D1 — and then The Pick, generated daily. Everything above the fold
@@ -7678,10 +7678,23 @@ was the board reporting on itself. Nothing on the page argued *with* the board,
 and the one question a reader actually arrives with in September is not "what
 does the ranking say" but "which of these rankings is wrong."
 
-`/not-seeing-yet` is the answer, and it is now the **first thing in the
-`#laneFantasy` pane**, above The Desk. It is the only hand-written weekly piece
-on the front page, which is why it leads: it is the only thing there that takes
-a position against the numbers the rest of the page is printing.
+`/the-tell` is the answer. It sits in `#laneFantasy` **directly under The Desk
+and above The Pick** — under the board's own generated headline, where a reader
+has just been handed a number and is best placed to hear what is inside it. It
+is the only hand-written weekly piece on the front page and the only thing
+there that takes a position against the numbers the rest of the page prints.
+
+**On the name.** It launched, for about an hour, as "What You're Not Seeing
+Yet" at `/not-seeing-yet`. The site already had `/what-they-arent-telling-you`
+(the in-season "whole board, counted" page), and two negatively-framed headline
+titles on one site is brand mush; it also opened above The Desk, which demoted
+the generated lead to second. Ken took both recommendations: it is **The Tell**,
+and it runs under the Desk. Every internal identifier was renamed with it
+(`.call.tell`, `tell-YYYY-MM-DD-N`, `var TELL`, `.tell-*`, `#thetell`,
+`tellBand`, `tools/test-the-tell.mjs`), because a `.nsy-` prefix nobody can
+expand is the kind of thing this file exists to prevent. The "tell" line under
+each entry (`<p class="who"><b>The tell:</b>`) predates the rename and now
+happens to be the column's name, which is a happy accident, not a plan.
 
 ### The premise, which is also the constraint
 
@@ -7707,10 +7720,10 @@ match the other two columns; only the words are this column's.
 
 ### Where it lives
 
-- **`not-seeing-yet.html`** (route `/not-seeing-yet`) is the **source of truth**,
+- **`the-tell.html`** (route `/the-tell`) is the **source of truth**,
   same discipline as `the-pick.html` and `play-caller-premium.html`. Static
   entries, newest edition first, no client-side rendering and no date gating.
-- Each entry is one `<article class="call nsy" id="nsy-YYYY-MM-DD-N">` carrying
+- Each entry is one `<article class="call tell" id="tell-YYYY-MM-DD-N">` carrying
   a `.cmeta` row, an `<h2>`, prose, a `<p class="cnum">` evidence row of two or
   three `<span>`s, a `<p class="who">` whose `<b>` spans are the players the
   entry commits to, and a `<p class="statline">`.
@@ -7731,7 +7744,7 @@ match the other two columns; only the words are this column's.
 
 ### The build path
 
-`node tools/build-front.mjs` extracts the column into `var NOTSEEING = [...]` in
+`node tools/build-front.mjs` extracts the column into `var TELL = [...]` in
 `front.html`, alongside STORIES/REPORTS/PLAYERS/COLUMN/PICKS, and stamps
 `data-players` back onto the column's own articles. The extractor takes the
 chip, position, team, date, headline, tell line, statline, and **`nums` — the
@@ -7745,8 +7758,8 @@ must not claim a photo.
 
 ### On the front page
 
-`#notseeing` sits at the top of `#laneFantasy` with a ribbon jump of its own,
-first in the fantasy anchor set. The band renders the newest edition only — an
+`#thetell` sits under the `.hero` in `#laneFantasy` with a ribbon jump of its
+own, second in the fantasy anchor set after Today. The band renders the newest edition only — an
 older edition still in the array is archive, and the archive lives on the
 column's page — split into two columns, **Beats his rank** and **Misses his
 rank**, because the split *is* the argument and a flat grid of six equal cards
@@ -7770,7 +7783,7 @@ authorship metadata is a claim about a person who does not exist.
 
 ### The test is the point
 
-`node tools/test-not-seeing-yet.mjs` (34 assertions, wired into CI) recomputes
+`node tools/test-the-tell.mjs` (34 assertions, wired into CI) recomputes
 **every number the column prints** from the sources the column says it read:
 touchdown share and positional rank off `PROJECTIONS` at full PPR, implied
 points and offense rank off `tools/team-market.json`. It also checks the
