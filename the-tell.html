@@ -111,8 +111,8 @@ footer.site a{color:var(--muted)}
 .edsub{color:var(--muted);font-size:15px;margin:0}
 /* The standing table is the column in one screen: six rows, the two numbers,
    the verdict. It scrolls sideways under 620px rather than crushing the cells. */
-table.ledger{display:block;overflow-x:auto;white-space:nowrap}
-table.ledger td:first-child{font-weight:700;color:var(--text)}
+table.ledger,table.grade{display:block;overflow-x:auto;white-space:nowrap}
+table.ledger td:first-child,table.grade td:first-child{font-weight:700;color:var(--text)}
 .v-up{color:var(--teal);font-weight:700}
 .v-down{color:var(--danger);font-weight:700}
 .v-split{color:var(--goldink);font-weight:700}
@@ -158,6 +158,8 @@ table.ledger td:first-child{font-weight:700;color:var(--text)}
 
 <div class="eyebrow" id="entries">The board</div>
 
+<div class="entries">
+
 <div class="edhead" id="ed-2026-09-08">
   <!-- Dated, not numbered. What NFL week it is comes from /api/season off the
        real schedule (see it-season.js), and a week printed into static markup
@@ -179,7 +181,6 @@ table.ledger td:first-child{font-weight:700;color:var(--text)}
 </table>
 <p class="tnote">Ranks are positional finish on Iron Tuna&rsquo;s committed 2026 projections at full PPR. Offense is the betting market&rsquo;s implied points-per-game rank, 1 to 32.</p>
 
-<div class="entries">
 
 <article class="call tell" id="tell-2026-09-08-1" data-players="chase-brown">
 <div class="cmeta"><span class="chip up">Beats his rank</span><span class="cpos">RB</span><span class="cteam">CIN</span><span class="cdate">Sep 8</span></div>
