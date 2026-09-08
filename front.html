@@ -789,35 +789,60 @@ img{max-width:100%}
 .fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: #97a5a0; text-transform: none; letter-spacing: .01em }
 .fp-clock .its-note { flex: 1 }
 .fp-clock .its-next { margin-left: auto }
-.fp-hero { padding: 30px 0 36px }
+.fp-hero { padding: 34px 0 46px }
 .fp-h1 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(40px, 6.4vw, 84px); line-height: 0.98; letter-spacing: .015em; text-transform: uppercase; margin: 14px 0 0 }
 .fp-h1 span { display: block }
 .fp-h1 .fp-accent { color: var(--teal, #2dd4a3) }
-.fp-hero-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(18px, 3vw, 48px); align-items: end; margin-top: 24px }
-.fp-lede { font-size: 17px; line-height: 27px; margin: 0; max-width: 60ch }
+/* The lede sits under the headline and the buttons under the lede, all on the
+   same left edge. The muted grey is the band's secondary ink (.hb-dek), so the
+   claim keeps the white and the paragraph does not compete with it. */
+.fp-lede { font-size: 17.5px; line-height: 28px; margin: 20px 0 0; max-width: 58ch; color: #b3c1bd }
+.fp-hero .hb-ctas { margin-top: 26px }
 
 .fp-sec { padding: 0 0 clamp(30px, 4vw, 54px) }
 .fp-fine { margin: 12px 0 0; font-size: 13px; line-height: 21px; opacity: .72 }
 
-.fp-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); border: 1px solid var(--line, #e3e8ec); border-radius: 12px; overflow: hidden }
-.fp-lane { display: flex; flex-direction: column; padding: 22px 22px 20px; border-right: 1px solid var(--line, #e3e8ec); color: inherit; text-decoration: none }
-.fp-lane:last-child { border-right: 0 }
-.fp-lane:hover { background: rgba(14, 124, 99, .05); text-decoration: none }
-.fp-lane-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; opacity: .7 }
-.fp-lane-meta b { color: var(--brand, #0e7c63) }
-.fp-lane h3 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: .02em; text-transform: uppercase; margin: 14px 0 0 }
-.fp-lane p { font-size: 14.5px; line-height: 23px; margin: 12px 0 0; flex: 1; opacity: .86 }
-.fp-reading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line, #e3e8ec) }
-.fp-reading-k { font-size: 13px; line-height: 19px; opacity: .8 }
-.fp-reading-v { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 26px; line-height: 1; letter-spacing: .02em; white-space: nowrap; font-variant-numeric: tabular-nums }
-.fp-lane-go { display: block; margin-top: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--brand, #0e7c63) }
+/* ── the lead story plate, on light ──────────────────────────────────────
+   Everything inside carries .hb-* classes written for the dark hero band, so
+   each colour is restated here against the page's ink scale. Nothing below
+   changes the dark band's own rendering: every selector is scoped to the
+   plate. */
+.fp-lead-plate { border: 1px solid var(--line, #e1e7ea); border-radius: 14px; background: var(--card, #fff); padding: clamp(18px, 2.6vw, 28px); box-shadow: 0 10px 30px rgba(15, 23, 25, .05) }
+.fp-lead-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap }
+.fp-lead-kicker { font-size: 10.5px; font-weight: 800; letter-spacing: .17em; text-transform: uppercase; color: var(--brand, #0e7c63) }
+.fp-lead-plate .hb-week { color: var(--ink-3, #6d7c86) }
+.fp-lead-plate .hb-week b { color: var(--ink, #0f1719) }
+.fp-lead-plate .hb-week .live { color: var(--value-red, #c8322b) }
+.fp-lead-dek { font-size: 16px; line-height: 26px; margin: 10px 0 0; color: var(--ink-2, #3f4e58); max-width: 74ch }
+.fp-lead-plate .hb-teasers { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 18px }
+.fp-lead-plate .hb-card { background: var(--bg, #f4f7f7); border-color: var(--line, #e1e7ea); padding: 15px 16px }
+.fp-lead-plate .hb-card i { color: var(--brand, #0e7c63) }
+.fp-lead-plate .hb-card i.fade { color: var(--value-red, #c8322b) }
+.fp-lead-plate .hb-card i.td { color: var(--gold-ink, #7a5300) }
+.fp-lead-plate .hb-card b { color: var(--ink, #0f1719); font-size: 16px }
+.fp-lead-plate .hb-card small { color: var(--ink-3, #6d7c86) }
+.fp-lead-plate .hb-card .hb-row { color: var(--ink-2, #3f4e58); border-top-color: var(--line, #e1e7ea) }
+.fp-lead-plate .hb-card .hb-row span:last-child { color: var(--ink, #0f1719) }
+.fp-lead-plate .hb-card .hb-row.big span:last-child { color: var(--gold-ink, #7a5300) }
+.fp-lead-plate .hb-card .hb-basis { color: var(--ink-3, #6d7c86) }
+.fp-lead-plate .hb-note { color: var(--ink-2, #3f4e58); max-width: 74ch; margin-top: 14px }
+.fp-lead-plate .hb-note b { color: var(--ink, #0f1719) }
 
 .fp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: clamp(18px, 3vw, 44px) }
 .fp-cols .fp-n { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 42px; line-height: 1; color: var(--brand, #0e7c63) }
 .fp-cols h3 { font-size: 19px; margin: 8px 0 0 }
 .fp-cols p { font-size: 14.5px; line-height: 23px; margin: 8px 0 0; opacity: .86 }
 
-.fp-gap-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px }
+.fp-gap-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px }
+/* Gold is the one conversion colour on this page (Save my league). A reading
+   link that is merely the next page gets the brand green, not a second gold. */
+.hb-btn.brand { background: var(--brand, #0e7c63); color: #fff }
+.hb-btn.brand:hover { background: var(--brand-dark, #0a6151); filter: none }
+/* .hb-btn.ghost is a white border and white type — correct on the hero band,
+   invisible on the light plates down the page. Restate it wherever it lands on
+   light: the lead story's footer and the closing band both used it. */
+.fp-lead-plate .hb-btn.ghost, .fp-close .hb-btn.ghost { border-color: var(--line, #e1e7ea); color: var(--ink, #0f1719); background: var(--card, #fff) }
+.fp-lead-plate .hb-btn.ghost:hover, .fp-close .hb-btn.ghost:hover { border-color: var(--brand, #0e7c63); color: var(--brand, #0e7c63); filter: none }
 
 .fp-draft-band { border-top: 3px solid var(--line, #e3e8ec); margin-top: 8px; padding-top: 8px }
 .fp-draft { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(18px, 3vw, 40px); align-items: center }
@@ -832,9 +857,8 @@ img{max-width:100%}
 .foot-21 { font-size: 12.5px; line-height: 1.6; opacity: .8; margin: 14px 0 10px; max-width: 92ch }
 
 @media (max-width: 760px) {
-  .fp-lane { border-right: 0; border-bottom: 1px solid var(--line, #e3e8ec) }
-  .fp-lane:last-child { border-bottom: 0 }
   .fp-close .hb-ctas { justify-content: flex-start }
+  .fp-hero .hb-ctas .hb-btn { flex: 1 1 100%; text-align: center }
 }
 </style>
 
@@ -862,85 +886,52 @@ img{max-width:100%}
 </div></div>
 
 <section class="hero-band" id="heroBand">
-  <!-- Two halves of the year, two equal columns. LEFT is the draft product,
-       unchanged in copy and in every call to action. RIGHT is the in-season
-       product: the week from /api/season, the two buttons, and three cards
-       read off the same day's odds digest the Vegas section below prints from.
-       The cards are REAL DATA OR NOTHING: a card whose numbers the digest does
-       not carry is not rendered, and no example name is ever shown. On a phone
-       the columns stack, draft first; in the regular season the clock flips
-       them so the week is what a reader lands on (see [data-season="in"]). -->
+  <!-- One claim, one paragraph, two buttons, left-aligned and stacked. The band
+       used to hold two competing columns (the draft product and an in-season
+       panel) and then a two-cell row that parked the buttons in dead space to
+       the right of the paragraph. There is one argument on the page now and the
+       hero makes it; the products are linked from the masthead, the lead story
+       below and the closing band. The NFL clock strip above still comes from
+       /api/season. Gold is the primary button and nothing else in this band,
+       which is why the eyebrow is teal like the accent line. -->
   <div class="wrap"><div class="fp-clock its-strip" data-season-strip></div></div>
-  <div class="wrap fp-hero" id="heroIntel">
-    <span class="hb-eyebrow intel">Fantasy &middot; DFS &middot; Wagers &mdash; read against the betting market</span>
-    <h1 class="fp-h1"><span>Three prices on every player.</span><span class="fp-accent">Read them before kickoff.</span></h1>
-    <div class="fp-hero-row">
-      <p class="fp-lede">Your league, the daily-fantasy salary and the sportsbook each put a number on the same player. Iron Tuna reads the market first, the consensus second, and your league&rsquo;s scoring on top of both &mdash; then prints where they disagree. Free, no signup.</p>
-      <div class="hb-ctas">
-        <a class="hb-btn gold" href="/in-season#league">Save my league</a>
-        <a class="hb-btn ghost" href="/in-season">This week&rsquo;s readings &rarr;</a>
-      </div>
+  <div class="wrap fp-hero">
+    <span class="hb-eyebrow">Fantasy &middot; DFS &middot; Wagers</span>
+    <h1 class="fp-h1"><span>Analytics beats intuition.</span><span class="fp-accent">Every time.</span></h1>
+    <p class="fp-lede">Iron Tuna uses better market intel, advanced analytics, and AI analysis to give you the edge you need.</p>
+    <div class="hb-ctas">
+      <a class="hb-btn gold" href="/in-season#league">Save my league</a>
+      <a class="hb-btn ghost" href="/in-season">This week&rsquo;s readings &rarr;</a>
     </div>
   </div>
 </section>
 
-<!-- ── 01 · the three lanes ────────────────────────────────────────────────
-     One bordered plate, three cells, each a single link carrying the one
-     reading its lane exists to produce. Readings are fetched; a lane that
-     cannot be read says so in its own cell rather than going missing, so the
-     plate is always three lanes wide. -->
-<section class="fp-sec" aria-labelledby="lanesHead">
-  <div class="wrap">
-    <div class="sec-head"><h2 id="lanesHead">This week, in three lanes</h2><a class="sec-more" href="/in-season">The whole section &rarr;</a></div>
-    <div class="fp-lanes" id="fpLanes">
-      <a class="fp-lane" href="/fantasy">
-        <div class="fp-lane-meta"><b>01</b><span>Fantasy</span></div>
-        <h3>Fantasy</h3>
-        <p>Your league, re-scored every week. Rankings across four horizons, start/sit, waiver prices in your FAAB dollars, and the trades both sides say yes to.</p>
-        <div class="fp-reading"><span class="fp-reading-k" data-lane-k="fantasy">Reading the market&hellip;</span><span class="fp-reading-v" data-lane-v="fantasy">&mdash;</span></div>
-        <span class="fp-lane-go">Open Fantasy &rarr;</span>
-      </a>
-      <a class="fp-lane" href="/dfs">
-        <div class="fp-lane-meta"><b>02</b><span>DFS</span></div>
-        <h3>DFS</h3>
-        <p>One slate, one set of lines, one cap. Every DraftKings and FanDuel salary read against market-implied points, plus a pick&rsquo;em board that shows where the model leans off the line.</p>
-        <div class="fp-reading"><span class="fp-reading-k" data-lane-k="dfs">Reading the slate&hellip;</span><span class="fp-reading-v" data-lane-v="dfs">&mdash;</span></div>
-        <span class="fp-lane-go">Open DFS &rarr;</span>
-      </a>
-      <a class="fp-lane" href="/wagers">
-        <div class="fp-lane-meta"><b>03</b><span>Wagers</span></div>
-        <h3>Wagers</h3>
-        <p>Where the model and the market disagree: game lines, props and the TD board, an opinion column kept on the record, and prediction-market contracts beside the model when they open. 21+.</p>
-        <div class="fp-reading"><span class="fp-reading-k" data-lane-k="wagers">Reading the lines&hellip;</span><span class="fp-reading-v" data-lane-v="wagers">&mdash;</span></div>
-        <span class="fp-lane-go">Open Wagers &rarr;</span>
-      </a>
-    </div>
-    <p class="fp-fine">Readings hold for the current week and re-score to your league once it is saved. Wagers surfaces are 21+ and informational; Iron Tuna is not a sportsbook.</p>
-  </div>
-</section>
+<!-- ── 01 · the lead story: where the two boards disagree ────────────────
+     This is the front page's lead. It replaced a three-lane navigation plate
+     that carried one reading per product and no argument; the products are in
+     the masthead. The cards are the market-vs-consensus read, on the same
+     renderer and the same day's digest the Vegas section further down prints
+     from, so the lead and that section can never name different players for the
+     same day. Real data or nothing: a card the digest cannot fill is not
+     drawn, and when there is no case the note says so.
 
-<!-- ── 02 · how the number is made ─────────────────────────────────────── -->
-<section class="fp-sec" aria-labelledby="howHead">
-  <div class="wrap">
-    <div class="sec-head"><h2 id="howHead">How the number is made</h2></div>
-    <div class="fp-cols">
-      <div><span class="fp-n">1</span><h3>The market</h3><p>Game totals, spreads and player props, pulled on a schedule and cached. A sportsbook has its own money behind a number and corrects it in public within minutes.</p></div>
-      <div><span class="fp-n">2</span><h3>The consensus</h3><p>Expert projections, blended toward the market where a book prices the player and left alone where none does. The gap between the two is printed, never hidden.</p></div>
-      <div><span class="fp-n">3</span><h3>Your league</h3><p>Scoring, roster slots and FAAB budget, saved once in this browser. Every board restates its numbers in your points instead of somebody else&rsquo;s.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ── 03 · where the experts and the market disagree most ─────────────────
-     The cards here are the ones the hero used to carry, on the same renderer
-     and the same digest. They were always a market-vs-consensus read; they were
-     never a hero. -->
+     The plate is a LIGHT surface. The .hb-* card and button styles were written
+     for the dark hero band (white type, white borders, #8b9c97 notes), and they
+     were rendering white-on-white here. The overrides below restate every one
+     of those colours against the page's ink scale. -->
 <section class="fp-sec" aria-labelledby="gapHead">
   <div class="wrap">
-    <div class="sec-head"><h2 id="gapHead">Where the experts and the market disagree most</h2><span class="hb-week" id="hbWeek" hidden></span></div>
-    <div class="hb-teasers" id="hbTeasers" hidden></div>
-    <p class="hb-note" id="hbTeaserNote">Reading today&rsquo;s odds&hellip;</p>
-    <div class="fp-gap-foot"><a class="hb-btn ghost" href="/fantasy">Full board &rarr;</a><a class="hb-btn ghost" href="/vegas-edge">Vegas Edge &rarr;</a></div>
+    <div class="sec-head"><h2 id="gapHead">Where the experts and the market disagree most</h2><a class="sec-more" href="/vegas-edge">The whole board &rarr;</a></div>
+    <div class="fp-lead-plate">
+      <div class="fp-lead-top">
+        <span class="fp-lead-kicker">Today&rsquo;s reading</span>
+        <span class="hb-week" id="hbWeek" hidden></span>
+      </div>
+      <p class="fp-lead-dek">The sportsbook and the projection consensus put two different numbers on the same player. These are the widest arguments on today&rsquo;s board, priced at the site&rsquo;s default league.</p>
+      <div class="hb-teasers" id="hbTeasers" hidden></div>
+      <p class="hb-note" id="hbTeaserNote">Reading today&rsquo;s odds&hellip;</p>
+      <div class="fp-gap-foot"><a class="hb-btn brand" href="/fantasy">Full board &rarr;</a><a class="hb-btn ghost" href="/vegas-edge">Vegas Edge &rarr;</a></div>
+    </div>
   </div>
 </section>
 
@@ -1116,6 +1107,16 @@ img{max-width:100%}
     <ul class="camp-list" id="campList"><li><span class="cd">Sep 6</span><a href="/auction-watch-2026-09-06">Auction Watch: September 6, 2026</a></li><li><span class="cd">Sep 5</span><a href="/auction-watch-2026-09-05">Auction Watch: September 5, 2026</a></li><li><span class="cd">Sep 4</span><a href="/auction-watch-2026-09-04">Auction Watch: September 4, 2026</a></li><li><span class="cd">Sep 3</span><a href="/auction-watch-2026-09-03">Auction Watch: September 3, 2026</a></li></ul>
   </div>
 
+  <!-- The method, one band above the close. It sat between the lead and the
+       desk, which put an explainer in front of the reporting a reader came
+       for. It sits in the main column, so it needs no .wrap of its own. -->
+  <div class="sec-head" id="method"><h2 id="howHead">How the number is made</h2></div>
+  <div class="fp-cols">
+    <div><span class="fp-n">1</span><h3>The market</h3><p>Game totals, spreads and player props, pulled on a schedule and cached. A sportsbook has its own money behind a number and corrects it in public within minutes.</p></div>
+    <div><span class="fp-n">2</span><h3>The consensus</h3><p>Expert projections, blended toward the market where a book prices the player and left alone where none does. The gap between the two is printed, never hidden.</p></div>
+    <div><span class="fp-n">3</span><h3>Your league</h3><p>Scoring, roster slots and FAAB budget, saved once in this browser. Every board restates its numbers in your points instead of somebody else&rsquo;s.</p></div>
+  </div>
+
   <div class="fp-close">
     <div>
       <h2>One save. Every board in your points.</h2>
@@ -1151,52 +1152,6 @@ img{max-width:100%}
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; Player photos &copy; NFL/ESPN</span>
 </div></footer>
 
-<script>
-/* The three lane readings on the front page. Same feeds and the same states as
- * the hub at /in-season, so the two cannot disagree about what this week says.
- * A lane whose board has not answered prints why, in place, and never a stale
- * number. */
-(function () {
-  var n1 = function (v) { return (v == null || !isFinite(v)) ? '\u2014' : Number(v).toFixed(1); };
-  var sgn = function (v) { return (v > 0 ? '+' : '') + n1(v); };
-  function put(lane, k, v) {
-    var ke = document.querySelector('[data-lane-k="' + lane + '"]');
-    var ve = document.querySelector('[data-lane-v="' + lane + '"]');
-    if (ke) ke.textContent = k;
-    if (ve) ve.textContent = v;
-  }
-  function get(p) {
-    return fetch(p, { credentials: 'omit' }).then(function (r) { return r.json(); }).catch(function () { return null; });
-  }
-  document.addEventListener('DOMContentLoaded', function () {
-    get('/api/vegas-edge').then(function (j) {
-      if (!j || !j.ok) {
-        put('fantasy', 'The board has not answered yet.', '\u2014');
-        put('wagers', 'The lines have not answered yet.', '\u2014');
-        return;
-      }
-      var top = [].concat((j.vsExperts && j.vsExperts.buys) || [], (j.vsExperts && j.vsExperts.fades) || [])
-        .filter(function (p) { return p.delta && p.delta.points != null; })
-        .sort(function (a, b) { return Math.abs(b.delta.points) - Math.abs(a.delta.points); })[0];
-      put('fantasy',
-        top ? 'Largest market edge \u00b7 ' + top.name : 'No game carries a posted line yet.',
-        top ? sgn(top.delta.points) : '\u2014');
-      var g = (j.gameEnvironments || []).filter(function (x) { return x.gap != null; })
-        .sort(function (a, b) { return Math.abs(b.gap) - Math.abs(a.gap); })[0];
-      put('wagers',
-        g ? 'Largest total gap \u00b7 ' + g.game : 'No game carries both a posted and a model total yet.',
-        g ? sgn(g.gap) : '\u2014');
-    });
-    get('/api/dfs?site=dk').then(function (j) {
-      var best = j && j.ok ? ((j.boards && j.boards.bestVegasValues) || [])[0] : null;
-      put('dfs',
-        best ? 'Best Vegas value \u00b7 ' + best.name + ', ' + best.team
-             : 'No DraftKings salaries are posted for this week yet.',
-        best ? 'VVS ' + best.vegasValueScore : '\u2014');
-    });
-  });
-})();
-</script>
 <script src="/it-league.js"></script>
 <script src="/it-season.js" defer></script>
 <script src="/player-search.js" defer></script>
@@ -2096,22 +2051,10 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     });
   }
   hbClock();
-  // The Weekly Fantasy Intel panel is one target. A click that lands on a
-  // link or button inside it goes where that link goes; a click anywhere else
-  // on the box opens the in-season front page, the same place the gold button
-  // does. A drag that selected text is left alone, and a modifier-click opens
-  // it the way the reader asked for.
-  (function () {
-    var panel = document.getElementById('heroIntel');
-    if (!panel) return;
-    panel.addEventListener('click', function (ev) {
-      if (ev.defaultPrevented || ev.button !== 0) return;
-      if (ev.target.closest && ev.target.closest('a,button,input,select,textarea,label')) return;
-      try { if (window.getSelection && String(window.getSelection())) return; } catch (e) {}
-      if (ev.metaKey || ev.ctrlKey || ev.shiftKey) { window.open('/weekly-intel', '_blank', 'noopener'); return; }
-      window.location.href = '/weekly-intel';
-    });
-  })();
+  // The panel-wide click target that used to live here died with the panel.
+  // #heroIntel had become the whole hero <div>, so a click on any empty pixel
+  // of the band — beside the headline, under the buttons — navigated to
+  // /weekly-intel. The hero's links are the hero's only targets now.
   // ── the day's dateline ────────────────────────────────────────────────────
   // Twelve cases at one every six hours is three days of rotation, so the case
   // on screen cannot by itself tell a reader what changed TODAY. The digest
