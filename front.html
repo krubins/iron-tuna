@@ -36,7 +36,10 @@
    mean what it says everywhere, including on the sections that hide themselves
    when their feed has nothing to show. */
 [hidden]{display:none !important}
-html{scroll-behavior:smooth}
+/* Two sticky bars now sit at the top of the page — the section ribbon and the
+   lane tabs under it — so an anchor jump has to stop clear of both or it lands
+   with the section head hidden behind them. */
+html{scroll-behavior:smooth;scroll-padding-top:106px}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 img{max-width:100%}
@@ -89,6 +92,16 @@ img{max-width:100%}
 .ribbon a:hover{color:var(--ink);border-bottom-color:var(--brand)}
 .ribbon .rb-spacer{flex:1}
 .ribbon a.rb-dim{color:var(--ink-3);font-weight:700}
+/* One anchor set per lane. setSectionVisible() already owns the `hidden`
+   attribute on these links — it drops the jump for a section whose feed came
+   back empty — so the lane switch cannot use that attribute too without the
+   two writers overwriting each other. It sets data-lane on the ribbon and CSS
+   does the rest, which also leaves a section hidden for being empty hidden
+   when its lane comes back. */
+.ribbon[data-lane="dfs"] a[data-lane="fantasy"],
+.ribbon[data-lane="fantasy"] a[data-lane="dfs"]{display:none}
+/* Auction or snake is a question about a draft. It has no answer on a slate. */
+.ribbon[data-lane="dfs"] .ed-switch{display:none}
 
 /* ── section headers ── */
 .sec-head{display:flex;align-items:baseline;gap:14px;margin:34px 0 14px;border-bottom:2px solid var(--ink);padding-bottom:8px;position:relative}
@@ -860,6 +873,59 @@ img{max-width:100%}
   .fp-close .hb-ctas { justify-content: flex-start }
   .fp-hero .hb-ctas .hb-btn { flex: 1 1 100%; text-align: center }
 }
+
+/* ── lane tabs: Weekly Fantasy | DFS ───────────────────────────────────────
+   Two tabs, each half the screen, sitting under the sticky ribbon and above
+   The Desk. They swap the whole middle of the page between the two things a
+   reader is here for in season: their own league's week, and the one slate.
+   The panes are two siblings in <main>; nothing is fetched for DFS until the
+   DFS tab is opened for the first time, so the fantasy reader pays nothing
+   for a lane they never look at. */
+.lane-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--mast); border-bottom: 1px solid var(--line);
+  position: sticky; top: 44px; z-index: 39 }
+.lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: #8d99a1;
+  font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-size: clamp(19px, 2.4vw, 26px); letter-spacing: .1em;
+  line-height: 1; text-transform: uppercase; padding: 15px 10px 12px; border-bottom: 4px solid transparent; transition: color .12s, background .12s }
+.lane-tab + .lane-tab { border-left: 1px solid rgba(255, 255, 255, .12) }
+.lane-tab:hover { color: #fff; background: rgba(255, 255, 255, .06) }
+/* --brand is a dark green; on the black band it reads as no underline at all,
+   so the selected tab takes the light --teal the hero band already uses. */
+.lane-tab[aria-selected="true"] { color: #fff; background: rgba(45, 212, 163, .12); border-bottom-color: var(--teal) }
+.lane-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: -4px }
+
+/* ── the DFS lane ──
+   Its own numbers, off /api/dfs, the same slate /dfs reads. Every block draws
+   only what the feed actually returned: a table with no rows is hidden and its
+   note says why, because an empty board that looks like a loaded one is the
+   worst thing this page could print. */
+.dfs-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 14px 0 6px }
+.dfs-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--card) }
+.dfs-seg button { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 7px 13px }
+.dfs-seg button + button { border-left: 1px solid var(--line) }
+.dfs-seg button:hover { color: var(--brand) }
+.dfs-seg button[aria-pressed="true"] { background: var(--ink); color: #fff }
+.dfs-note { font-size: 12.5px; color: var(--ink-3); margin: 6px 0 0 }
+.dfs-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 16px 0 6px }
+.dfs-card { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 14px 16px }
+.dfs-card .dfs-tag { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand) }
+.dfs-card h3 { font-size: 17px; line-height: 1.2; margin: 6px 0 4px }
+.dfs-card p { font-size: 13px; line-height: 19px; color: var(--ink-2) }
+.dfs-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin-top: 14px }
+.dfs-table { width: 100%; border-collapse: collapse; font-size: 13.5px }
+.dfs-table th, .dfs-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap }
+.dfs-table thead th { font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); background: var(--bg) }
+.dfs-table tbody tr:last-child td { border-bottom: 0 }
+.dfs-table .num { text-align: right; font-variant-numeric: tabular-nums }
+.dfs-table small { display: block; font-size: 11px; font-weight: 600; color: var(--ink-3) }
+.dfs-buy { color: var(--brand); font-weight: 800 }
+.dfs-fade { color: var(--value-red); font-weight: 800 }
+.dfs-stacks { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 14px }
+.dfs-stack { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 14px 16px }
+.dfs-stack h3 { font-size: 15px; margin-bottom: 6px }
+.dfs-stack p { font-size: 13px; line-height: 20px; color: var(--ink-2); margin-top: 6px }
+.dfs-empty { font-size: 13.5px; color: var(--ink-3); margin-top: 12px }
+@media (max-width: 560px) { .lane-tab { letter-spacing: .05em; padding: 13px 6px 10px } }
 </style>
 
 <script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Iron Tuna","url":"https://irontuna.com/","description":"Analytics beats intuition, every time. Iron Tuna combines market intel, advanced analytics and AI analysis: the betting market read first, the consensus second, and your league’s scoring on top of both. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
@@ -935,18 +1001,25 @@ img{max-width:100%}
   </div>
 </section>
 
-<div class="ribbon"><div class="wrap">
+<div class="ribbon" data-lane="fantasy"><div class="wrap">
   <!-- Ribbon order tracks the page order. The Build moved up because it is the
        proof the rest of the page is arguing for — a solved roster with the money
        on it — and it was sitting eight screens down on a phone behind two
        sections of prose. -->
-  <a href="#today">Today</a>
-  <a href="#build">The Build</a>
-  <a href="#thepick">The Pick</a>
-  <a href="#vegas">Vegas</a>
-  <a href="#positions">Position Intel</a>
-  <a href="#allocation">Allocation</a>
-  <a href="#camp">Camp</a>
+  <!-- The ribbon carries one set of anchors per lane. A link to a section the
+       lane tabs have hidden scrolls to nothing, so the DFS set replaces the
+       fantasy set rather than sitting beside it. -->
+  <a href="#today" data-lane="fantasy">Today</a>
+  <a href="#build" data-lane="fantasy">The Build</a>
+  <a href="#thepick" data-lane="fantasy">The Pick</a>
+  <a href="#vegas" data-lane="fantasy">Vegas</a>
+  <a href="#positions" data-lane="fantasy">Position Intel</a>
+  <a href="#allocation" data-lane="fantasy">Allocation</a>
+  <a href="#camp" data-lane="fantasy">Camp</a>
+  <a href="#dfsSlate" data-lane="dfs">The Slate</a>
+  <a href="#dfsValues" data-lane="dfs">Vegas Values</a>
+  <a href="#dfsStacks" data-lane="dfs">Game Stacks</a>
+  <a href="#dfsTd" data-lane="dfs">TD Board</a>
   <span class="rb-spacer"></span>
   <!-- Player lookup. It lives in the ribbon because the ribbon is the one band
        that stays on screen the whole way down the page, so "look a player up"
@@ -960,11 +1033,23 @@ img{max-width:100%}
            role="combobox" aria-expanded="false" aria-controls="rbSearchList" aria-autocomplete="list"
            data-player-search="ribbon">
   </form>
-  <span class="ed-switch" id="edSwitch" role="group" aria-label="Choose your draft format">
+  <span class="ed-switch" id="edSwitch" data-lane="fantasy" role="group" aria-label="Choose your draft format">
     <a href="/?fmt=auction" data-ed="auction">Auction</a>
     <a href="/?fmt=snake" data-ed="snake">Snake</a>
   </span>
 </div></div>
+
+<!-- ── the lane tabs ─────────────────────────────────────────────────────────
+     Two tabs across the page, half the screen each: the reader's own league's
+     week, and the one slate. They sit under the sticky ribbon and above The
+     Desk, and they swap the middle of the page rather than navigating, so a
+     reader can look at the other lane and come straight back. The choice is
+     kept in the URL (?lane=dfs) and in this browser, so a shared link opens on
+     the lane it was shared from. -->
+<div class="lane-tabs" role="tablist" aria-label="Choose a lane">
+  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Weekly Fantasy</button>
+  <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
+</div>
 
 <main class="wrap">
   <!-- The two tool shelves that stood here — six "Before the draft" cards and
@@ -975,6 +1060,8 @@ img{max-width:100%}
        below closes on; the middle of the page is for the desk. Every
        destination they held is still linked from the footer, so nothing on the
        site lost its link from the homepage. -->
+
+  <div class="lane-pane" id="laneFantasy" role="tabpanel" aria-labelledby="laneTabFantasy">
 
   <div class="sec-head" id="today"><h2>The Desk</h2><a class="sec-more" href="/auction-insights">Every insight &rarr;</a></div>
   <div class="hero">
@@ -1106,6 +1193,62 @@ img{max-width:100%}
     <div class="camp-feat" id="campFeat"><span><span class="badge badge-pos">Latest report</span></span><h3><a href="/auction-watch-2026-09-07">Auction Watch: September 7, 2026</a></h3><p>Verified, auction-relevant player signals from September 7: James Conner opens the season on IR while Jeremiyah Love's ankle stays a coin flip in Arizona, TreVeyon Henderson's ankle clouds his Patriots Week 1 status, Christian McCaffrey sits out a Melbourne practice, and Tampa Bay's receivers trend healthy.</p><a class="lead-link" href="/auction-watch-2026-09-07">Read the report &rarr;</a></div>
     <ul class="camp-list" id="campList"><li><span class="cd">Sep 6</span><a href="/auction-watch-2026-09-06">Auction Watch: September 6, 2026</a></li><li><span class="cd">Sep 5</span><a href="/auction-watch-2026-09-05">Auction Watch: September 5, 2026</a></li><li><span class="cd">Sep 4</span><a href="/auction-watch-2026-09-04">Auction Watch: September 4, 2026</a></li><li><span class="cd">Sep 3</span><a href="/auction-watch-2026-09-03">Auction Watch: September 3, 2026</a></li></ul>
   </div>
+
+  </div><!-- /#laneFantasy -->
+
+  <!-- ── the DFS lane ──────────────────────────────────────────────────────
+       Everything here reads one call to /api/dfs, the same slate /dfs prints
+       from, so the front page and the sheet can never name different players
+       for the same slate. The call is not made until the tab is first opened.
+       Nothing is drawn from an empty answer: a board with no rows is hidden
+       and the note says which site had no salaries loaded. -->
+  <div class="lane-pane" id="laneDfs" role="tabpanel" aria-labelledby="laneTabDfs" hidden>
+
+  <div class="sec-head" id="dfsSlate"><h2>The Slate</h2><a class="sec-more" href="/dfs">The whole DFS sheet &rarr;</a></div>
+  <p class="sec-sub">Daily fantasy is the purest version of what this site already does: no rest of season to project, only the games on the board, what the market expects out of them, and a salary cap that is an auction budget by another name.</p>
+  <div class="dfs-controls">
+    <div class="dfs-seg" id="dfsSite" role="group" aria-label="Site">
+      <button type="button" data-site="dk" aria-pressed="true">DraftKings</button>
+      <button type="button" data-site="fd" aria-pressed="false">FanDuel</button>
+    </div>
+    <span class="dfs-note" id="dfsCap"></span>
+  </div>
+  <p class="dfs-note" id="dfsNote">Reading the slate&hellip;</p>
+  <div class="dfs-cards" id="dfsCards"></div>
+
+  <div class="sec-head" id="dfsValues"><h2>Vegas Values</h2><a class="sec-more" href="/dfs#values">Every row &rarr;</a></div>
+  <p class="sec-sub">The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate&rsquo;s median: 100 is an ordinary price, 130 is a bargain.</p>
+  <div class="dfs-scroll" id="dfsValuesWrap" hidden>
+    <table class="dfs-table" id="dfsValuesTable">
+      <thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Vegas</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">VVS</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="dfs-empty" id="dfsValuesEmpty">Reading the board&hellip;</p>
+
+  <div class="sec-head" id="dfsStacks"><h2>Game Stacks</h2><a class="sec-more" href="/dfs#stacks">Every game &rarr;</a></div>
+  <p class="sec-sub">The highest-total games on the slate, each side&rsquo;s quarterback with his best-priced pass catchers, and the bring-back from the other side.</p>
+  <div class="dfs-stacks" id="dfsStacksWrap"></div>
+  <p class="dfs-empty" id="dfsStacksEmpty">Reading the game lines&hellip;</p>
+
+  <div class="sec-head" id="dfsTd"><h2>TD Board</h2><a class="sec-more" href="/dfs#td">The whole board &rarr;</a></div>
+  <p class="sec-sub">Players by the probability of scoring at least once, with the salary it costs to own that chance. Quoted where a book prices it, derived where none does, and labelled either way.</p>
+  <div class="dfs-scroll" id="dfsTdWrap" hidden>
+    <table class="dfs-table" id="dfsTdTable">
+      <thead><tr><th>#</th><th>Player</th><th class="num">Salary</th><th class="num">Anytime TD</th><th class="num">TD % per $1K</th><th class="num">Team total</th><th>Basis</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="dfs-empty" id="dfsTdEmpty">Reading the touchdown market&hellip;</p>
+
+  <div class="dfs-cards">
+    <div class="dfs-card"><h3><a href="/dfs#builder">Lineup Builder</a></h3><p>Build lineups against the cap on Iron Tuna, Vegas or consensus points, with stacks, bring-backs and a per-team cap.</p></div>
+    <div class="dfs-card"><h3><a href="/dfs?site=pk">Pick&rsquo;em board</a></h3><p>Higher or lower on a posted stat line, read against the sportsbook median the model disagrees with.</p></div>
+    <div class="dfs-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
+    <div class="dfs-card"><h3><a href="/wagers">Wagers</a></h3><p>Every game with its line beside Iron Tuna&rsquo;s own total, the props and the TD board. 21+.</p></div>
+  </div>
+
+  </div><!-- /#laneDfs -->
 
   <!-- The method, one band above the close. It sat between the lead and the
        desk, which put an explainer in front of the reporting a reader came
@@ -3001,6 +3144,226 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // which is the cheapest way to be sure the two paths agree.
   applyEdition();
 
+})();
+</script>
+
+<!-- ══════════════════ the lane tabs, and the DFS lane under one of them ══════
+     A tab bar rather than two pages: the fantasy lane and the DFS lane are the
+     same reader on the same week, and making them navigate loses the scroll
+     position and the fetches every time they look across. The DFS lane fetches
+     nothing until it is opened for the first time, and then once per site.
+
+     This is a separate block from the main front-page script above on purpose.
+     That script paints the fantasy lane and nothing in here needs anything from
+     it; keeping them apart means a failure on either side cannot take the other
+     down, and the lane switch keeps working even if a feed throws. -->
+<script>
+(function () {
+  var LANES = { fantasy: 1, dfs: 1 };
+  var tabs = [].slice.call(document.querySelectorAll('.lane-tab'));
+  var ribbon = document.querySelector('.ribbon');
+  var panes = { fantasy: document.getElementById('laneFantasy'), dfs: document.getElementById('laneDfs') };
+  if (!tabs.length || !panes.fantasy || !panes.dfs) return;
+
+  var lane = 'fantasy';
+
+  // Where the opening lane comes from, in order: an explicit ?lane=, a hash
+  // that names a section inside one of the panes (so a shared deep link lands
+  // on the section it names rather than on a blank page), then the last lane
+  // this browser chose.
+  function opening() {
+    try {
+      var q = new URLSearchParams(location.search).get('lane');
+      if (q && LANES[q]) return q;
+      var hash = (location.hash || '').replace('#', '');
+      if (hash) {
+        var target = document.getElementById(hash);
+        if (target && panes.dfs.contains(target)) return 'dfs';
+        if (target && panes.fantasy.contains(target)) return 'fantasy';
+      }
+      var saved = localStorage.getItem('it.lane');
+      if (saved && LANES[saved]) return saved;
+    } catch (err) {}
+    return 'fantasy';
+  }
+
+  function setLane(next, opts) {
+    if (!LANES[next]) return;
+    lane = next;
+    panes.fantasy.hidden = next !== 'fantasy';
+    panes.dfs.hidden = next !== 'dfs';
+    tabs.forEach(function (t) {
+      var on = t.getAttribute('data-lane') === next;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+    });
+    if (ribbon) ribbon.setAttribute('data-lane', next);
+    try { localStorage.setItem('it.lane', next); } catch (err) {}
+    // The ribbon's overflow fade is measured off the row's width, and the row
+    // just changed length. Its listener is inside the block above; a resize is
+    // the one handle it exposes.
+    try { window.dispatchEvent(new Event('resize')); } catch (err) {}
+    if (!opts || opts.url !== false) {
+      try {
+        var u = new URL(location.href);
+        if (next === 'fantasy') u.searchParams.delete('lane'); else u.searchParams.set('lane', next);
+        u.hash = '';
+        history.replaceState(null, '', u.toString());
+      } catch (err) {}
+    }
+    if (next === 'dfs') loadSlate();
+  }
+
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () { setLane(t.getAttribute('data-lane')); });
+    // Left/right move between tabs, which is what a tablist is expected to do
+    // once the unselected tab is out of the tab order.
+    t.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
+      ev.preventDefault();
+      var i = tabs.indexOf(t), n = tabs[(i + (ev.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      n.focus();
+      setLane(n.getAttribute('data-lane'));
+    });
+  });
+
+  // A ribbon jump into the other lane opens that lane first, or it scrolls to
+  // a section that is display:none.
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('a[href^="#"]');
+    if (!a) return;
+    var target = document.getElementById(a.getAttribute('href').slice(1));
+    if (!target) return;
+    var want = panes.dfs.contains(target) ? 'dfs' : panes.fantasy.contains(target) ? 'fantasy' : null;
+    if (want && want !== lane) setLane(want);
+  });
+
+  // ── the slate ────────────────────────────────────────────────────────────
+  var $ = function (id) { return document.getElementById(id); };
+  var e = function (v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; };
+  var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
+  var money = function (v) { return v == null || !isFinite(v) ? '—' : '$' + Number(v).toLocaleString('en-US'); };
+  var CAPS = { dk: 'Classic salary cap · $50,000.', fd: 'Classic salary cap · $60,000.' };
+  var site = 'dk', slates = {}, pending = false;
+
+  function delta(d) {
+    if (!d) return '—';
+    var cls = /BUY|HIGHER/.test(d.classification) ? 'dfs-buy' : /FADE|LOWER/.test(d.classification) ? 'dfs-fade' : '';
+    return '<span class="' + cls + '">' + e(d.classification) + (d.points != null ? ' ' + (d.points > 0 ? '+' : '') + d.points : '') + '</span>';
+  }
+
+  function cards(s) {
+    var on = (s.players || []).filter(function (p) { return p.onBoard; });
+    var best = (s.boards && s.boards.bestVegasValues || [])[0];
+    var fade = (s.boards && s.boards.expensiveFades || [])[0];
+    var card = function (tag, head, body) { return '<div class="dfs-card"><span class="dfs-tag">' + tag + '</span><h3>' + head + '</h3><p>' + body + '</p></div>'; };
+    $('dfsCards').innerHTML = [
+      card('Slate', e(s.label) + ' · Week ' + e(s.week), on.length + ' priced players on the board, cap ' + money(s.cap) + '.'),
+      card('Median value', n1(s.medianVegasPerK) + ' pts / $1K', 'What the market implies an ordinary dollar buys on this slate.'),
+      best ? card('Best value', e(best.name), 'VVS ' + e(best.vegasValueScore) + ' at ' + money(best.salary) + '.') : '',
+      fade && fade.marketDelta ? card('Expensive fade', e(fade.name), money(fade.salary) + ', ' + e(String(fade.marketDelta.classification).toLowerCase()) + '.') : ''
+    ].join('');
+  }
+
+  function values(s) {
+    var list = (s.boards && s.boards.bestVegasValues || []).slice(0, 10);
+    $('dfsValuesTable').querySelector('tbody').innerHTML = list.map(function (p) {
+      return '<tr><td><b>' + e(p.name) + '</b><small>' + e(p.position + ' · ' + p.team + (p.opponent ? (p.home === false ? ' @ ' : ' vs ') + p.opponent : '')) + '</small></td>' +
+        '<td class="num">' + money(p.salary) + '</td>' +
+        '<td class="num"><b>' + n1(p.vegasPoints) + '</b></td>' +
+        '<td class="num">' + n1(p.ironTunaPoints) + '</td>' +
+        '<td class="num">' + n1(p.consensusPoints) + '</td>' +
+        '<td>' + delta(p.marketDelta) + '</td>' +
+        '<td class="num">' + n1(p.tdProbability) + '%</td>' +
+        '<td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>';
+    }).join('');
+    $('dfsValuesWrap').hidden = !list.length;
+    $('dfsValuesEmpty').hidden = !!list.length;
+    if (!list.length) $('dfsValuesEmpty').textContent = 'No salaries are loaded for this site this week, so there is nothing to price against them.';
+  }
+
+  function stacks(s) {
+    var games = (s.stacks || []).slice(0, 4);
+    $('dfsStacksWrap').innerHTML = games.map(function (g) {
+      var side = function (x, where) {
+        if (!x) return '';
+        return '<p><b>' + e(x.team) + '</b> (' + where + ') — QB ' + (x.qb ? e(x.qb.name) + ' ' + money(x.qb.salary) : '—') +
+          '. Catchers: ' + ((x.catchers || []).map(function (c) { return e(c.name) + ' ' + money(c.salary); }).join('; ') || '—') +
+          '. QB + 2: ' + money(x.stackSalary) + ' for ' + n1(x.stackVegasPoints) + ' Vegas pts.</p>';
+      };
+      return '<div class="dfs-stack"><h3>' + e(g.game) + ' · total ' + n1(g.total) + ' · implied ' + n1(g.impliedAway) + '–' + n1(g.impliedHome) + '</h3>' +
+        side(g.away, 'away') + side(g.home, 'home') + '</div>';
+    }).join('');
+    var any = games.length > 0;
+    $('dfsStacksEmpty').hidden = any;
+    if (!any) $('dfsStacksEmpty').textContent = 'No game on this slate carries a posted total yet.';
+  }
+
+  function tdBoard(s) {
+    var list = (s.players || []).filter(function (p) { return p.onBoard && p.position !== 'DST' && p.tdProbability != null; })
+      .sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 10);
+    $('dfsTdTable').querySelector('tbody').innerHTML = list.map(function (p, i) {
+      return '<tr><td class="num">' + (i + 1) + '</td>' +
+        '<td><b>' + e(p.name) + '</b><small>' + e(p.position + ' · ' + p.team) + '</small></td>' +
+        '<td class="num">' + money(p.salary) + '</td>' +
+        '<td class="num"><b>' + n1(p.tdProbability) + '%</b></td>' +
+        '<td class="num">' + n1(p.salary ? p.tdProbability / (p.salary / 1000) : null) + '</td>' +
+        '<td class="num">' + n1(p.teamTotal) + '</td>' +
+        '<td><small>' + e(p.tdBasis) + '</small></td></tr>';
+    }).join('');
+    $('dfsTdWrap').hidden = !list.length;
+    $('dfsTdEmpty').hidden = !!list.length;
+    if (!list.length) $('dfsTdEmpty').textContent = 'No player on this slate carries a touchdown price yet.';
+  }
+
+  function blank(msg) {
+    $('dfsCards').innerHTML = '';
+    $('dfsValuesWrap').hidden = true; $('dfsValuesEmpty').hidden = false; $('dfsValuesEmpty').textContent = msg;
+    $('dfsStacksWrap').innerHTML = ''; $('dfsStacksEmpty').hidden = false; $('dfsStacksEmpty').textContent = msg;
+    $('dfsTdWrap').hidden = true; $('dfsTdEmpty').hidden = false; $('dfsTdEmpty').textContent = msg;
+  }
+
+  function render(s) {
+    if (!s || !s.ok) {
+      $('dfsNote').textContent = (s && s.note) || 'No salaries are loaded for this week.';
+      blank('No salaries are loaded for this site this week. The full sheet at /dfs still reads the scoring environment off the game lines.');
+      return;
+    }
+    var stamp = '';
+    try { stamp = new Date(s.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (err) {}
+    $('dfsNote').textContent = (s.note ? s.note + ' ' : '') + (stamp ? 'Salaries as of ' + stamp + ' ET.' : '');
+    cards(s); values(s); stacks(s); tdBoard(s);
+  }
+
+  function loadSlate() {
+    $('dfsCap').textContent = CAPS[site] || '';
+    if (slates[site]) { render(slates[site]); return; }
+    if (pending) return;
+    pending = true;
+    $('dfsNote').textContent = 'Reading the slate…';
+    fetch('/api/dfs?site=' + site, { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { pending = false; slates[site] = j || { ok: false }; render(slates[site]); })
+      .catch(function () {
+        pending = false;
+        $('dfsNote').textContent = 'The slate did not answer.';
+        blank('The slate did not answer. The board is blank rather than stale.');
+      });
+  }
+
+  $('dfsSite').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
+    if (!b) return;
+    site = b.getAttribute('data-site');
+    [].forEach.call(this.querySelectorAll('button'), function (x) {
+      x.setAttribute('aria-pressed', x.getAttribute('data-site') === site ? 'true' : 'false');
+    });
+    loadSlate();
+  });
+
+  // Opening the page on the DFS lane must not strip a hash that names a DFS
+  // section, so the URL is left alone on the first pass.
+  setLane(opening(), { url: false });
 })();
 </script>
 </body>
