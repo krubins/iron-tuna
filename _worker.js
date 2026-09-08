@@ -7807,31 +7807,10 @@ export default {
       await saveContact(env, { email: email, phone: String(body.phone || '').slice(0, 40), source: body.source || 'cheatsheet', type: body.type || 'lead', ref: body.code || '', path: '' });
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
     }
-    // "Tell me when it opens." One address, one topic, one send — the waiting
-    // list behind the prediction-markets panel on /in-season.
-    //
-    // It writes a CONTACT row rather than a table of its own: the leads export
-    // and the admin board already read that table, and a second store would mean
-    // a second place to look when the day comes to send the one email. type is
-    // the topic, so a query can pick exactly the people who asked about markets
-    // and nobody else. Nothing here subscribes anyone to anything: the copy on
-    // both forms promises one email and this endpoint is what has to keep it.
-    if (url.pathname === '/api/notify') {
-      const c = corsHeaders(request.headers.get('Origin'));
-      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-      if (request.method !== 'POST') return json({ ok: false }, 405, c);
-      if (await rl(env, request, 'notify', 20, 600)) return json({ ok: false, error: 'rate' }, 429, c);
-      let b = {}; try { b = await request.json(); } catch (e) {}
-      if (b.company) return json({ ok: true }, 200, c); // honeypot, as /api/contact
-      const email = String(b.email || '').trim().toLowerCase();
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
-      // A closed list of topics, so the field cannot become free text that has to
-      // be cleaned up before anyone can query it.
-      const TOPICS = new Set(['markets']);
-      const topic = TOPICS.has(String(b.topic || '')) ? String(b.topic) : 'markets';
-      await saveContact(env, { email, source: 'in-season', type: 'notify:' + topic, ref: '', path: String(b.path || '').slice(0, 120) });
-      return json({ ok: true, topic, stored: !!env.LEADS_DB }, 200, c);
-    }
+    // /api/notify — the prediction-markets waiting list — is GONE with the panel
+    // it sat behind. The notify:markets CONTACT rows it already wrote stay in
+    // the table and the leads export still reads them: the endpoint stopped
+    // taking new addresses, it did not throw away the ones it has.
     if (url.pathname === '/api/contact') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });

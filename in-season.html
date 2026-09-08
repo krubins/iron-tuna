@@ -150,20 +150,6 @@ section{margin:0 0 var(--space-6)}
   </div>
 </section>
 
-<!-- ── 04 · prediction markets, not yet open ──────────────────────────────── -->
-<section id="markets">
-  <div class="is-label"><p class="is-eyebrow">04 &middot; Prediction markets</p></div>
-  <hr class="is-rule">
-  <div class="is-two" style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5)">
-    <div>
-      <span class="is-tag">Coming soon</span>
-      <h2 style="margin-top:0">Contract prices beside the model</h2>
-      <p>A yes/no contract on a game winner, a division, an MVP or a weekly touchdown market is a probability with money behind it. When it opens, this panel prints the contract price next to Iron Tuna&rsquo;s own probability, labelled by venue, with the move since open.</p>
-      <p class="is-note" style="margin-top:0">Venues under review: Kalshi (CFTC-regulated, US) and Polymarket. Prices are informational; nothing is traded here.</p>
-    </div>
-    <div id="pmSlot"></div>
-  </div>
-</section>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -311,10 +297,7 @@ section{margin:0 0 var(--space-6)}
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    if (window.ITInSeasonUI) {
-      ITInSeasonUI.leagueForm($('mlSlot'));
-      ITInSeasonUI.notify($('pmSlot'), 'markets');
-    }
+    if (window.ITInSeasonUI) ITInSeasonUI.leagueForm($('mlSlot'));
     Promise.all([get('/api/vegas-edge'), get('/api/dfs?site=dk')]).then(function (r) {
       paint(r[0] && r[0].ok ? r[0] : null, r[1]);
     });
