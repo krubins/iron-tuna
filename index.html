@@ -45,7 +45,7 @@ function gtag_report_conversion(url) {
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Iron Tuna" />
   <meta property="og:title" content="Three prices on every player. Read them before kickoff." />
-  <meta property="og:description" content="Fantasy, DFS and wagers in one place, every number read against the betting market first and restated at your league’s scoring. Free, no signup." />
+  <meta property="og:description" content="Fantasy and DFS in one place, every number read against the betting market first and restated at your league’s scoring. Free, no signup." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Iron Tuna: three prices on every player" />
   <meta name="twitter:description" content="Your league, the DFS salary and the sportsbook each price the same player. Iron Tuna prints where they disagree — every week, at your scoring." />
@@ -71,7 +71,7 @@ function gtag_report_conversion(url) {
   <script src="/player-search.js"></script>
   <!-- The NFL clock and the reader's in-season league. Both are plain scripts
        that set a window global the app reads from an effect, and both are the
-       SAME files /in-season, /fantasy, /dfs and /wagers run — so the homepage
+       SAME files /in-season, /fantasy and /dfs run — so the homepage
        cannot disagree with the section about what week it is or what league
        the reader plays in. -->
   <script src="/it-season.js"></script>
@@ -2461,12 +2461,12 @@ input:focus, select:focus { border-color: var(--accent); }
 
 
 /* ── the homepage, in-season ────────────────────────────────────────────────
-   Rendered by HubLanding. The three lanes — Fantasy, DFS, Wagers — are the
+   Rendered by HubLanding. The two lanes — Fantasy and DFS — are the
    front door in season; the draft product keeps its own plate further down.
 
    Dark, because this file's :root is the app's palette and the landing has
    always been the same surface as the draft room behind it. The CONTENT pages
-   (/in-season, /fantasy, /dfs, /wagers) are light, on site.css, because they
+   (/in-season, /fantasy, /dfs) are light, on site.css, because they
    sit beside the eight in-season tools that have always been light. Two zones,
    each internally consistent — same rule the front page and the reading pages
    already follow.
@@ -2555,7 +2555,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .itl-sec-head a:hover { text-decoration: underline; }
 .itl-rule { height: 1px; border: 0; margin: 0 0 28px; background: var(--border-subtle); }
 
-/* 01 · the three lanes, one plate */
+/* 01 · the two lanes, one plate */
 .itl-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-panel); }
 .itl-lane { display: flex; flex-direction: column; padding: 26px 26px 22px; border-right: 1px solid var(--border-subtle); }
 .itl-lane:last-child { border-right: 0; }
@@ -23293,7 +23293,7 @@ function Coachmark({
   }, "Got it"));
 }
 // ── the homepage ────────────────────────────────────────────────────────────
-// In season the site is three lanes — Fantasy, DFS, Wagers — read against the
+// In season the site is two lanes — Fantasy and DFS — read against the
 // betting market, and the draft product is one plate near the bottom. The page
 // used to open on the draft: a giant wordmark, two format cards and a rotating
 // AI line. That is the right front door in August and the wrong one in
@@ -23388,7 +23388,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
   const scoringLabel = league ? league.scoring + ', ' + league.teams + ' teams — your saved settings'
                               : 'PPR until you save your league';
 
-  // ── the three lanes ──────────────────────────────────────────────────────
+  // ── the two lanes ────────────────────────────────────────────────────────
   // Each lane prints ONE reading off a live board. Where the board has not
   // answered the cell says what is missing rather than showing a number.
   const laneReading = (st, label, value, line) => st === 'ok'
@@ -23404,17 +23404,12 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
   const dfsRead = laneReading(slate.st, slate.best ? 'Best Vegas value · ' + slate.best.name + ', ' + slate.best.team : '',
     slate.best ? 'VVS ' + slate.best.vegasValueScore : '—',
     slate.best ? '$' + Number(slate.best.salary).toLocaleString('en-US') + ' on DraftKings for ' + n1(slate.best.vegasPoints) + ' market-implied points.' : '');
-  const wagerRead = laneReading(edge.st, edge.game ? 'Largest total gap · ' + edge.game.game : '',
-    edge.game ? (edge.game.gap > 0 ? '+' : '') + n1(edge.game.gap) : '—',
-    edge.game ? 'Model ' + n1(edge.game.ironTunaTotal) + ' against a market ' + n1(edge.game.total) + '.' : '');
 
   const LANES = [
     { no: '01', sheet: 'Sheet 02', title: 'Fantasy', href: '/fantasy', read: fantasyRead,
       body: 'Your league, re-scored every week. Rankings across four horizons, start/sit, waiver prices in your FAAB dollars, and the trades both sides say yes to.' },
     { no: '02', sheet: 'Sheet 03', title: 'DFS', href: '/dfs', read: dfsRead,
-      body: 'One slate, one set of lines, one cap. Every DraftKings and FanDuel salary read against market-implied points, plus a pick’em board that shows where the model leans off the line.' },
-    { no: '03', sheet: 'Sheet 04', title: 'Wagers', href: '/wagers', read: wagerRead,
-      body: 'Where the model and the market disagree: game lines, props and the TD board, an opinion column kept on the record, and prediction-market contracts beside the model when they open. 21+.' }
+      body: 'One slate, one set of lines, one cap. Every DraftKings and FanDuel salary read against market-implied points, plus a pick’em board that shows where the model leans off the line.' }
   ];
 
   const HOW = [
@@ -23432,7 +23427,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
   ];
 
   const FOOT = [
-    ['In-Season', [['/in-season', 'Overview'], ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/wagers', 'Wagers & prediction markets'], ['/my-league', 'My League']]],
+    ['In-Season', [['/in-season', 'Overview'], ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/my-league', 'My League']]],
     ['Draft', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
     ['Read', [['/in-season/desk', 'The Desk'], ['/the-pick', 'The Pick'], ['/auction-insights', 'Insights'], ['/insights-vault', 'Insight Vault']]],
     ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms']]]
@@ -23483,7 +23478,6 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
         h('nav', { className: 'itl-nav', 'aria-label': 'Main' },
           h('a', { href: '/fantasy' }, 'Fantasy'),
           h('a', { href: '/dfs' }, 'DFS'),
-          h('a', { href: '/wagers' }, 'Wagers'),
           h('a', { href: '/fantasy-football-auction-values' }, 'Draft'),
           h('a', { href: '/in-season/desk' }, 'The Desk'),
           // Spelled out rather than via the h() alias above: tools/test-player-card.mjs
@@ -23502,7 +23496,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
 
         // ── hero ──────────────────────────────────────────────────────────
         h('section', { className: 'itl-hero' },
-          h('span', { className: 'itl-eyebrow' }, 'Fantasy · DFS · Wagers — read against the betting market'),
+          h('span', { className: 'itl-eyebrow' }, 'Fantasy · DFS — read against the betting market'),
           h('h1', { className: 'itl-h1' },
             h('span', null, 'Three prices on every player.'),
             h('span', { className: 'accent' }, 'Read them before kickoff.')),
@@ -23512,7 +23506,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
               h('a', { className: 'itl-btn primary', href: '/in-season#league' }, 'Save my league'),
               h('a', { className: 'itl-btn ghost', href: '/in-season' }, 'This week’s readings →')))),
 
-        // ── 01 · three lanes ──────────────────────────────────────────────
+        // ── 01 · two lanes ────────────────────────────────────────────────
         h('section', { className: 'itl-sec' },
           h('div', { className: 'itl-lanes' }, LANES.map((l) => h('a', { key: l.no, className: 'itl-lane', href: l.href },
             h('div', { className: 'itl-lane-meta' }, h('b', null, l.no), h('span', null, l.sheet)),
@@ -23524,7 +23518,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
                 h('span', { className: 'v' }, l.read.line),
                 h('span', { className: 'n' }, l.read.value))),
             h('span', { className: 'itl-lane-go' }, 'Open ' + l.title + ' →')))),
-          h('p', { className: 'itl-fine' }, 'Readings hold for the current week and re-score to your league once it is saved. Wagers surfaces are 21+ and informational; Iron Tuna is not a sportsbook.')),
+          h('p', { className: 'itl-fine' }, 'Readings hold for the current week and re-score to your league once it is saved. Odds shown anywhere on the site are 21+ and informational; Iron Tuna is not a sportsbook.')),
 
         // ── 02 · how the number is made ───────────────────────────────────
         h('section', { className: 'itl-sec' },
@@ -23606,9 +23600,9 @@ const DESK_TAG = {
   'opportunity-report': 'Fantasy',
   'rankings-update': 'Fantasy',
   'final-read': 'Fantasy',
-  'weekend-game-plan': 'Wagers',
-  'tnf-preview': 'Wagers',
-  'what-changed-today': 'Wagers',
+  'weekend-game-plan': 'Market',
+  'tnf-preview': 'Market',
+  'what-changed-today': 'Market',
   'what-they-arent-telling-you': 'Opinion'
 };
 function WillHeBeThere({ players, draftedIds, draftHistory, config }) {

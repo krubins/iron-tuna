@@ -65,7 +65,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // advertised in the sitemap while the gate is shut.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/wagers']);
+  '/fantasy']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -7345,6 +7345,13 @@ export default {
     if (url.pathname === '/post-draft' || url.pathname === '/post-draft/') {
       return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
     }
+    // The WAGERS lane is retired. The page is gone, but /wagers and
+    // /in-season/wagers were linked from every footer on the site and indexed
+    // under both names, so they 301 to the hub rather than 404: the odds the
+    // lane read are still on Vegas Edge and Game Intel, one lane over.
+    if (/^\/(in-season\/)?wagers\/?$/.test(url.pathname)) {
+      return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+    }
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
@@ -7800,31 +7807,10 @@ export default {
       await saveContact(env, { email: email, phone: String(body.phone || '').slice(0, 40), source: body.source || 'cheatsheet', type: body.type || 'lead', ref: body.code || '', path: '' });
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
     }
-    // "Tell me when it opens." One address, one topic, one send — the waiting
-    // list behind the prediction-markets panel on /in-season and /wagers.
-    //
-    // It writes a CONTACT row rather than a table of its own: the leads export
-    // and the admin board already read that table, and a second store would mean
-    // a second place to look when the day comes to send the one email. type is
-    // the topic, so a query can pick exactly the people who asked about markets
-    // and nobody else. Nothing here subscribes anyone to anything: the copy on
-    // both forms promises one email and this endpoint is what has to keep it.
-    if (url.pathname === '/api/notify') {
-      const c = corsHeaders(request.headers.get('Origin'));
-      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-      if (request.method !== 'POST') return json({ ok: false }, 405, c);
-      if (await rl(env, request, 'notify', 20, 600)) return json({ ok: false, error: 'rate' }, 429, c);
-      let b = {}; try { b = await request.json(); } catch (e) {}
-      if (b.company) return json({ ok: true }, 200, c); // honeypot, as /api/contact
-      const email = String(b.email || '').trim().toLowerCase();
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
-      // A closed list of topics, so the field cannot become free text that has to
-      // be cleaned up before anyone can query it.
-      const TOPICS = new Set(['markets']);
-      const topic = TOPICS.has(String(b.topic || '')) ? String(b.topic) : 'markets';
-      await saveContact(env, { email, source: 'in-season', type: 'notify:' + topic, ref: '', path: String(b.path || '').slice(0, 120) });
-      return json({ ok: true, topic, stored: !!env.LEADS_DB }, 200, c);
-    }
+    // /api/notify — the prediction-markets waiting list — is GONE with the panel
+    // it sat behind. The notify:markets CONTACT rows it already wrote stay in
+    // the table and the leads export still reads them: the endpoint stopped
+    // taking new addresses, it did not throw away the ones it has.
     if (url.pathname === '/api/contact') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
@@ -8892,11 +8878,11 @@ export default {
       // root because the chrome and SEO generators walk the root. Extensionless
       // target, as above. The gate below sees the SAME name, so a section page
       // cannot be reached ungated by adding the prefix.
-      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
       }
-      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
         __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
       // /in-season IS a page now (in-season.html), so it needs no alias here —

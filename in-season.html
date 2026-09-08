@@ -16,7 +16,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <title>In-Season: Fantasy, DFS and the Betting Market, Every Week | Iron Tuna</title>
-<meta name="description" content="Three lanes under one hub. Fantasy rankings and FAAB prices at your league’s scoring, DFS values read against market-implied points, and where the model and the sportsbook disagree on every game. Free, no signup.">
+<meta name="description" content="Two lanes under one hub. Fantasy rankings and FAAB prices at your league’s scoring, and DFS values read against market-implied points. Free, no signup.">
 <link rel="canonical" href="https://irontuna.com/in-season">
 <meta property="og:title" content="Iron Tuna In-Season: three prices on every player">
 <meta property="og:description" content="Your league, the daily-fantasy salary and the betting market each price the same player. Iron Tuna prints where they disagree.">
@@ -51,7 +51,7 @@ section{margin:0 0 var(--space-6)}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season" aria-current="page">In-Season</a><span class="nav-dd-menu"><a href="/in-season" aria-current="page">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season" aria-current="page">In-Season</a><span class="nav-dd-menu"><a href="/in-season" aria-current="page">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -79,7 +79,7 @@ section{margin:0 0 var(--space-6)}
       <span id="rdHead">In-Season &mdash; this week&rsquo;s readings</span>
       <span>IS-01</span>
       <span id="rdWeek">&mdash;</span>
-      <span>Sheet 01 of 04</span>
+      <span>Sheet 01 of 03</span>
     </div>
     <div class="is-scroll" id="rdWrap" hidden>
       <table class="is-table">
@@ -94,9 +94,9 @@ section{margin:0 0 var(--space-6)}
   </div>
 </section>
 
-<!-- ── 02 · the three lanes ───────────────────────────────────────────────── -->
+<!-- ── 02 · the two lanes ─────────────────────────────────────────────────── -->
 <section id="lanes">
-  <div class="is-label"><p class="is-eyebrow">02 &middot; Three lanes</p></div>
+  <div class="is-label"><p class="is-eyebrow">02 &middot; Two lanes</p></div>
   <hr class="is-rule">
   <div class="is-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
 
@@ -111,6 +111,7 @@ section{margin:0 0 var(--space-6)}
         <li><a href="/fantasy#tools">Roster Audit</a></li>
         <li><a href="/weekly-intel">Weekly Intel</a></li>
         <li><a href="/game-intel">Game Intel</a></li>
+        <li><a href="/vegas-edge">Vegas Edge</a></li>
         <li><a href="/in-season/desk">The Desk</a></li>
         <li><a href="/player-intel">Player Intel</a></li>
       </ul>
@@ -132,19 +133,6 @@ section{margin:0 0 var(--space-6)}
       <a class="is-btn sec" href="/dfs">Open DFS</a>
     </div>
 
-    <div class="is-lane">
-      <div class="is-lane-head"><h3>Wagers</h3><span>Sheet 04</span></div>
-      <p>Where the model and the market disagree: game lines, props and the TD board, an opinion column kept on the record, and prediction-market contracts beside the model when they open. 21+.</p>
-      <ul>
-        <li><a href="/wagers#lines">Lines, totals, implied points</a></li>
-        <li><a href="/wagers#props">Props &amp; TD board</a></li>
-        <li><a href="/vegas-edge">Model vs. market</a></li>
-        <li><a href="/wagers#column">The column</a> <span class="is-tag" style="margin:0">Opinion</span></li>
-        <li><a href="/wagers#markets">Prediction markets</a> <span class="is-tag" style="margin:0">Coming soon</span></li>
-      </ul>
-      <a class="is-btn sec" href="/wagers">Open Wagers</a>
-    </div>
-
   </div>
 </section>
 
@@ -162,20 +150,6 @@ section{margin:0 0 var(--space-6)}
   </div>
 </section>
 
-<!-- ── 04 · prediction markets, not yet open ──────────────────────────────── -->
-<section id="markets">
-  <div class="is-label"><p class="is-eyebrow">04 &middot; Prediction markets</p></div>
-  <hr class="is-rule">
-  <div class="is-two" style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-5)">
-    <div>
-      <span class="is-tag">Coming soon</span>
-      <h2 style="margin-top:0">Contract prices beside the model</h2>
-      <p>A yes/no contract on a game winner, a division, an MVP or a weekly touchdown market is a probability with money behind it. When it opens, this panel prints the contract price next to Iron Tuna&rsquo;s own probability, labelled by venue, with the move since open.</p>
-      <p class="is-note" style="margin-top:0">Venues under review: Kalshi (CFTC-regulated, US) and Polymarket. Prices are informational; nothing is traded here.</p>
-    </div>
-    <div id="pmSlot"></div>
-  </div>
-</section>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -207,7 +181,6 @@ section{margin:0 0 var(--space-6)}
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
-      <li><a href="/wagers">Wagers &amp; prediction markets</a></li>
       <li><a href="/my-league">My League</a></li>
      </ul>
     </div>
@@ -313,20 +286,6 @@ section{margin:0 0 var(--space-6)}
         'No DraftKings salaries are loaded for this week, so nothing on the slate has a price to read against yet.'));
     }
 
-    // 03 · Wagers — the game the model and the book price furthest apart.
-    var g = edge ? (edge.gameEnvironments || []).filter(function (x) { return x.gap != null; })
-      .sort(function (a, b) { return Math.abs(b.gap) - Math.abs(a.gap); })[0] : null;
-    if (g) {
-      read++;
-      rows.push(row('03', 'Wagers', '/wagers', 'Largest total gap · ' + g.game,
-        sgn(g.gap),
-        'Model ' + n1(g.ironTunaTotal) + ' against a market ' + n1(g.total) + '. ' +
-        (g.gap > 0 ? 'Model higher.' : 'Model lower.')));
-    } else {
-      rows.push(blank('03', 'Wagers', '/wagers',
-        'No game on this week carries both a posted total and a model total, so there is no gap to print.'));
-    }
-
     if (edge && edge.week) $('rdWeek').textContent = edge.week;
     if (!read) {
       $('rdState').textContent = 'No readings for this week yet. The sheet fills once the first line is posted; it never falls back to the calendar.';
@@ -338,10 +297,7 @@ section{margin:0 0 var(--space-6)}
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    if (window.ITInSeasonUI) {
-      ITInSeasonUI.leagueForm($('mlSlot'));
-      ITInSeasonUI.notify($('pmSlot'), 'markets');
-    }
+    if (window.ITInSeasonUI) ITInSeasonUI.leagueForm($('mlSlot'));
     Promise.all([get('/api/vegas-edge'), get('/api/dfs?site=dk')]).then(function (r) {
       paint(r[0] && r[0].ok ? r[0] : null, r[1]);
     });

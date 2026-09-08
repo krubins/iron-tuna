@@ -1,6 +1,6 @@
 # Iron Tuna
 
-> Iron Tuna reads the **betting market** first. Your fantasy league, the daily-fantasy salary and the sportsbook each put a number on the same NFL player; Iron Tuna reads the market first, the consensus projections second, and your league's scoring on top of both, then prints where the three disagree. In season that is three lanes — Fantasy, DFS, and Wagers & prediction markets — under one hub. Before the season the same engine prices every player for your draft, in snake ranks or auction dollars.
+> Iron Tuna reads the **betting market** first. Your fantasy league, the daily-fantasy salary and the sportsbook each put a number on the same NFL player; Iron Tuna reads the market first, the consensus projections second, and your league's scoring on top of both, then prints where the three disagree. In season that is two lanes — Fantasy and DFS — under one hub. Before the season the same engine prices every player for your draft, in snake ranks or auction dollars.
 
 ## The idea (this is the whole thing)
 A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news. A ranking carries no such penalty and moves when a ranker gets round to it. When a priced market and an unpriced list disagree, **the disagreement is the thing worth reading** — so Iron Tuna prints both numbers and the gap between them rather than blending them away.
@@ -11,7 +11,7 @@ Three inputs, in order:
 - **Your league** — scoring, roster slots and FAAB budget, saved once in the browser. Every board restates its numbers in your points.
 
 ## In-season hub — https://irontuna.com/in-season
-This week's reading from each lane, the three lanes themselves, and the one place to save your league. Free, no signup; the league record lives in the reader's own browser and is never uploaded.
+This week's reading from each lane, the two lanes themselves, and the one place to save your league. Free, no signup; the league record lives in the reader's own browser and is never uploaded.
 
 ### Fantasy — https://irontuna.com/fantasy
 - This week's board with Iron Tuna, the consensus and the betting market side by side, and a Market Delta column saying which way they disagree.
@@ -23,11 +23,9 @@ This week's reading from each lane, the three lanes themselves, and the one plac
 - A lineup builder, game stacks and the anytime-touchdown board. It builds lineups to look at and copy; nothing on the page can enter a contest.
 - A pick'em board for Underdog, PrizePicks and Sleeper, showing where the model leans off a posted stat line.
 
-### Wagers & prediction markets — https://irontuna.com/wagers
-- Every game with its spread, total and implied team points, beside Iron Tuna's own model total and the gap between them. Under 2 points the two agree.
-- Player props and the anytime-touchdown board, each row labelled **quoted** where a book has posted a price and **derived** where the number comes from the game line instead.
-- An opinion column, labelled Opinion and kept on a public record.
-- Prediction-market contract prices beside the model's own probability: not live yet, and the page says so.
+### Vegas Edge — https://irontuna.com/vegas-edge
+- The players the betting market and the consensus rankings disagree about, and by how much, each row labelled **quoted** where a book has posted a price and **derived** where the number comes from the game line instead.
+- Game Intel (https://irontuna.com/game-intel) carries the same read one level up: every game with its spread, total and implied team points, beside Iron Tuna's own model total and the gap between them. Under 2 points the two agree.
 - **21+. Informational only. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. No affiliate links and no sportsbook sign-up offers anywhere on the site.** Problem gambling: call or text 1-800-GAMBLER.
 
 ## Draft season — https://irontuna.com/auctiondraft
@@ -60,7 +58,6 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - In-season hub: https://irontuna.com/in-season
 - Fantasy: https://irontuna.com/fantasy
 - DFS: https://irontuna.com/dfs
-- Wagers & prediction markets: https://irontuna.com/wagers
 - My League: https://irontuna.com/my-league
 - Weekly rankings: https://irontuna.com/rankings
 - Vegas Edge (model vs. market): https://irontuna.com/vegas-edge
