@@ -65,13 +65,15 @@ console.log('\nevery destination is reachable from every page');
   // hub was a format chooser for a site that now has one format; the auction
   // edition is the destination. The pages still serve at their old URLs — see
   // the sitemap assertions in tools/test-seo.mjs — they are simply not linked.
-  // /in-season replaced /post-draft as the section hub. Its three lanes are
+  // /in-season replaced /post-draft as the section hub. Its two lanes are
   // asserted too: the dropdown carries them instead of the eleven tools it used
   // to list, so if a lane silently drops out of the nav there is no other place
-  // a reader can reach it from every page.
+  // a reader can reach it from every page. /wagers is NOT here: the lane is
+  // retired and 301s to the hub, so a nav link to it would be a link to a
+  // redirect.
   const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
     '/snake-insights', '/insights-vault', '/the-pick', '/guides',
-    '/in-season', '/fantasy', '/dfs', '/wagers', '/my-league', '/faq'];
+    '/in-season', '/fantasy', '/dfs', '/my-league', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
     '/play-caller-premium', '/the-tell', '/auction-insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];
@@ -194,8 +196,8 @@ console.log('\nthe disclaimer is on every page, in full');
   // that exists for a reason other than being read: it says the numbers are for
   // social and entertainment purposes, that they are estimates of markets that
   // have already moved, that the reader should verify anything they act on, and
-  // — because /wagers is one click from every footer — the gambling disclosure
-  // and the helpline.
+  // — because Vegas Edge, Game Intel and the weekly intel page all print lines
+  // and totals — the gambling disclosure and the helpline.
   //
   // It is asserted CLAUSE BY CLAUSE rather than as one string so that rewording
   // a sentence does not silently drop a clause out of the middle of it, which is

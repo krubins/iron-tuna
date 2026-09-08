@@ -77,18 +77,22 @@ const NAV = [
   },
   { label: 'The Pick', href: '/the-pick' },
   { label: 'Columns', href: '/play-caller-premium' },
-  // The in-season section, in its three lanes. The parent points at /in-season,
+  // The in-season section, in its two lanes. The parent points at /in-season,
   // which is the section's hub AND the gate the tools serve behind while
   // POST_DRAFT_OPEN is unset — so the link works in both states and nothing has
   // to change here when the section opens. /post-draft, the name the hub used
   // to carry, redirects here in the worker.
   //
+  // THE WAGERS LANE IS GONE. /wagers is retired and 301s to /in-season in the
+  // worker; the odds the site still reads live on Vegas Edge and Game Intel,
+  // which are Fantasy-lane tools and stay exactly where they were.
+  //
   // THE TOOLS ARE NOT LISTED HERE ANY MORE and that is deliberate. Eleven
   // in-season destinations in a hover menu is the same problem the canonical
   // nav was built to fix, one level down. Each lane page lists its own tools —
   // Fantasy carries Rankings, Waivers, Trade Finder, Weekly Intel, Game Intel,
-  // Player Intel and the Desk; Wagers carries Vegas Edge and the lines — so
-  // every one of them is two clicks from any page and none has been retired.
+  // Vegas Edge, Player Intel and the Desk — so every one of them is two clicks
+  // from any page and none has been retired.
   // They all stay in sitemap.xml. Do not put them back here without first
   // taking something else out.
   {
@@ -96,7 +100,6 @@ const NAV = [
       { label: 'Overview', href: '/in-season' },
       { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
-      { label: 'Wagers', href: '/wagers' },
       { label: 'My League', href: '/my-league' },
     ],
   },
@@ -110,7 +113,7 @@ const NAV = [
 // saving their scoring and their FAAB budget. The draft CTA is still one click
 // away in the nav and owns the whole of §05 on the homepage.
 const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
-const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'wagers.html', 'dfs.html', 'my-league.html',
+const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html',
   'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
   'post-draft.html']);
@@ -141,7 +144,6 @@ const FOOT_COLS = [
       { label: 'Overview', href: '/in-season' },
       { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
-      { label: 'Wagers & prediction markets', href: '/wagers' },
       { label: 'My League', href: '/my-league' },
     ],
   },
@@ -162,16 +164,16 @@ const FOOT_COLS = [
 
 const BLURB = 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.';
 
-// The site-wide disclaimer, on EVERY page rather than only the wagers lane.
-// Two things it has to say, in this order:
+// The site-wide disclaimer, on EVERY page rather than only the pages that print
+// odds. Two things it has to say, in this order:
 //
 //   1. This is for social and entertainment purposes, and every number on it
 //      is an estimate or a snapshot of a market that has moved since. That is
-//      true of a weekly ranking and a FAAB price as much as of an odds board,
-//      which is why it sits in the shared chrome and not on /wagers alone.
-//   2. The gambling disclosure. A reader can reach /wagers from the footer of
-//      any page, and a helpline is worth nothing if it only appears once they
-//      are already there.
+//      true of a weekly ranking and a FAAB price as much as of an odds board.
+//   2. The gambling disclosure. Retiring the wagers lane did not retire the
+//      odds: Vegas Edge, Game Intel and the weekly intel page all still print
+//      lines and totals, and a helpline is worth nothing if it only appears
+//      once the reader is already on one of them.
 //
 // The wording is fixed: entertainment-only, verify-before-relying, 21+,
 // informational, not-a-sportsbook, state availability, 1-800-GAMBLER.

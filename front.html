@@ -21,7 +21,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Iron Tuna">
 <meta property="og:title" content="Analytics beats intuition. Every time.">
-<meta property="og:description" content="Fantasy, DFS and wagers in one place, every number read against the betting market first and restated at your league’s scoring. Free, no signup.">
+<meta property="og:description" content="Fantasy and DFS in one place, every number read against the betting market first and restated at your league’s scoring. Free, no signup.">
 <meta property="og:url" content="https://irontuna.com/">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -36,9 +36,9 @@
    mean what it says everywhere, including on the sections that hide themselves
    when their feed has nothing to show. */
 [hidden]{display:none !important}
-/* Two sticky bars now sit at the top of the page — the section ribbon and the
-   lane tabs under it — so an anchor jump has to stop clear of both or it lands
-   with the section head hidden behind them. */
+/* Two sticky bars now sit at the top of the page — the lane tabs and the
+   section ribbon under them — so an anchor jump has to stop clear of both or it
+   lands with the section head hidden behind them. */
 html{scroll-behavior:smooth;scroll-padding-top:106px}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
@@ -86,7 +86,10 @@ img{max-width:100%}
 @media(max-width:400px){.dominant-rule{display:none}.dominant .wrap{padding-left:12px;padding-right:12px}}
 
 /* ── section ribbon (in-page nav) ── */
-.ribbon{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;box-shadow:0 1px 4px rgba(16,19,23,.06)}
+/* The two bars stick together as `.topbars`, so neither carries a `top` of
+   its own. */
+.topbars{position:sticky;top:0;z-index:40}
+.ribbon{background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 4px rgba(16,19,23,.06)}
 .ribbon .wrap{display:flex;align-items:center;gap:4px;height:44px;overflow-x:auto}
 .ribbon a{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:12px 11px;border-bottom:3px solid transparent;white-space:nowrap}
 .ribbon a:hover{color:var(--ink);border-bottom-color:var(--brand)}
@@ -818,7 +821,7 @@ img{max-width:100%}
 .mast-jump a.mj-soon{display:inline-flex;align-items:center;gap:6px}
 .mast-jump a.mj-soon span{font-size:9px;letter-spacing:.1em;padding:1px 5px;border-radius:3px;background:var(--gold);color:#231700;font-weight:800}
 /* ── the redesigned front: hero, lanes, the number, draft band, close ─────
-   The page leads with one claim and three lanes; the draft product keeps its
+   The page leads with one claim and two lanes; the draft product keeps its
    pitch, its screenshot and its three numbers, one band lower. */
 .fp-clock {
   display: flex; flex-wrap: wrap; align-items: stretch; margin: 22px 0 0;
@@ -910,14 +913,13 @@ img{max-width:100%}
 }
 
 /* ── lane tabs: Weekly Fantasy | DFS ───────────────────────────────────────
-   Two tabs, each half the screen, sitting under the sticky ribbon and above
-   The Desk. They swap the whole middle of the page between the two things a
+   Two tabs, each half the screen, sitting on top of the sticky ribbon and
+   above The Desk. They swap the whole middle of the page between the two things a
    reader is here for in season: their own league's week, and the one slate.
    The panes are two siblings in <main>; nothing is fetched for DFS until the
    DFS tab is opened for the first time, so the fantasy reader pays nothing
    for a lane they never look at. */
-.lane-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--mast); border-bottom: 1px solid var(--line);
-  position: sticky; top: 44px; z-index: 39 }
+.lane-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--mast); border-bottom: 1px solid var(--line) }
 .lane-tab { appearance: none; border: 0; background: none; cursor: pointer; font: inherit; color: #8d99a1;
   font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif; font-size: clamp(19px, 2.4vw, 26px); letter-spacing: .1em;
   line-height: 1; text-transform: uppercase; padding: 15px 10px 12px; border-bottom: 4px solid transparent; transition: color .12s, background .12s }
@@ -969,7 +971,7 @@ img{max-width:100%}
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="mast-jump" aria-label="Sections of the site">
-    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/in-season">In-Season</a><a href="/fantasy-football-auction-values">Draft</a><a href="/auction-insights">The Desk</a>
+    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season">In-Season</a><a href="/fantasy-football-auction-values">Draft</a><a href="/auction-insights">The Desk</a>
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
@@ -997,7 +999,7 @@ img{max-width:100%}
        which is why the eyebrow is teal like the accent line. -->
   <div class="wrap"><div class="fp-clock its-strip" data-season-strip></div></div>
   <div class="wrap fp-hero">
-    <span class="hb-eyebrow">Fantasy &middot; DFS &middot; Wagers</span>
+    <span class="hb-eyebrow">Fantasy &middot; DFS &middot; The betting market</span>
     <h1 class="fp-h1"><span>Analytics beats intuition.</span><span class="fp-accent">Every time.</span></h1>
     <p class="fp-lede">Iron Tuna uses better market intel, advanced analytics, and AI analysis to give you the edge you need.</p>
     <div class="hb-ctas">
@@ -1035,6 +1037,26 @@ img{max-width:100%}
     </div>
   </div>
 </section>
+
+<!-- ── the two sticky bars ───────────────────────────────────
+     The lane choice comes first and the section ribbon under it: the lane is
+     the bigger of the two decisions, and the ribbon's links change with it,
+     so reading top-down now matches the order the two bars actually work in.
+     They stick as one group rather than each carrying its own `top` offset,
+     because the tabs' height is a clamp() on the viewport and any fixed
+     offset under it would be wrong at some width. -->
+<div class="topbars">
+<!-- ── the lane tabs ─────────────────────────────────────────────────────────
+     Two tabs across the page, half the screen each: the reader's own league's
+     week, and the one slate. They sit on top of the sticky ribbon, whose links
+     they change, and they swap the middle of the page rather than navigating,
+     so a reader can look at the other lane and come straight back. The choice is
+     kept in the URL (?lane=dfs) and in this browser, so a shared link opens on
+     the lane it was shared from. -->
+<div class="lane-tabs" role="tablist" aria-label="Choose a lane">
+  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Weekly Fantasy</button>
+  <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
+</div>
 
 <div class="ribbon" data-lane="fantasy"><div class="wrap">
   <!-- Ribbon order tracks the page order. The Build moved up because it is the
@@ -1074,17 +1096,6 @@ img{max-width:100%}
     <a href="/?fmt=snake" data-ed="snake">Snake</a>
   </span>
 </div></div>
-
-<!-- ── the lane tabs ─────────────────────────────────────────────────────────
-     Two tabs across the page, half the screen each: the reader's own league's
-     week, and the one slate. They sit under the sticky ribbon and above The
-     Desk, and they swap the middle of the page rather than navigating, so a
-     reader can look at the other lane and come straight back. The choice is
-     kept in the URL (?lane=dfs) and in this browser, so a shared link opens on
-     the lane it was shared from. -->
-<div class="lane-tabs" role="tablist" aria-label="Choose a lane">
-  <button class="lane-tab" type="button" role="tab" id="laneTabFantasy" data-lane="fantasy" aria-controls="laneFantasy" aria-selected="true">Weekly Fantasy</button>
-  <button class="lane-tab" type="button" role="tab" id="laneTabDfs" data-lane="dfs" aria-controls="laneDfs" aria-selected="false" tabindex="-1">DFS</button>
 </div>
 
 <main class="wrap">
@@ -1294,7 +1305,7 @@ img{max-width:100%}
     <div class="dfs-card"><h3><a href="/dfs#builder">Lineup Builder</a></h3><p>Build lineups against the cap on Iron Tuna, Vegas or consensus points, with stacks, bring-backs and a per-team cap.</p></div>
     <div class="dfs-card"><h3><a href="/dfs?site=pk">Pick&rsquo;em board</a></h3><p>Higher or lower on a posted stat line, read against the sportsbook median the model disagrees with.</p></div>
     <div class="dfs-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
-    <div class="dfs-card"><h3><a href="/wagers">Wagers</a></h3><p>Every game with its line beside Iron Tuna&rsquo;s own total, the props and the TD board. 21+.</p></div>
+    <div class="dfs-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much. 21+.</p></div>
   </div>
 
   </div><!-- /#laneDfs -->
@@ -1342,7 +1353,7 @@ img{max-width:100%}
        highest-authority page on the site and on two pages the title tag targets
        by name. The cards go, the links stay. -->
   <nav class="foot-tools" aria-label="Tools">
-    <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/in-season">In-Season</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/my-league">My League</a>
+    <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/in-season">In-Season</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/my-league">My League</a>
   </nav>
   <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/auction-watch">Auction Watch</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.</p>
