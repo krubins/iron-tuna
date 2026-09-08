@@ -246,39 +246,60 @@ console.log('\nevery offense claim is the one the market file produces');
   ok('every one matches tools/team-market.json', wrong.length === 0, wrong.join('; '));
 }
 
-console.log('\nthe ledger table agrees with the entries and with the board');
+console.log('\nevery edition\'s ledger table agrees with its entries and with the board');
 {
-  const body = (page.match(/<table class="ledger">[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/) || [])[1] || '';
-  const rows = [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(([, tr]) =>
-    [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => norm(m[1])));
-  ok('the ledger has a row per entry', rows.length === entries.length,
-     `${rows.length} rows, ${entries.length} entries`);
-  const badName = [], badRank = [], badShare = [], badOff = [], badVerdict = [];
-  rows.forEach((cells, i) => {
-    const e = entries[i];
-    if (!e || cells.length < 5) return;
-    const [name, rank, share, off, verdict] = cells;
-    if (keyOf(name) !== keyOf(e.named[0])) badName.push(`row ${i + 1}: ${name} vs ${e.named[0]}`);
-    const rows2 = byName.get(keyOf(name)) || [];
-    const p = rows2.find((r) => r.team === e.team && r.position === e.pos) || rows2[0];
-    if (p) {
-      const want = `${p.position}${rankOf(p.name, p.position)}`;
-      if (rank !== want) badRank.push(`row ${i + 1}: says ${rank}, board says ${want}`);
-      const wantShare = r1(tdPtsOf(p.projectedStats) / pprOf(p.projectedStats) * 100).toFixed(1) + '%';
-      if (share !== wantShare) badShare.push(`row ${i + 1}: says ${share}, board says ${wantShare}`);
-    }
-    const o = offenseOf(e.team);
-    const wantOff = o ? `${e.team}, ${o.rank}${o.rank % 10 === 1 && o.rank !== 11 ? 'st'
-      : o.rank % 10 === 2 && o.rank !== 12 ? 'nd'
-      : o.rank % 10 === 3 && o.rank !== 13 ? 'rd' : 'th'}` : '';
-    if (o && off !== wantOff) badOff.push(`row ${i + 1}: says "${off}", market says "${wantOff}"`);
-    if (verdict !== e.label) badVerdict.push(`row ${i + 1}: says "${verdict}", entry says "${e.label}"`);
-  });
+  // One ledger per edition, each followed by that edition's articles. The page
+  // is split at every <table class="ledger"> and the rows in each piece are
+  // checked against the articles in the same piece — so a second edition
+  // cannot pass on the strength of the first one's table, and a grade table
+  // (class "grade", written by a later edition about an earlier one) is not
+  // mistaken for a ledger.
+  const pieces = page.split('<table class="ledger">').slice(1);
+  ok('there is a ledger per edition', pieces.length >= 1
+     && pieces.length === new Set(entries.map((e) => e.date)).size,
+     `${pieces.length} ledgers, ${new Set(entries.map((e) => e.date)).size} edition dates`);
+  const badName = [], badRank = [], badShare = [], badOff = [], badVerdict = [], badCount = [];
+  for (const piece of pieces) {
+    const body = (piece.match(/<tbody>([\s\S]*?)<\/tbody>/) || [])[1] || '';
+    const rows = [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(([, tr]) =>
+      [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => norm(m[1])));
+    const ids = [...piece.matchAll(/<article class="call tell" id="([^"]+)"/g)].map((m) => m[1]);
+    const local = ids.map((id) => entries.find((e) => e.id === id)).filter(Boolean);
+    if (rows.length !== local.length) badCount.push(`${rows.length} rows over ${local.length} entries (${ids[0] || 'no entries'})`);
+    rows.forEach((cells, i) => {
+      const e = local[i];
+      if (!e || cells.length < 5) return;
+      const [name, rank, share, off, verdict] = cells;
+      if (keyOf(name) !== keyOf(e.named[0])) badName.push(`${e.id}: ${name} vs ${e.named[0]}`);
+      const rows2 = byName.get(keyOf(name)) || [];
+      const p = rows2.find((r) => r.team === e.team && r.position === e.pos) || rows2[0];
+      if (p) {
+        const want = `${p.position}${rankOf(p.name, p.position)}`;
+        if (rank !== want) badRank.push(`${e.id}: says ${rank}, board says ${want}`);
+        const wantShare = r1(tdPtsOf(p.projectedStats) / pprOf(p.projectedStats) * 100).toFixed(1) + '%';
+        if (share !== wantShare) badShare.push(`${e.id}: says ${share}, board says ${wantShare}`);
+      }
+      const o = offenseOf(e.team);
+      const wantOff = o ? `${e.team}, ${o.rank}${o.rank % 10 === 1 && o.rank !== 11 ? 'st'
+        : o.rank % 10 === 2 && o.rank !== 12 ? 'nd'
+        : o.rank % 10 === 3 && o.rank !== 13 ? 'rd' : 'th'}` : '';
+      if (o && off !== wantOff) badOff.push(`${e.id}: says "${off}", market says "${wantOff}"`);
+      if (verdict !== e.label) badVerdict.push(`${e.id}: says "${verdict}", entry says "${e.label}"`);
+    });
+  }
+  ok('each ledger has a row per entry under it', badCount.length === 0, badCount.join('; '));
   ok('the ledger names the same players in the same order', badName.length === 0, badName.join('; '));
   ok('every rank cell is the rank the board produces', badRank.length === 0, badRank.join('; '));
   ok('every touchdown-share cell matches the board', badShare.length === 0, badShare.join('; '));
   ok('every offense cell matches the market file', badOff.length === 0, badOff.join('; '));
   ok('every verdict cell matches its entry', badVerdict.length === 0, badVerdict.join('; '));
+  // Only the NEWEST edition's ledger may sit above the newest entries: an edition
+  // block is head, grade (optional), ledger, note, then its six articles, inserted
+  // at the top of <div class="entries">. A ledger after the last article of its
+  // edition is a block written in the wrong order.
+  const firstLedger = page.indexOf('<table class="ledger">');
+  const firstArticle = page.indexOf('<article class="call tell"');
+  ok('the newest edition\'s ledger precedes its entries', firstLedger > 0 && firstLedger < firstArticle);
 }
 
 console.log('\nevery statline can be restated in the reader\'s league');

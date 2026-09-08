@@ -7818,12 +7818,59 @@ points.
 - Every call gets graded by name in a later edition. That promise is printed on
   the page, so it is a commitment rather than a nicety.
 
-### Cadence
+### Cadence: a weekly Routine, Tuesdays
 
-Weekly, and **not yet on a Routine** — the launch edition of September 8, 2026
-was written by hand. When it is automated, the prompt gets the same treatment as
-`tools/lead-story-routine-prompt.md`: a canonical copy in the repo, and the
-Routine's own copy pushed from it. The test above is what makes that safe.
+A Claude Routine (`trig_01LvL8PwjZ89dkhKq7gSaVGS`, "Iron Tuna — The Tell
+(weekly column)") fires **Tuesdays at 14:00 UTC** — 10:00 AM ET in summer, 9:00
+once the clocks change — into a fresh session and writes the week's edition,
+publishing hands-off to `main` the way the camp desk, the Play-Caller column and
+The Pick do. The slot is after the 10:00 UTC projections update and the 11:00
+UTC odds refresh, and clear of the 12:00, 13:00 and 15:00 UTC slots the other
+desks fire in. First scheduled run: **2026-09-15**. The launch edition of
+September 8 was written by hand.
+
+The canonical prompt is **`tools/the-tell-routine-prompt.md`**, same discipline
+as `tools/the-pick-routine-prompt.md`: edit there, push the same text to the
+Routine with `update_trigger`, and the diff is in the history either way. Three
+things about it matter more than the rest:
+
+- **It was created from a session (`created_via: meta_mcp`), so the trigger
+  stores no git source.** Its fresh sessions start with no checkout. §46
+  records what that did to The Pick for ten days when the prompt's first line
+  was "if the file is missing, stop". This prompt's checkout paragraph clones
+  the repo itself and says a missing checkout is never a reason to stop; do not
+  remove that paragraph. The durable fix — re-creating the Routine with
+  `krubins/iron-tuna` attached as a source — is a claude.ai Routines UI action.
+- **It grades the previous edition by name before writing its own.** The page
+  promises "every call here gets graded", so each new edition opens with a
+  `<div class="method">` carrying a `<table class="grade">`: player, the call,
+  games played, actual full-PPR points per game, projected per game, and
+  Holding / Missing / Too early. Actuals come from nflverse weekly player stats
+  (CC BY 4.0, the publisher the site already uses for schedules and rosters).
+  If the file is unreachable the block still runs and says so with the URL;
+  it never invents an actual and never skips silently.
+- **One edition a week, adopt-don't-duplicate.** Before writing it checks the
+  newest `ed-YYYY-MM-DD` on `main` and `git ls-remote` for a same-week
+  `claude/the-tell-*` branch, and adopts a well-formed stranded edition rather
+  than writing a second one — the lesson of §47.
+
+### The page holds editions, and the test knows it
+
+`the-tell.html` grew a shape for its second edition before the second edition
+existed. Each edition is one block at the top of `<div class="entries">`, in a
+fixed order: `.edhead`, the grade (absent on the launch edition, which had
+nothing to grade), `table.ledger`, `.tnote`, then its six `<article class="call
+tell">`s. The launch edition's head and ledger, which had sat above `.entries`,
+were moved inside it so every edition has the one shape the Routine's template
+shows.
+
+`tools/test-the-tell.mjs` changed with it: it splits the page at every
+`<table class="ledger">` and checks each ledger's rows against the articles in
+the same piece, so a second edition cannot pass on the strength of the first
+one's table, and it asserts the newest ledger precedes the newest articles (a
+block written in the wrong order). The grade table is `table.grade`, its own
+class, precisely so the split does not mistake it for a ledger. 36 assertions
+now; still every printed number.
 
 Verified in Chromium at 1200px and 390px: both surfaces render, the band splits
 and stacks, the ledger table scrolls sideways rather than overflowing the page
