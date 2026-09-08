@@ -197,6 +197,26 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <h2>Failed jobs, last 7 days</h2>
     <div class="tblwrap"><table id="hlthFailed"></table></div>
   </div>
+  <div class="card" id="nrCard">
+    <h2>Newsroom control <span class="badge" id="nrBadge"></span></h2>
+    <div class="field" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn" id="nrPause" type="button" style="font-weight:800">PAUSE AUTOMATIC PUBLISHING</button>
+      <button class="btn" id="nrResume" type="button" hidden>Resume automatic publishing</button>
+      <button class="btn" id="nrScan" type="button">Run breaking-news scan</button>
+      <button class="btn" id="nrGrade" type="button">Grade analyst calls</button>
+      <span class="meta" id="nrAuto"></span>
+    </div>
+    <div class="note">Paused, every validated piece is stored as <b>held · awaiting approval</b> and nothing reaches the site until Approve is pressed in the Editorial table below. The pause is a database setting, so it survives a deploy; FLAG_AUTO_PUBLISH=0 in the Worker vars does the same from the dashboard.</div>
+    <div class="result" id="nrResult"><div class="msg" id="nrMsg"></div></div>
+    <h2 style="margin-top:14px">Feature flags</h2>
+    <div class="tblwrap"><table id="nrFlags"></table></div>
+    <h2 style="margin-top:14px">Legacy content migration</h2>
+    <div class="note">Every scheduled story, job and Routine the desk used to run, and what became of it. The audit below fails if a retired kind is ever runnable again or two kinds share a slot.</div>
+    <div class="tblwrap"><table id="nrLegacy"></table></div>
+    <div class="tblwrap"><table id="nrRoutines"></table></div>
+    <h2 style="margin-top:14px">Breaking-news events (last 20)</h2>
+    <div class="tblwrap"><table id="nrEvents"></table></div>
+  </div>
   <div class="card" id="hlthDesk">
     <h2>Editorial</h2>
     <div class="tblwrap"><table id="hlthEditorial"></table></div>
@@ -740,9 +760,38 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       var gate = e.due && e.ready ? pill('due · ready', 'ok') : e.due ? pill('due · waiting', 'warn') + ' ' + esc(e.reason || '') : pill('not due', '') + ' ' + esc(e.reason || '');
       var p = e.piece, latest = p ? (p.status === 'published' ? pill('published', 'ok') : p.status === 'held' ? pill('held', 'warn') + ' ' + p.violations + ' violation' + (p.violations === 1 ? '' : 's') : pill(p.status, '')) + ' <span style="color:var(--muted)">wk ' + p.week + ', ' + esc(new Date(p.createdAt).toLocaleString()) + '</span>' : '<span style="color:var(--muted)">none</span>';
       var b = function(act, label){ return '<button class="btn" type="button" data-act="' + act + '" data-kind="' + esc(e.kind) + '" data-week="' + (p ? p.week : (e.week == null ? '' : e.week)) + '">' + label + '</button> '; };
-      var acts = (p ? b('preview', 'Preview') + b('edit', 'Edit') + (p.status === 'published' ? b('unpublish', 'Unpublish') : b('publish', 'Publish')) : '') + b('regenerate', p ? 'Regenerate' : 'Generate');
-      return '<tr><td><b>' + esc(e.title) + '</b>' + (e.optional ? ' <span style="color:var(--muted)">optional</span>' : '') + '</td><td>' + esc(e.day + ' ' + e.hour + ':00') + '</td><td>' + (e.week == null ? '—' : e.week) + '</td><td>' + gate + '</td><td>' + latest + '</td><td style="white-space:nowrap">' + acts + '</td></tr>'; }).join('');
+      var acts = (p ? b('preview', 'Preview') + b('edit', 'Edit') + (p.status === 'published' ? b('unpublish', 'Unpublish') : (p.status === 'held' ? b('approve', 'Approve') : b('publish', 'Publish'))) : '') + b('regenerate', p ? 'Regenerate' : 'Generate');
+      return '<tr><td><b>' + esc(e.title) + '</b>' + (e.optional ? ' <span style="color:var(--muted)">optional</span>' : '') + (e.gate ? ' <span style="color:var(--muted)">worth-gated</span>' : '') + (e.updates ? ' <span style="color:var(--muted)">live updates</span>' : '') + (e.analystName ? '<br><span style="color:var(--muted)">' + esc(e.analystName) + (e.lens === 'both' ? ' · Weekly + DFS' : '') + '</span>' : '') + '</td><td>' + esc(e.unscheduled ? 'on news' : e.day + ' ' + e.hour + ':' + (e.minute < 10 ? '0' : '') + (e.minute || 0)) + '</td><td>' + (e.week == null ? '—' : e.week) + '</td><td>' + gate + '</td><td>' + latest + '</td><td style="white-space:nowrap">' + acts + '</td></tr>'; }).join('');
+    nrRender(j.newsroom);
   }
+  function nrRender(n){
+    if (!n) { $('nrBadge').textContent = 'no answer'; return; }
+    var auto = n.autoPublish || {};
+    $('nrBadge').textContent = auto.on ? 'auto-publishing' : 'PAUSED';
+    $('nrBadge').style.background = auto.on ? '#e6f4ee' : '#fde8e8'; $('nrBadge').style.color = auto.on ? '#0e6b4a' : '#9b1c1c';
+    $('nrPause').hidden = !auto.on; $('nrResume').hidden = !!auto.on;
+    $('nrAuto').textContent = auto.on ? 'Validated pieces publish on their slot.' : 'Paused: ' + (auto.reason || '') + '. Pieces are held for approval.';
+    var f = n.flags || {};
+    $('nrFlags').innerHTML = '<tr><th>Flag</th><th>State</th><th>Source</th><th>What it does</th></tr>' + Object.keys(f).map(function(k){ return '<tr><td><b>FLAG_' + esc(k) + '</b></td><td>' + (f[k].on ? pill('on', 'ok') : pill('off', 'bad')) + '</td><td>' + esc(f[k].source) + '</td><td style="color:var(--muted)">' + esc(f[k].note) + '</td></tr>'; }).join('');
+    var a = n.audit || {};
+    $('nrLegacy').innerHTML = '<tr><th>Was</th><th>Slot</th><th>Disposition</th><th>Now</th><th>Why</th></tr>' + (n.legacy || []).map(function(l){ return '<tr><td><b>' + esc(l.title) + '</b><br><span style="color:var(--muted)">' + esc(l.kind) + '</span></td><td style="color:var(--muted)">' + esc(l.slot) + '</td><td>' + (l.disposition === 'retired' ? pill('retired', 'bad') : l.disposition === 'merged' ? pill('merged', 'warn') : pill('retained', 'ok')) + '</td><td>' + esc(l.destination) + '</td><td style="color:var(--muted)">' + esc(l.reason) + '</td></tr>'; }).join('') +
+      '<tr><td colspan="5">' + (a.ok ? pill('audit clean', 'ok') + ' ' + a.activeKinds + ' active kinds, ' + a.legacyKinds + ' legacy entries, no duplicate slots, no retired kind runnable.' : pill('audit FAILED', 'bad') + ' ' + esc((a.problems || []).join('; '))) + '</td></tr>';
+    $('nrRoutines').innerHTML = '<tr><th>Claude Routine (outside the repo)</th><th>Cron</th><th>Disposition</th><th>Now</th></tr>' + (n.routines || []).map(function(r){ return '<tr><td><b>' + esc(r.name) + '</b><br><span style="color:var(--muted)">' + esc(r.id) + '</span></td><td style="color:var(--muted)">' + esc(r.cron) + '</td><td>' + (r.disposition === 'retired' ? pill('retired', 'bad') : pill('retained', 'ok')) + '</td><td>' + esc(r.destination) + '</td></tr>'; }).join('') +
+      '<tr><td colspan="4" style="color:var(--muted)">A retired Routine must also be disabled in the claude.ai Routines UI if it was not disabled from the migration session; the worker no longer reads what they write as current.</td></tr>';
+    $('nrEvents').innerHTML = '<tr><th>When</th><th>Type</th><th>Player</th><th>Score</th><th>Handled</th><th>Detail</th></tr>' + ((n.events || []).length ? n.events.map(function(ev){ return '<tr><td>' + esc(new Date(ev.at).toLocaleString()) + '</td><td>' + esc(ev.type) + '</td><td><b>' + esc(ev.player || '') + '</b> <span style="color:var(--muted)">' + esc((ev.position || '') + ' ' + (ev.team || '')) + '</span></td><td>' + (ev.score >= 60 ? pill(String(ev.score), 'warn') : esc(String(ev.score))) + '</td><td>' + esc(ev.handled || '') + '</td><td style="color:var(--muted)">' + esc(ev.detail || '') + '</td></tr>'; }).join('') : '<tr><td colspan="6" class="empty">No events scored yet.</td></tr>');
+  }
+  function nrAction(action, extra){
+    var key = getKey(); if (!key) { showGate('Session locked. Enter the key again.'); return; }
+    hlthMsg('nrResult', '', esc(action) + '…');
+    fetch('/api/admin/newsroom?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ action: action }, extra || {})) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (!j || !j.ok) { hlthMsg('nrResult', 'bad', '<b>' + esc(action) + ' failed.</b> ' + esc((j && (j.error || j.note)) || '')); return; } hlthMsg('nrResult', 'ok', '<b>' + esc(action) + '</b> done. ' + esc(JSON.stringify(j.scan || j.grade || j.autoPublish || '').slice(0, 300))); hlthLoad(); })
+      .catch(function(e){ hlthMsg('nrResult', 'bad', 'Network error: ' + esc((e && e.message) || '')); });
+  }
+  $('nrPause').addEventListener('click', function(){ if (confirm('Pause automatic publishing? Every validated piece will be held until you approve it.')) nrAction('pause'); });
+  $('nrResume').addEventListener('click', function(){ nrAction('resume'); });
+  $('nrScan').addEventListener('click', function(){ nrAction('scan'); });
+  $('nrGrade').addEventListener('click', function(){ nrAction('grade'); });
   function hlthLoad(q){
     var key = getKey(); if (!key) return;
     fetch('/api/admin/health?key=' + encodeURIComponent(key) + (q || ''))
@@ -784,7 +833,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     if (act === 'unpublish' && !confirm('Take ' + kind + ' (week ' + week + ') off the public desk?')) return;
     var was = b.textContent; b.disabled = true; b.textContent = 'Working…';
     hlthMsg('hlthPieceResult', '', esc(act) + ' ' + esc(kind) + '…');
-    hlthAction(act, kind, week).then(function(j){
+    var run = act === 'approve'
+      ? fetch('/api/admin/newsroom?key=' + encodeURIComponent(getKey()), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'approve', kind: kind, week: week }) }).then(function(r){ return r.json(); }).then(function(j){ if (j && j.ok) { hlthMsg('hlthPieceResult', 'ok', '<b>Approved</b> ' + esc(kind) + ' for week ' + esc(week) + '; ' + esc(j.calls) + ' calls recorded.'); hlthLoad(); } else hlthMsg('hlthPieceResult', 'bad', '<b>approve failed.</b> ' + esc((j && j.error) || '')); return null; })
+      : hlthAction(act, kind, week);
+    run.then(function(j){
       if (!j) return;
       if (!j.ok) { hlthMsg('hlthPieceResult', 'bad', '<b>' + esc(act) + ' failed.</b> ' + esc(j.note || j.error || j.reason || '')); return; }
       if (act === 'preview' || act === 'edit') { hlthOpenEditor(j.piece); hlthMsg('hlthPieceResult', 'ok', '<b>' + esc(j.piece.title) + '</b> loaded below.'); }

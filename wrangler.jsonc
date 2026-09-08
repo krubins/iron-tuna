@@ -8,17 +8,17 @@
     { "binding": "LEADS_DB", "database_name": "iron-tuna-leads", "database_id": "75f7c43a-69cc-48eb-aa78-6ecfd91af2fb" }
   ],
   "triggers": {
-    // Three staggered weekday posts so they hit different audience windows instead of one
-    // same-minute burst. scheduled() in _worker.js maps each cron string to its slot, so these
-    // strings must stay in sync with slotsByCron there. 13:00/16:00/19:00 UTC = 9am/noon/3pm EDT.
-    //  - 13:00 auction insight thread
-    //  - 16:00 snake insight thread
-    //  - 19:00 day's bonus post (Mon poll, Tue/Thu snake feature, Wed auction strategy/coach,
-    //    Fri best ball, per X_BONUS_DAY_POOLS). See HANDOFF.md §10.
-    //  - hourly: the data clock (HANDOFF.md §60). JOB_SCHEDULE in _worker.js,
-    //    in New York time, says which pulls, recalculations and desk pieces
-    //    are due this hour; the tick runs them through the job log. The old
-    //    11:00 daily trigger is gone: everything it ran is on that table.
-    "crons": ["0 13 * * 1-5", "0 16 * * 1-5", "0 19 * * 1-5", "0 * * * *"]
+    // ONE trigger: the quarter-hour tick. scheduled() in _worker.js hands it to
+    // runScheduledTick, which reads JOB_SCHEDULE in New York time (days, hours
+    // and quarter-hour minutes) and runs what is due through the job log, then
+    // the content desk. The quarter-hour cadence is what makes a Sunday 12:15 PM
+    // and a 7:30 PM editorial slot possible in Eastern time without a UTC cron
+    // that drifts an hour every November. See HANDOFF.md "The in-season newsroom".
+    //
+    // The three weekday social crons (13:00 / 16:00 / 19:00 UTC: auction, snake
+    // and best-ball insight threads) are retired for the regular season and are
+    // NOT here; scheduled() still recognises their strings and refuses to post
+    // in the regular season unless DRAFT_SEASON_SOCIAL=1. Put them back for 2027.
+    "crons": ["*/15 * * * *"]
   }
 }

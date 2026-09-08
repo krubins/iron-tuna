@@ -69,51 +69,58 @@ const sched = { season: 2026, games, updatedAt: 1 };
 const withStatus = (finalIds) => ({ ...sched, games: games.map(x => ({ ...x, status: finalIds.includes(x.id) ? 'final' : null })) });
 const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); return H.contentDue(kind, when, H.nflSeasonState(sc, when), sc); };
 {
-  ok('ET weekday and hour are read', H.etParts(ET(2026, 9, 13, 20, 0)).dow === 'Sun' && H.etParts(ET(2026, 9, 13, 20, 0)).hour === 20);
-  // Sunday 8pm, Week 1: the early and late games are final, SNF is on, MNF is tomorrow.
-  const sun8 = due('what-changed-today', ET(2026, 9, 13, 20, 5), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late']);
-  ok('Sunday 8pm is due and ready with the finals it has', sun8.due && sun8.ready, JSON.stringify(sun8));
-  ok('it covers only the Sunday games that are final', sun8.targets.length === 3 && !sun8.targets.includes('w1-snf'), JSON.stringify(sun8.targets));
-  ok('and names the game still being played', sun8.excluded.includes('III@JJJ'), JSON.stringify(sun8.excluded));
-  ok('Sunday 7pm is not yet due', !due('what-changed-today', ET(2026, 9, 13, 19, 30), ['w1-e1']).due);
-  // SNF piece: 1am Monday, gated on the night game being final.
-  const snfEarly = due('snf-what-we-learned', ET(2026, 9, 14, 1, 0), ['w1-e1', 'w1-e2', 'w1-late']);
-  ok('the SNF piece waits for the night game to be final', snfEarly.due && !snfEarly.ready && /III@JJJ/.test(snfEarly.reason), JSON.stringify(snfEarly));
-  const snfDone = due('snf-what-we-learned', ET(2026, 9, 14, 1, 0), ['w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('and goes once it is', snfDone.due && snfDone.ready && snfDone.targets.join() === 'w1-snf', JSON.stringify(snfDone));
-  // Monday recaps: due Monday 7am, covering everything but the Monday game.
-  const mon = due('team-recaps', ET(2026, 9, 14, 7, 30), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('Monday recaps are due Monday morning with the weekend final', mon.due && mon.ready && mon.week === 1, JSON.stringify(mon));
-  ok('and leave the Monday game to Tuesday', !mon.targets.includes('w1-mnf'));
-  ok('Monday recaps are not due on Sunday night', !due('team-recaps', ET(2026, 9, 13, 23, 0), []).due);
-  // MNF: Tuesday 7am, gated on the Monday game.
-  const mnfWait = due('mnf-breakdown', ET(2026, 9, 15, 7, 30), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
-  ok('the MNF piece waits for Monday night', mnfWait.due && !mnfWait.ready, JSON.stringify(mnfWait));
-  const mnfGo = due('mnf-breakdown', ET(2026, 9, 15, 7, 30), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf', 'w1-mnf']);
-  ok('and publishes once it is final', mnfGo.due && mnfGo.ready && mnfGo.week === 1);
-  // A week with no Monday game skips the MNF piece rather than waiting forever.
-  const noMnf = due('mnf-breakdown', ET(2026, 9, 22, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf']);
-  ok('a week with no Monday game skips the MNF piece', noMnf.skip === true && noMnf.reason === 'no_such_game', JSON.stringify(noMnf));
-  // Tuesday feature: the whole week final.
-  const tue = due('what-they-arent-telling-you', ET(2026, 9, 15, 7, 15), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf', 'w1-mnf']);
-  ok('the Tuesday feature is due Tuesday morning about the week just played', tue.due && tue.ready && tue.week === 1, JSON.stringify(tue));
-  ok('on Tuesday the clock has turned to Week 2 but the piece is about Week 1', H.nflSeasonState(withStatus([]), ET(2026, 9, 15, 7, 15)).week.number === 2 && tue.week === 1);
-  // Thursday: preview before the game, aftermath Friday after it.
-  const prev = due('tnf-preview', ET(2026, 9, 17, 7, 30), []);
-  ok('the TNF preview is due Thursday morning, before kickoff', prev.due && prev.ready && prev.week === 2 && prev.targets.join() === 'w2-thu', JSON.stringify(prev));
-  ok('a preview is not ready once the game has started', !due('tnf-preview', ET(2026, 9, 17, 21, 0), []).ready);
-  const after = due('tnf-aftermath', ET(2026, 9, 18, 7, 30), ['w2-thu']);
-  ok('the aftermath is due Friday once the game is final', after.due && after.ready && after.targets.join() === 'w2-thu', JSON.stringify(after));
-  ok('and not before it is', !due('tnf-aftermath', ET(2026, 9, 18, 7, 30), []).ready);
-  const plan = due('weekend-game-plan', ET(2026, 9, 18, 7, 30), ['w2-thu']);
-  ok('the weekend plan covers the games still to come', plan.due && plan.ready && !plan.targets.includes('w2-thu') && plan.targets.length === 2, JSON.stringify(plan));
-  const wed = due('opportunity-report', ET(2026, 9, 16, 7, 30), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf', 'w1-mnf']);
-  ok('Wednesday pieces are due Wednesday morning about the played week', wed.due && wed.ready && wed.week === 1);
-  const fin = due('final-read', ET(2026, 9, 17, 7, 30), []);
-  ok('Thursday\'s Final Read is about the coming week', fin.due && fin.ready && fin.week === 2);
-  ok('the morning pieces are not due at 6:30 any more', !due('team-recaps', ET(2026, 9, 14, 6, 30), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']).due && !due('mnf-breakdown', ET(2026, 9, 15, 0, 30), ['w1-mnf']).due && !due('tnf-aftermath', ET(2026, 9, 18, 0, 30), ['w2-thu']).due);
-  ok('nothing is due before a game has been played', !due('team-recaps', ET(2026, 9, 1, 12, 0), []).due && !due('what-changed-today', ET(2026, 9, 1, 12, 0), []).due);
-  ok('nothing is due in the offseason', due('team-recaps', ET(2026, 5, 1, 12, 0), []).reason === 'not_regular_season');
+  ok('ET weekday, hour and minute are read', H.etParts(ET(2026, 9, 13, 20, 0)).dow === 'Sun' && H.etParts(ET(2026, 9, 13, 20, 0)).hour === 20 && H.etParts(ET(2026, 9, 13, 12, 15)).minute === 15);
+  ok('_nextEt lands on a quarter-hour slot', H.etParts(H._nextEt('Sun', 12, ET(2026, 9, 12, 0, 0), 15)).minute === 15 && H.etParts(H._nextEt('Sun', 12, ET(2026, 9, 12, 0, 0), 15)).hour === 12);
+  const wk1 = ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf', 'w1-mnf'];
+  // Sunday 12:15 PM, Week 1: Last-Minute Intel, live until the last Sunday kickoff.
+  const lmi = due('last-minute-intel', ET(2026, 9, 13, 12, 15), ['w1-thu']);
+  ok('Last-Minute Intel is due at 12:15 Sunday and ready while a Sunday game is still to kick off', lmi.due && lmi.ready && lmi.week === 1 && lmi.targets.length === 4, JSON.stringify(lmi));
+  ok('and not at noon', !due('last-minute-intel', ET(2026, 9, 13, 12, 0), ['w1-thu']).due);
+  ok('and not ready once every Sunday game has started', !due('last-minute-intel', ET(2026, 9, 13, 21, 0), ['w1-thu']).ready && due('last-minute-intel', ET(2026, 9, 13, 21, 0), ['w1-thu']).reason === 'all_games_started');
+  // Sunday 7:30 PM: What Sunday Taught Us with the finals it has, updated later.
+  const sun = due('what-sunday-taught-us', ET(2026, 9, 13, 19, 35), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late']);
+  ok('What Sunday Taught Us is due at 7:30 and ready with the finals it has', sun.due && sun.ready && sun.week === 1, JSON.stringify(sun));
+  ok('it covers only the Sunday games that are final', sun.targets.length === 3 && !sun.targets.includes('w1-snf'), JSON.stringify(sun.targets));
+  ok('and names the game still being played', sun.excluded.includes('III@JJJ'), JSON.stringify(sun.excluded));
+  ok('and carries an update window into Monday morning', sun.updatesUntil === sun.dueAt + 12 * 3600000);
+  ok('Sunday 7:15 is not yet due', !due('what-sunday-taught-us', ET(2026, 9, 13, 19, 15), ['w1-e1']).due);
+  // Monday 6 AM: the MNF preview, before the game; the early rankings, about NEXT week.
+  const mnf = due('mnf-preview', ET(2026, 9, 14, 6, 10), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  ok('the MNF preview is due Monday morning, before kickoff, about the Monday game', mnf.due && mnf.ready && mnf.week === 1 && mnf.targets.join() === 'w1-mnf', JSON.stringify(mnf));
+  ok('the Monday after a week with no Monday game, the clock has turned and the preview is simply not due', !due('mnf-preview', ET(2026, 9, 21, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf']).due && due('mnf-preview', ET(2026, 9, 28, 6, 0), ['w2-thu', 'w2-e1', 'w2-snf', 'w3-e1']).due);
+  const early = due('early-rankings', ET(2026, 9, 14, 6, 0), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  ok('the early rankings are due Monday 6 AM and are about Week 2 while the clock still says Week 1', early.due && early.ready && early.week === 2 && H.nflSeasonState(withStatus([]), ET(2026, 9, 14, 6, 0)).week.number === 1, JSON.stringify(early));
+  ok('and are not due on Sunday night', !due('early-rankings', ET(2026, 9, 13, 23, 0), []).due);
+  const qb = due('quarterback-monday', ET(2026, 9, 14, 7, 0), ['w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  ok('Quarterback Monday is due at 7 and is about the played week', qb.due && qb.ready && qb.week === 1);
+  // Tuesday: ROS rankings about the coming week; Tailback Tuesday about the played one.
+  const ros = due('ros-rankings', ET(2026, 9, 15, 7, 0), wk1);
+  ok('ROS rankings are due Tuesday 7 AM about the coming week', ros.due && ros.ready && ros.week === 2, JSON.stringify(ros));
+  ok('and not on Monday', !due('ros-rankings', ET(2026, 9, 14, 7, 0), wk1.slice(0, 5)).due);
+  const tb = due('tailback-tuesday', ET(2026, 9, 15, 8, 0), wk1);
+  ok('Tailback Tuesday is due at 8 about the played week', tb.due && tb.ready && tb.week === 1);
+  ok('the ROS piece anchors on Monday night when there is a Monday game, so Tuesday 6:45 is early', !due('ros-rankings', ET(2026, 9, 15, 6, 45), wk1).due);
+  // Wednesday.
+  const pick = due('pickup-advisor', ET(2026, 9, 16, 6, 0), wk1);
+  ok('the Pickup Advisor is due Wednesday 6 AM about the coming week', pick.due && pick.ready && pick.week === 2);
+  const wo = due('wideout-wednesday', ET(2026, 9, 16, 8, 0), wk1);
+  ok('Wideout Wednesday is due at 8 about the played week', wo.due && wo.ready && wo.week === 1);
+  // Thursday: preview before the game, then the forward pieces.
+  const prev = due('tnf-preview', ET(2026, 9, 17, 6, 30), wk1);
+  ok('the TNF preview is due Thursday 6 AM, before kickoff', prev.due && prev.ready && prev.week === 2 && prev.targets.join() === 'w2-thu', JSON.stringify(prev));
+  ok('a preview is not ready once the game has started', !due('tnf-preview', ET(2026, 9, 17, 21, 0), wk1).ready);
+  ok('Underrated, the Trade Desk and Tight End Thursday follow at 7, 8 and 9', due('underrated', ET(2026, 9, 17, 7, 0), wk1).due && !due('underrated', ET(2026, 9, 17, 6, 45), wk1).due && due('trade-desk', ET(2026, 9, 17, 8, 0), wk1).week === 2 && due('tight-end-thursday', ET(2026, 9, 17, 9, 0), wk1).week === 1);
+  // Friday.
+  const after = due('tnf-what-matters', ET(2026, 9, 18, 6, 30), wk1.concat(['w2-thu']));
+  ok('Thursday Night: What Matters is due Friday 6 AM once the game is final', after.due && after.ready && after.targets.join() === 'w2-thu', JSON.stringify(after));
+  ok('and not before it is', !due('tnf-what-matters', ET(2026, 9, 18, 6, 30), wk1).ready);
+  const wp = due('weekend-preview', ET(2026, 9, 18, 7, 30), wk1.concat(['w2-thu']));
+  ok('the Weekend Preview covers the games still to come', wp.due && wp.ready && !wp.targets.includes('w2-thu') && wp.targets.length === 2, JSON.stringify(wp));
+  ok('Kickers & Defenses is due Friday 8 AM', due('kickers-defenses', ET(2026, 9, 18, 8, 0), wk1).due && !due('kickers-defenses', ET(2026, 9, 18, 7, 45), wk1).due);
+  ok('a breaking piece is never due on the clock', due('breaking', ET(2026, 9, 18, 8, 0), wk1).reason === 'unscheduled');
+  ok('nothing is due before a game has been played', !due('what-sunday-taught-us', ET(2026, 9, 1, 12, 0), []).due && !due('early-rankings', ET(2026, 9, 1, 12, 0), []).due);
+  ok('nothing is due in the offseason', due('ros-rankings', ET(2026, 5, 1, 12, 0), []).reason === 'not_regular_season');
+  ok('an unknown kind is refused', due('team-recaps', ET(2026, 9, 14, 7, 30), wk1).reason === 'unknown_kind');
 }
 
 console.log('\nthe briefs');
@@ -122,7 +129,7 @@ const week = { ok: true, players: POOL.map((p, i) => ({ key: _oddsNorm(p.name) +
   marketDelta: { points: i === 0 ? 3 : 0, rank: i === 0 ? 6 : 0, classification: i === 0 ? 'VEGAS LEANS HIGHER' : 'MARKET AGREES', significant: i === 0 }, why: { summary: 'x', drivers: [] }, weeks: [{ opponent: 'XXX', home: true, env: { factor: 1 } }], roleTrend: { label: 'no data' } })) };
 const ctx = { sched: { games: [{ type: 'REG', home: 'PHI', away: 'DAL' }] }, week, next: null, depth: { teams: { PHI: { offense: { QB: ['Jalen Hurts'], RB: ['Saquon Barkley'], WR: ['A.J. Brown'], TE: ['Dallas Goedert'] } } } }, usage: null, signals: { insights: [] }, gameMarkets: {}, weekMarkets: {}, injuriesList: [], injuriesByTeam: {}, weekNumber: 1, rules: H.scoringRules('ppr'), nameIndex: H._oddsProjectionIndex(), excluded: ['III@JJJ'] };
 {
-  const b = H.briefForGames('snf-what-we-learned', [{ id: 'x', home: 'PHI', away: 'DAL' }], [G], ctx);
+  const b = H.briefForGames('what-sunday-taught-us', [{ id: 'x', home: 'PHI', away: 'DAL' }], [G], ctx);
   ok('a game brief has a section per club', b.teams.length === 2 && b.teams.every(t => t.alreadyKnew && t.learned && Array.isArray(t.stillDontKnow)));
   ok('what we already knew carries the depth chart', b.teams.find(t => t.team === 'PHI').alreadyKnew.depthChart.RB[0] === 'Saquon Barkley');
   ok('what we learned carries the usage counts', b.teams.find(t => t.team === 'PHI').learned.backfield[0].carries > 0);

@@ -100,6 +100,8 @@ const NAV = [
       { label: 'Overview', href: '/in-season' },
       { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
+      { label: 'The Desk', href: '/in-season/desk' },
+      { label: 'Analysts', href: '/analysts' },
       { label: 'My League', href: '/my-league' },
     ],
   },
@@ -116,7 +118,7 @@ const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta:
 const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html',
   'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
-  'post-draft.html']);
+  'post-draft.html', 'analysts.html', 'analyst.html']);
 
 const FOOT_COLS = [
   {
@@ -144,6 +146,8 @@ const FOOT_COLS = [
       { label: 'Overview', href: '/in-season' },
       { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
+      { label: 'The Desk', href: '/in-season/desk' },
+      { label: 'The analysts (AI)', href: '/analysts' },
       { label: 'My League', href: '/my-league' },
     ],
   },

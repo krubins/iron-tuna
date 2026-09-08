@@ -74,7 +74,11 @@ p{color:var(--sec);margin:0 0 16px}
 .rk-movers li{margin-bottom:6px} .rk-movers b{color:var(--text)}
 .rk-movers small{display:block;color:var(--muted);font-size:12px}
 .rk-why{font-size:12px;color:var(--sec);max-width:360px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;margin-top:3px}
-.rk-table td.p a{color:var(--text);text-decoration:none} .rk-table td.p </style>
+.rk-table td.p a{color:var(--text);text-decoration:none} .rk-table td.p .rk-blend{border:1px solid var(--line2);border-radius:10px;padding:12px 16px;margin:0 0 14px}
+.rk-blend-h{display:flex;justify-content:space-between;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.rk-blend-h span:nth-child(2){color:var(--text);letter-spacing:0;text-transform:none;font-size:14px}
+.rk-blend input[type=range]{width:100%;margin:8px 0 4px;accent-color:var(--teal)}
+</style>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -87,7 +91,7 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -120,7 +124,13 @@ p{color:var(--sec);margin:0 0 16px}
     <button type="button" data-board="ironTuna">Iron Tuna</button>
     <button type="button" data-board="consensus">Consensus</button>
     <button type="button" data-board="vegas">Vegas</button>
+    <button type="button" data-board="blend">Fantasy &harr; Market</button>
   </div>
+</div>
+<div class="rk-blend" id="rkBlend" hidden>
+  <div class="rk-blend-h"><span>Fantasy Analysis</span><span id="rkBlendLabel">50 / 50</span><span>Market Intelligence</span></div>
+  <input type="range" id="rkBlendW" min="0" max="100" step="5" value="50" aria-label="Weight between Fantasy Analysis and Market Intelligence">
+  <p class="is-note" id="rkBlendNote">At the left the board is <a href="/analysts/brooks">Evan Brooks</a>&rsquo;s: the consensus projection at your scoring, with the usage role trend once three games have earned it. At the right it is <a href="/analysts/vega">Nate Vega</a>&rsquo;s: the sportsbook read, shrunk toward the fantasy number where no prop is priced (a fitted team rating is a projection of the market, not a market). In between is a weighted point total, recomputed here in the browser from those two components, never a reorder.</p>
 </div>
 <div class="rk-controls">
   <div class="rk-seg" id="rkScoring" role="group" aria-label="Scoring settings">
@@ -199,6 +209,8 @@ p{color:var(--sec);margin:0 0 16px}
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
       <li><a href="/my-league">My League</a></li>
      </ul>
     </div>
@@ -236,6 +248,16 @@ p{color:var(--sec);margin:0 0 16px}
   // engine, pinned by tools/test-scoring.mjs), then the three boards are
   // re-ranked and Market Delta recomputed with the thresholds the API shipped.
   var data = {}, preset = 'ppr', horizon = 'week', board = 'ironTuna', pos = 'RB', sortKey = 'rank', sortDir = 1, q = '', hideOut = false;
+  // The Fantasy Analysis / Market Intelligence weight, 0 to 1, and the shrink
+  // the worker applies to the market side by how much of it is a quoted
+  // market (blendComponents in _worker.js; the same table).
+  var w = 0.5, SHRINK = { props: 1, 'props-partial': 0.9, 'props+gamelines': 0.95, gamelines: 0.8, 'gamelines+ratings': 0.7, ratings: 0.55, none: 0 };
+  function blendPts(p, c, v) {
+    var role = p.roleTrend && p.roleTrend.applied ? p.roleTrend.factor : 1;
+    var f = c * role, sh = SHRINK[p.vegas.basis] != null ? SHRINK[p.vegas.basis] : 0;
+    return Math.round((f + w * sh * (v - f)) * 10) / 10;
+  }
+  function bp(r) { return board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : board === 'blend' ? r.b : r.v; }
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var $ = function (id) { return document.getElementById(id); };
@@ -272,11 +294,12 @@ p{color:var(--sec);margin:0 0 16px}
   function scored(payload) {
     var rows = payload.players.map(function (p) {
       var g = p.games || 1;
-      return { p: p, c: score(p.consensus.stats, p.position, g), v: score(p.vegas.stats, p.position, g), i: score(p.ironTuna.stats, p.position, g) };
+      var c = score(p.consensus.stats, p.position, g), v = score(p.vegas.stats, p.position, g);
+      return { p: p, c: c, v: v, i: score(p.ironTuna.stats, p.position, g), b: c != null && v != null ? blendPts(p, c, v) : null };
     }).filter(function (r) { return r.i != null; });
     var groups = {};
     rows.forEach(function (r) { (groups[r.p.position] = groups[r.p.position] || []).push(r); });
-    ['c', 'v', 'i'].forEach(function (f) {
+    ['c', 'v', 'i', 'b'].forEach(function (f) {
       Object.keys(groups).forEach(function (g) {
         groups[g].slice().sort(function (a, b) { return b[f] - a[f] || (a.p.name < b.p.name ? -1 : 1); }).forEach(function (r, ix) { r[f + 'Rank'] = ix + 1; });
       });
@@ -300,8 +323,8 @@ p{color:var(--sec);margin:0 0 16px}
       case 'team': return '<td>' + e(p.team) + '</td>';
       case 'opp': return '<td>' + (p.byes.length && !w0 ? '<span class="is-status">BYE</span>' : w0 ? e((w0.home ? 'vs ' : 'at ') + w0.opponent) : '—') + '</td>';
       case 'opps': return '<td>' + e(p.weeks.map(function (w) { return w.bye ? 'BYE' : w.out ? 'OUT' : (w.home ? 'vs ' : '@') + w.opponent; }).join(', ')) + '</td>';
-      case 'it': return '<td class="num"><b>' + n1(board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v) + '</b></td>';
-      case 'ppg': var pts = board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v; return '<td class="num">' + (p.games ? n1(pts / p.games) : '—') + '</td>';
+      case 'it': return '<td class="num"><b>' + n1(bp(r)) + '</b></td>';
+      case 'ppg': var pts = bp(r); return '<td class="num">' + (p.games ? n1(pts / p.games) : '—') + '</td>';
       case 'games': return '<td class="num">' + p.games + '</td>';
       case 'byes': return '<td>' + (p.byes.length ? e(p.byes.join(', ')) : '—') + '</td>';
       case 'sched': return '<td>' + (p.scheduleDifficulty ? e(p.scheduleDifficulty.label) + ' <span class="is-status">' + e(p.scheduleDifficulty.avgOpponentDefRank) + '</span>' : '—') + '</td>';
@@ -320,8 +343,8 @@ p{color:var(--sec);margin:0 0 16px}
     switch (key) {
       case 'rank': return r[rankField];
       case 'player': return p.name; case 'team': return p.team; case 'opp': return (p.weeks[0] && p.weeks[0].opponent) || 'zzz';
-      case 'it': return -(board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v);
-      case 'ppg': return -((board === 'ironTuna' ? r.i : board === 'consensus' ? r.c : r.v) / (p.games || 1));
+      case 'it': return -(bp(r));
+      case 'ppg': return -((bp(r)) / (p.games || 1));
       case 'games': return -p.games; case 'byes': return p.byes[0] || 99; case 'sched': return p.scheduleDifficulty ? p.scheduleDifficulty.avgOpponentDefRank : 99;
       case 'crank': return r.cRank; case 'vrank': return r.vRank; case 'delta': return -(r.delta.rank || 0);
       case 'conf': return ['HIGH', 'MEDIUM', 'LOW'].indexOf(p.vegas.confidence); case 'inj': return p.injury ? 0 : 1;
@@ -332,7 +355,7 @@ p{color:var(--sec);margin:0 0 16px}
   function render() {
     var payload = data[horizon]; if (!payload) return;
     var rows = scored(payload);
-    var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
+    var rankField = (board === 'ironTuna' ? 'i' : board === 'consensus' ? 'c' : board === 'blend' ? 'b' : 'v') + (pos === 'FLEX' ? 'Flex' : 'Rank');
     rows = rows.filter(function (r) { return pos === 'FLEX' ? /^(RB|WR|TE)$/.test(r.p.position) : r.p.position === pos; });
     if (q) { var qq = q.toLowerCase(); rows = rows.filter(function (r) { return r.p.name.toLowerCase().indexOf(qq) >= 0 || r.p.team.toLowerCase() === qq; }); }
     if (hideOut && horizon === 'week') rows = rows.filter(function (r) { return !(r.p.weeks[0] && (r.p.weeks[0].out || r.p.weeks[0].bye)); });
@@ -347,7 +370,8 @@ p{color:var(--sec);margin:0 0 16px}
     var L = window.ITLeague;
     $('rkScoringNote').innerHTML = (preset === 'custom' ? 'Scored at <b>' + e(L && L.label ? L.label() : 'your league') + '</b>' : 'Scored at <b>' + (preset === 'standard' ? 'Standard' : preset === 'half' ? 'Half PPR' : 'PPR') + '</b>') +
       ' &middot; ' + e(payload.horizon.label) + (payload.horizon.weeks.length ? ' (weeks ' + payload.horizon.weeks[0] + (payload.horizon.weeks.length > 1 ? '–' + payload.horizon.weeks[payload.horizon.weeks.length - 1] : '') + ')' : '') +
-      ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : 'Vegas') + '</b> board.';
+      ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Brooks)' : w === 1 ? 'Market Intelligence (Vega)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
+    $('rkBlend').hidden = board !== 'blend';
     $('rkFoot').innerHTML = 'Vegas basis: <b>props</b> is a priced player prop; <b>gamelines</b> is the posted game line’s scoring environment applied to his line; <b>ratings</b> is a fixture no book has posted yet, projected from fitted team ratings and graded LOW. ' +
       (payload.sources && payload.sources.props ? payload.sources.props + ' players carry a prop this week.' : 'No sportsbook has posted a player prop for this week yet.') +
       (payload.sources && payload.sources.usage ? ' Usage through week ' + payload.sources.usage + '.' : ' No weekly usage has been published yet.');
@@ -387,6 +411,9 @@ p{color:var(--sec);margin:0 0 16px}
     $('rkScoring').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; preset = b.getAttribute('data-preset'); setPressed(this, 'data-preset', preset); render(); });
     $('rkHorizon').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; horizon = b.getAttribute('data-horizon'); setPressed(this, 'data-horizon', horizon); sortKey = 'rank'; sortDir = 1; load(horizon); });
     $('rkBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); setPressed(this, 'data-board', board); render(); });
+    $('rkBlendW').addEventListener('input', function () { w = Math.min(1, Math.max(0, (parseInt(this.value, 10) || 0) / 100)); $('rkBlendLabel').textContent = w === 0 ? 'Fantasy Analysis' : w === 1 ? 'Market Intelligence' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100); render(); });
+    $('rkBlendW').addEventListener('change', function () { try { var uid = localStorage.getItem('it.uid') || Math.random().toString(36).slice(2, 12); localStorage.setItem('it.uid', uid); navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'slider_set', uid: uid, props: { path: location.pathname, w: w, horizon: horizon, pos: pos } })], { type: 'application/json' })); } catch (x) {} });
+    var bq = (location.hash.match(/blend=(\d+)/) || [])[1]; if (bq) { board = 'blend'; w = Math.min(1, Math.max(0, parseInt(bq, 10) / 100)); $('rkBlendW').value = Math.round(w * 100); setPressed($('rkBoard'), 'data-board', board); }
     $('rkPos').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; pos = b.getAttribute('data-pos'); setPressed(this, 'data-pos', pos); render(); });
     $('rkSearch').addEventListener('input', function () { q = this.value.trim(); render(); });
     $('rkHideOut').addEventListener('change', function () { hideOut = this.checked; render(); });

@@ -103,6 +103,39 @@ img{max-width:100%}
    when its lane comes back. */
 .ribbon[data-lane="dfs"] a[data-lane="fantasy"],
 .ribbon[data-lane="fantasy"] a[data-lane="dfs"]{display:none}
+/* The regular season. it-season.js stamps html[data-season="in"] off /api/season,
+   and the draft-season bands (The Pick, The Build, Asset Allocation, the cheat-sheet
+   Vegas column, Position Intel, Just Posted, Training Camp) leave the front page
+   with it: they are historical once the games start, not current advice. The
+   pages themselves stay reachable from the footer and the nav. */
+html[data-season="in"] #thepick,html[data-season="in"] #pickSub,html[data-season="in"] #pickBand,
+html[data-season="in"] #build,html[data-season="in"] #buildSub,html[data-season="in"] .build-wrap,html[data-season="in"] #buildCards,
+html[data-season="in"] #allocation,html[data-season="in"] #allocSub,html[data-season="in"] #allocGrid,
+html[data-season="in"] #camp,html[data-season="in"] #campNote,html[data-season="in"] .camp-grid,
+html[data-season="in"] #vegas,html[data-season="in"] #vegasSub,html[data-season="in"] #vegasWrap,
+html[data-season="in"] #positions,html[data-season="in"] #posGrid,
+html[data-season="in"] #wire,html[data-season="in"] #wireSub,html[data-season="in"] #wireList,
+html[data-season="in"] .ribbon a[href="#thepick"],html[data-season="in"] .ribbon a[href="#build"],html[data-season="in"] .ribbon a[href="#vegas"],
+html[data-season="in"] .ribbon a[href="#positions"],html[data-season="in"] .ribbon a[href="#allocation"],html[data-season="in"] .ribbon a[href="#camp"]{display:none!important}
+html:not([data-season="in"]) .ribbon a[href="#newsroom"],html:not([data-season="in"]) .ribbon a[href="#disagree"],html:not([data-season="in"]) .ribbon a[href="#dfsNewsroom"],
+html:not([data-season="in"]) #newsroom,html:not([data-season="in"]) #newsroomSub,html:not([data-season="in"]) #newsroomBand,html:not([data-season="in"]) #disagree,html:not([data-season="in"]) #disagreeBand,
+html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsroomBand{display:none}
+/* The newsroom: the desk's newest pieces, bylined. */
+.nr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:8px 0 26px}
+.nr-card{border:1px solid var(--line2,#d9e0e5);border-radius:10px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none;background:var(--card,#fff)}
+.nr-card:hover{border-color:var(--teal,#0e7c63)}
+.nr-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
+.nr-card h3{margin:0;font-size:17px;line-height:1.3}.nr-card p{margin:0;color:var(--sec,#5a6b78);font-size:13.5px;line-height:1.45}
+.nr-by{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sec,#5a6b78);margin-top:auto}
+.nr-av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--teal,#0e7c63);color:#fff;font-weight:800;font-size:10px}
+.nr-riv{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line2,#d9e0e5);border-radius:3px;padding:1px 5px;margin-left:auto}
+.dg-wrap{border:1px solid var(--line2,#d9e0e5);border-radius:10px;padding:14px 16px;margin:8px 0 26px;display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+.dg-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line,#e6ebef);font-size:14px}
+.dg-row:first-child{border-top:0}.dg-row b{font-size:15px}.dg-row small{display:block;color:var(--sec,#5a6b78);font-size:11.5px}
+.dg-r{font-weight:800;text-align:right}.dg-r small{font-weight:400}
+.dg-side h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
+.dg-side p{margin:0 0 8px;font-size:14px;line-height:1.45}.dg-line{font-style:italic;color:var(--sec,#5a6b78)}
+@media(max-width:800px){.dg-wrap{grid-template-columns:1fr}}
 /* Auction or snake is a question about a draft. It has no answer on a slate. */
 .ribbon[data-lane="dfs"] .ed-switch{display:none}
 
@@ -1071,6 +1104,8 @@ img{max-width:100%}
        fantasy set rather than sitting beside it. -->
   <a href="#today" data-lane="fantasy">Today</a>
   <a href="#thetell" data-lane="fantasy">The Tell</a>
+  <a href="#newsroom" data-lane="fantasy">Newsroom</a>
+  <a href="#disagree" data-lane="fantasy">Vega vs. Brooks</a>
   <a href="#build" data-lane="fantasy">The Build</a>
   <a href="#thepick" data-lane="fantasy">The Pick</a>
   <a href="#vegas" data-lane="fantasy">Vegas</a>
@@ -1078,6 +1113,7 @@ img{max-width:100%}
   <a href="#allocation" data-lane="fantasy">Allocation</a>
   <a href="#camp" data-lane="fantasy">Camp</a>
   <a href="#dfsSlate" data-lane="dfs">The Slate</a>
+  <a href="#dfsNewsroom" data-lane="dfs">Newsroom</a>
   <a href="#dfsValues" data-lane="dfs">Vegas Values</a>
   <a href="#dfsStacks" data-lane="dfs">Game Stacks</a>
   <a href="#dfsTd" data-lane="dfs">TD Board</a>
@@ -1153,6 +1189,16 @@ img{max-width:100%}
        the source of truth and this band cannot quote it wrongly. Hidden
        outright when the feed is empty — a column heading over nothing is worse
        than no column. -->
+  <!-- The newsroom: the in-season desk's newest packages, bylined to the AI
+       analyst personas, off /api/newsroom. Regular season only (CSS above);
+       hidden outright when the feed has nothing, like every band here. -->
+  <div class="sec-head" id="newsroom"><h2>The Newsroom</h2><a class="sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
+  <p class="sec-sub" id="newsroomSub">Eight analysts, one set of facts. The week&rsquo;s packages, newest first, each with a Weekly Fantasy read and a DFS read of the same research. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p>
+  <div class="nr-grid" id="newsroomBand"></div>
+
+  <div class="sec-head" id="disagree"><h2>Vega vs. Brooks</h2><a class="sec-more" href="/rankings#blend=50">Slide it yourself &rarr;</a></div>
+  <div class="dg-wrap" id="disagreeBand" hidden></div>
+
   <div class="sec-head" id="thetell"><h2>The Tell</h2><a class="sec-more" href="/the-tell">The whole column &rarr;</a></div>
   <p class="sec-sub" id="tellSub">Every ranking has a tell: the one number inside it that says whether the rest will hold. Six players a week whose rank and whose projection disagree &mdash; touchdown share, the betting market&rsquo;s offense ranks, and the reason each one is about to embarrass its own tier.</p>
   <div class="tell-band" id="tellBand"></div>
@@ -1278,6 +1324,9 @@ img{max-width:100%}
   </div>
   <p class="dfs-note" id="dfsNote">Reading the slate&hellip;</p>
   <div class="dfs-cards" id="dfsCards"></div>
+
+  <div class="sec-head" id="dfsNewsroom"><h2>The Newsroom, DFS lens</h2><a class="sec-more" href="/in-season/desk?lens=dfs">The whole desk &rarr;</a></div>
+  <div class="nr-grid" id="dfsNewsroomBand"></div>
 
   <div class="sec-head" id="dfsValues"><h2>Vegas Values</h2><a class="sec-more" href="/dfs#values">Every row &rarr;</a></div>
   <p class="sec-sub">The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate&rsquo;s median: 100 is an ordinary price, 130 is a bargain.</p>
@@ -2255,6 +2304,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       var band = document.getElementById('heroBand'), wk = document.getElementById('hbWeek');
       if (!s || !band || !wk) return;
       if (s.phase === 'regular') band.setAttribute('data-season', 'in');
+      if (s.phase === 'regular') document.documentElement.setAttribute('data-season', 'in');
       var w = s.week || {}, h = esc(s.phaseLabel || '');
       if (w.label) h += ' · <b>' + esc(w.label) + '</b>';
       if (w.status === 'active') h += ' · <span class="live">' + ((s.counts && s.counts.inProgress) ? s.counts.inProgress + ' live' : 'under way') + '</span>';
@@ -3529,6 +3579,41 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // Opening the page on the DFS lane must not strip a hash that names a DFS
   // section, so the URL is left alone on the first pass.
   setLane(opening(), { url: false });
+})();
+</script>
+<script>
+/* The newsroom bands, both lanes, and the Vega vs. Brooks module. A separate
+   block: a throw here cannot take the front page's own script down. */
+(function () {
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  var hide = function (ids) { ids.forEach(function (id) { var el = $(id); if (el) el.hidden = true; }); var a = document.querySelector('.ribbon a[href="#' + ids[0] + '"]'); if (a) a.hidden = true; };
+  var av = function (name) { return (name || '').split(' ').map(function (w) { return w[0]; }).join(''); };
+  function card(p, lens) {
+    var by = p.byline || {}; var who = lens === 'dfs' ? by.dfsName : by.name;
+    return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker">' + esc(lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title) + ' &middot; Week ' + esc(p.week) + (p.version > 1 ? ' &middot; update ' + esc(p.version) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
+      '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + '</span></a>';
+  }
+  function band(lens, gridId, ids) {
+    fetch('/api/newsroom?lens=' + lens + '&limit=8').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      var grid = $(gridId); if (!grid) return;
+      if (!j || !j.ok || !j.pieces || !j.pieces.length) { hide(ids); return; }
+      grid.innerHTML = j.pieces.slice(0, 8).map(function (p) { return card(p, lens); }).join('');
+    }).catch(function () { hide(ids); });
+  }
+  band('weekly', 'newsroomBand', ['newsroom', 'newsroomSub', 'newsroomBand']);
+  band('dfs', 'dfsNewsroomBand', ['dfsNewsroom', 'dfsNewsroomBand']);
+  fetch('/api/disagreements').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    var el = $('disagreeBand'); if (!el) return;
+    if (!j || !j.ok || !j.disagreements || !j.disagreements.length) { hide(['disagree', 'disagreeBand']); return; }
+    var rows = j.disagreements.slice(0, 6).map(function (d) {
+      return '<div class="dg-row"><div><b>' + esc(d.name) + '</b><small>' + esc(d.position) + ' &middot; ' + esc(d.team) + (d.why ? ' &middot; ' + esc(d.why) : '') + '</small></div><div class="dg-r">Brooks ' + esc(d.position) + esc(d.brooksRank) + '<small>Fantasy Analysis</small></div><div class="dg-r">Vega ' + esc(d.position) + esc(d.vegaRank) + '<small>Market &middot; ' + esc(d.marketBasis) + '</small></div></div>';
+    }).join('');
+    var lines = (j.recentLines || []).slice(0, 2).map(function (l) { return '<p class="dg-line">' + esc(l.line || (l.player + ': Brooks ' + l.position + l.brooks.rank + ', Vega ' + l.position + l.vega.rank)) + ' <a href="' + esc(l.url) + '">&rarr;</a></p>'; }).join('');
+    el.innerHTML = '<div><div class="dg-side"><h4>Where the two methods rank a player apart this week</h4></div>' + rows + '</div>' +
+      '<div class="dg-side"><h4>The desk&rsquo;s one argument</h4><p><a href="/analysts/brooks"><b>Evan Brooks</b></a> ranks from talent, role, workload and schedule; the market is one input. <a href="/analysts/vega"><b>Nate Vega</b></a> ranks from what the sportsbooks price; the ranking is one opinion. Neither is always right, and the desk says so when one of them was.</p>' + lines + '<p><a href="/rankings#blend=50">Move the slider between them on the rankings page &rarr;</a></p></div>';
+    el.hidden = false;
+  }).catch(function () { hide(['disagree', 'disagreeBand']); });
 })();
 </script>
 </body>

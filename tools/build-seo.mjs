@@ -94,7 +94,7 @@ const COLUMN_PAGES = {
     // data-players onto these articles, so an id-then-close regex (which is all
     // The Pick needs) silently matches nothing here and the Blog ships with no
     // blogPost list at all.
-    entry: /<article class="call nsy" id="(tell-(\d{4}-\d{2}-\d{2})[^"]*)"[^>]*>[\s\S]*?<h2>([\s\S]*?)<\/h2>/g,
+    entry: /<article class="call tell" id="(tell-(\d{4}-\d{2}-\d{2})[^"]*)"[^>]*>[\s\S]*?<h2>([\s\S]*?)<\/h2>/g,
   },
 };
 

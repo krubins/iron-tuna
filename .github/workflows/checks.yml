@@ -292,6 +292,10 @@ jobs:
         run: node tools/test-health.mjs
       - name: The job schedule in New York time
         run: node tools/test-jobs.mjs
+      - name: The in-season newsroom (migration, staff, blend, packets, memory, fact check, breaking news)
+        run: node tools/test-newsroom.mjs
+      - name: The editorial week, dry run (fake D1, fake model, the clock advanced a quarter hour at a time)
+        run: node tools/test-dry-run.mjs
 
       # The data-licensing boundary (docs/data-sources.md, Addendum §14). Every
       # external host the worker can reach is named in an allowlist with the
