@@ -115,7 +115,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -360,6 +360,17 @@ jobs:
       # from, and to the markup /it-league.js needs to translate it.
       - name: The Pick, against the player pool it prices from
         run: node tools/test-the-pick.mjs
+
+      # "The Tell" argues from three printed numbers per entry
+      # rather than from prose, and its whole claim on a reader is that those
+      # numbers are checkable. So every one of them is recomputed here from the
+      # sources the column says it read — touchdown share and positional rank off
+      # PROJECTIONS at full PPR, implied points and offense rank off
+      # tools/team-market.json — and the summary table at the top of the page is
+      # checked against the six entries under it, because two statements of the
+      # same fact on one page is how a page contradicts itself.
+      - name: The Tell, against the numbers it quotes
+        run: node tools/test-the-tell.mjs
 
       # Who coaches whom is handed to the Value Coach as authoritative and told to
       # override the model's own memory, so a wrong row is stated as confidently as

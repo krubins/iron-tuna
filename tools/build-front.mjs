@@ -525,6 +525,61 @@ const column = [];
   column.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
+// ── The Tell ───────────────────────────────────────────────────────────────
+// not-seeing-yet.html is the source of truth, same discipline as the two
+// columns above. This one is the Weekly Fantasy lane's LEAD, so the front page
+// takes more off each entry than a card needs: the verdict chip, the headline,
+// the tell line, and `nums` — the evidence row, which is the whole conceit of
+// the column. An entry with no numbers under it is an opinion, and the band
+// would be printing one without saying so, which is why nums is extracted
+// rather than re-summarised here.
+const tell = [];
+{
+  const src = read('the-tell.html');
+  const re = /<article class="call tell" id="([^"]+)"[^>]*>([\s\S]*?)<\/article>/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const [id, block] = [m[1], m[2]];
+    const chip = (block.match(/<span class="chip ([a-z]+)">([^<]*)<\/span>/) || []);
+    const pos = norm((block.match(/<span class="cpos">([^<]*)<\/span>/) || [])[1] || '');
+    const team = norm((block.match(/<span class="cteam">([^<]*)<\/span>/) || [])[1] || '');
+    const title = norm((block.match(/<h2>([\s\S]*?)<\/h2>/) || [])[1] || '');
+    const whoBlock = ((block.match(/<p class="who">([\s\S]*?)<\/p>/) || [])[1]) || '';
+    const who = clip(norm(whoBlock.replace(/<[^>]*>/g, '')).replace(/^The tell:\s*/i, ''), 190);
+    const stat = norm(((block.match(/<p class="statline">([\s\S]*?)<\/p>/) || [])[1] || '')
+      .replace(/<[^>]*>/g, '')).replace(/^Projected effect:\s*/i, '');
+    // The evidence row: each <span> is one number, tags stripped, in the order
+    // the entry states them.
+    const nums = [...cnumSpans(block)].slice(0, 3);
+    if (!title) continue;
+    // Same rule as the coaching column: only the tell line commits to a player,
+    // so only its <b> spans claim a photo. The label itself is not a name.
+    const named = [...whoBlock.matchAll(/<b>([^<]+)<\/b>/g)]
+      .map(x => norm(x[1])).filter(n => !/^The tell/i.test(n));
+    const keys = named.map(n => slug(n)).filter(k => bySlug.has(k));
+    enlist(keys);
+    tell.push({
+      id, title, pos, team,
+      date: (id.match(/(\d{4}-\d{2}-\d{2})/) || [])[1] || '',
+      side: chip[1] || '', label: norm(chip[2] || ''),
+      who, stat, nums, url: '/the-tell#' + id,
+      ppl: keys,
+    });
+  }
+  // Newest edition first, and within an edition the order the column wrote them
+  // — the entries argue in sequence and the band reprints that sequence.
+  tell.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+// The evidence row is `<p class="cnum"><span>label <b>value</b></span>...`.
+// Read as text, so the band prints the sentence the column wrote rather than a
+// second copy of the number formatted some other way.
+function cnumSpans(block) {
+  const line = (block.match(/<p class="cnum">([\s\S]*?)<\/p>/) || [])[1] || '';
+  return [...line.matchAll(/<span>([\s\S]*?)<\/span>/g)]
+    .map(x => norm(x[1].replace(/<[^>]*>/g, '')))
+    .filter(Boolean);
+}
+
 // ── The Pick ───────────────────────────────────────────────────────────────
 // the-pick.html is the source of truth, same discipline as the coaching column
 // above: one themed story a day, and the front page quotes it rather than
@@ -598,6 +653,7 @@ front = front.replace(/var PLAYERS = \{[\s\S]*?\};\n/, 'var PLAYERS = ' + JSON.s
 front = front.replace(/var REPORTS = \[[\s\S]*?\];\n/, 'var REPORTS = ' + JSON.stringify(reports) + ';\n');
 front = front.replace(/var COLUMN = \[[\s\S]*?\];\n/, 'var COLUMN = ' + JSON.stringify(column) + ';\n');
 front = front.replace(/var PICKS = \[[\s\S]*?\];\n/, 'var PICKS = ' + JSON.stringify(picks) + ';\n');
+front = front.replace(/var TELL = \[[\s\S]*?\];\n/, 'var TELL = ' + JSON.stringify(tell) + ';\n');
 
 // ── static camp desk, for crawlers that never run the script ────────────────
 // The camp desk used to be built entirely on the client out of REPORTS, which
@@ -665,12 +721,12 @@ if (reports.length) {
 }
 
 front = front.replace(/var PRESEASON = \[[\s\S]*?\];\n/, 'var PRESEASON = ' + JSON.stringify(preseason) + ';\n');
-if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PICKS = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
-  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PICKS/PRESEASON declarations in front.html');
+if (!/var STORIES = \[/.test(front) || !/var REPORTS = \[/.test(front) || !/var PLAYERS = \{/.test(front) || !/var COLUMN = \[/.test(front) || !/var PICKS = \[/.test(front) || !/var TELL = \[/.test(front) || !/var PRESEASON = \[/.test(front)) {
+  console.error('ABORT: could not find STORIES/REPORTS/PLAYERS/COLUMN/PICKS/TELL/PRESEASON declarations in front.html');
   process.exit(1);
 }
 fs.writeFileSync(path.join(root, 'front.html'), front);
-console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${picks.length} picks, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
+console.log(`front.html: ${stories.length} stories, ${reports.length} camp reports, ${cast.size} player photos, ${picks.length} picks, ${tell.length} tells, ${preseason.length} preseason weeks${front === before ? ' (no change)' : ''}`);
 
 // ── weekly-intel.html: the in-season front page ────────────────────────────
 // It carries The Pick and the coaching column too, and for the same reason
@@ -764,6 +820,24 @@ const hasCard = k => seenSlug.has(k);
   const next = src.replace(/<article class="call" id="([^"]+)"[^>]*>/g, (whole, id) => {
     const who = (byId.get(id) || []).filter(hasCard);
     return who.length ? `<article class="call" id="${id}" data-players="${who.join(' ')}">` : `<article class="call" id="${id}">`;
+  });
+  const changed = next !== src;
+  if (changed) fs.writeFileSync(path.join(root, file), next);
+  console.log(`${file}: ${byId.size} entries carry a cast${changed ? '' : ' (no change)'}`);
+}
+
+// ── the-tell.html: who each entry names ──────────────────────────────
+// Same attribute, same reason as the coaching column: the desk writes "Pittman"
+// in the prose and the full name only in the tell line, and no client-side
+// guess should be reading a bare surname against four hundred players.
+{
+  const file = 'the-tell.html';
+  const src = read(file);
+  const byId = new Map(tell.filter(c => c.ppl && c.ppl.length).map(c => [c.id, c.ppl]));
+  const next = src.replace(/<article class="call tell" id="([^"]+)"[^>]*>/g, (whole, id) => {
+    const who = (byId.get(id) || []).filter(hasCard);
+    return who.length ? `<article class="call tell" id="${id}" data-players="${who.join(' ')}">`
+                      : `<article class="call tell" id="${id}">`;
   });
   const changed = next !== src;
   if (changed) fs.writeFileSync(path.join(root, file), next);

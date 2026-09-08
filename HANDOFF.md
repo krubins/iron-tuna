@@ -7667,3 +7667,165 @@ Verified in Chromium at 1400px and 390px against a stubbed `/api/dfs`: both
 panes toggle, the ribbon swaps its anchor set, the edition switch leaves in the
 DFS lane, `?lane=dfs` opens on the slate, an `ok:false` feed prints its note and
 no table, and the page throws nothing on either lane.
+
+---
+
+## 67. September 2026: The Tell, the weekly column under The Desk
+
+The Weekly Fantasy lane opened with The Desk — a lead story generated every six
+hours out of D1 — and then The Pick, generated daily. Everything above the fold
+was the board reporting on itself. Nothing on the page argued *with* the board,
+and the one question a reader actually arrives with in September is not "what
+does the ranking say" but "which of these rankings is wrong."
+
+`/the-tell` is the answer. It sits in `#laneFantasy` **directly under The Desk
+and above The Pick** — under the board's own generated headline, where a reader
+has just been handed a number and is best placed to hear what is inside it. It
+is the only hand-written weekly piece on the front page and the only thing
+there that takes a position against the numbers the rest of the page prints.
+
+**On the name.** It launched, for about an hour, as "What You're Not Seeing
+Yet" at `/not-seeing-yet`. The site already had `/what-they-arent-telling-you`
+(the in-season "whole board, counted" page), and two negatively-framed headline
+titles on one site is brand mush; it also opened above The Desk, which demoted
+the generated lead to second. Ken took both recommendations: it is **The Tell**,
+and it runs under the Desk. Every internal identifier was renamed with it
+(`.call.tell`, `tell-YYYY-MM-DD-N`, `var TELL`, `.tell-*`, `#thetell`,
+`tellBand`, `tools/test-the-tell.mjs`), because a `.nsy-` prefix nobody can
+expand is the kind of thing this file exists to prevent. The "tell" line under
+each entry (`<p class="who"><b>The tell:</b>`) predates the rename and now
+happens to be the column's name, which is a happy accident, not a plan.
+
+### The premise, which is also the constraint
+
+A rank is a sum. The column opens the sum. Every entry is a player whose rank
+and whose *projection composition* disagree, and the disagreement is stated in
+**three numbers printed in the entry**, never in adjectives:
+
+- **Touchdown share** — the share of a player's projected fantasy points that
+  comes from touchdowns, at full PPR. Touchdowns are the least repeatable input
+  on a stat sheet and receptions the most, so a high share at a given rank means
+  the rank is a bet on the end zone rather than on volume.
+- **Offense rank** — where the betting market prices his team in implied points
+  per game, out of `tools/team-market.json`. The size of the pie every share is
+  a share of.
+- **One entry-specific number** — receptions, per-game pace, a snap share quoted
+  from a dated camp report.
+
+The verdicts are **Beats his rank** (`chip up`), **Misses his rank**
+(`chip down`) and **The rank is an artifact** (`chip split`, for a rank driven
+by games missed rather than by football — Josh Jacobs at RB36 while the
+availability file docks him six games). The class names carry the colour and
+match the other two columns; only the words are this column's.
+
+### Where it lives
+
+- **`the-tell.html`** (route `/the-tell`) is the **source of truth**,
+  same discipline as `the-pick.html` and `play-caller-premium.html`. Static
+  entries, newest edition first, no client-side rendering and no date gating.
+- Each entry is one `<article class="call tell" id="tell-YYYY-MM-DD-N">` carrying
+  a `.cmeta` row, an `<h2>`, prose, a `<p class="cnum">` evidence row of two or
+  three `<span>`s, a `<p class="who">` whose `<b>` spans are the players the
+  entry commits to, and a `<p class="statline">`.
+- **`p.statline` is deliberate markup, not decoration** — `/it-league.js` finds
+  it through `.call` and restates each percentage in the reader's own dollars
+  (§9f). The page ships `<script src="/it-league.js" defer>` for exactly that.
+- It is a **reading page**: it keeps its own `:root` and its own short header,
+  like `lead.html` and `play-caller-premium.html`, so it is in `NAV_EXCLUDE` in
+  both `tools/build-chrome.mjs` and `tools/test-chrome.mjs`, and in `PAGES` in
+  `tools/test-reading-view.mjs`. It takes the generated footer, and the footer's
+  Read column now links it, so it is reachable from every page on the site.
+- **`build-seo.mjs` treats it as a standing column** (`COLUMN_PAGES`), the same
+  Blog + blogPost graph The Pick gets. Its entry regex ends `"[^>]*>` rather
+  than `">`, and that is not cosmetic: `build-front.mjs` stamps `data-players`
+  onto these articles, so the id-then-close regex The Pick can use matches
+  nothing here and ships a Blog with no posts in it. It did, once, before the
+  regex was widened.
+
+### The build path
+
+`node tools/build-front.mjs` extracts the column into `var TELL = [...]` in
+`front.html`, alongside STORIES/REPORTS/PLAYERS/COLUMN/PICKS, and stamps
+`data-players` back onto the column's own articles. The extractor takes the
+chip, position, team, date, headline, tell line, statline, and **`nums` — the
+evidence row read as text**. The band prints those numbers rather than
+re-summarising them, because a band that showed only the verdict would be
+printing an opinion from a column whose whole promise is that it does not.
+
+Named players come **only from the `<b>` spans inside the tell line**, same rule
+as the coaching column: a name in the prose above is context, not a call, and
+must not claim a photo.
+
+### On the front page
+
+`#thetell` sits under the `.hero` in `#laneFantasy` with a ribbon jump of its
+own, second in the fantasy anchor set after Today. The band renders the newest edition only — an
+older edition still in the array is archive, and the archive lives on the
+column's page — split into two columns, **Beats his rank** and **Misses his
+rank**, because the split *is* the argument and a flat grid of six equal cards
+would leave the reader to re-derive it. The artifact verdict rides in the left
+column (it argues the printed rank is too low) and is the only one that still
+prints its chip, since the other two would be repeating the heading above them.
+**An empty feed hides the head, the standfirst, the band and the ribbon jump**
+via `setSectionVisible` — a column heading over an empty box reads as a column
+that failed rather than one that has not published yet.
+
+### The byline
+
+The column runs under **Artie Kesselman**, a pen name, and the method box says
+so in as many words under "About the byline". The name exists because a standing
+weekly column needs someone answering for last week's calls, and because the
+voice — dry, mildly exasperated, observational — is a voice rather than the
+site's institutional register. **The JSON-LD author stays `Iron Tuna`, the
+organisation.** Do not put the pen name in structured data: a fictional byline
+in prose is a column convention, and a fictional byline in machine-readable
+authorship metadata is a claim about a person who does not exist.
+
+### The test is the point
+
+`node tools/test-the-tell.mjs` (34 assertions, wired into CI) recomputes
+**every number the column prints** from the sources the column says it read:
+touchdown share and positional rank off `PROJECTIONS` at full PPR, implied
+points and offense rank off `tools/team-market.json`. It also checks the
+six-row ledger table at the top of the page against the six entries below it,
+because two statements of the same fact on one page is how a page contradicts
+itself; that every named player is on the board *on the team the entry chips*;
+that every statline quotes a percentage AND names its player where
+`/it-league.js` looks, or the "Your league" line silently never renders; and
+that `front.html`'s extracted array still points at the entries it claims to.
+
+This is the check that makes the column publishable by a Routine later. A column
+that argues from three printed numbers is only worth reading if the numbers are
+right, and prose review does not catch a touchdown share that is off by three
+points.
+
+### Writing conventions
+
+- **The headline names the player and the tension**, not just the player. "Josh
+  Jacobs Is the RB36 Because of a Calendar, Not a Depth Chart" is the entry; a
+  headline reading "Josh Jacobs" is a blurb.
+- **Every current-season claim is grounded in this repo** — the projections, the
+  market file, the availability file, and the dated `auction-watch-*.html` camp
+  reports, which are linked inline. The roster and coaching landscape here is
+  the site's own and does not always match outside sources.
+- **State the counterargument inside the entry.** The Derrick Henry entry says
+  out loud that Baltimore is the fifth-best offense the market prices and that
+  if the touchdowns come the entry is wrong. An entry with no way to be wrong is
+  not a call.
+- **Editions are dated, never numbered.** What NFL week it is comes from
+  `/api/season` off the real schedule (`it-season.js`), and a week number typed
+  into static markup is a week this page invented.
+- Every call gets graded by name in a later edition. That promise is printed on
+  the page, so it is a commitment rather than a nicety.
+
+### Cadence
+
+Weekly, and **not yet on a Routine** — the launch edition of September 8, 2026
+was written by hand. When it is automated, the prompt gets the same treatment as
+`tools/lead-story-routine-prompt.md`: a canonical copy in the repo, and the
+Routine's own copy pushed from it. The test above is what makes that safe.
+
+Verified in Chromium at 1200px and 390px: both surfaces render, the band splits
+and stacks, the ledger table scrolls sideways rather than overflowing the page
+(0px horizontal overflow at 390), player names link to their cards through
+`player-search.js`, and neither page throws.
