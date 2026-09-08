@@ -40,7 +40,7 @@ const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
 // read rather than use, and an eleven-item nav belongs on neither. They keep
 // their own short header and take the shared footer, so every destination is
 // still one scroll away.
-const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html']);
+const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'not-seeing-yet.html']);
 
 // ── the canonical link set ───────────────────────────────────────────────────
 // One place to change what the site links to. `app` is filled in per page so a
@@ -132,6 +132,7 @@ const FOOT_COLS = [
       { label: 'Auction Watch', href: '/auction-watch' },
       { label: 'Guides', href: '/guides' },
       { label: 'Play-Caller Premium', href: '/play-caller-premium' },
+      { label: 'What You\u2019re Not Seeing Yet', href: '/not-seeing-yet' },
       { label: 'Insight Vault', href: '/insights-vault' },
     ],
   },

@@ -33,7 +33,7 @@ const EXCLUDE = new Set(['index.html', 'front.html', 'admin.html']);
 // The reading pages take the footer and the stylesheet but keep their own short
 // header — see the NAV_EXCLUDE note in build-chrome.mjs. `pages` is what the nav
 // assertions run over; `allPages` is everything the footer must reach.
-const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html']);
+const NAV_EXCLUDE = new Set(['lead.html', 'play-caller-premium.html', 'not-seeing-yet.html']);
 const allPages = fs.readdirSync(ROOT)
   .filter((f) => f.endsWith('.html') && !EXCLUDE.has(f))
   .filter((f) => read(f).includes('<header class="site">'))
@@ -73,7 +73,7 @@ console.log('\nevery destination is reachable from every page');
     '/snake-insights', '/insights-vault', '/the-pick', '/guides',
     '/in-season', '/fantasy', '/dfs', '/wagers', '/my-league', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
-    '/play-caller-premium', '/auction-insights', '/guides', '/the-pick'];
+    '/play-caller-premium', '/not-seeing-yet', '/auction-insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];
   for (const f of pages) {
     const nav = hrefs(header(read(f)));
