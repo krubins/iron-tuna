@@ -805,7 +805,10 @@ img{max-width:100%}
 .fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: #97a5a0; text-transform: none; letter-spacing: .01em }
 .fp-clock .its-note { flex: 1 }
 .fp-clock .its-next { margin-left: auto }
-.fp-hero { padding: 34px 0 46px }
+/* Horizontal padding restates the .wrap gutter: the shorthand used to zero it,
+   which pushed the headline, lede and buttons flush to the viewport edge while
+   the clock strip above kept its inset. */
+.fp-hero { padding: 34px 18px 46px }
 .fp-h1 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(40px, 6.4vw, 84px); line-height: 0.98; letter-spacing: .015em; text-transform: uppercase; margin: 14px 0 0 }
 .fp-h1 span { display: block }
 .fp-h1 .fp-accent { color: var(--teal, #2dd4a3) }
