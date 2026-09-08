@@ -8429,3 +8429,111 @@ exact, and the one difference has an ordinary explanation.
 - Tamper predicates clean; exactly one published row.
 - Routine enabled, `58 */6 * * *`, prompt 44,690 chars / `53007f8d8779`,
   byte-identical to the repo copy.
+
+## 73. September 8: the overlay snapshot is solved, and ties are commoner than they looked
+
+Clean audit. The live lead verifies in full — including four derived rates —
+and §72c is now cheap enough to do every day.
+
+### 73a. `tools/overlay-snapshot.mjs`
+
+§72c said the overlay is overwritten in place at the 7:00 AM ET refresh, so the
+board a story dates itself to is gone by the time an audit runs. Yesterday that
+left DK Metcalf's $7 neither confirmable nor refutable.
+
+Pulling the payload out of D1 was assumed to be expensive, because it arrives
+through the conversation. It is not, and the trick is to ask for **more** at
+once, not less:
+
+    SELECT id, provider, updated_at, payload FROM odds_overlay ORDER BY id
+
+is ~90 KB, which is over the inline limit, so the connector writes it to a file
+instead of spending it on context. `tools/overlay-snapshot.mjs` reads that file
+and splits it into the shapes `tools/live-board.mjs` already wants:
+
+    node tools/overlay-snapshot.mjs <result-file> <outdir> [MMDD]
+    snapshot 0908 (overlay updated 2026-09-08T11:00:55Z)
+      qb: 35 keys   rb: 91 keys   wr: 120 keys   te: 64 keys   avail: 16 keys
+
+All four positions plus the live injury feed, for about as much context as one
+short query. Before this, each audit hand-pasted the two or three position
+slices a story happened to name, at roughly 8 KB of context each, and kept no
+record of the rest. **Snapshot first, every day, before reading any story.**
+
+This does not close §72c on the server side: the archive still lives only in a
+session scratchpad, and a durable snapshot (a fifth `odds_overlay` row, or a
+small dated table written by the refresh job) is still the right fix and still
+Ken's. But the audit is no longer blind to yesterday.
+
+### 73b. Row 92 verifies completely, derived figures included
+
+"Cap Harold Fannin Jr. at $11, not $20; take Mark Andrews at $3 instead"
+(market desk, 09-08 07:14Z), against the September 8 board it names:
+
+| Claim | Board | |
+|---|---|---|
+| Emeka Egbuka WR17 $18 / Parker Washington WR36 $3 | exact | ✓ |
+| Breece Hall RB12 $33 / Rhamondre Stevenson RB24 $9 | exact | ✓ |
+| Joe Burrow QB6 $20 / Dak Prescott QB12 $5 | exact | ✓ |
+| Harold Fannin Jr. TE5 $20 / Mark Andrews TE12 $3 | exact | ✓ |
+| Sam LaPorta $13 TE7, "down $4, TE6 to TE7" | consensus TE6 $17 → served TE7 $13 | ✓ |
+| Tucker Kraft $12 TE8, "up $2, TE9 to TE8" | consensus TE9 $10 → served TE8 $12 | ✓ |
+| Fannin and Andrews "nothing … with or without odds" | r0 = rank, same price | ✓ |
+| Brock Bowers $58, Trey McBride $54 | exact | ✓ |
+
+And the four cost-per-point rates it derives reproduce: WR $5.40, RB $6.38,
+QB $11.43, TE $11.75, printed as $5.40 / $6.40 / $11.40 / $11.70 — the story
+rounds each to the nearest ten cents, consistently. Its max bids are internally
+consistent too: Andrews's $3 plus the player's edge over him at the receiver
+rate gives $10.83, $8.83 and $8.51, printed $11, $9 and $9.
+
+One hundredth-of-a-point difference in the "edge over Andrews" column (story
+1.08 and 1.02 where I get 1.09 and 1.03) is truncation against rounding. It
+changes no dollar figure.
+
+**A note on my own method.** My first pass flagged LaPorta and Kraft as
+disagreeing at $9, because I compared the story's *max bids* against board
+prices. They are recommendations, and the story quotes the board's $13 and $12
+beside them in the table. §71c again, in miniature: check what the number is
+before deciding it is wrong.
+
+### 73c. The tie scan: 22 ties, 8 inverted, one that costs a dollar
+
+Scanning every board for adjacent players with **exactly equal** printed points
+and an out-of-order world rank (§72a's mechanism) finds it is not a freak:
+
+- 22 exact ties on the committed board, 8 of them with the display order and
+  the world order disagreeing;
+- but almost all sit at the **$1 floor** — backup quarterbacks, the bottom of
+  the receiver list — where both orderings price the same and nothing is at
+  stake.
+
+The pairs where money is involved:
+
+- **Nico Collins / Garrett Wilson, WR11 and WR12 at 229.8** — §72a, unchanged
+  and unfixed. Still $28 for both on the served board, still $27 for Wilson in
+  `it-league.js`'s static block.
+- **Jordan Addison / Jayden Reed, WR44 and WR45 at 157** — inverted, but both
+  $2 either way. No effect.
+
+So §72a is real and narrow *today*: one player, one dollar, one disagreement
+between the two boards the site ships. The mechanism is general and will cost
+more whenever a tie lands higher up the curve, where the steps between slots
+are $2–$5 rather than nothing. The repair remains the choice set out in §72a,
+and the pipeline hashes confirm nothing has changed there yet.
+
+Worth noting: today's lead quotes Dak Prescott at QB12 $5, and Prescott sits on
+one of the inverted pairs (tied with Trevor Lawrence at 288.1). The story's
+figure matches the served board exactly, so nothing is wrong with the story —
+but it is a reminder that these pairs are not confined to the unpriced tail.
+
+### 73d. The rest
+
+- CI **60/60** after merging 9 commits.
+- Pipeline functions and `boardPayload` both hash identically to 09-07.
+- Repo vs deployed: 1380 player-rows across four boards, **0 differences**.
+- Harness self-test: 23 checks, all pass.
+- Runs 51–55 all `done`; no stalls.
+- Tamper predicates clean; exactly one published row.
+- Routine enabled, `58 */6 * * *`, prompt 44,690 chars / `53007f8d8779`,
+  byte-identical to the repo copy.
