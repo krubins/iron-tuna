@@ -65,7 +65,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // advertised in the sitemap while the gate is shut.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/wagers']);
+  '/fantasy']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -7345,6 +7345,13 @@ export default {
     if (url.pathname === '/post-draft' || url.pathname === '/post-draft/') {
       return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
     }
+    // The WAGERS lane is retired. The page is gone, but /wagers and
+    // /in-season/wagers were linked from every footer on the site and indexed
+    // under both names, so they 301 to the hub rather than 404: the odds the
+    // lane read are still on Vegas Edge and Game Intel, one lane over.
+    if (/^\/(in-season\/)?wagers\/?$/.test(url.pathname)) {
+      return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+    }
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
@@ -7801,7 +7808,7 @@ export default {
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
     }
     // "Tell me when it opens." One address, one topic, one send — the waiting
-    // list behind the prediction-markets panel on /in-season and /wagers.
+    // list behind the prediction-markets panel on /in-season.
     //
     // It writes a CONTACT row rather than a table of its own: the leads export
     // and the admin board already read that table, and a second store would mean
@@ -8892,11 +8899,11 @@ export default {
       // root because the chrome and SEO generators walk the root. Extensionless
       // target, as above. The gate below sees the SAME name, so a section page
       // cannot be reached ungated by adding the prefix.
-      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
       }
-      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
         __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
       // /in-season IS a page now (in-season.html), so it needs no alias here —

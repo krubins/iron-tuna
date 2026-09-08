@@ -1,8 +1,9 @@
 /* Iron Tuna — the two in-season widgets that appear on more than one page.
  *
  * The "save my league" form is on the hub (/in-season §03) and on /my-league,
- * and the prediction-markets waiting list is on the hub (§04) and at the foot
- * of /wagers. Written twice they would drift, and a form that writes a slightly
+ * and the prediction-markets waiting list is on the hub (§04). The wagers lane
+ * carried a second copy of that list until it was retired; the file stays the
+ * one home for both. Written twice they would drift, and a form that writes a slightly
  * different record on one page than the other is worse than no form: every
  * board downstream reads the record and would quietly re-score itself wrong.
  *
