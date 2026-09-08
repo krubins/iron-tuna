@@ -42,6 +42,14 @@ const pdLine = src.match(/const POST_DRAFT_PAGES = new Set\(\[([^\]]*)\]\)/);
 if (!pdLine) { console.error('FAIL: could not locate POST_DRAFT_PAGES in _worker.js'); process.exit(1); }
 const postDraftPages = pdLine[1].split(',').map(x => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
 
+// The page a closed route serves in place of itself. Read out of the worker for
+// the same reason as the set above: it moved once already (/post-draft ->
+// /in-season), and a hard-coded copy here would have gone on asserting the old
+// name while the gate quietly pointed somewhere else.
+const hubLine = src.match(/const IN_SEASON_HUB = '([^']+)'/);
+if (!hubLine) { console.error('FAIL: could not locate IN_SEASON_HUB in _worker.js'); process.exit(1); }
+const inSeasonHub = hubLine[1];
+
 // The block builds `new Request(new URL(...).toString(), request)`. Only the URL is
 // read here, so a stub Request that keeps it is enough — and keeps this test honest
 // about evaluating the shipped source rather than a paraphrase of it.
@@ -58,6 +66,7 @@ const rewrite = new Function('pathname', 'opts', `
   const env = {};
   function Request(u) { return { url: String(u) }; }
   const POST_DRAFT_PAGES = new Set(${JSON.stringify([...postDraftPages])});
+  const IN_SEASON_HUB = ${JSON.stringify(inSeasonHub)};
   function POST_DRAFT_OPEN() { return !!o.open; }
   function postDraftPreview() { return !!o.preview; }
   ${block}
@@ -184,8 +193,8 @@ console.log('\nthe post-draft section is closed by default');
   // a suggestion, because the HTML reaches the browser either way.
   for (const route of postDraftPages) {
     const closed = assetResolve(rewrite(route, {}));
-    ok(`${route} serves the waiting-list gate while closed`,
-       closed.status === 200 && closed.file === '/post-draft.html',
+    ok(`${route} serves the section hub while closed`,
+       closed.status === 200 && closed.file === inSeasonHub + '.html',
        `${route} -> ${closed.file || closed.status}`);
     // Serving it, not redirecting to it: the reader keeps the URL they clicked,
     // so the page that opens there later is the one they were promised.
@@ -200,8 +209,15 @@ console.log('\nthe post-draft section is closed by default');
        `${route} -> ${prev.file || prev.status}`);
   }
   // The gate page itself must never be gated, or the section is a closed loop.
-  const gate = assetResolve(rewrite('/post-draft', {}));
-  ok('/post-draft is always served', gate.status === 200 && gate.file === '/post-draft.html', String(gate.file));
+  const gate = assetResolve(rewrite(inSeasonHub, {}));
+  ok(inSeasonHub + ' is always served', gate.status === 200 && gate.file === inSeasonHub + '.html', String(gate.file));
+  ok('the hub is not itself in the gated set', !postDraftPages.includes(inSeasonHub));
+  // /post-draft is the name the hub used to carry. It 301s to the new one — a
+  // redirect rather than a second copy, so the months of links and indexing it
+  // collected land on one URL instead of being split across two.
+  const redirect = src.match(/if \(url\.pathname === '\/post-draft' \|\| url\.pathname === '\/post-draft\/'\) \{[\s\S]{0,320}?\}/);
+  ok('/post-draft redirects to the hub', !!redirect && /status: 301/.test(redirect[0]) && redirect[0].includes('IN_SEASON_HUB'),
+     redirect ? redirect[0].slice(0, 120) : 'no redirect found');
   // And the lock must not touch anything outside the section.
   for (const r of ['/faq', '/guides', '/auction-insights', '/']) {
     ok(`${r} is untouched by the gate`, rewrite(r, {}) === rewrite(r, { open: true }));

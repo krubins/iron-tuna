@@ -53,10 +53,10 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/post-draft">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/trade-finder">Trade Finder</a><a href="/dfs">DFS</a><a href="/my-league" aria-current="page">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/my-league" aria-current="page">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
-    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <a class="cta" href="/in-season#league">Save my league</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
@@ -68,9 +68,19 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="is-lede">A dollar figure means nothing until you know the budget behind it, and a rank means nothing until you know the scoring. Set yours once and every page on this site restates its numbers in them.</p>
 <div class="its-strip" data-season-strip></div>
 
-<h2>What is saved</h2>
+<h2>Your in-season settings</h2>
+<p>Platform, scoring, teams and FAAB budget. Every board in the In-Season section &mdash; the weekly rankings, the waiver prices, the DFS values and the market comparisons &mdash; restates its numbers at these.</p>
+<div class="is-two">
+  <div id="mlForm"></div>
+  <div>
+    <p class="is-note" style="margin-top:0">Free, no signup. Your league lives in your own browser and nowhere else: nothing on this page is uploaded, and clearing your browser storage removes it. That is the trade for not asking you for an account.</p>
+    <p class="is-note">The FAAB budget is the one number most tools guess at. A $23 bid out of $100 and a $23 bid out of $1,000 are not the same decision, and a waiver price quoted without the budget behind it is not a price.</p>
+  </div>
+</div>
+
+<h2>What the draft app knows</h2>
+<p>Set up separately, in the draft room. It carries your full custom scoring &mdash; every yardage divisor and touchdown value &mdash; which is more than the three presets above and is what the cheat sheet prices against.</p>
 <div id="mlBox"></div>
-<p class="is-note">Your league lives in your own browser and nowhere else. Nothing on this page is uploaded, and clearing your browser storage removes it.</p>
 
 <h2>Where it shows up</h2>
 <div class="is-grid">
@@ -81,14 +91,10 @@ p{color:var(--sec);margin:0 0 16px}
 
 <h2>The rest of the section</h2>
 <div class="is-grid">
-  <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
-  <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>The board re-ranked for the week ahead, at your league’s scoring rather than a stranger’s.</p></div>
-  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
-  <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
-  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
-  <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
-  <div class="is-card"><h3><a href="/trade-finder">Trade Finder</a></h3><p>Paste the rosters and get the trades that improve both lineups, each side scored on its own horizon.</p></div>
+  <div class="is-card"><h3><a href="/in-season">Overview</a></h3><p>This week&rsquo;s readings across all three lanes, and the one place to save your league.</p></div>
+  <div class="is-card"><h3><a href="/fantasy">Fantasy</a></h3><p>Your league, re-scored every week: rankings, start/sit, waiver prices and trades.</p></div>
   <div class="is-card"><h3><a href="/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
+  <div class="is-card"><h3><a href="/wagers">Wagers &amp; prediction markets</a></h3><p>Every game with its line beside Iron Tuna&rsquo;s own total, props, the TD board and the column. 21+.</p></div>
 </div>
 
 <h2>Where these numbers come from</h2>
@@ -123,20 +129,16 @@ p{color:var(--sec);margin:0 0 16px}
     <div class="foot-col">
      <h2>In-Season</h2>
      <ul>
-      <li><a href="/weekly-intel">Weekly Intel</a></li>
-      <li><a href="/rankings">Rankings</a></li>
-      <li><a href="/vegas-edge">Vegas Edge</a></li>
-      <li><a href="/game-intel">Game Intel</a></li>
-      <li><a href="/waivers">Waivers</a></li>
-      <li><a href="/trade-finder">Trade Finder</a></li>
+      <li><a href="/in-season">Overview</a></li>
+      <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
+      <li><a href="/wagers">Wagers &amp; prediction markets</a></li>
       <li><a href="/my-league">My League</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Company</h2>
      <ul>
-      <li><a href="/post-draft">In-Season</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -151,14 +153,22 @@ p{color:var(--sec);margin:0 0 16px}
     </div>
   </div>
   <div class="foot-note">
-   <p>Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.</p>
-   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+   <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>
     <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
+<script src="/it-inseason.js" defer></script>
+<script src="/it-inseason-ui.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.ITInSeasonUI) ITInSeasonUI.leagueForm(document.getElementById('mlForm'));
+});
+</script>
 <script>
 (function () {
   document.addEventListener('DOMContentLoaded', function () {

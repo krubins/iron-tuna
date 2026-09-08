@@ -77,27 +77,43 @@ const NAV = [
   },
   { label: 'The Pick', href: '/the-pick' },
   { label: 'Columns', href: '/play-caller-premium' },
-  // The in-season section. The parent still points at /post-draft, which is the
-  // section's landing page AND the gate the eight tools serve behind while
+  // The in-season section, in its three lanes. The parent points at /in-season,
+  // which is the section's hub AND the gate the tools serve behind while
   // POST_DRAFT_OPEN is unset — so the link works in both states and nothing has
-  // to change here when the section opens. The draft links above are untouched:
-  // both halves of the year are reachable from every page, all season.
+  // to change here when the section opens. /post-draft, the name the hub used
+  // to carry, redirects here in the worker.
+  //
+  // THE TOOLS ARE NOT LISTED HERE ANY MORE and that is deliberate. Eleven
+  // in-season destinations in a hover menu is the same problem the canonical
+  // nav was built to fix, one level down. Each lane page lists its own tools —
+  // Fantasy carries Rankings, Waivers, Trade Finder, Weekly Intel, Game Intel,
+  // Player Intel and the Desk; Wagers carries Vegas Edge and the lines — so
+  // every one of them is two clicks from any page and none has been retired.
+  // They all stay in sitemap.xml. Do not put them back here without first
+  // taking something else out.
   {
-    label: 'In-Season', href: '/post-draft', children: [
-      { label: 'Weekly Intel', href: '/weekly-intel' },
-      { label: 'Rankings', href: '/rankings' },
-      { label: 'Vegas Edge', href: '/vegas-edge' },
-      { label: "What They Aren't Telling You", href: '/what-they-arent-telling-you' },
-      { label: 'Game Intel', href: '/game-intel' },
-      { label: 'Waivers', href: '/waivers' },
-      { label: 'Trade Finder', href: '/trade-finder' },
+    label: 'In-Season', href: '/in-season', children: [
+      { label: 'Overview', href: '/in-season' },
+      { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
+      { label: 'Wagers', href: '/wagers' },
       { label: 'My League', href: '/my-league' },
     ],
   },
   { label: 'FAQ', href: '/faq' },
   { label: 'Free cheat sheet', href: '{app}', cta: true },
 ];
+
+// On an IN-SEASON page the header button is "Save my league", not "Free cheat
+// sheet". A reader on the waiver board in October is not there to build a draft
+// sheet, and the one thing that improves every number in front of them is
+// saving their scoring and their FAAB budget. The draft CTA is still one click
+// away in the nav and owns the whole of §05 on the homepage.
+const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
+const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'wagers.html', 'dfs.html', 'my-league.html',
+  'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
+  'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
+  'post-draft.html']);
 
 const FOOT_COLS = [
   {
@@ -121,19 +137,15 @@ const FOOT_COLS = [
   },
   {
     h: 'In-Season', links: [
-      { label: 'Weekly Intel', href: '/weekly-intel' },
-      { label: 'Rankings', href: '/rankings' },
-      { label: 'Vegas Edge', href: '/vegas-edge' },
-      { label: 'Game Intel', href: '/game-intel' },
-      { label: 'Waivers', href: '/waivers' },
-      { label: 'Trade Finder', href: '/trade-finder' },
+      { label: 'Overview', href: '/in-season' },
+      { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
+      { label: 'Wagers & prediction markets', href: '/wagers' },
       { label: 'My League', href: '/my-league' },
     ],
   },
   {
     h: 'Company', links: [
-      { label: 'In-Season', href: '/post-draft' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Support', href: '/support' },
       { label: 'Creators & affiliates', href: '/creators' },
@@ -147,7 +159,24 @@ const FOOT_COLS = [
   },
 ];
 
-const BLURB = 'Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.';
+const BLURB = 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.';
+
+// The site-wide disclaimer, on EVERY page rather than only the wagers lane.
+// Two things it has to say, in this order:
+//
+//   1. This is for social and entertainment purposes, and every number on it
+//      is an estimate or a snapshot of a market that has moved since. That is
+//      true of a weekly ranking and a FAAB price as much as of an odds board,
+//      which is why it sits in the shared chrome and not on /wagers alone.
+//   2. The gambling disclosure. A reader can reach /wagers from the footer of
+//      any page, and a helpline is worth nothing if it only appears once they
+//      are already there.
+//
+// The wording is fixed: entertainment-only, verify-before-relying, 21+,
+// informational, not-a-sportsbook, state availability, 1-800-GAMBLER.
+// tools/test-chrome.mjs asserts all seven clauses on every page. Do not
+// shorten it.
+const LEGAL = '<b>For social and entertainment purposes only.</b> Every number on this site \u2014 projections, odds, salaries and contract prices alike \u2014 is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -179,7 +208,7 @@ function navHtml(file) {
     const cls = l.cta ? ' class="cta"' : '';
     return `<a${cls} href="${href}"${cur}${extra}>${esc(l.label)}</a>`;
   };
-  const cta = NAV.find((l) => l.cta);
+  const cta = IN_SEASON.has(file) ? IN_SEASON_CTA : NAV.find((l) => l.cta);
   const items = NAV.filter((l) => !l.cta).map((l) => {
     if (!l.children) return '      ' + link(l);
     const kids = l.children.map((k) => link(k)).join('');
@@ -210,7 +239,8 @@ function footHtml(file) {
     '  </div>',
     '  <div class="foot-note">',
     `   <p>${BLURB}</p>`,
-    '   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>',
+    `   <p class="foot-21">${LEGAL}</p>`,
+    '   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>',
     `    <a href="${app}">Build your free sheet</a></p>`,
     '  </div>',
   ].join('\n');
