@@ -64,7 +64,12 @@ async function rl(env, request, bucket, max, ttlSec) {
 // both read this set, so a page added to the section cannot be left ungated or
 // advertised in the sitemap while the gate is shut.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
-  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk']);
+  '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
+  '/fantasy', '/wagers']);
+// The HUB is never in that set: it is the page a closed route serves in place of
+// itself, so gating it would be a loop. /post-draft is the name the hub used to
+// carry and 301s here — see the redirect at the top of fetch().
+const IN_SEASON_HUB = '/in-season';
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
@@ -5373,6 +5378,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const brief = p => ({ name: p.name, position: p.position, team: p.team, key: p.key,
     consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, ironTunaRank: p.ironTuna.rank,
     consensusPoints: p.consensus.points, vegasPoints: p.vegas.points, ironTunaPoints: p.ironTuna.points,
+    opponent: p.weeks && p.weeks[0] ? p.weeks[0].opponent : null,
     delta: p.marketDelta, confidence: p.vegas.confidence, basis: p.vegas.basis, why: p.why ? p.why.summary : '' });
   const vsExperts = {
     buys: sig.filter(p => p.marketDelta.points > 0).sort((a, b) => (b.marketDelta.rank || 0) - (a.marketDelta.rank || 0) || b.marketDelta.points - a.marketDelta.points).slice(0, 12).map(brief),
@@ -5414,11 +5420,30 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
              rushYards: _oddsRound(s.rushYd || 0), recYards: _oddsRound(s.recYd || 0), impliedTouches: _oddsRound(touches), basis: /^props/.test(p.vegas.basis) ? 'props' : 'derived from game lines' };
   }).sort((a, b) => b.impliedTouches - a.impliedTouches).slice(0, 40);
   // Game environments, with movement off the game snapshots.
+  // The model's OWN expected points per club this week, read off the boards the
+  // players already carry (weekEnvironment put it there as env.expected: club
+  // ratings fitted by teamRatingsFrom off the games that do carry a line, then
+  // projected onto every fixture). Summing the two sides of a game gives the
+  // model's total for it, which is the only honest thing to print beside the
+  // book's. A game where either side is missing gets null and prints as blank
+  // rather than as a gap of zero, which would read as agreement.
+  const modelPts = new Map();
+  for (const p of players) {
+    const w0 = p.weeks && p.weeks[0];
+    if (w0 && w0.env && w0.env.expected != null && !modelPts.has(p.team)) modelPts.set(p.team, w0.env.expected);
+  }
+  const GAP_AGREE = 2.0;
   const gameEnvironments = ((state && state.ok && state.games) || []).map(g => {
     const gm = gameMarkets && gameMarkets[g.id];
     const mv = gm ? { spread: gm.spread ? _oddsRound((gm.spread.current || 0) - (gm.spread.open || 0)) : null, total: gm.total ? _oddsRound((gm.total.current || 0) - (gm.total.open || 0)) : null } : null;
+    const mh = modelPts.has(g.home) ? modelPts.get(g.home) : null;
+    const ma = modelPts.has(g.away) ? modelPts.get(g.away) : null;
+    const itTotal = (mh != null && ma != null) ? _oddsRound(mh + ma) : null;
     return { id: g.id, game: g.away + ' at ' + g.home, home: g.home, away: g.away, kickoff: g.kickoff, status: g.status,
              total: g.total, spread: g.spread, impliedHome: g.impliedHome, impliedAway: g.impliedAway,
+             ironTunaTotal: itTotal, ironTunaHome: mh, ironTunaAway: ma,
+             gap: (itTotal != null && g.total != null) ? _oddsRound(itTotal - g.total) : null,
+             gapAgrees: (itTotal != null && g.total != null) ? Math.abs(itTotal - g.total) < GAP_AGREE : null,
              favourite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, movement: mv };
   }).filter(g => g.total != null).sort((a, b) => b.total - a.total);
   const hidden = (insights && insights.insights || []).filter(i => i.type === 'game_script_change');
@@ -7312,6 +7337,14 @@ export default {
         'Set-Cookie': 'it_pd_preview=' + encodeURIComponent(env.LEADS_EXPORT_KEY) + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + (12 * 3600)
       } });
     }
+    // The in-season hub was /post-draft while the section was a waiting list for
+    // one. It is the section itself now and its name says so. A 301 rather than
+    // serving the same bytes at both names: /post-draft has been indexed and
+    // linked for months, and a permanent redirect hands that history to the new
+    // URL instead of splitting it across two.
+    if (url.pathname === '/post-draft' || url.pathname === '/post-draft/') {
+      return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+    }
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
       if (request.headers.get('x-it-key') !== IT_KEY) return new Response('forbidden', { status: 403 });
@@ -7415,7 +7448,9 @@ export default {
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
       const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
       const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
-      if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries', note: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
+      if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
+        note: 'No ' + DFS_SITES[site].label + ' salaries are posted for this week yet. Salaries go up when the lobby does; the scoring environment below still reads from the game lines.',
+        operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
       const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
       const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, {});
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
@@ -7764,6 +7799,31 @@ export default {
       }
       await saveContact(env, { email: email, phone: String(body.phone || '').slice(0, 40), source: body.source || 'cheatsheet', type: body.type || 'lead', ref: body.code || '', path: '' });
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
+    }
+    // "Tell me when it opens." One address, one topic, one send — the waiting
+    // list behind the prediction-markets panel on /in-season and /wagers.
+    //
+    // It writes a CONTACT row rather than a table of its own: the leads export
+    // and the admin board already read that table, and a second store would mean
+    // a second place to look when the day comes to send the one email. type is
+    // the topic, so a query can pick exactly the people who asked about markets
+    // and nobody else. Nothing here subscribes anyone to anything: the copy on
+    // both forms promises one email and this endpoint is what has to keep it.
+    if (url.pathname === '/api/notify') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false }, 405, c);
+      if (await rl(env, request, 'notify', 20, 600)) return json({ ok: false, error: 'rate' }, 429, c);
+      let b = {}; try { b = await request.json(); } catch (e) {}
+      if (b.company) return json({ ok: true }, 200, c); // honeypot, as /api/contact
+      const email = String(b.email || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
+      // A closed list of topics, so the field cannot become free text that has to
+      // be cleaned up before anyone can query it.
+      const TOPICS = new Set(['markets']);
+      const topic = TOPICS.has(String(b.topic || '')) ? String(b.topic) : 'markets';
+      await saveContact(env, { email, source: 'in-season', type: 'notify:' + topic, ref: '', path: String(b.path || '').slice(0, 120) });
+      return json({ ok: true, topic, stored: !!env.LEADS_DB }, 200, c);
     }
     if (url.pathname === '/api/contact') {
       const c = corsHeaders(request.headers.get('Origin'));
@@ -8832,32 +8892,33 @@ export default {
       // root because the chrome and SEO generators walk the root. Extensionless
       // target, as above. The gate below sees the SAME name, so a section page
       // cannot be reached ungated by adding the prefix.
-      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|dfs|my-league)\/?$/.test(url.pathname)
+      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
       }
-      else if (/^\/in-season\/(weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|dfs|my-league)\/?$/.test(url.pathname)) {
-        __assetReq = new Request(new URL('/post-draft', url).toString(), request);
+      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
+        __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
-      else if (/^\/in-season\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/post-draft', url).toString(), request);
+      // /in-season IS a page now (in-season.html), so it needs no alias here —
+      // the assets layer resolves the extensionless route like any other.
       // /in-season/desk, /in-season/desk/<kind>, /in-season/desk/<kind>/<week>:
       // one shell for the week's pieces, reading kind and week off the path.
       else if (/^\/in-season\/desk(\/[a-z-]+(\/\d{1,2})?)?\/?$/.test(url.pathname)) {
         const open = POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request);
-        __assetReq = new Request(new URL(open ? '/desk' : '/post-draft', url).toString(), request);
+        __assetReq = new Request(new URL(open ? '/desk' : IN_SEASON_HUB, url).toString(), request);
       }
       // /in-season/player/<slug>: one shell for every player, like /player/<slug>,
       // gated with the rest of the section.
       else if (/^\/in-season\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) {
         const open = POST_DRAFT_OPEN(env) || postDraftPreview(env, url, request);
-        __assetReq = new Request(new URL(open ? '/player-intel' : '/post-draft', url).toString(), request);
+        __assetReq = new Request(new URL(open ? '/player-intel' : IN_SEASON_HUB, url).toString(), request);
       }
       // The in-season tools are deployed but closed (see POST_DRAFT_PAGES above).
       // A closed route serves the waiting-list gate rather than redirecting to it,
       // so the reader keeps the URL they clicked and the page they were promised
       // is the one that opens there later.
       else if (POST_DRAFT_PAGES.has(url.pathname.replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request)) {
-        __assetReq = new Request(new URL('/post-draft', url).toString(), request);
+        __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
     } catch (e) {}
     const resp = await env.ASSETS.fetch(__assetReq);

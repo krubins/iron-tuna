@@ -65,9 +65,13 @@ console.log('\nevery destination is reachable from every page');
   // hub was a format chooser for a site that now has one format; the auction
   // edition is the destination. The pages still serve at their old URLs — see
   // the sitemap assertions in tools/test-seo.mjs — they are simply not linked.
+  // /in-season replaced /post-draft as the section hub. Its three lanes are
+  // asserted too: the dropdown carries them instead of the eleven tools it used
+  // to list, so if a lane silently drops out of the nav there is no other place
+  // a reader can reach it from every page.
   const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
     '/snake-insights', '/insights-vault', '/the-pick', '/guides',
-    '/post-draft', '/faq'];
+    '/in-season', '/fantasy', '/dfs', '/wagers', '/my-league', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
     '/play-caller-premium', '/auction-insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];
@@ -85,8 +89,11 @@ console.log('\nevery destination is reachable from every page');
 
 console.log('\nthe nav link set is identical everywhere');
 {
-  // Everything but the app links, which legitimately differ by format.
-  const shape = (f) => hrefs(header(read(f))).filter((h) => h.startsWith('/')).join(',');
+  // The <nav> only. The CTA sits outside it in the header and legitimately
+  // differs — by format, and by whether the page is in-season — so it is
+  // asserted on its own below rather than folded in here and excused.
+  const navOf = (h) => (h.match(/<nav class="nav"[\s\S]*?<\/nav>/) || [''])[0];
+  const shape = (f) => hrefs(navOf(header(read(f)))).filter((h) => h.startsWith('/')).join(',');
   const shapes = new Map();
   for (const f of pages) {
     const s = shape(f);
@@ -100,13 +107,23 @@ console.log('\nthe nav link set is identical everywhere');
 
 console.log('\nthe call to action matches the page\'s format');
 {
+  // The in-season set, read out of the generator rather than copied, so the two
+  // cannot drift: a page added there gets asserted here on the next run.
+  const chrome = fs.readFileSync(path.join(ROOT, 'tools', 'build-chrome.mjs'), 'utf8');
+  const IN_SEASON = new Set((chrome.match(/const IN_SEASON = new Set\(\[([\s\S]*?)\]\)/) || [, ''])[1]
+    .split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean));
+  if (!IN_SEASON.size) throw new Error('could not read IN_SEASON out of build-chrome.mjs');
+
   const wrong = [];
   for (const f of pages) {
     const cta = (header(read(f)).match(/<a class="cta" href="([^"]*)"/) || [])[1] || '';
-    // Snake keeps its own board. Best ball no longer does: the line is retired,
-    // so its pages point at the auction sheet like everything else — that is the
-    // intended behaviour, not a leak, and it is asserted rather than tolerated.
-    const want = /^snake-/.test(f) ? 'snakedraft' : 'auctiondraft';
+    // An IN-SEASON page sells the league save: a reader on the waiver board in
+    // October is not there to build a draft sheet, and saving their scoring and
+    // FAAB budget improves every number in front of them. Everywhere else the
+    // CTA is the board that page belongs to. Snake keeps its own; best ball no
+    // longer does, because that line is retired and its pages point at the
+    // auction sheet like everything else.
+    const want = IN_SEASON.has(f) ? '/in-season#league' : /^snake-/.test(f) ? 'snakedraft' : 'auctiondraft';
     if (!cta.includes(want)) wrong.push(`${f}: cta=${cta} want ${want}`);
     // No page may send the reader to the retired best-ball room.
     if (cta.includes('/bestball')) wrong.push(`${f}: cta=${cta} still sells best ball`);
@@ -169,6 +186,60 @@ console.log('\nthe chrome elements are actually closed');
     }
   }
   ok('every header, nav, footer and main is closed', bad.length === 0, bad.slice(0, 6).join('; '));
+}
+
+console.log('\nthe disclaimer is on every page, in full');
+{
+  // Seven clauses, and all seven or none. This is the one block on the site
+  // that exists for a reason other than being read: it says the numbers are for
+  // social and entertainment purposes, that they are estimates of markets that
+  // have already moved, that the reader should verify anything they act on, and
+  // — because /wagers is one click from every footer — the gambling disclosure
+  // and the helpline.
+  //
+  // It is asserted CLAUSE BY CLAUSE rather than as one string so that rewording
+  // a sentence does not silently drop a clause out of the middle of it, which is
+  // the only way this ever goes wrong.
+  const CLAUSES = [
+    'For social and entertainment purposes only',
+    'Verify anything you intend to act on at its own source before relying on it',
+    '21+',
+    'informational and may differ at the venue',
+    'not a sportsbook or exchange',
+    'Availability varies by state',
+    '1-800-GAMBLER',
+  ];
+  // allPages is every page carrying <header class="site">, which is every page
+  // the chrome generator writes. THE THREE IT EXCLUDES ARE THE THREE THAT MATTER
+  // MOST HERE and they are named explicitly:
+  //
+  //   front.html  is "/" — the page nearly every reader actually lands on. It
+  //               keeps its own masthead and footer, so it fell outside this
+  //               check and shipped without the disclaimer once already.
+  //   index.html  is the app at /hub and the draft rooms; its footer is React.
+  //
+  // admin.html is deliberately not here: it is noindex, no visitor reaches it,
+  // and it prints no projections.
+  const mustCarry = [...allPages, 'index.html', 'front.html'];
+  const missing = [];
+  for (const f of mustCarry) {
+    const text = read(f).replace(/<[^>]*>/g, ' ').replace(/&mdash;|&#8212;/g, '-');
+    for (const c of CLAUSES) if (!text.includes(c)) missing.push(`${f}: "${c}"`);
+  }
+  ok('every page carries all seven clauses', missing.length === 0,
+     missing.length + ' missing, e.g. ' + missing.slice(0, 4).join('; '));
+  // Named on its own, because "every page" quietly meant "every page with the
+  // shared header" the first time and the homepage slipped through it.
+  ok('the homepage at / carries it', !missing.some((m) => m.startsWith('front.html:')));
+
+  // And the two copies of it agree. index.html keeps its own because it is not
+  // generated; if they drift, one set of readers is being told something else.
+  const legal = (fs.readFileSync(path.join(ROOT, 'tools', 'build-chrome.mjs'), 'utf8')
+    // \r?\n rather than \n: the working tree on Windows is CRLF, and a bare
+    // newline anchor matches nothing against it — which would fail this check
+    // for a reason that has nothing to do with the wording it guards.
+    .match(/const LEGAL = '([\s\S]*?)';\r?\n/) || [, ''])[1];
+  ok('build-chrome still owns the wording', legal.includes('social and entertainment'), legal.slice(0, 60));
 }
 
 console.log('\nthe visual zones are the ones the site says it has');

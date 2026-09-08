@@ -312,3 +312,144 @@ footer.site a:hover { color: var(--text) }
 .is-status.final { color: var(--text) }
 .is-note { font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; margin: var(--space-4) 0 0 }
 .is-empty { color: var(--muted); font-size: var(--fs-sm); margin: var(--space-4) 0 }
+
+/* ── the footer's gambling disclosure ────────────────────────────────────────
+   Written by tools/build-chrome.mjs onto every page, not only /wagers: the
+   wagers lane is reachable from the footer of any page on the site, and a
+   helpline printed only once you are already there is not a disclosure. */
+.foot-21 { color: var(--muted) }
+.foot-21 b { color: var(--sec) }
+
+/* ── the in-season "sheet" plate ─────────────────────────────────────────────
+   One bordered card with a labelled header row, a table, and a footer line
+   that says what the numbers are and where they came from. Every board in the
+   section — the hub's readings, the Fantasy week board, the DFS slate, the
+   wagers game lines — is this same object, so a reader who learns to read one
+   can read all four.
+
+   THE THREE STATES ARE PART OF THE COMPONENT. .is-plate-state carries the
+   "reading…" and the "blank rather than stale" copy, and one of the three is
+   always in the DOM. A board that silently renders nothing reads as a board
+   with nothing in it, which is a different claim and a wrong one. */
+.is-plate {
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel);
+  overflow: hidden; margin: var(--space-4) 0 var(--space-5);
+}
+.is-plate-head {
+  display: flex; flex-wrap: wrap; align-items: stretch; border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em;
+  text-transform: uppercase; font-weight: 700;
+}
+.is-plate-head > span, .is-plate-head > div { padding: var(--space-3) var(--space-4); border-left: 1px solid var(--line) }
+.is-plate-head > :first-child { border-left: 0; flex: 1; min-width: 16ch; color: var(--text) }
+.is-plate-head > span:not(:first-child) { color: var(--muted); white-space: nowrap }
+.is-plate-foot {
+  display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: center;
+  padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line);
+}
+.is-plate-foot p { margin: 0; flex: 1; min-width: 22ch; font-size: var(--fs-xs); color: var(--muted); line-height: 1.6 }
+.is-plate-state { margin: 0; padding: var(--space-6) var(--space-4); font-size: var(--fs-sm); color: var(--muted); line-height: 1.6 }
+.is-plate .is-table { margin: 0 }
+.is-plate .is-table th:first-child, .is-plate .is-table td:first-child { padding-left: var(--space-4) }
+.is-plate .is-table th:last-child, .is-plate .is-table td:last-child { padding-right: var(--space-4) }
+.is-plate .is-table tbody tr:last-child td { border-bottom: 0 }
+
+/* The one number a row exists to print. Display face, tabular, bigger than the
+   text around it, so a reader scanning a column lands on it first. */
+.is-val { font-family: var(--font-display); font-size: 22px; font-weight: 400; letter-spacing: .02em; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap }
+.is-table td.num, .is-table th.num { text-align: right; font-variant-numeric: tabular-nums }
+.is-table .is-who { color: var(--text); font-weight: 600 }
+.is-table .is-who small { font-weight: 400; color: var(--muted); font-size: var(--fs-2xs) }
+.is-rank { font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 700; color: var(--teal) }
+
+/* Tags. .is-tag is the gold default already here; these are the ones every
+   model-vs-market column uses — accent where the market is the higher number,
+   flat where it is not, and "Agree" inside the threshold the page states. */
+.is-tag.is-accent { color: var(--teal); background: rgba(14, 124, 99, .1); border-color: rgba(14, 124, 99, .32) }
+.is-tag.is-flat { color: var(--sec); background: var(--elev); border-color: var(--line2) }
+.is-tag.is-plain { color: var(--muted); background: var(--elev); border-color: var(--line) }
+.is-table .is-tag { margin: 0 }
+
+/* ── section labels and lane cards ───────────────────────────────────────── */
+.is-label { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; margin: var(--space-7) 0 var(--space-3) }
+.is-label .is-eyebrow { margin: 0 }
+.is-rule { height: 1px; border: 0; margin: 0 0 var(--space-5); background: var(--line) }
+
+.is-lane { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-5) }
+.is-lane-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3) }
+.is-lane-head h3 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .03em; text-transform: uppercase; margin: 0 }
+.is-lane-head span { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
+.is-lane > p { margin: var(--space-3) 0 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.55 }
+.is-lane ul { list-style: none; margin: var(--space-4) 0; padding: 0; flex: 1 }
+.is-lane li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); color: var(--sec) }
+.is-lane li:last-child { border-bottom: 0 }
+
+/* ── buttons ─────────────────────────────────────────────────────────────── */
+.is-btn {
+  display: inline-flex; align-items: center; justify-content: center; font: inherit;
+  font-size: var(--fs-sm); font-weight: 700; letter-spacing: .04em;
+  padding: 12px 22px; border-radius: var(--radius-md); border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap; text-align: center;
+}
+.is-btn.primary { background: var(--gold); color: #1a1205 }
+.is-btn.primary:hover { filter: brightness(1.06); text-decoration: none }
+.is-btn.sec { background: rgba(14, 124, 99, .1); color: var(--teal); border-color: var(--teal) }
+.is-btn.sec:hover { background: rgba(14, 124, 99, .18); text-decoration: none }
+.is-btn.ghost { background: transparent; color: var(--sec); border-color: var(--line2) }
+.is-btn.ghost:hover { border-color: var(--teal); color: var(--teal); text-decoration: none }
+.is-btns { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin: var(--space-5) 0 0 }
+
+/* ── segmented controls ──────────────────────────────────────────────────────
+   Real radios with the input visually hidden, so the control is keyboard- and
+   screen-reader-operable and its checked state is CSS rather than a class some
+   script has to remember to set. Every one of these filters JSON that is
+   already loaded; none of them reloads the page. */
+.is-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line2); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg) }
+.is-seg label {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  padding: 8px 14px; min-height: 38px; cursor: pointer; font-size: var(--fs-xs); font-weight: 700;
+  letter-spacing: .05em; color: var(--sec); border-left: 1px solid var(--line2); white-space: nowrap;
+}
+.is-seg label:first-child { border-left: 0 }
+.is-seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0 }
+.is-seg label:hover { background: var(--elev); color: var(--text) }
+.is-seg label:has(input:checked) { background: rgba(14, 124, 99, .12); color: var(--teal) }
+.is-seg label:has(input:focus-visible) { outline: 2px solid var(--gold); outline-offset: -2px }
+
+/* ── forms ───────────────────────────────────────────────────────────────── */
+.is-form { display: flex; flex-direction: column; gap: var(--space-4); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-5) }
+.is-field { display: flex; flex-direction: column; gap: 6px }
+.is-field > label { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted) }
+.is-field > label small { font-weight: 400; letter-spacing: .01em; text-transform: none; font-size: var(--fs-2xs) }
+.is-input { padding: 11px 13px; border-radius: var(--radius-sm); border: 1px solid var(--line2); background: #fff; color: var(--text); font: inherit; font-size: var(--fs-sm); width: 100% }
+.is-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(14, 124, 99, .12) }
+.is-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) }
+.is-submit { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap }
+.is-hint { font-size: var(--fs-xs); color: var(--muted); margin: 0 }
+.is-hint.err { color: var(--danger) }
+.is-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-5) }
+
+/* ── the compliance strip ────────────────────────────────────────────────────
+   Directly under the lede on every wagers surface, not tucked at the foot of
+   the page. Four clauses, each its own cell, so none is lost to a wrap. */
+.is-legal {
+  display: flex; flex-wrap: wrap; align-items: stretch; margin: var(--space-4) 0 var(--space-6);
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel);
+  font-size: var(--fs-xs); color: var(--sec); line-height: 1.5;
+}
+.is-legal > span { padding: var(--space-3) var(--space-4); border-left: 1px solid var(--line) }
+.is-legal > span:first-child { border-left: 0 }
+.is-legal b { color: var(--text) }
+
+/* A block shown as an illustration of something not yet live. Dimmed AND
+   aria-hidden at the markup level, so it is neither read as data by a person
+   nor announced as data by a screen reader. */
+.is-preview { opacity: .55 }
+
+@media (max-width: 640px) {
+  .is-row2 { grid-template-columns: 1fr }
+  .is-plate-head > span:not(:first-child) { border-left: 0; border-top: 1px solid var(--line) }
+  .is-plate-head > :first-child { flex-basis: 100% }
+  .is-legal > span { border-left: 0; border-top: 1px solid var(--line) }
+  .is-legal > span:first-child { border-top: 0 }
+}

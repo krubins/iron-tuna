@@ -213,7 +213,13 @@ console.log('\nsitemap.xml');
     .match(/const POST_DRAFT_PAGES = new Set\(\[([^\]]*)\]\)/) || [, ''])[1]
     .split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
     .map((r) => r.replace(/^\//, '') + '.html');
-  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'player.html', 'my-insights.html', ...gated]);
+  //
+  // post-draft.html is out because /post-draft 301s to /in-season. The file is
+  // kept — the redirect is one line and this is the page that would have to
+  // serve again if it were ever removed — but advertising a permanently
+  // redirected URL as canonical is exactly the split signal the 301 exists to
+  // prevent, so it is noindex and unlisted.
+  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', ...gated]);
   const locs = new Set(urls.map((u) => (u.match(/<loc>([^<]*)<\/loc>/) || [])[1]));
   const absent = pages.filter((f) => !NOT_LISTED.has(f) && !locs.has('https://irontuna.com/' + f.replace('.html', '')));
   ok('every indexable page is in the sitemap', absent.length === 0, absent.join(', '));
