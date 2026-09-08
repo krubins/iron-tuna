@@ -51,7 +51,7 @@ section{margin:0 0 var(--space-6)}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy" aria-current="page">Fantasy</a><a href="/dfs">DFS</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy" aria-current="page">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -131,6 +131,25 @@ section{margin:0 0 var(--space-6)}
   </div>
 </section>
 
+<!-- ── the newsroom ────────────────────────────────────────────────────────
+     The in-season desk's newest packages in the Weekly Fantasy lens, and the
+     desk's one standing argument. Both read a route and hide themselves when it
+     has nothing, like every module on this page. -->
+<section id="desk">
+  <div class="is-label"><p class="is-eyebrow">The newsroom</p></div>
+  <hr class="is-rule">
+  <p class="is-note" id="fnDeskNote">Eight AI analyst personas, one set of facts. Newest first. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p>
+  <div class="is-grid" id="fnDesk"></div>
+  <p class="is-empty" id="fnDeskEmpty">Reading the desk&hellip;</p>
+</section>
+<section id="disagree">
+  <div class="is-label"><p class="is-eyebrow">Vega vs. Brooks</p></div>
+  <hr class="is-rule">
+  <p class="is-note">Where <a href="/analysts/brooks">Fantasy Analysis</a> and <a href="/analysts/vega">Market Intelligence</a> rank a player apart this week. <a href="/rankings#blend=50">Slide between them on the rankings page &rarr;</a></p>
+  <div class="is-scroll" id="fnDisWrap" hidden><table class="is-table"><thead><tr><th>Player</th><th class="num">Brooks</th><th class="num">Vega</th><th>Market basis</th><th>Why</th></tr></thead><tbody id="fnDisBody"></tbody></table></div>
+  <p class="is-empty" id="fnDisEmpty">Reading the boards&hellip;</p>
+</section>
+
 <!-- ── the tools ──────────────────────────────────────────────────────────── -->
 <section id="tools">
   <div class="is-label"><p class="is-eyebrow">The tools</p></div>
@@ -179,6 +198,8 @@ section{margin:0 0 var(--space-6)}
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
       <li><a href="/my-league">My League</a></li>
      </ul>
     </div>
@@ -376,6 +397,22 @@ section{margin:0 0 var(--space-6)}
         $('fnState').textContent = 'The projection feeds have not answered. The board is blank rather than stale.';
       });
   });
+})();
+</script>
+<script>
+(function () {
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  fetch('/api/newsroom?lens=weekly&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
+    if (!j || !j.ok || !j.pieces.length) { $('fnDeskEmpty').textContent = 'The desk has not published this week yet. The first package lands at its slot once the games are final.'; return; }
+    $('fnDesk').innerHTML = j.pieces.map(function (p) { var by = p.byline || {}; return '<div class="is-card"><span class="is-tag">' + e(p.title) + ' &middot; Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3><p>' + e(p.dek || '') + '</p><p class="is-note">By <a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' + (p.rivalry ? ' &middot; Vega vs. Brooks' : '') + '</p></div>'; }).join('');
+    $('fnDeskEmpty').hidden = true;
+  }).catch(function () { $('fnDeskEmpty').textContent = 'The desk did not answer.'; });
+  fetch('/api/disagreements', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
+    if (!j || !j.ok || !j.disagreements.length) { $('fnDisEmpty').textContent = 'The two methods agree within six places on every startable player this week.'; return; }
+    $('fnDisBody').innerHTML = j.disagreements.slice(0, 10).map(function (d) { return '<tr><td class="is-who">' + e(d.name) + ' <small>' + e(d.position + ' \u00b7 ' + d.team) + '</small></td><td class="num">' + e(d.position + d.brooksRank) + '</td><td class="num">' + e(d.position + d.vegaRank) + '</td><td>' + e(d.marketBasis) + '</td><td>' + e(d.why || '') + '</td></tr>'; }).join('');
+    $('fnDisWrap').hidden = false; $('fnDisEmpty').hidden = true;
+  }).catch(function () { $('fnDisEmpty').textContent = 'The boards did not answer.'; });
 })();
 </script>
 <!--chrome:navjs--><script>

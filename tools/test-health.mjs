@@ -38,8 +38,10 @@ const stubs = {
   SNAP_KEEP_DAYS: 200, DEPTH_ROW: 6,
   scheduleCacheRead: async () => null, nflSeasonState: () => ({ ok: false }), oddsCacheRead: async () => null, snapshotStatus: async () => null, usageCacheRead: async () => null,
   availabilityCacheRead: async () => null, rosSnapshots: async () => [], dfsSalariesRead: async () => null, providerReport: () => ({ providers: {}, unavailable: {} }),
-  etParts: () => ({ dow: 'Tue', hour: 9 }), contentReady: async () => true,
-  CONTENT_KINDS: { 'team-recaps': { title: 'Team-by-Team Recaps', day: 'Mon', hour: 6 }, 'final-read': { title: 'The Final Read', day: 'Thu', hour: 6 } },
+  etParts: () => ({ dow: 'Tue', hour: 9, minute: 0 }), contentReady: async () => true,
+  ANALYSTS: { mercer: { id: 'mercer', name: 'Jack Mercer' } }, ANALYST_HOUSE: { id: 'irontuna', name: 'Iron Tuna' }, newsroomStatus: async () => ({ autoPublish: { on: true }, audit: { ok: true, problems: [] }, legacy: [], routines: [] }),
+  sectionsFor: (k, l) => (l === 'dfs' ? [] : ['recaps']), runNewsScan: async () => ({ ok: true }), runCallsGrade: async () => ({ ok: true }),
+  CONTENT_KINDS: { 'team-recaps': { title: 'Team-by-Team Recaps', day: 'Mon', hour: 6, analyst: 'mercer', lens: 'both' }, 'final-read': { title: 'The Final Read', day: 'Thu', hour: 6, analyst: 'mercer', lens: 'both' } },
   CONTENT_SECTIONS: { 'team-recaps': ['recaps'] },
   contentDue: () => ({ due: false, ready: false, reason: 'not_regular_season' }),
   produceContent: async (env, kind, o) => ({ ok: true, kind, week: 3, status: 'published', forced: !!(o && o.force) }),
@@ -64,7 +66,7 @@ console.log('\nthe job log');
   const soft = await H.jobRun(env, 'availability-refresh', 'admin');
   ok('a job that returns ok:false is a failure too', soft.ok === false && db.log.filter(x => /INSERT INTO job_runs/.test(x.sql))[2].args[5] === 'espn 403');
   ok('an unknown job is refused', (await H.jobRun(env, 'reboot-the-moon', 'admin')).error === 'unknown_job');
-  ok('every job the cron runs is in the table', ['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'depth-charts', 'ros-snapshot', 'snapshot-prune', 'analytics-prune', 'content-tick'].every(j => H.JOB_FNS[j]));
+  ok('every job the cron runs is in the table', ['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'depth-charts', 'ros-snapshot', 'news-scan', 'calls-grade', 'snapshot-prune', 'analytics-prune', 'content-tick'].every(j => H.JOB_FNS[j]));
   ok('no database means no log and no crash', (await H.jobRun({}, 'schedule-refresh', 'x')).ok === true);
   const now = Date.now();
   const rows = [{ job: 'odds-refresh', trigger: 'cron', started_at: now - 3600000, finished_at: now - 3599000, ok: 0, error: 'boom', summary: null },
@@ -161,7 +163,7 @@ console.log('\nthe worker source');
   const bare = (sched.match(/ctx\.waitUntil\((run[A-Z][A-Za-z]*|snapshotPrune|pruneAnalytics)\(/g) || []).filter(x => !/runXAutoPost|runScheduledTick/.test(x));
   ok('every scheduled job runs through the log (the tick itself runs each job through jobRun)', bare.length === 0 && /runScheduledTick\(env, Date\.now\(\), event\.cron\)/.test(sched), bare.join(','));
   ok('the X auto-post stays where it was', /runXAutoPost\(env/.test(sched));
-  ok('the public content list hides unpublished pieces', /status != 'unpublished' ORDER BY created_at DESC LIMIT 60/.test(src));
+  ok('the public content list hides unpublished pieces', /status != 'unpublished' ORDER BY created_at DESC LIMIT 80/.test(src));
   ok('the public piece payload does too', /if \(!row \|\| row\.status === 'unpublished'\) return \{ ok: false, error: 'not_found'/.test(src));
   ok('the health route exists and takes a rerun', /url\.pathname === '\/api\/admin\/health'/.test(src) && /searchParams\.get\('rerun'\)/.test(src));
   ok('the content route takes POST actions and ?preview=', /request\.method === 'POST' \|\| url\.searchParams\.get\('preview'\)/.test(src));

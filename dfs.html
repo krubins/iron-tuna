@@ -66,7 +66,7 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs" aria-current="page">DFS</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs" aria-current="page">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -122,6 +122,10 @@ p{color:var(--sec);margin:0 0 16px}
 <section id="sec-dash">
   <h2>DFS Dashboard</h2>
   <div class="is-grid" id="dfCards"></div>
+  <h3>The newsroom, DFS lens</h3>
+  <p class="is-note">The desk’s newest packages read for the slate: price, ownership, leverage. <a href="/analysts/park">Lena Park</a> writes the DFS lens of every shared story. <a href="/analysts">The desk, and the AI disclosure &rarr;</a></p>
+  <div class="is-grid" id="dfDesk"></div>
+  <p class="is-empty" id="dfDeskEmpty">Reading the desk&hellip;</p>
   <h3>This week’s scoring environment</h3>
   <div class="is-scroll"><table class="is-table" id="dfTable" hidden><thead><tr><th>Club</th><th>Opponent</th><th class="num">Implied points</th><th class="num">Game total</th></tr></thead><tbody id="dfBody"></tbody></table></div>
   <p class="is-empty" id="dfEmpty">Reading the slate&hellip;</p>
@@ -130,7 +134,11 @@ p{color:var(--sec);margin:0 0 16px}
 <section id="sec-values" hidden>
   <h2>Vegas Values</h2>
   <p>The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate’s median: 100 is an ordinary price, 130 is a bargain. Every row carries the salary, the three projections, Market Delta, the TD probability and the team total.</p>
-  <div class="rk-seg" id="dfBoard" role="group"><button type="button" data-board="bestVegasValues">Best Vegas Values</button><button type="button" data-board="tdUpside">TD Upside</button><button type="button" data-board="volumeValues">Volume Values</button><button type="button" data-board="expensiveFades">Expensive Fades</button></div>
+  <div class="rk-seg" id="dfContest" role="group" aria-label="Contest type"><button type="button" data-contest="cash">Cash</button><button type="button" data-contest="single">Single Entry</button><button type="button" data-contest="3max">3-Max</button><button type="button" data-contest="gpp" aria-pressed="true">Large-Field GPP</button></div>
+  <p class="is-note" id="dfContestNote"></p>
+  <div class="rk-seg" id="dfBoard" role="group"><button type="button" data-board="metrics">Value &amp; Leverage</button><button type="button" data-board="bestVegasValues">Best Vegas Values</button><button type="button" data-board="tdUpside">TD Upside</button><button type="button" data-board="volumeValues">Volume Values</button><button type="button" data-board="expensiveFades">Expensive Fades</button></div>
+  <div class="is-scroll"><table class="is-table" id="dfMetrics" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Proj</th><th class="num">Value</th><th class="num">Floor</th><th class="num">Ceiling</th><th class="num">Own% <small>(model)</small></th><th class="num">Leverage</th><th class="num">Cash</th><th class="num">Tourney</th><th>Chalk</th></tr></thead><tbody></tbody></table></div>
+  <p class="is-note" id="dfMetricsNote" hidden>Ownership is a model, not a feed: a logistic of value and salary tier, labelled as such everywhere it appears. Every metric’s method is written down in <code>docs/dfs-metrics.md</code>. Sorted for the contest type you chose.</p>
   <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Vegas</th><th class="num">Iron Tuna</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
 </section>
 
@@ -208,6 +216,8 @@ p{color:var(--sec);margin:0 0 16px}
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
       <li><a href="/my-league">My League</a></li>
      </ul>
     </div>
@@ -272,7 +282,27 @@ p{color:var(--sec);margin:0 0 16px}
       s.boards.expensiveFades[0] ? card('Expensive fade', e(s.boards.expensiveFades[0].name), money(s.boards.expensiveFades[0].salary) + ', ' + e(s.boards.expensiveFades[0].marketDelta.classification.toLowerCase()) + '.') : ''];
     $('dfCards').innerHTML = out.join('');
   }
+  var contest = 'gpp';
+  function metrics(s) {
+    var m = s.metrics || null; var rows = s.players.filter(function (p) { return p.onBoard && typeof p.value === 'number'; });
+    $('dfMetrics').hidden = board !== 'metrics'; $('dfMetricsNote').hidden = board !== 'metrics'; $('dfValues').hidden = board === 'metrics' ? true : $('dfValues').hidden;
+    if (board !== 'metrics') return;
+    var key = m && m.sortBy ? m.sortBy : 'leverage';
+    rows.sort(function (a, b) { return (b[key] || 0) - (a[key] || 0); });
+    $('dfContestNote').textContent = m ? (m.label + ': ' + m.note) : '';
+    $('dfMetrics').querySelector('tbody').innerHTML = rows.slice(0, 40).map(function (p) { return '<tr><td><b>' + e(p.name) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num"><b>' + e(p.value) + '</b></td><td class="num">' + n1(p.floor) + '</td><td class="num">' + n1(p.ceiling) + '</td><td class="num">' + n1(p.ownership) + '%</td><td class="num">' + n1(p.leverage) + '</td><td class="num">' + e(p.cashScore) + '</td><td class="num">' + e(p.tournamentScore) + '</td><td>' + e(p.chalk || '') + '</td></tr>'; }).join('');
+    $('dfMetrics').hidden = !rows.length;
+  }
+  function desk() {
+    fetch('/api/newsroom?lens=dfs&limit=6', { credentials: 'omit' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok || !j.pieces.length) { $('dfDeskEmpty').textContent = 'The desk has not published this week yet.'; return; }
+      $('dfDesk').innerHTML = j.pieces.map(function (p) { var by = p.byline || {}; return '<div class="is-card"><span class="is-tag">' + e(p.dfsTitle || p.title) + ' · Week ' + e(p.week) + '</span><h3><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a></h3><p>' + e(p.dek || '') + '</p><p class="is-note">DFS lens by <a href="/analysts/' + e(by.dfsAnalyst) + '">' + e(by.dfsName) + '</a></p></div>'; }).join('');
+      $('dfDeskEmpty').hidden = true;
+    }).catch(function () { $('dfDeskEmpty').textContent = 'The desk did not answer.'; });
+  }
   function values(s) {
+    if (board === 'metrics') { metrics(s); press($('dfBoard'), 'data-board', board); return; }
+    $('dfMetrics').hidden = true; $('dfMetricsNote').hidden = true;
     var list = s.boards[board] || [];
     $('dfValues').querySelector('tbody').innerHTML = list.map(function (p) { return '<tr><td><b>' + e(p.name) + '</b> <span class="is-status">' + e(p.position + ' · ' + p.team + (p.opponent ? ' ' + (p.home === false ? '@' : 'vs ') + p.opponent : '')) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.vegasPoints) + '</b> <span class="is-status">' + e(p.vegasBasis) + '</span></td><td class="num">' + n1(p.ironTunaPoints) + '</td><td class="num">' + n1(p.consensusPoints) + '</td><td>' + delta(p.marketDelta) + '</td><td class="num">' + n1(p.tdProbability) + '%</td><td class="num">' + n1(p.teamTotal) + '</td><td class="num"><b>' + e(p.vegasValueScore) + '</b></td></tr>'; }).join('');
     $('dfValues').hidden = !list.length; press($('dfBoard'), 'data-board', board);
@@ -371,7 +401,7 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfNav').hidden = false;
     $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '.';
     show();
-    fetch('/api/dfs?site=' + site).then(function (r) { return r.json(); }).then(function (j) {
+    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) { slate = null; $('dfNote').textContent = (j && j.note) || 'No salaries are loaded for this week.'; $('dfEmpty').textContent = 'No ' + ((j && j.label) || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.'; $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true; $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = ''; return; }
       slate = j; $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + 'Salaries as of ' + e(new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + ' ET.'; render();
     }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
@@ -381,6 +411,8 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; load(); });
     $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
     $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
+    $('dfContest').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; contest = b.getAttribute('data-contest'); press($('dfContest'), 'data-contest', contest); board = 'metrics'; load(); try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_contest', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, contest: contest, site: site } })], { type: 'application/json' })); } catch (x) {} });
+    desk();
     $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); });
     $('dfBuild').addEventListener('click', build);
     $('dfPool').addEventListener('click', function (ev) { var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); });

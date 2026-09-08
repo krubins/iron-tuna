@@ -15,14 +15,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-<title>What They Aren’t Telling You: The Whole Board, Counted | Iron Tuna</title>
-<meta name="description" content="Every ranking site publishes a list. None of them tells you how far that list has drifted from the priced market. Iron Tuna counts the disagreement across the whole board, every day.">
-<link rel="canonical" href="https://irontuna.com/what-they-arent-telling-you">
-<meta property="og:title" content="What They Aren’t Telling You">
-<meta property="og:description" content="How far the consensus has drifted from the betting market, counted across the whole board.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://irontuna.com/what-they-arent-telling-you">
-<meta property="og:image" content="https://irontuna.com/og.png">
+<title>Analyst | Iron Tuna</title>
+<meta name="description" content="One of Iron Tuna’s AI analyst personas: beat, philosophy, recent pieces and the public record of calls.">
+<link rel="canonical" href="https://irontuna.com/analysts">
+
+
+
+
+
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/site.css">
 <style>
@@ -40,7 +40,28 @@ p{color:var(--sec);margin:0 0 16px}
 .btn:hover{filter:brightness(1.06);text-decoration:none}
 .btn.alt{background:rgba(14,124,99,.14);color:var(--teal);border:1px solid var(--teal)}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:22px 0 8px}
+
 </style>
+<style>
+.an-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin:18px 0 26px}
+.an-card{border:1px solid var(--line2);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none}
+.an-card:hover{border-color:var(--teal)}
+.an-av{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:15px;letter-spacing:.04em}
+.an-card h3{margin:6px 0 0;font-size:19px}.an-role{color:var(--sec);font-size:13px;margin:0}
+.an-spec{font-size:13px;color:var(--sec);margin:4px 0 0}.an-riv{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-top:6px}
+.an-disc{border:1px solid var(--line2);border-left:4px solid var(--teal);border-radius:8px;padding:14px 16px;margin:18px 0;font-size:14px;line-height:1.5}
+.an-head{display:flex;gap:16px;align-items:center;margin:26px 0 8px}.an-head .an-av{width:64px;height:64px;font-size:22px}
+.an-head h1{margin:0;font-size:clamp(28px,5vw,38px)}.an-head p{margin:2px 0 0;color:var(--sec)}
+.an-two{display:grid;grid-template-columns:1.2fr 1fr;gap:22px}@media(max-width:800px){.an-two{grid-template-columns:1fr}}
+.an-box{border:1px solid var(--line2);border-radius:10px;padding:14px 16px;margin:0 0 16px}.an-box h2{margin:0 0 8px;font-size:17px}
+.an-box ul{margin:0;padding-left:18px}.an-box li{margin:4px 0}
+.an-list a{font-weight:700}.an-list li{margin:8px 0;line-height:1.4}.an-when{color:var(--sec);font-size:12px}
+.an-rec{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}.an-rec span{border:1px solid var(--line2);border-radius:6px;padding:4px 8px;font-size:13px}
+.an-h2h{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;font-size:14px;padding:8px 0;border-top:1px solid var(--line)}
+.an-h2h b{font-size:15px}.an-h2h .r{font-weight:800}.an-h2h small{display:block;color:var(--sec);font-size:11px}
+</style>
+<meta name="robots" content="noindex">
+
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -63,40 +84,12 @@ p{color:var(--sec);margin:0 0 16px}
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; What They Aren't Telling You</p>
-<h1>The number nobody else publishes</h1>
-<p class="is-lede">Every site will give you a list. None of them will tell you how far that list has drifted from the market that has money on it. This page counts the drift rather than describing it, and it is recomputed off every odds pull.</p>
-<div class="its-strip" data-season-strip></div>
-
-<h2>The board today</h2>
-<div class="is-grid" id="wtCards"></div>
-<p class="is-empty" id="wtEmpty">Counting the board&hellip;</p>
-
-<h2>By position</h2>
-<div class="is-scroll"><table class="is-table" id="wtPos" hidden>
-  <thead><tr><th>Position</th><th class="num">Players moved</th><th class="num">Market higher</th><th class="num">Market lower</th><th class="num">Dollars</th></tr></thead>
-  <tbody id="wtPosBody"></tbody>
-</table></div>
-
-<h2>Why this is the honest version</h2>
-<p>A disagreement is only worth printing if it is big enough to act on, so a gap counts here only when it moves a player at least two rank slots or two dollars. Everything under that is rounding, and calling it an edge would be the same overclaiming this page exists to answer.</p>
-<p>A day where the market and the consensus broadly agree produces a small number, and the page says so. That is the point: a tool that finds a dramatic edge every single day is not measuring anything.</p>
-
-<h2>The rest of the section</h2>
-<div class="is-grid">
-  <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
-  <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>The board re-ranked for the week ahead, at your league’s scoring rather than a stranger’s.</p></div>
-  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
-  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
-  <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
-  <div class="is-card"><h3><a href="/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
-  <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
-</div>
-
-<h2>Where these numbers come from</h2>
-<p>Iron Tuna prices players against the <b>betting market</b> first and the consensus projection feeds second. A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news; a ranking carries no such penalty. When a priced market and an unpriced list disagree, the disagreement is the thing worth reading.</p>
-<p class="is-note">The week, the game states and the byes on this page come from the NFL schedule itself, not from the calendar: a week is current until its own last game has finished. Game lines and totals are the market’s, pulled on a schedule and cached, never fetched from your browser. Where a number is derived rather than quoted, the page says so.</p>
-
+<p class="is-eyebrow"><a href="/analysts">In-Season &middot; The analysts</a></p>
+<div class="an-head" id="anHead"></div>
+<div class="an-disc" id="anDisc"></div>
+<div id="anMain"></div>
+<p class="is-empty" id="anEmpty">Reading the desk&hellip;</p>
+<p class="is-note"><a href="/analysts">All analysts</a> &middot; <a href="/in-season/desk">The desk</a></p>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -159,32 +152,32 @@ p{color:var(--sec);margin:0 0 16px}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-season.js" defer></script>
+<script src="/player-search.js" defer></script>
 <script>
 (function () {
-  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
-  function card(tag, h, p) { return '<div class="is-card"><span class="is-tag is-live">' + tag + '</span><h3>' + h + '</h3><p>' + p + '</p></div>'; }
-  document.addEventListener('DOMContentLoaded', function () {
-    fetch('/api/vegas-column').then(function (r) { return r.json(); }).then(function (j) {
-      var d = j && j.digest;
-      if (!d) { document.getElementById('wtEmpty').textContent = 'The odds feed has not answered, so there is nothing counted to show.'; return; }
-      var out = [];
-      out.push(card('Priced', d.priced + ' of ' + d.scanned, 'Players a sportsbook put a number on today. The rest keep their projection-fed line.'));
-      out.push(card('Disagreement', d.moved + ' players', 'Where the market and the consensus are at least two slots or two dollars apart.'));
-      out.push(card('Direction', d.up + ' up, ' + d.down + ' down', 'How many the market rates higher than the rankings do, and how many lower.'));
-      out.push(card('Money', '$' + d.dollars, 'The total gap between the two boards, in the site\u2019s default league dollars.'));
-      if (d.topUp) out.push(card('Biggest riser', e(d.topUp.name), 'The consensus has him at ' + e(d.topUp.position + d.topUp.rankConsensus) + '. The market says ' + e(d.topUp.position + d.topUp.rankIronTuna) + '.'));
-      if (d.topDown) out.push(card('Biggest fader', e(d.topDown.name), 'The consensus has him at ' + e(d.topDown.position + d.topDown.rankConsensus) + '. The market says ' + e(d.topDown.position + d.topDown.rankIronTuna) + '.'));
-      if (d.teamUp) out.push(card('Club the market likes', e(d.teamUp.team), 'Ranked ' + d.teamUp.rankMarket + ' by the money and ' + d.teamUp.rankConsensus + ' by the projections.'));
-      if (d.teamDown) out.push(card('Club the market doubts', e(d.teamDown.team), 'Ranked ' + d.teamDown.rankMarket + ' by the money and ' + d.teamDown.rankConsensus + ' by the projections.'));
-      document.getElementById('wtCards').innerHTML = out.join('');
-      document.getElementById('wtEmpty').hidden = true;
-      var rows = Object.keys(d.byPos || {}).map(function (p) {
-        var v = d.byPos[p];
-        return '<tr><td><b>' + e(p) + '</b></td><td class="num">' + v.moved + '</td><td class="num">' + v.up + '</td><td class="num">' + v.down + '</td><td class="num">$' + v.dollars + '</td></tr>';
-      });
-      if (rows.length) { document.getElementById('wtPosBody').innerHTML = rows.join(''); document.getElementById('wtPos').hidden = false; }
-    }).catch(function () { document.getElementById('wtEmpty').textContent = 'The board did not answer.'; });
-  });
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var $ = function (id) { return document.getElementById(id); };
+  var m = location.pathname.match(/^\/analysts\/([a-z]+)\/?$/);
+  var id = m ? m[1] : (new URLSearchParams(location.search).get('id') || '');
+  var when = function (ms) { return ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
+  fetch('/api/analyst?id=' + encodeURIComponent(id)).then(function (r) { return r.json(); }).then(function (j) {
+    if (!j || !j.ok) { $('anEmpty').textContent = 'No such analyst. The desk is at /analysts.'; return; }
+    var a = j.analyst;
+    document.title = a.name + ', ' + a.role + ' | Iron Tuna';
+    $('anHead').innerHTML = '<span class="an-av">' + e(a.avatar) + '</span><div><h1>' + e(a.name) + '</h1><p>' + e(a.role) + ' &middot; <span class="dk-ai">AI analyst persona</span></p></div>';
+    $('anDisc').textContent = j.disclosure;
+    var left = '<div class="an-box"><h2>Beat</h2><ul>' + a.specialty.map(function (s) { return '<li>' + e(s) + '</li>'; }).join('') + '</ul></div>' +
+      '<div class="an-box"><h2>How ' + e(a.name.split(' ')[0]) + ' thinks</h2><p>' + e(a.personality) + '</p><p><i>' + e(a.philosophy) + '</i></p></div>' +
+      '<div class="an-box"><h2>Assignments</h2><ul>' + a.assignments.map(function (s) { return '<li>' + e(s) + '</li>'; }).join('') + '</ul>' + (j.columns && j.columns.length ? '<p class="is-note">' + j.columns.map(function (c) { return '<a href="' + e(c.url) + '">' + e(c.title) + '</a>: ' + e(c.note); }).join('') + '</p>' : '') + '</div>' +
+      (a.rivalry ? '<div class="an-box"><h2>The desk’s one rivalry</h2><p>' + e(a.name) + ' and <a href="' + e(a.rivalry.url) + '">' + e(a.rivalry.name) + '</a> disagree about what a ranking should be built from: ' + (a.id === 'vega' ? 'the market first, the football second' : 'the football first, the market as one input') + '. It surfaces only where the two methods actually rank a player apart, and never as a feud.</p>' +
+        (j.headToHead && j.headToHead.length ? j.headToHead.map(function (h) { return '<div class="an-h2h"><div><b>' + e(h.player) + '</b><small>' + e(h.position) + ', Week ' + e(h.week) + ' &middot; <a href="' + e(h.url) + '">' + e(h.headline || h.kind) + '</a></small>' + (h.line ? '<small><i>' + e(h.line) + '</i></small>' : '') + '</div><div class="r">Brooks ' + e(h.position) + e(h.brooks.rank) + '</div><div class="r">Vega ' + e(h.position) + e(h.vega.rank) + '</div></div>'; }).join('') : '<p class="is-note">No head-to-head yet this season.</p>') + '</div>' : '');
+    var pieces = j.pieces && j.pieces.length ? '<ul class="an-list">' + j.pieces.map(function (p) { return '<li><span class="an-when">' + e(when(p.publishedAt)) + ' &middot; ' + e(p.title) + ' &middot; Week ' + e(p.week) + '</span><br><a href="' + e(p.url) + '">' + e(p.headline || p.title) + '</a>' + (p.dek ? '<br><span class="an-when">' + e(p.dek) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<p class="is-note">Nothing published yet this season.</p>';
+    var rec = Object.keys(j.record || {}).length ? '<div class="an-rec">' + Object.keys(j.record).map(function (k) { return '<span>' + e(k) + ': ' + e(j.record[k]) + '</span>'; }).join('') + '</div>' : '';
+    var calls = j.calls && j.calls.length ? '<div class="is-scroll"><table class="is-table"><thead><tr><th>Week</th><th>Player</th><th>Call</th><th>Confidence</th><th>Outcome</th></tr></thead><tbody>' + j.calls.map(function (c) { return '<tr><td>' + e(c.week) + '</td><td><b>' + e(c.player) + '</b> <span class="an-when">' + e(c.position || '') + ' ' + e(c.team || '') + '</span></td><td>' + e(c.direction) + (c.rank ? ' (' + e(c.rank) + ')' : '') + (c.recommendation ? ': ' + e(c.recommendation) : '') + '</td><td>' + e(c.confidence || '') + '</td><td>' + e(c.outcome || 'pending') + (c.outcomeNote ? '<br><span class="an-when">' + e(c.outcomeNote) + '</span>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="is-note">No calls on the record yet. Every firm position published under this byline is stored here and graded once the week’s stats publish.</p>';
+    $('anMain').innerHTML = '<div class="an-two"><div>' + left + '</div><div><div class="an-box"><h2>Recent pieces</h2>' + pieces + '</div><div class="an-box"><h2>The record</h2>' + rec + calls + '</div></div></div>';
+    $('anEmpty').hidden = true;
+    if (window.ITPlayerSearch && window.ITPlayerSearch.linkAllPlayers) { try { window.ITPlayerSearch.linkAllPlayers($('anMain')); } catch (x) {} }
+  }).catch(function () { $('anEmpty').textContent = 'The desk did not answer.'; });
 })();
 </script>
 <!--chrome:navjs--><script>

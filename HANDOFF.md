@@ -7876,3 +7876,237 @@ Verified in Chromium at 1200px and 390px: both surfaces render, the band splits
 and stacks, the ledger table scrolls sideways rather than overflowing the page
 (0px horizontal overflow at 390), player names link to their cards through
 `player-search.js`, and neither page throws.
+
+---
+
+## 68. September 8: the in-season newsroom
+
+The regular season started, and the site's editorial system was still a
+draft-season one: three weekday crons posting auction, snake and best-ball
+insight threads to X; six Claude Routines writing a camp desk, a coaching
+column, two copies of a daily auction-priced story, and a six-hourly
+"lead story" that rebuilt the auction against the day's lines; and, on the
+in-season side, eleven desk pieces that reported on games rather than on
+what the games meant. This section is the migration to the in-season
+intelligence desk the September 8 specification asked for, and the system
+as built. `docs/editorial-migration.md` is the migration analysis that
+preceded it; `tools/test-newsroom.mjs` and `tools/test-dry-run.mjs` pin it.
+
+### 68a. What was retired, merged and kept
+
+Two schedulers exist and both were audited: the Worker's cron triggers, and
+the Claude Routines outside the repository. Every item and its disposition
+is in `LEGACY_CONTENT` and `ROUTINE_MIGRATION` in `_worker.js`, which is
+what the admin board's **Legacy content migration** table prints, so the
+table and the code cannot disagree.
+
+- **Retired (worker):** the three weekday social crons. `scheduled()`
+  still recognises their strings and refuses to post in the regular season
+  unless `DRAFT_SEASON_SOCIAL=1`; the code is kept for 2027.
+- **Retired (Routines):** the camp & preseason desk, the Play-Caller
+  Premium entries, both Pick Routines, the lead-story refresh and its
+  paused watcher. They are disabled from the migration session where the
+  API allowed it; any that refused are named in the migration report and
+  must be disabled in the Routines UI. The worker no longer reads what
+  they write as current: `/api/lead-story` serves the newest desk piece in
+  the regular season and the `/lead` archive stays readable.
+- **Retained (Routines):** the projection updates (data jobs, not stories)
+  and The Tell (a distinct function nothing on the calendar duplicates;
+  registered on Evan Brooks's desk, byline unchanged, see 68j).
+- **Retired / merged (desk kinds):** all eleven of §56's kinds. Their rows
+  in `content_pieces` stay readable at their old URLs (`/in-season/desk/
+  <kind>/<week>` renders a legacy row with its original sections); none can
+  be produced again, which `newsroomAudit()` checks.
+- **Hidden in the regular season (front page):** The Pick, The Build, Asset
+  Allocation, the cheat-sheet Vegas column, Position Intel, Just Posted and
+  Training Camp, by CSS on `html[data-season="in"]`, which `it-season.js`
+  now stamps on the root off `/api/season`. The pages themselves keep their
+  links in the nav and the footer.
+
+### 68b. The calendar
+
+Sixteen scheduled packages and one unscheduled, in `CONTENT_KINDS`
+(Eastern time; every slot in `docs/editorial-migration.md` §2). Each is one
+research packet, a primary analyst, and, on every package, a Weekly Fantasy
+lens and a DFS lens written from the same facts. Four are **worth-gated**
+(`gate: 'worth'`: Quarterback Monday, Tailback Tuesday, Wideout Wednesday,
+Tight End Thursday): the packet may say nothing clears the bar and the
+piece is stored as `skipped` with the reason rather than padded. Two are
+**live** (`updates`): Last-Minute Intel re-produces as a new version of the
+same slug while a Sunday game is still to kick off and the inactives have
+changed; What Sunday Taught Us re-produces as the late and night games go
+final, into Monday morning. One slug, several versions, never a second
+story. `breaking` is produced only by the news scan.
+
+`contentDue` grew three things: a `minute`, a `subject` week separate from
+the anchor week (Monday's early rankings anchor on Sunday's last game and
+are about the week after it), and `anchor: 'targets'` for a piece about a
+specific game (the previews and the Sunday intel anchor a day before their
+own first game, not on the week's opener).
+
+### 68c. The clock
+
+`wrangler.jsonc` has ONE trigger, `*/15 * * * *`. `JOB_SCHEDULE` entries
+carry `minutes` ([0] unless said otherwise); the schedule refresh runs
+every quarter hour on game days, the Sunday injury list every quarter hour
+from 10 AM, the news scan and the desk tick every quarter hour. The ROS
+snapshot moved from Wednesday 7 to **Tuesday 6 AM** so the Tuesday 7 AM
+rankings piece reads a fresh one. `calls-grade` (Tue/Wed 6 AM) and
+`news-scan` are new jobs in `JOB_FNS`. `tools/test-jobs.mjs` pins the DST
+behaviour at the quarter hours.
+
+### 68d. The staff, and the one rivalry
+
+`ANALYSTS`: Jack Mercer (editor), Nate Vega (market), Evan Brooks
+(rankings), Mike Raines (usage), Chris Dalton (QB/offense), Tyler Grant
+(waivers), Sam Porter (matchups, K/DST), Lena Park (DFS). Each has a beat, a
+personality, a philosophy, assignments and a `voice` the writer is handed.
+`RIVALRY_PAIR` is Vega/Brooks and `newsroomAudit()` fails if a second pair
+ever appears. `/analysts` is the staff page with the AI disclosure
+(`AI_DISCLOSURE`, also on every piece payload); `/analysts/<id>` is one
+analyst: beat, recent pieces, the record of calls, and for the two rivals
+the head-to-head.
+
+The rivalry is gated three ways (`rivalryGate`): the kind must allow it,
+the packet must carry a player the two ends of the blend rank at least six
+places and a quarter apart (`blendDisagreements`), and the budget must
+allow it (`rivalryBudget`: one in five of the last ten eligible published
+pieces). When it fires the packet carries `rivalry` and the writer is told
+to write ONE line; when it does not, the other analyst's name is not in
+the allowed list and `factCheck` rejects a draft that names him (full name,
+or bare surname for the two rivals). Nothing is manufactured.
+
+### 68e. The research packet
+
+`buildResearchPacket(env, kind, due, ctx)` wraps a per-kind builder
+(`packetLastMinute`, `packetSundayTaught`, `packetShowdown`,
+`packetRankings`, `packetRos`, `packetPosition`, `packetQb`,
+`packetPickups`, `packetUnderrated`, `packetTradeDesk`, `packetWeekend`,
+`packetKDst`, `packetBreaking`; the legacy `briefForGames`, `briefFinalRead`
+and `briefGamePlan` are reused underneath) with what every packet carries:
+`meta` (kind, week, analysts, lens), `freshness` (`freshnessReport`: every
+source's provider, retrieval time, age and a status against the KIND's
+own limit in `FRESHNESS_REQ`; a stale source is named in `staleSources` and
+the writer is told it is unavailable), `priorCalls` on the players named,
+`rivalry`, `playerIndex`, a `dfs` block (`_dfsBlock`: the slate's values,
+likely chalk, leverage, cash and tournament boards under the metrics, or
+the reason there is none), and `allowed` (every name and number, plus the
+analysts the packet earned). `contentContext` gained the freshness stamps
+and the DFS slates.
+
+### 68f. The Fantasy Analysis / Market Intelligence blend
+
+`blendComponents(row)` gives every player two normalised components:
+`fantasy` (the consensus at the rules, with the usage role trend once
+applied) and `market` (the Vegas board, shrunk toward the fantasy number
+by `BLEND_SHRINK[basis]`: a prop is 1.0, a posted game line 0.8, a fitted
+team rating 0.55, so "100% market" never means "100% a curve fit").
+`blendPoints(c, w)` interpolates; `blendBoard(board, w)` ranks at both ends
+and at `w`. `/api/blend?horizon=&pos=&scoring=&w=` serves it;
+`/rankings` has the fourth board, **Fantasy ↔ Market**, with a slider that
+recomputes in the browser from the same two components (the same shrink
+table, `tools/test-vegas-weight.mjs`-style discipline: a calculation, never
+a reorder). `/api/disagreements` lists where the two ends disagree and the
+recent rivalry lines; the front page and `/fantasy` print it as **Vega vs.
+Brooks**.
+
+### 68g. The writer and the fact check
+
+`writeNewsroomPiece` hands the packet to the model under `NEWSROOM_SYSTEM`
+plus a voice block (`_voiceBlock`: the byline's voice, the DFS byline's,
+the market voice where the kind has one, the rivalry instruction or its
+absence, the prior calls) and asks for one JSON object: `headline`, `dek`,
+`weekly` and `dfs` (the sections in `NEWSROOM_SECTIONS`; object sections
+in `NEWSROOM_OBJECT_SECTIONS`), `calls`, `rivalryLine`. `factCheck` runs
+`validateDraft` on the whole body (every name and number must be in the
+packet), then the colleague rule, the rivalry rule, the section rule, and
+a banned-phrasing list (`AI_PHRASES`, em dashes included). One corrective
+retry; otherwise the piece is `held` with the problems named and the page
+shows the packet. A model that returns `{"skip": "..."}` is honoured: the
+piece is `skipped` with `writer_declined`.
+
+### 68h. Storage, memory, the feeds
+
+`content_pieces` grew `analyst, lens, version, rivalry, headline, dek`
+(guarded `ALTER TABLE` in `newsroomReady`). `analyst_calls` stores every
+firm position a published piece took (`normaliseCalls` keeps only players
+the packet contains and directions in `CALL_DIRECTIONS`); `priorCallsFor`
+feeds them back into later packets; `runCallsGrade` writes `hit / miss /
+push / noted` once the week's usage file has the actual points
+(`gradeCall`). `newsroom_settings` holds the pause. `news_events` and
+`news_state` are the breaking-news log and its last picture.
+
+Public routes: `/api/newsroom?lens=` (the feed the homes read),
+`/api/analysts`, `/api/analyst?id=`, `/api/blend`, `/api/disagreements`;
+`/api/content` and `/api/content/piece` carry bylines, both lenses and the
+disclosure; `/api/dfs` carries `metrics` and `?contest=`. Pages:
+`desk.html` renders a piece with **Weekly Fantasy | DFS** tabs (the lens
+defaults from `?lens=`, the referrer, or the lane the reader last chose on
+the front page), the byline, the rivalry module, the calls, the prior
+calls, the sources-and-freshness table and the packet; `analysts.html`,
+`analyst.html`; the front page's **The Newsroom** band in both lanes and
+**Vega vs. Brooks** in the fantasy lane; `/fantasy` and `/dfs` each carry
+the feed in their lens, `/dfs` the contest selector and the **Value &
+Leverage** board.
+
+### 68i. DFS metrics, breaking news, the control centre
+
+`dfsMetrics(rows, contest)`: value, floor, ceiling, modelled ownership,
+leverage, cash score, tournament score, chalk; `dfsStackScores`. The
+methods are written in `docs/dfs-metrics.md`, and ownership is labelled
+`modelled` everywhere it appears because no licensed feed exists.
+
+`runNewsScan` (quarter-hourly) compares the injury list and the depth
+charts with the last picture, scores every change (`scoreNewsEvent`: type,
+board prominence, day of week) and logs it; a change at or above
+`NEWS.threshold` (60) on a Sunday before kickoff refreshes Last-Minute
+Intel, otherwise produces a Breaking piece. Below the threshold, nothing.
+
+`/admin` opens with **Newsroom control**: **PAUSE AUTOMATIC PUBLISHING**
+(a D1 setting; paused, every validated piece is held `awaiting_approval`
+and the Editorial table gains **Approve**), the flags, the legacy
+migration table, the Routines table, the audit, and the last twenty news
+events; the Editorial table shows each kind's analyst, minute, gate and
+live-update status. `POST /api/admin/newsroom` takes `pause, resume,
+approve, run, scan, grade, status`.
+
+Feature flags are Worker vars `FLAG_IN_SEASON_DESK`, `FLAG_AUTO_PUBLISH`,
+`FLAG_DFS_CONTENT`, `FLAG_MARKET_SLIDER`, `FLAG_ANALYST_PERSONAS`,
+`FLAG_RIVALRY`, `FLAG_BREAKING_NEWS`, `FLAG_PERSONALIZED_RANKINGS`, all
+defaulting on (`NEWSROOM_FLAGS`, `flagOn`); `DRAFT_SEASON_SOCIAL=1`
+re-enables the retired social threads.
+
+### 68j. Open items, and what was left alone
+
+- **The Tell's byline.** The specification's roster has eight names and no
+  ninth. The Tell is bylined to a pen name, Artie Kesselman, written by the
+  owner hours before this migration. It is registered on Evan Brooks's desk
+  (his page links it and says so) and its Routine, page and prompt are
+  untouched pending the owner's call on re-bylining it.
+- **The projection Routine ends with September.** The ROS boards price off
+  the committed set; a weekly Monday cadence through Week 17 is the
+  recommendation.
+- **The Routines this session could not disable** are named in the
+  migration report. The worker-side changes make their output harmless.
+- **No weather feed** is configured (the packet says so), **no ownership
+  feed** exists (modelled and labelled), and **routes / route participation**
+  remain unavailable from any free feed, as before.
+- `tools/build-seo.mjs` matched The Tell's articles on a stale class
+  (`call nsy`); fixed to `call tell` in passing, so the column's Blog graph
+  carries its posts.
+
+### 68k. Tests
+
+`tools/test-newsroom.mjs` (the migration, the staff, the blend at 0 / 0.5
+/ 1, freshness, the DFS metrics, the packets and their worth gates, memory,
+the fact check, the news scorer, the social guard) and
+`tools/test-dry-run.mjs` (the whole pipeline against a fake D1 and a fake
+model, the clock advanced a quarter hour at a time from the Thursday opener
+to the Friday of Week 2: every slot, both lenses, the two live pieces
+updating on one slug, a Sunday-morning scratch scored and routed, the
+worth-gated pieces skipping, the rivalry budget, analyst calls recorded and
+fed back, the pause and the approval, and a first draft that names a player
+the packet lacks being sent back once). `tools/test-content.mjs` and
+`tools/test-jobs.mjs` were rewritten to the new calendar and clock;
+`tools/test-health.mjs` gained the newsroom stubs. Both new suites are in
+`checks.yml`.
