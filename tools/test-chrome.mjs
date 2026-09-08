@@ -209,10 +209,18 @@ console.log('\nthe disclaimer is on every page, in full');
     'Availability varies by state',
     '1-800-GAMBLER',
   ];
-  // index.html is excluded from the chrome generator — its footer is React — and
-  // it is the page a first-time reader is most likely to land on, so it is held
-  // to the same bar by hand. front.html and admin.html take the shared footer.
-  const mustCarry = [...allPages, 'index.html'];
+  // allPages is every page carrying <header class="site">, which is every page
+  // the chrome generator writes. THE THREE IT EXCLUDES ARE THE THREE THAT MATTER
+  // MOST HERE and they are named explicitly:
+  //
+  //   front.html  is "/" — the page nearly every reader actually lands on. It
+  //               keeps its own masthead and footer, so it fell outside this
+  //               check and shipped without the disclaimer once already.
+  //   index.html  is the app at /hub and the draft rooms; its footer is React.
+  //
+  // admin.html is deliberately not here: it is noindex, no visitor reaches it,
+  // and it prints no projections.
+  const mustCarry = [...allPages, 'index.html', 'front.html'];
   const missing = [];
   for (const f of mustCarry) {
     const text = read(f).replace(/<[^>]*>/g, ' ').replace(/&mdash;|&#8212;/g, '-');
@@ -220,6 +228,9 @@ console.log('\nthe disclaimer is on every page, in full');
   }
   ok('every page carries all seven clauses', missing.length === 0,
      missing.length + ' missing, e.g. ' + missing.slice(0, 4).join('; '));
+  // Named on its own, because "every page" quietly meant "every page with the
+  // shared header" the first time and the homepage slipped through it.
+  ok('the homepage at / carries it', !missing.some((m) => m.startsWith('front.html:')));
 
   // And the two copies of it agree. index.html keeps its own because it is not
   // generated; if they drift, one set of readers is being told something else.

@@ -15,13 +15,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b1614">
-<title>Fantasy Football Auction Values &amp; Draft Tools | Iron Tuna</title>
-<meta name="description" content="The fantasy site built for auction drafts. Custom dollar values for your exact league, a live Auction Manager for draft night, an AI Value Coach, and auction intel updated daily.">
+<title>Fantasy, DFS &amp; Betting-Market Reads for Every NFL Week | Iron Tuna</title>
+<meta name="description" content="Your fantasy league, the daily-fantasy salary and the sportsbook each put a number on the same player. Iron Tuna reads the betting market first, the consensus second, and your league’s scoring on top of both — then prints where they disagree. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup.">
 <link rel="canonical" href="https://irontuna.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Iron Tuna">
-<meta property="og:title" content="Iron Tuna: Fantasy Football Auction Values &amp; Draft Tools">
-<meta property="og:description" content="Know what he is worth, what he will cost, and what you should bid. Custom auction values for your exact league, plus a live Auction Manager and an AI Value Coach.">
+<meta property="og:title" content="Three prices on every player. Read them before kickoff.">
+<meta property="og:description" content="Fantasy, DFS and wagers in one place, every number read against the betting market first and restated at your league’s scoring. Free, no signup.">
 <meta property="og:url" content="https://irontuna.com/">
 <meta property="og:image" content="https://irontuna.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -769,25 +769,95 @@ img{max-width:100%}
    not open yet. */
 .mast-jump a.mj-soon{display:inline-flex;align-items:center;gap:6px}
 .mast-jump a.mj-soon span{font-size:9px;letter-spacing:.1em;padding:1px 5px;border-radius:3px;background:var(--gold);color:#231700;font-weight:800}
+/* ── the redesigned front: hero, lanes, the number, draft band, close ─────
+   The page leads with one claim and three lanes; the draft product keeps its
+   pitch, its screenshot and its three numbers, one band lower. */
+.fp-clock {
+  display: flex; flex-wrap: wrap; align-items: stretch; margin: 22px 0 0;
+  border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px;
+  background: rgba(255, 255, 255, .04);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; line-height: 20px; letter-spacing: .06em; text-transform: uppercase;
+  font-variant-numeric: tabular-nums; color: #cfdad6;
+}
+.fp-clock > span { padding: 7px 14px; border-left: 1px solid rgba(255, 255, 255, .14) }
+.fp-clock > span:first-child { border-left: 0 }
+.fp-clock .its-phase { color: var(--teal, #2dd4a3); font-weight: 700 }
+.fp-clock .its-phase.its-off { color: #97a5a0 }
+.fp-clock .its-week { color: #fff; font-weight: 700 }
+.fp-clock .its-state { color: #fff }
+.fp-clock .its-counts, .fp-clock .its-next, .fp-clock .its-note { color: #97a5a0; text-transform: none; letter-spacing: .01em }
+.fp-clock .its-note { flex: 1 }
+.fp-clock .its-next { margin-left: auto }
+.fp-hero { padding: 30px 0 36px }
+.fp-h1 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(40px, 6.4vw, 84px); line-height: 0.98; letter-spacing: .015em; text-transform: uppercase; margin: 14px 0 0 }
+.fp-h1 span { display: block }
+.fp-h1 .fp-accent { color: var(--teal, #2dd4a3) }
+.fp-hero-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(18px, 3vw, 48px); align-items: end; margin-top: 24px }
+.fp-lede { font-size: 17px; line-height: 27px; margin: 0; max-width: 60ch }
+
+.fp-sec { padding: 0 0 clamp(30px, 4vw, 54px) }
+.fp-fine { margin: 12px 0 0; font-size: 13px; line-height: 21px; opacity: .72 }
+
+.fp-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); border: 1px solid var(--line, #e3e8ec); border-radius: 12px; overflow: hidden }
+.fp-lane { display: flex; flex-direction: column; padding: 22px 22px 20px; border-right: 1px solid var(--line, #e3e8ec); color: inherit; text-decoration: none }
+.fp-lane:last-child { border-right: 0 }
+.fp-lane:hover { background: rgba(14, 124, 99, .05); text-decoration: none }
+.fp-lane-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; opacity: .7 }
+.fp-lane-meta b { color: var(--brand, #0e7c63) }
+.fp-lane h3 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: .02em; text-transform: uppercase; margin: 14px 0 0 }
+.fp-lane p { font-size: 14.5px; line-height: 23px; margin: 12px 0 0; flex: 1; opacity: .86 }
+.fp-reading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line, #e3e8ec) }
+.fp-reading-k { font-size: 13px; line-height: 19px; opacity: .8 }
+.fp-reading-v { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 26px; line-height: 1; letter-spacing: .02em; white-space: nowrap; font-variant-numeric: tabular-nums }
+.fp-lane-go { display: block; margin-top: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--brand, #0e7c63) }
+
+.fp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: clamp(18px, 3vw, 44px) }
+.fp-cols .fp-n { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 42px; line-height: 1; color: var(--brand, #0e7c63) }
+.fp-cols h3 { font-size: 19px; margin: 8px 0 0 }
+.fp-cols p { font-size: 14.5px; line-height: 23px; margin: 8px 0 0; opacity: .86 }
+
+.fp-gap-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px }
+
+.fp-draft-band { border-top: 3px solid var(--line, #e3e8ec); margin-top: 8px; padding-top: 8px }
+.fp-draft { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(18px, 3vw, 40px); align-items: center }
+.fp-draft-copy h3 { font-size: clamp(21px, 2.6vw, 30px); line-height: 1.16; margin: 10px 0 0 }
+.fp-draft .hb-shot { margin: 0 }
+
+.fp-close { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: clamp(18px, 3vw, 48px); align-items: center; border: 1px solid var(--line, #e3e8ec); border-radius: 14px; padding: clamp(22px, 3vw, 36px); margin: 30px 0 18px }
+.fp-close h2 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(28px, 3.6vw, 42px); line-height: 1; letter-spacing: .02em; text-transform: uppercase; margin: 0 }
+.fp-close p { font-size: 14.5px; line-height: 23px; margin: 12px 0 0; opacity: .86 }
+.fp-close .hb-ctas { justify-content: flex-end }
+
+.foot-21 { font-size: 12.5px; line-height: 1.6; opacity: .8; margin: 14px 0 10px; max-width: 92ch }
+
+@media (max-width: 760px) {
+  .fp-lane { border-right: 0; border-bottom: 1px solid var(--line, #e3e8ec) }
+  .fp-lane:last-child { border-bottom: 0 }
+  .fp-close .hb-ctas { justify-content: flex-start }
+}
 </style>
 
-<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Iron Tuna","url":"https://irontuna.com/","description":"The fantasy site built for auction drafts. Custom dollar values for your exact league, a live Auction Manager for draft night, an AI Value Coach, and auction intel updated daily.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna builds custom fantasy football auction, snake and best ball values for your exact league settings, with a live AI Value Coach for draft day.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
+<script type="application/ld+json" data-seo="build-seo">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Iron Tuna","url":"https://irontuna.com/","description":"Your fantasy league, the daily-fantasy salary and the sportsbook each put a number on the same player. Iron Tuna reads the betting market first, the consensus second, and your league’s scoring on top of both — then prints where they disagree. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"}}},{"@type":"Organization","name":"Iron Tuna","url":"https://irontuna.com/","logo":{"@type":"ImageObject","url":"https://irontuna.com/og.png"},"description":"Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.","sameAs":["https://x.com/irontunafantasy","https://www.threads.net/@irontunafantasy"]}]}</script>
 </head>
 <body>
 <header class="mast"><div class="wrap">
   <a class="mast-brand" href="/" aria-label="Iron Tuna home"><svg class="mast-logo" viewBox="0 0 296.6 56.0" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Iron Tuna"><defs><linearGradient id="wordMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="20%" stop-color="#dde8ee"/><stop offset="44%" stop-color="#a4bbc2"/><stop offset="50%" stop-color="#7d99a0"/><stop offset="55%" stop-color="#6f928b"/><stop offset="74%" stop-color="#b0c2c8"/><stop offset="100%" stop-color="#46555e"/></linearGradient><filter id="itTealHalo" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#2dd4a3" flood-opacity="0.16"/></filter></defs><g><text x="10.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">I</text><text x="40.86" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="57.99999999999999" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">R</text><text x="76.92" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">O</text><text x="109.14" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="155.08" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="46" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">T</text><text x="187.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="50" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">U</text><text x="222.40" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="55.00000000000001" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">N</text><text x="262.30" y="27.500000000000004" font-family="'Bebas Neue','Impact',sans-serif" font-size="65" text-anchor="middle" dominant-baseline="central" fill="url(#wordMetal)">A</text></g></svg></a>
   <nav class="mast-jump" aria-label="Sections of the site">
-    <a href="/fantasy-football-auction-values">Auction Values</a><a href="/guides">Strategy</a><a href="/auction-insights">Insights</a><a href="/play-caller-premium">Columns</a><a href="/in-season">In-Season</a>
+    <a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/in-season">In-Season</a><a href="/fantasy-football-auction-values">Draft</a><a href="/auction-insights">The Desk</a>
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
-    <a class="cta-gold" href="/auctiondraft?screen=cheat">Free Cheat Sheet</a>
+    <a class="cta-gold" href="/in-season#league">Save My League</a>
+    <!-- The label is owned by the edition switcher below (it becomes "Auction
+         Manager", "Snake board" and so on), so the href has to be the draft ROOM
+         and not the cheat sheet, or the button says one thing and does another. -->
     <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
   </nav>
 </div></header>
 <div class="dominant" role="doc-subtitle"><div class="wrap">
   <span class="dominant-rule"></span>
-  <span class="dominant-text">The Fantasy Site Built For Auction Drafts</span>
+  <span class="dominant-text">Read Against The Betting Market</span>
   <span class="dominant-rule"></span>
 </div></div>
 
@@ -800,45 +870,78 @@ img{max-width:100%}
        not carry is not rendered, and no example name is ever shown. On a phone
        the columns stack, draft first; in the regular season the clock flips
        them so the week is what a reader lands on (see [data-season="in"]). -->
-  <div class="wrap hb-grid">
-    <div class="hb-copy hb-auction">
-      <span class="hb-eyebrow">2026 Auction Season</span>
-      <h1>Know what he&rsquo;s <em>worth</em>. Know what he&rsquo;ll <em>cost</em>. Know <em>what you should bid</em>.</h1>
-      <p class="hb-dek">Every other site ranks players. An auction does not run on ranks &mdash; it runs on dollars. Iron Tuna prices all 500+ players for your teams, your budget and your scoring, and blends every number with the betting market.</p>
+  <div class="wrap"><div class="fp-clock its-strip" data-season-strip></div></div>
+  <div class="wrap fp-hero" id="heroIntel">
+    <span class="hb-eyebrow intel">Fantasy &middot; DFS &middot; Wagers &mdash; read against the betting market</span>
+    <h1 class="fp-h1"><span>Three prices on every player.</span><span class="fp-accent">Read them before kickoff.</span></h1>
+    <div class="fp-hero-row">
+      <p class="fp-lede">Your league, the daily-fantasy salary and the sportsbook each put a number on the same player. Iron Tuna reads the market first, the consensus second, and your league&rsquo;s scoring on top of both &mdash; then prints where they disagree. Free, no signup.</p>
       <div class="hb-ctas">
-        <a class="hb-btn gold" href="/auctiondraft?screen=cheat">Get my free auction values</a>
-        <a class="hb-btn ghost" href="/auctiondraft?screen=board">Open the Auction Manager</a>
+        <a class="hb-btn gold" href="/in-season#league">Save my league</a>
+        <a class="hb-btn ghost" href="/in-season">This week&rsquo;s readings &rarr;</a>
       </div>
-      <p class="hb-note">Free values in about a minute. Full custom pricing, the live Auction Manager and the AI Value Coach are a one-time <b>$9.99</b>.</p>
-      <figure class="hb-shot">
-        <img src="/auction-sheet.webp" width="1180" height="692" alt="The Iron Tuna auction cheat sheet: quarterbacks and running backs priced in dollars, with market price, true value and what you should bid on every row. Names run green where the price sits under what he is worth and red where it sits above, and a V flags the players the betting market moved." fetchpriority="high" decoding="async">
-        <figcaption class="hb-cap">The cheat sheet, priced for a 12-team $200 auction.</figcaption>
-      </figure>
-    </div>
-    <div class="hb-copy hb-intel" id="heroIntel">
-      <p class="hb-launch">Starting Labor Day - 9/7</p>
-      <div class="hb-intel-top">
-        <span class="hb-eyebrow intel">Weekly Fantasy Intel</span>
-        <span class="hb-week" id="hbWeek" hidden></span>
-      </div>
-      <h2 class="hb-h2">Rankings personalized to your league. See where fantasy experts and the betting markets <em>disagree</em>.</h2>
-      <p class="hb-dek">A sportsbook prices a player with its own money behind it and corrects in public within minutes. A ranking costs nothing to be wrong about. These are the players where the two are furthest apart today.</p>
-      <div class="hb-ctas">
-        <a class="hb-btn gold" href="/weekly-intel">View This Week&rsquo;s Intel</a>
-        <a class="hb-btn ghost" href="/auctiondraft?screen=cheat">Customize My Scoring</a>
-      </div>
-      <div class="hb-teasers" id="hbTeasers" hidden></div>
-      <p class="hb-note" id="hbTeaserNote">Reading today&rsquo;s odds&hellip;</p>
     </div>
   </div>
-  <!-- Scrolls sideways under 900px (see .trio .wrap below), so the region is
-       focusable: a scroll container that only a pointer can move is unreachable
-       by keyboard. -->
-  <div class="trio"><div class="wrap" tabindex="0" role="group" aria-label="The three numbers on every player">
-    <div class="tr"><i>Proj</i><b>The going rate</b><span>What the room is likely to pay for him, on the curve your league&rsquo;s budget actually produces.</span></div>
-    <div class="tr on"><i>Value</i><b>What he is worth</b><span>His points converted to dollars against a replacement starter &mdash; the honest price, whatever the room does.</span></div>
-    <div class="tr"><i>You</i><b>What you should bid</b><span>What one more dollar buys <em>your</em> lineup, given the roster you have already bought and the money still in your pocket.</span></div>
-  </div></div>
+</section>
+
+<!-- ── 01 · the three lanes ────────────────────────────────────────────────
+     One bordered plate, three cells, each a single link carrying the one
+     reading its lane exists to produce. Readings are fetched; a lane that
+     cannot be read says so in its own cell rather than going missing, so the
+     plate is always three lanes wide. -->
+<section class="fp-sec" aria-labelledby="lanesHead">
+  <div class="wrap">
+    <div class="sec-head"><h2 id="lanesHead">This week, in three lanes</h2><a class="sec-more" href="/in-season">The whole section &rarr;</a></div>
+    <div class="fp-lanes" id="fpLanes">
+      <a class="fp-lane" href="/fantasy">
+        <div class="fp-lane-meta"><b>01</b><span>Fantasy</span></div>
+        <h3>Fantasy</h3>
+        <p>Your league, re-scored every week. Rankings across four horizons, start/sit, waiver prices in your FAAB dollars, and the trades both sides say yes to.</p>
+        <div class="fp-reading"><span class="fp-reading-k" data-lane-k="fantasy">Reading the market&hellip;</span><span class="fp-reading-v" data-lane-v="fantasy">&mdash;</span></div>
+        <span class="fp-lane-go">Open Fantasy &rarr;</span>
+      </a>
+      <a class="fp-lane" href="/dfs">
+        <div class="fp-lane-meta"><b>02</b><span>DFS</span></div>
+        <h3>DFS</h3>
+        <p>One slate, one set of lines, one cap. Every DraftKings and FanDuel salary read against market-implied points, plus a pick&rsquo;em board that shows where the model leans off the line.</p>
+        <div class="fp-reading"><span class="fp-reading-k" data-lane-k="dfs">Reading the slate&hellip;</span><span class="fp-reading-v" data-lane-v="dfs">&mdash;</span></div>
+        <span class="fp-lane-go">Open DFS &rarr;</span>
+      </a>
+      <a class="fp-lane" href="/wagers">
+        <div class="fp-lane-meta"><b>03</b><span>Wagers</span></div>
+        <h3>Wagers</h3>
+        <p>Where the model and the market disagree: game lines, props and the TD board, an opinion column kept on the record, and prediction-market contracts beside the model when they open. 21+.</p>
+        <div class="fp-reading"><span class="fp-reading-k" data-lane-k="wagers">Reading the lines&hellip;</span><span class="fp-reading-v" data-lane-v="wagers">&mdash;</span></div>
+        <span class="fp-lane-go">Open Wagers &rarr;</span>
+      </a>
+    </div>
+    <p class="fp-fine">Readings hold for the current week and re-score to your league once it is saved. Wagers surfaces are 21+ and informational; Iron Tuna is not a sportsbook.</p>
+  </div>
+</section>
+
+<!-- ── 02 · how the number is made ─────────────────────────────────────── -->
+<section class="fp-sec" aria-labelledby="howHead">
+  <div class="wrap">
+    <div class="sec-head"><h2 id="howHead">How the number is made</h2></div>
+    <div class="fp-cols">
+      <div><span class="fp-n">1</span><h3>The market</h3><p>Game totals, spreads and player props, pulled on a schedule and cached. A sportsbook has its own money behind a number and corrects it in public within minutes.</p></div>
+      <div><span class="fp-n">2</span><h3>The consensus</h3><p>Expert projections, blended toward the market where a book prices the player and left alone where none does. The gap between the two is printed, never hidden.</p></div>
+      <div><span class="fp-n">3</span><h3>Your league</h3><p>Scoring, roster slots and FAAB budget, saved once in this browser. Every board restates its numbers in your points instead of somebody else&rsquo;s.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 03 · where the experts and the market disagree most ─────────────────
+     The cards here are the ones the hero used to carry, on the same renderer
+     and the same digest. They were always a market-vs-consensus read; they were
+     never a hero. -->
+<section class="fp-sec" aria-labelledby="gapHead">
+  <div class="wrap">
+    <div class="sec-head"><h2 id="gapHead">Where the experts and the market disagree most</h2><span class="hb-week" id="hbWeek" hidden></span></div>
+    <div class="hb-teasers" id="hbTeasers" hidden></div>
+    <p class="hb-note" id="hbTeaserNote">Reading today&rsquo;s odds&hellip;</p>
+    <div class="fp-gap-foot"><a class="hb-btn ghost" href="/fantasy">Full board &rarr;</a><a class="hb-btn ghost" href="/vegas-edge">Vegas Edge &rarr;</a></div>
+  </div>
 </section>
 
 <div class="ribbon"><div class="wrap">
@@ -882,7 +985,7 @@ img{max-width:100%}
        destination they held is still linked from the footer, so nothing on the
        site lost its link from the homepage. -->
 
-  <div class="sec-head" id="today"><h2>The Auction Desk</h2><a class="sec-more" href="/auction-insights">Every insight &rarr;</a></div>
+  <div class="sec-head" id="today"><h2>The Desk</h2><a class="sec-more" href="/auction-insights">Every insight &rarr;</a></div>
   <div class="hero">
     <div class="lead" id="lead">
       <div class="lead-media" id="leadMedia" hidden>
@@ -913,23 +1016,6 @@ img{max-width:100%}
       <ul id="railList"></ul>
     </aside>
   </div>
-
-  <div class="sec-head" id="build"><h2>The Build<span class="ed-tag" id="buildTag" hidden></span></h2><a class="sec-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>
-  <p class="sec-sub" id="buildSub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
-  <div class="build-wrap">
-    <div class="build-main">
-      <h3 id="buildHeadline">The best team <em id="buildBudget">$200</em> can buy</h3>
-      <p class="build-dek" id="buildDek"></p>
-      <div class="roster" id="rosterStrip"></div>
-      <p class="bench-line" id="benchLine"></p>
-      <div class="spend-bar" id="spendBar"></div>
-      <div class="spend-key" id="spendKey"></div>
-      <div class="build-meta" id="buildMeta"></div>
-      <p class="bnote" id="buildCustomNote"></p>
-    </div>
-    <aside class="build-side" id="buildSide"></aside>
-  </div>
-  <div class="build-cards" id="buildCards"></div>
 
   <div class="sec-head" id="thepick"><h2>The Pick</h2><a class="sec-more" href="/the-pick">Every entry &rarr;</a></div>
   <p class="sec-sub" id="pickSub">One story a day, each one arguing a single idea &mdash; scarcity, scoring settings, tier cliffs &mdash; with the projection numbers that prove it and the player it tells you to buy.</p>
@@ -969,6 +1055,50 @@ img{max-width:100%}
   <p class="sec-sub">A coach is worth real money. The habits that have repeated for decades &mdash; the zone scheme&rsquo;s running backs, Andy Reid&rsquo;s lead back, Todd Monken&rsquo;s tight ends &mdash; and the exact player each one moves this season. New entries daily through kickoff.</p>
   <div class="pcp-grid" id="pcpGrid"></div>
 
+  <div class="fp-draft-band" id="draft">
+    <div class="sec-head"><h2>Draft season</h2><a class="sec-more" href="/guides">Strategy library &rarr;</a></div>
+    <div class="fp-draft">
+      <div class="fp-draft-copy">
+        <span class="hb-eyebrow">2026 Auction Season</span>
+        <h3>Know what he&rsquo;s <em>worth</em>. Know what he&rsquo;ll <em>cost</em>. Know <em>what you should bid</em>.</h3>
+        <p class="hb-dek">Every other site ranks players. An auction does not run on ranks &mdash; it runs on dollars. Iron Tuna prices all 500+ players for your teams, your budget and your scoring, and blends every number with the betting market.</p>
+        <div class="hb-ctas">
+          <a class="hb-btn gold" href="/auctiondraft?screen=cheat">Get my free auction values</a>
+          <a class="hb-btn ghost" href="/auctiondraft?screen=board">Open the Auction Manager</a>
+        </div>
+        <p class="hb-note">Free values in about a minute. Full custom pricing, the live Auction Manager and the AI Value Coach are a one-time <b>$9.99</b>.</p>
+      </div>
+      <figure class="hb-shot">
+        <img src="/auction-sheet.webp" width="1180" height="692" alt="The Iron Tuna auction cheat sheet: quarterbacks and running backs priced in dollars, with market price, true value and what you should bid on every row. Names run green where the price sits under what he is worth and red where it sits above, and a V flags the players the betting market moved." loading="lazy" decoding="async">
+        <figcaption class="hb-cap">The cheat sheet, priced for a 12-team $200 auction.</figcaption>
+      </figure>
+    </div>
+    <!-- Scrolls sideways under 900px, so the region is focusable: a scroll
+         container only a pointer can move is unreachable by keyboard. -->
+    <div class="trio"><div class="wrap" tabindex="0" role="group" aria-label="The three numbers on every player">
+      <div class="tr"><i>Proj</i><b>The going rate</b><span>What the room is likely to pay for him, on the curve your league&rsquo;s budget actually produces.</span></div>
+      <div class="tr on"><i>Value</i><b>What he is worth</b><span>His points converted to dollars against a replacement starter &mdash; the honest price, whatever the room does.</span></div>
+      <div class="tr"><i>You</i><b>What you should bid</b><span>What one more dollar buys <em>your</em> lineup, given the roster you have already bought and the money still in your pocket.</span></div>
+    </div></div>
+  </div>
+
+  <div class="sec-head" id="build"><h2>The Build<span class="ed-tag" id="buildTag" hidden></span></h2><a class="sec-more" href="/auctiondraft?screen=board">Solve it for my league &rarr;</a></div>
+  <p class="sec-sub" id="buildSub">Not a rule of thumb. Every legal combination of players is solved against the budget, so this is the highest-scoring starting lineup the money can buy.</p>
+  <div class="build-wrap">
+    <div class="build-main">
+      <h3 id="buildHeadline">The best team <em id="buildBudget">$200</em> can buy</h3>
+      <p class="build-dek" id="buildDek"></p>
+      <div class="roster" id="rosterStrip"></div>
+      <p class="bench-line" id="benchLine"></p>
+      <div class="spend-bar" id="spendBar"></div>
+      <div class="spend-key" id="spendKey"></div>
+      <div class="build-meta" id="buildMeta"></div>
+      <p class="bnote" id="buildCustomNote"></p>
+    </div>
+    <aside class="build-side" id="buildSide"></aside>
+  </div>
+  <div class="build-cards" id="buildCards"></div>
+
   <div class="sec-head" id="allocation"><h2 id="allocHead">Asset Allocation</h2><a class="sec-more" href="/guides">All guides &rarr;</a></div>
   <p class="sec-sub" id="allocSub">How to spend the <span data-it-money="200">$200</span>: budget shape, nomination tactics, and the endgame.</p>
   <div class="alloc-grid" id="allocGrid">
@@ -986,8 +1116,19 @@ img{max-width:100%}
     <ul class="camp-list" id="campList"><li><span class="cd">Sep 6</span><a href="/auction-watch-2026-09-06">Auction Watch: September 6, 2026</a></li><li><span class="cd">Sep 5</span><a href="/auction-watch-2026-09-05">Auction Watch: September 5, 2026</a></li><li><span class="cd">Sep 4</span><a href="/auction-watch-2026-09-04">Auction Watch: September 4, 2026</a></li><li><span class="cd">Sep 3</span><a href="/auction-watch-2026-09-03">Auction Watch: September 3, 2026</a></li></ul>
   </div>
 
+  <div class="fp-close">
+    <div>
+      <h2>One save. Every board in your points.</h2>
+      <p>Platform, scoring, teams and FAAB budget. Stored in this browser, no account. Rankings, waiver bids, DFS values and the market comparisons all re-score from it.</p>
+    </div>
+    <div class="hb-ctas">
+      <a class="hb-btn gold" href="/in-season#league">Save my league</a>
+      <a class="hb-btn ghost" href="/in-season">Browse first</a>
+    </div>
+  </div>
+
   <div class="tools-band">
-    <span class="tb-text" id="tbText"><b>Draft night is the deadline.</b> Free expert values in 60 seconds — or unlock your league&rsquo;s full custom values, the live Auction Manager, and the AI Value Coach for a one-time $9.99.</span>
+    <span class="tb-text" id="tbText"><b>Drafting soon?</b> Free expert values in 60 seconds — or unlock your league&rsquo;s full custom values, the live Auction Manager, and the AI Value Coach for a one-time $9.99.</span>
     <span class="tb-ctas">
       <a class="tb-btn gold" href="/auctiondraft?screen=cheat">Build my free cheat sheet</a>
       <a class="tb-btn brand" id="tbMgr" href="/auctiondraft?screen=board">Open the Auction Manager</a>
@@ -1006,9 +1147,56 @@ img{max-width:100%}
     <a href="/auctiondraft?screen=cheat">Custom Auction Values</a><a href="/auctiondraft?screen=board">Auction Manager</a><a href="/auction-draft-assistant">AI Value Coach</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary Cap &amp; Keepers</a><a href="/guides">Strategy Library</a><a href="/in-season">In-Season</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/my-league">My League</a>
   </nav>
   <a href="/the-pick">The Pick</a><a href="/play-caller-premium">Play-Caller</a><a href="/insights-vault">Insight Vault</a><a href="/auction-watch">Auction Watch</a><a href="/hub">Classic Home</a><a href="/faq">FAQ</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/creators">Creators</a><a href="/admin" style="color:#b9bfc6">Admin</a>
+  <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site &mdash; projections, odds, salaries and contract prices alike &mdash; is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.</p>
   <span class="fm">Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via <a href="https://github.com/nflverse/nflverse-data" rel="noopener" style="color:inherit;text-decoration:underline">nflverse</a> (CC BY 4.0) &middot; Player photos &copy; NFL/ESPN</span>
 </div></footer>
 
+<script>
+/* The three lane readings on the front page. Same feeds and the same states as
+ * the hub at /in-season, so the two cannot disagree about what this week says.
+ * A lane whose board has not answered prints why, in place, and never a stale
+ * number. */
+(function () {
+  var n1 = function (v) { return (v == null || !isFinite(v)) ? '\u2014' : Number(v).toFixed(1); };
+  var sgn = function (v) { return (v > 0 ? '+' : '') + n1(v); };
+  function put(lane, k, v) {
+    var ke = document.querySelector('[data-lane-k="' + lane + '"]');
+    var ve = document.querySelector('[data-lane-v="' + lane + '"]');
+    if (ke) ke.textContent = k;
+    if (ve) ve.textContent = v;
+  }
+  function get(p) {
+    return fetch(p, { credentials: 'omit' }).then(function (r) { return r.json(); }).catch(function () { return null; });
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    get('/api/vegas-edge').then(function (j) {
+      if (!j || !j.ok) {
+        put('fantasy', 'The board has not answered yet.', '\u2014');
+        put('wagers', 'The lines have not answered yet.', '\u2014');
+        return;
+      }
+      var top = [].concat((j.vsExperts && j.vsExperts.buys) || [], (j.vsExperts && j.vsExperts.fades) || [])
+        .filter(function (p) { return p.delta && p.delta.points != null; })
+        .sort(function (a, b) { return Math.abs(b.delta.points) - Math.abs(a.delta.points); })[0];
+      put('fantasy',
+        top ? 'Largest market edge \u00b7 ' + top.name : 'No game carries a posted line yet.',
+        top ? sgn(top.delta.points) : '\u2014');
+      var g = (j.gameEnvironments || []).filter(function (x) { return x.gap != null; })
+        .sort(function (a, b) { return Math.abs(b.gap) - Math.abs(a.gap); })[0];
+      put('wagers',
+        g ? 'Largest total gap \u00b7 ' + g.game : 'No game carries both a posted and a model total yet.',
+        g ? sgn(g.gap) : '\u2014');
+    });
+    get('/api/dfs?site=dk').then(function (j) {
+      var best = j && j.ok ? ((j.boards && j.boards.bestVegasValues) || [])[0] : null;
+      put('dfs',
+        best ? 'Best Vegas value \u00b7 ' + best.name + ', ' + best.team
+             : 'No DraftKings salaries are posted for this week yet.',
+        best ? 'VVS ' + best.vegasValueScore : '\u2014');
+    });
+  });
+})();
+</script>
 <script src="/it-league.js"></script>
 <script src="/it-season.js" defer></script>
 <script src="/player-search.js" defer></script>
