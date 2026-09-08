@@ -1,50 +1,78 @@
 # Iron Tuna
 
-> Iron Tuna is a fantasy football **auction draft** site. Where every other fantasy tool publishes a ranking, Iron Tuna publishes dollars: it prices all 500+ players for your exact league — your teams, your budget, your roster slots, your scoring — and gives three numbers on every player instead of one. It runs a live Auction Manager on draft night and an AI "Value Coach" that answers "do I go to $41 here?" against the roster you have already bought. A snake-draft assistant is also available for readers who play that format, but the auction is what the site is built for.
+> Iron Tuna reads the **betting market** first. Your fantasy league, the daily-fantasy salary and the sportsbook each put a number on the same NFL player; Iron Tuna reads the market first, the consensus projections second, and your league's scoring on top of both, then prints where the three disagree. In season that is three lanes — Fantasy, DFS, and Wagers & prediction markets — under one hub. Before the season the same engine prices every player for your draft, in snake ranks or auction dollars.
 
-## The three numbers (this is the whole idea)
-- **Proj** — the going rate: what the room is likely to pay, on the price curve your league's budget actually produces.
-- **Value** — what he is worth: his projected points converted to dollars against a replacement-level starter. The honest price, whatever the room does.
-- **You** — what you should bid: what one more dollar buys *your* lineup, given the players you have already won and the money left in your pocket.
+## The idea (this is the whole thing)
+A sportsbook posts a number with its own money behind it and corrects it in public within minutes of news. A ranking carries no such penalty and moves when a ranker gets round to it. When a priced market and an unpriced list disagree, **the disagreement is the thing worth reading** — so Iron Tuna prints both numbers and the gap between them rather than blending them away.
 
-A ranking cannot answer any of those questions, which is why an auction drafter armed with one is guessing.
+Three inputs, in order:
+- **The market** — game totals, spreads and player props, pulled on a schedule and cached.
+- **The consensus** — expert projections, blended toward the market where a book prices the player and left alone where none does.
+- **Your league** — scoring, roster slots and FAAB budget, saved once in the browser. Every board restates its numbers in your points.
 
-## What it does
-- Free auction values for every player, calibrated to your league — no signup.
-- A one-time $9.99 unlock rebuilds every value for your league's exact custom scoring, lets you reorder the board, and includes the live draft-day tools.
-- A live AI Value Coach that answers questions and gives team-specific advice from planning through draft night.
-- Tiered cheat sheets, a budget-aware lineup planner, and unlimited mock auctions.
-- Values are blended with the betting market (game lines via nflverse) and refreshed daily, so a price moves when the market moves rather than when a ranker gets round to it.
+## In-season hub — https://irontuna.com/in-season
+This week's reading from each lane, the three lanes themselves, and the one place to save your league. Free, no signup; the league record lives in the reader's own browser and is never uploaded.
 
-## Auction draft tool (the flagship) — https://irontuna.com/auctiondraft
-- The three numbers above, on every row of the cheat sheet.
-- A budget-aware optimal-lineup planner that solves, exactly, the highest-scoring starting lineup your budget can buy.
-- Live prices that adjust to the room as money leaves it, plus proactive reads on emerging bidding trends.
-- Supports salary-cap, keeper, Superflex and 2-QB auction formats.
+### Fantasy — https://irontuna.com/fantasy
+- This week's board with Iron Tuna, the consensus and the betting market side by side, and a Market Delta column saying which way they disagree.
+- Rankings across four horizons (this week, next three, rest of season, fantasy playoffs), start/sit, and a Trade Finder that scores each side on its own horizon.
+- The FAAB Advisor prices a waiver claim in the reader's own league dollars: the going rate computed one rival at a time from their remaining budget and their actual hole, what the player is worth to that roster, and what to bid.
 
-## Snake draft tool — https://irontuna.com/snakedraft
-- Custom rankings for your exact scoring, with ADP, tier-cliff alerts, and survival odds (the chance each player lasts to your next pick).
-- The AI Value Coach tells you who to draft on the clock based on your roster needs and what is likely to be gone by your next turn.
+### DFS — https://irontuna.com/dfs
+- DraftKings and FanDuel salaries read against market-implied points. VVS (Vegas Value Score) is market-implied points per $1,000 of salary, indexed to the slate's median: 100 is an ordinary price, 130 is a bargain.
+- A lineup builder, game stacks and the anytime-touchdown board. It builds lineups to look at and copy; nothing on the page can enter a contest.
+- A pick'em board for Underdog, PrizePicks and Sleeper, showing where the model leans off a posted stat line.
+
+### Wagers & prediction markets — https://irontuna.com/wagers
+- Every game with its spread, total and implied team points, beside Iron Tuna's own model total and the gap between them. Under 2 points the two agree.
+- Player props and the anytime-touchdown board, each row labelled **quoted** where a book has posted a price and **derived** where the number comes from the game line instead.
+- An opinion column, labelled Opinion and kept on a public record.
+- Prediction-market contract prices beside the model's own probability: not live yet, and the page says so.
+- **21+. Informational only. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. No affiliate links and no sportsbook sign-up offers anywhere on the site.** Problem gambling: call or text 1-800-GAMBLER.
+
+## Draft season — https://irontuna.com/auctiondraft
+The same engine, aimed at draft night. Auction is the format it is built for; snake is fully supported.
+- **Three numbers on every player** in an auction: *Proj* (the going rate the room is likely to pay, on the price curve your budget actually produces), *Value* (his projected points converted to dollars against a replacement-level starter), and *You* (what one more dollar buys your lineup, given what you have already won and the money left).
+- A budget-aware planner that solves, exactly, the highest-scoring starting lineup your budget can buy; a live Auction Manager that re-prices the board as money leaves the room.
+- Snake: custom rankings for your scoring, ADP, tier-cliff alerts, and survival odds — the chance each player lasts to your next pick.
+- An AI Value Coach that answers "do I go to $41 here?" against the roster you have actually bought.
+- Supports salary-cap, keeper, Superflex and 2-QB formats and any custom scoring.
 
 ## Key facts
-- Price: free to start (expert default values). One optional one-time upgrade ($9.99) unlocks your league's custom scoring, board reordering, the live in-draft tools, and the Value Coach.
-- No account or password sharing required; enter or paste your league settings. Purchasers can restore access on another device with a one-tap email magic link.
-- Runs entirely in the browser and keeps working on draft night even if Wi-Fi drops.
-- Best for: fantasy football **auction** drafts of any settings; snake drafts are supported too.
+- **Iron Tuna is provided for social and entertainment purposes only.** Every number on it is an estimate or a snapshot of a market that moves; none of it is advice, and anything a reader intends to act on should be verified at its own source first.
+- The whole in-season section is free and needs no account. Saving a league writes to that browser's local storage and nothing else.
+- Draft season: free values with no signup; a one-time **$9.99** unlocks your league's exact custom scoring, board reordering, the live draft-day tools and the Value Coach.
+- Nothing is fetched from a sportsbook by the reader's browser. Lines are a market median pulled on a schedule into the site's own cache, and every surface says how fresh it is.
+- The week is read from the NFL schedule, never from the calendar: a week is current until its own last game has finished. If the schedule feed does not answer, every surface says so rather than guessing — a wrong week silently mislabels every number under it.
+- Where a board has no data it says so explicitly. It is blank rather than stale.
+- Game lines and player data via nflverse (CC BY 4.0).
 
 ## FAQ
-- Is it free? Yes — the auction board with expert default values is free, no signup. The one-time $9.99 upgrade rebuilds every value for your league's exact custom scoring and adds board reordering, the live draft tools, and the Value Coach.
-- Is it only for auctions? Auction is what it is built for and the only format that gets bid maths and room-wide budget tracking. Snake is supported; you can switch to it from the ribbon on the home page.
-- Does it work for any league? Yes — including salary-cap, keeper, Superflex and 2-QB formats, and any custom scoring.
-- How is it different? Most tools give one generic ranking. Iron Tuna gives three dollar figures per player, calibrated to your league, blended with the betting market, plus a real-time AI Value Coach that advises you bid by bid.
+- Is it free? The whole in-season section is, with no signup. On the draft side the board with expert default values is free; a one-time $9.99 unlocks custom scoring and the live tools.
+- Do I need an account? No, and there is no password sharing. The in-season league record lives in your browser. Draft purchasers can restore access on another device with a one-tap email magic link.
+- Does Iron Tuna take bets? No. It is not a sportsbook or an exchange, it places no bets, it holds no funds, and it carries no affiliate links or sportsbook sign-up offers. Odds are shown for reading, 21+.
+- What is a "Market Delta"? The gap between the market's number for a player and the consensus projection, in points and in ranking slots. It is printed rather than hidden.
+- What is VVS? Market-implied points per $1,000 of DFS salary, indexed to the slate median. 100 is ordinary, 130 is a bargain.
+- Does it work for any league? Yes — PPR, half-PPR and standard in season; salary-cap, keeper, Superflex, 2-QB and any custom scoring on the draft side.
 
 ## Links
 - Home: https://irontuna.com/
+- In-season hub: https://irontuna.com/in-season
+- Fantasy: https://irontuna.com/fantasy
+- DFS: https://irontuna.com/dfs
+- Wagers & prediction markets: https://irontuna.com/wagers
+- My League: https://irontuna.com/my-league
+- Weekly rankings: https://irontuna.com/rankings
+- Vegas Edge (model vs. market): https://irontuna.com/vegas-edge
+- Game Intel: https://irontuna.com/game-intel
+- FAAB Advisor: https://irontuna.com/faab
+- Trade Finder: https://irontuna.com/trade-finder
+- The Desk: https://irontuna.com/in-season/desk
 - Auction draft tool: https://irontuna.com/auctiondraft
+- Snake draft tool: https://irontuna.com/snakedraft
 - Auction values explained: https://irontuna.com/fantasy-football-auction-values
 - Superflex & 2QB auction values: https://irontuna.com/superflex-auction-values
 - Salary cap & keeper auctions: https://irontuna.com/salary-cap-draft-tool
-- Auction strategy guides: https://irontuna.com/guides
-- Snake draft tool: https://irontuna.com/snakedraft
+- Draft strategy guides: https://irontuna.com/guides
 - FAQ: https://irontuna.com/faq
-- [2026 Auction Insights](https://irontuna.com/auction-insights): free stat-based 2026 insights released through Labor Day; 150 premium insights tailored to the user's league ship with the Draft Day unlock.
+- [2026 Auction Insights](https://irontuna.com/auction-insights): free stat-based 2026 insights; 150 premium insights tailored to the user's league ship with the Draft Day unlock.

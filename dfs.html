@@ -66,26 +66,58 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/post-draft">In-Season</a><span class="nav-dd-menu"><a href="/weekly-intel">Weekly Intel</a><a href="/rankings">Rankings</a><a href="/vegas-edge">Vegas Edge</a><a href="/what-they-arent-telling-you">What They Aren't Telling You</a><a href="/game-intel">Game Intel</a><a href="/waivers">Waivers</a><a href="/trade-finder">Trade Finder</a><a href="/dfs" aria-current="page">DFS</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs" aria-current="page">DFS</a><a href="/wagers">Wagers</a><a href="/my-league">My League</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
-    <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
+    <a class="cta" href="/in-season#league">Save my league</a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
       <span class="nav-toggle-bars"><span></span></span>Menu
     </button>
     <!--/chrome:nav-->
 </div></header>
 <main id="main" class="wrap">
-<p class="is-eyebrow">In-Season &middot; DFS</p>
-<h1>One slate, one set of lines, one cap</h1>
+<p class="is-eyebrow">Sheet 03 &middot; DFS</p>
+<hr class="is-rule">
+<h1>One slate. One set of lines.<br>One cap.</h1>
 <p class="is-lede">Daily fantasy is the purest version of the thing this site already does. There is no rest of season to project, only the games on the board and what the market expects out of them, and a salary cap that is an auction budget by another name.</p>
 <div class="its-strip" data-season-strip></div>
 
 <div class="rk-controls">
-  <div class="rk-seg" id="dfSite" role="group" aria-label="Site"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button></div>
+  <div class="rk-seg" id="dfSite" role="group" aria-label="Site"><button type="button" data-site="dk">DraftKings</button><button type="button" data-site="fd">FanDuel</button><button type="button" data-site="pk">Pick&rsquo;em</button><button type="button" data-site="sl">Sleeper picks</button></div>
   <div class="rk-seg" id="dfNav" role="group" aria-label="Section"><button type="button" data-sec="dash">Dashboard</button><button type="button" data-sec="values">Vegas Values</button><button type="button" data-sec="builder">Lineup Builder</button><button type="button" data-sec="stacks">Game Stacks</button><button type="button" data-sec="td">TD Board</button></div>
 </div>
 <p class="is-note" id="dfNote"></p>
+<p class="is-note" id="dfSiteNote"></p>
+
+<!-- ── pick'em ────────────────────────────────────────────────────────────────
+     Underdog, PrizePicks and Sleeper post a stat line and ask higher or lower.
+     There is no cap and no salary, so none of the salary-cap sections below
+     apply and they are hidden on these two venues.
+
+     WHAT THIS BOARD DOES NOT HAVE is the venue's own posted line. Iron Tuna
+     does not hold an Underdog or PrizePicks feed, and inventing one from the
+     sportsbook median and calling it theirs would be the single most misleading
+     thing on this site. So the board prints the SPORTSBOOK median against the
+     model, says which is which, and tells the reader to compare it to the line
+     actually in front of them. -->
+<section id="sec-pickem" hidden>
+  <div class="is-plate">
+    <div class="is-plate-head">
+      <span>Pick&rsquo;em board &mdash; where the model leans off the line</span>
+      <span id="pkVenue">Pick&rsquo;em</span>
+    </div>
+    <div class="is-scroll" id="pkWrap" hidden>
+      <table class="is-table">
+        <thead><tr><th>Player</th><th>Stat</th><th class="num">Book median</th><th class="num">Iron Tuna</th><th class="num">Gap</th><th>Lean</th></tr></thead>
+        <tbody id="pkBody"></tbody>
+      </table>
+    </div>
+    <p class="is-plate-state" id="pkState">Reading the player markets&hellip;</p>
+    <div class="is-plate-foot">
+      <p>A lean is a gap of at least 5% between the model and the sportsbook&rsquo;s median line, not a recommendation. <b>The line shown is the sportsbook&rsquo;s, not the venue&rsquo;s</b> &mdash; pick&rsquo;em venues post their own and they differ; check the number in front of you before you enter. Every row is a quoted market: where no book has priced a player there is no line to disagree with and he is left off.</p>
+    </div>
+  </div>
+</section>
 
 <section id="sec-dash">
   <h2>DFS Dashboard</h2>
@@ -133,12 +165,11 @@ p{color:var(--sec);margin:0 0 16px}
 
 <h2>The rest of the section</h2>
 <div class="is-grid">
-  <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
-  <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>The board re-ranked for the week ahead, at your league’s scoring rather than a stranger’s.</p></div>
-  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
-  <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
+  <div class="is-card"><h3><a href="/in-season">Overview</a></h3><p>This week&rsquo;s readings across all three lanes, and the one place to save your league.</p></div>
+  <div class="is-card"><h3><a href="/fantasy">Fantasy</a></h3><p>Your league, re-scored every week: rankings, start/sit, waiver prices and trades.</p></div>
+  <div class="is-card"><h3><a href="/wagers">Wagers &amp; prediction markets</a></h3><p>Every game with its line beside Iron Tuna&rsquo;s own total, props, the TD board and the column. 21+.</p></div>
   <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
-  <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
+  <div class="is-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much.</p></div>
   <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
 </div>
 
@@ -174,20 +205,16 @@ p{color:var(--sec);margin:0 0 16px}
     <div class="foot-col">
      <h2>In-Season</h2>
      <ul>
-      <li><a href="/weekly-intel">Weekly Intel</a></li>
-      <li><a href="/rankings">Rankings</a></li>
-      <li><a href="/vegas-edge">Vegas Edge</a></li>
-      <li><a href="/game-intel">Game Intel</a></li>
-      <li><a href="/waivers">Waivers</a></li>
-      <li><a href="/trade-finder">Trade Finder</a></li>
+      <li><a href="/in-season">Overview</a></li>
+      <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
+      <li><a href="/wagers">Wagers &amp; prediction markets</a></li>
       <li><a href="/my-league">My League</a></li>
      </ul>
     </div>
     <div class="foot-col">
      <h2>Company</h2>
      <ul>
-      <li><a href="/post-draft">In-Season</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/support">Support</a></li>
       <li><a href="/creators">Creators &amp; affiliates</a></li>
@@ -202,8 +229,9 @@ p{color:var(--sec);margin:0 0 16px}
     </div>
   </div>
   <div class="foot-note">
-   <p>Iron Tuna builds custom auction values, true player value, and what you should bid for every player in your exact league, then updates it live on draft night. Values are projections, not guarantees.</p>
-   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna</span>
+   <p>Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.</p>
+   <p class="foot-21"><b>For social and entertainment purposes only.</b> Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. <b>21+.</b> Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text <b>1-800-GAMBLER</b>.</p>
+   <p class="foot-legal"><span>Iron Tuna&trade; &middot; &copy; 2026 Iron Tuna &middot; Game lines &amp; player data via nflverse (CC BY 4.0)</span>
     <a href="https://irontuna.com/auctiondraft?screen=cheat">Build your free sheet</a></p>
   </div>
   <!--/chrome:foot-->
@@ -216,7 +244,15 @@ p{color:var(--sec);margin:0 0 16px}
   var $ = function (id) { return document.getElementById(id); };
   var n1 = function (v) { return v == null || !isFinite(v) ? '—' : (Math.round(v * 10) / 10).toFixed(1); };
   var money = function (v) { return v == null ? '—' : '$' + Number(v).toLocaleString('en-US'); };
+  var SITES = { dk: 1, fd: 1, pk: 1, sl: 1 };
+  var SECS = { dash: 1, values: 1, builder: 1, stacks: 1, td: 1 };
   var site = 'dk', sec = 'dash', board = 'bestVegasValues', mode = 'ironTuna', slate = null, marks = {};
+  try {
+    var q = new URLSearchParams(location.search).get('site');
+    if (q && SITES[q]) site = q;
+    var hash = (location.hash || '').replace('#', '');
+    if (SECS[hash]) sec = hash;
+  } catch (err) {}
   function press(host, attr, val) { [].forEach.call(host.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.getAttribute(attr) === val ? 'true' : 'false'); }); }
   function show() { ['dash', 'values', 'builder', 'stacks', 'td'].forEach(function (k) { $('sec-' + k).hidden = k !== sec; }); press($('dfNav'), 'data-sec', sec); }
   function delta(d) { if (!d) return '—'; var cls = /BUY|HIGHER/.test(d.classification) ? 'buy' : /FADE|LOWER/.test(d.classification) ? 'fade' : 'agree'; return '<span class="rk-conf" style="' + (cls === 'buy' ? 'color:var(--teal)' : cls === 'fade' ? 'color:var(--danger)' : '') + '">' + e(d.classification) + (d.points != null ? ' ' + (d.points > 0 ? '+' : '') + d.points : '') + '</span>'; }
@@ -266,8 +302,76 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfTd').hidden = !list.length;
   }
   function render() { if (!slate) return; dashboard(slate); envTable(slate); values(slate); pool(slate); stacks(slate); tdBoard(slate); $('dfCap').value = slate.cap; }
+
+  // ── pick'em ──────────────────────────────────────────────────────────────
+  // Underdog, PrizePicks and Sleeper are higher/lower on a posted stat line, so
+  // there is no salary and no cap and none of the sections above apply. The
+  // board is the market's implied line for the one stat each position is really
+  // priced on, against the model's own, off the same /api/boards every other
+  // surface reads.
+  var PICKEM = { pk: 'Underdog / PrizePicks', sl: 'Sleeper picks' };
+  var PRIMARY = { QB: ['passYd', 'Pass yds'], RB: ['rushYd', 'Rush yds'], WR: ['recYd', 'Rec yds'], TE: ['recYd', 'Rec yds'] };
+  var LEAN_PCT = 0.05;
+  var pickemLoaded = false;
+  function isPickem() { return site === 'pk' || site === 'sl'; }
+  function pickem(board) {
+    var rows = [];
+    (board && board.players || []).forEach(function (p) {
+      var m = PRIMARY[p.position];
+      if (!m || !p.vegas || !p.ironTuna || !p.games) return;
+      var line = p.vegas.stats ? p.vegas.stats[m[0]] : null;
+      var model = p.ironTuna.stats ? p.ironTuna.stats[m[0]] : null;
+      // QUOTED ONLY. With no posted prop the "line" is the game line applied to
+      // the player, which is what the model is built from too — so comparing
+      // them produces rounding, and a pick'em board of rounding is the worst
+      // thing this site could ship.
+      if (!(p.vegas.basis && p.vegas.basis.indexOf('props') === 0)) return;
+      if (line == null || model == null || line < 20) return;
+      var per = p.games || 1, l = line / per, mo = model / per;
+      rows.push({ name: p.name, pos: p.position, team: p.team, label: m[1], line: l, model: mo, pct: (mo - l) / l });
+    });
+    rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
+    rows = rows.slice(0, 14);
+    if (!rows.length) {
+      $('pkState').textContent = 'No sportsbook has posted a player prop for this week yet, so there is no line to read the model against. The board is blank rather than filled with the model compared to itself.';
+      return;
+    }
+    $('pkBody').innerHTML = rows.map(function (r) {
+      var lean = Math.abs(r.pct) < LEAN_PCT ? '<span class="is-tag is-flat">No lean</span>'
+        : '<span class="is-tag is-accent">' + (r.pct > 0 ? 'Over' : 'Under') + '</span>';
+      return '<tr><td class="is-who">' + e(r.name) + ' <small>' + e(r.pos + ' \u00b7 ' + r.team) + '</small></td>' +
+        '<td>' + e(r.label) + '</td><td class="num">' + n1(r.line) + '</td>' +
+        '<td class="num"><span class="is-val">' + n1(r.model) + '</span></td>' +
+        '<td class="num">' + (r.pct > 0 ? '+' : '') + (r.pct * 100).toFixed(0) + '%</td>' +
+        '<td>' + lean + '</td></tr>';
+    }).join('');
+    $('pkWrap').hidden = false;
+    $('pkState').hidden = true;
+  }
+  function loadPickem() {
+    $('pkVenue').textContent = PICKEM[site] || 'Pick’em';
+    if (pickemLoaded) return;
+    pickemLoaded = true;
+    fetch('/api/boards?horizon=week&pos=ALL&scoring=ppr', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
+      .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
+  }
   function load() {
     press($('dfSite'), 'data-site', site);
+    if (isPickem()) {
+      $('dfSiteNote').textContent = 'Higher or lower on a posted stat line; the board shows where the model leans. No cap, no salaries.';
+      $('dfNav').hidden = true;
+      ['sec-dash', 'sec-values', 'sec-builder', 'sec-stacks', 'sec-td'].forEach(function (id) { $(id).hidden = true; });
+      $('sec-pickem').hidden = false;
+      $('dfNote').textContent = '';
+      loadPickem();
+      return;
+    }
+    $('sec-pickem').hidden = true;
+    $('dfNav').hidden = false;
+    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '.';
+    show();
     fetch('/api/dfs?site=' + site).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.ok) { slate = null; $('dfNote').textContent = (j && j.note) || 'No salaries are loaded for this week.'; $('dfEmpty').textContent = 'No ' + ((j && j.label) || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.'; $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true; $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = ''; return; }
       slate = j; $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + 'Salaries as of ' + e(new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + ' ET.'; render();
