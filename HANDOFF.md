@@ -7589,3 +7589,81 @@ time; it had been written before that job existed and had never run in CI.
 Verified in Chromium against the live board: 16 of 234 cheat-sheet rows and 16
 of 409 rail rows light for the Ideal Team, the same 16 in both, and unchecking
 the box clears every one.
+
+---
+
+## 66. September 2026: the front page splits into two lanes, Weekly Fantasy and DFS
+
+The front page had one lane on it. Everything under the ribbon — The Desk, The
+Pick, Vegas, Position Intel, The Build, Allocation, Camp — is the reader's own
+league, and the site's other in-season product, the slate, was reachable only
+from the masthead and a card in the footer of `/in-season`. So the homepage sold
+one of the two things a reader is in season for.
+
+It is two lanes now, on a tab bar directly under the sticky ribbon and above The
+Desk: **Weekly Fantasy** and **DFS**, half the screen each.
+
+### How it is built
+
+- **The tab bar** is `.lane-tabs` in `front.html`, two `<button role="tab">`
+  across a `grid-template-columns: 1fr 1fr`. It is `position:sticky; top:44px`,
+  under the ribbon, so the lane is switchable from anywhere down the page. Both
+  bars sticking is why `html` now carries `scroll-padding-top:106px` — without
+  it a ribbon jump lands with the section head behind the two bands.
+- **The panes** are two siblings inside `<main>`: `#laneFantasy` (everything
+  that was already there) and `#laneDfs`. `[hidden]` is `display:none !important`
+  on this page, so hiding a pane is one attribute. The method band and the
+  closing band sit outside both — they are the page's own furniture, not a
+  lane. The tools band at the foot of the page is not: it pitches the draft
+  product, so it carries `data-lane="fantasy"` and the lane switch hides it
+  with the pane. It stays at the foot rather than moving up inside
+  `#laneFantasy`, because it is written as the last word after those two bands.
+  Anything else that turns out to belong to one lane gets the same attribute —
+  the switch reads `main [data-lane]`.
+- **The ribbon carries one anchor set per lane.** Each anchor is tagged
+  `data-lane`, the ribbon element carries `data-lane`, and CSS hides the other
+  lane's links. It cannot use the `hidden` attribute: `setSectionVisible()`
+  already owns that attribute on those same links (it drops the jump for a
+  section whose feed came back empty), and two writers on one attribute is how
+  an empty section's link comes back the next time the lane changes. The
+  edition switch (Auction / Snake) is hidden in the DFS lane for the same
+  reason it exists at all — it is a question about a draft, and a slate has no
+  answer to it.
+- **The lane is remembered.** `?lane=dfs` on the URL, `it.lane` in
+  `localStorage`, and a hash naming a section inside either pane opens that
+  pane — so a link to `#dfsStacks` lands on the stacks rather than on a blank
+  page. Opening the page does not rewrite the URL; only a click does.
+- **A ribbon jump into the other lane opens that lane first**, via a delegated
+  click handler on `a[href^="#"]`. Without it a jump scrolls to a
+  `display:none` section, which is a page that appears to do nothing.
+
+### The DFS lane's numbers
+
+One call to `/api/dfs?site=dk|fd`, the same slate `/dfs` prints from, so the
+front page and the sheet can never name different players for the same slate.
+Nothing is fetched until the DFS tab is opened for the first time, and the
+answer is cached per site, so a reader who never opens the lane pays nothing for
+it. The lane draws the slate cards, the top ten Vegas Values, the four
+highest-total game stacks and the top ten of the TD board. **A board with no
+rows is hidden and its note says why** — an empty table that looks like a loaded
+one is the worst thing this page could print — and a feed that does not answer
+says that rather than leaving a spinner up.
+
+The lane code is a **separate `<script>` block** from the main front-page
+script. Nothing in it needs anything from that script, and keeping them apart
+means a throw on either side cannot take the other down: the lane switch keeps
+working when a feed fails, and the fantasy lane keeps painting if the slate
+does.
+
+### Tests
+
+`tools/test-player-card.mjs` asserted the search box was in the ribbon by
+matching the literal string `<div class="ribbon">`. The ribbon carries
+`data-lane` now, so that regex was widened to `<div class="ribbon"[^>]*>`. It is
+the same assertion; it was pinned to an attribute list rather than to an
+element.
+
+Verified in Chromium at 1400px and 390px against a stubbed `/api/dfs`: both
+panes toggle, the ribbon swaps its anchor set, the edition switch leaves in the
+DFS lane, `?lane=dfs` opens on the slate, an `ok:false` feed prints its note and
+no table, and the page throws nothing on either lane.
