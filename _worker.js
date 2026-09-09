@@ -6696,6 +6696,98 @@ function analystFor(env, id) {
 }
 const AI_DISCLOSURE = 'Iron Tuna’s analysts are AI-powered editorial personas, not people. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls. Every number they print is computed from the site’s own data (the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries you load); a piece whose prose named something the data does not contain is held, not published. The personalities are a way of organising the analysis. The facts are the site’s.';
 
+// ── per-analyst head meta ──────────────────────────────────────────────────
+// /analysts/<id> is eight URLs served from ONE shell (analyst.html), which the
+// browser fills in from /api/analyst. The shell ships with the index page's
+// canonical, so without this every one of those eight URLs told a crawler "I am
+// really /analysts" while sitemap.xml advertised all eight — a self-cancelling
+// pair of signals, and the reason none of them could rank. The head is rewritten
+// here, at the edge, rather than in the page: the crawlers robots.txt invites by
+// name do not run JavaScript, so a title written by the client is a title they
+// never see.
+//
+// The copy is drawn from the ANALYSTS table itself, so a persona whose beat or
+// philosophy is edited there cannot leave a stale description behind.
+//
+// The personas are AI, and the meta says so in the same words the page does.
+// Nothing here describes them as people.
+function analystSeo(env, pathname) {
+  const m = /^\/analysts\/([a-z]+)\/?$/.exec(pathname);
+  if (!m) return null;
+  const a = ANALYSTS[m[1]];
+  if (!a) return null;                       // an unknown id keeps the shell's own meta
+  if (!flagOn(env, 'ANALYST_PERSONAS')) return null;   // personas off: every piece is Iron Tuna's
+  const url = 'https://irontuna.com/analysts/' + a.id;
+  // The specialty list is written sentence-case ("DFS salary and ownership",
+  // "Sportsbook props"). Lower-casing the whole string turns DFS into dfs; not
+  // lower-casing it drops capitals mid-sentence. So only the first word gives up
+  // its capital, and only when it is not an acronym.
+  const beat = a.specialty
+    .map((t) => (/^[A-Z]{2,}\b/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1)))
+    .join(', ');
+  // No pronouns in the generated copy. The table writes about the male-named
+  // personas as "he" and about Lena Park with none at all, so a template that
+  // picked one would be guessing about half the desk to save four characters.
+  const desc = a.name + ' is Iron Tuna\u2019s ' + a.role + ', an AI analyst persona covering '
+    + beat + '. ' + a.philosophy + ' Every published call, and how it turned out, is on this page.';
+  return {
+    analyst: a,
+    title: a.name + ', ' + a.role + ' | Iron Tuna',
+    desc,
+    url,
+    ogt: a.name + ' \u2014 ' + a.role,
+    ogd: a.philosophy + ' ' + a.name + ' is an AI analyst persona on Iron Tuna\u2019s in-season desk.',
+  };
+}
+
+// The persona header, PRE-RENDERED — same reason as the AI disclosure already
+// pre-rendered in analyst.html, and deliberately byte-for-byte the markup the
+// page's own script writes into #anHead on hydration, so filling it here costs
+// no flash and no second layout.
+//
+// Without it the shell a crawler is handed reads "Reading the desk…" and nothing
+// else, which is why the page was noindex; the 8 URLs were in sitemap.xml all
+// the same. Pre-rendering the header is what makes dropping the noindex honest.
+function analystHeader(a) {
+  const e = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return '<span class="an-av">' + e(a.avatar) + '</span><div><h1>' + e(a.name)
+    + '</h1><p>' + e(a.role) + ' &middot; <span class="dk-ai">AI analyst persona</span></p></div>';
+}
+
+// ProfilePage, NOT Person. These are software; the page says so in its first
+// paragraph and the markup must not say otherwise to win a rich result. The
+// subject is therefore a Thing with the disclosure in its description, and the
+// publisher — the only actual entity here — is Iron Tuna.
+function analystLd(a, url) {
+  return '<script type="application/ld+json">' + JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    '@id': url,
+    url,
+    name: a.name + ', ' + a.role,
+    inLanguage: 'en-US',
+    isPartOf: { '@id': 'https://irontuna.com/#website' },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Iron Tuna', item: 'https://irontuna.com/' },
+        { '@type': 'ListItem', position: 2, name: 'The Analysts', item: 'https://irontuna.com/analysts' },
+        { '@type': 'ListItem', position: 3, name: a.name },
+      ],
+    },
+    mainEntity: {
+      '@type': 'Thing',
+      name: a.name,
+      alternateName: a.role,
+      description: a.philosophy + ' ' + AI_DISCLOSURE,
+      additionalType: 'https://schema.org/SoftwareApplication',
+      subjectOf: { '@id': 'https://irontuna.com/#organization' },
+    },
+    about: a.specialty.map((t) => ({ '@type': 'Thing', name: t })),
+    publisher: { '@id': 'https://irontuna.com/#organization' },
+  }).replace(/</g, '\\u003c') + '</' + 'script>';
+}
+
 // ── data freshness ─────────────────────────────────────────────────────────
 // Every packet carries where each input came from and how old it is, graded
 // against the KIND's own requirement: a Sunday 12:15 piece needs an injury
@@ -12495,7 +12587,9 @@ export default {
           ogd: 'Ceiling-weighted best ball values, live stack detection, and championship-week edges tuned to your exact roster as you draft. Free to try.'
         }
       };
-      const __m = __SPA_SEO[__seoKey];
+      // The SPA format routes take their meta from the table above; /analysts/<id>
+      // builds its own from the staff table, and both land in the same rewriter.
+      const __m = __SPA_SEO[__seoKey] || analystSeo(env, __seoKey);
       if (__m) {
         let __html = await resp.text();
         const __ix = __html.indexOf('</head>');
@@ -12511,6 +12605,18 @@ export default {
             .replace(/(<meta name="twitter:title" content=")[^"]*(")/, '$1' + __esc(__m.ogt) + '$2')
             .replace(/(<meta name="twitter:description" content=")[^"]*(")/, '$1' + __esc(__m.ogd) + '$2');
           __html = __h + __html.slice(__ix);
+        }
+        // An analyst URL additionally becomes indexable and gets a body. The
+        // shell is noindex as it ships and must stay that way at /analysts
+        // itself and at any id the staff table does not know; only a matched
+        // persona, with its header pre-rendered below, earns the index.
+        if (__m.analyst) {
+          __html = __html
+            .replace(/<meta name="robots" content="noindex"\s*\/?>/,
+              '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">')
+            .replace('<div class="an-head" id="anHead"></div>',
+              '<div class="an-head" id="anHead">' + analystHeader(__m.analyst) + '</div>')
+            .replace('</head>', analystLd(__m.analyst, __m.url) + '\n</head>');
         }
         const __r = new Response(__html, resp);
         __r.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
