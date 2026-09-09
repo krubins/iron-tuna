@@ -92,6 +92,7 @@ function fakeDb(clock) {
       if (/FROM content_pieces WHERE status = 'published' AND analyst = \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.analyst === args[0]).sort((a, b) => b.published_at - a.published_at).slice(0, 12) };
       if (/FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published' && r.rivalry).sort((a, b) => b.published_at - a.published_at).slice(0, 10) };
       if (/FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'published').sort((a, b) => b.published_at - a.published_at).slice(0, args[0]) };
+      if (/FROM content_pieces WHERE status = 'held' AND created_at >= \?/.test(sql)) return { results: T.content_pieces.filter(r => r.status === 'held' && r.created_at >= args[0]).sort((a, b) => b.created_at - a.created_at).slice(0, 40) };
       if (/FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80/.test(sql)) return { results: T.content_pieces.filter(r => r.status !== 'unpublished').sort((a, b) => b.created_at - a.created_at) };
       return { results: [] };
     }
@@ -152,7 +153,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, recheckHeld, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);
 const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic' };
@@ -258,6 +259,33 @@ console.log('\nthe pause, the approval and the hallucinating writer');
   ok('a first draft naming a player the packet lacks is sent back once and the retry publishes clean', h.ok && h.status === 'published' && modelLog.length === 2 && modelLog[1].retry === true, JSON.stringify([h.status, modelLog]));
   modelMode = 'clean';
   ok('the writer was never asked to write a retired kind', modelLog.every(m => H.CONTENT_KINDS[m.kind]));
+  Date.now = realNow;
+}
+
+console.log('\nthe lead before the first piece, and a hold the old checker made');
+{
+  // Wednesday of Week 1, nothing published: the lead names the next piece on
+  // the calendar and its slot, never a draft-season story.
+  const wed = ET(2026, 9, 9, 9, 0);
+  Date.now = () => wed;
+  const st = H.nflSeasonState(scheduleAt(wed), wed);
+  const nx = H.deskNextPayload(st, scheduleAt(wed), wed);
+  ok('the lead names the next piece and when it publishes', nx && nx.ok && nx.story.placeholder === true && nx.story.category === 'desk' && /^Next from the desk: /.test(nx.story.title) && /Publishes (Wednesday|Thursday) at \d{1,2}:\d{2} (AM|PM) ET\.$/.test(nx.story.dek) && nx.story.url === '/in-season/desk', JSON.stringify(nx && nx.story));
+  ok('and it is the earliest slot still to come', nx && nx.story.createdAt > wed && Object.keys(H.CONTENT_KINDS).filter(k => !H.CONTENT_KINDS[k].unscheduled).every(k => { const d = H.contentDue(k, wed, st, scheduleAt(wed)); return !(Number.isFinite(d.dueAt) && d.dueAt > wed && d.dueAt < nx.story.createdAt); }));
+  // A draft the September 8 checker held over "Two Slates" is republished by
+  // the current one at the next tick; a draft with a real problem stays held.
+  Date.now = () => end;
+  const src = db.T.content_pieces.find(r => r.status === 'published' && r.body && r.body !== 'null' && r.brief);
+  const held = { ...src, id: 9001, week: 9, status: 'held', published_at: null, created_at: end - 3600000, violations: JSON.stringify(['name:Two Slates', 'number:1.5']) };
+  const stuck = { ...src, id: 9002, week: 10, status: 'held', published_at: null, created_at: end - 3600000, violations: JSON.stringify(['name:Jerry Jeudy']), body: JSON.stringify({ ...JSON.parse(src.body), headline: 'Jerry Jeudy is the play' }) };
+  db.T.content_pieces.push(held, stuck);
+  const rc = await H.recheckHeld(env);
+  ok('a held draft that passes the current checker is published at the tick', rc.ok && rc.published.some(p => p.week === 9) && held.status === 'published' && held.published_at === end, JSON.stringify(rc));
+  ok('a held draft with a real problem stays held, and the problem is named', stuck.status === 'held' && rc.still.some(s => s.week === 10 && s.problems.includes('name:Jerry Jeudy')), JSON.stringify(rc.still));
+  await H.newsroomAdmin(env, 'pause', {});
+  const paused = await H.recheckHeld(env);
+  ok('paused, nothing is rechecked: every hold is the editor\'s', paused.ok && paused.rechecked === 0 && /paused/.test(paused.reason));
+  await H.newsroomAdmin(env, 'resume', {});
   Date.now = realNow;
 }
 

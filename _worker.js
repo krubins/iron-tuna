@@ -6383,20 +6383,92 @@ function _sectionSpec(kind) {
 }
 // Every capitalised two-or-three-word name and every number in the draft must
 // be in the brief. Small integers are allowed (ordinals, counts of things).
+//
+// WHAT A NAME IS. The first live Thursday preview (2026-09-09) was held over
+// "Two Slates", "Implied Totals", "Strong Vegas Fade", "New England's",
+// "Guerendo's PUP" and "Nacua. Reasonable": a title-case headline, a
+// possessive, an acronym and two sentences meeting at a full stop, every one
+// of them read as a player the packet did not contain. Nothing in that draft
+// was invented, and the site's front page showed a draft-season auction story
+// for a day because of it. So a capitalised run is a NAME only when it holds
+// a word the checker cannot otherwise account for: not a word of an allowed
+// name, not an acronym, not a club, not a word the draft itself also uses in
+// lower case (a "Totals" that appears as "totals" elsewhere is prose), and
+// not on the short list of words that open a headline. "Jerry Jeudy" fails
+// every one of those tests and is still caught.
+const DRAFT_STOP_WORDS = new Set(('a an the this that these those his her their its our your my me him them us ' +
+  'and or but nor so yet if then than as at by for from in into of off on onto out over per to up upon ' +
+  'with without within through across around against between before after under toward towards via versus vs ' +
+  'is are was were be been being has have had do does did will would can could should may might must not no yes ' +
+  'what why how who whom which where when here there now still only just more less most least much many few ' +
+  'every each all any some none both either neither other another such very too also again away back ' +
+  'one two three four five six seven eight nine ten first second third last next new old big small high low ' +
+  'top bottom best worst better worse good bad strong weak early late long short hard easy fast slow ' +
+  'different same reasonable classified implied expected likely unlikely ' +
+  'week weeks night day days season sunday monday tuesday wednesday thursday friday saturday ' +
+  'football fantasy game games slate slates board boards market markets line lines odds spread total totals ' +
+  'point points rank ranks ranking rankings tier tiers value values price prices salary salaries ownership ' +
+  'chalk leverage stack stacks captain flex start starts sit sits bench play plays fade fades follow target targets ' +
+  'usage role roles injury injuries report update preview review intel edge delta consensus vegas ' +
+  'home road favorite favourite underdog weather wind rain he she it they we you').split(/\s+/));
+// The clubs: the thirty-two nicknames and cities, plus whatever the projection
+// set's own defence rows say, so a relocation or a rename reaches the checker
+// with the data. A club is never a fact the writer could invent.
+const NFL_CLUB_WORDS = ('arizona cardinals atlanta falcons baltimore ravens buffalo bills carolina panthers chicago bears ' +
+  'cincinnati bengals cleveland browns dallas cowboys denver broncos detroit lions green bay packers houston texans ' +
+  'indianapolis colts jacksonville jaguars kansas city chiefs las vegas raiders los angeles chargers rams miami dolphins ' +
+  'minnesota vikings new england patriots orleans saints york giants jets philadelphia eagles pittsburgh steelers ' +
+  'san francisco 49ers seattle seahawks tampa bay buccaneers tennessee titans washington commanders').split(/\s+/);
+let _TEAM_WORDS = null;
+function _teamWords() {
+  if (!_TEAM_WORDS) {
+    _TEAM_WORDS = new Set(NFL_CLUB_WORDS);
+    for (const p of PROJECTIONS) if (p.position === 'DEF') for (const w of String(p.name || '').split(/\s+/)) if (w) _TEAM_WORDS.add(w.toLowerCase());
+  }
+  return _TEAM_WORDS;
+}
+// A word with its possessive and its trailing punctuation taken off:
+// "England's" -> "England", "Nacua." -> "Nacua".
+const _wordCore = w => String(w).replace(/[’']s$/i, '').replace(/^[^A-Za-z]+/, '').replace(/[^A-Za-z]+$/, '');
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
   const bad = { names: [], numbers: [] };
   const OK_WORDS = new Set(['Iron Tuna', 'Market Delta', 'Monday Night', 'Sunday Night', 'Thursday Night', 'Red Zone', 'Vegas Edge', 'What We', 'Fantasy Playoffs', 'Rest Of', 'Next Three', 'Week One']);
-  for (const m of String(text).matchAll(/\b([A-Z][a-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2})\b/g)) {
+  const str = String(text);
+  const known = new Set();
+  for (const n of names) for (const w of n.split(/\s+/)) { const c = _wordCore(w).toLowerCase(); if (c) known.add(c); }
+  for (const n of OK_WORDS) for (const w of n.split(/\s+/)) known.add(w.toLowerCase());
+  const lower = new Set();
+  for (const m of str.matchAll(/\b[a-z][a-z'’-]+\b/g)) lower.add(m[0].replace(/[’']s$/, ''));
+  const team = _teamWords();
+  // A word never crosses a full stop: "Nacua." ends a sentence, and the
+  // capital that follows it opens another. A dot inside a word (A.J.) stays.
+  const WORD = "[A-Z](?:[A-Za-z'’-]|\\.(?=[A-Za-z]))*";
+  for (const m of str.matchAll(new RegExp('\\b(' + WORD + '(?:\\s' + WORD + '){1,2})(?![A-Za-z])', 'g'))) {
     const n = m[1];
     if (names.has(n) || OK_WORDS.has(n)) continue;
     if ([...names].some(x => x.includes(n) || n.includes(x))) continue;
-    if (/^(What|Why|The|This|That|His|Their|A|An|In|On|At|For|With|And|But|Not|No|He|She|It|They|We|Both)\b/.test(n)) continue;
+    const words = n.split(/\s+/).map(_wordCore).filter(Boolean);
+    if (!words.length) continue;
+    const unknown = words.filter(w => {
+      if (/^[A-Z][A-Z0-9.]*$/.test(w)) return false;                    // QB, DST, PUP, NE
+      const l = w.toLowerCase();
+      return !(known.has(l) || DRAFT_STOP_WORDS.has(l) || team.has(l) || lower.has(l));
+    });
+    if (!unknown.length) continue;
+    // "Expect Nacua", "Bench Josh Allen": a sentence opener in front of a
+    // name the packet holds. The opener is a verb, not a first name.
+    const last = words[words.length - 1].toLowerCase();
+    if (unknown.length < words.length && known.has(last) && !unknown.includes(words[words.length - 1])) continue;
     bad.names.push(n);
   }
-  for (const m of String(text).matchAll(/-?\d+(?:\.\d+)?/g)) {
+  for (const m of str.matchAll(/-?\d+(?:\.\d+)?/g)) {
     const v = m[0]; const num = Number(v);
-    if (nums.has(v) || (Number.isInteger(num) && Math.abs(num) <= 20)) continue;
+    // A number the packet holds, in either sign (a spread is quoted from
+    // either side); a small count; or a small difference of two packet
+    // figures ("1.5 points apart"), which is arithmetic, not a fact.
+    if (nums.has(v) || nums.has(v.replace(/^-/, ''))) continue;
+    if (Math.abs(num) <= (Number.isInteger(num) ? 20 : 5)) continue;
     bad.numbers.push(v);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
@@ -7230,6 +7302,7 @@ TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manage
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
 THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
+HEADLINE AND DEK in sentence case: capitalise the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
@@ -7456,13 +7529,66 @@ async function produceContent(env, kind, opts) {
   }
   return { ok: true, kind, week, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
 }
+// A draft the fact check held is re-read by the CURRENT fact check on every
+// tick. The check changes (on 2026-09-09 it stopped reading a title-case
+// headline as a list of players), and a draft the model got right must not
+// stay held because the check that read it was wrong: that is how the front
+// page showed an auction story on the Wednesday of Week 1. Only a draft that
+// exists, only a hold the checker made (names, numbers, phrasing: a missing
+// section or a colleague is the writer's, and awaiting_approval is the
+// editor's), only the newest row for its kind and week, and only while
+// automatic publishing is on.
+const RECHECK_HELD_DAYS = 10;
+function heldRecheckable(row, now) {
+  if (!row || row.status !== 'held') return false;
+  if (!row.body || row.body === 'null') return false;
+  let v = []; try { v = JSON.parse(row.violations || '[]'); } catch (e) { v = []; }
+  if (!Array.isArray(v) || !v.length) return false;
+  if (!v.every(x => /^(name|number|phrasing):/.test(String(x)))) return false;
+  return (now - (row.created_at || 0)) <= RECHECK_HELD_DAYS * 86400000;
+}
+async function recheckHeld(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  const auto = await autoPublishOn(env);
+  if (!auto.on) return { ok: true, rechecked: 0, published: [], still: [], reason: auto.reason };
+  const now = Date.now();
+  let rows = [];
+  try {
+    rows = (await env.LEADS_DB.prepare("SELECT id, kind, season, week, status, version, brief, body, violations, analyst, rivalry, created_at FROM content_pieces WHERE status = 'held' AND created_at >= ? ORDER BY created_at DESC LIMIT 40")
+      .bind(now - RECHECK_HELD_DAYS * 86400000).all()).results || [];
+  } catch (e) { return { ok: false, error: 'read_failed' }; }
+  const published = [], still = [];
+  for (const row of rows) {
+    if (!heldRecheckable(row, now)) continue;
+    const latest = await contentLatest(env, row.kind, row.season, row.week);
+    if (!latest || latest.id !== row.id) continue;                       // a later version exists
+    let body = null, packet = null;
+    try { body = JSON.parse(row.body); packet = JSON.parse(row.brief); } catch (e) { continue; }
+    if (!body || !packet || !packet.allowed || !packet.meta) continue;
+    const v = factCheck(body, packet);
+    if (!v.ok) { still.push({ kind: row.kind, week: row.week, problems: v.problems.slice(0, 8) }); continue; }
+    try {
+      await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ? WHERE id = ?').bind('published', now, row.id).run();
+      let rivalry = null; try { rivalry = row.rivalry ? JSON.parse(row.rivalry) : null; } catch (e) { rivalry = null; }
+      const list = normaliseCalls(body.calls, packet, row.analyst || packet.meta.analyst, 'weekly');
+      const calls = await recordCalls(env, { season: row.season, week: row.week, kind: row.kind, slug: _slugOf(row.kind, row.season, row.week) }, list, rivalry);
+      published.push({ kind: row.kind, week: row.week, version: row.version || 1, calls: calls.stored });
+    } catch (e) { still.push({ kind: row.kind, week: row.week, problems: ['publish_failed'] }); }
+  }
+  // The front page memoises its lead for two minutes; a piece that just went
+  // live should not wait behind it.
+  if (published.length) { try { _LEAD_CACHE = null; _LEAD_AT = 0; } catch (e) {} }
+  return { ok: true, rechecked: rows.length, published, still };
+}
 async function runContentTick(env) {
   const out = [];
+  let recheck = null;
+  try { recheck = await recheckHeld(env); } catch (e) { recheck = { ok: false, error: (e && e.message) || 'failed' }; }
   for (const kind of Object.keys(CONTENT_KINDS)) {
     if (CONTENT_KINDS[kind].unscheduled) continue;
     try { out.push(await produceContent(env, kind)); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); }
   }
-  return { ok: true, at: Date.now(), results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
+  return { ok: true, at: Date.now(), recheck, results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
 }
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
 const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
@@ -7520,6 +7646,30 @@ async function deskLeadPayload(env) {
   const [cur, ...rest] = feed.pieces;
   const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week, url: p.url, title: p.headline || p.title + ' · Week ' + p.week, dek: p.dek || '', label: p.title, category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], names: [], cast: [] });
   return { ok: true, source: 'desk', story: row(cur), recent: rest.map(row) };
+}
+// The regular season with nothing published yet: the lead is the desk's NEXT
+// piece, named and timed, in the same shape. Never a draft-season story. The
+// alternative, which the front page ran on the Wednesday of Week 1, was a
+// six-hour-old auction price above the week's slate: a reader was being told
+// the wrong month. Pure apart from the clock, so tools/test-newsroom.mjs can
+// hold it to the calendar.
+function deskNextPayload(state, sched, now) {
+  let best = null;
+  for (const [kind, K] of Object.entries(CONTENT_KINDS)) {
+    if (K.unscheduled) continue;
+    let d = null;
+    try { d = contentDue(kind, now, state, sched); } catch (e) { continue; }
+    if (!d || d.skip || !Number.isFinite(d.dueAt) || d.dueAt === Number.MAX_SAFE_INTEGER || d.dueAt <= now) continue;
+    if (!best || d.dueAt < best.at) best = { kind, K, at: d.dueAt, week: d.week };
+  }
+  if (!best) return null;
+  const p = etParts(best.at);
+  const day = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }[p.dow] || p.dow;
+  const when = day + ' at ' + (p.hour % 12 || 12) + ':' + String(p.minute).padStart(2, '0') + ' ' + (p.hour < 12 ? 'AM' : 'PM') + ' ET';
+  const a = ANALYSTS[best.K.analyst] || ANALYST_HOUSE;
+  const story = { slug: 'desk:next:' + best.kind, url: '/in-season/desk', title: 'Next from the desk: ' + best.K.title, dek: (best.K.summary || '') + ' Publishes ' + when + '.',
+                  label: 'The Desk', category: 'desk', placeholder: true, analyst: a.name, analystId: a.id, createdAt: best.at, players: [], names: [], cast: [] };
+  return { ok: true, source: 'desk-next', story, recent: [] };
 }
 
 // ── author pages, disagreements ────────────────────────────────────────────
@@ -8368,6 +8518,10 @@ async function leadStoryPayload(env) {
       if (st && st.ok && st.phase === 'regular') {
         const desk = await deskLeadPayload(env);
         if (desk && desk.ok) { _LEAD_CACHE = desk; _LEAD_AT = now; return desk; }
+        // Nothing published yet: name the next piece rather than reach back
+        // into the draft-season archive for a story about a different month.
+        const next = deskNextPayload(st, sched, now);
+        if (next && next.ok) { _LEAD_CACHE = next; _LEAD_AT = now; return next; }
       }
     }
   } catch (e) {}

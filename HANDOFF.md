@@ -8139,6 +8139,65 @@ days). And `_namesOf` collected names only under keys that looked like
 names, so a correct draft naming a receiver the packet stored as `absent`
 was held; every string in a packet is a fact now.
 
+### 68m. September 9: The Desk showed an auction story, and why
+
+Ken's report on the Wednesday of Week 1: "The story on The Desk is still
+auction focused. This should be focused on this week's matchups." He was
+right, and the cause was not the front page. `/api/lead-story` serves the
+newest **published** desk piece in the regular season (68a) and falls back
+to the `lead_story` archive when there is none. Four pieces existed and
+**every one was held**: three by the 60-second abort that 68l fixed, and
+the Thursday Night Football Preview, written at 7:48 AM ET on September 9
+by the fixed writer, by the fact check, over
+`name:Two Slates, name:Two Very Different, name:Implied Totals, name:New
+England's, name:Guerendo's PUP, name:Nacua. Reasonable, name:Vegas. Team,
+number:1.5, number:-3.5 …` — a title-case headline, possessives, an
+acronym, two sentences meeting at a full stop, a spread quoted from the
+other side and a difference of two packet figures. Nothing in the draft was
+invented. Meanwhile the retired lead-story Routine (68a) was **still
+running every six hours** (the migration session could not disable it),
+so the fallback was never empty: a fresh "Bid Carnell Tate to $13" sat on
+the front page above the Week 1 slate.
+
+Four changes, all on `main`:
+
+- **`validateDraft` knows what a name is.** A capitalised run is a name
+  only when it holds a word the checker cannot otherwise account for: not
+  a word of an allowed name, not an acronym, not a club (`NFL_CLUB_WORDS`
+  plus the projection set's DEF rows), not a word the draft itself also
+  uses in lower case, and not on `DRAFT_STOP_WORDS` (the words that open a
+  headline). A word never crosses a full stop; a possessive is the name it
+  belongs to; a verb in front of a packet name ("Expect Nacua") is a verb.
+  A number passes in either sign, and a decimal of five or less is
+  arithmetic. "Jerry Jeudy" and "155 yards" are still caught;
+  `tools/test-newsroom.mjs` holds every phrase from the September 9 hold.
+  `NEWSROOM_SYSTEM` now asks for sentence-case headlines as well.
+- **Held drafts are re-read at every tick.** `recheckHeld` (first thing in
+  `runContentTick`) runs the CURRENT `factCheck` over every recent hold
+  that has a draft and whose violations were the checker's (`name:`,
+  `number:`, `phrasing:`), publishes the ones that now pass and records
+  their calls, and leaves the rest with the problems named. A hold with
+  no draft is the retry path (68l); `missing:` and `analyst:` are the
+  writer's; `awaiting_approval` is the editor's; a paused desk rechecks
+  nothing. `heldRecheckable` is the pure rule. So the Thursday preview
+  publishes at the first tick after this deploys, with no admin action.
+- **No auction story in the regular season.** With nothing published,
+  `leadStoryPayload` now serves `deskNextPayload`: the next piece on the
+  calendar, named and timed in ET, `placeholder: true`, linking to
+  `/in-season/desk`. It reaches the archive only outside the regular
+  season. `front.html` treats a desk lead as a desk lead: "The Desk" badge,
+  the byline and publish time instead of the Routine's six-hour countdown,
+  no default-league pricing note (a desk piece quotes no dollars), "More
+  from the desk", a five-minute re-look, and the section's "more" link
+  goes to `/in-season/desk` under `html[data-season="in"]`.
+- **The retired Routine is off.** `trig_011LYewcPUQikF8izFsN2LAr` ("lead
+  story refresh (every 6h)") was disabled from this session. Its prompt
+  stays in `tools/lead-story-routine-prompt.md` for 2027's draft season.
+
+`tools/test-dry-run.mjs` now also asserts the placeholder on the Wednesday
+of Week 1 and a "Two Slates" hold being republished by the tick while a
+"Jerry Jeudy" hold stays held.
+
 ---
 
 ## Sync My League (2026-09-09)
