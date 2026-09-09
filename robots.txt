@@ -10,6 +10,21 @@
 # records a deliberate decision rather than an oversight. An agent that is
 # misspelled here, or retired by its vendor, simply falls through to the
 # wildcard and is still allowed, so this list can never lock anyone out.
+#
+# CAREFUL — THE ONE WAY THIS FILE CAN BITE. Under RFC 9309 a crawler obeys the
+# MOST SPECIFIC group that names it, and that group ENTIRELY: it does not
+# inherit a single line from the wildcard. Every group here carries "Allow: /"
+# and nothing else, so today they all agree and the specificity is harmless.
+# Add a "Disallow:" to the wildcard alone, though — to keep crawlers out of
+# /api/, say — and every agent named below would quietly ignore it, which is
+# the opposite of what the person adding the line intended. A rule that is
+# meant for everyone has to be repeated in every group. tools/test-seo.mjs
+# fails if the wildcard ever carries a directive the named groups do not.
+#
+# Tokens verified against vendor documentation and crawler references on
+# 2026-09-09. Two Anthropic tokens are DELIBERATELY ABSENT because they are
+# deprecated and naming a retired agent only dates the file: "Claude-Web" and
+# "anthropic-ai", both superseded by the three Claude tokens below.
 
 User-agent: *
 Allow: /

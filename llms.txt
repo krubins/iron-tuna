@@ -29,7 +29,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 - Every row prints the same player twice — **Fantasy Consensus** (the projection consensus at the chosen scoring, nudged by live usage once three games have earned it, with no odds in it) and **Betting Odds** (the same player priced off the sportsbook) — with the gap between them in points and in rank slots.
 - The odds side always says what it is built from: **props** is a quoted player prop, **gamelines** is the posted game line's scoring environment applied to his line, **ratings** is a fixture no book has posted yet, projected from fitted team ratings and graded low.
 - On the season-long boards any row opens into every remaining week: the opponent, both columns, and Iron Tuna's blend, week by week to the end of the season.
-- Scoring is Standard, Half PPR or PPR; the full tool at https://irontuna.com/in-season/rankings adds every horizon and your own league's settings.
+- Scoring is Standard, Half PPR or PPR; the full tool at https://irontuna.com/rankings adds every horizon and your own league's settings.
 
 ### Stats — https://irontuna.com/stats
 - The one board on the site that is not a forecast: season and latest-week production off the weekly stat lines and snap counts, scored at the setting you choose. A player with no published line shows a dash, never a zero.
@@ -40,7 +40,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 ### Previews — https://irontuna.com/previews
 - Every game on the week's slate with its posted spread and total, the points each offence is implied to score, how the line has moved since it opened, and where Iron Tuna's own fitted total disagrees with the book's.
 
-### Vegas Edge — https://irontuna.com/in-season/vegas-edge
+### Vegas Edge — https://irontuna.com/vegas-edge
 - The players the betting market and the consensus rankings disagree about, and by how much, each row labelled **quoted** where a book has posted a price and **derived** where the number comes from the game line instead.
 - Game Intel (https://irontuna.com/game-intel) carries the same read one level up: every game with its spread, total and implied team points, beside Iron Tuna's own model total and the gap between them. Under 2 points the two agree.
 - **21+. Informational only. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. No affiliate links and no sportsbook sign-up offers anywhere on the site.** Problem gambling: call or text 1-800-GAMBLER.
@@ -92,13 +92,13 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - Fantasy: https://irontuna.com/fantasy
 - DFS: https://irontuna.com/dfs
 - My League: https://irontuna.com/my-league
-- Weekly rankings: https://irontuna.com/in-season/rankings
+- Weekly rankings: https://irontuna.com/rankings
 - This week's rankings, by position: https://irontuna.com/weekly-rankings
 - Season long rankings, by position: https://irontuna.com/season-long-rankings
 - Stats (what has actually been played): https://irontuna.com/stats
 - Hidden Value (widest market-vs-consensus gaps): https://irontuna.com/hidden-value
 - Game previews: https://irontuna.com/previews
-- Vegas Edge (model vs. market): https://irontuna.com/in-season/vegas-edge
+- Vegas Edge (model vs. market): https://irontuna.com/vegas-edge
 - Game Intel: https://irontuna.com/game-intel
 - FAAB Advisor: https://irontuna.com/faab
 - Trade Finder: https://irontuna.com/trade-finder
