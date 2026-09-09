@@ -23430,7 +23430,10 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
     ['In-Season', [['/in-season', 'Overview'], ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/my-league', 'My League']]],
     ['Draft Tools', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
     ['Read', [['/in-season/desk', 'The Desk'], ['/the-pick', 'The Pick'], ['/auction-insights', 'Insights'], ['/insights-vault', 'Insight Vault']]],
-    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/data', 'Data & sources']]]
+    // The Admin link is the only way into /admin from the site; it is a plain
+    // footer link because the page itself is what gates access (export key),
+    // and rel=nofollow keeps a noindex page out of the crawl.
+    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/data', 'Data & sources'], ['/admin', 'Admin', 'nofollow']]]
   ];
 
   // ── 03 · where the experts and the market disagree most ──────────────────
@@ -23575,7 +23578,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
       h('footer', { className: 'itl-foot' }, h('div', { className: 'itl-wrap' },
         FOOT.map(([head, links]) => h('div', { key: head },
           h('h2', null, head),
-          links.map(([href, label]) => h('a', { key: href, href }, label)))),
+          links.map(([href, label, rel]) => h('a', { key: href, href, rel }, label)))),
         h('div', { className: 'itl-legal' },
           h('p', null, 'Iron Tuna prices every player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring. Projections are not guarantees.'),
           // Kept in step with LEGAL in tools/build-chrome.mjs by hand: this
