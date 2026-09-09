@@ -10799,9 +10799,15 @@ export default {
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
       const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
       const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);
+      // The empty case is OUR table being empty, which is the only thing this
+      // code can see. It holds no operator feed and cannot look at a lobby, so
+      // it must not tell the reader the lobby is late: by the time a week's
+      // games are on the board the salaries are usually up on the site already
+      // and the missing piece is the import. Say the true thing, which is also
+      // the one the reader can act on.
       if (!sal || !sal.rows.length) return json({ ok: false, contract: DFS_CONTRACT, site, label: DFS_SITES[site].label, error: 'no_salaries',
-        note: 'No ' + DFS_SITES[site].label + ' salaries are posted for this week yet. Salaries go up when the lobby does; the scoring environment below still reads from the game lines.',
-        operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed.' }, 200, c);
+        note: 'Iron Tuna has not loaded the ' + DFS_SITES[site].label + ' salaries for this week. That is a gap on this site, not a claim about the lobby, which may well have them up already. The scoring environment below still reads from the game lines.',
+        operatorNote: 'No ' + DFS_SITES[site].label + ' salaries have been loaded for this week. Import the lobby CSV from /admin, or configure the site feed; a reader can price their own export at /dfs without either.' }, 200, c);
       const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
       const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, {});
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
