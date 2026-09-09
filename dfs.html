@@ -720,7 +720,7 @@ p{color:var(--sec);margin:0 0 16px}
     rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
     rows = rows.slice(0, 14);
     if (!rows.length) {
-      $('pkState').textContent = 'No sportsbook has posted a player prop for this week yet, so there is no line to read the model against. The board is blank rather than filled with the model compared to itself.';
+      $('pkState').textContent = 'No priced player prop has reached this board for the week, so there is no posted line to read the model against. Books have props up; this build is not carrying them. The board is blank rather than filled with the model compared to itself.';
       return;
     }
     $('pkBody').innerHTML = rows.map(function (r) {

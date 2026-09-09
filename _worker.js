@@ -5485,7 +5485,8 @@ function detectInsights(input) {
 // The primary product: what the money says this week, in six boards, each one
 // a plain sort over data the engine already holds. `basis` on every board says
 // whether a number is a quoted market or derived from the game lines, because
-// on a week with no player props (today) every player board is the latter.
+// on a week where no priced props reach the feed (today) every player board is
+// the latter. Books have props posted; this build is not carrying them.
 const EDGE_CONTRACT = 1;
 function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const players = (week && week.players) || [];
@@ -5567,7 +5568,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   }).filter(g => g.total != null).sort((a, b) => b.total - a.total);
   const hidden = (insights && insights.insights || []).filter(i => i.type === 'game_script_change');
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
-           note: hasProps ? null : 'No sportsbook has a player prop on this board yet. Every player number here is derived from the posted game lines; the game board is quoted.',
+           note: hasProps ? null : 'No priced player prop has reached this board. Books post props; none are in the feed behind this build, so every player number here is derived from the posted game lines. The game board is quoted.',
            vsExperts, movers: movers.slice(0, 40), tdBoard, volumeBoard, gameEnvironments, hiddenSignals: hidden };
 }
 
@@ -8108,7 +8109,7 @@ function buildDfsSlate(site, salaries, week, opts) {
   };
   return { ok: rows.length > 0, contract: DFS_CONTRACT, site, label: S.label, cap: S.cap, slots: S.slots, flex: S.flex, scoring: 'site', players: rows.sort((a, b) => b.salary - a.salary),
            medianVegasPerK: _oddsRound(med * 100) / 100, unmatched: rows.filter(r => !r.onBoard).length, boards,
-           hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No sportsbook has a player prop on this slate yet; every Vegas number is the game line’s environment applied to the player’s line.' };
+           hasProps: on.some(r => /^props/.test(r.vegasBasis)), note: on.some(r => /^props/.test(r.vegasBasis)) ? null : 'No priced player prop has reached this slate. Books post props; none are in the feed behind this build, so every Vegas number is the game line’s environment applied to the player’s line.' };
 }
 // Game stacks: every game on the slate ranked by total, with each side's
 // QB and his two most-targeted pass catchers, and the bring-back on the

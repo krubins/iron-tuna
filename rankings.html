@@ -425,7 +425,7 @@ p{color:var(--sec);margin:0 0 16px}
       ' &middot; showing the <b>' + (board === 'ironTuna' ? 'Iron Tuna' : board === 'consensus' ? 'Consensus' : board === 'blend' ? (w === 0 ? 'Fantasy Analysis (Brooks)' : w === 1 ? 'Market Intelligence (Vega)' : Math.round((1 - w) * 100) + ' / ' + Math.round(w * 100) + ' Fantasy / Market') : 'Vegas') + '</b> board.';
     $('rkBlend').hidden = board !== 'blend';
     $('rkFoot').innerHTML = 'Vegas basis: <b>props</b> is a priced player prop; <b>gamelines</b> is the posted game line’s scoring environment applied to his line; <b>ratings</b> is a fixture no book has posted yet, projected from fitted team ratings and graded LOW. ' +
-      (payload.sources && payload.sources.props ? payload.sources.props + ' players carry a prop this week.' : 'No sportsbook has posted a player prop for this week yet.') +
+      (payload.sources && payload.sources.props ? payload.sources.props + ' players carry a prop this week.' : 'No priced player prop has reached this board for the week. Books post them; this feed is not carrying them.') +
       (payload.sources && payload.sources.usage ? ' Usage through week ' + payload.sources.usage + '.' : ' No weekly usage has been published yet.');
   }
   function load(hz) {
