@@ -372,7 +372,7 @@ function buildGraph(file, html) {
       { '@type': 'WebSite', name: 'Iron Tuna', url: SITE + '/', description, inLanguage: 'en-US', publisher: PUBLISHER },
       {
         ...PUBLISHER,
-        description: 'Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.',
+        description: 'Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices and model-vs-market game lines in season, and custom draft values before it.',
         sameAs: ['https://x.com/irontunafantasy', 'https://www.threads.net/@irontunafantasy'],
       },
     ];

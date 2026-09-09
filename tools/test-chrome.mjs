@@ -65,15 +65,17 @@ console.log('\nevery destination is reachable from every page');
   // hub was a format chooser for a site that now has one format; the auction
   // edition is the destination. The pages still serve at their old URLs — see
   // the sitemap assertions in tools/test-seo.mjs — they are simply not linked.
-  // /in-season replaced /post-draft as the section hub. Its two lanes are
-  // asserted too: the dropdown carries them instead of the eleven tools it used
-  // to list, so if a lane silently drops out of the nav there is no other place
-  // a reader can reach it from every page. /wagers is NOT here: the lane is
-  // retired and 301s to the hub, so a nav link to it would be a link to a
-  // redirect.
+  // /in-season replaced /post-draft as the section hub. Its lanes are asserted
+  // too: the dropdown carries them instead of the eleven tools it used to list,
+  // so if a lane silently drops out of the nav there is no other place a reader
+  // can reach it from every page. /wagers is NOT here: the lane is retired and
+  // 301s to the hub, so a nav link to it would be a link to a redirect. /dfs is
+  // out for the same reason while the lane is on hold (docs/dfs-on-hold.md) —
+  // the route serves the hub, and it goes back on this list the day the lane
+  // reopens.
   const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
     '/snake-insights', '/insights-vault', '/the-pick', '/guides',
-    '/in-season', '/fantasy', '/dfs', '/my-league', '/faq'];
+    '/in-season', '/fantasy', '/my-league', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
     '/play-caller-premium', '/the-tell', '/auction-insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];

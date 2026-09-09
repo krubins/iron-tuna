@@ -70,6 +70,17 @@ const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/r
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
 const IN_SEASON_HUB = '/in-season';
+// /dfs is closed on its own switch, on top of the post-draft gate above. It is
+// a separate question from whether the section has opened: the DFS lane is on
+// hold until its salaries can be kept current without a person remembering to
+// import a CSV every week (docs/dfs-on-hold.md). Closed, the route serves the
+// hub in place of itself, exactly as a closed post-draft page does, so the URL
+// a reader holds still opens the page it will be when the lane returns.
+const DFS_PAGES = new Set(['/dfs']);
+function dfsClosed(env, url, request) {
+  if (flagOn(env, 'DFS_CONTENT')) return false;
+  return !postDraftPreview(env, url, request);
+}
 function POST_DRAFT_OPEN(env) { return String(env && env.POST_DRAFT_OPEN || '') === '1'; }
 function postDraftPreview(env, url, request) {
   if (adminOk(env, url.searchParams.get('preview'))) return true;
@@ -6500,7 +6511,12 @@ async function writePiece(env, kind, brief) {
 const NEWSROOM_FLAGS = {
   IN_SEASON_DESK:        { dflt: true,  note: 'the in-season editorial system: the calendar, the front-page lead switch, the bylines' },
   AUTO_PUBLISH:          { dflt: true,  note: 'validated pieces publish without a person; off holds every piece for approval' },
-  DFS_CONTENT:           { dflt: true,  note: 'the DFS lens on every package and the DFS metrics' },
+  // OFF: the DFS lane is on hold (docs/dfs-on-hold.md). This one name closes
+  // /dfs, /api/dfs, /api/dfs/slate and the desk's DFS lens. It is off by
+  // DEFAULT rather than by an unset Cloudflare var so that a fresh environment
+  // is also closed: a product nobody can keep fed should not come back up just
+  // because someone deployed somewhere new.
+  DFS_CONTENT:           { dflt: false, note: 'the DFS lane: /dfs, the DFS APIs, the DFS lens on every package and the DFS metrics' },
   MARKET_SLIDER:         { dflt: true,  note: 'the Fantasy Analysis / Market Intelligence control and /api/blend' },
   ANALYST_PERSONAS:      { dflt: true,  note: 'bylines and voices; off publishes every piece under Iron Tuna' },
   RIVALRY:               { dflt: true,  note: 'the single Vega/Brooks rivalry line, when the numbers earn it' },
@@ -10794,6 +10810,11 @@ export default {
     if (url.pathname === '/api/dfs') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      // The lane is on hold, so the API says so rather than serving a slate to
+      // a page that no longer exists. 200, not 404: the route is not gone, the
+      // product is paused, and a caller that reads `ok` handles this already.
+      if (!flagOn(env, 'DFS_CONTENT')) return json({ ok: false, contract: DFS_CONTRACT, error: 'on_hold',
+        note: 'The DFS lane is paused. The weekly fantasy boards still read every game line.' }, 200, { ...c, 'cache-control': 'no-store' });
       const site = DFS_SITES[url.searchParams.get('site')] ? url.searchParams.get('site') : 'dk';
       const sched = await scheduleCacheRead(env);
       const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
@@ -10838,6 +10859,11 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       if (request.method !== 'POST') return json({ ok: false, error: 'method', note: 'POST { site, csv } to price a salary file.' }, 405, c);
+      // The lane is on hold, so the API says so rather than serving a slate to
+      // a page that no longer exists. 200, not 404: the route is not gone, the
+      // product is paused, and a caller that reads `ok` handles this already.
+      if (!flagOn(env, 'DFS_CONTENT')) return json({ ok: false, contract: DFS_CONTRACT, error: 'on_hold',
+        note: 'The DFS lane is paused. The weekly fantasy boards still read every game line.' }, 200, { ...c, 'cache-control': 'no-store' });
       if (await rl(env, request, 'dfsup', 60, 600)) return json({ ok: false, error: 'too_many', note: 'That is a lot of files in ten minutes. Wait a moment and try again.' }, 429, c);
       // Measure the body before parsing it. The admin import can take the JSON
       // straight because a key gets you there; anyone at all gets here, and a
@@ -12330,6 +12356,14 @@ export default {
       // target, or the assets layer answers with a 307 back to this same path.
       else if (/^\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/player', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
+      // The DFS lane, closed on its own switch (DFS_PAGES above). This sits
+      // BEFORE the /in-season alias: that clause rewrites /in-season/dfs to
+      // /dfs, so a gate after it would only ever see the bare name and the
+      // prefixed URL would walk straight through. One clause covers both,
+      // because it strips the prefix itself.
+      else if (DFS_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && dfsClosed(env, url, request)) {
+        __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
+      }
       // /in-season/<page> is the section's canonical URL; the pages live at the
       // root because the chrome and SEO generators walk the root. Extensionless
       // target, as above. The gate below sees the SAME name, so a section page

@@ -91,7 +91,6 @@ const NAV = [
       { label: 'My Week', href: '/my-week' },
     ],
   },
-  { label: 'DFS', href: '/dfs' },
   // MARKET INTEL is the standing name for the betting-market lane. The pages
   // keep the names they were indexed under — Vegas Edge, Game Intel — because
   // renaming a URL to tidy a label costs inbound links and buys nothing. This
@@ -162,7 +161,6 @@ const FOOT_COLS = [
     h: 'In-Season', links: [
       { label: 'Overview', href: '/in-season' },
       { label: 'Fantasy', href: '/fantasy' },
-      { label: 'DFS', href: '/dfs' },
       { label: 'Rankings', href: '/rankings' },
       { label: 'Waivers & FAAB', href: '/waivers' },
       { label: 'My Leagues', href: '/my-league' },

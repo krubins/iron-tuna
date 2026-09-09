@@ -50,6 +50,13 @@ const hubLine = src.match(/const IN_SEASON_HUB = '([^']+)'/);
 if (!hubLine) { console.error('FAIL: could not locate IN_SEASON_HUB in _worker.js'); process.exit(1); }
 const inSeasonHub = hubLine[1];
 
+// The DFS lane closes on its own switch, on top of the post-draft gate, and its
+// page set is read out of the worker for the same reason as POST_DRAFT_PAGES:
+// a page added to the lane cannot be left silently reachable here.
+const dfsLine = src.match(/const DFS_PAGES = new Set\(\[([^\]]*)\]\)/);
+if (!dfsLine) { console.error('FAIL: could not locate DFS_PAGES in _worker.js'); process.exit(1); }
+const dfsPages = dfsLine[1].split(',').map(x => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+
 // The block builds `new Request(new URL(...).toString(), request)`. Only the URL is
 // read here, so a stub Request that keeps it is enough — and keeps this test honest
 // about evaluating the shipped source rather than a paraphrase of it.
@@ -69,6 +76,8 @@ const rewrite = new Function('pathname', 'opts', `
   const IN_SEASON_HUB = ${JSON.stringify(inSeasonHub)};
   function POST_DRAFT_OPEN() { return !!o.open; }
   function postDraftPreview() { return !!o.preview; }
+  const DFS_PAGES = new Set(${JSON.stringify([...dfsPages])});
+  function dfsClosed() { return !o.dfs && !o.preview; }
   ${block}
   return new URL(__assetReq.url).pathname;
 `);
@@ -199,14 +208,33 @@ console.log('\nthe post-draft section is closed by default');
     // Serving it, not redirecting to it: the reader keeps the URL they clicked,
     // so the page that opens there later is the one they were promised.
     ok(`${route} keeps its own URL while closed`, rewrite(route, {}) !== route ? closed.status === 200 : true);
+    // A page on the DFS lane needs BOTH switches: the section open and the lane
+    // not on hold. Opening the section must not reopen a lane that was paused
+    // for its own reasons.
+    const onDfsLane = dfsPages.includes(route);
     const open = assetResolve(rewrite(route, { open: true }));
     ok(`${route} serves its own page once POST_DRAFT_OPEN is set`,
-       open.status === 200 && open.file === route + '.html',
+       open.status === 200 && open.file === (onDfsLane ? inSeasonHub : route) + '.html',
        `${route} -> ${open.file || open.status}`);
+    if (onDfsLane) {
+      const both = assetResolve(rewrite(route, { open: true, dfs: true }));
+      ok(`${route} comes back when the DFS lane is switched on too`,
+         both.status === 200 && both.file === route + '.html',
+         `${route} -> ${both.file || both.status}`);
+    }
     const prev = assetResolve(rewrite(route, { preview: true }));
     ok(`${route} is reachable with the owner's preview key`,
        prev.status === 200 && prev.file === route + '.html',
        `${route} -> ${prev.file || prev.status}`);
+  }
+  // /in-season/<page> is rewritten to the bare name BEFORE the post-draft gate
+  // runs, so the DFS lane's gate has to sit ahead of that rewrite or the
+  // prefixed URL would be the way around it.
+  for (const route of dfsPages) {
+    const pref = assetResolve(rewrite('/in-season' + route, { open: true }));
+    ok(`/in-season${route} is closed with the lane, not a way around it`,
+       pref.status === 200 && pref.file === inSeasonHub + '.html',
+       `/in-season${route} -> ${pref.file || pref.status}`);
   }
   // The gate page itself must never be gated, or the section is a closed loop.
   const gate = assetResolve(rewrite(inSeasonHub, {}));

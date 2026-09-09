@@ -15,8 +15,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-<title>In-Season: Fantasy, DFS and the Betting Market, Every Week | Iron Tuna</title>
-<meta name="description" content="Two lanes under one hub. Fantasy rankings and FAAB prices at your league’s scoring, and DFS values read against market-implied points. Free, no signup.">
+<title>In-Season: Fantasy and the Betting Market, Every Week | Iron Tuna</title>
+<meta name="description" content="Fantasy rankings and FAAB prices at your league’s scoring, read against the betting market. Free, no signup.">
 <link rel="canonical" href="https://irontuna.com/in-season">
 <meta property="og:title" content="Iron Tuna In-Season: three prices on every player">
 <meta property="og:description" content="Your league, the daily-fantasy salary and the betting market each price the same player. Iron Tuna prints where they disagree.">
@@ -47,7 +47,6 @@ section{margin:0 0 var(--space-6)}
   <!--chrome:nav-->
     <nav class="nav" id="sitenav" aria-label="Main">
       <span class="nav-dd"><a href="/fantasy">Fantasy</a><span class="nav-dd-menu"><a href="/fantasy">This week</a><a href="/in-season" aria-current="page">In-Season hub</a><a href="/rankings">Rankings</a><a href="/weekly-intel">Weekly Intel</a><a href="/waivers">Waivers &amp; FAAB</a><a href="/trade-finder">Trade Finder</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
-      <a href="/dfs">DFS</a>
       <span class="nav-dd"><a href="/vegas-edge">Market Intel</a><span class="nav-dd-menu"><a href="/vegas-edge">Vegas Edge</a><a href="/game-intel">Game Intel</a><a href="/player-intel">Player Intel</a><a href="/what-they-arent-telling-you">The whole board</a></span></span>
       <span class="nav-dd"><a href="/in-season/desk">The Desk</a><span class="nav-dd-menu"><a href="/in-season/desk">The Desk</a><a href="/analysts">The Analysts</a><a href="/the-pick">The Pick</a><a href="/the-tell">The Tell</a><a href="/play-caller-premium">Play-Caller Premium</a></span></span>
       <span class="nav-dd"><a href="/fantasy-football-auction-values">Draft Tools</a><span class="nav-dd-menu"><a href="/fantasy-football-auction-values">Auction values</a><a href="/superflex-auction-values">Superflex &amp; 2QB</a><a href="/salary-cap-draft-tool">Salary cap &amp; keepers</a><a href="/guides">Strategy guides</a><a href="/auction-insights">Auction insights</a><a href="/snake-insights">Snake insights</a><a href="/insights-vault">Insight Vault</a></span></span>
@@ -117,21 +116,6 @@ section{margin:0 0 var(--space-6)}
       <a class="is-btn sec" href="/fantasy">Open Fantasy</a>
     </div>
 
-    <div class="is-lane">
-      <div class="is-lane-head"><h3>DFS</h3><span>Sheet 03</span></div>
-      <p>One slate, one set of lines, one cap. Every salary read against market-implied points, a lineup builder, game stacks and the TD board.</p>
-      <ul>
-        <li><a href="/dfs?site=dk">DraftKings</a></li>
-        <li><a href="/dfs?site=fd">FanDuel</a></li>
-        <li><a href="/dfs?site=pk">Pick&rsquo;em (Underdog / PrizePicks)</a> <span class="is-tag" style="margin:0">New</span></li>
-        <li><a href="/dfs?site=sl">Sleeper picks</a> <span class="is-tag" style="margin:0">New</span></li>
-        <li><a href="/dfs#values">Vegas Values</a></li>
-        <li><a href="/dfs#builder">Lineup Builder</a></li>
-        <li><a href="/dfs#stacks">Stacks</a></li>
-      </ul>
-      <a class="is-btn sec" href="/dfs">Open DFS</a>
-    </div>
-
   </div>
 </section>
 
@@ -144,7 +128,7 @@ section{margin:0 0 var(--space-6)}
       <h2 style="margin-top:0">Every board re-scores itself for your league</h2>
       <div class="its-strip-sync" id="isSync" hidden></div>
       <p id="isConnect" hidden><a class="is-btn primary" href="/my-league#connect">Sync my league</a> <span class="is-hint">Connect Sleeper or Yahoo and Iron Tuna imports your exact scoring, roster and free-agent pool.</span></p>
-      <p>Save your teams, roster slots and scoring once. Rankings, waiver prices, the DFS boards and the market comparisons all restate their numbers in your points instead of somebody else&rsquo;s. Free, no signup; it lives in this browser.</p>
+      <p>Save your teams, roster slots and scoring once. Rankings, waiver prices and the market comparisons all restate their numbers in your points instead of somebody else&rsquo;s. Free, no signup; it lives in this browser.</p>
       <p class="is-note" style="margin-top:0">Nothing here is sent to a server, and there is nothing to log into. Clear your browser data and it is gone &mdash; which is the trade for not asking you for an account.</p>
     </div>
     <div id="mlSlot"></div>
@@ -160,7 +144,6 @@ section{margin:0 0 var(--space-6)}
      <ul>
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
-      <li><a href="/dfs">DFS</a></li>
       <li><a href="/rankings">Rankings</a></li>
       <li><a href="/waivers">Waivers &amp; FAAB</a></li>
       <li><a href="/my-league">My Leagues</a></li>
@@ -233,10 +216,10 @@ section{margin:0 0 var(--space-6)}
 <script src="/it-inseason-ui.js" defer></script>
 <script>
 /* The hub's own sheet: one row per lane, each the single number that lane
- * exists to produce. Two feeds behind it — /api/vegas-edge for the market
- * disagreements and the game totals, /api/dfs for the slate — and three states,
- * because a row is either read from a board, waiting on one, or blank. It is
- * never a number from last week.
+ * exists to produce. One feed behind it — /api/vegas-edge for the market
+ * disagreements and the game totals — and three states, because a row is
+ * either read from a board, waiting on one, or blank. It is never a number
+ * from last week.
  */
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -268,8 +251,7 @@ section{margin:0 0 var(--space-6)}
     return row(no, lane, href, 'No reading this week', '—', why);
   }
 
-  function paint(edge, dfsRes) {
-    var dfs = dfsRes && dfsRes.ok ? dfsRes : null;
+  function paint(edge) {
     var rows = [], read = 0;
 
     // 01 · Fantasy — the player the market and the consensus disagree about most.
@@ -290,21 +272,6 @@ section{margin:0 0 var(--space-6)}
         'No game on this week carries a posted line yet, so there is nothing for the market and the consensus to disagree about.'));
     }
 
-    // 02 · DFS — the best price on the slate, once a slate exists.
-    var best = dfs ? ((dfs.boards && dfs.boards.bestVegasValues) || [])[0] : null;
-    if (best) {
-      read++;
-      rows.push(row('02', 'DFS', '/dfs', 'Best Vegas value · ' + best.name + ', ' + best.team,
-        'VVS ' + best.vegasValueScore,
-        '$' + Number(best.salary).toLocaleString('en-US') + ' on DraftKings for ' + n1(best.vegasPoints) + ' market-implied points.'));
-    } else {
-      rows.push(blank('02', 'DFS', '/dfs',
-        // NOT the API's own note here: it is written for the operator and
-        // says to import a CSV from /admin, which is not a sentence a reader
-        // should ever be shown. The lane page carries the operator wording.
-        'No DraftKings salaries are loaded for this week, so nothing on the slate has a price to read against yet.'));
-    }
-
     if (edge && edge.week) $('rdWeek').textContent = edge.week;
     if (!read) {
       $('rdState').textContent = 'No readings for this week yet. The sheet fills once the first line is posted; it never falls back to the calendar.';
@@ -318,8 +285,8 @@ section{margin:0 0 var(--space-6)}
   document.addEventListener('DOMContentLoaded', function () {
     if (window.ITInSeasonUI) ITInSeasonUI.leagueForm($('mlSlot'));
     if (window.ITSync) ITSync.load().then(function (st) { ITSync.strip($('isSync'), { week: true }); if (st && st.signedIn && !ITSync.active()) $('isConnect').hidden = false; });
-    Promise.all([get('/api/vegas-edge'), get('/api/dfs?site=dk')]).then(function (r) {
-      paint(r[0] && r[0].ok ? r[0] : null, r[1]);
+    get('/api/vegas-edge').then(function (r) {
+      paint(r && r.ok ? r : null);
     });
   });
 })();
