@@ -91,7 +91,11 @@ const NAV = [
       { label: 'My Week', href: '/my-week' },
     ],
   },
-  { label: 'DFS', href: '/dfs' },
+  // DFS IS NOT IN THE NAV. It was pulled from the header on 2026-09-09 to give
+  // the top bar back some room. The page still serves and is still linked from
+  // the footer's In-Season column and from the Fantasy menu's in-season hub, so
+  // nothing is orphaned — this is a nav decision, not a retirement. Do not put
+  // it back here without saying why in tools/test-chrome.mjs's MUST_NAV.
   // MARKET INTEL is the standing name for the betting-market lane. The pages
   // keep the names they were indexed under — Vegas Edge, Game Intel — because
   // renaming a URL to tidy a label costs inbound links and buys nothing. This

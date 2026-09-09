@@ -71,9 +71,14 @@ console.log('\nevery destination is reachable from every page');
   // a reader can reach it from every page. /wagers is NOT here: the lane is
   // retired and 301s to the hub, so a nav link to it would be a link to a
   // redirect.
+  // /dfs is deliberately NOT here. It came out of the header nav on 2026-09-09
+  // to give the top bar room; the page still serves and the footer's In-Season
+  // column still reaches it, which MUST_FOOT-style coverage below and
+  // test-content's link sweep both keep honest. Every other section is still
+  // required on every page.
   const MUST_NAV = ['/fantasy-football-auction-values', '/auction-insights',
     '/snake-insights', '/insights-vault', '/the-pick', '/guides',
-    '/in-season', '/fantasy', '/dfs', '/my-league', '/faq'];
+    '/in-season', '/fantasy', '/my-league', '/faq'];
   const MUST_FOOT = ['/privacy', '/terms', '/support', '/creators',
     '/play-caller-premium', '/the-tell', '/auction-insights', '/guides', '/the-pick'];
   const badNav = [], badFoot = [];

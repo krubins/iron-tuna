@@ -22,7 +22,10 @@
 //   - #2dd4a3 is about 1.9:1 on white. The light surface needs its own teal.
 //   - #f5b800 is a BUTTON FILL. As type on white it is barely there, so bare
 //     numerals and chip labels use --goldink instead while buttons keep it.
-//   - The wordmark is a light-on-dark metal gradient and disappears on white.
+//   - The wordmark has to match the ground it is drawn on. The BAND IS BLACK on
+//     every page as of 2026-09-09, so the wordmark is the silver gradient
+//     everywhere; the dark-metal one it used on the old white header now
+//     disappears. This flipped — read the assertion, do not assume.
 
 import fs from 'fs';
 import path from 'path';
@@ -54,11 +57,12 @@ for (const f of PAGES) {
   ok(`${f} keeps no dark-theme accent`,
      !/rgba\(45,\s*212,\s*163/.test(src) && !/rgba\(239,\s*91,\s*91/.test(src)
      && !/rgba\(11,\s*17,\s*23/.test(src), 'a dark-theme rgba survived');
-  ok(`${f} inverts the wordmark so it survives on white`,
-     !src.includes('stop-color="#dde8ee"'));
+  ok(`${f} draws the silver wordmark the black band needs`,
+     src.includes('stop-color="#dde8ee"'));
   // The sticky header is painted with a literal rgba, not a token, because it
-  // is translucent over scrolling content.
-  ok(`${f} paints its header light`, /header\.site\{[^}]*rgba\(255,\s*255,\s*255/.test(src));
+  // is translucent over scrolling content. It is the masthead black — the page
+  // under it is still white, which every other assertion here holds it to.
+  ok(`${f} paints its header the masthead black`, /header\.site\{[^}]*rgba\(11,\s*22,\s*20/.test(src));
 }
 
 console.log('\ngold is a fill, not an ink');
@@ -104,8 +108,13 @@ console.log('\nthe rest of the site reads as the same surface');
   ok('with gold defined as an ink as well as a fill', /--goldink:\s*#[0-9a-f]{6}/i.test(sroot));
   const darkLeft = content.filter((f) => /rgba\(45,\s*212,\s*163/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
   ok('no dark-theme accent survives anywhere', darkLeft.length === 0, darkLeft.slice(0, 5).join(', '));
-  const oldMark = content.filter((f) => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('stop-color="#dde8ee"'));
-  ok('and no page still draws the light-on-dark wordmark on white', oldMark.length === 0, oldMark.slice(0, 5).join(', '));
+  // The mark and its ground move together. Every page that draws a wordmark
+  // draws the silver one, because every page's header band is black; a page
+  // carrying the old dark-metal stops would have a wordmark invisible on it.
+  const marked = content.filter((f) => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('class="brand-logo"'));
+  const oldMark = marked.filter((f) => !fs.readFileSync(path.join(ROOT, f), 'utf8').includes('stop-color="#dde8ee"'));
+  ok('there are wordmarks to sweep', marked.length > 100, String(marked.length));
+  ok('and every one of them is the silver mark the black band needs', oldMark.length === 0, oldMark.slice(0, 5).join(', '));
 }
 
 console.log('\nthe front page is light chrome over a black masthead');

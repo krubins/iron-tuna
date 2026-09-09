@@ -37,6 +37,23 @@
   --sec: #39454f;
   --muted: #6b7a85;
 
+  /* ── the masthead band ────────────────────────────────────────────────────
+     The header is black on every page, the way the front page's masthead has
+     always been, so the site reads as one thing from the landing page inward.
+     These are the front page's own values (front.html's --mast and its
+     .mast-jump ink), lifted here so the two surfaces cannot drift apart.
+     --mast-ink is 11.4:1 on --mast and --mast-ink-2 is 7.2:1, both well clear
+     of AA. They are the ONLY light inks on this sheet: the page body under the
+     band is still white, and nothing below the header may reach for them. */
+  --mast: #0b1614;
+  --mast-ink: #cfd4da;
+  --mast-ink-2: #9aa3ac;
+  --mast-line: rgba(255, 255, 255, .12);
+  /* The white-safe teal is 2.6:1 on the band and cannot be read there, so the
+     band gets the brighter mint the front page and the app already use. It is
+     for the black band ONLY. */
+  --mast-accent: #2dd4a3;
+
   /* ── accents ──────────────────────────────────────────────────────────────
      #2dd4a3 is about 1.9:1 on white and cannot be the accent here; --teal is the
      white-safe green the whole site is drawn in.
@@ -125,28 +142,28 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
 /* ── header ─────────────────────────────────────────────────────────────── */
 header.site {
   position: sticky; top: 0; z-index: 30;
-  background: rgba(255, 255, 255, .92); backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--line);
+  background: rgba(11, 22, 20, .94); backdrop-filter: blur(8px);
+  border-bottom: 3px solid var(--brand);
 }
 header.site .wrap {
   max-width: 1080px; display: flex; align-items: center;
   justify-content: space-between; height: var(--header-h); gap: var(--space-4);
 }
-.brand { display: inline-flex; align-items: center; font-weight: 800; letter-spacing: .14em; font-size: var(--fs-md); color: var(--text); flex: 0 0 auto }
+.brand { display: inline-flex; align-items: center; font-weight: 800; letter-spacing: .14em; font-size: var(--fs-md); color: #fff; flex: 0 0 auto }
 .brand:hover { text-decoration: none }
-.brand b { color: var(--teal) }
+.brand b { color: var(--mast-accent) }
 .brand-logo { height: 30px; width: auto; display: block }
 header.site .brand-logo { height: 26px }
 
 .nav { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1) }
 .nav a {
-  color: var(--sec); font-size: var(--fs-2xs); letter-spacing: .06em;
+  color: var(--mast-ink); font-size: var(--fs-2xs); letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap;
   padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
 }
-.nav a:hover { color: var(--text); background: rgba(17, 24, 32, .05); text-decoration: none }
+.nav a:hover { color: #fff; background: rgba(255, 255, 255, .08); text-decoration: none }
 /* The page you are on, so the nav answers "where am I". */
-.nav a[aria-current="page"] { color: var(--teal); background: rgba(14, 124, 99, .10) }
+.nav a[aria-current="page"] { color: #fff; background: rgba(45, 212, 163, .16) }
 header.site > .wrap > a.cta {
   color: #231700; border: 1px solid var(--gold); border-radius: 9px; font-weight: 700;
   padding: var(--space-2) var(--space-3); background: var(--gold);
@@ -162,9 +179,9 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
   display: flex; flex-direction: column; visibility: hidden; opacity: 0;
   transition: opacity .12s ease, visibility 0s linear .3s;
   position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  background: var(--panel); border: 1px solid rgba(14, 124, 99, .4);
+  background: #12201d; border: 1px solid var(--mast-line);
   border-radius: var(--radius-md); padding: var(--space-2); z-index: 40; min-width: 180px;
-  box-shadow: 0 10px 26px rgba(17, 24, 32, .12), 0 0 16px rgba(14, 124, 99, .14);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .38), 0 0 16px rgba(45, 212, 163, .10);
 }
 /* Bridges the gap between trigger and menu so the pointer can cross it. */
 .nav-dd .nav-dd-menu::before { content: ""; position: absolute; top: -16px; left: -14px; right: -14px; height: 18px }
@@ -172,9 +189,9 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
 .nav-dd .nav-dd-menu a {
   display: block; margin: 0; padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm); text-transform: none; letter-spacing: .02em;
-  font-size: var(--fs-sm); color: var(--sec);
+  font-size: var(--fs-sm); color: var(--mast-ink);
 }
-.nav-dd .nav-dd-menu a:hover { background: rgba(14, 124, 99, .13); color: var(--text); text-decoration: none }
+.nav-dd .nav-dd-menu a:hover { background: rgba(255, 255, 255, .08); color: #fff; text-decoration: none }
 
 /* ── mobile disclosure nav ───────────────────────────────────────────────── */
 .nav-toggle { display: none }
@@ -204,11 +221,11 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
   .nav-toggle {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     min-height: 44px; min-width: 44px; padding: 0 var(--space-3);
-    background: transparent; border: 1px solid var(--line2); border-radius: var(--radius-sm);
-    color: var(--sec); font: inherit; font-size: var(--fs-2xs);
+    background: transparent; border: 1px solid rgba(255, 255, 255, .28); border-radius: var(--radius-sm);
+    color: var(--mast-ink); font: inherit; font-size: var(--fs-2xs);
     letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
   }
-  .nav-toggle:hover { color: var(--text); border-color: var(--teal) }
+  .nav-toggle:hover { color: #fff; border-color: var(--mast-accent) }
   .nav-toggle-bars { display: block; width: 16px; height: 10px; position: relative }
   .nav-toggle-bars::before, .nav-toggle-bars::after,
   .nav-toggle-bars span { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: currentColor; border-radius: 2px }
@@ -219,9 +236,9 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
   .nav {
     position: absolute; top: 100%; left: 0; right: 0;
     display: none; flex-direction: column; align-items: stretch; justify-content: flex-start;
-    background: var(--panel); border-bottom: 1px solid var(--line);
+    background: var(--mast); border-bottom: 3px solid var(--brand);
     padding: var(--space-2) var(--space-3) var(--space-4);
-    box-shadow: 0 18px 40px rgba(17, 24, 32, .12); max-height: calc(100vh - 52px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .38); max-height: calc(100vh - 52px);
     overflow-y: auto; gap: 0;
   }
   header.site { position: sticky }
@@ -299,6 +316,28 @@ footer.site a:hover { color: var(--text) }
   letter-spacing: .18em; text-transform: uppercase; color: var(--teal); margin: var(--space-6) 0 var(--space-2);
 }
 .is-lede { font-size: var(--fs-lg); color: var(--sec); margin: 0 0 var(--space-5); max-width: 720px; line-height: 1.5 }
+
+/* ── the section hero ───────────────────────────────────────────────────────
+   The rankings section used to open on white: black header, white ribbon,
+   white page, white table. Four surfaces of the same colour with nothing to
+   say where the furniture ended and the reading began.
+   So the page's own head — eyebrow, headline, lede — runs on the same black as
+   the header, closed by the brand rule, and the content starts underneath it.
+   It is the front page's move (masthead, then a coloured band, then white) on
+   a section page.
+   THIS IS THE ONLY BLACK BLOCK BELOW THE HEADER. It is full-bleed, so it must
+   be a direct child of <main> and NOT of a .wrap — the .wrap goes inside it.
+   The head block is scaffolded by tools/build-ranks.mjs; new section pages get
+   this shape from there. */
+.rk-hero {
+  background: var(--mast); border-bottom: 3px solid var(--brand);
+  padding: var(--space-5) 0 var(--space-6); margin-bottom: var(--space-6);
+}
+.rk-hero .is-eyebrow { color: var(--mast-accent); margin-top: 0 }
+.rk-hero h1 { color: #fff; margin-bottom: var(--space-3) }
+.rk-hero .is-lede { color: var(--mast-ink); margin-bottom: 0 }
+/* The season strip is a data row, not a headline: it stays on the white page
+   under the band, where its own light card styling still applies. */
 .is-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4) }
 .is-card {
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
