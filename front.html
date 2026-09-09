@@ -2324,16 +2324,23 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // one <g> so that a mark which never loads can hand its space back — the type
   // carries a `data-x0`, the x it would have used on a plate with no logo, and
   // the block closes up rather than leaving a hole where the mark should be.
+  var CLIP_N = 0;
   function clubSvg(t, x, y, size, type) {
+    // The disc, and the same circle again as a clip. Club marks are drawn for a
+    // white page and half of them are dark enough to vanish into a navy plate,
+    // so the disc gives every one of them the ground it was designed on and
+    // reads as a deliberate badge on the light plates. It is a fifth wider than
+    // the mark's own box, so a wide mark (the bolt, the flying elvis) sits
+    // inside it rather than breaking its edge — and the clip holds that even for
+    // a file that arrives with its own opaque square behind the art, which some
+    // of them do. Without it those square out of the badge and the plate looks
+    // like a mistake.
+    var cx = x + size / 2, cy = y + size / 2, r = size * 0.6, id = 'clubclip' + (++CLIP_N);
     return '<g class="club">' +
-      // Club marks are drawn for a white page: half of them are dark enough to
-      // vanish into a navy plate. The disc gives every one of them the ground it
-      // was designed on, and reads as a deliberate badge on the light plates.
-      // A fifth wider than the mark's own box, so a wide mark (the bolt, the
-      // flying elvis) sits inside the disc rather than breaking its edge.
-      '<circle class="club-d" cx="' + (x + size / 2) + '" cy="' + (y + size / 2) + '" r="' + (size * 0.6) + '" fill="#ffffff" opacity="0.94"/>' +
-      '<image href="' + logoUrl(t) + '" x="' + x + '" y="' + y + '" width="' + size + '" height="' + size +
-      '" preserveAspectRatio="xMidYMid meet"/>' + type + '</g>';
+      '<clipPath id="' + id + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"/></clipPath>' +
+      '<circle class="club-d" cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#ffffff" opacity="0.94"/>' +
+      '<image clip-path="url(#' + id + ')" href="' + logoUrl(t) + '" x="' + x + '" y="' + y +
+      '" width="' + size + '" height="' + size + '" preserveAspectRatio="xMidYMid meet"/>' + type + '</g>';
   }
   function closeUp(img) {
     var g = img.parentNode;
