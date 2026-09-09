@@ -678,6 +678,9 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   lead pool, so it never repeats the lead. *(If the rail ever looks stale, the cause is
   usually a new page added without re-running `build-front.mjs` — that is exactly how it
   got stuck showing July 22.)*
+- **In the regular season the rail is a different feed entirely** — the desk plus this
+  fortnight's reports, never the drop pages. See "Top Headlines in the regular season
+  (2026-09-09)" below.
 > **Routing note (merge of PR #39 and #40):** both branches fixed `?screen=cheat`
 > landing on the draft board. PR #40's fix sent phones to `'tiers'`, which was right
 > against the *old* mobile tab bar where `'tiers'` was the tab labelled "Cheat". PR #39
@@ -8484,3 +8487,61 @@ carries it, the desktop row is asserted not to be a scroll container, and every
 page in the section is checked against `POST_DRAFT_PAGES` and against
 `build-chrome.mjs`'s `IN_SEASON` set. `it-ranks.js` gets its own parse step and
 joins the control-byte scan.
+
+---
+
+## Top Headlines in the regular season (2026-09-09)
+
+**The report.** Ken: "The Top Headlines seem to have stopped as nothing is more
+recent than Sep. 6." It had stopped, and it was going to stay stopped.
+
+**Why.** The column has two feeds and both went quiet in the same week:
+
+| Feed | State on September 9 |
+|---|---|
+| `STORIES` — the drop-page library baked into `front.html` | last insight drop **2026-09-03**, and no more are coming: the draft season is over |
+| the desk, through `/api/lead-story` → `deskLeadPayload` | exactly **one** published piece (`tnf-preview`, Week 1), and the lead takes it, so `recent` was empty |
+
+`paintDeskRail` answered an empty desk by returning `false` and leaving whatever
+was already painted, which was the drop-page list. So a September 3 auction
+price sat under a heading that says Top Headlines, on the site's front door, in
+Week 1 — the same failure as the lead story in §68p, one column to the right.
+Camp reports had been taken out of the rail on 2026-09-05 (they were a second
+copy of a row the Training Camp desk already showed), which was right in the
+draft season and wrong the moment `html[data-season="in"]` hid that desk.
+
+**The rule now.** In the regular season the column is the desk plus any dated
+report inside `RAIL_FRESH_MS` (14 days), merged and sorted **strictly newest
+first**, and the draft-season drop pages are not eligible at all. Out of season
+nothing changed: the desk's retired stories, topped up by the drop-page library.
+
+- `railMerge(deskItems, reportItems, fallbackItems, inSeason)` in `front.html` is
+  pure and is the whole rule; `tools/test-lead-story.mjs` lifts it out of the
+  page and holds it (16 assertions).
+- `railReportItems(now)` is the in-season backfill, off the `REPORTS` array the
+  camp desk already carries, age-capped so it cannot become the next frozen feed.
+- An in-season column with nothing current in it is painted **empty** and the
+  box takes itself off the page (the lead goes full width). A Top Headlines box
+  holding six pre-season auction calls is worse than no box.
+- The heading only says "More from the desk" when every line under it is the
+  desk's; a mixed column says Top Headlines.
+- Two witnesses tell the page the season has turned: the lead payload's own
+  `category: 'desk'` (a piece **or** the `deskNextPayload` placeholder), and
+  `ITSeason`'s `phase === 'regular'` stamp, which calls `railSeasonPaint()` so a
+  failed `/api/lead-story` cannot strand a reader on last month's shelf.
+- `deskLeadPayload` now asks `newsroomFeedPayload` for **12** pieces, not 6: the
+  lead takes the first row, and six left the column one short of ever filling
+  from the desk alone.
+
+**What makes it keep moving.** The desk publishes on the calendar (16 kinds,
+several a day in season) and the front page re-looks every five minutes while a
+desk lead is up, so each new piece pushes the reports down and out. Nothing here
+needs `build-front.mjs` to be re-run; the drop-page library is now only the
+draft-season feed.
+
+**Watch this.** The pieces are what fill the column, so a desk that does not
+publish is now visible on the front page as a shorter column. On the day this
+was written three Week 1 rows sat `held` with `["The operation was aborted"]`
+and no body — a transport failure in the writer run, retried by `heldRetryable`,
+not a fact-check hold. If the column ever thins out, look at `content_pieces`
+first.

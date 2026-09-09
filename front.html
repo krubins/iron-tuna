@@ -2551,7 +2551,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // well exists to make visible. The card keeps the story and nothing else.
     var also = document.getElementById('leadAlso');
     also.innerHTML = '';
-    paintDeskRail(d.recent, desk ? 'More from the desk' : 'Recent insights');
+    paintDeskRail(d.recent, desk ? 'More from the desk' : 'Recent insights', desk);
     linkLead(s);
 
     // No dots and no arrows: there is one current story, and a control that
@@ -2813,6 +2813,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       if (!s || !band || !wk) return;
       if (s.phase === 'regular') band.setAttribute('data-season', 'in');
       if (s.phase === 'regular') document.documentElement.setAttribute('data-season', 'in');
+      if (s.phase === 'regular') railSeasonPaint();
       var w = s.week || {}, h = esc(s.phaseLabel || '');
       if (w.label) h += ' · <b>' + esc(w.label) + '</b>';
       if (w.status === 'active') h += ' · <span class="live">' + ((s.counts && s.counts.inProgress) ? s.counts.inProgress + ' live' : 'under way') + '</span>';
@@ -3109,11 +3110,14 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // Sorted strictly newest-first. Dates are ISO (YYYY-MM-DD) so a plain string
   // compare is a date compare.
   //
-  // Camp reports are deliberately NOT merged in any more. The Training Camp desk
-  // at the foot of the page lists every one of them, so a report here was always
-  // a second copy of a row already on the page — and because they are the most
-  // frequent drop, the newest two or three took the rail slots that the insight
-  // headlines this rail exists to surface should have had.
+  // Camp reports are deliberately NOT merged into this pool. The Training Camp
+  // desk at the foot of the page lists every one of them, so a report here was
+  // always a second copy of a row already on the page — and because they are the
+  // most frequent drop, the newest two or three took the rail slots that the
+  // insight headlines this rail exists to surface should have had. That is a
+  // DRAFT-SEASON rule: in the regular season the camp desk is hidden and the
+  // insight drops have stopped, and railReportItems() below brings this week's
+  // reports back into the column rather than let it freeze on the last drop.
   // Six slots, down from nine. The column is now spaced to the lead story's own
   // height (.fp-well .rail ul), so the number is a design decision rather than
   // "as many as fit": six headlines spread over a lead card land at a readable
@@ -3121,11 +3125,18 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // it. The seventh onward were never the reason anyone came to the page.
   var RAIL_MAX = 6;          // rail slots
   var RAIL_MIN_TOP_DAY = 3;  // never show the newest day as a lone headline
+  // How old a dated page may be and still stand in the column once the season
+  // is on. The draft-season library below ends with its last drop and no more
+  // are coming — the desk writes the news now — so without a cap this box goes
+  // on printing a September auction price at the top of the site's front door
+  // for the rest of the year. That is exactly how it froze at September 3.
+  var RAIL_FRESH_MS = 14 * 24 * 60 * 60 * 1000;
 
   var railPool = [];
   live.forEach(function(s){
     if (claimed[s.url]) return;                      // the lead already has it
-    railPool.push({ date: s.date, title: s.title, url: s.url, meta: s.pos + ' · ' + fmtShort(s.date) });
+    railPool.push({ date: s.date, title: s.title, url: s.url, meta: s.pos + ' · ' + fmtShort(s.date),
+                    at: Date.parse(s.date + 'T13:00:00Z') });
   });
   railPool.sort(function(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
 
@@ -3187,23 +3198,83 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       return {
         title: rr ? rr.text : o.title,
         url: o.url,
-        meta: (o.label || 'The Desk') + (when ? ' · ' + when : '')
+        meta: (o.label || 'The Desk') + (when ? ' · ' + when : ''),
+        desk: 1,
+        at: +o.createdAt || 0
       };
     });
   }
-  function paintDeskRail(recent, heading) {
-    var items = deskRailItems(recent);
-    if (!items.length) return false;
-    var seen = {};
-    items.forEach(function(it){ seen[it.url] = 1; });
-    (railFallback || []).forEach(function(it){
-      if (items.length >= RAIL_MAX || seen[it.url]) return;
-      items.push(it);
+  // ── the in-season backfill ────────────────────────────────────────────────
+  // Camp reports stay out of this column in the draft season: the desk at the
+  // foot of the page lists every one of them, and the insight drops are the
+  // news. In the regular season neither of those is true — that desk is hidden
+  // (html[data-season="in"] #camp) and the drops have stopped — so a report
+  // from this week IS the news, and it stands beside the newsroom's own pieces
+  // until the desk has published enough of them to fill the six slots itself.
+  function railReportItems(now) {
+    var out = [];
+    var src = (typeof REPORTS !== 'undefined' && REPORTS) ? REPORTS : [];
+    src.forEach(function(r){
+      var at = Date.parse(r.date + 'T13:00:00Z');
+      if (!isFinite(at) || now - at > RAIL_FRESH_MS) return;
+      out.push({ date: r.date, title: r.title, url: r.url, meta: 'Report · ' + fmtShort(r.date), at: at });
     });
+    return out;
+  }
+
+  // ── which six lines the column shows ──────────────────────────────────────
+  // Pure, and lifted out of the painter, so tools/test-lead-story.mjs can hold
+  // it to the one rule the box exists for: what is under "Top Headlines" is the
+  // newest thing the site has.
+  //
+  //   in season   the desk's published pieces and any report inside
+  //               RAIL_FRESH_MS, merged and sorted strictly newest first. The
+  //               draft-season drop pages are not eligible AT ALL. When there
+  //               is nothing current the column is empty and takes itself off
+  //               the page, which is the honest answer — a "Top Headlines" box
+  //               holding six auction calls from before the season started is
+  //               not.
+  //   out of it   unchanged: the desk's retired stories, topped up by the
+  //               drop-page library, which in the draft season IS the news.
+  function railMerge(deskItems, reportItems, fallbackItems, inSeason) {
+    var out = [], seen = {};
+    function take(list) {
+      (list || []).forEach(function(it){
+        if (!it || !it.url || seen[it.url] || out.length >= RAIL_MAX) return;
+        seen[it.url] = 1;
+        out.push(it);
+      });
+    }
+    if (!inSeason) { take(deskItems); take(fallbackItems); return out; }
+    take((deskItems || []).concat(reportItems || []).sort(function(a, b){ return (b.at || 0) - (a.at || 0); }));
+    return out;
+  }
+
+  function paintDeskRail(recent, heading, inSeason) {
+    var items = railMerge(deskRailItems(recent), railReportItems(Date.now()), railFallback, inSeason);
+    // Out of season an empty desk means the drop-page column already painted
+    // stays where it is. In season there is nothing behind it worth keeping,
+    // so the empty list is painted and the box leaves.
+    if (!items.length && !inSeason) return false;
     var head = document.getElementById('railHead');
-    if (head && heading) head.textContent = heading;
-    paintRail(items.slice(0, RAIL_MAX));
+    // "More from the desk" is a claim about every line beneath it. The moment a
+    // report stands in the column beside the desk's own pieces, the heading
+    // goes back to the one that covers both.
+    if (head) head.textContent =
+      (heading && items.length && items.every(function(it){ return it.desk; })) ? heading : 'Top Headlines';
+    paintRail(items);
     return true;
+  }
+
+  // The column is painted from the drop-page library before any fetch answers,
+  // and /api/lead-story is what normally tells this page the season has turned
+  // (a desk piece, or the desk's next slot as a placeholder). If that request
+  // fails, the season stamp is the other witness: re-run the column under the
+  // in-season rule so a reader is never left with last month's auction shelf
+  // because one endpoint was down.
+  function railSeasonPaint() {
+    if (genLead) return;                       // the desk has already answered
+    paintDeskRail(null, null, true);
   }
 
   // ── position modules ──
