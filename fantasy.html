@@ -38,6 +38,22 @@ h1{font-family:var(--font-display);font-weight:400;font-size:clamp(38px,6.4vw,68
 h2{font-size:clamp(21px,3vw,27px);margin:34px 0 10px;letter-spacing:.01em}
 p{color:var(--sec);margin:0 0 16px}
 section{margin:0 0 var(--space-6)}
+
+/* The masthead block. It was a 68px display headline sitting directly on a
+   paragraph, a note, a clock strip and then a table, all at the same 820px
+   measure and all the same distance apart -- so the page opened with five
+   objects of equal weight and no entry point. The lede is held to a reading
+   measure inside a wider page, and the clock strip is pushed down to sit with
+   the deck it dates rather than floating between the headline and the board. */
+.fn-top{max-width:760px}
+.fn-top .is-lede{margin-bottom:var(--space-3)}
+.fn-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:var(--space-3)}
+.fn-tool{display:block;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:var(--space-4) var(--space-5);color:var(--sec);transition:border-color .12s ease,box-shadow .12s ease}
+.fn-tool:hover{border-color:var(--teal);text-decoration:none;box-shadow:0 6px 18px rgba(15,23,25,.05)}
+.fn-tool b{display:block;color:var(--text);font-size:var(--fs-md);margin-bottom:4px}
+.fn-tool span{display:block;font-size:var(--fs-xs);line-height:1.55}
+.fn-side .is-card{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -59,17 +75,64 @@ section{margin:0 0 var(--space-6)}
     </button>
     <!--/chrome:nav-->
 </div></header>
-<main id="main" class="wrap">
-<p class="is-eyebrow">Sheet 02 &middot; Fantasy</p>
-<hr class="is-rule">
-<h1>Your league, re-scored<br>every week.</h1>
-<p class="is-lede">Rankings, start/sit, waiver prices and trades, each read from the market first and restated at your league&rsquo;s scoring.</p>
-<p class="is-note" id="fnScoring" style="margin-top:0">Scored at PPR until you save your league.</p>
+<main id="main">
+<div class="wrap wide">
+<div class="fn-top">
+  <p class="is-eyebrow">Sheet 02 &middot; Fantasy</p>
+  <hr class="is-rule">
+  <h1>Your league, re-scored<br>every week.</h1>
+  <p class="is-lede">Rankings, start/sit, waiver prices and trades, each read from the market first and restated at your league&rsquo;s scoring.</p>
+  <p class="is-note" id="fnScoring" style="margin-top:0">Scored at PPR until you save your league.</p>
+</div>
 <div class="its-strip" data-season-strip></div>
 <div class="its-strip-sync" id="fnSync" hidden></div>
 <div id="fnCta" hidden></div>
 
-<!-- ── this week's board ──────────────────────────────────────────────────── -->
+<!-- ── the deck ───────────────────────────────────────────────────────────────
+     What this page owed a reader in its first screen and did not give them: the
+     decisions their league has open right now, each one already carrying the
+     answer rather than a link to a place where an answer might be found. The
+     page used to open on a twelve-row ranking table, which is evidence, not a
+     decision, and it opened on it because the table was the only module that
+     had been built. The evidence is still here; it is under the decisions now.
+
+     Two of these four fill from the board that is already loaded, so they cost
+     no extra request. Both say so when the board cannot support a call. -->
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">01</span><h2>Do this now</h2><a class="is-sec-more" href="/weekly-intel">Every tool &rarr;</a></div>
+  <p>The four decisions open in a managed league this week. The first two are answered off this week&rsquo;s board; the other two need your rosters, which is one save away.</p></div>
+
+<div class="is-deck">
+  <a class="is-act" href="/weekly-intel#startsit">
+    <span class="is-act-k">Start / Sit</span>
+    <span class="is-act-h" id="actFlexH">Reading the board&hellip;</span>
+    <p id="actFlexP">The closest flex pair on this week&rsquo;s board that the betting market splits most widely.</p>
+    <span class="is-act-go">Set the lineup &rarr;</span>
+  </a>
+  <a class="is-act gold" href="/vegas-edge">
+    <span class="is-act-k">The market&rsquo;s biggest buy</span>
+    <span class="is-act-h" id="actBuyH">Reading the odds&hellip;</span>
+    <p id="actBuyP">Where a sportsbook with money on the line prices a startable player above the consensus ranking.</p>
+    <span class="is-act-go">The whole Vegas board &rarr;</span>
+  </a>
+  <a class="is-act" href="/faab">
+    <span class="is-act-k">Waivers</span>
+    <span class="is-act-h">What a claim is worth <em>in your dollars</em></span>
+    <p>Priced one rival at a time off each team&rsquo;s remaining budget and its actual hole at the position, never a national average.</p>
+    <span class="is-act-go">Open the FAAB Advisor &rarr;</span>
+  </a>
+  <a class="is-act flat" href="/trade-finder">
+    <span class="is-act-k">Trades</span>
+    <span class="is-act-h">The trades that improve <em>both</em> lineups</span>
+    <p>Paste the two rosters. Every combination is scored on each side&rsquo;s own horizon, so a trade worth proposing is one the other manager can also say yes to.</p>
+    <span class="is-act-go">Open the Trade Finder &rarr;</span>
+  </a>
+</div>
+
+<!-- ── this week's board ────────────────────────────────────────────────────
+     Chapter two, not chapter one. It is the evidence the deck above is drawn
+     from, and it reads better once a reader knows what it is for. -->
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">02</span><h2>This week&rsquo;s board</h2><a class="is-sec-more" href="/rankings">All four horizons &rarr;</a></div>
+  <p>Iron Tuna is the consensus projection blended toward the betting market. Where the two disagree by more than half a point, the row says which way and by how much.</p></div>
 <section id="board">
   <div class="is-plate">
     <div class="is-plate-head">
@@ -98,43 +161,53 @@ section{margin:0 0 var(--space-6)}
   </div>
 </section>
 
-<!-- ── the clock, the FAAB advisor, the flex call ─────────────────────────── -->
+<!-- ── the week's two calls, and the clock they run against ──────────────────
+     These four cards used to be one flat grid of equal boxes holding four
+     unrelated objects: a countdown, a three-row price table, a league summary
+     and an argument. Nothing in the grid said which of the four a reader was
+     supposed to act on, and the two that carry real analysis -- the flex call
+     and the bid -- were the same size as the clock.
+
+     The two calls are the column now. The clock and the league summary are the
+     rail beside them: context, dated, not decisions. -->
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">03</span><h2>The week&rsquo;s two calls</h2><a class="is-sec-more" href="/waivers">Why the price is the decision &rarr;</a></div>
+  <p>One lineup call the market disagrees with the rankings about, and one price. Both are stated as a choice, because that is the form the decision actually takes.</p></div>
 <section id="startsit">
-  <div class="is-grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+  <div class="is-split">
+    <div>
+      <div class="is-card feat">
+        <span class="is-tag">Start / Sit</span>
+        <h3>Flex call of the week</h3>
+        <p id="fnFlex">Reading the board&hellip;</p>
+        <p class="is-note" id="fnFlexNote"></p>
+      </div>
 
-    <div class="is-card">
-      <span class="is-tag is-live">The clock</span>
-      <h3 id="fnClockH">Waivers process Wednesday 3:00 AM ET</h3>
-      <p id="fnClockP">Claims lock after Monday night on most platforms. The going rate below reads your league&rsquo;s own settled bids where it can see them, never a national average.</p>
+      <div class="is-card feat" style="margin-top:var(--space-4)">
+        <span class="is-tag">FAAB Advisor</span>
+        <h3>What a claim is worth, in your dollars</h3>
+        <div class="is-stats" id="fbStats">
+          <div class="is-stat"><b id="fbGoing">&mdash;</b><span>Going rate</span></div>
+          <div class="is-stat"><b id="fbWorth">&mdash;</b><span>Worth to you</span></div>
+          <div class="is-stat key"><b id="fbBid">&mdash;</b><span>What to bid</span></div>
+        </div>
+        <p class="is-note" id="fbNote">These three numbers are computed one rival at a time, from each team&rsquo;s remaining budget and its actual hole at the position &mdash; so they need your league&rsquo;s rosters and its transaction log. Connect it once and they fill in here.</p>
+        <div class="is-btns"><a class="is-btn sec" href="/faab">Open the FAAB Advisor</a></div>
+      </div>
     </div>
 
-    <div class="is-card">
-      <span class="is-tag">FAAB Advisor</span>
-      <h3>What a claim is worth, in your dollars</h3>
-      <table class="is-table" style="margin-top:10px">
-        <tbody>
-          <tr><td>Going rate</td><td class="num" id="fbGoing">&mdash;</td></tr>
-          <tr><td>Worth to your roster</td><td class="num" id="fbWorth">&mdash;</td></tr>
-          <tr><td><b>What you should bid</b></td><td class="num"><span class="is-val" id="fbBid">&mdash;</span></td></tr>
-        </tbody>
-      </table>
-      <p class="is-note" id="fbNote">These three numbers are computed one rival at a time, from each team&rsquo;s remaining budget and its actual hole at the position &mdash; so they need your league&rsquo;s rosters and its transaction log. Connect it once and they fill in here.</p>
-      <div class="is-btns"><a class="is-btn sec" href="/faab">Open the FAAB Advisor</a></div>
-    </div>
-
-    <div class="is-card" id="fnWeekCard" hidden>
-      <span class="is-tag is-live">Your week</span>
-      <h3 id="fnWeekH">Best lineup, matchup and alerts</h3>
-      <p id="fnWeekP">Reading your league&hellip;</p>
-      <div class="is-btns"><a class="is-btn sec" href="/my-week">Open My Week</a></div>
-    </div>
-    <div class="is-card">
-      <span class="is-tag">Start / Sit</span>
-      <h3>Flex call of the week</h3>
-      <p id="fnFlex">Reading the board&hellip;</p>
-      <p class="is-note" id="fnFlexNote"></p>
-    </div>
-
+    <aside class="is-rail fn-side">
+      <div class="is-card">
+        <span class="is-tag is-live">The clock</span>
+        <h3 id="fnClockH">Waivers process Wednesday 3:00 AM ET</h3>
+        <p id="fnClockP">Claims lock after Monday night on most platforms. The going rate reads your league&rsquo;s own settled bids where it can see them, never a national average.</p>
+      </div>
+      <div class="is-card" id="fnWeekCard" hidden>
+        <span class="is-tag is-live">Your week</span>
+        <h3 id="fnWeekH">Best lineup, matchup and alerts</h3>
+        <p id="fnWeekP">Reading your league&hellip;</p>
+        <div class="is-btns"><a class="is-btn sec" href="/my-week">Open My Week</a></div>
+      </div>
+    </aside>
   </div>
 </section>
 
@@ -142,37 +215,54 @@ section{margin:0 0 var(--space-6)}
      The in-season desk's newest packages in the Weekly Fantasy lens, and the
      desk's one standing argument. Both read a route and hide themselves when it
      has nothing, like every module on this page. -->
-<section id="desk">
-  <div class="is-label"><p class="is-eyebrow">The newsroom</p></div>
-  <hr class="is-rule">
-  <p class="is-note" id="fnDeskNote">Eight AI analyst personas, one set of facts. Newest first. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p>
-  <div class="is-grid" id="fnDesk"></div>
-  <p class="is-empty" id="fnDeskEmpty">Reading the desk&hellip;</p>
-</section>
-<section id="disagree">
-  <div class="is-label"><p class="is-eyebrow">Vega vs. Brooks</p></div>
-  <hr class="is-rule">
-  <p class="is-note">Where <a href="/analysts/brooks">Fantasy Analysis</a> and <a href="/analysts/vega">Market Intelligence</a> rank a player apart this week. <a href="/rankings#blend=50">Slide between them on the rankings page &rarr;</a></p>
-  <div class="is-scroll" id="fnDisWrap" hidden><table class="is-table"><thead><tr><th>Player</th><th class="num">Brooks</th><th class="num">Vega</th><th>Market basis</th><th>Why</th></tr></thead><tbody id="fnDisBody"></tbody></table></div>
-  <p class="is-empty" id="fnDisEmpty">Reading the boards&hellip;</p>
-</section>
+</div>
+
+<!-- ── the reading half ───────────────────────────────────────────────────────
+     Everything above is a tool; everything in this band is writing. They were
+     the same white ground and the same card, one after another, so the page had
+     no seam between "decide something" and "read something". The band is the
+     seam. -->
+<div class="is-band">
+<div class="wrap wide">
+  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">04</span><h2>The Newsroom</h2><a class="is-sec-more" href="/in-season/desk">The whole desk &rarr;</a></div>
+    <p id="fnDeskNote">Eight AI analyst personas, one set of facts, newest first. <a href="/analysts">Who they are, and the AI disclosure &rarr;</a></p></div>
+  <section id="desk">
+    <div class="is-grid" id="fnDesk"></div>
+    <p class="is-empty" id="fnDeskEmpty">Reading the desk&hellip;</p>
+  </section>
+
+  <div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">05</span><h2>Vega vs. Brooks</h2><a class="is-sec-more" href="/rankings#blend=50">Slide between them &rarr;</a></div>
+    <p>Where <a href="/analysts/brooks">Fantasy Analysis</a> and <a href="/analysts/vega">Market Intelligence</a> rank the same player apart this week, and what the market is reading that the ranking is not.</p></div>
+  <section id="disagree">
+    <div class="is-plate">
+      <div class="is-scroll" id="fnDisWrap" hidden><table class="is-table"><thead><tr><th>Player</th><th class="num">Brooks</th><th class="num">Vega</th><th>Market basis</th><th>Why</th></tr></thead><tbody id="fnDisBody"></tbody></table></div>
+      <p class="is-plate-state is-empty" id="fnDisEmpty">Reading the boards&hellip;</p>
+    </div>
+  </section>
+</div>
+</div>
+
+<div class="wrap wide">
 
 <!-- ── the tools ──────────────────────────────────────────────────────────── -->
+<!-- Nine cards at card weight read as nine things of equal importance, which
+     is wrong: four of them are already the deck at the top of the page. This is
+     a shelf, at shelf weight. -->
+<div class="is-sec"><div class="is-sec-top"><span class="is-sec-n">06</span><h2>Everything else in the lane</h2><a class="is-sec-more" href="/in-season">In-season overview &rarr;</a></div></div>
 <section id="tools">
-  <div class="is-label"><p class="is-eyebrow">The tools</p></div>
-  <hr class="is-rule">
-  <div class="is-grid">
-    <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>This week, the next three, rest of season and the playoffs. Iron Tuna, consensus and Vegas side by side.</p></div>
-    <div class="is-card"><h3><a href="/weekly-intel#startsit">Start / Sit</a></h3><p>Your lineup at your settings, with the week&rsquo;s scoring environment priced off the market.</p></div>
-    <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>Why the price is the whole decision in a FAAB league, and what the <a href="/faab">FAAB Advisor</a> does about it.</p></div>
-    <div class="is-card"><h3><a href="/trade-finder">Trade Finder</a></h3><p>Paste the rosters; get the trades that improve both lineups on their own horizons.</p></div>
-    <div class="is-card"><h3><a href="/my-league">Roster Audit</a></h3><p>What each player cost you against what he has returned.</p></div>
-    <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week, the byes, the slate, and every tool in one place.</p></div>
-    <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game with its line, total and the points each offence is implied to score.</p></div>
-    <div class="is-card"><h3><a href="/in-season/desk">The Desk</a></h3><p>Eleven pieces a week, each published when its games are final.</p></div>
-    <div class="is-card"><h3><a href="/player-intel">Player Intel</a></h3><p>Every horizon, prop movement, TD probability and usage for any player.</p></div>
+  <div class="fn-tools">
+    <a class="fn-tool" href="/rankings"><b>Rankings</b><span>This week, the next three, rest of season and the playoffs &mdash; Iron Tuna, consensus and Vegas side by side.</span></a>
+    <a class="fn-tool" href="/weekly-intel#startsit"><b>Start / Sit</b><span>Your lineup at your settings, with the week&rsquo;s scoring environment priced off the market.</span></a>
+    <a class="fn-tool" href="/waivers"><b>Waivers</b><span>Why the price is the whole decision in a FAAB league.</span></a>
+    <a class="fn-tool" href="/trade-finder"><b>Trade Finder</b><span>Paste the rosters; get the trades that improve both lineups on their own horizons.</span></a>
+    <a class="fn-tool" href="/my-league"><b>Roster Audit</b><span>What each player cost you against what he has returned.</span></a>
+    <a class="fn-tool" href="/weekly-intel"><b>Weekly Intel</b><span>The week, the byes, the slate, and every tool in one place.</span></a>
+    <a class="fn-tool" href="/game-intel"><b>Game Intel</b><span>Every game with its line, total and the points each offence is implied to score.</span></a>
+    <a class="fn-tool" href="/in-season/desk"><b>The Desk</b><span>Eleven pieces a week, each published when its games are final.</span></a>
+    <a class="fn-tool" href="/player-intel"><b>Player Intel</b><span>Every horizon, prop movement, TD probability and usage for any player.</span></a>
   </div>
 </section>
+</div>
 </main>
 <footer class="site"><div class="wrap">
   <!--chrome:foot-->
@@ -320,6 +410,7 @@ section{margin:0 0 var(--space-6)}
     $('fnWrap').hidden = false;
     $('fnState').hidden = true;
     flexCall();
+    biggestBuy();
   }
 
   // The flex call: the biggest gap between two comparable flex options, stated
@@ -348,6 +439,8 @@ section{margin:0 0 var(--space-6)}
     if (!best || Math.abs(best.split) < 1) {
       $('fnFlex').textContent = 'No two flex options are close enough on projection and far enough apart in the market for there to be a call this week.';
       $('fnFlexNote').textContent = '';
+      $('actFlexH').textContent = 'No flex call this week';
+      $('actFlexP').textContent = 'No two flex options are close enough on projection and far enough apart in the market to be a real choice. Blank rather than invented.';
       return;
     }
     var sc = window.ITInSeason ? ITInSeason.scoring() : 'PPR';
@@ -364,6 +457,40 @@ section{margin:0 0 var(--space-6)}
       (up.vegas && up.vegas.basis && up.vegas.basis.indexOf('props') === 0
         ? 'quoted from a book.'
         : 'derived from the game lines, which is a weaker claim than a posted prop.');
+    // The same call, stated in three words at the top of the page. The deck
+    // card and this card are one computation, so they cannot disagree.
+    $('actFlexH').innerHTML = e(up.name) + ' <em>over</em> ' + e(dn.name);
+    $('actFlexP').textContent = n1(up.ironTuna.points) + ' to ' + n1(dn.ironTuna.points) + ' projected at ' + sc
+      + ' \u2014 close enough to be a real choice \u2014 and the market splits them by ' + n1(best.split) + ' points.';
+  }
+
+  // The deck's second card: the startable player the betting market prices
+  // furthest ABOVE the consensus ranking. Startable is deliberately strict —
+  // a market disagreement about a WR60 is not a decision anybody has to make.
+  var STARTABLE = { QB: 14, RB: 30, WR: 40, TE: 12 };
+  function biggestBuy() {
+    if (!data) return;
+    var byPos = {};
+    (data.players || []).forEach(function (p) {
+      if (!STARTABLE[p.position] || !p.ironTuna || p.ironTuna.points == null) return;
+      (byPos[p.position] = byPos[p.position] || []).push(p);
+    });
+    var pool = [];
+    Object.keys(byPos).forEach(function (k) {
+      byPos[k].sort(function (a, b) { return b.ironTuna.points - a.ironTuna.points; })
+        .slice(0, STARTABLE[k]).forEach(function (p) { if (p.marketDelta && p.marketDelta.points != null) pool.push(p); });
+    });
+    pool.sort(function (a, b) { return b.marketDelta.points - a.marketDelta.points; });
+    var top = pool[0];
+    if (!top || top.marketDelta.points < 0.5) {
+      $('actBuyH').textContent = 'The market agrees this week';
+      $('actBuyP').textContent = 'No startable player is priced more than half a point above the consensus. That is a real reading, not a missing one.';
+      return;
+    }
+    var quoted = top.vegas && top.vegas.basis && top.vegas.basis.indexOf('props') === 0;
+    $('actBuyH').innerHTML = e(top.name) + ' <em>+' + n1(top.marketDelta.points) + '</em>';
+    $('actBuyP').textContent = top.position + ' \u00b7 ' + top.team + ' \u2014 the book has him ' + n1(top.marketDelta.points)
+      + ' points above the consensus projection, ' + (quoted ? 'off a posted player prop.' : 'derived from the game line, which is a weaker claim than a posted prop.');
   }
 
   function scoringNote() {

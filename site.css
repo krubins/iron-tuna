@@ -444,3 +444,149 @@ footer.site a:hover { color: var(--text) }
   .is-plate-head > span:not(:first-child) { border-left: 0; border-top: 1px solid var(--line) }
   .is-plate-head > :first-child { flex-basis: 100% }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE LAYOUT LAYER
+   ══════════════════════════════════════════════════════════════════════════
+   Everything above this line is a component. What the site did not have was a
+   way to COMPOSE components, and that is what made the pages read as a wall:
+   every section on every in-season page was an <h2>, a paragraph and a grid of
+   identical grey rectangles, at one width, on one surface, in one weight. Ten
+   of those in a column is not ten sections, it is one long section a reader
+   cannot navigate.
+
+   What is added here is four things and no new colours:
+
+     1. A WIDTH for boards. .wrap is 820px, which is a reading measure and the
+        right one for prose. A nine-column salary table squeezed into it scrolls
+        sideways on a desktop monitor, which is why the tool pages looked
+        cramped. .wrap.wide is 1200px and is opted into per page.
+     2. A CHAPTER HEAD, so sections have a rank instead of all being h2.
+     3. TWO SURFACES beyond white — a tinted band and a dark board — so the
+        page has a rhythm and the primary answer can be the darkest thing on it.
+     4. NUMBERS AS TYPE. The display face at 34-44px, tabular, is the site's
+        strongest visual asset and it was being used for one thing.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.wrap.wide { max-width: 1200px }
+
+/* ── the chapter head ───────────────────────────────────────────────────────
+   Eyebrow, title, and the link out of the section, on one baseline with a rule
+   under it. The rule is the ink colour and carries a short accent tick, so a
+   section boundary is visible at a glance from across the page rather than
+   being inferred from the size of a heading. */
+.is-sec { margin: var(--space-7) 0 var(--space-5); position: relative; border-bottom: 2px solid var(--text); padding-bottom: var(--space-3) }
+.is-sec::after { content: ""; position: absolute; left: 0; bottom: -2px; width: 56px; height: 2px; background: var(--teal) }
+.is-sec-top { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap }
+.is-sec h2, .is-sec .is-sec-h {
+  font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 3.4vw, 34px);
+  letter-spacing: .045em; line-height: 1; margin: 0; text-transform: uppercase; color: var(--text);
+}
+.is-sec .is-sec-n {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .18em;
+  color: var(--teal); text-transform: uppercase;
+}
+.is-sec .is-sec-more {
+  margin-left: auto; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--teal); white-space: nowrap;
+}
+.is-sec p { margin: var(--space-3) 0 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.6; max-width: 78ch }
+
+/* ── surfaces ───────────────────────────────────────────────────────────────
+   A tinted band breaks the column without a new colour: it is --panel edge to
+   edge with hairlines top and bottom, and the cards inside it flip to white so
+   the contrast between card and ground survives the change of ground. */
+.is-band { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: var(--space-6) 0 var(--space-7); margin: var(--space-7) 0 }
+.is-band > .wrap > .is-sec:first-child { margin-top: 0 }
+.is-band .is-card { background: var(--bg) }
+
+/* The dark board. One per page at most: the answer the page exists to give.
+   It is the only inverted surface in the light system, which is exactly why it
+   works as a focal point -- and its own tokens are restated locally so nothing
+   inside it has to know it is on a dark ground. */
+.is-board {
+  --board-line: rgba(255, 255, 255, .13);
+  background: #0f1719; color: #eaf1f0; border-radius: var(--radius-lg);
+  border: 1px solid #0f1719; overflow: hidden; margin: var(--space-5) 0;
+  box-shadow: 0 18px 44px rgba(15, 23, 25, .16);
+}
+.is-board a { color: #46d6ac }
+.is-board .is-board-head {
+  display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: baseline;
+  justify-content: space-between; padding: var(--space-4) var(--space-5) 0;
+}
+.is-board .is-board-head h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 27px; letter-spacing: .04em; text-transform: uppercase; line-height: 1 }
+.is-board .is-board-head .is-board-sub { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: .1em; text-transform: uppercase; color: #8fa3a0 }
+.is-board table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm) }
+.is-board th, .is-board td { padding: 10px var(--space-3); border-bottom: 1px solid var(--board-line); text-align: left }
+.is-board th:first-child, .is-board td:first-child { padding-left: var(--space-5) }
+.is-board th:last-child, .is-board td:last-child { padding-right: var(--space-5) }
+.is-board th { font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .1em; color: #8fa3a0; font-weight: 700 }
+.is-board td.num, .is-board th.num { text-align: right; font-variant-numeric: tabular-nums }
+.is-board tbody tr:last-child td { border-bottom: 0 }
+.is-board b { color: #fff }
+.is-board .is-status { color: #8fa3a0 }
+.is-board-foot { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; padding: var(--space-4) var(--space-5); border-top: 1px solid var(--board-line) }
+
+/* ── numbers as type ────────────────────────────────────────────────────────
+   A row of figures in the display face. This is the component the site was
+   missing most: a page whose whole claim is "here is the number" had no way to
+   print a number larger than its body text. */
+.is-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: var(--space-4); margin: var(--space-4) 0 }
+.is-stat b {
+  display: block; font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(30px, 4.2vw, 42px); line-height: .95; letter-spacing: .02em;
+  font-variant-numeric: tabular-nums; color: var(--text);
+}
+.is-stat.key b { color: var(--teal) }
+.is-stat span { display: block; margin-top: 5px; font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
+.is-board .is-stats { padding: var(--space-4) var(--space-5) 0; margin: 0 }
+.is-board .is-stat b { color: #fff }
+.is-board .is-stat.key b { color: #46d6ac }
+.is-board .is-stat span { color: #8fa3a0 }
+
+/* A cap / budget meter. Two elements, no library. */
+.is-meter { height: 7px; border-radius: 5px; background: var(--elev); overflow: hidden }
+.is-meter i { display: block; height: 100%; background: var(--teal); border-radius: 5px }
+.is-meter.tight i { background: var(--gold) }
+.is-board .is-meter { background: rgba(255, 255, 255, .12) }
+.is-board .is-meter i { background: #46d6ac }
+
+/* ── the action deck ────────────────────────────────────────────────────────
+   The thing an in-season page owes a reader in the first screen: the decisions
+   that are open right now, each one already carrying its answer, each one a
+   link into the tool that finishes it. It is deliberately NOT .is-card -- a
+   navigation tile and a decision are different objects and looked identical
+   before, which is most of why the pages read as undifferentiated. */
+.is-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: var(--space-4); margin: var(--space-5) 0 }
+.is-act {
+  display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--line2); border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5) var(--space-4) calc(var(--space-5) + 4px);
+  color: var(--sec); text-decoration: none;
+}
+.is-act::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--teal) }
+.is-act.gold::before { background: var(--gold) }
+.is-act.flat::before { background: var(--line2) }
+.is-act:hover { border-color: var(--teal); text-decoration: none; transform: translateY(-1px) }
+.is-act:hover .is-act-go { text-decoration: underline }
+.is-act-k { font-family: var(--font-mono); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted) }
+.is-act-h { font-size: var(--fs-lg); line-height: 1.2; font-weight: 700; color: var(--text); letter-spacing: -.01em }
+.is-act-h em { font-style: normal; color: var(--teal) }
+.is-act p { margin: 0; font-size: var(--fs-xs); color: var(--sec); line-height: 1.55 }
+.is-act-go { margin-top: auto; padding-top: var(--space-2); font-size: var(--fs-2xs); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal) }
+@media (prefers-reduced-motion: reduce) { .is-act:hover { transform: none } }
+
+/* Cards get a hairline lift on hover so a grid of them reads as a set of
+   things you can open rather than a set of boxes. */
+.is-card { transition: border-color .12s ease, box-shadow .12s ease }
+.is-card:hover { border-color: var(--line2); box-shadow: 0 6px 18px rgba(15, 23, 25, .05) }
+.is-card.feat { border-left: 3px solid var(--teal) }
+
+/* ── a two-column page body ────────────────────────────────────────────────
+   Main and a rail. Collapses to one column early, because a 300px rail beside
+   a table is worse than a rail under it. */
+.is-split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-6); align-items: start }
+@media (max-width: 980px) { .is-split { grid-template-columns: minmax(0, 1fr) } }
+.is-rail { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: var(--space-4) }
+@media (max-width: 980px) { .is-rail { position: static } }
