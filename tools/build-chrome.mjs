@@ -145,10 +145,21 @@ const NAV = [
 // tools/test-chrome.mjs reads this set out of this file rather than copying it,
 // so adding a page here is one edit, not two.
 const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
+//
+// The rankings section — the ribbon's five destinations and the fourteen
+// per-position pages under its two menus — is in-season by definition, so every
+// one of them is listed here. tools/build-ranks.mjs generates the pages; this
+// set is what gives them the season's call to action rather than the draft one.
 const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html', 'my-week.html',
   'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
   'post-draft.html', 'analysts.html', 'analyst.html',
+  'stats.html', 'hidden-value.html', 'previews.html',
+  'weekly-rankings.html', 'weekly-qb-rankings.html', 'weekly-rb-rankings.html', 'weekly-wr-rankings.html',
+  'weekly-te-rankings.html', 'weekly-flex-rankings.html', 'weekly-k-rankings.html', 'weekly-dst-rankings.html',
+  'season-long-rankings.html', 'season-long-qb-rankings.html', 'season-long-rb-rankings.html',
+  'season-long-wr-rankings.html', 'season-long-te-rankings.html', 'season-long-flex-rankings.html',
+  'season-long-k-rankings.html', 'season-long-dst-rankings.html',
   'faq.html', 'support.html', 'terms.html', 'privacy.html', 'data.html', 'creators.html',
   'the-pick.html']);
 
@@ -164,6 +175,12 @@ const FOOT_COLS = [
       { label: 'Fantasy', href: '/fantasy' },
       { label: 'DFS', href: '/dfs' },
       { label: 'Rankings', href: '/rankings' },
+      // The section ribbon's own destinations. The ribbon itself is only on the
+      // front page and the rankings section, so the footer is how every OTHER
+      // page on the site reaches them.
+      { label: 'This week’s rankings', href: '/weekly-rankings' },
+      { label: 'Season long rankings', href: '/season-long-rankings' },
+      { label: 'Stats', href: '/stats' },
       { label: 'Waivers & FAAB', href: '/waivers' },
       { label: 'My Leagues', href: '/my-league' },
       { label: 'My Week', href: '/my-week' },
@@ -172,6 +189,8 @@ const FOOT_COLS = [
   {
     h: 'Market Intel', links: [
       { label: 'Vegas Edge', href: '/vegas-edge' },
+      { label: 'Hidden Value', href: '/hidden-value' },
+      { label: 'Previews', href: '/previews' },
       { label: 'Game Intel', href: '/game-intel' },
       { label: 'Player Intel', href: '/player-intel' },
       { label: 'The whole board', href: '/what-they-arent-telling-you' },

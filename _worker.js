@@ -63,9 +63,30 @@ async function rl(env, request, bucket, max, ttlSec) {
 // the browser either way. tools/test-asset-routing.mjs and tools/test-seo.mjs
 // both read this set, so a page added to the section cannot be left ungated or
 // advertised in the sitemap while the gate is shut.
+// The section ribbon's five destinations are gated with the rest of the
+// section, and so is every per-position rankings page under the two rankings
+// menus. They are listed rather than matched by prefix because this set is also
+// what tools/test-seo.mjs reads to decide which pages must stay out of the
+// sitemap while the gate is shut: a page the worker serves the gate's BODY at
+// must not also be advertised as a URL of its own, or the crawler is handed the
+// same body under twenty addresses. tools/build-ranks.mjs generates the pages
+// from the same position list, so adding a position is one edit there and one
+// here.
+//
+// EVERY ENTRY IS A LITERAL STRING. tools/test-seo.mjs and
+// tools/test-asset-routing.mjs both read this set by lifting the text between
+// the brackets out of this file and splitting it on commas, so a computed entry
+// (a .map(), a spread) would parse as one nonsense route and leave the real
+// ones unlisted — which is a page silently ungated and advertised in the
+// sitemap while the gate is shut. Spell them out.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy']);
+  '/fantasy', '/stats', '/hidden-value', '/previews',
+  '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
+  '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
+  '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
+  '/season-long-wr-rankings', '/season-long-te-rankings', '/season-long-flex-rankings',
+  '/season-long-k-rankings', '/season-long-dst-rankings']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -4407,9 +4428,16 @@ async function runUsageRefresh(env, season) {
     if (r.week > maxWeek) maxWeek = r.week;
     const k = key(r.name, r.position);
     const rec = players[k] || (players[k] = { name: r.name, position: r.position, team: r.team,
-      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, tds: 0, points: 0 } });
+      latest: null, season: { games: 0, targets: 0, carries: 0, receptions: 0, airYards: 0, tds: 0, points: 0, stats: {} } });
     rec.team = r.team;
     rec.season.games++;
+    // The RAW season stat line, accumulated week by week. Points are not stored
+    // with it on purpose: a season total is only worth something at a stated
+    // scoring, and this cache is built once for every reader. /api/stats scores
+    // this line at the preset the reader asked for. A cache written before this
+    // field existed simply has no `stats`, and every consumer treats that as
+    // "no season line yet" rather than as zeroes.
+    _addStats(rec.season.stats || (rec.season.stats = {}), r.stats);
     rec.season.targets += r.usage.targets || 0;
     rec.season.carries += r.usage.carries || 0;
     rec.season.receptions += r.usage.receptions || 0;
@@ -4643,6 +4671,76 @@ async function rankingsPayload(env) {
   };
   _RANK_CACHE = out; _RANK_AT = Date.now();
   return out;
+}
+
+// -- what has actually happened ---------------------------------------------
+// PRODUCTION, NOT PROJECTION. Every other board on this site is a forecast;
+// this one is the season that has been played, read straight off the usage
+// overlay (nflverse weekly stats and snap counts) and scored at the reader's
+// setting. Nothing here is modelled, blended or shrunk, and no odds touch it.
+//
+// Two lines per player: the SEASON line, accumulated week by week in
+// runUsageRefresh, and the LATEST week, kept whole so a page can print the game
+// that just happened beside the season it belongs to. Points are computed here
+// rather than stored, because a season total is only worth something at a
+// stated scoring and one cache serves every reader.
+//
+// A cache written before season.stats existed has no season line. That is
+// returned as null and prints as a dash — never as zero, which would read as a
+// player who did nothing rather than as a number nobody has.
+async function statsPayload(env, opts) {
+  const o = opts || {};
+  const preset = SCORING_PRESETS[o.preset] ? o.preset : 'ppr';
+  const rules = scoringRules(preset, null);
+  const usage = await usageCacheRead(env);
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  if (!usage || !usage.players) {
+    return { ok: false, error: 'no_usage', note: 'No weekly stats have been published yet this season.',
+             season: sched ? sched.season : null, week: state.ok ? state.week.label : null };
+  }
+  const wantPos = o.position ? String(o.position).toUpperCase() : null;
+  const posMatch = p => !wantPos || wantPos === 'ALL' || p === wantPos ||
+    (wantPos === 'FLEX' && (p === 'RB' || p === 'WR' || p === 'TE')) || (wantPos === 'DST' && p === 'DEF');
+  const players = [];
+  for (const [key, u] of Object.entries(usage.players)) {
+    if (!u || !u.position || !posMatch(u.position)) continue;
+    const sea = u.season || null;
+    const seaStats = sea && sea.stats && Object.keys(sea.stats).length ? sea.stats : null;
+    const games = sea ? sea.games || 0 : 0;
+    const seasonPts = seaStats ? _oddsRound(scoreStats(seaStats, u.position, rules)) : null;
+    const last = u.latest || null;
+    const lastPts = last && last.stats ? _oddsRound(scoreStats(last.stats, u.position, rules)) : null;
+    players.push({
+      key, name: u.name, position: u.position === 'DEF' ? 'DST' : u.position, team: teamKey(u.team),
+      games,
+      season: sea ? { games, targets: sea.targets || 0, carries: sea.carries || 0, receptions: sea.receptions || 0,
+                      airYards: _oddsRound(sea.airYards || 0), tds: sea.tds || 0,
+                      stats: seaStats ? _roundStats(seaStats) : null,
+                      points: seasonPts, ppg: seasonPts != null && games ? _oddsRound(seasonPts / games) : null } : null,
+      latest: last ? { week: last.week, opponent: last.opponent, stats: _roundStats(last.stats || {}),
+                       usage: last.usage || {}, points: lastPts } : null
+    });
+  }
+  // Rank within position on season points, and across RB/WR/TE for FLEX. A
+  // player with no season line is unranked rather than last.
+  const groups = {};
+  for (const r of players) if (r.season && r.season.points != null) (groups[r.position] = groups[r.position] || []).push(r);
+  for (const g of Object.values(groups)) g.sort((a, b) => b.season.points - a.season.points || (a.name < b.name ? -1 : 1)).forEach((r, i) => { r.rank = i + 1; });
+  players.filter(r => /^(RB|WR|TE)$/.test(r.position) && r.season && r.season.points != null)
+    .sort((a, b) => b.season.points - a.season.points || (a.name < b.name ? -1 : 1)).forEach((r, i) => { r.flexRank = i + 1; });
+  players.sort((a, b) => (b.season && b.season.points != null ? b.season.points : -1) - (a.season && a.season.points != null ? a.season.points : -1) || (a.name < b.name ? -1 : 1));
+  const limit = Math.max(1, Math.min(600, parseInt(o.limit, 10) || 300));
+  return {
+    ok: players.length > 0, source: 'nflverse weekly stats and snap counts',
+    season: usage.season || (sched ? sched.season : null),
+    throughWeek: usage.throughWeek || null,
+    currentWeek: state.ok && state.week.type === 'REG' ? state.week.number : null,
+    week: state.ok ? state.week.label : null,
+    updatedAt: usage.updatedAt || null,
+    scoring: { preset, label: SCORING_PRESET_LABEL[preset] || 'PPR' },
+    players: players.slice(0, limit)
+  };
 }
 
 // The odds pull, snapshotted. Runs the odds providers through the registry and
@@ -10764,6 +10862,19 @@ export default {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const out = await rankingsPayload(env);
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=900' });
+    }
+    // What has actually been played, scored at the reader's setting. The one
+    // board on this site that is not a forecast — see statsPayload.
+    if (url.pathname === '/api/stats') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
+      const out = await statsPayload(env, {
+        preset: SCORING_PRESETS[preset] ? preset : 'ppr',
+        position: url.searchParams.get('pos') || 'ALL',
+        limit: url.searchParams.get('limit')
+      });
       return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=900' });
     }
     // One record per player per week: projections, the money, usage and
