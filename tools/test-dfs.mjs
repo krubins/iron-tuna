@@ -21,7 +21,7 @@ function _csvSplit(line) { const out = []; let cur = '', q = false; for (let i =
 const H = new Function('teamKey', '_oddsNorm', '_oddsRound', '_csvSplit', 'fetch',
   cut('// ── the scoring engine ─', 'const COLUMN_SCORING = {') + '\n' + cut('const _median = arr =>', '// How far apart the books are') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the three boards') + '\n' + cut('// -- DFS ---', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats };'
+  'return { DFS_SITES, SCORING_SITE, parseDfsCsv, dfsSlateShape, buildDfsSlate, buildDfsStacks, scoringRules, scoreStats };'
 )(teamKey, _oddsNorm, _oddsRound, _csvSplit, () => { throw new Error('no network'); });
 const DFS = require(path.join(ROOT, 'dfs-optimizer.js'));
 
@@ -38,6 +38,41 @@ console.log('\nthe lobby CSVs');
   ok('the nickname is the name and D is a DST', b.rows[0].name === 'Josh Allen' && b.rows[1].position === 'DST');
   ok('a file from the wrong site is refused', !!H.parseDfsCsv('dk', fd).error && !!H.parseDfsCsv('fd', dk).error);
   ok('an empty file is refused', H.parseDfsCsv('dk', '').error === 'empty');
+  ok('the roster position comes across', a.rows[1].rosterPosition === 'RB/FLEX' && b.rows[0].rosterPosition === 'QB');
+}
+
+// The reader upload takes whatever file the reader has, so it has to know a
+// single-game file when it sees one: priced against the classic cap, a captain
+// file builds a lineup nobody can enter.
+console.log('\nclassic or single game');
+{
+  const classic = H.parseDfsCsv('dk', 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\nQB,"Josh Allen (1)",Josh Allen,1,QB,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\nRB,"Jahmyr Gibbs (2)",Jahmyr Gibbs,2,RB/FLEX,8900,DET@GB 09/14/2026 04:25PM ET,DET,21.3\n');
+  ok('a main-slate file is classic', H.dfsSlateShape(classic.rows) === 'classic');
+
+  // DraftKings Showdown: the captain is a second row for the same player at a
+  // 1.5x price, tagged CPT.
+  const dkShow = H.parseDfsCsv('dk', 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\nQB,"Josh Allen (1)",Josh Allen,1,CPT,12300,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\nQB,"Josh Allen (2)",Josh Allen,2,FLEX,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\n');
+  ok('a DraftKings captain file is named', H.dfsSlateShape(dkShow.rows) === 'single-game');
+
+  // FanDuel single game: the same shape under a different word.
+  const fdShow = H.parseDfsCsv('fd', 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,QB,Josh,Josh Allen,Allen,24.1,1,17000,BUF@NYJ,BUF,NYJ,,,,MVP\n2,QB,Josh,Josh Allen,Allen,24.1,1,15000,BUF@NYJ,BUF,NYJ,,,,FLEX\n');
+  ok('a FanDuel MVP file is named', H.dfsSlateShape(fdShow.rows) === 'single-game');
+
+  // The token is the operators' to rename, so the repeated player row is
+  // caught on its own with no Roster Position column in the file at all.
+  const noCol = H.parseDfsCsv('dk', 'Position,Name + ID,Name,ID,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\nQB,"Josh Allen (1)",Josh Allen,1,12300,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\nQB,"Josh Allen (2)",Josh Allen,2,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\nWR,"Garrett Wilson (3)",Garrett Wilson,3,6800,BUF@NYJ 09/14/2026 01:00PM ET,NYJ,14.0\n');
+  ok('a repeated player is caught without the column', H.dfsSlateShape(noCol.rows) === 'single-game');
+
+  // Two players sharing a name on one slate is not a captain file. Six rows,
+  // one collision: under the quarter-of-the-file threshold.
+  const twins = { rows: [
+    { name: 'Mike Williams', position: 'WR' }, { name: 'Mike Williams', position: 'WR' },
+    { name: 'Josh Allen', position: 'QB' }, { name: 'Jahmyr Gibbs', position: 'RB' },
+    { name: 'Garrett Wilson', position: 'WR' }, { name: 'Bears', position: 'DST' },
+    { name: 'Travis Kelce', position: 'TE' }, { name: 'Bijan Robinson', position: 'RB' }
+  ] };
+  ok('two players with one name is still classic', H.dfsSlateShape(twins.rows) === 'classic');
+  ok('an empty file is classic, not a captain file', H.dfsSlateShape([]) === 'classic');
 }
 
 console.log('\nsite scoring');

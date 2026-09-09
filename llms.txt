@@ -21,6 +21,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 ### DFS — https://irontuna.com/dfs
 - DraftKings and FanDuel salaries read against market-implied points. VVS (Vegas Value Score) is market-implied points per $1,000 of salary, indexed to the slate's median: 100 is an ordinary price, 130 is a bargain.
 - A lineup builder, game stacks and the anytime-touchdown board. It builds lineups to look at and copy; nothing on the page can enter a contest.
+- Readers on a slate the desk has not imported can price their own salary export from the contest lobby. The file is read in the browser and stored nowhere on the site.
 - A pick'em board for Underdog, PrizePicks and Sleeper, showing where the model leans off a posted stat line.
 
 ### Vegas Edge — https://irontuna.com/vegas-edge

@@ -53,6 +53,13 @@ p{color:var(--sec);margin:0 0 16px}
 .df-stack{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
 .df-stack h3{margin:0 0 6px} .df-stack .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:14px}
 .df-stack b{color:var(--text)} .df-stack .is-status{display:inline}
+.df-up{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:var(--panel)}
+.df-up-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.df-up .btn{padding:8px 16px;font-size:14px}
+.df-up-state{font-size:13px;color:var(--muted);flex:1;min-width:24ch;line-height:1.5}
+.df-up-state.bad{color:var(--danger)}
+.df-up [hidden]{display:none}
+.df-up textarea{width:100%;margin:10px 0 0;font:12px/1.4 ui-monospace,monospace;padding:8px;border:1px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--text)}
 </style>
 </head>
 <body>
@@ -88,6 +95,26 @@ p{color:var(--sec);margin:0 0 16px}
 </div>
 <p class="is-note" id="dfNote"></p>
 <p class="is-note" id="dfSiteNote"></p>
+
+<!-- ── the reader's own salary file ───────────────────────────────────────────
+     The salaries above are the desk's import: one main slate a week, the same
+     rows for every reader. Anyone entering a different contest already holds
+     their own salary file, because the site they play on hands it to them on
+     the contest page. This prices that file against the same boards.
+
+     It stays with the reader. The file is posted to be parsed and scored, is
+     stored nowhere on the server, and lives in this browser until they clear
+     it. Nothing here submits an entry, and nothing here reaches an operator. -->
+<div class="df-up" id="dfUp" hidden>
+  <div class="df-up-row">
+    <label class="btn alt" for="dfUpFile">Choose salary file<input id="dfUpFile" type="file" accept=".csv,text/csv" hidden></label>
+    <button class="btn alt" type="button" id="dfUpPaste">Paste instead</button>
+    <button class="btn alt" type="button" id="dfUpClear" hidden>Back to the site&rsquo;s slate</button>
+    <span class="df-up-state" id="dfUpState">Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.</span>
+  </div>
+  <textarea id="dfUpText" rows="4" hidden spellcheck="false" placeholder="Paste the salary CSV here, then press Read the file."></textarea>
+  <div class="df-up-row" id="dfUpReadRow" hidden style="margin-top:10px"><button class="btn" type="button" id="dfUpRead">Read the file</button></div>
+</div>
 
 <!-- ── pick'em ────────────────────────────────────────────────────────────────
      Underdog, PrizePicks and Sleeper post a stat line and ask higher or lower.
@@ -387,6 +414,62 @@ p{color:var(--sec);margin:0 0 16px}
       .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
       .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
   }
+  // ── the reader's own salary file ─────────────────────────────────────────
+  // Held in this browser and nowhere else: kept in memory for the session and
+  // mirrored to localStorage so a reload does not lose it. Storage can throw
+  // (private windows, a file past the quota), so every touch is guarded and
+  // the in-memory copy is what the page actually reads.
+  var upMem = {};
+  function upKey(s) { return 'it.dfs.csv.' + s; }
+  function upGet(s) { if (upMem[s]) return upMem[s]; try { return localStorage.getItem(upKey(s)) || ''; } catch (err) { return ''; } }
+  function upSet(s, csv) { upMem[s] = csv || ''; try { if (csv) localStorage.setItem(upKey(s), csv); else localStorage.removeItem(upKey(s)); } catch (err) {} }
+  function upState(msg, bad) { var el = $('dfUpState'); el.textContent = msg; el.className = 'df-up-state' + (bad ? ' bad' : ''); }
+
+  function slateOk(j) {
+    slate = j;
+    var stamp = j.source === 'upload'
+      ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
+      : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
+    $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
+    render();
+  }
+  function slateNone(msg, label) {
+    slate = null;
+    $('dfNote').textContent = msg;
+    $('dfEmpty').textContent = 'No ' + (label || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.';
+    $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
+    $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
+  }
+  // Price the reader's file. A file the parser refuses is theirs to fix, so the
+  // reason is printed and the page falls back to the site's own slate rather
+  // than sitting on a blank board — and a refused file is not kept.
+  function loadUpload(csv) {
+    upState('Reading your file\u2026', false);
+    fetch('/api/dfs/slate', { method: 'POST', headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ site: site, csv: csv, contest: contest }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) {
+          upSet(site, ''); $('dfUpClear').hidden = true;
+          upState((j && j.note) || 'That file could not be read.', true);
+          loadSite();
+          return;
+        }
+        upSet(site, csv);
+        $('dfUpClear').hidden = false;
+        upState('Your file: ' + j.players.length + ' priced rows'
+                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
+                + '. Stored in this browser only.', false);
+        slateOk(j);
+      })
+      .catch(function () { upState('The slate did not answer. Your file was not read.', true); });
+  }
+  function loadSite() {
+    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label); return; }
+      slateOk(j);
+    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
+  }
   function load() {
     press($('dfSite'), 'data-site', site);
     if (isPickem()) {
@@ -394,22 +477,53 @@ p{color:var(--sec);margin:0 0 16px}
       $('dfNav').hidden = true;
       ['sec-dash', 'sec-values', 'sec-builder', 'sec-stacks', 'sec-td'].forEach(function (id) { $(id).hidden = true; });
       $('sec-pickem').hidden = false;
+      $('dfUp').hidden = true;
       $('dfNote').textContent = '';
       loadPickem();
       return;
     }
     $('sec-pickem').hidden = true;
     $('dfNav').hidden = false;
+    $('dfUp').hidden = false;
     $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '.';
     show();
-    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) { slate = null; $('dfNote').textContent = (j && j.note) || 'No salaries are loaded for this week.'; $('dfEmpty').textContent = 'No ' + ((j && j.label) || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.'; $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true; $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = ''; return; }
-      slate = j; $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + 'Salaries as of ' + e(new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + ' ET.'; render();
-    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
+    var mine = upGet(site);
+    $('dfUpClear').hidden = !mine;
+    if (!mine) upState('Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.', false);
+    if (mine) loadUpload(mine); else loadSite();
   }
   document.addEventListener('DOMContentLoaded', function () {
     press($('dfMode'), 'data-mode', mode); show();
     $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; load(); });
+    // The salary file. The server caps the body at a million characters, so a
+    // file past that is refused here rather than truncated into a CSV that
+    // parses and quietly leaves half the slate off the board.
+    $('dfUpFile').addEventListener('change', function (ev) {
+      var f = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (!f) return;
+      if (f.size > 1000000) { upState('That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.', true); return; }
+      var fr = new FileReader();
+      fr.onload = function () { marks = {}; loadUpload(String(fr.result || '')); };
+      fr.onerror = function () { upState('That file could not be read from your computer.', true); };
+      fr.readAsText(f);
+    });
+    $('dfUpPaste').addEventListener('click', function () {
+      var open = $('dfUpText').hidden;
+      $('dfUpText').hidden = !open; $('dfUpReadRow').hidden = !open;
+      if (open) $('dfUpText').focus();
+    });
+    $('dfUpRead').addEventListener('click', function () {
+      var csv = $('dfUpText').value;
+      if (!csv.trim()) { upState('Paste the salary CSV first.', true); return; }
+      marks = {}; loadUpload(csv);
+    });
+    $('dfUpClear').addEventListener('click', function () {
+      upSet(site, ''); marks = {};
+      $('dfUpClear').hidden = true; $('dfUpText').value = ''; $('dfUpText').hidden = true; $('dfUpReadRow').hidden = true;
+      upState('Back on the site\u2019s slate. Your file is gone from this browser.', false);
+      loadSite();
+    });
     $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
     $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
     $('dfContest').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; contest = b.getAttribute('data-contest'); press($('dfContest'), 'data-contest', contest); board = 'metrics'; load(); try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_contest', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, contest: contest, site: site } })], { type: 'application/json' })); } catch (x) {} });

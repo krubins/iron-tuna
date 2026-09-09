@@ -25,7 +25,8 @@ Verified against `_worker.js` on 2026-09-06.
 | `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~335 URL references, none fetched server-side | **Unreviewed.** Copyrighted images served from the league's CDN. See R4. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the licence exists. Unset today. |
-| DFS lobby CSV | DraftKings / FanDuel salaries | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
+| DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
+| DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
 
 ### Infrastructure — not content, no data-licensing question
 
