@@ -19,7 +19,7 @@ function fakeDb(answers) {
   const stmt = (sql, args) => {
     const rec = { sql, args }; log.push(rec);
     const a = (answers || []).find(x => x.match.test(sql));
-    return { async run() { if (a && a.throws) throw new Error(a.throws); return { meta: { changes: a && a.changes || 0 } }; },
+    return { async run() { if (a && a.throws) throw new Error(a.throws); return { meta: { changes: a && a.changes || 0, last_row_id: a && a.lastRowId || 0 } }; },
              async first() { if (a && a.throws) throw new Error(a.throws); return a ? (typeof a.first === 'function' ? a.first(args) : a.first || null) : null; },
              async all() { if (a && a.throws) throw new Error(a.throws); return { results: a ? (typeof a.all === 'function' ? a.all(args) : a.all || []) : [] }; } };
   };
@@ -48,7 +48,7 @@ const stubs = {
   validateDraft: (text, allowed) => { const bad = (text.match(/[A-Z][a-z]+ [A-Z][a-z]+/g) || []).filter(n => !(allowed.names || []).includes(n)); return { ok: !bad.length, names: bad, numbers: [] }; }
 };
 const H = new Function(...Object.keys(stubs), cut('// -- the job log and the health board', '// Memoized per isolate alongside _PROJ_ENC') +
-  '\nreturn { JOB_FNS, jobRun, jobBoard, jobPrune, healthAssess, healthPayload, contentAdmin, CONTENT_ACTIONS, HEALTH_STALE_H };')(...Object.values(stubs));
+  '\nreturn { JOB_FNS, jobRun, jobBoard, jobPrune, healthAssess, healthPayload, contentAdmin, CONTENT_ACTIONS, HEALTH_STALE_H, JOB_DEADLINE_MS, JOB_DIED_AFTER_MS, tickHealth };')(...Object.values(stubs));
 
 console.log('\nthe job log');
 {
@@ -56,18 +56,64 @@ console.log('\nthe job log');
   const env = { LEADS_DB: db };
   const r = await H.jobRun(env, 'schedule-refresh', '0 11 * * *');
   ok('a job that succeeds returns its result', r.ok === true && r.games === 272);
-  const ins = db.log.filter(x => /INSERT INTO job_runs/.test(x.sql));
+  const ins = db.log.filter(x => /INSERT INTO job_runs/.test(x.sql) && x.args.length === 7);
   ok('and logs one row with the job, the trigger and ok=1', ins.length === 1 && ins[0].args[0] === 'schedule-refresh' && ins[0].args[1] === '0 11 * * *' && ins[0].args[4] === 1 && ins[0].args[5] === null);
   ok('the summary is what the job returned', /"games":272/.test(ins[0].args[6]));
+  ok('with no id from the open write (this fake returns none), the whole row is written at the end, the way it always was', db.log.filter(x => /INSERT INTO job_runs/.test(x.sql)).length === 2 && db.log.filter(x => /UPDATE job_runs/.test(x.sql)).length === 0);
   const bad = await H.jobRun(env, 'odds-refresh', 'admin');
   ok('a job that throws is a logged failure, not an exception', bad.ok === false && /books did not answer/.test(bad.error));
-  const ins2 = db.log.filter(x => /INSERT INTO job_runs/.test(x.sql));
+  const ins2 = db.log.filter(x => /INSERT INTO job_runs/.test(x.sql) && x.args.length === 7);
   ok('with ok=0 and the error text', ins2[1].args[4] === 0 && /books did not answer/.test(ins2[1].args[5]));
   const soft = await H.jobRun(env, 'availability-refresh', 'admin');
-  ok('a job that returns ok:false is a failure too', soft.ok === false && db.log.filter(x => /INSERT INTO job_runs/.test(x.sql))[2].args[5] === 'espn 403');
+  ok('a job that returns ok:false is a failure too', soft.ok === false && db.log.filter(x => /INSERT INTO job_runs/.test(x.sql) && x.args.length === 7)[2].args[5] === 'espn 403');
   ok('an unknown job is refused', (await H.jobRun(env, 'reboot-the-moon', 'admin')).error === 'unknown_job');
   ok('every job the cron runs is in the table', ['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'depth-charts', 'ros-snapshot', 'news-scan', 'calls-grade', 'snapshot-prune', 'analytics-prune', 'content-tick'].every(j => H.JOB_FNS[j]));
   ok('no database means no log and no crash', (await H.jobRun({}, 'schedule-refresh', 'x')).ok === true);
+}
+
+console.log('\nthe row opens before the job and closes after it');
+{
+  const db = fakeDb([{ match: /INSERT INTO job_runs/, lastRowId: 41 }]);
+  const env = { LEADS_DB: db };
+  const r = await H.jobRun(env, 'schedule-refresh', 'tick');
+  const ins = db.log.filter(x => /INSERT INTO job_runs/.test(x.sql)), upd = db.log.filter(x => /UPDATE job_runs SET finished_at/.test(x.sql));
+  ok('the job still returns its result', r.ok === true && r.games === 272);
+  ok('one INSERT opens the row with the job, the trigger and the start, and nothing else', ins.length === 1 && ins[0].args.length === 3 && ins[0].args[0] === 'schedule-refresh' && ins[0].args[1] === 'tick' && /NULL, NULL, NULL, NULL/.test(ins[0].sql));
+  ok('one UPDATE closes it by id with ok=1, no error and the summary', upd.length === 1 && upd[0].args[4] === 41 && upd[0].args[1] === 1 && upd[0].args[2] === null && /"games":272/.test(upd[0].args[3]));
+  ok('the open comes before the job runs (the insert is logged before the update)', db.log.indexOf(ins[0]) < db.log.indexOf(upd[0]));
+  const bad = await H.jobRun(env, 'odds-refresh', 'tick');
+  const upd2 = db.log.filter(x => /UPDATE job_runs SET finished_at/.test(x.sql));
+  ok('a failure closes the row with ok=0 and the error', bad.ok === false && upd2[1].args[1] === 0 && /books did not answer/.test(upd2[1].args[2]));
+  H.JOB_DEADLINE_MS['glacier'] = 40;
+  const slow = await H.jobRun(env, 'glacier', 'tick', () => new Promise(() => {}));
+  const upd3 = db.log.filter(x => /UPDATE job_runs SET finished_at/.test(x.sql));
+  ok('a job past its deadline is a logged failure and the tick moves on', slow.ok === false && /deadline: glacier/.test(slow.error) && upd3[2].args[1] === 0 && /deadline/.test(upd3[2].args[2]));
+  ok('the desk tick has most of the invocation and every other job a few minutes, all inside the fifteen-minute limit', H.JOB_DEADLINE_MS['content-tick'] === 13 * 60000 && H.JOB_DEADLINE_MS['content-tick'] < 15 * 60000 && H.JOB_DIED_AFTER_MS > H.JOB_DEADLINE_MS['content-tick']);
+}
+
+console.log('\na row that never closed is an invocation that died');
+{
+  const now = Date.now();
+  const rows = [{ job: 'content-tick', trigger: 'tick', started_at: now - 3 * 3600000, finished_at: null, ok: null, error: null, summary: null },
+                { job: 'content-tick', trigger: 'tick', started_at: now - 4 * 3600000, finished_at: now - 4 * 3600000 + 900, ok: 1, error: null, summary: '{}' },
+                { job: 'news-scan', trigger: 'tick', started_at: now - 30000, finished_at: null, ok: null, error: null, summary: null }];
+  const db = fakeDb([{ match: /FROM job_runs WHERE started_at >=/, all: rows }, { match: /MAX\(started_at\) AS last_ok/, all: [] },
+                     { match: /WHERE job = 'content-tick' ORDER BY started_at DESC/, first: rows[0] }, { match: /COUNT\(\*\) AS n FROM job_runs WHERE finished_at IS NULL/, first: { n: 1 } }]);
+  const b = await H.jobBoard({ LEADS_DB: db }, now);
+  const ct = b.jobs.find(j => j.job === 'content-tick'), ns = b.jobs.find(j => j.job === 'news-scan');
+  ok('an open row older than the died-after line is a failure with a reason that says so', ct.last.died === true && ct.last.unfinished === true && ct.last.ok === false && /did not finish/.test(ct.last.error) && ct.failures7d === 1);
+  ok('and it is on the failed list', b.failed.some(r => r.job === 'content-tick' && r.died));
+  ok('an open row thirty seconds old is a job still running, not a death', ns.last.unfinished === true && ns.last.died === false && ns.failures7d === 0);
+  ok('the last success is still the last closed ok row', ct.lastOk === rows[1].started_at);
+  const t = await H.tickHealth({ LEADS_DB: db }, now);
+  ok('the pulse says when the cron last reached the worker and calls three hours silent', t.lastAt === rows[0].started_at && t.silentMinutes === 180 && t.silent === true && t.died24h === 1);
+  const t2 = await H.tickHealth({ LEADS_DB: fakeDb([{ match: /WHERE job = 'content-tick' ORDER BY started_at DESC/, first: { started_at: now - 5 * 60000, finished_at: now - 5 * 60000 + 800, ok: 1 } }, { match: /COUNT\(\*\) AS n/, first: { n: 0 } }]) }, now);
+  ok('five minutes since the last tick is not silence', t2.silent === false && t2.silentMinutes === 5 && t2.lastOk === true && t2.died24h === 0);
+  ok('no database is a quiet pulse, not a crash', (await H.tickHealth({}, now)).lastAt === null);
+}
+
+console.log('\nthe board');
+{
   const now = Date.now();
   const rows = [{ job: 'odds-refresh', trigger: 'cron', started_at: now - 3600000, finished_at: now - 3599000, ok: 0, error: 'boom', summary: null },
                 { job: 'odds-refresh', trigger: 'cron', started_at: now - 90000000, finished_at: now - 89999000, ok: 1, error: null, summary: '{}' },

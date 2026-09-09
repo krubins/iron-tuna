@@ -7716,9 +7716,10 @@ async function newsroomAdmin(env, action, body) {
 async function newsroomStatus(env) {
   const auto = await autoPublishOn(env);
   const et = etParts(Date.now());
+  let tick = null; try { tick = await tickHealth(env, Date.now()); } catch (e) { tick = null; }
   const legacy = Object.entries(LEGACY_CONTENT).map(([k, v]) => ({ kind: k, ...v }));
   return { autoPublish: auto, flags: flagReport(env), audit: newsroomAudit(null), legacy, routines: ROUTINE_MIGRATION, events: (await newsEventsPayload(env, 20)).map(e => ({ at: e.created_at, type: e.type, player: e.player, team: e.team, position: e.position, score: e.score, handled: e.handled, detail: e.detail })),
-           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
+           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, tick, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
 }
 
 // -- DFS -------------------------------------------------------------------------
@@ -7917,23 +7918,62 @@ const JOB_FNS = {
   'content-tick':         env => runContentTick(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
+// How long a job may run before the log calls it dead. A cron invocation has
+// fifteen minutes of wall clock in total; the desk tick, which may write two
+// pieces with a retry each at 170 s a call, gets most of it, and every other
+// job a few minutes. A job past its deadline is logged as a failure and the
+// tick moves on; the work itself is not cancelled (the runtime has no way to
+// cancel a promise), it is simply no longer waited for.
+const JOB_DEADLINE_MS = { 'content-tick': 13 * 60000 };
+const JOB_DEADLINE_DEFAULT_MS = 4 * 60000;
+// A row that opened and never closed is an invocation that died: the runtime
+// killed it at the duration limit, or evicted it. Nothing closes such a row,
+// so the board counts it as a failure once it is older than any deadline.
+const JOB_DIED_AFTER_MS = 16 * 60000;
 // Run one job and log it. Never throws: a job that throws is a logged
 // failure, and the caller gets { ok:false, error }.
+//
+// The row is OPENED before the job runs and CLOSED after it, in two writes.
+// On September 8 and 9 the cron went silent three times for two hours and
+// more, and each gap began with a tick whose news-scan logged and whose
+// content-tick did not. A log written only at the end cannot say whether the
+// runtime killed that invocation or the cron never fired the next ones; a
+// row that is open with nothing after it says the first, no row says the
+// second. When the open write fails (no id comes back), the job still runs
+// and the row is written whole at the end, the way it always was.
 async function jobRun(env, name, trigger, fn) {
   const f = fn || JOB_FNS[name];
   if (!f) return { ok: false, error: 'unknown_job', job: name };
   const started = Date.now();
-  let result = null, error = null;
+  const id = await jobOpen(env, { job: name, trigger: trigger || null, started });
+  const limit = JOB_DEADLINE_MS[name] || JOB_DEADLINE_DEFAULT_MS;
+  let result = null, error = null, timer = null;
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('deadline: ' + name + ' still running after ' + Math.round(limit / 1000) + ' s')), limit); });
   try {
-    result = await f(env);
+    result = await Promise.race([f(env), deadline]);
     if (result && result.ok === false) error = String(result.error || result.reason || 'failed');
   } catch (e) { error = (e && e.message) || 'failed'; result = { ok: false, error }; }
-  await jobLog(env, { job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
+  finally { clearTimeout(timer); }
+  await jobLog(env, { id, job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
   return result == null ? { ok: true } : result;
+}
+async function jobOpen(env, r) {
+  if (!(await jobReady(env))) return null;
+  try {
+    const res = await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, NULL, NULL, NULL, NULL)')
+      .bind(r.job, r.trigger, r.started).run();
+    const id = res && res.meta && res.meta.last_row_id;
+    return Number.isFinite(id) && id > 0 ? id : null;
+  } catch (e) { return null; }
 }
 async function jobLog(env, r) {
   if (!(await jobReady(env))) return false;
   try {
+    if (r.id) {
+      await env.LEADS_DB.prepare('UPDATE job_runs SET finished_at = ?, ok = ?, error = ?, summary = ? WHERE id = ?')
+        .bind(r.finished, r.ok, r.error, r.summary, r.id).run();
+      return true;
+    }
     await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .bind(r.job, r.trigger, r.started, r.finished, r.ok, r.error, r.summary).run();
     return true;
@@ -7959,15 +7999,37 @@ async function jobBoard(env, now) {
     const lastOkAny = {}; for (const r of (older.results || [])) lastOkAny[r.job] = r.last_ok;
     const seen = new Set(rows.map(r => r.job));
     const all = names.concat(Array.from(seen).filter(j => !names.includes(j)));
+    const bad = r => r.ok === 0 || _jobDied(r, at);
     return { ok: true, jobs: all.map(j => {
       const mine = rows.filter(r => r.job === j);
       const last = mine[0] || null, ok = mine.find(r => r.ok === 1) || null;
-      return { job: j, last: last ? _jobRow(last) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(r => r.ok === 0).length };
-    }), failed: rows.filter(r => r.ok === 0).slice(0, 40).map(_jobRow) };
+      return { job: j, last: last ? _jobRow(last, at) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(bad).length };
+    }), failed: rows.filter(bad).slice(0, 40).map(r => _jobRow(r, at)) };
   } catch (e) { return { ...empty, error: (e && e.message) || 'failed' }; }
 }
-const _jobRow = r => ({ job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, error: r.error || null,
-                        ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null });
+const _jobDied = (r, at) => r.finished_at == null && r.ok == null && (at - r.started_at) > JOB_DIED_AFTER_MS;
+const _jobRow = (r, at) => {
+  const died = _jobDied(r, Number.isFinite(at) ? at : Date.now());
+  return { job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, unfinished: r.finished_at == null, died,
+           error: died ? 'did not finish: the invocation died before the job closed its row' : (r.error || null),
+           ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null };
+};
+// The cron's pulse. content-tick runs every quarter hour, so its newest row
+// is the last time the cron reached the worker at all; the silence is how
+// long ago that was. died24h counts rows that opened and never closed.
+const TICK_SILENT_MIN = 20;
+async function tickHealth(env, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const out = { lastAt: null, lastOk: null, silentMinutes: null, silent: false, died24h: 0, silentAfterMin: TICK_SILENT_MIN };
+  try {
+    if (!(await jobReady(env))) return out;
+    const r = await env.LEADS_DB.prepare("SELECT started_at, finished_at, ok FROM job_runs WHERE job = 'content-tick' ORDER BY started_at DESC LIMIT 1").first();
+    if (r) { out.lastAt = r.started_at; out.lastOk = r.ok === 1; out.silentMinutes = Math.max(0, Math.round((at - r.started_at) / 60000)); out.silent = out.silentMinutes > TICK_SILENT_MIN; }
+    const d = await env.LEADS_DB.prepare('SELECT COUNT(*) AS n FROM job_runs WHERE finished_at IS NULL AND ok IS NULL AND started_at > ? AND started_at < ?').bind(at - 86400000, at - JOB_DIED_AFTER_MS).first();
+    out.died24h = d && Number.isFinite(+d.n) ? +d.n : 0;
+  } catch (e) {}
+  return out;
+}
 
 // ── the assessment ─────────────────────────────────────────────────────────
 // Pure. Takes what the caches and the log say and returns what is missing or
@@ -10427,6 +10489,7 @@ export default {
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
     if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
+      console.log('tick start:', event.cron, new Date(event.scheduledTime || Date.now()).toISOString());
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
         .catch(e => console.error('tick failed:', e && e.message)));
