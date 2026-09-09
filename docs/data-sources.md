@@ -7,7 +7,7 @@ This file is the **inventory of what the code actually does today**, not a plan.
 Every external host reached by `_worker.js` is listed. When you add or remove a
 source, edit this file in the same commit.
 
-Verified against `_worker.js` on 2026-09-06.
+Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) published 2026-09-09; keep the two in step.
 
 ---
 
@@ -23,7 +23,7 @@ Verified against `_worker.js` on 2026-09-06.
 | `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 licence question; see R7. |
 | `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorise, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
 | `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
-| `static.www.nfl.com` | Team and player imagery, hot-linked | ~335 URL references, none fetched server-side | **Unreviewed.** Copyrighted images served from the league's CDN. See R4. |
+| `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the licence exists. Unset today. |
 | DFS lobby CSV | DraftKings / FanDuel salaries | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 
@@ -95,18 +95,33 @@ subscription product, and save the reply. Addendum 13.2 and 14.6.
 
 This is the cheapest item on the list and it is currently unanswered.
 
-### R4 — NFL.com imagery
+### R4 — NFL.com and ESPN imagery  *(OPEN — owner decision required)*
 
-**Where:** ~335 `static.www.nfl.com` URLs, hot-linked into rendered HTML rather
-than fetched server-side.
+**Where:** ~1,680 `static.www.nfl.com` URLs plus ESPN cutout URLs built from
+`tools/nfl-headshots.json`, hot-linked into rendered HTML rather than fetched
+or stored server-side. `tools/build-headshots.mjs` sources the *lookup* from
+nflverse (CC BY 4.0); the CC licence covers that dataset, **not** the images the
+URLs in it point at, which stay the publishers' property.
 
 Not covered by Addendum Section 13, which is about data rather than images, but
-it is the same class of question and it is unreviewed. Decide deliberately:
+it is the same class of question and it remains unreviewed. Decide deliberately:
 licensed imagery, a permissively licensed substitute, or no headshots.
+
+**Changed 2026-09-09, and only the wording.** The front-page footer used to read
+"Player photos © NFL/ESPN", which states someone else's copyright next to Iron
+Tuna's own and reads to a careful reader as a claim of permission. No such
+permission is documented anywhere in this repository. The line now says what is
+actually true — the images are referenced from their publishers' own hosts, the
+rights stay with their owners, Iron Tuna is not affiliated with or endorsed by
+the NFL or any club — and `/data` carries the same statement plus a takedown
+address. **The images themselves were NOT removed**: there is no lawful drop-in
+replacement already in use anywhere in the app, and pulling ~1,680 images out of
+the front page, the player cards and every story is a product decision, not a
+cleanup. It is the largest open IP item on this list.
 
 ### R5 — Structural rules from Section 14
 
-- [ ] `/data` page listing every source, licence, and attribution string, linked from every footer. §14.1. **This file is its source of truth.**
+- [x] `/data` page listing every source, licence, and attribution string, linked from every footer. §14.1 — shipped 2026-09-09 as `data.html`, linked from the generated Legal column (`tools/build-chrome.mjs`), the front-page footer and the app footer. **This file remains its source of truth: edit both in the same commit.**
 - [ ] External-fetch boundary lint. §14.3 specifies `lib/sources/`, which does not exist — the app is a single `_worker.js` plus a root `index.html`. Restate the rule as a marked region inside `_worker.js` with a CI check that fails on `fetch('http` outside it, or budget the restructure. As written the criterion cannot be met.
 - [x] No raw third-party response body returned to the browser. §14.2. Holds today: every adapter transforms server-side into an Iron Tuna shape. Needs a test to keep it true.
 - [x] API keys server-side only. §14.4. All keys are worker `env` bindings.
