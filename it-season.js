@@ -111,6 +111,15 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // Every page can style itself by season phase: html[data-season="in"] is
+  // the regular season, which is how the front page hides its draft-season
+  // bands without a second feed read.
+  function stamp(s) {
+    try {
+      var h = doc.documentElement;
+      if (s && s.phase) { h.setAttribute('data-phase', s.phase); h.setAttribute('data-season', s.phase === 'regular' ? 'in' : s.phase === 'postseason' ? 'post' : 'off'); }
+    } catch (e) {}
+  }
   function render(el, s) {
     if (!el) return;
     el.innerHTML = strip(s);
@@ -122,7 +131,7 @@
     var els = [].slice.call(doc.querySelectorAll('[data-season-strip]'));
     if (!els.length) return;
     els.forEach(function (el) { if (!el.innerHTML.trim()) el.innerHTML = '<span class="its-note">Reading the NFL schedule&hellip;</span>'; });
-    load(function (s) { els.forEach(function (el) { render(el, s); }); });
+    load(function (s) { stamp(s); els.forEach(function (el) { render(el, s); }); });
   }
 
   root.ITSeason = {

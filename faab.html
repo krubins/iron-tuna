@@ -135,7 +135,7 @@ table.fa .mine{color:var(--teal);font-weight:800}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -151,6 +151,20 @@ table.fa .mine{color:var(--teal);font-weight:800}
 <p class="lede">A waiver claim in a FAAB league is a blind auction against the same people you drafted against. This prices the whole free-agent pool in your league&rsquo;s dollars, reads every rival&rsquo;s remaining budget, and tells you the number.</p>
 </div>
 
+<div class="its-strip-sync" id="faSync" hidden></div>
+<div id="faCta" hidden></div>
+<!-- The synced room: the Pickup Advisor on players nobody in THIS league
+     owns, with a drop and a bid range. Rendered only for a reader with a
+     connected league; the Sleeper/manual flow below is untouched. -->
+<div id="fa-synced" hidden>
+  <div class="fa-step">
+    <h3 id="fsHead">Your league</h3>
+    <p class="sub" id="fsSub">Reading the free agents in your room&hellip;</p>
+    <div class="fa-seg" id="fsMode" role="group" aria-label="Pool"><button type="button" class="btn small" data-mode="league" aria-pressed="true">Your league</button> <button type="button" class="btn alt small" data-mode="generic" aria-pressed="false">10 / 12 / 14 team (generic)</button></div>
+    <div id="fsRows"></div>
+    <p class="is-note" id="fsNote" hidden></p>
+  </div>
+</div>
 <div id="fa-connect">
   <div class="fa-step" id="step-user">
     <h3>1. Connect your Sleeper account</h3>
@@ -246,6 +260,7 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
       <li><a href="/auction-watch">Auction Watch</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/the-tell">The Tell</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
     </div>
@@ -255,8 +270,10 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
-      <li><a href="/wagers">Wagers &amp; prediction markets</a></li>
-      <li><a href="/my-league">My League</a></li>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
      </ul>
     </div>
     <div class="foot-col">
@@ -285,6 +302,48 @@ Wk 4 - Tyler Allgeier - $12" spellcheck="false"></textarea></label>
 </div></footer>
 <script src="/it-league.js"></script>
 <script src="/it-trade.js"></script>
+<script src="/it-sync.js"></script>
+<script>
+(function () {
+  // Tyler Grant's desk, for the reader's own room. Everything here is one
+  // call: /api/leagues/<id>/advice?module=pickups, computed on the server
+  // from the synced rosters and the league-scored boards.
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function n1(v) { return v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1); }
+  var DOLLAR = String.fromCharCode(36);
+  function row(p) {
+    var pri = { High: 'is-live', Medium: 'is-accent', Low: 'is-flat', Stash: 'is-flat' }[p.priority] || '';
+    return '<div class="is-card" style="margin:10px 0">' +
+      '<span class="is-tag ' + pri + '">' + esc(p.priority) + (p.stash ? ' · stash' : p.cracksLineup ? ' · starts this week' : '') + '</span>' +
+      '<h3>ADD: ' + esc(p.name) + ' <span class="is-status">' + esc(p.position) + ' · ' + esc(p.team || '') + '</span></h3>' +
+      '<p><span class="its-tag avail">' + (p.status === 'waiver' ? 'On waivers' : 'Available in your league') + '</span>' + (p.injury ? ' <span class="its-tag">' + esc(p.injury) + '</span>' : '') + '</p>' +
+      '<p>' + (p.drop && p.drop.name ? '<b>Drop:</b> ' + esc(p.drop.name) + ' (' + esc(p.drop.position) + ', ' + n1(p.drop.ros) + ' ROS)' : p.drop && p.drop.open ? '<b>Drop:</b> nobody, you have an open spot' : '<b>Drop:</b> no drop improves the roster; stash only if you have room') + '</p>' +
+      '<p><b>Why:</b> ' + esc(p.why) + '</p>' +
+      '<p class="is-note" style="margin-top:6px">This week ' + n1(p.projected.week) + ' · next 3 ' + n1(p.projected.next3) + ' · rest of season ' + n1(p.projected.ros) + ' (' + esc(p.position) + esc(p.projected.rosRank) + ')' +
+      (p.faab ? ' · <b>FAAB: ' + DOLLAR + esc(p.faab.low) + '–' + DOLLAR + esc(p.faab.high) + '</b> of your ' + DOLLAR + esc(p.faab.budget) : '') + '</p></div>';
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!window.ITSync) return;
+    ITSync.load().then(function () {
+      ITSync.strip($('faSync'), { week: true });
+      var LS = ITSync.active();
+      if (!LS) { ITSync.cta($('faCta'), 'pickups'); return; }
+      $('fa-synced').hidden = false;
+      $('fsHead').textContent = 'Pickup Advisor · ' + LS.name;
+      $('fsMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; var generic = b.getAttribute('data-mode') === 'generic'; [].forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); $('fsRows').hidden = generic; $('fa-connect').hidden = !generic; $('fsSub').hidden = generic; $('fsNote').hidden = generic; });
+      $('fa-connect').hidden = true;
+      ITSync.api('/api/leagues/' + encodeURIComponent(LS.id) + '/advice?module=pickups&limit=15').then(function (j) {
+        if (!j || !j.ok) { $('fsSub').textContent = (j && (j.message || j.note)) || 'Your league did not answer. The generic advisor below still works.'; $('fa-connect').hidden = false; return; }
+        $('fsSub').innerHTML = '<b>Customized for your league.</b> ' + esc(j.availableCount) + ' players nobody in your room owns, ranked by what they add to <em>your</em> best lineup at your scoring.' + (j.stale ? ' <span class="its-warn">League data may be outdated. Sync now above.</span>' : '');
+        $('fsRows').innerHTML = j.pickups.length ? j.pickups.map(row).join('') : '<p class="is-empty">No available player improves your roster this week. That is a compliment.</p>';
+        $('fsNote').hidden = false;
+        $('fsNote').innerHTML = 'Priority is the lineup gain per week over the next three and the rest of the season at your scoring. A drop is only proposed when the add is worth more than the player it costs. ' + (j.league.faab != null ? 'Bid ranges are shares of your remaining ' + DOLLAR + esc(j.league.budgetLeft) + ' by priority.' : 'This league uses waiver priority, so no bid is quoted.');
+      }).catch(function () { $('fsSub').textContent = 'Your league did not answer.'; $('fa-connect').hidden = false; });
+    });
+  });
+})();
+</script>
 <script>
 
 (function () {

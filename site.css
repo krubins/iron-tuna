@@ -314,18 +314,18 @@ footer.site a:hover { color: var(--text) }
 .is-empty { color: var(--muted); font-size: var(--fs-sm); margin: var(--space-4) 0 }
 
 /* ── the footer's gambling disclosure ────────────────────────────────────────
-   Written by tools/build-chrome.mjs onto every page, not only /wagers: the
-   wagers lane is reachable from the footer of any page on the site, and a
-   helpline printed only once you are already there is not a disclosure. */
+   Written by tools/build-chrome.mjs onto every page, not only the ones that
+   print odds: Vegas Edge, Game Intel and the weekly intel page all carry lines
+   and totals, and a helpline printed only once you are already on one of them
+   is not a disclosure. */
 .foot-21 { color: var(--muted) }
 .foot-21 b { color: var(--sec) }
 
 /* ── the in-season "sheet" plate ─────────────────────────────────────────────
    One bordered card with a labelled header row, a table, and a footer line
    that says what the numbers are and where they came from. Every board in the
-   section — the hub's readings, the Fantasy week board, the DFS slate, the
-   wagers game lines — is this same object, so a reader who learns to read one
-   can read all four.
+   section — the hub's readings, the Fantasy week board, the DFS slate — is
+   this same object, so a reader who learns to read one can read all three.
 
    THE THREE STATES ARE PART OF THE COMPONENT. .is-plate-state carries the
    "reading…" and the "blank rather than stale" copy, and one of the three is
@@ -429,27 +429,8 @@ footer.site a:hover { color: var(--text) }
 .is-hint.err { color: var(--danger) }
 .is-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-5) }
 
-/* ── the compliance strip ────────────────────────────────────────────────────
-   Directly under the lede on every wagers surface, not tucked at the foot of
-   the page. Four clauses, each its own cell, so none is lost to a wrap. */
-.is-legal {
-  display: flex; flex-wrap: wrap; align-items: stretch; margin: var(--space-4) 0 var(--space-6);
-  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel);
-  font-size: var(--fs-xs); color: var(--sec); line-height: 1.5;
-}
-.is-legal > span { padding: var(--space-3) var(--space-4); border-left: 1px solid var(--line) }
-.is-legal > span:first-child { border-left: 0 }
-.is-legal b { color: var(--text) }
-
-/* A block shown as an illustration of something not yet live. Dimmed AND
-   aria-hidden at the markup level, so it is neither read as data by a person
-   nor announced as data by a screen reader. */
-.is-preview { opacity: .55 }
-
 @media (max-width: 640px) {
   .is-row2 { grid-template-columns: 1fr }
   .is-plate-head > span:not(:first-child) { border-left: 0; border-top: 1px solid var(--line) }
   .is-plate-head > :first-child { flex-basis: 100% }
-  .is-legal > span { border-left: 0; border-top: 1px solid var(--line) }
-  .is-legal > span:first-child { border-top: 0 }
 }

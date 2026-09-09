@@ -133,7 +133,7 @@
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="https://irontuna.com/auctiondraft?screen=cheat">Free cheat sheet</a>
@@ -157,6 +157,7 @@
         <span class="pc-eyebrow">Player card</span>
         <h1 id="pcName"></h1>
         <p class="pc-club" id="pcClub"></p>
+        <p class="pc-club" id="pcLeague" hidden></p>
       </div>
     </div>
 
@@ -211,6 +212,7 @@
       <li><a href="/auction-watch">Auction Watch</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/the-tell">The Tell</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
     </div>
@@ -220,8 +222,10 @@
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
-      <li><a href="/wagers">Wagers &amp; prediction markets</a></li>
-      <li><a href="/my-league">My League</a></li>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
      </ul>
     </div>
     <div class="foot-col">
@@ -250,6 +254,7 @@
 </div></footer>
 
 <script src="/it-league.js"></script>
+<script src="/it-sync.js"></script>
 <script src="/player-search.js"></script>
 <script>
 // The calls that name a player, extracted from the insight drop pages by
@@ -699,6 +704,12 @@ var STORIES = [{"title":"Patrick Mahomes is a reputation trap if drafted as a to
       shot.parentNode.replaceChild(next, shot);
     }
     doc.getElementById('pcName').textContent = p.n;
+    // The synced league's view of him: yours, a rival's, or free in your room.
+    try { if (window.ITSync) ITSync.load().then(function () { var LS = ITSync.active(); if (!LS) return; return ITSync.api('/api/leagues/' + encodeURIComponent(LS.id) + '/availability?names=' + encodeURIComponent(p.n)); }).then(function (j) {
+      var el = doc.getElementById('pcLeague'); if (!j || !j.ok || !j.players || !j.players[0] || j.players[0].status === 'unknown') return;
+      var a = j.players[0], cls = a.status === 'mine' ? 'mine' : (a.status === 'available' || a.status === 'waiver') ? 'avail' : a.isOpponent ? 'opp' : '';
+      el.hidden = false; el.innerHTML = '<span class="its-tag ' + cls + '">' + ITSync.esc(a.label) + '</span> <span>' + ITSync.esc(j.league.name) + '</span>' + (a.status === 'available' || a.status === 'waiver' ? ' · <a href="/faab">Pickup Advisor</a>' : a.status === 'mine' ? ' · <a href="/my-week">Your lineup</a>' : ' · <a href="/trade-finder">Trade for him</a>');
+    }).catch(function () {}); } catch (e) {}
     doc.getElementById('pcClub').innerHTML =
       '<b>' + (POS_WORD[p.p] || p.p) + '</b>'
       + (club ? ' &middot; ' + club[0] : p.t && p.t !== 'FA' ? ' &middot; ' + p.t : ' &middot; Free agent');

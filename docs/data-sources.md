@@ -20,6 +20,9 @@ Verified against `_worker.js` on 2026-09-06.
 | `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts | `_worker.js:1353`, `:3061`, `:5656`, `:5657` | **Red.** Undocumented endpoints, no commercial licence. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
+| `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 licence question; see R7. |
+| `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorise, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
+| `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~335 URL references, none fetched server-side | **Unreviewed.** Copyrighted images served from the league's CDN. See R4. |
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the licence exists. Unset today. |
 | DFS lobby CSV | DraftKings / FanDuel salaries | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
@@ -109,6 +112,14 @@ licensed imagery, a permissively licensed substitute, or no headshots.
 - [x] API keys server-side only. §14.4. All keys are worker `env` bindings.
 - [x] Caching. §14.5. ESPN and Sleeper pulls are `cf.cacheTtl` cached; odds are on the job clock.
 - [ ] No Kalshi or prediction-market data anywhere. §13.4. Holds today — nothing to remove — keep it that way.
+
+### R7 — League sync providers (added 2026-09-09)
+
+See `docs/league-sync.md` Part 3 for the full record. In short:
+
+- **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written licence in `docs/`. Attribution string in §3 applies.
+- **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorises Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
+- **ESPN.** No supported path. Not implemented; the adapter is a documented placeholder and manual setup is the fallback. Do not add the `lm-api-reads` host.
 
 ### R6 — Schema note for the free-tier delay model
 

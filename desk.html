@@ -58,6 +58,24 @@ p{color:var(--sec);margin:0 0 16px}
 .dk-ins{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;background:var(--panel)}
 .dk-ins h3{margin:0 0 8px} .dk-ins dt{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-top:8px} .dk-ins dd{margin:2px 0 0;font-size:15px;line-height:1.55}
 .dk-conf{font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:2px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--sec)}
+.dk-kicker{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin:18px 0 4px}
+.dk-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:10px 0 18px;border:1px solid var(--line2);border-radius:8px;overflow:hidden;position:sticky;top:52px;z-index:5;background:var(--bg,#fff)}
+.dk-tabs button{appearance:none;border:0;background:transparent;padding:11px 8px;font:inherit;font-weight:800;letter-spacing:.04em;color:var(--sec);cursor:pointer}
+.dk-tabs button.on{background:var(--teal);color:#fff}
+.dk-byline{display:flex;align-items:center;gap:8px;color:var(--sec);font-size:14px;margin:0 0 10px}
+.dk-byline a{font-weight:700}
+.dk-av{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:12px;letter-spacing:.04em}
+.dk-ai{font-size:11px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line2);border-radius:3px;padding:1px 5px}
+.dk-dek{font-size:18px;color:var(--text);margin:0 0 18px;line-height:1.45}
+.dk-by{display:block;font-size:12px;color:var(--sec);margin:4px 0}
+.dk-rival{border:1px solid var(--line2);border-left:4px solid var(--teal);border-radius:8px;padding:12px 14px;margin:6px 0 18px}
+.dk-rival-h{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.dk-rival-p{font-size:17px;font-weight:800;margin:4px 0 8px}.dk-rival-p span{font-weight:400;color:var(--sec);font-size:13px}
+.dk-rival-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}.dk-rival-g div{background:var(--bg2,#f6f8f9);border-radius:6px;padding:8px 10px}
+.dk-rival-g b{display:block;font-size:12px}.dk-rival-g span{font-size:22px;font-weight:800;display:block}.dk-rival-g small{color:var(--sec)}
+.dk-rival p{margin:10px 0 6px;font-style:italic}
+.dk-disc{font-size:12.5px;margin-top:22px}
+@media(max-width:640px){.dk-tabs{top:52px}.dk-rival-g{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -71,7 +89,7 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/wagers">Wagers</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -86,7 +104,16 @@ p{color:var(--sec);margin:0 0 16px}
 <p class="is-lede" id="dkLede">The week&rsquo;s pieces, in the order the week produces them. Every fact in them comes from the box score, the depth chart, the injury list, the usage file or the betting market; a piece is published only when its prose stayed inside that data, and shows the data itself when it did not.</p>
 <div class="its-strip" data-season-strip></div>
 <div id="dkList"></div>
-<article class="dk-piece" id="dkPiece" hidden></article>
+<article class="dk-piece" id="dkPiece" hidden>
+  <p class="dk-kicker" id="dkKicker"></p>
+  <div class="dk-tabs" id="dkTabs" role="tablist" aria-label="Audience" hidden>
+    <button type="button" role="tab" data-lens="weekly" aria-selected="true" class="on">Weekly Fantasy</button>
+    <button type="button" role="tab" data-lens="dfs" aria-selected="false">DFS</button>
+  </div>
+  <div id="dkPre"></div>
+  <div id="dkBody"></div>
+  <div id="dkPost"></div>
+</article>
 <p class="is-empty" id="dkEmpty">Reading the desk&hellip;</p>
 <p class="is-note" style="margin-top:28px"><a href="/in-season/desk">&larr; The desk</a> &middot; <a href="/in-season/rankings">Rankings</a> &middot; <a href="/in-season/vegas-edge">Vegas Edge</a></p>
 </main>
@@ -111,6 +138,7 @@ p{color:var(--sec);margin:0 0 16px}
       <li><a href="/auction-watch">Auction Watch</a></li>
       <li><a href="/guides">Guides</a></li>
       <li><a href="/play-caller-premium">Play-Caller Premium</a></li>
+      <li><a href="/the-tell">The Tell</a></li>
       <li><a href="/insights-vault">Insight Vault</a></li>
      </ul>
     </div>
@@ -120,8 +148,10 @@ p{color:var(--sec);margin:0 0 16px}
       <li><a href="/in-season">Overview</a></li>
       <li><a href="/fantasy">Fantasy</a></li>
       <li><a href="/dfs">DFS</a></li>
-      <li><a href="/wagers">Wagers &amp; prediction markets</a></li>
-      <li><a href="/my-league">My League</a></li>
+      <li><a href="/in-season/desk">The Desk</a></li>
+      <li><a href="/analysts">The analysts (AI)</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
      </ul>
     </div>
     <div class="foot-col">
@@ -149,67 +179,173 @@ p{color:var(--sec);margin:0 0 16px}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-season.js" defer></script>
+<script src="/it-sync.js" defer></script>
 <script>
 (function () {
-  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var $ = function (id) { return document.getElementById(id); };
-  var LABEL = { alreadyKnew: 'What we already knew', learned: 'What we learned', stillDontKnow: "What we still don't know", fantasyWinners: 'Fantasy winners', fantasyLosers: 'Fantasy losers', winners: 'Winners', losers: 'Losers', usageChanges: 'Usage changes', marketImplications: 'Market implications', waiverImplications: 'Waiver implications', injuryImplications: 'Injury implications', earlyMarketReaction: 'Early next-week market reaction', roleChanges: 'Role changes', injuries: 'Injuries', misleadingBoxScores: 'Misleading box scores', surprisingUsage: 'Surprising usage', biggestValueChanges: 'Biggest fantasy value changes', firstIndicationsForNextWeek: 'First indications for next week', opportunityRisers: 'Opportunity risers', opportunityFallers: 'Opportunity fallers', targetRouteOpportunity: 'Target / route opportunity', backfieldControl: 'Backfield control', redZoneReality: 'Red-zone reality', marketConfirmation: 'Market confirmation', next3Weeks: 'Next 3 weeks', restOfSeason: 'Rest of season', fantasyPlayoffs: 'Fantasy playoffs: weeks 15\u201317', majorMovers: 'Major movers', marketVsConsensus: 'Market vs. consensus', injuryDrivenOpportunity: 'Injury-driven opportunity', startSitPressurePoints: 'Start / sit pressure points', ironTunaHigher: 'Players Iron Tuna is higher on', ironTunaLower: 'Players Iron Tuna is lower on', whatCouldStillChange: 'What could still change', lines: 'Spread, total and team totals', gameEnvironment: 'Game environment', props: 'Player props', marketDelta: 'Market Delta', rankings: 'Rankings', keyQuestions: 'Key questions', fantasyApproach: 'Fantasy approach' };
+  var words = function (k) { return String(k).replace(/([A-Z])/g, ' $1').replace(/^./, function (c) { return c.toUpperCase(); }); };
+  var LABEL = { alreadyKnew: 'What we already knew', learned: 'What we learned', stillDontKnow: "What we still don't know", fantasyWinners: 'Fantasy winners', fantasyLosers: 'Fantasy losers', winners: 'Winners', losers: 'Losers', usageChanges: 'Usage changes', marketImplications: 'Market implications', waiverImplications: 'Waiver implications', injuryImplications: 'Injury implications', earlyMarketReaction: 'Early next-week market reaction', roleChanges: 'Role changes', injuries: 'Injuries', misleadingBoxScores: 'Misleading box scores', surprisingUsage: 'Surprising usage', biggestValueChanges: 'Biggest fantasy value changes', firstIndicationsForNextWeek: 'First indications for next week', opportunityRisers: 'Opportunity risers', opportunityFallers: 'Opportunity fallers', targetRouteOpportunity: 'Target / route opportunity', backfieldControl: 'Backfield control', redZoneReality: 'Red-zone reality', marketConfirmation: 'Market confirmation', next3Weeks: 'Next 3 weeks', restOfSeason: 'Rest of season', fantasyPlayoffs: 'Fantasy playoffs: weeks 15–17', majorMovers: 'Major movers', marketVsConsensus: 'Market vs. consensus', injuryDrivenOpportunity: 'Injury-driven opportunity', startSitPressurePoints: 'Start / sit pressure points', ironTunaHigher: 'Players Iron Tuna is higher on', ironTunaLower: 'Players Iron Tuna is lower on', whatCouldStillChange: 'What could still change', lines: 'Spread, total and team totals', gameEnvironment: 'Game environment', props: 'Player props', marketDelta: 'Market Delta', rankings: 'Rankings', keyQuestions: 'Key questions', fantasyApproach: 'Fantasy approach',
+    whatChanged: 'What changed', movesUp: 'Moves up', movesDown: 'Moves down', startSit: 'Start / sit', replacements: 'Replacements', longerTerm: 'Longer-term significance', projectionImpact: 'Projection impact', ownershipImpact: 'Ownership impact', cashGame: 'Cash games', tournaments: 'Tournaments', stacks: 'Stacks', pivots: 'Pivots', lateSwap: 'Late swap',
+    signal: 'Signal', noise: 'Noise', concerns: 'Concern', buy: 'Buy', watchThis: 'Watch this', waiversAndTrades: 'Waivers and trades', emergingChalk: 'Emerging chalk', priceInefficiencies: 'Price inefficiencies', roleChangesForPricing: 'Role changes not yet in the price', touchdownRegression: 'Touchdown regression', stackImplications: 'Stack implications', leverage: 'Leverage',
+    expectations: 'Key expectations', matchups: 'Matchups', usage: 'Usage', marketSignals: 'Market signals', risk: 'Risk and uncertainty', captainOptions: 'Captain / MVP options', value: 'Value', ownership: 'Ownership', contrarianCaptains: 'Contrarian captains', correlation: 'Correlation', gameScripts: 'Game scripts', fades: 'Fades',
+    overview: 'Overview', quarterbacks: 'Quarterbacks', runningBacks: 'Running backs', wideReceivers: 'Wide receivers', tightEnds: 'Tight ends', flex: 'FLEX', kickersAndDefenses: 'Kickers and defenses', whereWeDisagree: 'Where Brooks and Vega disagree', rawVsSalary: 'Raw projection vs. salary', earlyValues: 'Early values', earlyChalk: 'Early chalk', cashVsTournament: 'Cash vs. tournament',
+    theStory: 'The story', whatTheNumbersSay: 'What the numbers say', whatToDo: 'What to do', buySell: 'Buy / sell', bringBacks: 'Bring-backs', salaryAndRushingUpside: 'Salary and rushing upside',
+    whatMondayChanged: 'What Monday night changed', next3: 'Next 3 games', untilPlayoffs: 'Until the fantasy playoffs', playoffsOnly: 'Fantasy playoffs only', priceInefficiencyBoard: 'Early price inefficiency board', whyThePriceIsWrong: 'Why the price is wrong', initialOwnership: 'Initial ownership',
+    theDevelopment: 'The development', workloadEvidence: 'Workload evidence', rankingImpact: 'Ranking impact', tradesAndWaivers: 'Trades and waivers', salary: 'Salary', workloadPerDollar: 'Workload per dollar', touchdownEquity: 'Touchdown equity', chalkVsLeverage: 'Chalk vs. leverage', stacking: 'Stacking',
+    priorityAdds: 'Priority adds', midLevelAdds: 'Mid-level adds', deepAdds: 'Deep adds', speculativeStashes: 'Speculative stashes', doNotChase: 'Do not chase', faabAndDrops: 'FAAB and drops', likelyChalk: 'Likely chalk', goodChalk: 'Good chalk', badChalk: 'Bad chalk', pricingErrors: 'Pricing errors', initialStacks: 'Initial stacks', ownershipUncertainty: 'Early-week ownership uncertainty',
+    targetEvidence: 'Target evidence', trades: 'Trades', bigPlayUpside: 'Big-play upside', propImplications: 'Prop implications', chalk: 'Chalk', contrarianConstruction: 'Contrarian construction', kickersAndDefense: 'Kicker and defense', overowned: 'Overowned plays',
+    thePlayer: 'The player', theDiscrepancy: 'The discrepancy', theEvidence: 'The evidence', howToUseHim: 'How to use him', target: 'Five to target', tradeAway: 'Five to trade away', reasoning: 'Reasoning', marketCounterpoint: 'Market counterpoint', attack: 'Five to attack', fade: 'Five to fade',
+    routeAndTargetEvidence: 'Route and target evidence', salaryAllocation: 'Salary allocation', payUpOrSave: 'Pay up or save', positionalLeverage: 'Positional leverage',
+    usageAndRole: 'Usage and role', sustainability: 'Sustainability', calledBackAndNearMisses: 'Called back and near misses', nextWeek: 'Next week', futurePricing: 'Future pricing', stackRelationships: 'Stack relationships', salaryInefficiency: 'Salary inefficiency',
+    injurySituations: 'Injury situations', difficultStartSits: 'Difficult start / sits', marketMovers: 'Market movers', weather: 'Weather', sundayContingencies: 'Sunday contingencies', slateOverview: 'Slate overview', bestGameEnvironments: 'Best game environments', coreStacks: 'Core stacks', contrarianStacks: 'Contrarian stacks', values: 'Values', injuryContingencies: 'Injury contingencies', salarySavers: 'Salary savers', contestTypes: 'Contest-type differences',
+    streamingDefenses: 'Streaming defenses', defensesToAvoid: 'Defenses to avoid', kickerRankings: 'Kicker rankings', teamTotalsAndWeather: 'Team totals and weather', upcomingSchedule: 'Upcoming schedule', dstSalary: 'DST salary', pressureAndTurnovers: 'Pressure and turnovers',
+    whatHappened: 'What happened', whoMovesUp: 'Who moves up', whoMovesDown: 'Who moves down', salaryValue: 'Salary value' };
+  var lbl = function (k) { return LABEL[k] || words(k); };
   function wanted() {
     var m = location.pathname.match(/^\/in-season\/desk\/([a-z-]+)(?:\/(\d{1,2}))?\/?$/);
     var qs = new URLSearchParams(location.search);
-    return { kind: m ? m[1] : (qs.get('kind') || ''), week: m && m[2] ? m[2] : (qs.get('week') || '') };
+    return { kind: m ? m[1] : (qs.get('kind') || ''), week: m && m[2] ? m[2] : (qs.get('week') || ''), lens: qs.get('lens') };
+  }
+  // Which lens to open on: the URL says, else where the reader came from,
+  // else the lane they last chose on the front page.
+  function defaultLens(want) {
+    if (want.lens === 'dfs' || want.lens === 'weekly') return want.lens;
+    try { if (/\/dfs(\b|\?|#|$)/.test(document.referrer) || /lane=dfs/.test(document.referrer)) return 'dfs'; } catch (x) {}
+    try { if (localStorage.getItem('it.lane') === 'dfs') return 'dfs'; } catch (x) {}
+    return 'weekly';
+  }
+  function track(ev, props) {
+    try { var uid = localStorage.getItem('it.uid'); if (!uid) { uid = Math.random().toString(36).slice(2, 12); localStorage.setItem('it.uid', uid); }
+      var body = JSON.stringify({ event: ev, uid: uid, props: Object.assign({ path: location.pathname }, props || {}) });
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' })); else fetch('/api/track', { method: 'POST', body: body, keepalive: true }); } catch (x) {}
   }
   function list(j) {
     var latest = {};
     (j.pieces || []).forEach(function (p) { if (!latest[p.kind]) latest[p.kind] = p; });
-    $('dkList').innerHTML = '<div class="dk-grid">' + j.kinds.map(function (k) {
+    var order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    var kinds = (j.kinds || []).slice().sort(function (a, b) { return (order.indexOf(a.day) - order.indexOf(b.day)) || (a.hour - b.hour) || (a.minute - b.minute); });
+    $('dkList').innerHTML = '<div class="dk-grid">' + kinds.map(function (k) {
       var p = latest[k.kind];
-      return '<a class="dk-card" href="/in-season/desk/' + e(k.kind) + '"><span class="when">' + e(k.day) + ' ' + (k.hour === 0 ? 'after the game' : k.hour + ':00 ET') + '</span><h3>' + e(k.title) + '</h3>' +
-        (p ? '<span class="st ' + e(p.status) + '">Week ' + e(p.week) + ' &middot; ' + e(p.status) + '</span>' : '<span class="st">Not yet this season</span>') + '</a>';
-    }).join('') + '</div>';
+      var when = k.day + ' ' + (k.hour % 12 === 0 ? 12 : k.hour % 12) + ':' + (k.minute < 10 ? '0' : '') + k.minute + (k.hour < 12 ? ' AM' : ' PM') + ' ET';
+      return '<a class="dk-card" href="/in-season/desk/' + e(k.kind) + '"><span class="when">' + e(when) + (k.gate ? ' &middot; only when there is a story' : '') + '</span><h3>' + e(k.title) + '</h3>' +
+        '<span class="dk-by">' + e(k.analystName) + (k.lens === 'both' ? ' &middot; Weekly + DFS' : '') + '</span>' +
+        (p ? '<span class="st ' + e(p.status) + '">Week ' + e(p.week) + ' &middot; ' + e(p.status) + (p.version > 1 ? ' &middot; update ' + e(p.version) : '') + '</span>' : '<span class="st">Not yet this season</span>') + '</a>';
+    }).join('') + '</div>' + (j.disclosure ? '<p class="is-note dk-disc">' + e(j.disclosure) + ' <a href="/analysts">Meet the desk &rarr;</a></p>' : '');
     $('dkEmpty').hidden = true;
+  }
+  function objTable(key, rows) {
+    if (!rows.length) return '';
+    var cols = Object.keys(rows[0]).filter(function (c) { return c !== 'why'; });
+    return '<div class="is-scroll"><table class="is-table"><thead><tr>' + cols.map(function (c) { return '<th>' + e(words(c)) + '</th>'; }).join('') + '<th>Why</th></tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr>' + cols.map(function (c) { var v = r[c]; if (Array.isArray(v)) v = v.join(', '); return '<td' + (typeof v === 'number' ? ' class="num"' : '') + '>' + e(v == null ? '—' : v) + '</td>'; }).join('') + '<td>' + e(r.why || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
   }
   function section(key, val) {
     if (val == null) return '';
-    var h = '<h2>' + e(LABEL[key] || key.replace(/([A-Z])/g, ' $1')) + '</h2>';
-    if (Array.isArray(val) && val.every(function (x) { return typeof x === 'string'; })) return h + '<ul>' + val.map(function (s) { return '<li>' + e(s) + '</li>'; }).join('') + '</ul>';
+    var h = '<h2>' + e(lbl(key)) + '</h2>';
+    if (Array.isArray(val) && val.every(function (x) { return typeof x === 'string'; })) return val.length ? h + '<ul>' + val.map(function (s) { return '<li>' + e(s) + '</li>'; }).join('') + '</ul>' : '';
+    if (Array.isArray(val) && val.every(function (x) { return x && typeof x === 'object'; })) return val.length ? h + objTable(key, val) : '';
     if (typeof val === 'string') return h + '<p>' + e(val) + '</p>';
     return h + '<pre>' + e(JSON.stringify(val, null, 1)) + '</pre>';
   }
-  function piece(j) {
-    document.title = j.title + ' | Iron Tuna';
-    $('dkTitle').textContent = j.title;
-    $('dkLede').textContent = 'Published ' + (j.publishedAt ? new Date(j.publishedAt).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'not yet') + '.';
+  function lensBody(j, lens, order) {
+    var b = (j.body && j.body[lens]) || null;
+    if (!b) return '<p class="is-empty">This piece has no ' + (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' lens.</p>';
     var out = '';
-    if (j.status === 'held') out += '<div class="dk-held"><b>Held.</b> The written draft named something the brief does not contain (' + e((j.violations || []).slice(0, 6).join(', ')) + '), so it was not published. The data the piece was built from is below and is right by construction.</div>';
-    if (j.status === 'skipped') out += '<div class="dk-held">There was no such game this week.</div>';
+    (order && order.length ? order : Object.keys(b)).forEach(function (k) { if (k in b) out += section(k, b[k]); });
+    Object.keys(b).forEach(function (k) { if (!order || order.indexOf(k) < 0) out += section(k, b[k]); });
+    return out;
+  }
+  function byline(j, lens) {
+    var by = j.byline || {};
+    var id = lens === 'dfs' ? by.dfsAnalyst : by.analyst, name = lens === 'dfs' ? by.dfsName : by.name;
+    if (!name) return '';
+    return '<p class="dk-byline"><span class="dk-av">' + e((name || '').split(' ').map(function (w) { return w[0]; }).join('')) + '</span> By <a href="/analysts/' + e(id) + '">' + e(name) + '</a>' + (lens === 'dfs' && by.name && by.name !== name ? ' &middot; reporting with <a href="/analysts/' + e(by.analyst) + '">' + e(by.name) + '</a>' : '') + ' &middot; <span class="dk-ai">AI analyst persona</span></p>';
+  }
+  function rivalryBox(j) {
+    var r = j.rivalry; if (!r) return '';
+    return '<aside class="dk-rival"><div class="dk-rival-h">Vega vs. Brooks</div><div class="dk-rival-p">' + e(r.player) + ' <span>' + e(r.position) + ', ' + e(r.team) + '</span></div>' +
+      '<div class="dk-rival-g"><div><b>Brooks</b><span>' + e(r.position) + e(r.brooks.rank) + '</span><small>Fantasy Analysis</small></div><div><b>Vega</b><span>' + e(r.position) + e(r.vega.rank) + '</span><small>Market Intelligence &middot; ' + e(r.vega.basis) + '</small></div></div>' +
+      (r.line ? '<p>' + e(r.line) + '</p>' : '') + '<a href="/analysts/vega">Vega</a> &middot; <a href="/analysts/brooks">Brooks</a></aside>';
+  }
+  function callsBox(j) {
+    var calls = j.body && j.body.calls; if (!calls || !calls.length) return '';
+    return '<h2>The calls</h2><div class="is-scroll"><table class="is-table"><thead><tr><th>Player</th><th>Call</th><th>Confidence</th><th>Why</th></tr></thead><tbody>' +
+      calls.map(function (c) { return '<tr><td><b>' + e(c.player) + '</b></td><td>' + e(c.direction) + (c.rank ? ' (' + e(c.rank) + ')' : '') + (c.recommendation ? ': ' + e(c.recommendation) : '') + '</td><td>' + e(c.confidence || '') + '</td><td>' + e(c.rationale || '') + '</td></tr>'; }).join('') + '</tbody></table></div><p class="is-note">Every call is stored and graded in a later week. <a href="/analysts/' + e((j.byline || {}).analyst) + '">The record &rarr;</a></p>';
+  }
+  function priorBox(j) {
+    var pc = j.brief && j.brief.priorCalls; if (!pc || !pc.length) return '';
+    return '<details class="dk-data"><summary>What the desk said before about these players</summary><ul>' + pc.slice(0, 12).map(function (c) { return '<li><b>' + e(c.analystName) + '</b>, Week ' + e(c.week) + ': ' + e(c.player) + ' ' + e(c.direction) + (c.recommendation ? ', ' + e(c.recommendation) : '') + (c.outcome ? ' <span class="dk-conf">' + e(c.outcome) + '</span>' : '') + '</li>'; }).join('') + '</ul></details>';
+  }
+  function freshBox(j) {
+    var f = j.brief && j.brief.freshness; if (!f || !f.sources) return '';
+    var rows = Object.keys(f.sources).map(function (k) { var s = f.sources[k]; return '<tr><td>' + e(k) + '</td><td>' + e(s.provider || '—') + '</td><td class="num">' + e(s.ageHours == null ? '—' : s.ageHours + 'h') + '</td><td>' + e(s.status) + '</td></tr>'; }).join('');
+    return '<details class="dk-data"><summary>Sources and freshness' + (f.stale && f.stale.length ? ' &middot; ' + e(f.stale.length) + ' stale, excluded' : '') + '</summary><div class="is-scroll"><table class="is-table"><thead><tr><th>Source</th><th>Provider</th><th class="num">Age</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div></details>';
+  }
+  function legacyPiece(j) {
+    var out = '';
     var b = j.body || {};
     if (j.kind === 'team-recaps' && b.teams) {
-      out += b.teams.map(function (t) { return '<div class="dk-team"><h3>' + e(t.team) + '</h3>' + ['whatWeAlreadyKnew', 'whatWeLearned', 'whatWeStillDontKnow'].map(function (k) { return t[k] && t[k].length ? '<h4>' + e(LABEL[k] || k.replace(/([A-Z])/g, ' $1')) + '</h4><ul>' + t[k].map(function (s) { return '<li>' + e(s) + '</li>'; }).join('') + '</ul>' : ''; }).join('') + '</div>'; }).join('');
+      out += b.teams.map(function (t) { return '<div class="dk-team"><h3>' + e(t.team) + '</h3>' + ['whatWeAlreadyKnew', 'whatWeLearned', 'whatWeStillDontKnow'].map(function (k) { return t[k] && t[k].length ? '<h4>' + e(lbl(k)) + '</h4><ul>' + t[k].map(function (s) { return '<li>' + e(s) + '</li>'; }).join('') + '</ul>' : ''; }).join('') + '</div>'; }).join('');
     } else if (j.kind === 'what-they-arent-telling-you' && b.insights) {
       out += b.insights.map(function (i) { return '<div class="dk-ins"><h3>' + e(i.headline) + ' <span class="dk-conf">' + e(i.confidence) + '</span></h3><dl>' + [['whatEveryoneSees', 'What everyone sees'], ['whatTheDataSays', 'What the data says'], ['whatVegasSays', 'What Vegas says'], ['whyItMatters', 'Why it matters']].map(function (k) { return '<dt>' + k[1] + '</dt><dd>' + e(i[k[0]]) + '</dd>'; }).join('') + '</dl></div>'; }).join('');
     } else if (j.kind === 'weekend-game-plan' && b.cards) {
       out += b.cards.map(function (c) { return '<div class="dk-ins"><h3>' + e(c.game) + '</h3><dl>' + [['fantasyEnvironment', 'Fantasy environment'], ['whatVegasIsTellingUs', 'What Vegas is telling us'], ['biggestVegasEdge', 'Biggest Vegas edge'], ['mostImportantPlayer', 'Most important player'], ['keyQuestion', 'Key question'], ['ironTunaApproach', 'Iron Tuna approach']].map(function (k) { return '<dt>' + k[1] + '</dt><dd>' + e(c[k[0]]) + '</dd>'; }).join('') + '</dl></div>'; }).join('');
     } else {
-      (j.sections || Object.keys(b)).forEach(function (k) { out += section(k, b[k]); });
+      (j.sections && j.sections.weekly && j.sections.weekly.length ? j.sections.weekly : Object.keys(b)).forEach(function (k) { out += section(k, b[k]); });
     }
-    if (j.brief) {
-      if (j.kind === 'weekend-game-plan' || j.kind === 'tnf-preview') {
-        var cards = (j.brief.cards || []);
-        out += '<h2>The lines</h2><div class="is-scroll"><table class="is-table"><thead><tr><th>Game</th><th class="num">Spread</th><th class="num">Total</th><th class="num">Implied away</th><th class="num">Implied home</th><th>Environment</th><th>Biggest edge</th><th>Most important</th></tr></thead><tbody>' +
-          cards.map(function (c) { return '<tr><td><b>' + e(c.game) + '</b></td><td class="num">' + (c.favourite ? e(c.favourite) + ' -' + Math.abs(c.spread) : 'PK') + '</td><td class="num">' + e(c.total == null ? '\u2014' : c.total) + '</td><td class="num">' + e(c.impliedAway == null ? '\u2014' : c.impliedAway) + '</td><td class="num">' + e(c.impliedHome == null ? '\u2014' : c.impliedHome) + '</td><td>' + e(c.environment) + '</td><td>' + (c.biggestEdge ? e(c.biggestEdge.name + ' (' + c.biggestEdge.classification + ')') : '\u2014') + '</td><td>' + (c.mostImportant ? e(c.mostImportant.name) : '\u2014') + '</td></tr>'; }).join('') + '</tbody></table></div>';
-      }
-      if (j.brief.excluded && j.brief.excluded.length) out += '<p class="is-note">Not covered here because they had not finished: ' + e(j.brief.excluded.join(', ')) + '.</p>';
-      out += '<details class="dk-data"><summary>The data this piece was built from</summary><pre>' + e(JSON.stringify(j.brief, null, 1)) + '</pre></details>';
-    }
-    $('dkPiece').innerHTML = out; $('dkPiece').hidden = false; $('dkList').hidden = true; $('dkEmpty').hidden = true;
+    return '<p class="is-note">A piece from the desk’s first calendar, kept as published. The current calendar is <a href="/in-season/desk">here</a>.</p>' + out;
   }
+  var current = null, lens = 'weekly';
+  function paintLens() {
+    var j = current; if (!j) return;
+    var both = j.lens === 'both' && j.body && j.body.dfs;
+    $('dkTabs').hidden = !both;
+    [].forEach.call($('dkTabs').querySelectorAll('button'), function (b) { var on = b.getAttribute('data-lens') === lens; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.classList.toggle('on', on); });
+    var title = lens === 'dfs' && j.dfsTitle ? j.dfsTitle : (j.headline || j.title);
+    $('dkTitle').textContent = title;
+    $('dkKicker').innerHTML = (lens === 'dfs' ? 'DFS' : 'Weekly Fantasy') + ' &middot; ' + e(j.title) + ' &middot; Week ' + e(j.week) + (j.version > 1 ? ' &middot; update ' + e(j.version) : '');
+    $('dkBody').innerHTML = byline(j, lens) + (j.dek ? '<p class="dk-dek">' + e(j.dek) + '</p>' : '') + (lens === 'weekly' ? rivalryBox(j) : '') +
+      (j.status === 'published' ? lensBody(j, lens, j.sections ? j.sections[lens] : null) + (lens === 'weekly' ? callsBox(j) : '') : '');
+    if (lens === 'dfs' && j.brief && j.brief.dfs && j.brief.dfs.note) $('dkBody').innerHTML += '<p class="is-note">' + e(j.brief.dfs.note) + '</p>';
+    try { history.replaceState(null, '', location.pathname + (lens === 'dfs' ? '?lens=dfs' : '')); } catch (x) {}
+    track('desk_lens', { kind: j.kind, week: j.week, lens: lens });
+  }
+  function piece(j, want) {
+    current = j; lens = j.lens === 'both' ? defaultLens(want) : 'weekly';
+    document.title = (j.headline || j.title) + ' | Iron Tuna';
+    $('dkLede').textContent = 'Published ' + (j.publishedAt ? new Date(j.publishedAt).toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET' : 'not yet') + '.';
+    var pre = '';
+    if (j.status === 'held') pre += '<div class="dk-held"><b>Held.</b> The written draft did not clear the fact check (' + e((j.violations || []).slice(0, 6).join(', ')) + '), so it was not published. The research packet the piece was built from is below and is right by construction.</div>';
+    if (j.status === 'skipped') pre += '<div class="dk-held">Nothing worth publishing this week' + (j.brief && j.brief.reason ? ': ' + e(String(j.brief.reason).replace(/_/g, ' ')) : '') + '. The desk publishes less rather than filling a slot.</div>';
+    $('dkPre').innerHTML = pre;
+    var post = '';
+    if (j.legacy) { $('dkTabs').hidden = true; $('dkTitle').textContent = j.title; $('dkKicker').textContent = 'From the archive'; $('dkBody').innerHTML = legacyPiece(j); }
+    else paintLens();
+    if (j.brief) {
+      post += priorBox(j) + freshBox(j);
+      if (j.brief.excludedGames && j.brief.excludedGames.length) post += '<p class="is-note">Not covered here because they had not finished: ' + e(j.brief.excludedGames.join(', ')) + '.</p>';
+      if (j.brief.meta && j.brief.meta.excludedGames && j.brief.meta.excludedGames.length) post += '<p class="is-note">Not covered here because they had not finished: ' + e(j.brief.meta.excludedGames.join(', ')) + '.</p>';
+      post += '<details class="dk-data"><summary>The research packet this piece was built from</summary><pre>' + e(JSON.stringify(j.brief, null, 1)) + '</pre></details>';
+    }
+    if (j.disclosure) post += '<p class="is-note dk-disc">' + e(j.disclosure) + ' <a href="/analysts">Meet the desk &rarr;</a></p>';
+    $('dkPost').innerHTML = post;
+    try { if (window.ITSync) { var sb = $('dkSync'); if (!sb) { sb = document.createElement('div'); sb.id = 'dkSync'; sb.hidden = true; $('dkBody').parentNode.insertBefore(sb, $('dkBody')); } ITSync.callouts($('dkBody'), { summary: sb }); } } catch (e) {}
+    $('dkPiece').hidden = false; $('dkList').hidden = true; $('dkEmpty').hidden = true;
+    if (window.ITPlayerSearch && window.ITPlayerSearch.linkAllPlayers) { try { window.ITPlayerSearch.linkAllPlayers($('dkBody')); } catch (x) {} }
+    track('story_open', { kind: j.kind, week: j.week, lens: lens, analyst: (j.byline || {}).analyst });
+  }
+  $('dkTabs').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-lens]'); if (!b) return;
+    lens = b.getAttribute('data-lens'); try { localStorage.setItem('it.lane', lens === 'dfs' ? 'dfs' : 'fantasy'); } catch (x) {}
+    paintLens();
+  });
   function boot() {
     var w = wanted();
     if (w.kind) {
       fetch('/api/content/piece?kind=' + encodeURIComponent(w.kind) + (w.week ? '&week=' + encodeURIComponent(w.week) : '')).then(function (r) { return r.json(); }).then(function (j) {
         if (!j || !j.ok) { $('dkEmpty').textContent = 'That piece has not been produced yet this season. It appears when its games are final and its hour comes round.'; return; }
-        piece(j);
+        piece(j, w);
       }).catch(function () { $('dkEmpty').textContent = 'The desk did not answer.'; });
     } else {
       fetch('/api/content').then(function (r) { return r.json(); }).then(function (j) { if (!j || !j.ok) { $('dkEmpty').textContent = 'The desk did not answer.'; return; } list(j); }).catch(function () { $('dkEmpty').textContent = 'The desk did not answer.'; });

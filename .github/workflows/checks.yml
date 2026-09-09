@@ -115,7 +115,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -292,6 +292,10 @@ jobs:
         run: node tools/test-health.mjs
       - name: The job schedule in New York time
         run: node tools/test-jobs.mjs
+      - name: The in-season newsroom (migration, staff, blend, packets, memory, fact check, breaking news)
+        run: node tools/test-newsroom.mjs
+      - name: The editorial week, dry run (fake D1, fake model, the clock advanced a quarter hour at a time)
+        run: node tools/test-dry-run.mjs
 
       # The data-licensing boundary (docs/data-sources.md, Addendum §14). Every
       # external host the worker can reach is named in an allowlist with the
@@ -360,6 +364,17 @@ jobs:
       # from, and to the markup /it-league.js needs to translate it.
       - name: The Pick, against the player pool it prices from
         run: node tools/test-the-pick.mjs
+
+      # "The Tell" argues from three printed numbers per entry
+      # rather than from prose, and its whole claim on a reader is that those
+      # numbers are checkable. So every one of them is recomputed here from the
+      # sources the column says it read — touchdown share and positional rank off
+      # PROJECTIONS at full PPR, implied points and offense rank off
+      # tools/team-market.json — and the summary table at the top of the page is
+      # checked against the six entries under it, because two statements of the
+      # same fact on one page is how a page contradicts itself.
+      - name: The Tell, against the numbers it quotes
+        run: node tools/test-the-tell.mjs
 
       # Who coaches whom is handed to the Value Coach as authoritative and told to
       # override the model's own memory, so a wrong row is stated as confidently as
@@ -502,6 +517,22 @@ jobs:
       # pro-rating applied exactly once. Skips the live pull without network.
       - name: Worker availability refresh
         run: node tools/test-worker-availability.mjs
+
+      # Sync My League (docs/league-sync.md): the provider adapters against
+      # Sleeper- and Yahoo-shaped fixtures, the player-id crosswalk and its
+      # miss log, the idempotent sync into an in-memory D1, OAuth sealing,
+      # expiry and refresh, disconnect, and every personalised module (the
+      # league board with TE premium, best lineup incl. superflex, the pickup
+      # advisor on the room's actual free agents, matchup, intel, trades,
+      # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
+      - name: "Sync My League: providers, crosswalk, sync and the personalised modules"
+        run: node tools/test-league-sync.mjs
+
+      # Every deployed script that the pages load. it-sync.js is loaded by
+      # nine in-season pages; a syntax error there takes the league strip and
+      # the personalised modules off all of them at once.
+      - name: Parse it-sync.js
+        run: node --check it-sync.js
 
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one

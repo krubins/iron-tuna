@@ -169,8 +169,18 @@ ok('the card is not advertised in the sitemap',
 // ── the box is on the front page, and stays on screen ──────────────────────
 console.log('\nthe box lives in the sticky ribbon');
 ok('front.html has the search box in the ribbon',
-   /<div class="ribbon">[\s\S]*?class="rb-search"[\s\S]*?<\/div><\/div>/.test(front));
-ok('the ribbon is still sticky', /\.ribbon\{[^}]*position:sticky/.test(front));
+   /<div class="ribbon"[^>]*>[\s\S]*?class="rb-search"[\s\S]*?<\/div><\/div>/.test(front));
+// The ribbon no longer carries `position:sticky` itself: it and the lane tabs
+// stick as one `.topbars` group, because the tabs' height is a clamp() on the
+// viewport and any fixed `top` offset under them is wrong at some width. What
+// still has to hold is what this line has always meant — the box stays on
+// screen — so assert the group is pinned and the ribbon is inside it.
+const topbars = front.indexOf('<div class="topbars">');
+ok('the ribbon is still pinned to the top of the page',
+   /\.topbars\{[^}]*position:sticky[^}]*top:0/.test(front)
+   && topbars !== -1
+   && front.indexOf('<div class="ribbon"') > topbars
+   && front.indexOf('<div class="ribbon"') < front.indexOf('<main class="wrap">'));
 ok('front.html loads the lookup', front.includes('src="/player-search.js"'));
 ok('the box opts in by attribute, so both pages mount the same widget',
    front.includes('data-player-search') && card.includes('data-player-search')

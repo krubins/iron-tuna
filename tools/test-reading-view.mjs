@@ -35,7 +35,7 @@ const ok = (name, cond, extra = '') => {
   else { fail++; console.log(`  FAIL ${name}${extra ? ' — ' + extra : ''}`); }
 };
 
-const PAGES = ['lead.html', 'play-caller-premium.html'];
+const PAGES = ['lead.html', 'play-caller-premium.html', 'the-tell.html'];
 // The draft app is the one dark surface left, on purpose: it is a tool you work
 // in on draft night, not a page you read.
 const DARK = ['index.html'];

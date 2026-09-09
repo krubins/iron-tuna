@@ -219,7 +219,9 @@ console.log('\nsitemap.xml');
   // serve again if it were ever removed — but advertising a permanently
   // redirected URL as canonical is exactly the split signal the 301 exists to
   // prevent, so it is noindex and unlisted.
-  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', ...gated]);
+  // analyst.html is a shell like player.html: it answers at /analysts/<id>,
+  // and those eight URLs are what the sitemap lists.
+  const NOT_LISTED = new Set(['index.html', 'front.html', 'admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', 'analyst.html', ...gated]);
   const locs = new Set(urls.map((u) => (u.match(/<loc>([^<]*)<\/loc>/) || [])[1]));
   const absent = pages.filter((f) => !NOT_LISTED.has(f) && !locs.has('https://irontuna.com/' + f.replace('.html', '')));
   ok('every indexable page is in the sitemap', absent.length === 0, absent.join(', '));

@@ -65,7 +65,7 @@ async function rl(env, request, bucket, max, ttlSec) {
 // advertised in the sitemap while the gate is shut.
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
-  '/fantasy', '/wagers']);
+  '/fantasy']);
 // The HUB is never in that set: it is the page a closed route serves in place of
 // itself, so gating it would be a loop. /post-draft is the name the hub used to
 // carry and 301s here — see the redirect at the top of fetch().
@@ -5149,7 +5149,7 @@ async function boardsContext(env, opts) {
 let _BOARDS_MEMO = new Map();
 async function boardsPayload(env, opts) {
   const o = opts || {};
-  const key = [o.horizon, o.position, o.preset, o.through].join('|');
+  const key = [o.horizon, o.position, o.preset, o.through, o.customKey || ''].join('|');
   const hit = _BOARDS_MEMO.get(key);
   if (hit && Date.now() - hit.at < 300000) return hit.out;
   const ctx = await boardsContext(env, o);
@@ -5843,12 +5843,12 @@ async function depthChartsRead(env) {
 // ── the calendar ───────────────────────────────────────────────────────────
 function etParts(ms) {
   try {
-    const f = new Intl.DateTimeFormat('en-US', { timeZone: LEAD_TZ, weekday: 'short', hour: 'numeric', hour12: false }).formatToParts(new Date(ms));
+    const f = new Intl.DateTimeFormat('en-US', { timeZone: LEAD_TZ, weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date(ms));
     const get = t => (f.find(p => p.type === t) || {}).value || '';
-    return { dow: get('weekday'), hour: parseInt(get('hour'), 10) % 24 };
+    return { dow: get('weekday'), hour: parseInt(get('hour'), 10) % 24, minute: parseInt(get('minute'), 10) || 0 };
   } catch (e) {
     const d = new Date(ms + etOffsetHours(ms) * 3600000);
-    return { dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()], hour: d.getUTCHours() };
+    return { dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()], hour: d.getUTCHours(), minute: d.getUTCMinutes() };
   }
 }
 const _etDow = (ms) => etParts(ms).dow;
@@ -5869,57 +5869,212 @@ function weekGames(sched, week, now) {
   return ((sched && sched.games) || []).filter(g => g.type === 'REG' && g.week === week)
     .map(g => ({ ...g, dow: _etDow(g.kickoff), state: seasonGameStatus(g, at) }));
 }
+// ── the in-season calendar ─────────────────────────────────────────────────
+// The editorial calendar of the in-season newsroom (docs/editorial-migration.md
+// is the migration analysis; HANDOFF "The in-season newsroom" is the spec as
+// built). Every KIND is one PACKAGE: one research packet, one primary analyst,
+// and, where `lens` is `both`, a Weekly Fantasy lens and a DFS lens written
+// from the same facts. Times are Eastern. `retro` is the DUE-ANCHOR rule (a
+// retrospective piece keys off the last game of the played week, a forward
+// piece off the first game of the coming week); `subject` says which week the
+// piece is ABOUT, which is not always the same week: Monday's early rankings
+// anchor on Sunday's last game and are about the week after it.
+//
+//   gate: 'worth'   the packet may say there is nothing worth publishing, and
+//                   the piece is then skipped rather than padded. PUBLISH LESS.
+//   updates         the piece is re-produced as a new version while its
+//                   condition holds ('more-finals': more target games have
+//                   gone final; 'until-kickoff': the availability picture has
+//                   changed and a target game is still to kick off). One slug,
+//                   several versions, never a second story.
+//   rivalry: true   the one place the Vega/Brooks disagreement may surface,
+//                   and only when rivalryGate() says the numbers earn it.
+//   absorbs         the legacy kinds this package replaced (LEGACY_CONTENT).
 const CONTENT_KINDS = {
-  'team-recaps':          { title: 'Team-by-Team Recaps', day: 'Mon', hour: 7, retro: true,
-                            targets: (gs) => gs.filter(g => g.dow !== 'Mon') },
-  'mnf-breakdown':        { title: 'Monday Night: What We Learned', day: 'Tue', hour: 7, retro: true,
-                            targets: (gs) => gs.filter(g => g.dow === 'Mon'), optional: true },
-  'what-they-arent-telling-you': { title: "What They Aren't Telling You", day: 'Tue', hour: 7, retro: true,
-                            targets: (gs) => gs },
-  'opportunity-report':   { title: 'The Opportunity Report', day: 'Wed', hour: 7, retro: true, targets: (gs) => gs },
-  'rankings-update':      { title: 'Forward-Looking Rankings Update', day: 'Wed', hour: 7, retro: false, targets: () => [] },
-  'final-read':           { title: 'The Final Read', day: 'Thu', hour: 7, retro: false, targets: () => [] },
-  'tnf-preview':          { title: 'Thursday Night Football Preview', day: 'Thu', hour: 7, retro: false,
-                            targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true, preview: true },
-  'tnf-aftermath':        { title: 'Thursday Night Aftermath', day: 'Fri', hour: 7, retro: false,
-                            targets: (gs) => gs.filter(g => g.dow === 'Thu'), optional: true },
-  'weekend-game-plan':    { title: 'The Weekend Game Plan', day: 'Fri', hour: 7, retro: false,
-                            targets: (gs) => gs.filter(g => g.dow !== 'Thu'), preview: true },
-  'what-changed-today':   { title: 'What Changed Today?', day: 'Sun', hour: 20, retro: true,
-                            targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'), partial: true },
-  'snf-what-we-learned':  { title: 'Sunday Night: What We Learned', day: 'Mon', hour: 1, retro: true,
-                            targets: (gs) => { const sun = gs.filter(g => g.dow === 'Sun'); if (!sun.length) return []; const last = Math.max(...sun.map(g => g.kickoff)); return sun.filter(g => g.kickoff === last && etParts(g.kickoff).hour >= 19); }, optional: true }
+  'last-minute-intel': { title: 'Last-Minute Intel', day: 'Sun', hour: 12, minute: 15, retro: false, subject: 'current', anchor: 'targets',
+    analyst: 'raines', dfsAnalyst: 'park', lens: 'both', live: true, updates: 'until-kickoff', updateHours: 8,
+    targets: (gs) => gs.filter(g => g.dow === 'Sun'),
+    summary: 'Inactives, late injuries, lineup and line changes before kickoff, and what each one does to the rankings and the slate.',
+    absorbs: [] },
+  'what-sunday-taught-us': { title: 'What Sunday Taught Us', day: 'Sun', hour: 19, minute: 30, retro: true, subject: 'played',
+    analyst: 'mercer', dfsAnalyst: 'park', lens: 'both', partial: true, updates: 'more-finals', updateHours: 12, rivalry: true,
+    targets: (gs) => gs.filter(g => g.dow === 'Sun' && g.status === 'final'),
+    summary: 'Not a recap. Signal, noise, role changes and misleading box scores, and what they say about next week.',
+    absorbs: ['what-changed-today', 'snf-what-we-learned', 'team-recaps'] },
+  'mnf-preview': { title: 'Monday Night Football Preview', day: 'Mon', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
+    analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true,
+    targets: (gs) => gs.filter(g => g.dow === 'Mon'),
+    summary: 'Start/sit and the showdown slate for the Monday game.', absorbs: [] },
+  'early-rankings': { title: 'Early Rankings for Next Week', day: 'Mon', hour: 6, minute: 0, retro: true, subject: 'nextPlayed',
+    analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
+    summary: 'Every position ranked for the coming week, with the Fantasy Analysis / Market Intelligence slider.', absorbs: [] },
+  'quarterback-monday': { title: 'Quarterback Monday', day: 'Mon', hour: 7, minute: 0, retro: true, subject: 'played',
+    analyst: 'dalton', dfsAnalyst: 'park', lens: 'both', gate: 'worth', targets: () => [],
+    summary: 'One quarterback story that matters, or nothing.', absorbs: [] },
+  'ros-rankings': { title: 'Rest-of-Season Rankings', day: 'Tue', hour: 7, minute: 0, retro: true, subject: 'current',
+    analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
+    dfsTitle: 'Early Price Inefficiency Board',
+    summary: 'Next 3, until the playoffs, playoffs only, rest of season: one engine, four horizons.', absorbs: ['rankings-update', 'mnf-breakdown'] },
+  'tailback-tuesday': { title: 'Tailback Tuesday', day: 'Tue', hour: 8, minute: 0, retro: true, subject: 'played',
+    analyst: 'brooks', altAnalyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
+    summary: 'The running back development that changes a ranking, argued from the workload.', absorbs: ['opportunity-report'] },
+  'pickup-advisor': { title: 'Pickup Advisor', day: 'Wed', hour: 6, minute: 0, retro: true, subject: 'current',
+    analyst: 'grant', dfsAnalyst: 'park', lens: 'both', targets: () => [], dfsTitle: 'First-Look DFS Value & Leverage Report',
+    summary: 'Priority adds, mid-level adds, deep adds, stashes and do-not-chase, for 10, 12 and 14 teams.', absorbs: ['waiver-watch'] },
+  'wideout-wednesday': { title: 'Wideout Wednesday', day: 'Wed', hour: 8, minute: 0, retro: true, subject: 'played',
+    analyst: 'raines', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
+    summary: 'Targets, air yards and deployment: the receiver whose opportunity moved before his points did.', absorbs: ['opportunity-report'] },
+  'tnf-preview': { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
+    analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true, updates: 'until-kickoff', updateHours: 14,
+    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    summary: 'Start/sit and the full showdown for the Thursday game, updated if late news changes it.', absorbs: ['tnf-preview'] },
+  'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 7, minute: 0, retro: false, subject: 'current',
+    analyst: 'vega', dfsAnalyst: 'vega', lens: 'both', rivalry: true, targets: () => [],
+    summary: 'One player the consensus has wrong, argued from the market and the usage. The DFS pick may differ.', absorbs: ['what-they-arent-telling-you', 'the-pick'] },
+  'trade-desk': { title: 'Trade Desk', day: 'Thu', hour: 8, minute: 0, retro: false, subject: 'current',
+    analyst: 'brooks', marketAnalyst: 'vega', dfsAnalyst: 'park', lens: 'both', rivalry: true, targets: () => [],
+    summary: 'Five to target, five to trade away. For DFS, five to attack and five to fade.', absorbs: [] },
+  'tight-end-thursday': { title: 'Tight End Thursday', day: 'Thu', hour: 9, minute: 0, retro: true, subject: 'played',
+    analyst: 'brooks', dfsAnalyst: 'park', lens: 'both', gate: 'worth', rivalry: true, targets: () => [],
+    summary: 'Only when a tight end story is worth your time.', absorbs: [] },
+  'tnf-what-matters': { title: 'Thursday Night: What Matters', day: 'Fri', hour: 6, minute: 0, retro: false, subject: 'current',
+    analyst: 'raines', dfsAnalyst: 'park', lens: 'both', optional: true,
+    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    summary: 'Usage, role and sustainability from the Thursday game. Not a recap.', absorbs: ['tnf-aftermath'] },
+  'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 7, minute: 0, retro: false, subject: 'current',
+    analyst: 'porter', dfsAnalyst: 'park', lens: 'both', preview: true,
+    targets: (gs) => gs.filter(g => g.dow !== 'Thu'),
+    summary: 'The hard start/sits, the matchups, the movers and the weather. For DFS, the whole slate.', absorbs: ['final-read', 'weekend-game-plan'] },
+  'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 8, minute: 0, retro: false, subject: 'current',
+    analyst: 'porter', dfsAnalyst: 'park', lens: 'both', targets: () => [],
+    summary: 'Streaming defenses, defenses to avoid, kicker rankings. DFS: DST only.', absorbs: [] },
+  'breaking': { title: 'Breaking', day: null, hour: null, minute: null, retro: false, subject: 'current', unscheduled: true,
+    analyst: 'mercer', dfsAnalyst: 'park', lens: 'both', targets: () => [],
+    summary: 'A significant development, scored and verified before anything is written.', absorbs: [] }
 };
+// The kinds the desk used to run, and what became of each. Read by the admin
+// board's Legacy Content Migration table and by newsroomAudit(), which fails
+// if any of these is ever runnable again. Rows the old kinds wrote stay in
+// content_pieces and stay readable at their old URLs; nothing is deleted.
+const LEGACY_CONTENT = {
+  'team-recaps':                 { title: 'Team-by-Team Recaps', slot: 'Mon 7 AM', disposition: 'retired', destination: 'what-sunday-taught-us', reason: 'A conventional recap. Its per-club usage data feeds What Sunday Taught Us.' },
+  'mnf-breakdown':               { title: 'Monday Night: What We Learned', slot: 'Tue 7 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'What Monday night changed opens the Tuesday rankings.' },
+  'what-they-arent-telling-you': { title: "What They Aren't Telling You", slot: 'Tue 7 AM', disposition: 'merged', destination: 'underrated', reason: 'Same premise, one player, Thursday, Nate Vega.' },
+  'opportunity-report':          { title: 'The Opportunity Report', slot: 'Wed 7 AM', disposition: 'merged', destination: 'wideout-wednesday', reason: 'Targets to Wideout Wednesday, backfields to Tailback Tuesday.' },
+  'rankings-update':             { title: 'Forward-Looking Rankings Update', slot: 'Wed 7 AM', disposition: 'merged', destination: 'ros-rankings', reason: 'One ranking engine, four horizons, Tuesday.' },
+  'final-read':                  { title: 'The Final Read', slot: 'Thu 7 AM', disposition: 'merged', destination: 'weekend-preview', reason: 'Start/sit pressure and market vs consensus belong in the weekend preview.' },
+  'tnf-aftermath':               { title: 'Thursday Night Aftermath', slot: 'Fri 7 AM', disposition: 'merged', destination: 'tnf-what-matters', reason: 'Re-cut from recap to usage and sustainability, Mike Raines.' },
+  'weekend-game-plan':           { title: 'The Weekend Game Plan', slot: 'Fri 7 AM', disposition: 'merged', destination: 'weekend-preview', reason: 'The game cards are the weekend preview’s DFS slate overview.' },
+  'what-changed-today':          { title: 'What Changed Today?', slot: 'Sun 8 PM', disposition: 'merged', destination: 'what-sunday-taught-us', reason: 'Same slot, same question, Jack Mercer, with signal/noise labels and a DFS lens.' },
+  'snf-what-we-learned':         { title: 'Sunday Night: What We Learned', slot: 'Mon 1 AM', disposition: 'merged', destination: 'what-sunday-taught-us', reason: 'A live update of the Sunday piece once the night game is final, not a second story.' },
+  'waiver-watch':                { title: 'Waiver Watch (static page)', slot: 'one-off', disposition: 'merged', destination: 'pickup-advisor', reason: 'The Wednesday Pickup Advisor is the standing feature.' },
+  'the-pick':                    { title: 'The Pick (daily story, two Routines)', slot: 'daily 12:00Z and 13:00Z', disposition: 'retired', destination: 'underrated', reason: 'Draft-priced; two Routines wrote one column. The one-player-a-day idea is Thursday’s Most Underrated Player.' },
+  'lead-story':                  { title: 'Lead story refresh (Routine, every 6h)', slot: '58 */6 * * *', disposition: 'retired', destination: 'desk-lead', reason: 'The front-page lead is the newest desk piece in the regular season. The /lead archive stays readable.' },
+  'camp-desk':                   { title: 'Camp & preseason desk (Routine)', slot: 'daily 15:00Z', disposition: 'retired', destination: 'last-minute-intel', reason: 'Camp is over. Injury and role tracking runs through the availability and depth-chart jobs, Last-Minute Intel and breaking news.' },
+  'play-caller-premium':         { title: 'Play-Caller Premium daily entries (Routine)', slot: 'daily 12:00Z, hard stop 2026-09-13', disposition: 'retired', destination: 'quarterback-monday', reason: 'Coaching and scheme is Chris Dalton’s beat.' },
+  'x-draft-posts':               { title: 'X/Threads auction, snake and best-ball threads (three weekday crons)', slot: '13:00, 16:00, 19:00 UTC weekdays', disposition: 'retired', destination: 'none', reason: 'Draft-day insights. Gated off in the regular season; DRAFT_SEASON_SOCIAL=1 re-enables them for 2027.' },
+  'the-tell':                    { title: 'The Tell (Routine, Tuesdays)', slot: 'Tue 14:00Z', disposition: 'retained', destination: 'the-tell', reason: 'A distinct function (rank versus projection composition) nothing in the calendar duplicates. Registered on Evan Brooks’s desk.' },
+  'projections-update':          { title: 'Projections update (Routine, daily Aug–Sep)', slot: '0 10 * 8,9 *', disposition: 'retained', destination: 'data', reason: 'A data job, not a story; the ROS boards price off it. Ends with September; a weekly cadence is recommended.' }
+};
+// Sections per lens. A section named here is what the writer is asked for and
+// what the page prints; the legacy table below keeps old rows renderable.
+const NEWSROOM_SECTIONS = {
+  'last-minute-intel':     { weekly: ['whatChanged', 'movesUp', 'movesDown', 'startSit', 'replacements', 'longerTerm'], dfs: ['projectionImpact', 'ownershipImpact', 'cashGame', 'tournaments', 'stacks', 'pivots', 'lateSwap'] },
+  'what-sunday-taught-us': { weekly: ['signal', 'noise', 'roleChanges', 'concerns', 'buy', 'watchThis', 'waiversAndTrades'], dfs: ['emergingChalk', 'priceInefficiencies', 'roleChangesForPricing', 'touchdownRegression', 'stackImplications', 'leverage'] },
+  'mnf-preview':           { weekly: ['startSit', 'expectations', 'matchups', 'injuries', 'usage', 'marketSignals', 'risk'], dfs: ['captainOptions', 'value', 'ownership', 'contrarianCaptains', 'correlation', 'gameScripts', 'fades'] },
+  'early-rankings':        { weekly: ['overview', 'quarterbacks', 'runningBacks', 'wideReceivers', 'tightEnds', 'flex', 'kickersAndDefenses', 'whereWeDisagree'], dfs: ['rawVsSalary', 'earlyValues', 'earlyChalk', 'leverage', 'cashVsTournament'] },
+  'quarterback-monday':    { weekly: ['theStory', 'whatTheNumbersSay', 'whatToDo', 'buySell'], dfs: ['stacks', 'bringBacks', 'ownership', 'salaryAndRushingUpside', 'gameEnvironment'] },
+  'ros-rankings':          { weekly: ['whatMondayChanged', 'next3', 'untilPlayoffs', 'playoffsOnly', 'restOfSeason', 'majorMovers', 'whereWeDisagree'], dfs: ['priceInefficiencyBoard', 'whyThePriceIsWrong', 'initialOwnership', 'leverage'] },
+  'tailback-tuesday':      { weekly: ['theDevelopment', 'workloadEvidence', 'rankingImpact', 'tradesAndWaivers', 'restOfSeason'], dfs: ['salary', 'workloadPerDollar', 'touchdownEquity', 'ownership', 'chalkVsLeverage', 'stacking'] },
+  'pickup-advisor':        { weekly: ['priorityAdds', 'midLevelAdds', 'deepAdds', 'speculativeStashes', 'doNotChase', 'faabAndDrops'], dfs: ['earlyValues', 'likelyChalk', 'goodChalk', 'badChalk', 'leverage', 'pricingErrors', 'initialStacks', 'ownershipUncertainty'] },
+  'wideout-wednesday':     { weekly: ['theDevelopment', 'targetEvidence', 'startSit', 'trades', 'restOfSeason'], dfs: ['salary', 'ownership', 'stacks', 'bigPlayUpside', 'leverage', 'correlation'] },
+  'tnf-preview':           { weekly: ['startSit', 'injuries', 'usage', 'matchups', 'rankings', 'flex', 'propImplications'], dfs: ['captainOptions', 'value', 'chalk', 'contrarianConstruction', 'correlation', 'gameScripts', 'kickersAndDefense', 'overowned'] },
+  'underrated':            { weekly: ['thePlayer', 'theDiscrepancy', 'theEvidence', 'whatToDo'], dfs: ['thePlayer', 'whyThePriceIsWrong', 'ownership', 'leverage', 'howToUseHim'] },
+  'trade-desk':            { weekly: ['target', 'tradeAway', 'reasoning', 'marketCounterpoint'], dfs: ['attack', 'fade', 'reasoning'] },
+  'tight-end-thursday':    { weekly: ['theDevelopment', 'routeAndTargetEvidence', 'matchups', 'buySell'], dfs: ['salaryAllocation', 'ownership', 'payUpOrSave', 'positionalLeverage', 'correlation'] },
+  'tnf-what-matters':      { weekly: ['usageAndRole', 'injuries', 'sustainability', 'calledBackAndNearMisses', 'nextWeek', 'waiversAndTrades'], dfs: ['futurePricing', 'emergingChalk', 'stackRelationships', 'salaryInefficiency', 'roleChanges'] },
+  'weekend-preview':       { weekly: ['injurySituations', 'difficultStartSits', 'matchups', 'marketMovers', 'weather', 'sundayContingencies'], dfs: ['slateOverview', 'bestGameEnvironments', 'coreStacks', 'contrarianStacks', 'values', 'chalk', 'fades', 'ownership', 'leverage', 'injuryContingencies', 'salarySavers', 'lateSwap', 'contestTypes'] },
+  'kickers-defenses':      { weekly: ['streamingDefenses', 'defensesToAvoid', 'kickerRankings', 'teamTotalsAndWeather', 'upcomingSchedule'], dfs: ['dstSalary', 'pressureAndTurnovers', 'ownership', 'leverage'] },
+  'breaking':              { weekly: ['whatHappened', 'whoMovesUp', 'whoMovesDown', 'rankingImpact', 'whatToDo'], dfs: ['projectionImpact', 'salaryValue', 'ownershipImpact', 'pivots', 'lateSwap'] }
+};
+// Sections that are lists of OBJECTS rather than of sentences, and their fields.
+const NEWSROOM_OBJECT_SECTIONS = {
+  target: ['player', 'position', 'team', 'why'], tradeAway: ['player', 'position', 'team', 'why'], attack: ['player', 'position', 'team', 'salary', 'why'], fade: ['player', 'position', 'team', 'salary', 'why'],
+  priorityAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], midLevelAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], deepAdds: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'],
+  speculativeStashes: ['player', 'position', 'team', 'faabPct', 'holdFor', 'why'], doNotChase: ['player', 'position', 'team', 'why'],
+  movesUp: ['player', 'position', 'team', 'from', 'to', 'why'], movesDown: ['player', 'position', 'team', 'from', 'to', 'why'],
+  signal: ['player', 'team', 'label', 'why'], noise: ['player', 'team', 'label', 'why'], roleChanges: ['player', 'team', 'label', 'why'], buy: ['player', 'team', 'label', 'why'], concerns: ['player', 'team', 'label', 'why'], watchThis: ['player', 'team', 'label', 'why'],
+  whoMovesUp: ['player', 'position', 'team', 'why'], whoMovesDown: ['player', 'position', 'team', 'why'], pivots: ['player', 'position', 'team', 'salary', 'why'],
+  captainOptions: ['player', 'position', 'team', 'salary', 'why'], contrarianCaptains: ['player', 'position', 'team', 'salary', 'why'], streamingDefenses: ['team', 'opponent', 'why'], defensesToAvoid: ['team', 'opponent', 'why'], kickerRankings: ['player', 'team', 'rank', 'why'],
+  priceInefficiencyBoard: ['player', 'position', 'team', 'salary', 'projection', 'value', 'why'], earlyValues: ['player', 'position', 'team', 'salary', 'why'], likelyChalk: ['player', 'position', 'team', 'salary', 'why'], goodChalk: ['player', 'position', 'team', 'salary', 'why'], badChalk: ['player', 'position', 'team', 'salary', 'why'],
+  coreStacks: ['game', 'players', 'why'], contrarianStacks: ['game', 'players', 'why'], stacks: ['game', 'players', 'why'], initialStacks: ['game', 'players', 'why']
+};
+function sectionsFor(kind, lens) {
+  const n = NEWSROOM_SECTIONS[kind];
+  if (n) return lens === 'dfs' ? n.dfs.slice() : n.weekly.slice();
+  return (CONTENT_SECTIONS[kind] || []).slice();
+}
 const DOW_N = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+// Which week a kind is ABOUT at `now`. 'played' is the last week with a game
+// played; 'current' is the clock's week; 'nextPlayed' is the week after the
+// played one (Monday's early rankings are about next week whether or not a
+// Monday game is still to be played).
+function contentSubjectWeek(K, state, now) {
+  if (!state || !state.ok) return null;
+  const cur = state.week.type === 'REG' ? state.week.number : null;
+  const played = lastPlayedWeek(state, now);
+  if (K.subject === 'played') return played;
+  if (K.subject === 'nextPlayed') return played == null ? null : played + 1;
+  return cur;
+}
 // Is a piece due, and is it ready? Pure. `state` is the season service's
 // answer; `sched` the schedule cache; `now` the instant asked about.
 function contentDue(kind, now, state, sched) {
   const K = CONTENT_KINDS[kind];
   if (!K) return { due: false, ready: false, reason: 'unknown_kind' };
+  if (K.unscheduled) return { due: false, ready: false, reason: 'unscheduled', week: contentSubjectWeek(K, state, now) };
   if (!state || !state.ok || state.phase !== 'regular') return { due: false, ready: false, reason: 'not_regular_season' };
-  const et = etParts(now);
-  const week = K.retro ? lastPlayedWeek(state, now) : (state.week.type === 'REG' ? state.week.number : null);
-  if (week == null) return { due: false, ready: false, reason: 'no_week' };
-  // Due: on or after the piece's weekday and hour, within the same ET week.
-  // A retrospective piece keys off the week that was played, so a Monday
-  // recap of Week 3 is due the Monday after Week 3's Sunday, which is the
-  // first Monday whose date is after that Sunday's kickoff.
-  const gs = weekGames(sched, week, now);
-  if (!gs.length) return { due: false, ready: false, reason: 'no_games', week };
-  const anchor = K.retro ? Math.max(...gs.map(g => g.kickoff)) : Math.min(...gs.map(g => g.kickoff));
-  // The first instant >= (the Monday 00:00 ET of the week the anchor game belongs to) matching day/hour.
-  const dueAt = _contentDueAt(K, anchor);
-  const due = now >= dueAt;
+  // The anchor week is the one the due rule keys off; the subject week is the
+  // one the piece is about. They differ for Monday's early rankings.
+  const anchorWeek = K.retro ? lastPlayedWeek(state, now) : (state.week.type === 'REG' ? state.week.number : null);
+  const week = contentSubjectWeek(K, state, now);
+  if (anchorWeek == null || week == null) return { due: false, ready: false, reason: 'no_week' };
+  const ags = weekGames(sched, anchorWeek, now);
+  if (!ags.length) return { due: false, ready: false, reason: 'no_games', week };
+  // Targets come from the SUBJECT week's games.
+  const gs = week === anchorWeek ? ags : weekGames(sched, week, now);
   const targets = K.targets(gs);
+  // A piece about a specific game (a preview, or the live pre-kickoff
+  // intel) anchors on its own first target game, a day before it: Sunday's
+  // 12:15 slot is the Sunday of those games, and the Monday preview is the
+  // Monday of the Monday game, not the Monday before the week's opener.
+  // A forward piece about a week anchors on the week BEFORE it: its slot is
+  // the first occurrence after that week's last game, less 36 hours (the same
+  // rule the retrospective pieces use), so Week 2's Friday preview is due the
+  // Friday after Week 1's Monday night and never the Friday before. Week 1
+  // has no week before it and anchors on its own opener less five and a half
+  // days: the half day is what keeps a kickoff the schedule stores at
+  // midnight from pulling the slot a week early, which the first live tick did.
+  const prevGames = !K.retro && K.anchor !== 'targets' && anchorWeek > 1 ? weekGames(sched, anchorWeek - 1, now) : [];
+  let dueAt;
+  if (K.anchor === 'targets' && targets.length) dueAt = _nextEt(K.day, K.hour, Math.min(...targets.map(g => g.kickoff)) - 24 * 3600000, K.minute || 0);
+  else if (K.retro) dueAt = _nextEt(K.day, K.hour, Math.max(...ags.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
+  else if (prevGames.length) dueAt = _nextEt(K.day, K.hour, Math.max(...prevGames.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
+  else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 132 * 3600000, K.minute || 0);
+  const due = now >= dueAt;
   if (K.optional && !targets.length) return { due, ready: false, reason: 'no_such_game', week, skip: true };
   // FINAL MEANS THE FEED SAID FINAL. The season service's clock infers that a
   // game is over three and three-quarter hours after kickoff, which is right
   // for "what week is it" and wrong for "may I write about this game": a
   // game that ran long is not over because a timer says so. Only ESPN's own
-  // status counts here, and the hourly tick refreshes it before evaluating.
+  // status counts here, and the tick refreshes it before evaluating.
   const feedFinal = g => g.status === 'final';
   let ready = true, reason = 'ready';
-  if (K.preview) {
+  if (K.live) {
+    // Pre-kickoff intel: ready while at least one target game is still to come.
+    ready = targets.some(g => g.state.status === 'upcoming');
+    if (!ready) reason = 'all_games_started';
+  } else if (K.preview) {
     ready = targets.every(g => g.state.status === 'upcoming');
     if (!ready) reason = 'game_already_started';
   } else if (K.partial) {
@@ -5930,27 +6085,27 @@ function contentDue(kind, now, state, sched) {
     ready = notFinal.length === 0;
     if (!ready) reason = 'games_not_final:' + notFinal.map(g => g.away + '@' + g.home).join(',');
   }
-  return { due, ready, reason, week, dueAt, targets: targets.map(g => g.id),
+  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id),
+           updatesUntil: K.updates ? dueAt + (K.updateHours || 6) * 3600000 : null,
            excluded: K.partial ? gs.filter(g => g.dow === 'Sun' && !feedFinal(g)).map(g => g.away + '@' + g.home) : [] };
 }
-// The due instant: the first occurrence of the piece's ET weekday and hour at
-// or after a start point taken from the anchor game. A retrospective piece
-// anchors on the LAST game of the week it is about and looks back 36 hours,
-// so a Monday-morning recap of a week that ends with Monday night finds the
-// Monday 6am BEFORE that game, not the one a week later; a forward piece
-// anchors on the FIRST game of the week it is about and looks back six days,
-// so a Wednesday update lands the Wednesday before a Thursday opener. Walked
-// hour by hour and capped at nine days, so a malformed schedule cannot loop.
-function _nextEt(day, hour, fromMs) {
-  let t = Math.floor(fromMs / 3600000) * 3600000;
-  for (let i = 0; i < 24 * 9; i++, t += 3600000) {
+// The due instant: the first occurrence of the piece's ET weekday, hour and
+// minute at or after a start point taken from the anchor game. A retrospective
+// piece anchors on the LAST game of the week it is about and looks back 36
+// hours, so a Monday-morning piece about a week that ends with Monday night
+// finds the Monday 6am BEFORE that game, not the one a week later; a forward
+// piece anchors on the FIRST game of the week it is about and looks back six
+// days, so a Wednesday piece lands the Wednesday before a Thursday opener.
+// Walked a quarter-hour at a time and capped at nine days, so a malformed
+// schedule cannot loop.
+function _nextEt(day, hour, fromMs, minute) {
+  const m = minute || 0;
+  let t = Math.floor(fromMs / 900000) * 900000;
+  for (let i = 0; i < 96 * 9; i++, t += 900000) {
     const p = etParts(t);
-    if (p.dow === day && p.hour === hour) return t;
+    if (p.dow === day && p.hour === hour && p.minute === m) return t;
   }
   return Number.MAX_SAFE_INTEGER;
-}
-function _contentDueAt(K, anchorMs) {
-  return _nextEt(K.day, K.hour, anchorMs - (K.retro ? 36 : 6 * 24) * 3600000);
 }
 
 // ── box scores, stored ─────────────────────────────────────────────────────
@@ -5987,7 +6142,10 @@ function _namesOf(obj, set) {
   if (obj == null) return set;
   if (typeof obj === 'string') { if (/^[A-Z][A-Za-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2}$/.test(obj)) set.add(obj); return set; }
   if (Array.isArray(obj)) { for (const x of obj) _namesOf(x, set); return set; }
-  if (typeof obj === 'object') { for (const [k, v] of Object.entries(obj)) if (/name|player|team|opponent|game|title/i.test(k) || typeof v === 'object') _namesOf(v, set); }
+  // Every string in a packet is a fact by construction, whatever key it sits
+  // under: a name stored as `absent` or `replaces` is as allowed as one
+  // stored as `name`. The first live week held a correct draft over this.
+  if (typeof obj === 'object') { for (const v of Object.values(obj)) _namesOf(v, set); }
   return set;
 }
 function _finishBrief(b) {
@@ -6180,11 +6338,14 @@ function briefGamePlan(kind, games, ctx) {
 }
 
 // ── the writer ─────────────────────────────────────────────────────────────
-async function llmText(env, system, user, maxTokens) {
+async function llmText(env, system, user, maxTokens, timeoutMs) {
   if (!env || !env.LLM_API_KEY) return { ok: false, error: 'no_key' };
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
   const model = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
-  const ctrl = new AbortController(); const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 60000);
+  // The legacy desk's briefs finished inside a minute. A newsroom packet is a
+  // 60 KB prompt asking for two lenses, and the first live tick showed it
+  // needs more than that; the caller says how long it can wait.
+  const ctrl = new AbortController(); const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, timeoutMs || 60000);
   try {
     const r = provider === 'anthropic'
       ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, system, messages: [{ role: 'user', content: user }] }) })
@@ -6257,23 +6418,953 @@ async function writePiece(env, kind, brief) {
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.names.concat(v.numbers), model: attempt.model || null };
 }
 
+// -- the newsroom ----------------------------------------------------------------
+// The in-season intelligence desk: eight AI analyst personas with fixed
+// beats, one research packet per package, a Weekly Fantasy lens and a DFS
+// lens written from the same facts, analyst memory, the one Vega/Brooks
+// rivalry, a significance-scored breaking-news workflow, and an admin
+// control centre with a pause switch. Nothing here invents a fact: the
+// packet is built by arithmetic over the boards, the usage file, the injury
+// list, the depth charts, the line history and the salaries, and the writer
+// may state only what the packet contains (validateDraft, extended below).
+//
+// Feature flags are plain Worker vars named FLAG_<NAME>; a flag that is not
+// set takes its default here, so a fresh deploy is the intended product.
+const NEWSROOM_FLAGS = {
+  IN_SEASON_DESK:        { dflt: true,  note: 'the in-season editorial system: the calendar, the front-page lead switch, the bylines' },
+  AUTO_PUBLISH:          { dflt: true,  note: 'validated pieces publish without a person; off holds every piece for approval' },
+  DFS_CONTENT:           { dflt: true,  note: 'the DFS lens on every package and the DFS metrics' },
+  MARKET_SLIDER:         { dflt: true,  note: 'the Fantasy Analysis / Market Intelligence control and /api/blend' },
+  ANALYST_PERSONAS:      { dflt: true,  note: 'bylines and voices; off publishes every piece under Iron Tuna' },
+  RIVALRY:               { dflt: true,  note: 'the single Vega/Brooks rivalry line, when the numbers earn it' },
+  BREAKING_NEWS:         { dflt: true,  note: 'the significance-scored breaking-news scan and pieces' },
+  PERSONALIZED_RANKINGS: { dflt: true,  note: 'rankings re-scored at the saved league on the pages' },
+  // League sync (docs/league-sync.md). A provider flag gates connecting AND the
+  // scheduled refresh of leagues already connected on it.
+  LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalised module' },
+  SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial licence is in writing (docs/data-sources.md R2)' },
+  YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and LEAGUE_TOKEN_KEY' },
+  ESPN_SYNC:             { dflt: false, note: 'the ESPN connector; no supported path exists, the adapter is a placeholder' },
+  PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
+  PERSONALIZED_LINEUP:   { dflt: true,  note: 'Best Lineup, Your Matchup, roster alerts and playoff readiness from a synced roster' },
+  PERSONALIZED_TRADES:   { dflt: true,  note: 'trade partners and targets across a synced league’s rosters' },
+  PERSONALIZED_STORIES:  { dflt: true,  note: 'the On Your Roster / Available in Your League callouts on stories and player cards' }
+};
+function flagOn(env, name) {
+  const f = NEWSROOM_FLAGS[name]; if (!f) return false;
+  const v = env ? env['FLAG_' + name] : null;
+  if (v == null || String(v).trim() === '') return f.dflt;
+  return !/^(0|off|false|no)$/i.test(String(v).trim());
+}
+function flagReport(env) {
+  return Object.fromEntries(Object.keys(NEWSROOM_FLAGS).map(k => [k, { on: flagOn(env, k), source: env && env['FLAG_' + k] != null && String(env['FLAG_' + k]).trim() !== '' ? 'env' : 'default', note: NEWSROOM_FLAGS[k].note }]));
+}
+
+// ── the staff ──────────────────────────────────────────────────────────────
+// Eight personas. `voice` is what the writer is told; `rivalry` names the ONE
+// formal rivalry on the desk (Vega and Brooks, market intelligence against
+// traditional fantasy analysis). Nobody else has one, and newsroomAudit()
+// fails if a second pair ever appears here.
+const ANALYSTS = {
+  mercer: { id: 'mercer', name: 'Jack Mercer', role: 'Editor-in-Chief', avatar: 'JM',
+    specialty: ['Editorial synthesis', 'Major fantasy developments', 'Cross-position conclusions'],
+    personality: 'Confident, decisive and skeptical.',
+    philosophy: 'His question is "So what?" A statistic without an action attached is trivia.',
+    assignments: ['What Sunday Taught Us', 'Breaking stories', 'Cross-position analysis'],
+    voice: 'Decisive. Opens with the conclusion, then the evidence. Asks "so what" of every number and answers it in the same breath. Impatient with statistics that do not change a decision. Short declarative sentences; no throat-clearing.',
+    rivalry: null },
+  vega: { id: 'vega', name: 'Nate Vega', role: 'Market Intelligence Analyst', avatar: 'NV',
+    specialty: ['Sportsbook props', 'Market movement', 'Implied player expectations', 'Consensus-vs-market discrepancies'],
+    personality: 'Quantitative, confident, contrarian and mildly provocative.',
+    philosophy: 'The market often knows before the fantasy consensus knows. A prop line is a forecast with money behind it; a ranking is a forecast with a byline behind it.',
+    assignments: ['Market analysis', 'Market-driven rankings', 'Most Underrated Player', 'Market movers', 'DFS pricing discrepancies', 'The market side of the Fantasy / Market slider'],
+    voice: 'Leads with the line and what moved it. Treats a prop as evidence and a ranking as an opinion. Mildly provocative, never rude: he needles the consensus, not people. Quotes numbers, then says what they imply. Enjoys being early.',
+    rivalry: 'brooks' },
+  brooks: { id: 'brooks', name: 'Evan Brooks', role: 'Fantasy Rankings Analyst', avatar: 'EB',
+    specialty: ['Weekly and rest-of-season rankings', 'Talent, role and workload', 'Schedule', 'Positional evaluation', 'Trade value'],
+    personality: 'Confident, measured and skeptical of overreacting to market movements.',
+    philosophy: 'Markets provide useful information but do not replace football analysis. Sportsbooks optimise a market; they do not rank your flex.',
+    assignments: ['Weekly rankings', 'Rest-of-season rankings', 'Running backs, receivers and tight ends', 'Trade Desk', 'The fantasy side of the Fantasy / Market slider'],
+    voice: 'Measured. Builds from role, workload and schedule to a rank, and says what would change his mind. Wants to see a player earn the opportunity before he pays for it. Respects the market as one input among several and says so plainly.',
+    rivalry: 'vega' },
+  raines: { id: 'raines', name: 'Mike Raines', role: 'Usage and Opportunity Analyst', avatar: 'MR',
+    specialty: ['Snaps and routes', 'Targets and carries', 'Red-zone and goal-line opportunity', 'Deployment', 'Near misses and plays called back'],
+    personality: 'Detail-obsessed and skeptical of conclusions drawn from a box score alone.',
+    philosophy: 'Opportunity predicts tomorrow better than yesterday’s fantasy points do.',
+    assignments: ['Last-Minute Intel', 'Sunday usage intelligence', 'Thursday Night: What Matters', 'Wideout Wednesday', 'Role changes and hidden opportunity'],
+    voice: 'Counts things. Targets, carries, snaps, red-zone touches, and what share of the team each was. Distrusts a box score that the usage does not support and says which number is lying. Dry, precise, a little relentless.',
+    rivalry: null },
+  dalton: { id: 'dalton', name: 'Chris Dalton', role: 'Quarterback and Offense Analyst', avatar: 'CD',
+    specialty: ['Quarterbacks', 'Offensive systems', 'Passing volume and protection', 'Game script', 'Coaching and receiver relationships'],
+    personality: 'Analytical, opinionated and system-oriented.',
+    philosophy: 'A quarterback is the system he plays in. Volume, protection and the play-caller explain more than arm talent does.',
+    assignments: ['Monday Night Football Preview', 'Thursday Night Football Preview', 'Quarterback Monday', 'QB rankings', 'Passing-game analysis'],
+    voice: 'Thinks in systems: pass rate, protection, the play-caller’s tendencies, who the quarterback looks for on third down. Opinionated about scheme and willing to say a good player is in a bad system. Explains the game script before the fantasy points.',
+    rivalry: null },
+  grant: { id: 'grant', name: 'Tyler Grant', role: 'Waiver and Roster Strategy Analyst', avatar: 'TG',
+    specialty: ['Waivers and FAAB', 'Deep pickups and stashes', 'Bench construction', 'Aggressive roster optimisation'],
+    personality: 'Practical, aggressive and conversational.',
+    philosophy: 'The bottom of the roster should constantly earn its place.',
+    assignments: ['Pickup Advisor', 'Stashes and deep sleepers', 'Injury beneficiaries'],
+    voice: 'Talks to the reader like a league-mate who has already put in the claim. Practical about FAAB and bench spots, aggressive about churning the bottom of the roster, plain about what to drop. Conversational, never sloppy with a number.',
+    rivalry: null },
+  porter: { id: 'porter', name: 'Sam Porter', role: 'Matchups and Special Teams Analyst', avatar: 'SP',
+    specialty: ['Matchups and schedule', 'Defenses', 'Kickers', 'Streaming decisions'],
+    personality: 'Concise, dry and skeptical of unnecessary complexity.',
+    philosophy: 'Most of a streaming decision is the opponent and the total. The rest is noise with a byline.',
+    assignments: ['Weekend Preview', 'Kickers & Defenses', 'Streaming and matchup recommendations'],
+    voice: 'Terse. Names the matchup, the total and the decision, and stops. Suspicious of any argument that needs more than two numbers. Dry humour, used sparingly.',
+    rivalry: null },
+  park: { id: 'park', name: 'Lena Park', role: 'DFS Strategy Analyst', avatar: 'LP',
+    specialty: ['DFS salary and ownership', 'Leverage', 'Stacking and correlation', 'Cash, single-entry and large-field strategy', 'Showdown', 'Late swap'],
+    personality: 'Calm, quantitative and focused on expected value.',
+    philosophy: 'A good fantasy player is not automatically a good DFS play. Price and ownership decide.',
+    assignments: ['DFS slate analysis', 'Ownership and leverage', 'Stacks', 'Showdown', 'The DFS lens of every shared package'],
+    voice: 'Calm and quantitative. Every recommendation is a projection at a salary at an ownership. Separates cash from tournaments explicitly. Says when ownership is a model rather than a feed. Never excited, always specific.',
+    rivalry: null }
+};
+const RIVALRY_PAIR = ['vega', 'brooks'];
+const ANALYST_HOUSE = { id: 'irontuna', name: 'Iron Tuna', role: 'The desk', avatar: 'IT', voice: 'Direct, analytical, actionable. No persona.' };
+function analystFor(env, id) {
+  if (!flagOn(env, 'ANALYST_PERSONAS')) return ANALYST_HOUSE;
+  return ANALYSTS[id] || ANALYST_HOUSE;
+}
+const AI_DISCLOSURE = 'Iron Tuna’s analysts are AI-powered editorial personas, not people. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls. Every number they print is computed from the site’s own data (the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries you load); a piece whose prose named something the data does not contain is held, not published. The personalities are a way of organising the analysis. The facts are the site’s.';
+
+// ── data freshness ─────────────────────────────────────────────────────────
+// Every packet carries where each input came from and how old it is, graded
+// against the KIND's own requirement: a Sunday 12:15 piece needs an injury
+// list minutes old; a Tuesday ROS piece can use one from this morning. A
+// stale input is named in `excluded` and the writer is told the field is
+// unavailable; it is never silently treated as current.
+const FRESHNESS_REQ = {
+  default:               { schedule: 26, availability: 30, odds: 48, snapshots: 48, usage: 24 * 9, depth: 48, dfs: 24 * 8 },
+  'last-minute-intel':   { schedule: 1,  availability: 1.5, odds: 12, snapshots: 4, usage: 24 * 9, depth: 30, dfs: 72 },
+  'what-sunday-taught-us': { schedule: 1.5, availability: 12, odds: 48, snapshots: 12, usage: 24 * 9, depth: 48, dfs: 24 * 8 },
+  'breaking':            { schedule: 2,  availability: 1,   odds: 12, snapshots: 6, usage: 24 * 9, depth: 30, dfs: 72 },
+  'mnf-preview':         { schedule: 6,  availability: 8,   odds: 24, snapshots: 8, usage: 24 * 9, depth: 36, dfs: 72 },
+  'tnf-preview':         { schedule: 6,  availability: 8,   odds: 24, snapshots: 8, usage: 24 * 9, depth: 36, dfs: 72 },
+  'weekend-preview':     { schedule: 6,  availability: 12,  odds: 24, snapshots: 12, usage: 24 * 9, depth: 36, dfs: 24 * 4 }
+};
+function freshnessReport(stamps, kind, now) {
+  const req = { ...FRESHNESS_REQ.default, ...(FRESHNESS_REQ[kind] || {}) };
+  const at = Number.isFinite(now) ? now : Date.now();
+  const sources = {}; const stale = [], missing = [], excluded = [];
+  for (const name of Object.keys(req)) {
+    const s = stamps && stamps[name];
+    if (!s || !s.at) { sources[name] = { provider: s && s.provider || null, retrievedAt: null, ageHours: null, limitHours: req[name], status: 'missing' }; missing.push(name); continue; }
+    const age = Math.round((at - s.at) / 360000) / 10;
+    const status = age <= req[name] ? (age <= req[name] / 2 ? 'fresh' : 'aging') : 'stale';
+    sources[name] = { provider: s.provider || null, retrievedAt: s.at, ageHours: age, limitHours: req[name], status };
+    if (status === 'stale') { stale.push(name); excluded.push(name); }
+  }
+  return { checkedAt: at, sources, stale, missing, excluded };
+}
+
+// ── the Fantasy Analysis / Market Intelligence blend ───────────────────────
+// Two normalised components per player, precomputed once so a slider can
+// interpolate between them in the browser with no recalculation:
+//   fantasy  the traditional read: the consensus projection at the reader's
+//            rules, with the usage role trend applied once three games have
+//            earned it (Brooks's inputs: talent, role, workload, schedule).
+//   market   the sportsbook read: the Vegas board (Vega's inputs: props,
+//            team totals, game totals), SHRUNK toward the fantasy number by
+//            how much of it is a quoted market. A prop is a market; a fitted
+//            team rating is a projection OF the market and gets 55%.
+// points(w) = fantasy + w * shrink * (market - fantasy). Both are fantasy
+// points under the same rules, so the interpolation is in one unit; the
+// shrink is the normalisation, and it is what keeps "100% market" from
+// meaning "100% a curve fit" on a player nobody priced.
+const BLEND_SHRINK = { props: 1, 'props-partial': 0.9, 'props+gamelines': 0.95, gamelines: 0.8, 'gamelines+ratings': 0.7, ratings: 0.55, none: 0 };
+function blendComponents(p) {
+  const role = p.roleTrend && p.roleTrend.applied ? p.roleTrend.factor : 1;
+  const fantasy = _oddsRound((p.consensus.points || 0) * role);
+  const market = _oddsRound(p.vegas.points || 0);
+  const basis = p.vegas.basis || 'none';
+  const shrink = BLEND_SHRINK[basis] != null ? BLEND_SHRINK[basis] : BLEND_SHRINK.none;
+  return { fantasy, market, shrink, marketBasis: basis, marketConfidence: p.vegas.confidence || 'LOW', roleFactor: role,
+           fantasyInputs: ['consensus projection', role !== 1 ? 'usage role trend' : 'usage role trend (not yet applied)', 'schedule'],
+           marketInputs: /^props/.test(basis) ? ['player props', 'team total', 'game total'] : basis === 'gamelines' ? ['team total', 'game total'] : ['fitted team ratings'] };
+}
+function blendPoints(c, w) { const x = Math.min(1, Math.max(0, Number(w) || 0)); return _oddsRound(c.fantasy + x * c.shrink * (c.market - c.fantasy)); }
+// Rank a list within position (and FLEX across RB/WR/TE) on a points field.
+function _rankBy(rows, get, field, flexField) {
+  const groups = {};
+  for (const r of rows) (groups[r.position] = groups[r.position] || []).push(r);
+  for (const g of Object.values(groups)) g.slice().sort((a, b) => get(b) - get(a) || (a.name < b.name ? -1 : 1)).forEach((r, i) => { r[field] = i + 1; });
+  if (flexField) rows.filter(r => r.position === 'RB' || r.position === 'WR' || r.position === 'TE').sort((a, b) => get(b) - get(a) || (a.name < b.name ? -1 : 1)).forEach((r, i) => { r[flexField] = i + 1; });
+}
+// The board with its blend components and the ranks at both ends and at `w`.
+function blendBoard(board, w) {
+  if (!board || !board.ok) return board;
+  const x = Math.min(1, Math.max(0, Number(w) || 0));
+  const rows = board.players.map(p => { const c = blendComponents(p); return { ...p, blend: { ...c, points: blendPoints(c, x) } }; });
+  _rankBy(rows, r => r.blend.fantasy, '_fr', '_ffr'); _rankBy(rows, r => r.blend.market * r.blend.shrink + r.blend.fantasy * (1 - r.blend.shrink), '_mr', '_mfr'); _rankBy(rows, r => r.blend.points, '_br', '_bfr');
+  for (const r of rows) { r.blend.fantasyRank = r._fr; r.blend.marketRank = r._mr; r.blend.rank = r._br; r.blend.fantasyFlexRank = r._ffr || null; r.blend.marketFlexRank = r._mfr || null; r.blend.flexRank = r._bfr || null; delete r._fr; delete r._mr; delete r._br; delete r._ffr; delete r._mfr; delete r._bfr; }
+  rows.sort((a, b) => b.blend.points - a.blend.points || (a.name < b.name ? -1 : 1));
+  return { ...board, weight: x, weightLabel: x === 0 ? 'Fantasy Analysis' : x === 1 ? 'Market Intelligence' : Math.round((1 - x) * 100) + '/' + Math.round(x * 100), shrink: BLEND_SHRINK, players: rows };
+}
+// Where the two ends disagree by enough to matter: a rank gap of at least
+// `minGap` positions AND at least `minPct` of the better rank, on players
+// somebody would start. The candidates for the one rivalry.
+const BLEND_DISAGREE = { minGap: 6, minPct: 0.25, startable: { QB: 16, RB: 36, WR: 48, TE: 16, K: 12, DST: 12 } };
+function blendDisagreements(rows, limit) {
+  const out = [];
+  for (const r of rows) {
+    if (!r.blend) continue;
+    const a = r.blend.fantasyRank, b = r.blend.marketRank;
+    const best = Math.min(a, b);
+    if (best > (BLEND_DISAGREE.startable[r.position] || 24)) continue;
+    const gap = Math.abs(a - b);
+    if (gap < BLEND_DISAGREE.minGap || gap < best * BLEND_DISAGREE.minPct) continue;
+    out.push({ name: r.name, position: r.position, team: r.team, key: r.key, fantasyRank: a, marketRank: b, gap, higher: a < b ? 'fantasy' : 'market',
+               fantasyPoints: r.blend.fantasy, marketPoints: r.blend.market, marketBasis: r.blend.marketBasis, marketConfidence: r.blend.marketConfidence,
+               why: r.why ? r.why.summary : '' });
+  }
+  return out.sort((x, y) => y.gap - x.gap).slice(0, limit || 20);
+}
+
+// ── DFS metrics ────────────────────────────────────────────────────────────
+// Every metric here has a written method (docs/dfs-metrics.md) and a
+// `basis` on the row saying whether it is a feed or a model. No feed on this
+// site carries projected ownership, so it is MODELLED, and every surface
+// that prints it says so. Contest types change what is emphasised, not the
+// numbers.
+const DFS_CONTESTS = {
+  cash:   { label: 'Cash', sortBy: 'cashScore', note: 'Floor and value first. Chalk is fine.' },
+  single: { label: 'Single Entry', sortBy: 'tournamentScore', note: 'One lineup: good chalk plus one or two leverage spots.' },
+  '3max': { label: '3-Max', sortBy: 'tournamentScore', note: 'Three lineups: spread the leverage, keep the core.' },
+  gpp:    { label: 'Large-Field GPP', sortBy: 'leverage', note: 'Ceiling and ownership decide. Fade fragile chalk.' },
+  showdown: { label: 'Showdown', sortBy: 'tournamentScore', note: 'One game: captain choice and correlation.' }
+};
+const DFS_VARIANCE = { QB: { floor: 0.62, ceil: 1.55 }, RB: { floor: 0.55, ceil: 1.75 }, WR: { floor: 0.45, ceil: 1.95 }, TE: { floor: 0.45, ceil: 1.9 }, DST: { floor: 0.4, ceil: 2.1 }, K: { floor: 0.5, ceil: 1.6 } };
+function dfsMetrics(rows, contest) {
+  const on = rows.filter(r => r.onBoard && r.vegasPoints > 0 && r.salary > 0);
+  if (!on.length) return { contest: DFS_CONTESTS[contest] ? contest : 'gpp', rows: [], note: 'no priced players' };
+  // Value: Iron Tuna points per $1K, indexed to the slate median (100 = an ordinary dollar).
+  const perK = on.map(r => r.ironTunaPoints / (r.salary / 1000));
+  const med = _median(perK) || 1;
+  const byPos = {};
+  for (const r of on) (byPos[r.position] = byPos[r.position] || []).push(r);
+  for (const pos of Object.keys(byPos)) byPos[pos].sort((a, b) => b.salary - a.salary).forEach((r, i) => { r._salRank = i + 1; r._posN = byPos[pos].length; });
+  const vals = on.map(r => r.ironTunaPoints / (r.salary / 1000) / med);
+  for (let i = 0; i < on.length; i++) {
+    const r = on[i]; const v = vals[i];
+    const V = DFS_VARIANCE[r.position] || DFS_VARIANCE.WR;
+    const conf = r.vegasConfidence === 'HIGH' ? 1 : r.vegasConfidence === 'MEDIUM' ? 0.92 : 0.84;
+    r.value = Math.round(v * 100);
+    r.floor = _oddsRound(r.ironTunaPoints * V.floor * conf);
+    r.ceiling = _oddsRound(r.ironTunaPoints * V.ceil * (2 - conf));
+    // Ownership model v1: a logistic of value (indexed) and salary rank within
+    // position, scaled so a slate's skill positions sum to roughly a full
+    // roster. Documented in docs/dfs-metrics.md. A feed replaces it when one is licensed.
+    const z = 2.2 * (v - 1) - 1.4 * ((r._salRank - 1) / Math.max(1, r._posN - 1)) + (r.tdProbability ? (r.tdProbability - 30) / 60 : 0);
+    r.ownership = Math.round(100 / (1 + Math.exp(-z)) * 0.42 * 10) / 10;
+    r.ownershipBasis = 'modelled';
+    r.leverage = Math.round((r.ceiling / Math.max(1, r.ownership)) * 10) / 10;
+    r.cashScore = Math.round((r.floor / (r.salary / 1000)) / med * 100);
+    r.tournamentScore = Math.round((r.ceiling / (r.salary / 1000)) / med * 100 * Math.min(1.6, Math.max(0.6, 12 / Math.max(3, r.ownership))));
+    r.chalk = r.ownership >= 20 ? (r.value >= 105 ? 'good chalk' : 'bad chalk') : null;
+    delete r._salRank; delete r._posN;
+  }
+  const c = DFS_CONTESTS[contest] ? contest : 'gpp';
+  return { contest: c, label: DFS_CONTESTS[c].label, note: DFS_CONTESTS[c].note, sortBy: DFS_CONTESTS[c].sortBy, medianPerK: _oddsRound(med * 100) / 100, ownershipBasis: 'modelled', rows: on };
+}
+// Stack score: the game's total, the side's implied points and the QB's
+// projection, indexed to the slate's best.
+function dfsStackScores(stacks) {
+  const list = (stacks || []).filter(s => s.total != null);
+  if (!list.length) return [];
+  const best = Math.max(...list.map(s => Math.max(s.home.stackVegasPoints || 0, s.away.stackVegasPoints || 0)));
+  return list.map(s => ({ game: s.game, total: s.total, home: { team: s.home.team, stackScore: best ? Math.round(((s.home.stackVegasPoints || 0) / best) * 100) : null, salary: s.home.stackSalary, points: s.home.stackVegasPoints, qb: s.home.qb ? s.home.qb.name : null, catchers: s.home.catchers.map(c => c.name) },
+    away: { team: s.away.team, stackScore: best ? Math.round(((s.away.stackVegasPoints || 0) / best) * 100) : null, salary: s.away.stackSalary, points: s.away.stackVegasPoints, qb: s.away.qb ? s.away.qb.name : null, catchers: s.away.catchers.map(c => c.name) } }));
+}
+
+// ── analyst memory ─────────────────────────────────────────────────────────
+// A published position, stored: who said what about whom, when, with what
+// confidence and why, and later how it turned out. The packet feeds a
+// player's prior calls back to the writer, who may reference exactly those
+// and nothing else; the grader writes the outcome once the week's usage
+// file has the actual points.
+const CALLS_DDL = [
+  'CREATE TABLE IF NOT EXISTS analyst_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, season INTEGER, week INTEGER, analyst TEXT NOT NULL, player_key TEXT, player TEXT NOT NULL, team TEXT, position TEXT, kind TEXT, slug TEXT, lens TEXT, direction TEXT, recommendation TEXT, rank INTEGER, confidence TEXT, rationale TEXT, evidence TEXT, rivalry TEXT, created_at INTEGER NOT NULL, outcome TEXT, outcome_note TEXT, outcome_at INTEGER)',
+  'CREATE INDEX IF NOT EXISTS ix_calls_player ON analyst_calls (player_key, created_at)',
+  'CREATE INDEX IF NOT EXISTS ix_calls_analyst ON analyst_calls (analyst, created_at)',
+  'CREATE TABLE IF NOT EXISTS newsroom_settings (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)',
+  'CREATE TABLE IF NOT EXISTS news_events (id INTEGER PRIMARY KEY AUTOINCREMENT, season INTEGER, week INTEGER, type TEXT NOT NULL, player_key TEXT, player TEXT, team TEXT, position TEXT, detail TEXT, score INTEGER NOT NULL, handled TEXT, created_at INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS news_state (id INTEGER PRIMARY KEY, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)'
+];
+const CALL_DIRECTIONS = new Set(['up', 'down', 'hold', 'buy', 'sell', 'start', 'sit', 'add', 'drop', 'stash', 'attack', 'fade', 'target', 'avoid']);
+function normaliseCalls(calls, packet, analystId, lens) {
+  const names = new Set((packet.allowed && packet.allowed.names) || []);
+  const index = packet.playerIndex || {};
+  const out = [];
+  for (const c of (Array.isArray(calls) ? calls : []).slice(0, 12)) {
+    if (!c || typeof c !== 'object') continue;
+    const player = String(c.player || '').trim();
+    if (!player || !names.has(player)) continue;
+    const dir = String(c.direction || '').toLowerCase();
+    if (!CALL_DIRECTIONS.has(dir)) continue;
+    const ix = index[player] || {};
+    out.push({ analyst: analystId, lens: lens || 'weekly', player, playerKey: ix.key || null, team: ix.team || String(c.team || '').slice(0, 4) || null, position: ix.position || String(c.position || '').slice(0, 3) || null,
+               direction: dir, recommendation: String(c.recommendation || '').slice(0, 200), rank: Number.isInteger(c.rank) ? c.rank : null,
+               confidence: /^(high|medium|low)$/i.test(String(c.confidence || '')) ? String(c.confidence).toUpperCase() : 'MEDIUM',
+               rationale: String(c.rationale || '').slice(0, 400), evidence: Array.isArray(c.evidence) ? c.evidence.map(String).slice(0, 6) : [] });
+  }
+  return out;
+}
+async function recordCalls(env, piece, calls, rivalry) {
+  if (!env || !env.LEADS_DB || !calls || !calls.length) return { stored: 0 };
+  const stmt = env.LEADS_DB.prepare('INSERT INTO analyst_calls (season, week, analyst, player_key, player, team, position, kind, slug, lens, direction, recommendation, rank, confidence, rationale, evidence, rivalry, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  let n = 0;
+  for (const c of calls) {
+    try {
+      await stmt.bind(piece.season, piece.week, c.analyst, c.playerKey, c.player, c.team, c.position, piece.kind, piece.slug, c.lens, c.direction, c.recommendation, c.rank, c.confidence, c.rationale, JSON.stringify(c.evidence || []),
+                      rivalry && rivalry.player === c.player ? JSON.stringify(rivalry) : null, Date.now()).run();
+      n++;
+    } catch (e) {}
+  }
+  return { stored: n };
+}
+async function priorCallsFor(env, keys, limit) {
+  if (!env || !env.LEADS_DB || !keys || !keys.length) return [];
+  const want = keys.slice(0, 60);
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT analyst, player_key, player, team, position, week, kind, slug, lens, direction, recommendation, rank, confidence, rationale, outcome, outcome_note, created_at FROM analyst_calls WHERE player_key IN (' + want.map(() => '?').join(',') + ') ORDER BY created_at DESC LIMIT ?').bind(...want, limit || 40).all();
+    return (q.results || []).map(r => ({ analyst: r.analyst, analystName: (ANALYSTS[r.analyst] || ANALYST_HOUSE).name, playerKey: r.player_key, player: r.player, team: r.team, position: r.position, week: r.week, kind: r.kind, slug: r.slug, lens: r.lens,
+      direction: r.direction, recommendation: r.recommendation, rank: r.rank, confidence: r.confidence, rationale: r.rationale, outcome: r.outcome, outcomeNote: r.outcome_note, at: r.created_at }));
+  } catch (e) { return []; }
+}
+async function analystCalls(env, analyst, limit) {
+  if (!env || !env.LEADS_DB) return [];
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT * FROM analyst_calls WHERE analyst = ? ORDER BY created_at DESC LIMIT ?').bind(analyst, limit || 20).all();
+    return (q.results || []).map(r => ({ id: r.id, week: r.week, player: r.player, playerKey: r.player_key, team: r.team, position: r.position, kind: r.kind, slug: r.slug, lens: r.lens, direction: r.direction, recommendation: r.recommendation, rank: r.rank, confidence: r.confidence, rationale: r.rationale, rivalry: r.rivalry ? JSON.parse(r.rivalry) : null, outcome: r.outcome, outcomeNote: r.outcome_note, at: r.created_at }));
+  } catch (e) { return []; }
+}
+// Grade a call from what actually happened: the player's actual points in the
+// week the call was about against the consensus projection for it. up/buy/
+// start/add/attack/target hit when actual >= projected; down/sell/sit/fade/
+// avoid/drop hit when actual < projected; hold and stash are 'noted'. A week
+// the usage file has not published is left ungraded.
+function gradeCall(call, actualPts, projectedPts) {
+  if (actualPts == null || projectedPts == null) return null;
+  const bull = ['up', 'buy', 'start', 'add', 'attack', 'target'].includes(call.direction);
+  const bear = ['down', 'sell', 'sit', 'fade', 'avoid', 'drop'].includes(call.direction);
+  if (!bull && !bear) return { outcome: 'noted', note: 'a hold or a stash is graded over time, not on one week' };
+  const diff = _oddsRound(actualPts - projectedPts);
+  const hit = bull ? diff >= 0 : diff < 0;
+  const push = Math.abs(diff) < 1.5;
+  return { outcome: push ? 'push' : hit ? 'hit' : 'miss', note: actualPts + ' actual vs ' + projectedPts + ' projected (' + (diff >= 0 ? '+' : '') + diff + ')' };
+}
+async function runCallsGrade(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  await newsroomReady(env);
+  const usage = await usageCacheRead(env);
+  if (!usage || !usage.players) return { ok: true, graded: 0, note: 'no usage file yet' };
+  let rows;
+  try { rows = (await env.LEADS_DB.prepare('SELECT id, week, player_key, position, direction, lens FROM analyst_calls WHERE outcome IS NULL AND week IS NOT NULL AND week <= ? ORDER BY created_at DESC LIMIT 200').bind(usage.throughWeek).all()).results || []; } catch (e) { return { ok: false, error: 'read_failed' }; }
+  const rules = scoringRules('ppr');
+  let graded = 0;
+  for (const r of rows) {
+    const u = usage.players[r.player_key];
+    if (!u || !u.latest || u.latest.week !== r.week) continue;      // the file has a later week; only the exact week counts
+    const actual = _oddsRound(scoreStats(u.latest.stats, r.position || 'WR', rules));
+    const projected = u.season && u.season.games ? _oddsRound(u.season.points / u.season.games) : null;
+    const g = gradeCall(r, actual, projected);
+    if (!g) continue;
+    try { await env.LEADS_DB.prepare('UPDATE analyst_calls SET outcome = ?, outcome_note = ?, outcome_at = ? WHERE id = ?').bind(g.outcome, g.note, Date.now(), r.id).run(); graded++; } catch (e) {}
+  }
+  return { ok: true, graded, candidates: rows.length };
+}
+
+// ── the one rivalry ────────────────────────────────────────────────────────
+// Vega against Brooks, and only them, and only when: the kind allows it, the
+// packet has a player the two ends of the blend rank at least six spots and
+// a quarter apart, and the rivalry has appeared in fewer than one in five of
+// the last ten eligible pieces. Otherwise the packet carries no rivalry and
+// the writer cannot name the other analyst at all (his name is not in the
+// allowed list). Nothing is ever manufactured.
+const RIVALRY = { targetShare: 0.2, window: 10 };
+function rivalryCandidate(disagreements) {
+  const d = (disagreements || [])[0];
+  if (!d) return null;
+  const brooksRank = d.fantasyRank, vegaRank = d.marketRank;
+  return { pair: RIVALRY_PAIR.slice(), player: d.name, position: d.position, team: d.team, key: d.key,
+           brooks: { rank: brooksRank, points: d.fantasyPoints, label: 'Fantasy Analysis' }, vega: { rank: vegaRank, points: d.marketPoints, basis: d.marketBasis, confidence: d.marketConfidence, label: 'Market Intelligence' },
+           gap: d.gap, higher: d.higher === 'fantasy' ? 'brooks' : 'vega', why: d.why || '' };
+}
+async function rivalryBudget(env, season) {
+  const eligible = Object.keys(CONTENT_KINDS).filter(k => CONTENT_KINDS[k].rivalry);
+  let recent = [];
+  try {
+    const q = await env.LEADS_DB.prepare("SELECT kind, rivalry FROM content_pieces WHERE season = ? AND status = 'published' AND kind IN (" + eligible.map(() => '?').join(',') + ') ORDER BY created_at DESC LIMIT ?').bind(season, ...eligible, RIVALRY.window).all();
+    recent = q.results || [];
+  } catch (e) { recent = []; }
+  const used = recent.filter(r => r.rivalry).length;
+  const share = recent.length ? used / recent.length : 0;
+  // Allowed while the share over the window stays under target once this
+  // piece is counted.
+  const allowed = (used + 1) / Math.max(RIVALRY.window, recent.length + 1) <= RIVALRY.targetShare;
+  return { allowed, used, window: recent.length, share: Math.round(share * 100) / 100 };
+}
+function rivalryGate(env, kind, disagreements, budget) {
+  const K = CONTENT_KINDS[kind];
+  if (!K || !K.rivalry || !flagOn(env, 'RIVALRY')) return null;
+  if (!budget || !budget.allowed) return null;
+  return rivalryCandidate(disagreements);
+}
+
+// ── settings, readiness, pause ─────────────────────────────────────────────
+let _NEWSROOM_READY = false;
+async function newsroomReady(env) {
+  if (_NEWSROOM_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try {
+    for (const q of CALLS_DDL) await env.LEADS_DB.prepare(q).run();
+    // Columns the desk's table grew for the newsroom. SQLite has no ADD COLUMN
+    // IF NOT EXISTS; a duplicate column is an error we expect and swallow.
+    for (const col of ['analyst TEXT', 'lens TEXT', 'version INTEGER', 'rivalry TEXT', 'headline TEXT', 'dek TEXT']) {
+      try { await env.LEADS_DB.prepare('ALTER TABLE content_pieces ADD COLUMN ' + col).run(); } catch (e) {}
+    }
+    _NEWSROOM_READY = true; return true;
+  } catch (e) { return false; }
+}
+async function settingRead(env, key) {
+  if (!env || !env.LEADS_DB) return null;
+  try { const r = await env.LEADS_DB.prepare('SELECT value, updated_at FROM newsroom_settings WHERE key = ?').bind(key).first(); return r ? { value: r.value, updatedAt: r.updated_at } : null; } catch (e) { return null; }
+}
+async function settingWrite(env, key, value) {
+  if (!env || !env.LEADS_DB) return false;
+  try { await env.LEADS_DB.prepare('INSERT OR REPLACE INTO newsroom_settings (key, value, updated_at) VALUES (?, ?, ?)').bind(key, value == null ? null : String(value), Date.now()).run(); return true; } catch (e) { return false; }
+}
+// Automatic publishing is on when the flag is on AND nobody has pressed
+// PAUSE. Paused, every validated piece is stored as `held` with the reason
+// `awaiting_approval`, and the admin board's Approve publishes it.
+async function autoPublishOn(env) {
+  if (!flagOn(env, 'AUTO_PUBLISH')) return { on: false, reason: 'FLAG_AUTO_PUBLISH is off' };
+  const s = await settingRead(env, 'auto_publish_paused');
+  if (s && s.value === '1') return { on: false, reason: 'paused from /admin', since: s.updatedAt };
+  return { on: true, reason: null };
+}
+
+// ── research packets ───────────────────────────────────────────────────────
+// One packet per package. Structured, deterministic, and the ONLY thing the
+// writer sees. Every builder returns either the packet's facts or
+// { skip: true, reason } when the kind has a worth gate and nothing clears it.
+// `allowed` (every name and number in the packet) is computed at the end by
+// _finishBrief, exactly as the legacy briefs did.
+const _short = s => String(s == null ? '' : s).slice(0, 240);
+const _pk = p => ({ name: p.name, position: p.position, team: p.team, key: p.key });
+function _boardIndex(ctx) {
+  const out = {};
+  for (const p of (ctx.week && ctx.week.players) || []) out[p.name] = { key: p.key, team: p.team, position: p.position };
+  for (const p of (ctx.next && ctx.next.players) || []) if (!out[p.name]) out[p.name] = { key: p.key, team: p.team, position: p.position };
+  return out;
+}
+const _injSev = s => /out|ir\b|doubtful|suspend|pup|nfi/i.test(String(s || '')) ? 2 : /questionable/i.test(String(s || '')) ? 1 : 0;
+// The depth-chart name behind an absent player at his position, priced.
+function _replacementFor(team, position, absentName, ctx) {
+  const dc = ctx.depth && ctx.depth.teams && ctx.depth.teams[team] && ctx.depth.teams[team].offense;
+  const list = dc ? (dc[position] || []) : [];
+  const board = new Map(((ctx.week && ctx.week.players) || []).map(p => [_oddsNorm(p.name) + '|' + p.position, p]));
+  const out = [];
+  for (const n of list) {
+    if (_oddsNorm(n) === _oddsNorm(absentName)) continue;
+    const p = board.get(_oddsNorm(n) + '|' + position);
+    if (!p) continue;
+    if (p.injury && _injSev(p.injury.status) === 2) continue;
+    out.push({ name: p.name, position: p.position, team, ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, points: p.ironTuna.points, roleTrend: p.roleTrend ? p.roleTrend.label : null });
+    if (out.length >= 2) break;
+  }
+  return out;
+}
+// A row from the week board, in the shape every packet prints.
+function _rowFor(p, extra) {
+  const wk = p.weeks && p.weeks.find(x => x.env) || null;
+  return { name: p.name, position: p.position, team: p.team, opponent: wk ? wk.opponent : null, home: wk ? wk.home : null,
+           ironTunaRank: p.ironTuna.rank, consensusRank: p.consensus.rank, vegasRank: p.vegas.rank, flexRank: p.ironTuna.flexRank || null,
+           projected: p.ironTuna.points, consensusPoints: p.consensus.points, marketPoints: p.vegas.points, marketBasis: p.vegas.basis, marketConfidence: p.vegas.confidence,
+           marketDelta: p.marketDelta && p.marketDelta.significant ? { classification: p.marketDelta.classification, rank: p.marketDelta.rank, points: p.marketDelta.points } : null,
+           injury: p.injury ? p.injury.status : null, roleTrend: p.roleTrend && p.roleTrend.games ? { label: p.roleTrend.label, pct: p.roleTrend.pct, games: p.roleTrend.games } : null,
+           teamTotal: wk && wk.env ? (wk.env.implied != null ? wk.env.implied : wk.env.expected) : null, teamTotalPosted: !!(wk && wk.env && wk.env.posted),
+           why: p.why ? _short(p.why.summary) : '', ...(extra || {}) };
+}
+// The DFS side of any packet: the slate's best values, likely chalk and
+// leverage under the metrics, or the reason there is none.
+function _dfsBlock(ctx, teams) {
+  const out = { available: false, sites: {}, note: null };
+  for (const site of ['dk', 'fd']) {
+    const s = ctx.dfs && ctx.dfs[site];
+    if (!s || !s.metrics || !s.metrics.rows.length) continue;
+    let rows = s.metrics.rows;
+    if (teams && teams.size) rows = rows.filter(r => teams.has(r.team));
+    const pick = (list, n) => list.slice(0, n).map(r => ({ name: r.name, position: r.position, team: r.team, salary: r.salary, projected: r.ironTunaPoints, marketPoints: r.vegasPoints, value: r.value, ownership: r.ownership, ownershipBasis: r.ownershipBasis, leverage: r.leverage, floor: r.floor, ceiling: r.ceiling, cashScore: r.cashScore, tournamentScore: r.tournamentScore, chalk: r.chalk, tdProbability: r.tdProbability }));
+    out.sites[site] = { label: s.label, cap: s.cap, salariesAsOf: s.salariesAsOf, ownershipBasis: 'modelled',
+      bestValues: pick(rows.slice().sort((a, b) => b.value - a.value), 12),
+      likelyChalk: pick(rows.slice().sort((a, b) => b.ownership - a.ownership), 10),
+      leverage: pick(rows.filter(r => r.value >= 95).sort((a, b) => b.leverage - a.leverage), 10),
+      cash: pick(rows.slice().sort((a, b) => b.cashScore - a.cashScore), 10),
+      tournament: pick(rows.slice().sort((a, b) => b.tournamentScore - a.tournamentScore), 10),
+      expensiveFades: pick(rows.filter(r => r.salary >= 6000 && r.value < 95).sort((a, b) => a.value - b.value), 8),
+      stacks: (s.stackScores || []).slice(0, 6) };
+    out.available = true;
+  }
+  if (!out.available) out.note = 'No DFS salaries are loaded for this week. Salaries arrive by CSV import from the lobby (see /admin); until then the DFS lens can speak to roles and pricing direction but not to a number.';
+  return out;
+}
+// ── the builders ───────────────────────────────────────────────────────────
+function packetLastMinute(ctx, games) {
+  const W = (ctx.week && ctx.week.players) || [];
+  const teams = new Set(); for (const g of games) { teams.add(g.home); teams.add(g.away); }
+  const startable = { QB: 24, RB: 48, WR: 60, TE: 24, K: 20, DST: 20 };
+  const inactives = [], questionable = [], replacements = [];
+  for (const p of W) {
+    if (!teams.has(p.team) || !p.injury) continue;
+    const sev = _injSev(p.injury.status);
+    if (!sev) continue;
+    if (p.ironTuna.rank > (startable[p.position] || 24) && sev < 2) continue;
+    const row = _rowFor(p, { status: p.injury.status, note: _short(p.injury.note) });
+    if (sev === 2) { inactives.push(row); for (const r of _replacementFor(p.team, p.pos === 'DEF' ? 'DST' : p.position, p.name, ctx)) replacements.push({ replaces: p.name, ...r }); }
+    else questionable.push(row);
+  }
+  const lineMoves = [];
+  for (const g of games) {
+    const mv = ctx.gameMarkets && ctx.gameMarkets[g.id];
+    const dS = mv && mv.spread ? _oddsRound((mv.spread.current || 0) - (mv.spread.open || 0)) : null;
+    const dT = mv && mv.total ? _oddsRound((mv.total.current || 0) - (mv.total.open || 0)) : null;
+    lineMoves.push({ game: g.away + ' at ' + g.home, kickoff: g.kickoff, spread: g.spread, total: g.total, impliedHome: g.impliedHome, impliedAway: g.impliedAway, spreadMove: dS, totalMove: dT, started: g.state.status !== 'upcoming' });
+  }
+  const propMoves = W.filter(p => teams.has(p.team) && p.marketDelta && p.marketDelta.significant && /^props/.test(p.vegas.basis)).sort((a, b) => Math.abs(b.marketDelta.rank || 0) - Math.abs(a.marketDelta.rank || 0)).slice(0, 12).map(p => _rowFor(p));
+  const hash = inactives.map(r => r.name + ':' + r.status).concat(questionable.map(r => r.name + ':' + r.status)).sort().join('|');
+  return { games: lineMoves, inactives: inactives.sort((a, b) => a.ironTunaRank - b.ironTunaRank).slice(0, 30), questionable: questionable.sort((a, b) => a.ironTunaRank - b.ironTunaRank).slice(0, 30),
+           replacements: replacements.slice(0, 30), propMoves, weather: 'unavailable: no licensed weather feed is configured (api.weather.gov is on the provider list, unbuilt)',
+           stateHash: hash, dfs: _dfsBlock(ctx, teams) };
+}
+function packetSundayTaught(games, summaries, ctx) {
+  const base = briefForGames('what-sunday-taught-us', games, summaries, ctx);
+  const sig = (ctx.signals && ctx.signals.insights) || [];
+  const teams = new Set(); for (const g of games) { teams.add(g.home); teams.add(g.away); }
+  const label = (type) => /consolidation|role/.test(type) ? 'ROLE CHANGE' : /production_below/.test(type) ? 'BUY' : /production_above|td_regression/.test(type) ? 'NOISE' : /vegas_above|line_movement/.test(type) ? 'SIGNAL' : /vegas_below/.test(type) ? 'CONCERN' : 'WATCH THIS';
+  const labelled = sig.filter(i => i.confidence !== 'LOW' && (i.subject.team ? teams.has(i.subject.team) : true)).slice(0, 20)
+    .map(i => ({ label: label(i.type), player: i.subject.name || null, team: i.subject.team || null, type: i.type, confidence: i.confidence, data: i.data }));
+  // Winners whose usage does not support the score are noise; usage changes
+  // the market already agrees with are signal.
+  const noise = base.winners.filter(w => w.touches != null && w.targetShare != null && (w.touches <= 8 && w.points >= 15)).map(w => ({ label: 'NOISE', player: w.name, team: w.team, touches: w.touches, points: w.points, projected: w.projected }));
+  const signal = base.usageChanges.filter(c => c.direction === 'up').map(c => ({ label: 'SIGNAL', player: c.name, team: c.team, touches: c.touches, seasonAvgTouches: c.seasonAvgTouches }));
+  delete base.allowed;
+  return { ...base, labelled, noiseCandidates: noise.slice(0, 8), signalCandidates: signal.slice(0, 8), finalsCount: summaries.length, dfs: _dfsBlock(ctx, null) };
+}
+function packetShowdown(kind, games, ctx) {
+  const base = briefGamePlan(kind, games, ctx);
+  delete base.allowed;
+  const teams = new Set(); for (const g of games) { teams.add(g.home); teams.add(g.away); }
+  const inGame = ((ctx.week && ctx.week.players) || []).filter(p => teams.has(p.team)).sort((a, b) => b.ironTuna.points - a.ironTuna.points).slice(0, 24).map(p => _rowFor(p));
+  const inj = (ctx.injuriesList || []).filter(i => teams.has(i.team));
+  const hash = inj.map(i => i.name + ':' + i.status).sort().join('|');
+  return { ...base, players: inGame, injuries: inj, stateHash: hash, showdown: { note: 'Showdown salaries are not loaded; main-slate values are shown where a slate exists. Captain and correlation reasoning uses projections and ownership models only.', candidates: inGame.slice(0, 10) }, dfs: _dfsBlock(ctx, teams) };
+}
+// Next week's board from the next-3 horizon: one row per player from his
+// row for the subject week, then the blend at both ends.
+function _nextWeekRows(ctx, week) {
+  const out = [];
+  for (const p of (ctx.next && ctx.next.players) || []) {
+    const wk = (p.weeks || []).find(x => x.week === week);
+    if (!wk || wk.bye || wk.out) continue;
+    out.push({ name: p.name, position: p.position, pos: p.pos, team: p.team, key: p.key, roleTrend: p.roleTrend, injury: p.injury, why: null,
+               weeks: [wk], consensus: { points: wk.consensusPts }, vegas: { points: wk.vegasPts, basis: wk.basis, confidence: wk.confidence }, ironTuna: { points: wk.ironTunaPts }, marketDelta: null });
+  }
+  return out;
+}
+function packetRankings(ctx, week, opts) {
+  const o = opts || {};
+  const rows = o.horizonRows || _nextWeekRows(ctx, week);
+  if (!rows.length) return { skip: true, reason: 'no_rows_for_week' };
+  const b = blendBoard({ ok: true, players: rows }, 0.5);
+  const byPos = {};
+  for (const r of b.players) (byPos[r.position] = byPos[r.position] || []).push(r);
+  const top = { QB: 16, RB: 36, WR: 48, TE: 16, K: 12, DST: 12 };
+  const table = {};
+  for (const pos of Object.keys(top)) {
+    table[pos] = (byPos[pos] || []).sort((x, y) => x.blend.rank - y.blend.rank).slice(0, top[pos]).map(r => ({ name: r.name, team: r.team, opponent: r.weeks && r.weeks[0] ? r.weeks[0].opponent : null,
+      rank: r.blend.rank, fantasyRank: r.blend.fantasyRank, marketRank: r.blend.marketRank, points: r.blend.points, fantasyPoints: r.blend.fantasy, marketPoints: r.blend.market, marketBasis: r.blend.marketBasis,
+      injury: r.injury ? r.injury.status : null, roleTrend: r.roleTrend && r.roleTrend.games ? r.roleTrend.label : null }));
+  }
+  const flex = b.players.filter(r => /^(RB|WR|TE)$/.test(r.position)).sort((x, y) => (x.blend.flexRank || 999) - (y.blend.flexRank || 999)).slice(0, 30).map(r => ({ name: r.name, position: r.position, team: r.team, flexRank: r.blend.flexRank, points: r.blend.points }));
+  const dis = blendDisagreements(b.players, 12);
+  return { week, rankings: table, flex, disagreements: dis, blendNote: 'rank is the 50/50 blend; fantasyRank is 100% Fantasy Analysis; marketRank is 100% Market Intelligence', dfs: _dfsBlock(ctx, null) };
+}
+function packetRos(ctx, boards, rosUpdate, mondaySummaries) {
+  const mv = rosUpdate ? (rosUpdate.movers || rosUpdate) : null;
+  const out = { horizons: {}, movers: mv ? { risers: (mv.risers || []).slice(0, 10), fallers: (mv.fallers || []).slice(0, 10) } : null,
+                marketVsRos: rosUpdate ? (rosUpdate.marketVsRos || []).slice(0, 10) : [] };
+  let dis = [];
+  for (const h of Object.keys(boards)) {
+    const bd = boards[h]; if (!bd || !bd.ok) { out.horizons[h] = null; continue; }
+    const b = blendBoard(bd, 0.5);
+    const byPos = {};
+    for (const r of b.players) (byPos[r.position] = byPos[r.position] || []).push(r);
+    out.horizons[h] = { label: bd.horizon.label, weeks: bd.horizon.weeks, positions: Object.fromEntries(['QB', 'RB', 'WR', 'TE'].map(pos => [pos, (byPos[pos] || []).sort((x, y) => x.blend.rank - y.blend.rank).slice(0, pos === 'QB' || pos === 'TE' ? 14 : 30)
+      .map(r => ({ name: r.name, team: r.team, rank: r.blend.rank, fantasyRank: r.blend.fantasyRank, marketRank: r.blend.marketRank, points: r.blend.points, games: r.games, injury: r.injury ? r.injury.status : null, schedule: r.scheduleDifficulty ? r.scheduleDifficulty.label : null }))])) };
+    if (h === 'ros') dis = blendDisagreements(b.players, 12);
+  }
+  out.disagreements = dis;
+  if (mondaySummaries && mondaySummaries.length) { const m = briefForGames('ros-rankings', mondaySummaries.games, mondaySummaries.summaries, ctx); delete m.allowed; out.whatMondayChanged = { winners: m.winners, losers: m.losers, usageChanges: m.usageChanges, teams: m.teams.map(t => ({ team: t.team, learned: t.learned, stillDontKnow: t.stillDontKnow })) }; }
+  else out.whatMondayChanged = { note: 'no Monday game this week, or its box score is not final' };
+  out.dfs = _dfsBlock(ctx, null);
+  return out;
+}
+// Position features share one shape and one worth gate: a player at the
+// position whose touches moved 30% against his average with two games of
+// evidence, a consolidation or role insight, or an absence at the top of a
+// depth chart with a priced beneficiary. Nothing qualifies, nothing runs.
+function packetPosition(ctx, positions, opts) {
+  const o = opts || {};
+  const U = ctx.usage && ctx.usage.players ? Object.values(ctx.usage.players).filter(u => positions.includes(u.position) && u.latest && u.season && u.season.games >= 1) : [];
+  const board = new Map(((ctx.week && ctx.week.players) || []).map(p => [p.key, p]));
+  const rows = U.map(u => {
+    const key = _oddsNorm(u.name) + '|' + u.position; const p = board.get(key);
+    const t = (u.latest.usage.targets || 0) + (u.latest.usage.carries || 0);
+    const avg = u.season.games > 1 ? ((u.season.targets + u.season.carries) - t) / (u.season.games - 1) : null;
+    return { name: u.name, position: u.position, team: u.team, week: u.latest.week, touches: t, priorAvgTouches: avg == null ? null : _oddsRound(avg),
+      targets: u.latest.usage.targets || 0, targetShare: u.latest.usage.targetShare == null ? null : Math.round(u.latest.usage.targetShare * 100), airYardsShare: u.latest.usage.airYardsShare == null ? null : Math.round(u.latest.usage.airYardsShare * 100),
+      carries: u.latest.usage.carries || 0, carryShare: u.latest.usage.carryShare == null ? null : Math.round(u.latest.usage.carryShare * 100), snapPct: u.latest.usage.snapPct == null ? null : Math.round(u.latest.usage.snapPct * 100),
+      receptions: u.latest.stats.rec || 0, yards: (u.latest.stats.recYd || 0) + (u.latest.stats.rushYd || 0), tds: (u.latest.stats.recTD || 0) + (u.latest.stats.rushTD || 0),
+      points: _oddsRound(scoreStats(u.latest.stats, u.position, ctx.rules)), seasonPointsPerGame: u.season.games ? _oddsRound(u.season.points / u.season.games) : null,
+      ironTunaRank: p ? p.ironTuna.rank : null, consensusRank: p ? p.consensus.rank : null, vegasRank: p ? p.vegas.rank : null, marketDelta: p && p.marketDelta && p.marketDelta.significant ? p.marketDelta.classification : null, marketBasis: p ? p.vegas.basis : null, injury: p && p.injury ? p.injury.status : null };
+  });
+  const moved = rows.filter(r => r.priorAvgTouches != null && r.priorAvgTouches >= 3 && (r.touches >= r.priorAvgTouches * 1.3 || r.touches <= r.priorAvgTouches * 0.7));
+  const sig = ((ctx.signals && ctx.signals.insights) || []).filter(i => i.confidence !== 'LOW' && i.subject && positions.includes(i.subject.position) && /consolidation|role|production/.test(i.type)).slice(0, 12);
+  const absences = ((ctx.week && ctx.week.players) || []).filter(p => positions.includes(p.position) && p.injury && _injSev(p.injury.status) === 2 && p.consensus.rank <= (p.position === 'RB' ? 24 : p.position === 'WR' ? 36 : 12))
+    .map(p => ({ absent: p.name, team: p.team, status: p.injury.status, consensusRank: p.consensus.rank, beneficiaries: _replacementFor(p.team, p.position, p.name, ctx) })).filter(a => a.beneficiaries.length);
+  if (o.gate && !moved.length && !sig.length && !absences.length) return { skip: true, reason: 'nothing_worth_publishing', checked: { usageMoves: 0, insights: 0, absences: 0, playersWithUsage: rows.length } };
+  const leaders = rows.slice().sort((a, b) => b.touches - a.touches).slice(0, 20);
+  return { positions, week: rows[0] ? rows[0].week : null, usageMoves: moved.sort((a, b) => Math.abs(b.touches - b.priorAvgTouches) - Math.abs(a.touches - a.priorAvgTouches)).slice(0, 12), insights: sig.map(i => ({ type: i.type, label: i.label, player: i.subject.name, team: i.subject.team, confidence: i.confidence, data: i.data })),
+           absences, leaders, redZone: (ctx.redZoneWeek || []).filter(r => positions.includes(r.position)).slice(0, 12), unavailable: ['routes and route participation (no free feed publishes them)', 'first-read share', 'air yards before the weekly file'], dfs: _dfsBlock(ctx, null) };
+}
+function packetQb(ctx) {
+  const base = packetPosition(ctx, ['QB'], { gate: false });
+  const W = (ctx.week && ctx.week.players) || [];
+  // A starter the depth chart names who is not the board's QB1 for the club.
+  const changes = [];
+  const dc = ctx.depth && ctx.depth.teams ? ctx.depth.teams : {};
+  for (const t of Object.keys(dc)) {
+    const list = (dc[t].offense && dc[t].offense.QB) || []; if (!list.length) continue;
+    const boardQb = W.filter(p => p.team === t && p.position === 'QB').sort((a, b) => a.consensus.rank - b.consensus.rank)[0];
+    if (boardQb && _oddsNorm(list[0]) !== _oddsNorm(boardQb.name)) changes.push({ team: t, depthChartStarter: list[0], boardStarter: boardQb.name, boardStarterRank: boardQb.consensus.rank, boardStarterInjury: boardQb.injury ? boardQb.injury.status : null });
+  }
+  const volume = (base.usageMoves || []).filter(r => r.position === 'QB');
+  const worth = changes.length || volume.length || (base.insights || []).length || (base.absences || []).length;
+  if (!worth) return { skip: true, reason: 'nothing_worth_publishing', checked: { starterChanges: 0, volumeMoves: 0, insights: 0 } };
+  const qbs = W.filter(p => p.position === 'QB').sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, 16).map(p => _rowFor(p));
+  return { ...base, starterChanges: changes, quarterbacks: qbs, dfs: _dfsBlock(ctx, null) };
+}
+// Waiver candidates by league size. Rostered depth per position at a size
+// is what separates a priority add from a name nobody needs to claim.
+const PICKUP_ROSTERED = { QB: 1.4, RB: 5, WR: 6, TE: 1.5, K: 1, DST: 1 };
+const PICKUP_FAAB = { priority: [25, 45], mid: [10, 20], deep: [3, 8], stash: [1, 5] };
+function packetPickups(ctx) {
+  const N = (ctx.next && ctx.next.players) || [];
+  const sizes = [10, 12, 14];
+  const tiers = {};
+  for (const size of sizes) {
+    const rostered = pos => Math.round((PICKUP_ROSTERED[pos] || 1) * size);
+    const priority = [], mid = [], deep = [], stash = [], noChase = [];
+    for (const p of N) {
+      if (!/^(QB|RB|WR|TE)$/.test(p.position)) continue;
+      const line = rostered(p.position);
+      const r = p.ironTuna.rank, c = p.consensus.rank;
+      const trend = p.roleTrend && p.roleTrend.games ? p.roleTrend.label : null;
+      const hurt = p.injury && _injSev(p.injury.status) === 2;
+      // Beyond the consensus rostered line: nobody in this size has him.
+      if (c <= line) continue;
+      const row = { name: p.name, position: p.position, team: p.team, ironTunaRank: r, consensusRank: c, next3Points: p.ironTuna.points, roleTrend: trend, injury: p.injury ? p.injury.status : null, marketBasis: p.vegas.basis, gamesOut: p.injury ? p.injury.gamesOut : 0 };
+      if (hurt && p.injury.gamesOut <= 4 && r <= line * 1.2) stash.push({ ...row, faabPct: PICKUP_FAAB.stash, holdFor: 'until he returns' });
+      else if (r <= line * 0.8 && trend !== 'down') priority.push({ ...row, faabPct: PICKUP_FAAB.priority, holdFor: 'rest of season' });
+      else if (r <= line * 1.1) mid.push({ ...row, faabPct: PICKUP_FAAB.mid, holdFor: 'three weeks' });
+      else if (r <= line * 1.6 && (trend === 'up' || (p.marketDelta && p.marketDelta.points > 0))) deep.push({ ...row, faabPct: PICKUP_FAAB.deep, holdFor: 'two weeks' });
+      else if (trend === 'down' && c <= line * 1.5) noChase.push(row);
+    }
+    const byRank = (a, b) => a.ironTunaRank - b.ironTunaRank;
+    tiers[size] = { rosteredLine: Object.fromEntries(['QB', 'RB', 'WR', 'TE'].map(p => [p, rostered(p)])), priorityAdds: priority.sort(byRank).slice(0, 6), midLevelAdds: mid.sort(byRank).slice(0, 8), deepAdds: deep.sort(byRank).slice(0, 8), speculativeStashes: stash.sort(byRank).slice(0, 5), doNotChase: noChase.slice(0, 5) };
+  }
+  const recent = ((ctx.signals && ctx.signals.insights) || []).filter(i => /role_increase|consolidation|production_below/.test(i.type) && i.confidence !== 'LOW').slice(0, 10).map(i => ({ type: i.type, player: i.subject.name, team: i.subject.team, data: i.data }));
+  return { leagueSizes: sizes, tiers, faabNote: 'faabPct is a range of the reader’s remaining budget; the page restates it in their dollars', usageEvidence: recent, dfs: _dfsBlock(ctx, null) };
+}
+function packetUnderrated(ctx) {
+  const W = (ctx.week && ctx.week.players) || [];
+  const b = blendBoard({ ok: true, players: W.filter(p => /^(QB|RB|WR|TE)$/.test(p.position)) }, 0.5);
+  const dis = blendDisagreements(b.players, 20).filter(d => d.higher === 'market' && /props|gamelines/.test(d.marketBasis));
+  const opp = ((ctx.signals && ctx.signals.insights) || []).filter(i => i.type === 'production_below_opportunity' && i.confidence !== 'LOW').slice(0, 6).map(i => ({ player: i.subject.name, team: i.subject.team, position: i.subject.position, data: i.data }));
+  const pick = dis[0] || null;
+  if (!pick && !opp.length) return { skip: true, reason: 'no_discrepancy_clears_the_bar' };
+  const weekly = pick ? { ...pick, row: _rowFor(W.find(p => p.key === pick.key)) } : { player: opp[0].player, team: opp[0].team, position: opp[0].position, basis: 'usage above ranking', data: opp[0].data };
+  const dfs = _dfsBlock(ctx, null);
+  let dfsPick = null;
+  for (const site of Object.keys(dfs.sites)) { const s = dfs.sites[site]; const cand = (s.leverage || []).filter(r => r.value >= 105)[0] || (s.bestValues || [])[0]; if (cand) { dfsPick = { site: s.label, ...cand }; break; } }
+  return { weeklyPick: weekly, candidates: dis.slice(0, 6), usageCandidates: opp, dfsPick, dfs };
+}
+function packetTradeDesk(ctx, rosBoard) {
+  const R = (rosBoard && rosBoard.ok ? rosBoard.players : []).filter(p => /^(QB|RB|WR|TE)$/.test(p.position));
+  const U = ctx.usage && ctx.usage.players ? ctx.usage.players : {};
+  const recent = k => { const u = U[k]; if (!u || !u.season || !u.season.games) return null; return { games: u.season.games, ppg: _oddsRound(u.season.points / u.season.games), trend: roleTrendFrom(u).label }; };
+  const targets = [], away = [];
+  for (const p of R) {
+    const rc = recent(p.key);
+    const rosEdge = p.consensus.rank - p.ironTuna.rank;    // positive: Iron Tuna higher than consensus
+    const perGame = p.games ? _oddsRound(p.ironTuna.points / p.games) : null;
+    const row = { name: p.name, position: p.position, team: p.team, rosRank: p.ironTuna.rank, consensusRosRank: p.consensus.rank, rosPointsPerGame: perGame, recentPointsPerGame: rc ? rc.ppg : null, recentGames: rc ? rc.games : null, roleTrend: rc ? rc.trend : null, schedule: p.scheduleDifficulty ? p.scheduleDifficulty.label : null, injury: p.injury ? p.injury.status : null, marketBasis: p.vegas.basis };
+    if (rosEdge >= 4 && (!rc || (perGame != null && rc.ppg <= perGame * 0.9)) && !(p.injury && _injSev(p.injury.status) === 2)) targets.push({ ...row, edge: rosEdge });
+    if (rosEdge <= -4 && rc && perGame != null && rc.ppg >= perGame * 1.15 && rc.trend !== 'up') away.push({ ...row, edge: rosEdge });
+  }
+  const dfs = _dfsBlock(ctx, null);
+  const attack = [], fade = [];
+  for (const site of Object.keys(dfs.sites)) { const s = dfs.sites[site]; attack.push(...(s.leverage || []).filter(r => r.value >= 105 && r.ownership < 15).slice(0, 5).map(r => ({ site: s.label, ...r }))); fade.push(...(s.likelyChalk || []).filter(r => r.value < 100).slice(0, 5).map(r => ({ site: s.label, ...r }))); break; }
+  if (!targets.length && !away.length) return { skip: true, reason: 'no_trade_edges_clear_the_bar' };
+  return { targets: targets.sort((a, b) => b.edge - a.edge).slice(0, 8), tradeAway: away.sort((a, b) => a.edge - b.edge).slice(0, 8), rule: 'a target is a player the rest-of-season board ranks at least four spots above the consensus whose recent scoring runs below his line; a trade-away is the reverse', attack: attack.slice(0, 5), fade: fade.slice(0, 5), dfs };
+}
+function packetWeekend(games, ctx) {
+  const fr = briefFinalRead(ctx); delete fr.allowed;
+  const gp = briefGamePlan('weekend-preview', games, ctx); delete gp.allowed;
+  return { ...fr, cards: gp.cards, weather: 'unavailable: no licensed weather feed is configured', dfs: _dfsBlock(ctx, null) };
+}
+function packetKDst(ctx) {
+  const W = (ctx.week && ctx.week.players) || [];
+  const row = p => _rowFor(p, { pointsAllowedFactor: null });
+  const dst = W.filter(p => p.position === 'DST').sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).map(row);
+  const k = W.filter(p => p.position === 'K').sort((a, b) => a.ironTuna.rank - b.ironTuna.rank).slice(0, 20).map(row);
+  if (!dst.length && !k.length) return { skip: true, reason: 'no_k_dst_rows' };
+  // Streamers: defenses the consensus has outside its top twelve that the
+  // Iron Tuna board has inside its top fourteen (the opponent's implied total
+  // is what moved them). Avoid: consensus top-twelve defenses facing a high
+  // implied total.
+  const streaming = dst.filter(d => d.consensusRank > 12 && d.ironTunaRank <= 14).slice(0, 6);
+  const avoid = dst.filter(d => d.consensusRank <= 12 && d.ironTunaRank >= 16).slice(0, 5);
+  return { defenses: dst.slice(0, 20), kickers: k, streaming, avoid, dfs: _dfsBlock(ctx, null), kickerNote: 'kickers are discussed only for formats that roster them; neither DraftKings nor FanDuel main slates do' };
+}
+function packetBreaking(ctx, events) {
+  const W = (ctx.week && ctx.week.players) || [];
+  const evs = (events || []).slice(0, 6);
+  const affected = [];
+  for (const e of evs) {
+    const p = W.find(x => x.key === e.playerKey) || W.find(x => x.name === e.player);
+    if (p) { affected.push(_rowFor(p, { event: e.type, detail: e.detail, score: e.score })); if (_injSev(e.to) === 2 || e.type === 'depth') for (const r of _replacementFor(p.team, p.position, p.name, ctx)) affected.push({ ...r, replaces: p.name }); }
+  }
+  return { events: evs, affected, dfs: _dfsBlock(ctx, new Set(evs.map(e => e.team).filter(Boolean))) };
+}
+// ── the packet ─────────────────────────────────────────────────────────────
+// Wraps a builder's facts with what every packet carries: the story's
+// metadata, the freshness report, the prior calls on the players named, the
+// rivalry (or its absence), and `allowed`.
+async function buildResearchPacket(env, kind, d, ctx, opts) {
+  const o = opts || {};
+  const K = CONTENT_KINDS[kind];
+  const games = weekGames(ctx.sched, d.week, Date.now()).filter(g => (d.targets || []).includes(g.id));
+  const anchorGames = d.anchorWeek != null && d.anchorWeek !== d.week ? weekGames(ctx.sched, d.anchorWeek, Date.now()) : games;
+  let facts = null;
+  const summariesFor = async (gs) => { const out = []; for (const g of gs) { try { const s = await gameSummaryFor(env, g, ctx.nameIndex); if (s && s.final) out.push(s); } catch (e) {} } return out; };
+  if (kind === 'last-minute-intel') facts = packetLastMinute(ctx, games);
+  else if (kind === 'what-sunday-taught-us') { const s = await summariesFor(games); if (!s.length && !o.force) return { skip: true, reason: 'no_box_scores' }; facts = packetSundayTaught(games, s, ctx); }
+  else if (kind === 'mnf-preview' || kind === 'tnf-preview') facts = packetShowdown(kind, games, ctx);
+  else if (kind === 'early-rankings') facts = packetRankings(ctx, d.week);
+  else if (kind === 'quarterback-monday') facts = packetQb(ctx);
+  else if (kind === 'ros-rankings') {
+    const [next3, ros, untilPlayoffs, playoffs, rosUpdate] = await Promise.all([
+      boardsPayload(env, { horizon: 'next3', position: 'ALL', preset: 'ppr' }), boardsPayload(env, { horizon: 'ros', position: 'ALL', preset: 'ppr' }),
+      boardsPayload(env, { horizon: 'ros', position: 'ALL', preset: 'ppr', through: 14 }), boardsPayload(env, { horizon: 'playoffs', position: 'ALL', preset: 'ppr' }),
+      rosUpdatePayload(env, {}).catch(() => null)]);
+    const mon = anchorGames.filter(g => g.dow === 'Mon');
+    const ms = mon.length ? { games: mon, summaries: await summariesFor(mon) } : null;
+    facts = packetRos(ctx, { next3, untilPlayoffs, playoffs, ros }, rosUpdate && rosUpdate.ok ? rosUpdate : null, ms && ms.summaries.length ? ms : null);
+  }
+  else if (kind === 'tailback-tuesday') facts = packetPosition(ctx, ['RB'], { gate: true });
+  else if (kind === 'wideout-wednesday') facts = packetPosition(ctx, ['WR'], { gate: true });
+  else if (kind === 'tight-end-thursday') facts = packetPosition(ctx, ['TE'], { gate: true });
+  else if (kind === 'pickup-advisor') facts = packetPickups(ctx);
+  else if (kind === 'underrated') facts = packetUnderrated(ctx);
+  else if (kind === 'trade-desk') facts = packetTradeDesk(ctx, await boardsPayload(env, { horizon: 'ros', position: 'ALL', preset: 'ppr' }));
+  else if (kind === 'tnf-what-matters') { const s = await summariesFor(games); if (!s.length && !o.force) return { skip: true, reason: 'no_box_scores' }; facts = briefForGames(kind, games, s, ctx); delete facts.allowed; facts.dfs = _dfsBlock(ctx, null); }
+  else if (kind === 'weekend-preview') facts = packetWeekend(games, ctx);
+  else if (kind === 'kickers-defenses') facts = packetKDst(ctx);
+  else if (kind === 'breaking') facts = packetBreaking(ctx, o.events || []);
+  if (!facts) return { skip: true, reason: 'no_builder' };
+  if (facts.skip) return facts;
+  if (K.gate === 'worth' && facts.skip) return facts;
+  const index = _boardIndex(ctx);
+  const keys = [...new Set(JSON.stringify(facts).match(/"name":"([^"]+)"/g) || [])].map(s => s.slice(8, -1)).map(n => index[n] && index[n].key).filter(Boolean).slice(0, 60);
+  const priorCalls = await priorCallsFor(env, keys, 30).catch(() => []);
+  const budget = K.rivalry ? await rivalryBudget(env, ctx.sched ? ctx.sched.season : null).catch(() => ({ allowed: false })) : null;
+  const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
+  const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
+  const packet = {
+    meta: { kind, title: K.title, subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+            analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
+            lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
+    freshness: freshnessReport(ctx.stamps, kind, Date.now()),
+    priorCalls, rivalry, rivalryBudget: budget, colleagues: [...new Set(priorCalls.map(c => c.analystName))],
+    playerIndex: index,
+    ...facts
+  };
+  // A stale source is not a fact. Name what was excluded so the writer says
+  // "unavailable" rather than reading an old number as today's.
+  if (packet.freshness.excluded.length) packet.staleSources = packet.freshness.excluded.map(s => s + ' (last retrieved ' + (packet.freshness.sources[s].ageHours) + 'h ago; limit ' + packet.freshness.sources[s].limitHours + 'h)');
+  const fin = _finishBrief(packet);
+  // Analysts may be named only where the packet earned it: the byline, the
+  // DFS byline, the market voice, the rivalry pair when it fired, and the
+  // authors of prior calls the packet carries.
+  const people = [analyst.name, dfsAnalyst.name];
+  if (marketAnalyst) people.push(marketAnalyst.name);
+  if (rivalry) people.push(ANALYSTS.vega.name, ANALYSTS.brooks.name);
+  for (const c of priorCalls) people.push(c.analystName);
+  fin.allowed.names = [...new Set(fin.allowed.names.concat(people))];
+  fin.allowed.analysts = [...new Set(people)];
+  delete fin.playerIndexKeys;
+  return fin;
+}
+
+// ── the writer, in an analyst's voice, two lenses ──────────────────────────
+const NEWSROOM_SYSTEM = `You write for Iron Tuna, a fantasy football intelligence desk that prices players against the betting market and reads usage before it reads box scores.
+THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
+THE QUESTION is never "what happened". It is "what does what happened tell us about what is going to happen next", and for DFS "what does this mean at this salary and this expected ownership".
+TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manager what to do: rankings, start/sit, waivers, trades, rest-of-season value. The DFS lens tells a daily player where projection, price and ownership create opportunity: value, chalk, leverage, stacks, cash versus tournaments. A good fantasy player is not automatically a good DFS play. The facts do not change between the lenses; the recommendations may. If the packet's dfs block says no salaries are loaded, the DFS lens speaks to roles and pricing direction and says plainly that no salary number is available.
+COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
+THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
+STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
+PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
+OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
+const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
+function _lensShape(kind, lens) {
+  const secs = sectionsFor(kind, lens);
+  return '{' + secs.map(s => {
+    const f = NEWSROOM_OBJECT_SECTIONS[s];
+    return '"' + s + '":' + (f ? '[{' + f.map(x => '"' + x + '":"..."').join(',') + '}]' : '["..."]');
+  }).join(',') + '}';
+}
+function _voiceBlock(packet) {
+  const a = ANALYSTS[packet.meta.analyst] || ANALYST_HOUSE, d = ANALYSTS[packet.meta.dfsAnalyst] || ANALYST_HOUSE, m = packet.meta.marketAnalyst ? ANALYSTS[packet.meta.marketAnalyst] : null;
+  let s = 'BYLINE (WEEKLY FANTASY lens): ' + a.name + ', ' + a.role + '. Voice: ' + a.voice + ' Philosophy: ' + (a.philosophy || '') + '\n';
+  s += 'BYLINE (DFS lens): ' + d.name + ', ' + d.role + '. Voice: ' + d.voice + '\n';
+  if (m) s += 'MARKET VOICE available for one counterpoint line where the packet supports it: ' + m.name + ' (' + m.role + ').\n';
+  if (packet.rivalry) s += 'RIVALRY IN THIS PIECE: ' + packet.rivalry.player + '. Brooks (Fantasy Analysis) ' + packet.rivalry.position + packet.rivalry.brooks.rank + '; Vega (Market Intelligence) ' + packet.rivalry.position + packet.rivalry.vega.rank + ' on ' + packet.rivalry.vega.basis + '. Write ONE line in the weekly lens, in the section it belongs to, and put the same line in "rivalryLine". Nowhere else.\n';
+  else s += 'NO RIVALRY IN THIS PIECE. Do not set up Vega against Brooks.\n';
+  if (packet.priorCalls && packet.priorCalls.length) s += 'PRIOR CALLS the desk has published on players in this packet are in priorCalls. Reference only those, by analyst and week, where relevant.\n';
+  return s;
+}
+function factCheck(body, packet) {
+  const v = validateDraft(JSON.stringify(body), packet.allowed);
+  const problems = v.ok ? [] : v.names.map(n => 'name:' + n).concat(v.numbers.map(n => 'number:' + n));
+  const text = JSON.stringify(body);
+  for (const re of AI_PHRASES) if (re.test(text)) problems.push('phrasing:' + String(re).replace(/^\/|\/i?$/g, ''));
+  // Analysts: only the packet's people, and the rivalry only when it fired.
+  for (const a of Object.values(ANALYSTS)) {
+    if ((packet.allowed.analysts || []).includes(a.name)) continue;
+    if (text.includes(a.name)) { problems.push('analyst:' + a.name); continue; }
+    // The two rivals by surname alone ("Vega has him WR5"), unless a player in
+    // the packet carries that surname.
+    if (RIVALRY_PAIR.includes(a.id)) {
+      const sur = a.name.split(' ').pop();
+      const playerHas = (packet.allowed.names || []).some(n => n !== a.name && new RegExp('\\b' + sur + '\\b').test(n));
+      if (!playerHas && new RegExp('\\b' + sur + '\\b').test(text)) problems.push('analyst:' + a.name);
+    }
+  }
+  if (!packet.rivalry && body && body.rivalryLine) problems.push('rivalry:not_in_packet');
+  // Sections: each lens must carry its sections.
+  for (const lens of packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly']) {
+    const secs = sectionsFor(packet.meta.kind, lens);
+    const got = body && body[lens] && typeof body[lens] === 'object' ? body[lens] : null;
+    if (!got) { problems.push('missing:' + lens); continue; }
+    for (const s of secs) if (!(s in got)) problems.push('missing:' + lens + '.' + s);
+  }
+  if (!body || typeof body.headline !== 'string' || !body.headline.trim()) problems.push('missing:headline');
+  return { ok: !problems.length, problems: [...new Set(problems)] };
+}
+// The prompt has a length budget and the packet has to fit it WHOLE: a JSON
+// string cut at a character count hands the model half an object, which is
+// exactly the gap it fills from memory. Drop the writer-only bulk first, then
+// the heaviest fact blocks, naming each one dropped, until it fits.
+const WRITER_PACKET_BUDGET = 90000;
+const WRITER_TIMEOUT_MS = 170000;
+function compactForWriter(packet, budget) {
+  const limit = budget || WRITER_PACKET_BUDGET;
+  // A copy: the trims below must not reach the packet the row stores.
+  const out = {};
+  for (const [k, v] of Object.entries(packet)) if (!['playerIndex', 'rivalryBudget', 'colleagues'].includes(k)) out[k] = v == null ? v : JSON.parse(JSON.stringify(v));
+  out.allowed = { analysts: packet.allowed ? packet.allowed.analysts : [] };   // the names and numbers are IN the facts; the list is for the checker
+  const size = () => JSON.stringify(out).length;
+  const omitted = [];
+  // Trim long arrays inside the facts before dropping whole blocks.
+  const trim = (o, n) => { for (const [k, v] of Object.entries(o)) { if (Array.isArray(v) && v.length > n) { o[k] = v.slice(0, n); omitted.push(k + ' cut to ' + n); } else if (v && typeof v === 'object' && !Array.isArray(v) && k !== 'meta') trim(v, n); } };
+  // The DFS block and the prior calls are the usual bulk; cut those first,
+  // then every array, and only then drop a whole fact block.
+  if (size() > limit && out.dfs && out.dfs.sites) { for (const site of Object.values(out.dfs.sites)) { for (const k of ['cash', 'tournament', 'stacks', 'expensiveFades']) if (site[k]) { delete site[k]; omitted.push('dfs.' + k + ' omitted for length'); } } }
+  if (size() > limit && Array.isArray(out.priorCalls) && out.priorCalls.length > 8) { out.priorCalls = out.priorCalls.slice(0, 8); omitted.push('priorCalls cut to 8'); }
+  if (size() > limit) trim(out, 24);
+  if (size() > limit) trim(out, 12);
+  if (size() > limit) trim(out, 8);
+  while (size() > limit) {
+    let big = null, bigLen = 0;
+    for (const [k, v] of Object.entries(out)) { if (['meta', 'freshness', 'rivalry', 'priorCalls', 'staleSources', 'allowed'].includes(k)) continue; const l = JSON.stringify(v).length; if (l > bigLen) { big = k; bigLen = l; } }
+    if (!big) break;
+    delete out[big]; omitted.push(big + ' omitted for length');
+  }
+  if (omitted.length) out.omittedForLength = omitted;
+  return out;
+}
+async function writeNewsroomPiece(env, kind, packet) {
+  const K = CONTENT_KINDS[kind];
+  const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
+  const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
+  const user = 'KIND: ' + kind + ' (' + K.title + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
+    'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
+    '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
+  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS);
+  if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
+  const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
+  let body = parse(attempt.text);
+  if (body && typeof body.skip === 'string') return { status: 'skipped', body: null, violations: [], model: attempt.model || null, skip: body.skip.slice(0, 300) };
+  let v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] };
+  if (!v.ok) {
+    const fix = user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash.';
+    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, 6000, WRITER_TIMEOUT_MS);
+    if (attempt.ok) { body = parse(attempt.text); v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] }; }
+  }
+  return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.problems, model: attempt.model || null };
+}
+
 // ── storage, tick, payloads ────────────────────────────────────────────────
 const _slugOf = (kind, season, week) => kind + '-' + season + '-w' + week;
-async function contentExists(env, kind, season, week) {
-  try { return !!(await env.LEADS_DB.prepare('SELECT 1 FROM content_pieces WHERE kind = ? AND season = ? AND week = ?').bind(kind, season, week).first()); } catch (e) { return false; }
+async function contentLatest(env, kind, season, week) {
+  try { return await env.LEADS_DB.prepare('SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first(); } catch (e) { return null; }
 }
+// A piece held with NO draft failed on the way to the model (a timeout, a
+// provider error, no key), not on the fact check. It is retried on a later
+// tick, at most every forty minutes and at most six times; a piece held
+// because its prose failed the check is not retried: that is the editor's.
+const RETRY_HELD_AFTER_MS = 40 * 60000, RETRY_HELD_MAX = 6;
+function heldRetryable(latest, now) {
+  if (!latest || latest.status !== 'held') return false;
+  if (latest.body && latest.body !== 'null') return false;
+  if ((latest.version || 1) >= RETRY_HELD_MAX) return false;
+  return (now - latest.created_at) >= RETRY_HELD_AFTER_MS;
+}
+async function contentExists(env, kind, season, week) { return !!(await contentLatest(env, kind, season, week)); }
 async function contentStore(env, rec) {
-  await env.LEADS_DB.prepare('INSERT INTO content_pieces (season, week, kind, slug, title, status, brief, body, violations, model, created_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(rec.season, rec.week, rec.kind, rec.slug, rec.title, rec.status, JSON.stringify(rec.brief || null), JSON.stringify(rec.body || null), JSON.stringify(rec.violations || []), rec.model || null, Date.now(), rec.status === 'published' ? Date.now() : null).run();
+  await newsroomReady(env);
+  await env.LEADS_DB.prepare('INSERT INTO content_pieces (season, week, kind, slug, title, status, brief, body, violations, model, created_at, published_at, analyst, lens, version, rivalry, headline, dek) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(rec.season, rec.week, rec.kind, rec.slug, rec.title, rec.status, JSON.stringify(rec.brief || null), JSON.stringify(rec.body || null), JSON.stringify(rec.violations || []), rec.model || null, Date.now(), rec.status === 'published' ? Date.now() : null,
+          rec.analyst || null, rec.lens || null, rec.version || 1, rec.rivalry ? JSON.stringify(rec.rivalry) : null, rec.headline || null, rec.dek || null).run();
 }
+// Everything a packet reads, read once. Extends the desk's context with the
+// freshness stamps and the DFS slates under the metrics.
 async function contentContext(env, weekNumber, opts) {
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
   const preset = 'ppr';
-  const [week, next, depth, usage, injuries] = await Promise.all([
+  const [week, next, depth, usage, injuries, odds, snaps, availLive] = await Promise.all([
     boardsPayload(env, { horizon: 'week', position: 'ALL', preset }),
     boardsPayload(env, { horizon: 'next3', position: 'ALL', preset }),
-    depthChartsRead(env), usageCacheRead(env), availabilityReport(env).catch(() => null)
+    depthChartsRead(env), usageCacheRead(env), availabilityReport(env).catch(() => null),
+    oddsCacheRead(env).catch(() => null), snapshotStatus(env).catch(() => null), availabilityCacheRead(env).catch(() => null)
   ]);
   const curWeek = state.ok && state.week.type === 'REG' ? state.week.number : null;
   const [weekMarkets, gameMarkets] = await Promise.all([
@@ -6283,73 +7374,361 @@ async function contentContext(env, weekNumber, opts) {
   const signals = detectInsights({ week: week.ok ? week : null, usage, weekMarkets, gameMarkets, state, rules: scoringRules(preset) });
   const injuriesList = injuries && injuries.affected ? injuries.affected.map(a => ({ name: a.name, position: a.position, team: a.team, status: a.status, gamesOut: a.gamesOut, note: a.note })) : [];
   const injuriesByTeam = {}; for (const i of injuriesList) (injuriesByTeam[i.team] = injuriesByTeam[i.team] || []).push(i);
+  // The DFS slates, priced and measured, where salaries exist.
+  const dfs = {};
+  if (flagOn(env, 'DFS_CONTENT') && week.ok && curWeek != null) {
+    for (const site of ['dk', 'fd']) {
+      try {
+        const sal = await dfsSalariesRead(env, site, sched.season, curWeek);
+        if (!sal || !sal.rows.length) continue;
+        const slate = buildDfsSlate(site, sal.rows, week, {});
+        slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
+        slate.metrics = dfsMetrics(slate.players, 'gpp'); slate.stackScores = dfsStackScores(slate.stacks);
+        dfs[site] = slate;
+      } catch (e) {}
+    }
+  }
+  const stamps = {
+    schedule: sched ? { provider: sched.provider, at: sched.updatedAt } : null,
+    availability: availLive ? { provider: 'espn-injuries', at: availLive.updatedAt } : null,
+    odds: odds ? { provider: odds.provider, at: odds.updatedAt } : null,
+    snapshots: snaps && snaps.ok && snaps.last ? { provider: 'odds_snapshots', at: snaps.last } : null,
+    usage: usage ? { provider: 'nflverse', at: usage.updatedAt || usage.builtAt } : null,
+    depth: depth ? { provider: 'espn-depth', at: depth.asOf } : null,
+    dfs: dfs.dk ? { provider: 'csv', at: dfs.dk.salariesAsOf } : dfs.fd ? { provider: 'csv', at: dfs.fd.salariesAsOf } : null
+  };
   return { sched, state, week: week.ok ? week : null, next: next.ok ? next : null, depth, usage, signals, gameMarkets, weekMarkets,
-           injuriesList, injuriesByTeam, weekNumber, rules: scoringRules(preset), nameIndex: _oddsProjectionIndex(), ...(opts || {}) };
+           injuriesList, injuriesByTeam, weekNumber, rules: scoringRules(preset), nameIndex: _oddsProjectionIndex(), dfs, stamps, ...(opts || {}) };
+}
+// Does a live piece want a new version? 'more-finals': more of its target
+// games are final than when the last version was written. 'until-kickoff':
+// the availability picture changed and a target game is still to come.
+function updateWanted(K, latest, d, packet, now) {
+  if (!K.updates || !latest) return false;
+  if (latest.status === 'unpublished') return false;
+  if (d.updatesUntil && now > d.updatesUntil) return false;
+  let prev = null; try { prev = JSON.parse(latest.brief || 'null'); } catch (e) { prev = null; }
+  if (K.updates === 'more-finals') return (packet.finalsCount || 0) > ((prev && prev.finalsCount) || 0);
+  if (K.updates === 'until-kickoff') return !!d.ready && !!packet.stateHash && packet.stateHash !== (prev && prev.stateHash);
+  return false;
 }
 async function produceContent(env, kind, opts) {
   const o = opts || {};
-  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  const K = CONTENT_KINDS[kind];
+  if (!K) return { ok: false, kind, error: 'unknown_kind' };
+  if (!(await contentReady(env)) || !(await newsroomReady(env))) return { ok: false, error: 'no_db' };
+  if (!flagOn(env, 'IN_SEASON_DESK') && !o.force) return { ok: false, kind, error: 'desk_off' };
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
   const d = contentDue(kind, Date.now(), state, sched);
+  if (K.unscheduled) { if (!o.events && !o.force) return { ok: false, kind, error: 'unscheduled_needs_event' }; d.due = true; d.ready = true; if (d.week == null && state.ok) d.week = state.week.number; }
   if (!o.force && (!d.due || !d.ready)) return { ok: false, kind, ...d };
   if (d.week == null) return { ok: false, kind, error: 'no_week' };
-  const season = sched.season, week = d.week, K = CONTENT_KINDS[kind];
-  if (!o.force && await contentExists(env, kind, season, week)) return { ok: false, kind, week, error: 'exists' };
-  if (d.skip) { await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null }); return { ok: true, kind, week, status: 'skipped' }; }
+  const season = sched.season, week = d.week;
+  const latest = await contentLatest(env, kind, season, week);
+  const retry = heldRetryable(latest, Date.now());
+  if (latest && !o.force && !retry && !K.updates && !K.unscheduled) return { ok: false, kind, week, error: 'exists' };
+  if (d.skip) { if (!latest) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped' }; }
   const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
-  const games = weekGames(sched, week, Date.now()).filter(g => (d.targets || []).includes(g.id));
-  let brief = null;
-  if (['mnf-breakdown', 'tnf-aftermath', 'snf-what-we-learned', 'what-changed-today', 'team-recaps'].includes(kind)) {
-    const summaries = [];
-    for (const g of games) { try { const s = await gameSummaryFor(env, g, ctx.nameIndex); if (s) summaries.push(s); } catch (e) {} }
-    // The schedule said final; the box score is the second opinion. A summary
-    // that is not final is not written from, whatever the schedule said.
-    const notFinal = summaries.filter(s => !s.final);
-    if (notFinal.length && !o.force) return { ok: false, kind, week, error: 'box_score_not_final', games: notFinal.map(s => s.away.team + '@' + s.home.team) };
-    if (!summaries.length && !o.force) return { ok: false, kind, week, error: 'no_box_scores' };
-    brief = kind === 'team-recaps' ? briefTeamRecaps(games, summaries, ctx) : briefForGames(kind, games, summaries, ctx);
-  } else if (kind === 'what-they-arent-telling-you') brief = briefWtaty(ctx);
-  else if (kind === 'opportunity-report') brief = briefOpportunity(ctx);
-  else if (kind === 'rankings-update') brief = _finishBrief({ kind, week, ...(await rosUpdatePayload(env, {})) });
-  else if (kind === 'final-read') brief = briefFinalRead(ctx);
-  else if (kind === 'tnf-preview' || kind === 'weekend-game-plan') brief = briefGamePlan(kind, games, ctx);
-  if (!brief) return { ok: false, kind, week, error: 'no_brief' };
-  const written = await writePiece(env, kind, brief);
-  const title = K.title + ' · Week ' + week;
-  await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status: written.status, brief, body: written.body, violations: written.violations, model: written.model });
-  return { ok: true, kind, week, status: written.status, violations: written.violations, sections: written.body ? Object.keys(written.body) : [] };
+  const packet = await buildResearchPacket(env, kind, d, ctx, o);
+  if (packet.skip) {
+    if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
+    return { ok: true, kind, week, status: 'skipped', reason: packet.reason };
+  }
+  if (latest && !o.force && !retry && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
+  const written = await writeNewsroomPiece(env, kind, packet);
+  if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
+  const auto = await autoPublishOn(env);
+  let status = written.status;
+  const violations = written.violations.slice();
+  if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
+  const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
+  // A retry of a transport failure is the same edition, not an update.
+  const title = K.title + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
+  const analyst = packet.meta.analyst;
+  const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
+  await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
+                           headline: written.body ? String(written.body.headline || '').slice(0, 200) : null, dek: written.body ? String(written.body.dek || '').slice(0, 400) : null });
+  let calls = { stored: 0 };
+  if (status === 'published' && written.body) {
+    const list = normaliseCalls(written.body.calls, packet, analyst, 'weekly');
+    calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, list, rivalry);
+  }
+  return { ok: true, kind, week, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
 }
 async function runContentTick(env) {
   const out = [];
   for (const kind of Object.keys(CONTENT_KINDS)) {
+    if (CONTENT_KINDS[kind].unscheduled) continue;
     try { out.push(await produceContent(env, kind)); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); }
   }
   return { ok: true, at: Date.now(), results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
 }
+const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
+const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
 async function contentListPayload(env, season, week) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  await newsroomReady(env);
   try {
     const q = week != null
-      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
-      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 60").all();
-    return { ok: true, contract: CONTENT_CONTRACT, kinds: Object.entries(CONTENT_KINDS).map(([k, v]) => ({ kind: k, title: v.title, day: v.day, hour: v.hour })), pieces: q.results || [] };
+      ? await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE season = ? AND week = ? AND status != 'unpublished' ORDER BY created_at DESC").bind(season, week).all()
+      : await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek FROM content_pieces WHERE status != 'unpublished' ORDER BY created_at DESC LIMIT 80").all();
+    const pieces = (q.results || []).map(r => ({ ...r, byline: _bylineOf(r), url: _pieceUrl(r), legacy: !CONTENT_KINDS[r.kind] }));
+    return { ok: true, contract: CONTENT_CONTRACT, disclosure: AI_DISCLOSURE,
+             kinds: Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled).map(([k, v]) => ({ kind: k, title: v.title, subtitle: v.subtitle || null, day: v.day, hour: v.hour, minute: v.minute || 0, analyst: v.analyst, analystName: (ANALYSTS[v.analyst] || ANALYST_HOUSE).name, dfsAnalyst: v.dfsAnalyst, lens: v.lens, summary: v.summary, gate: v.gate || null, updates: v.updates || null })),
+             pieces };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 async function contentPiecePayload(env, kind, season, week) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  await newsroomReady(env);
   try {
     const row = week != null
       ? await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first()
       : await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? ORDER BY created_at DESC LIMIT 1').bind(kind).first();
     if (!row || row.status === 'unpublished') return { ok: false, error: 'not_found', kind };
     const parse = s => { try { return JSON.parse(s); } catch (e) { return null; } };
-    // A held piece ships its BRIEF and not its draft: the data is right by
+    const K = CONTENT_KINDS[kind];
+    const brief = parse(row.brief);
+    // A held piece ships its PACKET and not its draft: the data is right by
     // construction, the prose was not.
-    return { ok: true, contract: CONTENT_CONTRACT, kind, title: row.title, status: row.status, week: row.week, season: row.season,
-             createdAt: row.created_at, publishedAt: row.published_at, sections: CONTENT_SECTIONS[kind] || [],
-             body: row.status === 'published' ? parse(row.body) : null, brief: parse(row.brief), violations: row.status === 'held' ? parse(row.violations) : null };
+    const pub = brief && brief.meta ? { meta: brief.meta, freshness: brief.freshness, rivalry: brief.rivalry, priorCalls: brief.priorCalls, dfs: brief.dfs, ...Object.fromEntries(Object.entries(brief).filter(([k]) => !['allowed', 'playerIndex', 'rivalryBudget', 'colleagues'].includes(k))) } : brief;
+    return { ok: true, contract: CONTENT_CONTRACT, kind, title: row.title, subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
+             headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
+             createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, objectSections: NEWSROOM_OBJECT_SECTIONS,
+             body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
+}
+// The public feed the homes read: published pieces newest first, with the
+// byline and the lens each carries. ?lens=dfs lists only pieces with a DFS
+// lens (every package in the calendar today, but a legacy row has none).
+async function newsroomFeedPayload(env, lens, limit) {
+  if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
+  await newsroomReady(env);
+  try {
+    const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, limit || 20)).all();
+    let rows = (q.results || []);
+    if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
+    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].title : r.title, dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry })) };
+  } catch (e) { return { ok: false, error: 'unavailable' }; }
+}
+// The front page's lead, in the regular season: the newest published piece,
+// in the shape the lead painter already understands.
+async function deskLeadPayload(env) {
+  const feed = await newsroomFeedPayload(env, 'weekly', 6);
+  if (!feed.ok || !feed.pieces.length) return null;
+  const [cur, ...rest] = feed.pieces;
+  const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week, url: p.url, title: p.headline || p.title + ' · Week ' + p.week, dek: p.dek || '', label: p.title, category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], names: [], cast: [] });
+  return { ok: true, source: 'desk', story: row(cur), recent: rest.map(row) };
+}
+
+// ── author pages, disagreements ────────────────────────────────────────────
+async function analystsPayload(env) {
+  return { ok: true, disclosure: AI_DISCLOSURE, rivalry: RIVALRY_PAIR, personas: flagOn(env, 'ANALYST_PERSONAS'),
+           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, rivalry: a.rivalry, url: '/analysts/' + a.id })) };
+}
+async function analystPayload(env, id) {
+  const a = ANALYSTS[id];
+  if (!a) return { ok: false, error: 'unknown_analyst' };
+  let pieces = [];
+  if (await contentReady(env)) {
+    await newsroomReady(env);
+    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, dek, published_at, rivalry FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].title : r.kind, week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
+  }
+  const calls = await analystCalls(env, id, 20);
+  const record = calls.reduce((m, c) => { if (c.outcome) m[c.outcome] = (m[c.outcome] || 0) + 1; return m; }, {});
+  let headToHead = null;
+  if (RIVALRY_PAIR.includes(id)) {
+    try { headToHead = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 10").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null, publishedAt: r.published_at } : null; }).filter(Boolean); } catch (e) { headToHead = []; }
+  }
+  const columns = id === 'brooks' ? [{ title: 'The Tell', url: '/the-tell', note: 'The weekly column on what is inside a ranking runs on this desk under a pen name; see the column’s own method box.' }] : [];
+  return { ok: true, disclosure: AI_DISCLOSURE, analyst: { id: a.id, name: a.name, role: a.role, avatar: a.avatar, specialty: a.specialty, personality: a.personality, philosophy: a.philosophy, assignments: a.assignments, voice: a.voice, rivalry: a.rivalry ? { id: a.rivalry, name: ANALYSTS[a.rivalry].name, url: '/analysts/' + a.rivalry } : null },
+           pieces, calls, record, headToHead, columns };
+}
+async function disagreementsPayload(env, horizon) {
+  const board = await boardsPayload(env, { horizon: HORIZONS[horizon] ? horizon : 'week', position: 'ALL', preset: 'ppr' });
+  if (!board.ok) return { ok: false, error: board.error || 'no_board' };
+  const b = blendBoard(board, 0.5);
+  const rows = blendDisagreements(b.players.filter(p => /^(QB|RB|WR|TE)$/.test(p.position)), 12);
+  let recent = [];
+  if (await contentReady(env)) { await newsroomReady(env); try { recent = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, rivalry, published_at FROM content_pieces WHERE status = 'published' AND rivalry IS NOT NULL ORDER BY published_at DESC LIMIT 5").all()).results || []).map(r => { let rv = null; try { rv = JSON.parse(r.rivalry); } catch (e) {} return rv ? { kind: r.kind, week: r.week, headline: r.headline, url: _pieceUrl(r), player: rv.player, position: rv.position, brooks: rv.brooks, vega: rv.vega, line: rv.line || null } : null; }).filter(Boolean); } catch (e) {} }
+  return { ok: true, horizon: b.horizon, currentWeek: b.currentWeek, pair: { brooks: { name: ANALYSTS.brooks.name, label: 'Fantasy Analysis', url: '/analysts/brooks' }, vega: { name: ANALYSTS.vega.name, label: 'Market Intelligence', url: '/analysts/vega' } },
+           disagreements: rows.map(r => ({ ...r, brooksRank: r.fantasyRank, vegaRank: r.marketRank })), recentLines: recent, thresholds: BLEND_DISAGREE };
+}
+
+// ── breaking news ──────────────────────────────────────────────────────────
+// Every quarter hour the scan compares the injury list and the depth charts
+// with what it saw last time, scores each change by who it happens to and
+// when, and only a change that clears NEWS.threshold produces anything: on a
+// Sunday before kickoff it refreshes Last-Minute Intel; otherwise it produces
+// a Breaking piece. Everything below the threshold is logged and nothing more.
+const NEWS = { threshold: 60, top: { QB: 14, RB: 30, WR: 40, TE: 14, K: 8, DST: 8 } };
+function scoreNewsEvent(ev, rankOf, now) {
+  const rank = rankOf(ev) || 99;
+  const top = NEWS.top[ev.position] || 24;
+  const prominence = Math.max(0, 1 - (rank - 1) / (top * 1.5));      // 1 at rank 1, 0 past 1.5x the startable line
+  let base = 0;
+  if (ev.type === 'status') {
+    const from = _injSev(ev.from), to = _injSev(ev.to);
+    base = to === 2 && from < 2 ? 85 : to === 1 && from === 0 ? 40 : to < from ? 55 : 20;
+  } else if (ev.type === 'depth') base = ev.position === 'QB' ? 90 : 65;
+  else if (ev.type === 'line') base = Math.min(70, 20 * Math.abs(ev.move || 0));
+  let score = Math.round(base * (0.35 + 0.65 * prominence));
+  // Proximity to kickoff: a scratch on Sunday morning matters more than the
+  // same news on a Tuesday.
+  const et = etParts(now || Date.now());
+  if (ev.type !== 'line' && (et.dow === 'Sun' || (et.dow === 'Sat' && et.hour >= 18))) score = Math.min(100, Math.round(score * 1.2));
+  return { score: Math.min(100, score), rank, rationale: ev.type + ' ' + (ev.from || '') + ' -> ' + (ev.to || '') + ', rank ' + rank + ' at ' + ev.position };
+}
+function detectNewsEvents(prev, next, board, now) {
+  const rankOf = ev => { const p = board.find(x => x.key === ev.playerKey); return p ? p.consensus.rank : null; };
+  const events = [];
+  const pa = (prev && prev.availability) || {}, na = (next && next.availability) || {};
+  for (const k of Object.keys(na)) {
+    const before = pa[k] ? pa[k].status : '', after = na[k].status || '';
+    if (String(before) === String(after)) continue;
+    if (!pa[k] && _injSev(after) === 0) continue;
+    const p = board.find(x => x.key === k);
+    const ev = { type: 'status', playerKey: k, player: p ? p.name : na[k].name, team: p ? p.team : na[k].team, position: p ? p.position : na[k].position, from: before, to: after, detail: na[k].note || '' };
+    events.push({ ...ev, ...scoreNewsEvent(ev, rankOf, now) });
+  }
+  const pd = (prev && prev.depth) || {}, nd = (next && next.depth) || {};
+  for (const t of Object.keys(nd)) {
+    for (const pos of ['QB', 'RB']) {
+      const b = (pd[t] && pd[t][pos]) || null, a = nd[t][pos] || null;
+      if (!b || !a || !a.length || _oddsNorm(b[0] || '') === _oddsNorm(a[0])) continue;
+      const p = board.find(x => x.team === t && x.position === pos && _oddsNorm(x.name) === _oddsNorm(a[0]));
+      const ev = { type: 'depth', playerKey: p ? p.key : null, player: a[0], team: t, position: pos, from: b[0], to: a[0], detail: 'depth chart ' + pos + '1 changed' };
+      events.push({ ...ev, ...scoreNewsEvent({ ...ev, playerKey: p ? p.key : null }, () => (p ? p.consensus.rank : 30), now) });
+    }
+  }
+  return events.sort((a, b) => b.score - a.score);
+}
+function _newsStateFrom(availTable, depth) {
+  const availability = {};
+  for (const [k, a] of Object.entries(availTable || {})) if (a && a.status) availability[k] = { status: a.status, note: a.note || '' };
+  const d = {};
+  for (const [t, v] of Object.entries((depth && depth.teams) || {})) d[t] = { QB: ((v.offense && v.offense.QB) || []).slice(0, 2), RB: ((v.offense && v.offense.RB) || []).slice(0, 2) };
+  return { availability, depth: d, at: Date.now() };
+}
+async function runNewsScan(env) {
+  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+  if (!flagOn(env, 'BREAKING_NEWS')) return { ok: true, skipped: 'flag off' };
+  await newsroomReady(env);
+  const [avail, depth, board, sched] = await Promise.all([availabilityTable(env), depthChartsRead(env), boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' }), scheduleCacheRead(env)]);
+  const next = _newsStateFrom(avail, depth);
+  let prev = null;
+  try { const r = await env.LEADS_DB.prepare('SELECT payload FROM news_state WHERE id = 1').first(); if (r) prev = JSON.parse(r.payload); } catch (e) {}
+  await env.LEADS_DB.prepare('INSERT OR REPLACE INTO news_state (id, payload, updated_at) VALUES (1, ?, ?)').bind(JSON.stringify(next), Date.now()).run();
+  if (!prev) return { ok: true, baseline: true, events: 0 };
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const events = detectNewsEvents(prev, next, board.ok ? board.players : [], Date.now());
+  const week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  for (const e of events) { try { await env.LEADS_DB.prepare('INSERT INTO news_events (season, week, type, player_key, player, team, position, detail, score, handled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(sched ? sched.season : null, week, e.type, e.playerKey, e.player, e.team, e.position, e.rationale + (e.detail ? '; ' + e.detail : ''), e.score, null, Date.now()).run(); } catch (err) {} }
+  const significant = events.filter(e => e.score >= NEWS.threshold);
+  let handled = null;
+  if (significant.length && state.ok && state.phase === 'regular') {
+    const et = etParts(Date.now());
+    const d = contentDue('last-minute-intel', Date.now(), state, sched);
+    if (et.dow === 'Sun' && d.due && d.ready) handled = { via: 'last-minute-intel', result: await produceContent(env, 'last-minute-intel', {}) };
+    else handled = { via: 'breaking', result: await produceContent(env, 'breaking', { events: significant }) };
+    try { await env.LEADS_DB.prepare('UPDATE news_events SET handled = ? WHERE handled IS NULL AND score >= ? AND created_at >= ?').bind(handled.via, NEWS.threshold, Date.now() - 60000).run(); } catch (e) {}
+  }
+  return { ok: true, events: events.length, significant: significant.length, top: events.slice(0, 5).map(e => ({ player: e.player, type: e.type, score: e.score })), handled };
+}
+async function newsEventsPayload(env, limit) {
+  if (!env || !env.LEADS_DB) return [];
+  try { return (await env.LEADS_DB.prepare('SELECT * FROM news_events ORDER BY created_at DESC LIMIT ?').bind(limit || 40).all()).results || []; } catch (e) { return []; }
+}
+
+// Draft-season social posting is allowed outside the regular season, or when
+// DRAFT_SEASON_SOCIAL=1 says so explicitly.
+async function draftSocialAllowed(env) {
+  if (env && String(env.DRAFT_SEASON_SOCIAL || '') === '1') return { ok: true, reason: 'DRAFT_SEASON_SOCIAL=1' };
+  try {
+    const sched = await scheduleCacheRead(env);
+    const st = sched ? nflSeasonState(sched, Date.now()) : null;
+    if (st && st.ok && (st.phase === 'regular' || st.phase === 'postseason')) return { ok: false, reason: 'regular season: draft-season threads are retired (LEGACY_CONTENT x-draft-posts)' };
+  } catch (e) {}
+  return { ok: true, reason: 'not the regular season' };
+}
+// ── the audit, and the Routines it cannot reach ────────────────────────────
+// The Routines that published content from outside the repository, and what
+// this migration did with each. The admin board prints this beside the kinds
+// table; the ids are the ones list_triggers reports.
+const ROUTINE_MIGRATION = [
+  { id: 'trig_013vFwxbbFTQNwCpxLbv5FqY', name: 'Iron Tuna camp & preseason desk', cron: '0 15 * * *', disposition: 'retired', destination: 'last-minute-intel' },
+  { id: 'trig_015MJSf2RFwE89n8Hua3oSG8', name: 'Play-Caller Premium daily entries', cron: '0 12 * * *', disposition: 'retired', destination: 'quarterback-monday' },
+  { id: 'trig_016JAiJJMZi2jtZDmZS1QPNK', name: 'The Pick (daily story)', cron: '0 13 * * *', disposition: 'retired', destination: 'underrated' },
+  { id: 'trig_01K2obtrMAKiwGn3N4UroTEv', name: 'The Pick (Story) - Updated', cron: '0 12 * * *', disposition: 'retired', destination: 'underrated' },
+  { id: 'trig_011LYewcPUQikF8izFsN2LAr', name: 'lead story refresh (every 6h)', cron: '58 */6 * * *', disposition: 'retired', destination: 'desk-lead' },
+  { id: 'trig_01WTgFuRik7kDWJHJv5pDwgQ', name: 'watch for empty lead-story slots (paused)', cron: '15 14 * * *', disposition: 'retired', destination: 'none' },
+  { id: 'trig_01PMc44HMe6Z5yjaGGK64ZXv', name: 'Projections update, daily Aug–Sep', cron: '0 10 * 8,9 *', disposition: 'retained', destination: 'data' },
+  { id: 'trig_01HwcprHsvuAe233Bxx4Jqfk', name: 'Projections update, weekly July', cron: '0 10 * 7 1', disposition: 'retained', destination: 'data (dormant)' },
+  { id: 'trig_01LvL8PwjZ89dkhKq7gSaVGS', name: 'The Tell (weekly column)', cron: '0 14 * * 2', disposition: 'retained', destination: 'the-tell' }
+];
+// Pure. Fails on the shapes of duplication the migration exists to remove.
+function newsroomAudit(crons) {
+  const problems = [];
+  const active = Object.entries(CONTENT_KINDS).filter(([k, v]) => !v.unscheduled);
+  const slots = new Map();
+  for (const [k, v] of active) {
+    const key = v.day + ' ' + v.hour + ':' + (v.minute || 0) + ' ' + (v.retro ? 'retro' : 'fwd') + ' ' + (v.targets.toString());
+    if (slots.has(key)) problems.push('duplicate slot and target rule: ' + slots.get(key) + ' and ' + k);
+    slots.set(key, k);
+    if (LEGACY_CONTENT[k]) problems.push('legacy kind still active: ' + k);
+    if (!ANALYSTS[v.analyst]) problems.push('no such analyst on ' + k + ': ' + v.analyst);
+    if (!NEWSROOM_SECTIONS[k]) problems.push('no sections for ' + k);
+  }
+  const titles = new Map();
+  for (const [k, v] of Object.entries(CONTENT_KINDS)) { const t = v.title.toLowerCase(); if (titles.has(t)) problems.push('duplicate title: ' + titles.get(t) + ' and ' + k); titles.set(t, k); }
+  for (const k of Object.keys(LEGACY_CONTENT)) if (CONTENT_KINDS[k] && LEGACY_CONTENT[k].disposition !== 'retained') problems.push('retired kind is runnable: ' + k);
+  const pairs = Object.values(ANALYSTS).filter(a => a.rivalry).map(a => [a.id, a.rivalry].sort().join('/'));
+  if (new Set(pairs).size > 1) problems.push('more than one rivalry: ' + [...new Set(pairs)].join(', '));
+  for (const a of Object.values(ANALYSTS)) if (a.rivalry && ANALYSTS[a.rivalry].rivalry !== a.id) problems.push('one-sided rivalry on ' + a.id);
+  if (Array.isArray(crons)) {
+    const ticks = crons.filter(c => /^(\*\/15|0) \* \* \* \*$/.test(c));
+    if (ticks.length > 1) problems.push('more than one cron runs the tick: ' + ticks.join(', '));
+    if (!ticks.length) problems.push('no cron runs the tick');
+  }
+  return { ok: !problems.length, problems, activeKinds: active.length, legacyKinds: Object.keys(LEGACY_CONTENT).length };
+}
+// The admin control centre's actions, beyond the desk's own (preview,
+// publish, unpublish, regenerate, edit).
+async function newsroomAdmin(env, action, body) {
+  const b = body || {};
+  await newsroomReady(env);
+  if (action === 'pause') { await settingWrite(env, 'auto_publish_paused', '1'); return { ok: true, action, autoPublish: await autoPublishOn(env) }; }
+  if (action === 'resume') { await settingWrite(env, 'auto_publish_paused', '0'); return { ok: true, action, autoPublish: await autoPublishOn(env) }; }
+  if (action === 'approve') {
+    const kind = String(b.kind || '').replace(/[^a-z-]/g, ''); const week = /^\d{1,2}$/.test(String(b.week || '')) ? parseInt(b.week, 10) : null;
+    if (!CONTENT_KINDS[kind] || week == null) return { ok: false, error: 'kind_and_week' };
+    const sched = await scheduleCacheRead(env);
+    const row = await env.LEADS_DB.prepare('SELECT * FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, sched ? sched.season : null, week).first();
+    if (!row) return { ok: false, error: 'not_found' };
+    if (!row.body || row.body === 'null') return { ok: false, error: 'no_body' };
+    await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ? WHERE id = ?').bind('published', Date.now(), row.id).run();
+    let calls = { stored: 0 };
+    try { const packet = JSON.parse(row.brief); const bd = JSON.parse(row.body); const list = normaliseCalls(bd.calls, packet, row.analyst, 'weekly'); calls = await recordCalls(env, { season: row.season, week: row.week, kind, slug: row.slug }, list, row.rivalry ? JSON.parse(row.rivalry) : null); } catch (e) {}
+    return { ok: true, action, kind, week, calls: calls.stored };
+  }
+  if (action === 'run') {
+    const kind = String(b.kind || '').replace(/[^a-z-]/g, '');
+    if (!CONTENT_KINDS[kind]) return { ok: false, error: 'unknown_kind' };
+    const r = await produceContent(env, kind, { force: true, events: b.events });
+    return { ok: !!r.ok, action, ...r };
+  }
+  if (action === 'scan') return { ok: true, action, scan: await runNewsScan(env) };
+  if (action === 'grade') return { ok: true, action, grade: await runCallsGrade(env) };
+  if (action === 'status') return { ok: true, action, ...(await newsroomStatus(env)) };
+  return { ok: false, error: 'unknown_action' };
+}
+async function newsroomStatus(env) {
+  const auto = await autoPublishOn(env);
+  const et = etParts(Date.now());
+  const legacy = Object.entries(LEGACY_CONTENT).map(([k, v]) => ({ kind: k, ...v }));
+  return { autoPublish: auto, flags: flagReport(env), audit: newsroomAudit(null), legacy, routines: ROUTINE_MIGRATION, events: (await newsEventsPayload(env, 20)).map(e => ({ at: e.created_at, type: e.type, player: e.player, team: e.team, position: e.position, score: e.score, handled: e.handled, detail: e.detail })),
+           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
 }
 
 // -- DFS -------------------------------------------------------------------------
@@ -6543,7 +7922,10 @@ const JOB_FNS = {
   'snapshot-prune':       env => snapshotPrune(env, SNAP_KEEP_DAYS),
   'analytics-prune':      env => pruneAnalytics(env, 180),
   'job-prune':            env => jobPrune(env, JOB_KEEP_DAYS),
-  'content-tick':         env => runContentTick(env)
+  'news-scan':            env => runNewsScan(env),
+  'calls-grade':          env => runCallsGrade(env),
+  'content-tick':         env => runContentTick(env),
+  'league-sync':          env => runLeagueSync(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
 // Run one job and log it. Never throws: a job that throws is a logged
@@ -6669,7 +8051,7 @@ async function _editorialRows(env, state, sched, now) {
     const wk = d.week != null ? d.week : null;
     const latest = pieces.find(p => p.kind === kind && (wk == null || p.week === wk)) || pieces.find(p => p.kind === kind) || null;
     let violations = 0; if (latest && latest.violations) { try { violations = (JSON.parse(latest.violations) || []).length; } catch (e) {} }
-    rows.push({ kind, title: K.title, day: K.day, hour: K.hour, optional: !!K.optional, week: wk, due: !!d.due, ready: !!d.ready, reason: d.reason || null, dueAt: d.dueAt || null,
+    rows.push({ kind, title: K.title, day: K.day, hour: K.hour, minute: K.minute || 0, analyst: K.analyst, analystName: (ANALYSTS[K.analyst] || ANALYST_HOUSE).name, lens: K.lens, gate: K.gate || null, updates: K.updates || null, unscheduled: !!K.unscheduled, optional: !!K.optional, week: wk, due: !!d.due, ready: !!d.ready, reason: d.reason || null, dueAt: d.dueAt || null,
                 piece: latest ? { id: latest.id, week: latest.week, status: latest.status, title: latest.title, createdAt: latest.created_at, publishedAt: latest.published_at, violations } : null });
   }
   return rows;
@@ -6709,7 +8091,8 @@ async function healthPayload(env, opts) {
            status: assess.status, ages: assess.ages, missing: assess.missing, stale: assess.stale,
            updates, sources: report.providers, unavailable: report.unavailable, llm: !!env.LLM_API_KEY,
            jobs: jobs.jobs.map(j => ({ ...j, ...(schedule.jobs.find(x => x.job === j.job) || {}) })), failedJobs: jobs.failed, jobNames: Object.keys(JOB_FNS),
-           schedule: { tz: schedule.tz, source: schedule.source, errors: schedule.errors }, editorial, ran: o.ran || null };
+           schedule: { tz: schedule.tz, source: schedule.source, errors: schedule.errors }, editorial, ran: o.ran || null,
+           newsroom: await newsroomStatus(env).catch(() => null) };
 }
 
 // ── editorial actions ──────────────────────────────────────────────────────
@@ -6738,7 +8121,7 @@ async function contentAdmin(env, action, kind, season, week, body) {
   try { row = await _latestPiece(env, kind, season, week); } catch (e) { return { ok: false, error: 'unavailable' }; }
   if (!row) return { ok: false, error: 'not_found', kind, week };
   const full = () => ({ id: row.id, kind, season: row.season, week: row.week, title: row.title, status: row.status, createdAt: row.created_at, publishedAt: row.published_at,
-                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: CONTENT_SECTIONS[kind] || [] });
+                        body: parse(row.body), brief: parse(row.brief), violations: parse(row.violations) || [], model: row.model, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, analyst: row.analyst || null, version: row.version || 1 });
   if (action === 'preview') return { ok: true, action, piece: full() };
   if (action === 'publish') {
     if (!row.body || row.body === 'null') return { ok: false, error: 'no_body', note: 'This piece has no draft to publish. Regenerate it or edit one in.' };
@@ -6779,20 +8162,33 @@ async function contentAdmin(env, action, kind, season, week, body) {
 const JOB_TZ = 'America/New_York';
 const JOB_SCHEDULE = [
   // phase 1: the pulls
-  { job: 'schedule-refresh',     days: null,            hours: 'hourly',                       phase: 1 },
-  { job: 'market-snapshot',      days: null,            hours: [1, 4, 7, 10, 13, 16, 19, 22],  phase: 1 },
-  { job: 'market-snapshot',      days: ['Sun'],         hours: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], phase: 1 },
-  { job: 'odds-refresh',         days: null,            hours: [7],                            phase: 1 },
-  { job: 'availability-refresh', days: null,            hours: [7, 11, 13, 19],                phase: 1 },
-  { job: 'usage-refresh',        days: ['Tue', 'Wed'],  hours: [6],                            phase: 1 },
-  { job: 'depth-charts',         days: null,            hours: [6],                            phase: 1 },
+  { job: 'schedule-refresh',     days: null,                   hours: 'hourly',                       phase: 1 },
+  { job: 'schedule-refresh',     days: ['Thu', 'Sun', 'Mon'],  hours: 'hourly', minutes: [15, 30, 45], phase: 1 },
+  { job: 'market-snapshot',      days: null,                   hours: [1, 4, 7, 10, 13, 16, 19, 22],  phase: 1 },
+  { job: 'market-snapshot',      days: ['Sun'],                hours: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], phase: 1 },
+  { job: 'odds-refresh',         days: null,                   hours: [7],                            phase: 1 },
+  { job: 'availability-refresh', days: null,                   hours: [7, 11, 13, 19],                phase: 1 },
+  // Sunday inactives land about ninety minutes before kickoff; the 12:15
+  // piece reads a list minutes old, and the evening games get their own.
+  { job: 'availability-refresh', days: ['Sun'],                hours: [10, 11, 12], minutes: [0, 15, 30, 45], phase: 1 },
+  { job: 'availability-refresh', days: ['Mon', 'Thu'],         hours: [18, 19], minutes: [0, 30],      phase: 1 },
+  { job: 'usage-refresh',        days: ['Tue', 'Wed'],         hours: [6],                            phase: 1 },
+  { job: 'depth-charts',         days: null,                   hours: [6],                            phase: 1 },
+  { job: 'depth-charts',         days: ['Sun'],                hours: [11],                           phase: 1 },
   // phase 2: derived from the pulls
-  { job: 'ros-snapshot',         days: ['Wed'],         hours: [7],                            phase: 2 },
-  { job: 'snapshot-prune',       days: ['Sun'],         hours: [4],                            phase: 2 },
-  { job: 'analytics-prune',      days: ['Sun'],         hours: [4],                            phase: 2 },
-  { job: 'job-prune',            days: ['Sun'],         hours: [4],                            phase: 2 },
-  // phase 3: the desk, which reads everything above
-  { job: 'content-tick',         days: null,            hours: 'hourly',                       phase: 3 }
+  { job: 'ros-snapshot',         days: ['Tue'],                hours: [6],                            phase: 2 },
+  { job: 'calls-grade',          days: ['Tue', 'Wed'],         hours: [6],                            phase: 2 },
+  { job: 'news-scan',            days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 2 },
+  { job: 'snapshot-prune',       days: ['Sun'],                hours: [4],                            phase: 2 },
+  { job: 'analytics-prune',      days: ['Sun'],                hours: [4],                            phase: 2 },
+  { job: 'job-prune',            days: ['Sun'],                hours: [4],                            phase: 2 },
+  // Connected leagues that are due (leagueNextSyncAt decides per league:
+  // hourly on Sunday, three-hourly Tue/Wed for waivers, six-hourly otherwise).
+  { job: 'league-sync',          days: null,                   hours: 'hourly',                       phase: 2 },
+  // phase 3: the desk, which reads everything above. Quarter-hourly so a
+  // 12:15 and a 7:30 slot exist in Eastern time; a tick with nothing due
+  // costs one pure evaluation per kind.
+  { job: 'content-tick',         days: null,                   hours: 'hourly', minutes: [0, 15, 30, 45], phase: 3 }
 ];
 const JOB_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // Validate one entry. Returns the clean entry or a string saying what is wrong.
@@ -6810,7 +8206,12 @@ function jobEntryCheck(e) {
   else return e.job + ': hours must be "hourly" or a list of 0..23';
   const phase = e.phase == null ? 2 : e.phase;
   if (![1, 2, 3].includes(phase)) return e.job + ': phase must be 1, 2 or 3';
-  return { job: e.job, days, hours, phase };
+  let minutes = [0];
+  if (e.minutes != null) {
+    if (!Array.isArray(e.minutes) || !e.minutes.length || !e.minutes.every(m => [0, 15, 30, 45].includes(m))) return e.job + ': minutes must be a list of 0, 15, 30, 45';
+    minutes = Array.from(new Set(e.minutes)).sort((a, b) => a - b);
+  }
+  return { job: e.job, days, hours, minutes, phase };
 }
 // The schedule in force: the table, with any env override applied.
 function jobScheduleFrom(env) {
@@ -6834,6 +8235,8 @@ function jobScheduleFrom(env) {
 }
 function _jobEntryDue(e, et) {
   if (e.days && !e.days.includes(et.dow)) return false;
+  const q = Math.floor((et.minute || 0) / 15) * 15;
+  if (!(e.minutes || [0]).includes(q)) return false;
   return e.hours === 'hourly' || e.hours.includes(et.hour);
 }
 // What is due in the ET hour containing `now`, in run order (phase, then
@@ -6848,7 +8251,8 @@ const _hhmm = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM');
 function _jobWhen(entries) {
   return entries.map(e => {
     const days = e.days ? e.days.join('/') : 'daily';
-    if (e.hours === 'hourly') return days + ' hourly';
+    const q = e.minutes && e.minutes.length > 1 ? ' at :' + e.minutes.map(m => String(m).padStart(2, '0')).join('/:') : '';
+    if (e.hours === 'hourly') return days + ' hourly' + q;
     const consecutive = e.hours.length > 2 && e.hours.every((h, i) => i === 0 || h === e.hours[i - 1] + 1);
     if (consecutive) return days + ' ' + _hhmm(e.hours[0]) + ' to ' + _hhmm(e.hours[e.hours.length - 1]) + ' hourly';
     return days + ' ' + e.hours.map(_hhmm).join(', ');
@@ -6863,8 +8267,8 @@ function jobScheduleReport(sched, now) {
     const mine = byJob[job] || [];
     let nextAt = null;
     if (mine.length) {
-      let t = Math.floor(at / 3600000) * 3600000 + 3600000;
-      for (let i = 0; i < 24 * 8 && nextAt == null; i++, t += 3600000) if (mine.some(e => _jobEntryDue(e, etParts(t)))) nextAt = t;
+      let t = Math.floor(at / 900000) * 900000 + 900000;
+      for (let i = 0; i < 96 * 8 && nextAt == null; i++, t += 900000) if (mine.some(e => _jobEntryDue(e, etParts(t)))) nextAt = t;
     }
     return { job, scheduled: mine.length > 0, when: mine.length ? _jobWhen(mine) : 'on demand only', nextAt, phase: mine.length ? Math.min(...mine.map(e => e.phase)) : null, overridden: sched.overridden.includes(job) };
   });
@@ -6955,6 +8359,18 @@ async function leadStoryPayload(env) {
   const now = Date.now();
   if (_LEAD_CACHE && now - _LEAD_AT < 120000) return _LEAD_CACHE;
   let out = { ok: false, story: null, recent: [] };
+  // In the regular season the lead is the newest desk piece. The lead_story
+  // archive stays readable at /lead/<slug>; it is simply no longer the front.
+  try {
+    if (flagOn(env, 'IN_SEASON_DESK')) {
+      const sched = await scheduleCacheRead(env);
+      const st = sched ? nflSeasonState(sched, now) : null;
+      if (st && st.ok && st.phase === 'regular') {
+        const desk = await deskLeadPayload(env);
+        if (desk && desk.ok) { _LEAD_CACHE = desk; _LEAD_AT = now; return desk; }
+      }
+    }
+  } catch (e) {}
   try {
     if (env.LEADS_DB) {
       const cur = await env.LEADS_DB.prepare(
@@ -7322,6 +8738,1720 @@ async function pruneAnalytics(env, keepDays) {
   return { pruned: true, keepDays, pageViews: (a.meta && a.meta.changes) || 0, events: (b.meta && b.meta.changes) || 0 };
 }
 
+// ══ LEAGUE SYNC ════════════════════════════════════════════════════════════
+// "Sync My League": a reader connects a fantasy league and every in-season
+// surface reads their exact scoring, roster, opponents and free-agent pool.
+//
+// The shape of it, and the one rule: nothing downstream knows which platform
+// a league came from. Provider adapters (LEAGUE_PROVIDERS) pull and normalise
+// into the Iron Tuna league model (LEAGUE_CONTRACT); leagueSync writes that
+// model into D1 idempotently, keyed on provider IDs; and the personalisation
+// modules (leagueBoard, leaguePickups, leagueLineup, leagueMatchup,
+// leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailability) read ONLY the
+// local model plus the site's own boards. External calls happen on connect,
+// on Sync Now, and on the league-sync job. See docs/league-sync.md.
+//
+// Provider terms are not a footnote. Sleeper's API is free for non-commercial
+// use only (docs/data-sources.md R2, Addendum 13.5), so the Sleeper connector
+// is behind FLAG_SLEEPER_SYNC, default OFF, until a licence is in writing.
+// Yahoo is OAuth 2.0 with the reader's consent and needs client credentials;
+// it is behind FLAG_YAHOO_SYNC. ESPN has no supported path (see LEAGUE_PROVIDERS.espn).
+const LEAGUE_CONTRACT = 1;
+const LEAGUE_DDL = [
+  'CREATE TABLE IF NOT EXISTS leagues (id TEXT PRIMARY KEY, email TEXT NOT NULL, provider TEXT NOT NULL, provider_league_id TEXT NOT NULL, name TEXT, season INTEGER, sport TEXT, num_teams INTEGER, status TEXT, settings TEXT, overrides TEXT, user_team_id TEXT, is_default INTEGER DEFAULT 0, created_at INTEGER, updated_at INTEGER, last_sync_at INTEGER, last_ok_at INTEGER, sync_status TEXT, last_error TEXT, next_sync_at INTEGER, failures INTEGER DEFAULT 0)',
+  'CREATE UNIQUE INDEX IF NOT EXISTS ux_leagues_owner ON leagues (email, provider, provider_league_id)',
+  'CREATE INDEX IF NOT EXISTS ix_leagues_due ON leagues (next_sync_at)',
+  'CREATE TABLE IF NOT EXISTS league_teams (league_id TEXT NOT NULL, team_id TEXT NOT NULL, name TEXT, manager TEXT, owner_id TEXT, wins INTEGER, losses INTEGER, ties INTEGER, points_for REAL, points_against REAL, standing INTEGER, faab_left INTEGER, waiver_position INTEGER, updated_at INTEGER, PRIMARY KEY (league_id, team_id))',
+  'CREATE TABLE IF NOT EXISTS league_roster_players (league_id TEXT NOT NULL, team_id TEXT NOT NULL, provider_player_id TEXT NOT NULL, player_key TEXT, name TEXT, position TEXT, nfl_team TEXT, slot TEXT, slot_label TEXT, updated_at INTEGER, PRIMARY KEY (league_id, provider_player_id))',
+  'CREATE INDEX IF NOT EXISTS ix_lrp_team ON league_roster_players (league_id, team_id)',
+  'CREATE TABLE IF NOT EXISTS league_matchups (league_id TEXT NOT NULL, week INTEGER NOT NULL, team_id TEXT NOT NULL, matchup_id TEXT, opponent_id TEXT, points REAL, opponent_points REAL, played INTEGER, updated_at INTEGER, PRIMARY KEY (league_id, week, team_id))',
+  'CREATE TABLE IF NOT EXISTS league_transactions (league_id TEXT NOT NULL, provider_txn_id TEXT NOT NULL, type TEXT, team_id TEXT, adds TEXT, drops TEXT, faab INTEGER, status TEXT, ts INTEGER, week INTEGER, PRIMARY KEY (league_id, provider_txn_id))',
+  'CREATE TABLE IF NOT EXISTS league_snapshots (league_id TEXT NOT NULL, season INTEGER, week INTEGER, kind TEXT NOT NULL, payload TEXT, built_at INTEGER, PRIMARY KEY (league_id, season, week, kind))',
+  'CREATE TABLE IF NOT EXISTS league_sync_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, league_id TEXT, provider TEXT, trigger TEXT, started_at INTEGER, finished_at INTEGER, ok INTEGER, error TEXT, summary TEXT, unmatched INTEGER)',
+  'CREATE INDEX IF NOT EXISTS ix_league_sync_runs ON league_sync_runs (league_id, started_at)',
+  'CREATE TABLE IF NOT EXISTS provider_connections (email TEXT NOT NULL, provider TEXT NOT NULL, provider_user_id TEXT, display_name TEXT, access_enc TEXT, refresh_enc TEXT, expires_at INTEGER, scopes TEXT, status TEXT, created_at INTEGER, updated_at INTEGER, PRIMARY KEY (email, provider))',
+  'CREATE TABLE IF NOT EXISTS player_id_map (provider TEXT NOT NULL, provider_player_id TEXT NOT NULL, player_key TEXT, name TEXT, position TEXT, nfl_team TEXT, confidence TEXT, updated_at INTEGER, PRIMARY KEY (provider, provider_player_id))',
+  'CREATE TABLE IF NOT EXISTS player_map_misses (provider TEXT NOT NULL, provider_player_id TEXT NOT NULL, name TEXT, position TEXT, nfl_team TEXT, count INTEGER, last_seen INTEGER, PRIMARY KEY (provider, provider_player_id))'
+];
+let _LEAGUE_READY = false;
+async function leagueReady(env) {
+  if (_LEAGUE_READY) return true;
+  if (!env || !env.LEADS_DB) return false;
+  try { for (const q of LEAGUE_DDL) await env.LEADS_DB.prepare(q).run(); _LEAGUE_READY = true; return true; } catch (e) { return false; }
+}
+// Sync cadence, in New York time. A league is re-read when it is due, never
+// on a page view: Sunday late morning to kickoff hourly (inactives, lineup
+// moves), Tuesday and Wednesday every three hours (waivers clear overnight),
+// otherwise every six. A failing provider backs off by doubling, capped at a day.
+const LEAGUE_SYNC_MIN_GAP_MS = 2 * 60 * 1000;         // Sync Now, per league
+const LEAGUE_SYNC_BATCH = 40;                          // leagues per job tick
+const LEAGUE_STALE_MS = 12 * 3600 * 1000;              // "may be outdated" after this
+function leagueNextSyncAt(now, failures) {
+  if (failures > 0) return now + Math.min(24 * 3600000, 15 * 60000 * Math.pow(2, Math.min(7, failures - 1)));
+  const et = etParts(now);
+  let h = 6;
+  if (et.dow === 'Sun' && et.hour >= 8 && et.hour < 16) h = 1;
+  else if (et.dow === 'Tue' || et.dow === 'Wed') h = 3;
+  return now + h * 3600000;
+}
+// The session behind a request: the same cookie /api/auth/me reads, checked
+// against the sessions table so a signed-out device stays signed out.
+async function leagueSessionEmail(request, env) {
+  if (!env || !env.AUTH_SECRET) return null;
+  const o = await readToken(env.AUTH_SECRET, parseCookie(request.headers.get('Cookie'))['it_sess']);
+  if (!o || o.t !== 'sess' || !o.e) return null;
+  if (env.LEADS_DB && o.sid) { try { const row = await env.LEADS_DB.prepare('SELECT id FROM sessions WHERE id=?').bind(o.sid).first(); if (!row) return null; } catch (e) {} }
+  return String(o.e).toLowerCase();
+}
+// Secrets at rest. OAuth tokens are sealed with AES-GCM under a key derived
+// from LEAGUE_TOKEN_KEY; without that secret no OAuth provider can connect,
+// and the admin board says so. A token never goes to the browser.
+let _LEAGUE_AES = null, _LEAGUE_AES_FOR = '';
+async function leagueAesKey(env) {
+  const secret = env && env.LEAGUE_TOKEN_KEY;
+  if (!secret) return null;
+  if (_LEAGUE_AES && _LEAGUE_AES_FOR === secret) return _LEAGUE_AES;
+  const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  _LEAGUE_AES = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  _LEAGUE_AES_FOR = secret;
+  return _LEAGUE_AES;
+}
+async function leagueSeal(env, text) {
+  const key = await leagueAesKey(env);
+  if (!key) throw new Error('no_token_key');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(String(text))));
+  const out = new Uint8Array(iv.length + ct.length); out.set(iv, 0); out.set(ct, iv.length);
+  return 'v1.' + b64urlEncode(out);
+}
+async function leagueOpen(env, sealed) {
+  const key = await leagueAesKey(env);
+  if (!key || !sealed || !String(sealed).startsWith('v1.')) return null;
+  try {
+    const buf = b64urlToBytes(String(sealed).slice(3));
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+    return new TextDecoder().decode(pt);
+  } catch (e) { return null; }
+}
+// -- the player pool and the canonical key ----------------------------------
+// The site ranks by _oddsNorm(name)|position and always has; that IS the
+// canonical Iron Tuna player key. A provider's id maps onto it, or is a
+// recorded miss. Nothing is matched by display name where an id exists.
+const LEAGUE_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+function leaguePos(p) { const u = String(p || '').toUpperCase(); return u === 'DST' || u === 'D/ST' || u === 'D' ? 'DEF' : u === 'PK' ? 'K' : u; }
+function leaguePlayerKey(name, pos) { return _oddsNorm(name) + '|' + leaguePos(pos); }
+let _LEAGUE_POOL = null;
+function leaguePoolIndex() {
+  if (_LEAGUE_POOL) return _LEAGUE_POOL;
+  const byKey = new Map(), byLast = new Map(), defByTeam = new Map();
+  for (const p of PROJECTIONS) {
+    const pos = leaguePos(p.position);
+    const row = { name: p.name, position: pos, team: teamKey(p.team), key: leaguePlayerKey(p.name, pos) };
+    byKey.set(row.key, row);
+    if (pos === 'DEF') { defByTeam.set(row.team, row); continue; }
+    const last = _oddsNorm(String(p.name).trim().split(/\s+/).slice(-1)[0]);
+    const lk = last + '|' + pos;
+    if (!byLast.has(lk)) byLast.set(lk, []);
+    byLast.get(lk).push(row);
+  }
+  _LEAGUE_POOL = { byKey, byLast, defByTeam };
+  return _LEAGUE_POOL;
+}
+// One provider player -> one key, or a miss with a reason. `hint` is what the
+// provider knows: name, position, team. Exact name|position first; then a
+// unique surname at the position on the same club; a defence by its club.
+function leagueResolvePlayer(hint) {
+  const pool = leaguePoolIndex();
+  const pos = leaguePos(hint && hint.position);
+  const name = String((hint && hint.name) || '').trim();
+  const team = teamKey(hint && hint.team);
+  if (!LEAGUE_POSITIONS.has(pos)) return { key: null, confidence: 'none', reason: 'position ' + (pos || '?') + ' is not ranked' };
+  if (pos === 'DEF') {
+    const d = team ? pool.defByTeam.get(team) : null;
+    if (d) return { key: d.key, name: d.name, confidence: 'exact', reason: 'defence by club' };
+    return { key: null, confidence: 'none', reason: 'no defence for club ' + (team || '?') };
+  }
+  if (!name) return { key: null, confidence: 'none', reason: 'no name' };
+  const exact = pool.byKey.get(leaguePlayerKey(name, pos));
+  if (exact) return { key: exact.key, name: exact.name, confidence: 'exact', reason: 'name and position' };
+  const last = _oddsNorm(name.split(/\s+/).slice(-1)[0]);
+  const cands = (pool.byLast.get(last + '|' + pos) || []).filter(r => !team || r.team === team);
+  if (cands.length === 1) {
+    // The surname matched on the same club; the first name must at least agree
+    // on its initial, so "Mike Evans" cannot land on "Zach Evans".
+    const fi = _oddsNorm(name)[0], ci = _oddsNorm(cands[0].name)[0];
+    if (fi === ci) return { key: cands[0].key, name: cands[0].name, confidence: 'surname+team', reason: 'surname, position and club' };
+  }
+  return { key: null, confidence: 'none', reason: 'not on the board' };
+}
+// Resolve every player a league carries, writing the map rows and the misses.
+// Confidence 'none' rows are misses: they stay on the roster by name so the
+// reader sees the player, but no projection is ever attached to them.
+async function leagueMapPlayers(env, provider, players) {
+  const out = new Map();
+  const ts = Date.now();
+  const writes = [];
+  let unmatched = 0;
+  const seen = new Set();
+  for (const p of players || []) {
+    const id = String(p.providerPlayerId || '');
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const r = leagueResolvePlayer(p);
+    out.set(id, r);
+    if (!env || !env.LEADS_DB) continue;
+    if (r.key) {
+      writes.push(env.LEADS_DB.prepare('INSERT INTO player_id_map (provider, provider_player_id, player_key, name, position, nfl_team, confidence, updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(provider, provider_player_id) DO UPDATE SET player_key=excluded.player_key, name=excluded.name, position=excluded.position, nfl_team=excluded.nfl_team, confidence=excluded.confidence, updated_at=excluded.updated_at')
+        .bind(provider, id, r.key, p.name || null, leaguePos(p.position) || null, teamKey(p.team) || null, r.confidence, ts));
+    } else if (LEAGUE_POSITIONS.has(leaguePos(p.position))) {
+      unmatched++;
+      writes.push(env.LEADS_DB.prepare('INSERT INTO player_map_misses (provider, provider_player_id, name, position, nfl_team, count, last_seen) VALUES (?,?,?,?,?,1,?) ON CONFLICT(provider, provider_player_id) DO UPDATE SET count=count+1, last_seen=excluded.last_seen, name=excluded.name, nfl_team=excluded.nfl_team')
+        .bind(provider, id, p.name || null, leaguePos(p.position) || null, teamKey(p.team) || null, ts));
+    }
+  }
+  for (let i = 0; i < writes.length; i += 50) { try { await env.LEADS_DB.batch(writes.slice(i, i + 50)); } catch (e) { for (const s of writes.slice(i, i + 50)) { try { await s.run(); } catch (e2) {} } } }
+  return { map: out, unmatched };
+}
+// -- the normalised settings ------------------------------------------------
+// Roster slots the lineup engine understands, with what may fill each. A
+// slot the engine does not know (IDP, a "DL") is kept under roster.other and
+// counted in the roster size, never in a lineup.
+const LEAGUE_SLOT_ELIG = {
+  QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], K: ['K'], DEF: ['DEF'],
+  FLEX: ['RB', 'WR', 'TE'], SFLEX: ['QB', 'RB', 'WR', 'TE'], REC_FLEX: ['WR', 'TE'], WRRB_FLEX: ['RB', 'WR']
+};
+const LEAGUE_SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'WRRB_FLEX', 'REC_FLEX', 'FLEX', 'SFLEX'];
+function leagueEmptyRoster() { return { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0, FLEX: 0, SFLEX: 0, REC_FLEX: 0, WRRB_FLEX: 0, BN: 0, IR: 0, TAXI: 0, other: {} }; }
+function leagueRosterSize(r) { let n = 0; for (const k of Object.keys(r || {})) { if (k === 'other') { for (const v of Object.values(r.other || {})) n += Number(v) || 0; } else n += Number(r[k]) || 0; } return n; }
+function leagueStarterSlots(r) { const out = []; for (const s of LEAGUE_SLOT_ORDER) for (let i = 0; i < (Number(r && r[s]) || 0); i++) out.push(s); return out; }
+// Default settings for a manual league, and the base every provider fills in.
+function leagueDefaultSettings() {
+  return {
+    scoring: { ...SCORING_BASE, ...SCORING_KDEF, passingYardsThreshold: 0 },
+    extras: { tePremium: 0, unsupported: {}, notes: [] },
+    roster: { ...leagueEmptyRoster(), QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, K: 1, DEF: 1, BN: 6 },
+    faab: null, waiverType: 'unknown', playoffWeekStart: 15, playoffTeams: 6, leagueType: 'redraft'
+  };
+}
+// A settings object, made safe whatever came in (a provider payload, a manual
+// form, a hand-edited override). Unknown scoring keys are preserved under
+// extras.unsupported rather than dropped.
+function leagueNormalizeSettings(s) {
+  const d = leagueDefaultSettings();
+  const inp = s && typeof s === 'object' ? s : {};
+  const scoring = { ...d.scoring };
+  for (const k of Object.keys(inp.scoring || {})) {
+    const v = inp.scoring[k];
+    if (k in d.scoring) {
+      if (Array.isArray(d.scoring[k])) { if (Array.isArray(v)) scoring[k] = v; }
+      else if (Number.isFinite(Number(v))) scoring[k] = Number(v);
+    } else d.extras.unsupported[k] = v;
+  }
+  const extras = { ...d.extras, ...(inp.extras || {}) };
+  extras.unsupported = { ...d.extras.unsupported, ...((inp.extras && inp.extras.unsupported) || {}) };
+  extras.tePremium = Number.isFinite(Number(extras.tePremium)) ? Number(extras.tePremium) : 0;
+  extras.notes = Array.isArray(extras.notes) ? extras.notes.slice(0, 20) : [];
+  const roster = leagueEmptyRoster();
+  for (const k of Object.keys(inp.roster || {})) {
+    if (k === 'other') { for (const [lab, n] of Object.entries(inp.roster.other || {})) roster.other[String(lab).slice(0, 12)] = Math.max(0, Math.floor(Number(n) || 0)); }
+    else if (k in roster) roster[k] = Math.max(0, Math.min(20, Math.floor(Number(inp.roster[k]) || 0)));
+  }
+  if (!Object.keys(inp.roster || {}).length) Object.assign(roster, d.roster);
+  const faab = inp.faab == null || inp.faab === '' ? null : Math.max(0, Math.floor(Number(inp.faab) || 0));
+  return {
+    scoring, extras, roster, faab,
+    waiverType: ['faab', 'priority', 'none', 'unknown'].includes(inp.waiverType) ? inp.waiverType : (faab != null ? 'faab' : d.waiverType),
+    playoffWeekStart: Math.max(12, Math.min(18, Math.floor(Number(inp.playoffWeekStart) || d.playoffWeekStart))),
+    playoffTeams: Math.max(0, Math.min(16, Math.floor(Number(inp.playoffTeams) || d.playoffTeams))),
+    leagueType: ['redraft', 'keeper', 'dynasty'].includes(inp.leagueType) ? inp.leagueType : d.leagueType
+  };
+}
+// Synced settings with the reader's corrections laid over them. The result
+// says which fields are overridden, so a page can label "your correction".
+function leagueEffectiveSettings(settings, overrides) {
+  const base = leagueNormalizeSettings(settings);
+  const o = overrides && typeof overrides === 'object' ? overrides : {};
+  const overridden = [];
+  if (o.scoring && typeof o.scoring === 'object') { for (const k of Object.keys(o.scoring)) if (k in base.scoring && Number.isFinite(Number(o.scoring[k]))) { base.scoring[k] = Number(o.scoring[k]); overridden.push('scoring.' + k); } }
+  if (o.extras && Number.isFinite(Number(o.extras.tePremium))) { base.extras.tePremium = Number(o.extras.tePremium); overridden.push('extras.tePremium'); }
+  if (o.roster && typeof o.roster === 'object') { for (const k of Object.keys(o.roster)) if (k in base.roster && k !== 'other') { base.roster[k] = Math.max(0, Math.min(20, Math.floor(Number(o.roster[k]) || 0))); overridden.push('roster.' + k); } }
+  if (o.faab != null && o.faab !== '') { base.faab = Math.max(0, Math.floor(Number(o.faab) || 0)); base.waiverType = 'faab'; overridden.push('faab'); }
+  base.overridden = overridden;
+  return base;
+}
+// Points at the league's scoring: the shared engine, plus what it does not
+// model. TE premium is a per-reception bonus on tight ends only.
+function leagueScore(stats, position, settings, games) {
+  const pos = leaguePos(position);
+  let pts = scoreAny(stats, pos, settings.scoring, games);
+  if (pos === 'TE' && settings.extras && settings.extras.tePremium) pts += (Number(settings.extras.tePremium) || 0) * ((stats && stats.rec) || 0);
+  return pts;
+}
+// A stable fingerprint of a league's scoring, for the boards memo.
+function leagueScoringKey(settings) {
+  const s = settings.scoring || {};
+  const parts = Object.keys(s).sort().map(k => k + '=' + JSON.stringify(s[k]));
+  parts.push('te=' + ((settings.extras && settings.extras.tePremium) || 0));
+  let h = 0; const str = parts.join(';');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return 'L' + (h >>> 0).toString(36);
+}
+// A settings summary in words: "PPR · TE premium · 12 teams · Superflex".
+function leagueSettingsLabel(settings, numTeams) {
+  const s = settings.scoring || {};
+  const rec = Number(s.receptionPoints) || 0;
+  const bits = [rec >= 0.9 ? 'PPR' : rec >= 0.4 ? 'Half PPR' : rec > 0 ? rec + ' PPR' : 'Standard'];
+  if (settings.extras && settings.extras.tePremium) bits.push('TE premium');
+  if (Number(s.passingTD) === 6) bits.push('6-pt pass TD');
+  if (numTeams) bits.push(numTeams + ' teams');
+  if (settings.roster && settings.roster.SFLEX) bits.push('Superflex');
+  if (settings.leagueType === 'dynasty') bits.push('Dynasty'); else if (settings.leagueType === 'keeper') bits.push('Keeper');
+  return bits.join(' · ');
+}
+// -- the provider adapters --------------------------------------------------
+// Every adapter has the same face and the same exit: discover() lists the
+// leagues a connection can see, pull() reads one league's raw payloads, and
+// normalize() turns them into the LEAGUE_CONTRACT shape with players carrying
+// only providerPlayerId/name/position/team. Keys are resolved afterwards by
+// leagueMapPlayers, once, for every provider alike.
+class LeagueProviderError extends Error {
+  constructor(code, message, status) { super(message || code); this.code = code; this.status = status || null; }
+}
+async function leagueFetchJson(url, init, label) {
+  let r;
+  try { r = await fetch(url, init); }
+  catch (e) { throw new LeagueProviderError('provider_unavailable', label + ' did not answer'); }
+  if (r.status === 401 || r.status === 403) throw new LeagueProviderError('expired_authorization', label + ' refused the request', r.status);
+  if (r.status === 404) throw new LeagueProviderError('league_not_found', label + ' has no such league', 404);
+  if (r.status === 429) throw new LeagueProviderError('rate_limited', label + ' rate limit', 429);
+  if (!r.ok) throw new LeagueProviderError('provider_unavailable', label + ' answered ' + r.status, r.status);
+  try { return await r.json(); } catch (e) { throw new LeagueProviderError('provider_unavailable', label + ' sent something that is not JSON'); }
+}
+// ── Sleeper ────────────────────────────────────────────────────────────────
+// Read-only, no key, public league data. The players file is the one big
+// pull (cached six hours, as /api/faab/players already does); it also carries
+// ESPN, Yahoo and gsis ids, which is what seeds the other crosswalks.
+const SLEEPER_API = 'https://api.sleeper.app/v1';
+let _SLEEPER_PLAYERS = null, _SLEEPER_PLAYERS_AT = 0;
+async function sleeperPlayers(env) {
+  if (_SLEEPER_PLAYERS && Date.now() - _SLEEPER_PLAYERS_AT < 6 * 3600000) return _SLEEPER_PLAYERS;
+  const all = await leagueFetchJson(SLEEPER_API + '/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } }, 'Sleeper');
+  const out = {};
+  for (const id in all) {
+    const p = all[id];
+    if (!p || !LEAGUE_POSITIONS.has(p.position)) continue;
+    const name = p.position === 'DEF' ? ((p.team || id) + ' DEF') : (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim());
+    out[id] = { name, position: p.position, team: p.team || (p.position === 'DEF' ? id : null), injury: p.injury_status || null,
+                espn: p.espn_id != null ? String(p.espn_id) : null, yahoo: p.yahoo_id != null ? String(p.yahoo_id) : null, gsis: p.gsis_id || null };
+  }
+  _SLEEPER_PLAYERS = out; _SLEEPER_PLAYERS_AT = Date.now();
+  return out;
+}
+function _sleeperPer(v) { const n = Number(v); return n > 0 ? 1 / n : 0; }
+function _sleeperBonuses(ss, stem, ats) {
+  const out = [];
+  for (const at of ats) { const v = Number(ss['bonus_' + stem + '_' + at]); if (Number.isFinite(v) && v) out.push({ at, points: v }); }
+  return out;
+}
+// Sleeper's scoring_settings, into scoringRules' fields. Every key consumed is
+// named in SLEEPER_SCORING_KEYS; anything else with a value is preserved in
+// extras.unsupported so a league with IDP or a return-yardage rule is not
+// quietly scored as if it had none.
+const SLEEPER_SCORING_KEYS = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec',
+  'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe', 'blk_kick',
+  'xpm', 'xpmiss', 'fgm', 'fgmiss', 'fgm_0_19', 'fgm_20_29', 'fgm_30_39', 'fgm_40_49', 'fgm_50p', 'fgmiss_0_19', 'fgmiss_20_29', 'fgmiss_30_39', 'fgmiss_40_49', 'fgmiss_50p',
+  'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
+  'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200', 'fum', 'fum_rec_2pt', 'def_2pt', 'st_2pt', 'def_st_fum_rec', 'def_st_ff', 'st_fum_rec', 'st_ff', 'ff', 'pass_sack', 'pass_cmp', 'pass_inc', 'pass_att', 'rush_att', 'rec_tgt', 'pass_cmp_40p', 'pass_td_40p', 'rush_40p', 'rec_40p', 'rush_td_40p', 'rec_td_40p', 'pass_td_50p', 'rush_td_50p', 'rec_td_50p', 'rec_0_4', 'rec_5_9', 'rec_10_19', 'rec_20_29', 'rec_30_39', 'rec_40p', 'sack_yd', 'idp_tkl', 'idp_sack', 'idp_int', 'idp_ff', 'idp_fum_rec', 'idp_def_td', 'idp_pass_def', 'idp_safe', 'idp_blk_kick', 'idp_tkl_loss', 'idp_qb_hit', 'idp_tkl_ast', 'idp_tkl_solo', 'yds_allow_0_100', 'yds_allow_100_199', 'yds_allow_200_299', 'yds_allow_300_349', 'yds_allow_350_399', 'yds_allow_400_449', 'yds_allow_450_499', 'yds_allow_500_549', 'yds_allow_550p', 'def_kr_td', 'def_pr_td', 'def_forced_punts', 'def_3_and_out', 'def_4_and_stop', 'def_pass_def', 'tkl', 'tkl_solo', 'tkl_ast', 'tkl_loss', 'qb_hit', 'pass_def', 'fum_ret_yd', 'int_ret_yd', 'kr_yd', 'pr_yd', 'bonus_fd_qb', 'bonus_fd_rb', 'bonus_fd_wr', 'bonus_fd_te', 'bonus_rush_rec_yd_100', 'bonus_rush_rec_yd_200', 'bonus_pass_cmp_25', 'pass_fd', 'rush_fd', 'rec_fd', 'fgm_yds', 'fgm_yds_over_30']);
+// The subset above that the engine actually MODELS; the rest are recorded.
+const SLEEPER_MODELLED = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec', 'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe',
+  'xpm', 'xpmiss', 'fgm_0_19', 'fgm_20_29', 'fgm_30_39', 'fgm_40_49', 'fgm_50p', 'fgmiss', 'fgmiss_0_19', 'fgmiss_20_29', 'fgmiss_30_39', 'fgmiss_40_49', 'fgmiss_50p', 'fgm',
+  'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
+  'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200']);
+function sleeperScoring(ss) {
+  ss = ss || {};
+  const n = (k, d) => (Number.isFinite(Number(ss[k])) && ss[k] != null ? Number(ss[k]) : d);
+  const rec = n('rec', 0);
+  const scoring = {
+    passingYardsPerPoint: _sleeperPer(ss.pass_yd), passingYardsThreshold: 0, passingYardBonuses: _sleeperBonuses(ss, 'pass_yd', [300, 400]),
+    passingTD: n('pass_td', 4), passingInt: n('pass_int', -1), passing2pt: n('pass_2pt', 2),
+    rushingYardsPerPoint: _sleeperPer(ss.rush_yd), rushingYardsThreshold: 0, rushingYardBonuses: _sleeperBonuses(ss, 'rush_yd', [100, 200]),
+    rushingTD: n('rush_td', 6), rushing2pt: n('rush_2pt', 2),
+    receivingYardsPerPoint: _sleeperPer(ss.rec_yd), receivingYardsThreshold: 0, receivingYardBonuses: _sleeperBonuses(ss, 'rec_yd', [100, 200]),
+    receivingTD: n('rec_td', 6), receiving2pt: n('rec_2pt', 2),
+    receptionPoints: rec + n('bonus_rec_wr', 0), receptionBonuses: [], rbReceptionPoints: rec + n('bonus_rec_rb', 0), rbReceptionBonuses: [],
+    fumbleLost: n('fum_lost', -2), fumble2pt: n('fum_rec_2pt', 2),
+    individualFumbleRecoveryTD: n('fum_rec_td', 6), individualKickReturnTD: n('kr_td', 6), individualPuntReturnTD: n('pr_td', 6),
+    // Kicker: Sleeper bins 0-19/20-29/30-39/40-49/50+; the engine's five tiers
+    // are 0-24/25-34/35-44/45-49/50+. The nearest bin fills each tier.
+    fieldGoalTiers: [
+      { min: 0, max: 24, points: n('fgm_0_19', n('fgm_20_29', n('fgm', 3))), missPoints: n('fgmiss_0_19', n('fgmiss', -1)) },
+      { min: 25, max: 34, points: n('fgm_20_29', n('fgm', 3)), missPoints: n('fgmiss_20_29', n('fgmiss', -1)) },
+      { min: 35, max: 44, points: n('fgm_30_39', n('fgm', 3)), missPoints: n('fgmiss_30_39', n('fgmiss', -1)) },
+      { min: 45, max: 49, points: n('fgm_40_49', n('fgm', 4)), missPoints: n('fgmiss_40_49', n('fgmiss', -1)) },
+      { min: 50, max: 999, points: n('fgm_50p', n('fgm', 5)), missPoints: n('fgmiss_50p', n('fgmiss', -1)) }],
+    extraPoint: n('xpm', 1), missedExtraPoint: n('xpmiss', -1),
+    defensiveFumbleRecovery: n('fum_rec', 2), defensiveTD: n('def_td', 6), interception: n('int', 2), sackPoints: n('sack', 1), sackBonuses: [],
+    safety: n('safe', 2), specialTeamsTD: n('st_td', n('def_st_td', 6)), specialTeams2pt: 2, specialTeamsSafety1pt: 1,
+    pointsAllowed: [{ min: 0, max: 0, points: n('pts_allow_0', 10) }, { min: 1, max: 6, points: n('pts_allow_1_6', 7) }, { min: 7, max: 13, points: n('pts_allow_7_13', 4) },
+                    { min: 14, max: 20, points: n('pts_allow_14_20', 1) }, { min: 21, max: 27, points: n('pts_allow_21_27', 0) }, { min: 28, max: 34, points: n('pts_allow_28_34', -1) }, { min: 35, max: 999, points: n('pts_allow_35p', -4) }]
+  };
+  const unsupported = {};
+  for (const k of Object.keys(ss)) if (!SLEEPER_MODELLED.has(k) && Number(ss[k])) unsupported[k] = Number(ss[k]);
+  const notes = [];
+  if (Object.keys(unsupported).length) notes.push('Rules Iron Tuna does not model are kept but not scored: ' + Object.keys(unsupported).join(', ') + '.');
+  if (ss.fgm_0_19 != null || ss.fgm_20_29 != null) notes.push('Kicker distances use the nearest of Sleeper’s bins in Iron Tuna’s five tiers.');
+  return { scoring, extras: { tePremium: n('bonus_rec_te', 0), unsupported, notes } };
+}
+// roster_positions ['QB','RB','RB','WR','WR','TE','FLEX','K','DEF','BN',...]
+// into slot counts. IR and taxi come from settings, not the array.
+const SLEEPER_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', FLEX: 'FLEX', SUPER_FLEX: 'SFLEX', REC_FLEX: 'REC_FLEX', WRRB_FLEX: 'WRRB_FLEX', BN: 'BN', IR: 'IR' };
+function sleeperRoster(positions, settings) {
+  const r = leagueEmptyRoster();
+  for (const p of positions || []) { const s = SLEEPER_SLOT[p]; if (s) r[s]++; else r.other[p] = (r.other[p] || 0) + 1; }
+  if (settings) { r.IR = Number(settings.reserve_slots) || r.IR; r.TAXI = Number(settings.taxi_slots) || 0; }
+  return r;
+}
+function sleeperNormalize(raw, ctx) {
+  const lg = raw.league || {};
+  const st = lg.settings || {};
+  const sc = sleeperScoring(lg.scoring_settings);
+  const roster = sleeperRoster(lg.roster_positions, st);
+  const waiverType = st.waiver_type === 2 ? 'faab' : st.waiver_type === 1 ? 'priority' : st.waiver_type === 0 ? 'priority' : 'unknown';
+  const settings = leagueNormalizeSettings({
+    scoring: sc.scoring, extras: sc.extras, roster,
+    faab: waiverType === 'faab' ? (Number(st.waiver_budget) || 100) : null, waiverType,
+    playoffWeekStart: Number(st.playoff_week_start) || 15, playoffTeams: Number(st.playoff_teams) || 6,
+    leagueType: st.type === 2 ? 'dynasty' : st.type === 1 ? 'keeper' : 'redraft'
+  });
+  const users = new Map();
+  for (const u of raw.users || []) users.set(String(u.user_id), u);
+  const players = raw.players || {};
+  const teams = [], rosters = [];
+  // Which starter index is which slot: the roster_positions array minus BN/IR.
+  const starterSlots = (lg.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR');
+  const byRoster = new Map();
+  for (const ro of raw.rosters || []) {
+    const rid = String(ro.roster_id);
+    byRoster.set(rid, ro);
+    const owner = users.get(String(ro.owner_id)) || null;
+    const rs = ro.settings || {};
+    const fpts = (Number(rs.fpts) || 0) + (Number(rs.fpts_decimal) || 0) / 100;
+    const fpa = (Number(rs.fpts_against) || 0) + (Number(rs.fpts_against_decimal) || 0) / 100;
+    teams.push({
+      teamId: rid, ownerId: ro.owner_id ? String(ro.owner_id) : null,
+      name: (owner && owner.metadata && owner.metadata.team_name) || (owner && owner.display_name ? owner.display_name + '’s team' : 'Team ' + rid),
+      manager: owner ? (owner.display_name || owner.username || null) : null,
+      wins: Number(rs.wins) || 0, losses: Number(rs.losses) || 0, ties: Number(rs.ties) || 0,
+      pointsFor: Math.round(fpts * 100) / 100, pointsAgainst: Math.round(fpa * 100) / 100,
+      faabLeft: settings.faab != null ? Math.max(0, settings.faab - (Number(rs.waiver_budget_used) || 0)) : null,
+      waiverPosition: Number(rs.waiver_position) || null
+    });
+    const list = [];
+    const starters = ro.starters || [], reserve = new Set((ro.reserve || []).map(String)), taxi = new Set((ro.taxi || []).map(String));
+    const starterSet = new Map();
+    starters.forEach((pid, i) => { if (pid && pid !== '0') starterSet.set(String(pid), starterSlots[i] || 'FLEX'); });
+    for (const pid of ro.players || []) {
+      const id = String(pid);
+      const meta = players[id] || null;
+      const slot = starterSet.has(id) ? 'starter' : reserve.has(id) ? 'ir' : taxi.has(id) ? 'taxi' : 'bench';
+      list.push({ providerPlayerId: id, name: meta ? meta.name : ('Sleeper #' + id), position: meta ? meta.position : null, team: meta ? meta.team : null,
+                  slot, slotLabel: slot === 'starter' ? (SLEEPER_SLOT[starterSet.get(id)] || starterSet.get(id)) : slot.toUpperCase() });
+    }
+    rosters.push({ teamId: rid, players: list });
+  }
+  // Standings: record, then points for.
+  teams.slice().sort((a, b) => (b.wins - a.wins) || (a.losses - b.losses) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
+  const matchups = [];
+  for (const [week, rows] of Object.entries(raw.matchups || {})) {
+    const byM = new Map();
+    for (const m of rows || []) { const k = String(m.matchup_id); if (!byM.has(k)) byM.set(k, []); byM.get(k).push(m); }
+    for (const [mid, pair] of byM) for (const m of pair) {
+      const opp = pair.find(x => x !== m) || null;
+      matchups.push({ week: Number(week), matchupId: mid, teamId: String(m.roster_id), opponentId: opp ? String(opp.roster_id) : null,
+                      points: Number(m.points) || 0, opponentPoints: opp ? (Number(opp.points) || 0) : null, played: Number(week) < (ctx.currentWeek || 0) ? 1 : 0 });
+    }
+  }
+  const transactions = [];
+  for (const t of raw.transactions || []) {
+    if (!t || t.status !== 'complete') continue;
+    const txp = pid => ({ providerPlayerId: String(pid), name: players[pid] ? players[pid].name : null, position: players[pid] ? players[pid].position : null, team: players[pid] ? players[pid].team : null });
+    const adds = Object.entries(t.adds || {}).map(([pid, rid]) => ({ ...txp(pid), teamId: String(rid) }));
+    const drops = Object.entries(t.drops || {}).map(([pid, rid]) => ({ ...txp(pid), teamId: String(rid) }));
+    transactions.push({ providerTxnId: String(t.transaction_id), type: t.type === 'free_agent' ? 'add' : t.type, teamId: t.roster_ids && t.roster_ids.length ? String(t.roster_ids[0]) : null,
+                        adds, drops, faab: t.settings && t.settings.waiver_bid != null ? Number(t.settings.waiver_bid) : null, status: t.status, ts: Number(t.status_updated || t.created) || null, week: Number(t.leg) || null });
+  }
+  // The reader's team: the roster they own or co-own.
+  let userTeamId = null;
+  if (ctx.userId) for (const ro of raw.rosters || []) if (String(ro.owner_id) === String(ctx.userId) || (ro.co_owners || []).map(String).includes(String(ctx.userId))) userTeamId = String(ro.roster_id);
+  return {
+    provider: 'sleeper', providerLeagueId: String(lg.league_id), name: lg.name || 'Sleeper league', season: Number(lg.season) || null, sport: 'nfl',
+    numTeams: Number(lg.total_rosters) || teams.length, status: lg.status === 'in_season' ? 'in_season' : lg.status === 'complete' ? 'complete' : lg.status === 'pre_draft' || lg.status === 'drafting' ? 'pre_draft' : 'unknown',
+    settings, userTeamId, teams, rosters, matchups, transactions
+  };
+}
+const PROVIDER_SLEEPER = {
+  id: 'sleeper', label: 'Sleeper', auth: 'public', flag: 'SLEEPER_SYNC',
+  terms: 'Sleeper’s API is free for non-commercial use only; commercial use needs a licence in writing (docs/data-sources.md R2).',
+  needs: env => true,
+  // input: { username } or { leagueId }
+  async discover(env, conn, input) {
+    const season = input.season;
+    if (input.leagueId) {
+      const lg = await leagueFetchJson(SLEEPER_API + '/league/' + encodeURIComponent(input.leagueId), { cf: { cacheTtl: 60 } }, 'Sleeper');
+      return { user: null, leagues: [{ providerLeagueId: String(lg.league_id), name: lg.name, season: Number(lg.season), numTeams: lg.total_rosters, status: lg.status }] };
+    }
+    const u = String(input.username || '').trim();
+    if (!u || !/^[A-Za-z0-9_.-]{1,40}$/.test(u)) throw new LeagueProviderError('bad_input', 'Enter your Sleeper username.');
+    let user;
+    try { user = await leagueFetchJson(SLEEPER_API + '/user/' + encodeURIComponent(u), { cf: { cacheTtl: 60 } }, 'Sleeper'); }
+    catch (e) { if (e.code === 'league_not_found') throw new LeagueProviderError('user_not_found', 'Sleeper has no user by that name.'); throw e; }
+    if (!user || !user.user_id) throw new LeagueProviderError('user_not_found', 'Sleeper has no user by that name.');
+    const list = await leagueFetchJson(SLEEPER_API + '/user/' + encodeURIComponent(user.user_id) + '/leagues/nfl/' + encodeURIComponent(season), { cf: { cacheTtl: 60 } }, 'Sleeper');
+    return { user: { id: String(user.user_id), name: user.display_name || user.username || u },
+             leagues: (list || []).map(lg => ({ providerLeagueId: String(lg.league_id), name: lg.name, season: Number(lg.season), numTeams: lg.total_rosters, status: lg.status })) };
+  },
+  async pull(env, conn, providerLeagueId, ctx) {
+    const base = SLEEPER_API + '/league/' + encodeURIComponent(providerLeagueId);
+    const opt = { cf: { cacheTtl: 60 } };
+    const [league, rosters, users, players] = await Promise.all([
+      leagueFetchJson(base, opt, 'Sleeper'), leagueFetchJson(base + '/rosters', opt, 'Sleeper'), leagueFetchJson(base + '/users', opt, 'Sleeper'), sleeperPlayers(env)
+    ]);
+    const cur = ctx.currentWeek || 1;
+    const weeks = ctx.firstSync ? Array.from({ length: Math.min(18, cur + 1) }, (_, i) => i + 1) : [cur - 1, cur, cur + 1].filter(w => w >= 1 && w <= 18);
+    const matchups = {};
+    await Promise.all(weeks.map(async w => { try { matchups[w] = await leagueFetchJson(base + '/matchups/' + w, opt, 'Sleeper'); } catch (e) { matchups[w] = []; } }));
+    const txWeeks = [cur - 1, cur].filter(w => w >= 1);
+    const transactions = [];
+    await Promise.all(txWeeks.map(async w => { try { const t = await leagueFetchJson(base + '/transactions/' + w, opt, 'Sleeper'); for (const x of t || []) transactions.push(x); } catch (e) {} }));
+    return { league, rosters, users, players, matchups, transactions };
+  },
+  normalize: sleeperNormalize
+};
+// ── Yahoo ──────────────────────────────────────────────────────────────────
+// OAuth 2.0 with the reader's consent, read-only fantasy scope. Iron Tuna
+// never sees a Yahoo password: the reader authorises on Yahoo's page, Yahoo
+// hands back a code, the worker exchanges it server-side and seals the tokens
+// (leagueSeal) before they touch D1. The browser never receives a token.
+const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
+const YAHOO_TOKEN = 'https://api.login.yahoo.com/oauth2/get_token';
+const YAHOO_API = 'https://fantasysports.yahooapis.com/fantasy/v2';
+const YAHOO_SCOPE = 'fspt-r';
+function yahooConfigured(env) { return !!(env && env.YAHOO_CLIENT_ID && env.YAHOO_CLIENT_SECRET && env.LEAGUE_TOKEN_KEY); }
+function yahooRedirect(env, origin) { return (env && env.YAHOO_REDIRECT_URI) || (origin + '/api/oauth/yahoo/callback'); }
+async function yahooTokenExchange(env, params) {
+  const body = new URLSearchParams(params).toString();
+  const auth = 'Basic ' + btoa(env.YAHOO_CLIENT_ID + ':' + env.YAHOO_CLIENT_SECRET);
+  let r;
+  try { r = await fetch(YAHOO_TOKEN, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: auth }, body }); }
+  catch (e) { throw new LeagueProviderError('provider_unavailable', 'Yahoo did not answer'); }
+  let j = null; try { j = await r.json(); } catch (e) {}
+  if (!r.ok || !j || !j.access_token) throw new LeagueProviderError(r.status === 400 || r.status === 401 ? 'expired_authorization' : 'provider_unavailable', 'Yahoo refused the token exchange' + (j && j.error ? ' (' + j.error + ')' : ''), r.status);
+  return { accessToken: j.access_token, refreshToken: j.refresh_token || params.refresh_token || null, expiresAt: Date.now() + (Number(j.expires_in) || 3600) * 1000, guid: j.xoauth_yahoo_guid || null };
+}
+async function yahooConnectionSave(env, email, tok, existing) {
+  if (!(await leagueReady(env))) return false;
+  const now = Date.now();
+  const access = await leagueSeal(env, tok.accessToken);
+  const refresh = tok.refreshToken ? await leagueSeal(env, tok.refreshToken) : (existing && existing.refresh_enc) || null;
+  await env.LEADS_DB.prepare('INSERT INTO provider_connections (email, provider, provider_user_id, display_name, access_enc, refresh_enc, expires_at, scopes, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(email, provider) DO UPDATE SET provider_user_id=COALESCE(excluded.provider_user_id, provider_connections.provider_user_id), access_enc=excluded.access_enc, refresh_enc=excluded.refresh_enc, expires_at=excluded.expires_at, status=excluded.status, updated_at=excluded.updated_at')
+    .bind(email, 'yahoo', tok.guid || (existing && existing.provider_user_id) || null, null, access, refresh, tok.expiresAt, YAHOO_SCOPE, 'connected', now, now).run();
+  return true;
+}
+async function leagueConnectionRead(env, email, provider) {
+  if (!(await leagueReady(env))) return null;
+  try { return await env.LEADS_DB.prepare('SELECT * FROM provider_connections WHERE email=? AND provider=?').bind(email, provider).first(); } catch (e) { return null; }
+}
+// A usable Yahoo access token: the stored one while it is fresh, else a
+// refresh. A refresh that fails marks the connection expired, which is what
+// the UI turns into "Reconnect Yahoo".
+async function yahooAccessToken(env, email) {
+  const conn = await leagueConnectionRead(env, email, 'yahoo');
+  if (!conn || conn.status === 'disconnected') throw new LeagueProviderError('expired_authorization', 'Yahoo is not connected');
+  if (conn.expires_at && conn.expires_at - Date.now() > 120000) {
+    const t = await leagueOpen(env, conn.access_enc);
+    if (t) return t;
+  }
+  const refresh = await leagueOpen(env, conn.refresh_enc);
+  if (!refresh) { await leagueConnectionStatus(env, email, 'yahoo', 'expired'); throw new LeagueProviderError('expired_authorization', 'Your Yahoo connection needs to be renewed.'); }
+  try {
+    const tok = await yahooTokenExchange(env, { grant_type: 'refresh_token', refresh_token: refresh, redirect_uri: yahooRedirect(env, 'https://irontuna.com') });
+    await yahooConnectionSave(env, email, tok, conn);
+    return tok.accessToken;
+  } catch (e) {
+    if (e.code === 'expired_authorization') await leagueConnectionStatus(env, email, 'yahoo', 'expired');
+    throw e;
+  }
+}
+async function leagueConnectionStatus(env, email, provider, status) {
+  if (!(await leagueReady(env))) return;
+  try { await env.LEADS_DB.prepare('UPDATE provider_connections SET status=?, updated_at=? WHERE email=? AND provider=?').bind(status, Date.now(), email, provider).run(); } catch (e) {}
+}
+// Revoke and forget. Yahoo has no server-side revoke endpoint for OAuth 2.0
+// tokens; the sealed tokens are deleted, which is the same outcome for us.
+async function leagueConnectionDelete(env, email, provider) {
+  if (!(await leagueReady(env))) return;
+  try { await env.LEADS_DB.prepare('DELETE FROM provider_connections WHERE email=? AND provider=?').bind(email, provider).run(); } catch (e) {}
+}
+async function yahooGet(env, email, path) {
+  const token = await yahooAccessToken(env, email);
+  return leagueFetchJson(YAHOO_API + path + (path.includes('?') ? '&' : '?') + 'format=json', { headers: { authorization: 'Bearer ' + token } }, 'Yahoo');
+}
+// Yahoo's JSON is XML wearing a JSON coat: arrays of one-key objects, and
+// collections keyed "0","1",... with a "count". These two read it plainly.
+function yList(node) {
+  if (!node || typeof node !== 'object') return [];
+  const out = [];
+  for (const k of Object.keys(node)) if (/^\d+$/.test(k)) out.push(node[k]);
+  return out;
+}
+function yMerge(node) {
+  if (Array.isArray(node)) { const o = {}; for (const x of node) { if (Array.isArray(x)) Object.assign(o, yMerge(x)); else if (x && typeof x === 'object') Object.assign(o, x); } return o; }
+  return node && typeof node === 'object' ? node : {};
+}
+// Yahoo stat ids the engine models. Anything else is preserved as
+// extras.unsupported['yahoo_stat_<id>'].
+const YAHOO_STAT = {
+  4: ['passYdPer'], 5: ['passingTD'], 6: ['passingInt'], 8: ['rushYdPer'], 10: ['rushingTD'], 11: ['rec'], 12: ['recYdPer'], 13: ['receivingTD'],
+  15: ['returnTD'], 16: ['twoPt'], 18: ['fumbleLost'], 19: ['fg0'], 20: ['fg1'], 21: ['fg2'], 22: ['fg3'], 23: ['fg4'], 29: ['extraPoint'], 30: ['missedExtraPoint'],
+  32: ['sackPoints'], 33: ['interception'], 34: ['defensiveFumbleRecovery'], 35: ['defensiveTD'], 36: ['safety'], 37: ['blockKick'], 49: ['specialTeamsTD'],
+  50: ['pa0'], 51: ['pa1'], 52: ['pa2'], 53: ['pa3'], 54: ['pa4'], 55: ['pa5'], 56: ['pa6'],
+  57: ['fgMiss0'], 58: ['fgMiss1'], 59: ['fgMiss2'], 60: ['fgMiss3'], 61: ['fgMiss4']
+};
+function yahooScoring(stats, positionTypes) {
+  const d = leagueDefaultSettings().scoring;
+  const scoring = { ...d, passingInt: -1, passingYardsThreshold: 0, passingYardsPerPoint: 25, rushingYardsPerPoint: 10, receivingYardsPerPoint: 10, receptionPoints: 0, rbReceptionPoints: 0 };
+  const unsupported = {};
+  const fg = [null, null, null, null, null], fgm = [null, null, null, null, null], pa = [null, null, null, null, null, null, null];
+  let tePrem = 0;
+  for (const s of stats || []) {
+    const id = Number(s.stat_id), v = Number(s.value);
+    if (!Number.isFinite(v)) continue;
+    const m = YAHOO_STAT[id];
+    if (!m) { unsupported['yahoo_stat_' + id] = v; continue; }
+    const f = m[0];
+    if (f === 'passYdPer') scoring.passingYardsPerPoint = v > 0 ? 1 / v : 0;
+    else if (f === 'rushYdPer') scoring.rushingYardsPerPoint = v > 0 ? 1 / v : 0;
+    else if (f === 'recYdPer') scoring.receivingYardsPerPoint = v > 0 ? 1 / v : 0;
+    else if (f === 'rec') {
+      // Position-specific reception values arrive as separate rows on the
+      // same stat id, each carrying the position it applies to.
+      const pos = s.position ? String(s.position).toUpperCase() : null;
+      if (pos === 'RB') scoring.rbReceptionPoints = v;
+      else if (pos === 'TE') tePrem = v;
+      else { scoring.receptionPoints = v; if (!s.position) scoring.rbReceptionPoints = v; }
+    }
+    else if (f === 'returnTD') { scoring.individualKickReturnTD = v; scoring.individualPuntReturnTD = v; }
+    else if (f === 'twoPt') { scoring.passing2pt = v; scoring.rushing2pt = v; scoring.receiving2pt = v; }
+    else if (/^fg\d$/.test(f)) fg[Number(f[2])] = v;
+    else if (/^fgMiss\d$/.test(f)) fgm[Number(f[6])] = v;
+    else if (/^pa\d$/.test(f)) pa[Number(f[2])] = v;
+    else if (f === 'blockKick') unsupported.yahoo_blocked_kick = v;
+    else scoring[f] = v;
+  }
+  if (fg.some(x => x != null)) scoring.fieldGoalTiers = scoring.fieldGoalTiers.map((t, i) => ({ ...t, points: fg[i] != null ? fg[i] : t.points, missPoints: fgm[i] != null ? fgm[i] : t.missPoints }));
+  if (pa.some(x => x != null)) scoring.pointsAllowed = scoring.pointsAllowed.map((t, i) => ({ ...t, points: pa[i] != null ? pa[i] : t.points }));
+  if (tePrem && tePrem > scoring.receptionPoints) { tePrem = tePrem - scoring.receptionPoints; } else tePrem = 0;
+  const notes = [];
+  if (Object.keys(unsupported).length) notes.push('Yahoo stat categories Iron Tuna does not model are kept but not scored: ' + Object.keys(unsupported).join(', ') + '.');
+  return { scoring, extras: { tePremium: tePrem, unsupported, notes } };
+}
+const YAHOO_SLOT = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', 'W/R/T': 'FLEX', 'Q/W/R/T': 'SFLEX', 'W/R': 'WRRB_FLEX', 'W/T': 'REC_FLEX', BN: 'BN', IR: 'IR' };
+function yahooNormalize(raw, ctx) {
+  const L = raw.league || {};
+  const S = raw.settings || {};
+  const sc = yahooScoring((S.stat_modifiers && S.stat_modifiers.stats ? S.stat_modifiers.stats.map(x => ({ ...(x.stat || x) })) : []), S.stat_categories);
+  const roster = leagueEmptyRoster();
+  for (const rp of (S.roster_positions || [])) {
+    const p = rp.roster_position || rp;
+    const s = YAHOO_SLOT[String(p.position)];
+    const n = Number(p.count) || 1;
+    if (s) roster[s] += n; else roster.other[String(p.position)] = (roster.other[String(p.position)] || 0) + n;
+  }
+  const usesFaab = String(S.uses_faab) === '1' || S.uses_faab === true;
+  const settings = leagueNormalizeSettings({
+    scoring: sc.scoring, extras: sc.extras, roster, faab: usesFaab ? 100 : null, waiverType: usesFaab ? 'faab' : 'priority',
+    playoffWeekStart: Number(S.playoff_start_week) || 15, playoffTeams: Number(S.num_playoff_teams) || 6,
+    leagueType: S.is_keeper_league ? 'keeper' : 'redraft'
+  });
+  const teams = [], rosters = [];
+  let userTeamId = null;
+  for (const t of raw.teams || []) {
+    const id = String(t.team_id);
+    const mgr = (t.managers && t.managers[0] && (t.managers[0].manager || t.managers[0])) || null;
+    const st = t.team_standings || {};
+    const ot = st.outcome_totals || {};
+    if (String(t.is_owned_by_current_login) === '1' || t.is_owned_by_current_login === true) userTeamId = id;
+    teams.push({
+      teamId: id, ownerId: mgr && mgr.guid ? String(mgr.guid) : null, name: t.name || ('Team ' + id), manager: mgr ? (mgr.nickname || null) : null,
+      wins: Number(ot.wins) || 0, losses: Number(ot.losses) || 0, ties: Number(ot.ties) || 0,
+      pointsFor: Number(st.points_for) || 0, pointsAgainst: Number(st.points_against) || 0, standing: Number(st.rank) || null,
+      faabLeft: t.faab_balance != null ? Number(t.faab_balance) : null, waiverPosition: t.waiver_priority != null ? Number(t.waiver_priority) : null
+    });
+    const list = [];
+    for (const p of t.roster || []) {
+      const sel = String((p.selected_position && p.selected_position.position) || p.selected_position || '').toUpperCase();
+      const slot = sel === 'BN' ? 'bench' : sel === 'IR' || sel === 'IL' ? 'ir' : sel ? 'starter' : 'bench';
+      list.push({ providerPlayerId: String(p.player_id || (p.player_key || '').split('.').pop()), name: p.name && p.name.full ? p.name.full : (p.name || null),
+                  position: leaguePos(p.primary_position || p.display_position), team: p.editorial_team_abbr ? String(p.editorial_team_abbr).toUpperCase() : null,
+                  slot, slotLabel: slot === 'starter' ? (YAHOO_SLOT[sel] || sel) : slot.toUpperCase() });
+    }
+    rosters.push({ teamId: id, players: list });
+  }
+  if (!teams.some(t => t.standing)) teams.slice().sort((a, b) => (b.wins - a.wins) || (a.losses - b.losses) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
+  const matchups = [];
+  for (const m of raw.matchups || []) {
+    const pair = m.teams || [];
+    if (pair.length !== 2) continue;
+    for (let i = 0; i < 2; i++) {
+      const me = pair[i], opp = pair[1 - i];
+      matchups.push({ week: Number(m.week), matchupId: String(m.week) + ':' + pair.map(x => x.team_id).sort().join('v'), teamId: String(me.team_id), opponentId: String(opp.team_id),
+                      points: Number(me.points) || 0, opponentPoints: Number(opp.points) || 0, played: m.status === 'postevent' ? 1 : 0 });
+    }
+  }
+  const transactions = [];
+  for (const t of raw.transactions || []) {
+    const adds = [], drops = [];
+    for (const p of t.players || []) {
+      const td = p.transaction_data || {};
+      const row = { providerPlayerId: String(p.player_id), teamId: td.destination_team_key ? String(td.destination_team_key).split('.').pop() : (td.source_team_key ? String(td.source_team_key).split('.').pop() : null), name: p.name && p.name.full ? p.name.full : null };
+      if (td.type === 'add') adds.push(row); else if (td.type === 'drop') drops.push(row); else if (td.type === 'trade') adds.push(row);
+    }
+    transactions.push({ providerTxnId: String(t.transaction_id || t.transaction_key), type: t.type === 'add/drop' ? 'add' : (t.type || 'add'), teamId: adds[0] ? adds[0].teamId : (drops[0] ? drops[0].teamId : null),
+                        adds, drops, faab: t.faab_bid != null ? Number(t.faab_bid) : null, status: t.status || 'complete', ts: t.timestamp ? Number(t.timestamp) * 1000 : null, week: null });
+  }
+  return {
+    provider: 'yahoo', providerLeagueId: String(L.league_key || L.league_id), name: L.name || 'Yahoo league', season: Number(L.season) || null, sport: 'nfl',
+    numTeams: Number(L.num_teams) || teams.length, status: String(L.is_finished) === '1' ? 'complete' : L.draft_status === 'predraft' ? 'pre_draft' : 'in_season',
+    settings, userTeamId, teams, rosters, matchups, transactions
+  };
+}
+// Walk Yahoo's nested resources into flat objects the normaliser reads.
+function yahooFlattenLeague(node) { return yMerge(node); }
+const PROVIDER_YAHOO = {
+  id: 'yahoo', label: 'Yahoo', auth: 'oauth2', flag: 'YAHOO_SYNC',
+  terms: 'Yahoo Fantasy Sports API under the Yahoo Developer Network terms; OAuth 2.0 with the reader’s consent, read-only scope fspt-r. Requires an app registered with Yahoo (YAHOO_CLIENT_ID / YAHOO_CLIENT_SECRET) and LEAGUE_TOKEN_KEY for sealed storage.',
+  needs: env => yahooConfigured(env),
+  async discover(env, conn, input) {
+    const j = await yahooGet(env, conn.email, '/users;use_login=true/games;game_keys=nfl/leagues');
+    const leagues = [];
+    const users = yList(((j || {}).fantasy_content || {}).users || {});
+    for (const u of users) {
+      const user = yMerge((u || {}).user);
+      for (const g of yList(user.games || {})) {
+        const game = yMerge((g || {}).game);
+        for (const l of yList(game.leagues || {})) {
+          const lg = yMerge((l || {}).league);
+          if (!lg.league_key) continue;
+          if (input.season && Number(lg.season) !== Number(input.season)) continue;
+          leagues.push({ providerLeagueId: String(lg.league_key), name: lg.name, season: Number(lg.season), numTeams: Number(lg.num_teams) || null, status: String(lg.is_finished) === '1' ? 'complete' : 'in_season' });
+        }
+      }
+    }
+    return { user: { id: conn.provider_user_id || null, name: conn.display_name || null }, leagues };
+  },
+  async pull(env, conn, providerLeagueId, ctx) {
+    const key = String(providerLeagueId);
+    if (!/^[a-z0-9.]+$/i.test(key)) throw new LeagueProviderError('league_not_found', 'That is not a Yahoo league key');
+    const [meta, standings, rosters, scoreboard, tx] = await Promise.all([
+      yahooGet(env, conn.email, '/league/' + key + '/settings'),
+      yahooGet(env, conn.email, '/league/' + key + '/standings'),
+      yahooGet(env, conn.email, '/league/' + key + '/teams/roster'),
+      yahooGet(env, conn.email, '/league/' + key + '/scoreboard' + (ctx.currentWeek ? ';week=' + ctx.currentWeek : '')),
+      yahooGet(env, conn.email, '/league/' + key + '/transactions;types=add,drop,trade;count=60').catch(() => null)
+    ]);
+    const lgA = yMerge((((meta || {}).fantasy_content || {}).league) || []);
+    const league = { ...lgA };
+    const settings = yMerge(lgA.settings);
+    const teams = [];
+    const stA = yMerge((((standings || {}).fantasy_content || {}).league) || []);
+    const byId = new Map();
+    for (const t of yList(yMerge(stA.standings).teams || {})) { const tm = yMerge((t || {}).team); byId.set(String(tm.team_id), { ...tm, managers: yList(tm.managers || {}).map(m => yMerge(m)) }); }
+    const roA = yMerge((((rosters || {}).fantasy_content || {}).league) || []);
+    for (const t of yList(roA.teams || {})) {
+      const tm = yMerge((t || {}).team);
+      const base = byId.get(String(tm.team_id)) || { ...tm, managers: yList(tm.managers || {}).map(m => yMerge(m)) };
+      const roster = [];
+      for (const p of yList(yMerge(tm.roster).players || {})) { const pl = yMerge((p || {}).player); roster.push({ ...pl, selected_position: yMerge(pl.selected_position) }); }
+      teams.push({ ...base, roster });
+    }
+    const matchups = [];
+    const sbA = yMerge((((scoreboard || {}).fantasy_content || {}).league) || []);
+    for (const m of yList(yMerge(sbA.scoreboard).matchups || {})) {
+      const mm = yMerge((m || {}).matchup);
+      const pair = yList(mm.teams || {}).map(t => { const tm = yMerge((t || {}).team); return { team_id: tm.team_id, points: Number((yMerge(tm.team_points) || {}).total) || 0 }; });
+      matchups.push({ week: Number(mm.week), status: mm.status, teams: pair });
+    }
+    const transactions = [];
+    if (tx) {
+      const txA = yMerge((((tx || {}).fantasy_content || {}).league) || []);
+      for (const t of yList(txA.transactions || {})) {
+        const tt = yMerge((t || {}).transaction);
+        transactions.push({ ...tt, players: yList(tt.players || {}).map(p => { const pl = yMerge((p || {}).player); return { ...pl, transaction_data: yMerge(pl.transaction_data) }; }) });
+      }
+    }
+    return { league, settings, teams, matchups, transactions };
+  },
+  normalize: yahooNormalize
+};
+// ── ESPN ───────────────────────────────────────────────────────────────────
+// Investigated 2026-09-09. ESPN publishes no fantasy API and no OAuth. The
+// only technical route is the undocumented lm-api-reads endpoint, which is
+// already red-listed here for injuries and depth charts (docs/data-sources.md
+// R1), and a PRIVATE league additionally needs the reader's espn_s2 and SWID
+// session cookies, which are login credentials by another name. That fails
+// three rules at once: no undocumented endpoints, no user credentials, no
+// commercial redisplay without terms. So: the adapter exists so the UI and
+// the model have a place for ESPN, it reports why it cannot connect, and the
+// manual league is the fallback. Adding a real adapter later touches this
+// object and nothing downstream.
+const PROVIDER_ESPN = {
+  id: 'espn', label: 'ESPN', auth: 'unavailable', flag: 'ESPN_SYNC',
+  terms: 'No public API, no OAuth; the undocumented endpoint needs the reader’s session cookies for private leagues and has no commercial terms. Not implemented; manual setup is the fallback.',
+  unavailable: 'ESPN does not offer a supported way to read your league. Set your ESPN league up manually and Iron Tuna will use it the same way.',
+  needs: env => false,
+  async discover() { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); },
+  async pull() { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); },
+  normalize(raw) { throw new LeagueProviderError('unsupported_provider', PROVIDER_ESPN.unavailable); }
+};
+// ── Manual ─────────────────────────────────────────────────────────────────
+// The fallback that always works: the reader types the settings and pastes
+// the rosters, and the result is the same model every module reads. A
+// manual league syncs nothing; its "sync" is the form.
+const PROVIDER_MANUAL = {
+  id: 'manual', label: 'Manual', auth: 'none', flag: null, terms: 'The reader’s own entry. Nothing is fetched.',
+  needs: env => true,
+  async discover() { return { user: null, leagues: [] }; },
+  async pull() { throw new LeagueProviderError('manual_league', 'A manual league is edited, not synced.'); },
+  normalize(raw) { return raw; }
+};
+const LEAGUE_PROVIDERS = { sleeper: PROVIDER_SLEEPER, yahoo: PROVIDER_YAHOO, espn: PROVIDER_ESPN, manual: PROVIDER_MANUAL };
+// What a reader may connect right now, and why not otherwise. Presence only,
+// never a key.
+function leagueProviderReport(env) {
+  const out = {};
+  for (const [id, p] of Object.entries(LEAGUE_PROVIDERS)) {
+    const flagOk = !p.flag || flagOn(env, p.flag);
+    const configured = p.needs(env);
+    out[id] = { id, label: p.label, auth: p.auth, enabled: flagOk && configured && p.auth !== 'unavailable',
+                reason: p.auth === 'unavailable' ? p.unavailable : !flagOk ? 'off (FLAG_' + p.flag + ')' : !configured ? 'not configured' : null, terms: p.terms };
+  }
+  return out;
+}
+// -- storage: the model in D1, idempotently ---------------------------------
+// Provider ids are the primary keys, so a sync that runs twice writes the
+// same rows twice. Rows a sync did not touch (a dropped player, a team that
+// left) are removed by their stale updated_at, so nothing accumulates.
+function leagueRowToLeague(row) {
+  let settings = null, overrides = null;
+  try { settings = JSON.parse(row.settings || 'null'); } catch (e) {}
+  try { overrides = JSON.parse(row.overrides || 'null'); } catch (e) {}
+  const eff = leagueEffectiveSettings(settings || {}, overrides || {});
+  const now = Date.now();
+  return {
+    id: row.id, provider: row.provider, providerLeagueId: row.provider_league_id, name: row.name, season: row.season, sport: row.sport || 'nfl',
+    numTeams: row.num_teams, status: row.status, userTeamId: row.user_team_id, isDefault: !!row.is_default,
+    settings: eff, synced: leagueNormalizeSettings(settings || {}), overrides: overrides || {}, label: leagueSettingsLabel(eff, row.num_teams),
+    sync: { provider: row.provider, status: row.sync_status || (row.provider === 'manual' ? 'manual' : 'never'), lastAt: row.last_sync_at || null, lastOkAt: row.last_ok_at || null,
+            error: row.last_error || null, nextAt: row.next_sync_at || null, failures: row.failures || 0,
+            stale: row.provider !== 'manual' && (!row.last_ok_at || now - row.last_ok_at > LEAGUE_STALE_MS) },
+    createdAt: row.created_at, updatedAt: row.updated_at
+  };
+}
+async function leagueList(env, email) {
+  if (!(await leagueReady(env))) return [];
+  try {
+    const q = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE email=? ORDER BY is_default DESC, created_at ASC').bind(email).all();
+    return (q.results || []).map(leagueRowToLeague);
+  } catch (e) { return []; }
+}
+async function leagueRow(env, email, id) {
+  if (!(await leagueReady(env)) || !id) return null;
+  try { return await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=? AND email=?').bind(id, email).first(); } catch (e) { return null; }
+}
+// The whole league: teams, rosters, this week's matchups, recent transactions.
+async function leagueLoad(env, email, id) {
+  const row = await leagueRow(env, email, id);
+  if (!row) return null;
+  const L = leagueRowToLeague(row);
+  try {
+    const [t, r, m, x] = await Promise.all([
+      env.LEADS_DB.prepare('SELECT * FROM league_teams WHERE league_id=? ORDER BY standing ASC, team_id ASC').bind(id).all(),
+      env.LEADS_DB.prepare('SELECT * FROM league_roster_players WHERE league_id=? ORDER BY team_id, slot, position, name').bind(id).all(),
+      env.LEADS_DB.prepare('SELECT * FROM league_matchups WHERE league_id=? ORDER BY week ASC').bind(id).all(),
+      env.LEADS_DB.prepare('SELECT * FROM league_transactions WHERE league_id=? ORDER BY ts DESC LIMIT 80').bind(id).all()
+    ]);
+    L.teams = (t.results || []).map(row => ({ teamId: row.team_id, name: row.name, manager: row.manager, ownerId: row.owner_id, wins: row.wins, losses: row.losses, ties: row.ties, pointsFor: row.points_for, pointsAgainst: row.points_against, standing: row.standing, faabLeft: row.faab_left, waiverPosition: row.waiver_position, isUser: row.team_id === L.userTeamId }));
+    const byTeam = new Map();
+    for (const p of r.results || []) {
+      if (!byTeam.has(p.team_id)) byTeam.set(p.team_id, []);
+      byTeam.get(p.team_id).push({ providerPlayerId: p.provider_player_id, key: p.player_key, name: p.name, position: p.position, team: p.nfl_team, slot: p.slot, slotLabel: p.slot_label });
+    }
+    L.rosters = L.teams.map(tm => ({ teamId: tm.teamId, players: byTeam.get(tm.teamId) || [] }));
+    L.matchups = (m.results || []).map(row => ({ week: row.week, matchupId: row.matchup_id, teamId: row.team_id, opponentId: row.opponent_id, points: row.points, opponentPoints: row.opponent_points, played: !!row.played }));
+    L.transactions = (x.results || []).map(row => { let adds = [], drops = []; try { adds = JSON.parse(row.adds || '[]'); drops = JSON.parse(row.drops || '[]'); } catch (e) {} return { providerTxnId: row.provider_txn_id, type: row.type, teamId: row.team_id, adds, drops, faab: row.faab, status: row.status, ts: row.ts, week: row.week }; });
+  } catch (e) { L.teams = L.teams || []; L.rosters = L.rosters || []; L.matchups = []; L.transactions = []; L.loadError = (e && e.message) || 'load failed'; }
+  return L;
+}
+// Write a normalised league (teams, rosters, matchups, transactions) under a
+// league row. Keys come from `keyMap` (providerPlayerId -> resolution).
+async function leagueWriteModel(env, leagueId, model, keyMap, ts) {
+  const db = env.LEADS_DB;
+  const w = [];
+  for (const t of model.teams || []) w.push(db.prepare('INSERT INTO league_teams (league_id, team_id, name, manager, owner_id, wins, losses, ties, points_for, points_against, standing, faab_left, waiver_position, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, team_id) DO UPDATE SET name=excluded.name, manager=excluded.manager, owner_id=excluded.owner_id, wins=excluded.wins, losses=excluded.losses, ties=excluded.ties, points_for=excluded.points_for, points_against=excluded.points_against, standing=excluded.standing, faab_left=excluded.faab_left, waiver_position=excluded.waiver_position, updated_at=excluded.updated_at')
+    .bind(leagueId, t.teamId, t.name || null, t.manager || null, t.ownerId || null, t.wins || 0, t.losses || 0, t.ties || 0, t.pointsFor || 0, t.pointsAgainst || 0, t.standing || null, t.faabLeft, t.waiverPosition, ts));
+  for (const ro of model.rosters || []) for (const p of ro.players || []) {
+    const res = keyMap.get(String(p.providerPlayerId)) || {};
+    w.push(db.prepare('INSERT INTO league_roster_players (league_id, team_id, provider_player_id, player_key, name, position, nfl_team, slot, slot_label, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, provider_player_id) DO UPDATE SET team_id=excluded.team_id, player_key=excluded.player_key, name=excluded.name, position=excluded.position, nfl_team=excluded.nfl_team, slot=excluded.slot, slot_label=excluded.slot_label, updated_at=excluded.updated_at')
+      .bind(leagueId, ro.teamId, String(p.providerPlayerId), res.key || null, res.name || p.name || null, leaguePos(p.position) || null, teamKey(p.team) || null, p.slot || 'bench', p.slotLabel || null, ts));
+  }
+  for (const m of model.matchups || []) w.push(db.prepare('INSERT INTO league_matchups (league_id, week, team_id, matchup_id, opponent_id, points, opponent_points, played, updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, week, team_id) DO UPDATE SET matchup_id=excluded.matchup_id, opponent_id=excluded.opponent_id, points=excluded.points, opponent_points=excluded.opponent_points, played=excluded.played, updated_at=excluded.updated_at')
+    .bind(leagueId, m.week, m.teamId, m.matchupId || null, m.opponentId || null, m.points || 0, m.opponentPoints, m.played ? 1 : 0, ts));
+  for (const x of model.transactions || []) w.push(db.prepare('INSERT INTO league_transactions (league_id, provider_txn_id, type, team_id, adds, drops, faab, status, ts, week) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(league_id, provider_txn_id) DO UPDATE SET status=excluded.status, adds=excluded.adds, drops=excluded.drops, faab=excluded.faab')
+    .bind(leagueId, x.providerTxnId, x.type || null, x.teamId || null, JSON.stringify((x.adds || []).map(a => ({ id: a.providerPlayerId, team: a.teamId, name: a.name, key: (keyMap.get(String(a.providerPlayerId)) || {}).key || null }))), JSON.stringify((x.drops || []).map(a => ({ id: a.providerPlayerId, team: a.teamId, name: a.name, key: (keyMap.get(String(a.providerPlayerId)) || {}).key || null }))), x.faab, x.status || null, x.ts || null, x.week || null));
+  for (let i = 0; i < w.length; i += 40) { try { await db.batch(w.slice(i, i + 40)); } catch (e) { for (const s of w.slice(i, i + 40)) await s.run(); } }
+  // Whatever this sync did not touch is gone from the provider.
+  await db.prepare('DELETE FROM league_roster_players WHERE league_id=? AND updated_at < ?').bind(leagueId, ts).run();
+  await db.prepare('DELETE FROM league_teams WHERE league_id=? AND updated_at < ?').bind(leagueId, ts).run();
+}
+// A weekly snapshot of rosters and standings, one row per league per week,
+// so "you dropped him two weeks ago" and "your rank moved" can be facts.
+async function leagueSnapshot(env, leagueId, model, season, week, ts) {
+  if (!week) return;
+  const payload = { teams: (model.teams || []).map(t => ({ teamId: t.teamId, name: t.name, wins: t.wins, losses: t.losses, pointsFor: t.pointsFor, standing: t.standing })),
+                    rosters: (model.rosters || []).map(r => ({ teamId: r.teamId, players: (r.players || []).map(p => [p.providerPlayerId, p.slot]) })) };
+  try { await env.LEADS_DB.prepare('INSERT INTO league_snapshots (league_id, season, week, kind, payload, built_at) VALUES (?,?,?,?,?,?) ON CONFLICT(league_id, season, week, kind) DO UPDATE SET payload=excluded.payload, built_at=excluded.built_at')
+    .bind(leagueId, season || null, week, 'weekly', JSON.stringify(payload).slice(0, 200000), ts).run(); } catch (e) {}
+}
+async function leagueRunLog(env, r) {
+  try { await env.LEADS_DB.prepare('INSERT INTO league_sync_runs (league_id, provider, trigger, started_at, finished_at, ok, error, summary, unmatched) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(r.leagueId, r.provider, r.trigger || null, r.started, r.finished, r.ok ? 1 : 0, r.error || null, r.summary || null, r.unmatched || 0).run(); } catch (e) {}
+}
+// The current NFL week from the site's own season service, so a league and
+// a story never disagree about what week it is.
+async function leagueWeekContext(env) {
+  const sched = await scheduleCacheRead(env);
+  const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+  const cur = state.ok && state.week.type === 'REG' ? state.week.number : null;
+  return { season: sched ? sched.season : new Date().getUTCFullYear(), currentWeek: cur, state };
+}
+// -- the sync ----------------------------------------------------------------
+// pull -> normalise -> map players -> write -> snapshot -> log. Never throws;
+// a provider failure is a logged run and a scheduled retry, and the league
+// the reader already has is left exactly as it was.
+async function leagueSync(env, row, trigger) {
+  const started = Date.now();
+  const provider = LEAGUE_PROVIDERS[row.provider];
+  const base = { leagueId: row.id, provider: row.provider, trigger, started };
+  if (!provider) return { ok: false, error: 'unknown_provider' };
+  if (row.provider === 'manual') return { ok: true, manual: true };
+  if (provider.flag && !flagOn(env, provider.flag)) { const r = { ...base, finished: Date.now(), ok: false, error: 'provider_disabled' }; await leagueRunLog(env, r); await leagueSyncState(env, row, false, 'provider_disabled', started); return { ok: false, error: 'provider_disabled' }; }
+  let model = null, unmatched = 0, error = null, code = null;
+  try {
+    const ctx = await leagueWeekContext(env);
+    const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, row.email, row.provider) || {}), email: row.email } : { email: row.email };
+    let userId = null;
+    try { const meta = JSON.parse(row.overrides || '{}'); userId = meta.__providerUserId || null; } catch (e) {}
+    const raw = await provider.pull(env, conn, row.provider_league_id, { ...ctx, firstSync: !row.last_ok_at, userId });
+    model = provider.normalize(raw, { ...ctx, userId });
+    const allPlayers = [];
+    for (const r of model.rosters || []) for (const p of r.players || []) allPlayers.push(p);
+    for (const x of model.transactions || []) for (const p of [...(x.adds || []), ...(x.drops || [])]) if (!allPlayers.some(q => q.providerPlayerId === p.providerPlayerId)) allPlayers.push({ ...p, position: p.position || null });
+    const mapped = await leagueMapPlayers(env, row.provider, allPlayers);
+    unmatched = mapped.unmatched;
+    const ts = Date.now();
+    await leagueWriteModel(env, row.id, model, mapped.map, ts);
+    await leagueSnapshot(env, row.id, model, model.season || ctx.season, ctx.currentWeek, ts);
+    // The league row: name, size, status, settings (the reader's overrides are
+    // a separate column and are never touched here), the user's team if the
+    // provider identified it and the reader has not chosen one by hand.
+    const keepTeam = row.user_team_id && (model.teams || []).some(t => t.teamId === row.user_team_id);
+    await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL, next_sync_at=?, failures=0 WHERE id=?')
+      .bind(model.name || row.name, model.season || row.season, model.numTeams || row.num_teams, model.status || row.status, JSON.stringify(model.settings), keepTeam ? row.user_team_id : (model.userTeamId || row.user_team_id || null), ts, ts, ts, 'ok', leagueNextSyncAt(ts, 0), row.id).run();
+  } catch (e) {
+    error = (e && e.message) || 'failed'; code = (e && e.code) || 'sync_failed';
+    await leagueSyncState(env, row, false, code + ': ' + error, started);
+  }
+  const finished = Date.now();
+  const r = { ...base, finished, ok: !error, error: error ? code + ': ' + error : null, unmatched,
+              summary: model ? JSON.stringify({ teams: (model.teams || []).length, players: (model.rosters || []).reduce((n, r) => n + (r.players || []).length, 0), matchups: (model.matchups || []).length, transactions: (model.transactions || []).length, unmatched, ms: finished - started }) : null };
+  await leagueRunLog(env, r);
+  return { ok: !error, error: r.error, code, unmatched, durationMs: finished - started, userTeamId: model ? model.userTeamId : null, teams: model ? (model.teams || []).length : 0 };
+}
+async function leagueSyncState(env, row, ok, error, at) {
+  const failures = ok ? 0 : (Number(row.failures) || 0) + 1;
+  try { await env.LEADS_DB.prepare('UPDATE leagues SET last_sync_at=?, sync_status=?, last_error=?, next_sync_at=?, failures=? WHERE id=?')
+    .bind(at, ok ? 'ok' : 'failed', error || null, leagueNextSyncAt(at, failures), failures, row.id).run(); } catch (e) {}
+}
+// The job: every connected league that is due, a few at a time, with the
+// provider's flag respected and a per-league backoff on failure.
+async function runLeagueSync(env) {
+  if (!(await leagueReady(env))) return { ok: false, error: 'no_db' };
+  const now = Date.now();
+  let rows = [];
+  try { rows = (await env.LEADS_DB.prepare("SELECT * FROM leagues WHERE provider != 'manual' AND (next_sync_at IS NULL OR next_sync_at <= ?) ORDER BY next_sync_at ASC LIMIT ?").bind(now, LEAGUE_SYNC_BATCH).all()).results || []; }
+  catch (e) { return { ok: false, error: (e && e.message) || 'query failed' }; }
+  const results = [];
+  for (let i = 0; i < rows.length; i += 3) {
+    const part = await Promise.all(rows.slice(i, i + 3).map(r => leagueSync(env, r, 'job').then(x => ({ id: r.id, provider: r.provider, ok: x.ok, error: x.error || null, ms: x.durationMs }))));
+    results.push(...part);
+  }
+  return { ok: true, due: rows.length, synced: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results: results.slice(0, 20) };
+}
+// -- creating leagues --------------------------------------------------------
+async function leagueCreateRow(env, email, provider, providerLeagueId, name, season, opts) {
+  if (!(await leagueReady(env))) throw new LeagueProviderError('no_db', 'No database');
+  const now = Date.now();
+  const existing = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE email=? AND provider=? AND provider_league_id=?').bind(email, provider, String(providerLeagueId)).first();
+  if (existing) return { row: existing, created: false };
+  const count = await env.LEADS_DB.prepare('SELECT COUNT(*) AS n FROM leagues WHERE email=?').bind(email).first();
+  if (count && count.n >= 12) throw new LeagueProviderError('too_many_leagues', 'Twelve leagues is the limit per account.');
+  const id = crypto.randomUUID();
+  const overrides = opts && opts.providerUserId ? { __providerUserId: String(opts.providerUserId) } : {};
+  await env.LEADS_DB.prepare('INSERT INTO leagues (id, email, provider, provider_league_id, name, season, sport, num_teams, status, settings, overrides, user_team_id, is_default, created_at, updated_at, sync_status, next_sync_at, failures) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)')
+    .bind(id, email, provider, String(providerLeagueId), name || null, season || null, 'nfl', (opts && opts.numTeams) || null, 'unknown', JSON.stringify((opts && opts.settings) || leagueDefaultSettings()), JSON.stringify(overrides), (opts && opts.userTeamId) || null, count && count.n === 0 ? 1 : 0, now, now, provider === 'manual' ? 'manual' : 'never', now, 0).run();
+  const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=?').bind(id).first();
+  return { row, created: true };
+}
+// A manual league from the form: settings, a roster for the reader's team,
+// and optionally the other rosters as pasted text already resolved on the
+// client into names. Players are resolved by name here, the one place name
+// matching is allowed, because there is no id to prefer.
+async function leagueManualUpsert(env, email, body, existingRow) {
+  const settings = leagueNormalizeSettings(body.settings || {});
+  const name = String(body.name || 'My league').slice(0, 80);
+  const numTeams = Math.max(2, Math.min(20, Math.floor(Number(body.numTeams) || 12)));
+  const teams = [], rosters = [];
+  const inTeams = Array.isArray(body.teams) && body.teams.length ? body.teams : [{ name: body.teamName || 'My team', players: body.players || [], isUser: true }];
+  inTeams.slice(0, 20).forEach((t, i) => {
+    const id = String(t.teamId || ('m' + (i + 1)));
+    teams.push({ teamId: id, name: String(t.name || ('Team ' + (i + 1))).slice(0, 60), manager: null, wins: Number(t.wins) || 0, losses: Number(t.losses) || 0, ties: 0, pointsFor: Number(t.pointsFor) || 0, pointsAgainst: 0, faabLeft: t.faabLeft != null ? Number(t.faabLeft) : (settings.faab != null ? settings.faab : null), waiverPosition: null });
+    const players = [];
+    for (const p of (Array.isArray(t.players) ? t.players : []).slice(0, 40)) {
+      const nm = typeof p === 'string' ? p : (p && p.name);
+      if (!nm) continue;
+      const pos = typeof p === 'object' && p.position ? leaguePos(p.position) : null;
+      players.push({ providerPlayerId: 'name:' + _oddsNorm(nm) + '|' + (pos || '?'), name: String(nm).slice(0, 60), position: pos, team: typeof p === 'object' ? p.team : null, slot: typeof p === 'object' && p.slot ? p.slot : 'bench', slotLabel: typeof p === 'object' && p.slotLabel ? p.slotLabel : null });
+    }
+    rosters.push({ teamId: id, players });
+  });
+  teams.slice().sort((a, b) => (b.wins - a.wins) || (b.pointsFor - a.pointsFor)).forEach((t, i) => { t.standing = i + 1; });
+  const userTeamId = String((inTeams.find(t => t.isUser) || {}).teamId || (inTeams.findIndex(t => t.isUser) >= 0 ? 'm' + (inTeams.findIndex(t => t.isUser) + 1) : 'm1'));
+  const model = { provider: 'manual', name, season: null, numTeams, status: 'in_season', settings, userTeamId, teams, rosters, matchups: [], transactions: [] };
+  // Names without a position: try every position the board carries.
+  const players = [];
+  for (const r of rosters) for (const p of r.players) {
+    if (p.position) { players.push(p); continue; }
+    let hit = null;
+    for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const res = leagueResolvePlayer({ name: p.name, position: pos, team: p.team }); if (res.key) { hit = { ...res, pos }; break; } }
+    if (hit) { p.position = hit.pos; p.name = hit.name; }
+    players.push(p);
+  }
+  const mapped = await leagueMapPlayers(env, 'manual', players);
+  const ctx = await leagueWeekContext(env);
+  let row = existingRow;
+  if (!row) row = (await leagueCreateRow(env, email, 'manual', 'manual-' + crypto.randomUUID().slice(0, 8), name, ctx.season, { numTeams, settings, userTeamId })).row;
+  const ts = Date.now();
+  await leagueWriteModel(env, row.id, model, mapped.map, ts);
+  await env.LEADS_DB.prepare('UPDATE leagues SET name=?, season=?, num_teams=?, status=?, settings=?, user_team_id=?, updated_at=?, last_sync_at=?, last_ok_at=?, sync_status=?, last_error=NULL WHERE id=?')
+    .bind(name, ctx.season, numTeams, 'in_season', JSON.stringify(settings), userTeamId, ts, ts, ts, 'manual', row.id).run();
+  return { id: row.id, unmatched: mapped.unmatched, unresolved: players.filter(p => !(mapped.map.get(p.providerPlayerId) || {}).key).map(p => p.name) };
+}
+async function leagueSetDefault(env, email, id) {
+  if (!(await leagueReady(env))) return false;
+  try {
+    await env.LEADS_DB.batch([env.LEADS_DB.prepare('UPDATE leagues SET is_default=0 WHERE email=?').bind(email), env.LEADS_DB.prepare('UPDATE leagues SET is_default=1 WHERE email=? AND id=?').bind(email, id)]);
+    return true;
+  } catch (e) { return false; }
+}
+// Disconnect: the league and everything imported under it is deleted. If it
+// was the reader's last league on an OAuth provider, the sealed tokens go too.
+async function leagueDisconnect(env, email, row) {
+  const db = env.LEADS_DB;
+  const id = row.id;
+  await db.batch(['league_roster_players', 'league_teams', 'league_matchups', 'league_transactions', 'league_snapshots'].map(t => db.prepare('DELETE FROM ' + t + ' WHERE league_id=?').bind(id)));
+  await db.prepare('DELETE FROM leagues WHERE id=? AND email=?').bind(id, email).run();
+  let tokensRemoved = false;
+  if (LEAGUE_PROVIDERS[row.provider] && LEAGUE_PROVIDERS[row.provider].auth === 'oauth2') {
+    const left = await db.prepare('SELECT COUNT(*) AS n FROM leagues WHERE email=? AND provider=?').bind(email, row.provider).first();
+    if (!left || !left.n) { await leagueConnectionDelete(env, email, row.provider); tokensRemoved = true; }
+  }
+  if (row.is_default) { const first = await db.prepare('SELECT id FROM leagues WHERE email=? ORDER BY created_at ASC LIMIT 1').bind(email).first(); if (first) await leagueSetDefault(env, email, first.id); }
+  return { ok: true, removed: ['league settings', 'teams', 'rosters', 'matchups', 'transactions', 'weekly snapshots'], tokensRemoved, retained: ['the sync log (no league data, kept 45 days for the health board)'] };
+}
+// -- personalisation ---------------------------------------------------------
+// Every module below reads the local model and the site's own boards, scored
+// at the league's rules, and answers the reader's questions in the order the
+// spec asks them: what to do, why, who to replace, is he actually available,
+// how much does it help, short-term or rest-of-season, and playoff impact.
+// Confidence is graded from the margin, never asserted: a half-point edge is
+// a lean, not an order.
+const LEAGUE_HORIZONS = ['week', 'next3', 'ros', 'playoffs'];
+function leagueRankRows(rows) {
+  const rankIn = (list, field) => { list.slice().sort((x, y) => y[field].points - x[field].points || (x.name < y.name ? -1 : 1)).forEach((r, i) => { r[field].rank = i + 1; }); };
+  const groups = {};
+  for (const r of rows) (groups[r.position] = groups[r.position] || []).push(r);
+  for (const g of Object.values(groups)) for (const f of ['consensus', 'vegas', 'ironTuna']) rankIn(g, f);
+  const flex = rows.filter(r => r.position === 'RB' || r.position === 'WR' || r.position === 'TE');
+  for (const f of ['consensus', 'vegas', 'ironTuna']) flex.slice().sort((x, y) => y[f].points - x[f].points || (x.name < y.name ? -1 : 1)).forEach((r, i) => { r[f].flexRank = i + 1; });
+}
+// The board at the league's scoring, with TE premium applied and every row
+// stamped with who owns him here. Rows are copies: boardsPayload memoises
+// its own output and must not be written to.
+async function leagueBoard(env, L, horizon, through) {
+  const hz = LEAGUE_HORIZONS.includes(horizon) ? horizon : 'week';
+  const custom = { ...L.settings.scoring };
+  const out = await boardsPayload(env, { horizon: hz, position: 'ALL', preset: 'custom', custom, through: through || null, customKey: leagueScoringKey(L.settings) });
+  if (!out || !out.ok) return out || { ok: false, error: 'no_board' };
+  const te = Number(L.settings.extras && L.settings.extras.tePremium) || 0;
+  const idx = leagueRosterIndex(L);
+  const rows = out.players.map(p => {
+    const r = { ...p, consensus: { ...p.consensus }, vegas: { ...p.vegas }, ironTuna: { ...p.ironTuna } };
+    if (te && r.pos === 'TE') {
+      for (const f of ['consensus', 'vegas', 'ironTuna']) r[f].points = _oddsRound(p[f].points + te * (((p[f].stats || {}).rec) || 0));
+      const perWeek = te * ((((p.ironTuna.stats || {}).rec) || 0) / Math.max(1, p.games || 1));
+      r.weeks = (p.weeks || []).map(w => w.ironTunaPts != null ? { ...w, ironTunaPts: _oddsRound(w.ironTunaPts + perWeek), consensusPts: _oddsRound((w.consensusPts || 0) + perWeek), vegasPts: _oddsRound((w.vegasPts || 0) + perWeek) } : w);
+    }
+    const st = idx.get(r.key);
+    r.roster = st ? { status: st.isUser ? 'mine' : 'rostered', teamId: st.teamId, teamName: st.teamName, slot: st.slot, slotLabel: st.slotLabel, isUser: st.isUser, isOpponent: st.isOpponent }
+                  : { status: idx.waiver.has(r.key) ? 'waiver' : 'available', teamId: null, teamName: null, slot: null, isUser: false, isOpponent: false };
+    return r;
+  });
+  leagueRankRows(rows);
+  return { ...out, scoring: { preset: 'league', label: L.label }, league: { id: L.id, name: L.name, provider: L.provider, userTeamId: L.userTeamId }, players: rows };
+}
+// key -> where he is in this league. `waiver` is derived: a player dropped in
+// the last two days has not cleared waivers yet in most rooms.
+function leagueRosterIndex(L) {
+  const m = new Map();
+  const names = new Map(L.teams.map(t => [t.teamId, t.name]));
+  const oppId = leagueOpponentId(L);
+  for (const r of L.rosters || []) for (const p of r.players || []) if (p.key) m.set(p.key, { teamId: r.teamId, teamName: names.get(r.teamId) || r.teamId, slot: p.slot, slotLabel: p.slotLabel, isUser: r.teamId === L.userTeamId, isOpponent: r.teamId === oppId });
+  m.waiver = new Set();
+  const cutoff = Date.now() - 2 * 86400000;
+  for (const x of L.transactions || []) if (x.ts && x.ts >= cutoff) for (const d of x.drops || []) if (d.key && !m.has(d.key)) m.waiver.add(d.key);
+  return m;
+}
+function leagueCurrentMatchup(L) {
+  if (!L.userTeamId) return null;
+  const mine = (L.matchups || []).filter(m => m.teamId === L.userTeamId);
+  if (!mine.length) return null;
+  const upcoming = mine.filter(m => !m.played).sort((a, b) => a.week - b.week);
+  return upcoming[0] || mine.sort((a, b) => b.week - a.week)[0];
+}
+function leagueOpponentId(L) { const m = leagueCurrentMatchup(L); return m ? m.opponentId : null; }
+// A roster joined to a board: every player on it with his board row, or a
+// placeholder row that scores nothing and says why.
+function leagueJoin(L, board, teamId) {
+  const byKey = new Map((board.players || []).map(p => [p.key, p]));
+  const ro = (L.rosters || []).find(r => r.teamId === teamId);
+  const out = [];
+  for (const p of (ro ? ro.players : [])) {
+    const row = p.key ? byKey.get(p.key) : null;
+    out.push({ key: p.key, name: p.name, position: leaguePos(p.position), team: p.team, slot: p.slot, slotLabel: p.slotLabel, providerPlayerId: p.providerPlayerId,
+               row: row || null, points: row ? row.ironTuna.points : 0, ranked: !!row,
+               injury: row ? row.injury : null, bye: row && row.weeks && row.weeks.length === 1 && row.weeks[0].bye ? true : false,
+               out: row && row.weeks && row.weeks.length === 1 && row.weeks[0].out ? true : false });
+  }
+  return out;
+}
+// The lineup engine. Greedy into named slots, then the flex slots in order of
+// how restrictive they are (WR/RB, then WR/TE, then FLEX, then Superflex),
+// which is optimal when every flex is a superset of a named slot's pool. IR
+// and taxi players are never started; a player on a bye or ruled out scores
+// zero and is benched by arithmetic rather than by rule.
+function leagueOptimize(players, roster, pts) {
+  const slots = leagueStarterSlots(roster);
+  const rows = players.filter(p => p.slot !== 'ir' && p.slot !== 'taxi' && LEAGUE_POSITIONS.has(p.position)).map(p => ({ p, pos: p.position, v: Math.max(0, Number(pts ? pts(p) : p.points) || 0), slot: null }));
+  rows.sort((a, b) => b.v - a.v || (a.p.name < b.p.name ? -1 : 1));
+  const starters = [];
+  const used = new Set();
+  for (const s of slots) {
+    const elig = LEAGUE_SLOT_ELIG[s] || [];
+    const pick = rows.find(r => !used.has(r) && elig.includes(r.pos));
+    if (pick) { used.add(pick); pick.slot = s; starters.push(pick); } else starters.push({ p: null, pos: null, v: 0, slot: s, empty: true });
+  }
+  const bench = rows.filter(r => !used.has(r));
+  const total = starters.reduce((n, r) => n + r.v, 0);
+  return { slots, starters, bench, total: _oddsRound(total) };
+}
+function leagueConfidence(margin, base) {
+  const rel = base > 0 ? margin / base : 0;
+  if (margin >= 3 || rel >= 0.25) return 'Strong';
+  if (margin >= 1.2 || rel >= 0.1) return 'Moderate';
+  return 'Lean';
+}
+function _lgWhy(row) {
+  if (!row) return '';
+  if (row.injury && row.injury.status) return row.injury.status + (row.injury.note ? ' (' + row.injury.note + ')' : '');
+  if (row.why && row.why.summary) return row.why.summary;
+  const w = row.weeks && row.weeks[0];
+  if (w && w.env && w.env.implied != null) return 'implied team total ' + w.env.implied + (w.opponent ? ' vs ' + w.opponent : '');
+  return '';
+}
+// Best lineup for the current week, the decisions that were close, and the
+// changes against what the provider says is currently starting.
+async function leagueLineup(env, L, board) {
+  const b = board || await leagueBoard(env, L, 'week');
+  if (!b.ok) return { ok: false, error: b.error || 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team', note: 'Pick which team is yours on My Leagues.' };
+  const mine = leagueJoin(L, b, L.userTeamId);
+  const opt = leagueOptimize(mine, L.settings.roster);
+  const decisions = [];
+  for (const s of opt.starters) {
+    if (!s.p) { decisions.push({ slot: s.slot, empty: true, note: 'No eligible player for this slot.' }); continue; }
+    const elig = LEAGUE_SLOT_ELIG[s.slot] || [];
+    const alt = opt.bench.find(r => elig.includes(r.pos));
+    if (!alt) continue;
+    const margin = _oddsRound(s.v - alt.v);
+    const flexy = s.slot === 'FLEX' || s.slot === 'SFLEX' || s.slot === 'REC_FLEX' || s.slot === 'WRRB_FLEX';
+    if (!flexy && margin >= 3) continue;
+    const conf = leagueConfidence(margin, s.v);
+    decisions.push({ slot: s.slot, start: { name: s.p.name, position: s.pos, team: s.p.team, projected: _oddsRound(s.v), why: _lgWhy(s.p.row) },
+                     sit: { name: alt.p.name, position: alt.pos, team: alt.p.team, projected: _oddsRound(alt.v), why: _lgWhy(alt.p.row) },
+                     margin, confidence: conf, recommendation: (conf === 'Lean' ? 'Lean ' : 'Start ') + s.p.name,
+                     reason: s.p.name + ' projects ' + _oddsRound(s.v) + ' to ' + alt.p.name + '’s ' + _oddsRound(alt.v) + ' at your scoring' + (conf === 'Lean' ? '; close enough that late news should decide it.' : '.') });
+  }
+  const currentStarters = new Set(mine.filter(p => p.slot === 'starter').map(p => p.key || p.name));
+  const changes = [];
+  for (const s of opt.starters) if (s.p && !currentStarters.has(s.p.key || s.p.name)) changes.push({ action: 'start', name: s.p.name, position: s.pos, slot: s.slot, projected: _oddsRound(s.v) });
+  for (const r of opt.bench) if (currentStarters.has(r.p.key || r.p.name)) changes.push({ action: 'bench', name: r.p.name, position: r.pos, projected: _oddsRound(r.v), reason: r.p.bye ? 'bye week' : r.p.out ? 'ruled out' : 'outprojected' });
+  const currentTotal = _oddsRound(mine.filter(p => p.slot === 'starter').reduce((n, p) => n + p.points, 0));
+  return {
+    ok: true, contract: LEAGUE_CONTRACT, week: b.currentWeek, analyst: 'dalton',
+    lineup: opt.starters.map(s => ({ slot: s.slot, name: s.p ? s.p.name : null, position: s.pos, team: s.p ? s.p.team : null, projected: _oddsRound(s.v), why: s.p ? _lgWhy(s.p.row) : null, empty: !!s.empty })),
+    bench: opt.bench.map(r => ({ name: r.p.name, position: r.pos, team: r.p.team, projected: _oddsRound(r.v), ranked: r.p.ranked, bye: r.p.bye, out: r.p.out, slot: r.p.slot })),
+    reserve: mine.filter(p => p.slot === 'ir' || p.slot === 'taxi').map(p => ({ name: p.name, position: p.position, slot: p.slot })),
+    projectedTotal: opt.total, currentTotal, improvement: _oddsRound(opt.total - currentTotal), decisions, changes,
+    unranked: mine.filter(p => !p.ranked && p.slot !== 'ir').map(p => p.name)
+  };
+}
+// The pickup advisor for THIS room: only players nobody here owns, measured
+// by what they add to the reader's own lineup and bench, with a drop that
+// actually costs less than the add is worth. Tyler Grant's desk.
+let _LEAGUE_PICK_MEMO = new Map();
+async function leaguePickups(env, L, opts) {
+  const o = opts || {};
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  // Matchup, intel and the summary all ask the same question inside one
+  // request; a minute of memo per league keeps that to one search.
+  const mk = [L.id, L.updatedAt, L.userTeamId, leagueScoringKey(L.settings), JSON.stringify(L.settings.roster), L.settings.faab, L.settings.waiverType, (L.transactions || []).length, (L.rosters || []).reduce((n, r) => n + (r.players || []).length, 0), o.perPosition || 14].join('|');
+  const hit = _LEAGUE_PICK_MEMO.get(mk);
+  if (hit && Date.now() - hit.at < 60000) return { ...hit.out, pickups: hit.out.pickups.slice(0, o.limit || 20) };
+  const out = await _leaguePickups(env, L, { ...o, limit: 60 });
+  if (out && out.ok) { if (_LEAGUE_PICK_MEMO.size > 50) _LEAGUE_PICK_MEMO = new Map(); _LEAGUE_PICK_MEMO.set(mk, { at: Date.now(), out }); return { ...out, pickups: out.pickups.slice(0, o.limit || 20) }; }
+  return out;
+}
+async function _leaguePickups(env, L, opts) {
+  const o = opts || {};
+  const [bw, b3, br] = await Promise.all([leagueBoard(env, L, 'week'), leagueBoard(env, L, 'next3'), leagueBoard(env, L, 'ros')]);
+  if (!bw.ok || !b3.ok || !br.ok) return { ok: false, error: 'no_board' };
+  const idx = leagueRosterIndex(L);
+  const roster = L.settings.roster;
+  const usable = new Set(Object.keys(LEAGUE_SLOT_ELIG).filter(s => roster[s] > 0).flatMap(s => LEAGUE_SLOT_ELIG[s]));
+  const rosWeeks = Math.max(1, (br.horizon && br.horizon.weeks && br.horizon.weeks.length) || 1);
+  const mineW = leagueJoin(L, bw, L.userTeamId), mine3 = leagueJoin(L, b3, L.userTeamId), mineR = leagueJoin(L, br, L.userTeamId);
+  const baseW = leagueOptimize(mineW, roster).total, base3 = leagueOptimize(mine3, roster).total, baseR = leagueOptimize(mineR, roster);
+  const ptsOf = (b, key) => { const r = b.players.find(p => p.key === key); return r ? r.ironTuna.points : 0; };
+  const byKeyW = new Map(bw.players.map(p => [p.key, p])), byKey3 = new Map(b3.players.map(p => [p.key, p]));
+  const avail = br.players.filter(p => (p.roster.status === 'available' || p.roster.status === 'waiver') && usable.has(p.pos) && p.games > 0);
+  avail.sort((a, b) => b.ironTuna.points - a.ironTuna.points);
+  const cands = [];
+  const perPos = {};
+  for (const p of avail) { perPos[p.pos] = (perPos[p.pos] || 0) + 1; if (perPos[p.pos] <= (o.perPosition || 14)) cands.push(p); }
+  const rosterFull = leagueRosterSize(roster) > 0 && mineR.length >= leagueRosterSize(roster);
+  const benchR = baseR.bench.filter(r => r.p.slot !== 'ir').sort((a, b) => a.v - b.v);
+  const teamRow = (L.teams || []).find(t => t.teamId === L.userTeamId) || {};
+  const budget = L.settings.faab != null ? (teamRow.faabLeft != null ? teamRow.faabLeft : L.settings.faab) : null;
+  const rows = [];
+  for (const c of cands) {
+    const cw = byKeyW.get(c.key), c3 = byKey3.get(c.key);
+    const add = key => ({ key, name: c.name, position: c.pos, team: c.team, slot: 'bench', points: 0, ranked: true, row: c });
+    const gainW = _oddsRound(leagueOptimize(mineW.concat([{ ...add(c.key), points: cw ? cw.ironTuna.points : 0, row: cw }]), roster).total - baseW);
+    const gain3 = _oddsRound(leagueOptimize(mine3.concat([{ ...add(c.key), points: c3 ? c3.ironTuna.points : 0, row: c3 }]), roster).total - base3);
+    const gainR = _oddsRound(leagueOptimize(mineR.concat([{ ...add(c.key), points: c.ironTuna.points, row: c }]), roster).total - baseR.total);
+    // The drop: the least valuable bench player he could replace, never the
+    // only quarterback in a one-QB room, never a kicker for a receiver.
+    let drop = null;
+    if (rosterFull) {
+      const pool = benchR.filter(r => {
+        if (r.pos === 'QB' && roster.SFLEX === 0 && mineR.filter(p => p.position === 'QB').length <= 1) return false;
+        if ((r.pos === 'K' || r.pos === 'DEF') && r.pos !== c.pos) return false;
+        return true;
+      });
+      drop = pool[0] || null;
+    }
+    const dropR = drop ? drop.v : 0;
+    const benchGain = _oddsRound(c.ironTuna.points - dropR);
+    const stash = gainW <= 0.2 && gain3 <= 0.5 && benchGain > 0;
+    const ppg = 0.5 * (gain3 / 3) + 0.5 * (gainR / rosWeeks) + 0.15 * Math.max(0, benchGain / rosWeeks);
+    let priority = ppg >= 3 ? 'High' : ppg >= 1.5 ? 'Medium' : ppg >= 0.5 ? 'Low' : stash ? 'Stash' : null;
+    if (!priority) continue;
+    if (drop && c.ironTuna.points <= dropR * 1.1 && gainR <= 0 && gain3 <= 0) continue;   // does not improve the roster
+    const inj = c.injury && c.injury.status ? c.injury.status : null;
+    const faabPct = { High: [0.2, 0.35], Medium: [0.08, 0.18], Low: [0.02, 0.06], Stash: [0.01, 0.04] }[priority];
+    const faab = budget != null ? { low: Math.max(1, Math.round(budget * faabPct[0])), high: Math.max(1, Math.round(budget * faabPct[1])), budget } : null;
+    const why = [];
+    if (gainW > 0) why.push('starts for you this week (+' + gainW + ' at ' + (cw && cw.weeks && cw.weeks[0] && cw.weeks[0].opponent ? 'vs ' + cw.weeks[0].opponent : 'your scoring') + ')');
+    if (gain3 > 0) why.push('+' + gain3 + ' to your lineup over the next three weeks');
+    if (gainR > 0) why.push('+' + gainR + ' rest of season');
+    if (drop) why.push('projects ' + c.ironTuna.points + ' rest of season to ' + drop.p.name + '’s ' + _oddsRound(dropR));
+    if (stash) why.push('a stash: does not start for you now, but your best bench upgrade at ' + c.pos);
+    if (c.roleTrend && c.roleTrend.applied && c.roleTrend.label) why.push('usage trend: ' + c.roleTrend.label);
+    rows.push({ key: c.key, name: c.name, position: c.pos, team: c.team, status: c.roster.status, injury: inj, priority, score: _oddsRound(ppg),
+                projected: { week: cw ? cw.ironTuna.points : 0, next3: c3 ? c3.ironTuna.points : 0, ros: c.ironTuna.points, rosRank: c.ironTuna.rank },
+                gain: { week: gainW, next3: gain3, ros: gainR, bench: benchGain }, cracksLineup: gainW > 0, stash,
+                drop: drop ? { name: drop.p.name, position: drop.pos, team: drop.p.team, ros: _oddsRound(dropR) } : (rosterFull ? null : { open: true }),
+                faab, why: why.join('; ') + '.', byes: c.byes || [] });
+  }
+  const order = { High: 0, Medium: 1, Low: 2, Stash: 3 };
+  rows.sort((a, b) => order[a.priority] - order[b.priority] || b.score - a.score);
+  return { ok: true, contract: LEAGUE_CONTRACT, analyst: 'grant', week: bw.currentWeek, league: { id: L.id, name: L.name, numTeams: L.numTeams, faab: L.settings.faab, waiverType: L.settings.waiverType, budgetLeft: budget },
+           rosterFull, rosterSize: leagueRosterSize(roster), rostered: mineR.length, pickups: rows.slice(0, o.limit || 20), availableCount: avail.length };
+}
+// This week's matchup: both best lineups at the league's scoring, the slots
+// that swing it, the opponent's injury exposure, and who on waivers helps.
+async function leagueMatchup(env, L) {
+  const b = await leagueBoard(env, L, 'week');
+  if (!b.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const m = leagueCurrentMatchup(L);
+  const oppId = m ? m.opponentId : null;
+  const names = new Map(L.teams.map(t => [t.teamId, t]));
+  const mine = leagueOptimize(leagueJoin(L, b, L.userTeamId), L.settings.roster);
+  const theirs = oppId ? leagueOptimize(leagueJoin(L, b, oppId), L.settings.roster) : null;
+  const diff = theirs ? _oddsRound(mine.total - theirs.total) : null;
+  const swing = [];
+  if (theirs) for (let i = 0; i < mine.starters.length; i++) {
+    const a = mine.starters[i], o = theirs.starters[i];
+    if (!a || !o || a.slot !== o.slot) continue;
+    const d = _oddsRound(a.v - o.v);
+    if (Math.abs(d) >= 3) swing.push({ slot: a.slot, mine: a.p ? { name: a.p.name, projected: _oddsRound(a.v) } : null, theirs: o.p ? { name: o.p.name, projected: _oddsRound(o.v) } : null, edge: d });
+  }
+  swing.sort((x, y) => Math.abs(y.edge) - Math.abs(x.edge));
+  const risk = (opt) => opt.starters.filter(s => s.p && s.p.injury && s.p.injury.status && /out|doubtful|questionable|ir|pup|sus/i.test(String(s.p.injury.status))).map(s => ({ name: s.p.name, position: s.pos, status: s.p.injury.status, projected: _oddsRound(s.v) }));
+  let upgrades = [];
+  try { const pk = await leaguePickups(env, L, { limit: 40 }); if (pk.ok) upgrades = pk.pickups.filter(p => p.cracksLineup).slice(0, 3).map(p => ({ name: p.name, position: p.position, gainThisWeek: p.gain.week, drop: p.drop && p.drop.name ? p.drop.name : null })); } catch (e) {}
+  const verdict = diff == null ? 'no opponent found this week' : Math.abs(diff) < 4 ? 'toss-up' : Math.abs(diff) < 10 ? (diff > 0 ? 'lean you' : 'lean opponent') : (diff > 0 ? 'you are favored' : 'opponent is favored');
+  return { ok: true, contract: LEAGUE_CONTRACT, week: m ? m.week : b.currentWeek, analyst: 'dalton',
+           you: { teamId: L.userTeamId, name: (names.get(L.userTeamId) || {}).name || 'You', projected: mine.total, record: names.get(L.userTeamId) ? [names.get(L.userTeamId).wins, names.get(L.userTeamId).losses] : null, injuryRisk: risk(mine) },
+           opponent: theirs ? { teamId: oppId, name: (names.get(oppId) || {}).name || 'Opponent', manager: (names.get(oppId) || {}).manager || null, projected: theirs.total, record: names.get(oppId) ? [names.get(oppId).wins, names.get(oppId).losses] : null, injuryRisk: risk(theirs),
+                               lineup: theirs.starters.map(s => ({ slot: s.slot, name: s.p ? s.p.name : null, position: s.pos, projected: _oddsRound(s.v) })) } : null,
+           edge: diff, verdict, swing: swing.slice(0, 5), upgrades,
+           note: 'Projected totals are the best lineup each side could set at your scoring, not the lineup they have set. Treat a gap under four points as a coin flip.' };
+}
+// Last-minute intel for this roster: who on it is out, doubtful or
+// questionable and the move that answers it; the opponent's exposure; and
+// nothing about the other twenty-nine teams' injuries. Mike Raines's desk.
+async function leagueIntel(env, L) {
+  const b = await leagueBoard(env, L, 'week');
+  if (!b.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const mine = leagueJoin(L, b, L.userTeamId);
+  const roster = L.settings.roster;
+  const opt = leagueOptimize(mine, roster);
+  const flagged = p => p.row && p.row.injury && p.row.injury.status ? String(p.row.injury.status) : (p.out ? 'Out' : null);
+  const sev = s => /out|ir|pup|sus|nfi|dnr/i.test(s) ? 3 : /doubtful/i.test(s) ? 2 : /questionable/i.test(s) ? 1 : 0;
+  const alerts = [];
+  const currentStarters = new Set(mine.filter(p => p.slot === 'starter').map(p => p.key || p.name));
+  for (const p of mine) {
+    const st = flagged(p);
+    if (!st || p.slot === 'ir') continue;
+    const isStarter = currentStarters.has(p.key || p.name) || opt.starters.some(s => s.p === p);
+    const s = sev(st);
+    if (!isStarter && s < 3) continue;
+    let action = null;
+    if (isStarter) {
+      // The replacement: whoever the best lineup starts that the provider's
+      // current lineup does not (the injured man already scores nothing, so
+      // the optimiser has benched him by arithmetic); failing that, whoever
+      // steps in when he is removed outright.
+      let repl = opt.starters.filter(s2 => s2.p && s2.p !== p && !currentStarters.has(s2.p.key || s2.p.name)).map(s2 => s2.p)[0] || null;
+      if (!repl) { const without = leagueOptimize(mine.filter(x => x !== p), roster); repl = without.starters.filter(s2 => s2.p && !opt.starters.some(s3 => s3.p === s2.p)).map(s2 => s2.p)[0] || null; }
+      action = s >= 2 ? (repl ? 'Start ' + repl.name + ' (' + _oddsRound(repl.points) + ' projected) in place of ' + p.name + '.' : 'No bench replacement projects to score; check the waiver wire.')
+                      : (repl ? 'Monitor. If ' + p.name + ' is ruled out, ' + repl.name + ' (' + _oddsRound(repl.points) + ') is your best replacement.' : 'Monitor; there is no bench replacement on this roster.');
+    } else action = 'On your bench: no lineup move needed. ' + (s >= 3 ? 'Consider an IR slot if your league allows.' : '');
+    alerts.push({ priority: isStarter ? 1 : 2, tag: 'AFFECTS YOUR ROSTER', name: p.name, position: p.position, team: p.team, status: st, note: p.row && p.row.injury ? p.row.injury.note || '' : '', starter: isStarter, action });
+  }
+  const oppId = leagueOpponentId(L);
+  if (oppId) {
+    const theirs = leagueJoin(L, b, oppId);
+    const topt = leagueOptimize(theirs, roster);
+    for (const s of topt.starters) {
+      if (!s.p) continue;
+      const st = flagged(s.p);
+      if (!st || sev(st) < 2) continue;
+      alerts.push({ priority: 4, tag: 'YOUR OPPONENT IS AFFECTED', name: s.p.name, position: s.pos, team: s.p.team, status: st, starter: true, action: 'Your opponent’s ' + s.pos + ' (' + _oddsRound(s.v) + ' projected) is ' + st.toLowerCase() + '.' });
+    }
+  }
+  // Available players who became actionable: the top waiver adds whose
+  // lineup gain this week is real, so the alert can say who to add.
+  try { const pk = await leaguePickups(env, L, { limit: 30 }); if (pk.ok) for (const p of pk.pickups.filter(x => x.cracksLineup).slice(0, 3)) alerts.push({ priority: 3, tag: 'AVAILABLE IN YOUR LEAGUE', name: p.name, position: p.position, team: p.team, status: p.status, action: 'Add ' + p.name + (p.drop && p.drop.name ? ' for ' + p.drop.name : '') + ': +' + p.gain.week + ' to your lineup this week.' }); } catch (e) {}
+  alerts.sort((a, b) => a.priority - b.priority);
+  return { ok: true, contract: LEAGUE_CONTRACT, week: b.currentWeek, analyst: 'raines', alerts, asOf: Date.now(), quiet: alerts.length === 0 };
+}
+// Trade partners who exist. Every roster is known, so the search is over
+// real managers: what they have that the reader needs, what the reader has
+// that they need, and whether a package improves BOTH best lineups on the
+// rest-of-season board. One-sided offers are not proposed. Also hands the
+// client the rosters and points so the Trade Finder's engine can search
+// wider packages in the browser.
+async function leagueTrades(env, L, opts) {
+  const o = opts || {};
+  const [br, b3] = await Promise.all([leagueBoard(env, L, 'ros'), leagueBoard(env, L, 'next3')]);
+  if (!br.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const roster = L.settings.roster;
+  const rosWeeks = Math.max(1, (br.horizon.weeks || []).length);
+  const teams = L.teams.map(t => ({ ...t, players: leagueJoin(L, br, t.teamId) }));
+  const pts3 = new Map(b3.players.map(p => [p.key, p.ironTuna.points]));
+  const lineup = pl => leagueOptimize(pl, roster);
+  // Positional strength: the average of a team's starters at each position
+  // against the league's average of the same, per game.
+  const posStrength = t => { const opt = lineup(t.players); const by = {}; for (const s of opt.starters) if (s.p) (by[s.pos] = by[s.pos] || []).push(s.v); const out = {}; for (const [k, v] of Object.entries(by)) out[k] = v.reduce((a, b) => a + b, 0) / v.length; return { opt, strength: out }; };
+  const strengths = new Map(teams.map(t => [t.teamId, posStrength(t)]));
+  const avg = {};
+  for (const pos of ['QB', 'RB', 'WR', 'TE']) { const vals = teams.map(t => strengths.get(t.teamId).strength[pos]).filter(v => v != null); avg[pos] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0; }
+  const me = teams.find(t => t.teamId === L.userTeamId);
+  const myS = strengths.get(L.userTeamId);
+  const need = pos => avg[pos] > 0 ? ((myS.strength[pos] || 0) - avg[pos]) / avg[pos] : 0;
+  const needs = ['QB', 'RB', 'WR', 'TE'].filter(p => roster[p] > 0 || (p === 'QB' ? roster.SFLEX > 0 : true)).map(p => ({ position: p, delta: _oddsRound(need(p) * 100) })).sort((a, b) => a.delta - b.delta);
+  const depth = (t, pos) => { const s = strengths.get(t.teamId); const starters = new Set(s.opt.starters.map(x => x.p)); return t.players.filter(p => p.position === pos && !starters.has(p) && p.slot !== 'ir').sort((a, b) => b.points - a.points); };
+  const trades = [], targets = [];
+  const minGain = (o.minGain != null ? Number(o.minGain) : 0.75) * rosWeeks;
+  for (const t of teams) {
+    if (t.teamId === L.userTeamId) continue;
+    const ts = strengths.get(t.teamId);
+    const theirNeed = pos => avg[pos] > 0 ? ((ts.strength[pos] || 0) - avg[pos]) / avg[pos] : 0;
+    for (const n of needs.slice(0, 2)) {
+      if (n.delta > -5) continue;      // not a need
+      const pos = n.position;
+      const theirBench = depth(t, pos);
+      const theirStarters = ts.opt.starters.filter(s => s.p && s.pos === pos).map(s => s.p);
+      const cands = theirBench.slice(0, 2).concat(theirStarters.slice(0, 2)).filter(p => p.ranked);
+      for (const target of cands) {
+        const surplus = theirBench.length > 0 && theirBench[0].points >= 0.6 * (theirStarters[0] ? theirStarters[0].points : 0);
+        const wantPos = ['QB', 'RB', 'WR', 'TE'].filter(p => theirNeed(p) < -0.05 && p !== pos).sort((a, b) => theirNeed(a) - theirNeed(b));
+        let label = surplus ? 'ROSTER MATCH' : theirStarters.includes(target) ? (theirBench.length ? 'EXPENSIVE BUT WORTH ASKING' : 'UNLIKELY TO BE AVAILABLE') : 'BUY LOW';
+        if (target.row && target.row.marketDelta && target.row.marketDelta.points >= 3 && target.row.vegas.rank < target.row.consensus.rank) label = 'BUY LOW';
+        targets.push({ name: target.name, position: pos, team: target.team, owner: t.name, ownerTeamId: t.teamId, ros: target.points, rosRank: target.row ? target.row.ironTuna.rank : null, label, ownerNeeds: wantPos });
+        // Offers: one of mine at what they need, or two-for-one with a bench piece.
+        const mine = me.players.filter(p => p.ranked && p.slot !== 'ir' && (wantPos.includes(p.position) || !wantPos.length)).sort((a, b) => b.points - a.points).slice(0, 5);
+        const myBench = lineup(me.players).bench.map(r => r.p).filter(p => p.ranked).slice(0, 4);
+        const packages = [];
+        for (const m of mine) { packages.push([m]); for (const x of myBench) if (x !== m) packages.push([m, x]); }
+        const baseMe = lineup(me.players).total, baseThem = lineup(t.players).total;
+        for (const pk of packages) {
+          const meAfter = lineup(me.players.filter(p => !pk.includes(p)).concat([target])).total;
+          const themAfter = lineup(t.players.filter(p => p !== target).concat(pk)).total;
+          const gMe = _oddsRound(meAfter - baseMe), gThem = _oddsRound(themAfter - baseThem);
+          if (gMe < minGain || gThem < minGain) continue;
+          const tilt = Number(o.tilt) || 0;
+          trades.push({ partner: t.name, partnerTeamId: t.teamId, receive: [{ name: target.name, position: pos, ros: target.points }], give: pk.map(p => ({ name: p.name, position: p.position, ros: p.points })),
+                        yourGain: gMe, theirGain: gThem, perWeek: { you: _oddsRound(gMe / rosWeeks), them: _oddsRound(gThem / rosWeeks) },
+                        valueExchanged: { receive: target.points, give: _oddsRound(pk.reduce((n, p) => n + p.points, 0)) },
+                        shortTerm: { receive: pts3.get(target.key) || 0, give: _oddsRound(pk.reduce((n, p) => n + (pts3.get(p.key) || 0), 0)) },
+                        why: ['You need ' + pos + ' (' + n.delta + '% below the league average starter).', t.name + (surplus ? ' has ' + pos + ' depth.' : ' would be giving up a starter.')].concat(wantPos.length ? [t.name + ' needs ' + wantPos.join('/') + '.'] : []).concat(['Your best lineup improves by ' + _oddsRound(gMe / rosWeeks) + ' a week; theirs by ' + _oddsRound(gThem / rosWeeks) + '.']),
+                        score: _oddsRound(gMe + tilt * 0 + Math.min(gMe, gThem)) });
+        }
+      }
+    }
+  }
+  trades.sort((a, b) => b.score - a.score);
+  const seenT = new Set();
+  const uniqTargets = targets.filter(t => { const k = t.name + '|' + t.owner; if (seenT.has(k)) return false; seenT.add(k); return true; });
+  const found = new Set(trades.map(t => t.receive[0].name + '|' + t.partner));
+  for (const t of uniqTargets) if (found.has(t.name + '|' + t.owner)) t.label = 'BEST FIT';
+  const labelOrder = { 'BEST FIT': 0, 'ROSTER MATCH': 1, 'BUY LOW': 2, 'EXPENSIVE BUT WORTH ASKING': 3, 'UNLIKELY TO BE AVAILABLE': 4 };
+  uniqTargets.sort((a, b) => labelOrder[a.label] - labelOrder[b.label] || b.ros - a.ros);
+  return { ok: true, contract: LEAGUE_CONTRACT, analyst: 'brooks', horizon: br.horizon, needs, trades: trades.slice(0, o.limit || 10), targets: uniqTargets.slice(0, 16),
+           // For the browser engine: every roster with points on each horizon.
+           teams: teams.map(t => ({ teamId: t.teamId, name: t.name, isUser: t.teamId === L.userTeamId, players: t.players.map(p => ({ id: p.key || p.name, name: p.name, pos: p.position, team: p.team, ranked: p.ranked, slot: p.slot, ros: p.points, next3: pts3.get(p.key) || 0 })) })),
+           slots: { QB: roster.QB, RB: roster.RB, WR: roster.WR, TE: roster.TE, FLEX: roster.FLEX + roster.REC_FLEX + roster.WRRB_FLEX, SFLEX: roster.SFLEX } };
+}
+// Playoff readiness: the fantasy-playoff board over this roster, position by
+// position against the room, schedules that help or hurt, and the bench
+// moves worth making before everyone else notices.
+async function leaguePlayoffs(env, L) {
+  const b = await leagueBoard(env, L, 'playoffs');
+  if (!b.ok) return { ok: false, error: 'no_board' };
+  if (!L.userTeamId) return { ok: false, error: 'no_user_team' };
+  const roster = L.settings.roster;
+  const mine = leagueJoin(L, b, L.userTeamId);
+  const opt = leagueOptimize(mine, roster);
+  const teams = L.teams.map(t => ({ t, opt: leagueOptimize(leagueJoin(L, b, t.teamId), roster) }));
+  const posAvg = {};
+  for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const vals = teams.map(x => { const s = x.opt.starters.filter(s => s.p && s.pos === pos); return s.length ? s.reduce((n, r) => n + r.v, 0) / s.length : null; }).filter(v => v != null); posAvg[pos] = vals.length ? vals.reduce((a, b2) => a + b2, 0) / vals.length : 0; }
+  const positions = [];
+  for (const pos of ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) {
+    const s = opt.starters.filter(r => r.p && r.pos === pos);
+    if (!s.length) continue;
+    const mineAvg = s.reduce((n, r) => n + r.v, 0) / s.length;
+    const rel = posAvg[pos] ? (mineAvg - posAvg[pos]) / posAvg[pos] : 0;
+    positions.push({ position: pos, projectedPerStarter: _oddsRound(mineAvg), leagueAverage: _oddsRound(posAvg[pos]), delta: _oddsRound(rel * 100), grade: rel >= 0.15 ? 'strong' : rel <= -0.15 ? 'weak' : 'average', starters: s.map(r => r.p.name) });
+  }
+  const sched = mine.filter(p => p.row && p.row.scheduleDifficulty).map(p => ({ name: p.name, position: p.position, playoffPoints: p.points, schedule: p.row.scheduleDifficulty.label, byes: p.row.byes || [] }));
+  const rank = teams.slice().sort((a, b2) => b2.opt.total - a.opt.total).findIndex(x => x.t.teamId === L.userTeamId) + 1;
+  const bench = opt.bench.filter(r => r.p.slot !== 'ir').sort((a, b2) => a.v - b2.v);
+  const usable = new Set(Object.keys(LEAGUE_SLOT_ELIG).filter(s => roster[s] > 0).flatMap(s => LEAGUE_SLOT_ELIG[s]));
+  const moves = b.players.filter(p => p.roster.status !== 'mine' && p.roster.status !== 'rostered' && usable.has(p.pos) && p.games > 0)
+    .map(p => { const gain = _oddsRound(leagueOptimize(mine.concat([{ key: p.key, name: p.name, position: p.pos, team: p.team, slot: 'bench', points: p.ironTuna.points, ranked: true, row: p }]), roster).total - opt.total); const worst = bench.find(r => (r.pos === p.pos) || (r.pos !== 'K' && r.pos !== 'DEF' && p.pos !== 'K' && p.pos !== 'DEF')); return { name: p.name, position: p.pos, team: p.team, playoffPoints: p.ironTuna.points, lineupGain: gain, benchGain: worst ? _oddsRound(p.ironTuna.points - worst.v) : p.ironTuna.points, drop: worst ? worst.p.name : null, schedule: p.scheduleDifficulty ? p.scheduleDifficulty.label : null }; })
+    .filter(m => m.lineupGain > 0 || m.benchGain > 2).sort((a, b2) => b2.lineupGain - a.lineupGain || b2.benchGain - a.benchGain).slice(0, 6);
+  const dst = b.players.filter(p => p.pos === 'DEF' && p.roster.status !== 'mine' && p.roster.status !== 'rostered').sort((a, b2) => b2.ironTuna.points - a.ironTuna.points).slice(0, 3).map(p => ({ name: p.name, playoffPoints: p.ironTuna.points, schedule: p.scheduleDifficulty ? p.scheduleDifficulty.label : null }));
+  return { ok: true, contract: LEAGUE_CONTRACT, analyst: 'brooks', weeks: b.horizon.weeks, playoffWeekStart: L.settings.playoffWeekStart, projectedTotal: opt.total, rankInLeague: rank, of: teams.length,
+           positions, strong: positions.filter(p => p.grade === 'strong').map(p => p.position), weak: positions.filter(p => p.grade === 'weak').map(p => p.position),
+           favorable: sched.filter(s => s.schedule === 'Easy').sort((a, b2) => b2.playoffPoints - a.playoffPoints).slice(0, 6), concerning: sched.filter(s => s.schedule === 'Hard').sort((a, b2) => b2.playoffPoints - a.playoffPoints).slice(0, 6),
+           benchMoves: moves, dstStreaming: dst, benchSpots: roster.BN, note: 'Playoff weeks are ' + (b.horizon.weeks || []).join(', ') + '. Rankings this far out are graded LOW by the market side; treat them as direction, not distance.' };
+}
+// "Is player X available in league Y?", for any surface. Accepts keys or
+// names; names go through the same resolver every provider uses.
+function leagueAvailabilityLookup(L, items) {
+  const idx = leagueRosterIndex(L);
+  const oppId = leagueOpponentId(L);
+  const names = new Map(L.teams.map(t => [t.teamId, t.name]));
+  const out = [];
+  for (const it of items || []) {
+    let key = it.key || null;
+    if (!key && it.name) { for (const pos of it.position ? [leaguePos(it.position)] : ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']) { const r = leagueResolvePlayer({ name: it.name, position: pos, team: it.team }); if (r.key) { key = r.key; break; } } }
+    if (!key) { out.push({ name: it.name || null, key: null, status: 'unknown' }); continue; }
+    const st = idx.get(key);
+    out.push({ name: it.name || key, key, status: st ? (st.isUser ? 'mine' : 'rostered') : (idx.waiver.has(key) ? 'waiver' : 'available'),
+               teamName: st ? st.teamName : null, teamId: st ? st.teamId : null, slot: st ? st.slot : null, isUser: !!(st && st.isUser), isOpponent: !!(st && st.teamId === oppId),
+               label: st ? (st.isUser ? 'On your roster' + (st.slot === 'starter' ? ' (starting)' : st.slot === 'ir' ? ' (IR)' : ' (bench)') : (st.teamId === oppId ? 'On your opponent’s roster' : 'Rostered by ' + (names.get(st.teamId) || st.teamName))) : (idx.waiver.has(key) ? 'On waivers in your league' : 'Available in your league') });
+  }
+  return out;
+}
+// A one-screen summary: the module cards on My Week and the strip on every
+// page read this rather than each calling four modules.
+async function leagueSummary(env, L) {
+  const [lineup, matchup, intel, pickups] = await Promise.all([leagueLineup(env, L).catch(() => ({ ok: false })), leagueMatchup(env, L).catch(() => ({ ok: false })), leagueIntel(env, L).catch(() => ({ ok: false })), leaguePickups(env, L, { limit: 3 }).catch(() => ({ ok: false }))]);
+  return { ok: true, contract: LEAGUE_CONTRACT, league: { id: L.id, name: L.name, provider: L.provider, label: L.label, sync: L.sync, userTeamId: L.userTeamId },
+           lineup: lineup.ok ? { projectedTotal: lineup.projectedTotal, improvement: lineup.improvement, decisions: lineup.decisions.slice(0, 3), changes: lineup.changes.slice(0, 4) } : null,
+           matchup: matchup.ok ? { opponent: matchup.opponent ? matchup.opponent.name : null, you: matchup.you.projected, them: matchup.opponent ? matchup.opponent.projected : null, verdict: matchup.verdict } : null,
+           alerts: intel.ok ? intel.alerts.slice(0, 4) : [], pickups: pickups.ok ? pickups.pickups.slice(0, 3) : [] };
+}
+// -- the routes ---------------------------------------------------------------
+// Everything under /api/leagues, /api/oauth/<provider> and /api/admin/league-sync.
+// Returns a Response, or null when the path is not ours.
+const LEAGUE_ERRORS = {
+  expired_authorization: 'Your connection to this provider needs to be renewed.',
+  league_not_found: 'That league could not be found. Check the league ID or URL, and that the season is right.',
+  user_not_found: 'No user by that name. Check the spelling of your username.',
+  rate_limited: 'The provider is limiting requests right now. Try again in a minute.',
+  provider_unavailable: 'The provider is temporarily unavailable. Your last successful sync is still in use.',
+  unsupported_provider: 'This provider cannot be synced.',
+  provider_disabled: 'This provider is not enabled on Iron Tuna yet.',
+  no_token_key: 'OAuth connections are not configured on this server.',
+  too_many_leagues: 'Twelve leagues is the limit per account.',
+  too_soon: 'That league was synced less than two minutes ago.',
+  not_signed_in: 'Sign in to connect a league.',
+  no_db: 'League sync is not available right now.'
+};
+function leagueErr(code, detail, status, c) {
+  return json({ ok: false, error: code, message: LEAGUE_ERRORS[code] || detail || code, detail: detail || null }, status || 400, c);
+}
+function leaguePublic(L) {
+  // What a page needs about a league: never another reader's email.
+  const { createdAt, updatedAt, ...rest } = L; return rest;
+}
+async function leagueRoutes(request, env, url, ctx) {
+  const path = url.pathname.replace(/\/+$/, '');
+  const isLeague = path === '/api/leagues' || path.startsWith('/api/leagues/') || path.startsWith('/api/oauth/') || path === '/api/admin/league-sync';
+  if (!isLeague) return null;
+  const c = { ...corsHeaders(request.headers.get('Origin')), 'cache-control': 'no-store' };
+  if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+  if (!flagOn(env, 'LEAGUE_SYNC')) return leagueErr('provider_disabled', 'League sync is off', 404, c);
+  const readBody = async () => { try { return await request.json(); } catch (e) { return {}; } };
+
+  // Provider availability is public: the connect page decides what to show.
+  if (path === '/api/leagues/providers') return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env) }, 200, c);
+
+  // Admin: metrics and recent runs, never a token.
+  if (path === '/api/admin/league-sync') {
+    if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+    if (!(await leagueReady(env))) return json({ ok: false, error: 'no_db' }, 503, c);
+    let ran = null;
+    if (url.searchParams.get('run') === '1') ran = await jobRun(env, 'league-sync', 'admin');
+    const resync = url.searchParams.get('resync');
+    if (resync) { const row = await env.LEADS_DB.prepare('SELECT * FROM leagues WHERE id=?').bind(resync).first(); ran = row ? await leagueSync(env, row, 'admin') : { ok: false, error: 'no such league' }; }
+    const db = env.LEADS_DB, since = Date.now() - 7 * 86400000;
+    const q = async (sql, ...args) => { try { return (await db.prepare(sql).bind(...args).all()).results || []; } catch (e) { return []; } };
+    const byProvider = await q('SELECT provider, COUNT(*) AS n, SUM(CASE WHEN sync_status=\'ok\' OR sync_status=\'manual\' THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN sync_status=\'failed\' THEN 1 ELSE 0 END) AS failed FROM leagues GROUP BY provider');
+    const runs = await q('SELECT provider, COUNT(*) AS n, SUM(ok) AS ok, AVG(finished_at - started_at) AS avg_ms, SUM(unmatched) AS unmatched FROM league_sync_runs WHERE started_at >= ? GROUP BY provider', since);
+    const recent = await q('SELECT r.id, r.league_id, r.provider, r.trigger, r.started_at, r.finished_at, r.ok, r.error, r.summary, r.unmatched, l.name FROM league_sync_runs r LEFT JOIN leagues l ON l.id = r.league_id ORDER BY r.started_at DESC LIMIT 40');
+    const failing = await q('SELECT id, provider, provider_league_id, name, sync_status, last_error, last_ok_at, failures, next_sync_at FROM leagues WHERE sync_status=\'failed\' ORDER BY failures DESC LIMIT 40');
+    const misses = await q('SELECT provider, provider_player_id, name, position, nfl_team, count, last_seen FROM player_map_misses ORDER BY count DESC, last_seen DESC LIMIT 40');
+    const conns = await q('SELECT provider, status, COUNT(*) AS n FROM provider_connections GROUP BY provider, status');
+    const leagues = await q('SELECT id, provider, provider_league_id, name, season, num_teams, sync_status, last_ok_at, last_sync_at, next_sync_at, failures, last_error, user_team_id FROM leagues ORDER BY updated_at DESC LIMIT 60');
+    const rateLimited = recent.filter(r => /rate_limited/.test(String(r.error || ''))).length;
+    return json({ ok: true, contract: LEAGUE_CONTRACT, providers: leagueProviderReport(env), flags: Object.fromEntries(['LEAGUE_SYNC', 'SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC', 'PERSONALIZED_WAIVERS', 'PERSONALIZED_LINEUP', 'PERSONALIZED_TRADES', 'PERSONALIZED_STORIES'].map(k => [k, flagOn(env, k)])),
+                  tokenKey: !!env.LEAGUE_TOKEN_KEY, metrics: { byProvider, runs7d: runs.map(r => ({ ...r, successRate: r.n ? Math.round(100 * r.ok / r.n) : null, avgMs: r.avg_ms != null ? Math.round(r.avg_ms) : null })), rateLimited7d: rateLimited },
+                  recent, failing, misses, connections: conns, leagues, ran }, 200, c);
+  }
+
+  // Yahoo OAuth. The state is a signed token bound to the signed-in reader, so
+  // a callback cannot attach someone else's Yahoo account to this session.
+  if (path === '/api/oauth/yahoo/start' || path === '/api/oauth/yahoo/callback' || path === '/api/oauth/yahoo/disconnect') {
+    const email = await leagueSessionEmail(request, env);
+    if (!email) return path === '/api/oauth/yahoo/callback' ? Response.redirect(url.origin + '/my-league?yahoo=signin', 302) : leagueErr('not_signed_in', null, 401, c);
+    const rep = leagueProviderReport(env).yahoo;
+    if (path === '/api/oauth/yahoo/disconnect') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+      await leagueConnectionDelete(env, email, 'yahoo');
+      return json({ ok: true, removed: 'Yahoo tokens deleted. Your Yahoo leagues on Iron Tuna stay until you disconnect them, but they will no longer refresh.' }, 200, c);
+    }
+    if (!rep.enabled) return path === '/api/oauth/yahoo/callback' ? Response.redirect(url.origin + '/my-league?yahoo=off', 302) : leagueErr('provider_disabled', rep.reason, 503, c);
+    if (path === '/api/oauth/yahoo/start') {
+      const nonce = crypto.randomUUID();
+      const state = await makeToken(env.AUTH_SECRET, { t: 'yst', e: email, n: nonce, exp: Date.now() + 15 * 60000 });
+      const q = new URLSearchParams({ client_id: env.YAHOO_CLIENT_ID, redirect_uri: yahooRedirect(env, url.origin), response_type: 'code', scope: YAHOO_SCOPE, state });
+      return Response.redirect(YAHOO_AUTH + '?' + q.toString(), 302);
+    }
+    // callback
+    const st = await readToken(env.AUTH_SECRET, url.searchParams.get('state') || '');
+    if (!st || st.t !== 'yst' || st.e !== email || !(st.exp > Date.now())) return Response.redirect(url.origin + '/my-league?yahoo=state', 302);
+    const code = url.searchParams.get('code');
+    if (!code) return Response.redirect(url.origin + '/my-league?yahoo=denied', 302);
+    try {
+      const tok = await yahooTokenExchange(env, { grant_type: 'authorization_code', code, redirect_uri: yahooRedirect(env, url.origin) });
+      await yahooConnectionSave(env, email, tok, null);
+      return Response.redirect(url.origin + '/my-league?yahoo=connected', 302);
+    } catch (e) { return Response.redirect(url.origin + '/my-league?yahoo=failed&why=' + encodeURIComponent((e && e.code) || 'error'), 302); }
+  }
+
+  const email = await leagueSessionEmail(request, env);
+  if (!email) return leagueErr('not_signed_in', null, 401, c);
+  if (!(await leagueReady(env))) return leagueErr('no_db', null, 503, c);
+
+  if (path === '/api/leagues') {
+    const list = await leagueList(env, email);
+    const yahoo = await leagueConnectionRead(env, email, 'yahoo');
+    return json({ ok: true, contract: LEAGUE_CONTRACT, leagues: list.map(leaguePublic), defaultId: (list.find(l => l.isDefault) || list[0] || {}).id || null,
+                  connections: { yahoo: yahoo ? { status: yahoo.status, expiresAt: yahoo.expires_at } : null }, providers: leagueProviderReport(env) }, 200, c);
+  }
+  if (path === '/api/leagues/connect') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    if (await rl(env, request, 'lgconnect', 30, 600)) return leagueErr('rate_limited', null, 429, c);
+    const body = await readBody();
+    const pid = String(body.provider || '').toLowerCase();
+    const provider = LEAGUE_PROVIDERS[pid];
+    const rep = leagueProviderReport(env)[pid];
+    if (!provider || pid === 'manual') return leagueErr('unsupported_provider', 'Unknown provider', 400, c);
+    if (!rep.enabled) return leagueErr(provider.auth === 'unavailable' ? 'unsupported_provider' : 'provider_disabled', rep.reason, 503, c);
+    const ctx = await leagueWeekContext(env);
+    const conn = provider.auth === 'oauth2' ? { ...(await leagueConnectionRead(env, email, pid) || {}), email } : { email };
+    if (provider.auth === 'oauth2' && (!conn.access_enc || conn.status === 'disconnected')) return leagueErr('expired_authorization', null, 409, c);
+    try {
+      // Step 1: discover. Step 2 (leagueId present): import.
+      if (!body.leagueId) {
+        const d = await provider.discover(env, conn, { username: body.username, leagueId: body.lookupLeagueId, season: body.season || ctx.season });
+        const mine = await leagueList(env, email);
+        return json({ ok: true, step: 'leagues', provider: pid, user: d.user, season: body.season || ctx.season,
+                      leagues: d.leagues.map(l => ({ ...l, connected: mine.some(m => m.provider === pid && m.providerLeagueId === l.providerLeagueId) })) }, 200, c);
+      }
+      const lid = String(body.leagueId).slice(0, 80);
+      const { row, created } = await leagueCreateRow(env, email, pid, lid, body.name || null, body.season || ctx.season, { providerUserId: body.providerUserId || null });
+      const r = await leagueSync(env, row, 'connect');
+      if (!r.ok && created && /league_not_found|unsupported_provider/.test(String(r.error))) { await leagueDisconnect(env, email, row); return leagueErr(r.code || 'sync_failed', r.error, 404, c); }
+      const L = await leagueLoad(env, email, row.id);
+      return json({ ok: r.ok, step: 'done', created, sync: r, league: L ? leaguePublic(L) : null, needsTeam: !!(L && !L.userTeamId), teams: L ? L.teams : [] }, r.ok ? 200 : 502, c);
+    } catch (e) { return leagueErr((e && e.code) || 'sync_failed', (e && e.message) || 'failed', e && e.code === 'expired_authorization' ? 409 : e && e.code === 'league_not_found' || e && e.code === 'user_not_found' ? 404 : 502, c); }
+  }
+  if (path === '/api/leagues/manual') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    const body = await readBody();
+    let existing = null;
+    if (body.id) { existing = await leagueRow(env, email, String(body.id)); if (!existing || existing.provider !== 'manual') return leagueErr('league_not_found', null, 404, c); }
+    try {
+      const r = await leagueManualUpsert(env, email, body, existing);
+      const L = await leagueLoad(env, email, r.id);
+      return json({ ok: true, league: L ? leaguePublic(L) : null, unmatched: r.unmatched, unresolved: r.unresolved }, 200, c);
+    } catch (e) { return leagueErr((e && e.code) || 'manual_failed', (e && e.message) || 'failed', 400, c); }
+  }
+  const m = path.match(/^\/api\/leagues\/([A-Za-z0-9-]{8,64})(?:\/([a-z]+))?$/);
+  if (!m) return json({ ok: false, error: 'not_found' }, 404, c);
+  const id = m[1], action = m[2] || null;
+  const row = await leagueRow(env, email, id);
+  if (!row) return leagueErr('league_not_found', 'No such league on this account', 404, c);
+  if (!action) {
+    const L = await leagueLoad(env, email, id);
+    return json({ ok: true, contract: LEAGUE_CONTRACT, league: leaguePublic(L) }, 200, c);
+  }
+  if (action === 'sync') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    if (row.provider === 'manual') return json({ ok: true, manual: true, message: 'A manual league is edited, not synced.' }, 200, c);
+    if (row.last_sync_at && Date.now() - row.last_sync_at < LEAGUE_SYNC_MIN_GAP_MS && !url.searchParams.get('force')) return leagueErr('too_soon', null, 429, c);
+    const r = await leagueSync(env, row, 'user');
+    const L = await leagueLoad(env, email, id);
+    return json({ ok: r.ok, sync: r, message: r.ok ? null : (LEAGUE_ERRORS[r.code] || r.error), league: L ? leaguePublic(L) : null }, r.ok ? 200 : 502, c);
+  }
+  if (action === 'default') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    await leagueSetDefault(env, email, id);
+    return json({ ok: true, defaultId: id }, 200, c);
+  }
+  if (action === 'team') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    const body = await readBody();
+    const t = await env.LEADS_DB.prepare('SELECT team_id FROM league_teams WHERE league_id=? AND team_id=?').bind(id, String(body.teamId || '')).first();
+    if (!t) return json({ ok: false, error: 'no_such_team' }, 400, c);
+    await env.LEADS_DB.prepare('UPDATE leagues SET user_team_id=?, updated_at=? WHERE id=?').bind(t.team_id, Date.now(), id).run();
+    return json({ ok: true, userTeamId: t.team_id }, 200, c);
+  }
+  if (action === 'overrides') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, c);
+    const body = await readBody();
+    let cur = {}; try { cur = JSON.parse(row.overrides || '{}'); } catch (e) {}
+    const next = { __providerUserId: cur.__providerUserId };
+    if (body.clear) { /* back to the synced settings */ }
+    else {
+      const o = body.overrides && typeof body.overrides === 'object' ? body.overrides : body;
+      if (o.scoring && typeof o.scoring === 'object') { next.scoring = {}; for (const k of Object.keys(o.scoring)) if (k in SCORING_BASE || k in SCORING_KDEF) { const v = Number(o.scoring[k]); if (Number.isFinite(v)) next.scoring[k] = v; } }
+      if (o.extras && Number.isFinite(Number(o.extras.tePremium))) next.extras = { tePremium: Number(o.extras.tePremium) };
+      if (o.roster && typeof o.roster === 'object') { next.roster = {}; for (const k of Object.keys(o.roster)) if (k in leagueEmptyRoster() && k !== 'other') next.roster[k] = Math.max(0, Math.min(20, Math.floor(Number(o.roster[k]) || 0))); }
+      if (o.faab != null && o.faab !== '') next.faab = Math.max(0, Math.floor(Number(o.faab) || 0));
+    }
+    await env.LEADS_DB.prepare('UPDATE leagues SET overrides=?, updated_at=? WHERE id=?').bind(JSON.stringify(next), Date.now(), id).run();
+    const L = await leagueLoad(env, email, id);
+    return json({ ok: true, league: leaguePublic(L) }, 200, c);
+  }
+  if (action === 'disconnect') {
+    if (request.method !== 'POST' && request.method !== 'DELETE') return json({ error: 'Method not allowed' }, 405, c);
+    const r = await leagueDisconnect(env, email, row);
+    return json(r, 200, c);
+  }
+  // Everything below reads the model.
+  const L = await leagueLoad(env, email, id);
+  if (!L) return leagueErr('league_not_found', null, 404, c);
+  try {
+    if (action === 'board') {
+      if (!flagOn(env, 'PERSONALIZED_RANKINGS')) return leagueErr('provider_disabled', 'Personalised rankings are off', 404, c);
+      const thr = url.searchParams.get('through');
+      const out = await leagueBoard(env, L, String(url.searchParams.get('horizon') || 'week').toLowerCase(), thr && /^1[0-8]$/.test(thr) ? parseInt(thr, 10) : null);
+      const pos = String(url.searchParams.get('pos') || 'ALL').toUpperCase();
+      if (out.ok && pos !== 'ALL') out.players = out.players.filter(p => p.position === pos || (pos === 'FLEX' && ['RB', 'WR', 'TE'].includes(p.position)));
+      return json(out, out.ok ? 200 : 503, c);
+    }
+    if (action === 'availability') {
+      const names = String(url.searchParams.get('names') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 60);
+      const keys = String(url.searchParams.get('keys') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 60);
+      const items = names.map(n => ({ name: n })).concat(keys.map(k => ({ key: k })));
+      return json({ ok: true, contract: LEAGUE_CONTRACT, league: { id: L.id, name: L.name }, players: leagueAvailabilityLookup(L, items) }, 200, c);
+    }
+    if (action === 'advice') {
+      const mod = String(url.searchParams.get('module') || 'summary').toLowerCase();
+      const gate = { pickups: 'PERSONALIZED_WAIVERS', lineup: 'PERSONALIZED_LINEUP', matchup: 'PERSONALIZED_LINEUP', intel: 'PERSONALIZED_LINEUP', trades: 'PERSONALIZED_TRADES', playoffs: 'PERSONALIZED_LINEUP', summary: 'LEAGUE_SYNC' }[mod];
+      if (!gate) return json({ ok: false, error: 'unknown_module' }, 400, c);
+      if (!flagOn(env, gate)) return leagueErr('provider_disabled', 'That module is off', 404, c);
+      const out = mod === 'pickups' ? await leaguePickups(env, L, { limit: parseInt(url.searchParams.get('limit') || '20', 10) || 20 })
+        : mod === 'lineup' ? await leagueLineup(env, L) : mod === 'matchup' ? await leagueMatchup(env, L) : mod === 'intel' ? await leagueIntel(env, L)
+        : mod === 'trades' ? await leagueTrades(env, L, { limit: 10, minGain: url.searchParams.get('minGain') }) : mod === 'playoffs' ? await leaguePlayoffs(env, L) : await leagueSummary(env, L);
+      return json({ ...out, league: out.league || { id: L.id, name: L.name, provider: L.provider, label: L.label, sync: L.sync }, stale: L.sync.stale }, out.ok ? 200 : 503, c);
+    }
+  } catch (e) { return json({ ok: false, error: 'module_failed', detail: String((e && e.message) || e).slice(0, 200) }, 500, c); }
+  return json({ ok: false, error: 'not_found' }, 404, c);
+}
+// ══ /LEAGUE SYNC ═══════════════════════════════════════════════════════════
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -7344,6 +10474,18 @@ export default {
     // URL instead of splitting it across two.
     if (url.pathname === '/post-draft' || url.pathname === '/post-draft/') {
       return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+    }
+    // The WAGERS lane is retired. The page is gone, but /wagers and
+    // /in-season/wagers were linked from every footer on the site and indexed
+    // under both names, so they 301 to the hub rather than 404: the odds the
+    // lane read are still on Vegas Edge and Game Intel, one lane over.
+    if (/^\/(in-season\/)?wagers\/?$/.test(url.pathname)) {
+      return new Response(null, { status: 301, headers: { 'Location': IN_SEASON_HUB + (url.search || ''), 'Cache-Control': 'public, max-age=3600' } });
+    }
+    // Sync My League: /api/leagues/*, /api/oauth/*, /api/admin/league-sync.
+    if (url.pathname.startsWith('/api/leagues') || url.pathname.startsWith('/api/oauth/') || url.pathname === '/api/admin/league-sync') {
+      const lr = await leagueRoutes(request, env, url, ctx);
+      if (lr) return lr;
     }
     if (url.pathname === '/api/projections') {
       if (request.method !== 'GET') return new Response('method', { status: 405 });
@@ -7454,7 +10596,45 @@ export default {
       const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
       const slate = buildDfsSlate(site, sal.rows, board.ok ? board : null, {});
       slate.week = week; slate.salariesAsOf = sal.fetchedAt; slate.stacks = buildDfsStacks(slate, state);
+      if (flagOn(env, 'DFS_CONTENT')) {
+        const contest = DFS_CONTESTS[url.searchParams.get('contest')] ? url.searchParams.get('contest') : 'gpp';
+        const m = dfsMetrics(slate.players, contest);
+        slate.metrics = { contest: m.contest, label: m.label, note: m.note, sortBy: m.sortBy, ownershipBasis: m.ownershipBasis, medianPerK: m.medianPerK, contests: Object.fromEntries(Object.entries(DFS_CONTESTS).map(([k, v]) => [k, v.label])) };
+        slate.stackScores = dfsStackScores(slate.stacks);
+      }
       return json(slate, 200, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    // The newsroom: the public feed the homes read, the staff, one analyst,
+    // the Fantasy/Market blend, and the Vega/Brooks disagreements.
+    if (url.pathname === '/api/newsroom') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const out = await newsroomFeedPayload(env, url.searchParams.get('lens') === 'dfs' ? 'dfs' : 'weekly', parseInt(url.searchParams.get('limit') || '20', 10) || 20);
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=120' });
+    }
+    if (url.pathname === '/api/analysts' || url.pathname === '/api/analyst') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const out = url.pathname === '/api/analysts' ? await analystsPayload(env) : await analystPayload(env, String(url.searchParams.get('id') || '').replace(/[^a-z]/g, ''));
+      return json(out, out.ok ? 200 : 404, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    if (url.pathname === '/api/blend') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (!flagOn(env, 'MARKET_SLIDER')) return json({ ok: false, error: 'off' }, 404, c);
+      const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
+      const hz = String(url.searchParams.get('horizon') || 'week');
+      const board = await boardsPayload(env, { horizon: HORIZONS[hz] ? hz : 'week', position: url.searchParams.get('pos') || 'ALL', preset: SCORING_PRESETS[preset] ? preset : 'ppr',
+        through: /^1[0-8]$/.test(url.searchParams.get('through') || '') ? parseInt(url.searchParams.get('through'), 10) : null });
+      const w = url.searchParams.get('w');
+      const out = blendBoard(board, w == null ? 0.5 : Number(w));
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
+    }
+    if (url.pathname === '/api/disagreements') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      const out = await disagreementsPayload(env, String(url.searchParams.get('horizon') || 'week'));
+      return json(out, out.ok ? 200 : 503, { ...c, 'cache-control': 'public, max-age=300' });
     }
     // The desk: the week's pieces, and one piece.
     if (url.pathname === '/api/content' || url.pathname === '/api/content/piece') {
@@ -7466,7 +10646,7 @@ export default {
       const week = wk && /^\d{1,2}$/.test(wk) ? parseInt(wk, 10) : null;
       if (url.pathname === '/api/content/piece') {
         const kind = String(url.searchParams.get('kind') || '').replace(/[^a-z-]/g, '');
-        if (!CONTENT_KINDS[kind]) return json({ ok: false, error: 'unknown_kind' }, 404, c);
+        if (!CONTENT_KINDS[kind] && !LEGACY_CONTENT[kind]) return json({ ok: false, error: 'unknown_kind' }, 404, c);
         const out = await contentPiecePayload(env, kind, season, week);
         return json(out, out.ok ? 200 : 404, { ...c, 'cache-control': 'public, max-age=300' });
       }
@@ -7800,31 +10980,10 @@ export default {
       await saveContact(env, { email: email, phone: String(body.phone || '').slice(0, 40), source: body.source || 'cheatsheet', type: body.type || 'lead', ref: body.code || '', path: '' });
       return json({ ok: true, stored: !!env.LEAD_WEBHOOK || !!env.LEADS_DB }, 200, c);
     }
-    // "Tell me when it opens." One address, one topic, one send — the waiting
-    // list behind the prediction-markets panel on /in-season and /wagers.
-    //
-    // It writes a CONTACT row rather than a table of its own: the leads export
-    // and the admin board already read that table, and a second store would mean
-    // a second place to look when the day comes to send the one email. type is
-    // the topic, so a query can pick exactly the people who asked about markets
-    // and nobody else. Nothing here subscribes anyone to anything: the copy on
-    // both forms promises one email and this endpoint is what has to keep it.
-    if (url.pathname === '/api/notify') {
-      const c = corsHeaders(request.headers.get('Origin'));
-      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
-      if (request.method !== 'POST') return json({ ok: false }, 405, c);
-      if (await rl(env, request, 'notify', 20, 600)) return json({ ok: false, error: 'rate' }, 429, c);
-      let b = {}; try { b = await request.json(); } catch (e) {}
-      if (b.company) return json({ ok: true }, 200, c); // honeypot, as /api/contact
-      const email = String(b.email || '').trim().toLowerCase();
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'invalid_email' }, 400, c);
-      // A closed list of topics, so the field cannot become free text that has to
-      // be cleaned up before anyone can query it.
-      const TOPICS = new Set(['markets']);
-      const topic = TOPICS.has(String(b.topic || '')) ? String(b.topic) : 'markets';
-      await saveContact(env, { email, source: 'in-season', type: 'notify:' + topic, ref: '', path: String(b.path || '').slice(0, 120) });
-      return json({ ok: true, topic, stored: !!env.LEADS_DB }, 200, c);
-    }
+    // /api/notify — the prediction-markets waiting list — is GONE with the panel
+    // it sat behind. The notify:markets CONTACT rows it already wrote stay in
+    // the table and the leads export still reads them: the endpoint stopped
+    // taking new addresses, it did not throw away the ones it has.
     if (url.pathname === '/api/contact') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
@@ -8375,6 +11534,15 @@ export default {
     // produces one piece now if it is due and ready; &force=1 produces it
     // regardless (for a look at the pipeline before the season); ?depth=1
     // refreshes the depth charts; ?due=1 reports every kind's due/ready state.
+    if (url.pathname === '/api/admin/newsroom') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
+      let b = {};
+      if (request.method === 'POST') { try { b = await request.json(); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); } }
+      else b = { action: url.searchParams.get('action') || 'status', kind: url.searchParams.get('kind'), week: url.searchParams.get('week') };
+      const r = await newsroomAdmin(env, String(b.action || 'status').replace(/[^a-z]/g, ''), b);
+      return json(r, r.ok ? 200 : 400, c);
+    }
     if (url.pathname === '/api/admin/content') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
@@ -8881,6 +12049,9 @@ export default {
       // slug back off the path and fetches its own body. The stories turn over
       // every three hours, so they are rendered rather than built as pages.
       else if (/^\/lead(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/lead', url).toString(), request);
+      // /analysts is the staff page and the AI disclosure; /analysts/<id> is
+      // one analyst's page, one shell reading the id off the path.
+      else if (/^\/analysts\/[a-z]+\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/analyst', url).toString(), request);
       // /player and /player/<slug> both serve the one player-card shell, which
       // reads the slug back off the path and assembles the card in the browser
       // from /player-search.js and /it-league.js. Same shape as /lead above and
@@ -8892,11 +12063,11 @@ export default {
       // root because the chrome and SEO generators walk the root. Extensionless
       // target, as above. The gate below sees the SAME name, so a section page
       // cannot be reached ungated by adding the prefix.
-      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);
       }
-      else if (/^\/in-season\/(fantasy|dfs|wagers|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
+      else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)) {
         __assetReq = new Request(new URL(IN_SEASON_HUB, url).toString(), request);
       }
       // /in-season IS a page now (in-season.html), so it needs no alias here —
@@ -8988,7 +12159,7 @@ export default {
     // The hourly tick is the data clock (HANDOFF §60): JOB_SCHEDULE, in New
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
-    if (event.cron === '0 * * * *') {
+    if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
         .catch(e => console.error('tick failed:', e && e.message)));
@@ -9000,7 +12171,13 @@ export default {
     // snapshot rows and the ROS history.
     if (event.cron === '0 11 * * *') { console.log('legacy 11:00 trigger ignored; the hourly tick carries the schedule'); return; }
     const slots = slotsByCron[event.cron];
-    ctx.waitUntil(runXAutoPost(env, slots ? { slots } : undefined).catch(e => console.error('x-auto-post failed:', e && e.message)));
+    // The auction, snake and best-ball threads are draft-season content. In
+    // the regular season they do not post unless DRAFT_SEASON_SOCIAL=1 says
+    // so; the crons that carried them are out of wrangler.jsonc, and this is
+    // the guard for the day someone puts them back (see LEGACY_CONTENT).
+    ctx.waitUntil(draftSocialAllowed(env)
+      .then(a => a.ok ? runXAutoPost(env, slots ? { slots } : undefined) : (console.log('draft-season social skipped: ' + a.reason), null))
+      .catch(e => console.error('x-auto-post failed:', e && e.message)));
   },
 };
 
