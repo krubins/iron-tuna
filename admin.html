@@ -217,6 +217,23 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     <h2 style="margin-top:14px">Breaking-news events (last 20)</h2>
     <div class="tblwrap"><table id="nrEvents"></table></div>
   </div>
+  <div class="card" id="lsCard">
+    <h2>League sync <span class="badge" id="lsBadge"></span></h2>
+    <div class="field" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn" id="lsRun" type="button">Run the sync job now</button>
+      <button class="btn" id="lsReload" type="button">Reload</button>
+      <span class="meta" id="lsMeta"></span>
+    </div>
+    <div class="note">Sync My League (docs/league-sync.md). Providers, connected leagues, the last runs, the leagues that are failing, and the players no provider id could be mapped to. Tokens are never shown here or anywhere.</div>
+    <div class="result" id="lsResult"><div class="msg" id="lsMsg"></div></div>
+    <div class="tblwrap"><table id="lsProviders"></table></div>
+    <h2 style="margin-top:14px">Connected leagues</h2>
+    <div class="tblwrap"><table id="lsLeagues"></table></div>
+    <h2 style="margin-top:14px">Recent sync runs</h2>
+    <div class="tblwrap"><table id="lsRuns"></table></div>
+    <h2 style="margin-top:14px">Unmatched players</h2>
+    <div class="tblwrap"><table id="lsMisses"></table></div>
+  </div>
   <div class="card" id="hlthDesk">
     <h2>Editorial</h2>
     <div class="tblwrap"><table id="hlthEditorial"></table></div>
@@ -795,11 +812,39 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   $('nrResume').addEventListener('click', function(){ nrAction('resume'); });
   $('nrScan').addEventListener('click', function(){ nrAction('scan'); });
   $('nrGrade').addEventListener('click', function(){ nrAction('grade'); });
+  // ── league sync ──────────────────────────────────────────────────────────
+  function lsLoad(q){
+    var key = getKey(); if (!key) return;
+    $('lsMeta').textContent = 'Loading…';
+    fetch('/api/admin/league-sync?key=' + encodeURIComponent(key) + (q || ''))
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if (j && j.ok) lsRender(j); else $('lsMeta').textContent = 'League sync did not answer: ' + ((j && j.error) || 'unknown'); })
+      .catch(function(e){ $('lsMeta').textContent = 'Network error: ' + ((e && e.message) || ''); });
+  }
+  function lsRender(j){
+    var when = function(ts){ return ts ? new Date(ts).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'; };
+    var total = (j.metrics.byProvider || []).reduce(function(n, r){ return n + (r.n || 0); }, 0);
+    var failing = (j.failing || []).length;
+    $('lsBadge').textContent = total + ' connected' + (failing ? ' · ' + failing + ' failing' : '');
+    $('lsBadge').style.background = failing ? '#fde8e8' : '#e6f4ee'; $('lsBadge').style.color = failing ? '#9b1c1c' : '#0e6b4a';
+    $('lsMeta').textContent = 'Token key ' + (j.tokenKey ? 'set' : 'NOT SET (OAuth providers cannot connect)') + ' · rate-limit errors, 7d: ' + (j.metrics.rateLimited7d || 0);
+    var runs = {}; (j.metrics.runs7d || []).forEach(function(r){ runs[r.provider] = r; });
+    var by = {}; (j.metrics.byProvider || []).forEach(function(r){ by[r.provider] = r; });
+    $('lsProviders').innerHTML = '<tr><th>Provider</th><th>Enabled</th><th>Why not</th><th>Connected</th><th>OK / failed</th><th>Success rate 7d</th><th>Avg sync</th><th>Unmatched 7d</th><th>Terms</th></tr>' + Object.keys(j.providers).map(function(k){ var p = j.providers[k], b = by[k] || {}, r = runs[k] || {}; return '<tr><td><b>' + esc(p.label) + '</b><br><span style="color:var(--muted)">' + esc(p.auth) + '</span></td><td>' + (p.enabled ? pill('on', 'ok') : pill('off', 'bad')) + '</td><td>' + esc(p.reason || '') + '</td><td>' + esc(b.n || 0) + '</td><td>' + esc(b.ok || 0) + ' / ' + esc(b.failed || 0) + '</td><td>' + (r.successRate != null ? esc(r.successRate) + '% of ' + esc(r.n) : '—') + '</td><td>' + (r.avgMs != null ? esc(r.avgMs) + ' ms' : '—') + '</td><td>' + esc(r.unmatched || 0) + '</td><td style="max-width:320px;color:var(--muted)">' + esc(p.terms || '') + '</td></tr>'; }).join('') +
+      '<tr><td colspan="9" style="color:var(--muted)">Flags: ' + Object.keys(j.flags).map(function(k){ return 'FLAG_' + esc(k) + '=' + (j.flags[k] ? 'on' : 'off'); }).join(' · ') + '</td></tr>';
+    $('lsLeagues').innerHTML = '<tr><th>League</th><th>Provider</th><th>Provider id</th><th>Season / teams</th><th>Status</th><th>Last OK</th><th>Next</th><th>Failures</th><th>Error</th><th></th></tr>' + ((j.leagues || []).length ? j.leagues.map(function(l){ return '<tr><td><b>' + esc(l.name || '') + '</b><br><span style="color:var(--muted)">' + esc(l.id) + '</span></td><td>' + esc(l.provider) + '</td><td>' + esc(l.provider_league_id) + '</td><td>' + esc(l.season || '') + ' / ' + esc(l.num_teams || '') + '</td><td>' + (l.sync_status === 'failed' ? pill('failed', 'bad') : pill(l.sync_status || 'never', l.sync_status === 'ok' || l.sync_status === 'manual' ? 'ok' : '')) + '</td><td>' + when(l.last_ok_at) + '</td><td>' + when(l.next_sync_at) + '</td><td>' + esc(l.failures || 0) + '</td><td style="max-width:260px">' + esc(l.last_error || '') + '</td><td>' + (l.provider !== 'manual' ? '<button class="btn" type="button" data-resync="' + esc(l.id) + '">Resync</button>' : '') + '</td></tr>'; }).join('') : '<tr><td colspan="10" style="color:var(--muted)">No league connected yet.</td></tr>');
+    $('lsRuns').innerHTML = '<tr><th>When</th><th>League</th><th>Provider</th><th>Trigger</th><th>Result</th><th>Duration</th><th>Unmatched</th><th>Summary</th></tr>' + ((j.recent || []).length ? j.recent.map(function(r){ return '<tr><td>' + when(r.started_at) + '</td><td>' + esc(r.name || r.league_id) + '</td><td>' + esc(r.provider) + '</td><td>' + esc(r.trigger || '') + '</td><td>' + (r.ok ? pill('ok', 'ok') : pill('failed', 'bad') + ' ' + esc(r.error || '')) + '</td><td>' + (r.finished_at && r.started_at ? esc(r.finished_at - r.started_at) + ' ms' : '—') + '</td><td>' + esc(r.unmatched || 0) + '</td><td style="color:var(--muted);max-width:300px">' + esc(r.summary || '') + '</td></tr>'; }).join('') : '<tr><td colspan="8" style="color:var(--muted)">No runs yet.</td></tr>');
+    $('lsMisses').innerHTML = '<tr><th>Provider</th><th>Provider id</th><th>Name</th><th>Pos</th><th>Team</th><th>Seen</th><th>Last</th></tr>' + ((j.misses || []).length ? j.misses.map(function(m){ return '<tr><td>' + esc(m.provider) + '</td><td>' + esc(m.provider_player_id) + '</td><td><b>' + esc(m.name || '') + '</b></td><td>' + esc(m.position || '') + '</td><td>' + esc(m.nfl_team || '') + '</td><td>' + esc(m.count) + '</td><td>' + when(m.last_seen) + '</td></tr>'; }).join('') : '<tr><td colspan="7" style="color:var(--muted)">Every rostered player mapped to the board.</td></tr>');
+    if (j.ran) hlthMsg('lsResult', j.ran.ok === false ? 'bad' : 'ok', '<b>Ran.</b> ' + esc(JSON.stringify(j.ran).slice(0, 400)));
+  }
+  $('lsRun').addEventListener('click', function(){ lsLoad('&run=1'); });
+  $('lsReload').addEventListener('click', function(){ lsLoad(''); });
+  $('lsLeagues').addEventListener('click', function(ev){ var b = ev.target.closest('[data-resync]'); if (b) lsLoad('&resync=' + encodeURIComponent(b.getAttribute('data-resync'))); });
   function hlthLoad(q){
     var key = getKey(); if (!key) return;
     fetch('/api/admin/health?key=' + encodeURIComponent(key) + (q || ''))
       .then(function(r){ return r.json(); })
-      .then(function(j){ if (j && j.ok) hlthRender(j); else $('hlthMeta').textContent = 'The health board did not answer: ' + ((j && j.error) || 'unknown'); })
+      .then(function(j){ if (j && j.ok) hlthRender(j); else $('hlthMeta').textContent = 'The health board did not answer: ' + ((j && j.error) || 'unknown'); lsLoad(''); })
       .catch(function(e){ $('hlthMeta').textContent = 'Network error: ' + ((e && e.message) || ''); });
   }
   function hlthMsg(id, kind, html){ $(id).className = 'result ' + kind; $(id).querySelector('.msg').innerHTML = html; }
