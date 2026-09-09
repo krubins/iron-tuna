@@ -8375,18 +8375,35 @@ on hover, and each position has a page of its own.
 
 | URL | What it is |
 |---|---|
-| `/weekly-rankings` | this week, every position pooled |
 | `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`) |
-| `/season-long-rankings` | rest of season, every position pooled |
 | `/season-long-<pos>-rankings` | rest of season, one position |
 | `/stats` | what has actually been played |
 | `/hidden-value` | where the two boards disagree most |
 | `/previews` | every game this week, off the market |
 
-That is sixteen rankings pages and three lane pages, nineteen in all. Every one
+That is fourteen rankings pages and three lane pages, seventeen in all. Every one
 of them is in `POST_DRAFT_PAGES` in `_worker.js`, so the whole section is gated
 with the rest of the in-season tools and stays out of the sitemap while the gate
 is shut.
+
+**There is no "Overall" board, and there was one for about an hour.** The first
+cut shipped `/weekly-rankings` and `/season-long-rankings` as pooled boards
+across every position; Ken had them removed the same evening, and the reason is
+worth keeping: a ranking that sorts a quarterback's projection against a
+kicker's is not a decision anybody makes. No lineup question is ever "start the
+QB or the K". Every board here is within one position, or the one pooled board
+that IS a lineup slot (FLEX) — which is the only comparison a ranking can
+honestly make.
+
+A category therefore has no landing page of its own. The ribbon's trigger, the
+footer links and the cross-links all point at the category's FIRST position
+(`/weekly-qb-rankings`, `/season-long-qb-rankings`), computed in
+`build-ranks.mjs` from `POSITIONS[0]` rather than written down, so reordering
+the list moves them. That destination matters most on a phone, where the hover
+menus are off and a tap on the trigger is the only way in; the page it lands on
+carries the chip row to every other position. `tools/test-ranks.mjs` asserts the
+two pooled files are GONE rather than merely unlinked, and that no page anywhere
+on the site still links them.
 
 ### Every board is Fantasy Consensus vs. Betting Odds
 

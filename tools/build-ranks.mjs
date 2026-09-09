@@ -11,7 +11,7 @@
 // chrome tool gives it a header and a footer, the SEO tool tags it).
 //
 // WHY A GENERATOR. The ribbon is one link set that has to be identical on
-// nineteen pages, and the two menus under it drop down to fourteen pages that
+// seventeen pages, and the two menus under it drop down to fourteen pages that
 // differ only by a position and a horizon. Hand-writing either is how the site's
 // nav drifted into ten variants before build-chrome.mjs existed; the same
 // sentinel discipline is used here, so this tool finds and replaces only its own
@@ -20,6 +20,8 @@
 // WHAT IT OWNS
 //   <!--ranks:ribbon--> … <!--/ranks:ribbon-->   the section ribbon, on every
 //                                                page that carries the sentinel
+//   <!--ranks:chips--> … <!--/ranks:chips-->     the position chip row, on every
+//                                                rankings page
 //   /* ranks:css */ … /* /ranks:css */           the ribbon's stylesheet, in
 //                                                site.css AND in front.html's
 //                                                inline <style> (front.html is
@@ -59,21 +61,32 @@ const POSITIONS = [
 // The two rankings categories. `horizon` is the /api/boards horizon; `weeks` says
 // whether a row can be expanded into the weeks ahead — only the season-long
 // board can, because "this week" is one week and there is nothing to open.
+//
+// THERE IS NO "OVERALL" BOARD, and there was one until 2026-09-09. A pooled
+// ranking across positions is a number nobody can act on: it sorts a
+// quarterback's projection against a kicker's, and no lineup decision is ever
+// "start the QB or the K". Every board here is within one position (or the one
+// pooled board that IS a lineup slot, FLEX), which is the only comparison a
+// ranking can honestly make. So a category has no landing page of its own —
+// its destination is its FIRST position, computed below rather than written
+// down, so reordering POSITIONS moves it and nothing goes stale.
 const CATEGORIES = [
   {
     id: 'week', horizon: 'week', slug: 'weekly', menu: 'This Week&rsquo;s Rankings',
-    hub: '/weekly-rankings', hubFile: 'weekly-rankings.html', weeks: false,
-    noun: 'this week', title: 'Week', h1: 'This week',
+    weeks: false, noun: 'this week', title: 'Week', h1: 'This week',
   },
   {
     id: 'season', horizon: 'ros', slug: 'season-long', menu: 'Season Long Rankings',
-    hub: '/season-long-rankings', hubFile: 'season-long-rankings.html', weeks: true,
-    noun: 'the rest of the season', title: 'Rest of season', h1: 'Rest of season',
+    weeks: true, noun: 'the rest of the season', title: 'Rest of season', h1: 'Rest of season',
   },
 ];
 
 const pageFile = (cat, pos) => cat.slug + '-' + pos.slug + '-rankings.html';
 const pageHref = (cat, pos) => '/' + cat.slug + '-' + pos.slug + '-rankings';
+// Where the ribbon's trigger and every "see the rankings" link points: the first
+// position in the menu. On a phone, where the menus are off, this is the page a
+// tap lands on — and it carries the chip row to every other position.
+const catHref = (cat) => pageHref(cat, POSITIONS[0]);
 
 // ── the ribbon ───────────────────────────────────────────────────────────────
 // Five destinations. Two of them carry every position under them, which is the
@@ -82,18 +95,16 @@ const pageHref = (cat, pos) => '/' + cat.slug + '-' + pos.slug + '-rankings';
 //
 // The menus open on HOVER and on FOCUS, in CSS, with no script — the same
 // mechanism the header's own dropdowns use (site.css, .nav-dd). On a phone a
-// hover menu is unreachable, so the trigger is a real link to the category's hub
-// page and the hub lists every position as a chip; the same chip row is on every
-// position page, so the menu is a shortcut rather than the only way through.
+// hover menu is unreachable, so the trigger is a real link to the category's
+// first position page, and every position page carries a chip row reaching all
+// the others — so the menu is a shortcut, never the only way through.
 const RIBBON_OPEN = '<!--ranks:ribbon-->', RIBBON_CLOSE = '<!--/ranks:ribbon-->';
 
 function menuHtml(cat) {
-  const kids = [`<a href="${cat.hub}">Overall</a>`]
-    .concat(POSITIONS.map((p) => `<a href="${pageHref(cat, p)}">${p.label}</a>`))
-    .join('');
+  const kids = POSITIONS.map((p) => `<a href="${pageHref(cat, p)}">${p.label}</a>`).join('');
   return [
     '    <span class="rkr-item rkr-has-menu">',
-    `      <a class="rkr-link" href="${cat.hub}">${cat.menu}</a>`,
+    `      <a class="rkr-link" href="${catHref(cat)}">${cat.menu}</a>`,
     `      <span class="rkr-menu" role="group" aria-label="${cat.menu.replace(/&rsquo;/g, "’")} by position">${kids}</span>`,
     '    </span>',
   ].join('\n');
@@ -190,12 +201,14 @@ const RIBBON_CSS = `${CSS_OPEN}
 }
 .rk-ribbon .rkr-menu a[aria-current="page"] { color: var(--rkr-brand); font-weight: 800 }
 /* A hover menu is unreachable on touch, so below the desktop breakpoint the
-   trigger is simply a link to the category's hub — which lists every position as
-   a chip, as does every position page. Nothing is lost; the menu was a shortcut. */
+   trigger is simply a link to the category's first position page, which lists
+   every position as a chip, as does every other position page. Nothing is lost;
+   the menu was a shortcut. */
 @media (max-width: 860px) {
   .rk-ribbon .rkr-menu { display: none }
   /* And with the menu gone, so is the caret: an arrow that opens nothing is a
-     promise the band cannot keep. The trigger is a plain link to the hub. */
+     promise the band cannot keep. The trigger is a plain link to the first
+     position page, which reaches every other one by chip. */
   .rk-ribbon .rkr-has-menu > .rkr-link::after { content: none }
   .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 11.5px; letter-spacing: .05em }
   .rk-ribbon-in {
@@ -210,35 +223,41 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 // The chip row: every position in this category, on every page in it. This is
 // the touch path to a position page and the desktop path between two of them.
+//
+// SENTINEL-WRAPPED, like the ribbon, and for a reason learned the hard way: the
+// first cut wrote this row once at scaffold time and never looked at it again,
+// so when the pooled "Overall" board was retired every one of the fourteen
+// pages kept an Overall chip pointing at a page that no longer existed. A row
+// built from POSITIONS has to be REBUILT from POSITIONS, or it is not generated
+// at all — it is just a copy that was right once.
+const CHIPS_OPEN = '<!--ranks:chips-->', CHIPS_CLOSE = '<!--/ranks:chips-->';
 function chipsHtml(cat, currentSlug) {
   const one = (href, label, on) =>
     `<a class="rkc-chip${on ? ' on' : ''}" href="${href}"${on ? ' aria-current="page"' : ''}>${label}</a>`;
-  return ['<nav class="rk-chips" aria-label="Position">',
-    '  ' + one(cat.hub, 'Overall', currentSlug === null),
+  return [CHIPS_OPEN,
+    '<nav class="rk-chips" aria-label="Position">',
     ...POSITIONS.map((p) => '  ' + one(pageHref(cat, p), p.short, currentSlug === p.slug)),
-    '</nav>'].join('\n');
+    '</nav>',
+    CHIPS_CLOSE].join('\n');
 }
 
 function titleFor(cat, pos) {
-  if (!pos) return cat.id === 'week' ? 'This Week’s Fantasy Football Rankings' : 'Rest of Season Fantasy Football Rankings';
   return (cat.id === 'week' ? 'This Week’s ' : 'Rest of Season ') + pos.short + ' Rankings';
 }
 
 function dekFor(cat, pos) {
-  const who = pos ? (pos.key === 'FLEX' ? 'every running back, receiver and tight end on one pooled board' : 'every ' + pos.long.toLowerCase()) : 'every position';
+  const who = pos.key === 'FLEX' ? 'every running back, receiver and tight end on one pooled board' : 'every ' + pos.long.toLowerCase();
   return cat.id === 'week'
     ? `What the fantasy consensus projects for ${who} this week, beside what the betting market implies, and the gap between the two.`
     : `What the fantasy consensus projects for ${who} across the rest of the season, beside what the betting market implies — with every remaining week openable on any row.`;
 }
 
 function pageHtml(cat, pos) {
-  const href = pos ? pageHref(cat, pos) : cat.hub;
+  const href = pageHref(cat, pos);
   const title = titleFor(cat, pos);
   const dek = dekFor(cat, pos);
-  const posKey = pos ? pos.key : 'ALL';
-  const h1 = pos
-    ? (cat.id === 'week' ? 'This week’s ' : 'Rest-of-season ') + pos.short + ' rankings'
-    : (cat.id === 'week' ? 'This week’s rankings' : 'Rest-of-season rankings');
+  const posKey = pos.key;
+  const h1 = (cat.id === 'week' ? 'This week’s ' : 'Rest-of-season ') + pos.short + ' rankings';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -291,7 +310,7 @@ ${ribbonHtml(href)}
 <p class="is-lede">${dek}</p>
 <div class="its-strip" data-season-strip></div>
 
-${chipsHtml(cat, pos ? pos.slug : null)}
+${chipsHtml(cat, pos.slug)}
 
 <div class="rk-board"
      data-rk-board
@@ -329,6 +348,20 @@ ${chipsHtml(cat, pos ? pos.slug : null)}
 const changed = [];
 const created = [];
 
+function putChips(html, cat, currentSlug) {
+  const block = chipsHtml(cat, currentSlug);
+  if (html.includes(CHIPS_OPEN)) {
+    return html.replace(
+      new RegExp(CHIPS_OPEN + '[\\s\\S]*?' + CHIPS_CLOSE.replace(/\//g, '\\/')),
+      () => block,
+    );
+  }
+  // First run on a page scaffolded before the sentinels existed: swallow the
+  // hand-frozen row it is carrying.
+  if (!/<nav class="rk-chips"/.test(html)) return html;
+  return html.replace(/<nav class="rk-chips"[\s\S]*?<\/nav>/, () => block);
+}
+
 function putRibbon(html, current) {
   const block = ribbonHtml(current);
   if (!html.includes(RIBBON_OPEN)) return html;
@@ -354,7 +387,6 @@ function write(file, next, before) {
 //    because build-chrome.mjs and build-seo.mjs own regions of the same files.
 const wanted = [];
 for (const cat of CATEGORIES) {
-  wanted.push({ file: cat.hubFile, cat, pos: null });
   for (const pos of POSITIONS) wanted.push({ file: pageFile(cat, pos), cat, pos });
 }
 
@@ -366,7 +398,8 @@ for (const w of wanted) {
     continue;
   }
   const before = fs.readFileSync(full, 'utf8');
-  write(w.file, putRibbon(before, w.pos ? pageHref(w.cat, w.pos) : w.cat.hub), before);
+  const next = putChips(putRibbon(before, pageHref(w.cat, w.pos)), w.cat, w.pos.slug);
+  write(w.file, next, before);
 }
 
 // 2. the ribbon on every other page that asks for it, and the CSS in the two

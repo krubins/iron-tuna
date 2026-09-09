@@ -660,12 +660,14 @@ footer.site a:hover { color: var(--text) }
 }
 .rk-ribbon .rkr-menu a[aria-current="page"] { color: var(--rkr-brand); font-weight: 800 }
 /* A hover menu is unreachable on touch, so below the desktop breakpoint the
-   trigger is simply a link to the category's hub — which lists every position as
-   a chip, as does every position page. Nothing is lost; the menu was a shortcut. */
+   trigger is simply a link to the category's first position page, which lists
+   every position as a chip, as does every other position page. Nothing is lost;
+   the menu was a shortcut. */
 @media (max-width: 860px) {
   .rk-ribbon .rkr-menu { display: none }
   /* And with the menu gone, so is the caret: an arrow that opens nothing is a
-     promise the band cannot keep. The trigger is a plain link to the hub. */
+     promise the band cannot keep. The trigger is a plain link to the first
+     position page, which reaches every other one by chip. */
   .rk-ribbon .rkr-has-menu > .rkr-link::after { content: none }
   .rk-ribbon .rkr-link { padding: 12px 10px; font-size: 11.5px; letter-spacing: .05em }
   .rk-ribbon-in {

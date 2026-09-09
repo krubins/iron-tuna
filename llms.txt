@@ -24,8 +24,9 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 - Readers on a slate the desk has not imported can price their own salary export from the contest lobby. The file is read in the browser and stored nowhere on the site.
 - A pick'em board for Underdog, PrizePicks and Sleeper, showing where the model leans off a posted stat line.
 
-### Rankings — https://irontuna.com/weekly-rankings and https://irontuna.com/season-long-rankings
-- Two boards, each broken out into a page per position (QB, RB, WR, TE, FLEX, K, DST): `/weekly-<pos>-rankings` for the week ahead and `/season-long-<pos>-rankings` for the rest of the season.
+### Rankings — https://irontuna.com/weekly-qb-rankings and https://irontuna.com/season-long-qb-rankings
+- Two boards, each published as a page per position (QB, RB, WR, TE, FLEX, K, DST): `/weekly-<pos>-rankings` for the week ahead and `/season-long-<pos>-rankings` for the rest of the season.
+- **There is no pooled "overall" board on purpose.** A ranking that sorts a quarterback's projection against a kicker's is not a decision anybody makes; every board here is within one position, or the one pooled board that is itself a lineup slot (FLEX).
 - Every row prints the same player twice — **Fantasy Consensus** (the projection consensus at the chosen scoring, nudged by live usage once three games have earned it, with no odds in it) and **Betting Odds** (the same player priced off the sportsbook) — with the gap between them in points and in rank slots.
 - The odds side always says what it is built from: **props** is a quoted player prop, **gamelines** is the posted game line's scoring environment applied to his line, **ratings** is a fixture no book has posted yet, projected from fitted team ratings and graded low.
 - On the season-long boards any row opens into every remaining week: the opponent, both columns, and Iron Tuna's blend, week by week to the end of the season.
@@ -80,8 +81,8 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - DFS: https://irontuna.com/dfs
 - My League: https://irontuna.com/my-league
 - Weekly rankings: https://irontuna.com/rankings
-- This week's rankings, by position: https://irontuna.com/weekly-rankings
-- Season long rankings, by position: https://irontuna.com/season-long-rankings
+- This week's rankings, by position: https://irontuna.com/weekly-qb-rankings (also rb, wr, te, flex, k, dst)
+- Season long rankings, by position: https://irontuna.com/season-long-qb-rankings (also rb, wr, te, flex, k, dst)
 - Stats (what has actually been played): https://irontuna.com/stats
 - Hidden Value (widest market-vs-consensus gaps): https://irontuna.com/hidden-value
 - Game previews: https://irontuna.com/previews

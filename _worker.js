@@ -82,9 +82,9 @@ async function rl(env, request, bucket, max, ttlSec) {
 const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/rankings', '/vegas-edge',
   '/what-they-arent-telling-you', '/game-intel', '/waivers', '/dfs', '/my-league', '/player-intel', '/desk',
   '/fantasy', '/stats', '/hidden-value', '/previews',
-  '/weekly-rankings', '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
+  '/weekly-qb-rankings', '/weekly-rb-rankings', '/weekly-wr-rankings',
   '/weekly-te-rankings', '/weekly-flex-rankings', '/weekly-k-rankings', '/weekly-dst-rankings',
-  '/season-long-rankings', '/season-long-qb-rankings', '/season-long-rb-rankings',
+  '/season-long-qb-rankings', '/season-long-rb-rankings',
   '/season-long-wr-rankings', '/season-long-te-rankings', '/season-long-flex-rankings',
   '/season-long-k-rankings', '/season-long-dst-rankings']);
 // The HUB is never in that set: it is the page a closed route serves in place of

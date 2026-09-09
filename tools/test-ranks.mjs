@@ -44,25 +44,35 @@ const CATS = [
 ];
 const LANES = ['stats.html', 'hidden-value.html', 'previews.html'];
 const pageFile = (c, p) => `${c.slug}-${p}-rankings.html`;
-const hubFile = (c) => `${c.slug}-rankings.html`;
-const allBoards = CATS.flatMap((c) => [hubFile(c), ...POSITIONS.map((p) => pageFile(c, p))]);
+const pageHref = (c, p) => `/${c.slug}-${p}-rankings`;
+const allBoards = CATS.flatMap((c) => POSITIONS.map((p) => pageFile(c, p)));
+// A category has no landing page: its destination is its first position, and
+// that is what the ribbon's trigger and every "see the rankings" link point at.
+const catHref = (c) => pageHref(c, POSITIONS[0]);
+// The pooled boards that were retired on 2026-09-09, asserted GONE rather than
+// merely unlinked — a ranking that sorts a quarterback against a kicker is not
+// a decision anybody makes, and leaving the files behind is how one comes back.
+const RETIRED = CATS.map((c) => `${c.slug}-rankings.html`);
 
 // ── the pages exist and ask for the right board ──────────────────────────────
 console.log('\nevery position in the menu has a page of its own');
 {
   const missing = allBoards.filter((f) => !fs.existsSync(path.join(ROOT, f)));
-  ok('all sixteen rankings pages exist', missing.length === 0, missing.join(', '));
+  ok('all fourteen rankings pages exist', missing.length === 0, missing.join(', '));
+
+  const back = RETIRED.filter((f) => fs.existsSync(path.join(ROOT, f)));
+  ok('and the pooled "overall" boards are really gone', back.length === 0, back.join(', '));
 
   const wrong = [];
   for (const c of CATS) {
-    for (const p of [null, ...POSITIONS]) {
-      const f = p ? pageFile(c, p) : hubFile(c);
+    for (const p of POSITIONS) {
+      const f = pageFile(c, p);
       if (!fs.existsSync(path.join(ROOT, f))) continue;
       const h = read(f);
       const mount = (h.match(/<div class="rk-board"[\s\S]*?><\/div>/) || [''])[0];
       const attr = (k) => (mount.match(new RegExp(`data-rk-${k}="([^"]*)"`)) || [, ''])[1];
       if (attr('horizon') !== c.horizon) wrong.push(`${f}: horizon=${attr('horizon')} want ${c.horizon}`);
-      if (attr('pos') !== (p ? p.toUpperCase() : 'ALL')) wrong.push(`${f}: pos=${attr('pos')}`);
+      if (attr('pos') !== p.toUpperCase()) wrong.push(`${f}: pos=${attr('pos')}`);
       if (attr('weeks') !== c.weeks) wrong.push(`${f}: weeks=${attr('weeks')} want ${c.weeks}`);
     }
   }
@@ -70,13 +80,41 @@ console.log('\nevery position in the menu has a page of its own');
 
   // Only the season-long boards can open a row: "this week" is one week, and a
   // drawer holding a single row is a control that does nothing.
-  const weekOpens = CATS[0] && [hubFile(CATS[0]), ...POSITIONS.map((p) => pageFile(CATS[0], p))]
+  const weekOpens = POSITIONS.map((p) => pageFile(CATS[0], p))
     .filter((f) => fs.existsSync(path.join(ROOT, f)) && /data-rk-weeks="1"/.test(read(f)));
   ok('no weekly board offers a week-by-week drawer', weekOpens.length === 0, weekOpens.join(', '));
 
-  const noDrawer = [hubFile(CATS[1]), ...POSITIONS.map((p) => pageFile(CATS[1], p))]
+  const noDrawer = POSITIONS.map((p) => pageFile(CATS[1], p))
     .filter((f) => fs.existsSync(path.join(ROOT, f)) && !/data-rk-weeks="1"/.test(read(f)));
   ok('every season-long board does', noDrawer.length === 0, noDrawer.join(', '));
+
+  // No page in the section — nor any page anywhere on the site — may still link
+  // a retired board. A dead internal link is the whole cost of removing them.
+  const stale = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html'))
+    .filter((f) => CATS.some((c) => read(f).includes(`href="/${c.slug}-rankings"`)));
+  ok('nothing on the site still links a retired board', stale.length === 0, stale.slice(0, 6).join(', '));
+
+  // The chip row is GENERATED, not frozen at scaffold time. It was frozen once,
+  // and retiring the pooled board left an Overall chip on all fourteen pages
+  // pointing at a URL that no longer existed. Both halves are asserted: the
+  // sentinels are there so the tool can rebuild it, and the row it holds is
+  // exactly POSITIONS with the page's own position marked.
+  const chipsBad = [];
+  for (const c of CATS) {
+    for (const p of POSITIONS) {
+      const f = pageFile(c, p);
+      if (!fs.existsSync(path.join(ROOT, f))) continue;
+      const h = read(f);
+      const m = h.match(/<!--ranks:chips-->([\s\S]*?)<!--\/ranks:chips-->/);
+      if (!m) { chipsBad.push(`${f}: no sentinels`); continue; }
+      const hrefs = [...m[1].matchAll(/href="([^"]*)"/g)].map((x) => x[1]);
+      const want = POSITIONS.map((q) => pageHref(c, q));
+      if (hrefs.join(',') !== want.join(',')) chipsBad.push(`${f}: ${hrefs.join(',')}`);
+      const cur = (m[1].match(/class="rkc-chip on" href="([^"]*)"/) || [])[1];
+      if (cur !== pageHref(c, p)) chipsBad.push(`${f}: current=${cur}`);
+    }
+  }
+  ok('the chip row is generated, lists every position and marks this one', chipsBad.length === 0, chipsBad.slice(0, 4).join('; '));
 
   const noScript = allBoards.concat(LANES).filter((f) => fs.existsSync(path.join(ROOT, f)))
     .filter((f) => f.includes('rankings') && !read(f).includes('src="/it-ranks.js"'));
@@ -90,7 +128,7 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
 {
   ok('the ribbon is on the front page', carriers.includes('front.html'));
   ok('on the full rankings tool', carriers.includes('rankings.html'));
-  ok('on all sixteen rankings pages', allBoards.every((f) => carriers.includes(f)));
+  ok('on all fourteen rankings pages', allBoards.every((f) => carriers.includes(f)));
   ok('and on the three other destinations', LANES.every((f) => carriers.includes(f)));
 
   // Byte for byte, once the one legitimate per-page difference — which item is
@@ -114,9 +152,14 @@ const carriers = fs.readdirSync(ROOT).filter((f) => f.endsWith('.html') && RIB.t
   ok('two of them drop down', menus.length === 2, String(menus.length));
   for (const [i, c] of CATS.entries()) {
     const hrefs = [...(menus[i] || '').matchAll(/href="([^"]*)"/g)].map((m) => m[1]);
-    const want = ['/' + c.slug + '-rankings', ...POSITIONS.map((p) => `/${c.slug}-${p}-rankings`)];
-    ok(`the ${c.slug} menu drops every position`, hrefs.join(',') === want.join(','), hrefs.join(','));
+    const want = POSITIONS.map((p) => `/${c.slug}-${p}-rankings`);
+    ok(`the ${c.slug} menu drops every position and nothing else`, hrefs.join(',') === want.join(','), hrefs.join(','));
   }
+  // The trigger has to go SOMEWHERE: on a phone the menus are off, so a tap on
+  // it is the only way in. With no pooled board it is the first position page.
+  const triggers = [...rib.matchAll(/<span class="rkr-item rkr-has-menu">\s*<a class="rkr-link" href="([^"]*)"/g)].map((m) => m[1]);
+  ok('each trigger lands on its first position page',
+    triggers.join(',') === CATS.map(catHref).join(','), triggers.join(','));
 }
 
 // ── the ribbon sits under the hero, not somewhere else ───────────────────────

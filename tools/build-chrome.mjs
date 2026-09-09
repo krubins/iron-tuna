@@ -155,9 +155,9 @@ const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-lea
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
   'post-draft.html', 'analysts.html', 'analyst.html',
   'stats.html', 'hidden-value.html', 'previews.html',
-  'weekly-rankings.html', 'weekly-qb-rankings.html', 'weekly-rb-rankings.html', 'weekly-wr-rankings.html',
+  'weekly-qb-rankings.html', 'weekly-rb-rankings.html', 'weekly-wr-rankings.html',
   'weekly-te-rankings.html', 'weekly-flex-rankings.html', 'weekly-k-rankings.html', 'weekly-dst-rankings.html',
-  'season-long-rankings.html', 'season-long-qb-rankings.html', 'season-long-rb-rankings.html',
+  'season-long-qb-rankings.html', 'season-long-rb-rankings.html',
   'season-long-wr-rankings.html', 'season-long-te-rankings.html', 'season-long-flex-rankings.html',
   'season-long-k-rankings.html', 'season-long-dst-rankings.html',
   'faq.html', 'support.html', 'terms.html', 'privacy.html', 'data.html', 'creators.html',
@@ -178,8 +178,14 @@ const FOOT_COLS = [
       // The section ribbon's own destinations. The ribbon itself is only on the
       // front page and the rankings section, so the footer is how every OTHER
       // page on the site reaches them.
-      { label: 'This week’s rankings', href: '/weekly-rankings' },
-      { label: 'Season long rankings', href: '/season-long-rankings' },
+      //
+      // There is no pooled "Overall" board to land on (see the note in
+      // build-ranks.mjs: a ranking that sorts a quarterback against a kicker is
+      // not a decision anybody makes), so each of these goes to its category's
+      // FIRST position page — the same destination the ribbon's trigger uses —
+      // and every position page reaches the rest by chip.
+      { label: 'This week’s rankings', href: '/weekly-qb-rankings' },
+      { label: 'Season long rankings', href: '/season-long-qb-rankings' },
       { label: 'Stats', href: '/stats' },
       { label: 'Waivers & FAAB', href: '/waivers' },
       { label: 'My Leagues', href: '/my-league' },
