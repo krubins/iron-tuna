@@ -8172,3 +8172,30 @@ What this does not do is fix the cron. If the next gap shows open rows, the
 invocation is dying and the deadline plus the log will say in which job; if
 it shows nothing, the trigger is not firing and the answer is in the
 dashboard's Cron Events for the worker, which the repo cannot read.
+
+### 68n. A Wednesday opener, and what ESPN says to the worker
+
+The 2026 season opened on a Wednesday (NE at SEA, September 9, 8:20 PM ET)
+with a second game on Thursday (SF and the Rams). The calendar previewed
+only Thursday games, so the opener would have had no preview at all. A
+piece about specific games now takes its SLOT from the first of them:
+`contentDue` uses the first target's weekday in place of the kind's `day`
+when `anchor` is `targets`, so the Thursday preview runs Thursday morning
+in an ordinary week and Wednesday morning in this one, covering both
+midweek games; `tnf-preview` and `tnf-what-matters` target Wednesday and
+Thursday games alike, and `titleFor(days)` retitles them (Midweek Kickoff
+Preview, Midweek Football: What Matters) when the slate is not Thursday's.
+`kindTitle(K, d)` is the one place the title is decided, and `contentDue`
+returns `targetDays` and `slotDay` so the packet and the row can use it.
+
+Two feeds looked wrong the same morning. The hourly schedule refresh has
+reported `live: 0` with no error, and the depth chart job `got: 0,
+failed: 32`, every day since September 4, while both ESPN URLs answer in
+full from outside Cloudflare. Every ESPN fetch now sends a user agent and
+an accept header (the injuries feed always did, and it is the one ESPN
+feed that has worked), `_espnEvents` records what ESPN returned (status,
+content type, event count, the first bytes of an eventless body) and the
+refresh writes it into its summary as `espn`; the depth chart job keeps
+its `firstError`. If the next refresh still shows nothing, the summary
+says what the worker was actually given. Until statuses arrive from ESPN,
+no game is ever `final` and no retrospective piece is ever ready.
