@@ -3134,11 +3134,31 @@ async function fetchScheduleNflverse() {
   return { season, games };
 }
 
+// What ESPN last said to the worker, kept for the job log. On September 9
+// the hourly refresh reported live:0 with no error while the same scoreboard
+// URL answered sixteen Week 1 games from outside Cloudflare, and the depth
+// chart job failed all thirty-two fetches every morning since the 4th. The
+// worker's own view of the response (status, type, event count, the first
+// bytes when there are no events) is the only way to see the difference.
+// The 12:00Z refresh on September 9 recorded what ESPN says to the worker:
+// 403, text/html, for the scoreboard, while the injuries feed on the same
+// host answered 800 rows an hour earlier. The two requests differed in two
+// ways: the injuries fetch sends a plain user agent and no `cf` cache
+// options, the scoreboard sent a user agent with a URL in it through
+// Cloudflare's cache (`cf.cacheTtl`). Every ESPN fetch is now shaped like
+// the one that works; the 403 body's first bytes are kept when it recurs.
+let _ESPN_LAST = null;
+const ESPN_HEADERS = { 'user-agent': 'iron-tuna-schedule/1.0', 'accept': 'application/json' };
 async function _espnEvents(qs) {
-  const r = await fetch(ESPN_SCOREBOARD + (qs ? '?' + qs : ''), { cf: { cacheTtl: 300 } });
-  if (!r.ok) throw new Error('espn ' + r.status);
-  const j = await r.json();
-  return Array.isArray(j && j.events) ? j.events : [];
+  const url = ESPN_SCOREBOARD + (qs ? '?' + qs : '');
+  const r = await fetch(url, { headers: ESPN_HEADERS });
+  const type = r.headers.get('content-type') || null;
+  if (!r.ok) { let head = null; try { head = (await r.text()).slice(0, 160); } catch (e) {} _ESPN_LAST = { qs, status: r.status, type, events: null, head }; throw new Error('espn ' + r.status); }
+  const text = await r.text();
+  let j = null; try { j = JSON.parse(text); } catch (e) { _ESPN_LAST = { qs, status: r.status, type, events: null, head: text.slice(0, 120) }; throw new Error('espn: not json'); }
+  const events = Array.isArray(j && j.events) ? j.events : [];
+  _ESPN_LAST = { qs, status: r.status, type, events: events.length, week: j && j.week && j.week.number || null, head: events.length ? null : text.slice(0, 120) };
+  return events;
 }
 function _espnGame(ev) {
   const comp = (ev && ev.competitions || [])[0] || {};
@@ -3430,13 +3450,14 @@ async function runScheduleRefresh(env) {
   catch (e) { liveError = (e && e.message) || 'failed'; }
   const merged = mergeSchedule(spine.games, live);
   const provider = 'nflverse' + (live.length ? '+espn' : '');
+  const espn = _ESPN_LAST;
   await scheduleCacheWrite(env, spine.season, merged.games, provider);
   _SEASON_CACHE = null; _SEASON_AT = 0;
   return {
     ok: true, season: spine.season, provider,
     spine: spine.games.length, live: live.length,
     statusUpdated: merged.updated, preseasonAdded: merged.added,
-    games: merged.games.length, liveError
+    games: merged.games.length, liveError, espn
   };
 }
 async function seasonPayload(env, opts) {
@@ -5678,7 +5699,7 @@ const ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl
 const ESPN_DEPTH = t => 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + encodeURIComponent(t) + '/depthcharts';
 const RED_ZONE_YARDS = 20, GOAL_LINE_YARDS = 5;
 async function fetchGameSummaryEspn(eventId) {
-  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { cf: { cacheTtl: 120 } });
+  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { headers: ESPN_HEADERS });
   if (!r.ok) throw new Error('espn summary ' + r.status);
   return await r.json();
 }
@@ -5804,8 +5825,8 @@ function gameUsageByTeam(game) {
 const DEPTH_ROW = 6;
 const DEPTH_MAX_AGE_MS = 7 * 86400000;
 async function fetchDepthChartEspn(team) {
-  const r = await fetch(ESPN_DEPTH(team), { cf: { cacheTtl: 3600 } });
-  if (!r.ok) throw new Error('espn depth ' + r.status);
+  const r = await fetch(ESPN_DEPTH(team), { headers: ESPN_HEADERS });
+  if (!r.ok) throw new Error('espn depth ' + r.status + ' for ' + team);
   const j = await r.json();
   const groups = Array.isArray(j.depthchart) ? j.depthchart : [];
   const off = groups.find(g => g.positions && (g.positions.qb || g.positions.rb)) || null;
@@ -5821,11 +5842,14 @@ async function runDepthChartRefresh(env) {
   const sched = await scheduleCacheRead(env);
   const clubs = new Set();
   for (const g of (sched && sched.games) || []) if (g.type === 'REG') { clubs.add(g.home); clubs.add(g.away); }
-  const teams = {}; let failed = 0;
+  const teams = {}; let failed = 0, firstError = null;
   for (const t of clubs) {
-    try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; }
+    try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; if (!firstError) firstError = (e && e.message) || 'failed'; }
   }
-  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed };
+  // Every morning since September 4 this returned got:0 failed:32 and said
+  // nothing else; the same URL answers 200 from outside the worker. The first
+  // error is kept so the log can say what ESPN actually said to the worker.
+  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed, firstError };
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare('INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)')
     .bind(DEPTH_ROW, JSON.stringify({ asOf: Date.now(), teams }), 'espn-depth', Object.keys(teams).length, Date.now()).run();
@@ -5926,7 +5950,10 @@ const CONTENT_KINDS = {
     summary: 'Targets, air yards and deployment: the receiver whose opportunity moved before his points did.', absorbs: ['opportunity-report'] },
   'tnf-preview': { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
     analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true, updates: 'until-kickoff', updateHours: 14,
-    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    // The midweek games: Thursday's, and a Wednesday opener when there is one.
+    // The slot follows the first of them (contentDue), and so does the title.
+    targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
+    titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? (days.length > 1 ? 'Midweek Kickoff Preview' : 'Opening Night Preview') : 'Thursday Night Football Preview',
     summary: 'Start/sit and the full showdown for the Thursday game, updated if late news changes it.', absorbs: ['tnf-preview'] },
   'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 7, minute: 0, retro: false, subject: 'current',
     analyst: 'vega', dfsAnalyst: 'vega', lens: 'both', rivalry: true, targets: () => [],
@@ -5939,11 +5966,15 @@ const CONTENT_KINDS = {
     summary: 'Only when a tight end story is worth your time.', absorbs: [] },
   'tnf-what-matters': { title: 'Thursday Night: What Matters', day: 'Fri', hour: 6, minute: 0, retro: false, subject: 'current',
     analyst: 'raines', dfsAnalyst: 'park', lens: 'both', optional: true,
-    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
+    titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? 'Midweek Football: What Matters' : 'Thursday Night: What Matters',
     summary: 'Usage, role and sustainability from the Thursday game. Not a recap.', absorbs: ['tnf-aftermath'] },
   'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 7, minute: 0, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', preview: true,
-    targets: (gs) => gs.filter(g => g.dow !== 'Thu'),
+    // The weekend: everything after the midweek games. A Wednesday opener is
+    // the midweek preview's, and a preview is not ready once any target has
+    // kicked off, so it must not be here on Friday.
+    targets: (gs) => gs.filter(g => g.dow !== 'Wed' && g.dow !== 'Thu'),
     summary: 'The hard start/sits, the matchups, the movers and the weather. For DFS, the whole slate.', absorbs: ['final-read', 'weekend-game-plan'] },
   'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 8, minute: 0, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', targets: () => [],
@@ -6029,6 +6060,9 @@ function contentSubjectWeek(K, state, now) {
 }
 // Is a piece due, and is it ready? Pure. `state` is the season service's
 // answer; `sched` the schedule cache; `now` the instant asked about.
+// The title a piece carries: the kind's, unless the kind names one for the
+// days its target games fall on (a Wednesday opener is not Thursday night).
+const kindTitle = (K, d) => (K && K.titleFor && d && Array.isArray(d.targetDays)) ? K.titleFor(d.targetDays) : (K ? K.title : '');
 function contentDue(kind, now, state, sched) {
   const K = CONTENT_KINDS[kind];
   if (!K) return { due: false, ready: false, reason: 'unknown_kind' };
@@ -6056,8 +6090,14 @@ function contentDue(kind, now, state, sched) {
   // days: the half day is what keeps a kickoff the schedule stores at
   // midnight from pulling the slot a week early, which the first live tick did.
   const prevGames = !K.retro && K.anchor !== 'targets' && anchorWeek > 1 ? weekGames(sched, anchorWeek - 1, now) : [];
+  // A piece about specific games takes its slot from the FIRST of them: the
+  // Thursday preview runs Thursday morning, and when the season opens on a
+  // Wednesday (2026 did, NE at SEA the night before SF and the Rams) the same
+  // piece runs Wednesday morning and covers both midweek games.
+  const firstTarget = targets.length ? targets.slice().sort((a, b) => a.kickoff - b.kickoff)[0] : null;
+  const slotDay = K.anchor === 'targets' && firstTarget ? firstTarget.dow : K.day;
   let dueAt;
-  if (K.anchor === 'targets' && targets.length) dueAt = _nextEt(K.day, K.hour, Math.min(...targets.map(g => g.kickoff)) - 24 * 3600000, K.minute || 0);
+  if (K.anchor === 'targets' && firstTarget) dueAt = _nextEt(slotDay, K.hour, firstTarget.kickoff - 24 * 3600000, K.minute || 0);
   else if (K.retro) dueAt = _nextEt(K.day, K.hour, Math.max(...ags.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else if (prevGames.length) dueAt = _nextEt(K.day, K.hour, Math.max(...prevGames.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 132 * 3600000, K.minute || 0);
@@ -6085,7 +6125,7 @@ function contentDue(kind, now, state, sched) {
     ready = notFinal.length === 0;
     if (!ready) reason = 'games_not_final:' + notFinal.map(g => g.away + '@' + g.home).join(',');
   }
-  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id),
+  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id), targetDays: targets.map(g => g.dow), slotDay,
            updatesUntil: K.updates ? dueAt + (K.updateHours || 6) * 3600000 : null,
            excluded: K.partial ? gs.filter(g => g.dow === 'Sun' && !feedFinal(g)).map(g => g.away + '@' + g.home) : [] };
 }
@@ -6383,92 +6423,47 @@ function _sectionSpec(kind) {
 }
 // Every capitalised two-or-three-word name and every number in the draft must
 // be in the brief. Small integers are allowed (ordinals, counts of things).
-//
-// WHAT A NAME IS. The first live Thursday preview (2026-09-09) was held over
-// "Two Slates", "Implied Totals", "Strong Vegas Fade", "New England's",
-// "Guerendo's PUP" and "Nacua. Reasonable": a title-case headline, a
-// possessive, an acronym and two sentences meeting at a full stop, every one
-// of them read as a player the packet did not contain. Nothing in that draft
-// was invented, and the site's front page showed a draft-season auction story
-// for a day because of it. So a capitalised run is a NAME only when it holds
-// a word the checker cannot otherwise account for: not a word of an allowed
-// name, not an acronym, not a club, not a word the draft itself also uses in
-// lower case (a "Totals" that appears as "totals" elsewhere is prose), and
-// not on the short list of words that open a headline. "Jerry Jeudy" fails
-// every one of those tests and is still caught.
-const DRAFT_STOP_WORDS = new Set(('a an the this that these those his her their its our your my me him them us ' +
-  'and or but nor so yet if then than as at by for from in into of off on onto out over per to up upon ' +
-  'with without within through across around against between before after under toward towards via versus vs ' +
-  'is are was were be been being has have had do does did will would can could should may might must not no yes ' +
-  'what why how who whom which where when here there now still only just more less most least much many few ' +
-  'every each all any some none both either neither other another such very too also again away back ' +
-  'one two three four five six seven eight nine ten first second third last next new old big small high low ' +
-  'top bottom best worst better worse good bad strong weak early late long short hard easy fast slow ' +
-  'different same reasonable classified implied expected likely unlikely ' +
-  'week weeks night day days season sunday monday tuesday wednesday thursday friday saturday ' +
-  'football fantasy game games slate slates board boards market markets line lines odds spread total totals ' +
-  'point points rank ranks ranking rankings tier tiers value values price prices salary salaries ownership ' +
-  'chalk leverage stack stacks captain flex start starts sit sits bench play plays fade fades follow target targets ' +
-  'usage role roles injury injuries report update preview review intel edge delta consensus vegas ' +
-  'home road favorite favourite underdog weather wind rain he she it they we you').split(/\s+/));
-// The clubs: the thirty-two nicknames and cities, plus whatever the projection
-// set's own defence rows say, so a relocation or a rename reaches the checker
-// with the data. A club is never a fact the writer could invent.
-const NFL_CLUB_WORDS = ('arizona cardinals atlanta falcons baltimore ravens buffalo bills carolina panthers chicago bears ' +
-  'cincinnati bengals cleveland browns dallas cowboys denver broncos detroit lions green bay packers houston texans ' +
-  'indianapolis colts jacksonville jaguars kansas city chiefs las vegas raiders los angeles chargers rams miami dolphins ' +
-  'minnesota vikings new england patriots orleans saints york giants jets philadelphia eagles pittsburgh steelers ' +
-  'san francisco 49ers seattle seahawks tampa bay buccaneers tennessee titans washington commanders').split(/\s+/);
-let _TEAM_WORDS = null;
-function _teamWords() {
-  if (!_TEAM_WORDS) {
-    _TEAM_WORDS = new Set(NFL_CLUB_WORDS);
-    for (const p of PROJECTIONS) if (p.position === 'DEF') for (const w of String(p.name || '').split(/\s+/)) if (w) _TEAM_WORDS.add(w.toLowerCase());
-  }
-  return _TEAM_WORDS;
-}
-// A word with its possessive and its trailing punctuation taken off:
-// "England's" -> "England", "Nacua." -> "Nacua".
-const _wordCore = w => String(w).replace(/[’']s$/i, '').replace(/^[^A-Za-z]+/, '').replace(/[^A-Za-z]+$/, '');
+// Capitalised words that are not people: the words a headline or a sentence
+// starts with, the clubs, the site's own names, the vocabulary of the desk.
+// A run of capitalised words is a NAME only if two or more of its words are
+// none of these (and not an all-caps abbreviation, and not a possessive of
+// something allowed). The first live preview was held on "Two Slates",
+// "Implied Totals", "Every Patriots", "Guerendo's PUP" and "Brown. Vegas".
+const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modelled Modeled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
+const _nameTokens = (run) => run.split(/\s+/).map(t => t.replace(/['\u2019]s$/, '')).filter(t => t && !/^[A-Z0-9.&-]+$/.test(t) && !NOT_A_NAME.has(t.replace(/[.,]+$/, '')));
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
   const bad = { names: [], numbers: [] };
   const OK_WORDS = new Set(['Iron Tuna', 'Market Delta', 'Monday Night', 'Sunday Night', 'Thursday Night', 'Red Zone', 'Vegas Edge', 'What We', 'Fantasy Playoffs', 'Rest Of', 'Next Three', 'Week One']);
-  const str = String(text);
-  const known = new Set();
-  for (const n of names) for (const w of n.split(/\s+/)) { const c = _wordCore(w).toLowerCase(); if (c) known.add(c); }
-  for (const n of OK_WORDS) for (const w of n.split(/\s+/)) known.add(w.toLowerCase());
-  const lower = new Set();
-  for (const m of str.matchAll(/\b[a-z][a-z'’-]+\b/g)) lower.add(m[0].replace(/[’']s$/, ''));
-  const team = _teamWords();
-  // A word never crosses a full stop: "Nacua." ends a sentence, and the
-  // capital that follows it opens another. A dot inside a word (A.J.) stays.
-  const WORD = "[A-Z](?:[A-Za-z'’-]|\\.(?=[A-Za-z]))*";
-  for (const m of str.matchAll(new RegExp('\\b(' + WORD + '(?:\\s' + WORD + '){1,2})(?![A-Za-z])', 'g'))) {
+  const known = n => names.has(n) || OK_WORDS.has(n) || [...names].some(x => x.includes(n) || n.includes(x));
+  // A sentence ends where a lower-case word meets its full stop, so "Brown.
+  // Vegas" is two sentences and not a man. An initial ("A.J.") is not a
+  // sentence end.
+  const bounded = String(text).replace(/([a-z0-9)][.!?;:])\s+(?=[A-Z])/g, '$1\n');
+  for (const m of bounded.matchAll(/\b([A-Z][a-z'\u2019.-]+(?:\s[A-Z][A-Za-z'\u2019.-]+){1,2})\b/g)) {
     const n = m[1];
-    if (names.has(n) || OK_WORDS.has(n)) continue;
-    if ([...names].some(x => x.includes(n) || n.includes(x))) continue;
-    const words = n.split(/\s+/).map(_wordCore).filter(Boolean);
-    if (!words.length) continue;
-    const unknown = words.filter(w => {
-      if (/^[A-Z][A-Z0-9.]*$/.test(w)) return false;                    // QB, DST, PUP, NE
-      const l = w.toLowerCase();
-      return !(known.has(l) || DRAFT_STOP_WORDS.has(l) || team.has(l) || lower.has(l));
-    });
-    if (!unknown.length) continue;
-    // "Expect Nacua", "Bench Josh Allen": a sentence opener in front of a
-    // name the packet holds. The opener is a verb, not a first name.
-    const last = words[words.length - 1].toLowerCase();
-    if (unknown.length < words.length && known.has(last) && !unknown.includes(words[words.length - 1])) continue;
+    if (known(n)) continue;
+    if (/^(What|Why|The|This|That|His|Their|A|An|In|On|At|For|With|And|But|Not|No|He|She|It|They|We|Both)\b/.test(n)) continue;
+    const toks = _nameTokens(n);
+    if (toks.length < 2) continue;
+    const core = toks.join(' ');
+    if (known(core)) continue;
+    // Two allowed surnames next to each other ("Stevenson and McCaffrey"
+    // without the "and", a list) are not a third person.
+    if (toks.every(t => [...names].some(x => x.split(/\s+/).includes(t)))) continue;
     bad.names.push(n);
   }
-  for (const m of str.matchAll(/-?\d+(?:\.\d+)?/g)) {
-    const v = m[0]; const num = Number(v);
-    // A number the packet holds, in either sign (a spread is quoted from
-    // either side); a small count; or a small difference of two packet
-    // figures ("1.5 points apart"), which is arithmetic, not a fact.
-    if (nums.has(v) || nums.has(v.replace(/^-/, ''))) continue;
-    if (Math.abs(num) <= (Number.isInteger(num) ? 20 : 5)) continue;
+  // A number the packet does not carry is still allowed when it is a signed
+  // form of one it does (a spread quoted from the other side), or, below ten,
+  // the difference or sum of two packet numbers: "18.6, 1.5 below consensus
+  // 20.1" is arithmetic on the packet, not a new fact.
+  const vals = [...nums].map(Number).filter(Number.isFinite);
+  const grid = new Set(vals.map(x => x.toFixed(1)));
+  const arithmetic = a => a < 10 && vals.some(x => grid.has((x - a).toFixed(1)) || grid.has((x + a).toFixed(1)));
+  for (const m of String(text).matchAll(/-?\d+(?:\.\d+)?/g)) {
+    const v = m[0]; const num = Number(v), abs = Math.abs(num);
+    if (nums.has(v) || nums.has(String(abs)) || (Number.isInteger(num) && abs <= 20)) continue;
+    if (arithmetic(abs)) continue;
     bad.numbers.push(v);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
@@ -7269,7 +7264,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: K.title, subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
     freshness: freshnessReport(ctx.stamps, kind, Date.now()),
@@ -7387,7 +7382,7 @@ async function writeNewsroomPiece(env, kind, packet) {
   const K = CONTENT_KINDS[kind];
   const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
   const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
-  const user = 'KIND: ' + kind + ' (' + K.title + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
+  const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
   let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS);
@@ -7508,6 +7503,15 @@ async function produceContent(env, kind, opts) {
     if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
     return { ok: true, kind, week, status: 'skipped', reason: packet.reason };
   }
+  // A draft the fact check held is checked again against the fresh packet
+  // before the writer is asked for another. The check is code and the code
+  // changes: the first live preview was held on title-case headline words
+  // and sentence boundaries, and once the rule learned them the draft it had
+  // held was right. Nothing is rewritten; the row is published as it stands.
+  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
+    const revived = await revalidateHeld(env, kind, latest, packet, d, season);
+    if (revived) return revived;
+  }
   if (latest && !o.force && !retry && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
   const written = await writeNewsroomPiece(env, kind, packet);
   if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
@@ -7517,7 +7521,7 @@ async function produceContent(env, kind, opts) {
   if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
   const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
   // A retry of a transport failure is the same edition, not an update.
-  const title = K.title + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
+  const title = kindTitle(K, d) + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
   const analyst = packet.meta.analyst;
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
   await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
@@ -7529,66 +7533,31 @@ async function produceContent(env, kind, opts) {
   }
   return { ok: true, kind, week, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
 }
-// A draft the fact check held is re-read by the CURRENT fact check on every
-// tick. The check changes (on 2026-09-09 it stopped reading a title-case
-// headline as a list of players), and a draft the model got right must not
-// stay held because the check that read it was wrong: that is how the front
-// page showed an auction story on the Wednesday of Week 1. Only a draft that
-// exists, only a hold the checker made (names, numbers, phrasing: a missing
-// section or a colleague is the writer's, and awaiting_approval is the
-// editor's), only the newest row for its kind and week, and only while
-// automatic publishing is on.
-const RECHECK_HELD_DAYS = 10;
-function heldRecheckable(row, now) {
-  if (!row || row.status !== 'held') return false;
-  if (!row.body || row.body === 'null') return false;
-  let v = []; try { v = JSON.parse(row.violations || '[]'); } catch (e) { v = []; }
-  if (!Array.isArray(v) || !v.length) return false;
-  if (!v.every(x => /^(name|number|phrasing):/.test(String(x)))) return false;
-  return (now - (row.created_at || 0)) <= RECHECK_HELD_DAYS * 86400000;
-}
-async function recheckHeld(env) {
-  if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
+async function revalidateHeld(env, kind, latest, packet, d, season) {
+  let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
+  if (!body || typeof body !== 'object') return null;
+  let vio = []; try { vio = JSON.parse(latest.violations || '[]') || []; } catch (e) { vio = []; }
+  // Held for approval is the editor's call, never the tick's.
+  if (vio.some(v => /^awaiting_approval/.test(String(v)))) return null;
+  const fc = factCheck(body, packet);
+  if (!fc.ok) return null;
   const auto = await autoPublishOn(env);
-  if (!auto.on) return { ok: true, rechecked: 0, published: [], still: [], reason: auto.reason };
-  const now = Date.now();
-  let rows = [];
-  try {
-    rows = (await env.LEADS_DB.prepare("SELECT id, kind, season, week, status, version, brief, body, violations, analyst, rivalry, created_at FROM content_pieces WHERE status = 'held' AND created_at >= ? ORDER BY created_at DESC LIMIT 40")
-      .bind(now - RECHECK_HELD_DAYS * 86400000).all()).results || [];
-  } catch (e) { return { ok: false, error: 'read_failed' }; }
-  const published = [], still = [];
-  for (const row of rows) {
-    if (!heldRecheckable(row, now)) continue;
-    const latest = await contentLatest(env, row.kind, row.season, row.week);
-    if (!latest || latest.id !== row.id) continue;                       // a later version exists
-    let body = null, packet = null;
-    try { body = JSON.parse(row.body); packet = JSON.parse(row.brief); } catch (e) { continue; }
-    if (!body || !packet || !packet.allowed || !packet.meta) continue;
-    const v = factCheck(body, packet);
-    if (!v.ok) { still.push({ kind: row.kind, week: row.week, problems: v.problems.slice(0, 8) }); continue; }
-    try {
-      await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ? WHERE id = ?').bind('published', now, row.id).run();
-      let rivalry = null; try { rivalry = row.rivalry ? JSON.parse(row.rivalry) : null; } catch (e) { rivalry = null; }
-      const list = normaliseCalls(body.calls, packet, row.analyst || packet.meta.analyst, 'weekly');
-      const calls = await recordCalls(env, { season: row.season, week: row.week, kind: row.kind, slug: _slugOf(row.kind, row.season, row.week) }, list, rivalry);
-      published.push({ kind: row.kind, week: row.week, version: row.version || 1, calls: calls.stored });
-    } catch (e) { still.push({ kind: row.kind, week: row.week, problems: ['publish_failed'] }); }
-  }
-  // The front page memoises its lead for two minutes; a piece that just went
-  // live should not wait behind it.
-  if (published.length) { try { _LEAD_CACHE = null; _LEAD_AT = 0; } catch (e) {} }
-  return { ok: true, rechecked: rows.length, published, still };
+  if (!auto.on) return null;
+  try { await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ?, violations = ? WHERE id = ?').bind('published', Date.now(), null, latest.id).run(); }
+  catch (e) { return null; }
+  const analyst = packet.meta.analyst, week = d.week;
+  const rivalry = packet.rivalry && body.rivalryLine ? { ...packet.rivalry, line: String(body.rivalryLine).slice(0, 300) } : null;
+  let calls = { stored: 0 };
+  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normaliseCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
+  return { ok: true, kind, week, status: 'published', version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
 }
 async function runContentTick(env) {
   const out = [];
-  let recheck = null;
-  try { recheck = await recheckHeld(env); } catch (e) { recheck = { ok: false, error: (e && e.message) || 'failed' }; }
   for (const kind of Object.keys(CONTENT_KINDS)) {
     if (CONTENT_KINDS[kind].unscheduled) continue;
     try { out.push(await produceContent(env, kind)); } catch (e) { out.push({ ok: false, kind, error: (e && e.message) || 'failed' }); }
   }
-  return { ok: true, at: Date.now(), recheck, results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
+  return { ok: true, at: Date.now(), results: out.filter(r => r.ok || (r.reason !== 'not_regular_season' && r.error !== 'exists' && r.reason !== undefined ? r.due : false)) };
 }
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
 const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
@@ -7876,9 +7845,10 @@ async function newsroomAdmin(env, action, body) {
 async function newsroomStatus(env) {
   const auto = await autoPublishOn(env);
   const et = etParts(Date.now());
+  let tick = null; try { tick = await tickHealth(env, Date.now()); } catch (e) { tick = null; }
   const legacy = Object.entries(LEGACY_CONTENT).map(([k, v]) => ({ kind: k, ...v }));
   return { autoPublish: auto, flags: flagReport(env), audit: newsroomAudit(null), legacy, routines: ROUTINE_MIGRATION, events: (await newsEventsPayload(env, 20)).map(e => ({ at: e.created_at, type: e.type, player: e.player, team: e.team, position: e.position, score: e.score, handled: e.handled, detail: e.detail })),
-           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
+           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, tick, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
 }
 
 // -- DFS -------------------------------------------------------------------------
@@ -7919,6 +7889,28 @@ async function dfsReady(env) {
 // A DST row on either site names the club; the board names the club's
 // defence. Both resolve to the team key.
 const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DEF' || u === 'D' || u === 'D/ST' ? 'DST' : u; };
+// Which contest a salary file is for. Both sites sell single-game contests out
+// of a file with the same columns as the main slate, and the difference is a
+// multiplier slot the classic roster does not have: DraftKings prices the
+// captain as a second CPT row for the same player, FanDuel an MVP. Priced
+// against the classic cap and roster, that file builds a lineup nobody can
+// enter, so the reader upload names it and stops rather than quietly costing
+// someone an entry fee.
+//
+// The test is structural as well as by name, because the slot token is the
+// operators' to rename and the repeated player row is the shape of a captain
+// file whatever they call it. One shared name between two players on a slate
+// happens; a file where a quarter of the rows repeat a player does not.
+const DFS_MULTIPLIER_SLOT = /\b(CPT|MVP)\b/;
+function dfsSlateShape(rows) {
+  const list = rows || [];
+  if (!list.length) return 'classic';
+  if (list.some(r => DFS_MULTIPLIER_SLOT.test(r.rosterPosition || ''))) return 'single-game';
+  const seen = new Set();
+  let dup = 0;
+  for (const r of list) { const k = _oddsNorm(r.name) + '|' + r.position; if (seen.has(k)) dup++; else seen.add(k); }
+  return dup * 4 > list.length ? 'single-game' : 'classic';
+}
 // ── the CSV each lobby exports ─────────────────────────────────────────────
 // DraftKings: Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, TeamAbbrev, AvgPointsPerGame
 // FanDuel:    Id, Position, First Name, Nickname, Last Name, FPPG, Played, Salary, Game, Team, Opponent, Injury Indicator, Injury Details, Tier, Roster Position
@@ -7929,7 +7921,7 @@ function parseDfsCsv(site, text) {
   const idx = k => head.findIndex(h => h.toLowerCase() === k.toLowerCase());
   const rows = [];
   if (site === 'dk') {
-    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info');
+    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info'), iRoster = idx('Roster Position');
     if (iPos < 0 || iName < 0 || iSal < 0) return { rows: [], error: 'not a DraftKings salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -7937,15 +7929,17 @@ function parseDfsCsv(site, text) {
       const game = String(f[iGame] || '');
       const m = /^([A-Z]{2,3})@([A-Z]{2,3})/.exec(game);
       const opp = m ? (teamKey(m[1]) === team ? teamKey(m[2]) : teamKey(m[1])) : null;
-      rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+      rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
       const name = iNick >= 0 && f[iNick] ? f[iNick] : ((f[iFirst] || '') + ' ' + (f[iLast] || '')).trim();
-      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
     }
   } else return { rows: [], error: 'unknown site' };
   const good = rows.filter(r => r.name && r.position && Number.isFinite(r.salary) && r.salary > 0);
@@ -8078,23 +8072,62 @@ const JOB_FNS = {
   'league-sync':          env => runLeagueSync(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
+// How long a job may run before the log calls it dead. A cron invocation has
+// fifteen minutes of wall clock in total; the desk tick, which may write two
+// pieces with a retry each at 170 s a call, gets most of it, and every other
+// job a few minutes. A job past its deadline is logged as a failure and the
+// tick moves on; the work itself is not cancelled (the runtime has no way to
+// cancel a promise), it is simply no longer waited for.
+const JOB_DEADLINE_MS = { 'content-tick': 13 * 60000 };
+const JOB_DEADLINE_DEFAULT_MS = 4 * 60000;
+// A row that opened and never closed is an invocation that died: the runtime
+// killed it at the duration limit, or evicted it. Nothing closes such a row,
+// so the board counts it as a failure once it is older than any deadline.
+const JOB_DIED_AFTER_MS = 16 * 60000;
 // Run one job and log it. Never throws: a job that throws is a logged
 // failure, and the caller gets { ok:false, error }.
+//
+// The row is OPENED before the job runs and CLOSED after it, in two writes.
+// On September 8 and 9 the cron went silent three times for two hours and
+// more, and each gap began with a tick whose news-scan logged and whose
+// content-tick did not. A log written only at the end cannot say whether the
+// runtime killed that invocation or the cron never fired the next ones; a
+// row that is open with nothing after it says the first, no row says the
+// second. When the open write fails (no id comes back), the job still runs
+// and the row is written whole at the end, the way it always was.
 async function jobRun(env, name, trigger, fn) {
   const f = fn || JOB_FNS[name];
   if (!f) return { ok: false, error: 'unknown_job', job: name };
   const started = Date.now();
-  let result = null, error = null;
+  const id = await jobOpen(env, { job: name, trigger: trigger || null, started });
+  const limit = JOB_DEADLINE_MS[name] || JOB_DEADLINE_DEFAULT_MS;
+  let result = null, error = null, timer = null;
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('deadline: ' + name + ' still running after ' + Math.round(limit / 1000) + ' s')), limit); });
   try {
-    result = await f(env);
+    result = await Promise.race([f(env), deadline]);
     if (result && result.ok === false) error = String(result.error || result.reason || 'failed');
   } catch (e) { error = (e && e.message) || 'failed'; result = { ok: false, error }; }
-  await jobLog(env, { job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
+  finally { clearTimeout(timer); }
+  await jobLog(env, { id, job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
   return result == null ? { ok: true } : result;
+}
+async function jobOpen(env, r) {
+  if (!(await jobReady(env))) return null;
+  try {
+    const res = await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, NULL, NULL, NULL, NULL)')
+      .bind(r.job, r.trigger, r.started).run();
+    const id = res && res.meta && res.meta.last_row_id;
+    return Number.isFinite(id) && id > 0 ? id : null;
+  } catch (e) { return null; }
 }
 async function jobLog(env, r) {
   if (!(await jobReady(env))) return false;
   try {
+    if (r.id) {
+      await env.LEADS_DB.prepare('UPDATE job_runs SET finished_at = ?, ok = ?, error = ?, summary = ? WHERE id = ?')
+        .bind(r.finished, r.ok, r.error, r.summary, r.id).run();
+      return true;
+    }
     await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .bind(r.job, r.trigger, r.started, r.finished, r.ok, r.error, r.summary).run();
     return true;
@@ -8120,15 +8153,37 @@ async function jobBoard(env, now) {
     const lastOkAny = {}; for (const r of (older.results || [])) lastOkAny[r.job] = r.last_ok;
     const seen = new Set(rows.map(r => r.job));
     const all = names.concat(Array.from(seen).filter(j => !names.includes(j)));
+    const bad = r => r.ok === 0 || _jobDied(r, at);
     return { ok: true, jobs: all.map(j => {
       const mine = rows.filter(r => r.job === j);
       const last = mine[0] || null, ok = mine.find(r => r.ok === 1) || null;
-      return { job: j, last: last ? _jobRow(last) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(r => r.ok === 0).length };
-    }), failed: rows.filter(r => r.ok === 0).slice(0, 40).map(_jobRow) };
+      return { job: j, last: last ? _jobRow(last, at) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(bad).length };
+    }), failed: rows.filter(bad).slice(0, 40).map(r => _jobRow(r, at)) };
   } catch (e) { return { ...empty, error: (e && e.message) || 'failed' }; }
 }
-const _jobRow = r => ({ job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, error: r.error || null,
-                        ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null });
+const _jobDied = (r, at) => r.finished_at == null && r.ok == null && (at - r.started_at) > JOB_DIED_AFTER_MS;
+const _jobRow = (r, at) => {
+  const died = _jobDied(r, Number.isFinite(at) ? at : Date.now());
+  return { job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, unfinished: r.finished_at == null, died,
+           error: died ? 'did not finish: the invocation died before the job closed its row' : (r.error || null),
+           ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null };
+};
+// The cron's pulse. content-tick runs every quarter hour, so its newest row
+// is the last time the cron reached the worker at all; the silence is how
+// long ago that was. died24h counts rows that opened and never closed.
+const TICK_SILENT_MIN = 20;
+async function tickHealth(env, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const out = { lastAt: null, lastOk: null, silentMinutes: null, silent: false, died24h: 0, silentAfterMin: TICK_SILENT_MIN };
+  try {
+    if (!(await jobReady(env))) return out;
+    const r = await env.LEADS_DB.prepare("SELECT started_at, finished_at, ok FROM job_runs WHERE job = 'content-tick' ORDER BY started_at DESC LIMIT 1").first();
+    if (r) { out.lastAt = r.started_at; out.lastOk = r.ok === 1; out.silentMinutes = Math.max(0, Math.round((at - r.started_at) / 60000)); out.silent = out.silentMinutes > TICK_SILENT_MIN; }
+    const d = await env.LEADS_DB.prepare('SELECT COUNT(*) AS n FROM job_runs WHERE finished_at IS NULL AND ok IS NULL AND started_at > ? AND started_at < ?').bind(at - 86400000, at - JOB_DIED_AFTER_MS).first();
+    out.died24h = d && Number.isFinite(+d.n) ? +d.n : 0;
+  } catch (e) {}
+  return out;
+}
 
 // ── the assessment ─────────────────────────────────────────────────────────
 // Pure. Takes what the caches and the log say and returns what is missing or
@@ -10758,6 +10813,59 @@ export default {
       }
       return json(slate, 200, { ...c, 'cache-control': 'public, max-age=300' });
     }
+    // The reader's own lobby export, priced and then thrown away.
+    //
+    // /api/dfs above serves the desk's import: one main slate a week, the same
+    // rows for everybody. A reader entering a different contest already has the
+    // salary file, because the site they play on hands it to them on the
+    // contest page. This takes that file, runs it through the same parser and
+    // the same slate builder, and hands back the boards. It is the CSV path of
+    // docs/data-sources.md carried to where it belongs: the act of obtaining
+    // the data stays with the person already entitled to it.
+    //
+    // It STORES NOTHING. dfs_salaries is keyed by site and week with no reader
+    // on it, so one reader's upload written there would be what every other
+    // reader is shown. The parse is per request, the response is uncacheable,
+    // and the file itself never leaves the reader's browser except to be
+    // scored. Importing to the shared table stays an admin action.
+    if (url.pathname === '/api/dfs/slate') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false, error: 'method', note: 'POST { site, csv } to price a salary file.' }, 405, c);
+      if (await rl(env, request, 'dfsup', 60, 600)) return json({ ok: false, error: 'too_many', note: 'That is a lot of files in ten minutes. Wait a moment and try again.' }, 429, c);
+      // Measure the body before parsing it. The admin import can take the JSON
+      // straight because a key gets you there; anyone at all gets here, and a
+      // request.json() on an unbounded body is memory spent before the first
+      // check runs. The headroom over the CSV cap below is JSON escaping.
+      let raw = '';
+      try { raw = await request.text(); } catch (e) { return json({ ok: false, error: 'bad_body' }, 400, c); }
+      if (raw.length > 1400000) return json({ ok: false, error: 'too_big',
+        note: 'That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.' }, 413, c);
+      let b = {}; try { b = JSON.parse(raw); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
+      const site = DFS_SITES[b.site] ? b.site : null;
+      if (!site) return json({ ok: false, error: 'site', note: 'Choose DraftKings or FanDuel before reading a file.' }, 400, c);
+      const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 1000000));
+      if (parsed.error) return json({ ok: false, error: parsed.error,
+        note: 'That file did not read as a ' + DFS_SITES[site].label + ' salary export. Download it from the contest lobby and upload it unchanged.' }, 400, c);
+      if (dfsSlateShape(parsed.rows) === 'single-game') return json({ ok: false, error: 'single_game',
+        note: 'That is a single-game file: it prices a captain or MVP at a multiplier the classic roster does not have. Every board here is built for the classic cap, so pricing it would show you a lineup you cannot enter. Upload a main-slate export instead.' }, 400, c);
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, {});
+      slate.week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      // No salariesAsOf: the reader's file has no import time, and a timestamp
+      // for when they happened to press the button would say nothing true.
+      slate.source = 'upload'; slate.salariesAsOf = null;
+      slate.stacks = buildDfsStacks(slate, state);
+      if (flagOn(env, 'DFS_CONTENT')) {
+        const contest = DFS_CONTESTS[b.contest] ? b.contest : 'gpp';
+        const m = dfsMetrics(slate.players, contest);
+        slate.metrics = { contest: m.contest, label: m.label, note: m.note, sortBy: m.sortBy, ownershipBasis: m.ownershipBasis, medianPerK: m.medianPerK, contests: Object.fromEntries(Object.entries(DFS_CONTESTS).map(([k, v]) => [k, v.label])) };
+        slate.stackScores = dfsStackScores(slate.stacks);
+      }
+      return json(slate, 200, { ...c, 'cache-control': 'no-store' });
+    }
     // The newsroom: the public feed the homes read, the staff, one analyst,
     // the Fantasy/Market blend, and the Vega/Brooks disagreements.
     if (url.pathname === '/api/newsroom') {
@@ -11661,8 +11769,11 @@ export default {
       return json({ ok: true, ...providerReport(env), kinds: Object.keys(PROVIDERS), ran }, 200, c);
     }
     // DFS salaries: GET reports what is loaded; POST { site, csv, slate? }
-    // imports a lobby CSV for the current week; ?refresh=1 pulls the configured
-    // site feeds now.
+    // imports a lobby CSV for the current week. There is no feed refresh here.
+    // The operator endpoints were removed on 2026-09-06 (docs/data-sources.md)
+    // and a licensed feed, if one is ever configured, has no import job yet:
+    // providerRun(env, 'dfs') is reachable only from /api/admin/providers, and
+    // that route reports what it fetched without storing it.
     if (url.pathname === '/api/admin/dfs') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
@@ -12314,6 +12425,7 @@ export default {
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
     if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
+      console.log('tick start:', event.cron, new Date(event.scheduledTime || Date.now()).toISOString());
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
         .catch(e => console.error('tick failed:', e && e.message)));

@@ -8139,64 +8139,98 @@ days). And `_namesOf` collected names only under keys that looked like
 names, so a correct draft naming a receiver the packet stored as `absent`
 was held; every string in a packet is a fact now.
 
-### 68m. September 9: The Desk showed an auction story, and why
+### 68m. The cron went silent, and the log could not say why
+
+Between the first live tick and the next morning the `*/15` trigger reached
+the worker on an ordinary quarter-hour rhythm and then, three times, did not:
+21:00 to 23:30Z on September 8, 04:31 to 06:45Z and 07:31 onward on
+September 9, each silence two hours or more. D1 was not the cause (page views
+kept writing through every gap) and neither was a deploy (none coincided).
+Two of the three gaps began with a tick whose `news-scan` row was written
+and whose `content-tick` row was not, which a log written only at the end
+cannot distinguish from a cron that never fired again.
+
+So the log changed shape. `jobRun` now OPENS the row before the job (job,
+trigger, started_at, everything else NULL) and CLOSES it after (finished_at,
+ok, error, summary, by id). A row that is open with nothing after it is an
+invocation the runtime killed; no row at all is a cron that never fired. When
+the open write returns no id the row is written whole at the end, as before,
+so a fake D1 in a test and a degraded D1 in production both still get a log.
+The board (`jobBoard`, `_jobRow`) reports `unfinished` and `died` (open and
+older than `JOB_DIED_AFTER_MS`, 16 minutes) and counts a death as a failure;
+`tickHealth` is the pulse the control centre shows (last tick, minutes of
+silence, deaths in the last day), red past `TICK_SILENT_MIN` (20 minutes).
+
+Every job also runs under a deadline now (`JOB_DEADLINE_MS`: 13 minutes for
+the desk tick, 4 for the rest), inside the runtime's fifteen. A job past it
+is a logged failure with `deadline:` in the error and the tick moves on; the
+promise itself is not cancelled, only no longer waited for. And the scheduled
+handler logs `tick start` before it does anything, so the Cloudflare log has
+a line for every invocation that reached the worker.
+
+What this does not do is fix the cron. If the next gap shows open rows, the
+invocation is dying and the deadline plus the log will say in which job; if
+it shows nothing, the trigger is not firing and the answer is in the
+dashboard's Cron Events for the worker, which the repo cannot read.
+
+### 68n. A Wednesday opener, and what ESPN says to the worker
+
+The 2026 season opened on a Wednesday (NE at SEA, September 9, 8:20 PM ET)
+with a second game on Thursday (SF and the Rams). The calendar previewed
+only Thursday games, so the opener would have had no preview at all. A
+piece about specific games now takes its SLOT from the first of them:
+`contentDue` uses the first target's weekday in place of the kind's `day`
+when `anchor` is `targets`, so the Thursday preview runs Thursday morning
+in an ordinary week and Wednesday morning in this one, covering both
+midweek games; `tnf-preview` and `tnf-what-matters` target Wednesday and
+Thursday games alike, and `titleFor(days)` retitles them (Midweek Kickoff
+Preview, Midweek Football: What Matters) when the slate is not Thursday's.
+`kindTitle(K, d)` is the one place the title is decided, and `contentDue`
+returns `targetDays` and `slotDay` so the packet and the row can use it.
+
+Two feeds looked wrong the same morning. The hourly schedule refresh has
+reported `live: 0` with no error, and the depth chart job `got: 0,
+failed: 32`, every day since September 4, while both ESPN URLs answer in
+full from outside Cloudflare. Every ESPN fetch now sends a user agent and
+an accept header (the injuries feed always did, and it is the one ESPN
+feed that has worked), `_espnEvents` records what ESPN returned (status,
+content type, event count, the first bytes of an eventless body) and the
+refresh writes it into its summary as `espn`; the depth chart job keeps
+its `firstError`. If the next refresh still shows nothing, the summary
+says what the worker was actually given. Until statuses arrive from ESPN,
+no game is ever `final` and no retrospective piece is ever ready.
+
+---
+
+### 68p. September 9: The Desk showed an auction story on the front page
 
 Ken's report on the Wednesday of Week 1: "The story on The Desk is still
-auction focused. This should be focused on this week's matchups." He was
-right, and the cause was not the front page. `/api/lead-story` serves the
-newest **published** desk piece in the regular season (68a) and falls back
-to the `lead_story` archive when there is none. Four pieces existed and
-**every one was held**: three by the 60-second abort that 68l fixed, and
-the Thursday Night Football Preview, written at 7:48 AM ET on September 9
-by the fixed writer, by the fact check, over
-`name:Two Slates, name:Two Very Different, name:Implied Totals, name:New
-England's, name:Guerendo's PUP, name:Nacua. Reasonable, name:Vegas. Team,
-number:1.5, number:-3.5 …` — a title-case headline, possessives, an
-acronym, two sentences meeting at a full stop, a spread quoted from the
-other side and a difference of two packet figures. Nothing in the draft was
-invented. Meanwhile the retired lead-story Routine (68a) was **still
-running every six hours** (the migration session could not disable it),
-so the fallback was never empty: a fresh "Bid Carnell Tate to $13" sat on
-the front page above the Week 1 slate.
+auction focused. This should be focused on this week's matchups." The lead
+is the newest published desk piece in the regular season (68a); every Week 1
+piece was held (68l, 68m), and the retired lead-story Routine (68a) was still
+running every six hours, so the fallback to the `lead_story` archive was
+never empty: "Bid Carnell Tate to $13" sat above the Week 1 slate. 68m's
+checker and `revalidateHeld` published the Thursday preview at 12:45Z. This
+section is the rest:
 
-Four changes, all on `main`:
-
-- **`validateDraft` knows what a name is.** A capitalised run is a name
-  only when it holds a word the checker cannot otherwise account for: not
-  a word of an allowed name, not an acronym, not a club (`NFL_CLUB_WORDS`
-  plus the projection set's DEF rows), not a word the draft itself also
-  uses in lower case, and not on `DRAFT_STOP_WORDS` (the words that open a
-  headline). A word never crosses a full stop; a possessive is the name it
-  belongs to; a verb in front of a packet name ("Expect Nacua") is a verb.
-  A number passes in either sign, and a decimal of five or less is
-  arithmetic. "Jerry Jeudy" and "155 yards" are still caught;
-  `tools/test-newsroom.mjs` holds every phrase from the September 9 hold.
-  `NEWSROOM_SYSTEM` now asks for sentence-case headlines as well.
-- **Held drafts are re-read at every tick.** `recheckHeld` (first thing in
-  `runContentTick`) runs the CURRENT `factCheck` over every recent hold
-  that has a draft and whose violations were the checker's (`name:`,
-  `number:`, `phrasing:`), publishes the ones that now pass and records
-  their calls, and leaves the rest with the problems named. A hold with
-  no draft is the retry path (68l); `missing:` and `analyst:` are the
-  writer's; `awaiting_approval` is the editor's; a paused desk rechecks
-  nothing. `heldRecheckable` is the pure rule. So the Thursday preview
-  publishes at the first tick after this deploys, with no admin action.
+- **The Routine is off.** `trig_011LYewcPUQikF8izFsN2LAr` ("lead story
+  refresh (every 6h)") was disabled from a session on 2026-09-09. Its prompt
+  stays in `tools/lead-story-routine-prompt.md` for the 2027 draft season.
 - **No auction story in the regular season.** With nothing published,
-  `leadStoryPayload` now serves `deskNextPayload`: the next piece on the
+  `leadStoryPayload` serves `deskNextPayload`: the next piece on the
   calendar, named and timed in ET, `placeholder: true`, linking to
-  `/in-season/desk`. It reaches the archive only outside the regular
-  season. `front.html` treats a desk lead as a desk lead: "The Desk" badge,
-  the byline and publish time instead of the Routine's six-hour countdown,
-  no default-league pricing note (a desk piece quotes no dollars), "More
-  from the desk", a five-minute re-look, and the section's "more" link
-  goes to `/in-season/desk` under `html[data-season="in"]`.
-- **The retired Routine is off.** `trig_011LYewcPUQikF8izFsN2LAr` ("lead
-  story refresh (every 6h)") was disabled from this session. Its prompt
-  stays in `tools/lead-story-routine-prompt.md` for 2027's draft season.
-
-`tools/test-dry-run.mjs` now also asserts the placeholder on the Wednesday
-of Week 1 and a "Two Slates" hold being republished by the tick while a
-"Jerry Jeudy" hold stays held.
+  `/in-season/desk`. The archive is reached only outside the regular season.
+- **`front.html` paints a desk lead as a desk lead:** "The Desk" badge, the
+  byline and publish time instead of the Routine's six-hour countdown, no
+  default-league pricing note (a desk piece quotes no dollars; the note was
+  printing "12 teams, $200" under a matchup preview), "More from the desk", a
+  five-minute re-look, and the section's more-link goes to `/in-season/desk`
+  under `html[data-season="in"]`.
+- **`NEWSROOM_SYSTEM` asks for sentence-case headlines**, so the checker
+  meets fewer title-case runs in the first place.
+- `tools/test-newsroom.mjs` holds every phrase from the September 9 hold
+  against the checker; `tools/test-dry-run.mjs` asserts the Wednesday
+  placeholder.
 
 ---
 
@@ -8220,3 +8254,41 @@ of Week 1 and a "Two Slates" hold being republished by the tick while a
 - **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`). Their API is non-commercial-only and this is a paid product (docs/data-sources.md R2, R7). Turn it on only with their licence in writing. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
 
 **Tests.** `node tools/test-league-sync.mjs` (in CI): fixtures in `tools/fixtures/`, the network stubbed, an in-memory D1, the real scoring engine and the real PROJECTIONS pool. `tools/test-jobs.mjs`, `test-health.mjs` and `test-newsroom.mjs` know the new job and the three off-by-default flags. `tools/test-data-sources.mjs` allowlists the two Yahoo hosts.
+
+### 68o. The first real draft, and what the fact check got wrong
+
+The first writer run on production (the Week 1 midweek preview, 11:45Z on
+September 9, 201 seconds for two lenses and one retry) produced a sound
+draft, grounded and honest about the feeds it lacked, and the fact check
+held it on twenty-three violations, every one a false positive: "Two
+Slates", "Implied Totals" and "Market Away From" from a title-case
+headline; "Brown. Vegas" and "Nacua. Reasonable" across a full stop;
+"Guerendo's PUP", "Every Patriots", "Reasonable DST", "Iron Tuna's"; and
+numbers that were arithmetic on the packet (18.6 is 1.5 below 20.1) or the
+spread quoted from the other side (-3.5).
+
+`validateDraft` now ends a sentence where a lower-case word meets its full
+stop before it looks for names (an initial is not a sentence end), strips a
+possessive, drops all-caps abbreviations and every word in `NOT_A_NAME`
+(the words a headline starts with, the clubs and cities, the desk's own
+vocabulary), and calls a run of capitals a name only if two or more words
+survive and the pair is not made of allowed surnames. A number is allowed
+as the signed form of a packet number or, below ten, as the difference or
+sum of two packet numbers. A real player the packet lacks is still caught,
+and so is a number that is neither in the packet nor arithmetic on it.
+
+And a held draft is not thrown away when the check improves:
+`revalidateHeld` runs the fact check on the stored body against a fresh
+packet before the writer is asked again, and publishes the row as it stands
+(calls recorded) when it passes and the desk is auto-publishing. A row held
+for approval stays the editor's. The Week 1 preview passes the new check
+with its real packet (35 allowed names, 152 numbers); the first tick after
+this deploys publishes it.
+
+The 12:00Z refresh answered the question in §68n: ESPN returns 403 with an
+HTML body to the worker's scoreboard request, while the injuries feed on
+the same host answered 800 rows an hour earlier. The requests differed in
+two ways, a user agent carrying a URL and `cf.cacheTtl` on the failing
+ones; every ESPN fetch is now shaped like the one that works (plain user
+agent, no cache options), and a 403 body's first bytes are kept in the
+refresh summary if it recurs.

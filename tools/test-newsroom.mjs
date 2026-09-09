@@ -35,7 +35,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, heldRecheckable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, NEWSROOM_SYSTEM, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => null, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -225,7 +225,7 @@ console.log('\nthe fact check reads prose as prose');
 {
   const packet = H._finishBrief({ meta: { kind: 'tnf-preview', lens: 'both' }, rivalry: null,
     players: [{ name: 'Puka Nacua', targets: 12 }, { name: 'Isaac Guerendo', status: 'PUP' }, { name: 'Zach Charbonnet', status: 'PUP' }, { name: 'Sam Darnold', team: 'SEA' }],
-    game: { spread: 3.5, total: 48.5, impliedHome: 26, impliedAway: 22.5 } });
+    game: { spread: 3.5, total: 48.5, impliedHome: 26, impliedAway: 24.5, seasonAverage: 22.5, lastWeek: 22.4 } });
   const v = s => H.validateDraft(s, packet.allowed);
   ok('a title-case headline is not a list of players', v('Two Slates, Two Very Different Implied Totals: Follow the Market Away From New England').ok, JSON.stringify(v('Two Slates, Two Very Different Implied Totals: Follow the Market Away From New England').names));
   ok('a possessive is the name it belongs to', v("Guerendo's PUP stint and Charbonnet's PUP stint leave Iron Tuna's board thin.").ok, JSON.stringify(v("Guerendo's PUP stint and Charbonnet's PUP stint leave Iron Tuna's board thin.").names));
@@ -239,19 +239,6 @@ console.log('\nthe fact check reads prose as prose');
   const num = v('He ran for 155 yards and 26.4 points.');
   ok('a large number the packet lacks is still caught, and a packet number is not', !num.ok && num.numbers.includes('155') && !num.numbers.includes('26'), JSON.stringify(num.numbers));
   ok('the writer is told to write the headline in sentence case', /sentence case/i.test(H.NEWSROOM_SYSTEM) && /Never Title Case/.test(H.NEWSROOM_SYSTEM));
-}
-
-console.log('\nheld drafts are re-read by the current checker');
-{
-  const now = Date.now();
-  const row = (o) => ({ status: 'held', body: '{"headline":"x"}', violations: '["name:Two Slates","number:1.5"]', created_at: now - 3600000, ...o });
-  ok('a draft the checker held is recheckable', H.heldRecheckable(row({}), now));
-  ok('a phrasing hold is the checker\'s too', H.heldRecheckable(row({ violations: '["phrasing:—"]' }), now));
-  ok('a hold with no draft is the retry path, not this one', !H.heldRecheckable(row({ body: null }), now) && !H.heldRecheckable(row({ body: 'null' }), now));
-  ok('an approval hold is the editor\'s', !H.heldRecheckable(row({ violations: '["awaiting_approval: paused from /admin"]' }), now));
-  ok('a missing section or a named colleague is the writer\'s', !H.heldRecheckable(row({ violations: '["name:Two Slates","missing:dfs"]' }), now) && !H.heldRecheckable(row({ violations: '["analyst:Nate Vega"]' }), now));
-  ok('a published piece and an old hold are left alone', !H.heldRecheckable(row({ status: 'published' }), now) && !H.heldRecheckable(row({ created_at: now - 11 * 86400000 }), now));
-  ok('a transport failure is not a checker hold', !H.heldRecheckable(row({ violations: '["The operation was aborted"]' }), now));
 }
 
 console.log('\nbreaking news');
