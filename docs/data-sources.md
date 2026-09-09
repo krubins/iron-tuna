@@ -33,7 +33,9 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 `api.stripe.com` (payments), `api.resend.com` (mail), `api.anthropic.com` /
 `api.openai.com` (LLM), `challenges.cloudflare.com` (Turnstile),
 `api.twitter.com` + `upload.twitter.com` + `graph.threads.net` (our own posting),
-`api.indexnow.org` (search ping), `github.com` (links only).
+`api.indexnow.org` (search ping), `github.com` (links only), `schema.org`
+(the JSON-LD `@context`: a vocabulary identifier printed into the structured
+data, never fetched).
 
 These are services Iron Tuna is a paying or authenticated customer of. They do
 not supply the factual data the product is built on, so Section 13 does not
@@ -119,6 +121,20 @@ address. **The images themselves were NOT removed**: there is no lawful drop-in
 replacement already in use anywhere in the app, and pulling ~1,680 images out of
 the front page, the player cards and every story is a product decision, not a
 cleanup. It is the largest open IP item on this list.
+
+**Widened 2026-09-09: club marks, not only player photographs.** The front-page
+lead's art plate (`renderArt` in `front.html`) now references club logos from
+`a.espncdn.com/i/teamlogos/nfl/500/<abbr>.png`, on the owner's instruction. Same
+host and same posture as the headshots above — hot-linked, never copied or
+stored, rights left with their owners, no affiliation asserted — but a different
+class of right: a club mark is a **trademark** as well as a copyright work, and
+using one to illustrate a story about that club is a nominative-fair-use argument
+rather than a license. Nothing in this repository documents permission for it.
+`/data` already discloses "team marks" in the imagery row and carries the
+takedown address, so the disclosure covers this; the decision does not become
+lower-risk for having been disclosed. Backing it out is one edit: delete
+`logoUrl` and the `<image>` tags in `renderArt`. Every plate still draws without
+them, and the runtime already takes that path when a fetch fails.
 
 ### R5 — Structural rules from Section 14
 

@@ -25,6 +25,16 @@
 // pages are stripped from sitemap.xml at request time by a regex over each
 // <url> block. Reshaping those blocks without checking that regex would publish
 // tomorrow's drops today.
+//
+// Fifth, THE SITE MUST NOT CONTRADICT ITSELF ABOUT WHERE A PAGE LIVES. Every
+// signal that names a URL — the canonical, og:url, the JSON-LD, the sitemap
+// entry — has to name the SAME one, and only one page may name it. Where they
+// disagreed, they canceled: sitemap.xml advertised eight /analysts/<id> URLs
+// whose shell was noindex and canonicalised to /analysts, and creators.html
+// declared itself a duplicate of the front page while being listed as
+// /creators. Neither failure shows up as an error anywhere; the pages just
+// never rank. The sitemap is always the side that yields, because a canonical
+// is the page's own statement about its address.
 
 import fs from 'fs';
 import path from 'path';
@@ -131,6 +141,144 @@ console.log('\nstructured data');
   ok('faq.html keeps its FAQPage', read('faq.html').includes('FAQPage'));
   ok('the front page declares WebSite and Organization',
     /"@type":"WebSite"/.test(read('front.html')) && /"@type":"Organization"/.test(read('front.html')));
+
+  // THE FLOOR. Before this, 52 pages carried no structured data at all —
+  // /rankings, /dfs, /stats, /previews, /vegas-edge, /waivers, /trade-finder,
+  // /faab and every per-position rankings board among them, which is to say the
+  // whole in-season product. A page with no markup is not penalized; it simply
+  // arrives as prose to be guessed at rather than as a stated subject with a
+  // stated publisher, and the guess is what loses.
+  const indexable = pages.filter((f) => !/<meta name="robots"[^>]*noindex/.test(read(f)) && f !== ADMIN);
+  const bare = indexable.filter((f) => !/<script type="application\/ld\+json"/.test(read(f)));
+  ok('every indexable page carries structured data', bare.length === 0, bare.slice(0, 8).join(', '));
+
+  // front.html is the exception, twice over: it IS the root, so there is no
+  // trail to print, and it is where the WebSite and Organization the rest of the
+  // site points at are defined, so it is not part of anything — it is the thing.
+  const FRONT = "front.html";
+  const noCrumb = indexable.filter((f) => f !== FRONT && !/"@type":\s*"BreadcrumbList"/.test(read(f)));
+  ok('every indexable page carries breadcrumbs', noCrumb.length === 0, noCrumb.slice(0, 8).join(', '));
+
+  // ONE entity, not 160. Every page repeats the publisher rather than pointing
+  // at a definition it would have to fetch, but all the copies carry the same
+  // @id — which is the difference between a site an answer engine can attribute
+  // and a pile of pages that merely share a domain.
+  const ORG = 'https://irontuna.com/#organization';
+  const SITE_ID = 'https://irontuna.com/#website';
+  const graphs = (f) => {
+    const m = read(f).match(/<script type="application\/ld\+json" data-seo="build-seo">([\s\S]*?)<\/script>/);
+    return m ? JSON.parse(m[1])['@graph'] : null;
+  };
+  const generated = indexable.filter((f) => graphs(f));
+  ok('most pages take their markup from build-seo', generated.length > 140, String(generated.length));
+
+  const orphan = generated.filter((f) => !read(f).includes(ORG));
+  ok('every generated graph names the one organization', orphan.length === 0, orphan.slice(0, 6).join(', '));
+
+  const unmoored = generated.filter((f) => f !== FRONT).filter((f) => {
+    const page = graphs(f).find((n) => n['@type'] !== 'BreadcrumbList');
+    return !page || !page.isPartOf || page.isPartOf['@id'] !== SITE_ID;
+  });
+  ok('every generated page says which website it is part of', unmoored.length === 0, unmoored.slice(0, 6).join(', '));
+
+  ok('and the front page is where that website is defined',
+    read('front.html').includes(SITE_ID) && read('front.html').includes(ORG));
+
+  // The markup's URL is the page's own canonical, everywhere — not just on the
+  // dated pages the check above covers.
+  const split = generated.filter((f) => {
+    const c = (read(f).match(/<link rel="canonical" href="([^"]*)"/) || [])[1];
+    const page = graphs(f).find((n) => n['@type'] !== 'BreadcrumbList');
+    return !c || !page || (page.url && page.url !== c);
+  });
+  ok('every generated graph points at the page\'s own canonical', split.length === 0, split.slice(0, 6).join(', '));
+
+  // A board fills itself in the browser. Markup listing rows the served HTML
+  // does not contain is a claim a crawler can check and disbelieve, so the
+  // in-season boards must never grow an itemListElement they cannot back.
+  const boards = ['weekly-rankings.html', 'season-long-rankings.html', 'stats.html', 'previews.html', 'hidden-value.html'];
+  const claiming = boards.filter((f) => /"itemListElement"/.test((read(f).match(/data-seo="build-seo">([\s\S]*?)<\/script>/) || [, ''])[1].replace(/"@type":"BreadcrumbList"[\s\S]*/, '')));
+  ok('no client-rendered board claims rows it does not serve', claiming.length === 0, claiming.join(', '));
+}
+
+// ── the head meta ────────────────────────────────────────────────────────────
+// tools/build-seo.mjs generates this block. What it is FOR is written there;
+// what is pinned here is that it reached every page and that it did not
+// contradict the page it landed on.
+console.log('\nhead meta');
+{
+  // The pages a crawler is told to skip. They get no generated meta at all, so
+  // every check below is scoped to the pages that are actually up for indexing.
+  const NOINDEXED = pages.filter((f) => /<meta name="robots"[^>]*noindex/.test(read(f)));
+  const indexable = pages.filter((f) => !NOINDEXED.includes(f));
+  ok('most of the site is indexable', indexable.length > 140, String(indexable.length));
+
+  // index.html is the React app and writes its head in XHTML style — <meta ... />
+  // with a space and a slash. Every generated tag closes with a plain ">". Both
+  // are valid HTML and a matcher that only knows one of them fails the app page
+  // for a tag the app page has, which is a test bug reported as a site bug.
+  const missing = (re, label) => {
+    const bad = indexable.filter((f) => !re.test(read(f)));
+    ok(label, bad.length === 0, bad.slice(0, 6).join(', '));
+  };
+
+  // Snippet and preview permissions. Without them the site takes Google's
+  // defaults, which cap how much of a page may be quoted — on a site whose
+  // product IS the explanation, and whose robots.txt invites answer engines by
+  // name, a capped snippet is the answer cut off before it is useful.
+  missing(/<meta name="robots" content="[^"]*max-image-preview:large/, 'every indexable page allows a large image preview');
+  missing(/<meta name="robots" content="[^"]*max-snippet:-1/, 'every indexable page allows an unlimited snippet');
+
+  missing(/<meta property="og:site_name" content="Iron Tuna"\s*\/?>/, 'every indexable page names the site in its card');
+  missing(/<meta property="og:title" content="[^"]+"/, 'every indexable page has an og:title');
+  missing(/<meta property="og:description" content="[^"]+"/, 'every indexable page has an og:description');
+  missing(/<meta property="og:image" content="https:\/\/irontuna\.com\/[^"]+"/, 'every indexable page has an absolute og:image');
+  missing(/<meta name="twitter:card" content="summary_large_image"\s*\/?>/, 'every indexable page declares a large card');
+  missing(/<meta name="twitter:image" content="[^"]+"/, 'a large card is declared with an image to put in it');
+
+  // ONE of each. The worker rewrites the FIRST match of these tags per route
+  // (__SPA_SEO for the format routes, analystSeo for /analysts/<id>), so a
+  // duplicate is a stale second copy the rewrite never reaches — which is worse
+  // than the missing tag it was added to fix.
+  const dup = [];
+  for (const f of pages) {
+    const head = read(f).slice(0, read(f).indexOf('</head>'));
+    for (const t of ['og:title', 'og:description', 'og:url', 'og:image', 'og:site_name', 'twitter:title', 'twitter:description', 'twitter:image', 'twitter:card']) {
+      const n = [...head.matchAll(new RegExp('<meta (?:property|name)="' + t + '"', 'g'))].length;
+      if (n > 1) dup.push(f + ':' + t);
+    }
+    const r = [...head.matchAll(/<meta name="robots"/g)].length;
+    if (r > 1) dup.push(f + ':robots');
+  }
+  ok('no page carries the same head tag twice', dup.length === 0, dup.slice(0, 6).join(', '));
+
+  // og:url and the canonical are two statements about the same thing.
+  const split = indexable.filter((f) => {
+    const h = read(f);
+    const c = (h.match(/<link rel="canonical" href="([^"]*)"/) || [])[1];
+    const u = (h.match(/<meta property="og:url" content="([^"]*)"/) || [])[1];
+    return c && u && c !== u;
+  });
+  ok('og:url and the canonical name the same URL', split.length === 0, split.slice(0, 6).join(', '));
+
+  // The one that bit creators.html: a canonical of "https://irontuna.com" made
+  // the page a declared duplicate of the front page, and the sitemap advertised
+  // it as /creators at the same time. Two pages claiming one URL is the same
+  // bug with a different symptom.
+  const seen = new Map();
+  const clash = [];
+  for (const f of indexable) {
+    const c = (read(f).match(/<link rel="canonical" href="([^"]*)"/) || [])[1];
+    if (!c) { clash.push(f + ' (none)'); continue; }
+    // The front page's canonical is the root, with the trailing slash. Anything
+    // else must carry a path: "https://irontuna.com" with no path at all is what
+    // creators.html said, and it made the page a declared duplicate of the front
+    // page while the sitemap advertised it as /creators.
+    if (!/^https:\/\/irontuna\.com\/.*/.test(c) || c === 'https://irontuna.com') clash.push(f + ' -> ' + c);
+    else if (seen.has(c)) clash.push(f + ' shares ' + c + ' with ' + seen.get(c));
+    else seen.set(c, f);
+  }
+  ok('every indexable page claims one URL, and claims it alone', clash.length === 0, clash.slice(0, 6).join(', '));
 }
 
 // ── the static camp desk ─────────────────────────────────────────────────────
@@ -246,6 +394,140 @@ console.log('\nsitemap.xml');
   ok('the filter leaves no orphaned lastmod behind', !/^\s*<lastmod>/m.test(filtered.replace(/<url>[\s\S]*?<\/url>/g, '')));
   ok('the filtered sitemap is still well formed',
     /<\/urlset>\s*$/.test(filtered) && [...filtered.matchAll(/<url>/g)].length === [...filtered.matchAll(/<\/url>/g)].length);
+}
+
+// ── the sitemap says what the pages say ──────────────────────────────────────
+console.log('\nthe sitemap and the pages agree');
+{
+  const xml = read('sitemap.xml');
+  const locs = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1]);
+
+  ok('no URL is advertised twice', new Set(locs).size === locs.length,
+    String(locs.length - new Set(locs).size));
+
+  // THE RULE, and it only runs one way: a canonical is the page's own statement
+  // about which address it lives at, so the sitemap follows it. Advertising a
+  // URL whose page disowns it in its first ten lines is the /analysts/<id>
+  // mistake — eight URLs listed, every one of them canonicalising to /analysts —
+  // and it is how /rankings, /desk and /vegas-edge would have been listed too,
+  // since all three actually claim /in-season/<name>.
+  const disowned = [];
+  for (const loc of locs) {
+    const f = (loc.replace('https://irontuna.com', '') || '/').replace(/^\//, '') + '.html';
+    if (!fs.existsSync(path.join(ROOT, f))) continue;   // a route with no file of its own
+    const c = (read(f).match(/<link rel="canonical" href="([^"]*)"/) || [])[1];
+    if (c !== loc) disowned.push(loc + ' -> ' + c);
+  }
+  ok('no listed URL is disowned by the page it points at', disowned.length === 0, disowned.slice(0, 6).join(', '));
+
+  // A noindex page in the sitemap is the site asking for a crawl and refusing it
+  // in the same breath.
+  const contradiction = locs.filter((loc) => {
+    const f = (loc.replace('https://irontuna.com', '') || '/').replace(/^\//, '') + '.html';
+    return fs.existsSync(path.join(ROOT, f)) && /<meta name="robots"[^>]*noindex/.test(read(f));
+  });
+  ok('the sitemap advertises nothing that says noindex', contradiction.length === 0, contradiction.slice(0, 6).join(', '));
+
+  // The gate is open, so the section's boards belong in the file. They were left
+  // out while it was shut, correctly: the worker served the waiting-list gate's
+  // BODY at their URLs, and sixteen addresses for one body is how a site teaches
+  // Google it has duplicate content. Both halves of that are pinned here, so
+  // whichever way the switch moves the sitemap has to move with it.
+  const open = /"POST_DRAFT_OPEN"\s*:\s*"1"/.test(read('wrangler.jsonc'));
+  const boards = pages.filter((f) => /^(?:weekly|season-long)-(?:qb|rb|wr|te|flex|k|dst|rankings)/.test(f))
+    .map((f) => (read(f).match(/<link rel="canonical" href="([^"]*)"/) || [])[1]);
+  const missing = boards.filter((u) => !locs.includes(u));
+  if (open) ok('the gate is open, so every rankings board is advertised', missing.length === 0, missing.slice(0, 6).join(', '));
+  else ok('the gate is shut, so no rankings board is advertised', missing.length === boards.length, String(boards.length - missing.length));
+}
+
+// ── /analysts/<id> ───────────────────────────────────────────────────────────
+// Eight URLs served from ONE shell. The shell ships noindex and canonicalises to
+// /analysts, because a crawler that does not run JavaScript is handed "Reading
+// the desk…" and nothing else — and sitemap.xml advertised all eight anyway.
+// _worker.js now rewrites the head and pre-renders the persona header for each,
+// which is what makes those eight indexable. Every part of that has to hold
+// together, so this lifts the REAL code out of the worker and runs it.
+console.log('\n/analysts/<id>');
+{
+  const src = fs.readFileSync(path.join(ROOT, '_worker.js'), 'utf8');
+  const lift = (a, b) => { const i = src.indexOf(a); return i < 0 ? null : src.slice(i, src.indexOf(b, i) + b.length); };
+  const seo = lift('function analystSeo(env, pathname) {', '\n}');
+  const hdr = lift('function analystHeader(a) {', '\n}');
+  const ld = lift('function analystLd(a, url) {', '\n}');
+  const ids = [...(lift('const ANALYSTS = {', '\n};') || '').matchAll(/^  ([a-z]+): \{ id: '([a-z]+)'/gm)].map((m) => m[2]);
+
+  ok('the worker still carries the per-analyst head', !!seo && !!hdr && !!ld);
+  ok('the staff table still parses', ids.length === 8, String(ids.length));
+
+  // The shell must stay noindex ON DISK. It is what /analysts/<id> is BUILT
+  // from, not what is served there, and if the file itself became indexable the
+  // empty shell would be crawlable at /analyst.
+  ok('the shell on disk is still noindex', /<meta name="robots" content="noindex">/.test(read('analyst.html')));
+
+  // ...and the worker must still find every tag it rewrites. A head-meta pass
+  // that stopped emitting one of these would silently leave the eight URLs
+  // wearing the index page's copy again.
+  const shell = read('analyst.html');
+  const needed = [/<title>/, /<meta name="description" content="/, /<link rel="canonical" href="/,
+    /<meta property="og:url" content="/, /<meta property="og:title" content="/,
+    /<meta property="og:description" content="/, /<div class="an-head" id="anHead"><\/div>/];
+  const gone = needed.filter((re) => !re.test(shell));
+  ok('the shell still carries every tag the worker rewrites', gone.length === 0, gone.join(', '));
+
+  // The pre-render must be byte-for-byte what the page's own script writes into
+  // #anHead, or hydration repaints the header and the reader sees it flicker.
+  const client = (shell.match(/\$\('anHead'\)\.innerHTML = ([\s\S]*?);\n/) || [, ''])[1];
+  const shape = /'<span class="an-av">' \+ e\(a\.avatar\) \+ '<\/span><div><h1>' \+ e\(a\.name\) \+ '<\/h1><p>' \+ e\(a\.role\) \+ ' &middot; <span class="dk-ai">AI analyst persona<\/span><\/p><\/div>'/;
+  ok('the pre-render matches the markup the page hydrates with', shape.test(client), client.slice(0, 80));
+
+  // The eight URLs are advertised, and the shell's own /analyst is not.
+  const xml = read('sitemap.xml');
+  const unlisted = ids.filter((id) => !xml.includes('<loc>https://irontuna.com/analysts/' + id + '</loc>'));
+  ok('every analyst URL is in the sitemap', unlisted.length === 0, unlisted.join(', '));
+  ok('the shell\'s own URL is not', !xml.includes('<loc>https://irontuna.com/analyst</loc>'));
+
+  // These are software, and the markup must not claim otherwise to win a rich
+  // result. The page says so in its first paragraph; Person here would be the
+  // markup contradicting the disclosure.
+  ok('the analyst markup is a ProfilePage, not a Person', /'@type': 'ProfilePage'/.test(ld) && !/'@type': 'Person'/.test(ld));
+  ok('and it carries the AI disclosure', ld.includes('AI_DISCLOSURE'));
+}
+
+// ── llms.txt ─────────────────────────────────────────────────────────────────
+// The site's own description of itself, written for a model rather than a
+// browser, and the one robots.txt points at. Its failure mode is silence: a link
+// that 404s or points at a URL the page disowns is followed once and dropped,
+// and nothing anywhere reports it.
+console.log('\nllms.txt');
+{
+  const txt = read('llms.txt');
+  const locs = new Set([...read('sitemap.xml').matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1]));
+
+  // "/analysts/<id>" is a template, not a link — it is how the file tells a
+  // model the shape of the eight per-analyst URLs.
+  const links = [...new Set([...txt.matchAll(/https:\/\/irontuna\.com[^\s)\],*]*/g)].map((m) => m[0].replace(/[.,]$/, '')))]
+    .filter((u) => !u.includes('<id>'));
+  const unknown = links.filter((u) => !locs.has(u) && !locs.has(u.replace(/\/$/, '')));
+  ok('every link in llms.txt is a URL the sitemap advertises', unknown.length === 0, unknown.slice(0, 6).join(', '));
+
+  // The disclosure has to travel with the bylines. A model that reads this file
+  // and then quotes "Nate Vega" as an analyst has been misled by the file.
+  ok('llms.txt says the analysts are software', /not people/.test(txt) && txt.includes('https://irontuna.com/analysts'));
+  ok('and says who to attribute a quotation to', /attribute anything from this site to \*\*Iron Tuna\*\*/i.test(txt));
+
+  // robots.txt is where a crawler is told the file exists.
+  const robots = read('robots.txt');
+  ok('robots.txt points at llms.txt', robots.includes('https://irontuna.com/llms.txt'));
+  ok('robots.txt still names the sitemap', robots.includes('Sitemap: https://irontuna.com/sitemap.xml'));
+
+  // The blanket allow is the line that actually governs an unnamed agent; the
+  // named blocks below it are a record of a decision. Losing the wildcard while
+  // keeping the list would quietly close the site to everything unlisted.
+  ok('robots.txt still allows every crawler by default', /User-agent: \*\nAllow: \//.test(robots));
+  for (const a of ['ClaudeBot', 'GPTBot', 'OAI-SearchBot', 'PerplexityBot', 'Google-Extended', 'Googlebot']) {
+    ok('robots.txt names ' + a, new RegExp('^User-agent: ' + a + '$', 'm').test(robots));
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

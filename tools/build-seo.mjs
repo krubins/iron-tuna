@@ -6,15 +6,29 @@
 //                         (AW-18397866361). Ads was tagged everywhere; GA4 was
 //                         tagged nowhere, which is why Analytics reported the
 //                         site as untagged and collected zero data.
-//   2. JSON-LD          — an Article block on every dated insight/watch page and
+//   2. The head meta    — og:site_name, the og:/twitter: card pair, and a robots
+//                         directive lifting the snippet and image-preview caps.
+//                         Without the directive every page takes Google's
+//                         defaults, which truncate the quoted text — and on a
+//                         site whose product IS the explanation, and whose
+//                         robots.txt invites answer engines by name, the
+//                         truncation lands before the explanation is useful.
+//   3. JSON-LD          — an Article block on every dated insight/watch page and
 //                         every strategy guide, a SoftwareApplication block on
-//                         the tool landing pages, and WebSite/Organization on the
-//                         front page. Google will not show a rich result for a
-//                         page whose subject it has to infer from prose.
-//   3. sitemap.xml      — a <lastmod> on every URL. Without it a crawler cannot
+//                         the tool landing pages, WebSite/Organization on the
+//                         front page, and a WebPage, CollectionPage or
+//                         WebApplication on everything else indexable. Google
+//                         will not show a rich result for a page whose subject
+//                         it has to infer from prose. All of it hangs off ONE
+//                         organization @id and ONE website @id, so ~160 pages
+//                         read as one publisher rather than as 160.
+//   4. sitemap.xml      — a <lastmod> on every URL, and an entry for every page
+//                         that has none. Without the lastmod a crawler cannot
 //                         tell a page written this morning from one written in
-//                         July, and a <changefreq> of "daily" on a page that has
-//                         not changed since July is worse than no hint at all.
+//                         July; without the entry it may never look at all. The
+//                         URL of a new entry is read from the PAGE'S OWN
+//                         canonical, never from its filename: three of these
+//                         pages are served at a name they do not claim.
 //
 //   node tools/build-seo.mjs           writes the files
 //   node tools/build-seo.mjs --check   writes nothing, exits 1 if anything is stale
@@ -45,12 +59,44 @@ const ADS = 'AW-18397866361';
 // counter in _worker.js already guards against.
 const NO_TAG = new Set(['admin.html']);
 
+// Every page repeats the publisher and the site rather than pointing at a
+// definition on another page, because a crawler grades one page at a time and
+// an @id it has not fetched resolves to nothing. What the ids buy is that all
+// ~160 copies are recognizably ONE organization and ONE website instead of 160
+// unrelated ones — which is the difference between a site that answer engines
+// can attribute and a pile of pages that merely share a domain.
+const ORG_ID = SITE + '/#organization';
+const SITE_ID = SITE + '/#website';
+
 const PUBLISHER = {
   '@type': 'Organization',
+  '@id': ORG_ID,
   name: 'Iron Tuna',
   url: SITE + '/',
   logo: { '@type': 'ImageObject', url: SITE + '/og.png' },
 };
+
+const WEBSITE = {
+  '@type': 'WebSite',
+  '@id': SITE_ID,
+  name: 'Iron Tuna',
+  url: SITE + '/',
+  inLanguage: 'en-US',
+  publisher: { '@id': ORG_ID },
+};
+
+// The pages that say noindex. They get no structured data and no robots
+// directive from this tool: markup describing a page to a crawler that has been
+// told not to index it is noise, and a second robots tag beside the page's own
+// is a contradiction.
+//
+// analyst.html is the one that needs explaining. It ships noindex because the
+// shell a crawler is handed says "Reading the desk…" and nothing else. At
+// /analysts/<id> the worker pre-renders the persona header, swaps the canonical
+// and drops the noindex (analystSeo/analystHeader/analystLd in _worker.js), so
+// those eight URLs ARE indexed — but the file on disk is not the thing indexed
+// and must stay as it is.
+const NOINDEX = new Set(['admin.html', 'lead.html', 'player.html', 'my-insights.html', 'post-draft.html', 'analyst.html', 'player-intel.html']);
 
 // Evergreen strategy guides. datePublished/dateModified come from git so they
 // stay honest as the guides are revised.
@@ -97,6 +143,56 @@ const COLUMN_PAGES = {
     entry: /<article class="call tell" id="(tell-(\d{4}-\d{2}-\d{2})[^"]*)"[^>]*>[\s\S]*?<h2>([\s\S]*?)<\/h2>/g,
   },
 };
+
+// ── the rest of the site ─────────────────────────────────────────────────────
+// Everything above is a page shape this tool already knew. What was left was 52
+// pages carrying no structured data at all — among them /rankings, /dfs,
+// /stats, /previews, /vegas-edge, /waivers, /trade-finder, /faab and all sixteen
+// per-position rankings boards, which is to say the entire in-season product and
+// most of what the site is searched for. A page with no markup is not penalized,
+// but it arrives at an answer engine as prose to be guessed at rather than as a
+// stated subject with a stated publisher, and it is the guess that loses.
+//
+// Three shapes cover them. A page the reader OPERATES is a WebApplication; a
+// page that INDEXES other pages is a CollectionPage; everything else is a
+// WebPage. Nothing here claims an itemListElement, because these boards fill
+// themselves in the browser and markup listing rows the served HTML does not
+// contain would be a claim a crawler can check and disbelieve.
+const APP_PAGES = new Set([
+  'rankings.html', 'trade-finder.html', 'faab.html', 'dfs.html',
+  'my-league.html', 'my-week.html', 'waivers.html',
+]);
+
+const COLLECTION_PAGES = new Set([
+  'insights.html', 'insights-vault.html', 'auction-insights.html', 'snake-insights.html',
+  'bestball-insights.html', 'desk.html', 'analysts.html', 'creators.html', 'in-season.html',
+]);
+
+// The one breadcrumb parent each page sits under. A page absent from this map
+// hangs straight off the front page, which is true of the standalone landing and
+// policy pages and of nothing else.
+const IN_SEASON = { name: 'In-Season', url: SITE + '/in-season' };
+const RANKINGS = { name: 'Rankings', url: SITE + '/rankings' };
+const MARKET = { name: 'Market Intel', url: SITE + '/vegas-edge' };
+const READ = { name: 'The Desk', url: SITE + '/in-season/desk' };
+const PARENT = {
+  'fantasy.html': IN_SEASON, 'dfs.html': IN_SEASON, 'stats.html': IN_SEASON,
+  'waivers.html': IN_SEASON, 'faab.html': IN_SEASON, 'trade-finder.html': IN_SEASON,
+  'my-league.html': IN_SEASON, 'my-week.html': IN_SEASON, 'weekly-intel.html': IN_SEASON,
+  'rankings.html': IN_SEASON,
+  'vegas-edge.html': MARKET, 'game-intel.html': MARKET, 'hidden-value.html': MARKET,
+  'previews.html': MARKET, 'what-they-arent-telling-you.html': MARKET,
+  'desk.html': IN_SEASON, 'analysts.html': READ, 'play-caller-premium.html': READ,
+  'insights.html': READ, 'insights-vault.html': READ,
+  'auction-insights.html': READ, 'snake-insights.html': READ, 'bestball-insights.html': READ,
+};
+// The sixteen position boards all hang off their own overall board.
+for (const p of ['qb', 'rb', 'wr', 'te', 'flex', 'k', 'dst']) {
+  PARENT['weekly-' + p + '-rankings.html'] = { name: 'This week\u2019s rankings', url: SITE + '/weekly-rankings' };
+  PARENT['season-long-' + p + '-rankings.html'] = { name: 'Season long rankings', url: SITE + '/season-long-rankings' };
+}
+PARENT['weekly-rankings.html'] = RANKINGS;
+PARENT['season-long-rankings.html'] = RANKINGS;
 
 const DATED_ARTICLE = [
   { re: /^(?:auction|snake|bestball)-insights-(\d{4}-\d{2}-\d{2})\.html$/, section: 'Insights' },
@@ -188,6 +284,90 @@ function applyTag(file, html) {
   return html.replace(adsConfig, `${adsConfig}\n  gtag('config', '${GA4}');`);
 }
 
+// ── 1b. the head meta every page was missing ─────────────────────────────────
+// Three gaps, all site-wide, all invisible until you go looking.
+//
+// ROBOTS. No page said anything about snippets, so every page took Google's
+// defaults — which cap the text that may be quoted from it and the size of any
+// image preview. On a site whose whole product is an explanation ("this is what
+// the market says, this is what the consensus says, here is the gap"), a capped
+// snippet is the explanation truncated at the point it becomes useful, and an AI
+// answer surface quoting the site is exactly the traffic being competed for.
+// max-snippet:-1 and max-image-preview:large lift the caps. They are permissions
+// granted, not rankings claimed: nothing here asks for placement.
+//
+// OG:SITE_NAME. Absent from all 157 pages, so a card rendered from any of them
+// was attributed to a bare domain rather than to Iron Tuna.
+//
+// TWITTER:TITLE / :DESCRIPTION / :IMAGE. Absent from 151 pages. Most scrapers
+// fall back to the og:* pair and were fine; the ones that do not had a
+// summary_large_image card declared with no image to put in it.
+//
+// The block is bounded by sentinels so this tool rewrites only its own output,
+// and each tag is emitted ONLY where the page does not already carry it — the
+// worker's per-route rewriter (__SPA_SEO, analystSeo) edits the FIRST match of
+// each of these tags, so a duplicate would leave a stale second copy behind it.
+const ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+const META_OPEN = '<!--seo:meta-->';
+const META_RE = /\n?<!--seo:meta-->[\s\S]*?<!--\/seo:meta-->/;
+
+const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const hasTag = (html, re) => re.test(html.slice(0, html.indexOf('</head>') + 1));
+
+function applyMeta(file, html) {
+  // The generated block is stripped first so every read below sees the PAGE's
+  // own tags rather than last run's output — otherwise a second run would find
+  // its own twitter:title and decide the page already had one.
+  let out = html.replace(META_RE, '');
+  if (NOINDEX.has(file)) return out;
+
+  const tags = [];
+  const want = (re, tag) => { if (!hasTag(out, re)) tags.push(tag); };
+
+  // A page that already states an indexable robots directive keeps its own tag,
+  // rewritten in place to carry the preview permissions. Only a page with no
+  // robots tag at all gets one from the block.
+  const own = out.slice(0, out.indexOf('</head>') + 1).match(/<meta\s+name="robots"\s+content="([^"]*)"\s*\/?>/i);
+  if (own) out = out.replace(own[0], '<meta name="robots" content="' + ROBOTS + '">');
+  else tags.push('<meta name="robots" content="' + ROBOTS + '">');
+
+  want(/<meta\s+property="og:site_name"/i, '<meta property="og:site_name" content="Iron Tuna">');
+  want(/<meta\s+property="og:locale"/i, '<meta property="og:locale" content="en_US">');
+  want(/<meta\s+name="twitter:site"/i, '<meta name="twitter:site" content="@irontunafantasy">');
+  want(/<meta\s+name="twitter:card"/i, '<meta name="twitter:card" content="summary_large_image">');
+
+  // The og: and twitter: pairs, each filled from the page's own head so a card
+  // can never say something the <title> and the description do not. Both are
+  // generated only where the page has nothing of its own: the pages that came
+  // with hand-written OG copy have better copy than a template would produce,
+  // and the worker rewrites the FIRST match of each of these tags per route, so
+  // a generated duplicate would leave a stale second copy behind the rewrite.
+  const full = meta(out, /<title>([\s\S]*?)<\/title>/i).trim();
+  const ogt = meta(out, /<meta\s+property="og:title"\s+content="([^"]*)"/i) || full;
+  const ogd = meta(out, /<meta\s+property="og:description"\s+content="([^"]*)"/i) || desc(out);
+  const ogu = meta(out, /<meta\s+property="og:url"\s+content="([^"]*)"/i) || canon(out);
+  const ogi = ogImage(out) || SITE + '/og.png';
+  want(/<meta\s+property="og:type"/i, '<meta property="og:type" content="website">');
+  if (ogt) want(/<meta\s+property="og:title"/i, '<meta property="og:title" content="' + esc(ogt) + '">');
+  if (ogd) want(/<meta\s+property="og:description"/i, '<meta property="og:description" content="' + esc(ogd) + '">');
+  if (ogu) want(/<meta\s+property="og:url"/i, '<meta property="og:url" content="' + esc(ogu) + '">');
+  want(/<meta\s+property="og:image"/i, '<meta property="og:image" content="' + esc(ogi) + '">');
+  if (ogt) want(/<meta\s+name="twitter:title"/i, '<meta name="twitter:title" content="' + esc(ogt) + '">');
+  if (ogd) want(/<meta\s+name="twitter:description"/i, '<meta name="twitter:description" content="' + esc(ogd) + '">');
+  want(/<meta\s+name="twitter:image"/i, '<meta name="twitter:image" content="' + esc(ogi) + '">');
+
+  if (!tags.length) return out;
+  const block = '\n' + META_OPEN + '\n' + tags.join('\n') + '\n<!--/seo:meta-->';
+  // Anchored to the canonical link, NOT to </head>. Both this pass and the
+  // JSON-LD pass below insert into the head, and if both anchored on </head>
+  // they would swap places on every run — strip, re-append after the other
+  // block, and report 150 files out of date for ever. The canonical is the one
+  // tag every indexable page carries exactly once, so it is the stable anchor.
+  const c = out.match(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i);
+  if (c) return out.replace(c[0], c[0] + block);
+  return out.replace('</head>', block + '\n</head>');
+}
+
 // ── 2. JSON-LD ───────────────────────────────────────────────────────────────
 const MARK_OPEN = '<script type="application/ld+json" data-seo="build-seo">';
 const MARK_RE = /\n?<script type="application\/ld\+json" data-seo="build-seo">[\s\S]*?<\/script>/;
@@ -236,6 +416,7 @@ function buildGraph(file, html) {
         dateModified: date,
         articleSection: section,
         inLanguage: 'en-US',
+        isPartOf: { '@id': SITE_ID },
         isAccessibleForFree: true,
         author: PUBLISHER,
         publisher: PUBLISHER,
@@ -271,6 +452,7 @@ function buildGraph(file, html) {
         image,
         articleSection: section,
         inLanguage: 'en-US',
+        isPartOf: { '@id': SITE_ID },
         isAccessibleForFree: true,
         author: PUBLISHER,
         publisher: PUBLISHER,
@@ -297,6 +479,7 @@ function buildGraph(file, html) {
         ...(d ? { datePublished: d.published, dateModified: d.modified } : {}),
         articleSection: 'Draft Strategy',
         inLanguage: 'en-US',
+        isPartOf: { '@id': SITE_ID },
         isAccessibleForFree: true,
         author: PUBLISHER,
         publisher: PUBLISHER,
@@ -319,6 +502,8 @@ function buildGraph(file, html) {
         applicationCategory: 'SportsApplication',
         operatingSystem: 'Any (web browser)',
         image,
+        inLanguage: 'en-US',
+        isPartOf: { '@id': SITE_ID },
         publisher: PUBLISHER,
         // Free to use; the $9.99 unlock is an upgrade, not a paywall on entry,
         // and describing it as the price would misrepresent the page.
@@ -337,6 +522,7 @@ function buildGraph(file, html) {
         '@type': 'CollectionPage',
         name, description, url,
         inLanguage: 'en-US',
+        isPartOf: { '@id': SITE_ID },
         publisher: PUBLISHER,
         hasPart: GUIDES.map((g) => {
           const h = read(g);
@@ -356,7 +542,7 @@ function buildGraph(file, html) {
     return [
       {
         '@type': 'CollectionPage',
-        name, description, url, inLanguage: 'en-US', publisher: PUBLISHER,
+        name, description, url, inLanguage: 'en-US', isPartOf: { '@id': SITE_ID }, publisher: PUBLISHER,
         hasPart: rows.map((m) => ({
           '@type': 'Article',
           headline: decode(m[2].replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim(),
@@ -369,7 +555,7 @@ function buildGraph(file, html) {
 
   if (file === 'front.html') {
     return [
-      { '@type': 'WebSite', name: 'Iron Tuna', url: SITE + '/', description, inLanguage: 'en-US', publisher: PUBLISHER },
+      { ...WEBSITE, description, publisher: { '@id': ORG_ID } },
       {
         ...PUBLISHER,
         description: 'Iron Tuna prices every NFL player against the betting market first and the consensus projections second, then restates the numbers at your league’s scoring — weekly rankings, waiver prices, DFS values and model-vs-market game lines in season, and custom draft values before it.',
@@ -378,7 +564,47 @@ function buildGraph(file, html) {
     ];
   }
 
-  return null;
+  if (NOINDEX.has(file)) return null;
+
+  // Everything else that is indexable. WebApplication for a board the reader
+  // operates, CollectionPage for a page that indexes others, WebPage for the
+  // rest — plus the breadcrumb, which is what turns a bare URL in a result into
+  // "Iron Tuna › In-Season › Rankings › This week's rankings".
+  const type = APP_PAGES.has(file) ? 'WebApplication' : COLLECTION_PAGES.has(file) ? 'CollectionPage' : 'WebPage';
+  const d = gitDates(file);
+  const parent = PARENT[file];
+  return [
+    {
+      '@type': type,
+      '@id': url,
+      name,
+      description,
+      url,
+      mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+      image,
+      inLanguage: 'en-US',
+      isAccessibleForFree: true,
+      isPartOf: { '@id': SITE_ID },
+      ...(d ? { dateModified: d.modified } : {}),
+      // A tool has to say what kind of tool it is and what it costs to open, or
+      // the type is a label with nothing behind it. Free is the honest answer:
+      // every board here opens without a signup, and the $9.99 unlock is an
+      // upgrade inside the draft app, not the price of this page.
+      ...(type === 'WebApplication'
+        ? {
+          applicationCategory: 'SportsApplication',
+          operatingSystem: 'Any (web browser)',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        }
+        : {}),
+      publisher: PUBLISHER,
+    },
+    crumbs([
+      { name: 'Iron Tuna', url: SITE + '/' },
+      ...(parent ? [parent] : []),
+      { name },
+    ]),
+  ];
 }
 
 // ── 3. sitemap.xml ───────────────────────────────────────────────────────────
@@ -401,8 +627,60 @@ function applySitemap() {
     return '<url>' + inner.replace(/(<\/loc>)/, `$1<lastmod>${mod}</lastmod>`) + '</url>';
   });
 
+  // ── the entries that were never there ──────────────────────────────────────
+  // Filling a lastmod only helps a URL the file already lists. What it could not
+  // catch was a page missing from the file altogether — and sixteen were: every
+  // per-position rankings board plus /rankings, /stats, /previews, /vegas-edge,
+  // /hidden-value, /desk. All sixteen were written while the in-season section
+  // was still gated, when leaving them out was correct: the worker served the
+  // waiting-list gate's body at their URLs, and advertising sixteen addresses
+  // for one body is how a site teaches Google it has duplicate content.
+  //
+  // POST_DRAFT_OPEN is set now. They serve themselves, and a page a crawler is
+  // never told about is a page that has to be stumbled upon.
+  //
+  // Appended rather than inserted in place: the file is hand-ordered and the
+  // priorities in it are deliberate, so a new line goes at the end where it can
+  // be read and moved, and an existing line is never rewritten.
+  // The URL comes from the page's OWN canonical, never from its filename. Three
+  // of these pages are served at a name they do not claim — /rankings, /desk and
+  // /vegas-edge each canonicalise to /in-season/<name> — so a filename-derived
+  // entry would have advertised a URL that the page it points at disowns in its
+  // first ten lines. That is the /analysts/<id> mistake again, and the sitemap
+  // is always the side that yields: a canonical is the page's own statement
+  // about which address it lives at.
+  const listed = new Set([...out.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1]));
+  const add = fs.readdirSync(ROOT)
+    .filter((f) => f.endsWith('.html') && !NOINDEX.has(f) && !SITEMAP_SKIP.has(f))
+    .map((f) => [f, canon(read(f))])
+    .filter(([f, loc]) => {
+      if (!loc) { console.error(`  WARN ${f}: no canonical, left out of the sitemap`); return false; }
+      return !listed.has(loc);
+    })
+    .sort((a, b) => a[1].localeCompare(b[1]));
+  if (add.length) {
+    // A board that re-renders every day has no older honest lastmod than today,
+    // and every page reaching this branch is one of those. A page with real git
+    // history still takes its date from git; TODAY is the fallback, and it is
+    // announced rather than assumed.
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = add.map(([f, loc]) => {
+      const d = gitDates(f);
+      if (!d) console.error(`  NOTE ${loc}: no git history for ${f}, lastmod set to today (${today})`);
+      return `  <url><loc>${loc}</loc><lastmod>${d ? d.modified : today}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
+    });
+    out = out.replace(/<\/urlset>/, rows.join('\n') + '\n</urlset>');
+  }
+
   write(file, out, before);
 }
+
+// The pages that are indexable but are NOT a URL of their own, so the appender
+// above must not invent one for them. index.html answers at "/hub" and the three
+// format routes; front.html answers at "/". Both are listed under those names
+// already. The two shells answer at /analysts/<id> and /lead/<slug>, which are
+// listed per id, not per file.
+const SITEMAP_SKIP = new Set(['index.html', 'front.html']);
 
 // Routes without a file of their own are the SPA and the front page, which
 // change whenever the app or the day's news does.
@@ -430,6 +708,7 @@ for (const file of pages) {
   const before = read(file);
   let out = before;
   if (!NO_TAG.has(file)) out = applyTag(file, out);
+  out = applyMeta(file, out);
   out = applyLd(file, out);
   write(file, out, before);
 }

@@ -1,16 +1,98 @@
+# Iron Tuna — https://irontuna.com
+#
+# The policy is one line: everything on this site is open to every crawler, for
+# search and for AI answers alike. The wildcard block below already says that,
+# and it is the block an unnamed agent obeys.
+#
+# The named blocks that follow add nothing technically. They are here because a
+# blanket allow is ambiguous in practice — several answer engines treat an
+# unnamed site as undecided rather than as open — and because naming an agent
+# records a deliberate decision rather than an oversight. An agent that is
+# misspelled here, or retired by its vendor, simply falls through to the
+# wildcard and is still allowed, so this list can never lock anyone out.
+
 User-agent: *
 Allow: /
 
-# AI answer engines welcome
-User-agent: GPTBot
+# ── search ───────────────────────────────────────────────────────────────────
+User-agent: Googlebot
 Allow: /
-User-agent: OAI-SearchBot
+
+User-agent: Bingbot
 Allow: /
-User-agent: ClaudeBot
+
+User-agent: Applebot
 Allow: /
-User-agent: PerplexityBot
+
+User-agent: DuckDuckBot
 Allow: /
+
+# ── AI answer engines and model crawlers ─────────────────────────────────────
+# Google's AI surfaces
 User-agent: Google-Extended
 Allow: /
+
+# Anthropic
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+# OpenAI
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot-Extended
+Allow: /
+
+# Meta
+User-agent: meta-externalagent
+Allow: /
+
+# Amazon
+User-agent: Amazonbot
+Allow: /
+
+# Mistral
+User-agent: MistralAI-User
+Allow: /
+
+# Cohere
+User-agent: cohere-ai
+Allow: /
+
+# DuckDuckGo's assistant
+User-agent: DuckAssistBot
+Allow: /
+
+# Common Crawl — the corpus a great many models are trained from
+User-agent: CCBot
+Allow: /
+
+# ByteDance
+User-agent: Bytespider
+Allow: /
+
+# A plain-language description of what this site is and where each board lives,
+# written for a model rather than for a browser.
+# https://irontuna.com/llms.txt
 
 Sitemap: https://irontuna.com/sitemap.xml

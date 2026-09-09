@@ -733,17 +733,41 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   cases come from `/api/vegas-column`, not from `STORIES`, so `build-front.mjs` does not
   touch it and it never needs a copy refresh. Full contract in **§9c**.
 - **The lead carries artwork** (`#leadArt`), an inline SVG plate in the featured team's
-  colors. **No club logo, wordmark or player likeness is reproduced** — none of that is
-  ours to publish. What is used is a team's colors (a fact, not a creative work) plus the
-  abbreviation, drawn as original geometry. `TEAM_ART` in `front.html` holds the palette;
-  `inkOn()` picks the type color from the background's luminance, because white on
-  Pittsburgh's yellow is unreadable.
-  - The team comes from `story.team`, set by `build-front.mjs` from **the headline only**.
-    The body fallback that works for topics is too loose here: "Offensive-line dispersion
-    matters more this year" is a league-wide piece that cites Buffalo in paragraph three,
-    and body matching handed it Buffalo's colors. League-wide stories get the neutral
-    plate — currently 17 of 20 deep dives name a team, and the 3 that don't are the two
-    rule-change pieces and the dispersion one, correctly.
+  colors. The geometry is original — a team's colors (a fact, not a creative work) plus
+  the abbreviation and the club name — and it is what always draws. `TEAM_ART` in
+  `front.html` holds the palette; `inkOn()` picks the type color from the background's
+  luminance, because white on Pittsburgh's yellow is unreadable.
+  - **Club marks are referenced, not reproduced.** `logoUrl()` points an SVG `<image>` at
+    ESPN's own logo host, the same posture as the player photographs in the band above,
+    disclosed in the same row on `/data` and claiming no rights and no affiliation. A mark
+    that will not load (blocked, moved, 404) removes itself and its badge, and the type
+    slides back to its `data-x0` position, so the plate is whole either way. Backing this
+    out is deleting `logoUrl` and the `<image>`: nothing else depends on it.
+  - The badge under a mark is a **rounded square the size of the file**, not a disc, and
+    the same shape clips the image. The files are square: a circle either crops their
+    corners or leaves the art rattling around inside a badge too big for it, and both
+    read as a mark that does not fit its space. A square fits either kind of file — art
+    on a transparent ground gets a clean tile, art baked onto its own opaque square lands
+    flush against the edges.
+  - **Three layouts.** A **fixture** ("NE at SEA" / "Raiders vs Jaguars") splits the plate
+    between the two clubs, with the connector in the center badge so the order still reads
+    — "at" means the first club is the visitor. One club gets the single plate. Neither
+    gets the neutral `NFL / LEAGUE-WIDE` plate.
+  - The team comes from `story.team` where `build-front.mjs` set one, from **the headline
+    only**. The body fallback that works for topics is too loose here: "Offensive-line
+    dispersion matters more this year" is a league-wide piece that cites Buffalo in
+    paragraph three, and body matching handed it Buffalo's colors. A generated desk piece
+    arrives with no team at all, so `firstTeam()` reads its headline under the same rule.
+    The **dek is read for one thing only**: a fixture. "NE at SEA" in the dek of a game
+    preview is the subject of the piece, not a rival cited in passing. A fixture also has
+    to be the headline club's own game, so a slate piece led by New England does not get
+    San Francisco's plate because SF-at-LA happens to be the first game its dek lists.
+    "LA" is deliberately not a key — it names two clubs — and neither is a bare "New York".
+  - The strap (the topic, bottom right) rides a chip measured to its own type by
+    `fitStrap()`, re-measured once `document.fonts.ready` resolves. It used to be bare type
+    anchored to the right edge, long enough to run off the accent wedge onto the plate
+    behind it: "THURSDAY NIGHT FOOTBALL PREVIEW" was set in the wedge's dark ink and its
+    first eight characters landed on a near-black field, invisible.
 - **Odds impact on every player row** (`vegasRankEl` / `vegasRankShifts` in `index.html`,
   wired into **`Cheatsheet`** and **`PlayersRail`** — the cheat sheet and the auction
   manager). The old `vegasFlagEl` "V" badge only said *that* the odds mattered, and only on
@@ -8545,3 +8569,56 @@ was written three Week 1 rows sat `held` with `["The operation was aborted"]`
 and no body — a transport failure in the writer run, retried by `heldRetryable`,
 not a fact-check hold. If the column ever thins out, look at `content_pieces`
 first.
+
+---
+
+## The masthead is the cover page's, on every page (2026-09-09)
+
+Two changes, one about a link and one about the chrome under it.
+
+**`/dfs` came out of the front page's jump ribbon.** `front.html`'s masthead row
+now reads Fantasy · In-Season · Draft · The Desk. The page still links `/dfs`
+from its footer tools row and the DFS lane still opens from the lane tabs, so
+nothing is unreachable and the URL is untouched. The generated nav on every
+other page keeps DFS — `tools/test-chrome.mjs`'s `MUST_NAV` requires it, and the
+ask was about the front page's ribbon only.
+
+**Everything else on the site now wears the front page's masthead.** Before
+this, `/` was a black band with a 3px teal rule and the metal wordmark, and the
+other 155 pages were a white bar with gray sentence-case links. Clicking off the
+cover page looked like leaving the site. The band moved into `site.css`
+(`--mast`, `--mast-ink`, `--mast-ink-hi`, `--mast-dim`, `--mast-accent`), so it
+is one rule set rather than a second copy that can drift, and `--header-h` went
+56px → 64px to match the cover page's row (`weekly-intel.html`'s sticky
+sub-ribbon reads that token and followed it).
+
+Two things this touched that are easy to get wrong on the way back:
+
+- **The wordmark inverted again, and that is the point.** §27c's rule was "the
+  wordmark is light-on-dark and vanishes on white", and the wordmark-only mark
+  landed the same day on the dark-ink stops for a white bar. There is no white
+  bar now, so every page is back on the light stops — the same seven the cover
+  page uses. `test-reading-view`'s two wordmark assertions were inverted with
+  them. **The reading pages' white SURFACE is untouched**: `--bg` is still
+  `#fff`, the type is still near-black, `--teal` is still `#0e7c63`. The band
+  was never part of the reading view.
+- **The phone masthead is a width problem, not a color one.** The brand, the
+  CTA and the disclosure button need more than a 360px screen has; the CTA is
+  tightened to `--fs-3xs` there and the wordmark SVG scales on its viewBox, so
+  the name no longer runs under the button. Setting the wordmark as TYPE instead
+  of the SVG was tried first and fails at 320px — type cannot shrink to fit.
+
+`lead.html`, `the-tell.html` and `play-caller-premium.html` no longer paint a
+`header.site{}` of their own; they take the shared band like everything else,
+and `test-reading-view` asserts that they do not paint one rather than that they
+paint it white.
+
+**The nav dropdown opened under the rankings ribbon**, which paints an opaque
+white band across its first item or two. That predated the band — it did the
+same under the white bar — and it is fixed here. `header.site` is a stacking
+context (`position:sticky` with a `z-index`), so the menu inside it cannot rise
+past the header's own layer however high its own `z-index` goes: at 30 the whole
+menu was under `.rk-ribbon`'s 45. The header is 50 now, which is also the right
+order on its own terms — a sticky site header belongs over an in-page band that
+scrolls under it. Nothing else on a chrome page sits between 30 and 49, and the
+skip link (100) still clears it.

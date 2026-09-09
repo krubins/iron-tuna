@@ -29,7 +29,7 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 - Every row prints the same player twice — **Fantasy Consensus** (the projection consensus at the chosen scoring, nudged by live usage once three games have earned it, with no odds in it) and **Betting Odds** (the same player priced off the sportsbook) — with the gap between them in points and in rank slots.
 - The odds side always says what it is built from: **props** is a quoted player prop, **gamelines** is the posted game line's scoring environment applied to his line, **ratings** is a fixture no book has posted yet, projected from fitted team ratings and graded low.
 - On the season-long boards any row opens into every remaining week: the opponent, both columns, and Iron Tuna's blend, week by week to the end of the season.
-- Scoring is Standard, Half PPR or PPR; the full tool at https://irontuna.com/rankings adds every horizon and your own league's settings.
+- Scoring is Standard, Half PPR or PPR; the full tool at https://irontuna.com/in-season/rankings adds every horizon and your own league's settings.
 
 ### Stats — https://irontuna.com/stats
 - The one board on the site that is not a forecast: season and latest-week production off the weekly stat lines and snap counts, scored at the setting you choose. A player with no published line shows a dash, never a zero.
@@ -40,10 +40,23 @@ This week's reading from each lane, the two lanes themselves, and the one place 
 ### Previews — https://irontuna.com/previews
 - Every game on the week's slate with its posted spread and total, the points each offense is implied to score, how the line has moved since it opened, and where Iron Tuna's own fitted total disagrees with the book's.
 
-### Vegas Edge — https://irontuna.com/vegas-edge
+### Vegas Edge — https://irontuna.com/in-season/vegas-edge
 - The players the betting market and the consensus rankings disagree about, and by how much, each row labeled **quoted** where a book has posted a price and **derived** where the number comes from the game line instead.
 - Game Intel (https://irontuna.com/game-intel) carries the same read one level up: every game with its spread, total and implied team points, beside Iron Tuna's own model total and the gap between them. Under 2 points the two agree.
 - **21+. Informational only. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. No affiliate links and no sportsbook sign-up offers anywhere on the site.** Problem gambling: call or text 1-800-GAMBLER.
+
+### The desk — https://irontuna.com/in-season/desk
+- The written coverage: previews, what a Sunday changed, waiver and start/sit pieces, and the two standing columns — The Pick (https://irontuna.com/the-pick) and The Tell (https://irontuna.com/the-tell), each one dated call kept on the page it was made on.
+- Waivers & FAAB (https://irontuna.com/waivers), Weekly Intel (https://irontuna.com/weekly-intel) and My Week (https://irontuna.com/my-week) sit beside it, on the same week's numbers.
+
+## Authorship, and how to attribute a quotation
+Read this before quoting anything on the site to a person.
+
+**Iron Tuna's analysts are AI-powered editorial personas, not people.** Jack Mercer, Nate Vega, Evan Brooks, Mike Raines, Chris Dalton, Tyler Grant, Sam Porter and Lena Park are software. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls, and each has a page of its own at https://irontuna.com/analysts/<id> — but none of them is a person, has an opinion, or can be cited as a human analyst. The full disclosure and the whole staff are at https://irontuna.com/analysts.
+
+Every number those bylines print is computed from the site's own data — the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries. A piece whose prose named something the data does not contain is held rather than published. The personalities organize the analysis; the facts are the site's.
+
+So: attribute anything from this site to **Iron Tuna**, never to one of the personas as a person. A quotation carried without that context misrepresents the site.
 
 ## Draft season — https://irontuna.com/auctiondraft
 The same engine, aimed at draft night. Auction is the format it is built for; snake is fully supported.
@@ -79,17 +92,27 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - Fantasy: https://irontuna.com/fantasy
 - DFS: https://irontuna.com/dfs
 - My League: https://irontuna.com/my-league
-- Weekly rankings: https://irontuna.com/rankings
+- Weekly rankings: https://irontuna.com/in-season/rankings
 - This week's rankings, by position: https://irontuna.com/weekly-rankings
 - Season long rankings, by position: https://irontuna.com/season-long-rankings
 - Stats (what has actually been played): https://irontuna.com/stats
 - Hidden Value (widest market-vs-consensus gaps): https://irontuna.com/hidden-value
 - Game previews: https://irontuna.com/previews
-- Vegas Edge (model vs. market): https://irontuna.com/vegas-edge
+- Vegas Edge (model vs. market): https://irontuna.com/in-season/vegas-edge
 - Game Intel: https://irontuna.com/game-intel
 - FAAB Advisor: https://irontuna.com/faab
 - Trade Finder: https://irontuna.com/trade-finder
 - The Desk: https://irontuna.com/in-season/desk
+- The analysts, and the AI disclosure: https://irontuna.com/analysts
+- The Pick (one dated call, kept on the page it was made on): https://irontuna.com/the-pick
+- The Tell: https://irontuna.com/the-tell
+- Waivers & FAAB: https://irontuna.com/waivers
+- Weekly Intel: https://irontuna.com/weekly-intel
+- My Week: https://irontuna.com/my-week
+- The whole board (every market-vs-consensus gap, unfiltered): https://irontuna.com/what-they-arent-telling-you
+- Rankings by position, this week: /weekly-qb-rankings, -rb-, -wr-, -te-, -flex-, -k-, -dst- (e.g. https://irontuna.com/weekly-wr-rankings)
+- Rankings by position, rest of season: /season-long-qb-rankings and the same six (e.g. https://irontuna.com/season-long-te-rankings)
+- Insight Vault: https://irontuna.com/insights-vault
 - Auction draft tool: https://irontuna.com/auctiondraft
 - Snake draft tool: https://irontuna.com/snakedraft
 - Auction values explained: https://irontuna.com/fantasy-football-auction-values
