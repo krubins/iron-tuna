@@ -3181,6 +3181,56 @@ async function _espnEvents(qs) {
   _ESPN_LAST = { qs, status: r.status, type, events: events.length, week: j && j.week && j.week.number || null, head: events.length ? null : text.slice(0, 120) };
   return events;
 }
+// ESPN's scoreboard carries one bookmaker's game lines with an OPEN and a
+// CLOSE for the moneyline, the spread and the total. That open is the book's
+// own number, not the first line this worker happened to record, which is the
+// one thing a snapshot history cannot reconstruct after the fact: a history
+// that starts on Thursday has no way to know where the market opened on Sunday
+// night, and the book does.
+//
+// SIGN. ESPN writes the spread as the HOME side's handicap, so Seattle -3 is
+// -3; the spine writes the same game as a home margin of +3. Everything here
+// is flipped into the spine's convention on the way out, so _seasonDecorate
+// stays the only place that knows which way a spread points. Totals arrive as
+// a side-prefixed string ("o44.5"); the prefix is dropped, because the over
+// and the under quote the same number.
+function _espnLine(v) {
+  const n = parseFloat(String(v == null ? '' : v).replace(/^[ou]/i, ''));
+  return Number.isFinite(n) ? n : null;
+}
+// -0 is a real value in JS and it prints as "-0". A pick'em has to survive the
+// flip as 0 or every even game reads as a typo.
+const _espnFlip = n => (n == null ? null : n === 0 ? 0 : -n);
+function _espnOdds(comp) {
+  const list = (comp && comp.odds) || [];
+  if (!list.length) return null;
+  // ESPN ranks its books with `priority`, 1 being the one it shows. An entry
+  // with no priority sorts last rather than winning the tie by arriving first.
+  let o = null, best = Infinity;
+  for (const e of list) {
+    if (!e) continue;
+    const raw = e.provider ? Number(e.provider.priority) : NaN;
+    const p = Number.isFinite(raw) ? raw : 99;
+    if (p < best) { best = p; o = e; }
+  }
+  if (!o) return null;
+  const ps = o.pointSpread || {}, tot = o.total || {};
+  const at = (node, when) => (node && node[when]) ? node[when] : null;
+  const psNow = at(ps.home, 'close'), psOpen = at(ps.home, 'open');
+  const toNow = at(tot.over, 'close'), toOpen = at(tot.over, 'open');
+  // The top-level `spread` and `overUnder` are the current numbers already
+  // parsed; the close nodes carry the same values as strings. Either does, so
+  // the parsed one is preferred and the node is the fallback.
+  const spread = _espnLine(o.spread != null ? o.spread : (psNow ? psNow.line : null));
+  const total = _espnLine(o.overUnder != null ? o.overUnder : (toNow ? toNow.line : null));
+  if (spread == null && total == null) return null;
+  const name = o.provider ? (o.provider.name || o.provider.displayName || null) : null;
+  return {
+    name: name || null,
+    spread: _espnFlip(spread), spreadOpen: _espnFlip(_espnLine(psOpen ? psOpen.line : null)),
+    total, totalOpen: _espnLine(toOpen ? toOpen.line : null)
+  };
+}
 function _espnGame(ev) {
   const comp = (ev && ev.competitions || [])[0] || {};
   const cs = comp.competitors || [];
@@ -3194,11 +3244,17 @@ function _espnGame(ev) {
   if (!h || !a) return null;
   const st = (((ev.status || comp.status || {}).type) || {}).name || '';
   const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+  const bk = _espnOdds(comp);
   return {
     id: 'espn-' + ev.id, type: ESPN_SEASONTYPE[(ev.season || {}).type] || '',
     week: ((ev.week || {}).number) || 0, kickoff, home: h, away: a,
     homeScore: num(home.score), awayScore: num(away.score),
-    spread: null, total: null, status: ESPN_STATUS[st] || null, src: 'espn'
+    // `spread`/`total` are the fixture's line in the spine's convention, so a
+    // game the spine has not priced can still carry one. `book` keeps the same
+    // numbers attributed and paired with their open, which is what movement
+    // and the "who said so" line on the board both need.
+    spread: bk ? bk.spread : null, total: bk ? bk.total : null, book: bk,
+    status: ESPN_STATUS[st] || null, src: 'espn'
   };
 }
 // The preseason, which the spine does not carry at all, plus whatever the
@@ -3245,6 +3301,15 @@ function mergeSchedule(spine, live) {
       if (g.status) t.status = g.status;
       if (g.homeScore != null) t.homeScore = g.homeScore;
       if (g.awayScore != null) t.awayScore = g.awayScore;
+      // The spine keeps the line where it has one: games.csv is a consensus
+      // number and the scoreboard quotes a single book. Where the spine is
+      // blank -- the preseason, and any fixture the CSV has not priced yet --
+      // one book beats no book, and `lineSrc` says which it was. The book's
+      // own open/current pair rides along either way, because the spine has no
+      // concept of an opening line to be overwritten.
+      if (t.spread == null && g.spread != null) { t.spread = g.spread; t.lineSrc = 'espn'; }
+      if (t.total == null && g.total != null) { t.total = g.total; t.lineSrc = 'espn'; }
+      if (g.book) t.book = g.book;
       t.src = t.src + '+espn';
       updated++;
     } else if (g.type && Object.prototype.hasOwnProperty.call(SEASON_ORDER, g.type === 'POST' ? 'WC' : g.type)) {
@@ -3321,6 +3386,10 @@ function _seasonDecorate(g, at) {
     home: g.home, away: g.away, homeScore: g.homeScore, awayScore: g.awayScore,
     spread: g.spread == null ? null : g.spread, total: g.total == null ? null : g.total,
     impliedHome: imp.home, impliedAway: imp.away,
+    // One named book's open and current, in the same convention as `spread`
+    // above. Null on a fixture no book has posted, which is not the same fact
+    // as a line of zero and must not print as one.
+    book: g.book || null, lineSrc: g.lineSrc || null,
     status: s.status, statusSource: s.source
   };
 }
@@ -3568,6 +3637,27 @@ const PROVIDER_ODDS = [
       market: r.market, line: r.line, overOdds: r.overOdds, underOdds: r.underOdds,
       gameId: r.gameId || null, ts: Date.now()
     })) },
+  { name: 'espn-gamelines', free: true, subjectType: 'game',
+    fetch: async (env) => {
+      // The schedule refresh already merged the book's lines onto every game,
+      // so this reads them rather than pulling the scoreboard a second time.
+      // Rows go in under the BOOK's name, not 'consensus': a real bookmaker
+      // sitting beside the consensus row is what lets the store say the two
+      // disagree, and it is the only game-line row that moves intraday.
+      const cached = await scheduleCacheRead(env);
+      if (!cached) return [];
+      const out = [], ts = Date.now();
+      for (const g of cached.games) {
+        const b = g.book;
+        if (!b || !b.name) continue;
+        const book = String(b.name).toLowerCase().replace(/[^a-z0-9]+/g, '') || 'book';
+        if (b.spread != null) out.push({ book, subjectType: 'game', subject: g.id,
+          market: 'spread', line: b.spread, overOdds: null, underOdds: null, gameId: g.id, ts });
+        if (b.total != null) out.push({ book, subjectType: 'game', subject: g.id,
+          market: 'total', line: b.total, overOdds: null, underOdds: null, gameId: g.id, ts });
+      }
+      return out;
+    } },
   { name: 'nflverse-gamelines', free: true, subjectType: 'game',
     fetch: async (env) => {
       // The schedule refresh already pulled this file minutes ago; read the
@@ -4093,6 +4183,34 @@ async function marketHistoryGames(env, gameIds) {
     for (const [g, mk] of Object.entries(by)) { out[g] = {}; for (const [m, rows] of Object.entries(mk)) out[g][m] = marketHistoryFrom(rows); }
     return out;
   } catch (e) { return {}; }
+}
+// How far a game's line has moved, and off what. THE BOOK'S OWN OPEN WINS: the
+// snapshot store can only call "open" the first row it recorded, so a history
+// that starts on Thursday reports a Sunday-to-Thursday move as no move at all.
+// The scoreboard hands over the book's real opener, and one book measured
+// against itself is a truer move than a consensus measured against its own
+// first sighting. The store is the fallback, and `source` says which was used
+// so nothing downstream has to guess.
+function _gameLineMove(g, gm) {
+  const b = (g && g.book) || null;
+  // Open, current and move always come from the SAME source. Mixing them --
+  // the book's open against the store's current, say -- would produce a move
+  // no one quoted, off two numbers taken hours apart.
+  const one = (mkt, open, cur) => {
+    if (open != null && cur != null) return { move: _oddsRound(cur - open), open, current: cur, source: 'book' };
+    const h = gm && gm[mkt];
+    if (h && h.movement != null) return { move: h.movement, open: h.open, current: h.current, source: 'snapshots' };
+    return { move: null, open: null, current: null, source: null };
+  };
+  const sp = one('spread', b && b.spreadOpen, b && b.spread);
+  const to = one('total', b && b.totalOpen, b && b.total);
+  return {
+    spread: sp.move, total: to.move,
+    spreadOpen: sp.open, spreadCurrent: sp.current,
+    totalOpen: to.open, totalCurrent: to.current,
+    source: sp.source || to.source || null,
+    book: (sp.source === 'book' || to.source === 'book') && b ? b.name : null
+  };
 }
 async function snapshotStatus(env) {
   if (!(await snapshotReady(env))) return { ok: false, error: 'no_db' };
@@ -5446,10 +5564,13 @@ function detectInsights(input) {
   const games = (state && state.ok && state.games) || [];
   for (const g of games) {
     const gm = gameMarkets && gameMarkets[g.id];
-    if (!gm) continue;
-    const sp = gm.spread, tot = gm.total;
-    const spMove = sp && sp.open != null && sp.current != null ? sp.current - sp.open : 0;
-    const totMove = tot && tot.open != null && tot.current != null ? tot.current - tot.open : 0;
+    // A game the store has never seen can still have moved, because the book
+    // ships its own opener with the current line; `_gameLineMove` prefers that
+    // and falls back to the store, so this no longer skips on an empty history.
+    const lm = _gameLineMove(g, gm);
+    if (!gm && lm.source == null) continue;
+    const spMove = lm.spread == null ? 0 : lm.spread;
+    const totMove = lm.total == null ? 0 : lm.total;
     if (Math.abs(spMove) < INSIGHT_T.spreadMove && Math.abs(totMove) < INSIGHT_T.totalMove) continue;
     // spread is the HOME margin: rising means the home side is more favoured.
     const favouredMore = spMove > 0 ? g.home : spMove < 0 ? g.away : null;
@@ -5471,8 +5592,9 @@ function detectInsights(input) {
       : totMove <= -INSIGHT_T.totalMove ? 'The market expects less scoring in this game than it did when the line opened.'
       : 'The spread has moved without a matching move in the player markets.';
     out.push(_insight('game_script_change', { key: g.id, team: favouredMore || g.home, game: g.away + ' at ' + g.home, home: g.home, away: g.away },
-      { spreadOpen: sp ? sp.open : null, spreadCurrent: sp ? sp.current : null, spreadMove: _oddsRound(spMove),
-        totalOpen: tot ? tot.open : null, totalCurrent: tot ? tot.current : null, totalMove: _oddsRound(totMove),
+      { spreadOpen: lm.spreadOpen, spreadCurrent: lm.spreadCurrent, spreadMove: _oddsRound(spMove),
+        totalOpen: lm.totalOpen, totalCurrent: lm.totalCurrent, totalMove: _oddsRound(totMove),
+        moveSource: lm.source, moveBook: lm.book,
         favouredMore, corroborating, interpretation: story },
       Math.max(Math.abs(spMove), Math.abs(totMove)), corroborating.length >= 2 ? 'HIGH' : corroborating.length ? 'MEDIUM' : 'LOW', ts));
   }
@@ -5555,7 +5677,8 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const GAP_AGREE = 2.0;
   const gameEnvironments = ((state && state.ok && state.games) || []).map(g => {
     const gm = gameMarkets && gameMarkets[g.id];
-    const mv = gm ? { spread: gm.spread ? _oddsRound((gm.spread.current || 0) - (gm.spread.open || 0)) : null, total: gm.total ? _oddsRound((gm.total.current || 0) - (gm.total.open || 0)) : null } : null;
+    const lm = _gameLineMove(g, gm);
+    const mv = (lm.spread != null || lm.total != null) ? lm : null;
     const mh = modelPts.has(g.home) ? modelPts.get(g.home) : null;
     const ma = modelPts.has(g.away) ? modelPts.get(g.away) : null;
     const itTotal = (mh != null && ma != null) ? _oddsRound(mh + ma) : null;
@@ -7096,10 +7219,8 @@ function packetLastMinute(ctx, games) {
   }
   const lineMoves = [];
   for (const g of games) {
-    const mv = ctx.gameMarkets && ctx.gameMarkets[g.id];
-    const dS = mv && mv.spread ? _oddsRound((mv.spread.current || 0) - (mv.spread.open || 0)) : null;
-    const dT = mv && mv.total ? _oddsRound((mv.total.current || 0) - (mv.total.open || 0)) : null;
-    lineMoves.push({ game: g.away + ' at ' + g.home, kickoff: g.kickoff, spread: g.spread, total: g.total, impliedHome: g.impliedHome, impliedAway: g.impliedAway, spreadMove: dS, totalMove: dT, started: g.state.status !== 'upcoming' });
+    const lm = _gameLineMove(g, ctx.gameMarkets && ctx.gameMarkets[g.id]);
+    lineMoves.push({ game: g.away + ' at ' + g.home, kickoff: g.kickoff, spread: g.spread, total: g.total, impliedHome: g.impliedHome, impliedAway: g.impliedAway, spreadMove: lm.spread, totalMove: lm.total, moveSource: lm.source, moveBook: lm.book, started: g.state.status !== 'upcoming' });
   }
   const propMoves = W.filter(p => teams.has(p.team) && p.marketDelta && p.marketDelta.significant && /^props/.test(p.vegas.basis)).sort((a, b) => Math.abs(b.marketDelta.rank || 0) - Math.abs(a.marketDelta.rank || 0)).slice(0, 12).map(p => _rowFor(p));
   const hash = inactives.map(r => r.name + ':' + r.status).concat(questionable.map(r => r.name + ':' + r.status)).sort().join('|');

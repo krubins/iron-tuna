@@ -143,7 +143,8 @@ console.log('\nVegas Edge');
   ok('hidden signals are the game-script insights', e.hiddenSignals.length === 1 && e.hiddenSignals[0].type === 'game_script_change');
   ok('a week with props does not carry the no-props note', e.hasProps === true && e.note === null);
   const none = H.buildVegasEdge({ ok: true, players: WEEK.players.map(p => ({ ...p, vegas: { ...p.vegas, basis: 'gamelines' } })) }, {}, {}, STATE, { insights: [] });
-  ok('a week with no props says so on the payload', none.hasProps === false && /No sportsbook/.test(none.note));
+  ok('a week with no props says so on the payload, without claiming what the books have posted',
+     none.hasProps === false && /No priced player prop has reached this board/.test(none.note) && !/No sportsbook/.test(none.note));
 }
 
 console.log('\nWednesday movers');

@@ -18,7 +18,7 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
 | `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
-| `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts | `_worker.js:1353`, `:3061`, `:5656`, `:5657` | **Red.** Undocumented endpoints, no commercial licence. See R1. |
+| `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red, and the lines raise the stakes.** Undocumented endpoints, no commercial licence, and the odds block redisplays a **named bookmaker's** spread and total rather than a score. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
 | `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 licence question; see R7. |
 | `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorise, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
@@ -71,6 +71,18 @@ injuries, depth charts, rosters, schedules and snap counts. It is a source swap,
 not a feature loss. The one gap is live in-game scoreboard state, which nflverse
 does not publish in real time — decide whether `/game-intel` needs live scores or
 whether post-game data is enough, because that answer changes the size of R1.
+
+**The scoreboard's odds block is a second gap, added deliberately.** `_espnOdds`
+reads the spread and total ESPN carries from one named book, plus that book's
+own opening line, and the site now displays the movement between them. nflverse
+publishes closing lines in `games.csv` and no opener at all, so this one is not
+a straight swap: dropping ESPN costs the opening line and every move computed
+off it. Two things follow. The line display is attributed to the book by name,
+which is a more pointed use of an unlicensed feed than showing a score, so it
+belongs in whatever inquiry R1 produces. And the fallback is real rather than
+theoretical — `_gameLineMove` drops back to the snapshot store's own first
+sighting when the book pair is absent, so pulling the feed degrades the number
+instead of removing the feature.
 
 **Attribution owed once adopted:** see §3.
 
