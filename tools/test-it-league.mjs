@@ -536,20 +536,21 @@ console.log('\nwire contract');
   // The lead and the Position Intel modules print the SAME stories: if one of
   // them stops passing the lens it silently falls back to the saved league, and
   // the page contradicts itself a screen apart. tools/test-position-lens.mjs
-  // drives the switch in a browser; this only guards the argument.
-  // Two editions on the switch, not three: the auction-first pass took best
-  // ball off every surface that sold it. The library still understands the
-  // value (a reader with a saved best ball league keeps their lens), the front
-  // page simply no longer offers it and falls back to auction.
-  ok('the front page offers the edition switch',
-     /id="edSwitch"/.test(front) && ['auction', 'snake'].every(f => front.includes('data-ed="' + f + '"')));
-  ok('and does not sell best ball on it', !front.includes('data-ed="bestball"'));
+  // drives the edition in a browser; this only guards the argument.
+  // The ribbon's Auction / Snake switch came off in September 2026 (in-season:
+  // the draft format is no longer a choice a reader makes on the front page).
+  // The edition still exists — a saved league or a ?fmt= link sets it, auction
+  // otherwise — the page simply offers no control for it, and nothing sells a
+  // best ball surface either.
+  ok('the front page no longer offers an edition switch',
+     !/id="edSwitch"/.test(front) && !/class="ed-switch"/.test(front) && !front.includes('data-ed="'));
+  ok('and a ?fmt= link still sets the edition', /\[?&\]fmt=/.test(front));
   ok('both front-page renders read through the lens',
      (front.match(/L\.tailor\(s\.stat, s\.title, s\.pos, readFmt\)/g) || []).length === 2);
   // The edition is the coarser choice and it owns the lens: setEdition writes
   // the reading format too, so best ball (which has no lens of its own) reads
   // in slots rather than being left on auction dollars.
-  ok('the switch writes the reader’s choice back to the library', /L\.setEdition\(/.test(front));
+  ok('a ?fmt= link writes the reader’s choice back to the library', /L\.setEdition\(/.test(front));
   ok('and setting an edition sets the lens under it',
      /function setEdition[\s\S]{0,400}setReadingFormat\(v\)/.test(fs.readFileSync(path.join(ROOT, 'it-league.js'), 'utf8')));
   ok('the front page labels the line from the library', /L\.tailorLabel\(\)/.test(front));
