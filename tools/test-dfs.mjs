@@ -179,6 +179,45 @@ console.log('\nthe optimizer');
   ok('the consensus mode exists and builds', DFS.build(players, { ...base, mode: 'consensus' }).ok);
   const impossible = DFS.build(players, { ...base, cap: 20000 });
   ok('an impossible cap yields no lineup rather than a broken one', impossible.ok === false && impossible.lineups.length === 0);
+
+  // ── the contest shapes ───────────────────────────────────────────────────
+  // The three objectives the site's contest switch presets. They exist because
+  // the best lineup in a double-up is not the best lineup in a 150,000-entry
+  // tournament, and the page would be lying if all four shapes solved the same
+  // number. The fixture carries no floor/ceiling/ownership fields, so this also
+  // covers the fallback path: the optimizer reconstructs them from the same
+  // positional variance the worker uses rather than degrading to the median.
+  const floorL = DFS.build(players, { ...base, mode: 'floor' });
+  const ceilL = DFS.build(players, { ...base, mode: 'ceiling' });
+  const levL = DFS.build(players, { ...base, mode: 'leverage' });
+  ok('the floor, ceiling and leverage modes all build', floorL.ok && ceilL.ok && levL.ok);
+  ok('each names itself', floorL.mode === 'Safest floor' && ceilL.mode === 'Highest ceiling' && levL.mode === 'Ceiling per point of ownership');
+  ok('a lineup carries its projection, floor and ceiling alongside the objective',
+     ['projPoints', 'floorPoints', 'ceilingPoints'].every(k => typeof ceilL.lineups[0][k] === 'number'));
+  ok('the floor is under the projection and the ceiling over it',
+     floorL.lineups[0].floorPoints < floorL.lineups[0].projPoints && floorL.lineups[0].projPoints < floorL.lineups[0].ceilingPoints,
+     JSON.stringify({ f: floorL.lineups[0].floorPoints, p: floorL.lineups[0].projPoints, c: floorL.lineups[0].ceilingPoints }));
+  ok('the ceiling mode maximises the ceiling, and the floor mode does not beat it there',
+     ceilL.lineups[0].ceilingPoints >= floorL.lineups[0].ceilingPoints - 1e-9,
+     ceilL.lineups[0].ceilingPoints + ' vs ' + floorL.lineups[0].ceilingPoints);
+  ok('the floor mode maximises the floor, and the ceiling mode does not beat it there',
+     floorL.lineups[0].floorPoints >= ceilL.lineups[0].floorPoints - 1e-9,
+     floorL.lineups[0].floorPoints + ' vs ' + ceilL.lineups[0].floorPoints);
+  ok('every shape still respects the cap and fills the roster',
+     [floorL, ceilL, levL].every(r => r.lineups[0].salary <= 50000 && r.lineups[0].players.length === 9));
+  // With no ownership on the slate there is nothing to discount by, so leverage
+  // must fall back to the ceiling rather than to a number it cannot compute.
+  ok('leverage with no ownership on the board falls back to the ceiling, not to nothing',
+     near(levL.lineups[0].points, ceilL.lineups[0].points, 0.11), levL.lineups[0].points + ' vs ' + ceilL.lineups[0].points);
+  // And with ownership present it must actually move off the chalk.
+  const owned = players.map((p, i) => ({ ...p, ownership: i % 3 === 0 ? 34 : 4 }));
+  const chalkFree = DFS.build(owned, { ...base, mode: 'leverage' });
+  const heavy = l => l.players.filter(p => (owned.find(q => q.id === p.id) || {}).ownership >= 34).length;
+  ok('ownership moves the leverage build off the chalk',
+     chalkFree.ok && heavy(chalkFree.lineups[0]) <= heavy(DFS.build(owned, { ...base, mode: 'ceiling' }).lineups[0]),
+     'leverage kept ' + heavy(chalkFree.lineups[0]) + ' chalk bodies');
+  ok('a lineup reports its total modelled ownership when the board carries it',
+     typeof chalkFree.lineups[0].ownership === 'number' && chalkFree.lineups[0].ownership > 0);
 }
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
