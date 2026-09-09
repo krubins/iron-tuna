@@ -8613,6 +8613,12 @@ Two things this touched that are easy to get wrong on the way back:
 and `test-reading-view` asserts that they do not paint one rather than that they
 paint it white.
 
-Known and NOT fixed here, because it predates this: the shared nav's dropdown
-opens under the rankings ribbon, which paints over its first item or two. It did
-that on the white bar too.
+**The nav dropdown opened under the rankings ribbon**, which paints an opaque
+white band across its first item or two. That predated the band — it did the
+same under the white bar — and it is fixed here. `header.site` is a stacking
+context (`position:sticky` with a `z-index`), so the menu inside it cannot rise
+past the header's own layer however high its own `z-index` goes: at 30 the whole
+menu was under `.rk-ribbon`'s 45. The header is 50 now, which is also the right
+order on its own terms — a sticky site header belongs over an in-page band that
+scrolls under it. Nothing else on a chrome page sits between 30 and 49, and the
+skip link (100) still clears it.

@@ -153,7 +153,15 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
    colour, and the blur is what keeps the links legible once white content is
    passing underneath. */
 header.site {
-  position: sticky; top: 0; z-index: 30;
+  /* ABOVE THE RANKINGS RIBBON (.rk-ribbon, z-index 45). The header is a
+     stacking context — position:sticky with a z-index — so the nav dropdown
+     inside it cannot rise past the header's own layer however high its own
+     z-index goes. At 30 that put the whole menu under the ribbon, which paints
+     an opaque white band across its first item or two. This is also the right
+     order on its own terms: a sticky site header belongs over an in-page band
+     that scrolls under it. Nothing else on a chrome page sits between 30 and
+     49, and the skip link (100) still clears it. */
+  position: sticky; top: 0; z-index: 50;
   background: rgba(11, 22, 20, .94); backdrop-filter: blur(8px);
   border-bottom: 3px solid var(--brand);
 }
