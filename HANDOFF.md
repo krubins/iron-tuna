@@ -8252,3 +8252,11 @@ packet before the writer is asked again, and publishes the row as it stands
 for approval stays the editor's. The Week 1 preview passes the new check
 with its real packet (35 allowed names, 152 numbers); the first tick after
 this deploys publishes it.
+
+The 12:00Z refresh answered the question in §68n: ESPN returns 403 with an
+HTML body to the worker's scoreboard request, while the injuries feed on
+the same host answered 800 rows an hour earlier. The requests differed in
+two ways, a user agent carrying a URL and `cf.cacheTtl` on the failing
+ones; every ESPN fetch is now shaped like the one that works (plain user
+agent, no cache options), and a 403 body's first bytes are kept in the
+refresh summary if it recurs.

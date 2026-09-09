@@ -3140,13 +3140,20 @@ async function fetchScheduleNflverse() {
 // chart job failed all thirty-two fetches every morning since the 4th. The
 // worker's own view of the response (status, type, event count, the first
 // bytes when there are no events) is the only way to see the difference.
+// The 12:00Z refresh on September 9 recorded what ESPN says to the worker:
+// 403, text/html, for the scoreboard, while the injuries feed on the same
+// host answered 800 rows an hour earlier. The two requests differed in two
+// ways: the injuries fetch sends a plain user agent and no `cf` cache
+// options, the scoreboard sent a user agent with a URL in it through
+// Cloudflare's cache (`cf.cacheTtl`). Every ESPN fetch is now shaped like
+// the one that works; the 403 body's first bytes are kept when it recurs.
 let _ESPN_LAST = null;
-const ESPN_HEADERS = { 'user-agent': 'iron-tuna/1.0 (+https://irontuna.com)', 'accept': 'application/json' };
+const ESPN_HEADERS = { 'user-agent': 'iron-tuna-schedule/1.0', 'accept': 'application/json' };
 async function _espnEvents(qs) {
   const url = ESPN_SCOREBOARD + (qs ? '?' + qs : '');
-  const r = await fetch(url, { cf: { cacheTtl: 300 }, headers: ESPN_HEADERS });
+  const r = await fetch(url, { headers: ESPN_HEADERS });
   const type = r.headers.get('content-type') || null;
-  if (!r.ok) { _ESPN_LAST = { qs, status: r.status, type, events: null }; throw new Error('espn ' + r.status); }
+  if (!r.ok) { let head = null; try { head = (await r.text()).slice(0, 160); } catch (e) {} _ESPN_LAST = { qs, status: r.status, type, events: null, head }; throw new Error('espn ' + r.status); }
   const text = await r.text();
   let j = null; try { j = JSON.parse(text); } catch (e) { _ESPN_LAST = { qs, status: r.status, type, events: null, head: text.slice(0, 120) }; throw new Error('espn: not json'); }
   const events = Array.isArray(j && j.events) ? j.events : [];
@@ -5692,7 +5699,7 @@ const ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl
 const ESPN_DEPTH = t => 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + encodeURIComponent(t) + '/depthcharts';
 const RED_ZONE_YARDS = 20, GOAL_LINE_YARDS = 5;
 async function fetchGameSummaryEspn(eventId) {
-  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { cf: { cacheTtl: 120 }, headers: ESPN_HEADERS });
+  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { headers: ESPN_HEADERS });
   if (!r.ok) throw new Error('espn summary ' + r.status);
   return await r.json();
 }
@@ -5818,7 +5825,7 @@ function gameUsageByTeam(game) {
 const DEPTH_ROW = 6;
 const DEPTH_MAX_AGE_MS = 7 * 86400000;
 async function fetchDepthChartEspn(team) {
-  const r = await fetch(ESPN_DEPTH(team), { cf: { cacheTtl: 3600 }, headers: ESPN_HEADERS });
+  const r = await fetch(ESPN_DEPTH(team), { headers: ESPN_HEADERS });
   if (!r.ok) throw new Error('espn depth ' + r.status + ' for ' + team);
   const j = await r.json();
   const groups = Array.isArray(j.depthchart) ? j.depthchart : [];
