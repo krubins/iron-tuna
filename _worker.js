@@ -5964,7 +5964,10 @@ const CONTENT_KINDS = {
     summary: 'Usage, role and sustainability from the Thursday game. Not a recap.', absorbs: ['tnf-aftermath'] },
   'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 7, minute: 0, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', preview: true,
-    targets: (gs) => gs.filter(g => g.dow !== 'Thu'),
+    // The weekend: everything after the midweek games. A Wednesday opener is
+    // the midweek preview's, and a preview is not ready once any target has
+    // kicked off, so it must not be here on Friday.
+    targets: (gs) => gs.filter(g => g.dow !== 'Wed' && g.dow !== 'Thu'),
     summary: 'The hard start/sits, the matchups, the movers and the weather. For DFS, the whole slate.', absorbs: ['final-read', 'weekend-game-plan'] },
   'kickers-defenses': { title: 'Kickers & Defenses', day: 'Fri', hour: 8, minute: 0, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', targets: () => [],

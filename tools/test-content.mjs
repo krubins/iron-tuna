@@ -124,6 +124,8 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   ok('and waits while Thursday is still to be played', !wdue('tnf-what-matters', ET(2026, 9, 11, 6, 0), ['w1-wed']).ready);
   const mnfw = wdue('mnf-preview', ET(2026, 9, 14, 6, 10), ['w1-wed', 'w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
   ok('the Monday preview is untouched by a Wednesday opener', mnfw.due && mnfw.ready && mnfw.slotDay === 'Mon' && mnfw.targets.join() === 'w1-mnf');
+  const wkd = wdue('weekend-preview', ET(2026, 9, 11, 7, 0), ['w1-wed', 'w1-thu']);
+  ok('the Weekend Preview on Friday leaves the played midweek games out and is ready', wkd.due && wkd.ready && !wkd.targets.includes('w1-wed') && !wkd.targets.includes('w1-thu') && wkd.targets.includes('w1-e1'), JSON.stringify(wkd));
   ok('Underrated, the Trade Desk and Tight End Thursday follow at 7, 8 and 9', due('underrated', ET(2026, 9, 17, 7, 0), wk1).due && !due('underrated', ET(2026, 9, 17, 6, 45), wk1).due && due('trade-desk', ET(2026, 9, 17, 8, 0), wk1).week === 2 && due('tight-end-thursday', ET(2026, 9, 17, 9, 0), wk1).week === 1);
   // Friday.
   const after = due('tnf-what-matters', ET(2026, 9, 18, 6, 30), wk1.concat(['w2-thu']));
