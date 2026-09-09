@@ -992,6 +992,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-board .tg.stack { color: #bcd0cc; background: rgba(255, 255, 255, .1) }
 .fp-board-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 22px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 12.5px; color: #7f948f }
 .fp-board-foot a { color: var(--teal, #2dd4a3); font-weight: 700 }
+.fp-nosal { border: 1px solid var(--line, #e1e7ea); border-left: 4px solid var(--gold, #f2a900); border-radius: 12px; background: var(--card, #fff); padding: 20px 22px 18px; margin: 16px 0 8px }
+.fp-nosal h3 { font-size: 18px; line-height: 1.25; margin: 0 0 8px; color: var(--ink, #0f1719) }
+.fp-nosal p { font-size: 14px; line-height: 22px; color: var(--ink-2, #3f4e58); margin: 0 0 8px; max-width: 76ch }
+.fp-nosal p:last-child { margin-bottom: 0 }
+.fp-nosal a { color: var(--brand, #0e7c63); font-weight: 700 }
 
 /* ── the action deck ─────────────────────────────────────────────────────── */
 .fp-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 14px; margin: 0 0 10px }
@@ -3857,10 +3862,29 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       window.addEventListener('load', function () { buildLineup(slates[site]); }, { once: true });
     }
     if (!s || !s.ok || !window.ITDfs || !s.slots) {
-      host.innerHTML = '<p class="dfs-empty">' + (s && s.ok ? 'Reading the slate\u2026' :
-        'No salaries are loaded for this site this week, so there is no cap to solve. The full sheet at /dfs prices your own contest\u2019s salary file.') + '</p>';
+      // No licensed salary feed exists (docs/data-sources.md), so between the
+      // desk's imports there is no cap to solve. The chips govern a solve that
+      // cannot run, so they go too, and the panel points at the one route that
+      // works without the desk: the reader's own lobby CSV, priced at /dfs.
+      var shp = $('dfsShape'), shn = $('dfsShapeNote');
+      if (s && s.ok) {
+        host.innerHTML = '<p class="dfs-empty">Reading the slate\u2026</p>';
+        return;
+      }
+      if (shp) shp.hidden = true;
+      if (shn) shn.hidden = true;
+      host.innerHTML = '<div class="fp-nosal">'
+        + '<h3>No salaries are posted for this site this week</h3>'
+        + '<p>There is no cap to solve against yet, so no roster is drawn. The board is empty rather than stale.</p>'
+        + '<p>Your own contest already gave you its salary CSV on the lobby page. '
+        + '<a href="/dfs">The full DFS sheet</a> prices that file in your browser and solves the same lineup off it \u2014 '
+        + 'or reads the pick\u2019em board, which needs no salaries at all.</p>'
+        + '</div>';
       return;
     }
+    var shpOk = $('dfsShape'), shnOk = $('dfsShapeNote');
+    if (shpOk) shpOk.hidden = false;
+    if (shnOk) shnOk.hidden = false;
     var pool = (s.players || []).filter(function (p) { return p.onBoard; })
       .map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
     var r = ITDfs.build(pool, { mode: sh.mode, cap: s.cap, slots: s.slots, flex: s.flex,

@@ -120,6 +120,27 @@ p{color:var(--sec);margin:0 0 16px}
 .df-tune .rk-controls{margin-top:0}
 .df-tune>:last-child{margin-bottom:var(--space-5)}
 .df-sub{font-size:var(--fs-sm);color:var(--sec);line-height:1.6;margin:0 0 var(--space-4);max-width:80ch}
+
+/* ── the empty slate ─────────────────────────────────────────────────────────
+   There is no licensed salary feed (docs/data-sources.md: DFS_SALARY_API is
+   unset), so the site's own slate exists only after the desk pastes a lobby CSV
+   into /admin. Between those imports this page has no cap to solve, and since
+   the lineup is now the headline that is the whole page failing rather than one
+   table being short.
+
+   So the empty state is a real panel, not a grey line, and it leads with the
+   path that works WITHOUT the desk: the reader's own contest already handed
+   them a salary file, and /api/dfs/slate prices it. The two buttons drive the
+   upload controls above rather than duplicating them, so there is still one
+   file input on the page. */
+.df-nosal{border:1px solid var(--line2);border-left:4px solid var(--gold);border-radius:var(--radius-md);
+  background:var(--panel);padding:var(--space-5) var(--space-5) var(--space-4);margin:var(--space-4) 0}
+.df-nosal h3{margin:0 0 var(--space-2);font-size:var(--fs-lg);letter-spacing:-.01em;color:var(--text)}
+.df-nosal p{font-size:var(--fs-sm);color:var(--sec);line-height:1.6;margin:0 0 var(--space-3);max-width:78ch}
+.df-nosal p:last-child{margin-bottom:0}
+.df-nosal b{color:var(--text)}
+.df-nosal-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:var(--space-4) 0}
+.df-nosal-row .btn{padding:10px 20px;font-size:var(--fs-sm)}
 .df-h3{font-family:var(--font-display);font-weight:400;font-size:24px;letter-spacing:.04em;text-transform:uppercase;
   line-height:1;margin:var(--space-6) 0 var(--space-3);color:var(--text);display:flex;align-items:baseline;gap:12px}
 .df-h3 em{font-family:var(--font-body);font-style:normal;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted)}
@@ -752,6 +773,7 @@ p{color:var(--sec);margin:0 0 16px}
 
   function slateOk(j) {
     slate = j;
+    $('dfShape').hidden = false; $('dfShapeNote').hidden = false;
     var stamp = j.source === 'upload'
       ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
       : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
@@ -764,7 +786,22 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfEmpty').textContent = 'No ' + (label || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.';
     $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
     $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
-    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
+    // The shape switch governs a solve and a sort that both have nothing to
+    // work on, so it is hidden rather than left as a control that does nothing.
+    $('dfShape').hidden = true; $('dfShapeNote').hidden = true;
+    $('dfLineups').innerHTML =
+      '<div class="df-nosal">'
+      + '<h3>No ' + e(label || 'salary') + ' salaries are posted for this week yet</h3>'
+      + '<p>The desk imports one main-slate file a week and this week\u2019s is not up, so there is no cap to solve against. '
+      + 'Nothing here is stale \u2014 the board is empty rather than wrong.</p>'
+      + '<p><b>You do not have to wait for it.</b> The contest you are entering already handed you its own salary CSV on the lobby page. '
+      + 'Upload that file and this roster solves off it immediately, against the same market numbers the desk\u2019s slate uses. '
+      + 'It is read in your browser, priced, and stored nowhere on the site.</p>'
+      + '<div class="df-nosal-row"><button class="btn" type="button" data-nosal="file">Choose your salary file</button>'
+      + '<button class="btn alt" type="button" data-nosal="paste">Paste the CSV instead</button></div>'
+      + '<p class="is-note">Not playing a salary-cap contest? The <a href="/dfs?site=pk">pick\u2019em board</a> needs no salaries at all, '
+      + 'and <a href="/game-intel">Game Intel</a> reads this week\u2019s scoring environment straight off the game lines.</p>'
+      + '</div>';
     $('dfPivots').innerHTML = ''; built = null;
   }
   // Price the reader's file. A file the parser refuses is theirs to fix, so the
@@ -873,6 +910,17 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
     $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
     $('dfPool').addEventListener('click', function (ev) { var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
+    // The empty state's two buttons are the upload controls above, reached from
+    // where the reader actually is. Delegated, because the panel is re-rendered
+    // on every failed load.
+    $('dfLineups').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-nosal]'); if (!b) return;
+      var up = $('dfUp');
+      if (up) up.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (b.getAttribute('data-nosal') === 'file') { $('dfUpFile').click(); return; }
+      if ($('dfUpText').hidden) $('dfUpPaste').click();
+      $('dfUpText').focus();
+    });
     // Copy takes the roster to the clipboard as names, which is what every
     // lobby's paste box wants. It copies; it does not enter anything.
     $('dfLineups').addEventListener('click', function (ev) {
