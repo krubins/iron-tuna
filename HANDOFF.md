@@ -8222,3 +8222,33 @@ no game is ever `final` and no retrospective piece is ever ready.
 - **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`). Their API is non-commercial-only and this is a paid product (docs/data-sources.md R2, R7). Turn it on only with their licence in writing. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
 
 **Tests.** `node tools/test-league-sync.mjs` (in CI): fixtures in `tools/fixtures/`, the network stubbed, an in-memory D1, the real scoring engine and the real PROJECTIONS pool. `tools/test-jobs.mjs`, `test-health.mjs` and `test-newsroom.mjs` know the new job and the three off-by-default flags. `tools/test-data-sources.mjs` allowlists the two Yahoo hosts.
+
+### 68o. The first real draft, and what the fact check got wrong
+
+The first writer run on production (the Week 1 midweek preview, 11:45Z on
+September 9, 201 seconds for two lenses and one retry) produced a sound
+draft, grounded and honest about the feeds it lacked, and the fact check
+held it on twenty-three violations, every one a false positive: "Two
+Slates", "Implied Totals" and "Market Away From" from a title-case
+headline; "Brown. Vegas" and "Nacua. Reasonable" across a full stop;
+"Guerendo's PUP", "Every Patriots", "Reasonable DST", "Iron Tuna's"; and
+numbers that were arithmetic on the packet (18.6 is 1.5 below 20.1) or the
+spread quoted from the other side (-3.5).
+
+`validateDraft` now ends a sentence where a lower-case word meets its full
+stop before it looks for names (an initial is not a sentence end), strips a
+possessive, drops all-caps abbreviations and every word in `NOT_A_NAME`
+(the words a headline starts with, the clubs and cities, the desk's own
+vocabulary), and calls a run of capitals a name only if two or more words
+survive and the pair is not made of allowed surnames. A number is allowed
+as the signed form of a packet number or, below ten, as the difference or
+sum of two packet numbers. A real player the packet lacks is still caught,
+and so is a number that is neither in the packet nor arithmetic on it.
+
+And a held draft is not thrown away when the check improves:
+`revalidateHeld` runs the fact check on the stored body against a fresh
+packet before the writer is asked again, and publishes the row as it stands
+(calls recorded) when it passes and the desk is auto-publishing. A row held
+for approval stays the editor's. The Week 1 preview passes the new check
+with its real packet (35 allowed names, 152 numbers); the first tick after
+this deploys publishes it.

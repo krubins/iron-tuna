@@ -187,6 +187,19 @@ console.log('\nthe validator');
   ok('a number the brief does not contain is caught', bad.numbers.includes('155'));
   ok('small counts are allowed as prose', H.validateDraft('He was one of 3 backs used.', b.allowed).ok);
   ok('the site\'s own names are allowed', H.validateDraft('Iron Tuna has him higher. Market Delta agrees.', b.allowed).ok);
+  // The first live preview (Week 1, 2026) was held on all of these.
+  const wk = H._finishBrief({ games: [{ away: 'NE', home: 'SEA', spread: 3.5, total: 44.5 }], players: [{ name: 'Puka Nacua', proj: 20.7, market: 18.6, consensus: 20.1 }, { name: 'Isaac Guerendo', status: 'PUP' }, { name: 'A.J. Brown' }] });
+  const hl = H.validateDraft('Two Slates, Two Very Different Implied Totals: Follow the Market Away From New England', wk.allowed);
+  ok('a title-case headline is not a roster', hl.ok, JSON.stringify(hl));
+  const sb = H.validateDraft('Same problem as Brown. Vegas ranks him lower. He is behind Nacua. Reasonable flex.', wk.allowed);
+  ok('a sentence boundary is not a name', sb.ok, JSON.stringify(sb));
+  const ps = H.validateDraft("Guerendo's PUP absence opens the backfield. Every Patriots skill player. Reasonable DST start. Iron Tuna's rank agrees.", wk.allowed);
+  ok('a possessive, an abbreviation, a club and the site are not a name', ps.ok, JSON.stringify(ps));
+  ok('a real player the packet lacks is still caught', H.validateDraft('Justin Jefferson is the play here.', wk.allowed).names.join() === 'Justin Jefferson');
+  const ar = H.validateDraft('Market points 18.6, 1.5 below consensus. LA -3.5 at home.', wk.allowed);
+  ok('a difference of two packet numbers is allowed, and so is the signed spread', ar.ok, JSON.stringify(ar));
+  const nn = H.validateDraft('He ran for 155 yards, 4.7 per carry.', wk.allowed);
+  ok('a number that is neither in the packet nor arithmetic on it is still caught', nn.numbers.join() === '155,4.7', JSON.stringify(nn));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

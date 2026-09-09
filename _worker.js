@@ -6416,20 +6416,47 @@ function _sectionSpec(kind) {
 }
 // Every capitalised two-or-three-word name and every number in the draft must
 // be in the brief. Small integers are allowed (ordinals, counts of things).
+// Capitalised words that are not people: the words a headline or a sentence
+// starts with, the clubs, the site's own names, the vocabulary of the desk.
+// A run of capitalised words is a NAME only if two or more of its words are
+// none of these (and not an all-caps abbreviation, and not a possessive of
+// something allowed). The first live preview was held on "Two Slates",
+// "Implied Totals", "Every Patriots", "Guerendo's PUP" and "Brown. Vegas".
+const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modelled Modeled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
+const _nameTokens = (run) => run.split(/\s+/).map(t => t.replace(/['\u2019]s$/, '')).filter(t => t && !/^[A-Z0-9.&-]+$/.test(t) && !NOT_A_NAME.has(t.replace(/[.,]+$/, '')));
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
   const bad = { names: [], numbers: [] };
   const OK_WORDS = new Set(['Iron Tuna', 'Market Delta', 'Monday Night', 'Sunday Night', 'Thursday Night', 'Red Zone', 'Vegas Edge', 'What We', 'Fantasy Playoffs', 'Rest Of', 'Next Three', 'Week One']);
-  for (const m of String(text).matchAll(/\b([A-Z][a-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2})\b/g)) {
+  const known = n => names.has(n) || OK_WORDS.has(n) || [...names].some(x => x.includes(n) || n.includes(x));
+  // A sentence ends where a lower-case word meets its full stop, so "Brown.
+  // Vegas" is two sentences and not a man. An initial ("A.J.") is not a
+  // sentence end.
+  const bounded = String(text).replace(/([a-z0-9)][.!?;:])\s+(?=[A-Z])/g, '$1\n');
+  for (const m of bounded.matchAll(/\b([A-Z][a-z'\u2019.-]+(?:\s[A-Z][A-Za-z'\u2019.-]+){1,2})\b/g)) {
     const n = m[1];
-    if (names.has(n) || OK_WORDS.has(n)) continue;
-    if ([...names].some(x => x.includes(n) || n.includes(x))) continue;
+    if (known(n)) continue;
     if (/^(What|Why|The|This|That|His|Their|A|An|In|On|At|For|With|And|But|Not|No|He|She|It|They|We|Both)\b/.test(n)) continue;
+    const toks = _nameTokens(n);
+    if (toks.length < 2) continue;
+    const core = toks.join(' ');
+    if (known(core)) continue;
+    // Two allowed surnames next to each other ("Stevenson and McCaffrey"
+    // without the "and", a list) are not a third person.
+    if (toks.every(t => [...names].some(x => x.split(/\s+/).includes(t)))) continue;
     bad.names.push(n);
   }
+  // A number the packet does not carry is still allowed when it is a signed
+  // form of one it does (a spread quoted from the other side), or, below ten,
+  // the difference or sum of two packet numbers: "18.6, 1.5 below consensus
+  // 20.1" is arithmetic on the packet, not a new fact.
+  const vals = [...nums].map(Number).filter(Number.isFinite);
+  const grid = new Set(vals.map(x => x.toFixed(1)));
+  const arithmetic = a => a < 10 && vals.some(x => grid.has((x - a).toFixed(1)) || grid.has((x + a).toFixed(1)));
   for (const m of String(text).matchAll(/-?\d+(?:\.\d+)?/g)) {
-    const v = m[0]; const num = Number(v);
-    if (nums.has(v) || (Number.isInteger(num) && Math.abs(num) <= 20)) continue;
+    const v = m[0]; const num = Number(v), abs = Math.abs(num);
+    if (nums.has(v) || nums.has(String(abs)) || (Number.isInteger(num) && abs <= 20)) continue;
+    if (arithmetic(abs)) continue;
     bad.numbers.push(v);
   }
   bad.names = [...new Set(bad.names)]; bad.numbers = [...new Set(bad.numbers)];
@@ -7468,6 +7495,15 @@ async function produceContent(env, kind, opts) {
     if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
     return { ok: true, kind, week, status: 'skipped', reason: packet.reason };
   }
+  // A draft the fact check held is checked again against the fresh packet
+  // before the writer is asked for another. The check is code and the code
+  // changes: the first live preview was held on title-case headline words
+  // and sentence boundaries, and once the rule learned them the draft it had
+  // held was right. Nothing is rewritten; the row is published as it stands.
+  if (latest && latest.status === 'held' && latest.body && latest.body !== 'null' && !o.force) {
+    const revived = await revalidateHeld(env, kind, latest, packet, d, season);
+    if (revived) return revived;
+  }
   if (latest && !o.force && !retry && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
   const written = await writeNewsroomPiece(env, kind, packet);
   if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
@@ -7488,6 +7524,24 @@ async function produceContent(env, kind, opts) {
     calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, list, rivalry);
   }
   return { ok: true, kind, week, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
+}
+async function revalidateHeld(env, kind, latest, packet, d, season) {
+  let body = null; try { body = JSON.parse(latest.body); } catch (e) { return null; }
+  if (!body || typeof body !== 'object') return null;
+  let vio = []; try { vio = JSON.parse(latest.violations || '[]') || []; } catch (e) { vio = []; }
+  // Held for approval is the editor's call, never the tick's.
+  if (vio.some(v => /^awaiting_approval/.test(String(v)))) return null;
+  const fc = factCheck(body, packet);
+  if (!fc.ok) return null;
+  const auto = await autoPublishOn(env);
+  if (!auto.on) return null;
+  try { await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ?, violations = ? WHERE id = ?').bind('published', Date.now(), null, latest.id).run(); }
+  catch (e) { return null; }
+  const analyst = packet.meta.analyst, week = d.week;
+  const rivalry = packet.rivalry && body.rivalryLine ? { ...packet.rivalry, line: String(body.rivalryLine).slice(0, 300) } : null;
+  let calls = { stored: 0 };
+  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normaliseCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
+  return { ok: true, kind, week, status: 'published', version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
 }
 async function runContentTick(env) {
   const out = [];
