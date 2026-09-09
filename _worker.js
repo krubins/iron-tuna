@@ -7864,6 +7864,28 @@ async function dfsReady(env) {
 // A DST row on either site names the club; the board names the club's
 // defence. Both resolve to the team key.
 const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DEF' || u === 'D' || u === 'D/ST' ? 'DST' : u; };
+// Which contest a salary file is for. Both sites sell single-game contests out
+// of a file with the same columns as the main slate, and the difference is a
+// multiplier slot the classic roster does not have: DraftKings prices the
+// captain as a second CPT row for the same player, FanDuel an MVP. Priced
+// against the classic cap and roster, that file builds a lineup nobody can
+// enter, so the reader upload names it and stops rather than quietly costing
+// someone an entry fee.
+//
+// The test is structural as well as by name, because the slot token is the
+// operators' to rename and the repeated player row is the shape of a captain
+// file whatever they call it. One shared name between two players on a slate
+// happens; a file where a quarter of the rows repeat a player does not.
+const DFS_MULTIPLIER_SLOT = /\b(CPT|MVP)\b/;
+function dfsSlateShape(rows) {
+  const list = rows || [];
+  if (!list.length) return 'classic';
+  if (list.some(r => DFS_MULTIPLIER_SLOT.test(r.rosterPosition || ''))) return 'single-game';
+  const seen = new Set();
+  let dup = 0;
+  for (const r of list) { const k = _oddsNorm(r.name) + '|' + r.position; if (seen.has(k)) dup++; else seen.add(k); }
+  return dup * 4 > list.length ? 'single-game' : 'classic';
+}
 // ── the CSV each lobby exports ─────────────────────────────────────────────
 // DraftKings: Position, Name + ID, Name, ID, Roster Position, Salary, Game Info, TeamAbbrev, AvgPointsPerGame
 // FanDuel:    Id, Position, First Name, Nickname, Last Name, FPPG, Played, Salary, Game, Team, Opponent, Injury Indicator, Injury Details, Tier, Roster Position
@@ -7874,7 +7896,7 @@ function parseDfsCsv(site, text) {
   const idx = k => head.findIndex(h => h.toLowerCase() === k.toLowerCase());
   const rows = [];
   if (site === 'dk') {
-    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info');
+    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info'), iRoster = idx('Roster Position');
     if (iPos < 0 || iName < 0 || iSal < 0) return { rows: [], error: 'not a DraftKings salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -7882,15 +7904,17 @@ function parseDfsCsv(site, text) {
       const game = String(f[iGame] || '');
       const m = /^([A-Z]{2,3})@([A-Z]{2,3})/.exec(game);
       const opp = m ? (teamKey(m[1]) === team ? teamKey(m[2]) : teamKey(m[1])) : null;
-      rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+      rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
       const name = iNick >= 0 && f[iNick] ? f[iNick] : ((f[iFirst] || '') + ' ' + (f[iLast] || '')).trim();
-      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null });
+      rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
     }
   } else return { rows: [], error: 'unknown site' };
   const good = rows.filter(r => r.name && r.position && Number.isFinite(r.salary) && r.salary > 0);
@@ -10760,6 +10784,59 @@ export default {
       }
       return json(slate, 200, { ...c, 'cache-control': 'public, max-age=300' });
     }
+    // The reader's own lobby export, priced and then thrown away.
+    //
+    // /api/dfs above serves the desk's import: one main slate a week, the same
+    // rows for everybody. A reader entering a different contest already has the
+    // salary file, because the site they play on hands it to them on the
+    // contest page. This takes that file, runs it through the same parser and
+    // the same slate builder, and hands back the boards. It is the CSV path of
+    // docs/data-sources.md carried to where it belongs: the act of obtaining
+    // the data stays with the person already entitled to it.
+    //
+    // It STORES NOTHING. dfs_salaries is keyed by site and week with no reader
+    // on it, so one reader's upload written there would be what every other
+    // reader is shown. The parse is per request, the response is uncacheable,
+    // and the file itself never leaves the reader's browser except to be
+    // scored. Importing to the shared table stays an admin action.
+    if (url.pathname === '/api/dfs/slate') {
+      const c = corsHeaders(request.headers.get('Origin'));
+      if (request.method === 'OPTIONS') return new Response(null, { headers: c });
+      if (request.method !== 'POST') return json({ ok: false, error: 'method', note: 'POST { site, csv } to price a salary file.' }, 405, c);
+      if (await rl(env, request, 'dfsup', 60, 600)) return json({ ok: false, error: 'too_many', note: 'That is a lot of files in ten minutes. Wait a moment and try again.' }, 429, c);
+      // Measure the body before parsing it. The admin import can take the JSON
+      // straight because a key gets you there; anyone at all gets here, and a
+      // request.json() on an unbounded body is memory spent before the first
+      // check runs. The headroom over the CSV cap below is JSON escaping.
+      let raw = '';
+      try { raw = await request.text(); } catch (e) { return json({ ok: false, error: 'bad_body' }, 400, c); }
+      if (raw.length > 1400000) return json({ ok: false, error: 'too_big',
+        note: 'That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.' }, 413, c);
+      let b = {}; try { b = JSON.parse(raw); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400, c); }
+      const site = DFS_SITES[b.site] ? b.site : null;
+      if (!site) return json({ ok: false, error: 'site', note: 'Choose DraftKings or FanDuel before reading a file.' }, 400, c);
+      const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 1000000));
+      if (parsed.error) return json({ ok: false, error: parsed.error,
+        note: 'That file did not read as a ' + DFS_SITES[site].label + ' salary export. Download it from the contest lobby and upload it unchanged.' }, 400, c);
+      if (dfsSlateShape(parsed.rows) === 'single-game') return json({ ok: false, error: 'single_game',
+        note: 'That is a single-game file: it prices a captain or MVP at a multiplier the classic roster does not have. Every board here is built for the classic cap, so pricing it would show you a lineup you cannot enter. Upload a main-slate export instead.' }, 400, c);
+      const sched = await scheduleCacheRead(env);
+      const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
+      const board = await boardsPayload(env, { horizon: 'week', position: 'ALL', preset: 'ppr' });
+      const slate = buildDfsSlate(site, parsed.rows, board.ok ? board : null, {});
+      slate.week = state.ok && state.week.type === 'REG' ? state.week.number : null;
+      // No salariesAsOf: the reader's file has no import time, and a timestamp
+      // for when they happened to press the button would say nothing true.
+      slate.source = 'upload'; slate.salariesAsOf = null;
+      slate.stacks = buildDfsStacks(slate, state);
+      if (flagOn(env, 'DFS_CONTENT')) {
+        const contest = DFS_CONTESTS[b.contest] ? b.contest : 'gpp';
+        const m = dfsMetrics(slate.players, contest);
+        slate.metrics = { contest: m.contest, label: m.label, note: m.note, sortBy: m.sortBy, ownershipBasis: m.ownershipBasis, medianPerK: m.medianPerK, contests: Object.fromEntries(Object.entries(DFS_CONTESTS).map(([k, v]) => [k, v.label])) };
+        slate.stackScores = dfsStackScores(slate.stacks);
+      }
+      return json(slate, 200, { ...c, 'cache-control': 'no-store' });
+    }
     // The newsroom: the public feed the homes read, the staff, one analyst,
     // the Fantasy/Market blend, and the Vega/Brooks disagreements.
     if (url.pathname === '/api/newsroom') {
@@ -11663,8 +11740,11 @@ export default {
       return json({ ok: true, ...providerReport(env), kinds: Object.keys(PROVIDERS), ran }, 200, c);
     }
     // DFS salaries: GET reports what is loaded; POST { site, csv, slate? }
-    // imports a lobby CSV for the current week; ?refresh=1 pulls the configured
-    // site feeds now.
+    // imports a lobby CSV for the current week. There is no feed refresh here.
+    // The operator endpoints were removed on 2026-09-06 (docs/data-sources.md)
+    // and a licensed feed, if one is ever configured, has no import job yet:
+    // providerRun(env, 'dfs') is reachable only from /api/admin/providers, and
+    // that route reports what it fetched without storing it.
     if (url.pathname === '/api/admin/dfs') {
       const c = corsHeaders(request.headers.get('Origin'));
       if (!adminOk(env, url.searchParams.get('key') || '')) return json({ ok: false, error: 'forbidden' }, 403, c);
