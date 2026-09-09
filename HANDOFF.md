@@ -730,17 +730,35 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   cases come from `/api/vegas-column`, not from `STORIES`, so `build-front.mjs` does not
   touch it and it never needs a copy refresh. Full contract in **§9c**.
 - **The lead carries artwork** (`#leadArt`), an inline SVG plate in the featured team's
-  colours. **No club logo, wordmark or player likeness is reproduced** — none of that is
-  ours to publish. What is used is a team's colours (a fact, not a creative work) plus the
-  abbreviation, drawn as original geometry. `TEAM_ART` in `front.html` holds the palette;
-  `inkOn()` picks the type colour from the background's luminance, because white on
-  Pittsburgh's yellow is unreadable.
-  - The team comes from `story.team`, set by `build-front.mjs` from **the headline only**.
-    The body fallback that works for topics is too loose here: "Offensive-line dispersion
-    matters more this year" is a league-wide piece that cites Buffalo in paragraph three,
-    and body matching handed it Buffalo's colours. League-wide stories get the neutral
-    plate — currently 17 of 20 deep dives name a team, and the 3 that don't are the two
-    rule-change pieces and the dispersion one, correctly.
+  colours. The geometry is original — a team's colours (a fact, not a creative work) plus
+  the abbreviation and the club name — and it is what always draws. `TEAM_ART` in
+  `front.html` holds the palette; `inkOn()` picks the type colour from the background's
+  luminance, because white on Pittsburgh's yellow is unreadable.
+  - **Club marks are referenced, not reproduced.** `logoUrl()` points an SVG `<image>` at
+    ESPN's own logo host, the same posture as the player photographs in the band above,
+    disclosed in the same row on `/data` and claiming no rights and no affiliation. A mark
+    that will not load (blocked, moved, 404) removes itself and its disc, and the type
+    slides back to its `data-x0` position, so the plate is whole either way. Backing this
+    out is deleting `logoUrl` and the `<image>`: nothing else depends on it.
+  - **Three layouts.** A **fixture** ("NE at SEA" / "Raiders vs Jaguars") splits the plate
+    between the two clubs, with the connector in the centre badge so the order still reads
+    — "at" means the first club is the visitor. One club gets the single plate. Neither
+    gets the neutral `NFL / LEAGUE-WIDE` plate.
+  - The team comes from `story.team` where `build-front.mjs` set one, from **the headline
+    only**. The body fallback that works for topics is too loose here: "Offensive-line
+    dispersion matters more this year" is a league-wide piece that cites Buffalo in
+    paragraph three, and body matching handed it Buffalo's colours. A generated desk piece
+    arrives with no team at all, so `firstTeam()` reads its headline under the same rule.
+    The **dek is read for one thing only**: a fixture. "NE at SEA" in the dek of a game
+    preview is the subject of the piece, not a rival cited in passing. A fixture also has
+    to be the headline club's own game, so a slate piece led by New England does not get
+    San Francisco's plate because SF-at-LA happens to be the first game its dek lists.
+    "LA" is deliberately not a key — it names two clubs — and neither is a bare "New York".
+  - The strap (the topic, bottom right) rides a chip measured to its own type by
+    `fitStrap()`, re-measured once `document.fonts.ready` resolves. It used to be bare type
+    anchored to the right edge, long enough to run off the accent wedge onto the plate
+    behind it: "THURSDAY NIGHT FOOTBALL PREVIEW" was set in the wedge's dark ink and its
+    first eight characters landed on a near-black field, invisible.
 - **Odds impact on every player row** (`vegasRankEl` / `vegasRankShifts` in `index.html`,
   wired into **`Cheatsheet`** and **`PlayersRail`** — the cheat sheet and the auction
   manager). The old `vegasFlagEl` "V" badge only said *that* the odds mattered, and only on
