@@ -140,8 +140,6 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 .dg-side h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
 .dg-side p{margin:0 0 8px;font-size:14px;line-height:1.45}.dg-line{font-style:italic;color:var(--sec,#5a6b78)}
 @media(max-width:800px){.dg-wrap{grid-template-columns:1fr}}
-/* Auction or snake is a question about a draft. It has no answer on a slate. */
-.ribbon[data-lane="dfs"] .ed-switch{display:none}
 
 /* ── section headers ── */
 .sec-head{display:flex;align-items:baseline;gap:14px;margin:34px 0 14px;border-bottom:2px solid var(--ink);padding-bottom:8px;position:relative}
@@ -150,25 +148,15 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 .sec-head .sec-more{margin-left:auto;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
 .sec-head .sec-more:hover{color:var(--brand-dark)}
 @media(max-width:560px){.sec-head{flex-wrap:wrap}}
-/* ── the edition switch ──
-   Auction / Snake, in the ribbon: a small secondary control, deliberately.
-   This is an auction site, and the switch exists so a reader who plays a snake
-   draft is shown the snake edition of a story rather than being thrown off the
-   page — not so the two formats look like equals. Best ball was a third option
-   here until August 2026; it is off the switch now, and every surface that
-   sold it. The published bestball-insights-* pages are left reachable at the
-   URLs they were indexed at, they are simply no longer promoted. */
+/* ── the edition tag ──
+   The Auction / Snake switch that stood in the ribbon is gone (September 2026:
+   the season is under way and the draft format is no longer a choice a reader
+   makes here). The page still reads in an edition — the league they saved, a
+   ?fmt= link, or auction — it simply no longer offers a control for it. What
+   is left is .ed-tag, the small label The Build wears when it is read in a
+   currency other than the site's own. */
 .ed-tag{display:inline-block;margin-left:9px;padding:2px 7px;border:1px solid var(--line);border-radius:3px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);vertical-align:middle}
 .ed-tag[hidden]{display:none}
-.ed-switch{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--card);margin:0 8px;flex:0 0 auto}
-.ribbon .ed-switch a{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:6px 12px;border-bottom:0;line-height:1.5}
-.ribbon .ed-switch a+a{border-left:1px solid var(--line)}
-.ribbon .ed-switch a:hover{color:var(--brand);border-bottom-color:transparent}
-.ribbon .ed-switch a.on{background:var(--ink);color:#fff}
-/* The ribbon scrolls sideways on a phone, and the edition switch is the one
-   control on it that has to be reachable without scrolling — so on a narrow
-   screen it leads the ribbon instead of sitting past the fold. */
-@media(max-width:700px){.ribbon .ed-switch{order:-1;margin:0 8px 0 0}.ribbon .ed-switch a{padding:6px 9px;font-size:10.5px;letter-spacing:.04em}}
 
 /* ── player lookup, in the ribbon ── */
 /* The field is the one control on the page that is always on screen, so it is
@@ -583,10 +571,10 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 .foot .fm{margin-left:auto}
 
 /* Between the widest phone and the full desktop the ribbon is a handful of
-   pixels too wide, which pushes the edition switcher — a control, not a link —
-   out of reach. Tightening the links buys those pixels back rather than
-   spending a scroll on them: the row fits down to 1087px. */
-@media(max-width:1240px){.ribbon a{padding:12px 7px}.ribbon .wrap{gap:2px}.ribbon .ed-switch a{padding:6px 9px}}
+   pixels too wide, which pushes the last tab out of reach. Tightening the
+   links buys those pixels back rather than spending a scroll on them: the row
+   fits down to 1087px. */
+@media(max-width:1240px){.ribbon a{padding:12px 7px}.ribbon .wrap{gap:2px}}
 /* The masthead row, tightened — and NOT behind a media query, which is the trap
    this rule was in. `.wrap` is capped at max-width:1260px, so the masthead's
    content box is the same width at 1360px and at 2560px: a row that does not fit
@@ -655,7 +643,7 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
    guillotining the last tab mid-word. */
 .ribbon .wrap{scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
 .ribbon .wrap::-webkit-scrollbar{display:none}
-.ribbon a,.ribbon .ed-switch{scroll-snap-align:start}
+.ribbon a{scroll-snap-align:start}
 /* The fade is a sticky pseudo-element inside the scroller rather than a mask on
    the bar, because the bar is also `position:sticky` and masking it repaints the
    whole thing on every scroll frame. Being inside the scroller also puts it at
@@ -795,7 +783,7 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 
 /* ── the tool grid ────────────────────────────────────────────────────────
    Six tiles, one row of three on a desktop. Every one of them is an auction
-   tool; the snake room is the small switch in the ribbon, not a tile here. */
+   tool; the snake room is not sold here. */
 .tools-head{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-weight:400;font-size:30px;letter-spacing:.05em;line-height:1;margin:34px 0 4px}
 .tools-sub{font-size:13.5px;color:var(--ink-3);margin-bottom:16px}
 .tools-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
@@ -1017,8 +1005,8 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
     <a class="cta-gold" href="/in-season#league">Save My League</a>
-    <!-- The label is owned by the edition switcher below (it becomes "Auction
-         Manager", "Snake board" and so on), so the href has to be the draft ROOM
+    <!-- The label is owned by the edition painter below (it becomes "Auction
+         Manager", "Draft Room" and so on), so the href has to be the draft ROOM
          and not the cheat sheet, or the button says one thing and does another. -->
     <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
   </nav>
@@ -1138,10 +1126,6 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
            role="combobox" aria-expanded="false" aria-controls="rbSearchList" aria-autocomplete="list"
            data-player-search="ribbon">
   </form>
-  <span class="ed-switch" id="edSwitch" data-lane="fantasy" role="group" aria-label="Choose your draft format">
-    <a href="/?fmt=auction" data-ed="auction">Auction</a>
-    <a href="/?fmt=snake" data-ed="snake">Snake</a>
-  </span>
 </div></div>
 </div>
 
@@ -1471,9 +1455,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // Every "Your league" line on this page has to commit to a draft type: an
   // auction reader wants the call in dollars off their own sheet, a snake reader
   // wants it in draft slots. it-league.js holds the answer — their saved league,
-  // or auction where they have never said — and the ribbon's edition switch
-  // below writes any change back there, so the lead and the modules never
-  // disagree.
+  // or auction where they have never said — and a ?fmt= link writes any
+  // change back there, so the lead and the modules never disagree. The ribbon
+  // no longer carries a switch for it (September 2026: in-season).
   var L = window.ITLeague || null;
 
   // ── the edition ────────────────────────────────────────────────────────────
@@ -1535,7 +1519,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // Precedence, highest first: an explicit ?fmt= on the URL (so a shared link
   // opens in the edition it was shared from), then the reader's saved choice or
   // league via it-league.js, then auction. A ?fmt= is written through
-  // setEdition, so following one link is remembered like a click on the switch.
+  // setEdition, so following one link is remembered.
   var edQuery = (function () {
     var m = /[?&]fmt=([a-z]+)/.exec(location.search || '');
     return m && ED[m[1]] ? m[1] : null;
@@ -1590,46 +1574,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // A block that paints on a timer or a fetch can push its own painter as it
   // defines it, so ordering inside this file stops being load-bearing.
   var edPainters = [];
-  function paintEdSwitch() {
-    var sw = document.getElementById('edSwitch');
-    if (!sw) return;
-    var as = sw.getElementsByTagName('a');
-    for (var i = 0; i < as.length; i++) {
-      var on = as[i].getAttribute('data-ed') === edKey;
-      as[i].className = on ? 'on' : '';
-      if (on) as[i].setAttribute('aria-current', 'true'); else as[i].removeAttribute('aria-current');
-    }
-    sw.title = (L && L.editionFromLeague && L.editionFromLeague())
-      ? 'Set from the league you saved — switch it if you are drafting another way'
-      : 'Every story on this page, in the draft you are actually playing';
-  }
   function applyEdition() {
-    paintEdSwitch();
     readFmt = (L && L.readingFormat) ? L.readingFormat() : (edKey === 'auction' ? 'auction' : 'snake');
     for (var i = 0; i < edPainters.length; i++) { try { edPainters[i](); } catch (e) {} }
     edSweep();
   }
-  var edSwitchEl = document.getElementById('edSwitch');
-  if (edSwitchEl) edSwitchEl.addEventListener('click', function (ev) {
-    var a = ev.target.closest ? ev.target.closest('a[data-ed]') : null;
-    if (!a) return;
-    var next = a.getAttribute('data-ed');
-    if (!ED[next]) return;                       // let an unknown value navigate
-    // A reader opening an edition in a new tab means it: leave the modified
-    // click to the browser, which is what the real hrefs are there for.
-    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button) return;
-    ev.preventDefault();                         // no reload: the data is already here
-    if (next === edKey) return;
-    edKey = (L && L.setEdition) ? L.setEdition(next) : next;
-    applyEdition();
-    // Keep the URL honest so the choice survives a refresh and can be shared,
-    // without pushing a history entry per click — the back button belongs to the
-    // reader's last PAGE, not to their last format.
-    try {
-      if (history.replaceState) history.replaceState(null, '', edKey === 'auction' ? '/' : '/?fmt=' + edKey);
-    } catch (e) {}
-    try { if (typeof gtag === 'function') gtag('event', 'edition_switch', { edition: edKey }); } catch (e) {}
-  });
 
   var live = STORIES.filter(function(s){ return unlocked(s.date); });
   live.sort(function(a,b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
@@ -1886,7 +1835,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   }
 
   // The lead is a story, so the players it names link to their cards. It is
-  // repainted on every edition switch, arrow and dot, so this runs at the tail
+  // repainted on every edition change, arrow and dot, so this runs at the tail
   // of both painters; a name already inside a link is left alone, which is why
   // running it again is free and why the headline keeps its own destination.
   function linkLead(s){
@@ -2693,9 +2642,9 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return s.view ? el('span', 'st-view ' + viewCls(s), s.view) : null;
   }
 
-  // Re-rendered rather than built once, because the auction/snake switch below
-  // re-words every tailored line on the page and these modules quote the same
-  // calls the lead does.
+  // Re-rendered rather than built once, because a change of edition (a saved
+  // league, or a ?fmt= link) re-words every tailored line on the page and these
+  // modules quote the same calls the lead does.
   function renderPositions(){
     grid.innerHTML = '';
     var yourLbl = (L && L.tailorLabel) ? L.tailorLabel() : 'Your league';

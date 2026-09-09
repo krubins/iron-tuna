@@ -87,8 +87,10 @@ async function open(store) {
   return { page, ctx };
 }
 const read = page => page.evaluate(() => ({
-  shown: document.getElementById('edSwitch').getClientRects().length > 0,
-  on: [...document.querySelectorAll('#edSwitch a')].filter(a => a.classList.contains('on')).map(a => a.dataset.ed).join(),
+  // The ribbon's Auction / Snake switch came off in September 2026; the edition
+  // is now the library's answer (saved league, ?fmt= link, or auction).
+  gone: !document.getElementById('edSwitch') && !document.querySelector('.ed-switch'),
+  on: (window.ITLeague && window.ITLeague.edition && window.ITLeague.edition()) || '',
   sub: document.getElementById('posSub').textContent,
   lines: [...document.querySelectorAll('#posGrid .it-yours')].map(e => e.textContent),
   labels: [...new Set([...document.querySelectorAll('#posGrid .it-yours b')].map(e => e.textContent.replace(/:$/, '')))],
@@ -108,7 +110,10 @@ const read = page => page.evaluate(() => ({
   camp: document.getElementById('campNote').textContent,
   buildTag: document.getElementById('buildTag').hidden ? '' : document.getElementById('buildTag').textContent
 }));
-const pick = (page, ed) => page.click('#edSwitch a[data-ed="' + ed + '"]');
+// With no switch on the page, a reader changes edition by following a ?fmt=
+// link — which is what this does. The page reloads; the choice is written to
+// the library, so a later visit to the bare URL keeps it.
+const pick = (page, ed) => page.goto(BASE + '?fmt=' + ed, { waitUntil: 'load' });
 
 // ── 1. a snake league opens in the snake edition, and can be read as an auction
 console.log('\na snake league on an auction front page');
@@ -116,7 +121,7 @@ console.log('\na snake league on an auction front page');
   const store = { iron_tuna_draft_state_v2: league('snake'), iron_tuna_values_v1: JSON.stringify(BOARD) };
   const { page, ctx } = await open(store);
   const before = await read(page);
-  ok('the switch is offered', before.shown === true);
+  ok('the ribbon offers no switch', before.gone === true);
   ok('it opens on the league they saved', before.on === 'snake');
   ok('every story points at the snake edition', before.drops.join() === '/snake', before.drops.join());
   ok('the stories are written in draft slots',
@@ -126,16 +131,16 @@ console.log('\na snake league on an auction front page');
 
   await pick(page, 'auction');
   const after = await read(page);
-  ok('one click re-prices every story', after.on === 'auction' && after.lines.every(l => /\$/.test(l)), after.lines[0]);
+  ok('one ?fmt= link re-prices every story', after.on === 'auction' && after.lines.every(l => /\$/.test(l)), after.lines[0]);
   ok('and re-points every story with it', after.drops.join() === '/auction', after.drops.join());
   ok('the same number of stories survives the switch', after.lines.length === before.lines.length);
   ok('a borrowed lens does not claim to be their league',
      after.lines.every(l => !/your \d+-team snake/.test(l)), after.lines[0]);
   ok('the standfirst follows the switch', /as an auction/.test(after.sub), after.sub);
 
-  await page.reload({ waitUntil: 'load' });
+  await page.goto(BASE, { waitUntil: 'load' });
   const back = await read(page);
-  ok('the choice survives a reload',
+  ok('the choice survives a visit to the bare URL',
      back.on === 'auction' && back.drops.join() === '/auction' && back.lines.every(l => /\$/.test(l)));
   ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
@@ -164,7 +169,7 @@ console.log('\na reader who has never opened the app');
 {
   const { page, ctx } = await open({});
   const s = await read(page);
-  ok('the switch is offered anyway', s.shown === true);
+  ok('the ribbon offers no switch here either', s.gone === true);
   ok('and it opens on the site\u2019s own edition', s.on === 'auction');
   // This used to pin the standfirst's tail to "New drops land through Labor
   // Day." — the sentence SUB_TAIL appended to whichever edition's lead was in
@@ -237,9 +242,8 @@ console.log('\nthe whole page follows the edition');
   ok('the auction keeps its allocation guides', a.allocHead === 'Asset Allocation', a.allocHead);
   ok('and The Build needs no tag to say which currency it is in', a.buildTag === '', a.buildTag);
 
-  // The switch offers exactly two editions now, and the site sells one of them.
-  ok('the switch offers auction and snake, and nothing else',
-     (await page.$$eval('#edSwitch a', as => as.map(x => x.dataset.ed).join())) === 'auction,snake');
+  // No switch at all since September 2026, and the site sells one edition.
+  ok('the ribbon offers no edition switch', (await page.$('#edSwitch, .ed-switch')) === null);
   ok('nothing on the page still sells a best ball room',
      await page.$$eval('a', as => as.every(x => !/^\/bestball/.test(x.getAttribute('href') || ''))));
 
@@ -314,7 +318,8 @@ console.log('\na generated lead and a switch');
   await page.waitForFunction(() => /desk published/.test(document.getElementById('leadTitle').textContent));
   ok('the generated story is the lead', /desk published/.test(await title()));
   await pick(page, 'snake');
-  ok('and a switch leaves it there', /desk published/.test(await title()), await title());
+  await page.waitForFunction(() => /desk published/.test(document.getElementById('leadTitle').textContent));
+  ok('and a change of edition leaves it there', /desk published/.test(await title()), await title());
   ok('the modules moved underneath it anyway', (await read(page)).drops.join() === '/snake');
   ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
@@ -329,8 +334,8 @@ console.log('\na ?fmt= link');
   await page.goto(BASE + '?fmt=snake', { waitUntil: 'load' });
   const s = await read(page);
   ok('it opens on the edition in the URL', s.on === 'snake' && s.drops.join() === '/snake', s.on);
-  await page.reload({ waitUntil: 'load' });
-  ok('and following one is remembered like a click', (await read(page)).on === 'snake');
+  await page.goto(BASE, { waitUntil: 'load' });
+  ok('and following one is remembered', (await read(page)).on === 'snake');
   ok('nothing on the page threw', errors.length === 0, errors[0]);
   await ctx.close();
 }

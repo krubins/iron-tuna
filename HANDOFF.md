@@ -2286,6 +2286,17 @@ be committed.
 
 ## 22. August 2026: the edition switch (auction / snake / best ball) on the front page
 
+**Superseded, September 2026 — the switch is gone.** The season is under way and the
+draft format is no longer a choice a reader makes on the front page, so the ribbon
+control (`.ed-switch` / `#edSwitch`, with `paintEdSwitch()` and its click handler)
+came off `front.html`. Everything *underneath* it in this section still holds: the
+page still reads in an edition, set by the league the reader saved via `it-league.js`
+or by a `?fmt=` link (which is written through `setEdition`), auction otherwise;
+`edSweep()`, the `edPainters` and `ED[*]` all run as before. `tools/test-it-league.mjs`
+now asserts the switch is *absent*, and `tools/test-position-lens.mjs` changes edition
+by following a `?fmt=` link instead of clicking. The section below is kept as the
+record of why the edition exists at all.
+
 **The complaint:** the ribbon at `/` carried links called **Snake Draft** and
 **Best Ball**, and both of them left the front page — they went straight into the
 app's snake and best ball rooms. A reader who came for a snake draft was never
