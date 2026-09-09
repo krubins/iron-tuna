@@ -309,7 +309,7 @@
       foot.innerHTML = 'The <b>Betting Odds</b> column reads its basis off the market: <b>props</b> is a priced player prop, ' +
         '<b>gamelines</b> is the posted game line&rsquo;s scoring environment applied to his line, and <b>ratings</b> is a fixture no ' +
         'book has posted yet, projected from fitted team ratings and graded low. ' +
-        (src.props ? esc(src.props) + ' players carry a prop this week. ' : 'No sportsbook has posted a player prop for this week yet. ') +
+        (src.props ? esc(src.props) + ' players carry a prop this week. ' : 'No priced player prop has reached this board for the week. Books post them; this feed is not carrying them. ') +
         (src.usage ? 'Usage through week ' + esc(src.usage) + '.' : 'No weekly usage has been published yet.');
     }
 

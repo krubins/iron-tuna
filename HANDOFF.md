@@ -198,6 +198,7 @@ Providers run in priority order and their overlays are **merged, earlier wins pe
 | Provider | Needs | What it gives |
 |---|---|---|
 | `the-odds-api` | `ODDS_API_KEY` (paid tier) | Per-player season props. Optional upgrade. |
+| `espn-gamelines` | nothing | One named book's game spread and total, **with that book's own opening line**. Free. |
 | **`nflverse`** | **nothing** | **Game lines → team scoring environment. This is the one that actually runs.** |
 
 **nflverse is free, keyless, and CC BY 4.0** (attribution only — credited in the `front.html` footer; keep that credit if you keep the data). It is fetched from a GitHub release asset, so no sportsbook ToS is involved: DraftKings' internal JSON is keyless too but their terms prohibit automated access, which is why it is not used here.
@@ -6543,7 +6544,7 @@ order; every adapter normalises into Iron Tuna's schema before returning.
 | Kind | Adapters (in order) | Needs |
 |---|---|---|
 | `schedule` | nflverse games.csv, ESPN scoreboard | nothing |
-| `odds` | The Odds API v4 (per-event player props), nflverse game lines | `ODDS_API_KEY` for the first |
+| `odds` | The Odds API v4 (per-event player props), ESPN scoreboard game lines, nflverse game lines | `ODDS_API_KEY` for the first |
 | `projection` | the committed board | nothing |
 | `consensus` | the committed board, scored odds-blind | nothing |
 | `stats` / `snaps` | nflverse `stats_player_week_<yr>.csv`, `snap_counts_<yr>.csv` | nothing |
