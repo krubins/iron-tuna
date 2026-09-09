@@ -77,7 +77,7 @@ function fakeDb(clock) {
         if (args[0] === 6) return { payload: JSON.stringify(DEPTH), updated_at: clock.now() - 3600000 };
         return null;
       }
-      if (/SELECT id, status, version, brief, created_at FROM content_pieces WHERE kind = \? AND season = \? AND week = \?/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0] && r.season === args[1] && r.week === args[2]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
+      if (/SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = \? AND season = \? AND week = \?/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0] && r.season === args[1] && r.week === args[2]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
       if (/SELECT \* FROM content_pieces WHERE kind = \? AND season = \? AND week = \?/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0] && r.season === args[1] && r.week === args[2]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
       if (/SELECT \* FROM content_pieces WHERE kind = \? ORDER BY/.test(sql)) { const l = T.content_pieces.filter(r => r.kind === args[0]).sort((a, b) => b.created_at - a.created_at); return l[0] || null; }
       if (/FROM newsroom_settings WHERE key = \?/.test(sql)) return T.newsroom_settings[args[0]] || null;
@@ -115,8 +115,10 @@ function fakeModel(body) {
   if (retry) ptxt = ptxt.slice(0, ptxt.indexOf('\n\nYOUR PREVIOUS DRAFT'));
   const packet = JSON.parse(ptxt);
   modelLog.push({ kind, retry });
-  const names = packet.allowed.names.filter(n => /^[A-Z][a-z]+ [A-Z][a-z]+$/.test(n) && !/^(Iron Tuna|Jack Mercer|Nate Vega|Evan Brooks|Mike Raines|Chris Dalton|Tyler Grant|Sam Porter|Lena Park)$/.test(n));
-  const nums = packet.allowed.numbers.filter(n => /^\d+(\.\d+)?$/.test(n) && Number(n) > 20);
+  // The writer sees the facts, not the checker's allowed list: names and
+  // numbers come out of the packet's own fields, as a model would read them.
+  const names = [...new Set([...ptxt.matchAll(/"(?:name|player|absent|replaces)":"([A-Z][a-z]+ [A-Z][a-z]+)"/g)].map(m => m[1]))].filter(n => !/^(Iron Tuna|Jack Mercer|Nate Vega|Evan Brooks|Mike Raines|Chris Dalton|Tyler Grant|Sam Porter|Lena Park)$/.test(n));
+  const nums = [...new Set([...ptxt.matchAll(/:(\d{2,4}(?:\.\d)?)[,}\]]/g)].map(m => m[1]))].filter(n => Number(n) > 20);
   const nm = i => names[i % names.length] || names[0] || 'The desk';
   const nu = i => nums[i % nums.length] || '';
   const bad = modelMode === 'hallucinate' && !retry;
@@ -245,10 +247,10 @@ console.log('\nthe pause, the approval and the hallucinating writer');
   Date.now = () => end;
   await H.newsroomAdmin(env, 'pause', {});
   ok('paused, automatic publishing is off', !(await H.autoPublishOn(env)).on);
-  const r = await H.produceContent(env, 'pickup-advisor', { force: true });
+  const r = await H.produceContent(env, 'early-rankings', { force: true });
   ok('a validated piece is held for approval while paused', r.ok && r.status === 'held' && r.violations.some(v => /awaiting_approval/.test(v)), JSON.stringify(r));
-  const ap = await H.newsroomAdmin(env, 'approve', { kind: 'pickup-advisor', week: r.week });
-  ok('approve publishes it and records its calls', ap.ok && db.T.content_pieces.filter(x => x.kind === 'pickup-advisor').pop().status === 'published' && ap.calls >= 1, JSON.stringify(ap));
+  const ap = await H.newsroomAdmin(env, 'approve', { kind: 'early-rankings', week: r.week });
+  ok('approve publishes it and records its calls', ap.ok && db.T.content_pieces.filter(x => x.kind === 'early-rankings').pop().status === 'published' && ap.calls >= 1, JSON.stringify(ap));
   await H.newsroomAdmin(env, 'resume', {});
   ok('resumed', (await H.autoPublishOn(env)).on);
   modelMode = 'hallucinate'; modelLog.length = 0;

@@ -35,7 +35,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, NEWSROOM_SECTIONS, ANALYSTS, RIVALRY_PAIR, NEWSROOM_FLAGS, flagOn, flagReport, freshnessReport, blendComponents, blendPoints, blendBoard, blendDisagreements, dfsMetrics, DFS_CONTESTS, rivalryCandidate, rivalryGate, gradeCall, normaliseCalls, factCheck, scoreNewsEvent, detectNewsEvents, newsroomAudit, contentSubjectWeek, sectionsFor, packetPickups, packetPosition, packetUnderrated, packetKDst, updateWanted, compactForWriter, heldRetryable, WRITER_PACKET_BUDGET, WRITER_TIMEOUT_MS, _finishBrief, validateDraft, AI_PHRASES, draftSocialAllowed, newsroomStatus, scoringRules, etParts, ROUTINE_MIGRATION, AI_DISCLOSURE };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {}, async () => null, stub, async () => null, async () => null, async () => null, async () => null, stub, stub, {}, {}, stub);
 
 console.log('\nthe migration');
@@ -164,6 +164,21 @@ const board = (list) => ({ ok: true, players: list.map((p, i) => ({ ...p, games:
   ok('the subject week is the played week, the current week, or the week after the played one', (() => { const st = { ok: true, week: { type: 'REG', number: 3 }, weeks: [{ type: 'REG', number: 1, firstKickoff: 0 }, { type: 'REG', number: 2, firstKickoff: 1 }, { type: 'REG', number: 3, firstKickoff: 2 }] }; return H.contentSubjectWeek({ subject: 'played' }, st, 5) === 3 && H.contentSubjectWeek({ subject: 'nextPlayed' }, st, 5) === 4 && H.contentSubjectWeek({ subject: 'current' }, st, 5) === 3; })());
   ok('a live piece wants an update when the inactives changed and not otherwise', H.updateWanted(H.CONTENT_KINDS['last-minute-intel'], { status: 'published', brief: JSON.stringify({ stateHash: 'a' }) }, { ready: true, updatesUntil: Date.now() + 1e6 }, { stateHash: 'b' }, Date.now()) === true && H.updateWanted(H.CONTENT_KINDS['last-minute-intel'], { status: 'published', brief: JSON.stringify({ stateHash: 'a' }) }, { ready: true, updatesUntil: Date.now() + 1e6 }, { stateHash: 'a' }, Date.now()) === false);
   ok('the Sunday piece wants an update when more games are final, and not after its window', H.updateWanted(H.CONTENT_KINDS['what-sunday-taught-us'], { status: 'published', brief: JSON.stringify({ finalsCount: 9 }) }, { updatesUntil: Date.now() + 1e6 }, { finalsCount: 11 }, Date.now()) === true && H.updateWanted(H.CONTENT_KINDS['what-sunday-taught-us'], { status: 'published', brief: JSON.stringify({ finalsCount: 9 }) }, { updatesUntil: Date.now() - 1 }, { finalsCount: 11 }, Date.now()) === false);
+}
+
+console.log('\nthe packet the writer sees');
+{
+  const big = { meta: { kind: 'weekend-preview' }, freshness: { stale: [] }, rivalry: null, priorCalls: [], playerIndex: { a: 1 }, rivalryBudget: { allowed: true }, colleagues: ['x'], allowed: { names: ['A B'], numbers: ['1'], analysts: ['Sam Porter'] },
+    cards: Array.from({ length: 40 }, (_, i) => ({ game: 'G' + i, rankings: Array.from({ length: 30 }, (_, j) => ({ name: 'P' + j, x: 'y'.repeat(60) })) })), injuries: Array.from({ length: 200 }, (_, i) => ({ name: 'I' + i, note: 'z'.repeat(80) })) };
+  const c = H.compactForWriter(big, 20000);
+  ok('the compacted packet is whole JSON under the budget', JSON.stringify(c).length <= 20000 && JSON.parse(JSON.stringify(c)) && !c.playerIndex && !c.rivalryBudget);
+  ok('and says what it left out rather than cutting a string mid-object', Array.isArray(c.omittedForLength) && c.omittedForLength.length >= 1 && c.meta && c.allowed.analysts[0] === 'Sam Porter');
+  ok('a packet inside the budget passes through with its facts intact', !H.compactForWriter({ meta: {}, allowed: { analysts: [] }, facts: [1, 2, 3] }).omittedForLength);
+  ok('the writer waits longer than the legacy minute', H.WRITER_TIMEOUT_MS >= 120000 && H.WRITER_PACKET_BUDGET <= 120000);
+  const now = Date.now();
+  ok('a piece held with no draft is retried after forty minutes', H.heldRetryable({ status: 'held', body: null, version: 1, created_at: now - 50 * 60000 }, now) && !H.heldRetryable({ status: 'held', body: null, version: 1, created_at: now - 10 * 60000 }, now));
+  ok('a piece held by the fact check, with a draft, is not retried', !H.heldRetryable({ status: 'held', body: '{"weekly":{}}', version: 1, created_at: now - 3 * 3600000 }, now));
+  ok('nor a published piece, nor a sixth attempt', !H.heldRetryable({ status: 'published', body: null, version: 1, created_at: 0 }, now) && !H.heldRetryable({ status: 'held', body: null, version: 6, created_at: 0 }, now));
 }
 
 console.log('\nanalyst memory');
