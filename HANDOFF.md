@@ -8292,3 +8292,70 @@ two ways, a user agent carrying a URL and `cf.cacheTtl` on the failing
 ones; every ESPN fetch is now shaped like the one that works (plain user
 agent, no cache options), and a 403 body's first bytes are kept in the
 refresh summary if it recurs.
+
+---
+
+## The news well: the lead story moves under the hero (2026-09-09)
+
+**What changed.** Ken's note: "Right under the hero, include a main story
+with a picture on the left, and then 5-6 stories in a column on the right
+spaced so that the lowest story is aligned with the bottom of the lead
+story." The Desk's lead was four screens down, inside chapter 01, behind
+the lane tabs; the first thing under the hero was the market-vs-consensus
+plate. The lead is now the first object under the hero band, and the plate
+is the second.
+
+**Where it lives.** `<section class="fp-sec fp-well">` in `front.html`,
+between the hero band and the "Where the experts and the market disagree
+most" section, and deliberately ABOVE `.topbars`: the lead story belongs to
+the site, not to Weekly Fantasy or to DFS, so a reader who opens the DFS
+lane still sees what the desk published this morning. The `#today` sec-head
+("The Desk", with its two season-specific more-links) moved up with it.
+Chapter 01 now opens on The Newsroom.
+
+**The markup moved and the JavaScript did not.** Every id inside the well is
+the one `renderLead`, `paintGeneratedLead` and the rail already wrote to
+(`leadMedia`, `leadCast`, `leadBody`, `leadTitle`, `leadAlso`, `leadCtrls`,
+`railList`). Three deliberate changes on top of the move:
+
+- **The picture is a COLUMN, not a band.** `.fp-well .lead` is a two-column
+  grid: `.lead-media` is the left cell spanning both rows, the body and the
+  draft-season carousel controls stack in the right one. The first face runs
+  as one plate that takes whatever height the story leaves it (`flex: 1 1
+  auto`, `min-height: 186px`), the second stands under it caption-sized, and
+  the rest are hidden — a picture column, not a contact sheet. A story that
+  names nobody has no column at all: `renderCast` puts `.nopic` on the card
+  when it hides the band, and the markup ships with it so an unpainted card
+  never holds a 292px gutter open. Under 900px the whole thing reverts to
+  the band-across-the-top the rest of the site uses, every face visible.
+- **Six headlines, spaced to the lead's height.** `RAIL_MAX` is 6, down from
+  9. `.fp-well .rail` is a flex column stretched to the lead beside it and
+  its `<ul>` spreads its items over that height, so the sixth headline's
+  rule closes level with the lead card. That is the alignment the request
+  asked for; it is CSS, not a measured height, so it survives any headline
+  length.
+- **The column is the desk's, not the drop pages'.** In the regular season
+  the `STORIES` library is a July and August auction shelf, and six draft-day
+  calls standing beside a story about this week read as an archive. When
+  `/api/lead-story` returns retired stories, `paintDeskRail` gives them the
+  column (repriced through `it-league.js` exactly as they were in the card),
+  tops up to six from the drop pages only if the desk is thin, and retitles
+  the column "More from the desk". The drop-page rail paints first and is
+  replaced when the fetch lands, so the column is never empty in flight.
+  The "More from the desk" list that used to sit INSIDE the lead card is
+  gone: it and the column were the same five headlines four inches apart,
+  which the two-column well made impossible to miss.
+
+**Two smaller fixes it forced.** The generated lead's kicker printed THE
+DESK twice (the rank badge and the category label are the same word for a
+desk piece) — survivable four screens down, not at the top of the page, so
+the second badge is dropped when it repeats the first. And `.lead-also:empty`
+is `display:none`, because an empty list is otherwise a stray rule across the
+foot of the story.
+
+**Checked:** `test-css-tokens`, `test-seo`, `test-chrome`, `test-it-league`,
+`test-lead-story`, `test-content`, the front.html parse gate, and
+`build-front.mjs` / `build-seo.mjs` re-run clean (no generated-block drift).
+Rendered in Chromium at 1360px and 430px against a stubbed `/api/lead-story`
+(desk lead + five retired stories), against the draft-season fallback
+rotation, and against a lead that names nobody.
