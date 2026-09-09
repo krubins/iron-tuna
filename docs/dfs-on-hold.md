@@ -42,7 +42,7 @@ it. Its note on the page says the lane is on hold.
 
 ## Bringing it back
 
-1. `git revert <the commit this file arrived in>` restores the front page, the
+1. `git revert f3aa006` (the commit this file arrived in) restores the front page, the
    links, the sitemap and `llms.txt` in one move. Resolve against whatever the
    front page has become since.
 2. Set `DFS_CONTENT: { dflt: true, … }` in `_worker.js`, or set
