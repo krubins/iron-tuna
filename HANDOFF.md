@@ -9109,3 +9109,130 @@ but it is a reminder that these pairs are not confined to the unpriced tail.
 - Tamper predicates clean; exactly one published row.
 - Routine enabled, `58 */6 * * *`, prompt 44,690 chars / `53007f8d8779`,
   byte-identical to the repo copy.
+
+## 77. September 9: the Routine prompt gained a byline section that describes something the code does not do
+
+The live lead verifies in full. The finding today is upstream of it: **the
+Routine's prompt was edited directly, without the repo copy**, and the section
+that was added asserts a mechanism I cannot find in either the repo or the
+deployed worker.
+
+### 77a. What changed
+
+The live prompt is **47,183 chars, sha256 `9c578c415408`**, against the repo's
+44,690 / `53007f8d8779`. The diff is a clean append at line 85 — 17 lines, no
+deletions, nothing else touched — headed **"WHOSE BYLINE THIS RUN CARRIES"**.
+It tells the run that:
+
+> The story you are about to write is published under a **desk byline**, and
+> the site derives it from the `category` you store. There are four desks and
+> six categories, so two desks take two categories each.
+
+with a table mapping `vegas`/`market` → **The Numbers Desk**, `playcaller` →
+**The Film Room**, `preseason`/`injury` → **The Beat**, `player` → **The Value
+Desk**, each with a prose register to write in, and:
+
+> **You do not write the byline anywhere.** There is no column for it; the site
+> computes it from `category` (`leadByline` in `_worker.js`) …
+
+### 77b. What the code actually does
+
+Checked in the repo worker (1,388,257 bytes, this morning's `main`) and in the
+deployed bundle (1,258,366 bytes) separately:
+
+- **`leadByline` does not exist** in either.
+- The four desk names — "The Numbers Desk", "The Film Room", "The Beat", "The
+  Value Desk" — appear **nowhere** in any `.js` or `.html` in the repo, nor in
+  the deployed bundle.
+- `lead_story.category` maps to `LEAD_CATEGORIES`, which is six **topic**
+  labels, not four voices:
+
+      player: 'Player Insight'      playcaller: 'Play-Caller Premium'
+      vegas:  'Vegas vs. Consensus' preseason:  'Preseason'
+      injury: 'Injury Report'       market:     'Market & Roster Build'
+
+  That label is what the card shows (`_worker.js` 8574, 11398).
+- A `_bylineOf` **does** exist, added this morning by "The in-season newsroom:
+  one calendar, eight analysts, two lenses" — but it serves the newsroom
+  table, keying on `row.analyst` and `row.kind` against `ANALYSTS` and
+  `CONTENT_KINDS`. It never sees `lead_story.category`.
+
+So the section's worked example — *"a run that writes a coaching story and
+files it under `market` gets bylined to the Numbers Desk, and the reader is
+told a flat arithmetic piece is coming"* — cannot happen. The reader is told
+"Market & Roster Build", which is a topic, and no byline is rendered on a lead
+story at all.
+
+**I have not touched the Routine.** Two readings, and only Ken can say which:
+
+1. **The prompt is ahead of the code.** The in-season newsroom shipped bylines
+   for its own surface today; extending them to the lead story is a plausible
+   next step, and the prompt was written for it. If so, nothing is wrong except
+   the ordering, and the section starts being true when the code lands.
+2. **The premise is simply mistaken.** In which case an autonomous writer is
+   being told its category selects a reader-visible voice label, and is being
+   asked to change how it writes on that basis. The voice guidance is
+   defensible on its own merits — four registers is better than one — but the
+   reason given for it is not true today, and the instruction "write in that
+   voice, not near it" will change published prose starting with the next run.
+
+Either way the fix is small: either land the mapping, or rewrite the two
+sentences that explain *why* to say the desk is a register the writer chooses
+rather than a label the reader sees.
+
+### 77c. The repo copy has been synced to the live one, not the other way round
+
+§17 exists because this prompt has been edited by several sessions
+independently before, with no way to see what changed or when. The repo file is
+supposed to mirror the Routine.
+
+I brought **the repo into line with the Routine** — the safe direction, since
+it changes nothing that runs — and left the Routine alone, per the standing
+constraint that its prompt is Ken's. The file header now records that this
+revision was synced from the live copy rather than pushed to it, carries the
+new hash, and keeps the previous one. So the byline section is now in git
+history and diffable, which it was not this morning.
+
+**If you edit the live prompt, please also commit the same text here** (or say
+so and I will sync it, as today). Otherwise the audit's byte-identical check
+fires as a discrepancy every day and the repo stops being a record of anything.
+
+### 77d. Row 95 verifies completely
+
+"Bid Quinshon Judkins to $22, not $15; he took 80% of Cleveland's first-team
+snaps" (preseason desk, 09-09 07:13Z), against the **September 8** board it
+names — checkable because §76a's snapshot kept it:
+
+| Claim | Board | |
+|---|---|---|
+| Judkins RB17 $15; RB19 → RB17, worth $2 | exact | ✓ |
+| KC Concepcion WR49 $2; WR50 → WR49, worth $1 | exact | ✓ |
+| Kenneth Walker III RB8 $41; RB11 → RB8, worth $6 | exact | ✓ |
+| Dylan Sampson RB55 $1, either way, worth $0 | exact | ✓ |
+| committed: Judkins RB19 $13, Concepcion WR50 $1, Walker RB11 $35 | exact | ✓ |
+| "Judkins scores 225.4 on the September 8 board and 217.3 on the committed one" | **225.4 / 217.3** | ✓ |
+
+Every figure holds on today's board too, so nothing has drifted. The table names
+both boards in separate columns and the prose says which is which — the §72
+attribution habit is now standard in the column.
+
+One observation, not a defect: the table identifies Kenneth Walker III as
+Kansas City. `PROJECTIONS` carries `team: 'KC'` for him, so the story printed
+the site's own label, and the cheat sheet shows a reader the same thing. I
+cannot check NFL rosters from this session and the prompt is explicit that
+those labels are the dataset's, not news — but if that label is stale, it is
+stale on the board as well as in the story.
+
+### 77e. The rest
+
+- CI **64/64** after merging 36 commits (four new test files arrived with them).
+- Pipeline functions and `boardPayload` both hash identically to 09-08.
+- Repo vs deployed: 1380 player-rows across four boards, **0 differences**. The
+  deployed bundle is 130 KB behind the repo worker — this morning's newsroom
+  commits have not deployed yet — but nothing in the gap touches the board.
+- Harness self-test: 23 checks, all pass.
+- Runs 54–58 all `done`; no stalls.
+- Tamper predicates clean; exactly one published row.
+- **§75a unchanged**: Collins and Wilson still tie at 229.8 and are still the
+  only inverted tie where the two slot prices differ ($27 vs $28). Today's scan
+  found no new money-bearing pair.
