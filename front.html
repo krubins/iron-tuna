@@ -74,15 +74,19 @@ img{max-width:100%}
 
 /* ── dominance banner ── */
 .dominant{background:linear-gradient(90deg,var(--brand-dark) 0%,var(--brand) 18%,var(--brand) 82%,var(--brand-dark) 100%);color:#fff}
-.dominant .wrap{display:flex;align-items:center;justify-content:center;gap:16px;padding:7px 18px}
-.dominant-text{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(19px,2.6vw,26px);letter-spacing:.14em;line-height:1;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.25);white-space:nowrap}
+.dominant .wrap{display:flex;align-items:center;justify-content:center;gap:16px;padding:9px 18px}
+.dominant-copy{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0}
+.dominant-text{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(18px,2.4vw,25px);letter-spacing:.10em;line-height:1.05;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.dominant-sub{font-size:clamp(11.5px,1.3vw,13.5px);letter-spacing:.02em;line-height:1.35;color:rgba(255,255,255,.88);max-width:62ch}
 .dominant-rule{flex:0 1 140px;height:1px;background:rgba(255,255,255,.45)}
 /* The banner set its own width at 390px and pushed the whole document into a
    horizontal scroll: clamp() min was 19px with .14em of tracking on a line
-   that has to fit 'The Most Data Driven Fantasy Site'. Tighten the tracking
-   and let the rules collapse before the words do. */
+   that has to fit the whole claim. The claim is a headline plus a sentence
+   now, so it wraps by default; tighten the tracking and let the rules collapse
+   before the words do. */
 @media(max-width:560px){.dominant-rule{flex-basis:34px;min-width:0}.dominant .wrap{gap:10px}
-  .dominant-text{font-size:clamp(14px,4vw,22px);letter-spacing:.07em}}
+  .dominant-text{font-size:clamp(14px,4vw,22px);letter-spacing:.07em}
+  .dominant-sub{font-size:clamp(11px,3.1vw,13px)}}
 @media(max-width:400px){.dominant-rule{display:none}.dominant .wrap{padding-left:12px;padding-right:12px}}
 
 /* ── section ribbon (in-page nav) ── */
@@ -812,16 +816,16 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 .mast-jump a{white-space:nowrap}
 
 /* ── the hero and the claim strip on a phone ──────────────────────────────
-   The claim is longer than the line it replaced, and `white-space:nowrap` on a
-   390px screen pushed the whole document into a sideways scroll. It wraps to
-   two centred lines here instead, and the rules that flanked it go.
+   The claim is longer than the line it replaced, and on a 390px screen a
+   single unwrapped line pushed the whole document into a sideways scroll. It
+   wraps to centred lines here instead, and the rules that flanked it go.
    The screenshot is the other half: scaled to a 390px column the sheet is a
    grey smear, so the frame keeps the image at half size and shows the left of
    it — one readable column of real dollars rather than four illegible ones. */
 @media(max-width:620px){
-  .dominant-text{white-space:normal;text-align:center;font-size:clamp(15px,4.6vw,21px);letter-spacing:.05em;line-height:1.15}
+  .dominant-text{text-align:center;font-size:clamp(15px,4.6vw,21px);letter-spacing:.05em;line-height:1.15}
   .dominant-rule{display:none}
-  .dominant .wrap{padding:9px 14px}
+  .dominant .wrap{padding:10px 14px}
 }
 @media(max-width:700px){
   .hb-shot img{width:auto;max-width:none;height:300px;object-fit:cover;object-position:0 0}
@@ -1021,7 +1025,10 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 </div></header>
 <div class="dominant" role="doc-subtitle"><div class="wrap">
   <span class="dominant-rule"></span>
-  <span class="dominant-text">Read Against The Betting Market</span>
+  <span class="dominant-copy">
+    <span class="dominant-text">The Betting-Market Knows. Your Lineup Should Too.</span>
+    <span class="dominant-sub">Turn betting-market intelligence into an edge in fantasy football and DFS.</span>
+  </span>
   <span class="dominant-rule"></span>
 </div></div>
 
@@ -1036,7 +1043,7 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
        which is why the eyebrow is teal like the accent line. -->
   <div class="wrap"><div class="fp-clock its-strip" data-season-strip></div></div>
   <div class="wrap fp-hero">
-    <span class="hb-eyebrow">Fantasy &middot; DFS &middot; The betting market</span>
+    <span class="hb-eyebrow">Fantasy &middot; DFS &middot; The betting market knows</span>
     <h1 class="fp-h1"><span>Analytics <em class="fp-accent">consistently</em></span><span>beats intuition.</span></h1>
     <p class="fp-lede">Iron Tuna uses better market intel, advanced analytics, and AI analysis to give you the edge you need.</p>
     <div class="hb-ctas">
