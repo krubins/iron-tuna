@@ -737,9 +737,15 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   - **Club marks are referenced, not reproduced.** `logoUrl()` points an SVG `<image>` at
     ESPN's own logo host, the same posture as the player photographs in the band above,
     disclosed in the same row on `/data` and claiming no rights and no affiliation. A mark
-    that will not load (blocked, moved, 404) removes itself and its disc, and the type
+    that will not load (blocked, moved, 404) removes itself and its badge, and the type
     slides back to its `data-x0` position, so the plate is whole either way. Backing this
     out is deleting `logoUrl` and the `<image>`: nothing else depends on it.
+  - The badge under a mark is a **rounded square the size of the file**, not a disc, and
+    the same shape clips the image. The files are square: a circle either crops their
+    corners or leaves the art rattling around inside a badge too big for it, and both
+    read as a mark that does not fit its space. A square fits either kind of file — art
+    on a transparent ground gets a clean tile, art baked onto its own opaque square lands
+    flush against the edges.
   - **Three layouts.** A **fixture** ("NE at SEA" / "Raiders vs Jaguars") splits the plate
     between the two clubs, with the connector in the centre badge so the order still reads
     — "at" means the first club is the visitor. One club gets the single plate. Neither

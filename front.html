@@ -2326,19 +2326,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // the block closes up rather than leaving a hole where the mark should be.
   var CLIP_N = 0;
   function clubSvg(t, x, y, size, type) {
-    // The disc, and the same circle again as a clip. Club marks are drawn for a
-    // white page and half of them are dark enough to vanish into a navy plate,
-    // so the disc gives every one of them the ground it was designed on and
-    // reads as a deliberate badge on the light plates. It is a fifth wider than
-    // the mark's own box, so a wide mark (the bolt, the flying elvis) sits
-    // inside it rather than breaking its edge — and the clip holds that even for
-    // a file that arrives with its own opaque square behind the art, which some
-    // of them do. Without it those square out of the badge and the plate looks
-    // like a mistake.
-    var cx = x + size / 2, cy = y + size / 2, r = size * 0.6, id = 'clubclip' + (++CLIP_N);
+    // The badge, and the same rounded square again as a clip.
+    //
+    // Club marks are drawn for a white page and half of them are dark enough to
+    // vanish into a navy plate, so the badge gives every one of them the ground
+    // it was designed on and reads as a deliberate tile on the light plates.
+    // It is a SQUARE, softened at the corners, because the files are square: a
+    // circle around a square image either crops its corners or leaves the art
+    // rattling around inside a badge too big for it, and both read as a mark
+    // that does not fit its space. A square the size of the file, plus a hair
+    // of padding, fits whatever the file turns out to be — art on a transparent
+    // ground gets a clean tile around it, and art baked onto its own opaque
+    // square lands flush against the edges instead of squaring out of a circle.
+    var pad = Math.round(size * 0.09), id = 'clubclip' + (++CLIP_N);
+    var bx = x - pad, by = y - pad, bs = size + pad * 2, rx = Math.round(size * 0.16);
+    var box = 'x="' + bx + '" y="' + by + '" width="' + bs + '" height="' + bs + '" rx="' + rx + '"';
     return '<g class="club">' +
-      '<clipPath id="' + id + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"/></clipPath>' +
-      '<circle class="club-d" cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#ffffff" opacity="0.94"/>' +
+      '<clipPath id="' + id + '"><rect ' + box + '/></clipPath>' +
+      '<rect class="club-d" ' + box + ' fill="#ffffff" opacity="0.96"/>' +
       '<image clip-path="url(#' + id + ')" href="' + logoUrl(t) + '" x="' + x + '" y="' + y +
       '" width="' + size + '" height="' + size + '" preserveAspectRatio="xMidYMid meet"/>' + type + '</g>';
   }
