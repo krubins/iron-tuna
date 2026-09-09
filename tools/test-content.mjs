@@ -29,7 +29,7 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// Memoized per isolate alongside _PROJ_ENC') + '\n' +
-  'return { normalizeGameSummary, gameUsageByTeam, contentDue, CONTENT_KINDS, lastPlayedWeek, etParts, nflSeasonState, _oddsProjectionIndex, briefForGames, briefTeamRecaps, briefWtaty, validateDraft, _finishBrief, _nextEt, scoringRules, detectInsights, briefFinalRead, briefGamePlan };'
+  'return { normalizeGameSummary, gameUsageByTeam, contentDue, kindTitle, CONTENT_KINDS, lastPlayedWeek, etParts, nflSeasonState, _oddsProjectionIndex, briefForGames, briefTeamRecaps, briefWtaty, validateDraft, _finishBrief, _nextEt, scoringRules, detectInsights, briefFinalRead, briefGamePlan };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, stub, stub, 'x', async () => {}, {}, {});
 
 console.log('\nthe box score, on a real game (2025 Week 1, DAL at PHI)');
@@ -109,6 +109,21 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   const prev = due('tnf-preview', ET(2026, 9, 17, 6, 30), wk1);
   ok('the TNF preview is due Thursday 6 AM, before kickoff', prev.due && prev.ready && prev.week === 2 && prev.targets.join() === 'w2-thu', JSON.stringify(prev));
   ok('a preview is not ready once the game has started', !due('tnf-preview', ET(2026, 9, 17, 21, 0), wk1).ready);
+  ok('a Thursday-only week keeps the Thursday title', H.kindTitle(H.CONTENT_KINDS['tnf-preview'], prev) === 'Thursday Night Football Preview' && prev.slotDay === 'Thu');
+  // A Wednesday opener (2026 opened NE at SEA on Wednesday, SF and the Rams on Thursday).
+  const wedGames = games.concat([g('w1-wed', 1, 2026, 9, 9, 20, 20, 'MMM', 'NNN')]);
+  const wsched = { season: 2026, games: wedGames, updatedAt: 1 };
+  const wdue = (kind, when, finalIds) => { const sc = { ...wsched, games: wedGames.map(x => ({ ...x, status: (finalIds || []).includes(x.id) ? 'final' : null })) }; return H.contentDue(kind, when, H.nflSeasonState(sc, when), sc); };
+  const wed = wdue('tnf-preview', ET(2026, 9, 9, 6, 0), []);
+  ok('with a Wednesday opener the preview is due Wednesday 6 AM and covers both midweek games', wed.due && wed.ready && wed.week === 1 && wed.slotDay === 'Wed' && wed.targets.slice().sort().join() === 'w1-thu,w1-wed', JSON.stringify(wed));
+  ok('and not Tuesday', !wdue('tnf-preview', ET(2026, 9, 8, 23, 45), []).due);
+  ok('and is titled for the midweek slate', H.kindTitle(H.CONTENT_KINDS['tnf-preview'], wed) === 'Midweek Kickoff Preview');
+  ok('once the Wednesday game has started the preview is no longer ready', !wdue('tnf-preview', ET(2026, 9, 9, 21, 0), []).ready);
+  const wafter = wdue('tnf-what-matters', ET(2026, 9, 11, 6, 0), ['w1-wed', 'w1-thu']);
+  ok('What Matters runs Friday once both midweek games are final, under a midweek title', wafter.due && wafter.ready && wafter.targets.length === 2 && H.kindTitle(H.CONTENT_KINDS['tnf-what-matters'], wafter) === 'Midweek Football: What Matters', JSON.stringify(wafter));
+  ok('and waits while Thursday is still to be played', !wdue('tnf-what-matters', ET(2026, 9, 11, 6, 0), ['w1-wed']).ready);
+  const mnfw = wdue('mnf-preview', ET(2026, 9, 14, 6, 10), ['w1-wed', 'w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
+  ok('the Monday preview is untouched by a Wednesday opener', mnfw.due && mnfw.ready && mnfw.slotDay === 'Mon' && mnfw.targets.join() === 'w1-mnf');
   ok('Underrated, the Trade Desk and Tight End Thursday follow at 7, 8 and 9', due('underrated', ET(2026, 9, 17, 7, 0), wk1).due && !due('underrated', ET(2026, 9, 17, 6, 45), wk1).due && due('trade-desk', ET(2026, 9, 17, 8, 0), wk1).week === 2 && due('tight-end-thursday', ET(2026, 9, 17, 9, 0), wk1).week === 1);
   // Friday.
   const after = due('tnf-what-matters', ET(2026, 9, 18, 6, 30), wk1.concat(['w2-thu']));

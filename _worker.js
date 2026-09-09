@@ -3134,11 +3134,24 @@ async function fetchScheduleNflverse() {
   return { season, games };
 }
 
+// What ESPN last said to the worker, kept for the job log. On September 9
+// the hourly refresh reported live:0 with no error while the same scoreboard
+// URL answered sixteen Week 1 games from outside Cloudflare, and the depth
+// chart job failed all thirty-two fetches every morning since the 4th. The
+// worker's own view of the response (status, type, event count, the first
+// bytes when there are no events) is the only way to see the difference.
+let _ESPN_LAST = null;
+const ESPN_HEADERS = { 'user-agent': 'iron-tuna/1.0 (+https://irontuna.com)', 'accept': 'application/json' };
 async function _espnEvents(qs) {
-  const r = await fetch(ESPN_SCOREBOARD + (qs ? '?' + qs : ''), { cf: { cacheTtl: 300 } });
-  if (!r.ok) throw new Error('espn ' + r.status);
-  const j = await r.json();
-  return Array.isArray(j && j.events) ? j.events : [];
+  const url = ESPN_SCOREBOARD + (qs ? '?' + qs : '');
+  const r = await fetch(url, { cf: { cacheTtl: 300 }, headers: ESPN_HEADERS });
+  const type = r.headers.get('content-type') || null;
+  if (!r.ok) { _ESPN_LAST = { qs, status: r.status, type, events: null }; throw new Error('espn ' + r.status); }
+  const text = await r.text();
+  let j = null; try { j = JSON.parse(text); } catch (e) { _ESPN_LAST = { qs, status: r.status, type, events: null, head: text.slice(0, 120) }; throw new Error('espn: not json'); }
+  const events = Array.isArray(j && j.events) ? j.events : [];
+  _ESPN_LAST = { qs, status: r.status, type, events: events.length, week: j && j.week && j.week.number || null, head: events.length ? null : text.slice(0, 120) };
+  return events;
 }
 function _espnGame(ev) {
   const comp = (ev && ev.competitions || [])[0] || {};
@@ -3430,13 +3443,14 @@ async function runScheduleRefresh(env) {
   catch (e) { liveError = (e && e.message) || 'failed'; }
   const merged = mergeSchedule(spine.games, live);
   const provider = 'nflverse' + (live.length ? '+espn' : '');
+  const espn = _ESPN_LAST;
   await scheduleCacheWrite(env, spine.season, merged.games, provider);
   _SEASON_CACHE = null; _SEASON_AT = 0;
   return {
     ok: true, season: spine.season, provider,
     spine: spine.games.length, live: live.length,
     statusUpdated: merged.updated, preseasonAdded: merged.added,
-    games: merged.games.length, liveError
+    games: merged.games.length, liveError, espn
   };
 }
 async function seasonPayload(env, opts) {
@@ -5678,7 +5692,7 @@ const ESPN_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl
 const ESPN_DEPTH = t => 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/' + encodeURIComponent(t) + '/depthcharts';
 const RED_ZONE_YARDS = 20, GOAL_LINE_YARDS = 5;
 async function fetchGameSummaryEspn(eventId) {
-  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { cf: { cacheTtl: 120 } });
+  const r = await fetch(ESPN_SUMMARY + encodeURIComponent(String(eventId)), { cf: { cacheTtl: 120 }, headers: ESPN_HEADERS });
   if (!r.ok) throw new Error('espn summary ' + r.status);
   return await r.json();
 }
@@ -5804,8 +5818,8 @@ function gameUsageByTeam(game) {
 const DEPTH_ROW = 6;
 const DEPTH_MAX_AGE_MS = 7 * 86400000;
 async function fetchDepthChartEspn(team) {
-  const r = await fetch(ESPN_DEPTH(team), { cf: { cacheTtl: 3600 } });
-  if (!r.ok) throw new Error('espn depth ' + r.status);
+  const r = await fetch(ESPN_DEPTH(team), { cf: { cacheTtl: 3600 }, headers: ESPN_HEADERS });
+  if (!r.ok) throw new Error('espn depth ' + r.status + ' for ' + team);
   const j = await r.json();
   const groups = Array.isArray(j.depthchart) ? j.depthchart : [];
   const off = groups.find(g => g.positions && (g.positions.qb || g.positions.rb)) || null;
@@ -5821,11 +5835,14 @@ async function runDepthChartRefresh(env) {
   const sched = await scheduleCacheRead(env);
   const clubs = new Set();
   for (const g of (sched && sched.games) || []) if (g.type === 'REG') { clubs.add(g.home); clubs.add(g.away); }
-  const teams = {}; let failed = 0;
+  const teams = {}; let failed = 0, firstError = null;
   for (const t of clubs) {
-    try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; }
+    try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; if (!firstError) firstError = (e && e.message) || 'failed'; }
   }
-  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed };
+  // Every morning since September 4 this returned got:0 failed:32 and said
+  // nothing else; the same URL answers 200 from outside the worker. The first
+  // error is kept so the log can say what ESPN actually said to the worker.
+  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed, firstError };
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare('INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)')
     .bind(DEPTH_ROW, JSON.stringify({ asOf: Date.now(), teams }), 'espn-depth', Object.keys(teams).length, Date.now()).run();
@@ -5926,7 +5943,10 @@ const CONTENT_KINDS = {
     summary: 'Targets, air yards and deployment: the receiver whose opportunity moved before his points did.', absorbs: ['opportunity-report'] },
   'tnf-preview': { title: 'Thursday Night Football Preview', day: 'Thu', hour: 6, minute: 0, retro: false, subject: 'current', anchor: 'targets',
     analyst: 'dalton', dfsAnalyst: 'dalton', lens: 'both', optional: true, preview: true, updates: 'until-kickoff', updateHours: 14,
-    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    // The midweek games: Thursday's, and a Wednesday opener when there is one.
+    // The slot follows the first of them (contentDue), and so does the title.
+    targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
+    titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? (days.length > 1 ? 'Midweek Kickoff Preview' : 'Opening Night Preview') : 'Thursday Night Football Preview',
     summary: 'Start/sit and the full showdown for the Thursday game, updated if late news changes it.', absorbs: ['tnf-preview'] },
   'underrated': { title: 'Most Underrated Player on the Board', subtitle: "What the Experts Aren't Telling You", day: 'Thu', hour: 7, minute: 0, retro: false, subject: 'current',
     analyst: 'vega', dfsAnalyst: 'vega', lens: 'both', rivalry: true, targets: () => [],
@@ -5939,7 +5959,8 @@ const CONTENT_KINDS = {
     summary: 'Only when a tight end story is worth your time.', absorbs: [] },
   'tnf-what-matters': { title: 'Thursday Night: What Matters', day: 'Fri', hour: 6, minute: 0, retro: false, subject: 'current',
     analyst: 'raines', dfsAnalyst: 'park', lens: 'both', optional: true,
-    targets: (gs) => gs.filter(g => g.dow === 'Thu'),
+    targets: (gs) => gs.filter(g => g.dow === 'Wed' || g.dow === 'Thu'),
+    titleFor: (days) => days.length && days.some(d => d !== 'Thu') ? 'Midweek Football: What Matters' : 'Thursday Night: What Matters',
     summary: 'Usage, role and sustainability from the Thursday game. Not a recap.', absorbs: ['tnf-aftermath'] },
   'weekend-preview': { title: 'Weekend Preview', day: 'Fri', hour: 7, minute: 0, retro: false, subject: 'current',
     analyst: 'porter', dfsAnalyst: 'park', lens: 'both', preview: true,
@@ -6029,6 +6050,9 @@ function contentSubjectWeek(K, state, now) {
 }
 // Is a piece due, and is it ready? Pure. `state` is the season service's
 // answer; `sched` the schedule cache; `now` the instant asked about.
+// The title a piece carries: the kind's, unless the kind names one for the
+// days its target games fall on (a Wednesday opener is not Thursday night).
+const kindTitle = (K, d) => (K && K.titleFor && d && Array.isArray(d.targetDays)) ? K.titleFor(d.targetDays) : (K ? K.title : '');
 function contentDue(kind, now, state, sched) {
   const K = CONTENT_KINDS[kind];
   if (!K) return { due: false, ready: false, reason: 'unknown_kind' };
@@ -6056,8 +6080,14 @@ function contentDue(kind, now, state, sched) {
   // days: the half day is what keeps a kickoff the schedule stores at
   // midnight from pulling the slot a week early, which the first live tick did.
   const prevGames = !K.retro && K.anchor !== 'targets' && anchorWeek > 1 ? weekGames(sched, anchorWeek - 1, now) : [];
+  // A piece about specific games takes its slot from the FIRST of them: the
+  // Thursday preview runs Thursday morning, and when the season opens on a
+  // Wednesday (2026 did, NE at SEA the night before SF and the Rams) the same
+  // piece runs Wednesday morning and covers both midweek games.
+  const firstTarget = targets.length ? targets.slice().sort((a, b) => a.kickoff - b.kickoff)[0] : null;
+  const slotDay = K.anchor === 'targets' && firstTarget ? firstTarget.dow : K.day;
   let dueAt;
-  if (K.anchor === 'targets' && targets.length) dueAt = _nextEt(K.day, K.hour, Math.min(...targets.map(g => g.kickoff)) - 24 * 3600000, K.minute || 0);
+  if (K.anchor === 'targets' && firstTarget) dueAt = _nextEt(slotDay, K.hour, firstTarget.kickoff - 24 * 3600000, K.minute || 0);
   else if (K.retro) dueAt = _nextEt(K.day, K.hour, Math.max(...ags.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else if (prevGames.length) dueAt = _nextEt(K.day, K.hour, Math.max(...prevGames.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
   else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 132 * 3600000, K.minute || 0);
@@ -6085,7 +6115,7 @@ function contentDue(kind, now, state, sched) {
     ready = notFinal.length === 0;
     if (!ready) reason = 'games_not_final:' + notFinal.map(g => g.away + '@' + g.home).join(',');
   }
-  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id),
+  return { due, ready, reason, week, anchorWeek, dueAt, targets: targets.map(g => g.id), targetDays: targets.map(g => g.dow), slotDay,
            updatesUntil: K.updates ? dueAt + (K.updateHours || 6) * 3600000 : null,
            excluded: K.partial ? gs.filter(g => g.dow === 'Sun' && !feedFinal(g)).map(g => g.away + '@' + g.home) : [] };
 }
@@ -7197,7 +7227,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
   const rivalry = rivalryGate(env, kind, facts.disagreements || (facts.candidates ? facts.candidates : []), budget);
   const analyst = analystFor(env, K.analyst), dfsAnalyst = analystFor(env, K.dfsAnalyst || 'park'), marketAnalyst = K.marketAnalyst ? analystFor(env, K.marketAnalyst) : null;
   const packet = {
-    meta: { kind, title: K.title, subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
+    meta: { kind, title: kindTitle(K, d), subtitle: K.subtitle || null, dfsTitle: K.dfsTitle || null, storyType: K.unscheduled ? 'breaking' : K.retro ? 'retrospective' : 'forward', season: ctx.sched ? ctx.sched.season : null, week: d.week, date: new Date().toISOString().slice(0, 10), generatedAt: Date.now(),
             analyst: analyst.id, analystName: analyst.name, dfsAnalyst: dfsAnalyst.id, dfsAnalystName: dfsAnalyst.name, marketAnalyst: marketAnalyst ? marketAnalyst.id : null, marketAnalystName: marketAnalyst ? marketAnalyst.name : null,
             lens: flagOn(env, 'DFS_CONTENT') ? K.lens : 'weekly', scoring: 'PPR (the reader’s league re-scores the tables on the page)', excludedGames: d.excluded || [] },
     freshness: freshnessReport(ctx.stamps, kind, Date.now()),
@@ -7314,7 +7344,7 @@ async function writeNewsroomPiece(env, kind, packet) {
   const K = CONTENT_KINDS[kind];
   const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
   const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
-  const user = 'KIND: ' + kind + ' (' + K.title + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
+  const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
   let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS);
@@ -7444,7 +7474,7 @@ async function produceContent(env, kind, opts) {
   if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
   const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
   // A retry of a transport failure is the same edition, not an update.
-  const title = K.title + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
+  const title = kindTitle(K, d) + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
   const analyst = packet.meta.analyst;
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
   await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,
@@ -7726,9 +7756,10 @@ async function newsroomAdmin(env, action, body) {
 async function newsroomStatus(env) {
   const auto = await autoPublishOn(env);
   const et = etParts(Date.now());
+  let tick = null; try { tick = await tickHealth(env, Date.now()); } catch (e) { tick = null; }
   const legacy = Object.entries(LEGACY_CONTENT).map(([k, v]) => ({ kind: k, ...v }));
   return { autoPublish: auto, flags: flagReport(env), audit: newsroomAudit(null), legacy, routines: ROUTINE_MIGRATION, events: (await newsEventsPayload(env, 20)).map(e => ({ at: e.created_at, type: e.type, player: e.player, team: e.team, position: e.position, score: e.score, handled: e.handled, detail: e.detail })),
-           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
+           analysts: Object.values(ANALYSTS).map(a => ({ id: a.id, name: a.name, role: a.role })), rivalry: RIVALRY, et, tick, draftSocial: env && env.DRAFT_SEASON_SOCIAL === '1' };
 }
 
 // -- DFS -------------------------------------------------------------------------
@@ -7928,23 +7959,62 @@ const JOB_FNS = {
   'league-sync':          env => runLeagueSync(env)
 };
 const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch (e) { return null; } };
+// How long a job may run before the log calls it dead. A cron invocation has
+// fifteen minutes of wall clock in total; the desk tick, which may write two
+// pieces with a retry each at 170 s a call, gets most of it, and every other
+// job a few minutes. A job past its deadline is logged as a failure and the
+// tick moves on; the work itself is not cancelled (the runtime has no way to
+// cancel a promise), it is simply no longer waited for.
+const JOB_DEADLINE_MS = { 'content-tick': 13 * 60000 };
+const JOB_DEADLINE_DEFAULT_MS = 4 * 60000;
+// A row that opened and never closed is an invocation that died: the runtime
+// killed it at the duration limit, or evicted it. Nothing closes such a row,
+// so the board counts it as a failure once it is older than any deadline.
+const JOB_DIED_AFTER_MS = 16 * 60000;
 // Run one job and log it. Never throws: a job that throws is a logged
 // failure, and the caller gets { ok:false, error }.
+//
+// The row is OPENED before the job runs and CLOSED after it, in two writes.
+// On September 8 and 9 the cron went silent three times for two hours and
+// more, and each gap began with a tick whose news-scan logged and whose
+// content-tick did not. A log written only at the end cannot say whether the
+// runtime killed that invocation or the cron never fired the next ones; a
+// row that is open with nothing after it says the first, no row says the
+// second. When the open write fails (no id comes back), the job still runs
+// and the row is written whole at the end, the way it always was.
 async function jobRun(env, name, trigger, fn) {
   const f = fn || JOB_FNS[name];
   if (!f) return { ok: false, error: 'unknown_job', job: name };
   const started = Date.now();
-  let result = null, error = null;
+  const id = await jobOpen(env, { job: name, trigger: trigger || null, started });
+  const limit = JOB_DEADLINE_MS[name] || JOB_DEADLINE_DEFAULT_MS;
+  let result = null, error = null, timer = null;
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('deadline: ' + name + ' still running after ' + Math.round(limit / 1000) + ' s')), limit); });
   try {
-    result = await f(env);
+    result = await Promise.race([f(env), deadline]);
     if (result && result.ok === false) error = String(result.error || result.reason || 'failed');
   } catch (e) { error = (e && e.message) || 'failed'; result = { ok: false, error }; }
-  await jobLog(env, { job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
+  finally { clearTimeout(timer); }
+  await jobLog(env, { id, job: name, trigger: trigger || null, started, finished: Date.now(), ok: error ? 0 : 1, error, summary: _jobSummary(result) });
   return result == null ? { ok: true } : result;
+}
+async function jobOpen(env, r) {
+  if (!(await jobReady(env))) return null;
+  try {
+    const res = await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, NULL, NULL, NULL, NULL)')
+      .bind(r.job, r.trigger, r.started).run();
+    const id = res && res.meta && res.meta.last_row_id;
+    return Number.isFinite(id) && id > 0 ? id : null;
+  } catch (e) { return null; }
 }
 async function jobLog(env, r) {
   if (!(await jobReady(env))) return false;
   try {
+    if (r.id) {
+      await env.LEADS_DB.prepare('UPDATE job_runs SET finished_at = ?, ok = ?, error = ?, summary = ? WHERE id = ?')
+        .bind(r.finished, r.ok, r.error, r.summary, r.id).run();
+      return true;
+    }
     await env.LEADS_DB.prepare('INSERT INTO job_runs (job, trigger, started_at, finished_at, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .bind(r.job, r.trigger, r.started, r.finished, r.ok, r.error, r.summary).run();
     return true;
@@ -7970,15 +8040,37 @@ async function jobBoard(env, now) {
     const lastOkAny = {}; for (const r of (older.results || [])) lastOkAny[r.job] = r.last_ok;
     const seen = new Set(rows.map(r => r.job));
     const all = names.concat(Array.from(seen).filter(j => !names.includes(j)));
+    const bad = r => r.ok === 0 || _jobDied(r, at);
     return { ok: true, jobs: all.map(j => {
       const mine = rows.filter(r => r.job === j);
       const last = mine[0] || null, ok = mine.find(r => r.ok === 1) || null;
-      return { job: j, last: last ? _jobRow(last) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(r => r.ok === 0).length };
-    }), failed: rows.filter(r => r.ok === 0).slice(0, 40).map(_jobRow) };
+      return { job: j, last: last ? _jobRow(last, at) : null, lastOk: ok ? ok.started_at : (lastOkAny[j] || null), failures7d: mine.filter(bad).length };
+    }), failed: rows.filter(bad).slice(0, 40).map(r => _jobRow(r, at)) };
   } catch (e) { return { ...empty, error: (e && e.message) || 'failed' }; }
 }
-const _jobRow = r => ({ job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, error: r.error || null,
-                        ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null });
+const _jobDied = (r, at) => r.finished_at == null && r.ok == null && (at - r.started_at) > JOB_DIED_AFTER_MS;
+const _jobRow = (r, at) => {
+  const died = _jobDied(r, Number.isFinite(at) ? at : Date.now());
+  return { job: r.job, trigger: r.trigger, startedAt: r.started_at, finishedAt: r.finished_at, ok: r.ok === 1, unfinished: r.finished_at == null, died,
+           error: died ? 'did not finish: the invocation died before the job closed its row' : (r.error || null),
+           ms: r.finished_at && r.started_at ? r.finished_at - r.started_at : null, summary: r.summary || null };
+};
+// The cron's pulse. content-tick runs every quarter hour, so its newest row
+// is the last time the cron reached the worker at all; the silence is how
+// long ago that was. died24h counts rows that opened and never closed.
+const TICK_SILENT_MIN = 20;
+async function tickHealth(env, now) {
+  const at = Number.isFinite(now) ? now : Date.now();
+  const out = { lastAt: null, lastOk: null, silentMinutes: null, silent: false, died24h: 0, silentAfterMin: TICK_SILENT_MIN };
+  try {
+    if (!(await jobReady(env))) return out;
+    const r = await env.LEADS_DB.prepare("SELECT started_at, finished_at, ok FROM job_runs WHERE job = 'content-tick' ORDER BY started_at DESC LIMIT 1").first();
+    if (r) { out.lastAt = r.started_at; out.lastOk = r.ok === 1; out.silentMinutes = Math.max(0, Math.round((at - r.started_at) / 60000)); out.silent = out.silentMinutes > TICK_SILENT_MIN; }
+    const d = await env.LEADS_DB.prepare('SELECT COUNT(*) AS n FROM job_runs WHERE finished_at IS NULL AND ok IS NULL AND started_at > ? AND started_at < ?').bind(at - 86400000, at - JOB_DIED_AFTER_MS).first();
+    out.died24h = d && Number.isFinite(+d.n) ? +d.n : 0;
+  } catch (e) {}
+  return out;
+}
 
 // ── the assessment ─────────────────────────────────────────────────────────
 // Pure. Takes what the caches and the log say and returns what is missing or
@@ -12160,6 +12252,7 @@ export default {
     // York time, says what is due this hour; runScheduledTick runs it phase
     // by phase through the job log, and the desk tick goes last.
     if (event.cron === '*/15 * * * *' || event.cron === '0 * * * *') {
+      console.log('tick start:', event.cron, new Date(event.scheduledTime || Date.now()).toISOString());
       ctx.waitUntil(runScheduledTick(env, Date.now(), event.cron)
         .then(r => console.log('tick:', JSON.stringify(r).slice(0, 600)))
         .catch(e => console.error('tick failed:', e && e.message)));

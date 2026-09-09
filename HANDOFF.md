@@ -8139,6 +8139,67 @@ days). And `_namesOf` collected names only under keys that looked like
 names, so a correct draft naming a receiver the packet stored as `absent`
 was held; every string in a packet is a fact now.
 
+### 68m. The cron went silent, and the log could not say why
+
+Between the first live tick and the next morning the `*/15` trigger reached
+the worker on an ordinary quarter-hour rhythm and then, three times, did not:
+21:00 to 23:30Z on September 8, 04:31 to 06:45Z and 07:31 onward on
+September 9, each silence two hours or more. D1 was not the cause (page views
+kept writing through every gap) and neither was a deploy (none coincided).
+Two of the three gaps began with a tick whose `news-scan` row was written
+and whose `content-tick` row was not, which a log written only at the end
+cannot distinguish from a cron that never fired again.
+
+So the log changed shape. `jobRun` now OPENS the row before the job (job,
+trigger, started_at, everything else NULL) and CLOSES it after (finished_at,
+ok, error, summary, by id). A row that is open with nothing after it is an
+invocation the runtime killed; no row at all is a cron that never fired. When
+the open write returns no id the row is written whole at the end, as before,
+so a fake D1 in a test and a degraded D1 in production both still get a log.
+The board (`jobBoard`, `_jobRow`) reports `unfinished` and `died` (open and
+older than `JOB_DIED_AFTER_MS`, 16 minutes) and counts a death as a failure;
+`tickHealth` is the pulse the control centre shows (last tick, minutes of
+silence, deaths in the last day), red past `TICK_SILENT_MIN` (20 minutes).
+
+Every job also runs under a deadline now (`JOB_DEADLINE_MS`: 13 minutes for
+the desk tick, 4 for the rest), inside the runtime's fifteen. A job past it
+is a logged failure with `deadline:` in the error and the tick moves on; the
+promise itself is not cancelled, only no longer waited for. And the scheduled
+handler logs `tick start` before it does anything, so the Cloudflare log has
+a line for every invocation that reached the worker.
+
+What this does not do is fix the cron. If the next gap shows open rows, the
+invocation is dying and the deadline plus the log will say in which job; if
+it shows nothing, the trigger is not firing and the answer is in the
+dashboard's Cron Events for the worker, which the repo cannot read.
+
+### 68n. A Wednesday opener, and what ESPN says to the worker
+
+The 2026 season opened on a Wednesday (NE at SEA, September 9, 8:20 PM ET)
+with a second game on Thursday (SF and the Rams). The calendar previewed
+only Thursday games, so the opener would have had no preview at all. A
+piece about specific games now takes its SLOT from the first of them:
+`contentDue` uses the first target's weekday in place of the kind's `day`
+when `anchor` is `targets`, so the Thursday preview runs Thursday morning
+in an ordinary week and Wednesday morning in this one, covering both
+midweek games; `tnf-preview` and `tnf-what-matters` target Wednesday and
+Thursday games alike, and `titleFor(days)` retitles them (Midweek Kickoff
+Preview, Midweek Football: What Matters) when the slate is not Thursday's.
+`kindTitle(K, d)` is the one place the title is decided, and `contentDue`
+returns `targetDays` and `slotDay` so the packet and the row can use it.
+
+Two feeds looked wrong the same morning. The hourly schedule refresh has
+reported `live: 0` with no error, and the depth chart job `got: 0,
+failed: 32`, every day since September 4, while both ESPN URLs answer in
+full from outside Cloudflare. Every ESPN fetch now sends a user agent and
+an accept header (the injuries feed always did, and it is the one ESPN
+feed that has worked), `_espnEvents` records what ESPN returned (status,
+content type, event count, the first bytes of an eventless body) and the
+refresh writes it into its summary as `espn`; the depth chart job keeps
+its `firstError`. If the next refresh still shows nothing, the summary
+says what the worker was actually given. Until statuses arrive from ESPN,
+no game is ever `final` and no retrospective piece is ever ready.
+
 ---
 
 ## Sync My League (2026-09-09)
