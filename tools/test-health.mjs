@@ -33,9 +33,9 @@ const stubs = {
   runOddsRefresh: async () => { calls.push('odds'); throw new Error('the books did not answer'); },
   runAvailabilityRefresh: async () => ({ ok: false, error: 'espn 403' }),
   runMarketSnapshot: async () => ({ ok: true, written: 12 }),
-  runUsageRefresh: async () => ({ ok: true }), runDfsRefresh: async () => ({ ok: true }), runDepthChartRefresh: async () => ({ ok: true }),
+  runUsageRefresh: async () => ({ ok: true }), runPriorUsageRefresh: async () => ({ ok: true }), runDfsRefresh: async () => ({ ok: true }), runDepthChartRefresh: async () => ({ ok: true }),
   runRosSnapshot: async () => ({ ok: true }), snapshotPrune: async () => ({ ok: true }), pruneAnalytics: async () => ({ ok: true }), runContentTick: async () => ({ ok: true, results: [] }),
-  SNAP_KEEP_DAYS: 200, DEPTH_ROW: 6,
+  SNAP_KEEP_DAYS: 200, DEPTH_ROW: 6, MARKET_PRIOR_ROW: 7,
   scheduleCacheRead: async () => null, nflSeasonState: () => ({ ok: false }), oddsCacheRead: async () => null, snapshotStatus: async () => null, usageCacheRead: async () => null,
   availabilityCacheRead: async () => null, rosSnapshots: async () => [], dfsSalariesRead: async () => null, providerReport: () => ({ providers: {}, unavailable: {} }),
   etParts: () => ({ dow: 'Tue', hour: 9, minute: 0 }), contentReady: async () => true,
@@ -169,6 +169,7 @@ console.log('\nthe payload');
 {
   const p = await H.healthPayload({ LEADS_DB: fakeDb([]) }, {});
   ok('with nothing loaded the payload still answers', p.ok && p.status === 'down' && p.week === null);
+  ok('and says nothing is loaded for either season of stat lines', p.updates.usage === null && p.updates.usagePrior === null);
   ok('it lists every job and every kind', p.jobNames.length === Object.keys(H.JOB_FNS).length && p.editorial.length === 2 && p.editorial[0].kind === 'team-recaps');
   ok('an editorial row says why it is not due', p.editorial[0].reason === 'not_regular_season' && p.editorial[0].piece === null);
   ok('the ran field carries an admin rerun', (await H.healthPayload({ LEADS_DB: fakeDb([]) }, { ran: { job: 'x', ok: true } })).ran.job === 'x');
