@@ -8138,3 +8138,59 @@ hours (Week 1, with no week before it, on its own opener less five and a half
 days). And `_namesOf` collected names only under keys that looked like
 names, so a correct draft naming a receiver the packet stored as `absent`
 was held; every string in a packet is a fact now.
+
+## 69. September 9: the static pages join the masthead
+
+§68 gave the site a masthead — eight analysts, a fixed beat each, an author page
+and a standing AI disclosure — and bylined everything the newsroom generates. It
+could not reach the pages the newsroom does not produce. The 83 dated drop pages,
+the evergreen guides, the coaching column and The Pick were all written by the
+Routines the migration retired; they are still served, still linked from the nav
+and the footer, and they still carried either "Iron Tuna Research" or no byline
+at all. A reader moving from a desk piece to a camp report crossed from a site
+with a masthead to a site without one.
+
+They are now stamped from the **same roster**, by `tools/build-bylines.mjs`.
+
+### Where the assignments come from
+
+Three of the five families were not a judgement call. `ROUTINE_MIGRATION` already
+records where each retired Routine’s work went, and the destination kind in
+`CONTENT_KINDS` already names its analyst, so the mapping was followed rather
+than invented:
+
+| static pages | retired Routine → destination | analyst |
+|---|---|---|
+| `auction-watch-*.html` | camp & preseason desk → `last-minute-intel` | Usage and Opportunity |
+| `play-caller-premium.html` | Play-Caller Premium → `quarterback-monday` | Quarterback and Offense |
+| `the-pick.html` | The Pick → `underrated` | Market Intelligence |
+| `auction\|snake\|bestball-insights-*.html` | (none — assigned on beat) | Fantasy Rankings |
+| the seven strategy guides | (none — assigned on beat) | Waiver and Roster Strategy |
+
+The stacking guide is the one exception inside a family: correlation is an
+offence question rather than a roster one, so it sits with the offence analyst.
+
+### The rules it keeps
+
+- **The roster is `ANALYSTS` in `_worker.js` and nowhere else.**
+  `tools/analyst-pages.mjs` holds the page-to-analyst assignment and reads the
+  names out of the worker at build time. `tools/test-bylines.mjs` fails if an
+  analyst’s name appears anywhere under `tools/` — including in a comment, which
+  is how it failed on its first run.
+- **The byline is one click from the disclosure.** Every name links to
+  `/analysts/<id>`, which is where the site says these are editorial personas
+  and not people. That route is a rewrite to the `/analyst` shell rather than a
+  file, so nothing that walks the directory can confirm the link resolves; the
+  test pins the route pattern in `_worker.js` instead.
+- **The JSON-LD was deliberately left alone.** `author` stays the Iron Tuna
+  `Organization`. A `Person` node carrying a persona’s name is the version of
+  that claim a search engine indexes, and it would contradict the disclosure the
+  visible byline links to.
+- **`--house` is the kill switch’s manual half.** `ANALYST_PERSONAS` off
+  "publishes every piece under Iron Tuna", but that flag is read at request time
+  and a static page cannot read it. If the personas are ever switched off, run
+  `node tools/build-bylines.mjs --house` and commit, or these pages keep naming
+  analysts the rest of the site has stopped naming.
+- Hubs, archives, the `SoftwareApplication` landing pages and the in-season
+  dashboards are **not** bylined, and the test asserts they are not. A byline on
+  a table recomputed on every load is the one kind that lies.

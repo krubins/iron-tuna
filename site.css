@@ -429,6 +429,26 @@ footer.site a:hover { color: var(--text) }
 .is-hint.err { color: var(--danger) }
 .is-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-5) }
 
+/* ── the desk byline ──────────────────────────────────────────────────────
+   Every story on the site is bylined to one of four desks (tools/desks.mjs),
+   and the line is stamped by tools/build-bylines.mjs rather than written by
+   hand. The 42 insight drop pages carry an identical rule in their own inline
+   <style>, which is harmless: same declarations, and the page block loads
+   after this file either way. Kept here so a page that has no inline copy —
+   the evergreen guides, the coaching column, the camp reports — is not left
+   rendering its byline as an unstyled paragraph. */
+.byline {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  font-size: 13.5px; color: var(--muted); margin: 2px 0 10px;
+}
+.byline b { color: var(--sec); font-weight: 600 }
+.byline .dot { opacity: .5 }
+/* The analyst’s name is a link to their page, which is where the standing AI
+   disclosure lives — but it reads as a byline first. It takes the byline’s own
+   colour rather than the site link colour, and only announces itself on hover. */
+.byline b a { color: inherit; text-decoration: none }
+.byline b a:hover { color: var(--teal); text-decoration: underline }
+
 @media (max-width: 640px) {
   .is-row2 { grid-template-columns: 1fr }
   .is-plate-head > span:not(:first-child) { border-left: 0; border-top: 1px solid var(--line) }
