@@ -124,6 +124,8 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   ok('and waits while Thursday is still to be played', !wdue('tnf-what-matters', ET(2026, 9, 11, 6, 0), ['w1-wed']).ready);
   const mnfw = wdue('mnf-preview', ET(2026, 9, 14, 6, 10), ['w1-wed', 'w1-thu', 'w1-e1', 'w1-e2', 'w1-late', 'w1-snf']);
   ok('the Monday preview is untouched by a Wednesday opener', mnfw.due && mnfw.ready && mnfw.slotDay === 'Mon' && mnfw.targets.join() === 'w1-mnf');
+  const wkd = wdue('weekend-preview', ET(2026, 9, 11, 7, 0), ['w1-wed', 'w1-thu']);
+  ok('the Weekend Preview on Friday leaves the played midweek games out and is ready', wkd.due && wkd.ready && !wkd.targets.includes('w1-wed') && !wkd.targets.includes('w1-thu') && wkd.targets.includes('w1-e1'), JSON.stringify(wkd));
   ok('Underrated, the Trade Desk and Tight End Thursday follow at 7, 8 and 9', due('underrated', ET(2026, 9, 17, 7, 0), wk1).due && !due('underrated', ET(2026, 9, 17, 6, 45), wk1).due && due('trade-desk', ET(2026, 9, 17, 8, 0), wk1).week === 2 && due('tight-end-thursday', ET(2026, 9, 17, 9, 0), wk1).week === 1);
   // Friday.
   const after = due('tnf-what-matters', ET(2026, 9, 18, 6, 30), wk1.concat(['w2-thu']));
@@ -185,6 +187,19 @@ console.log('\nthe validator');
   ok('a number the brief does not contain is caught', bad.numbers.includes('155'));
   ok('small counts are allowed as prose', H.validateDraft('He was one of 3 backs used.', b.allowed).ok);
   ok('the site\'s own names are allowed', H.validateDraft('Iron Tuna has him higher. Market Delta agrees.', b.allowed).ok);
+  // The first live preview (Week 1, 2026) was held on all of these.
+  const wk = H._finishBrief({ games: [{ away: 'NE', home: 'SEA', spread: 3.5, total: 44.5 }], players: [{ name: 'Puka Nacua', proj: 20.7, market: 18.6, consensus: 20.1 }, { name: 'Isaac Guerendo', status: 'PUP' }, { name: 'A.J. Brown' }] });
+  const hl = H.validateDraft('Two Slates, Two Very Different Implied Totals: Follow the Market Away From New England', wk.allowed);
+  ok('a title-case headline is not a roster', hl.ok, JSON.stringify(hl));
+  const sb = H.validateDraft('Same problem as Brown. Vegas ranks him lower. He is behind Nacua. Reasonable flex.', wk.allowed);
+  ok('a sentence boundary is not a name', sb.ok, JSON.stringify(sb));
+  const ps = H.validateDraft("Guerendo's PUP absence opens the backfield. Every Patriots skill player. Reasonable DST start. Iron Tuna's rank agrees.", wk.allowed);
+  ok('a possessive, an abbreviation, a club and the site are not a name', ps.ok, JSON.stringify(ps));
+  ok('a real player the packet lacks is still caught', H.validateDraft('Justin Jefferson is the play here.', wk.allowed).names.join() === 'Justin Jefferson');
+  const ar = H.validateDraft('Market points 18.6, 1.5 below consensus. LA -3.5 at home.', wk.allowed);
+  ok('a difference of two packet numbers is allowed, and so is the signed spread', ar.ok, JSON.stringify(ar));
+  const nn = H.validateDraft('He ran for 155 yards, 4.7 per carry.', wk.allowed);
+  ok('a number that is neither in the packet nor arithmetic on it is still caught', nn.numbers.join() === '155,4.7', JSON.stringify(nn));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
