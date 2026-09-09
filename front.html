@@ -2185,19 +2185,24 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
 
 
   // ── the lead's artwork ─────────────────────────────────────────────────────
-  // Original art, drawn here as SVG — no club logo or wordmark is reproduced,
-  // because that is not ours to publish. What IS ours to use is a team's colours
-  // (a fact, not a creative work) plus the abbreviation, so the plate is a
-  // geometric field in the featured team's colours.
+  // A geometric field in the featured club's own colours — colours are a fact,
+  // not a creative work — carrying the abbreviation, the club name and the
+  // strap. That part is drawn here, as SVG, and always draws.
   //
-  // It now runs as the fallback rather than the default: a story with players in
-  // it gets their photos in the band above, and the plate carries the rest —
-  // rule changes and league-wide reads, which get the neutral plate rather than
-  // somebody else's colours. Note the band DOES publish player likenesses,
-  // hot-linked from the ESPN and NFL CDNs and credited in the footer. This
-  // comment used to say the front page reproduced none; that is no longer true,
-  // and if it is a line this site does not want to cross, the fix is to drop the
-  // band, not the plate.
+  // The club MARKS are referenced, never reproduced: the <image> below points at
+  // ESPN's own logo host, exactly as the faces further down point at ESPN's
+  // headshot host, and /data discloses both in one row ("team marks … referenced
+  // from the publishers' own image CDNs"), claims no rights in them and asserts
+  // no affiliation. Two consequences worth stating plainly, because this comment
+  // used to say the front page reproduced no club mark at all:
+  //   - if that is a line this site decides not to cross, the fix is to delete
+  //     logoUrl and the <image> tags. Every plate still draws without them.
+  //   - a blocked, moved or 404ing file takes that same path at runtime: the
+  //     image removes itself and the geometry carries the plate.
+  //
+  // The plate runs as the fallback rather than the default: a story with players
+  // in it gets their photographs in the band above, and the plate carries the
+  // rest — rule changes, league-wide reads and the week's game previews.
   var TEAM_ART = {
     ARI:['Arizona Cardinals','#97233F','#000000'], ATL:['Atlanta Falcons','#A71930','#000000'],
     BAL:['Baltimore Ravens','#241773','#9E7C0C'],  BUF:['Buffalo Bills','#00338D','#C60C30'],
@@ -2225,29 +2230,214 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   }
   function inkOn(hex) { return lum(hex) > 0.34 ? '#101317' : '#ffffff'; }
+  var PLATE_TEAL = '#2dd4a3';
+  // ESPN's path segment is the club abbreviation this file already uses, with
+  // one exception it spells its own way.
+  var LOGO_ID = { WAS: 'wsh' };
+  function logoUrl(t) { return 'https://a.espncdn.com/i/teamlogos/nfl/500/' + (LOGO_ID[t] || t).toLowerCase() + '.png'; }
+
+  // ── which club, or clubs, the plate is for ────────────────────────────────
+  // TEAM_ART's own names are the vocabulary, split into city and nickname so
+  // the two shared markets stay honest: "New York" and "Los Angeles" cannot
+  // pick a club on their own, so only the four nicknames key those. The bare
+  // abbreviation counts too, but only in upper case and only where it is
+  // unambiguous — "LA" is a game the desk writes constantly and is not a team,
+  // so it is deliberately not a key and a story that only ever says "LA" gets
+  // the plate it would have got before.
+  var TEAM_TOKENS = (function () {
+    var alias = { SF: ['Niners'], TB: ['Bucs'] };
+    var shared = { 'New York': 1, 'Los Angeles': 1 };
+    var esc_re = function (s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+    var out = [];
+    for (var t in TEAM_ART) {
+      var parts = TEAM_ART[t][0].split(' '), nick = parts.pop(), city = parts.join(' ');
+      var words = [nick].concat(alias[t] || []);
+      if (!shared[city]) words.push(city);
+      for (var i = 0; i < words.length; i++) out.push([t, new RegExp('\\b' + esc_re(words[i]) + '\\b', 'gi')]);
+      out.push([t, new RegExp('\\b' + t + '\\b', 'g')]);
+    }
+    return out;
+  })();
+  // Every club named in a string, in the order the string names them. A club
+  // written out in full ("New England Patriots") lands twice, once on the city
+  // and once on the nickname; that is harmless, because nothing downstream
+  // counts mentions and the two sit adjacent with a space between them.
+  function teamMentions(text) {
+    var s = String(text || ''), hits = [], m;
+    for (var i = 0; i < TEAM_TOKENS.length; i++) {
+      var code = TEAM_TOKENS[i][0], re = TEAM_TOKENS[i][1];
+      re.lastIndex = 0;
+      while ((m = re.exec(s))) {
+        hits.push({ t: code, at: m.index, end: m.index + m[0].length });
+        if (!m[0].length) re.lastIndex++;
+      }
+    }
+    hits.sort(function (a, b) { return a.at - b.at || b.end - a.end; });
+    return hits;
+  }
+  function firstTeam(text) { var h = teamMentions(text); return h.length ? h[0].t : null; }
+  // A FIXTURE, not a mention: two different clubs with nothing between them but
+  // "at" or "vs". That is the one construction where a club named outside the
+  // headline has clearly earned the artwork — "NE at SEA" in the dek of a game
+  // preview is the subject of the piece, not a rival cited in passing — so it
+  // is the only place the dek is read at all. The connector rides along because
+  // it fixes the order: "at" means the first club is the visitor.
+  function matchups(text) {
+    var s = String(text || ''), h = teamMentions(s), out = [];
+    for (var i = 0; i + 1 < h.length; i++) {
+      var a = h[i], b = h[i + 1];
+      if (a.t === b.t || b.at < a.end) continue;
+      var gap = s.slice(a.end, b.at), m = gap.match(/^[\s,]*(at|@|vs\.?|versus|v\.)[\s]*$/i);
+      if (m) out.push([a.t, b.t, /^(at|@)$/i.test(m[1]) ? 'AT' : 'VS']);
+    }
+    return out;
+  }
+
+  // The strap used to be bare type anchored to the plate's right edge, free to
+  // run off the accent wedge and onto the field behind it: "THURSDAY NIGHT
+  // FOOTBALL PREVIEW" was set in the wedge's dark ink and its first eight
+  // characters landed on a near-black plate, invisible. The type now rides a
+  // chip measured to its own width, so the ink and the ground under it are
+  // chosen together and the whole strap is legible whatever the words are.
+  function fitStrap(host) {
+    var txt = host.querySelector('.strap-t'), chip = host.querySelector('.strap-c');
+    if (!txt || !chip) return;
+    var w = 0;
+    try { w = txt.getComputedTextLength(); } catch (e) { w = 0; }
+    // A plate that has not been laid out yet measures zero. Estimating from the
+    // character count keeps the chip roughly right rather than collapsing it.
+    if (!w) w = (txt.textContent || '').length * 8.4;
+    var pad = 13, x = +txt.getAttribute('x'), anchor = txt.getAttribute('text-anchor');
+    if (anchor === 'middle') x -= w / 2;
+    else if (anchor === 'end') x -= w;
+    chip.setAttribute('x', Math.max(6, x - pad));
+    chip.setAttribute('width', Math.min(708, w + pad * 2));
+    chip.setAttribute('y', +txt.getAttribute('y') - 18);
+    chip.setAttribute('height', 26);
+  }
+  function strapSvg(x, anchor, fill, sub) {
+    return '<rect class="strap-c" x="' + (x - 40) + '" y="94" width="80" height="26" rx="4" fill="' + fill + '"/>' +
+           '<text class="strap-t" x="' + x + '" y="112"' + (anchor ? ' text-anchor="' + anchor + '"' : '') +
+           ' fill="' + inkOn(fill) + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.16em">' + esc(sub) + '</text>';
+  }
+  // A club block: the mark, then the type that sits beside it. They travel in
+  // one <g> so that a mark which never loads can hand its space back — the type
+  // carries a `data-x0`, the x it would have used on a plate with no logo, and
+  // the block closes up rather than leaving a hole where the mark should be.
+  var CLIP_N = 0;
+  function clubSvg(t, x, y, size, type) {
+    // The badge, and the same rounded square again as a clip.
+    //
+    // Club marks are drawn for a white page and half of them are dark enough to
+    // vanish into a navy plate, so the badge gives every one of them the ground
+    // it was designed on and reads as a deliberate tile on the light plates.
+    // It is a SQUARE, softened at the corners, because the files are square: a
+    // circle around a square image either crops its corners or leaves the art
+    // rattling around inside a badge too big for it, and both read as a mark
+    // that does not fit its space. A square the size of the file, plus a hair
+    // of padding, fits whatever the file turns out to be — art on a transparent
+    // ground gets a clean tile around it, and art baked onto its own opaque
+    // square lands flush against the edges instead of squaring out of a circle.
+    var pad = Math.round(size * 0.09), id = 'clubclip' + (++CLIP_N);
+    var bx = x - pad, by = y - pad, bs = size + pad * 2, rx = Math.round(size * 0.16);
+    var box = 'x="' + bx + '" y="' + by + '" width="' + bs + '" height="' + bs + '" rx="' + rx + '"';
+    return '<g class="club">' +
+      '<clipPath id="' + id + '"><rect ' + box + '/></clipPath>' +
+      '<rect class="club-d" ' + box + ' fill="#ffffff" opacity="0.96"/>' +
+      '<image clip-path="url(#' + id + ')" href="' + logoUrl(t) + '" x="' + x + '" y="' + y +
+      '" width="' + size + '" height="' + size + '" preserveAspectRatio="xMidYMid meet"/>' + type + '</g>';
+  }
+  function closeUp(img) {
+    var g = img.parentNode;
+    if (!g) return;
+    g.removeChild(img);
+    var disc = g.querySelector('.club-d');
+    if (disc) g.removeChild(disc);
+    var type = g.querySelectorAll('[data-x0]');
+    for (var i = 0; i < type.length; i++) type[i].setAttribute('x', type[i].getAttribute('data-x0'));
+  }
   function renderArt(s) {
     var host = document.getElementById('leadArt');
     if (!host) return;
     // One piece of art per card: when the band above is showing real faces the
     // plate stands down, and it carries every story that has no band.
     if (s && s.ppl && s.ppl.length) { host.innerHTML = ''; return; }
-    var t = s && s.team && TEAM_ART[s.team];
-    var name = t ? t[0] : 'League-wide';
-    var bg = t ? t[1] : '#101114';
-    var accent = t ? t[2] : '#2dd4a3';
-    var mark = t ? s.team : 'NFL';
-    var ink = inkOn(bg);
+    var title = (s && s.title) || '', dek = (s && s.dek) || '';
     var sub = (s && s.topic ? s.topic : 'Deep dive').toUpperCase();
-    host.innerHTML =
-      '<svg viewBox="0 0 720 132" role="img" aria-label="' + esc(name) + ' \u2014 ' + esc(sub) + '">' +
-        '<rect width="720" height="132" fill="' + bg + '"/>' +
-        '<path d="M470 0 L720 0 L720 132 L560 132 Z" fill="' + accent + '" opacity="0.92"/>' +
-        '<path d="M420 0 L500 0 L340 132 L260 132 Z" fill="' + ink + '" opacity="0.06"/>' +
-        '<path d="M300 0 L340 0 L180 132 L140 132 Z" fill="' + ink + '" opacity="0.06"/>' +
-        '<text x="34" y="86" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
-        '<text x="34" y="110" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>' +
-        '<text x="686" y="112" text-anchor="end" fill="' + inkOn(accent) + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.16em">' + esc(sub) + '</text>' +
-      '</svg>';
+    // Whose story it is. An authored drop-page story arrives with `team` already
+    // stamped on it by tools/build-front.mjs, from its HEADLINE only — the body
+    // fallback that works for topics is too loose here, and a club cited in
+    // paragraph three must not claim the artwork. A generated desk piece arrives
+    // with no team at all, so the headline is read here under the same rule.
+    var one = (s && s.team && TEAM_ART[s.team]) ? s.team : firstTeam(title);
+    var pair = null, list = matchups(title).concat(matchups(dek));
+    for (var i = 0; i < list.length; i++) {
+      // With a club already established, the fixture has to be that club's own
+      // game: a slate piece led by New England does not get San Francisco's
+      // plate because SF-at-LA happens to be the first game its dek lists.
+      if (!one || list[i].indexOf(one) >= 0) { pair = list[i]; break; }
+    }
+    var svg;
+    if (pair) {
+      var a = pair[0], b = pair[1], A = TEAM_ART[a], B = TEAM_ART[b];
+      // Two clubs whose primaries are the same colour (three of them are the
+      // same near-black) would read as one field. The second takes its own
+      // secondary instead, so the plate still says "two teams".
+      var bgA = A[1], bgB = B[1] === A[1] ? B[2] : B[1];
+      svg =
+        '<svg viewBox="0 0 720 132" role="img" aria-label="' + esc(A[0]) + ' ' + pair[2].toLowerCase() + ' ' + esc(B[0]) + ' \u2014 ' + esc(sub) + '">' +
+          '<rect width="360" height="132" fill="' + bgA + '"/>' +
+          '<rect x="360" width="360" height="132" fill="' + bgB + '"/>' +
+          '<path d="M300 0 L340 0 L180 132 L140 132 Z" fill="' + inkOn(bgA) + '" opacity="0.06"/>' +
+          '<path d="M540 0 L580 0 L420 132 L380 132 Z" fill="' + inkOn(bgB) + '" opacity="0.06"/>' +
+          '<rect x="356" width="8" height="132" fill="#0b0d10"/>' +
+          clubSvg(a, 34, 12, 80,
+            '<text x="126" data-x0="34" y="56" fill="' + inkOn(bgA) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(a) + '</text>' +
+            '<text x="128" data-x0="36" y="78" fill="' + inkOn(bgA) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(A[0].toUpperCase()) + '</text>') +
+          clubSvg(b, 606, 12, 80,
+            '<text x="594" data-x0="686" y="56" text-anchor="end" fill="' + inkOn(bgB) + '" style="font:800 34px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(b) + '</text>' +
+            '<text x="592" data-x0="684" y="78" text-anchor="end" fill="' + inkOn(bgB) + '" opacity="0.72" style="font:700 10px Inter,Arial,sans-serif;letter-spacing:.12em">' + esc(B[0].toUpperCase()) + '</text>') +
+          '<circle cx="360" cy="50" r="21" fill="' + PLATE_TEAL + '"/>' +
+          '<text x="360" y="55" text-anchor="middle" fill="' + inkOn(PLATE_TEAL) + '" style="font:800 13px Inter,Arial,sans-serif;letter-spacing:.06em">' + pair[2] + '</text>' +
+          strapSvg(360, 'middle', PLATE_TEAL, sub) +
+        '</svg>';
+    } else {
+      var t = one ? TEAM_ART[one] : null;
+      var name = t ? t[0] : 'League-wide';
+      var bg = t ? t[1] : '#101114';
+      var accent = t ? t[2] : PLATE_TEAL;
+      var mark = t ? one : 'NFL';
+      var ink = inkOn(bg);
+      svg =
+        '<svg viewBox="0 0 720 132" role="img" aria-label="' + esc(name) + ' \u2014 ' + esc(sub) + '">' +
+          '<rect width="720" height="132" fill="' + bg + '"/>' +
+          '<path d="M470 0 L720 0 L720 132 L560 132 Z" fill="' + accent + '" opacity="0.92"/>' +
+          '<path d="M420 0 L500 0 L340 132 L260 132 Z" fill="' + ink + '" opacity="0.06"/>' +
+          '<path d="M300 0 L340 0 L180 132 L140 132 Z" fill="' + ink + '" opacity="0.06"/>' +
+          (function () {
+            var type =
+              '<text x="' + (t ? 140 : 34) + '" data-x0="34" y="86" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
+              '<text x="' + (t ? 142 : 34) + '" data-x0="34" y="110" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
+            // No club, no mark: the league-wide plate is the geometry alone.
+            return t ? clubSvg(one, 28, 18, 96, type) : type;
+          })() +
+          strapSvg(686, 'end', accent, sub) +
+        '</svg>';
+    }
+    host.innerHTML = svg;
+    // A mark that will not load — blocked, moved, 404 — takes itself off the
+    // plate and gives its space back, rather than leaving the browser's
+    // broken-image glyph on the front page or a hole in the middle of the art.
+    var imgs = host.querySelectorAll('image');
+    for (var k = 0; k < imgs.length; k++) {
+      imgs[k].addEventListener('error', function () { closeUp(this); });
+    }
+    fitStrap(host);
+    // Inter arrives after first paint, and the chip was measured against the
+    // fallback face. Measure it once more when the real one is in.
+    if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+      document.fonts.ready.then(function () { fitStrap(host); });
+    }
   }
 
   // ── the lead's faces ──────────────────────────────────────────────────────
