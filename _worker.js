@@ -7297,6 +7297,7 @@ TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manage
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
 THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
+HEADLINE AND DEK in sentence case: capitalise the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
@@ -7614,6 +7615,30 @@ async function deskLeadPayload(env) {
   const [cur, ...rest] = feed.pieces;
   const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week, url: p.url, title: p.headline || p.title + ' · Week ' + p.week, dek: p.dek || '', label: p.title, category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], names: [], cast: [] });
   return { ok: true, source: 'desk', story: row(cur), recent: rest.map(row) };
+}
+// The regular season with nothing published yet: the lead is the desk's NEXT
+// piece, named and timed, in the same shape. Never a draft-season story. The
+// alternative, which the front page ran on the Wednesday of Week 1, was a
+// six-hour-old auction price above the week's slate: a reader was being told
+// the wrong month. Pure apart from the clock, so tools/test-newsroom.mjs can
+// hold it to the calendar.
+function deskNextPayload(state, sched, now) {
+  let best = null;
+  for (const [kind, K] of Object.entries(CONTENT_KINDS)) {
+    if (K.unscheduled) continue;
+    let d = null;
+    try { d = contentDue(kind, now, state, sched); } catch (e) { continue; }
+    if (!d || d.skip || !Number.isFinite(d.dueAt) || d.dueAt === Number.MAX_SAFE_INTEGER || d.dueAt <= now) continue;
+    if (!best || d.dueAt < best.at) best = { kind, K, at: d.dueAt, week: d.week };
+  }
+  if (!best) return null;
+  const p = etParts(best.at);
+  const day = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }[p.dow] || p.dow;
+  const when = day + ' at ' + (p.hour % 12 || 12) + ':' + String(p.minute).padStart(2, '0') + ' ' + (p.hour < 12 ? 'AM' : 'PM') + ' ET';
+  const a = ANALYSTS[best.K.analyst] || ANALYST_HOUSE;
+  const story = { slug: 'desk:next:' + best.kind, url: '/in-season/desk', title: 'Next from the desk: ' + best.K.title, dek: (best.K.summary || '') + ' Publishes ' + when + '.',
+                  label: 'The Desk', category: 'desk', placeholder: true, analyst: a.name, analystId: a.id, createdAt: best.at, players: [], names: [], cast: [] };
+  return { ok: true, source: 'desk-next', story, recent: [] };
 }
 
 // ── author pages, disagreements ────────────────────────────────────────────
@@ -8548,6 +8573,10 @@ async function leadStoryPayload(env) {
       if (st && st.ok && st.phase === 'regular') {
         const desk = await deskLeadPayload(env);
         if (desk && desk.ok) { _LEAD_CACHE = desk; _LEAD_AT = now; return desk; }
+        // Nothing published yet: name the next piece rather than reach back
+        // into the draft-season archive for a story about a different month.
+        const next = deskNextPayload(st, sched, now);
+        if (next && next.ok) { _LEAD_CACHE = next; _LEAD_AT = now; return next; }
       }
     }
   } catch (e) {}

@@ -8202,6 +8202,38 @@ no game is ever `final` and no retrospective piece is ever ready.
 
 ---
 
+### 68p. September 9: The Desk showed an auction story on the front page
+
+Ken's report on the Wednesday of Week 1: "The story on The Desk is still
+auction focused. This should be focused on this week's matchups." The lead
+is the newest published desk piece in the regular season (68a); every Week 1
+piece was held (68l, 68m), and the retired lead-story Routine (68a) was still
+running every six hours, so the fallback to the `lead_story` archive was
+never empty: "Bid Carnell Tate to $13" sat above the Week 1 slate. 68m's
+checker and `revalidateHeld` published the Thursday preview at 12:45Z. This
+section is the rest:
+
+- **The Routine is off.** `trig_011LYewcPUQikF8izFsN2LAr` ("lead story
+  refresh (every 6h)") was disabled from a session on 2026-09-09. Its prompt
+  stays in `tools/lead-story-routine-prompt.md` for the 2027 draft season.
+- **No auction story in the regular season.** With nothing published,
+  `leadStoryPayload` serves `deskNextPayload`: the next piece on the
+  calendar, named and timed in ET, `placeholder: true`, linking to
+  `/in-season/desk`. The archive is reached only outside the regular season.
+- **`front.html` paints a desk lead as a desk lead:** "The Desk" badge, the
+  byline and publish time instead of the Routine's six-hour countdown, no
+  default-league pricing note (a desk piece quotes no dollars; the note was
+  printing "12 teams, $200" under a matchup preview), "More from the desk", a
+  five-minute re-look, and the section's more-link goes to `/in-season/desk`
+  under `html[data-season="in"]`.
+- **`NEWSROOM_SYSTEM` asks for sentence-case headlines**, so the checker
+  meets fewer title-case runs in the first place.
+- `tools/test-newsroom.mjs` holds every phrase from the September 9 hold
+  against the checker; `tools/test-dry-run.mjs` asserts the Wednesday
+  placeholder.
+
+---
+
 ## Sync My League (2026-09-09)
 
 **What it is.** A reader connects the fantasy league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool, their opponent and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record (audit, design, provider terms, deliverables, env vars, deployment) is `docs/league-sync.md`; this is the map.
