@@ -143,7 +143,7 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
 header.site {
   position: sticky; top: 0; z-index: 30;
   background: rgba(11, 22, 20, .94); backdrop-filter: blur(8px);
-  border-bottom: 3px solid var(--brand);
+  border-bottom: 6px solid var(--brand);
 }
 header.site .wrap {
   max-width: 1080px; display: flex; align-items: center;
@@ -236,7 +236,7 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
   .nav {
     position: absolute; top: 100%; left: 0; right: 0;
     display: none; flex-direction: column; align-items: stretch; justify-content: flex-start;
-    background: var(--mast); border-bottom: 3px solid var(--brand);
+    background: var(--mast); border-bottom: 6px solid var(--brand);
     padding: var(--space-2) var(--space-3) var(--space-4);
     box-shadow: 0 18px 40px rgba(0, 0, 0, .38); max-height: calc(100vh - 52px);
     overflow-y: auto; gap: 0;
@@ -330,7 +330,7 @@ footer.site a:hover { color: var(--text) }
    The head block is scaffolded by tools/build-ranks.mjs; new section pages get
    this shape from there. */
 .rk-hero {
-  background: var(--mast); border-bottom: 3px solid var(--brand);
+  background: var(--mast); border-bottom: 6px solid var(--brand);
   padding: var(--space-5) 0 var(--space-6); margin-bottom: var(--space-6);
 }
 .rk-hero .is-eyebrow { color: var(--mast-accent); margin-top: 0 }
