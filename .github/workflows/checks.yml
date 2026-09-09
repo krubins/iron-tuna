@@ -525,7 +525,7 @@ jobs:
       # league board with TE premium, best lineup incl. superflex, the pickup
       # advisor on the room's actual free agents, matchup, intel, trades,
       # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
-      - name: Sync My League: providers, crosswalk, sync and the personalised modules
+      - name: "Sync My League: providers, crosswalk, sync and the personalised modules"
         run: node tools/test-league-sync.mjs
 
       # Every deployed script that the pages load. it-sync.js is loaded by
