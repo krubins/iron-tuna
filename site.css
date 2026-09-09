@@ -168,11 +168,10 @@ header.site .wrap {
 .brand { display: inline-flex; align-items: center; font-weight: 800; letter-spacing: .14em; font-size: var(--fs-md); color: var(--mast-ink-hi); flex: 0 0 auto }
 .brand:hover { text-decoration: none }
 .brand b { color: var(--mast-accent) }
-/* THE WORDMARK IS THE COVER PAGE'S. Every page carries the same SVG the front
-   page does — the tuna and the letters, filled with the metal gradient — rather
-   than the dark-ink version it used to draw for a white bar. Three pages were
-   still writing the name as text; they carry the mark now too, so there is one
-   brand on the site instead of three.
+/* THE WORDMARK IS THE COVER PAGE'S. Every page already carried the same SVG the
+   front page does; it carried the DARK-INK stops, which were drawn for a white
+   bar. There is no white bar now, so it is the light metal on every page — the
+   same seven stops, one mark.
    Height is the only thing set here: the SVG has a viewBox, so it scales rather
    than distorting, which is what lets it shrink on a phone. */
 .brand-logo { height: 30px; width: auto; display: block }
