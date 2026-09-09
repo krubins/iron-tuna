@@ -51,7 +51,7 @@ section{margin:0 0 var(--space-6)}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season" aria-current="page">In-Season</a><span class="nav-dd-menu"><a href="/in-season" aria-current="page">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season" aria-current="page">In-Season</a><span class="nav-dd-menu"><a href="/in-season" aria-current="page">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -143,6 +143,8 @@ section{margin:0 0 var(--space-6)}
   <div class="is-two">
     <div>
       <h2 style="margin-top:0">Every board re-scores itself for your league</h2>
+      <div class="its-strip-sync" id="isSync" hidden></div>
+      <p id="isConnect" hidden><a class="is-btn primary" href="/my-league#connect">Sync my league</a> <span class="is-hint">Connect Sleeper or Yahoo and Iron Tuna imports your exact scoring, roster and free-agent pool.</span></p>
       <p>Save your teams, roster slots and scoring once. Rankings, waiver prices, the DFS boards and the market comparisons all restate their numbers in your points instead of somebody else&rsquo;s. Free, no signup; it lives in this browser.</p>
       <p class="is-note" style="margin-top:0">Nothing here is sent to a server, and there is nothing to log into. Clear your browser data and it is gone &mdash; which is the trade for not asking you for an account.</p>
     </div>
@@ -184,7 +186,8 @@ section{margin:0 0 var(--space-6)}
       <li><a href="/dfs">DFS</a></li>
       <li><a href="/in-season/desk">The Desk</a></li>
       <li><a href="/analysts">The analysts (AI)</a></li>
-      <li><a href="/my-league">My League</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
      </ul>
     </div>
     <div class="foot-col">
@@ -213,6 +216,7 @@ section{margin:0 0 var(--space-6)}
 </div></footer>
 <script src="/it-season.js" defer></script>
 <script src="/it-league.js" defer></script>
+<script src="/it-sync.js" defer></script>
 <script src="/it-inseason.js" defer></script>
 <script src="/it-inseason-ui.js" defer></script>
 <script>
@@ -301,6 +305,7 @@ section{margin:0 0 var(--space-6)}
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.ITInSeasonUI) ITInSeasonUI.leagueForm($('mlSlot'));
+    if (window.ITSync) ITSync.load().then(function (st) { ITSync.strip($('isSync'), { week: true }); if (st && st.signedIn && !ITSync.active()) $('isConnect').hidden = false; });
     Promise.all([get('/api/vegas-edge'), get('/api/dfs?site=dk')]).then(function (r) {
       paint(r[0] && r[0].ok ? r[0] : null, r[1]);
     });

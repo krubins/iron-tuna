@@ -8138,3 +8138,26 @@ hours (Week 1, with no week before it, on its own opener less five and a half
 days). And `_namesOf` collected names only under keys that looked like
 names, so a correct draft naming a receiver the packet stored as `absent`
 was held; every string in a packet is a fact now.
+
+---
+
+## Sync My League (2026-09-09)
+
+**What it is.** A reader connects the fantasy league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool, their opponent and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record (audit, design, provider terms, deliverables, env vars, deployment) is `docs/league-sync.md`; this is the map.
+
+**Where it lives.**
+- `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, espn placeholder, manual), the normalised model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
+- Three touches outside the region: eight flags appended to `NEWSROOM_FLAGS` (`LEAGUE_SYNC`, `SLEEPER_SYNC`, `YAHOO_SYNC`, `ESPN_SYNC`, `PERSONALIZED_WAIVERS/LINEUP/TRADES/STORIES`), the `league-sync` row in `JOB_FNS` and `JOB_SCHEDULE` (hourly, phase 2; the job decides per league), and `boardsPayload`'s memo key now includes `o.customKey` so a league's custom scoring does not collide with another's.
+- `it-sync.js` — the client library (`ITSync`): loads `/api/leagues` once a minute per tab, the active-league selector, the sync strip, the acquisition CTA, and the On Your Roster / Available in Your League callouts on any `/player/` link.
+- `my-league.html` is **My Leagues** (connect flow, league cards, Sync now, default, pick my team, Review settings with corrections, Disconnect, manual league form); `my-week.html` is **My Week** (best lineup, matchup, alerts, pickups, trade matches, playoff readiness). Hooks on `rankings.html` (a "Your league (synced)" scoring preset reading `/board`, roster badges), `faab.html` (the synced Pickup Advisor above the Sleeper/manual flow), `trade-finder.html` (load every roster from the league; the desk's own matches), `player.html` (the league line under the club), `fantasy.html` / `in-season.html` (strip, CTA, week card), `lead.html` / `desk.html` (story callouts), `admin.html` (the League sync card).
+
+**Rules.**
+- Nothing downstream knows which provider a league came from. Add a provider by adding an adapter with `discover/pull/normalize`; touch nothing else.
+- Provider ids are primary keys everywhere; a sync that runs twice writes the same rows. Rows a sync did not touch are deleted by their stale `updated_at`.
+- A provider failure never deletes a league. It is a logged run (`league_sync_runs`), a `failed` status the UI shows next to the last good sync, and a retry with doubling backoff capped at a day.
+- The reader's corrections (`leagues.overrides`) are never written by a sync. `leagueEffectiveSettings` lays them over the synced settings and names them.
+- No display-name matching where an id exists. A provider id that cannot be resolved is a recorded miss and stays on the roster by name, scored 0, never guessed.
+- OAuth tokens are sealed (AES-GCM under `LEAGUE_TOKEN_KEY`) before D1 and never reach the browser. Disconnecting the last league on an OAuth provider deletes the tokens.
+- **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`). Their API is non-commercial-only and this is a paid product (docs/data-sources.md R2, R7). Turn it on only with their licence in writing. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
+
+**Tests.** `node tools/test-league-sync.mjs` (in CI): fixtures in `tools/fixtures/`, the network stubbed, an in-memory D1, the real scoring engine and the real PROJECTIONS pool. `tools/test-jobs.mjs`, `test-health.mjs` and `test-newsroom.mjs` know the new job and the three off-by-default flags. `tools/test-data-sources.mjs` allowlists the two Yahoo hosts.

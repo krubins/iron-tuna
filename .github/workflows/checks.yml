@@ -518,6 +518,22 @@ jobs:
       - name: Worker availability refresh
         run: node tools/test-worker-availability.mjs
 
+      # Sync My League (docs/league-sync.md): the provider adapters against
+      # Sleeper- and Yahoo-shaped fixtures, the player-id crosswalk and its
+      # miss log, the idempotent sync into an in-memory D1, OAuth sealing,
+      # expiry and refresh, disconnect, and every personalised module (the
+      # league board with TE premium, best lineup incl. superflex, the pickup
+      # advisor on the room's actual free agents, matchup, intel, trades,
+      # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
+      - name: "Sync My League: providers, crosswalk, sync and the personalised modules"
+        run: node tools/test-league-sync.mjs
+
+      # Every deployed script that the pages load. it-sync.js is loaded by
+      # nine in-season pages; a syntax error there takes the league strip and
+      # the personalised modules off all of them at once.
+      - name: Parse it-sync.js
+        run: node --check it-sync.js
+
       # The same board, asked about one player. The column prints twelve cases;
       # a card has to answer for all four hundred, and both read one
       # computation — this fails if they ever start disagreeing.
