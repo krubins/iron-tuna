@@ -6048,9 +6048,19 @@ function contentDue(kind, now, state, sched) {
   // intel) anchors on its own first target game, a day before it: Sunday's
   // 12:15 slot is the Sunday of those games, and the Monday preview is the
   // Monday of the Monday game, not the Monday before the week's opener.
-  const anchor = K.anchor === 'targets' && targets.length ? Math.min(...targets.map(g => g.kickoff)) - 24 * 3600000 + 6 * 24 * 3600000
-               : K.retro ? Math.max(...ags.map(g => g.kickoff)) : Math.min(...ags.map(g => g.kickoff));
-  const dueAt = _contentDueAt(K, anchor);
+  // A forward piece about a week anchors on the week BEFORE it: its slot is
+  // the first occurrence after that week's last game, less 36 hours (the same
+  // rule the retrospective pieces use), so Week 2's Friday preview is due the
+  // Friday after Week 1's Monday night and never the Friday before. Week 1
+  // has no week before it and anchors on its own opener less five and a half
+  // days: the half day is what keeps a kickoff the schedule stores at
+  // midnight from pulling the slot a week early, which the first live tick did.
+  const prevGames = !K.retro && K.anchor !== 'targets' && anchorWeek > 1 ? weekGames(sched, anchorWeek - 1, now) : [];
+  let dueAt;
+  if (K.anchor === 'targets' && targets.length) dueAt = _nextEt(K.day, K.hour, Math.min(...targets.map(g => g.kickoff)) - 24 * 3600000, K.minute || 0);
+  else if (K.retro) dueAt = _nextEt(K.day, K.hour, Math.max(...ags.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
+  else if (prevGames.length) dueAt = _nextEt(K.day, K.hour, Math.max(...prevGames.map(g => g.kickoff)) - 36 * 3600000, K.minute || 0);
+  else dueAt = _nextEt(K.day, K.hour, Math.min(...ags.map(g => g.kickoff)) - 132 * 3600000, K.minute || 0);
   const due = now >= dueAt;
   if (K.optional && !targets.length) return { due, ready: false, reason: 'no_such_game', week, skip: true };
   // FINAL MEANS THE FEED SAID FINAL. The season service's clock infers that a
@@ -6097,9 +6107,6 @@ function _nextEt(day, hour, fromMs, minute) {
   }
   return Number.MAX_SAFE_INTEGER;
 }
-function _contentDueAt(K, anchorMs) {
-  return _nextEt(K.day, K.hour, anchorMs - (K.retro ? 36 : 6 * 24) * 3600000, K.minute || 0);
-}
 
 // ── box scores, stored ─────────────────────────────────────────────────────
 async function gameSummaryFor(env, game, nameIndex) {
@@ -6135,7 +6142,10 @@ function _namesOf(obj, set) {
   if (obj == null) return set;
   if (typeof obj === 'string') { if (/^[A-Z][A-Za-z'.-]+(?:\s[A-Z][A-Za-z'.-]+){1,2}$/.test(obj)) set.add(obj); return set; }
   if (Array.isArray(obj)) { for (const x of obj) _namesOf(x, set); return set; }
-  if (typeof obj === 'object') { for (const [k, v] of Object.entries(obj)) if (/name|player|team|opponent|game|title/i.test(k) || typeof v === 'object') _namesOf(v, set); }
+  // Every string in a packet is a fact by construction, whatever key it sits
+  // under: a name stored as `absent` or `replaces` is as allowed as one
+  // stored as `name`. The first live week held a correct draft over this.
+  if (typeof obj === 'object') { for (const v of Object.values(obj)) _namesOf(v, set); }
   return set;
 }
 function _finishBrief(b) {
@@ -6328,11 +6338,14 @@ function briefGamePlan(kind, games, ctx) {
 }
 
 // ── the writer ─────────────────────────────────────────────────────────────
-async function llmText(env, system, user, maxTokens) {
+async function llmText(env, system, user, maxTokens, timeoutMs) {
   if (!env || !env.LLM_API_KEY) return { ok: false, error: 'no_key' };
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
   const model = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
-  const ctrl = new AbortController(); const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 60000);
+  // The legacy desk's briefs finished inside a minute. A newsroom packet is a
+  // 60 KB prompt asking for two lenses, and the first live tick showed it
+  // needs more than that; the caller says how long it can wait.
+  const ctrl = new AbortController(); const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, timeoutMs || 60000);
   try {
     const r = provider === 'anthropic'
       ? await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json', 'x-api-key': env.LLM_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: maxTokens || 3000, system, messages: [{ role: 'user', content: user }] }) })
@@ -7255,14 +7268,46 @@ function factCheck(body, packet) {
   if (!body || typeof body.headline !== 'string' || !body.headline.trim()) problems.push('missing:headline');
   return { ok: !problems.length, problems: [...new Set(problems)] };
 }
+// The prompt has a length budget and the packet has to fit it WHOLE: a JSON
+// string cut at a character count hands the model half an object, which is
+// exactly the gap it fills from memory. Drop the writer-only bulk first, then
+// the heaviest fact blocks, naming each one dropped, until it fits.
+const WRITER_PACKET_BUDGET = 90000;
+const WRITER_TIMEOUT_MS = 170000;
+function compactForWriter(packet, budget) {
+  const limit = budget || WRITER_PACKET_BUDGET;
+  // A copy: the trims below must not reach the packet the row stores.
+  const out = {};
+  for (const [k, v] of Object.entries(packet)) if (!['playerIndex', 'rivalryBudget', 'colleagues'].includes(k)) out[k] = v == null ? v : JSON.parse(JSON.stringify(v));
+  out.allowed = { analysts: packet.allowed ? packet.allowed.analysts : [] };   // the names and numbers are IN the facts; the list is for the checker
+  const size = () => JSON.stringify(out).length;
+  const omitted = [];
+  // Trim long arrays inside the facts before dropping whole blocks.
+  const trim = (o, n) => { for (const [k, v] of Object.entries(o)) { if (Array.isArray(v) && v.length > n) { o[k] = v.slice(0, n); omitted.push(k + ' cut to ' + n); } else if (v && typeof v === 'object' && !Array.isArray(v) && k !== 'meta') trim(v, n); } };
+  // The DFS block and the prior calls are the usual bulk; cut those first,
+  // then every array, and only then drop a whole fact block.
+  if (size() > limit && out.dfs && out.dfs.sites) { for (const site of Object.values(out.dfs.sites)) { for (const k of ['cash', 'tournament', 'stacks', 'expensiveFades']) if (site[k]) { delete site[k]; omitted.push('dfs.' + k + ' omitted for length'); } } }
+  if (size() > limit && Array.isArray(out.priorCalls) && out.priorCalls.length > 8) { out.priorCalls = out.priorCalls.slice(0, 8); omitted.push('priorCalls cut to 8'); }
+  if (size() > limit) trim(out, 24);
+  if (size() > limit) trim(out, 12);
+  if (size() > limit) trim(out, 8);
+  while (size() > limit) {
+    let big = null, bigLen = 0;
+    for (const [k, v] of Object.entries(out)) { if (['meta', 'freshness', 'rivalry', 'priorCalls', 'staleSources', 'allowed'].includes(k)) continue; const l = JSON.stringify(v).length; if (l > bigLen) { big = k; bigLen = l; } }
+    if (!big) break;
+    delete out[big]; omitted.push(big + ' omitted for length');
+  }
+  if (omitted.length) out.omittedForLength = omitted;
+  return out;
+}
 async function writeNewsroomPiece(env, kind, packet) {
   const K = CONTENT_KINDS[kind];
   const lenses = packet.meta.lens === 'both' ? ['weekly', 'dfs'] : ['weekly'];
   const shape = '{"headline":"...","dek":"one sentence, the finding","' + lenses.map(l => l + '":' + _lensShape(kind, l)).join(',"') + ',"calls":[{"player":"exact name from the packet","direction":"up|down|hold|buy|sell|start|sit|add|drop|stash|attack|fade|target|avoid","recommendation":"...","rank":null,"confidence":"HIGH|MEDIUM|LOW","rationale":"...","evidence":["a number from the packet"]}],"rivalryLine":null}';
   const user = 'KIND: ' + kind + ' (' + K.title + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
-    '\n\nPACKET (the only source of facts):\n' + JSON.stringify(packet, null, 0).slice(0, 70000);
-  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000);
+    '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
+  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS);
   if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
   const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
   let body = parse(attempt.text);
@@ -7270,7 +7315,7 @@ async function writeNewsroomPiece(env, kind, packet) {
   let v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] };
   if (!v.ok) {
     const fix = user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash.';
-    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, 6000);
+    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, 6000, WRITER_TIMEOUT_MS);
     if (attempt.ok) { body = parse(attempt.text); v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] }; }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.problems, model: attempt.model || null };
@@ -7279,7 +7324,18 @@ async function writeNewsroomPiece(env, kind, packet) {
 // ── storage, tick, payloads ────────────────────────────────────────────────
 const _slugOf = (kind, season, week) => kind + '-' + season + '-w' + week;
 async function contentLatest(env, kind, season, week) {
-  try { return await env.LEADS_DB.prepare('SELECT id, status, version, brief, created_at FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first(); } catch (e) { return null; }
+  try { return await env.LEADS_DB.prepare('SELECT id, status, version, brief, body, violations, created_at FROM content_pieces WHERE kind = ? AND season = ? AND week = ? ORDER BY created_at DESC LIMIT 1').bind(kind, season, week).first(); } catch (e) { return null; }
+}
+// A piece held with NO draft failed on the way to the model (a timeout, a
+// provider error, no key), not on the fact check. It is retried on a later
+// tick, at most every forty minutes and at most six times; a piece held
+// because its prose failed the check is not retried: that is the editor's.
+const RETRY_HELD_AFTER_MS = 40 * 60000, RETRY_HELD_MAX = 6;
+function heldRetryable(latest, now) {
+  if (!latest || latest.status !== 'held') return false;
+  if (latest.body && latest.body !== 'null') return false;
+  if ((latest.version || 1) >= RETRY_HELD_MAX) return false;
+  return (now - latest.created_at) >= RETRY_HELD_AFTER_MS;
 }
 async function contentExists(env, kind, season, week) { return !!(await contentLatest(env, kind, season, week)); }
 async function contentStore(env, rec) {
@@ -7360,7 +7416,8 @@ async function produceContent(env, kind, opts) {
   if (d.week == null) return { ok: false, kind, error: 'no_week' };
   const season = sched.season, week = d.week;
   const latest = await contentLatest(env, kind, season, week);
-  if (latest && !o.force && !K.updates && !K.unscheduled) return { ok: false, kind, week, error: 'exists' };
+  const retry = heldRetryable(latest, Date.now());
+  if (latest && !o.force && !retry && !K.updates && !K.unscheduled) return { ok: false, kind, week, error: 'exists' };
   if (d.skip) { if (!latest) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: d.reason }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped' }; }
   const ctx = await contentContext(env, week, { excluded: d.excluded || [] });
   const packet = await buildResearchPacket(env, kind, d, ctx, o);
@@ -7368,7 +7425,7 @@ async function produceContent(env, kind, opts) {
     if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: packet.reason, checked: packet.checked || null }, body: null, analyst: K.analyst, lens: K.lens });
     return { ok: true, kind, week, status: 'skipped', reason: packet.reason };
   }
-  if (latest && !o.force && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
+  if (latest && !o.force && !retry && K.updates && !updateWanted(K, latest, d, packet, Date.now())) return { ok: false, kind, week, error: 'exists', note: 'no update wanted' };
   const written = await writeNewsroomPiece(env, kind, packet);
   if (written.status === 'skipped') { if (!latest && !K.unscheduled) await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title: K.title, status: 'skipped', brief: { reason: 'writer_declined', note: written.skip }, body: null, analyst: K.analyst, lens: K.lens }); return { ok: true, kind, week, status: 'skipped', reason: 'writer_declined', note: written.skip }; }
   const auto = await autoPublishOn(env);
@@ -7376,7 +7433,8 @@ async function produceContent(env, kind, opts) {
   const violations = written.violations.slice();
   if (status === 'published' && !auto.on) { status = 'held'; violations.push('awaiting_approval: ' + auto.reason); }
   const version = latest && latest.version ? latest.version + 1 : (latest ? 2 : 1);
-  const title = K.title + ' · Week ' + week + (version > 1 ? ' · update ' + version : '');
+  // A retry of a transport failure is the same edition, not an update.
+  const title = K.title + ' · Week ' + week + (version > 1 && !retry ? ' · update ' + version : '');
   const analyst = packet.meta.analyst;
   const rivalry = packet.rivalry && written.body && written.body.rivalryLine ? { ...packet.rivalry, line: String(written.body.rivalryLine).slice(0, 300) } : null;
   await contentStore(env, { season, week, kind, slug: _slugOf(kind, season, week), title, status, brief: packet, body: written.body, violations, model: written.model, analyst, lens: packet.meta.lens, version, rivalry,

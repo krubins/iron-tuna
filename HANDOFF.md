@@ -8110,3 +8110,31 @@ the packet lacks being sent back once). `tools/test-content.mjs` and
 `tools/test-jobs.mjs` were rewritten to the new calendar and clock;
 `tools/test-health.mjs` gained the newsroom stubs. Both new suites are in
 `checks.yml`.
+
+### 68l. The first live tick, and what it taught
+
+The merge deployed at 19:23Z on September 8; the first `*/15 * * * *` tick
+fired at 19:30Z. `news-scan` wrote its baseline and `content-tick` ran, both
+logged `ok`, and the four new tables appeared. The tick took 130 seconds and
+both pieces it produced (the Week 1 Weekend Preview and Kickers & Defenses)
+were stored `held` with the violation "The operation was aborted": the
+writer's 60-second abort, inherited from the legacy desk, fired before the
+model finished a 70 KB prompt asking for two lenses. Three fixes followed:
+
+- `llmText` takes a timeout; the writer passes `WRITER_TIMEOUT_MS` (170 s).
+- The packet is never sliced mid-JSON. `compactForWriter` copies it, drops
+  the writer-only bulk, cuts the DFS boards and the prior calls, trims every
+  array (24, then 12, then 8) and only then drops whole fact blocks, naming
+  each one under `omittedForLength`. Budget `WRITER_PACKET_BUDGET` (90 KB).
+- A piece held with NO draft (a transport failure, not a fact-check failure)
+  is retried by a later tick after forty minutes, at most six times
+  (`heldRetryable`). A piece held by the fact check is the editor's.
+
+Two smaller things the same tick exposed. A forward piece anchored on the
+coming week's first kickoff less six days, and the schedule stores at least
+one Week 1 kickoff at midnight, which made the Friday pieces due the Friday
+before; a forward piece now anchors on the previous week's last game less 36
+hours (Week 1, with no week before it, on its own opener less five and a half
+days). And `_namesOf` collected names only under keys that looked like
+names, so a correct draft naming a receiver the packet stored as `absent`
+was held; every string in a packet is a fact now.

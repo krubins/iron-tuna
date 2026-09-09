@@ -117,6 +117,14 @@ const due = (kind, when, finalIds) => { const sc = withStatus(finalIds || []); r
   const wp = due('weekend-preview', ET(2026, 9, 18, 7, 30), wk1.concat(['w2-thu']));
   ok('the Weekend Preview covers the games still to come', wp.due && wp.ready && !wp.targets.includes('w2-thu') && wp.targets.length === 2, JSON.stringify(wp));
   ok('Kickers & Defenses is due Friday 8 AM', due('kickers-defenses', ET(2026, 9, 18, 8, 0), wk1).due && !due('kickers-defenses', ET(2026, 9, 18, 7, 45), wk1).due);
+  // The forward anchor is the week before: a Week 2 Friday piece is not due
+  // on the Tuesday the clock turns to Week 2, and a Week 1 opener the
+  // schedule stores at midnight does not pull the Week 1 slots a week early.
+  ok('a Week 2 forward piece is not due on Tuesday of Week 2', !due('weekend-preview', ET(2026, 9, 15, 9, 0), wk1).due && !due('underrated', ET(2026, 9, 15, 9, 0), wk1).due && !due('kickers-defenses', ET(2026, 9, 16, 9, 0), wk1).due);
+  const midnight = (finalIds) => { const sc = withStatus(finalIds || []); sc.games = sc.games.map(x => x.id === 'w1-thu' ? { ...x, kickoff: ET(2026, 9, 10, 0, 0) } : x); return sc; };
+  const dm = (kind, when) => { const sc = midnight([]); return H.contentDue(kind, when, H.nflSeasonState(sc, when), sc); };
+  ok('a midnight-stored Week 1 opener does not make the Week 1 Friday pieces due the Friday before', !dm('weekend-preview', ET(2026, 9, 8, 15, 0)).due && !dm('kickers-defenses', ET(2026, 9, 8, 15, 0)).due && dm('weekend-preview', ET(2026, 9, 11, 7, 0)).due);
+  ok('and the Week 1 Thursday pieces are due on the Thursday, not the Thursday before', !dm('underrated', ET(2026, 9, 3, 8, 0)).due && dm('underrated', ET(2026, 9, 10, 7, 0)).due);
   ok('a breaking piece is never due on the clock', due('breaking', ET(2026, 9, 18, 8, 0), wk1).reason === 'unscheduled');
   ok('nothing is due before a game has been played', !due('what-sunday-taught-us', ET(2026, 9, 1, 12, 0), []).due && !due('early-rankings', ET(2026, 9, 1, 12, 0), []).due);
   ok('nothing is due in the offseason', due('ros-rankings', ET(2026, 5, 1, 12, 0), []).reason === 'not_regular_season');
