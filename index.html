@@ -37,7 +37,7 @@ function gtag_report_conversion(url) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
-  <title>Iron Tuna: Fantasy, DFS and betting-market reads for every NFL week</title>
+  <title>Iron Tuna: Custom Auction Values &amp; AI Auction Draft Assistant</title>
 <script>(function(){try{var p=location.pathname;if(p.indexOf("/snakedraft")===0)document.title="Iron Tuna: Snake Draft Rankings & AI Draft Assistant";else if(p.indexOf("/auctiondraft")===0)document.title="Iron Tuna: Custom Auction Values & AI Auction Draft Assistant";else if(p.indexOf("/bestball")===0)document.title="Iron Tuna: Best Ball Rankings, Stacks & AI Draft Assistant";}catch(e){}})();</script>
   <meta name="description" content="Your league, the daily-fantasy salary and the sportsbook each put a number on the same player. Iron Tuna reads the betting market first, the consensus projections second, and your league’s scoring on top of both — then prints where they disagree. Weekly rankings, start/sit, FAAB prices, DFS values and model-vs-market game lines. Free, no signup." />
   <meta name="keywords" content="fantasy football rankings, weekly fantasy rankings, start sit, FAAB bids, waiver wire, DFS values, DraftKings values, FanDuel values, NFL model vs market, implied team totals, player props, fantasy football auction values, auction draft, superflex" />
@@ -49,8 +49,8 @@ function gtag_report_conversion(url) {
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Iron Tuna: three prices on every player" />
   <meta name="twitter:description" content="Your league, the DFS salary and the sportsbook each price the same player. Iron Tuna prints where they disagree — every week, at your scoring." />
-  <link rel="canonical" href="https://irontuna.com/" />
-  <meta property="og:url" content="https://irontuna.com/" />
+  <link rel="canonical" href="https://irontuna.com/auctiondraft" />
+  <meta property="og:url" content="https://irontuna.com/auctiondraft" />
   <meta property="og:image" content="https://irontuna.com/og.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -23428,9 +23428,9 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
 
   const FOOT = [
     ['In-Season', [['/in-season', 'Overview'], ['/fantasy', 'Fantasy'], ['/dfs', 'DFS'], ['/my-league', 'My League']]],
-    ['Draft', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
+    ['Draft Tools', [['/fantasy-football-auction-values', 'Auction values'], ['/auctiondraft?screen=board', 'Draft manager'], ['/snakedraft', 'Snake board'], ['/superflex-auction-values', 'Superflex & 2QB'], ['/guides', 'Strategy library']]],
     ['Read', [['/in-season/desk', 'The Desk'], ['/the-pick', 'The Pick'], ['/auction-insights', 'Insights'], ['/insights-vault', 'Insight Vault']]],
-    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms']]]
+    ['Company', [['/faq', 'FAQ'], ['/support', 'Support'], ['/creators', 'Creators & affiliates'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/data', 'Data & sources']]]
   ];
 
   // ── 03 · where the experts and the market disagree most ──────────────────
@@ -23585,7 +23585,7 @@ function HubLanding({ onPick, onSignin, onTerms, account, setAccount }) {
           h('p', null, h('b', null, 'For social and entertainment purposes only.'), ' Every number on this site — projections, odds, salaries and contract prices alike — is an estimate or a snapshot of a market that moves, and none of it is advice. Verify anything you intend to act on at its own source before relying on it. ', h('b', null, '21+.'), ' Odds and contract prices are informational and may differ at the venue. Iron Tuna is not a sportsbook or exchange, places no bets and holds no funds. Availability varies by state. If you or someone you know has a gambling problem, call or text ', h('b', null, '1-800-GAMBLER'), '.'),
           h('p', null, 'Iron Tuna™ · © 2026 Iron Tuna · Game lines & player data via nflverse (CC BY 4.0) · ',
             h('a', { href: '#', onClick: (e) => { e.preventDefault(); setReferOpen(true); }, style: { display: 'inline' } }, 'Share & Earn'), ' · ',
-            h('a', { href: '/admin', style: { display: 'inline' } }, 'Admin'))))),
+            h('a', { href: '/data', style: { display: 'inline' } }, 'Data & sources'))))),
     ),
     referOpen && h(ReferralModal, { account, setAccount, onClose: () => setReferOpen(false) }));
 }

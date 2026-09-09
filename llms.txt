@@ -45,6 +45,9 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - The week is read from the NFL schedule, never from the calendar: a week is current until its own last game has finished. If the schedule feed does not answer, every surface says so rather than guessing — a wrong week silently mislabels every number under it.
 - Where a board has no data it says so explicitly. It is blank rather than stale.
 - Game lines and player data via nflverse (CC BY 4.0).
+- **Parts of the site are AI-generated and labelled where they are**: the analyst desk, some of the daily editorial coverage, and the Value Coach. The projections, rankings, prices and market numbers are computed, not written.
+- Every external data source, the licence it is used under and the attribution it carries is published at https://irontuna.com/data.
+- Team and player images are referenced from their publishers’ own image hosts and remain the property of their owners. Iron Tuna is not affiliated with, endorsed by or licensed by the NFL, any club, any fantasy platform or any sportsbook or DFS operator.
 
 ## FAQ
 - Is it free? The whole in-season section is, with no signup. On the draft side the board with expert default values is free; a one-time $9.99 unlocks custom scoring and the live tools.
@@ -73,4 +76,7 @@ The same engine, aimed at draft night. Auction is the format it is built for; sn
 - Salary cap & keeper auctions: https://irontuna.com/salary-cap-draft-tool
 - Draft strategy guides: https://irontuna.com/guides
 - FAQ: https://irontuna.com/faq
+- Data & sources (every feed, licence and attribution): https://irontuna.com/data
+- Terms of Service: https://irontuna.com/terms
+- Privacy Policy: https://irontuna.com/privacy
 - [2026 Auction Insights](https://irontuna.com/auction-insights): free stat-based 2026 insights; 150 premium insights tailored to the user's league ship with the Draft Day unlock.

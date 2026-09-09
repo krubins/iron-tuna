@@ -674,7 +674,11 @@ const fmtShort = (d) => { const p = d.split('-'); return `${MONTHS[+p[1] - 1].sl
 
 if (reports.length) {
   const f = reports[0];
-  const note = 'Verified, auction-relevant signals from camps and preseason games. '
+  // Season-neutral wording. The run started as camp reports and did not stop
+  // when the season did: the September entries are Week 1 scratches, snap
+  // shares and injury clearances. front.html's edition switch carries the
+  // same sentence for the client render — change both or --check goes red.
+  const note = 'Verified, roster-relevant player signals from around the league \u2014 usage, injuries, depth-chart moves and the price each one changes. '
     + `These reports update as news breaks — <b>latest report: ${fmtDate(f.date)}</b>.`;
   const feat = '<span><span class="badge badge-pos">Latest report</span></span>'
     + `<h3><a href="${f.url}">${escText(f.title)}</a></h3>`

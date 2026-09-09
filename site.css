@@ -189,8 +189,18 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
      of them behind a scroll with no affordance, which is the problem the
      canonical nav exists to fix. */
   header.site .wrap { flex-wrap: nowrap; height: auto; min-height: 52px; gap: 10px; padding-top: 7px; padding-bottom: 7px }
-  header.site .brand { flex: 0 0 auto }
-  header.site .brand-logo { height: 20px }
+  /* The three header items are a fixed 150px wordmark, a ~140px CTA and a 44px
+     disclosure button. With `flex: 0 0 auto` on the brand nothing could give,
+     so at 24px of wrap padding they needed 402px and the Menu button ran off
+     the right edge of any phone narrower than about 400 — every page on the
+     site, on an iPhone SE and on most Androids in portrait. The brand is the
+     item that can afford to give: it shrinks to fit, keeping its aspect ratio
+     (the SVG has a viewBox, so it scales rather than distorting), and the CTA
+     and the button stay at their full tap sizes. */
+  header.site .wrap { padding-left: 14px; padding-right: 14px }
+  header.site .brand { flex: 0 1 auto; min-width: 0 }
+  header.site .brand-logo { height: 20px; max-width: 100% }
+  header.site > .wrap > a.cta, header.site .nav-toggle { flex: 0 0 auto }
   .nav-toggle {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     min-height: 44px; min-width: 44px; padding: 0 var(--space-3);
