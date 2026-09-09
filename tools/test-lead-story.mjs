@@ -471,5 +471,93 @@ console.log('\nUTC never reaches a reader');
      Array.isArray(junk.names) && junk.names.length === 0);
 }
 
+// ── Top Headlines keeps up with the season ────────────────────────────────
+// The column froze. Its two feeds are the desk (through /api/lead-story) and
+// the drop-page library baked into front.html, and in September 2026 both went
+// quiet at once: the draft season's last insight drop was the 3rd, and the
+// in-season desk had published exactly one piece, which was the lead itself and
+// therefore not in the column. The painter's answer to "the desk sent nothing"
+// was to leave the drop-page list where it was, so the site's front door kept a
+// pre-season auction call under a heading that says Top Headlines.
+//
+// The rule these hold: in the regular season the column carries the desk and
+// this fortnight's reports, strictly newest first, and never a draft-season
+// drop page. Everything is lifted out of front.html rather than restated, so a
+// change to the page fails here rather than on the site.
+console.log('\nTop Headlines keeps up with the season');
+{
+  const grab = (name) => {
+    const i = front.indexOf('function ' + name + '(');
+    if (i < 0) throw new Error('front.html has no ' + name + '()');
+    const e = front.indexOf('\n  }\n', i);
+    return front.slice(i, e + 5);
+  };
+  const RAIL_MAX = Number((front.match(/var RAIL_MAX = (\d+);/) || [])[1]);
+  const FRESH_DAYS = Number((front.match(/var RAIL_FRESH_MS = (\d+) \* 24 \* 60 \* 60 \* 1000;/) || [])[1]);
+  const FRESH = FRESH_DAYS * 86400000;
+  ok('the column still has six slots and a freshness cap in days', RAIL_MAX === 6 && FRESH_DAYS >= 7 && FRESH_DAYS <= 28,
+     `${RAIL_MAX} slots, ${FRESH_DAYS} days`);
+
+  const railMerge = new Function('RAIL_MAX', grab('railMerge') + '\nreturn railMerge;')(RAIL_MAX);
+  const railReportItems = new Function('REPORTS', 'RAIL_FRESH_MS', 'fmtShort',
+    grab('railReportItems') + '\nreturn railReportItems;');
+
+  const NOW = Date.UTC(2026, 8, 9, 22, 0);                   // Wednesday of Week 1
+  const day = (n) => NOW - n * 86400000;
+  const deskItem = (n, hoursAgo) => ({ url: '/in-season/desk/k' + n + '/1', title: 'Desk ' + n,
+                                       meta: 'The Desk', desk: 1, at: NOW - hoursAgo * 3600000 });
+  const dropItem = (n) => ({ url: '/auction-insights-2026-09-03#call-' + n, title: 'Bid a September auction price',
+                             meta: 'QB · Sep 3', at: Date.parse('2026-09-03T13:00:00Z') });
+
+  // The bug, stated as a test: an empty desk must not leave the auction shelf.
+  ok('in season, a drop-page call never reaches the column, even with nothing to replace it',
+     railMerge([], [], [dropItem(1), dropItem(2)], true).length === 0);
+  ok('and out of season the drop pages are still exactly what fills it',
+     railMerge([], [], [dropItem(1), dropItem(2)], false).length === 2);
+
+  const desk = [deskItem(1, 2), deskItem(2, 30)];
+  const reports = [{ url: '/auction-watch-2026-09-08', title: 'Report Sep 8', meta: 'Report · Sep 8', at: day(1) },
+                   { url: '/auction-watch-2026-09-05', title: 'Report Sep 5', meta: 'Report · Sep 5', at: day(4) }];
+  const mixed = railMerge(desk, reports, [dropItem(1)], true);
+  ok('in season the desk and this week\'s reports share the column',
+     mixed.length === 4 && mixed.filter(x => x.desk).length === 2);
+  ok('and it is strictly newest first across both feeds, not desk-then-report',
+     mixed.map(x => x.at).every((v, i, a) => i === 0 || a[i - 1] >= v) && !mixed[1].desk,
+     mixed.map(x => x.title).join(' | '));
+  ok('no page is listed twice, whichever feed it came from',
+     new Set(railMerge(desk.concat(desk), reports.concat(reports), [], true).map(x => x.url)).size
+     === railMerge(desk.concat(desk), reports.concat(reports), [], true).length);
+  const many = Array.from({ length: 10 }, (_, i) => deskItem(i, i + 1));
+  ok('the column never runs past its slots', railMerge(many, reports, [], true).length === RAIL_MAX);
+  ok('a desk with six pieces of its own needs no report at all',
+     railMerge(many, reports, [], true).every(x => x.desk));
+
+  // The age cap is what stops the reports becoming the next frozen feed.
+  const REPORTS = [{ date: '2026-09-08', title: 'This week', url: '/auction-watch-2026-09-08' },
+                   { date: '2026-08-01', title: 'Camp, five weeks ago', url: '/auction-watch-2026-08-01' }];
+  const items = railReportItems(REPORTS, FRESH, (d) => d)(NOW);
+  ok('a report from this week is eligible and one from before the season is not',
+     items.length === 1 && items[0].url === '/auction-watch-2026-09-08', JSON.stringify(items.map(x => x.url)));
+  ok('every eligible report carries the timestamp the merge sorts on',
+     items.every(x => Number.isFinite(x.at)));
+
+  // The painter has to be TOLD which season it is in, and the page has two
+  // witnesses for that: the payload's own desk category, and the season stamp.
+  ok('the lead payload\'s desk flag is passed to the painter',
+     /paintDeskRail\(d\.recent, desk \? 'More from the desk' : 'Recent insights', desk\);/.test(front));
+  ok('and the season stamp repaints the column if the lead request never answers',
+     /if \(s\.phase === 'regular'\) railSeasonPaint\(\);/.test(front)
+     && /function railSeasonPaint\(\) \{\s*\n\s*if \(genLead\) return;/.test(front));
+  ok('an in-season column with nothing in it is painted empty rather than left standing',
+     /if \(!items\.length && !inSeason\) return false;/.test(front));
+  ok('"More from the desk" is only claimed when every line under it is the desk\'s',
+     /items\.every\(function\(it\)\{ return it\.desk; \}\)\) \? heading : 'Top Headlines'/.test(front));
+
+  // And the feed behind the lead has to be deep enough to fill the column once
+  // the lead itself has taken the first row off it.
+  const lim = Number((src.match(/const feed = await newsroomFeedPayload\(env, 'weekly', (\d+)\);/) || [])[1]);
+  ok('the desk feed behind the front page is deeper than the column is wide', lim > RAIL_MAX, String(lim));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

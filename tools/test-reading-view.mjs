@@ -54,11 +54,20 @@ for (const f of PAGES) {
   ok(`${f} keeps no dark-theme accent`,
      !/rgba\(45,\s*212,\s*163/.test(src) && !/rgba\(239,\s*91,\s*91/.test(src)
      && !/rgba\(11,\s*17,\s*23/.test(src), 'a dark-theme rgba survived');
-  ok(`${f} inverts the wordmark so it survives on white`,
-     !src.includes('stop-color="#dde8ee"'));
-  // The sticky header is painted with a literal rgba, not a token, because it
-  // is translucent over scrolling content.
-  ok(`${f} paints its header light`, /header\.site\{[^}]*rgba\(255,\s*255,\s*255/.test(src));
+  // The wordmark is not on white: it is on the masthead band, which is black on
+  // every page now. So it is the LIGHT metal again, the same mark the cover
+  // page draws — the dark-ink inversion this line used to demand is what would
+  // disappear today.
+  ok(`${f} draws the metal wordmark the band is built for`,
+     src.includes('stop-color="#dde8ee"'));
+  // THE CHROME IS NOT PART OF THE READING SURFACE. These pages used to paint
+  // their own white sticky bar; the masthead is the cover page's black band on
+  // every page now (site.css, --mast), so painting a private one here is the
+  // drift this suite exists to catch, not the fix for it. What the reading zone
+  // asserts is the surface you READ on — white page, near-black type, one teal
+  // — and that is every check above this one.
+  ok(`${f} takes the shared masthead rather than painting its own`,
+     !/header\.site\s*\{/.test(src));
 }
 
 console.log('\ngold is a fill, not an ink');
@@ -104,8 +113,10 @@ console.log('\nthe rest of the site reads as the same surface');
   ok('with gold defined as an ink as well as a fill', /--goldink:\s*#[0-9a-f]{6}/i.test(sroot));
   const darkLeft = content.filter((f) => /rgba\(45,\s*212,\s*163/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
   ok('no dark-theme accent survives anywhere', darkLeft.length === 0, darkLeft.slice(0, 5).join(', '));
-  const oldMark = content.filter((f) => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('stop-color="#dde8ee"'));
-  ok('and no page still draws the light-on-dark wordmark on white', oldMark.length === 0, oldMark.slice(0, 5).join(', '));
+  // Same inversion as above, swept across the site: the dark-ink wordmark was
+  // drawn for a white header bar and there is no longer one to draw it on.
+  const oldMark = content.filter((f) => fs.readFileSync(path.join(ROOT, f), 'utf8').includes('stop-color="#3d4c57"'));
+  ok('and no page still draws the dark-ink wordmark on the black band', oldMark.length === 0, oldMark.slice(0, 5).join(', '));
 }
 
 console.log('\nthe front page is light chrome over a black masthead');
