@@ -78,6 +78,12 @@ jobs:
       - name: Parse it-season.js
         run: node --check it-season.js
 
+      # /it-ranks.js is the board behind all sixteen per-position rankings pages.
+      # A syntax error there leaves every one of them saying "Reading the
+      # board..." forever, with no console anyone is watching.
+      - name: Parse it-ranks.js
+        run: node --check it-ranks.js
+
       # /it-trade.js is the Trade Finder's engine and the FAAB Advisor's roster
       # parser. A syntax error there leaves both pages with a button that does
       # nothing.
@@ -115,7 +121,7 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
+            const files = ["index.html", "front.html", "lead.html", "player.html", "player-search.js", "it-ranks.js", "the-pick.html", "play-caller-premium.html", "the-tell.html", "_worker.js"];
             let bad = 0;
             for (const f of files) {
               const buf = fs.readFileSync(f);
@@ -200,8 +206,26 @@ jobs:
             exit 1
           fi
 
+      # The rankings section — the ribbon under the hero and the fourteen
+      # per-position pages under its two menus — is generated from one link set
+      # and one position list, for the same reason the chrome is. Same contract:
+      # rebuilding here must produce no diff.
+      - name: The rankings ribbon and its per-position pages are rebuilt from their source
+        run: |
+          if ! node tools/build-ranks.mjs --check; then
+            echo "::error::the rankings section is stale — run 'node tools/build-ranks.mjs' and commit the result"
+            exit 1
+          fi
+
       - name: Every destination is reachable and the chrome is well-formed
         run: node tools/test-chrome.mjs
+
+      # The ribbon's link set, the gate over the pages it reaches, and the board
+      # that fills them. Three failures in here are silent — a hand-edited
+      # ribbon, a dropdown clipped inside a scroll container, and a page left out
+      # of POST_DRAFT_PAGES — so all three are asserted rather than reviewed.
+      - name: The rankings ribbon, its pages and the consensus-vs-odds board
+        run: node tools/test-ranks.mjs
 
       # The scrolling cheat-sheet insights are hand-written prose with no build
       # step, so nothing used to notice when a note outlived the roster it

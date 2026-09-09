@@ -8292,3 +8292,126 @@ two ways, a user agent carrying a URL and `cf.cacheTtl` on the failing
 ones; every ESPN fetch is now shaped like the one that works (plain user
 agent, no cache options), and a 403 body's first bytes are kept in the
 refresh summary if it recurs.
+
+---
+
+## 69. September 2026: the rankings ribbon, and a page per position
+
+Under the hero on the front page there is now a **section ribbon** with five
+destinations — **Stats**, **This Week's Rankings**, **Season Long Rankings**,
+**Hidden Value**, **Previews**. The two rankings items drop every position down
+on hover, and each position has a page of its own.
+
+### The pages
+
+| URL | What it is |
+|---|---|
+| `/weekly-rankings` | this week, every position pooled |
+| `/weekly-<pos>-rankings` | this week, one position (`qb rb wr te flex k dst`) |
+| `/season-long-rankings` | rest of season, every position pooled |
+| `/season-long-<pos>-rankings` | rest of season, one position |
+| `/stats` | what has actually been played |
+| `/hidden-value` | where the two boards disagree most |
+| `/previews` | every game this week, off the market |
+
+That is sixteen rankings pages and three lane pages, nineteen in all. Every one
+of them is in `POST_DRAFT_PAGES` in `_worker.js`, so the whole section is gated
+with the rest of the in-season tools and stays out of the sitemap while the gate
+is shut.
+
+### Every board is Fantasy Consensus vs. Betting Odds
+
+The point of the section. Each row prints the same player twice:
+
+- **Fantasy Consensus** — the projection consensus at the chosen scoring, nudged
+  by the live usage role trend once three games have earned it. No odds in it.
+- **Betting Odds** — the same player priced off the sportsbook. The `basis`
+  under the number says which of three things it is, every row: `props` (a
+  quoted player prop), `gamelines` (the posted game line's scoring environment
+  applied to his line), `ratings` (a fixture no book has posted yet, projected
+  from fitted team ratings and graded LOW).
+
+The Gap column is the second minus the first, in points and in rank slots, and
+the verdict beside it is `marketDelta.classification` — the site's own standing
+thresholds, shipped in the payload. **Nothing about the gap is re-derived in the
+browser**; that is how two pages come to name different players as the widest
+disagreement on the board.
+
+### The season-long drawer
+
+On a season-long board every row opens into **every remaining week**: opponent,
+both columns, Iron Tuna's blend, and the odds basis, week by week to the end of
+the season, with a total that has to match the row above it. A bye and an
+absence get a row of their own rather than being skipped, so the weeks still
+read 2..18. The data is `players[].weeks[]` out of `/api/boards`, which
+`buildBoards` has always carried — nothing new was computed for this.
+
+**The board is scored on the SERVER.** Unlike `/rankings`, which ships stat
+lines and re-scores them in the browser with `it-league.js`, these pages ask
+`/api/boards?...&scoring=<preset>` and re-fetch when the preset changes. The
+reason is the drawer: there is no per-week stat line in the payload, so a
+browser re-score would leave the weeks disagreeing with the row they sum to.
+One edge-cached fetch per preset instead of two engines to keep in step.
+
+### `/api/stats` (new)
+
+The one board on the site that is not a forecast. `statsPayload` reads the usage
+overlay — nflverse weekly stats and snap counts — and scores it at the preset
+asked for. Two lines per player: the **season**, and the **latest week** kept
+whole.
+
+`runUsageRefresh` now accumulates `season.stats` (the raw stat line, week by
+week) alongside the counting stats it already kept. Points are NOT stored with
+it: a season total is only worth something at a stated scoring, and one cache
+serves every reader. A cache written before this field existed simply has no
+`stats`, and that is returned as `null` and printed as a dash — never as zero.
+
+### How it is generated
+
+`tools/build-ranks.mjs`, on the same sentinel discipline as `build-chrome.mjs`:
+
+```
+node tools/build-ranks.mjs          # writes
+node tools/build-ranks.mjs --check  # CI gate
+```
+
+It owns three things and nothing else:
+
+- `<!--ranks:ribbon-->…<!--/ranks:ribbon-->` — the ribbon, on every page that
+  carries the sentinel (front page, `/rankings`, all nineteen section pages).
+- `/* ranks:css */…/* /ranks:css */` — the ribbon's stylesheet, injected into
+  **both** `site.css` and `front.html`'s inline `<style>`, because front.html
+  links no shared sheet. One block, two palettes: every colour reads through a
+  local alias with the other file's token as the fallback
+  (`var(--ink, var(--text, #111820))`), which is also the one form
+  `test-css-tokens.mjs` accepts unconditionally.
+- the sixteen rankings pages, **scaffolded once** and then left alone apart from
+  their ribbon — `build-chrome.mjs` and `build-seo.mjs` own regions of the same
+  files, so regenerating a whole page on every run would undo those two.
+
+Order after adding a position: `build-ranks` → `build-chrome` → `build-seo`. The
+position list is in the tool AND as literal strings in `POST_DRAFT_PAGES`; the
+comment there says why (two test suites parse that set out of the source text,
+so a `.map()` in it would leave every real route unlisted).
+
+### Two traps this hit, written down so it is not hit again
+
+1. **`overflow-x: auto` with `overflow-y: visible` computes to
+   `overflow-y: auto`.** The first cut of the ribbon was a sideways scroller
+   with the dropdowns inside it, and the menus were clipped at the band's 46px —
+   visible to `isVisible()`, invisible to a reader. front.html's own ribbon had
+   already learned this and parents its search menu to `<body>`. The band now
+   wraps at desktop width and only becomes a scroller below 860px, where the
+   menus (and their carets) are off anyway.
+2. **`build-seo.mjs` adds the GA4 destination to an existing Google tag but
+   never writes the tag itself.** A scaffolded page ships with both configs in
+   its `<head>` or it is silently untagged forever. The template carries them.
+
+### Tests
+
+`tools/test-ranks.mjs` (37 assertions, in CI). It holds the three things that
+fail silently here: the ribbon is compared byte for byte across every page that
+carries it, the desktop row is asserted not to be a scroll container, and every
+page in the section is checked against `POST_DRAFT_PAGES` and against
+`build-chrome.mjs`'s `IN_SEASON` set. `it-ranks.js` gets its own parse step and
+joins the control-byte scan.
