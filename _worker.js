@@ -12530,10 +12530,24 @@ export default {
       // target, or the assets layer answers with a 307 back to this same path.
       else if (/^\/player(\/[A-Za-z0-9._-]*)?\/?$/.test(url.pathname)) __assetReq = new Request(new URL('/player', url).toString(), request);
       else if (/^\/(auctiondraft|snakedraft|bestball|hub)(\/|$)/.test(url.pathname)) __assetReq = new Request(new URL('/', url).toString(), request);
-      // /in-season/<page> is the section's canonical URL; the pages live at the
-      // root because the chrome and SEO generators walk the root. Extensionless
-      // target, as above. The gate below sees the SAME name, so a section page
-      // cannot be reached ungated by adding the prefix.
+      // /in-season/<page> is an ALIAS, not the canonical URL. This comment used to
+      // claim the opposite, and two pages believed it: rankings.html and
+      // vegas-edge.html canonicalised to /in-season/<name> while the shared
+      // chrome — the one link set in tools/build-chrome.mjs, stamped onto ~150
+      // pages — linked them bare, 331 and 470 times against 6 and 5. Every one
+      // of those links pointed at a URL its own target disowned. The nine other
+      // section pages were bare on both sides all along, so the two were
+      // corrected to match them rather than the nine migrated to match the two.
+      //
+      // The prefix still serves, because it is linked from outside and printed in
+      // older copy; the canonical tag on each page is what says which of the two
+      // addresses is the page. /in-season/desk is the exception and is genuinely
+      // prefixed on both sides: it is the parent of /in-season/desk/<kind>/<week>
+      // and the chrome links it that way.
+      //
+      // The pages live at the root because the chrome and SEO generators walk the
+      // root. Extensionless target, as above. The gate below sees the SAME name,
+      // so a section page cannot be reached ungated by adding the prefix.
       else if (/^\/in-season\/(fantasy|dfs|weekly-intel|rankings|vegas-edge|what-they-arent-telling-you|game-intel|waivers|faab|trade-finder|my-league)\/?$/.test(url.pathname)
                && !(POST_DRAFT_PAGES.has(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, '')) && !POST_DRAFT_OPEN(env) && !postDraftPreview(env, url, request))) {
         __assetReq = new Request(new URL(url.pathname.replace(/^\/in-season/, '').replace(/\/+$/, ''), url).toString(), request);

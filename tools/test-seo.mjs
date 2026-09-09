@@ -396,6 +396,47 @@ console.log('\nsitemap.xml');
     /<\/urlset>\s*$/.test(filtered) && [...filtered.matchAll(/<url>/g)].length === [...filtered.matchAll(/<\/url>/g)].length);
 }
 
+// ── a page claims the URL the site links it as ───────────────────────────────
+// The invariant that was missing, and the one that caught the last two bugs.
+// tools/build-chrome.mjs holds ONE link set and stamps it onto ~150 pages, so it
+// is the closest thing the site has to a statement of where each page lives. A
+// page whose canonical disagrees with it is a page every one of those links
+// points at and its own head disowns — /rankings was linked bare 331 times while
+// claiming /in-season/rankings, /vegas-edge 470 times against 5. Internal links
+// are the strongest signal there is about which of two serving URLs is the page,
+// so the canonical follows the chrome, not the other way round.
+console.log('\nevery page claims the URL the chrome links it as');
+{
+  const chrome = read('tools/build-chrome.mjs');
+  const hrefs = [...new Set([...chrome.matchAll(/href: *.(\/[A-Za-z0-9\/_-]*)./g)].map((m) => m[1]))];
+  ok('the chrome link set was read', hrefs.length > 20, String(hrefs.length));
+
+  const wrong = [];
+  for (const f of pages) {
+    const h = read(f);
+    if (/<meta name="robots"[^>]*noindex/.test(h)) continue;
+    const c = (h.match(/<link rel="canonical" href="([^"]*)"/) || [])[1];
+    if (!c) continue;
+    const linkedAs = hrefs.filter((x) => x.replace(/^\//, '') + '.html' === f);
+    if (!linkedAs.length) continue;                 // not a page the chrome links
+    const claimed = c.replace('https://irontuna.com', '') || '/';
+    if (!linkedAs.includes(claimed)) wrong.push(`${f}: linked ${linkedAs.join(',')}, claims ${claimed}`);
+  }
+  ok('no page is linked as one URL and claims another', wrong.length === 0, wrong.slice(0, 6).join('; '));
+
+  // And nothing links the alias any more. The prefix still SERVES — it is linked
+  // from outside and printed in older copy — but no page on this site should
+  // send a reader or a crawler to a URL that immediately names a different one.
+  const alias = pages.filter((f) => /href="\/in-season\/(rankings|vegas-edge)"/.test(read(f)));
+  ok('nothing links the two aliases internally', alias.length === 0, alias.join(', '));
+
+  // /in-season/desk is prefixed on BOTH sides and must stay that way: it is the
+  // parent of /in-season/desk/<kind>/<week>, and the chrome links it so.
+  ok('the desk keeps its prefixed URL on both sides',
+    hrefs.includes('/in-season/desk')
+    && read('desk.html').includes('<link rel="canonical" href="https://irontuna.com/in-season/desk">'));
+}
+
 // ── the sitemap says what the pages say ──────────────────────────────────────
 console.log('\nthe sitemap and the pages agree');
 {
@@ -525,9 +566,50 @@ console.log('\nllms.txt');
   // named blocks below it are a record of a decision. Losing the wildcard while
   // keeping the list would quietly close the site to everything unlisted.
   ok('robots.txt still allows every crawler by default', /User-agent: \*\nAllow: \//.test(robots));
-  for (const a of ['ClaudeBot', 'GPTBot', 'OAI-SearchBot', 'PerplexityBot', 'Google-Extended', 'Googlebot']) {
-    ok('robots.txt names ' + a, new RegExp('^User-agent: ' + a + '$', 'm').test(robots));
+
+  // Every token, so deleting one is a decision rather than an accident. Verified
+  // against vendor documentation on 2026-09-09. "Claude-Web" and "anthropic-ai"
+  // are deprecated and must NOT come back: naming a retired agent only dates the
+  // file.
+  const AGENTS = ['Googlebot', 'Bingbot', 'Applebot', 'DuckDuckBot', 'Google-Extended',
+    'ClaudeBot', 'Claude-User', 'Claude-SearchBot', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User',
+    'PerplexityBot', 'Perplexity-User', 'Applebot-Extended', 'meta-externalagent', 'Amazonbot',
+    'MistralAI-User', 'cohere-ai', 'DuckAssistBot', 'CCBot', 'Bytespider'];
+  const absent = AGENTS.filter((a) => !new RegExp('^User-agent: ' + a + '$', 'mi').test(robots));
+  ok('robots.txt names every agent it means to', absent.length === 0, absent.join(', '));
+  const dead = ['Claude-Web', 'anthropic-ai'].filter((a) => new RegExp('^User-agent: ' + a + '$', 'mi').test(robots));
+  ok('and none that its vendor has retired', dead.length === 0, dead.join(', '));
+
+  // THE FOOTGUN, made real. Under RFC 9309 a crawler obeys the most specific
+  // group that names it, and that group ENTIRELY — it inherits nothing from the
+  // wildcard. So a Disallow added to the wildcard alone is a rule that every one
+  // of the ~20 agents above quietly ignores, which is the reverse of what
+  // whoever added it wanted. Groups are parsed here rather than grepped, because
+  // the question is per-group and a grep cannot answer it.
+  const groups = [];
+  for (const line of robots.split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const ua = t.match(/^User-agent:\s*(.+)$/i);
+    if (ua) { groups.push({ agent: ua[1].trim(), rules: [] }); continue; }
+    const rule = t.match(/^(Allow|Disallow|Crawl-delay):\s*(.*)$/i);
+    if (rule && groups.length) groups[groups.length - 1].rules.push(rule[1].toLowerCase() + ':' + rule[2].trim());
   }
+  ok('robots.txt parses into groups', groups.length > 20, String(groups.length));
+
+  const wildcard = groups.find((g) => g.agent === '*');
+  ok('there is exactly one wildcard group', groups.filter((g) => g.agent === '*').length === 1);
+  const diverged = groups.filter((g) => g.agent !== '*'
+    && wildcard.rules.some((r) => !g.rules.includes(r)));
+  ok('no named group is missing a rule the wildcard carries',
+    diverged.length === 0,
+    diverged.slice(0, 4).map((g) => g.agent + ' lacks ' + wildcard.rules.filter((r) => !g.rules.includes(r)).join('+')).join('; '));
+
+  // Every group must actually say something. A "User-agent:" with no rule under
+  // it is not a permissive group, it is a group with no directives, and what a
+  // crawler does with that is up to the crawler.
+  const silent = groups.filter((g) => !g.rules.length);
+  ok('every group carries at least one directive', silent.length === 0, silent.map((g) => g.agent).join(', '));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
