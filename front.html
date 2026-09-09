@@ -919,18 +919,25 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    its label for a screen reader: the claim beside it is the content, and the
    panel is a picture of the product.
 
-   Under 560px the SVG's own type would render below 6px, so the panel drops
-   to the bare mark — the same picture, without the chart labels nobody could
-   read at that size. */
-.fp-viz { min-width: 0; position: relative }
+   The plate is drawn 10% narrower than its column and the three cards 85%
+   of the plate, each scaled about the corner it hugs so it shrinks INTO its
+   own edge rather than drifting off it: each keeps the inset it had on the
+   edge it is pinned to, and gives its space back towards the middle, which
+   is where the mark is.
+
+   Under 640px the card type would render below 7px, so the panel drops to
+   the bare mark — the same picture, without the chart labels nobody could
+   read at that size. The stacked panel is capped wider than the plate's own
+   shrink would leave it, for the same reason. */
+.fp-viz { min-width: 0; position: relative; width: 90%; margin-left: auto }
 .fp-viz-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 26px 60px rgba(0, 0, 0, .45)) }
 .fp-viz-mark { display: none }
 @media (max-width: 900px) {
   .fp-hero { grid-template-columns: minmax(0, 1fr); gap: 30px; padding-bottom: 36px }
   /* The claim still leads on a phone; the panel follows it, full width. */
-  .fp-viz { max-width: 560px }
+  .fp-viz { width: 100%; max-width: 620px; margin-left: 0 }
 }
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .fp-viz-svg { display: none }
   .fp-viz-mark { display: block; width: 100%; max-width: 320px; height: auto; margin: 0 auto }
 }
@@ -1438,7 +1445,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
         <text x="42" y="62" font-family="'Inter',system-ui,sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.5" fill="#8fb3ab">LIVE LINES &#183; RE-READ EVERY SIX HOURS</text>
 
         <!-- ── weekly rankings: the projection against the market ── -->
-        <g>
+        <g transform="translate(648,12) scale(0.85) translate(-648,-12)">
           <rect x="350" y="12" width="298" height="148" rx="10" fill="#03100d" fill-opacity="0.86" stroke="#ffffff" stroke-opacity="0.14"/>
           <text x="366" y="34" font-family="'Inter',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="1.7" fill="#2dd4a3">PROJECTION VS. MARKET</text>
           <g stroke="#ffffff" stroke-opacity="0.07" stroke-width="1">
@@ -1456,7 +1463,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
         </g>
 
         <!-- ── the FAAB Advisor: one rival at a time ── -->
-        <g>
+        <g transform="translate(10,282) scale(0.85) translate(-10,-282)">
           <rect x="10" y="200" width="274" height="164" rx="10" fill="#03100d" fill-opacity="0.86" stroke="#ffffff" stroke-opacity="0.14"/>
           <text x="26" y="224" font-family="'Inter',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="1.7" fill="#2dd4a3">FAAB ADVISOR</text>
           <text x="26" y="238" font-family="'Inter',system-ui,sans-serif" font-size="9.5" font-weight="600" letter-spacing="0.8" fill="#7d938d">PRICED IN YOUR LEAGUE&#8217;S DOLLARS</text>
@@ -1476,7 +1483,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
         </g>
 
         <!-- ── the game line: what the model says against what the book posts ── -->
-        <g>
+        <g transform="translate(648,428) scale(0.85) translate(-648,-428)">
           <rect x="344" y="296" width="304" height="132" rx="10" fill="#03100d" fill-opacity="0.86" stroke="#ffffff" stroke-opacity="0.14"/>
           <text x="360" y="318" font-family="'Inter',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="1.7" fill="#2dd4a3">VEGAS EDGE</text>
           <g stroke="#ffffff" stroke-opacity="0.07" stroke-width="1">
