@@ -576,7 +576,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
         [['Consensus', hbRank(g.topDown, 'rankConsensus')], ['Vegas', hbRank(g.topDown, 'rankMarket')], ['Iron Tuna', hbRank(g.topDown, 'rankIronTuna')]]);
       var t = g.topTd;
       if (t && typeof t.anytimeTd === 'number' && isFinite(t.anytimeTd)) {
-        cards += hbCard('td', 'TD edge', t,
+        cards += hbCard('td', 'TD odds', t,
           [['Consensus', hbRank(t, 'rankConsensus')], ['Iron Tuna', hbRank(t, 'rankIronTuna')]],
           ['Anytime TD', t.anytimeTd + '%',
            'Implied from ' + t.tdIronTuna + ' season TDs over ' + t.games + ' games. The lines have him at '

@@ -8308,8 +8308,8 @@ between the hero and this well — it is a navigation band, not a chapter,
 so the numbering below is unchanged.)
 
 **Where it lives.** `<section class="fp-sec fp-well">` in `front.html`,
-between the hero band and the "Where the experts and the market disagree
-most" section, and deliberately ABOVE `.topbars`: the lead story belongs to
+between the hero band and the "Where the fantasy analysts and the betting
+market disagree most" section, and deliberately ABOVE `.topbars`: the lead story belongs to
 the site, not to Weekly Fantasy or to DFS, so a reader who opens the DFS
 lane still sees what the desk published this morning. The `#today` sec-head
 ("The Desk", with its two season-specific more-links) moved up with it.
