@@ -77,16 +77,13 @@ img{max-width:100%}
 .dominant .wrap{display:flex;align-items:center;justify-content:center;gap:16px;padding:9px 18px}
 .dominant-copy{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0}
 .dominant-text{font-family:'Bebas Neue','Arial Narrow',Impact,sans-serif;font-size:clamp(18px,2.4vw,25px);letter-spacing:.10em;line-height:1.05;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.25)}
-.dominant-sub{font-size:clamp(11.5px,1.3vw,13.5px);letter-spacing:.02em;line-height:1.35;color:rgba(255,255,255,.88);max-width:62ch}
 .dominant-rule{flex:0 1 140px;height:1px;background:rgba(255,255,255,.45)}
 /* The banner set its own width at 390px and pushed the whole document into a
    horizontal scroll: clamp() min was 19px with .14em of tracking on a line
-   that has to fit the whole claim. The claim is a headline plus a sentence
-   now, so it wraps by default; tighten the tracking and let the rules collapse
-   before the words do. */
+   that has to fit the whole claim. The claim is a single headline line, so
+   tighten the tracking and let the rules collapse before the words do. */
 @media(max-width:560px){.dominant-rule{flex-basis:34px;min-width:0}.dominant .wrap{gap:10px}
-  .dominant-text{font-size:clamp(14px,4vw,22px);letter-spacing:.07em}
-  .dominant-sub{font-size:clamp(11px,3.1vw,13px)}}
+  .dominant-text{font-size:clamp(14px,4vw,22px);letter-spacing:.07em}}
 @media(max-width:400px){.dominant-rule{display:none}.dominant .wrap{padding-left:12px;padding-right:12px}}
 
 /* ── section ribbon (in-page nav) ── */
@@ -1364,7 +1361,6 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   <span class="dominant-rule"></span>
   <span class="dominant-copy">
     <span class="dominant-text">The Betting-Market Knows. Your Lineup Should Too.</span>
-    <span class="dominant-sub">Turn betting-market intelligence into an edge in fantasy football and DFS.</span>
   </span>
   <span class="dominant-rule"></span>
 </div></div>
