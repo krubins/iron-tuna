@@ -53,7 +53,7 @@ const POSITIONS = [
   { key: 'TE', slug: 'te', label: 'Tight ends', short: 'TE', long: 'Tight end' },
   { key: 'FLEX', slug: 'flex', label: 'Flex (RB/WR/TE)', short: 'FLEX', long: 'Flex' },
   { key: 'K', slug: 'k', label: 'Kickers', short: 'K', long: 'Kicker' },
-  { key: 'DST', slug: 'dst', label: 'Defence / special teams', short: 'DST', long: 'Defence / special teams' },
+  { key: 'DST', slug: 'dst', label: 'Defense / special teams', short: 'DST', long: 'Defense / special teams' },
 ];
 
 // The two rankings categories. `horizon` is the /api/boards horizon; `weeks` says
