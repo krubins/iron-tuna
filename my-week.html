@@ -266,7 +266,7 @@ p{color:var(--sec);margin:0 0 16px}
     if (!j.ok) return fail('mwPlay', j);
     $('mwPlayH').textContent = 'Weeks ' + (j.weeks || []).join(', ') + ' · you rank ' + j.rankInLeague + ' of ' + j.of;
     var h = '<p>' + j.positions.map(function (p) { return '<span class="mw-pos ' + esc(p.grade) + '">' + esc(p.position) + ' ' + (p.delta > 0 ? '+' : '') + esc(p.delta) + '%</span>'; }).join('') + '</p>';
-    if (j.favorable.length) h += '<p><b>Favourable playoff schedule:</b> ' + j.favorable.map(function (s) { return esc(s.name); }).join(', ') + '</p>';
+    if (j.favorable.length) h += '<p><b>Favorable playoff schedule:</b> ' + j.favorable.map(function (s) { return esc(s.name); }).join(', ') + '</p>';
     if (j.concerning.length) h += '<p><b>Concerning:</b> ' + j.concerning.map(function (s) { return esc(s.name); }).join(', ') + '</p>';
     if (j.benchMoves.length) h += '<p><b>Bench moves worth making early:</b> ' + j.benchMoves.slice(0, 4).map(function (m) { return esc(m.name) + ' (' + esc(m.position) + ', ' + n1(m.playoffPoints) + ' pts' + (m.drop ? ', over ' + esc(m.drop) : '') + ')'; }).join('; ') + '</p>';
     if (j.dstStreaming.length) h += '<p><b>DST streaming:</b> ' + j.dstStreaming.map(function (d) { return esc(d.name) + ' ' + n1(d.playoffPoints); }).join(', ') + '</p>';

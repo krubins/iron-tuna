@@ -306,7 +306,7 @@ console.log('\nthe pro-rating is applied once');
   for (const p of pool) ppg[p.team] = (ppg[p.team] || 0) + ((p.projectedStats.passTD || 0) + (p.projectedStats.rushTD || 0)) * 6;
   // The provider hands over a schedule-complete season per club now, not a
   // per-game number. Points against ride along at the league level; only the
-  // kicker and defence paths read them, and this pool has neither.
+  // kicker and defense paths read them, and this pool has neither.
   const built = T.buildTeamEnvOverlay(Object.fromEntries(
     Object.entries(ppg).map(([t, pf]) => [t, { pf, pa: 391, games: 17 }])));
   ok('agreement gives a unit factor everywhere', Object.values(built.factors).every(f => near(f, 1)));
@@ -494,7 +494,7 @@ const realPool = (() => {
 
 console.log('\nlive ESPN injury feed (real network)');
 {
-  // Node's fetch may not honour the sandbox's proxy; curl does. Try the
+  // Node's fetch may not honor the sandbox's proxy; curl does. Try the
   // worker's own fetch path first, then curl, then skip.
   const curlFetch = async (u) => {
     const body = execFileSync('curl', ['-sS', '-m', '90', '-A', 'iron-tuna-availability/1.0', u], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });

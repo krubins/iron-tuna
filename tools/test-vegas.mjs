@@ -20,7 +20,7 @@ const ok = (name, cond, extra = '') => {
 const near = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol;
 
 console.log('\nimplied probability');
-ok('-110 favourite', near(impliedProb(-110), 110 / 210, 1e-9));
+ok('-110 favorite', near(impliedProb(-110), 110 / 210, 1e-9));
 ok('+150 underdog', near(impliedProb(150), 100 / 250, 1e-9));
 ok('even money', near(impliedProb(100), 0.5, 1e-9));
 ok('rejects garbage', impliedProb('abc') === null);

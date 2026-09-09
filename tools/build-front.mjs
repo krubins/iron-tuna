@@ -5,7 +5,7 @@
 //               the play/stat lines. Each story also carries `deep` (1 when the call is a
 //               structural read rather than a single-player call) and `topic` (the desk
 //               label shown on the front page lead) and `team` (the NFL team the
-//               call is about, used to colour the lead's plate). See DEEP/TOPICS
+//               call is about, used to color the lead's plate). See DEEP/TOPICS
 //               and TEAMS below.
 //   REPORTS  <- every auction-watch-YYYY-MM-DD.html page (title + meta description),
 //               newest first — this is the Training Camp & Preseason desk
@@ -71,7 +71,7 @@ const files = fs.readdirSync(root);
 // The front page lead is reserved for calls that go BEYOND A SINGLE PLAYER —
 // the coaching, offensive-line, schedule and rule-change reads that carry a
 // whole roster's worth of consequence. The insight pages already make exactly
-// that distinction: every call is labelled QB/RB/WR/TE (one player) or
+// that distinction: every call is labeled QB/RB/WR/TE (one player) or
 // "Market" (a structural read). So `deep` is the site's own editorial call,
 // not a keyword guess, which is why it does not drift as copy changes.
 const isDeep = pos => String(pos).toLowerCase() === 'market';
@@ -99,11 +99,11 @@ const matchTopic = text => {
 const topicFor = (title, body) => matchTopic(title) || matchTopic(body) || 'Team trend';
 
 // ── team detection, for the lead's artwork ─────────────────────────────────
-// The front page draws an original team-coloured plate beside the lead, so each
+// The front page draws an original team-colored plate beside the lead, so each
 // story needs to know whose story it is. Same discipline as the topic matcher:
 // the TITLE is the editorial summary and is matched first, the body only as a
 // fallback, so a rival mentioned in passing three paragraphs down cannot claim
-// the artwork. A miss costs a neutral plate, never a wrong team's colours.
+// the artwork. A miss costs a neutral plate, never a wrong team's colors.
 //
 // Ambiguity is resolved by matching CITY and NICKNAME separately: "New York"
 // alone cannot pick between the Giants and the Jets, so the bare city is not a
@@ -142,7 +142,7 @@ const matchTeam = text => {
 // TITLE ONLY — deliberately. The body fallback that works for topics is too
 // loose here: "Offensive-line dispersion matters more this year" is a
 // league-wide piece that happens to cite Buffalo in paragraph three, and body
-// matching handed it Buffalo's colours. A league-wide story should get the
+// matching handed it Buffalo's colors. A league-wide story should get the
 // neutral plate, so if the headline does not name a team, nothing does.
 const teamFor = (title) => matchTeam(title) || null;
 // ── player photos ──────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ const enlist = keys => {
 // ── the team's face, for a story that names nobody ─────────────────────────
 // Some deep dives are about a whole team — a schedule, a coaching staff, an
 // offensive line — and name no player. Those run the team's headline player
-// instead, and the band says so: it is labelled with the team, not "In this
+// instead, and the band says so: it is labeled with the team, not "In this
 // story", so the photo never implies a quote the story never made.
 //
 // "Headline player" is the site's own answer, not a popularity guess: the
@@ -266,7 +266,7 @@ for (const list of depth.values()) list.sort((a, b) => b.pts - a.pts);
 // each key a player by one id, so only the ids travel and player-search.js
 // rebuilds the URLs.
 //
-// SCOPE IS THE WHOLE PRICED POOL, kickers and defences included. They carry no
+// SCOPE IS THE WHOLE PRICED POOL, kickers and defenses included. They carry no
 // editorial and no photo, and player-search.js sorts them below the skill
 // players for that reason — but a reader who types "Bates" and is told the
 // board has never heard of him has been told something untrue.
@@ -327,8 +327,8 @@ const teamFace = ab => (depth.get(ab) || []).map(r => r.k).find(k => bySlug.has(
 // Where it is still not one man, the projection settles it — but only when the
 // gap is decisive. "Allen" at QB is Josh (357 points) and Kyle (4); a call about
 // "another QB1 finish" is plainly the former, and DOMINANCE keeps the rule from
-// quietly picking a favourite in a genuine tie. Title only: this is the widest
-// net in the file, and a headline is a deliberate sentence, where a capitalised
+// quietly picking a favorite in a genuine tie. Title only: this is the widest
+// net in the file, and a headline is a deliberate sentence, where a capitalized
 // word is a name rather than prose that happened to start a sentence.
 const DOMINANCE = 5;
 const pricedByPos = new Map();
@@ -532,7 +532,7 @@ const column = [];
 // the tell line, and `nums` — the evidence row, which is the whole conceit of
 // the column. An entry with no numbers under it is an opinion, and the band
 // would be printing one without saying so, which is why nums is extracted
-// rather than re-summarised here.
+// rather than re-summarized here.
 const tell = [];
 {
   const src = read('the-tell.html');

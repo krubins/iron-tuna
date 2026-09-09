@@ -133,13 +133,13 @@ console.log('\nscoring port matches the client function');
   ok('every real player scores identically in both copies', worst < 1e-9, `worst ${worst.toFixed(6)} on ${worstOf}`);
 }
 
-// ── 2b. the season-normalisation mirror matches the client ─────────────────
+// ── 2b. the season-normalization mirror matches the client ─────────────────
 // /api/board ships points on the SHEET's scale: the client re-levels each
 // position to last season's actual top-K mean (normalizeToLastYear) before
 // printing anything, and COLUMN_NORM mirrors that rule's constants. Recompute
 // both constants from index.html's own data — LAST_YEAR_*_STATS scored by the
 // client's own scoring function — and fail when the mirror drifts.
-console.log('\nseason normalisation mirrors the client');
+console.log('\nseason normalization mirrors the client');
 {
   const grab = name => {
     const i = client.indexOf('function ' + name);

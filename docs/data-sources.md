@@ -18,13 +18,13 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
 | `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
-| `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts | `_worker.js:1353`, `:3061`, `:5656`, `:5657` | **Red.** Undocumented endpoints, no commercial licence. See R1. |
+| `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts | `_worker.js:1353`, `:3061`, `:5656`, `:5657` | **Red.** Undocumented endpoints, no commercial license. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
-| `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 licence question; see R7. |
-| `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorise, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
+| `api.sleeper.app` (league sync) | A reader's Sleeper league: settings, rosters, users, matchups, transactions | `PROVIDER_SLEEPER` in the LEAGUE SYNC region | **Red for a paid product, so behind `FLAG_SLEEPER_SYNC` (default off).** Same R2 license question; see R7. |
+| `api.login.yahoo.com` | Yahoo OAuth 2.0 (authorize, token, refresh) | `YAHOO_AUTH`, `YAHOO_TOKEN` | Service endpoint; the reader consents on Yahoo's page. See R7. |
 | `fantasysports.yahooapis.com` | A reader's Yahoo league under their own OAuth grant, read-only scope `fspt-r` | `PROVIDER_YAHOO` | **Green for the reader's own data under the Yahoo Developer Network terms**; behind `FLAG_YAHOO_SYNC` until an app is registered. See R7. |
 | `static.www.nfl.com` | Team and player imagery, hot-linked | ~1,680 URL references across the deployed HTML, none fetched server-side | **Unreviewed and OPEN.** Copyrighted images served from the league's CDN. See R4. |
-| `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the licence exists. Unset today. |
+| `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
 
@@ -47,7 +47,7 @@ reach them. They still belong in this table so the list is complete.
 | `api.fanduel.com` | 2026-09-06 | Same. |
 
 Both were behind unset env vars and had never run against the live services, so
-removing them changed no behaviour. The `dfs-refresh` cron job went with them:
+removing them changed no behavior. The `dfs-refresh` cron job went with them:
 with no site feeds left, the CSV import is the only path, and it is an admin
 action, not a scheduled one.
 
@@ -74,7 +74,7 @@ whether post-game data is enough, because that answer changes the size of R1.
 
 **Attribution owed once adopted:** see §3.
 
-### R2 — Sleeper: licence it or drop it
+### R2 — Sleeper: license it or drop it
 
 **Where:** `_worker.js:7732`, `:7763` — both pull `/v1/players/nfl`, cached 6h.
 
@@ -101,7 +101,7 @@ This is the cheapest item on the list and it is currently unanswered.
 **Where:** ~1,680 `static.www.nfl.com` URLs plus ESPN cutout URLs built from
 `tools/nfl-headshots.json`, hot-linked into rendered HTML rather than fetched
 or stored server-side. `tools/build-headshots.mjs` sources the *lookup* from
-nflverse (CC BY 4.0); the CC licence covers that dataset, **not** the images the
+nflverse (CC BY 4.0); the CC license covers that dataset, **not** the images the
 URLs in it point at, which stay the publishers' property.
 
 Not covered by Addendum Section 13, which is about data rather than images, but
@@ -122,7 +122,7 @@ cleanup. It is the largest open IP item on this list.
 
 ### R5 — Structural rules from Section 14
 
-- [x] `/data` page listing every source, licence, and attribution string, linked from every footer. §14.1 — shipped 2026-09-09 as `data.html`, linked from the generated Legal column (`tools/build-chrome.mjs`), the front-page footer and the app footer. **This file remains its source of truth: edit both in the same commit.**
+- [x] `/data` page listing every source, license, and attribution string, linked from every footer. §14.1 — shipped 2026-09-09 as `data.html`, linked from the generated Legal column (`tools/build-chrome.mjs`), the front-page footer and the app footer. **This file remains its source of truth: edit both in the same commit.**
 - [ ] External-fetch boundary lint. §14.3 specifies `lib/sources/`, which does not exist — the app is a single `_worker.js` plus a root `index.html`. Restate the rule as a marked region inside `_worker.js` with a CI check that fails on `fetch('http` outside it, or budget the restructure. As written the criterion cannot be met.
 - [x] No raw third-party response body returned to the browser. §14.2. Holds today: every adapter transforms server-side into an Iron Tuna shape. Needs a test to keep it true.
 - [x] API keys server-side only. §14.4. All keys are worker `env` bindings.
@@ -133,8 +133,8 @@ cleanup. It is the largest open IP item on this list.
 
 See `docs/league-sync.md` Part 3 for the full record. In short:
 
-- **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written licence in `docs/`. Attribution string in §3 applies.
-- **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorises Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
+- **Sleeper.** The league connector uses the same API as the players map and inherits R2 exactly: free for non-commercial use, and Iron Tuna is a paid product. The connector is complete and tested against fixtures but ships **off** (`FLAG_SLEEPER_SYNC`). Turn it on only with Sleeper's written license in `docs/`. Attribution string in §3 applies.
+- **Yahoo.** OAuth 2.0 under the Yahoo Developer Network terms of use. The reader authorizes Iron Tuna to read their own fantasy data (scope `fspt-r`); no password is ever seen and tokens are sealed at rest (`LEAGUE_TOKEN_KEY`). Register an app at developer.yahoo.com, set `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`, and confirm the YDN terms permit use in a paid product before enabling `FLAG_YAHOO_SYNC`. Rate limits are per-app and undocumented; the connector caches for a minute and syncs on the job clock, never per page view.
 - **ESPN.** No supported path. Not implemented; the adapter is a documented placeholder and manual setup is the fallback. Do not add the `lm-api-reads` host.
 
 ### R6 — Schema note for the free-tier delay model
@@ -161,7 +161,7 @@ that the data was modified, and link the source.
 > Data provided by CollegeFootballData.com
 
 **Sleeper** — requested by their docs, wherever their data is used under a
-licence.
+license.
 
 > Player metadata from Sleeper. https://sleeper.com
 
@@ -179,6 +179,6 @@ anyway; it costs nothing.
 2. Never return a third-party response body to the browser. Transform
    server-side, return an Iron Tuna shape.
 3. API keys are `env` bindings. Never in client code, never in the repo.
-4. Cache. It protects the quota and every green licence here permits it.
+4. Cache. It protects the quota and every green license here permits it.
 5. Keep the written record. When The Odds API or Sleeper answers, save the
    email — `docs/` is a fine home for a text copy.

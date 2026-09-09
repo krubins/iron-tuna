@@ -121,7 +121,7 @@ function ribbonHtml(current) {
 // One block, injected into two files with different palettes. site.css names its
 // ink --text/--sec/--muted and its surfaces --bg/--panel; front.html names the
 // same things --ink/--ink-2/--ink-3 and --card/--bg. Rather than fork the CSS,
-// every colour here reads through a local alias with the other file's token as
+// every color here reads through a local alias with the other file's token as
 // the fallback and a literal as the floor — which is also the one form
 // tools/test-css-tokens.mjs accepts unconditionally, since `var(--x, …)` is the
 // language's own way of saying "this may not be set".
@@ -308,7 +308,7 @@ ${chipsHtml(cat, pos ? pos.slug : null)}
   <div class="is-card"><h3><a href="/rankings">The full rankings tool</a></h3><p>Every horizon, every board and your own league&rsquo;s scoring in one place.</p></div>
   <div class="is-card"><h3><a href="/hidden-value">Hidden Value</a></h3><p>Where the two columns on this page disagree by enough to act on.</p></div>
   <div class="is-card"><h3><a href="/stats">Stats</a></h3><p>What has actually been played, rather than what is projected.</p></div>
-  <div class="is-card"><h3><a href="/previews">Previews</a></h3><p>Every game this week with its line, its total and the points each offence is implied to score.</p></div>
+  <div class="is-card"><h3><a href="/previews">Previews</a></h3><p>Every game this week with its line, its total and the points each offense is implied to score.</p></div>
 </div>
 </main>
 <footer class="site"><div class="wrap"></div></footer>

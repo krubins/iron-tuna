@@ -104,7 +104,7 @@ p{color:var(--sec);margin:0 0 16px}
 
 <h2>Game Environments</h2>
 <p>Every game on the slate, ranked by total, with each side’s implied points and how the line has moved.</p>
-<div class="is-scroll"><table class="is-table" id="veGames" hidden><thead><tr><th>Game</th><th class="num">Total</th><th>Favourite</th><th class="num">Spread</th><th class="num">Implied away</th><th class="num">Implied home</th><th class="num">Total move</th><th class="num">Spread move</th></tr></thead><tbody></tbody></table></div>
+<div class="is-scroll"><table class="is-table" id="veGames" hidden><thead><tr><th>Game</th><th class="num">Total</th><th>Favorite</th><th class="num">Spread</th><th class="num">Implied away</th><th class="num">Implied home</th><th class="num">Total move</th><th class="num">Spread move</th></tr></thead><tbody></tbody></table></div>
 
 <h2>Hidden Market Signals</h2>
 <p>Combinations of lines telling a broader story: a spread and a player market moving together.</p>
@@ -112,8 +112,8 @@ p{color:var(--sec);margin:0 0 16px}
 
 <h2>How to read a gap</h2>
 <ol>
-  <li><b>Read the implied points, not the spread.</b> A spread and a total together give each offence its expected points, which is the scoring environment every skill player on that roster inherits.</li>
-  <li><b>Compare like with like.</b> The question is never whether a team is good, but whether the market rates that offence higher or lower than the projections already do.</li>
+  <li><b>Read the implied points, not the spread.</b> A spread and a total together give each offense its expected points, which is the scoring environment every skill player on that roster inherits.</li>
+  <li><b>Compare like with like.</b> The question is never whether a team is good, but whether the market rates that offense higher or lower than the projections already do.</li>
   <li><b>Buy the gap, not the name.</b> A cheap player the market likes is worth more than a stud everyone already agrees on.</li>
   <li><b>Respect the clamp.</b> One odd line is noise. A gap is a tiebreaker between players you already rate closely, not a reason to rebuild a roster.</li>
 </ol>
@@ -123,7 +123,7 @@ p{color:var(--sec);margin:0 0 16px}
   <div class="is-card"><h3><a href="/weekly-intel">Weekly Intel</a></h3><p>The week itself: who is on bye, what the slate looks like, and every tool below in one place.</p></div>
   <div class="is-card"><h3><a href="/rankings">Rankings</a></h3><p>The board re-ranked for the week ahead, at your league’s scoring rather than a stranger’s.</p></div>
   <div class="is-card"><h3><a href="/what-they-arent-telling-you">What They Aren't Telling You</a></h3><p>What the disagreement adds up to across the whole board, counted rather than written.</p></div>
-  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
+  <div class="is-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offense is implied to score.</p></div>
   <div class="is-card"><h3><a href="/waivers">Waivers</a></h3><p>What a claim is worth and what it will take to win it, priced in your league’s FAAB dollars.</p></div>
   <div class="is-card"><h3><a href="/dfs">DFS</a></h3><p>The same market read, aimed at a single slate rather than a season-long roster.</p></div>
   <div class="is-card"><h3><a href="/my-league">My League</a></h3><p>Your teams, budget and scoring, and every number on this site restated in them.</p></div>
@@ -252,7 +252,7 @@ p{color:var(--sec);margin:0 0 16px}
         $('veVol').hidden = false;
       }
       if (j.gameEnvironments.length) {
-        $('veGames').querySelector('tbody').innerHTML = j.gameEnvironments.map(function (g) { return '<tr><td><b>' + e(g.game) + '</b></td><td class="num">' + n1(g.total) + '</td><td>' + e(g.favourite || 'PK') + '</td><td class="num">' + (g.spread == null ? '—' : Math.abs(g.spread)) + '</td><td class="num">' + n1(g.impliedAway) + '</td><td class="num">' + n1(g.impliedHome) + '</td><td class="num">' + (g.movement ? sign(g.movement.total) : '—') + '</td><td class="num">' + (g.movement ? sign(g.movement.spread) : '—') + '</td></tr>'; }).join('');
+        $('veGames').querySelector('tbody').innerHTML = j.gameEnvironments.map(function (g) { return '<tr><td><b>' + e(g.game) + '</b></td><td class="num">' + n1(g.total) + '</td><td>' + e(g.favorite || 'PK') + '</td><td class="num">' + (g.spread == null ? '—' : Math.abs(g.spread)) + '</td><td class="num">' + n1(g.impliedAway) + '</td><td class="num">' + n1(g.impliedHome) + '</td><td class="num">' + (g.movement ? sign(g.movement.total) : '—') + '</td><td class="num">' + (g.movement ? sign(g.movement.spread) : '—') + '</td></tr>'; }).join('');
         $('veGames').hidden = false;
       }
       if (j.hiddenSignals.length) {

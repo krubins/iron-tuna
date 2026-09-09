@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // What the board grades a player name against.
-//   node tools/test-board-colour.mjs
+//   node tools/test-board-color.mjs
 //
 // THE HISTORY MATTERS, because it is easy to get this wrong twice.
 //
-// The name is coloured by comparing Proj (the likely market price) against what
+// The name is colored by comparing Proj (the likely market price) against what
 // the player is worth. "Worth" was Value — the VBD price in a vacuum — which
 // paints a star red for costing more than his vacuum price even when he is the
 // one player holding your starting lineup together.
@@ -61,7 +61,7 @@ console.log('\nwhat the cliff premium is worth');
      scarcityPremium({ count: 1, gapPts: 100000 }, 200) <= 30);
   ok('it scales with the budget, not with dollars',
      scarcityPremium({ count: 1, gapPts: 30 }, 400) > scarcityPremium({ count: 1, gapPts: 30 }, 200));
-  // The colour path has no pool to convert points against, so it keeps the
+  // The color path has no pool to convert points against, so it keeps the
   // budget-share reading. The BID does have one, and prices the drop itself —
   // see tools/test-cliff-premium.mjs. Both are capped the same way.
   ok('with the board\'s dollars per point it prices the drop, not a share of the budget',
@@ -103,10 +103,10 @@ console.log('\nthe rule the renderer and the export both follow');
 {
   // Regression guards for PR #66's mistake. `you` must not be what the name is
   // graded against, in either place.
-  ok('the name is coloured against the graded value', src.includes('nameColor = costColor(cost, graded)'));
-  ok('the name is NOT coloured against YOU', !src.includes('nameColor = costColor(cost, you)'));
+  ok('the name is colored against the graded value', src.includes('nameColor = costColor(cost, graded)'));
+  ok('the name is NOT colored against YOU', !src.includes('nameColor = costColor(cost, you)'));
   ok('the graded value comes from boardValue', src.includes('const graded = boardValue(p, value, config)'));
-  // The CSV/AI flag and the on-screen colour must agree, or a reader gets two
+  // The CSV/AI flag and the on-screen color must agree, or a reader gets two
   // different answers to "why is he red".
   ok('the export grades with the same function', src.includes('const _b = boardValue(p, p.inflatedValue != null ? p.inflatedValue : p.auctionValue, config)'));
   ok('the export no longer talks about You', !/Proj (above|below) You/.test(src));

@@ -123,7 +123,7 @@ const dRow = (name, team, s) =>
   `{ sacks: ${fmt(s.sacks)}, ints: ${fmt(s.ints)}, fumRec: ${fmt(s.fumRec)}, defTD: ${fmt(s.defTD)}, ` +
   `safety: ${fmt(s.safety)}, ptsAllowed: ${fmt(s.ptsAllowed)} }}`;
 
-// Every club with a defence gets a kicker: the two positions cover the same
+// Every club with a defense gets a kicker: the two positions cover the same
 // league, and a club the board prices on one side and not the other is a hole a
 // reader falls into.
 const clubs = committedD.map(d => d.team);
@@ -166,7 +166,7 @@ console.log(`  fgMade   sd ${sd(committedK.map(k => k.stats.fgMade)).toFixed(1)}
 console.log(`  xpMade   sd ${sd(committedK.map(k => k.stats.xpMade)).toFixed(1)} -> ${sd(kOut.map(k => k.stats.xpMade)).toFixed(1)}`);
 console.log(`  worst FG% ${(100 * Math.min(...kOut.map(k => k.stats.fgMade / (k.stats.fgMade + k.stats.fgMissed)))).toFixed(1)}%`);
 
-console.log('\ndefences');
+console.log('\ndefenses');
 for (const d of dOut) {
   console.log(`  ${d.team.padEnd(4)} PA ${String(d.old.stats.ptsAllowed).padStart(3)} -> ${String(d.stats.ptsAllowed).padStart(3)}` +
               ` (market ${market(d.team).pa.toFixed(0)})   sacks ${String(d.old.stats.sacks).padStart(2)} -> ${String(d.stats.sacks).padStart(4)}` +
@@ -199,6 +199,6 @@ const dBlock = `  // ── DEF (${stamp}) ──\n` + dOut.map(d => dRow(d.name
 const out = src.slice(0, kAt) + kBlock + dBlock + src.slice(dEnd);
 fs.writeFileSync(WORKER, out);
 fs.writeFileSync(SNAPSHOT, JSON.stringify(snap, null, 1) + '\n');
-console.log(`\nwrote ${kOut.length} kickers and ${dOut.length} defences into _worker.js`);
+console.log(`\nwrote ${kOut.length} kickers and ${dOut.length} defenses into _worker.js`);
 console.log('wrote tools/team-market.json');
 console.log('next: node tools/build-front.mjs && node tools/build-default-board.mjs && node tools/test-k-def.mjs');

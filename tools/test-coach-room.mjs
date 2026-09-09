@@ -10,7 +10,7 @@
 // generateTeamInsights was written. An auction turns on exactly those questions,
 // so the coach was answering "can I be outbid on him?" from data it did not have.
 //
-// These checks pin the fields down by behaviour, not by presence: a rival who
+// These checks pin the fields down by behavior, not by presence: a rival who
 // cannot afford a player must not count as a bidder, and runnerUp must track the
 // SECOND-best able bidder, because that is where the price actually settles.
 import fs from 'fs';

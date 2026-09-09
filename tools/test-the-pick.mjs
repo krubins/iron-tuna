@@ -75,7 +75,7 @@ function literalAfter(src, name) {
 
 const PROJECTIONS = literalAfter(worker, 'PROJECTIONS');
 
-// One scoring formula, parameterised by what a catch is worth, because the
+// One scoring formula, parameterized by what a catch is worth, because the
 // column argues about scoring settings and a second copy would drift from this
 // one the first time the site changed a coefficient.
 const scoreOf = (s, perRec) => (s.passYd || 0) / 25 + (s.passTD || 0) * 4 - (s.passInt || 0) * 2
@@ -147,7 +147,7 @@ function perRecOf(head) {
 // whole entry first would let a run of words cross a cell boundary, so a table
 // row would read as "PPR Standard Derrick Henry" and report a player nobody
 // wrote. Within a text node the leading words are dropped one at a time until
-// the pool recognises the name — a sentence can end in a capitalised word right
+// the pool recognizes the name — a sentence can end in a capitalized word right
 // before one.
 function namesWithTeam(html) {
   const out = [];

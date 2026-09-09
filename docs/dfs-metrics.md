@@ -11,7 +11,7 @@ derived from the Iron Tuna week board at the site's own scoring rules.
 | **Value** | Iron Tuna points per $1,000 of salary, indexed to the slate median. 100 is an ordinary dollar; 130 is a bargain; 80 is a tax. | The legacy `vegasValueScore` (market points per $1K) is still on the row. |
 | **Floor** | `projection × positional floor factor × confidence factor`. Floor factors: QB 0.62, RB 0.55, WR 0.45, TE 0.45, DST 0.40, K 0.50. Confidence factor 1.00 / 0.92 / 0.84 for HIGH / MEDIUM / LOW market confidence. | A first-cut variance model, not a distribution. The projection engine does not yet produce percentiles; when it does, floor and ceiling should become the 20th and 85th percentiles. |
 | **Ceiling** | `projection × positional ceiling factor × (2 − confidence factor)`. Ceiling factors: QB 1.55, RB 1.75, WR 1.95, TE 1.90, DST 2.10, K 1.60. | Wider for the positions whose scoring is spikier (touchdown-dependent receivers, defenses). |
-| **Ownership** | **Modelled**, version 1. `z = 2.2·(value/100 − 1) − 1.4·(salary rank within position, 0 at the top to 1 at the bottom) + (TD probability − 30)/60`; ownership `= 42 · logistic(z)`, in percent. | No licensed feed of projected ownership exists on this site, so this is a model of how the field prices value and salary tier, scaled so a slate's skill positions sum to roughly a full roster. Every surface prints `ownershipBasis: modelled`. Replace with a feed when one is licensed. |
+| **Ownership** | **Modeled**, version 1. `z = 2.2·(value/100 − 1) − 1.4·(salary rank within position, 0 at the top to 1 at the bottom) + (TD probability − 30)/60`; ownership `= 42 · logistic(z)`, in percent. | No licensed feed of projected ownership exists on this site, so this is a model of how the field prices value and salary tier, scaled so a slate's skill positions sum to roughly a full roster. Every surface prints `ownershipBasis: modeled`. Replace with a feed when one is licensed. |
 | **Leverage** | `ceiling ÷ ownership`. Ceiling points per point of expected ownership. | High leverage is a high-ceiling player the field is under-rostering. Chalk with a low ceiling has the least leverage. |
 | **Cash score** | Floor per $1K, indexed to the slate median projection-per-$1K, ×100. | Floor and price only; ownership does not matter in a cash game. |
 | **Tournament score** | Ceiling per $1K, indexed to the median, ×100, then multiplied by an ownership factor `clamp(12 ÷ ownership, 0.6, 1.6)`. | Ceiling, price and ownership together. A 12% owned player is scored at par; 6% at 1.6×; 24% at 0.6×. |
@@ -22,7 +22,7 @@ derived from the Iron Tuna week board at the site's own scoring rules.
 
 `/api/dfs?site=dk|fd&contest=cash|single|3max|gpp|showdown` returns the same
 rows and the same numbers; `metrics.sortBy` and `metrics.note` say what the
-contest emphasises:
+contest emphasizes:
 
 | Contest | Sort | Emphasis |
 |---|---|---|
@@ -38,5 +38,5 @@ contest emphasises:
   of the desk's packages (`_dfsBlock()` in the research packet) and by the
   DFS page.
 - Ownership is the one number that is a model rather than an observation, and
-  it is labelled as such everywhere it appears. The desk's writer is told the
-  same in the packet (`ownershipBasis: 'modelled'`).
+  it is labeled as such everywhere it appears. The desk's writer is told the
+  same in the packet (`ownershipBasis: 'modeled'`).

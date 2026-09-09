@@ -80,7 +80,7 @@ console.log('\ngranting');
   const r = await call(db, `/api/admin/grant?key=${KEY}&email=Friend@Example.com`);
   const j = await jsonOf(r);
   ok('a grant succeeds', r.status === 200 && j.ok === true, JSON.stringify(j));
-  ok('the address is normalised to lowercase', j.email === 'friend@example.com', j.email);
+  ok('the address is normalized to lowercase', j.email === 'friend@example.com', j.email);
   ok('it reports the account as entitled', j.entitled === true);
   ok('it reports that something changed', j.changed === true);
   ok('it hands back the sign-in URL to pass on', /signin=1/.test(j.signIn || ''), j.signIn);

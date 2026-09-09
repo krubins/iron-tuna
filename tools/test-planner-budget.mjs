@@ -122,7 +122,7 @@ const rows = await page.evaluate(({ MODELS }) => {
   const base = d.config;
   const out = [];
   // ONLY the app's own budget. Player prices come out of the valuation pipeline
-  // already renormalised to it, so overriding cfg.budget here would plan a $300
+  // already renormalized to it, so overriding cfg.budget here would plan a $300
   // draft with $200-scale prices and report a shortfall that no reader could
   // ever see. The knobs below are pure planner inputs and do not touch pricing,
   // so they are safe to sweep.

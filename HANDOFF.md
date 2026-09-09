@@ -171,10 +171,10 @@ Default projections are meant to follow the **betting market** first and the con
 
 **Pipeline:** raw book lines → `tools/vegas-to-projections.mjs` → `tools/sources/vegas.json` → `tools/merge-projections.mjs` → `PROJECTIONS` in `_worker.js`.
 
-1. Drop one JSON file per sportsbook into `tools/odds/` (gitignored). Shape is documented at the top of `tools/vegas-to-projections.mjs`; a committed sample lives in `tools/odds.example/`. Season-long markets recognised: `passYd passTD passInt rushYd rushTD recYd recTD rec scrimmageTD`.
+1. Drop one JSON file per sportsbook into `tools/odds/` (gitignored). Shape is documented at the top of `tools/vegas-to-projections.mjs`; a committed sample lives in `tools/odds.example/`. Season-long markets recognized: `passYd passTD passInt rushYd rushTD recYd recTD rec scrimmageTD`.
 2. `node tools/vegas-to-projections.mjs` converts them. Two corrections turn a posted total into a projection:
-   - **De-vig.** Both sides carry juice, so raw implied probabilities sum to >1. Each side's American price is converted to a probability and the pair normalised to sum to 1, leaving the market's honest `P(over)`.
-   - **Median → mean.** The line sits near the market's *median*; fantasy scoring needs the *mean*. Modelling a season total as roughly normal, `E[X] = line + σ·Φ⁻¹(P(over))`, with σ a per-market coefficient of variation × the line. At a balanced price the mean *is* the line, so the correction only bites when a book prices one side hard — which keeps the result robust to σ being somewhat off.
+   - **De-vig.** Both sides carry juice, so raw implied probabilities sum to >1. Each side's American price is converted to a probability and the pair normalized to sum to 1, leaving the market's honest `P(over)`.
+   - **Median → mean.** The line sits near the market's *median*; fantasy scoring needs the *mean*. Modeling a season total as roughly normal, `E[X] = line + σ·Φ⁻¹(P(over))`, with σ a per-market coefficient of variation × the line. At a balanced price the mean *is* the line, so the correction only bites when a book prices one side hard — which keeps the result robust to σ being somewhat off.
    
    Multiple books are de-vigged and converted **first**, then averaged, so a book with wide juice can't drag the consensus. A combined `scrimmageTD` market is split into `rushTD`/`recTD` using the player's *current* projected ratio rather than an invented split.
 3. `node tools/merge-projections.mjs` blends by **weight**, not evenly. `DEFAULT_WEIGHTS = { vegas: 3 }`, everything else 1 — so with one projection feed a merged stat lands **75% of the way from the projection to the Vegas number**. Override per source with `SOURCE_WEIGHT_<NAME>` (e.g. `SOURCE_WEIGHT_VEGAS=5`, or `=1` to restore a plain mean).
@@ -211,7 +211,7 @@ Two things keep that honest:
 - **No double counting.** The committed projections already have an opinion about which offenses are good, so scaling by raw Vegas points would apply that opinion twice. Both sides are reduced to a league-relative index and the factor is the **ratio of the two**: when Vegas and the projections agree on a team's standing the factor is exactly 1.0 and nothing moves. Only genuine disagreement changes a number.
 - **Same units on both sides — points, not touchdowns.** Team offensive points are `(passTD + rushTD) * 6 + xpMade + fgMade * 3`; `recTD` is excluded because a receiving touchdown *is* the quarterback's passing touchdown. Comparing a touchdown index against Vegas points systematically over-corrects, since weak offenses take a larger share of their points from field goals: on the real 2026 lines that mismatch stretched the factor range to 0.57 and pushed Miami to 1.33, versus 0.40 and 1.15 once both sides are points.
 
-The factor hits touchdowns at full strength and yardage damped (`TEAMENV_YARD_EXP = 0.5`), because yards track scoring environment far less tightly than touchdowns do — a judgement call, not a fit. Receptions, interceptions and fumbles are left alone. Every factor is clamped to `TEAMENV_CLAMP` (0.85–1.18) so a bad pull cannot rewrite a roster, and a team with fewer than `TEAMENV_MIN_GAMES` priced games is skipped entirely.
+The factor hits touchdowns at full strength and yardage damped (`TEAMENV_YARD_EXP = 0.5`), because yards track scoring environment far less tightly than touchdowns do — a judgment call, not a fit. Receptions, interceptions and fumbles are left alone. Every factor is clamped to `TEAMENV_CLAMP` (0.85–1.18) so a bad pull cannot rewrite a roster, and a team with fewer than `TEAMENV_MIN_GAMES` priced games is skipped entirely.
 
 **Known limitation:** this is a team-wide signal, so it moves every player on a roster in the same direction. It cannot tell you that one receiver specifically is being underrated — that needs player props, i.e. `ODDS_API_KEY`. Free season-long *player* props do not appear to exist.
 
@@ -229,7 +229,7 @@ Every step may fail and the endpoint falls back to the committed `PROJECTIONS`. 
 
 ## 9c. "Vegas vs. Rankings & ADP" column (added August 2026)
 
-A recurring front-page column at `#vegas`, between Position Intel and Asset Allocation. **Thesis:** a sportsbook has money at risk on every number it prints, so its lines are priced off repeatable trends and statistical modelling and corrected in public the moment they are wrong; a ranking carries no such penalty, and anyone with a TikTok account and a hunch can publish a top 200 and never revisit it. Where a priced market and an unpriced list disagree, the column shows the disagreement — it never asserts the book is right.
+A recurring front-page column at `#vegas`, between Position Intel and Asset Allocation. **Thesis:** a sportsbook has money at risk on every number it prints, so its lines are priced off repeatable trends and statistical modeling and corrected in public the moment they are wrong; a ranking carries no such penalty, and anyone with a TikTok account and a hunch can publish a top 200 and never revisit it. Where a priced market and an unpriced list disagree, the column shows the disagreement — it never asserts the book is right.
 
 **The point of the section is what the site does differently:** Iron Tuna's shipped values are already blended toward the market (§9b), and almost no ranking or ADP list is. So a case is not "the odds versus Iron Tuna" — it is *the consensus versus Iron Tuna*, with the odds as the reason they differ.
 
@@ -262,7 +262,7 @@ When conflicts do not fill the twelve slots, up to `COLUMN_MAX_AGREE` (3) **agre
 
 Two mechanisms now prevent it, and **both** are needed:
 - `COLUMN_CONTRACT` is echoed in the response and requested by the client as `?v=N`, so a page and a payload of different vintages can never meet — the cached copies are keyed apart, in the isolate (`_COLUMN_KEY`) and at the edge (distinct URL).
-- The client drops any payload whose `contract` is not its own, and drops any individual item missing a field it prints (`VS_REQUIRED` / `vsUsable`). An unrecognised shape renders the empty state.
+- The client drops any payload whose `contract` is not its own, and drops any individual item missing a field it prints (`VS_REQUIRED` / `vsUsable`). An unrecognized shape renders the empty state.
 
 **Bump `COLUMN_CONTRACT` and `VS_CONTRACT` together on any change to the item shape.** `node render-check` (scratch harness) has a `stale` mode that replays the exact production failure. `node tools/test-it-league.mjs` asserts the two numbers match, so a one-sided bump fails a test instead of a reader's page. **Contract 3** added `statsConsensus` / `statsIronTuna` / `statsMarket` to every item — see §9f.
 
@@ -276,13 +276,13 @@ Six-hour wall-clock slots (00/06/12/18 UTC), same mechanism and the same phase s
 
 `_colBlendStats` is **hand-synced with `blendProjections`** — if the blend weight or shape changes, the column stops quoting the number the cheat sheet shows. `COLUMN_SCORING`, `COLUMN_CURVE`, `COLUMN_CURVE_BUDGET`, `COLUMN_LEAGUE_BUDGET` and `_colScore` are **hand-synced with `index.html`** (`DEFAULT_LEAGUE_CONFIG.scoring`, `LEAGUE_MARKET_CURVE`, `LEAGUE_CURVE_BUDGET`, `scoreSkillPlayer`) — there is no build step. `_colTeamProjRank()` is hand-synced with `buildTeamEnvOverlay`'s points model. **`node tools/test-worker-column.mjs` lifts both copies out of their real files and fails loudly on drift**, runs the client's own `scoreSkillPlayer` head-to-head against the worker's port over every real player, and finishes against the live nflverse pull. Run it after touching scoring, the curve, or the odds section.
 
-## 9d. The You column and the optimiser window (fixed August 2026)
+## 9d. The You column and the optimizer window (fixed August 2026)
 
 `You` (what you should bid) comes from `personalValue`, built in `_basePersonalized` in `index.html`. Personal value is `switchPrice()` — how many starter points a player actually adds to *your* lineup — and that is a plan rebuild per player, so it is only run for a `relevant` set: plan targets, your stars, and **the top 20 at each position**.
 
-**The bug:** everyone below that window fell straight back to `auctionValue`, which is the VALUE column. So `You` decayed all the way down the board and then **jumped back up at rank 21**, and the sheet priced WR21 above WR16 for no reason other than being outside the window. A cutoff in an internal optimisation was visible in a published price.
+**The bug:** everyone below that window fell straight back to `auctionValue`, which is the VALUE column. So `You` decayed all the way down the board and then **jumped back up at rank 21**, and the sheet priced WR21 above WR16 for no reason other than being outside the window. A cutoff in an internal optimization was visible in a published price.
 
-**The fix:** the window's own discount is carried past its edge. Per position, the median `personalValue / auctionValue` ratio over the cheapest five players the optimiser *did* price sets the slope for everyone below, and nobody outside the window may exceed the cheapest player inside it (`_edge[pos].cap`) — so the seam can never step up. The median rather than the single last player, so one odd line cannot set the slope for a whole tail.
+**The fix:** the window's own discount is carried past its edge. Per position, the median `personalValue / auctionValue` ratio over the cheapest five players the optimizer *did* price sets the slope for everyone below, and nobody outside the window may exceed the cheapest player inside it (`_edge[pos].cap`) — so the seam can never step up. The median rather than the single last player, so one odd line cannot set the slope for a whole tail.
 
 **What is NOT a bug, and should not be "fixed" by flattening it:**
 - **The steep decline inside the window.** `switchPrice` is a *marginal* value: once your starters are covered by better players, the next one at that position genuinely adds almost nothing, so RB17 → RB20 falling $11 → $2 is the model working. Change it by changing allocation/strategy, not by smoothing the output.
@@ -320,15 +320,15 @@ Two keys, both written by the draft app on the same origin, neither of them new:
 
 **With no saved league every accessor that speaks for the reader still reports "no league"** — `has`, `hasBoard`, `rankOf`, `findPlayer`. A reader who has never opened the app must not be shown numbers dressed up as theirs. A saved league that matches the site defaults in every respect is likewise left alone (`custom === false`): a "Your league" badge on identical numbers only teaches people to ignore the badge.
 
-What that reader *is* shown is the **site's own board** — see "The default board" below. Labelled as the site's, never as theirs.
+What that reader *is* shown is the **site's own board** — see "The default board" below. Labeled as the site's, never as theirs.
 
-`custom` splits into `customScoring` (the scoring fields differ) and `customLeague` (teams or budget differ), because a story can honour one without the other — points move with scoring, prices move with the budget.
+`custom` splits into `customScoring` (the scoring fields differ) and `customLeague` (teams or budget differ), because a story can honor one without the other — points move with scoring, prices move with the budget.
 
 ### What each page does with it
 
 - **`/` (front.html), the Vegas column.** `myCase()` re-reads the whole card: points re-scored from the shipped stat lines, prices off the market curve at the reader's `teams × budget`, ranks off their own board. The kicker gains a **Your league** badge and the basis line names the league and the scoring. A reader with no league keeps the old card plus one line inviting them to set one.
 - **`/` story cards and the lead.** `ITLeague.tailor()` turns an editorial `+12% to +18% versus price` into the reader's own dollars (or, in a snake/best-ball league, draft slots) — through the reading lens below, which the Position Intel switch controls.
-- **Insight drop pages** (`auction|snake|bestball-insights-YYYY-MM-DD.html`). The library's own `tailorStatlines()` pass finds every `p.statline`, reads the call's `<h2>` for a player it recognises, and appends one `.it-yours` line. Pages opt in with nothing but the `<script src="/it-league.js" defer>` tag.
+- **Insight drop pages** (`auction|snake|bestball-insights-YYYY-MM-DD.html`). The library's own `tailorStatlines()` pass finds every `p.statline`, reads the call's `<h2>` for a player it recognizes, and appends one `.it-yours` line. Pages opt in with nothing but the `<script src="/it-league.js" defer>` tag.
 - **`/my-insights` and `/insights-vault`.** Both now call `ITLeague.tailor()` instead of carrying their own copy of the maths — `my-insights.html` had a duplicate, which is exactly how two pages start quoting different dollars for the same call.
 - **`/auction-budget-allocation`.** Declarative only: `data-it-money="200"`, `data-it-teams="12"` and `data-it-pct="38-42"` restate the sentence in the reader's league and print what each allocation band actually buys.
 
@@ -372,7 +372,7 @@ Every tailored line has to commit to a draft type before it can say anything use
 
 Points are a pure function of a stat line and a scoring system, so shipping the line lets a **publicly cached** payload produce a **private** answer — the worker never learns anything about the reader. That is why contract 3 added `statsConsensus`, `statsIronTuna` and `statsMarket` to each column item rather than adding a per-league endpoint.
 
-Ranks are the exception: they need the whole pool, which only the reader's saved board has. When the board is missing the site's ranks stand and only the money moves. When it is present, the player's own row calibrates the scale (the board carries the app's season normalisation and any per-player shaping baked into its points), and the identical adjustment is applied to both boards, so the gap between them stays exactly what the odds put there.
+Ranks are the exception: they need the whole pool, which only the reader's saved board has. When the board is missing the site's ranks stand and only the money moves. When it is present, the player's own row calibrates the scale (the board carries the app's season normalization and any per-player shaping baked into its points), and the identical adjustment is applied to both boards, so the gap between them stays exactly what the odds put there.
 
 ### Maintenance
 
@@ -397,7 +397,7 @@ Details worth knowing:
 - `changed` distinguishes a real change from a no-op, so a double-tap on a phone reads honestly.
 - **The comped-in-code trap:** `COMPED_EMAILS` (module scope in `_worker.js`) always has access, so a `revoke` on one of those addresses looks like it worked and does nothing. The response says `STILL HAS ACCESS` and names the fix. That list is for **owner access only** — to comp anyone else use `grant`, because a third party's address does not belong in a source file and git history keeps it forever.
 
-`node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalisation, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
+`node --experimental-sqlite tools/test-admin-grant.mjs` imports the worker module and drives the real routes against a real SQLite database via `node:sqlite` — the key gate, malformed addresses, lowercase normalization, idempotency, session clearing, and the comped-in-code case. It does **not** use `wrangler dev`, which needs to reach Cloudflare for the `Request.cf` object and cannot run offline.
 
 ### Grant *and* send the link, in one step
 
@@ -412,7 +412,7 @@ It grants, mints the magic link itself, emails it, and reports **what actually h
 - **The link is always returned**, sent or not, so a refused email never leaves you with nothing to pass on. `send=0` grants and hands back the link without emailing, for pasting into a DM.
 - **Access is granted first, then the link is minted** — the same ordering constraint as above, enforced in one request instead of trusted to whoever is doing it.
 - **The grant is confirmed by reading access back**, not assumed: `grantEntitlement()` swallows its own errors, and mailing a sign-in link to an address that is not entitled would sign someone in to the free site.
-- **A failed send is not a failed grant.** Resend refusing the message (unverified domain, no `RESEND_API_KEY`) still leaves the access in place; the response says `sent:false` with the reason, and `/admin` colours that result as a failure rather than a success.
+- **A failed send is not a failed grant.** Resend refusing the message (unverified domain, no `RESEND_API_KEY`) still leaves the access in place; the response says `sent:false` with the reason, and `/admin` colors that result as a failure rather than a success.
 - **The nonce write is not best-effort.** `/api/auth/verify` only enforces single use when `RATE_KV` is bound, and it is the same env — so if that `put` fails while KV *is* bound, the link would arrive already "used". The route refuses (`link_store_failed`) and sends nothing rather than mailing a dead link.
 - **`days`** (1–90, default 14) sets how long the link stays good. It is the *link* that expires, not the access — after that they sign in normally at `/auctiondraft?signin=1`, and the comp email says so.
 - The email is deliberately **not** `sendLoginEmail`. That one says "unlock your purchase", which is the wrong sentence for someone who never bought anything, and it swallows every failure.
@@ -427,7 +427,7 @@ It grants, mints the magic link itself, emails it, and reports **what actually h
 
 **The re-cut**, stated on the same $120-a-team board the owner reads: QB1 lands high-20s (Allen $29, was $40), QB6 is the last double-digit quarterback ($12), and QB7 down is single digits (was $10 on a clean board and $23 on a stale-anchored one — see §9e). Everything else on the board rises a little: the QB dollars have to go somewhere, and they go to the 144 rostered skill players, which is what the room actually does.
 
-The curve is not the price. `renormalizeToBudget` scales `marketValue` so the rostered players' prices spend the whole pool, which is why cutting the QB row needs no compensating rise anywhere else — the redistribution is automatic, and it is why a $25 curve slot prints as $29 on a $120 board. It is also why the cut has to be calibrated against what comes OUT of the app rather than against the array: the first draft of this curve was written to land Allen at $29 and, once renormalised, printed $32.
+The curve is not the price. `renormalizeToBudget` scales `marketValue` so the rostered players' prices spend the whole pool, which is why cutting the QB row needs no compensating rise anywhere else — the redistribution is automatic, and it is why a $25 curve slot prints as $29 on a $120 board. It is also why the cut has to be calibrated against what comes OUT of the app rather than against the array: the first draft of this curve was written to land Allen at $29 and, once renormalized, printed $32.
 
 **Calibrated against VALUE, the app's own second opinion.** VALUE is VORP-based and never touches `marketValue`, so the ratio between the two columns says whether the curve is asking a sane premium. Over the top 14 at each position, before this PR and after:
 
@@ -470,7 +470,7 @@ Hidden entirely when no player in the pool carries odds — an inert control rea
 
 **The reader has to actually have the odds, or the control is gone with no explanation.** A saved board is pinned to the pool it was saved from: while `initialState.projVersion === PROJ_VERSION` the app never re-fetches `/api/projections`. That is right for the projections, which only move on a version bump, and wrong for the odds, which the Worker refreshes daily (§9b) and which are simply **absent** from any pool fetched in a window where the D1 overlay was missing — a failed cron, or the self-heal running behind a response it is not allowed to delay. That reader keeps an odds-free board until the next version bump: no `V` flags, no rank chips, and no slider, because it hides itself. From the outside that reads as "the feature was removed".
 
-So the load effect no longer short-circuits on `savedFresh` alone. When the saved pool is current but carries **no triples at all**, the baseline is still fetched and `graftVegasOdds(saved, baseline)` puts the odds back stat by stat: only a stat still sitting on the **committed endpoint** (`vegas[k][0]`) is moved to the shipped blend and given its triple, so a number the reader typed over or imported is left exactly where it is — the same promise `handlePlayerEdit` makes in the other direction. Matching is on normalised name + position, so a live-status team change does not lose the odds. The projections, `dataInfo` and `playersVersionRef` are untouched, nothing to graft returns the *same array* (the effect runs on every load for a reader whose board legitimately has no odds, and must not churn state), and a failed fetch on this path is silent — the saved board is current and usable, only the odds are missing. A pool the reader replaced themselves (`dataInfo.source` of `CSV import` or `Live NFL`) is skipped entirely: that is their board, not ours.
+So the load effect no longer short-circuits on `savedFresh` alone. When the saved pool is current but carries **no triples at all**, the baseline is still fetched and `graftVegasOdds(saved, baseline)` puts the odds back stat by stat: only a stat still sitting on the **committed endpoint** (`vegas[k][0]`) is moved to the shipped blend and given its triple, so a number the reader typed over or imported is left exactly where it is — the same promise `handlePlayerEdit` makes in the other direction. Matching is on normalized name + position, so a live-status team change does not lose the odds. The projections, `dataInfo` and `playersVersionRef` are untouched, nothing to graft returns the *same array* (the effect runs on every load for a reader whose board legitimately has no odds, and must not churn state), and a failed fetch on this path is silent — the saved board is current and usable, only the odds are missing. A pool the reader replaced themselves (`dataInfo.source` of `CSV import` or `Live NFL`) is skipped entirely: that is their board, not ours.
 
 `node tools/test-vegas-weight.mjs` pins the math, the clamping, the hostile inputs, the graft and the wiring (58 assertions, no browser). `node tools/test-vegas-slider.mjs` drives the real app in Chromium: it stubs an overlay, opens the panel, drags to both ends and back, and asserts Proj, position rank, the `V` flag and the readout all follow — that reset lands back on the exact numbers it started from, and that a seeded odds-free saved board at the current `PROJ_VERSION` gets the slider and the flags back on its own. Same playwright-core/react/Chromium dependencies and the same clean skip as `test-you-column.mjs`.
 
@@ -488,7 +488,7 @@ Measured against the committed projections at 12 x $120, before this fix:
 |---|---|---|
 | Proj (`marketValue`) | $1441 | $1440 |
 | Value (`auctionValue`) | $1435 | $1440 |
-| **the raw curve, unnormalised** | **$1298** | **$1440** |
+| **the raw curve, unnormalized** | **$1298** | **$1440** |
 
 **The bug was in the third row.** `LEAGUE_CURVE_BUDGET = 1440` says out loud that
 `LEAGUE_MARKET_CURVE` is drawn at 12 teams x $120, and a league's prices are that
@@ -530,7 +530,7 @@ Both columns now total the league budget **exactly**, at every league shape test
 improving *your* lineup — so it is structurally at or below Value (§9d, and the
 measured table in "Grading against YOU is the trap"). It is one team's bidding
 ceiling, not a share of a market that has to clear, so there is no budget for it to
-add up to and renormalising it would destroy exactly the marginal signal it exists
+add up to and renormalizing it would destroy exactly the marginal signal it exists
 to carry. **Do not "fix" the You column by scaling it to the budget.**
 
 One quirk worth knowing rather than fixing: K and DEF skip `switchPrice` entirely,
@@ -683,10 +683,10 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   (2026-09-09)" below.
 > **Routing note (merge of PR #39 and #40):** both branches fixed `?screen=cheat`
 > landing on the draft board. PR #40's fix sent phones to `'tiers'`, which was right
-> against the *old* mobile tab bar where `'tiers'` was the tab labelled "Cheat". PR #39
+> against the *old* mobile tab bar where `'tiers'` was the tab labeled "Cheat". PR #39
 > relabels those tabs (`'prep'` = **Cheat**, `'tiers'` = **Tiers**), so the merged
-> behaviour routes `?screen=cheat` to `'prep'` on every device. Leaving `'tiers'` in
-> would have dropped phone traffic on a tab labelled "Tiers" showing the VORP tier view
+> behavior routes `?screen=cheat` to `'prep'` on every device. Leaving `'tiers'` in
+> would have dropped phone traffic on a tab labeled "Tiers" showing the VORP tier view
 > instead of the cheat sheet. Settings-exit routing for free users follows the same
 > target. The paywalled board is unaffected: `?screen=cheat` is never locked,
 > `?screen=board` still is.
@@ -733,15 +733,15 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   cases come from `/api/vegas-column`, not from `STORIES`, so `build-front.mjs` does not
   touch it and it never needs a copy refresh. Full contract in **§9c**.
 - **The lead carries artwork** (`#leadArt`), an inline SVG plate in the featured team's
-  colours. **No club logo, wordmark or player likeness is reproduced** — none of that is
-  ours to publish. What is used is a team's colours (a fact, not a creative work) plus the
+  colors. **No club logo, wordmark or player likeness is reproduced** — none of that is
+  ours to publish. What is used is a team's colors (a fact, not a creative work) plus the
   abbreviation, drawn as original geometry. `TEAM_ART` in `front.html` holds the palette;
-  `inkOn()` picks the type colour from the background's luminance, because white on
+  `inkOn()` picks the type color from the background's luminance, because white on
   Pittsburgh's yellow is unreadable.
   - The team comes from `story.team`, set by `build-front.mjs` from **the headline only**.
     The body fallback that works for topics is too loose here: "Offensive-line dispersion
     matters more this year" is a league-wide piece that cites Buffalo in paragraph three,
-    and body matching handed it Buffalo's colours. League-wide stories get the neutral
+    and body matching handed it Buffalo's colors. League-wide stories get the neutral
     plate — currently 17 of 20 deep dives name a team, and the 3 that don't are the two
     rule-change pieces and the dispersion one, correctly.
 - **Odds impact on every player row** (`vegasRankEl` / `vegasRankShifts` in `index.html`,
@@ -750,7 +750,7 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
   hover; the chip says **how far they moved the player on the board** (`▲3` / `▼2`), which
   is the sentence a drafter actually needs. Both boards are ranked over the **same pool**,
   because a rank is relative — ranking only the priced players would invent shifts that
-  never happened. Memoised per component; silent unless the rank moved or the points delta
+  never happened. Memoized per component; silent unless the rank moved or the points delta
   clears `VEGAS_FLAG_MIN_PTS`. Covered by `node tools/test-vegas-rank-chip.mjs`.
 - **Every number on the page reads through the reader's own league** (`/it-league.js`,
   §9f). The Vegas card's points, prices and ranks, the lead's and the story cards'
@@ -812,7 +812,7 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
 ## 14. August 2026: the Ideal Team is now solved exactly
 
 Filling the open starter slots is a **multiple-choice knapsack** (one distinct
-player per slot, maximise projected points, total price inside a dollar budget).
+player per slot, maximize projected points, total price inside a dollar budget).
 It used to be approximated by a greedy points-per-dollar hill climb in
 `buildOptimalPlan`. Two defects came out of that, both measured against an
 independent exact solver over the real projections:
@@ -830,7 +830,7 @@ What changed:
 
 - **`bestStarterSet(freeSlots, byPos, used, priceOf, budget, cap)`** (just above
   `buildOptimalPlan`) solves it exactly: an "exactly k players" knapsack per
-  position, a max-plus combine across positions, maximised over every way of
+  position, a max-plus combine across positions, maximized over every way of
   handing the FLEX slots to the positions they accept. Slots are grouped by
   eligibility signature, so it generalises to any roster/flex shape in
   `config.roster` / `config.flex`. Full player pools, no pruning — it is exact,
@@ -844,11 +844,11 @@ What changed:
 - **`buildModel('ideal', ...)`** no longer returns the best of the nine shape
   presets. It calls `buildOptimalPlan` directly with `noBench` and `noCap`, so it
   spends everything down to a $1 bench. Locked targets and what-if anchors are
-  still honoured as constraints; if it somehow returns nothing the old
+  still honored as constraints; if it somehow returns nothing the old
   best-of-presets path is the fallback.
 - **Opponent projections use the same full-budget optimum** (the `t.isMine`
   ternary in the team-cards memo). The column promises "each team optimally fills
-  its remaining starters within budget", and before this my team was optimised
+  its remaining starters within budget", and before this my team was optimized
   differently from everyone else's — on an empty board it read My Team 125.4
   pts/gm against 120.4 for all eleven opponents. All twelve now read 125.4.
 - The Ideal model's tooltip and note say it ignores the concentration/bench
@@ -891,7 +891,7 @@ The Build desk, all computed:
 - **"The best team $200 can buy"** — the provably optimal starting lineup from §14's
   solver, with the per-position spend bar. Currently $183 for 122.1 pts/gm, most of it
   on running backs, plus the $17 bench that spends the rest of the board (§24).
-- **"The cliffs"** — the largest points-per-game drop between neighbouring players at
+- **"The cliffs"** — the largest points-per-game drop between neighboring players at
   each position.
 - **"Why the money goes to running back"** — points between the position leader and
   the replacement-level starter in a 12-team league. RB 10.0, DEF 0.8. This is the
@@ -905,8 +905,8 @@ not build now exists and is priced off real lines. Two caveats from digging thro
 value pipeline still stand and are worth an honest pass:
 
 - **There is no consensus ADP in the player model.** `adpRedraft` is null for all 408
-  players, so `attachProvisionalAdp` synthesises a rank from Iron Tuna's own
-  `auctionValue`. §14 relabelled the user-facing column ("IT Rank") so it no longer
+  players, so `attachProvisionalAdp` synthesizes a rank from Iron Tuna's own
+  `auctionValue`. §14 relabeled the user-facing column ("IT Rank") so it no longer
   claims to be average draft position, but anything that calls that number "consensus"
   is comparing the model to itself.
 - **`calculateMarketValues` is a curve, not a market.** It assigns prices from the
@@ -971,7 +971,7 @@ The name is an auction name on purpose — the column measures what a play-calle
 
 - **`play-caller-premium.html`** (route `/play-caller-premium`) is the **source of truth**, same discipline as the insight drop pages. Entries are static HTML — no client-side rendering and no date gating, because entries are written on the day they publish rather than scheduled ahead. Newest first.
 - Each entry is one `<article class="call" id="call-YYYY-MM-DD-N">` carrying: a `.cmeta` row (chip + `.cpos` + `.cteam` + `.cdate`), an `<h2>` naming the **coach or the pattern**, two or three paragraphs of the tendency, a `<p class="who">` naming the players in `<b>` tags, and a `<p class="statline">`.
-- The chip is the verdict: `chip up` ("Underpriced"), `chip down` ("Overpriced"), `chip split` ("Two-sided" — a scheme that lifts one position by taxing another). The class names still read up/down/split because they carry the colour; only the words changed.
+- The chip is the verdict: `chip up` ("Underpriced"), `chip down` ("Overpriced"), `chip split` ("Two-sided" — a scheme that lifts one position by taxing another). The class names still read up/down/split because they carry the color; only the words changed.
 - **`p.statline` is deliberate markup, not decoration.** It is the same class the drop pages use, so `/it-league.js` finds it and translates each entry's percentage into the reader's own dollars (§9f). The column ships `<script src="/it-league.js" defer>` for exactly that.
 - The front page carries a **`#coaching` module** between Position Intel and Asset Allocation: the four newest entries as cards, each with the faces of the players it commits to.
 
@@ -992,7 +992,7 @@ It pushes a branch and never to main. **The Routine stores no MCP connectors**, 
 ### Writing conventions
 
 - The headline names the **coach**, not the player. That is what makes it a column rather than another player blurb.
-- Two-sided entries read "Up — **Player** … Down — **Player** …" (capitalised, em-dashed), because the who-line is also the front-page card's blurb and a card that opens mid-sentence in lower case reads like a bug.
+- Two-sided entries read "Up — **Player** … Down — **Player** …" (capitalized, em-dashed), because the who-line is also the front-page card's blurb and a card that opens mid-sentence in lower case reads like a bug.
 - State the risk in the entry rather than in a footnote — the zone-tree entry says out loud that the same tree invented the committee.
 - The percentage is the desk's estimate of the gap versus market price, not a stat projection, and the page's method box says so.
 
@@ -1072,7 +1072,7 @@ The Routine owns the writes; the site only reads.
 ### The routes (`_worker.js`)
 
 - **`GET /api/lead-story`** — what the front page reads: the current lead plus
-  the previous `LEAD_RECENT` (5) verified stories. Memoised for two minutes per
+  the previous `LEAD_RECENT` (5) verified stories. Memoized for two minutes per
   isolate. **`body_html` is deliberately not in this payload** — shipping ~13 KB
   of article to every visitor to render a headline puts the whole site's front
   door on the critical path of a story nobody has clicked yet.
@@ -1279,7 +1279,7 @@ a change is not a continuation of the last one.
 
 ### The analyst desk (added August 2026)
 
-`analyst`, labelled **Analysts vs. Iron Tuna**. Where the most-followed fantasy
+`analyst`, labeled **Analysts vs. Iron Tuna**. Where the most-followed fantasy
 analysts sit above or below the consensus sheet, where that lands next to Iron
 Tuna's own price, and — the part that makes it a column rather than an aggregator
 — why the desk agrees or disagrees. Matthew Berry (Fantasy Life), Mike Clay
@@ -1335,7 +1335,7 @@ ranking. **If you ever need the entries themselves indexed, that is a
 server-render, not a robots-tag change.**
 
 `GET /api/analyst-column` returns every verified `category = 'analyst'` row,
-newest first, capped at `ANALYST_MAX` (60), memoised two minutes per isolate the
+newest first, capped at `ANALYST_MAX` (60), memoized two minutes per isolate the
 same way the lead is. It deliberately does **not** select `body_html`: the page
 links to `/lead/<slug>` for the article, and shipping sixty stories to render a
 list of headlines is the same mistake `/api/lead-story` was written to avoid.
@@ -1375,7 +1375,7 @@ where a list belongs, junk entries, forty calls in one row, a verdict word
 nobody defined. A call with no `analyst` or no `player` is dropped outright,
 which is the desk's own rule made structural — this column may not show a take
 with nobody attached to it. `ANALYST_STANCES` owns the verdict vocabulary the
-way `LEAD_CATEGORIES` owns the desk names: an unrecognised `stance` still
+way `LEAD_CATEGORIES` owns the desk names: an unrecognized `stance` still
 renders its call, it just carries no chip and scores in no column.
 
 **The record table** is computed in the worker (`analystScoreboard`), not the
@@ -1485,7 +1485,7 @@ full one"). The prompt still said half PPR for a day afterwards.
 their method lines exactly as the rule allows. Stories written before the switch
 (ids 27-31) say half PPR and were right at the time; everything from id 32 on
 says full. Nothing was mispriced. The desk followed the shipped site over its own
-prompt, which is the behaviour you want and the opposite of what a stale
+prompt, which is the behavior you want and the opposite of what a stale
 instruction usually produces.
 
 The prompt now says full PPR **and says the paragraph is a copy**: read
@@ -1544,7 +1544,7 @@ flags. So it is not a blanket wipe and not the retire statement, which touches
 reconstruct.
 
 **Two things this cost, worth remembering.** It looked for a while like an
-external writer was vandalising the table, because rows kept changing state
+external writer was vandalizing the table, because rows kept changing state
 between reads; it was the desk doing it to itself on a three-hour timer. And it
 is not fully explained: the `published` wipe is accounted for, but **nothing here
 explains `verified` also being zeroed** on all 34 rows. If verified ever wipes
@@ -1560,7 +1560,7 @@ by a valuation the cheat sheet does not use (see the section below on Market
 Price versus True Value). So there is no second bug to hunt here.
 
 The two sessions then spent the morning undoing each other: one restored rows it
-read as vandalised, the other retired them again as inaccurate, and each read the
+read as vandalized, the other retired them again as inaccurate, and each read the
 other's writes as "rows changing state between reads". **That is the lesson worth
 keeping from this pair of entries.** `lead_story` has no audit trail, so a state
 change carries no author, and two agents with write access and different
@@ -1644,7 +1644,7 @@ finished string, which is why this is a separate step at the end rather than
 another sentence in the style section.
 
 The fourth check is the one that needs a test rather than a rule, because
-"leads with the finding" is a judgement: **would this headline read exactly the
+"leads with the finding" is a judgment: **would this headline read exactly the
 same if the analysis had come out the other way?** If yes, it is the setup. The
 prompt carries the real example. "Five seasons produced five different winners,
 which is what luck looks like" was the null result the piece started from;
@@ -1867,7 +1867,7 @@ which is why it is the headline tile and the leading chart series. Across a
 window it is not: the day is baked into the hash, so `COUNT(DISTINCT visitor)`
 over 30 days is exactly the sum of each day's uniques. **Someone who comes back on
 three days is three user-days, not one returning person.** The wide number is
-therefore labelled `userDays` in the payload and "User-days" on the tile, rather
+therefore labeled `userDays` in the payload and "User-days" on the tile, rather
 than being passed off as an audience size.
 
 The summary tiles (today, average/day, best day, user-days) are computed in the
@@ -1907,7 +1907,7 @@ figures and name what each one is.
 `gapMinutes` all ship alongside, and the note under the tiles spells the rule out
 including how many visits in the window read as zero.
 
-The sessionisation is one SQL statement (`LAG` for the gap, a running `SUM` over
+The sessionization is one SQL statement (`LAG` for the gap, a running `SUM` over
 the gap flags for the visit number), so what comes back is one row per visit
 rather than every pageview in the window. It carries the same `internal = 0`
 filter as every other read: the operator reading their own site for twenty
@@ -1992,7 +1992,7 @@ render. `admin.html` fetches both independently and the chart is now one
 
 `node tools/test-analytics.mjs` (93 assertions, no network, no browser), wired
 into `.github/workflows/checks.yml` — it existed from the start but was
-honour-system until Aug 2026. It drives the real `_worker.js` over an in-memory
+honor-system until Aug 2026. It drives the real `_worker.js` over an in-memory
 SQLite standing in for D1, so the SQL is actually executed rather than described.
 Beyond the never-break-the-page cases above, it pins who gets counted, that one
 person on one day is one unique user, that no row contains an IP or user-agent,
@@ -2087,7 +2087,7 @@ rather than asserting it away, so a regression that makes it worse still fails.
 
 `switchPrice()` — the YOU value on every player row — is a binary search over
 `buildOptimalPlan`, so the reserve fix moved it too, and PR #66 had just changed
-the board's colouring to grade `Proj` against **YOU** rather than against Value.
+the board's coloring to grade `Proj` against **YOU** rather than against Value.
 The two changes were written independently, hours apart, and neither anticipated
 the other, so the shift was measured rather than argued about. Over the top 120
 priced players, comparing YOU before and after:
@@ -2097,7 +2097,7 @@ priced players, comparing YOU before and after:
 | median change | **$0** |
 | mean change | **-$0.20** |
 | range | -$5 to +$4 |
-| rows whose colour flipped | 11 of 120 |
+| rows whose color flipped | 11 of 120 |
 | RED before → after | **72 → 69** |
 
 **It is a non-event, and it goes the opposite way to the obvious guess.** A
@@ -2108,13 +2108,13 @@ red count went *down* by three. No retuning is called for. Do not re-derive this
 from first principles — the first-principles answer is wrong.
 
 What that measurement did surface, and what is worth a look on its own terms: of
-the 76 players the optimiser priced on a fresh board, **72 came back RED and not
+the 76 players the optimizer priced on a fresh board, **72 came back RED and not
 one came back GREEN**, both before and after. Under the pre-#66 rule the same
 board produced a mix. That is #66's rule meeting an empty roster, not anything
 section 19 did, and it is the opposite of what that PR set out to achieve.
 (Caveat on the number: this counted raw `switchPrice`, while the app runs a
 tail-extrapolation pass afterwards that gives a `personalValue` to players the
-optimiser never priced. The 76 are exact; the other 44 are not covered.)
+optimizer never priced. The 76 are exact; the other 44 are not covered.)
 
 `switchReserve` is **gone**, along with the five call sites that passed it. It
 selected the better of two bench reserves for the YOU-value and opponent paths,
@@ -2133,7 +2133,7 @@ so anything reimplemented in Node measures a copy rather than what ships. It
 self-skips without playwright and a browser, which is why CI does not run it.
 
 **It sweeps only the app's own budget on purpose.** Player prices arrive from
-the valuation pipeline already renormalised to it, so overriding `cfg.budget`
+the valuation pipeline already renormalized to it, so overriding `cfg.budget`
 alone plans a $300 draft with $200-scale prices and reports a shortfall no
 reader could ever see. An earlier version of this test did exactly that and
 produced a page of impressive, meaningless failures.
@@ -2148,7 +2148,7 @@ $183/122.1.
 
 ## 20. August 2026: what the board grades a player name against
 
-The name on the cheat sheet and the draft board is coloured by comparing **Proj**
+The name on the cheat sheet and the draft board is colored by comparing **Proj**
 (the likely market price) against what the player is worth. Which number stands
 for "worth" has now been wrong twice, so the history is the documentation.
 
@@ -2204,15 +2204,15 @@ computation, not a different comparison — which is what the plan premium above
 
 ### Keep these three in step
 
-The colour, the CSV/AI `flag` field, and the coach's legend all describe the same
+The color, the CSV/AI `flag` field, and the coach's legend all describe the same
 rule, and a reader who gets two different answers to "why is he red" has found a
-bug. All three now route through `boardValue`. `tools/test-board-colour.mjs`
+bug. All three now route through `boardValue`. `tools/test-board-color.mjs`
 (23 assertions, no browser, runs in CI) pins the premium's shape and guards
 against the YOU comparison coming back.
 
 ### A related fix
 
-`nameTitle` — the sentence explaining why a name is the colour it is — was
+`nameTitle` — the sentence explaining why a name is the color it is — was
 computed in three places and **rendered in none**. Every explanation of red and
 green had been invisible for as long as it has existed. It is now the name's
 `title`, with the bye week appended behind it, so hovering Josh Allen reads:
@@ -2485,7 +2485,7 @@ player pool the boards price from:
   crawlers `robots.txt` invites do not run JavaScript.
 
 The name scan reads **one text node at a time**. Flattening an entry first lets
-a run of capitalised words cross a table-cell boundary, and a row then reads as
+a run of capitalized words cross a table-cell boundary, and a row then reads as
 a player called "PPR Standard Derrick Henry".
 
 ### The daily cadence
@@ -2591,21 +2591,21 @@ independent rescales would not sum to the one bench total the key states.
 
 ### Known, untouched
 
-At very small budgets (a $50 auction) `money(1)` rounds to 0, so a $1 defence
+At very small budgets (a $50 auction) `money(1)` rounds to 0, so a $1 defense
 prints as **$0** in the roster strip and the spend key. That is `money()`'s
 rounding, it predates this change, and flooring the display at $1 would break
 the column sums this section exists to make true. Real leagues draft at $100 and
 up, where it does not arise.
 
 
-### September 2026: the $1 defence in "The shape of a winning $120"
+### September 2026: the $1 defense in "The shape of a winning $120"
 
 The shape card drew its position bars from `posCost`, which is the **starting
 lineup's** spend by position, with the bench as a row of its own. On a $120
 board that printed `DEF $1` for a roster whose default shape carries **two**
-defences (`roster.DEF.total: 2`) at a $1 minimum each. The solve was right:
-PIT at $2 starts, MIA at $1 sits on the bench, $3 for two defences on the $200
-board. But the second defence was inside the BENCH bar with nothing to say so,
+defenses (`roster.DEF.total: 2`) at a $1 minimum each. The solve was right:
+PIT at $2 starts, MIA at $1 sits on the bench, $3 for two defenses on the $200
+board. But the second defense was inside the BENCH bar with nothing to say so,
 and `money(2)` at $120 is $1.20, rounded down on top of it. A story error, not
 a solver error, so the fix is in `front.html`'s render.
 
@@ -2619,7 +2619,7 @@ bench is seven. Printed dollars in the shape card are allocated per row as
 remainders, so the column adds to the budget the card names and no position
 ever prints below a dollar a body (the same largest-remainder rule
 `renormalizeToBudget` uses). On the site's own $200 board that is the
-identity. At $50 the floor bites (two defences at $3 rescale to $0.75 and
+identity. At $50 the floor bites (two defenses at $3 rescale to $0.75 and
 print $2) and the shortfall comes out of the biggest row, so the column still
 adds to $50.
 
@@ -2663,7 +2663,7 @@ of saying "this may not be set", and it is how a component-scoped value is meant
 to be written.
 
 This is a spelling check, not a cascade simulation. It cannot tell you a token is
-the *wrong* colour, only that it is nobody's colour at all — modelling which
+the *wrong* color, only that it is nobody's color at all — modeling which
 selector is in scope for which element is a browser's job. The narrowness is the
 point: the failure it does catch is invisible in review and is now impossible to
 merge.
@@ -2683,7 +2683,7 @@ Two older ones, both in `index.html`, both pre-dating The Pick:
 - **`.cheat-whb-h`** — a *rendered* element — asked for `var(--text)`, which has
   never existed in that file's palette (it has `--text-primary`,
   `--text-secondary`, `--text-muted`, `--text-faint`). A heading sitting above a
-  `--text-muted` subtitle was silently inheriting its colour. Fixed to
+  `--text-muted` subtitle was silently inheriting its color. Fixed to
   `--text-primary`.
 - **`.lp-mode-*`** asked for `--mode-accent`, a value the card was meant to set
   on itself. `.lp-mode-dot` already spelled the fallback and the other eight
@@ -2747,7 +2747,7 @@ was the only sign-in entry point on the page.
 ### Where the fade lives, and two traps it hit
 
 The fade is a **sticky pseudo-element inside the scroller**
-(`.ribbon.is-scrollable .wrap::after`, `flex:0 0 30px` cancelled by
+(`.ribbon.is-scrollable .wrap::after`, `flex:0 0 30px` canceled by
 `margin-left:-30px`) — the mobile pass's implementation with this section's
 gating class added to it. Two earlier drafts were worse, and both failure modes
 are easy to walk back into:
@@ -2758,7 +2758,7 @@ are easy to walk back into:
   for an absolutely positioned descendant, so the rule was destructive *and*
   unnecessary.)
 - **Do not anchor it with `right:0` on `.ribbon` either.** `.ribbon` is
-  viewport-wide while `.wrap` is a centred 1260px box, so `right:0` puts the
+  viewport-wide while `.wrap` is a centered 1260px box, so `right:0` puts the
   fade out in the margin rather than at the edge of the clipped content. It
   needs `calc()` against `.wrap`'s max-width, and then that number has to track
   any later change to it. Inside the scroller, the right edge is free.
@@ -2810,7 +2810,7 @@ below `.mast .wrap`'s. The contract:
   `document.documentElement` must not scroll horizontally.
 
 Counting *rows* is not a usable signal any more — `.mast-brand`, `.mast-jump`
-and `.mast-nav` are different heights and vertically centred, so their `top`
+and `.mast-nav` are different heights and vertically centered, so their `top`
 values differ on a single row. Use `.mast .wrap`'s height (64px = one row) or
 the nav's bottom against the wrap's.
 
@@ -2820,7 +2820,7 @@ the nav's bottom against the wrap's.
 
 **The brief.** Lean into the auction. Keep small buttons for the snake draft,
 drop best ball entirely. Style the site the way DraftSharks styles theirs —
-same approach, different colours, less density. Keep what is good.
+same approach, different colors, less density. Keep what is good.
 
 The site had grown into a general fantasy football site that happened to be
 best at auctions. `/` opened on a news lead, the ribbon offered three formats as
@@ -2885,7 +2885,7 @@ desk, unchanged.
   sheet (`auction-sheet.webp`, 73KB — cropped and re-encoded from the
   committed `cheatsheet.png`, which was 687KB and unused). On a phone the
   frame keeps the image at half size and shows the left of it, because a
-  1180px sheet scaled into a 390px column is a grey smear.
+  1180px sheet scaled into a 390px column is a gray smear.
 - **The `.trio` strip under it spells out PROJ / VALUE / YOU.** Those three
   columns are the entire differentiator — no ranking site has to answer any of
   them — so they get the width of the page rather than a clause in a paragraph.
@@ -2901,7 +2901,7 @@ desk, unchanged.
 
 The lead, Top Headlines, The Pick, Vegas vs. Consensus, The Build, the
 Play-Caller column, Asset Allocation and the camp desk are all unchanged in
-behaviour — every id the painters write into survived the restructure.
+behavior — every id the painters write into survived the restructure.
 
 ### 27c. Best ball is retired from the surface, not from the internet
 
@@ -3029,7 +3029,7 @@ yet: no entitlement, no cookie.
 
 ### 28d. The front page says which half of the season it is
 
-Two labelled shelves: **Before the draft** (the six auction tools) and **After
+Two labeled shelves: **Before the draft** (the six auction tools) and **After
 the draft** (three locked cards → `/post-draft`). The masthead carries an
 `In-Season` link with a `Soon` chip.
 
@@ -3142,17 +3142,17 @@ header and footer from a single link set, killing 10 divergent nav sets and 13
 footers across 95 pages. **PR #88** built the direction: auction-first, best ball
 retired, and the whole site on one *light* surface.
 
-They collided in 98 files, because #85 centralised a **dark** palette while #88
+They collided in 98 files, because #85 centralized a **dark** palette while #88
 converted 91 pages to a light one inline.
 
 **The resolution was #88's direction on #85's structure**, which is strictly
 better than either branch shipped:
 
 - `site.css` keeps its job and changes its values. The palette is light there and
-  nowhere else, so the site's colour is now **one file**, not ninety-one.
+  nowhere else, so the site's color is now **one file**, not ninety-one.
 - `build-chrome.mjs` keeps its job and changes its link set: auction-first, no
   best ball, `/post-draft` present, `/insights` (the three-format chooser)
-  dropped in favour of `/auction-insights`.
+  dropped in favor of `/auction-insights`.
 - `OWNED` learned the light `:root` spelling as well as the dark one, so pages
   that carried an inline palette from #88 were stripped of it. **This matters:
   `site.css` is linked BEFORE each page's own `<style>`, so a leftover inline
@@ -3164,7 +3164,7 @@ better than either branch shipped:
 
 ### What taking "ours" on 97 files cost, and how it was caught
 
-Resolving every HTML conflict in #88's favour reverted two of #85's real fixes,
+Resolving every HTML conflict in #88's favor reverted two of #85's real fixes,
 and neither was obvious:
 
 - **`auction-watch-2026-07-05.html` lost its `</header>` again.** #85 had fixed a
@@ -3248,7 +3248,7 @@ between the two, and that reads in both directions:
    it first, then the one after ("$32 is the bid on Flowers" opens its own
    sentence and falls forward).
 
-`scanNames()` also pulls capitalised runs out of the copy and keeps the ones the
+`scanNames()` also pulls capitalized runs out of the copy and keeps the ones the
 reader's board can name, because only four players travel with a story and a dek
 routinely prices a fifth ("...Garrett Wilson at $26 and DeVonta Smith at $26").
 Without that, the fifth player's dollars were priced off the fourth player's
@@ -3366,7 +3366,7 @@ date the flag is dead code and every story looks current.
 
 **29 of the 30 verified rows predate the model change** and cannot be made to
 track the cheat sheet by any amount of arithmetic: their dollars came off a
-board that no longer exists. They are labelled, not corrected. Retiring them
+board that no longer exists. They are labeled, not corrected. Retiring them
 (`UPDATE lead_story SET verified = 0 WHERE created_at < 1787443200000`) is the
 only thing that makes them stop quoting prices the sheet disagrees with, and it
 is a data decision rather than a code one.
@@ -3522,7 +3522,7 @@ worth", and §20 is the monument to how that goes.
 
 So the card labels the tile for whichever board answered — **Worth** on the
 reader's own, **Going rate** on the default — and the line under it says the
-same thing in words. Labelling both "worth" would have the site telling a reader
+same thing in words. Labeling both "worth" would have the site telling a reader
 the price is the value, which is the confusion the cheat sheet's Proj / Value
 split exists to end. Asserted in `tools/test-player-card.mjs`, including the
 fact it rests on (that `/it-league.js` reads its default price off the curve).
@@ -3553,7 +3553,7 @@ fact it rests on (that `/it-league.js` reads its default price off the curve).
 
 ### Scope
 
-Kickers and defences are in the index, because a reader who types "Bates" and is
+Kickers and defenses are in the index, because a reader who types "Bates" and is
 told the board has never heard of him has been told something untrue. They sort
 below the skill players, and their cards say plainly that the shared library
 carries points for QB/RB/WR/TE only and point at the cheat sheet.
@@ -3649,7 +3649,7 @@ over the same DOM cannot promote the second mention to a first one.
    "Likely, the Ravens will..." is an adverb. Written out in full it links like
    any other name; the list only ever sees the one-word form.
 
-A club's defence is not a player mention: "Kansas City Chiefs" in a sentence is
+A club's defense is not a player mention: "Kansas City Chiefs" in a sentence is
 a team, and DEF rows are dropped from the pattern.
 
 ### The trap: the desk does not always write a man out in full
@@ -3764,7 +3764,7 @@ Five true lead sentences, chosen by what the day's lines actually did:
    confirmation rather than an edge.
 3. not priced but the slot moved anyway → the sentence above.
 4. not priced and nothing around him moved → both boards agree, stated plainly.
-5. a kicker or a defence → **no book posts a season-long market this site
+5. a kicker or a defense → **no book posts a season-long market this site
    models for either**, so there is nothing to hold a ranking up against. Said
    out loud, because §32 already puts K and DEF in the lookup and a silent
    panel on one position group and not the others reads as breakage.
@@ -3845,7 +3845,7 @@ scored on the reader's own board, and two point scales on one card is the §32
   1..N on both boards; that the column is a filter over the board and never
   disagrees with a card about a player; every refusal (`unpriced_position`,
   `off_board`, `ambiguous`, `no_player`, no overlay); the digest recounted
-  against the rows it claims to summarise, including that the biggest raise
+  against the rows it claims to summarize, including that the biggest raise
   really is the biggest and that two builds of one overlay match; and then the
   **real renderers, lifted out of `player.html` and `front.html` and driven on
   real payloads through a minimal DOM** — every lead sentence, the kicker
@@ -3892,7 +3892,7 @@ later for this reason; id 36 went back to being the lead. Before any of the
 three is promoted, the fix is the same in each: **one price per player, the
 board price, and tell the odds disagreement as a rank move.** "The odds have him
 RB8 rather than RB13" is the finding, and it needs no second dollar figure.
-Story 39 loses its organising idea in that rewrite, because "the widest gaps in
+Story 39 loses its organizing idea in that rewrite, because "the widest gaps in
 dollars" is a ranking of an artefact; the honest version ranks by rank move.
 
 ### `verified` wiped a second time, on 2026-08-24 — closed 2026-08-30
@@ -4714,7 +4714,7 @@ So the standard should split:
 
 - **Dollar figures and position ranks must reproduce against the current
   board.** They are what the reader compares to their cheat sheet, they are
-  quantised by the curve, and they almost never move. This is Ken's actual
+  quantized by the curve, and they almost never move. This is Ken's actual
   requirement and it is being met.
 - **Point totals, spans and derived aggregates should be stated as of a named
   board and left alone.** Every story already names its refresh in the method
@@ -4761,7 +4761,7 @@ both have been the same slot.
     12:58Z     2      2
     18:58Z     2      0
 
-12:58Z is also the only lead-story slot with neighbours:
+12:58Z is also the only lead-story slot with neighbors:
 
     12:00Z   Iron Tuna — Play-Caller Premium daily entries   (0 12 * * *)
     12:58Z   Iron Tuna — lead story refresh                  (58 */6 * * *)
@@ -4773,7 +4773,7 @@ The Pick had already begun. Both times it died before finishing the board.
 
 **This displaces the `workers_get_worker_code` hypothesis.** A 625 KB fetch that
 was too heavy would fail at every slot, and 00:58Z, 06:58Z and 18:58Z are six
-for six. Contention with a neighbouring Routine explains the pattern the fetch
+for six. Contention with a neighboring Routine explains the pattern the fetch
 hypothesis cannot: why only this slot, and why every time.
 
 Two data points is not proof, and the mechanism is inferred rather than observed
@@ -4817,7 +4817,7 @@ was written from what the last defect touched rather than from the schema.
 ### 2026-08-28: the slot-collision hypothesis is refuted
 
 The 06:58Z slot stalled — run `165546-1787900354000`, claimed at 06:59:23Z,
-never moved off `start`. That is a slot with no neighbouring Routine, which is
+never moved off `start`. That is a slot with no neighboring Routine, which is
 the test the previous section set in advance, and it fails.
 
     slot     runs   stalls
@@ -4894,7 +4894,7 @@ publication, and it sets the line: **a story comes down when correcting it would
 mean rewriting its argument, and stays up when the argument holds and only
 figures have moved.**
 
-### 2026-08-29: a modelling error, not drift — the vacated-slot off-by-one
+### 2026-08-29: a modeling error, not drift — the vacated-slot off-by-one
 
 The 11:00Z refresh moved six ranks and **no prices**. The audit's real find was
 in row 59, the live lead, and it was wrong when published.
@@ -4985,7 +4985,7 @@ Six edits, in the order they matter:
 3. **A `parsed` heartbeat stage** between `start` and `board`, written the moment
    the projections and the odds payload are both in hand. Every stall so far has
    been in that window; this splits it.
-4. **Name the board beside any point total.** Prices are quantised and hold;
+4. **Name the board beside any point total.** Prices are quantized and hold;
    point totals move every refresh, forever.
 5. **No bare "today"** (already live since 2026-08-26, unchanged here).
 6. **`tools/live-board.mjs` as a documented fallback** if the connector fetch
@@ -5021,7 +5021,7 @@ production, which had been the whole reason it was outstanding.
 **The prompt copy #107 landed is already superseded.** It carries the original
 six-stage heartbeat; the live Routine and this branch carry the seven-stage
 version with `parsed`, plus the five other edits pushed on 2026-08-30. Merging
-this branch resolves that, and it resolves in this branch's favour because it
+this branch resolves that, and it resolves in this branch's favor because it
 already carried #107's commit as an ancestor.
 
 **Checked while merging, because main had moved further than expected.** Main had
@@ -5072,7 +5072,7 @@ Routine is scheduled near 03:00Z.
 run's own assertion and restoring flags in bulk manufactures claims nobody made
 — which is exactly what a bulk 0→1 here would do. It is also the safe direction:
 this is a takedown, so nothing inaccurate reached a reader. The recurring
-incident this database has a history of was the opposite, unauthorised 0→1
+incident this database has a history of was the opposite, unauthorized 0→1
 restores putting retired rows back on the site.
 
 Worth noting the tamper query in every check-in since 08-24 would **not** have
@@ -5560,7 +5560,7 @@ own position, so `WR9` on a running back is caught. And the ladder is built the
 way the site builds it — score, round to a tenth, *then* sort, matching
 `_colScore` and `tools/live-board.mjs` — because sorting raw and sorting rounded
 can disagree on a tie and the reader sees the rounded one. The scoring formula
-was parameterised rather than copied, so a second copy cannot drift from the
+was parameterized rather than copied, so a second copy cannot drift from the
 first the next time a coefficient changes.
 
 **The coverage guard now counts ranks.** It exists so the correctness checks
@@ -5668,7 +5668,7 @@ The file already warned that "a hand-copied curve is exactly how a checker goes
 stale". The warning was too narrow. These were hand-copied **functions**, and
 lifting the constants around them protected nothing. `COLUMN_NORM` is now lifted
 like every other constant, `price()` mirrors `_colPrice`, and `board()` applies
-score → normalise → round → sort, which is the worker's order.
+score → normalize → round → sort, which is the worker's order.
 
 **Verified against something the site generates itself**: `it-league.js`'s
 `DEFAULT_BOARD_RAW`, built by `tools/build-default-board.mjs` through the same
@@ -5975,7 +5975,7 @@ a season line change, and the book still prices those players.
 players it names; the rank cells and the two prose ranks were moved up one to
 match the pool, which `test-the-pick.mjs` now requires. One assertion in
 `test-it-league.mjs` had a hard-coded "$3" for Jadarian Price that was really a
-function of the default board; it now derives the figure the way its neighbours
+function of the default board; it now derives the figure the way its neighbors
 do. `it-league.js` DEFAULT_BOARD, `front.html`, `player.html`, `auction-watch.html`
 and `sitemap.xml` were regenerated with the repo's own tools (the last two were
 already a build behind from the 09-02 camp report).
@@ -6016,7 +6016,7 @@ three functions gained an optional last argument for this; with it omitted they
 are the pre-draft board, unchanged. `inflatedValue` is the live figure, and it
 now carries `liveReplacement` and `liveVorp` beside it. The reader's tier
 instructions ("value elite RBs 20% more") survive the re-solve through
-`valueAdjustMultipliers`. The cheat sheet's Value column, the board colour and
+`valueAdjustMultipliers`. The cheat sheet's Value column, the board color and
 the plan premium's replacement all read the live figure once picks are logged.
 
 With nothing drafted the result is `auctionValue` to the dollar, by
@@ -6041,16 +6041,16 @@ ex-ante preseason projection set in the repo — `PROJ_2025` sits within 1.5% of
 `ACT_2025` and is not one. `tools/backtest-projections.mjs` is the fit: drop
 `tools/sources/preseason-<year>.json` and `actuals-<year>.json` in (the
 merge-projections schema) and it prints the ex-ante level factor per position,
-the realised-over-projected VORP share (which is what a reliability factor is),
+the realized-over-projected VORP share (which is what a reliability factor is),
 the rank decay by bucket, and the concavity that best matches projected dollar
-shares to realised ones. Until then it exits 0 with a message. Move what it
+shares to realized ones. Until then it exits 0 with a message. Move what it
 prints into the table by hand and note the year.
 
 ### 49c. The last-year calibration compares like with like
 
 `normalizeToLastYear` scaled each position so its projected top-K mean matched
-last season's **realised** top-K — a top-13 slice at QB and TE against top-31
-at RB and WR. A realised top-K is the set that got lucky as well as good, so
+last season's **realized** top-K — a top-13 slice at QB and TE against top-31
+at RB and WR. A realized top-K is the set that got lucky as well as good, so
 the comparison is biased by construction and by a different amount per
 position. It now runs over the full depth of the tables (32 a position, the
 same everywhere), applies half the measured gap, and never more than 8%. On the
@@ -6096,7 +6096,7 @@ synthetic league.
 - **`SUPERFLEX_QB_CURVE`** was the old 1-QB shape at a higher level — sixteen
   entries, $3 at QB13, in a format where QB13 starts. It runs thirty deep now,
   double digits through QB16, mirrored in `it-league.js`. On the default board
-  superflex prices QB1 $60 against RB1 $65, QB7 $37. A judgement of shape, stated
+  superflex prices QB1 $60 against RB1 $65, QB7 $37. A judgment of shape, stated
   as such; `test-qb-curve.mjs` pins the invariants.
 - **The planner's stranded money** (§19's residual) is gone: `buildOptimalPlan`
   solves twice when the Starters-vs-Depth knob withholds more than the bench can
@@ -6160,7 +6160,7 @@ tests; all four are gitignored.
 
 ---
 
-## 50. September 2: the kicker and defence boards were outcomes, not projections
+## 50. September 2: the kicker and defense boards were outcomes, not projections
 
 Everything in §9c and §48 moves skill players. K and DEF never moved at all:
 `TEAMENV_TD_STATS` and `TEAMENV_YARD_STATS` list six offensive stats and nothing
@@ -6192,14 +6192,14 @@ Three separate faults, and the first is the one that matters:
   **fumble recoveries 0.01**. The board shrank none of it. Regressing committed
   points allowed on the market's view gave a slope of **2.06** — twice as spread
   out as the people with money at risk.
-- **Level errors on three stats.** Every defence was floored at 2 defensive
+- **Level errors on three stats.** Every defense was floored at 2 defensive
   touchdowns when real clubs average 1.5 and six to eight score none at all;
   that alone invented about thirty touchdowns a season. Fumble recoveries ran
   13-23% hot, sacks 7-9%, with Atlanta at 66 — a near-record for a club that had
   57 the year before.
 - **The kicker board asserted a signal that is not in the data.** Over those 64
   team-seasons, `pat_made` correlates with team points at **r = 0.96** and
-  `fg_made` at **r = 0.15**. A kicker on a bad offence trades touchdowns for
+  `fg_made` at **r = 0.15**. A kicker on a bad offense trades touchdowns for
   field goals and the two effects cancel. The committed board spread field goals
   22 to 36 anyway, which is 42 fantasy points of noise.
 
@@ -6215,13 +6215,13 @@ Books post lines a few weeks out. Averaging the priced games and multiplying by
 bias a points-allowed line must not inherit. So both copies fit
 
 ```
-points(offence i vs defence j, at home h) = mu + off_i + def_j + hfa*h
+points(offense i vs defense j, at home h) = mu + off_i + def_j + hfa*h
 ```
 
 over every priced side of every priced game, then project the ratings across the
 **whole** schedule — `games.csv` carries all 272 fixtures whether or not a line
 has been posted. Ridge 0.25 on the club terms only; `mu` and `hfa` are never
-penalised, because shrinking the intercept drags the league's scoring level down
+penalized, because shrinking the intercept drags the league's scoring level down
 with it. On the real file the fit lands at **0.59 points per game RMSE** and a
 home field of **0.77**.
 
@@ -6253,12 +6253,12 @@ snapshot is.
 `buildTeamEnvOverlay` now splits:
 
 - **Skill players** keep the ratio treatment of §9c, because the committed
-  projections already have an opinion about which offences are good and scaling
+  projections already have an opinion about which offenses are good and scaling
   by raw Vegas points would apply it twice.
-- **Kickers and defences do not.** Their line is team environment and nothing
+- **Kickers and defenses do not.** Their line is team environment and nothing
   else, so the market's implied points go in as the estimate itself, exactly as a
   player prop would. A kicker gets `fgMade`/`fgMissed`/`xpMade`/`xpMissed`; a
-  defence gets `ptsAllowed` **and nothing else** — sacks, interceptions and
+  defense gets `ptsAllowed` **and nothing else** — sacks, interceptions and
   fumble recoveries are nobody's market, and inventing an opinion about them
   would be worse than saying nothing.
 
@@ -6282,15 +6282,15 @@ figure a reader has always seen. `tools/test-worker-availability.mjs` and
 ### 50f. What the reader sees
 
 Points allowed SD is **61.9 -> 28.9**; the kicker board's top-to-bottom spread is
-**63 -> 32** fantasy points and the defence board's **61 -> 40**. Three clubs are
-new to the top twelve kickers and four to the top twelve defences. Both position
+**63 -> 32** fantasy points and the defense board's **61 -> 40**. Three clubs are
+new to the top twelve kickers and four to the top twelve defenses. Both position
 groups lose points in absolute terms (the phantom defensive touchdowns are gone),
 which correctly makes K and DEF cost less against the skill positions in an
 auction.
 
 The player card's K/DEF panel used to say no book prices these positions. That is
 now only half true and the copy says the true half: no book posts a market on an
-individual kicker or defence, the projection is still market-driven because the
+individual kicker or defense, the projection is still market-driven because the
 game lines price the club, and the odds column ranks the four skill positions
 because that is where there is an auction price to disagree about.
 
@@ -6299,7 +6299,7 @@ because that is where there is an auction price to disagree about.
 - **The odds column and the auction board still cover QB/RB/WR/TE.**
   `COLUMN_CURVE` has no K or DEF curve, so there is no price for the two boards
   to disagree about. Extending it is a separate job.
-- **No constant here is backtested against realised 2026 results**, because the
+- **No constant here is backtested against realized 2026 results**, because the
   season has not been played. They are fitted on 2024-25 and shrunk by measured
   year-over-year stickiness, which is the best available and not the same thing.
 - **`fumRec` still carries a little spread** (`fumRecKeep` 0.35) on a stat whose
@@ -6468,7 +6468,7 @@ Vegas section lower down can never name different players for the same day.
 **The anytime-TD percentage is derived, and the card says so.** No free feed
 carries an anytime-TD market. The number is Poisson on the blended season line
 over the games he can play (`17 - gamesOut`, which is why `buildVegasBoard` rows
-now carry `gamesOut`): `P(at least one) = 1 - e^(-TDs/games)`. It is labelled
+now carry `gamesOut`): `P(at least one) = 1 - e^(-TDs/games)`. It is labeled
 "Not a quoted prop" on the card itself, with the two season lines it came from,
 so it cannot be mistaken for a book's price. Quarterbacks are excluded; a thrown
 touchdown is not an anytime-TD.
@@ -6514,7 +6514,7 @@ findings say more about the shape of the code than the build does.
 
 Nothing above `PROVIDERS` in `_worker.js` knows a vendor's name. Application
 code asks for a KIND of data; the registry decides who answers and in what
-order; every adapter normalises into Iron Tuna's schema before returning.
+order; every adapter normalizes into Iron Tuna's schema before returning.
 
 | Kind | Adapters (in order) | Needs |
 |---|---|---|
@@ -6542,7 +6542,7 @@ reader will take for zero.
 `scoreStats(stats, position, rules)` is now the ONE implementation, and
 `_colScore` delegates to it. The other two copies (`it-league.js`'s `score()`,
 `index.html`'s `scoreSkillPlayer`) are unchanged and are held to it by
-`tools/test-scoring.mjs` on 400 randomised stat lines rather than a handful of
+`tools/test-scoring.mjs` on 400 randomized stat lines rather than a handful of
 chosen ones. Every category the brief names is asserted one at a time against
 an empty line, so a term that silently contributed zero would fail on its own.
 Presets differ ONLY in receptions, which the test also pins: a preset that
@@ -6553,7 +6553,7 @@ scores IN THE BROWSER off `/api/rankings`, which ships stat lines rather than
 points: a round trip per button would be a worse product than an instant
 re-order. My League is the default whenever `it-league.js` has a saved league
 and is disabled, with a tooltip, when it does not, so a reader is never shown
-a stranger's league labelled as theirs. Verified in Chromium: Standard puts
+a stranger's league labeled as theirs. Verified in Chromium: Standard puts
 the touchdown back first and PPR puts the catch-heavy back first, on the same
 four fixture players.
 
@@ -6565,7 +6565,7 @@ with no source is `null` and is named in the block's `unavailable` list. It
 reads the whole week's markets in ONE query (`marketHistoryWeek`); the first
 cut issued one per player, which on a request path is not a slow version of
 the same thing but a different order of cost. Served at `/api/market`,
-memoised per isolate on the exact query for the length of its edge cache.
+memoized per isolate on the exact query for the length of its edge cache.
 
 Usage is real and public: targets, target share, air yards and air-yards
 share, carries, receptions, attempts from the weekly file; offensive snaps and
@@ -6573,7 +6573,7 @@ snap share from the snap file. Both are ~10MB together and are pulled by the
 11:00 cron into `odds_overlay` row 5, never on a request. **As of this commit
 no 2026 file exists because no game has been played**; the adapter treats a
 404 as "no games yet" and the engine says so per player. Confirmed on the
-2025 files: 2025 weekly rows normalise to Iron Tuna's keys, snap rows carry
+2025 files: 2025 weekly rows normalize to Iron Tuna's keys, snap rows carry
 `snapPct`, and the 2026 pull returns zero rows without throwing.
 
 ### 53d. The historical betting store
@@ -6641,7 +6641,7 @@ fixture in both `test-worker-odds.mjs` and `test-market.mjs`.
 
 **Written to the published v4 documentation and NOT run against the live
 service**: no key is configured and `the-odds-api.com` is blocked from this
-sandbox by organisation policy. The first live pull should be watched via
+sandbox by organization policy. The first live pull should be watched via
 `/api/admin/market-status?snapshot=1` and `/api/admin/providers?run=odds`.
 
 ### 53g. What the release review found
@@ -6706,7 +6706,7 @@ Every player carries three numbers, and the distinction is the product:
 | **Vegas** | The market, in strictly descending order of evidence: a priced player prop for the week (`props`); the posted game line's implied scoring environment applied to his line (`gamelines`); the fitted team ratings for a fixture no book has posted (`ratings`, graded LOW because it is a projection *of* the market). `basis` says which, on every row. |
 | **Iron Tuna** | The blend, weighted by what the Vegas side knows (`IT_BLEND`: 0.75 / 0.6 / 0.45 by confidence), plus a bounded role nudge once three games of usage exist. |
 
-Horizons: `week`, `next3`, `ros` (through 17 by default; `?through=18` if a league says so), `playoffs` (15-17 only, never 18). Injury absences are anchored to the CURRENT week, not the horizon's first week; the first cut zeroed a Week-2 four-game absence out of the playoffs board, which `test-boards.mjs` now pins. The per-week environment factor is the posted implied total (or fitted expected points) over the club's season mean, clamped to `WEEK_ENV_CLAMP`; touchdowns follow it fully, yards at the square root, kickers fully, defences on the points-allowed factor inverted. `_mktFit` was extracted from `marketSeasonTotals` (output unchanged) so a single future fixture can be projected from the same ratings.
+Horizons: `week`, `next3`, `ros` (through 17 by default; `?through=18` if a league says so), `playoffs` (15-17 only, never 18). Injury absences are anchored to the CURRENT week, not the horizon's first week; the first cut zeroed a Week-2 four-game absence out of the playoffs board, which `test-boards.mjs` now pins. The per-week environment factor is the posted implied total (or fitted expected points) over the club's season mean, clamped to `WEEK_ENV_CLAMP`; touchdowns follow it fully, yards at the square root, kickers fully, defenses on the points-allowed factor inverted. `_mktFit` was extracted from `marketSeasonTotals` (output unchanged) so a single future fixture can be projected from the same ratings.
 
 `/api/boards?horizon=&pos=&scoring=&through=` ships stat lines AND points; `/in-season/rankings` re-scores in the browser at Standard / Half PPR / PPR / My League, re-ranks all three boards, and recomputes Market Delta with the thresholds the payload shipped. FLEX pools RB/WR/TE; K and DST score on the engine's `scoreKickerStats` / `scoreDefenseStats`, held to `index.html` and `it-league.js` (which now scores them too).
 
@@ -6728,7 +6728,7 @@ Inside the daily 11:00Z job when it is Wednesday in New York (7am EDT, 6am EST),
 
 ### 54f. Player intel (`/in-season/player/<slug>`, `/api/intel/player`)
 
-One shell for every player, resolved through `player-search.js` like `/player/<slug>`. Every horizon, the props and their movement, TD probability (quoted or derived, labelled), usage, injury, environment, and an Iron Tuna Take built by `buildTake` from fields that exist.
+One shell for every player, resolved through `player-search.js` like `/player/<slug>`. Every horizon, the props and their movement, TD probability (quoted or derived, labeled), usage, injury, environment, and an Iron Tuna Take built by `buildTake` from fields that exist.
 
 ### 54g. What is derived today, and will stop being derived
 
@@ -6784,7 +6784,7 @@ after the anchor game minus 36 hours (retrospective) or six days (forward),
 so a Monday recap of a week ending Monday night finds the Monday 6am before
 that game, not the one a week later.
 
-**The data.** ESPN's game summary (`fetchGameSummaryEspn`), normalised by
+**The data.** ESPN's game summary (`fetchGameSummaryEspn`), normalized by
 `normalizeGameSummary`: targets, receptions, yards, carries, TDs, passing
 splits, fumbles, per player; scoring plays; and the DRIVES, from which red-zone
 touches (a play starting inside the 20) and goal-line carries (inside the 5)
@@ -6807,7 +6807,7 @@ Each brief carries `allowed`: every name and number in it.
 **The writer** (`writePiece`) hands the brief to the site's LLM provider
 (`llmText`, same key and provider switch as the Value Coach) under a contract
 that it may state only facts in the brief, and asks for JSON with fixed
-section keys. `validateDraft` then checks every capitalised name and every
+section keys. `validateDraft` then checks every capitalized name and every
 number in the draft against `allowed`; a violation gets one corrective retry
 and is otherwise HELD: stored, unpublished, and shown on the page as its data
 with the violations named. No `LLM_API_KEY` means every piece is held with its
@@ -6930,7 +6930,7 @@ scoring engine (`scoringRules(preset, override)`): DK is full PPR with the
 minus two per fumble. Kickers are not on either slate; DST is.
 
 **The slate** (`buildDfsSlate`) matches each salary row to the board by
-normalised name plus position (a DST by club), and gives every matched player
+normalized name plus position (a DST by club), and gives every matched player
 `salary`, the Vegas, Iron Tuna and consensus projections under the site's
 scoring, `marketDelta`, `tdProbability` with its `tdBasis` (`anytime-td-market`
 when a book priced it, otherwise `derived` from the projected touchdowns),
@@ -6946,7 +6946,7 @@ side's QB + two catchers with a bring-back from the other side.
 with no network code at all: `tools/test-dfs.mjs` greps it for `fetch`,
 `XMLHttpRequest` and `submit` and fails if any appears. **Nothing submits an
 entry.** `ITDfs.build(players, {mode, cap, slots, flex, lock, exclude, stack,
-stackSize, bringBack, maxPerTeam, lineups, seed})` runs a randomised greedy
+stackSize, bringBack, maxPerTeam, lineups, seed})` runs a randomized greedy
 fill (thinnest slot first, budget-aware from the cheapest legal fill of the
 open slots) and then climbs single and pair swaps on the projection minus a
 heavy penalty per broken constraint, so a fill that lands over the cap or
@@ -7051,7 +7051,7 @@ A bad entry is ignored and named on the health board under "Missing and
 stale", never applied. The board's jobs table shows each job's schedule in
 words and its next Eastern hour.
 
-`tools/test-jobs.mjs` pins the table against the spec, the DST behaviour
+`tools/test-jobs.mjs` pins the table against the spec, the DST behavior
 (7 AM Eastern is 11:00Z in September and 12:00Z in December), the phase
 order, the override validation, and the tick.
 
@@ -7087,7 +7087,7 @@ runs the exact code the page ships. Three parts:
   (QB/RB/WR/TE, FLEX over RB/WR/TE, SFLEX over all four) greedily by points,
   named slots first then flex, which is optimal for this slot shape. The bench
   counts at 0.25 / 0.15 / 0.08 for the three best non-starters, and a backup QB
-  in a one-QB league at 0.3 of that. Kickers and defences are parsed (so they
+  in a one-QB league at 0.3 of that. Kickers and defenses are parsed (so they
   do not become team names) and ignored.
 - **Trades.** `findTrades(teams, opts)` tries every 1-, 2- and 3-player package
   between the reader's team and each other roster (or every pair, for the
@@ -7162,7 +7162,7 @@ and the obs box prints the rate and how many bids it rests on.
 
 - `node tools/test-trade-finder.mjs` (76 assertions, plain node): the resolver
   on every awkward name shape, the parser on a three-team paste with headers,
-  slot rows, a defence, a duplicate and an ambiguous surname, the lineup fill
+  slot rows, a defense, a duplicate and an ambiguous surname, the lineup fill
   and bench weights, and the search: both sides gain, gains equal the
   independently recomputed lineup deltas, tilt never lowers the reader's gain
   or drops the partner's floor, a playoff specialist surfaces only when the
@@ -7174,7 +7174,7 @@ and the obs box prints the rate and how many bids it rests on.
   reader's names resolve and its misread one is offered to fix, the search
   gains both sides, the slider and the per-side horizons reach it, a reload
   keeps everything; then the FAAB manual form, the room, the bounds, the
-  unrecognised-name note, and the history moving the going rate up while
+  unrecognized-name note, and the history moving the going rate up while
   staying under the richest rival. `IT_SHOT=/tmp/tf.png` writes both pages.
 - `tools/test-faab.mjs` still passes unchanged on the Sleeper path.
 
@@ -7187,7 +7187,7 @@ but ranks and points. No auction dollar appears on it.
 
 **The whole panel is the link.** `#heroIntel` on `front.html` navigates to
 `/weekly-intel` on any click that does not land on a link or button inside it
-(those keep their own destinations), leaves a text selection alone, and honours
+(those keep their own destinations), leaves a text selection alone, and honors
 a modifier-click by opening a new tab. The gold button still goes to the same
 place, so keyboard and no-script readers lose nothing.
 
@@ -7251,7 +7251,7 @@ across all three slots** — Philadelphia reads LWR1, RWR2, SWR3, SWR4, RWR5,
 LWR6 — so the merge is a sort on rank, never a sort within a slot.
 
 `/api/live` now emits them as `d: [slot, rank]` on each record, for players
-with a team and a slot, defences excluded. For a player carrying a designation
+with a team and a slot, defenses excluded. For a player carrying a designation
 it also emits the rest of the feed's injury line: `b` the body part, `n` the
 feed's note (rare: 19 of 157 tagged players had one), and `u` the
 `news_updated` timestamp, which is the only freshness signal the feed has —
@@ -7266,7 +7266,7 @@ payload was 66 KB, 974 records, 583 with a slot, 157 with a designation.
 per team, `{QB, RB, WR, TE}`, each an array of names in starting order, cut to
 QB2 / RB4 / WR5 / TE2 (`DEPTH_KEEP`), with the injury status abbreviated on
 the name (`DEPTH_TAG`: `Q`, `D`, `O`, `IR`, `PUP`, `SUS`, …). It is
-memoised by payload identity, so the fold runs once per session, not once per
+memoized by payload identity, so the fold runs once per session, not once per
 question. Names are Sleeper's, not the board's — a player the projection set
 never priced still shows in his slot, and a name the board spells differently
 does not break anything, because the table is keyed by team, not matched to
@@ -7329,7 +7329,7 @@ each position had 46 lines, about 5k characters. `_injuryCtx` follows the
 depth block in the prompt and says: the designations override memory, the
 updated date says how fresh, the news desk beats the feed when they disagree,
 never assert an injury the data does not show, the risk field already counts
-a designation so do not double-penalise, and use the depth chart to name who
+a designation so do not double-penalize, and use the depth chart to name who
 benefits from an injured starter. The depth-chart tags carry the body part too
 (`Tank Bigsby (Q, hamstring)`), so the two tables agree.
 
@@ -7339,7 +7339,7 @@ benefits from an injured starter. The depth-chart tags carry the body part too
 coaching-staffs guard. It lifts the real `depthChartsFromLive` and
 `applyLiveStatus` out of `index.html` by brace-matching and pins: the
 cross-slot receiver merge, the rank sort, the trim, the tags, the skips (no
-slot, no team, unparseable rank), memoisation, `null` for an empty fold; the
+slot, no team, unparseable rank), memoization, `null` for an empty fold; the
 worker's `d` field and bumped cache key; and every phrase of the prompt the
 grounding depends on, both branches. The same file pins the injury line: the
 worker's `b`/`n`/`u` gated on a designation, `applyLiveStatus` carrying
@@ -7358,7 +7358,7 @@ otherwise.
 
 ---
 
-## 64. September 2026: positional scarcity in the bid, not just in the colour
+## 64. September 2026: positional scarcity in the bid, not just in the color
 
 A reader's account of the failure this fixes, which is the clearest statement
 of it: *"there were six good quarterbacks and it was clear that to have an
@@ -7423,13 +7423,13 @@ and same shape as `handcuffDollars` and `byeStackDollars`. Capped at 15% of the
 budget, because a ceiling that can eat a sixth of the roster's money is not a
 ceiling.
 
-`scarcityPremium(fl, budget, dpp)` keeps its old two-argument behaviour for
+`scarcityPremium(fl, budget, dpp)` keeps its old two-argument behavior for
 `boardValue`, which only ever sees the config and has no pool to convert
 against. That path is unchanged except that a known room now moves its rate.
 
 **This does not reopen §20.** That section's rule — *do not grade the name
-against You* — still holds and is still tested. The colour asks "is this price
-fair"; You answers "what may I pay". Nothing about the colour changed here.
+against You* — still holds and is still tested. The color asks "is this price
+fair"; You answers "what may I pay". Nothing about the color changed here.
 
 On the live board, pre-draft: Allen's You goes $44 → $62 against a $47 market,
 the four behind him get $1 to $3, and QB6 gets nothing. Log four quarterbacks
@@ -7471,7 +7471,7 @@ brace matching (the harness is `tools/test-plan-pricing.mjs`) and pins: the six
 fallback, nested cliffs pricing each player against his own drop, the premium
 rising monotonically as a tier drains, the cap, the points-times-dollars shape,
 the banner's levels and copy, and the four source lines that put the premium on
-the bid. `tools/test-board-colour.mjs` still pins the colour contract (its
+the bid. `tools/test-board-color.mjs` still pins the color contract (its
 `START` marker moved with the signature).
 
 `tools/test-you-column.mjs` and `tools/test-market-anchors.mjs` both still pass
@@ -7503,7 +7503,7 @@ the model's own gold:
 | row background | panel | `rgba(227,181,58,0.10)` |
 
 Enough to pull the eye down a column, not enough to repaint the sheet. A
-favourite's green still outranks it — `.cheat-target` and `.rail-target` are
+favorite's green still outranks it — `.cheat-target` and `.rail-target` are
 declared *after* the new rules, because a decision the manager made beats a
 recommendation the model made. The printed sheet keeps the emphasis too; a
 manager who prints the sheet and takes it to the draft would otherwise lose the
@@ -7520,14 +7520,14 @@ cheat sheet — and they now render the same checkbox from one function,
 `recHighlightToggle()`, against one piece of state. They cannot drift into
 saying different things about the same setting.
 
-The set they emphasise is `recFitIds`. **With no model picked it follows the
+The set they emphasize is `recFitIds`. **With no model picked it follows the
 Ideal Team**, because that is already what the models pane displays; going blank
 there would read as a broken checkbox. With a model picked it reuses
 `modelFitIds` rather than re-solving the same plan.
 
 That whole question — *who is this model buying* — moved out of the `modelFitIds`
 memo into a top-level `modelTargetIds(modelKey, myTeam, …)`, so the gold bar,
-the new emphasis and the tests all read one implementation. Behaviour is
+the new emphasis and the tests all read one implementation. Behavior is
 unchanged; it is the same body with `draftModel` as a parameter.
 
 ### The $1–$2 endgame
@@ -7558,7 +7558,7 @@ the projection, never the projection itself. Four terms:
 | inherited role | `UPSIDE_JOB_OPENS[pos] × (UPSIDE_INHERIT × the man ahead − his own)`, only where the man ahead out-projects him by 35%+ |
 | the man ahead is hurt or past his age cliff | the odds the job opens, ×1.8 / ×1.25 (capped at 0.75) |
 | the breakout window | `yearsExp <= 2`, or age ≤ 24 with no experience on file |
-| the offence and the playoff schedule | a top-third offence, and soft Weeks 15–17 |
+| the offense and the playoff schedule | a top-third offense, and soft Weeks 15–17 |
 
 Cut back by his own age cliff (×0.5) and his own injury (×0.7). Handcuffing a
 starter this manager already owns is worth another 25%, because that cover is
@@ -7581,7 +7581,7 @@ matching, so it exercises the shipped source. It pins the two silent failures
 this feature could plausibly have: an emphasis the checkbox does not actually
 gate (the sheet stays repainted after it is turned off, and nothing errors), and
 an endgame shortlist that quietly re-sorts points per game (the board again in a
-different colour). Its fixture makes the second one concrete — an understudy
+different color). Its fixture makes the second one concrete — an understudy
 projecting 40 against a veteran projecting 70, where the shortlist has to take
 the understudy.
 
@@ -7718,7 +7718,7 @@ and whose *projection composition* disagree, and the disagreement is stated in
 The verdicts are **Beats his rank** (`chip up`), **Misses his rank**
 (`chip down`) and **The rank is an artifact** (`chip split`, for a rank driven
 by games missed rather than by football — Josh Jacobs at RB36 while the
-availability file docks him six games). The class names carry the colour and
+availability file docks him six games). The class names carry the color and
 match the other two columns; only the words are this column's.
 
 ### Where it lives
@@ -7752,7 +7752,7 @@ match the other two columns; only the words are this column's.
 `data-players` back onto the column's own articles. The extractor takes the
 chip, position, team, date, headline, tell line, statline, and **`nums` — the
 evidence row read as text**. The band prints those numbers rather than
-re-summarising them, because a band that showed only the verdict would be
+re-summarizing them, because a band that showed only the verdict would be
 printing an opinion from a column whose whole promise is that it does not.
 
 Named players come **only from the `<b>` spans inside the tell line**, same rule
@@ -7780,7 +7780,7 @@ so in as many words under "About the byline". The name exists because a standing
 weekly column needs someone answering for last week's calls, and because the
 voice — dry, mildly exasperated, observational — is a voice rather than the
 site's institutional register. **The JSON-LD author stays `Iron Tuna`, the
-organisation.** Do not put the pen name in structured data: a fictional byline
+organization.** Do not put the pen name in structured data: a fictional byline
 in prose is a column convention, and a fictional byline in machine-readable
 authorship metadata is a claim about a person who does not exist.
 
@@ -7904,7 +7904,7 @@ what the admin board's **Legacy content migration** table prints, so the
 table and the code cannot disagree.
 
 - **Retired (worker):** the three weekday social crons. `scheduled()`
-  still recognises their strings and refuses to post in the regular season
+  still recognizes their strings and refuses to post in the regular season
   unless `DRAFT_SEASON_SOCIAL=1`; the code is kept for 2027.
 - **Retired (Routines):** the camp & preseason desk, the Play-Caller
   Premium entries, both Pick Routines, the lead-story refresh and its
@@ -7956,7 +7956,7 @@ from 10 AM, the news scan and the desk tick every quarter hour. The ROS
 snapshot moved from Wednesday 7 to **Tuesday 6 AM** so the Tuesday 7 AM
 rankings piece reads a fresh one. `calls-grade` (Tue/Wed 6 AM) and
 `news-scan` are new jobs in `JOB_FNS`. `tools/test-jobs.mjs` pins the DST
-behaviour at the quarter hours.
+behavior at the quarter hours.
 
 ### 68d. The staff, and the one rivalry
 
@@ -7999,7 +7999,7 @@ and the DFS slates.
 
 ### 68f. The Fantasy Analysis / Market Intelligence blend
 
-`blendComponents(row)` gives every player two normalised components:
+`blendComponents(row)` gives every player two normalized components:
 `fantasy` (the consensus at the rules, with the usage role trend once
 applied) and `market` (the Vegas board, shrunk toward the fantasy number
 by `BLEND_SHRINK[basis]`: a prop is 1.0, a posted game line 0.8, a fitted
@@ -8025,14 +8025,14 @@ in `NEWSROOM_OBJECT_SECTIONS`), `calls`, `rivalryLine`. `factCheck` runs
 packet), then the colleague rule, the rivalry rule, the section rule, and
 a banned-phrasing list (`AI_PHRASES`, em dashes included). One corrective
 retry; otherwise the piece is `held` with the problems named and the page
-shows the packet. A model that returns `{"skip": "..."}` is honoured: the
+shows the packet. A model that returns `{"skip": "..."}` is honored: the
 piece is `skipped` with `writer_declined`.
 
 ### 68h. Storage, memory, the feeds
 
 `content_pieces` grew `analyst, lens, version, rivalry, headline, dek`
 (guarded `ALTER TABLE` in `newsroomReady`). `analyst_calls` stores every
-firm position a published piece took (`normaliseCalls` keeps only players
+firm position a published piece took (`normalizeCalls` keeps only players
 the packet contains and directions in `CALL_DIRECTIONS`); `priorCallsFor`
 feeds them back into later packets; `runCallsGrade` writes `hit / miss /
 push / noted` once the week's usage file has the actual points
@@ -8052,12 +8052,12 @@ calls, the sources-and-freshness table and the packet; `analysts.html`,
 the feed in their lens, `/dfs` the contest selector and the **Value &
 Leverage** board.
 
-### 68i. DFS metrics, breaking news, the control centre
+### 68i. DFS metrics, breaking news, the control center
 
-`dfsMetrics(rows, contest)`: value, floor, ceiling, modelled ownership,
+`dfsMetrics(rows, contest)`: value, floor, ceiling, modeled ownership,
 leverage, cash score, tournament score, chalk; `dfsStackScores`. The
-methods are written in `docs/dfs-metrics.md`, and ownership is labelled
-`modelled` everywhere it appears because no licensed feed exists.
+methods are written in `docs/dfs-metrics.md`, and ownership is labeled
+`modeled` everywhere it appears because no licensed feed exists.
 
 `runNewsScan` (quarter-hourly) compares the injury list and the depth
 charts with the last picture, scores every change (`scoreNewsEvent`: type,
@@ -8092,7 +8092,7 @@ re-enables the retired social threads.
 - **The Routines this session could not disable** are named in the
   migration report. The worker-side changes make their output harmless.
 - **No weather feed** is configured (the packet says so), **no ownership
-  feed** exists (modelled and labelled), and **routes / route participation**
+  feed** exists (modeled and labeled), and **routes / route participation**
   remain unavailable from any free feed, as before.
 - `tools/build-seo.mjs` matched The Tell's articles on a stale class
   (`call nsy`); fixed to `call tell` in passing, so the column's Blog graph
@@ -8161,13 +8161,13 @@ the open write returns no id the row is written whole at the end, as before,
 so a fake D1 in a test and a degraded D1 in production both still get a log.
 The board (`jobBoard`, `_jobRow`) reports `unfinished` and `died` (open and
 older than `JOB_DIED_AFTER_MS`, 16 minutes) and counts a death as a failure;
-`tickHealth` is the pulse the control centre shows (last tick, minutes of
+`tickHealth` is the pulse the control center shows (last tick, minutes of
 silence, deaths in the last day), red past `TICK_SILENT_MIN` (20 minutes).
 
 Every job also runs under a deadline now (`JOB_DEADLINE_MS`: 13 minutes for
 the desk tick, 4 for the rest), inside the runtime's fifteen. A job past it
 is a logged failure with `deadline:` in the error and the tick moves on; the
-promise itself is not cancelled, only no longer waited for. And the scheduled
+promise itself is not canceled, only no longer waited for. And the scheduled
 handler logs `tick start` before it does anything, so the Cloudflare log has
 a line for every invocation that reached the worker.
 
@@ -8242,7 +8242,7 @@ section is the rest:
 **What it is.** A reader connects the fantasy league they actually play in and every in-season surface reads their exact scoring, their roster, every other roster, the free-agent pool, their opponent and the standings. It is infrastructure, not a page: the model lives in D1 and the pages read it. The long record (audit, design, provider terms, deliverables, env vars, deployment) is `docs/league-sync.md`; this is the map.
 
 **Where it lives.**
-- `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, espn placeholder, manual), the normalised model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
+- `_worker.js`, the marked region `// ══ LEAGUE SYNC` … `// ══ /LEAGUE SYNC` just above `export default`. Adapters (`LEAGUE_PROVIDERS`: sleeper, yahoo, espn placeholder, manual), the normalized model (`leagueNormalizeSettings`, `leagueEffectiveSettings`, `leagueScore`), the crosswalk (`leagueResolvePlayer`, `leagueMapPlayers`, tables `player_id_map` / `player_map_misses`), storage (`leagueWriteModel`, `leagueLoad`), the sync (`leagueSync`, job `league-sync` → `runLeagueSync`, cadence `leagueNextSyncAt`), the modules (`leagueBoard`, `leagueLineup`, `leaguePickups`, `leagueMatchup`, `leagueIntel`, `leagueTrades`, `leaguePlayoffs`, `leagueAvailabilityLookup`, `leagueSummary`) and the routes (`leagueRoutes`: `/api/leagues*`, `/api/oauth/yahoo/*`, `/api/admin/league-sync`). The fetch handler dispatches to `leagueRoutes` first.
 - Three touches outside the region: eight flags appended to `NEWSROOM_FLAGS` (`LEAGUE_SYNC`, `SLEEPER_SYNC`, `YAHOO_SYNC`, `ESPN_SYNC`, `PERSONALIZED_WAIVERS/LINEUP/TRADES/STORIES`), the `league-sync` row in `JOB_FNS` and `JOB_SCHEDULE` (hourly, phase 2; the job decides per league), and `boardsPayload`'s memo key now includes `o.customKey` so a league's custom scoring does not collide with another's.
 - `it-sync.js` — the client library (`ITSync`): loads `/api/leagues` once a minute per tab, the active-league selector, the sync strip, the acquisition CTA, and the On Your Roster / Available in Your League callouts on any `/player/` link.
 - `my-league.html` is **My Leagues** (connect flow, league cards, Sync now, default, pick my team, Review settings with corrections, Disconnect, manual league form); `my-week.html` is **My Week** (best lineup, matchup, alerts, pickups, trade matches, playoff readiness). Hooks on `rankings.html` (a "Your league (synced)" scoring preset reading `/board`, roster badges), `faab.html` (the synced Pickup Advisor above the Sleeper/manual flow), `trade-finder.html` (load every roster from the league; the desk's own matches), `player.html` (the league line under the club), `fantasy.html` / `in-season.html` (strip, CTA, week card), `lead.html` / `desk.html` (story callouts), `admin.html` (the League sync card).
@@ -8254,7 +8254,7 @@ section is the rest:
 - The reader's corrections (`leagues.overrides`) are never written by a sync. `leagueEffectiveSettings` lays them over the synced settings and names them.
 - No display-name matching where an id exists. A provider id that cannot be resolved is a recorded miss and stays on the roster by name, scored 0, never guessed.
 - OAuth tokens are sealed (AES-GCM under `LEAGUE_TOKEN_KEY`) before D1 and never reach the browser. Disconnecting the last league on an OAuth provider deletes the tokens.
-- **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`). Their API is non-commercial-only and this is a paid product (docs/data-sources.md R2, R7). Turn it on only with their licence in writing. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
+- **Sleeper is off by default** (`FLAG_SLEEPER_SYNC`). Their API is non-commercial-only and this is a paid product (docs/data-sources.md R2, R7). Turn it on only with their license in writing. Yahoo is off until an app is registered (`YAHOO_CLIENT_ID`, `YAHOO_CLIENT_SECRET`, `LEAGUE_TOKEN_KEY`). ESPN has no supported path and the adapter says so.
 
 **Tests.** `node tools/test-league-sync.mjs` (in CI): fixtures in `tools/fixtures/`, the network stubbed, an in-memory D1, the real scoring engine and the real PROJECTIONS pool. `tools/test-jobs.mjs`, `test-health.mjs` and `test-newsroom.mjs` know the new job and the three off-by-default flags. `tools/test-data-sources.mjs` allowlists the two Yahoo hosts.
 
@@ -8453,7 +8453,7 @@ It owns three things and nothing else:
   carries the sentinel (front page, `/rankings`, all nineteen section pages).
 - `/* ranks:css */…/* /ranks:css */` — the ribbon's stylesheet, injected into
   **both** `site.css` and `front.html`'s inline `<style>`, because front.html
-  links no shared sheet. One block, two palettes: every colour reads through a
+  links no shared sheet. One block, two palettes: every color reads through a
   local alias with the other file's token as the fallback
   (`var(--ink, var(--text, #111820))`), which is also the one form
   `test-css-tokens.mjs` accepts unconditionally.

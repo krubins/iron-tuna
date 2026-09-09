@@ -187,7 +187,7 @@ ok('a hand-edited stat is not overwritten', afterEdit[0].projectedStats.rushYd =
 ok('a hand-edited stat gets no triple, so the slider cannot claim it later',
    !(afterEdit[0].vegas && afterEdit[0].vegas.rushYd));
 
-// Matching is by normalised name + position, so a live-status team change or a
+// Matching is by normalized name + position, so a live-status team change or a
 // punctuation difference in a saved name does not lose the odds.
 const renamed = savedNoOdds();
 renamed[0].name = "A Back";

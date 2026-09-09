@@ -277,7 +277,7 @@ jobs:
         run: node tools/test-season.mjs
 
       # One scoring engine, three copies (worker, it-league.js, index.html),
-      # checked against each other on 400 randomised stat lines rather than a
+      # checked against each other on 400 randomized stat lines rather than a
       # handful of chosen ones. A drift here means the same player is worth
       # different points on the cheat sheet, in a story and in the rankings.
       - name: The scoring engine agrees with itself in every file
@@ -325,7 +325,7 @@ jobs:
       # external host the worker can reach is named in an allowlist with the
       # reason it is allowed, so adding a source is a deliberate edit rather
       # than a stray fetch, and the red-listed hosts cannot come back.
-      - name: Data sources, licences and the red list
+      - name: Data sources, licenses and the red list
         run: node tools/test-data-sources.mjs
 
       # The Trade Finder: the roster parser, the lineup valuation, the trade
@@ -340,7 +340,7 @@ jobs:
       - name: Odds pipeline tests (worker, incl. worker/tool sync)
         run: node tools/test-worker-odds.mjs
 
-      # The team ratings fit and the kicker/defence model live in _worker.js AND
+      # The team ratings fit and the kicker/defense model live in _worker.js AND
       # in tools/, for the same no-bundler reason. This runs both against one
       # fixture, so a change to one copy fails here.
       - name: Team market ratings (worker/tool sync)
@@ -350,14 +350,14 @@ jobs:
       # club), the market snapshot they were built from, and the shape a
       # projection has to have — spread narrower than a season of outcomes, and
       # league totals that match what the NFL actually produces.
-      - name: Committed kicker and defence rows
+      - name: Committed kicker and defense rows
         run: node tools/test-k-def.mjs
 
       # Everything else with assertions in tools/. These are plain node, no
       # network beyond what the odds suites already pull, and they cover the
       # pieces most likely to drift: the reader's own-league pricing, the Vegas
       # column's worker/client scoring sync, and the generated lead story's
-      # fallback behaviour.
+      # fallback behavior.
       - name: Per-league pricing and the front page's contract with it
         run: node tools/test-it-league.mjs
 
@@ -448,9 +448,9 @@ jobs:
         run: node tools/test-build-desk.mjs
 
       - name: What the board grades a player name against
-        run: node tools/test-board-colour.mjs
+        run: node tools/test-board-color.mjs
 
-      # Positional scarcity in the BID, not just the colour. The detector used
+      # Positional scarcity in the BID, not just the color. The detector used
       # to see a cliff only when one or two players stood above it, so a tier of
       # six elite quarterbacks in a twelve-team room — the case where every one
       # of them goes over value and the team that waits pays the most — was
@@ -462,7 +462,7 @@ jobs:
       # silent failures live here: an emphasis that never clears (a class the
       # checkbox does not gate, so the sheet stays repainted after it is turned
       # off) and an endgame shortlist that quietly re-sorts points per game,
-      # which would make it the board again in a different colour. Neither shows
+      # which would make it the board again in a different color. Neither shows
       # up as an error. Also pins the two models boxes to one shared control, so
       # the board and the sheet cannot drift apart on the same setting.
       - name: Highlighting the model's own buys, and the $1 endgame shortlist
@@ -492,7 +492,7 @@ jobs:
 
       # Twelve managers at $120 spend $1440, so every dollar column has to total
       # $1440 over a full board. The market curve claimed to be drawn at that
-      # budget and added up to $1298 — invisible in the app, which renormalises,
+      # budget and added up to $1298 — invisible in the app, which renormalizes,
       # but /it-league.js and /api/vegas-column publish the raw curve, so a story
       # quoted WR1 at $42 against a sheet reading $50. No browser, no network.
       - name: The cheat sheet's dollars add up
@@ -520,7 +520,7 @@ jobs:
 
       # Bidding Status Intel is the cheat sheet's permanent read on the room, and
       # a manager acts on it mid-nomination: an overstated max bid talks him out
-      # of a player nobody could have taken from him, and a hole labelled RB1
+      # of a player nobody could have taken from him, and a hole labeled RB1
       # when the rival is really filling an RB4 has him bracing for a bidding war
       # that was never coming. No browser, no network.
       - name: Bidding intel names the right slot and the right ceiling
@@ -545,16 +545,16 @@ jobs:
       # Sync My League (docs/league-sync.md): the provider adapters against
       # Sleeper- and Yahoo-shaped fixtures, the player-id crosswalk and its
       # miss log, the idempotent sync into an in-memory D1, OAuth sealing,
-      # expiry and refresh, disconnect, and every personalised module (the
+      # expiry and refresh, disconnect, and every personalized module (the
       # league board with TE premium, best lineup incl. superflex, the pickup
       # advisor on the room's actual free agents, matchup, intel, trades,
       # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
-      - name: "Sync My League: providers, crosswalk, sync and the personalised modules"
+      - name: "Sync My League: providers, crosswalk, sync and the personalized modules"
         run: node tools/test-league-sync.mjs
 
       # Every deployed script that the pages load. it-sync.js is loaded by
       # nine in-season pages; a syntax error there takes the league strip and
-      # the personalised modules off all of them at once.
+      # the personalized modules off all of them at once.
       - name: Parse it-sync.js
         run: node --check it-sync.js
 

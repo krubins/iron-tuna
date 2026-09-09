@@ -7,7 +7,7 @@
 // agree to the digit or the same player is worth different points on the cheat
 // sheet, in a story and in the rankings -- and nothing about three files
 // rendering fine on their own would ever say so. scoreStats in the worker is
-// now the superset the other two are checked against, on RANDOMISED stat lines
+// now the superset the other two are checked against, on RANDOMIZED stat lines
 // rather than a handful of chosen ones, because a hand-picked case tends to
 // exercise the terms the author was already thinking about.
 
@@ -140,7 +140,7 @@ console.log('\nthe four scoring settings the rankings page offers');
     const a = W.scoringRules('standard'), b = W.scoringRules('ppr');
     return Object.keys(a).every(k => /[Rr]eception/.test(k) || JSON.stringify(a[k]) === JSON.stringify(b[k]));
   })());
-  ok('all four settings are labelled for the page',
+  ok('all four settings are labeled for the page',
      ['standard', 'half', 'ppr', 'custom'].every(k => !!W.SCORING_PRESET_LABEL[k]),
      JSON.stringify(W.SCORING_PRESET_LABEL));
   ok('"My League" is the label for custom', W.SCORING_PRESET_LABEL.custom === 'My League');

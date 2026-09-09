@@ -254,7 +254,7 @@ console.log('\nimplied points ride on every game');
                   g('noline', 'REG', 1, '2026-09-13', '16:25', 'CCC', 'DDD') ];
   const st = W.nflSeasonState({ season: 2026, games, updatedAt: Date.now() }, at('2026-09-13', '12:00'));
   const a = st.games.find(x => x.id === 'imp'), b = st.games.find(x => x.id === 'noline');
-  ok('a favoured home side gets half the total plus half the margin', a.impliedHome === 24 && a.impliedAway === 20.5,
+  ok('a favored home side gets half the total plus half the margin', a.impliedHome === 24 && a.impliedAway === 20.5,
      JSON.stringify([a.impliedHome, a.impliedAway]));
   ok('an unpriced game carries nulls, not zeros', b.impliedHome === null && b.impliedAway === null);
   const asked = W.nflSeasonWeek({ season: 2026, games, updatedAt: Date.now() }, at('2026-09-13', '12:00'), 'REG', 1);
@@ -325,7 +325,7 @@ console.log('\nthe live nflverse schedule');
     ok('the regular season is a full 272 games', reg.length === 272, String(reg.length));
     ok('it runs 18 weeks', new Set(reg.map(x => x.week)).size === 18);
     ok('every kickoff parsed', real.games.every(x => Number.isFinite(x.kickoff)));
-    ok('every club is a normalised abbreviation',
+    ok('every club is a normalized abbreviation',
       real.games.every(x => /^[A-Z]{2,3}$/.test(x.home) && /^[A-Z]{2,3}$/.test(x.away)));
     ok('32 clubs, no more and no fewer',
       new Set(reg.flatMap(x => [x.home, x.away])).size === 32,

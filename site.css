@@ -332,7 +332,7 @@ footer.site a:hover { color: var(--text) }
 .foot-21 b { color: var(--sec) }
 
 /* ── the in-season "sheet" plate ─────────────────────────────────────────────
-   One bordered card with a labelled header row, a table, and a footer line
+   One bordered card with a labeled header row, a table, and a footer line
    that says what the numbers are and where they came from. Every board in the
    section — the hub's readings, the Fantasy week board, the DFS slate — is
    this same object, so a reader who learns to read one can read all three.
@@ -451,11 +451,11 @@ footer.site a:hover { color: var(--text) }
    Everything above this line is a component. What the site did not have was a
    way to COMPOSE components, and that is what made the pages read as a wall:
    every section on every in-season page was an <h2>, a paragraph and a grid of
-   identical grey rectangles, at one width, on one surface, in one weight. Ten
+   identical gray rectangles, at one width, on one surface, in one weight. Ten
    of those in a column is not ten sections, it is one long section a reader
    cannot navigate.
 
-   What is added here is four things and no new colours:
+   What is added here is four things and no new colors:
 
      1. A WIDTH for boards. .wrap is 820px, which is a reading measure and the
         right one for prose. A nine-column salary table squeezed into it scrolls
@@ -472,7 +472,7 @@ footer.site a:hover { color: var(--text) }
 
 /* ── the chapter head ───────────────────────────────────────────────────────
    Eyebrow, title, and the link out of the section, on one baseline with a rule
-   under it. The rule is the ink colour and carries a short accent tick, so a
+   under it. The rule is the ink color and carries a short accent tick, so a
    section boundary is visible at a glance from across the page rather than
    being inferred from the size of a heading. */
 .is-sec { margin: var(--space-7) 0 var(--space-5); position: relative; border-bottom: 2px solid var(--text); padding-bottom: var(--space-3) }
@@ -493,7 +493,7 @@ footer.site a:hover { color: var(--text) }
 .is-sec p { margin: var(--space-3) 0 0; font-size: var(--fs-sm); color: var(--sec); line-height: 1.6; max-width: 78ch }
 
 /* ── surfaces ───────────────────────────────────────────────────────────────
-   A tinted band breaks the column without a new colour: it is --panel edge to
+   A tinted band breaks the column without a new color: it is --panel edge to
    edge with hairlines top and bottom, and the cards inside it flip to white so
    the contrast between card and ground survives the change of ground. */
 .is-band { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: var(--space-6) 0 var(--space-7); margin: var(--space-7) 0 }
@@ -692,7 +692,7 @@ footer.site a:hover { color: var(--text) }
 /* ── the two-column board ─────────────────────────────────────────────────
    FANTASY CONSENSUS and BETTING ODDS are the point of the page, so they are
    grouped under one spanning header rather than left as two columns among
-   eleven. The gap between them gets the colour; nothing else on the row does. */
+   eleven. The gap between them gets the color; nothing else on the row does. */
 .rk-board { margin: 0 0 var(--space-6) }
 .rk-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-4) }
 .rk-seg2 { display: inline-flex; border: 1px solid var(--line2); border-radius: var(--radius-sm); overflow: hidden }

@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     var q = new URLSearchParams(location.search).get('yahoo');
     if (q) {
-      var msg = { connected: 'Yahoo connected. Pick the league to sync below.', denied: 'Yahoo authorization was cancelled.', failed: 'Yahoo did not complete the authorization.', state: 'That authorization link was stale or belonged to another session. Try again.', off: 'Yahoo sync is not enabled.', signin: 'Sign in first, then connect Yahoo.' }[q];
+      var msg = { connected: 'Yahoo connected. Pick the league to sync below.', denied: 'Yahoo authorization was canceled.', failed: 'Yahoo did not complete the authorization.', state: 'That authorization link was stale or belonged to another session. Try again.', off: 'Yahoo sync is not enabled.', signin: 'Sign in first, then connect Yahoo.' }[q];
       if (msg) note(esc(msg), q !== 'connected');
       history.replaceState(null, '', location.pathname + location.hash);
     }

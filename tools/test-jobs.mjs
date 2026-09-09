@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The job schedule (Step 30): one table in New York time, read by the hourly
-// tick. Pins the table against the spec, the daylight-saving behaviour, the
+// tick. Pins the table against the spec, the daylight-saving behavior, the
 // phase order, the env override and its validation, the report, and the tick.
 //   node tools/test-jobs.mjs
 import fs from 'fs';

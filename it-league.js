@@ -22,7 +22,7 @@
  * dressed up as theirs.
  *
  * What they ARE shown is the site's own board (DEFAULT_BOARD_RAW below), at the
- * site's default league, labelled "Default league" and never "Your league".
+ * site's default league, labeled "Default league" and never "Your league".
  * That reader was the one least able to translate "+12% to +18% versus price"
  * on their own, and leaving them a bare percentage was not neutrality — so they
  * get all three readings of it: the dollars, the share of a budget, and the
@@ -57,7 +57,7 @@
   // CURVE_BUDGET is only honest if CURVE adds up to it: summed over a full 12-team
   // board (16 roster spots each, MIN_BID past the end of a position's curve) the
   // set must come to exactly 1440. It used to total 1298, and because this file
-  // publishes the RAW curve while the app renormalises its own column to the
+  // publishes the RAW curve while the app renormalizes its own column to the
   // league budget, every dollar quoted here ran ~10% under the reader's own sheet.
   // Re-cut Aug 2026 by a flat 1.125x. tools/test-curve-budget.mjs pins the total.
   var CURVE_BUDGET = 1440;
@@ -79,7 +79,7 @@
   // span that tools/test-curve-budget.mjs parses the 1-QB mirror out of.
   var SUPERFLEX_QB_CURVE = [44, 40, 37, 34, 31, 29, 27, 25, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1];
   // Default per-team roster totals (the site's default league), used to size a
-  // superflex board for the renormalisation in price(). A saved league's own
+  // superflex board for the renormalization in price(). A saved league's own
   // roster shape overrides these per position.
   var ROSTER_TOTALS_DEFAULT = { QB: 2, RB: 4, WR: 4, TE: 2, K: 2, DEF: 2 };
   // Mirrors VEGAS_DEFAULT_W in index.html: how far the board leans on the
@@ -99,10 +99,10 @@
   // "name|POS|points" per line, at SCORING_DEFAULTS, generated from the same
   // PROJECTIONS the worker serves. It exists for ONE job: a reader with no
   // saved league still deserves a real number instead of a bare percentage, and
-  // the only honest number to give them is the site's own — labelled as the
+  // the only honest number to give them is the site's own — labeled as the
   // site's own, never as theirs. Points only: with no stat lines it cannot be
   // re-scored at someone else's scoring, which is exactly the promise this file
-  // makes everywhere else. The points carry the app's season normalisation
+  // makes everywhere else. The points carry the app's season normalization
   // (normalizeToLastYear, mirrored as COLUMN_NORM in _worker.js), so they sit
   // on the same scale as the sheet and as /api/board — a raw-scored block used
   // to quote Nacua at 356.0 against a sheet reading 330.0. Regenerate with
@@ -182,10 +182,10 @@
 
   // "Custom" is the difference the reader can see. A saved league that matches
   // the site defaults in every respect would re-print the same numbers anyway,
-  // so it earns no "your league" labelling — a badge that changes nothing is
+  // so it earns no "your league" labeling — a badge that changes nothing is
   // just noise, and worse, it teaches readers to distrust the ones that matter.
   // Scoring is tracked separately from budget and team count, because a story
-  // can honour one without the other: points move with scoring, prices move
+  // can honor one without the other: points move with scoring, prices move
   // with the budget.
   var customScoring = false;
   if (cfg) {
@@ -208,7 +208,7 @@
     return readingChoice || (cfg && normFormat(cfg.format)) || 'auction';
   }
   // Returns the format now in force, so a caller can re-render from the answer
-  // instead of guessing whether an unrecognised value was taken.
+  // instead of guessing whether an unrecognized value was taken.
   function setReadingFormat(f) {
     var v = normFormat(f);
     if (!v) return readingFormat();
@@ -273,7 +273,7 @@
     (bonuses || []).forEach(function (b) { if (count >= b.at) pts += b.points; });
     return pts;
   }
-  // Kickers and defences, mirroring scoreKicker / scoreDefense in index.html
+  // Kickers and defenses, mirroring scoreKicker / scoreDefense in index.html
   // at the app's default tiers (a saved league's own tiers win where present).
   // HAND-SYNCED with SCORING_KDEF in _worker.js; tools/test-scoring.mjs holds
   // all three copies together.
@@ -354,7 +354,7 @@
   })();
   // The superflex board does not add up. The SF QB curve deliberately sits
   // above the 1-QB one, so summed over a full board the raw prices run ~10%
-  // past the league's money; the app closes that by renormalising the whole
+  // past the league's money; the app closes that by renormalizing the whole
   // column to the budget (renormalizeToBudget), and quoting the raw curve at a
   // superflex reader would overquote every position by that ~10%. This is the
   // app's factor to first order: spendable dollars above the min bids, over
@@ -459,7 +459,7 @@
   // Whether the reader's saved board may be read for PRICES. See SNAP_SHAPE:
   // before shape 2 the stored `v` was the True Value column, and quoting it as
   // the sheet's price is how a story ended up $12 above the reader's own row.
-  // The league it names is still honoured either way; only the dollars wait.
+  // The league it names is still honored either way; only the dollars wait.
   var minePrices = !!(snap && num(snap.sv, 1) >= SNAP_SHAPE);
 
   // The site's default board, parsed on first use — a reader who has their own
@@ -870,7 +870,7 @@
   //     money in the room, (teams x budget), which is what every price on an
   //     auction board scales by.
   // Nothing is invented: with no saved league this returns null and the copy
-  // ships exactly as the desk wrote it, labelled as the desk's own league.
+  // ships exactly as the desk wrote it, labeled as the desk's own league.
   // Both sides of this ratio must be the SAME COLUMN of the same kind of board,
   // or it is not a conversion at all. It used to divide the reader's True Value
   // by the site's Market Price and multiply a story's dollars by the result,
@@ -927,7 +927,7 @@
   // passing ("...Garrett Wilson at $26 and DeVonta Smith at $26"). Left
   // undiscovered, that fifth player's dollars get attributed to the name before
   // him, which prices one player off another's board slot. Cheap to avoid: pull
-  // the capitalised two- and three-word runs out of the copy and keep the ones
+  // the capitalized two- and three-word runs out of the copy and keep the ones
   // the reader's own board can name.
   function scanNames(text) {
     var re = /\b[A-Z][A-Za-z'\u2019.\-]+(?:\s+[A-Z][A-Za-z'\u2019.\-]+){1,2}/g;
@@ -1030,7 +1030,7 @@
   // a link is the same off-by-one in a different coat.
   var LINK_BACK = /^[\s,;:]*(?:up\s+to|at|to|for|of|near|around|about)?[\s,;:]*$/;
   var LINK_FWD = /^[\s,;:]*(?:on|for|to|upon)\s+/;
-  // Two or more capitalised words: shaped like a person, whoever it turns out
+  // Two or more capitalized words: shaped like a person, whoever it turns out
   // to be. Used only to tell "$33 on Tetairoa McMillan" from "$12 to the
   // quarterback pool".
   var NAME_RUN = /^[A-Z][A-Za-z'\u2019.\-]+(?:\s+[A-Z][A-Za-z'\u2019.\-]+)+/;
@@ -1144,7 +1144,7 @@
 
   // One stylesheet for the "Your league:" line, injected rather than copied into
   // forty pages' <style> blocks. It has to sit on the light front page and the
-  // dark drop pages alike, so it borrows the reader's text colour and paints
+  // dark drop pages alike, so it borrows the reader's text color and paints
   // only a translucent teal wash and rule — no palette assumptions beyond the
   // --teal token every page already defines, and a literal fallback if it does not.
   var STYLE_ID = 'it-league-css';

@@ -24,14 +24,14 @@
 // fallback and the others did not.
 //
 // WHAT COUNTS AS RESOLVED. A token is fine if the same file defines it anywhere
-// — this is a spelling check, not a cascade simulation, and modelling which
+// — this is a spelling check, not a cascade simulation, and modeling which
 // selector is in scope for which element is a job for a browser. `var(--x, …)`
 // with a fallback is always fine: that is the language's own way of saying "this
 // may not be set", and it is how a component-scoped value like --mode-accent is
 // meant to be written.
 //
-// The narrowness is the point. It cannot tell you a token is the WRONG colour,
-// only that it is nobody's colour at all — but that is the failure that is
+// The narrowness is the point. It cannot tell you a token is the WRONG color,
+// only that it is nobody's color at all — but that is the failure that is
 // invisible in review, and it is now impossible to merge.
 
 import fs from 'fs';

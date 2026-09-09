@@ -2,7 +2,7 @@
 // Fit the VALUE column's risk constants to a real season instead of guessing them.
 //   node tools/backtest-projections.mjs [--year 2025] [--teams 12]
 //
-// WHY THIS EXISTS: VALUE carries three judgement calls that decide how the
+// WHY THIS EXISTS: VALUE carries three judgment calls that decide how the
 // league's money is split between positions and between stars and depth —
 // POS_RELIABILITY (a per-position haircut), the per-rank decay inside
 // reliabilityFactor, and VORP_CONCAVITY (how much of a star's edge his price
@@ -21,13 +21,13 @@
 //   1. the EX-ANTE level factor — mean actual points of the players who were
 //      PROJECTED top-K, over their projected mean. This is the number
 //      normalizeToLastYear should apply; the ex-post version it has to use
-//      today (last year's realised top-K over this year's projected top-K) is
+//      today (last year's realized top-K over this year's projected top-K) is
 //      printed beside it so the survivorship gap is visible.
-//   2. realised VORP share vs projected VORP share, which is what a reliability
+//   2. realized VORP share vs projected VORP share, which is what a reliability
 //      factor is: the share of the money a position's projections actually
-//      earned. Normalised so the most reliable skill position reads 1.00.
-//   3. the rank decay: realised/projected VORP by projected-rank bucket.
-//   4. the concavity that best matches projected dollar shares to realised
+//      earned. Normalized so the most reliable skill position reads 1.00.
+//   3. the rank decay: realized/projected VORP by projected-rank bucket.
+//   4. the concavity that best matches projected dollar shares to realized
 //      ones, by grid search.
 // It prints suggested constants. It does not edit anything: move the numbers
 // into index.html by hand and record the year they came from beside them.
@@ -44,7 +44,7 @@ const actF = path.join(ROOT, 'tools/sources', `actuals-${YEAR}.json`);
 if (!fs.existsSync(preF) || !fs.existsSync(actF)) {
   console.log(`No backtest data: need ${path.relative(ROOT, preF)} and ${path.relative(ROOT, actF)}.`);
   console.log('The PROJ_2025/ACT_2025 tables in index.html are not a preseason set and cannot stand in.');
-  console.log('Nothing fitted; POS_RELIABILITY / VORP_CONCAVITY stay the documented judgement calls.');
+  console.log('Nothing fitted; POS_RELIABILITY / VORP_CONCAVITY stay the documented judgment calls.');
   process.exit(0);
 }
 const idx = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -106,20 +106,20 @@ const mean = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
 
 // 1. level: ex-ante vs ex-post
 console.log('\n1. LEVEL FACTOR (what normalizeToLastYear should apply)');
-console.log('   pos  K   ex-ante (actual of projected top-K / their projection)   ex-post (realised top-K / projected top-K)');
+console.log('   pos  K   ex-ante (actual of projected top-K / their projection)   ex-post (realized top-K / projected top-K)');
 const levelFit = {};
 POS.forEach(pos => {
   const arr = byPos[pos] || []; if (arr.length < 12) return;
   const K = Math.min(32, arr.length);
   const top = arr.slice(0, K);
   const exAnte = mean(top.map(r => r.act)) / mean(top.map(r => r.proj));
-  const realisedTop = arr.map(r => r.act).sort((a, b) => b - a).slice(0, K);
-  const exPost = mean(realisedTop) / mean(top.map(r => r.proj));
+  const realizedTop = arr.map(r => r.act).sort((a, b) => b - a).slice(0, K);
+  const exPost = mean(realizedTop) / mean(top.map(r => r.proj));
   levelFit[pos] = exAnte;
   console.log(`   ${pos.padEnd(3)} ${String(K).padEnd(3)} ${exAnte.toFixed(3).padEnd(56)} ${exPost.toFixed(3)}   (survivorship gap ${(exPost - exAnte).toFixed(3)})`);
 });
 
-// 2. reliability: realised VORP share vs projected VORP share
+// 2. reliability: realized VORP share vs projected VORP share
 console.log('\n2. RELIABILITY (share of the money a position\'s projections actually earned)');
 const pbp = {}; rows.forEach(r => (pbp[r.position] = pbp[r.position] || []).push({ ...r, projectedPoints: r.proj }));
 const replP = lib.calculateReplacementLevels(pbp, config);
@@ -134,11 +134,11 @@ POS.forEach(pos => {
   rel[pos] = pv > 0 ? av / pv : 0;
 });
 const relMax = Math.max(...POS.map(p => rel[p] || 0));
-console.log('   pos  realised/projected VORP   suggested POS_RELIABILITY (max skill position = 1.00)   current');
+console.log('   pos  realized/projected VORP   suggested POS_RELIABILITY (max skill position = 1.00)   current');
 POS.forEach(pos => console.log(`   ${pos.padEnd(3)}  ${(rel[pos] || 0).toFixed(3).padEnd(24)} ${(relMax ? rel[pos] / relMax : 0).toFixed(2).padEnd(52)} ${lib.POS_RELIABILITY[pos]}`));
 
 // 3. rank decay
-console.log('\n3. RANK DECAY (realised/projected VORP by projected rank; the current shape is 1 - 0.006 x rank, floor 0.82)');
+console.log('\n3. RANK DECAY (realized/projected VORP by projected rank; the current shape is 1 - 0.006 x rank, floor 0.82)');
 POS.forEach(pos => {
   const arr = byPos[pos] || []; const out = [];
   for (let b = 0; b < 48; b += 12) {
@@ -150,8 +150,8 @@ POS.forEach(pos => {
   console.log(`   ${pos.padEnd(3)} ${out.join('   ')}`);
 });
 
-// 4. concavity: which exponent on projected VORP best matches the realised dollar split
-console.log('\n4. CONCAVITY (exponent on projected VORP whose dollar shares best match realised VORP shares)');
+// 4. concavity: which exponent on projected VORP best matches the realized dollar split
+console.log('\n4. CONCAVITY (exponent on projected VORP whose dollar shares best match realized VORP shares)');
 const pool = [];
 POS.forEach(pos => { const n = (config.roster[pos] ? config.roster[pos].total : 0) * TEAMS; (byPos[pos] || []).slice(0, n).forEach(r => pool.push({ pv: Math.max(0, r.proj - (replP[pos] || 0)), av: Math.max(0, r.act - (replA[pos] || 0)) })); });
 const avTot = pool.reduce((s, r) => s + r.av, 0);

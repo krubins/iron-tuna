@@ -33,7 +33,7 @@ const H = new Function('_oddsRound', '_oddsNorm', 'PROVIDER_UNAVAILABLE', 'LEAD_
   cut('function _oddsImpliedProb(', '// The Odds API v4. WRITTEN') + '\n' +
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' +
   cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
-  cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' +
+  cut('// -- kickers and defenses, scored', '// -- the player intel payload') + '\n' +
   'return { detectInsights, INSIGHT_RULES, INSIGHT_T, buildVegasEdge, rosMoveReasons, marketDelta, marketHistoryFrom, scoreStats, SCORING_BASE, explainDelta };'
 )(_oddsRound, _oddsNorm, { goalLineCarries: 'play-by-play only' }, 'America/New_York', t => t, 17, g => Math.max(0, 1 - g / 17));
 
@@ -90,7 +90,7 @@ console.log('\ndetection on a known week');
   ok('a 2.7% move is below the threshold and is not an insight', !lm.some(i => i.data.market === 'rushYd'));
   const gs = r.insights.find(i => i.type === 'game_script_change');
   ok('a spread moving 3 to 6 is a game-script change', !!gs && gs.data.spreadOpen === 3 && gs.data.spreadCurrent === 6);
-  ok('it names the side the market favours more', gs && gs.data.favouredMore === 'AAA');
+  ok('it names the side the market favors more', gs && gs.data.favoredMore === 'AAA');
   ok('and offers an interpretation built from the lines', gs && /market/.test(gs.data.interpretation));
   ok('every insight carries subject, type, data, magnitude, confidence and a timestamp',
      r.insights.every(i => i.subject && i.type && i.data && Number.isFinite(i.magnitude) && ['HIGH', 'MEDIUM', 'LOW'].includes(i.confidence) && i.ts > 0));

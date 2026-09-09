@@ -9,7 +9,7 @@
  * Nothing here invents a league either. state() is null until /api/leagues
  * answers for a signed-in reader with at least one league, and every page
  * that reads it falls back to what it did before: the browser records, or
- * the site defaults, labelled as such.
+ * the site defaults, labeled as such.
  *
  *   ITSync.load(force)            -> Promise<state|null>; cached a minute per tab
  *   ITSync.state()                -> the last loaded state, or null
@@ -44,7 +44,7 @@
     return fetch(path, init).then(function (r) { return r.json().then(function (j) { if (j && typeof j === 'object') j.__status = r.status; return j; }, function () { return { ok: false, error: 'bad_json', __status: r.status }; }); });
   }
   function emit() { for (var i = 0; i < listeners.length; i++) { try { listeners[i](cur); } catch (e) {} } }
-  function normalise(j) {
+  function normalize(j) {
     if (!j || !j.ok) return { signedIn: j && j.__status !== 401, leagues: [], defaultId: null, providers: (j && j.providers) || null, connections: null };
     var st = { signedIn: true, leagues: j.leagues || [], defaultId: j.defaultId || null, providers: j.providers || null, connections: j.connections || null };
     var want = read('localStorage', ACTIVE_KEY);
@@ -56,11 +56,11 @@
   function load(force) {
     if (!force) {
       if (cur) return Promise.resolve(cur);
-      try { var c = JSON.parse(read('sessionStorage', CACHE_KEY) || 'null'); if (c && c.at && Date.now() - c.at < CACHE_MS && c.state) { cur = normalise(c.state); return Promise.resolve(cur); } } catch (e) {}
+      try { var c = JSON.parse(read('sessionStorage', CACHE_KEY) || 'null'); if (c && c.at && Date.now() - c.at < CACHE_MS && c.state) { cur = normalize(c.state); return Promise.resolve(cur); } } catch (e) {}
     }
     if (loading) return loading;
     loading = api('/api/leagues').then(function (j) {
-      cur = normalise(j);
+      cur = normalize(j);
       write('sessionStorage', CACHE_KEY, JSON.stringify({ at: Date.now(), state: j }));
       loading = null; emit();
       return cur;

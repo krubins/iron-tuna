@@ -1308,7 +1308,7 @@ const ODDS_BANDS = {
   rushYd: [150, 2600], rushTD: [0, 30],
   recYd: [150, 2300], recTD: [0, 30], rec: [10, 160],
   scrimmageTD: [0, 40],
-  // Kicker and defence lines come from the team-environment provider, never
+  // Kicker and defense lines come from the team-environment provider, never
   // from a book feed, and deliberately have NO entry in ODDS_CV above:
   // buildVegasOverlay gates on that table, so a props response claiming to
   // price "ptsAllowed" is rejected while buildTeamEnvOverlay can still emit it.
@@ -1675,7 +1675,7 @@ const NFLVERSE_GAMES_URL = 'https://github.com/nflverse/nflverse-data/releases/d
 const TEAM_ALIAS = { LAR: 'LA', JAC: 'JAX', WSH: 'WAS', LVR: 'LV', OAK: 'LV', SD: 'LAC', STL: 'LA' };
 const teamKey = t => { const u = String(t || '').toUpperCase(); return TEAM_ALIAS[u] || u; };
 // Yardage tracks scoring environment far less tightly than touchdowns do, so a
-// team's factor is damped before it touches yards. Judgement call, not a fit.
+// team's factor is damped before it touches yards. Judgment call, not a fit.
 const TEAMENV_YARD_EXP = 0.5;
 const TEAMENV_CLAMP = [0.85, 1.18];   // a data glitch must not rewrite a roster
 const TEAMENV_MIN_GAMES = 3;          // too few SCHEDULED games -> leave the club alone
@@ -1712,20 +1712,20 @@ function _csvSplit(line) {
 // whoever it happened to draw in September, which is exactly the schedule bias a
 // points-allowed projection must not inherit. Fitting
 //
-//     points(offence i vs defence j, at home h) = mu + off_i + def_j + hfa*h
+//     points(offense i vs defense j, at home h) = mu + off_i + def_j + hfa*h
 //
-// separates "this offence is good" from "those first six defences were bad", and
+// separates "this offense is good" from "those first six defenses were bad", and
 // the ratings then project across the WHOLE schedule, which games.csv carries in
 // full whether or not a line has been posted for a fixture yet.
 //
 // A small ridge keeps the fit stable while a club has only a handful of priced
-// games. mu and hfa are never penalised: shrinking the intercept would drag the
+// games. mu and hfa are never penalized: shrinking the intercept would drag the
 // league's entire scoring level down with it.
 const MARKET_RIDGE = 0.25;
 const MARKET_MIN_PRICED = 48;         // priced SIDES, so 24 games: fewer is not a season
 
 // Dense Gaussian elimination with partial pivoting. The system is 2n+2 wide —
-// an offence and a defence rating per club, plus mu and hfa, so 66 today.
+// an offense and a defense rating per club, plus mu and hfa, so 66 today.
 function _mktSolve(A, b) {
   const n = b.length;
   const M = A.map((row, i) => Array.from(row).concat([b[i]]));
@@ -1839,13 +1839,13 @@ async function fetchTeamEnvNflverse(env) {
   return full;
 }
 
-// ── kickers and defences ───────────────────────────────────────────────────
+// ── kickers and defenses ───────────────────────────────────────────────────
 // HAND-SYNCED with tools/k-def-model.mjs, which carries the same constants and
 // the measurements behind them. Change one, change both.
 //
 // No book posts a season-long PLAYER market for either position, which is why
 // neither used to move at all here. But neither position is really a player
-// market: a kicker's volume and a defence's points allowed are made almost
+// market: a kicker's volume and a defense's points allowed are made almost
 // entirely of team scoring environment, and the game lines price that directly.
 // So the same file that moves a running back's touchdowns moves these too.
 //
@@ -1856,7 +1856,7 @@ async function fetchTeamEnvNflverse(env) {
 //   fg_made  =  24.3 + 0.0126 * points     r = 0.15
 //
 // Extra points are very nearly a restatement of the team total. FIELD GOALS ARE
-// NOT: a kicker on a bad offence trades touchdowns for field goals, so the two
+// NOT: a kicker on a bad offense trades touchdowns for field goals, so the two
 // effects cancel. Year-over-year club correlation, 2024 -> 2025, sets how much
 // of a committed line survives: points allowed 0.45, sacks 0.33, fg_made 0.33,
 // interceptions 0.13, fumble recoveries 0.01. A projection is an EXPECTATION,
@@ -1905,8 +1905,8 @@ function blendDefense(committed, impliedAgainst) {
 // Turn Vegas implied team scoring into per-player stat adjustments.
 //
 // TWO PATHS OUT OF ONE INPUT. Skill players are adjusted by a RATIO, because the
-// committed projections already have an opinion about which offences are good.
-// Kickers and defences are not: their line is team environment and nothing else,
+// committed projections already have an opinion about which offenses are good.
+// Kickers and defenses are not: their line is team environment and nothing else,
 // so the market's implied points go in as the estimate itself (see blendKicker
 // and blendDefense above).
 //
@@ -1986,7 +1986,7 @@ function buildTeamEnvOverlay(marketTotals) {
     const full = af < 1
       ? Object.fromEntries(Object.entries(st).map(([k, v]) => [k, Number.isFinite(v) ? v / af : v]))
       : st;
-    // Kickers and defences are not scaled by the offensive factor: their whole
+    // Kickers and defenses are not scaled by the offensive factor: their whole
     // line is team environment, so the market's implied points ARE the estimate
     // and go in directly, exactly as a player prop would. When the committed row
     // was built from the same lines the two agree and the blend is a no-op; when
@@ -2134,7 +2134,7 @@ function _availPool(pool) {
 // ── §9c. "Vegas vs. Rankings & ADP" column ─────────────────────────────────
 // The editorial thesis: a sportsbook has money at risk on every number it
 // prints, so its lines are priced off repeatable trends and statistical
-// modelling and corrected the moment they are wrong. A ranking costs its author
+// modeling and corrected the moment they are wrong. A ranking costs its author
 // nothing. Where the two disagree, the column shows the disagreement and lets
 // the reader decide — it never asserts the book is right.
 //
@@ -2155,7 +2155,7 @@ function _availPool(pool) {
 // it-league.js, and the _colScore this replaces -- rather than a fourth
 // variant: same order of operations, same yardage thresholds, same bonus
 // arrays, same position-specific reception rule. tools/test-scoring.mjs runs
-// this against the it-league.js copy on randomised stat lines and fails if the
+// this against the it-league.js copy on randomized stat lines and fails if the
 // two ever disagree, which is the drift §9c already learned to test for.
 //
 // Everything is optional and defaulted. A league that does not score two-point
@@ -2218,7 +2218,7 @@ function _scCount(count, perEvent, bonuses) {
 }
 // Stat keys are Iron Tuna's internal names throughout: passYd passTD passInt
 // pass2pt rushYd rushTD rush2pt recYd recTD rec2pt rec fumLost fum2pt fumRecTD
-// krTD prTD. Every provider adapter normalises INTO these, so nothing
+// krTD prTD. Every provider adapter normalizes INTO these, so nothing
 // downstream ever sees a vendor's field names.
 function scoreStats(stats, position, rules) {
   const s = rules || SCORING_BASE;
@@ -2280,7 +2280,7 @@ const COLUMN_MIN_TD_GAP = 0.5;        // half a season touchdown: below that the
 // cached publicly for 15 minutes, so without a version in the request URL a
 // renamed field means new HTML meets an old cached payload and the page prints
 // "undefined" at readers for a quarter of an hour. The client asks for ?v=N and
-// only renders items whose shape it recognises; the two together make a
+// only renders items whose shape it recognizes; the two together make a
 // contract change safe to deploy.
 const COLUMN_CONTRACT = 5;   // 5: the digest names the biggest touchdown move, and every mover's market rank
                              // 4: the response carries the day's digest alongside the cases
@@ -2307,7 +2307,7 @@ function _colScore(stats, position) {
   return scoreStats(stats, position, _COL_RULES);
 }
 
-// ── season normalisation, mirrored from the client ─────────────────────────
+// ── season normalization, mirrored from the client ─────────────────────────
 // The app re-levels each position's projected points to LAST SEASON's actual
 // top-K mean before anything is ranked or printed (normalizeToLastYear in
 // index.html), so the points on a reader's sheet are NOT the raw scores of the
@@ -2458,7 +2458,7 @@ async function boardPayload(env) {
   // slot-price each world at its own rank, interpolate the two dollar figures
   // at the shipped weight, then restore never-rises-down-the-column with the
   // upper envelope — a running max walked up from the bottom of the blend
-  // order, which lifts a cheaper neighbour to a book favourite's money rather
+  // order, which lifts a cheaper neighbor to a book favorite's money rather
   // than ever pushing a player below his own line. Pricing the blend's rank
   // off the curve directly is what made a mid-slider price dip below both of
   // its extremes on the sheet, and this board must quote the sheet.
@@ -2489,7 +2489,7 @@ async function boardPayload(env) {
   return _BOARD_CACHE;
 }
 
-// Where the RANKINGS put each team's offence, on the same points model
+// Where the RANKINGS put each team's offense, on the same points model
 // buildTeamEnvOverlay uses for the Vegas side. Without this a card can only say
 // "Vegas has San Francisco 4th in implied points", which reads as a promotion
 // even when the odds are a downgrade — the team-environment factor is a RATIO,
@@ -2619,10 +2619,10 @@ function buildVegasBoard(overlay, ctx) {
       rows.push({
         name: r.name, team: r.team, position: pos,
         rankConsensus: iC + 1, rankIronTuna: iI + 1, rankMarket: iM + 1, rankDelta,
-        // Raw stat-line scores, DELIBERATELY un-normalised: contract 3 promises
+        // Raw stat-line scores, DELIBERATELY un-normalized: contract 3 promises
         // that re-scoring the shipped stat line reproduces these to the digit
         // (test-it-league §9), so they can never carry the pool-level season
-        // normalisation. front.html calibrates them onto the reader's board
+        // normalization. front.html calibrates them onto the reader's board
         // per player (myCase's `k`); the SHEET-scale boards are /api/board and
         // it-league's baked block, which do carry it — see COLUMN_NORM.
         ptsConsensus: Math.round(r.ptsConsensus * 10) / 10,
@@ -2710,7 +2710,7 @@ function buildVegasDigest(board) {
   // projects for a skill player's touchdowns and what the game lines imply,
   // with a per-game chance derived from the blended season line. Poisson on
   // (season TDs / games he can play) is the standard way to turn a season total
-  // into "scores at least once this week"; it is labelled as derived so a
+  // into "scores at least once this week"; it is labeled as derived so a
   // reader never mistakes it for a book's number. Quarterbacks are excluded
   // because their touchdowns are mostly thrown, and a thrown touchdown is not
   // an anytime-TD.
@@ -2807,7 +2807,7 @@ function playerOddsFrom(board, digest, name, position) {
   const want = _oddsNorm(name);
   if (!want) return { ok: true, player: null, reason: 'no_player', digest };
   if (!COLUMN_POSITIONS.includes(pos)) {
-    // Kickers and defences are on the board and in the lookup. Their
+    // Kickers and defenses are on the board and in the lookup. Their
     // PROJECTIONS do move with the odds — buildTeamEnvOverlay prices both off
     // the clubs' implied points — but this column ranks a player against an
     // auction price, and COLUMN_CURVE covers the four skill positions. The card
@@ -2815,7 +2815,7 @@ function playerOddsFrom(board, digest, name, position) {
     return { ok: true, player: null, reason: 'unpriced_position', digest };
   }
   const hit = board.rows.filter(r => r.position === pos && _oddsNorm(r.name) === want);
-  // Two men, one normalised name, one position: there is no way to tell which
+  // Two men, one normalized name, one position: there is no way to tell which
   // card is being looked at, and guessing would put another player's price on
   // this page. Say nothing instead.
   if (hit.length !== 1) return { ok: true, player: null, reason: hit.length ? 'ambiguous' : 'off_board', digest };
@@ -3493,7 +3493,7 @@ async function seasonPayload(env, opts) {
 // ── the provider layer ─────────────────────────────────────────────────────
 // NOTHING ABOVE THIS LINE KNOWS A VENDOR'S NAME. Application code asks for a
 // KIND of data; the registry decides who answers and in what order, and every
-// adapter normalises its vendor's output into Iron Tuna's own schema before it
+// adapter normalizes its vendor's output into Iron Tuna's own schema before it
 // is returned. Swapping The Odds API for another book feed, or adding a paid
 // projection feed, is a new entry in this table and nothing else.
 //
@@ -3510,7 +3510,7 @@ async function seasonPayload(env, opts) {
 // run, route participation, DFS salaries), the field is reported as
 // unavailable instead -- see PROVIDER_UNAVAILABLE at the bottom of this block.
 //
-// THE SEVEN KINDS, and the internal record each normalises to:
+// THE SEVEN KINDS, and the internal record each normalizes to:
 //
 //   schedule    { id, type, week, kickoff, home, away, homeScore, awayScore,
 //                 spread, total, status }
@@ -3707,7 +3707,7 @@ const PROVIDER_SNAPS = [
 ];
 
 // ── injuries ───────────────────────────────────────────────────────────────
-// The existing ESPN pull, normalised. buildAvailabilityOverlay already turns
+// The existing ESPN pull, normalized. buildAvailabilityOverlay already turns
 // the feed into the site's own availability shape; this exposes it through the
 // registry so the market engine reads injuries the same way it reads odds.
 const PROVIDER_INJURY = [
@@ -3728,7 +3728,7 @@ const PROVIDER_INJURY = [
 // scraping, which this repo does not do. The interface is here so a licensed
 // feed is a config change rather than a refactor: set DFS_SALARY_API and
 // DFS_SALARY_API_KEY and the adapter below carries the response into the same
-// normalised record every other provider returns. Until then the kind reports
+// normalized record every other provider returns. Until then the kind reports
 // "not configured" and /dfs shows the scoring environment it can actually
 // source, with no salary column invented to fill the gap.
 const PROVIDER_DFS = [
@@ -3840,7 +3840,7 @@ async function snapshotReady(env) {
   return true;
 }
 // THE JOIN KEY. A book writes "Ja'Marr Chase"; the board writes what it
-// writes; the store keys on neither spelling but on the site's own normalised
+// writes; the store keys on neither spelling but on the site's own normalized
 // name, the same key the season overlay joins on. The book's spelling is kept
 // beside it for audit, never for lookup. A game subject is its game id.
 function snapshotSubject(r) {
@@ -3862,7 +3862,7 @@ async function snapshotWrite(env, rows, ctx) {
   const list = (rows || []).filter(r => r && r.book && r.subject && r.market && Number.isFinite(Number(r.line)) && snapshotSubject(r));
   if (!list.length) return { ok: true, seen: 0, written: 0, unchanged: 0 };
   // The latest row per (book, subject, market) already held, so an unchanged
-  // line is recognised without a query per row.
+  // line is recognized without a query per row.
   const latest = new Map();
   try {
     const q = await env.LEADS_DB.prepare(
@@ -4113,12 +4113,12 @@ async function snapshotStatus(env) {
 // THREE RULES IT WILL NOT BREAK.
 //   1. Vig comes out before anything is believed. Both sides of a total carry
 //      juice, so the raw implied probabilities sum to more than one; each pair
-//      is normalised to sum to one, which is the market's honest P(over).
+//      is normalized to sum to one, which is the market's honest P(over).
 //   2. The MEDIAN across books, not the mean. One book hanging a stale line is
 //      an outlier, and a mean lets it drag the consensus; a median does not.
 //   3. A market nobody priced is NOT invented. Missing yardage is reported
 //      missing and the projection says PARTIAL or UNAVAILABLE. There is no
-//      fallback to a projection feed hidden inside a number labelled Vegas.
+//      fallback to a projection feed hidden inside a number labeled Vegas.
 //
 // What each position is expected to have priced. `core` are the markets
 // without which a Vegas projection is not a projection; `extra` improve it.
@@ -4370,7 +4370,7 @@ const MARKET_MAX_AGE_MS = 14 * 86400000;
 const MARKET_MEMO_MS = 300000;
 
 // Implied points for both sides of a game, from the spread and the total. The
-// favourite gets half the total plus half the margin. nflverse writes
+// favorite gets half the total plus half the margin. nflverse writes
 // spread_line as the HOME margin, so a positive number is the home side.
 function marketImplied(game) {
   if (!game) return { home: null, away: null };
@@ -4521,7 +4521,7 @@ async function buildMarketRecords(env, opts) {
     const slot = byTeam.get(team) || null;
     const a = avail[k] || null;
     const u = usage && usage.players ? usage.players[k] : null;
-    // Joined on the normalised name, the same rule the season overlay uses,
+    // Joined on the normalized name, the same rule the season overlay uses,
     // and an AMBIGUOUS name (two board players, one key) gets no props at all:
     // a prop on the wrong man is worse than no prop.
     const nk = _oddsNorm(p.name);
@@ -4530,7 +4530,7 @@ async function buildMarketRecords(env, opts) {
     const vp = vegasProjection(mk.props, p.position, rules,
       { asOf: mk.asOf, injuryStatus: a ? a.status : null });
     // Season-long odds view of this player, which the site already computes.
-    // Kept beside the weekly one and clearly labelled: they answer different
+    // Kept beside the weekly one and clearly labeled: they answer different
     // questions and a reader must never see one under the other's heading.
     const seasonOdds = overlay && overlay.overlay ? overlay.overlay[k] || null : null;
     out.push({
@@ -4677,7 +4677,7 @@ async function rankingsPayload(env) {
 // PRODUCTION, NOT PROJECTION. Every other board on this site is a forecast;
 // this one is the season that has been played, read straight off the usage
 // overlay (nflverse weekly stats and snap counts) and scored at the reader's
-// setting. Nothing here is modelled, blended or shrunk, and no odds touch it.
+// setting. Nothing here is modeled, blended or shrunk, and no odds touch it.
 //
 // Two lines per player: the SEASON line, accumulated week by week in
 // runUsageRefresh, and the LATEST week, kept whole so a page can print the game
@@ -4763,7 +4763,7 @@ async function runMarketSnapshot(env) {
     ...wrote };
 }
 
-// -- kickers and defences, scored -------------------------------------------
+// -- kickers and defenses, scored -------------------------------------------
 // Mirrors scoreKicker / scoreDefense in index.html at the app's default tiers,
 // so the K and DST views rank on the same arithmetic the cheat sheet uses. The
 // make- and miss-distance mixes are the app's own (see its comment on why the
@@ -4915,7 +4915,7 @@ function weekEnvironment(ratings, team, week) {
   const use = fx.implied != null ? fx.implied : fx.expected;
   let factor = (base > 0 && use != null) ? use / base : 1;
   factor = Math.min(WEEK_ENV_CLAMP[1], Math.max(WEEK_ENV_CLAMP[0], factor));
-  // The same for the DEFENCE's week: points it is expected to allow, against
+  // The same for the DEFENSE's week: points it is expected to allow, against
   // its own season mean. Below 1 is a good week for a DST.
   const baseA = ratings.avgAllowed[team];
   const useA = fx.allowedImplied != null ? fx.allowedImplied : fx.allowedExpected;
@@ -4931,7 +4931,7 @@ function weekEnvironment(ratings, team, week) {
 // A season line, made per game and scaled to a week's environment. Touchdowns
 // follow the environment fully, yards at the square root, exactly as the
 // season overlay does; kickers follow it fully (their whole line is team
-// scoring); defences follow the points-ALLOWED factor, inverted.
+// scoring); defenses follow the points-ALLOWED factor, inverted.
 const _ENV_TD = new Set(['passTD', 'rushTD', 'recTD']);
 const _ENV_YD = new Set(['passYd', 'rushYd', 'recYd', 'rec']);
 function weeklyStats(seasonStats, position, gamesPlayable, env) {
@@ -4973,7 +4973,7 @@ function horizonWeeks(horizon, state, through) {
 
 // Market Delta. THE PRIMARY VERSION IS POINTS: Vegas projected fantasy points
 // minus consensus projected fantasy points. The rank delta is beside it because
-// it is what a reader recognises (WR21 to WR11), and the classification reads
+// it is what a reader recognizes (WR21 to WR11), and the classification reads
 // both, whichever is louder. Every threshold is here and nowhere else.
 const MARKET_DELTA = {
   // rank slots, positive = Vegas higher
@@ -5441,7 +5441,7 @@ function detectInsights(input) {
   }
 
   // 4. Game-script change, off the GAME lines in the snapshot store: a spread
-  // that moved toward the favourite by INSIGHT_T.spreadMove or a total that
+  // that moved toward the favorite by INSIGHT_T.spreadMove or a total that
   // moved, with any player prop on the same game that agrees.
   const games = (state && state.ok && state.games) || [];
   for (const g of games) {
@@ -5451,8 +5451,8 @@ function detectInsights(input) {
     const spMove = sp && sp.open != null && sp.current != null ? sp.current - sp.open : 0;
     const totMove = tot && tot.open != null && tot.current != null ? tot.current - tot.open : 0;
     if (Math.abs(spMove) < INSIGHT_T.spreadMove && Math.abs(totMove) < INSIGHT_T.totalMove) continue;
-    // spread is the HOME margin: rising means the home side is more favoured.
-    const favouredMore = spMove > 0 ? g.home : spMove < 0 ? g.away : null;
+    // spread is the HOME margin: rising means the home side is more favored.
+    const favoredMore = spMove > 0 ? g.home : spMove < 0 ? g.away : null;
     const corroborating = [];
     for (const p of (week && week.players) || []) {
       if (p.team !== g.home && p.team !== g.away) continue;
@@ -5463,17 +5463,17 @@ function detectInsights(input) {
         corroborating.push({ name: p.name, position: p.position, team: p.team, market: m, movement: x.movement, percentChange: x.percentChange });
       }
     }
-    const runLean = favouredMore && corroborating.some(c => c.team === favouredMore && (c.market === 'rushYd' || c.market === 'rushAtt') && c.movement > 0);
-    const passDrop = favouredMore && corroborating.some(c => c.team === favouredMore && c.market === 'passYd' && c.movement < 0);
-    const story = favouredMore && (runLean || passDrop)
-      ? 'The betting market is increasingly pricing a run-favourable game script for ' + favouredMore + '.'
+    const runLean = favoredMore && corroborating.some(c => c.team === favoredMore && (c.market === 'rushYd' || c.market === 'rushAtt') && c.movement > 0);
+    const passDrop = favoredMore && corroborating.some(c => c.team === favoredMore && c.market === 'passYd' && c.movement < 0);
+    const story = favoredMore && (runLean || passDrop)
+      ? 'The betting market is increasingly pricing a run-favorable game script for ' + favoredMore + '.'
       : totMove >= INSIGHT_T.totalMove ? 'The market expects more scoring in this game than it did when the line opened.'
       : totMove <= -INSIGHT_T.totalMove ? 'The market expects less scoring in this game than it did when the line opened.'
       : 'The spread has moved without a matching move in the player markets.';
-    out.push(_insight('game_script_change', { key: g.id, team: favouredMore || g.home, game: g.away + ' at ' + g.home, home: g.home, away: g.away },
+    out.push(_insight('game_script_change', { key: g.id, team: favoredMore || g.home, game: g.away + ' at ' + g.home, home: g.home, away: g.away },
       { spreadOpen: sp ? sp.open : null, spreadCurrent: sp ? sp.current : null, spreadMove: _oddsRound(spMove),
         totalOpen: tot ? tot.open : null, totalCurrent: tot ? tot.current : null, totalMove: _oddsRound(totMove),
-        favouredMore, corroborating, interpretation: story },
+        favoredMore, corroborating, interpretation: story },
       Math.max(Math.abs(spMove), Math.abs(totMove)), corroborating.length >= 2 ? 'HIGH' : corroborating.length ? 'MEDIUM' : 'LOW', ts));
   }
 
@@ -5490,7 +5490,7 @@ const EDGE_CONTRACT = 1;
 function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   const players = (week && week.players) || [];
   const hasProps = players.some(p => /^props/.test(p.vegas.basis));
-  // Skill positions only. A defence's rank swings twenty slots on a game total
+  // Skill positions only. A defense's rank swings twenty slots on a game total
   // because its whole line IS the environment; that is not a disagreement
   // about a player, and it would crowd every real one off the board.
   const sig = players.filter(p => p.marketDelta && p.marketDelta.significant && p.pos !== 'K' && p.pos !== 'DEF');
@@ -5522,7 +5522,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
   }
   movers.sort((a, b) => Math.abs(b.percentChange || 0) - Math.abs(a.percentChange || 0));
   // TD board: a quoted anytime-TD probability where a book posted one, else
-  // derived from the blended weekly TD line (Poisson), and labelled.
+  // derived from the blended weekly TD line (Poisson), and labeled.
   const tdBoard = players.filter(p => p.pos !== 'K' && p.pos !== 'DEF' && p.games > 0).map(p => {
     const q = p.vegas.td;
     const lam = (p.ironTuna.stats.rushTD || 0) + (p.ironTuna.stats.recTD || 0) + (p.pos === 'QB' ? 0 : 0);
@@ -5531,7 +5531,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
              books: q ? q.books : null, expectedTds: _oddsRound(lam * 100) / 100, opponent: p.weeks[0] && p.weeks[0].opponent };
   }).sort((a, b) => b.probability - a.probability).slice(0, 40);
   // Volume board: market-implied touches. Props where present, else the
-  // environment-scaled line, labelled.
+  // environment-scaled line, labeled.
   const volumeBoard = players.filter(p => p.pos !== 'K' && p.pos !== 'DEF' && p.pos !== 'QB' && p.games > 0).map(p => {
     const s = p.vegas.stats;
     const touches = (s.rec || 0) + (s.rushAtt != null ? s.rushAtt : (s.rushYd || 0) / 4.3);
@@ -5563,7 +5563,7 @@ function buildVegasEdge(week, weekMarkets, gameMarkets, state, insights) {
              ironTunaTotal: itTotal, ironTunaHome: mh, ironTunaAway: ma,
              gap: (itTotal != null && g.total != null) ? _oddsRound(itTotal - g.total) : null,
              gapAgrees: (itTotal != null && g.total != null) ? Math.abs(itTotal - g.total) < GAP_AGREE : null,
-             favourite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, movement: mv };
+             favorite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, movement: mv };
   }).filter(g => g.total != null).sort((a, b) => b.total - a.total);
   const hidden = (insights && insights.insights || []).filter(i => i.type === 'game_script_change');
   return { ok: true, contract: EDGE_CONTRACT, week: state && state.ok ? state.week.label : null, hasProps,
@@ -5846,7 +5846,7 @@ function normalizeGameSummary(raw, nameIndex) {
   }
   // Red zone and goal line, off the plays. The play text names the ball
   // carrier as "J.Williams"; it is matched to the box-score list for the
-  // offence's side by initial and surname, and left uncounted when ambiguous.
+  // offense's side by initial and surname, and left uncounted when ambiguous.
   const byAbbr = new Map();
   for (const p of players.values()) {
     const k = p.team + '|' + _abbr(p.name);
@@ -6464,7 +6464,7 @@ function _gameCard(g, ctx) {
   const props = [];
   for (const p of inGame) if (/^props/.test(p.vegas.basis)) props.push({ name: p.name, position: p.position, priced: p.weeks[0] && p.weeks[0].vegasProjection ? p.weeks[0].vegasProjection.priced : [] });
   return { game: g.away + ' at ' + g.home, home: g.home, away: g.away, kickoff: g.kickoff, spread: g.spread, total: g.total, impliedHome: g.impliedHome, impliedAway: g.impliedAway,
-    favourite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, environment: env,
+    favorite: g.spread > 0 ? g.home : g.spread < 0 ? g.away : null, environment: env,
     movement: mv ? { spread: mv.spread ? _oddsRound((mv.spread.current || 0) - (mv.spread.open || 0)) : null, total: mv.total ? _oddsRound((mv.total.current || 0) - (mv.total.open || 0)) : null } : null,
     biggestEdge: edge ? { name: edge.name, position: edge.position, team: edge.team, classification: edge.marketDelta.classification, rankDelta: edge.marketDelta.rank, why: edge.why ? edge.why.summary : '' } : null,
     mostImportant: top ? { name: top.name, position: top.position, team: top.team, ironTunaRank: top.ironTuna.rank, projected: top.ironTuna.points } : null,
@@ -6519,15 +6519,15 @@ function _sectionSpec(kind) {
   if (kind === 'weekend-game-plan') return '{"cards":[{"game":"AWAY at HOME","fantasyEnvironment":"...","whatVegasIsTellingUs":"...","biggestVegasEdge":"...","mostImportantPlayer":"...","keyQuestion":"...","ironTunaApproach":"..."}]} (one per card in the brief)';
   return '{' + secs.map(s => '"' + s + '":["..."]').join(',') + '}';
 }
-// Every capitalised two-or-three-word name and every number in the draft must
+// Every capitalized two-or-three-word name and every number in the draft must
 // be in the brief. Small integers are allowed (ordinals, counts of things).
-// Capitalised words that are not people: the words a headline or a sentence
+// Capitalized words that are not people: the words a headline or a sentence
 // starts with, the clubs, the site's own names, the vocabulary of the desk.
-// A run of capitalised words is a NAME only if two or more of its words are
+// A run of capitalized words is a NAME only if two or more of its words are
 // none of these (and not an all-caps abbreviation, and not a possessive of
 // something allowed). The first live preview was held on "Two Slates",
 // "Implied Totals", "Every Patriots", "Guerendo's PUP" and "Brown. Vegas".
-const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modelled Modeled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
+const NOT_A_NAME = new Set(('A An The This That These Those His Her Their Its Our Your My What Why How When Where Which Who Whom Whose If Then Than So As At In On For With And But Or Nor Not No Yes To Of From By Into Onto Over Under Off Out Up Down Away Back Near Far Between Among Across Through Toward Towards Against About Above Below Behind Before After During Until While Since Because Though Although Unless Whether Once Again Also Only Just Even Still Yet Ever Never Always Often Sometimes Now Here There Every Each Either Neither Both All Any Some Most More Less Least Much Many Few Several Another Other Others Same Such Very Too Quite Rather Enough Almost Nearly Simply Mostly Largely Entirely Purely Directly Currently Already Previously Recently Finally Suddenly Follow Following Start Sit Fade Bench Flex Stack Pivot Chase Buy Sell Hold Trade Add Drop Claim Target Avoid Consider Expect Watch Note Remember Treat Rank Ranked Ranks Projected Projection Projections Consensus Market Markets Vegas Line Lines Spread Spreads Total Totals Implied Score Scores Odds Prop Props Book Books Sharp Sharps Public Money Price Priced Prices Salary Salaries Value Ceiling Floor Leverage Ownership Chalk Cash Tournament Showdown Captain Slate Slates Lineup Lineups Roster Rosters Format Formats League Leagues Team Teams Club Clubs Offense Offenses Defense Defenses Special Passing Rushing Receiving Red Zone Goal Snap Snaps Route Routes Share Shares Volume Usage Role Roles Workload Touches Carries Targets Catches Yards Points Point Game Games Week Weeks Weekly Season Seasons Preseason Playoff Playoffs Bye Byes Injury Injuries Injured Questionable Doubtful Probable Healthy Out Active Inactive Reserve Return Returns Report Reports Update Updates Preview Previews Recap Rankings Ranking Tier Tiers Waiver Waivers Pickup Pickups Trade Trades Deal Deals Dynasty Redraft Keeper Best Ball Auction Draft Drafts Kicker Kickers Quarterback Quarterbacks Running Back Backs Receiver Receivers Wideout Wideouts Tight End Ends Punter Coach Coaches Coordinator Rookie Rookies Veteran Veterans Starter Starters Backup Backups Handcuff Handcuffs Sleeper Sleepers Bust Busts Breakout Breakouts Riser Risers Faller Fallers Mover Movers Signal Noise Strong Weak High Low Higher Lower Highest Lowest Big Small Bigger Smaller Great Good Bad Better Worse Best Worst Top Bottom Early Late Earlier Later Long Short Longer Shorter Fast Slow New Old Full Half Empty Clean Clear Cheap Expensive Rich Poor Safe Risky Reasonable Unreasonable Modest Heavy Light Hard Easy Simple Clear Obvious Likely Unlikely Possible Probable Certain Sure Different Same Similar Two Three Four Five Six Seven Eight Nine Ten Eleven Twelve First Second Third Fourth Fifth Last Next Previous Final Finals Opening Closing Midweek Monday Tuesday Wednesday Thursday Friday Saturday Sunday Night Nights Morning Afternoon Evening Today Tonight Tomorrow Yesterday January February March April May June July August September October November December Home Road Neutral Favorite Favorites Underdog Underdogs Dog Dogs Push Cover Covers Over Under Win Wins Loss Losses Lead Leads Trail Trails Script Scripts Environment Environments Weather Wind Rain Snow Dome Grass Turf Iron Tuna Delta Edge Advisor Desk Newsroom Analyst Analysts Fantasy Football Intelligence Platform Classified Classification Strong Moderate Mild Slight Fade Fades Lean Leans Buy Buys Sell Sells Blend Blended Model Models Data Feed Feeds Packet Packets Brief Briefs Source Sources Basis Modeled Modelled Not Available Unavailable None Nothing Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Niners Seahawks Buccaneers Bucs Titans Commanders Arizona Atlanta Baltimore Buffalo Carolina Chicago Cincinnati Cleveland Dallas Denver Detroit Green Bay Houston Indianapolis Jacksonville Kansas City Las Los Angeles Miami Minnesota England Orleans York Philadelphia Pittsburgh San Francisco Seattle Tampa Tennessee Washington America American National Conference Division East West North South Super Bowl Pro Championship Wild Card Divisional Thanksgiving Christmas').split(/\s+/));
 const _nameTokens = (run) => run.split(/\s+/).map(t => t.replace(/['\u2019]s$/, '')).filter(t => t && !/^[A-Z0-9.&-]+$/.test(t) && !NOT_A_NAME.has(t.replace(/[.,]+$/, '')));
 function validateDraft(text, allowed) {
   const names = new Set(allowed.names || []), nums = new Set(allowed.numbers || []);
@@ -6588,7 +6588,7 @@ async function writePiece(env, kind, brief) {
 // beats, one research packet per package, a Weekly Fantasy lens and a DFS
 // lens written from the same facts, analyst memory, the one Vega/Brooks
 // rivalry, a significance-scored breaking-news workflow, and an admin
-// control centre with a pause switch. Nothing here invents a fact: the
+// control center with a pause switch. Nothing here invents a fact: the
 // packet is built by arithmetic over the boards, the usage file, the injury
 // list, the depth charts, the line history and the salaries, and the writer
 // may state only what the packet contains (validateDraft, extended below).
@@ -6606,8 +6606,8 @@ const NEWSROOM_FLAGS = {
   PERSONALIZED_RANKINGS: { dflt: true,  note: 'rankings re-scored at the saved league on the pages' },
   // League sync (docs/league-sync.md). A provider flag gates connecting AND the
   // scheduled refresh of leagues already connected on it.
-  LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalised module' },
-  SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial licence is in writing (docs/data-sources.md R2)' },
+  LEAGUE_SYNC:           { dflt: true,  note: 'Sync My League: the league model, My Leagues, and every personalized module' },
+  SLEEPER_SYNC:          { dflt: false, note: 'the Sleeper connector; OFF until Sleeper’s commercial license is in writing (docs/data-sources.md R2)' },
   YAHOO_SYNC:            { dflt: false, note: 'the Yahoo OAuth connector; needs YAHOO_CLIENT_ID, YAHOO_CLIENT_SECRET and LEAGUE_TOKEN_KEY' },
   ESPN_SYNC:             { dflt: false, note: 'the ESPN connector; no supported path exists, the adapter is a placeholder' },
   PERSONALIZED_WAIVERS:  { dflt: true,  note: 'the Pickup Advisor on the players actually available in a synced league' },
@@ -6648,7 +6648,7 @@ const ANALYSTS = {
   brooks: { id: 'brooks', name: 'Evan Brooks', role: 'Fantasy Rankings Analyst', avatar: 'EB',
     specialty: ['Weekly and rest-of-season rankings', 'Talent, role and workload', 'Schedule', 'Positional evaluation', 'Trade value'],
     personality: 'Confident, measured and skeptical of overreacting to market movements.',
-    philosophy: 'Markets provide useful information but do not replace football analysis. Sportsbooks optimise a market; they do not rank your flex.',
+    philosophy: 'Markets provide useful information but do not replace football analysis. Sportsbooks optimize a market; they do not rank your flex.',
     assignments: ['Weekly rankings', 'Rest-of-season rankings', 'Running backs, receivers and tight ends', 'Trade Desk', 'The fantasy side of the Fantasy / Market slider'],
     voice: 'Measured. Builds from role, workload and schedule to a rank, and says what would change his mind. Wants to see a player earn the opportunity before he pays for it. Respects the market as one input among several and says so plainly.',
     rivalry: 'vega' },
@@ -6667,7 +6667,7 @@ const ANALYSTS = {
     voice: 'Thinks in systems: pass rate, protection, the play-caller’s tendencies, who the quarterback looks for on third down. Opinionated about scheme and willing to say a good player is in a bad system. Explains the game script before the fantasy points.',
     rivalry: null },
   grant: { id: 'grant', name: 'Tyler Grant', role: 'Waiver and Roster Strategy Analyst', avatar: 'TG',
-    specialty: ['Waivers and FAAB', 'Deep pickups and stashes', 'Bench construction', 'Aggressive roster optimisation'],
+    specialty: ['Waivers and FAAB', 'Deep pickups and stashes', 'Bench construction', 'Aggressive roster optimization'],
     personality: 'Practical, aggressive and conversational.',
     philosophy: 'The bottom of the roster should constantly earn its place.',
     assignments: ['Pickup Advisor', 'Stashes and deep sleepers', 'Injury beneficiaries'],
@@ -6678,7 +6678,7 @@ const ANALYSTS = {
     personality: 'Concise, dry and skeptical of unnecessary complexity.',
     philosophy: 'Most of a streaming decision is the opponent and the total. The rest is noise with a byline.',
     assignments: ['Weekend Preview', 'Kickers & Defenses', 'Streaming and matchup recommendations'],
-    voice: 'Terse. Names the matchup, the total and the decision, and stops. Suspicious of any argument that needs more than two numbers. Dry humour, used sparingly.',
+    voice: 'Terse. Names the matchup, the total and the decision, and stops. Suspicious of any argument that needs more than two numbers. Dry humor, used sparingly.',
     rivalry: null },
   park: { id: 'park', name: 'Lena Park', role: 'DFS Strategy Analyst', avatar: 'LP',
     specialty: ['DFS salary and ownership', 'Leverage', 'Stacking and correlation', 'Cash, single-entry and large-field strategy', 'Showdown', 'Late swap'],
@@ -6694,7 +6694,7 @@ function analystFor(env, id) {
   if (!flagOn(env, 'ANALYST_PERSONAS')) return ANALYST_HOUSE;
   return ANALYSTS[id] || ANALYST_HOUSE;
 }
-const AI_DISCLOSURE = 'Iron Tuna’s analysts are AI-powered editorial personas, not people. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls. Every number they print is computed from the site’s own data (the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries you load); a piece whose prose named something the data does not contain is held, not published. The personalities are a way of organising the analysis. The facts are the site’s.';
+const AI_DISCLOSURE = 'Iron Tuna’s analysts are AI-powered editorial personas, not people. Each has a fixed beat, a stated analytical philosophy and a memory of its own published calls. Every number they print is computed from the site’s own data (the boards, the usage file, the injury list, the depth charts, the sportsbook line history and the DFS salaries you load); a piece whose prose named something the data does not contain is held, not published. The personalities are a way of organizing the analysis. The facts are the site’s.';
 
 // ── data freshness ─────────────────────────────────────────────────────────
 // Every packet carries where each input came from and how old it is, graded
@@ -6727,7 +6727,7 @@ function freshnessReport(stamps, kind, now) {
 }
 
 // ── the Fantasy Analysis / Market Intelligence blend ───────────────────────
-// Two normalised components per player, precomputed once so a slider can
+// Two normalized components per player, precomputed once so a slider can
 // interpolate between them in the browser with no recalculation:
 //   fantasy  the traditional read: the consensus projection at the reader's
 //            rules, with the usage role trend applied once three games have
@@ -6738,7 +6738,7 @@ function freshnessReport(stamps, kind, now) {
 //            team rating is a projection OF the market and gets 55%.
 // points(w) = fantasy + w * shrink * (market - fantasy). Both are fantasy
 // points under the same rules, so the interpolation is in one unit; the
-// shrink is the normalisation, and it is what keeps "100% market" from
+// shrink is the normalization, and it is what keeps "100% market" from
 // meaning "100% a curve fit" on a player nobody priced.
 const BLEND_SHRINK = { props: 1, 'props-partial': 0.9, 'props+gamelines': 0.95, gamelines: 0.8, 'gamelines+ratings': 0.7, ratings: 0.55, none: 0 };
 function blendComponents(p) {
@@ -6792,8 +6792,8 @@ function blendDisagreements(rows, limit) {
 // ── DFS metrics ────────────────────────────────────────────────────────────
 // Every metric here has a written method (docs/dfs-metrics.md) and a
 // `basis` on the row saying whether it is a feed or a model. No feed on this
-// site carries projected ownership, so it is MODELLED, and every surface
-// that prints it says so. Contest types change what is emphasised, not the
+// site carries projected ownership, so it is MODELED, and every surface
+// that prints it says so. Contest types change what is emphasized, not the
 // numbers.
 const DFS_CONTESTS = {
   cash:   { label: 'Cash', sortBy: 'cashScore', note: 'Floor and value first. Chalk is fine.' },
@@ -6825,7 +6825,7 @@ function dfsMetrics(rows, contest) {
     // roster. Documented in docs/dfs-metrics.md. A feed replaces it when one is licensed.
     const z = 2.2 * (v - 1) - 1.4 * ((r._salRank - 1) / Math.max(1, r._posN - 1)) + (r.tdProbability ? (r.tdProbability - 30) / 60 : 0);
     r.ownership = Math.round(100 / (1 + Math.exp(-z)) * 0.42 * 10) / 10;
-    r.ownershipBasis = 'modelled';
+    r.ownershipBasis = 'modeled';
     r.leverage = Math.round((r.ceiling / Math.max(1, r.ownership)) * 10) / 10;
     r.cashScore = Math.round((r.floor / (r.salary / 1000)) / med * 100);
     r.tournamentScore = Math.round((r.ceiling / (r.salary / 1000)) / med * 100 * Math.min(1.6, Math.max(0.6, 12 / Math.max(3, r.ownership))));
@@ -6833,7 +6833,7 @@ function dfsMetrics(rows, contest) {
     delete r._salRank; delete r._posN;
   }
   const c = DFS_CONTESTS[contest] ? contest : 'gpp';
-  return { contest: c, label: DFS_CONTESTS[c].label, note: DFS_CONTESTS[c].note, sortBy: DFS_CONTESTS[c].sortBy, medianPerK: _oddsRound(med * 100) / 100, ownershipBasis: 'modelled', rows: on };
+  return { contest: c, label: DFS_CONTESTS[c].label, note: DFS_CONTESTS[c].note, sortBy: DFS_CONTESTS[c].sortBy, medianPerK: _oddsRound(med * 100) / 100, ownershipBasis: 'modeled', rows: on };
 }
 // Stack score: the game's total, the side's implied points and the QB's
 // projection, indexed to the slate's best.
@@ -6860,7 +6860,7 @@ const CALLS_DDL = [
   'CREATE TABLE IF NOT EXISTS news_state (id INTEGER PRIMARY KEY, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)'
 ];
 const CALL_DIRECTIONS = new Set(['up', 'down', 'hold', 'buy', 'sell', 'start', 'sit', 'add', 'drop', 'stash', 'attack', 'fade', 'target', 'avoid']);
-function normaliseCalls(calls, packet, analystId, lens) {
+function normalizeCalls(calls, packet, analystId, lens) {
   const names = new Set((packet.allowed && packet.allowed.names) || []);
   const index = packet.playerIndex || {};
   const out = [];
@@ -7065,7 +7065,7 @@ function _dfsBlock(ctx, teams) {
     let rows = s.metrics.rows;
     if (teams && teams.size) rows = rows.filter(r => teams.has(r.team));
     const pick = (list, n) => list.slice(0, n).map(r => ({ name: r.name, position: r.position, team: r.team, salary: r.salary, projected: r.ironTunaPoints, marketPoints: r.vegasPoints, value: r.value, ownership: r.ownership, ownershipBasis: r.ownershipBasis, leverage: r.leverage, floor: r.floor, ceiling: r.ceiling, cashScore: r.cashScore, tournamentScore: r.tournamentScore, chalk: r.chalk, tdProbability: r.tdProbability }));
-    out.sites[site] = { label: s.label, cap: s.cap, salariesAsOf: s.salariesAsOf, ownershipBasis: 'modelled',
+    out.sites[site] = { label: s.label, cap: s.cap, salariesAsOf: s.salariesAsOf, ownershipBasis: 'modeled',
       bestValues: pick(rows.slice().sort((a, b) => b.value - a.value), 12),
       likelyChalk: pick(rows.slice().sort((a, b) => b.ownership - a.ownership), 10),
       leverage: pick(rows.filter(r => r.value >= 95).sort((a, b) => b.leverage - a.leverage), 10),
@@ -7111,14 +7111,14 @@ function packetSundayTaught(games, summaries, ctx) {
   const sig = (ctx.signals && ctx.signals.insights) || [];
   const teams = new Set(); for (const g of games) { teams.add(g.home); teams.add(g.away); }
   const label = (type) => /consolidation|role/.test(type) ? 'ROLE CHANGE' : /production_below/.test(type) ? 'BUY' : /production_above|td_regression/.test(type) ? 'NOISE' : /vegas_above|line_movement/.test(type) ? 'SIGNAL' : /vegas_below/.test(type) ? 'CONCERN' : 'WATCH THIS';
-  const labelled = sig.filter(i => i.confidence !== 'LOW' && (i.subject.team ? teams.has(i.subject.team) : true)).slice(0, 20)
+  const labeled = sig.filter(i => i.confidence !== 'LOW' && (i.subject.team ? teams.has(i.subject.team) : true)).slice(0, 20)
     .map(i => ({ label: label(i.type), player: i.subject.name || null, team: i.subject.team || null, type: i.type, confidence: i.confidence, data: i.data }));
   // Winners whose usage does not support the score are noise; usage changes
   // the market already agrees with are signal.
   const noise = base.winners.filter(w => w.touches != null && w.targetShare != null && (w.touches <= 8 && w.points >= 15)).map(w => ({ label: 'NOISE', player: w.name, team: w.team, touches: w.touches, points: w.points, projected: w.projected }));
   const signal = base.usageChanges.filter(c => c.direction === 'up').map(c => ({ label: 'SIGNAL', player: c.name, team: c.team, touches: c.touches, seasonAvgTouches: c.seasonAvgTouches }));
   delete base.allowed;
-  return { ...base, labelled, noiseCandidates: noise.slice(0, 8), signalCandidates: signal.slice(0, 8), finalsCount: summaries.length, dfs: _dfsBlock(ctx, null) };
+  return { ...base, labeled, noiseCandidates: noise.slice(0, 8), signalCandidates: signal.slice(0, 8), finalsCount: summaries.length, dfs: _dfsBlock(ctx, null) };
 }
 function packetShowdown(kind, games, ctx) {
   const base = briefGamePlan(kind, games, ctx);
@@ -7395,7 +7395,7 @@ TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manage
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
 THE RIVALRY, when the packet carries one: exactly one line, intellectual, never personal. Acceptable: "Brooks still has him WR17. The receiving market appears considerably less worried." Not acceptable: insults, claims a colleague does not understand football, manufactured heat.
 STYLE. Direct, analytical, actionable, confident, concise. Take positions. No introductions, no restating the box score, no hedging padding, no em dashes (use a period, a colon or a comma). Never write "it's worth noting", "buckle up", "dive in", "game-changer", "in conclusion", "at the end of the day", "ever-evolving", "look no further". The analyst's personality is noticeable in the prose and never overrides the facts.
-HEADLINE AND DEK in sentence case: capitalise the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
+HEADLINE AND DEK in sentence case: capitalize the first word and proper nouns (players, clubs, Vegas, Iron Tuna) and nothing else. Never Title Case. The headline names a player or a game and says what to do about it; the dek is one sentence carrying the finding and a number from the packet.
 PUBLISH LESS. If the packet genuinely carries nothing a reader should act on, return {"skip":"<one sentence why>"} instead of filler.
 OUTPUT: a single JSON object, no prose outside it, in exactly the shape requested.`;
 const AI_PHRASES = [/it'?s worth noting/i, /buckle up/i, /dive in/i, /game-?changer/i, /in conclusion/i, /at the end of the day/i, /ever-evolving/i, /look no further/i, /—/];
@@ -7626,7 +7626,7 @@ async function produceContent(env, kind, opts) {
                            headline: written.body ? String(written.body.headline || '').slice(0, 200) : null, dek: written.body ? String(written.body.dek || '').slice(0, 400) : null });
   let calls = { stored: 0 };
   if (status === 'published' && written.body) {
-    const list = normaliseCalls(written.body.calls, packet, analyst, 'weekly');
+    const list = normalizeCalls(written.body.calls, packet, analyst, 'weekly');
     calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, list, rivalry);
   }
   return { ok: true, kind, week, status, version, violations, analyst, rivalry: !!rivalry, calls: calls.stored, sections: written.body ? Object.keys(written.body) : [] };
@@ -7646,7 +7646,7 @@ async function revalidateHeld(env, kind, latest, packet, d, season) {
   const analyst = packet.meta.analyst, week = d.week;
   const rivalry = packet.rivalry && body.rivalryLine ? { ...packet.rivalry, line: String(body.rivalryLine).slice(0, 300) } : null;
   let calls = { stored: 0 };
-  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normaliseCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
+  try { calls = await recordCalls(env, { season, week, kind, slug: _slugOf(kind, season, week) }, normalizeCalls(body.calls, packet, analyst, 'weekly'), rivalry); } catch (e) {}
   return { ok: true, kind, week, status: 'published', version: latest.version || 1, revalidated: true, heldOn: vio.length, analyst, rivalry: !!rivalry, calls: calls.stored, sections: Object.keys(body) };
 }
 async function runContentTick(env) {
@@ -7913,7 +7913,7 @@ function newsroomAudit(crons) {
   }
   return { ok: !problems.length, problems, activeKinds: active.length, legacyKinds: Object.keys(LEGACY_CONTENT).length };
 }
-// The admin control centre's actions, beyond the desk's own (preview,
+// The admin control center's actions, beyond the desk's own (preview,
 // publish, unpublish, regenerate, edit).
 async function newsroomAdmin(env, action, body) {
   const b = body || {};
@@ -7929,7 +7929,7 @@ async function newsroomAdmin(env, action, body) {
     if (!row.body || row.body === 'null') return { ok: false, error: 'no_body' };
     await env.LEADS_DB.prepare('UPDATE content_pieces SET status = ?, published_at = ? WHERE id = ?').bind('published', Date.now(), row.id).run();
     let calls = { stored: 0 };
-    try { const packet = JSON.parse(row.brief); const bd = JSON.parse(row.body); const list = normaliseCalls(bd.calls, packet, row.analyst, 'weekly'); calls = await recordCalls(env, { season: row.season, week: row.week, kind, slug: row.slug }, list, row.rivalry ? JSON.parse(row.rivalry) : null); } catch (e) {}
+    try { const packet = JSON.parse(row.brief); const bd = JSON.parse(row.body); const list = normalizeCalls(bd.calls, packet, row.analyst, 'weekly'); calls = await recordCalls(env, { season: row.season, week: row.week, kind, slug: row.slug }, list, row.rivalry ? JSON.parse(row.rivalry) : null); } catch (e) {}
     return { ok: true, action, kind, week, calls: calls.stored };
   }
   if (action === 'run') {
@@ -7988,7 +7988,7 @@ async function dfsReady(env) {
   try { for (const q of DFS_DDL) await env.LEADS_DB.prepare(q).run(); _DFS_READY = true; return true; } catch (e) { return false; }
 }
 // A DST row on either site names the club; the board names the club's
-// defence. Both resolve to the team key.
+// defense. Both resolve to the team key.
 const _dfsPos = p => { const u = String(p || '').toUpperCase(); return u === 'DEF' || u === 'D' || u === 'D/ST' ? 'DST' : u; };
 // Which contest a salary file is for. Both sites sell single-game contests out
 // of a file with the same columns as the main slate, and the difference is a
@@ -8177,7 +8177,7 @@ const _jobSummary = r => { try { return JSON.stringify(r).slice(0, 800); } catch
 // fifteen minutes of wall clock in total; the desk tick, which may write two
 // pieces with a retry each at 170 s a call, gets most of it, and every other
 // job a few minutes. A job past its deadline is logged as a failure and the
-// tick moves on; the work itself is not cancelled (the runtime has no way to
+// tick moves on; the work itself is not canceled (the runtime has no way to
 // cancel a promise), it is simply no longer waited for.
 const JOB_DEADLINE_MS = { 'content-tick': 13 * 60000 };
 const JOB_DEADLINE_DEFAULT_MS = 4 * 60000;
@@ -8777,7 +8777,7 @@ async function postedInsightsPayload(env) {
 //
 // The reader's OWN zone is what the timestamp under the headline uses
 // (front.html's leadStamp), and this deliberately does not: the payload is
-// memoised for two minutes and served to everybody, so it gets one zone, and ET
+// memoized for two minutes and served to everybody, so it gets one zone, and ET
 // is the one the sport itself runs on.
 const LEAD_TZ = 'America/New_York';
 // Second Sunday in March to the first Sunday in November, the US rule since
@@ -9053,9 +9053,9 @@ async function pruneAnalytics(env, keepDays) {
 // surface reads their exact scoring, roster, opponents and free-agent pool.
 //
 // The shape of it, and the one rule: nothing downstream knows which platform
-// a league came from. Provider adapters (LEAGUE_PROVIDERS) pull and normalise
+// a league came from. Provider adapters (LEAGUE_PROVIDERS) pull and normalize
 // into the Iron Tuna league model (LEAGUE_CONTRACT); leagueSync writes that
-// model into D1 idempotently, keyed on provider IDs; and the personalisation
+// model into D1 idempotently, keyed on provider IDs; and the personalization
 // modules (leagueBoard, leaguePickups, leagueLineup, leagueMatchup,
 // leagueIntel, leagueTrades, leaguePlayoffs, leagueAvailability) read ONLY the
 // local model plus the site's own boards. External calls happen on connect,
@@ -9063,7 +9063,7 @@ async function pruneAnalytics(env, keepDays) {
 //
 // Provider terms are not a footnote. Sleeper's API is free for non-commercial
 // use only (docs/data-sources.md R2, Addendum 13.5), so the Sleeper connector
-// is behind FLAG_SLEEPER_SYNC, default OFF, until a licence is in writing.
+// is behind FLAG_SLEEPER_SYNC, default OFF, until a license is in writing.
 // Yahoo is OAuth 2.0 with the reader's consent and needs client credentials;
 // it is behind FLAG_YAHOO_SYNC. ESPN has no supported path (see LEAGUE_PROVIDERS.espn).
 const LEAGUE_CONTRACT = 1;
@@ -9169,7 +9169,7 @@ function leaguePoolIndex() {
 }
 // One provider player -> one key, or a miss with a reason. `hint` is what the
 // provider knows: name, position, team. Exact name|position first; then a
-// unique surname at the position on the same club; a defence by its club.
+// unique surname at the position on the same club; a defense by its club.
 function leagueResolvePlayer(hint) {
   const pool = leaguePoolIndex();
   const pos = leaguePos(hint && hint.position);
@@ -9178,8 +9178,8 @@ function leagueResolvePlayer(hint) {
   if (!LEAGUE_POSITIONS.has(pos)) return { key: null, confidence: 'none', reason: 'position ' + (pos || '?') + ' is not ranked' };
   if (pos === 'DEF') {
     const d = team ? pool.defByTeam.get(team) : null;
-    if (d) return { key: d.key, name: d.name, confidence: 'exact', reason: 'defence by club' };
-    return { key: null, confidence: 'none', reason: 'no defence for club ' + (team || '?') };
+    if (d) return { key: d.key, name: d.name, confidence: 'exact', reason: 'defense by club' };
+    return { key: null, confidence: 'none', reason: 'no defense for club ' + (team || '?') };
   }
   if (!name) return { key: null, confidence: 'none', reason: 'no name' };
   const exact = pool.byKey.get(leaguePlayerKey(name, pos));
@@ -9222,7 +9222,7 @@ async function leagueMapPlayers(env, provider, players) {
   for (let i = 0; i < writes.length; i += 50) { try { await env.LEADS_DB.batch(writes.slice(i, i + 50)); } catch (e) { for (const s of writes.slice(i, i + 50)) { try { await s.run(); } catch (e2) {} } } }
   return { map: out, unmatched };
 }
-// -- the normalised settings ------------------------------------------------
+// -- the normalized settings ------------------------------------------------
 // Roster slots the lineup engine understands, with what may fill each. A
 // slot the engine does not know (IDP, a "DL") is kept under roster.other and
 // counted in the roster size, never in a lineup.
@@ -9373,7 +9373,7 @@ const SLEEPER_SCORING_KEYS = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2p
   'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
   'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200', 'fum', 'fum_rec_2pt', 'def_2pt', 'st_2pt', 'def_st_fum_rec', 'def_st_ff', 'st_fum_rec', 'st_ff', 'ff', 'pass_sack', 'pass_cmp', 'pass_inc', 'pass_att', 'rush_att', 'rec_tgt', 'pass_cmp_40p', 'pass_td_40p', 'rush_40p', 'rec_40p', 'rush_td_40p', 'rec_td_40p', 'pass_td_50p', 'rush_td_50p', 'rec_td_50p', 'rec_0_4', 'rec_5_9', 'rec_10_19', 'rec_20_29', 'rec_30_39', 'rec_40p', 'sack_yd', 'idp_tkl', 'idp_sack', 'idp_int', 'idp_ff', 'idp_fum_rec', 'idp_def_td', 'idp_pass_def', 'idp_safe', 'idp_blk_kick', 'idp_tkl_loss', 'idp_qb_hit', 'idp_tkl_ast', 'idp_tkl_solo', 'yds_allow_0_100', 'yds_allow_100_199', 'yds_allow_200_299', 'yds_allow_300_349', 'yds_allow_350_399', 'yds_allow_400_449', 'yds_allow_450_499', 'yds_allow_500_549', 'yds_allow_550p', 'def_kr_td', 'def_pr_td', 'def_forced_punts', 'def_3_and_out', 'def_4_and_stop', 'def_pass_def', 'tkl', 'tkl_solo', 'tkl_ast', 'tkl_loss', 'qb_hit', 'pass_def', 'fum_ret_yd', 'int_ret_yd', 'kr_yd', 'pr_yd', 'bonus_fd_qb', 'bonus_fd_rb', 'bonus_fd_wr', 'bonus_fd_te', 'bonus_rush_rec_yd_100', 'bonus_rush_rec_yd_200', 'bonus_pass_cmp_25', 'pass_fd', 'rush_fd', 'rec_fd', 'fgm_yds', 'fgm_yds_over_30']);
 // The subset above that the engine actually MODELS; the rest are recorded.
-const SLEEPER_MODELLED = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec', 'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe',
+const SLEEPER_MODELED = new Set(['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td', 'rush_2pt', 'rec_yd', 'rec_td', 'rec_2pt', 'rec', 'bonus_rec_rb', 'bonus_rec_wr', 'bonus_rec_te', 'fum_lost', 'fum_rec_td', 'kr_td', 'pr_td', 'st_td', 'def_st_td', 'def_td', 'sack', 'int', 'fum_rec', 'safe',
   'xpm', 'xpmiss', 'fgm_0_19', 'fgm_20_29', 'fgm_30_39', 'fgm_40_49', 'fgm_50p', 'fgmiss', 'fgmiss_0_19', 'fgmiss_20_29', 'fgmiss_30_39', 'fgmiss_40_49', 'fgmiss_50p', 'fgm',
   'pts_allow_0', 'pts_allow_1_6', 'pts_allow_7_13', 'pts_allow_14_20', 'pts_allow_21_27', 'pts_allow_28_34', 'pts_allow_35p',
   'bonus_pass_yd_300', 'bonus_pass_yd_400', 'bonus_rush_yd_100', 'bonus_rush_yd_200', 'bonus_rec_yd_100', 'bonus_rec_yd_200']);
@@ -9406,7 +9406,7 @@ function sleeperScoring(ss) {
                     { min: 14, max: 20, points: n('pts_allow_14_20', 1) }, { min: 21, max: 27, points: n('pts_allow_21_27', 0) }, { min: 28, max: 34, points: n('pts_allow_28_34', -1) }, { min: 35, max: 999, points: n('pts_allow_35p', -4) }]
   };
   const unsupported = {};
-  for (const k of Object.keys(ss)) if (!SLEEPER_MODELLED.has(k) && Number(ss[k])) unsupported[k] = Number(ss[k]);
+  for (const k of Object.keys(ss)) if (!SLEEPER_MODELED.has(k) && Number(ss[k])) unsupported[k] = Number(ss[k]);
   const notes = [];
   if (Object.keys(unsupported).length) notes.push('Rules Iron Tuna does not model are kept but not scored: ' + Object.keys(unsupported).join(', ') + '.');
   if (ss.fgm_0_19 != null || ss.fgm_20_29 != null) notes.push('Kicker distances use the nearest of Sleeper’s bins in Iron Tuna’s five tiers.');
@@ -9501,7 +9501,7 @@ function sleeperNormalize(raw, ctx) {
 }
 const PROVIDER_SLEEPER = {
   id: 'sleeper', label: 'Sleeper', auth: 'public', flag: 'SLEEPER_SYNC',
-  terms: 'Sleeper’s API is free for non-commercial use only; commercial use needs a licence in writing (docs/data-sources.md R2).',
+  terms: 'Sleeper’s API is free for non-commercial use only; commercial use needs a license in writing (docs/data-sources.md R2).',
   needs: env => true,
   // input: { username } or { leagueId }
   async discover(env, conn, input) {
@@ -9539,7 +9539,7 @@ const PROVIDER_SLEEPER = {
 };
 // ── Yahoo ──────────────────────────────────────────────────────────────────
 // OAuth 2.0 with the reader's consent, read-only fantasy scope. Iron Tuna
-// never sees a Yahoo password: the reader authorises on Yahoo's page, Yahoo
+// never sees a Yahoo password: the reader authorizes on Yahoo's page, Yahoo
 // hands back a code, the worker exchanges it server-side and seals the tokens
 // (leagueSeal) before they touch D1. The browser never receives a token.
 const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
@@ -9735,7 +9735,7 @@ function yahooNormalize(raw, ctx) {
     settings, userTeamId, teams, rosters, matchups, transactions
   };
 }
-// Walk Yahoo's nested resources into flat objects the normaliser reads.
+// Walk Yahoo's nested resources into flat objects the normalizer reads.
 function yahooFlattenLeague(node) { return yMerge(node); }
 const PROVIDER_YAHOO = {
   id: 'yahoo', label: 'Yahoo', auth: 'oauth2', flag: 'YAHOO_SYNC',
@@ -9902,7 +9902,7 @@ async function leagueLoad(env, email, id) {
   } catch (e) { L.teams = L.teams || []; L.rosters = L.rosters || []; L.matchups = []; L.transactions = []; L.loadError = (e && e.message) || 'load failed'; }
   return L;
 }
-// Write a normalised league (teams, rosters, matchups, transactions) under a
+// Write a normalized league (teams, rosters, matchups, transactions) under a
 // league row. Keys come from `keyMap` (providerPlayerId -> resolution).
 async function leagueWriteModel(env, leagueId, model, keyMap, ts) {
   const db = env.LEADS_DB;
@@ -9945,7 +9945,7 @@ async function leagueWeekContext(env) {
   return { season: sched ? sched.season : new Date().getUTCFullYear(), currentWeek: cur, state };
 }
 // -- the sync ----------------------------------------------------------------
-// pull -> normalise -> map players -> write -> snapshot -> log. Never throws;
+// pull -> normalize -> map players -> write -> snapshot -> log. Never throws;
 // a provider failure is a logged run and a scheduled retry, and the league
 // the reader already has is left exactly as it was.
 async function leagueSync(env, row, trigger) {
@@ -10088,7 +10088,7 @@ async function leagueDisconnect(env, email, row) {
   if (row.is_default) { const first = await db.prepare('SELECT id FROM leagues WHERE email=? ORDER BY created_at ASC LIMIT 1').bind(email).first(); if (first) await leagueSetDefault(env, email, first.id); }
   return { ok: true, removed: ['league settings', 'teams', 'rosters', 'matchups', 'transactions', 'weekly snapshots'], tokensRemoved, retained: ['the sync log (no league data, kept 45 days for the health board)'] };
 }
-// -- personalisation ---------------------------------------------------------
+// -- personalization ---------------------------------------------------------
 // Every module below reads the local model and the site's own boards, scored
 // at the league's rules, and answers the reader's questions in the order the
 // spec asks them: what to do, why, who to replace, is he actually available,
@@ -10105,7 +10105,7 @@ function leagueRankRows(rows) {
   for (const f of ['consensus', 'vegas', 'ironTuna']) flex.slice().sort((x, y) => y[f].points - x[f].points || (x.name < y.name ? -1 : 1)).forEach((r, i) => { r[f].flexRank = i + 1; });
 }
 // The board at the league's scoring, with TE premium applied and every row
-// stamped with who owns him here. Rows are copies: boardsPayload memoises
+// stamped with who owns him here. Rows are copies: boardsPayload memoizes
 // its own output and must not be written to.
 async function leagueBoard(env, L, horizon, through) {
   const hz = LEAGUE_HORIZONS.includes(horizon) ? horizon : 'week';
@@ -10373,7 +10373,7 @@ async function leagueIntel(env, L) {
     if (isStarter) {
       // The replacement: whoever the best lineup starts that the provider's
       // current lineup does not (the injured man already scores nothing, so
-      // the optimiser has benched him by arithmetic); failing that, whoever
+      // the optimizer has benched him by arithmetic); failing that, whoever
       // steps in when he is removed outright.
       let repl = opt.starters.filter(s2 => s2.p && s2.p !== p && !currentStarters.has(s2.p.key || s2.p.name)).map(s2 => s2.p)[0] || null;
       if (!repl) { const without = leagueOptimize(mine.filter(x => x !== p), roster); repl = without.starters.filter(s2 => s2.p && !opt.starters.some(s3 => s3.p === s2.p)).map(s2 => s2.p)[0] || null; }
@@ -10734,7 +10734,7 @@ async function leagueRoutes(request, env, url, ctx) {
   if (!L) return leagueErr('league_not_found', null, 404, c);
   try {
     if (action === 'board') {
-      if (!flagOn(env, 'PERSONALIZED_RANKINGS')) return leagueErr('provider_disabled', 'Personalised rankings are off', 404, c);
+      if (!flagOn(env, 'PERSONALIZED_RANKINGS')) return leagueErr('provider_disabled', 'Personalized rankings are off', 404, c);
       const thr = url.searchParams.get('through');
       const out = await leagueBoard(env, L, String(url.searchParams.get('horizon') || 'week').toLowerCase(), thr && /^1[0-8]$/.test(thr) ? parseInt(thr, 10) : null);
       const pos = String(url.searchParams.get('pos') || 'ALL').toUpperCase();
@@ -10888,7 +10888,7 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const w = url.searchParams.get('week');
       const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
-      // Memoised per isolate on the exact query, for as long as the edge cache
+      // Memoized per isolate on the exact query, for as long as the edge cache
       // header below: a Sunday afternoon must not rebuild sixty records per hit.
       const mkey = [w, url.searchParams.get('type'), url.searchParams.get('pos'), url.searchParams.get('limit'), preset].join('|');
       if (_MARKET_MEMO.key === mkey && Date.now() - _MARKET_MEMO.at < 300000) {
@@ -11280,7 +11280,7 @@ export default {
         for (const id in all) {
           const p = all[id];
           if (!p || !FANT.has(p.position)) continue;
-          // A team defence has no name fields; its id IS the team abbreviation.
+          // A team defense has no name fields; its id IS the team abbreviation.
           const name = p.position === 'DEF'
             ? ((p.team || id) + ' DEF')
             : (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim());
@@ -12198,7 +12198,7 @@ export default {
         };
 
         // ── time spent on site ──
-        // Sessionised from the pageview log itself, because there is no beacon to
+        // Sessionized from the pageview log itself, because there is no beacon to
         // ask: consecutive views by the same visitor more than SESSION_GAP_MS apart
         // are separate visits, and a visit lasts from its first view to its last.
         //
@@ -12588,7 +12588,7 @@ Return ONLY a JSON object, no prose, no markdown fence, in exactly this shape:
 Rules: one entry per fantasy team visible; every player on it, starters and bench, in the order shown.
 Copy names exactly as printed; do not correct, expand, or invent a name, a position or a club you cannot see.
 A slot label (QB, RB, FLEX, BN, IR), a bye week, a projection or a score is not a player.
-A team defence is a player: name it "<City> <Nickname>" with pos "DEF" if the image shows it.
+A team defense is a player: name it "<City> <Nickname>" with pos "DEF" if the image shows it.
 If an image shows a league page with several teams, return every team. If it shows nothing readable, return {"teams":[]}.`;
 function rosterReadParse(text) {
   let t = String(text || '');
