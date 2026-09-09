@@ -8569,3 +8569,50 @@ was written three Week 1 rows sat `held` with `["The operation was aborted"]`
 and no body — a transport failure in the writer run, retried by `heldRetryable`,
 not a fact-check hold. If the column ever thins out, look at `content_pieces`
 first.
+
+---
+
+## The masthead is the cover page's, on every page (2026-09-09)
+
+Two changes, one about a link and one about the chrome under it.
+
+**`/dfs` came out of the front page's jump ribbon.** `front.html`'s masthead row
+now reads Fantasy · In-Season · Draft · The Desk. The page still links `/dfs`
+from its footer tools row and the DFS lane still opens from the lane tabs, so
+nothing is unreachable and the URL is untouched. The generated nav on every
+other page keeps DFS — `tools/test-chrome.mjs`'s `MUST_NAV` requires it, and the
+ask was about the front page's ribbon only.
+
+**Everything else on the site now wears the front page's masthead.** Before
+this, `/` was a black band with a 3px teal rule and the metal wordmark, and the
+other 155 pages were a white bar with grey sentence-case links. Clicking off the
+cover page looked like leaving the site. The band moved into `site.css`
+(`--mast`, `--mast-ink`, `--mast-ink-hi`, `--mast-dim`, `--mast-accent`), so it
+is one rule set rather than a second copy that can drift, and `--header-h` went
+56px → 64px to match the cover page's row (`weekly-intel.html`'s sticky
+sub-ribbon reads that token and followed it).
+
+Two things this touched that are easy to get wrong on the way back:
+
+- **The wordmark inverted again, and that is the point.** §27c's rule was "the
+  wordmark is light-on-dark and vanishes on white", and the wordmark-only mark
+  landed the same day on the dark-ink stops for a white bar. There is no white
+  bar now, so every page is back on the light stops — the same seven the cover
+  page uses. `test-reading-view`'s two wordmark assertions were inverted with
+  them. **The reading pages' white SURFACE is untouched**: `--bg` is still
+  `#fff`, the type is still near-black, `--teal` is still `#0e7c63`. The band
+  was never part of the reading view.
+- **The phone masthead is a width problem, not a colour one.** The brand, the
+  CTA and the disclosure button need more than a 360px screen has; the CTA is
+  tightened to `--fs-3xs` there and the wordmark SVG scales on its viewBox, so
+  the name no longer runs under the button. Setting the wordmark as TYPE instead
+  of the SVG was tried first and fails at 320px — type cannot shrink to fit.
+
+`lead.html`, `the-tell.html` and `play-caller-premium.html` no longer paint a
+`header.site{}` of their own; they take the shared band like everything else,
+and `test-reading-view` asserts that they do not paint one rather than that they
+paint it white.
+
+Known and NOT fixed here, because it predates this: the shared nav's dropdown
+opens under the rankings ribbon, which paints over its first item or two. It did
+that on the white bar too.
