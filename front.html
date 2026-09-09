@@ -920,6 +920,143 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 .fp-lead-plate .hb-note { color: var(--ink-2, #3f4e58); max-width: 74ch; margin-top: 14px }
 .fp-lead-plate .hb-note b { color: var(--ink, #0f1719) }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   THE POST-HERO LAYOUT
+   ══════════════════════════════════════════════════════════════════════════
+   The complaint this answers: below the hero the page was thirteen sections in
+   one column, every one of them an identical .sec-head — same 30px Bebas, same
+   two-pixel black rule — over a band with a completely different internal
+   shape. Thirteen objects at one rank is not a hierarchy; a reader scrolling it
+   cannot tell where a subject ends, so the whole middle of the page reads as
+   one undifferentiated run.
+
+   Three things fix it, and none of them is a new colour:
+
+     1. A DECK. The first thing under the lead is now what to actually do,
+        per lane, with the answer already on the card. The front page had no
+        object of this kind at all: everything below the hero was something to
+        read, and the only things to DO were in the masthead.
+     2. CHAPTERS. Four or five sections grouped under one heavy divider, so the
+        thirteen .sec-heads become subheads inside three subjects instead of
+        thirteen peers.
+     3. A ZONE. One chapter sits on white inside a rounded container while the
+        others sit on the page's grey ground, which gives the column a visible
+        seam without a full-bleed band and without touching the ground colour.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── the DFS lane's lineup ───────────────────────────────────────────────────
+   The contest chips, then the solved roster on the page's one dark surface.
+   Dark because it is the answer: on a grey page of white cards, an inverted
+   board is the only thing that cannot be scrolled past. */
+.dfs-shape { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px }
+.dfs-shape button {
+  appearance: none; font: inherit; cursor: pointer; text-align: left;
+  background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 10px;
+  padding: 10px 16px; color: var(--ink, #0f1719); font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.dfs-shape button small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3, #6d7c86); margin-top: 2px }
+.dfs-shape button:hover { border-color: var(--brand, #0e7c63) }
+.dfs-shape button[aria-pressed="true"] { border-color: var(--brand, #0e7c63); box-shadow: inset 0 0 0 1px var(--brand, #0e7c63) }
+.dfs-shape button[aria-pressed="true"] small { color: var(--brand, #0e7c63) }
+
+.fp-board {
+  background: var(--mast, #0b1614); color: #eaf1f0; border-radius: 16px; overflow: hidden;
+  margin: 16px 0 8px; box-shadow: 0 20px 46px rgba(11, 22, 20, .22);
+}
+.fp-board-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; padding: 18px 22px 0 }
+.fp-board-head h3 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: 28px; letter-spacing: .045em; text-transform: uppercase; line-height: 1 }
+.fp-board-head span { font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: #7f948f }
+.fp-board-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 16px; padding: 16px 22px 0 }
+.fp-board-stats b { display: block; font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: 40px; line-height: .92; letter-spacing: .02em; color: #fff }
+.fp-board-stats .on b { color: var(--teal, #2dd4a3) }
+.fp-board-stats span { display: block; margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #7f948f }
+.fp-board-meter { margin: 18px 22px 0; height: 7px; border-radius: 5px; background: rgba(255, 255, 255, .12); overflow: hidden }
+.fp-board-meter i { display: block; height: 100%; border-radius: 5px; background: var(--teal, #2dd4a3) }
+.fp-board-cap { display: flex; justify-content: space-between; margin: 7px 22px 14px; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #7f948f }
+.fp-board table { width: 100%; border-collapse: collapse; font-size: 14px }
+.fp-board th, .fp-board td { padding: 9px 12px; border-bottom: 1px solid rgba(255, 255, 255, .1); text-align: left }
+.fp-board th:first-child, .fp-board td:first-child { padding-left: 22px }
+.fp-board th:last-child, .fp-board td:last-child { padding-right: 22px }
+.fp-board th { font-size: 10.5px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; color: #7f948f }
+.fp-board td.num, .fp-board th.num { text-align: right; font-variant-numeric: tabular-nums }
+.fp-board tbody tr:last-child td { border-bottom: 0 }
+.fp-board b { color: #fff; font-weight: 700 }
+.fp-board small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7f948f }
+.fp-board .sl { display: inline-block; min-width: 40px; text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: #bcd0cc; background: rgba(255, 255, 255, .09); border-radius: 4px; padding: 4px 6px }
+.fp-board .sl.qb { background: var(--brand, #0e7c63); color: #fff }
+.fp-board .tg { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; border-radius: 4px; padding: 2px 6px; margin-left: 7px; vertical-align: 1px }
+.fp-board .tg.lev { color: var(--teal, #2dd4a3); background: rgba(45, 212, 163, .15) }
+.fp-board .tg.chalk { color: #f2c66a; background: rgba(242, 169, 0, .16) }
+.fp-board .tg.stack { color: #bcd0cc; background: rgba(255, 255, 255, .1) }
+.fp-board-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 22px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 12.5px; color: #7f948f }
+.fp-board-foot a { color: var(--teal, #2dd4a3); font-weight: 700 }
+
+/* ── the action deck ─────────────────────────────────────────────────────── */
+.fp-deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 14px; margin: 0 0 10px }
+.fp-act {
+  display: flex; flex-direction: column; gap: 7px; position: relative; overflow: hidden;
+  background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 12px;
+  padding: 16px 18px 15px 21px; box-shadow: 0 6px 18px rgba(15, 23, 25, .04);
+  transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
+}
+.fp-act::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--brand, #0e7c63) }
+.fp-act.gold::before { background: var(--gold, #f2a900) }
+.fp-act.flat::before { background: var(--line, #e1e7ea) }
+.fp-act:hover { border-color: var(--brand, #0e7c63); transform: translateY(-2px); box-shadow: 0 14px 30px rgba(15, 23, 25, .09) }
+.fp-act-k { font-size: 10.5px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3, #6d7c86) }
+.fp-act-h { font-size: 19px; line-height: 1.22; font-weight: 800; color: var(--ink, #0f1719); letter-spacing: -.012em }
+.fp-act-h em { font-style: normal; color: var(--brand, #0e7c63) }
+.fp-act p { font-size: 13px; line-height: 20px; color: var(--ink-2, #3f4e58) }
+.fp-act-go { margin-top: auto; padding-top: 9px; font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--brand, #0e7c63) }
+.fp-act:hover .fp-act-go { text-decoration: underline }
+@media (prefers-reduced-motion: reduce) { .fp-act:hover { transform: none } }
+
+/* ── the chapter divider ─────────────────────────────────────────────────────
+   Deliberately heavier than .sec-head and built out of different parts — an
+   oversized numeral, a rule that runs the full width, a dek — so that at a
+   glance, at any scroll position, a reader can tell a chapter boundary from a
+   section boundary without reading either. */
+.fp-chap { margin: clamp(38px, 5vw, 68px) 0 clamp(16px, 2vw, 26px); border-top: 1px solid var(--line, #e1e7ea); padding-top: 22px }
+.fp-chap-top { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap }
+.fp-chap-n {
+  font-family: 'Bebas Neue', Impact, sans-serif; font-size: clamp(40px, 5.4vw, 60px); line-height: .8;
+  color: var(--brand, #0e7c63); letter-spacing: .02em; flex: 0 0 auto;
+}
+.fp-chap h2 {
+  font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(28px, 3.8vw, 40px);
+  line-height: 1; letter-spacing: .045em; text-transform: uppercase; color: var(--ink, #0f1719); margin: 0;
+}
+.fp-chap-dek { font-size: 14.5px; line-height: 23px; color: var(--ink-2, #3f4e58); margin: 12px 0 0; max-width: 82ch }
+/* Inside a chapter a section head is a SUBhead: the black two-pixel rule that
+   made every one of them look like a chapter is dropped to a hairline, and the
+   type comes down a step. The chapter divider now carries the weight. */
+.fp-zone .sec-head, .fp-chapbody .sec-head { border-bottom-width: 1px; border-bottom-color: var(--line, #e1e7ea); margin-top: 30px }
+.fp-zone .sec-head h2, .fp-chapbody .sec-head h2 { font-size: 25px }
+.fp-zone .sec-head::after, .fp-chapbody .sec-head::after { width: 40px; background: var(--brand, #0e7c63) }
+.fp-chapbody > .sec-head:first-child, .fp-zone > .sec-head:first-child { margin-top: 0 }
+
+/* One chapter on white inside the page's grey ground. A seam, without a
+   full-bleed band and without a 100vw rule that can put a scrollbar on the
+   page at some width. */
+.fp-zone {
+  background: var(--card, #fff); border: 1px solid var(--line, #e1e7ea); border-radius: 16px;
+  padding: clamp(20px, 2.6vw, 34px); box-shadow: 0 10px 30px rgba(15, 23, 25, .04);
+}
+/* Every white card inside the white zone flips to the page's grey, so a card
+   is still a card once the ground under it changed. Left as one list on
+   purpose: these are exactly the modules chapter 02 contains, and a module
+   added to the chapter later has to be added here or it will render as a
+   white rectangle on white with only its hairline to say it exists. */
+.fp-zone .tell-band,
+.fp-zone .pcp-card,
+.fp-zone .nr-card,
+.fp-zone .vs-case,
+.fp-zone .vs-day,
+.fp-zone .camp-feat,
+.fp-zone .alloc-card { background: var(--bg, #f4f7f7) }
+.fp-zone .vs-arrow { background: var(--bg, #f4f7f7) }
+
 .fp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: clamp(18px, 3vw, 44px) }
 .fp-cols .fp-n { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 42px; line-height: 1; color: var(--brand, #0e7c63) }
 .fp-cols h3 { font-size: 19px; margin: 8px 0 0 }
@@ -936,7 +1073,10 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 .fp-lead-plate .hb-btn.ghost, .fp-close .hb-btn.ghost { border-color: var(--line, #e1e7ea); color: var(--ink, #0f1719); background: var(--card, #fff) }
 .fp-lead-plate .hb-btn.ghost:hover, .fp-close .hb-btn.ghost:hover { border-color: var(--brand, #0e7c63); color: var(--brand, #0e7c63); filter: none }
 
-.fp-draft-band { border-top: 3px solid var(--line, #e3e8ec); margin-top: 8px; padding-top: 8px }
+/* The 3px rule this used to carry was the only chapter break on the page, and
+   it was doing that job alone for thirteen sections. The chapter divider above
+   it does it now, so a second rule here is one line too many. */
+.fp-draft-band { margin-top: 8px; padding-top: 8px }
 .fp-draft { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(18px, 3vw, 40px); align-items: center }
 .fp-draft-copy h3 { font-size: clamp(21px, 2.6vw, 30px); line-height: 1.16; margin: 10px 0 0 }
 .fp-draft .hb-shot { margin: 0 }
@@ -1120,6 +1260,7 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
   <a href="#positions" data-lane="fantasy">Position Intel</a>
   <a href="#allocation" data-lane="fantasy">Allocation</a>
   <a href="#camp" data-lane="fantasy">Camp</a>
+  <a href="#dfsLineup" data-lane="dfs">The Lineup</a>
   <a href="#dfsSlate" data-lane="dfs">The Slate</a>
   <a href="#dfsNewsroom" data-lane="dfs">Newsroom</a>
   <a href="#dfsValues" data-lane="dfs">Vegas Values</a>
@@ -1156,6 +1297,49 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
        site lost its link from the homepage. -->
 
   <div class="lane-pane" id="laneFantasy" role="tabpanel" aria-labelledby="laneTabFantasy">
+
+  <!-- ── the deck ─────────────────────────────────────────────────────────────
+       Everything below the hero on this page was something to READ. The only
+       things a reader could DO were four links in the masthead and two buttons
+       in the hero, and neither carried an answer. These four do: two of them
+       print this week's actual call, and all four land on the surface that
+       finishes the decision rather than on a hub. -->
+  <div class="fp-deck" id="fnDeck">
+    <!-- Four ACTIONS, and deliberately no live player call: the plate directly
+         above this deck already names today's biggest market disagreement, and
+         a card here repeating it would be the fourth time in two screens that
+         the page pointed at the same player. The plate is the reading; this is
+         what to do about it. -->
+    <a class="fp-act" href="/weekly-intel#startsit">
+      <span class="fp-act-k">Set the lineup</span>
+      <span class="fp-act-h">Start / sit, at <em>your</em> scoring</span>
+      <p>Your week priced off the betting market and restated at your league&rsquo;s own settings, not somebody else&rsquo;s PPR.</p>
+      <span class="fp-act-go">Open Start / Sit &rarr;</span>
+    </a>
+    <a class="fp-act" href="/faab">
+      <span class="fp-act-k">Price a claim</span>
+      <span class="fp-act-h">What a waiver is worth <em>in your dollars</em></span>
+      <p>Computed one rival at a time from each team&rsquo;s remaining budget and its actual hole, never a national average.</p>
+      <span class="fp-act-go">Open the FAAB Advisor &rarr;</span>
+    </a>
+    <a class="fp-act" href="/trade-finder">
+      <span class="fp-act-k">Move a player</span>
+      <span class="fp-act-h">The trades that improve <em>both</em> lineups</span>
+      <p>Paste the two rosters. Every combination is scored on each side&rsquo;s own horizon, so a trade worth sending is one the other manager can accept.</p>
+      <span class="fp-act-go">Open the Trade Finder &rarr;</span>
+    </a>
+    <a class="fp-act gold" href="/in-season#league">
+      <span class="fp-act-k">Do this once</span>
+      <span class="fp-act-h">Save your league</span>
+      <p>Scoring, roster slots and budget. Every number on this site is restated in them from then on, on every page, free.</p>
+      <span class="fp-act-go">Save my league &rarr;</span>
+    </a>
+  </div>
+
+  <!-- ── chapter 01 ───────────────────────────────────────────────────────── -->
+  <div class="fp-chap"><div class="fp-chap-top"><span class="fp-chap-n">01</span><h2>Today</h2></div>
+    <p class="fp-chap-dek">What the desk published since you last looked, and the one argument it is having with itself.</p></div>
+  <div class="fp-chapbody">
 
   <div class="sec-head" id="today"><h2>The Desk</h2><a class="sec-more" href="/auction-insights">Every insight &rarr;</a></div>
   <div class="hero">
@@ -1207,6 +1391,16 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
   <div class="sec-head" id="disagree"><h2>Vega vs. Brooks</h2><a class="sec-more" href="/rankings#blend=50">Slide it yourself &rarr;</a></div>
   <div class="dg-wrap" id="disagreeBand" hidden></div>
 
+  </div><!-- /chapter 01 -->
+
+  <!-- ── chapter 02 ─────────────────────────────────────────────────────────
+       The six standing columns. They are the densest reading on the page and
+       they used to be six peers in a run of thirteen; on white, inside one
+       container, they read as one body of work with six parts. -->
+  <div class="fp-chap"><div class="fp-chap-top"><span class="fp-chap-n">02</span><h2>The week&rsquo;s calls</h2></div>
+    <p class="fp-chap-dek">Six standing columns, each one a stated position with the number behind it: the ranking that is about to break, the player to buy, the coach whose play-calling is the reason, and the position groups underneath all three.</p></div>
+  <div class="fp-zone">
+
   <div class="sec-head" id="thetell"><h2>The Tell</h2><a class="sec-more" href="/the-tell">The whole column &rarr;</a></div>
   <p class="sec-sub" id="tellSub">Every ranking has a tell: the one number inside it that says whether the rest will hold. Six players a week whose rank and whose projection disagree &mdash; touchdown share, the betting market&rsquo;s offense ranks, and the reason each one is about to embarrass its own tier.</p>
   <div class="tell-band" id="tellBand"></div>
@@ -1249,6 +1443,13 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
   <div class="sec-head" id="coaching"><h2>The Play-Caller Premium</h2><a class="sec-more" href="/play-caller-premium">The whole column &rarr;</a></div>
   <p class="sec-sub">A coach is worth real money. The habits that have repeated for decades &mdash; the zone scheme&rsquo;s running backs, Andy Reid&rsquo;s lead back, Todd Monken&rsquo;s tight ends &mdash; and the exact player each one moves this season. New entries land through the season.</p>
   <div class="pcp-grid" id="pcpGrid"></div>
+
+  </div><!-- /chapter 02 -->
+
+  <!-- ── chapter 03 ───────────────────────────────────────────────────────── -->
+  <div class="fp-chap"><div class="fp-chap-top"><span class="fp-chap-n">03</span><h2>Build the team</h2></div>
+    <p class="fp-chap-dek">The tools rather than the reading: the board priced for your league, the solved roster the budget can actually buy, how to spend it, and the signals that change a price between now and the draft.</p></div>
+  <div class="fp-chapbody">
 
   <div class="fp-draft-band" id="draft">
     <div class="sec-head"><h2>Draft Tools</h2><a class="sec-more" href="/guides">Strategy library &rarr;</a></div>
@@ -1311,6 +1512,8 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
     <ul class="camp-list" id="campList"><li><span class="cd">Sep 7</span><a href="/auction-watch-2026-09-07">Auction Watch: September 7, 2026</a></li><li><span class="cd">Sep 6</span><a href="/auction-watch-2026-09-06">Auction Watch: September 6, 2026</a></li><li><span class="cd">Sep 5</span><a href="/auction-watch-2026-09-05">Auction Watch: September 5, 2026</a></li><li><span class="cd">Sep 4</span><a href="/auction-watch-2026-09-04">Auction Watch: September 4, 2026</a></li></ul>
   </div>
 
+  </div><!-- /chapter 03 -->
+
   </div><!-- /#laneFantasy -->
 
   <!-- ── the DFS lane ──────────────────────────────────────────────────────
@@ -1320,6 +1523,52 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
        Nothing is drawn from an empty answer: a board with no rows is hidden
        and the note says which site had no salaries loaded. -->
   <div class="lane-pane" id="laneDfs" role="tabpanel" aria-labelledby="laneTabDfs" hidden>
+
+  <!-- ── the lineup ───────────────────────────────────────────────────────────
+       The DFS lane used to open on four summary tiles — how many players are
+       priced, what the median dollar buys — and the roster a reader could
+       actually enter was not on this page at all. It is the first thing now,
+       solved on the same slate the tiles are counting, and the contest chips
+       above it are the branch: the same cap solved for a double-up, for one
+       entry, or for a field big enough that the median is worth nothing.
+
+       It shares dfs-optimizer.js with /dfs, so the two surfaces cannot solve
+       the same slate differently. Nothing here enters a contest. -->
+  <div class="fp-deck" id="dfsDeck">
+    <a class="fp-act" href="/dfs">
+      <span class="fp-act-k">The whole sheet</span>
+      <span class="fp-act-h">Build it <em>your</em> way</span>
+      <p>Locks, exclusions, stacking rules, your own contest&rsquo;s salary file, and up to twenty lineups off one core.</p>
+      <span class="fp-act-go">Open the DFS sheet &rarr;</span>
+    </a>
+    <a class="fp-act" href="/dfs#values">
+      <span class="fp-act-k">The board behind it</span>
+      <span class="fp-act-h">Value, ceiling and <em>leverage</em></span>
+      <p>Every priced player with his floor, his ceiling, his modelled ownership and what the market disagrees with the consensus about.</p>
+      <span class="fp-act-go">Vegas Values &rarr;</span>
+    </a>
+    <a class="fp-act flat" href="/dfs#stacks">
+      <span class="fp-act-k">Correlate it</span>
+      <span class="fp-act-h">The games worth stacking</span>
+      <p>The highest-total games on the slate, each side&rsquo;s quarterback with his best-priced catchers, and the bring-back.</p>
+      <span class="fp-act-go">Game Stacks &rarr;</span>
+    </a>
+  </div>
+
+  <div class="fp-chap" id="dfsLineup"><div class="fp-chap-top"><span class="fp-chap-n">01</span><h2>The lineup</h2></div>
+    <p class="fp-chap-dek">One slate, one cap, solved. Pick the contest you are entering and the roster below is re-solved for it &mdash; floors for a double-up, ceiling discounted by ownership for a large field.</p></div>
+
+  <div class="dfs-shape" id="dfsShape" role="group" aria-label="What contest is this for">
+    <button type="button" data-contest="cash">Cash <small>Floors</small></button>
+    <button type="button" data-contest="single" aria-pressed="true">Single entry <small>Best roster</small></button>
+    <button type="button" data-contest="gpp">Large field <small>Longshots</small></button>
+  </div>
+  <p class="dfs-note" id="dfsShapeNote"></p>
+  <div id="dfsBuild"></div>
+
+  <div class="fp-chap"><div class="fp-chap-top"><span class="fp-chap-n">02</span><h2>The slate under it</h2></div>
+    <p class="fp-chap-dek">The evidence the roster is solved from: the scoring environment, the widest values, the games worth correlating and the touchdown market.</p></div>
+  <div class="fp-chapbody">
 
   <div class="sec-head" id="dfsSlate"><h2>The Slate</h2><a class="sec-more" href="/dfs">The whole DFS sheet &rarr;</a></div>
   <p class="sec-sub">Daily fantasy is the purest version of what this site already does: no rest of season to project, only the games on the board, what the market expects out of them, and a salary cap that is an auction budget by another name.</p>
@@ -1367,6 +1616,8 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
     <div class="dfs-card"><h3><a href="/game-intel">Game Intel</a></h3><p>Every game this week with its line, its total, and the points each offence is implied to score.</p></div>
     <div class="dfs-card"><h3><a href="/vegas-edge">Vegas Edge</a></h3><p>The players the betting market and the consensus rankings disagree about, and by how much. 21+.</p></div>
   </div>
+
+  </div><!-- /chapter 02 -->
 
   </div><!-- /#laneDfs -->
 
@@ -1423,6 +1674,10 @@ html:not([data-season="in"]) #dfsNewsroom,html:not([data-season="in"]) #dfsNewsr
 <script src="/it-league.js"></script>
 <script src="/it-season.js" defer></script>
 <script src="/player-search.js" defer></script>
+<!-- Shared with /dfs, so the front page and the sheet cannot solve the same
+     slate differently. It is deferred: nothing on this page needs it until the
+     reader opens the DFS lane. -->
+<script src="/dfs-optimizer.js" defer></script>
 <script>
 // Player headshots for the stories below, keyed by the slug each story's `ppl`
 // list references. Built from the nflverse players release — see
@@ -3546,16 +3801,97 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     $('dfsTdWrap').hidden = true; $('dfsTdEmpty').hidden = false; $('dfsTdEmpty').textContent = msg;
   }
 
+  // ── the solved roster ────────────────────────────────────────────────────
+  // Three shapes, the same three presets /dfs uses, over the shared optimizer.
+  // Nothing here submits an entry; it draws a roster to read.
+  var SHAPES = {
+    cash: { mode: 'floor', stack: false, bring: false, maxTeam: 3, head: 'The double-up roster', key: 'floorPoints', keyLabel: 'Floor',
+            why: 'A cash game pays the top half a flat amount, so this roster only has to clear a line. Built on floors, uncorrelated on purpose.' },
+    single: { mode: 'ironTuna', stack: true, bring: false, maxTeam: 4, head: 'The single-entry roster', key: 'projPoints', keyLabel: 'Projected',
+            why: 'The best roster the cap buys, with the quarterback correlated once so the ceiling is real. The optimal lineup, nothing given away for leverage.' },
+    gpp: { mode: 'leverage', stack: true, bring: true, maxTeam: 4, head: 'The large-field roster', key: 'ceilingPoints', keyLabel: 'Ceiling',
+            why: 'A big field pays almost everything to the top fraction of a percent, so the median is worth nothing. Ceiling discounted by modelled ownership, stacked and brought back \u2014 the build that carries longshots on purpose.' }
+  };
+  var shape = 'single';
+  function tagFor(p, qb) {
+    if (qb && p !== qb && p.team === qb.team && (p.position === 'WR' || p.position === 'TE')) return '<span class="tg stack">stack</span>';
+    if (qb && p.team === qb.opponent && p.position !== 'DST') return '<span class="tg stack">bring-back</span>';
+    if (p.ownership == null) return '';
+    if (p.ownership >= 20) return '<span class="tg chalk">chalk</span>';
+    if (p.ownership <= 6) return '<span class="tg lev">leverage</span>';
+    return '';
+  }
+  function buildLineup(s) {
+    var host = $('dfsBuild'), note = $('dfsShapeNote');
+    if (!host) return;
+    var sh = SHAPES[shape] || SHAPES.single;
+    if (note) note.textContent = sh.why;
+    if (s && s.ok && s.slots && !window.ITDfs && !buildLineup.waiting) {
+      // dfs-optimizer.js is deferred, so a slate served from cache can arrive
+      // before it does. Wait for load once rather than printing a failure.
+      buildLineup.waiting = true;
+      window.addEventListener('load', function () { buildLineup(slates[site]); }, { once: true });
+    }
+    if (!s || !s.ok || !window.ITDfs || !s.slots) {
+      host.innerHTML = '<p class="dfs-empty">' + (s && s.ok ? 'Reading the slate\u2026' :
+        'No salaries are loaded for this site this week, so there is no cap to solve. The full sheet at /dfs prices your own contest\u2019s salary file.') + '</p>';
+      return;
+    }
+    var pool = (s.players || []).filter(function (p) { return p.onBoard; })
+      .map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
+    var r = ITDfs.build(pool, { mode: sh.mode, cap: s.cap, slots: s.slots, flex: s.flex,
+                                stack: sh.stack, bringBack: sh.bring, maxPerTeam: sh.maxTeam, lineups: 1, seed: 7 });
+    if (!r.ok || !r.lineups.length) {
+      host.innerHTML = '<p class="dfs-empty">No roster satisfies that shape under this slate\u2019s cap. The full sheet at /dfs lets you loosen the constraints.</p>';
+      return;
+    }
+    var l = r.lineups[0];
+    var qb = null; for (var i = 0; i < l.players.length; i++) if (l.players[i].slot === 'QB') qb = l.players[i];
+    var full = l.salary + Math.max(0, l.remaining);
+    var pct = Math.min(100, Math.round((l.salary / full) * 100));
+    var tile = function (v, lab, on) { return '<div' + (on ? ' class="on"' : '') + '><b>' + v + '</b><span>' + lab + '</span></div>'; };
+    var rows = l.players.map(function (p) {
+      return '<tr><td><span class="sl' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
+        + '<td><b>' + e(p.name) + '</b>' + tagFor(p, qb) + '<small>' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? ' vs ' + p.opponent : '')) + '</small></td>'
+        + '<td class="num">' + money(p.salary) + '</td>'
+        + '<td class="num">' + n1(p.proj) + '</td>'
+        + '<td class="num">' + n1(p.ceiling) + '</td></tr>';
+    }).join('');
+    host.innerHTML = '<div class="fp-board">'
+      + '<div class="fp-board-head"><h3>' + e(sh.head) + '</h3><span>' + e((s.label || '') + (s.week ? ' \u00b7 Week ' + s.week : '')) + '</span></div>'
+      + '<div class="fp-board-stats">'
+        + tile(n1(l[sh.key]), sh.keyLabel, true)
+        + tile(n1(l.projPoints), 'Projected')
+        + tile(money(l.salary), 'Salary used')
+        + (l.ownership != null ? tile(n1(l.ownership) + '%', 'Total own') : tile(money(l.remaining), 'Left over'))
+      + '</div>'
+      + '<div class="fp-board-meter"><i style="width:' + pct + '%"></i></div>'
+      + '<div class="fp-board-cap"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div>'
+      + '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Proj</th><th class="num">Ceiling</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<div class="fp-board-foot"><span>Solved against the cap on the same market numbers the board below prints. Nothing here enters a contest.</span>'
+      + '<a href="/dfs">Lock, exclude and build twenty &rarr;</a></div></div>';
+  }
+  var shapeHost = $('dfsShape');
+  if (shapeHost) shapeHost.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    shape = b.getAttribute('data-contest');
+    [].forEach.call(this.querySelectorAll('button'), function (x) {
+      x.setAttribute('aria-pressed', x.getAttribute('data-contest') === shape ? 'true' : 'false');
+    });
+    buildLineup(slates[site]);
+  });
+
   function render(s) {
     if (!s || !s.ok) {
       $('dfsNote').textContent = (s && s.note) || 'No salaries are loaded for this week.';
       blank('No salaries are loaded for this site this week. The full sheet at /dfs still reads the scoring environment off the game lines.');
+      buildLineup(s);
       return;
     }
     var stamp = '';
     try { stamp = new Date(s.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (err) {}
     $('dfsNote').textContent = (s.note ? s.note + ' ' : '') + (stamp ? 'Salaries as of ' + stamp + ' ET.' : '');
-    cards(s); values(s); stacks(s); tdBoard(s);
+    buildLineup(s); cards(s); values(s); stacks(s); tdBoard(s);
   }
 
   function loadSlate() {
