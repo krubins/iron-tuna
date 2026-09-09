@@ -885,8 +885,12 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 /* Horizontal padding restates the .wrap gutter: the shorthand used to zero it,
    which pushed the headline, lede and buttons flush to the viewport edge while
    the clock strip above kept its inset. */
-.fp-hero { padding: 34px 18px 46px }
-.fp-h1 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(40px, 6.4vw, 84px); line-height: 0.98; letter-spacing: .015em; text-transform: uppercase; margin: 14px 0 0 }
+/* Two columns from 900px up: the claim on the left, the market-read panel on
+   the right. The band used to run the claim across the full width and leave
+   the right half of the dark plate empty. */
+.fp-hero { display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr); gap: clamp(20px, 3.2vw, 50px); align-items: center; padding: 34px 18px 46px }
+.fp-hero-copy { min-width: 0 }
+.fp-h1 { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; font-size: clamp(38px, 4.6vw, 72px); line-height: 0.98; letter-spacing: .015em; text-transform: uppercase; margin: 14px 0 0 }
 .fp-h1 span { display: block }
 .fp-h1 .fp-accent { color: var(--teal, #2dd4a3) }
 .fp-h1 em { display: inline; font-style: normal }
@@ -895,6 +899,36 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
    claim keeps the white and the paragraph does not compete with it. */
 .fp-lede { font-size: 17.5px; line-height: 28px; margin: 20px 0 0; max-width: 58ch; color: #b3c1bd }
 .fp-hero .hb-ctas { margin-top: 26px }
+
+/* ── the hero panel: the mark, inside the readings ────────────────────────
+   The right half of the band carries the Iron Tuna mark surrounded by the
+   three panels the site actually sells — the weekly read against the market
+   (/weekly-intel), the FAAB Advisor (/faab) and the model-vs-market game
+   lines (/vegas-edge). The numbers on it are illustrative, not live; nothing
+   here is fed by /api, and it must stay that way, because a hero that waits
+   on a fetch is a hero that paints late.
+
+   ONE inline SVG rather than absolutely-positioned cards over an image, so
+   the whole composition scales as a single unit and cannot come apart at an
+   in-between width. role="img" on the wrapper collapses the whole thing to
+   its label for a screen reader: the claim beside it is the content, and the
+   panel is a picture of the product.
+
+   Under 560px the SVG's own type would render below 6px, so the panel drops
+   to the bare mark — the same picture, without the chart labels nobody could
+   read at that size. */
+.fp-viz { min-width: 0; position: relative }
+.fp-viz-svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 26px 60px rgba(0, 0, 0, .45)) }
+.fp-viz-mark { display: none }
+@media (max-width: 900px) {
+  .fp-hero { grid-template-columns: minmax(0, 1fr); gap: 30px; padding-bottom: 36px }
+  /* The claim still leads on a phone; the panel follows it, full width. */
+  .fp-viz { max-width: 560px }
+}
+@media (max-width: 560px) {
+  .fp-viz-svg { display: none }
+  .fp-viz-mark { display: block; width: 100%; max-width: 320px; height: auto; margin: 0 auto }
+}
 
 .fp-sec { padding: 0 0 clamp(30px, 4vw, 54px) }
 .fp-fine { margin: 12px 0 0; font-size: 13px; line-height: 21px; opacity: .72 }
@@ -1336,22 +1370,129 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 </div></div>
 
 <section class="hero-band" id="heroBand">
-  <!-- One claim, one paragraph, two buttons, left-aligned and stacked. The band
-       used to hold two competing columns (the draft product and an in-season
-       panel) and then a two-cell row that parked the buttons in dead space to
-       the right of the paragraph. There is one argument on the page now and the
-       hero makes it; the products are linked from the masthead, the lead story
-       below and the closing band. The NFL clock strip above still comes from
-       /api/season. Gold is the primary button and nothing else in this band,
-       which is why the eyebrow is teal like the accent line. -->
+  <!-- One claim, one paragraph, two buttons, left-aligned, and the mark beside
+       them. The band used to hold two competing columns (the draft product and
+       an in-season panel) and then a two-cell row that parked the buttons in
+       dead space to the right of the paragraph. There is still only one
+       ARGUMENT here and the copy makes it; the right half is not a second
+       pitch but a picture of the product — the Iron Tuna mark inside the three
+       readings the site sells, drawn in .fp-viz below. The products themselves
+       are linked from the masthead, the lead story below and the closing band.
+       The NFL clock strip above still comes from /api/season. Gold is the
+       primary button and nothing else in this band, which is why the eyebrow
+       is teal like the accent line. -->
   <div class="wrap"><div class="fp-clock its-strip" data-season-strip></div></div>
   <div class="wrap fp-hero">
-    <span class="hb-eyebrow">The betting market knows</span>
-    <h1 class="fp-h1"><span>Analytics <em class="fp-accent">consistently</em></span><span>beats intuition.</span></h1>
-    <p class="fp-lede">Iron Tuna uses betting-market intel, advanced analytics, and AI analysis to give you the edge you need.</p>
-    <div class="hb-ctas">
-      <a class="hb-btn gold" href="/in-season#league">Save my league</a>
-      <a class="hb-btn ghost" href="/in-season">This week&rsquo;s readings &rarr;</a>
+    <div class="fp-hero-copy">
+      <span class="hb-eyebrow">The betting market knows</span>
+      <h1 class="fp-h1"><span>Analytics <em class="fp-accent">consistently</em></span><span>beats intuition.</span></h1>
+      <p class="fp-lede">Iron Tuna uses betting-market intel, advanced analytics, and AI analysis to give you the edge you need.</p>
+      <div class="hb-ctas">
+        <a class="hb-btn gold" href="/in-season#league">Save my league</a>
+        <a class="hb-btn ghost" href="/in-season">This week&rsquo;s readings &rarr;</a>
+      </div>
+    </div>
+    <div class="fp-viz" role="img" aria-label="The Iron Tuna mark inside the week&rsquo;s readings: a projection-versus-market chart for the weekly rankings, the FAAB Advisor pricing a claim against every rival&rsquo;s remaining budget, and the model-versus-market read on a game line.">
+      <svg class="fp-viz-svg" viewBox="0 0 660 440" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="fpvPlate" x1="0" y1="0" x2="0.35" y2="1">
+            <stop offset="0" stop-color="#16453c"/><stop offset="0.55" stop-color="#0d2723"/><stop offset="1" stop-color="#081311"/>
+          </linearGradient>
+          <radialGradient id="fpvGlow" cx="0.44" cy="0.46" r="0.52">
+            <stop offset="0" stop-color="#2dd4a3" stop-opacity="0.34"/><stop offset="0.6" stop-color="#2dd4a3" stop-opacity="0.08"/><stop offset="1" stop-color="#2dd4a3" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="fpvTealFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2dd4a3" stop-opacity="0.42"/><stop offset="1" stop-color="#2dd4a3" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="fpvGoldFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f2a900" stop-opacity="0.36"/><stop offset="1" stop-color="#f2a900" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <rect width="660" height="440" rx="16" fill="url(#fpvPlate)"/>
+        <rect width="660" height="440" rx="16" fill="url(#fpvGlow)"/>
+        <rect x="0.75" y="0.75" width="658.5" height="438.5" rx="15.25" fill="none" stroke="#ffffff" stroke-opacity="0.13"/>
+
+        <!-- The node web behind everything: the site reads one set of facts into
+             several places, and this is that, drawn. Decorative only. -->
+        <g fill="none" stroke="#2dd4a3" stroke-opacity="0.20" stroke-width="1">
+          <path d="M96 96 L206 152 L330 118 L470 178 L578 128"/>
+          <path d="M120 330 L246 366 L392 312 L520 358"/>
+          <path d="M206 152 L246 366"/><path d="M470 178 L392 312"/>
+        </g>
+        <g fill="#2dd4a3" fill-opacity="0.5">
+          <circle cx="96" cy="96" r="3"/><circle cx="206" cy="152" r="3"/><circle cx="330" cy="118" r="3"/>
+          <circle cx="470" cy="178" r="3"/><circle cx="578" cy="128" r="3"/><circle cx="120" cy="330" r="3"/>
+          <circle cx="246" cy="366" r="3"/><circle cx="392" cy="312" r="3"/><circle cx="520" cy="358" r="3"/>
+        </g>
+
+        <image href="/tuna-mark.png" x="170" y="112" width="320" height="169" opacity="0.97"/>
+
+        <!-- the plate's own title -->
+        <text x="26" y="40" font-family="'Bebas Neue','Arial Narrow',Impact,sans-serif" font-size="21" letter-spacing="1.7" fill="#ffffff">IRON TUNA MARKET READ</text>
+        <circle cx="30" cy="58" r="3.5" fill="#2dd4a3"/>
+        <text x="42" y="62" font-family="'Inter',system-ui,sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.5" fill="#8fb3ab">LIVE LINES &#183; RE-READ EVERY SIX HOURS</text>
+
+        <!-- ── weekly rankings: the projection against the market ── -->
+        <g>
+          <rect x="350" y="12" width="298" height="148" rx="10" fill="#03100d" fill-opacity="0.86" stroke="#ffffff" stroke-opacity="0.14"/>
+          <text x="366" y="34" font-family="'Inter',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="1.7" fill="#2dd4a3">PROJECTION VS. MARKET</text>
+          <g stroke="#ffffff" stroke-opacity="0.07" stroke-width="1">
+            <path d="M366 58 H632"/><path d="M366 80 H632"/><path d="M366 102 H632"/>
+          </g>
+          <path d="M366 102 L404 94 L442 98 L480 80 L518 86 L556 64 L594 70 L632 54 L632 112 L366 112 Z" fill="url(#fpvTealFill)"/>
+          <polyline points="366,102 404,94 442,98 480,80 518,86 556,64 594,70 632,54" fill="none" stroke="#2dd4a3" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="556" cy="64" r="7" fill="#f2a900" fill-opacity="0.25"/>
+          <circle cx="556" cy="64" r="4" fill="#f2a900"/>
+          <text x="566" y="52" font-family="'Inter',system-ui,sans-serif" font-size="10" font-weight="800" letter-spacing="0.4" fill="#f2a900">+3.1 PTS</text>
+          <g font-family="'Inter',system-ui,sans-serif" font-size="9" font-weight="600" letter-spacing="0.8" fill="#6f857f">
+            <text x="366" y="126">W1</text><text x="442" y="126">W3</text><text x="518" y="126">W5</text><text x="594" y="126">W7</text>
+          </g>
+          <text x="366" y="146" font-family="'Inter',system-ui,sans-serif" font-size="9.5" font-weight="600" letter-spacing="0.9" fill="#7d938d">THE TELL &#183; RANK VS. PROJECTION</text>
+        </g>
+
+        <!-- ── the FAAB Advisor: one rival at a time ── -->
+        <g>
+          <rect x="10" y="200" width="274" height="164" rx="10" fill="#03100d" fill-opacity="0.86" stroke="#ffffff" stroke-opacity="0.14"/>
+          <text x="26" y="224" font-family="'Inter',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="1.7" fill="#2dd4a3">FAAB ADVISOR</text>
+          <text x="26" y="238" font-family="'Inter',system-ui,sans-serif" font-size="9.5" font-weight="600" letter-spacing="0.8" fill="#7d938d">PRICED IN YOUR LEAGUE&#8217;S DOLLARS</text>
+          <path d="M26 322 H266" stroke="#ffffff" stroke-opacity="0.10" stroke-width="1"/>
+          <rect x="26" y="250" width="30" height="72" rx="3" fill="#f2a900"/>
+          <rect x="68" y="264" width="30" height="58" rx="3" fill="#2dd4a3" fill-opacity="0.72"/>
+          <rect x="110" y="276" width="30" height="46" rx="3" fill="#2dd4a3" fill-opacity="0.72"/>
+          <rect x="152" y="258" width="30" height="64" rx="3" fill="#2dd4a3" fill-opacity="0.72"/>
+          <rect x="194" y="284" width="30" height="38" rx="3" fill="#2dd4a3" fill-opacity="0.72"/>
+          <rect x="236" y="272" width="30" height="50" rx="3" fill="#2dd4a3" fill-opacity="0.72"/>
+          <text x="41" y="264" text-anchor="middle" font-family="'Inter',system-ui,sans-serif" font-size="10" font-weight="800" fill="#231700">$27</text>
+          <g font-family="'Inter',system-ui,sans-serif" font-size="9" font-weight="600" letter-spacing="0.8" fill="#6f857f" text-anchor="middle">
+            <text x="41" y="336">YOU</text><text x="83" y="336">T2</text><text x="125" y="336">T3</text>
+            <text x="167" y="336">T4</text><text x="209" y="336">T5</text><text x="251" y="336">T6</text>
+          </g>
+          <text x="26" y="354" font-family="'Inter',system-ui,sans-serif" font-size="9.5" font-weight="600" letter-spacing="0.9" fill="#7d938d">OFF EACH RIVAL&#8217;S REMAINING BUDGET</text>
+        </g>
+
+        <!-- ── the game line: what the model says against what the book posts ── -->
+        <g>
+          <rect x="344" y="296" width="304" height="132" rx="10" fill="#03100d" fill-opacity="0.86" stroke="#ffffff" stroke-opacity="0.14"/>
+          <text x="360" y="318" font-family="'Inter',system-ui,sans-serif" font-size="11" font-weight="800" letter-spacing="1.7" fill="#2dd4a3">VEGAS EDGE</text>
+          <g stroke="#ffffff" stroke-opacity="0.07" stroke-width="1">
+            <path d="M360 340 H500"/><path d="M360 362 H500"/><path d="M360 384 H500"/>
+          </g>
+          <path d="M360 380 L383 368 L407 372 L430 354 L453 360 L477 342 L500 334 L500 390 L360 390 Z" fill="url(#fpvGoldFill)"/>
+          <polyline points="360,380 383,368 407,372 430,354 453,360 477,342 500,334" fill="none" stroke="#f2a900" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+          <rect x="514" y="326" width="118" height="32" rx="6" fill="#ffffff" fill-opacity="0.06" stroke="#2dd4a3" stroke-opacity="0.30"/>
+          <text x="526" y="340" font-family="'Inter',system-ui,sans-serif" font-size="8.5" font-weight="700" letter-spacing="1.2" fill="#7d938d">IMPLIED TOTAL</text>
+          <text x="526" y="353" font-family="'Inter',system-ui,sans-serif" font-size="13" font-weight="800" fill="#ffffff">27.5</text>
+          <rect x="514" y="364" width="118" height="32" rx="6" fill="#ffffff" fill-opacity="0.06" stroke="#f2a900" stroke-opacity="0.32"/>
+          <text x="526" y="378" font-family="'Inter',system-ui,sans-serif" font-size="8.5" font-weight="700" letter-spacing="1.2" fill="#7d938d">LINE MOVE</text>
+          <text x="526" y="391" font-family="'Inter',system-ui,sans-serif" font-size="13" font-weight="800" fill="#f2a900">+2.5</text>
+          <text x="360" y="414" font-family="'Inter',system-ui,sans-serif" font-size="9.5" font-weight="600" letter-spacing="0.9" fill="#7d938d">MODEL VS. MARKET ON EVERY GAME LINE</text>
+        </g>
+
+        <rect x="26" y="392" width="130" height="4" rx="2" fill="#f2a900" fill-opacity="0.85"/>
+        <text x="26" y="420" font-family="'Bebas Neue','Arial Narrow',Impact,sans-serif" font-size="15" letter-spacing="1.4" fill="#e9eeec">EVERY NUMBER, YOUR SCORING</text>
+      </svg>
+      <img class="fp-viz-mark" src="/tuna-mark.png" width="409" height="216" alt="" decoding="async">
     </div>
   </div>
 </section>
