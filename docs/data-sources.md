@@ -136,6 +136,20 @@ replacement already in use anywhere in the app, and pulling ~1,680 images out of
 the front page, the player cards and every story is a product decision, not a
 cleanup. It is the largest open IP item on this list.
 
+**Widened 2026-09-09: club marks, not only player photographs.** The front-page
+lead's art plate (`renderArt` in `front.html`) now references club logos from
+`a.espncdn.com/i/teamlogos/nfl/500/<abbr>.png`, on the owner's instruction. Same
+host and same posture as the headshots above — hot-linked, never copied or
+stored, rights left with their owners, no affiliation asserted — but a different
+class of right: a club mark is a **trademark** as well as a copyright work, and
+using one to illustrate a story about that club is a nominative-fair-use argument
+rather than a licence. Nothing in this repository documents permission for it.
+`/data` already discloses "team marks" in the imagery row and carries the
+takedown address, so the disclosure covers this; the decision does not become
+lower-risk for having been disclosed. Backing it out is one edit: delete
+`logoUrl` and the `<image>` tags in `renderArt`. Every plate still draws without
+them, and the runtime already takes that path when a fetch fails.
+
 ### R5 — Structural rules from Section 14
 
 - [x] `/data` page listing every source, licence, and attribution string, linked from every footer. §14.1 — shipped 2026-09-09 as `data.html`, linked from the generated Legal column (`tools/build-chrome.mjs`), the front-page footer and the app footer. **This file remains its source of truth: edit both in the same commit.**

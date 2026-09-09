@@ -7830,7 +7830,10 @@ async function newsroomFeedPayload(env, lens, limit) {
 // The front page's lead, in the regular season: the newest published piece,
 // in the shape the lead painter already understands.
 async function deskLeadPayload(env) {
-  const feed = await newsroomFeedPayload(env, 'weekly', 6);
+  // Twelve, not six: the front page's Top Headlines column is six slots wide
+  // and the lead itself takes the first row off this list, so six left it one
+  // short of ever filling the column from the desk alone.
+  const feed = await newsroomFeedPayload(env, 'weekly', 12);
   if (!feed.ok || !feed.pieces.length) return null;
   const [cur, ...rest] = feed.pieces;
   const row = p => ({ slug: 'desk:' + p.kind + ':' + p.week, url: p.url, title: p.headline || p.title + ' · Week ' + p.week, dek: p.dek || '', label: p.title, category: 'desk', analyst: p.byline.name, analystId: p.byline.analyst, createdAt: p.publishedAt, players: [], names: [], cast: [] });
