@@ -228,6 +228,10 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .lead-art svg{display:block;width:100%;height:auto}
 .lead-foot{display:flex;align-items:center;gap:14px}
 .lead-also{margin-top:auto;border-top:1px solid var(--line);padding-top:12px}
+/* An empty list is a stray rule across the foot of the story. The generated
+   lead has no list at all now — its retired stories are the well's column — so
+   the element is only a rule when it has something to rule off. */
+.lead-also:empty{display:none}
 .lead-also .la-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:6px}
 .lead-also ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 18px}
 .lead-also a{font-size:13px;font-weight:600;color:var(--ink-2);display:block;padding:3px 0}
@@ -921,6 +925,81 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .fp-lead-plate .hb-note { color: var(--ink-2, #3f4e58); max-width: 74ch; margin-top: 14px }
 .fp-lead-plate .hb-note b { color: var(--ink, #0f1719) }
 
+/* ── the news well, directly under the hero ───────────────────────────────
+   A lead story with a picture down its left side and the rest of the desk in a
+   column beside it. Two things make it a well rather than two cards that
+   happen to be side by side: the picture is a COLUMN of the lead card (a grid
+   cell, not a band across its top), and the headline column is stretched to
+   the lead's height with its items spread, so the last headline sits on the
+   lead's bottom rule rather than stopping halfway and leaving a hole.
+
+   No new colours and no new components: this is the .lead and .rail the page
+   already had, composed differently and scoped to .fp-well so the same classes
+   keep their old rendering anywhere else they are used. */
+.fp-well { padding-top: clamp(22px, 3vw, 38px) }
+.fp-well .hero { margin-top: 14px; align-items: stretch }
+/* Column one is the picture and it runs the full height of the card; the body
+   and the draft-season carousel controls stack in column two. */
+.fp-well .lead { display: grid; grid-template-columns: minmax(200px, 292px) minmax(0, 1fr); grid-template-rows: 1fr auto }
+/* A story that names nobody gets no picture column rather than an empty one:
+   renderCast sets .nopic when it hides the band. */
+.fp-well .lead.nopic { grid-template-columns: minmax(0, 1fr) }
+.fp-well .lead-media { grid-column: 1; grid-row: 1 / -1; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 34px 22px 22px; border-bottom: 0; border-right: 3px solid var(--brand) }
+/* The photograph takes whatever height the story leaves it rather than sitting
+   at a fixed 226px under a slab of empty gradient: a picture column beside a
+   long headline and a picture column beside a short one are different heights,
+   and the plate should be the thing that absorbs the difference. */
+.fp-well .lm-cast { flex: 1 1 auto; min-height: 0 }
+.fp-well .lm-face:first-child { flex: 1 1 auto; min-height: 0 }
+.fp-well .lm-face:first-child .lm-shot { flex: 1 1 auto; height: auto; min-height: 186px }
+.fp-well .lead-body { grid-column: 2; grid-row: 1 }
+.fp-well .lead-ctrls { grid-column: 2; grid-row: 2 }
+.fp-well .lead.nopic .lead-body, .fp-well .lead.nopic .lead-ctrls { grid-column: 1 }
+/* The first face is the picture — one plate the width of the column, the way a
+   news page runs one photograph and not a contact sheet. The second stands
+   under it as a caption-sized row; past that the column stops, and the rest of
+   the names are where they always were, in the story's own copy. */
+.fp-well .lm-cast { flex-direction: column; align-items: stretch; gap: 14px; width: 100% }
+.fp-well .lm-face { width: 100%; max-width: none }
+.fp-well .lm-face .lm-shot { width: 100%; height: 226px }
+/* The story's foot rides the bottom of the card, so the headline block and the
+   headline column beside it close on the same line. */
+.fp-well .lead-foot { margin-top: auto }
+.fp-well .lead-also { margin-top: 12px }
+.fp-well .lm-face:nth-child(2) { flex-direction: row; align-items: center; gap: 12px }
+.fp-well .lm-face:nth-child(2) .lm-shot { width: 58px; height: 66px; flex: 0 0 auto }
+.fp-well .lm-face:nth-child(2) .lm-meta { margin-top: 0 }
+.fp-well .lm-face:nth-child(n+3) { display: none }
+.fp-well .lm-label { left: 22px }
+.fp-well .lm-mark { right: 14px; bottom: -14px; font-size: 78px }
+/* The bottom alignment the well is built around: the column is a flex box the
+   height of the lead beside it, and the list inside it spreads its items over
+   that height, so the sixth headline's rule closes level with the lead card. */
+.fp-well .rail { display: flex; flex-direction: column; padding-bottom: 14px }
+.fp-well .rail ul { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; min-height: 0 }
+.fp-well .rail li { flex: 0 0 auto }
+
+@media (max-width: 900px) {
+  /* Stacked: the picture goes back to a band across the top of the story, the
+     way it reads everywhere else on the site, and the headline column stops
+     spreading — spread items over a column with nothing beside it is just
+     uneven spacing. */
+  .fp-well .lead { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto }
+  .fp-well .lead-media { grid-column: 1; grid-row: 1; flex-direction: row; align-items: flex-end; border-right: 0; border-bottom: 3px solid var(--brand) }
+  .fp-well .lead-body { grid-column: 1; grid-row: 2 }
+  .fp-well .lead-ctrls { grid-column: 1; grid-row: 3 }
+  .fp-well .lm-cast { flex-direction: row; align-items: flex-end; flex-wrap: wrap; gap: 20px }
+  .fp-well .lm-face { width: auto; max-width: 168px }
+  .fp-well .lm-cast, .fp-well .lm-face:first-child { flex: 0 1 auto }
+  .fp-well .lm-face .lm-shot, .fp-well .lm-face:nth-child(2) .lm-shot, .fp-well .lm-face:first-child .lm-shot { width: 104px; height: 116px; flex: 0 0 auto; min-height: 0 }
+  .fp-well .lead-foot { margin-top: 0 }
+  .fp-well .lm-face:nth-child(2) { flex-direction: column; align-items: flex-start; gap: 0 }
+  .fp-well .lm-face:nth-child(2) .lm-meta { margin-top: 10px }
+  .fp-well .lm-face:nth-child(n+3) { display: flex }
+  .fp-well .lm-mark { font-size: 106px }
+  .fp-well .rail ul { display: block; flex: none }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    THE POST-HERO LAYOUT
    ══════════════════════════════════════════════════════════════════════════
@@ -1307,7 +1386,66 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 </nav>
 <!--/ranks:ribbon-->
 
-<!-- ── 01 · the lead story: where the two boards disagree ────────────────
+<!-- ── 01 · the news well: the lead story, and the column beside it ──────
+     The front page's own front page, and the first thing under the hero and
+     its section ribbon. The
+     desk's newest piece runs here with the players it names down its LEFT side
+     as a picture column, and the rest of the desk stands beside it as
+     headlines. The column is stretched to the lead's own height with its items
+     spread, so the last headline lands on the lead's bottom edge instead of
+     leaving the right third ragged the way a nine-item rail did.
+
+     It sits ABOVE the lane tabs deliberately: the lead story belongs to the
+     site, not to Weekly Fantasy or to DFS, and a reader who opens the DFS lane
+     should still see what the desk published this morning. It used to sit
+     inside chapter 01, four screens down, behind the tabs.
+
+     Every id in here is the one the lead painters already write to
+     (renderLead, paintGeneratedLead and the rail), so the markup moved and the
+     JavaScript did not. -->
+<section class="fp-sec fp-well" aria-labelledby="deskHead">
+  <div class="wrap">
+    <!-- Two "more" links, one per season; the CSS under html[data-season] shows
+         the one that matches. In the regular season the lead is a desk piece and
+         the archive is the desk, not the draft-season drop pages. -->
+    <div class="sec-head" id="today"><h2 id="deskHead">The Desk</h2><a class="sec-more" data-draft-only href="/auction-insights">Every insight &rarr;</a><a class="sec-more" data-in-only href="/in-season/desk">The whole desk &rarr;</a></div>
+    <div class="hero">
+      <!-- .nopic until a story paints: the picture is a grid COLUMN in the well, and
+           an unpainted card must not hold one open. renderCast drops the class the
+           moment it has a face to put there. -->
+      <div class="lead nopic" id="lead">
+        <div class="lead-media" id="leadMedia" hidden>
+          <span class="lm-label" id="leadMediaLabel">In this story</span>
+          <span class="lm-mark" id="leadMediaMark" aria-hidden="true"></span>
+          <div class="lm-cast" id="leadCast"></div>
+        </div>
+        <div class="lead-body" id="leadBody" data-player-links>
+          <div class="lead-kicker" id="leadKicker"></div>
+          <h1 id="leadTitle"></h1>
+          <p class="lead-play" id="leadPlay"></p>
+          <p class="lead-stat" id="leadStat"></p>
+          <p class="it-yours" id="leadYours" hidden></p>
+          <div class="lead-art" id="leadArt"></div>
+          <div class="lead-foot"><a class="lead-link" id="leadLink" href="#">Full story &rarr;</a><span class="lead-date" id="leadDate"></span></div>
+          <div class="lead-also" id="leadAlso"></div>
+        </div>
+        <div class="lead-ctrls" id="leadCtrls">
+          <div class="lead-dots" id="leadDots"></div>
+          <div class="lead-arrows">
+            <button class="lead-arrow" id="leadPrev" aria-label="Previous story">&#8249;</button>
+            <button class="lead-arrow" id="leadNext" aria-label="Next story">&#8250;</button>
+          </div>
+        </div>
+      </div>
+      <aside class="rail">
+        <h3 id="railHead">Top Headlines</h3>
+        <ul id="railList"></ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ── 02 · the lead story: where the two boards disagree ────────────────
      This is the front page's lead. It replaced a three-lane navigation plate
      that carried one reading per product and no argument; the products are in
      the masthead. The cards are the market-vs-consensus read, on the same
@@ -1455,45 +1593,9 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     <p class="fp-chap-dek">What the desk published since you last looked, and the one argument it is having with itself.</p></div>
   <div class="fp-chapbody">
 
-  <!-- Two "more" links, one per season; the CSS under html[data-season] shows
-       the one that matches. In the regular season the lead is a desk piece and
-       the archive is the desk, not the draft-season drop pages. -->
-  <div class="sec-head" id="today"><h2>The Desk</h2><a class="sec-more" data-draft-only href="/auction-insights">Every insight &rarr;</a><a class="sec-more" data-in-only href="/in-season/desk">The whole desk &rarr;</a></div>
-  <div class="hero">
-    <div class="lead" id="lead">
-      <div class="lead-media" id="leadMedia" hidden>
-        <span class="lm-label" id="leadMediaLabel">In this story</span>
-        <span class="lm-mark" id="leadMediaMark" aria-hidden="true"></span>
-        <div class="lm-cast" id="leadCast"></div>
-      </div>
-      <div class="lead-body" id="leadBody" data-player-links>
-        <div class="lead-kicker" id="leadKicker"></div>
-        <h1 id="leadTitle"></h1>
-        <p class="lead-play" id="leadPlay"></p>
-        <p class="lead-stat" id="leadStat"></p>
-        <p class="it-yours" id="leadYours" hidden></p>
-        <div class="lead-art" id="leadArt"></div>
-        <div class="lead-foot"><a class="lead-link" id="leadLink" href="#">Full story &rarr;</a><span class="lead-date" id="leadDate"></span></div>
-        <div class="lead-also" id="leadAlso"></div>
-      </div>
-      <div class="lead-ctrls" id="leadCtrls">
-        <div class="lead-dots" id="leadDots"></div>
-        <div class="lead-arrows">
-          <button class="lead-arrow" id="leadPrev" aria-label="Previous story">&#8249;</button>
-          <button class="lead-arrow" id="leadNext" aria-label="Next story">&#8250;</button>
-        </div>
-      </div>
-    </div>
-    <aside class="rail">
-      <h3>Top Headlines</h3>
-      <ul id="railList"></ul>
-    </aside>
-  </div>
-
-  <!-- The one hand-written weekly piece in this lane, directly under the
-       generated lead and above The Pick: it is the only thing on the page that
-       argues WITH the board rather than reporting it, so it sits where the
-       reader has just seen the board's own headline. The entries come out of
+  <!-- The one hand-written weekly piece in this lane (The Tell, chapter 02,
+       above The Pick): it is the only thing on the page that argues WITH the
+       board rather than reporting it. The entries come out of
        the-tell.html at build time (tools/build-front.mjs), so that page stays
        the source of truth and this band cannot quote it wrongly. Hidden
        outright when the feed is empty — a column heading over nothing is worse
@@ -2232,7 +2334,12 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     (s.cast || []).forEach(function(f){ if (f && f.k) sent[f.k] = f; });
     var keys = (s.ppl || []).filter(function(k){ return PLAYERS[k] || sent[k]; });
     cast.innerHTML = '';
-    if (!keys.length){ band.hidden = true; return; }
+    // The well runs the picture as the lead's LEFT COLUMN, so a story that
+    // names nobody has to collapse that column rather than leave a 292px gutter
+    // of white beside the headline. The band's own [hidden] handles the band;
+    // this is what tells the grid there is no first column to make room for.
+    var card = document.getElementById('lead');
+    if (!keys.length){ band.hidden = true; if (card) card.classList.add('nopic'); return; }
     keys.forEach(function(k){ cast.appendChild(faceEl(PLAYERS[k] || sent[k])); });
     // `tm` means the story named nobody and this is that club's headline player,
     // so the band is labelled with the team instead of claiming the story is
@@ -2255,6 +2362,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     mark.textContent = TEAM_ART[club] ? club : '';
     mark.style.color = clubClr ? tint(clubClr, 0.12) : 'rgba(255,255,255,.05)';
     band.hidden = false;
+    if (card) card.classList.remove('nopic');
   }
 
   // The lead is a story, so the players it names link to their cards. It is
@@ -2383,9 +2491,15 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // the desk it was written for.
     s.topic = s.label || 'Insight';
     renderCast(s);
+    // Two badges, unless they would say the same thing: a desk piece whose
+    // category label IS "The Desk" was printing THE DESK twice side by side,
+    // which was survivable four screens down and is not now that the lead is
+    // the first thing under the hero.
+    var lbl = s.label || 'Insight', rank = desk ? 'The Desk' : 'Insight';
     document.getElementById('leadKicker').innerHTML =
-      '<span class="badge badge-deep">' + (desk ? 'The Desk' : 'Insight') + '</span>' +
-      '<span class="badge badge-pos">' + esc(s.label || 'Insight') + '</span>';
+      '<span class="badge badge-deep">' + rank + '</span>' +
+      (lbl.toLowerCase() === rank.toLowerCase() ? ''
+        : '<span class="badge badge-pos">' + esc(lbl) + '</span>');
     // The desk writes at ONE league — 12 teams, $200, the site's own scoring —
     // and it quotes hard dollars in the headline: "bid $32, not the sheet's
     // $26". Both figures are wrong for a reader who plays $300, or ten teams,
@@ -2431,19 +2545,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       ? (placeholder ? 'Publishes ' + leadStamp(s.createdAt) : leadStamp(s.createdAt) + (s.analyst ? ' · ' + s.analyst : ''))
       : leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextLead());
 
+    // The retired stories go in the well's COLUMN now (paintDeskRail), not in a
+    // list inside the card. They were in both for one commit, and five headlines
+    // printed twice four inches apart is exactly the repetition the two-column
+    // well exists to make visible. The card keeps the story and nothing else.
     var also = document.getElementById('leadAlso');
-    var recent = (d.recent || []).filter(function(x){ return x.slug; }).slice(0, 4);
-    if (recent.length) {
-      var ah = '<span class="la-label">' + (desk ? 'More from the desk' : 'Recent insights') + '</span><ul>';
-      recent.forEach(function(o){
-        // Retired stories quote the same one-league dollars the lead does, so
-        // they are restated the same way rather than left as the only prices on
-        // the card still written in somebody else's money.
-        var rr = L ? L.repriceCopy(o.title, o.names || (o.cast || []).map(function(c){ return c.n; }), o.createdAt) : null;
-        ah += '<li><a href="' + esc(o.url) + '">' + esc(rr ? rr.text : o.title) + '</a></li>';
-      });
-      also.innerHTML = ah + '</ul>';
-    } else { also.innerHTML = ''; }
+    also.innerHTML = '';
+    paintDeskRail(d.recent, desk ? 'More from the desk' : 'Recent insights');
     linkLead(s);
 
     // No dots and no arrows: there is one current story, and a control that
@@ -3006,7 +3114,12 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // a second copy of a row already on the page — and because they are the most
   // frequent drop, the newest two or three took the rail slots that the insight
   // headlines this rail exists to surface should have had.
-  var RAIL_MAX = 9;          // rail slots
+  // Six slots, down from nine. The column is now spaced to the lead story's own
+  // height (.fp-well .rail ul), so the number is a design decision rather than
+  // "as many as fit": six headlines spread over a lead card land at a readable
+  // rhythm, and nine over the same height close up into a list with no air in
+  // it. The seventh onward were never the reason anyone came to the page.
+  var RAIL_MAX = 6;          // rail slots
   var RAIL_MIN_TOP_DAY = 3;  // never show the newest day as a lone headline
 
   var railPool = [];
@@ -3028,20 +3141,69 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   }
 
   var rail = document.getElementById('railList');
-  railItems.forEach(function(it){
-    var el = document.createElement('li');
-    el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
-    rail.appendChild(el);
-  });
-  // Early in a season the lead rotation can hold every story there is, leaving
-  // nothing for the rail. A "Top Headlines" box with no headlines under it is
-  // worse than no box, so the rail leaves and the lead takes the full width
-  // rather than sitting in two thirds of a two-column grid beside a hole.
-  if (!railItems.length) {
+  // Kept, because the desk's own list arrives on a fetch and this one does not:
+  // the column is painted from the drop-page library immediately and repainted
+  // the moment /api/lead-story lands, so it is never empty while a request is
+  // in flight.
+  var railFallback = railItems;
+  function paintRail(items) {
+    rail.innerHTML = '';
+    items.forEach(function(it){
+      var el = document.createElement('li');
+      el.innerHTML = '<a class="hl" href="' + it.url + '">' + esc(it.title) + '</a><div class="hl-meta">' + esc(it.meta) + '</div>';
+      rail.appendChild(el);
+    });
+    // Early in a season the lead rotation can hold every story there is, leaving
+    // nothing for the column. A "Top Headlines" box with no headlines under it is
+    // worse than no box, so the column leaves and the lead takes the full width
+    // rather than sitting in two thirds of a two-column grid beside a hole.
     var railBox = document.querySelector('.rail');
-    if (railBox) railBox.hidden = true;
+    if (railBox) railBox.hidden = !items.length;
     var heroBox = document.querySelector('.hero');
-    if (heroBox) heroBox.classList.add('solo');
+    if (heroBox) heroBox.classList.toggle('solo', !items.length);
+  }
+  paintRail(railFallback);
+
+  // ── the column, once the desk has answered ────────────────────────────────
+  // What the well's right-hand column is FOR is "the rest of what the desk has
+  // out", and in the regular season the drop-page library above is not that: it
+  // is a July and August auction shelf, and a September reader does not want six
+  // draft-day calls standing beside a story about this week. So when
+  // /api/lead-story comes back with retired stories, they take the column,
+  // newest first, and the drop pages only top it up to six if the desk is thin.
+  //
+  // This is also where the "More from the desk" list that used to sit INSIDE the
+  // lead card went. Printing the same five headlines twice, four inches apart,
+  // was the one thing the two-column well made obvious.
+  function deskRailItems(recent) {
+    return (recent || []).filter(function(o){ return o && o.slug; }).map(function(o){
+      // Retired desk stories quote the same one-league dollars the lead does, so
+      // they are restated the same way rather than left as the only prices in
+      // the well still written in somebody else's money.
+      var names = o.names || (o.cast || []).map(function(c){ return c.n; });
+      var rr = L ? L.repriceCopy(o.title, names, o.createdAt) : null;
+      var d = new Date(+o.createdAt || 0);
+      var when = (o.createdAt && !isNaN(d.getTime())) ? MONTHS[d.getMonth()] + ' ' + d.getDate() : '';
+      return {
+        title: rr ? rr.text : o.title,
+        url: o.url,
+        meta: (o.label || 'The Desk') + (when ? ' · ' + when : '')
+      };
+    });
+  }
+  function paintDeskRail(recent, heading) {
+    var items = deskRailItems(recent);
+    if (!items.length) return false;
+    var seen = {};
+    items.forEach(function(it){ seen[it.url] = 1; });
+    (railFallback || []).forEach(function(it){
+      if (items.length >= RAIL_MAX || seen[it.url]) return;
+      items.push(it);
+    });
+    var head = document.getElementById('railHead');
+    if (head && heading) head.textContent = heading;
+    paintRail(items.slice(0, RAIL_MAX));
+    return true;
   }
 
   // ── position modules ──
