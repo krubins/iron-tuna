@@ -152,10 +152,15 @@ const H = new Function('etOffsetHours', 'teamKey', '_oddsNorm', '_oddsRound', 'P
   cut('const MARKET_RIDGE', 'async function fetchTeamEnvNflverse') + '\n' + cut('function _oddsProjectionIndex()', 'function buildVegasOverlay(') + '\n' +
   cut('// ── the NFL season and week ─', '// ── the provider layer ─') + '\n' + cut('// -- historical betting markets', '// -- the Iron Tuna Market Engine') + '\n' +
   cut('// -- kickers and defences, scored', '// -- the player intel payload') + '\n' + cut('// -- the content desk', '// -- DFS ---') + '\n' +
-  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade };'
+  'return { CONTENT_KINDS, LEGACY_CONTENT, contentDue, produceContent, runContentTick, runNewsScan, nflSeasonState, contentListPayload, contentPiecePayload, newsroomFeedPayload, deskLeadPayload, deskNextPayload, analystPayload, newsroomAdmin, autoPublishOn, draftSocialAllowed, etParts, normalizeGameSummary, _oddsProjectionIndex, runCallsGrade, flagOn };'
 )(etOffsetHours, teamKey, _oddsNorm, _oddsRound, POOL, 'America/New_York', 17, g => Math.max(0, 1 - g / 17), { goalLineCarries: 'pbp' }, fakeFetch, stub, 'x', async () => {}, {}, {}, async () => null, availabilityTable, availabilityCacheRead, async () => null, availabilityReport, async () => null, stub, stub, {}, {}, p => p, async (id) => { const norm = RAW; return norm; });
 const db = fakeDb(clock);
-const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic' };
+const env = { LEADS_DB: db, LLM_API_KEY: 'test', LLM_PROVIDER: 'anthropic', FLAG_DFS_CONTENT: '1' };
+// The DFS lane is on hold and DFS_CONTENT defaults off (docs/dfs-on-hold.md).
+// The flag is forced ON for this run on purpose: the lens is paused, not
+// deleted, and this is the only full-season exercise of the desk, so it has to
+// keep proving the lens works for the day the lane returns. The paused
+// behaviour is asserted separately, against an env without the flag.
 // Box scores: the pipeline asks gameSummaryFor, which reads game_summaries
 // first; seed one for every game so a final game always has a box score,
 // with the fixture's clubs renamed to the game's.
@@ -221,6 +226,9 @@ for (const r of P.filter(x => x.status === 'held')) console.log('  HELD ' + r.ki
   ok('later packets carry the desk\'s prior calls on the players they name', later.length >= 1);
   ok('the model was asked in each analyst\'s voice, and never for a retired kind', modelLog.every(m => H.CONTENT_KINDS[m.kind]) && new Set(modelLog.map(m => m.kind)).size >= 10);
   ok('the draft-season social threads were refused all week', !(await H.draftSocialAllowed(env)).ok);
+  // ...and with the lane on hold (the shipped default), the desk stops writing
+  // a lens for a product no reader can open.
+  ok('the DFS lens is off by default while the lane is on hold', H.flagOn({ LEADS_DB: db }, 'DFS_CONTENT') === false);
 }
 
 console.log('\nthe feeds and the front page');

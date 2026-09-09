@@ -63,10 +63,17 @@ console.log('\nthe staff and the one rivalry');
   ok('every analyst has a voice, a philosophy and assignments', Object.values(A).every(a => a.voice.length > 40 && a.philosophy && a.assignments.length));
   ok('the disclosure says they are AI personas, not people', /AI-powered editorial personas, not people/.test(H.AI_DISCLOSURE));
   const flags = H.flagReport({});
-  // The three provider connectors (docs/league-sync.md) default OFF on purpose:
-  // Sleeper until its commercial licence is in writing, Yahoo and ESPN until
-  // configured. Every other flag is the intended product and defaults on.
-  ok('every flag defaults on, except the provider connectors', Object.entries(flags).every(([k, f]) => (f.on || /^(SLEEPER|YAHOO|ESPN)_SYNC$/.test(k)) && f.source === 'default'));
+  // Four flags default OFF on purpose. The three provider connectors
+  // (docs/league-sync.md): Sleeper until its commercial licence is in writing,
+  // Yahoo and ESPN until configured. And DFS_CONTENT, because the DFS lane is
+  // on hold until its salaries can be kept current (docs/dfs-on-hold.md) — a
+  // product decision rather than a licence one, and the one flag here whose
+  // default is expected to flip back. Every other flag is the intended product
+  // and defaults on.
+  ok('every flag defaults on, except the connectors and the paused DFS lane',
+     Object.entries(flags).every(([k, f]) => (f.on || /^(SLEEPER|YAHOO|ESPN)_SYNC$/.test(k) || k === 'DFS_CONTENT') && f.source === 'default'));
+  ok('the DFS lane is off by default, not by an unset var', flags.DFS_CONTENT && flags.DFS_CONTENT.on === false && flags.DFS_CONTENT.source === 'default');
+  ok('and it comes back on the env var alone', H.flagOn({ FLAG_DFS_CONTENT: '1' }, 'DFS_CONTENT') === true);
   ok('the provider connectors default off', ['SLEEPER_SYNC', 'YAHOO_SYNC', 'ESPN_SYNC'].every(k => flags[k] && !flags[k].on));
   ok('a flag reads off the env', !H.flagOn({ FLAG_RIVALRY: '0' }, 'RIVALRY') && H.flagOn({ FLAG_RIVALRY: 'on' }, 'RIVALRY') && !H.flagOn({}, 'NOPE'));
 }
