@@ -1950,6 +1950,34 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // lead is actually on screen.
   var genLead = null;
   function repaintLead(){ if (genLead) paintGeneratedLead(genLead); else renderLead(); }
+  // The rotation above this line is the summer's auction deep dives, every one
+  // of them argued in draft dollars. In the regular season it is not the fall-
+  // back any more: if /api/lead-story cannot answer at all, the lead is the
+  // week's lineup question rather than a story about what to bid. The copy
+  // mirrors startThisWeekLead() in _worker.js deliberately — this path exists
+  // for the case where the worker could not be reached, so it cannot read it.
+  // Set once /api/season has answered. Until it does the page cannot know
+  // which season's lead it is allowed to paint, so both orders are handled:
+  // this flag stops a draft-archive answer that lands late, and
+  // standingLeadFallback() replaces one that landed early.
+  var inRegularSeason = false;
+  var isSeasonLead = function(d){ return !!d && (d.source === 'desk' || d.source === 'start-this-week'); };
+  function standingLeadFallback(season){
+    inRegularSeason = true;
+    if (isSeasonLead(genLead)) return;          // the desk, or the worker's own standing lead, won
+    var w = (season && season.week) || {};
+    var label = (w.type === 'REG' && w.number) ? 'Week ' + w.number : 'This week';
+    paintGeneratedLead({ ok: true, source: 'start-this-week', recent: [
+      { slug: 'start-this-week:rankings', url: '/rankings', title: label + ' rankings, at your scoring' },
+      { slug: 'start-this-week:desk', url: '/in-season/desk', title: 'The desk\u2019s week: the hard start/sits, the matchups and the movers' },
+      { slug: 'start-this-week:intel', url: '/weekly-intel', title: 'Where the betting market and the consensus disagree this week' }
+    ], story: {
+      slug: 'start-this-week', url: '/my-week', label: label, category: 'start-sit', createdAt: null,
+      title: 'Who to start in ' + label + ', read off your own roster',
+      dek: 'The lineup is the one call the week actually asks you for. My Week ranks the players you already own at your league\u2019s exact scoring, names the best legal lineup from them, and flags the seats that need a move before kickoff.',
+      players: [], names: [], cast: []
+    } });
+  }
 
   // No carousel timer. This only refreshes the countdown and rolls the lead
   // over when the three-hour boundary passes on a tab left open — and it stands
@@ -1988,6 +2016,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // painted above. The front page is never blank because the desk had a bad day.
   function paintGeneratedLead(d){
     if (!d || !d.ok || !d.story || !d.story.slug) return;
+    // A lead with no source is a `lead_story` row, written against a draft
+    // board by the retired Routine. It is the summer's front page, and in the
+    // regular season it is not painted at all — not even for the moment before
+    // something better arrives.
+    if (inRegularSeason && !isSeasonLead(d)) return;
     genLead = d;
     var s = d.story;
     if (tick) { clearInterval(tick); tick = null; }
@@ -1996,9 +2029,17 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // The art plate reads its strap off `topic`; for a generated story that is
     // the desk it was written for.
     s.topic = s.label || 'Insight';
+    // The standing lead (worker: startThisWeekLead) is the week's lineup
+    // question, not a written insight, and it carries no createdAt because it
+    // was not written at a moment. Stamping it with one would claim a
+    // freshness it does not have, and counting down to the lead cron would
+    // promise a run that no longer exists — the desk's own calendar is what
+    // replaces it.
+    var standing = d.source === 'start-this-week';
+    var stamp = s.createdAt ? leadStamp(s.createdAt) : (s.label || 'This week');
     renderCast(s);
     document.getElementById('leadKicker').innerHTML =
-      '<span class="badge badge-deep">Insight</span>' +
+      '<span class="badge badge-deep">' + (standing ? 'Start / sit' : 'Insight') + '</span>' +
       '<span class="badge badge-pos">' + esc(s.label || 'Insight') + '</span>';
     // The desk writes at ONE league — 12 teams, $200, the site's own scoring —
     // and it quotes hard dollars in the headline: "bid $32, not the sheet's
@@ -2025,7 +2066,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     // of it; a reader whose league happens to match the desk's is told that
     // rather than left wondering whether anything happened.
     var yours = document.getElementById('leadYours');
-    var note = L ? L.pricingNote(!!(rt || rd), s.createdAt) : '';
+    // The standing lead quotes no money at all, so the "whose dollars are
+    // these" line has nothing to answer. Printing it there would put the
+    // auction league — 12 teams, $200 — back on the front page under a story
+    // about setting a lineup, which is the thing this lead exists to replace.
+    var note = (L && !standing) ? L.pricingNote(!!(rt || rd), s.createdAt) : '';
     if (note) {
       if (L.ensureStyle) L.ensureStyle();
       yours.innerHTML = '<b>' + (L.has ? 'Your league' : 'Default league') + ':</b> ' + esc(note)
@@ -2035,7 +2080,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     renderArt(s);
     document.getElementById('leadLink').setAttribute('href', s.url);
     document.getElementById('leadDate').textContent =
-      leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextLead());
+      standing ? stamp + ' · the desk replaces this when it publishes'
+               : stamp + ' · next insight in ' + fmtCountdown(msToNextLead());
 
     var also = document.getElementById('leadAlso');
     var recent = (d.recent || []).filter(function(x){ return x.slug; }).slice(0, 4);
@@ -2082,7 +2128,8 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     tick = setInterval(function(){
       var now = Date.now();
       document.getElementById('leadDate').textContent =
-        leadStamp(s.createdAt) + ' · next insight in ' + fmtCountdown(msToNextLead());
+        standing ? stamp + ' · the desk replaces this when it publishes'
+                 : stamp + ' · next insight in ' + fmtCountdown(msToNextLead());
       if (leadSlotOf(s.createdAt) < leadSlotOf(now) && now >= leadFiredAt(now)
           && looks < 20 && now - lastLook >= 120000) {
         looks++; lastLook = now; loadGeneratedLead();
@@ -2306,6 +2353,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       if (!s || !band || !wk) return;
       if (s.phase === 'regular') band.setAttribute('data-season', 'in');
       if (s.phase === 'regular') document.documentElement.setAttribute('data-season', 'in');
+      if (s.phase === 'regular') standingLeadFallback(s);
       var w = s.week || {}, h = esc(s.phaseLabel || '');
       if (w.label) h += ' · <b>' + esc(w.label) + '</b>';
       if (w.status === 'active') h += ' · <span class="live">' + ((s.counts && s.counts.inProgress) ? s.counts.inProgress + ' live' : 'under way') + '</span>';

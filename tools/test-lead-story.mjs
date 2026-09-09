@@ -471,5 +471,72 @@ console.log('\nUTC never reaches a reader');
      Array.isArray(junk.names) && junk.names.length === 0);
 }
 
+// ── the regular season never leads on the draft ────────────────────────────
+// Every row in `lead_story` was written by the retired six-hourly Routine
+// against a draft board, so they all argue about what to BID. The season
+// branch used to fall THROUGH to them when the desk had published nothing,
+// which is how a story about bidding and auctions stayed on the front page in
+// September. These pin the two things that must hold: the desk piece wins when
+// there is one, and the week's lineup wins when there is not.
+{
+  console.log('\nthe regular season leads on the week, not on the draft');
+
+  // A sandbox with the four things the season branch reaches for, stubbed.
+  const season = (opts = {}) => new Function('flagOn', 'scheduleCacheRead', 'nflSeasonState', 'deskLeadPayload', `
+    ${section}
+    return { leadStoryPayload, startThisWeekLead };
+  `)(
+    () => opts.flag !== false,
+    async () => ({}),
+    () => ({ ok: true, phase: opts.phase || 'regular', week: { type: 'REG', number: 2 } }),
+    async () => opts.desk || null
+  );
+
+  const DRAFT = ROW({ published: 1, slug: 'bid-32-not-26', title: 'Bid $32 on him, not the sheet\u2019s $26' });
+
+  const desk = { ok: true, source: 'desk', story: { slug: 'desk:weekend-preview:2', title: 'The hard start/sits' }, recent: [] };
+  const withDesk = await season({ desk }).leadStoryPayload(db([DRAFT]));
+  ok('the newest desk piece is the lead when the desk has published one',
+     withDesk.source === 'desk' && withDesk.story.slug === 'desk:weekend-preview:2', withDesk.source);
+
+  const bare = await season().leadStoryPayload(db([DRAFT]));
+  ok('with no desk piece the lead is the week, not the draft archive',
+     bare.ok === true && bare.source === 'start-this-week', JSON.stringify(bare.story && bare.story.slug));
+  ok('and it never serves a row written against a draft board',
+     !JSON.stringify(bare).includes('bid-32-not-26'));
+  ok('it names the week it is about', bare.story.title.includes('Week 2'), bare.story.title);
+  ok('it sends the reader to their own roster', bare.story.url === '/my-week', bare.story.url);
+  ok('it quotes no dollars, so nothing on it needs repricing',
+     !/\$\s?\d/.test(bare.story.title + ' ' + bare.story.dek));
+  ok('it carries no createdAt, because it was not written at a moment',
+     bare.story.createdAt === null);
+  ok('every onward link it offers is an in-season one',
+     bare.recent.length === 3 && bare.recent.every(r => ['/rankings', '/in-season/desk', '/weekly-intel'].includes(r.url)),
+     JSON.stringify(bare.recent.map(r => r.url)));
+
+  // Out of season the archive is still the front page's lead: those stories
+  // are about a draft, and in August a draft is what the reader is doing.
+  const summer = await season({ phase: 'offseason' }).leadStoryPayload(db([DRAFT]));
+  ok('out of season the draft archive is still the lead',
+     summer.ok === true && summer.story.slug === 'bid-32-not-26', JSON.stringify(summer.story && summer.story.slug));
+
+  // The front page has to know a standing lead when it sees one: it carries no
+  // write time to stamp and no prices to restate.
+  ok('the front page recognises the standing lead',
+     front.includes("d.source === 'start-this-week'"));
+  ok('it does not stamp it with a write time it does not have',
+     front.includes("s.createdAt ? leadStamp(s.createdAt) : (s.label"));
+  ok('and it does not print the auction league under it',
+     front.includes('(L && !standing) ? L.pricingNote'));
+  ok('a worker that cannot be reached still does not leave the draft lead up',
+     front.includes('function standingLeadFallback') && front.includes('standingLeadFallback(s)'));
+  // /api/season and /api/lead-story race. Whichever lands first, a row from
+  // the draft archive must not end up as the regular season's lead.
+  ok('a draft-archive answer that lands after the season is known is refused',
+     front.includes('if (inRegularSeason && !isSeasonLead(d)) return;'));
+  ok('and one that landed before it is replaced',
+     front.includes('if (isSeasonLead(genLead)) return;'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

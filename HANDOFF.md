@@ -8260,3 +8260,54 @@ two ways, a user agent carrying a URL and `cf.cacheTtl` on the failing
 ones; every ESPN fetch is now shaped like the one that works (plain user
 agent, no cache options), and a 403 body's first bytes are kept in the
 refresh summary if it recurs.
+
+### 68p. September 9: The Desk was still leading on what to bid
+
+Week 1 was played and the front page's Desk was still arguing about an
+auction. Two things put it there and both were fallbacks doing exactly what
+they were written to do.
+
+`/api/lead-story` serves the newest desk piece in the regular season (68a).
+The desk had published nothing: the Week 1 midweek preview was held on the
+fact check (68o), so `deskLeadPayload` returned null and the function fell
+*through* to the `lead_story` table. Every row in that table was written by
+the retired six-hourly Routine against a draft board, so every one of them
+argues about what to bid on a player. Behind that sits the front page's own
+static rotation, which is the summer's auction deep dives, priced the same
+way. A quiet day at the desk therefore did not cost the reader a story; it
+cost them the right season.
+
+The season branch no longer falls through. In the regular season the lead is
+the newest desk piece, and when there is none it is `startThisWeekLead()`:
+the week, the lineup decision, and the three pages that answer it (My Week,
+the rankings, the desk). It asserts no player, no projection and no game, so
+it cannot go stale or be wrong, and a desk package replaces it the moment one
+publishes. It carries `createdAt: null` on purpose — it was not written at a
+moment, and stamping it with one claims a freshness it does not have, so the
+front page prints the week label where the write time would go and drops the
+"next insight in" countdown, which promises a run that no longer exists. It
+quotes no dollars, so `pricingNote()` is suppressed under it: a "these prices
+are for a 12-team $200 auction" line under a story about setting a lineup is
+the same defect in one sentence.
+
+`standingLeadFallback()` in `front.html` is the same lead again, painted off
+`/api/season` when `/api/lead-story` cannot be reached at all. It duplicates
+two strings from the worker deliberately: it exists for the case where the
+worker did not answer, so it cannot read them from it. Out of season nothing
+changes — those stories are about a draft, and in August a draft is what the
+reader is doing.
+
+**Still to do by hand.** The Pick Routine `trig_01K2obtrMAKiwGn3N4UroTEv`
+("The Pick (Story) - Updated") is still enabled and still writing a daily
+auction-priced column; it wrote "the endgame dollar" on the morning of
+September 9. It was created over the HTTP API, so an agent cannot disable it
+(the same wall as §47) and 68a's "must be disabled in the Routines UI" still
+stands. Its output is hidden on the front page in the regular season by
+`html[data-season="in"]`, so it is now a branch a day rather than a visible
+column, but it is still a draft-season Routine running in week 2.
+
+**Tests.** `tools/test-lead-story.mjs` grew a section: the desk piece wins
+when there is one, the week's lineup wins when there is not, no draft-board
+row is ever served in the regular season, the archive is still the lead out
+of season, and the four front-page contracts (recognises the standing lead,
+does not stamp it, does not price it, falls back to it).
