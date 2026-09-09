@@ -49,6 +49,25 @@
   --danger: #c0322f;
   --brand: #0e7c63;
 
+  /* ── the masthead band ────────────────────────────────────────────────────
+     The cover page has always been a black band with a teal rule under it and
+     the metal wordmark on it; every other page wore a white bar with a small
+     photo logo instead, so clicking off "/" changed sites. These are the cover
+     page's own values (front.html's --mast, --brand and its wordmark stops),
+     moved here so the chrome tracks through.
+     The BAND is the only dark zone on a content page. Everything under it is
+     the white reading surface the palette above describes, which is why the
+     inks below are their own tokens rather than lightened versions of --text:
+     they are read on #0b1614 and nowhere else. */
+  --mast: #0b1614;
+  --mast-ink: #cfd4da;
+  --mast-ink-hi: #ffffff;
+  --mast-dim: #9aa3ac;
+  /* #2dd4a3 is the accent that CANNOT go on white (about 1.9:1) — see --teal.
+     On the band it is the same green the cover page marks the current edition
+     with, and it clears AA there, so it lives here and only here. */
+  --mast-accent: #2dd4a3;
+
   /* ── type ─────────────────────────────────────────────────────────────────
      A 1.25 scale off a 16px base. Before this, front.html alone computed 31
      distinct sizes including 9.5px, 13.3333px and four half-pixel steps.
@@ -80,7 +99,7 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --header-h: 56px;
+  --header-h: 64px;
 }
 
 /* ── base ───────────────────────────────────────────────────────────────── */
@@ -122,35 +141,56 @@ textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
 }
 .skip-link:focus { left: 0 }
 
-/* ── header ─────────────────────────────────────────────────────────────── */
+/* ── header ─────────────────────────────────────────────────────────────────
+   THE COVER PAGE'S MASTHEAD, ON EVERY PAGE. front.html draws a black band with
+   a 3px teal rule under it, the metal wordmark on the left and uppercase links
+   on the right. Every other page used to draw a white bar with a 26px photo
+   logo and grey sentence-case links, so a reader who landed on "/" and clicked
+   through to a rankings page appeared to change sites on the way. This is the
+   same band, built from the same values (see --mast).
+   It is translucent where the cover page's is flat, because this one is sticky
+   and that one scrolls away; at the top of the page the two are the same
+   colour, and the blur is what keeps the links legible once white content is
+   passing underneath. */
 header.site {
   position: sticky; top: 0; z-index: 30;
-  background: rgba(255, 255, 255, .92); backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--line);
+  background: rgba(11, 22, 20, .94); backdrop-filter: blur(8px);
+  border-bottom: 3px solid var(--brand);
 }
+/* min-height, not height, and for the reason the cover page gives: the nav is a
+   row of links whose width depends on the viewport, and on a narrow laptop it
+   wraps. A fixed height let the second row spill out of the band. */
 header.site .wrap {
   max-width: 1080px; display: flex; align-items: center;
-  justify-content: space-between; height: var(--header-h); gap: var(--space-4);
+  justify-content: space-between; min-height: var(--header-h); gap: var(--space-4);
+  padding-top: var(--space-1); padding-bottom: var(--space-1);
 }
-.brand { display: inline-flex; align-items: center; font-weight: 800; letter-spacing: .14em; font-size: var(--fs-md); color: var(--text); flex: 0 0 auto }
+.brand { display: inline-flex; align-items: center; font-weight: 800; letter-spacing: .14em; font-size: var(--fs-md); color: var(--mast-ink-hi); flex: 0 0 auto }
 .brand:hover { text-decoration: none }
-.brand b { color: var(--teal) }
+.brand b { color: var(--mast-accent) }
+/* THE WORDMARK IS THE COVER PAGE'S. Every page carries the same SVG the front
+   page does — the tuna and the letters, filled with the metal gradient — rather
+   than the dark-ink version it used to draw for a white bar. Three pages were
+   still writing the name as text; they carry the mark now too, so there is one
+   brand on the site instead of three.
+   Height is the only thing set here: the SVG has a viewBox, so it scales rather
+   than distorting, which is what lets it shrink on a phone. */
 .brand-logo { height: 30px; width: auto; display: block }
-header.site .brand-logo { height: 26px }
+header.site .brand-logo { height: 34px }
 
 .nav { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1) }
 .nav a {
-  color: var(--sec); font-size: var(--fs-2xs); letter-spacing: .06em;
+  color: var(--mast-ink); font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .09em;
   text-transform: uppercase; white-space: nowrap;
-  padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3); border-radius: 4px;
 }
-.nav a:hover { color: var(--text); background: rgba(17, 24, 32, .05); text-decoration: none }
+.nav a:hover { color: var(--mast-ink-hi); background: rgba(255, 255, 255, .08); text-decoration: none }
 /* The page you are on, so the nav answers "where am I". */
-.nav a[aria-current="page"] { color: var(--teal); background: rgba(14, 124, 99, .10) }
+.nav a[aria-current="page"] { color: var(--mast-accent); background: rgba(255, 255, 255, .10) }
 header.site > .wrap > a.cta {
-  color: #231700; border: 1px solid var(--gold); border-radius: 9px; font-weight: 700;
+  color: #1a1205; border: 1px solid var(--gold); border-radius: 4px; font-weight: 700;
   padding: var(--space-2) var(--space-3); background: var(--gold);
-  font-size: var(--fs-2xs); letter-spacing: .06em; text-transform: uppercase;
+  font-size: var(--fs-2xs); letter-spacing: .09em; text-transform: uppercase;
   white-space: nowrap; margin-left: auto; flex: 0 0 auto;
 }
 header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: none }
@@ -199,16 +239,16 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
      and the button stay at their full tap sizes. */
   header.site .wrap { padding-left: 14px; padding-right: 14px }
   header.site .brand { flex: 0 1 auto; min-width: 0 }
-  header.site .brand-logo { height: 20px; max-width: 100% }
+  header.site .brand-logo { height: 22px; max-width: 100% }
   header.site > .wrap > a.cta, header.site .nav-toggle { flex: 0 0 auto }
   .nav-toggle {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     min-height: 44px; min-width: 44px; padding: 0 var(--space-3);
-    background: transparent; border: 1px solid var(--line2); border-radius: var(--radius-sm);
-    color: var(--sec); font: inherit; font-size: var(--fs-2xs);
+    background: transparent; border: 1px solid rgba(255, 255, 255, .28); border-radius: var(--radius-sm);
+    color: var(--mast-ink); font: inherit; font-size: var(--fs-2xs);
     letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
   }
-  .nav-toggle:hover { color: var(--text); border-color: var(--teal) }
+  .nav-toggle:hover { color: var(--mast-ink-hi); border-color: var(--mast-accent) }
   .nav-toggle-bars { display: block; width: 16px; height: 10px; position: relative }
   .nav-toggle-bars::before, .nav-toggle-bars::after,
   .nav-toggle-bars span { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: currentColor; border-radius: 2px }
@@ -216,18 +256,28 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
   .nav-toggle-bars span { top: 4px }
   .nav-toggle-bars::after { top: 8px }
 
+  /* The panel drops out of the band and is read against it, so it is the band's
+     colour rather than the page's. A light sheet here would put a white slab
+     under a black bar every time the menu opened. */
   .nav {
     position: absolute; top: 100%; left: 0; right: 0;
     display: none; flex-direction: column; align-items: stretch; justify-content: flex-start;
-    background: var(--panel); border-bottom: 1px solid var(--line);
+    background: var(--mast); border-bottom: 1px solid rgba(255, 255, 255, .14);
     padding: var(--space-2) var(--space-3) var(--space-4);
-    box-shadow: 0 18px 40px rgba(17, 24, 32, .12); max-height: calc(100vh - 52px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .45); max-height: calc(100vh - 52px);
     overflow-y: auto; gap: 0;
   }
   header.site { position: sticky }
   header.site[data-nav-open="1"] .nav { display: flex }
   .nav a { font-size: var(--fs-sm); padding: var(--space-3) var(--space-4); min-height: 44px; display: flex; align-items: center }
-  header.site > .wrap > a.cta { padding: var(--space-2) 11px; min-height: 38px; display: inline-flex; align-items: center }
+  /* Tightened rather than shortened: the button's words are the chrome
+     generator's, and at the desktop size the three header items need more
+     than a 360px screen has, which used to be paid for by running the
+     wordmark under the button. */
+  header.site > .wrap > a.cta {
+    padding: var(--space-2) 10px; min-height: 38px; display: inline-flex; align-items: center;
+    font-size: var(--fs-3xs); letter-spacing: .04em;
+  }
   /* Flattened: a hover dropdown is unusable on touch, so the children are
      simply listed under an inline heading. */
   .nav-dd { display: block }
@@ -238,8 +288,9 @@ header.site > .wrap > a.cta:hover { filter: brightness(1.07); text-decoration: n
     padding: 0 0 0 var(--space-4); min-width: 0;
   }
   .nav-dd .nav-dd-menu::before { display: none }
-  .nav-dd .nav-dd-menu a { font-size: var(--fs-xs); color: var(--muted) }
+  .nav-dd .nav-dd-menu a { font-size: var(--fs-xs); color: var(--mast-dim) }
 }
+
 
 /* ── footer ─────────────────────────────────────────────────────────────── */
 footer.site {
