@@ -89,7 +89,7 @@ p{color:var(--sec);margin:0 0 16px}
       <span class="nav-dd"><a href="/auction-insights">Insights</a><span class="nav-dd-menu"><a href="/auction-insights">Auction</a><a href="/snake-insights">Snake</a><a href="/insights-vault">Insight Vault</a></span></span>
       <a href="/the-pick">The Pick</a>
       <a href="/play-caller-premium">Columns</a>
-      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My League</a></span></span>
+      <span class="nav-dd"><a href="/in-season">In-Season</a><span class="nav-dd-menu"><a href="/in-season">Overview</a><a href="/fantasy">Fantasy</a><a href="/dfs">DFS</a><a href="/in-season/desk">The Desk</a><a href="/analysts">Analysts</a><a href="/my-league">My Leagues</a><a href="/my-week">My Week</a></span></span>
       <a href="/faq">FAQ</a>
     </nav>
     <a class="cta" href="/in-season#league">Save my league</a>
@@ -150,7 +150,8 @@ p{color:var(--sec);margin:0 0 16px}
       <li><a href="/dfs">DFS</a></li>
       <li><a href="/in-season/desk">The Desk</a></li>
       <li><a href="/analysts">The analysts (AI)</a></li>
-      <li><a href="/my-league">My League</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
      </ul>
     </div>
     <div class="foot-col">
@@ -178,6 +179,7 @@ p{color:var(--sec);margin:0 0 16px}
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-season.js" defer></script>
+<script src="/it-sync.js" defer></script>
 <script>
 (function () {
   var e = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
@@ -328,6 +330,7 @@ p{color:var(--sec);margin:0 0 16px}
     }
     if (j.disclosure) post += '<p class="is-note dk-disc">' + e(j.disclosure) + ' <a href="/analysts">Meet the desk &rarr;</a></p>';
     $('dkPost').innerHTML = post;
+    try { if (window.ITSync) { var sb = $('dkSync'); if (!sb) { sb = document.createElement('div'); sb.id = 'dkSync'; sb.hidden = true; $('dkBody').parentNode.insertBefore(sb, $('dkBody')); } ITSync.callouts($('dkBody'), { summary: sb }); } } catch (e) {}
     $('dkPiece').hidden = false; $('dkList').hidden = true; $('dkEmpty').hidden = true;
     if (window.ITPlayerSearch && window.ITPlayerSearch.linkAllPlayers) { try { window.ITPlayerSearch.linkAllPlayers($('dkBody')); } catch (x) {} }
     track('story_open', { kind: j.kind, week: j.week, lens: lens, analyst: (j.byline || {}).analyst });

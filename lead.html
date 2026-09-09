@@ -187,7 +187,8 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
       <li><a href="/dfs">DFS</a></li>
       <li><a href="/in-season/desk">The Desk</a></li>
       <li><a href="/analysts">The analysts (AI)</a></li>
-      <li><a href="/my-league">My League</a></li>
+      <li><a href="/my-league">My Leagues</a></li>
+      <li><a href="/my-week">My Week</a></li>
      </ul>
     </div>
     <div class="foot-col">
@@ -215,6 +216,7 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
   <!--/chrome:foot-->
 </div></footer>
 <script src="/it-league.js"></script>
+<script src="/it-sync.js"></script>
 <script src="/player-search.js" defer></script>
 <script>
 (function(){
@@ -308,6 +310,9 @@ details.srcs summary{cursor:pointer;color:var(--sec);font-size:12px;letter-spaci
       // a headline in the reader's money over a table in somebody else's would
       // be worse than leaving both alone.
       host.innerHTML = rp(s.body || '');
+      // Synced readers get their own layer on the same story: who in it is on
+      // their roster, free in their room, or on this week's opponent.
+      try { if (window.ITSync) { var sb = document.getElementById('syncStory'); if (!sb) { sb = document.createElement('div'); sb.id = 'syncStory'; sb.hidden = true; host.parentNode.insertBefore(sb, host); } ITSync.callouts(host, { summary: sb }); } } catch (e) {}
       Array.prototype.forEach.call(host.querySelectorAll('table'), function(t){
         var w = document.createElement('div');
         w.className = 'tw';

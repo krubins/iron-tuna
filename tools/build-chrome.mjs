@@ -102,7 +102,8 @@ const NAV = [
       { label: 'DFS', href: '/dfs' },
       { label: 'The Desk', href: '/in-season/desk' },
       { label: 'Analysts', href: '/analysts' },
-      { label: 'My League', href: '/my-league' },
+      { label: 'My Leagues', href: '/my-league' },
+      { label: 'My Week', href: '/my-week' },
     ],
   },
   { label: 'FAQ', href: '/faq' },
@@ -115,7 +116,7 @@ const NAV = [
 // saving their scoring and their FAAB budget. The draft CTA is still one click
 // away in the nav and owns the whole of §05 on the homepage.
 const IN_SEASON_CTA = { label: 'Save my league', href: '/in-season#league', cta: true };
-const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html',
+const IN_SEASON = new Set(['in-season.html', 'fantasy.html', 'dfs.html', 'my-league.html', 'my-week.html',
   'weekly-intel.html', 'rankings.html', 'vegas-edge.html', 'game-intel.html', 'waivers.html',
   'trade-finder.html', 'faab.html', 'player-intel.html', 'desk.html', 'what-they-arent-telling-you.html',
   'post-draft.html', 'analysts.html', 'analyst.html']);
@@ -148,7 +149,8 @@ const FOOT_COLS = [
       { label: 'DFS', href: '/dfs' },
       { label: 'The Desk', href: '/in-season/desk' },
       { label: 'The analysts (AI)', href: '/analysts' },
-      { label: 'My League', href: '/my-league' },
+      { label: 'My Leagues', href: '/my-league' },
+      { label: 'My Week', href: '/my-week' },
     ],
   },
   {
