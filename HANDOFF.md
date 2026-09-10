@@ -8819,6 +8819,19 @@ Statuses (Metrics, Errors) name the outcome per invocation (`exceededCpu`,
 `exceededMemory`, `scriptThrew`), which the repo cannot read; that is the
 next thing to look at if deaths continue under the higher limit.
 
+The stanza did not deploy. Workers Builds refused the branch (build
+db0e0105, 10:30Z on September 10) with the only code change being
+`limits`, while main's builds were green nine hours earlier; Cloudflare's
+configuration reference says limits are only supported on the Standard
+usage model. So this worker is on a legacy model, and on the Bundled model
+a cron invocation gets 50 ms of CPU, which would kill a tick that does
+sixteen `contentDue` walks on a cold isolate, exactly the ticks that died.
+The stanza is out of `wrangler.jsonc` (a comment there says why) and the
+fix is the owner's: switch the worker to the Standard usage model in the
+dashboard (Workers, iron-tuna, Settings, Usage Model), then put
+`"limits": { "cpu_ms": 300000 }` back. On Standard the default is already
+30 seconds, which alone should end the deaths.
+
 Also seen: the Week 1 midweek preview published at 12:45Z on September 9
 by revalidation (§68o); the reshaped ESPN fetch (§68n) answered 200 with
 sixteen events at 13:00Z and the depth charts loaded all thirty-two clubs
