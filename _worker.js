@@ -6382,6 +6382,44 @@ async function fetchDepthChartEspn(team) {
   out.offense.WR = [].concat(take('wr1'), take('wr2'), take('wr3'), take('wr'));
   return out;
 }
+// ESPN has answered this worker with nothing since September 4 — got 0, failed
+// 32, every morning — while the same URLs serve in full from anywhere else, so
+// the daily job can no longer depend on ESPN alone. Sleeper publishes the same
+// order on the player file the site already mirrors for /api/live: a slot (QB,
+// RB, TE, or LWR/RWR/SWR for receivers) and a rank within the position group,
+// where the receiver ranks run ACROSS the three receiver slots — which is why
+// they are merged here and sorted on the rank, rather than sorted within a slot.
+// The shape returned is fetchDepthChartEspn's, so every consumer (the recap's
+// "what we already knew", the news desk's depth events, the health board) is fed
+// by whichever source answered.
+const SLEEPER_DEPTH_POS = { QB: 'QB', RB: 'RB', TE: 'TE', WR: 'WR', LWR: 'WR', RWR: 'WR', SWR: 'WR' };
+async function fetchDepthChartsSleeper() {
+  const r = await fetch('https://api.sleeper.app/v1/players/nfl', { cf: { cacheTtl: 21600, cacheEverything: true } });
+  if (!r.ok) throw new Error('sleeper players ' + r.status);
+  const all = await r.json();
+  const rows = {}, asOf = Date.now();
+  for (const id in all) {
+    const p = all[id];
+    if (!p || !p.team || !p.depth_chart_position || p.depth_chart_order == null) continue;
+    const pos = SLEEPER_DEPTH_POS[p.depth_chart_position];
+    if (!pos) continue;
+    const order = +p.depth_chart_order;
+    if (!isFinite(order)) continue;
+    const name = p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+    if (!name) continue;
+    const t = teamKey(p.team);
+    (rows[t] = rows[t] || []).push({ pos, order, name });
+  }
+  const teams = {};
+  for (const t of Object.keys(rows)) {
+    const offense = {};
+    for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+      offense[pos] = rows[t].filter(x => x.pos === pos).sort((a, b) => a.order - b.order).map(x => x.name);
+    }
+    teams[t] = { team: t, asOf, offense };
+  }
+  return teams;
+}
 async function runDepthChartRefresh(env) {
   if (!env || !env.LEADS_DB) return { ok: false, error: 'no_db' };
   const sched = await scheduleCacheRead(env);
@@ -6391,14 +6429,27 @@ async function runDepthChartRefresh(env) {
   for (const t of clubs) {
     try { teams[t] = await fetchDepthChartEspn(t); } catch (e) { failed++; if (!firstError) firstError = (e && e.message) || 'failed'; }
   }
-  // Every morning since September 4 this returned got:0 failed:32 and said
-  // nothing else; the same URL answers 200 from outside the worker. The first
-  // error is kept so the log can say what ESPN actually said to the worker.
-  if (Object.keys(teams).length < 24) return { ok: false, error: 'thin', got: Object.keys(teams).length, failed, firstError };
+  // Every morning since September 4 the ESPN pass returned got:0 failed:32 and
+  // said nothing else; the same URL answers 200 from outside the worker. The
+  // first error is kept so the log can say what ESPN actually said to the
+  // worker, and the second source below is what keeps the site's depth charts
+  // current in the meantime. A club ESPN did answer for keeps ESPN's answer.
+  const fromEspn = Object.keys(teams).length;
+  let filled = 0;
+  if (fromEspn < clubs.size || fromEspn < 24) {
+    try {
+      const sleeper = await fetchDepthChartsSleeper();
+      for (const t of Object.keys(sleeper)) if (!teams[t]) { teams[t] = sleeper[t]; filled++; }
+    } catch (e) { if (!firstError) firstError = (e && e.message) || 'sleeper failed'; }
+  }
+  const got = Object.keys(teams).length;
+  if (got < 24) return { ok: false, error: 'thin', got, failed, firstError };
+  const source = !filled ? 'espn-depth' : fromEspn ? 'espn+sleeper' : 'sleeper-depth';
+  const asOf = Date.now();
   await oddsCacheInit(env);
   await env.LEADS_DB.prepare('INSERT OR REPLACE INTO odds_overlay (id, payload, provider, matched, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(DEPTH_ROW, JSON.stringify({ asOf: Date.now(), teams }), 'espn-depth', Object.keys(teams).length, Date.now()).run();
-  return { ok: true, teams: Object.keys(teams).length, failed };
+    .bind(DEPTH_ROW, JSON.stringify({ asOf, updatedAt: asOf, source, teams }), source, got, asOf).run();
+  return { ok: true, teams: got, espn: fromEspn, sleeper: filled, failed, source, firstError };
 }
 async function depthChartsRead(env) {
   if (!env || !env.LEADS_DB) return null;
@@ -8410,7 +8461,7 @@ async function contentContext(env, weekNumber, opts) {
     odds: odds ? { provider: odds.provider, at: odds.updatedAt } : null,
     snapshots: snaps && snaps.ok && snaps.last ? { provider: 'odds_snapshots', at: snaps.last } : null,
     usage: usage ? { provider: 'nflverse', at: usage.updatedAt || usage.builtAt } : null,
-    depth: depth ? { provider: 'espn-depth', at: depth.asOf } : null,
+    depth: depth ? { provider: depth.source || 'espn-depth', at: depth.asOf } : null,
     dfs: dfs.dk ? { provider: 'csv', at: dfs.dk.salariesAsOf } : dfs.fd ? { provider: 'csv', at: dfs.fd.salariesAsOf } : null
   };
   return { sched, state, week: week.ok ? week : null, next: next.ok ? next : null, depth, usage, signals, gameMarkets, weekMarkets,
@@ -9263,7 +9314,7 @@ async function healthPayload(env, opts) {
     // an operator should be able to see whether it is there.
     usagePrior: usagePrior ? { updatedAt: usagePrior.updatedAt, season: usagePrior.season, throughWeek: usagePrior.throughWeek, players: Object.keys(usagePrior.players || {}).length } : null,
     availability: avail ? { updatedAt: avail.updatedAt, asOf: avail.asOf, matched: avail.matched } : null,
-    depthCharts: depth,
+    depthCharts: depth ? { updatedAt: depth.updatedAt || depth.asOf, source: depth.source || 'espn-depth', teams: Object.keys(depth.teams || {}).length } : null,
     rankings: { ros: snapMeta(rosList[0]), next3: snapMeta(next3List[0]), playoffs: snapMeta(playoffList[0]) },
     dfs: { dk: dk ? { fetchedAt: dk.fetchedAt, rows: dk.rows.length } : null, fd: fd ? { fetchedAt: fd.fetchedAt, rows: fd.rows.length } : null }
   };
