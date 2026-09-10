@@ -103,7 +103,10 @@ const read = page => page.evaluate(() => ({
             .map(a => a.getAttribute('href') || '')
             .filter(h => /^\/(auctiondraft|snakedraft)(\?|$)/.test(h))
             .map(h => h.split('?')[0]))],
-  mgr: document.getElementById('navMgr').textContent,
+  // The ribbon's Auction Manager button is gone; the band's button is now the
+  // one that names the room, and it carries the same edition label behind an
+  // "Open the " prefix.
+  mgr: document.getElementById('tbMgr').textContent.replace(/^Open the /, ''),
   allocHead: document.getElementById('allocHead').textContent,
   camp: document.getElementById('campNote').textContent,
   buildTag: document.getElementById('buildTag').hidden ? '' : document.getElementById('buildTag').textContent

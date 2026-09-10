@@ -69,14 +69,12 @@ img{max-width:100%}
 .mast-jump a:hover{color:#fff;background:rgba(255,255,255,.08)}
 .mast-nav a{color:#cfd4da;font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:8px 10px;border-radius:4px}
 .mast-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
-.mast-nav a.cta{background:var(--brand);color:#fff;margin-left:6px}
 /* Sign In sits with the account buttons rather than in the section ribbon: it
    is a thing you DO, not a place on the page, and in the ribbon it fell past
    the right edge at every desktop width. Dimmer and set slightly apart so it
    reads as account rather than as another section anchor. */
 .mast-nav a.mast-signin{color:#9aa3ac;margin-left:10px}
 .mast-nav a.mast-signin:hover{color:#fff}
-.mast-nav a.cta:hover{background:var(--brand-dark)}
 .mast-nav a.cta-gold{background:var(--gold);color:#1a1205;margin-left:6px}
 .mast-nav a.cta-gold:hover{filter:brightness(1.07)}
 
@@ -667,11 +665,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   .mast-jump::after{content:"";flex:0 0 22px;align-self:stretch;position:sticky;right:0;margin-left:-22px;pointer-events:none;background:linear-gradient(90deg,rgba(16,17,20,0),var(--mast))}
   .mast-jump::-webkit-scrollbar{display:none}
   .mast-jump a{flex:0 0 auto;font-size:11.5px;padding:8px 8px;letter-spacing:.07em}
-  /* Row two: the two actions, equal and full width, at a size a thumb can hit. */
+  /* Row two: the action, full width, at a size a thumb can hit. */
   .mast-nav{flex:1 1 100%;gap:9px;flex-wrap:nowrap}
-  .mast-nav a.cta,.mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;font-size:12.5px;letter-spacing:.04em;padding:11px 8px;border-radius:6px}
+  .mast-nav a.cta-gold{flex:1 1 0;margin-left:0;text-align:center;font-size:12.5px;letter-spacing:.04em;padding:11px 8px;border-radius:6px}
   /* Sign In rides along on that row at its own width — it is a text link, not a
-     third button, and giving it an equal third would say otherwise. */
+     second button, and giving it an equal half would say otherwise. */
   .mast-nav a.mast-signin{flex:0 0 auto;margin-left:0;padding-left:2px;padding-right:8px}
 }
 @media(max-width:380px){ .mast-logo{height:22px} .mast-jump a{font-size:11px;padding:8px 6px} }
@@ -863,10 +861,10 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   .hb-dek{font-size:15px}
   .hb-ctas .hb-btn{flex:1 1 100%;text-align:center}
 }
-/* Two buttons and Sign In share one row under the wordmark; at 390px the gold
-   one broke its label across two lines at the authored tracking. */
+/* The gold button and Sign In share one row under the wordmark; at 390px the
+   button broke its label across two lines at the authored tracking. */
 @media(max-width:760px){
-  .mast-nav a.cta,.mast-nav a.cta-gold{letter-spacing:.02em;padding:11px 6px}
+  .mast-nav a.cta-gold{letter-spacing:.02em;padding:11px 6px}
 }
 
 /* ── the two shelves: before the draft, and after it ──────────────────────
@@ -1385,11 +1383,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
   </nav>
   <nav class="mast-nav">
     <a class="mast-signin" href="/auctiondraft?signin=1">Sign In</a>
-    <a class="cta-gold" href="/in-season#league">Save My League</a>
-    <!-- The label is owned by the edition switcher below (it becomes "Auction
-         Manager", "Snake board" and so on), so the href has to be the draft ROOM
-         and not the cheat sheet, or the button says one thing and does another. -->
-    <a class="cta" id="navMgr" href="/auctiondraft?screen=board">Auction Manager</a>
+    <a class="cta-gold" href="/in-season#league">Enter League Settings</a>
   </nav>
 </div></header>
 <div class="dominant" role="doc-subtitle"><div class="wrap">
@@ -3835,7 +3829,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // back to are the same page.
   var posSub = document.getElementById('posSub');
   var SUB_TAIL = '';
-  var navMgr = document.getElementById('navMgr');
   var tbMgr = document.getElementById('tbMgr');
   var tbText = document.getElementById('tbText');
   var allocHead = document.getElementById('allocHead');
@@ -3857,7 +3850,6 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   edPainters.push(function () {
     var e = ED[edKey];
     if (posSub) posSub.textContent = e.posSub + SUB_TAIL;
-    if (navMgr) navMgr.textContent = e.mgr;
     if (tbMgr) tbMgr.textContent = 'Open the ' + (edKey === 'auction' ? 'Auction Manager' : e.mgr);
     // The band's pitch names the room it sells, so it cannot keep saying
     // "Auction Manager" to a reader who is drafting a snake.
