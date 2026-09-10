@@ -9868,3 +9868,119 @@ stale on the board as well as in the story.
 - **§77a unchanged**: Collins and Wilson still tie at 229.8 and are still the
   only inverted tie where the two slot prices differ ($27 vs $28). Today's scan
   found no new money-bearing pair.
+
+## 80. September 10: the column is paused, and the front page is pinned
+
+Nothing is broken. The lead-story Routine has been **deliberately stopped** and
+the front page rolled back a story, both by hand on 09-09. Recording it because
+a later reader will otherwise find a silent Routine and a stale lead and assume
+a fault.
+
+### 80a. What happened on 09-09, in order
+
+| time (UTC) | event |
+|---|---|
+| 07:13 | run 58 publishes row 95, "Bid Quinshon Judkins to $22" |
+| ~11:20–11:35 | the 09-09 audit runs; verifies row 95 exact; reports §79 |
+| **12:42:10** | **row 95 unpublished** (`lead_story_audit` id 66) |
+| **12:42:17** | **row 94 republished** (`lead_story_audit` id 67) |
+| **13:05:36** | **the Routine is disabled** (`updated_at` on the trigger) |
+
+Two statements seven seconds apart, then the Routine off twenty-three minutes
+later. `verified` was untouched on both rows. The trigger reads
+`enabled: false` with **both `ended_reason` and `suspension_reason` empty**,
+which is the signature of a person pausing it rather than the platform
+disabling it. Four scheduled fires have been missed since (09-09 12:58 and
+18:58, 09-10 00:58 and 06:58) and `lead_story_run` stops at id 58.
+
+**I have not touched any of it.** Pausing the column and choosing which story
+sits on the front page are editorial decisions, and the audit's job is to say
+what it found, not to restart anything.
+
+Worth noting for whoever picks this up: row 95's *figures* were verified exact
+on 09-09, against the September 8 board it named. Whatever the reason for
+pulling it, it was not an arithmetic error the audit had found. The one thing
+the audit did flag about it was a data question, not a story defect — the table
+identified Kenneth Walker III as Kansas City because `PROJECTIONS` carries
+`team: 'KC'` for him, which the cheat sheet shows a reader as well.
+
+### 80b. The pinned lead is accurate, with one figure now drifting
+
+Row 94, "Bid Carnell Tate to $13, not the consensus sheet's $11, and pay $2 for
+Cam Ward" (playcaller, 09-08 19:17Z), has been the front page since 12:42Z on
+09-09 and will stay there while the Routine is off.
+
+On the **September 8** board it names, every figure is exact:
+
+| | story | board |
+|---|---|---|
+| Carnell Tate | $11, WR25; WR29 → WR25, worth $3 | exact |
+| Cam Ward | $1, QB26; QB27 → QB26, worth $0 | exact |
+| Tony Pollard | $5, RB29; worth $2 | exact |
+| Wan'Dale Robinson | $3, WR38; WR41 → WR38, worth $1 | exact |
+| "projects him for 1,060.8 receiving yards" | **1,060.8** | exact |
+| "207.2 more than any other Tennessee receiver" | **207.2** | exact |
+
+On **today's** board, three of the four still hold and one has moved:
+
+- **Tony Pollard is now RB27 at $6**, against the story's "$5, RB29".
+
+The story's advice for him is "bid to $6". The board now charges $6 itself, so
+that recommendation has quietly become a non-recommendation — the same pattern
+as Pitts and Hurts before it: the board moves onto the call. The table header
+says "Consensus sheet, September 8", so the story is honest about which board
+it means, and per §76 I have not edited it.
+
+**But a pinned story is a different problem from a rotating one.** The column
+normally replaces itself every six hours, so drift has hours to matter. This
+one has been up for two days and will keep drifting for as long as the pause
+lasts. If the pause is going to run for a while, the Pollard row is the first
+thing that will read wrong to someone holding their own sheet.
+
+### 80c. §79 is unresolved and now untestable
+
+`leadByline` and the four desk names ("The Numbers Desk", "The Film Room",
+"The Beat", "The Value Desk") are still absent from the repo worker
+(1,458,512 bytes) and the deployed bundle (1,322,042) a day after the prompt
+section went live. The live prompt is unchanged at 47,183 chars, sha256
+`9c578c415408`, still byte-identical to the repo copy synced on 09-09.
+
+The second half of yesterday's question — whether the desk-voice instruction
+visibly changed the prose — **cannot be answered**: no story has been written
+under the new section, because the Routine stopped before the next fire. It
+stays open until the column restarts.
+
+### 80d. `tools/live-board.mjs` on `main` is the retired harness
+
+Today's merge conflicted in `tools/live-board.mjs`, and the reason matters more
+than the conflict: **this branch is 19 commits ahead of `main` and has never
+been merged**, so `main` still carries the pre-09-02 harness. Checked directly:
+`git show origin/main:tools/live-board.mjs` contains no `pts0`, no
+`_colBlendPrice`, no `applyAvailability`.
+
+That file on `main` prices a player at the blended rank's own curve slot — the
+recipe retired on 09-04 — and never scales the overlay for availability. Anyone
+running it from `main` gets the two defects §75 and §76 were written about, and
+gets them silently.
+
+The conflict itself was benign: a site-wide American-spelling pass
+(`77d6e6c`) changed one comment word in main's old copy. Resolved in favour of
+the current harness, with the spelling convention applied to it and to
+`test-live-board.mjs` and `overlay-snapshot.mjs` — `normalise` → `normalize`
+throughout, matching the pass.
+
+`boardPayload`'s hash also moved today (`9369b7eeecac` → `52905b06fdcf`) with
+every pipeline function unchanged — exactly the case §78e added that check for.
+Diffed: four comment words, `favourite`/`offence`/`un-normalised`/`labelled`
+Americanized. No code.
+
+### 80e. The rest
+
+- CI **69/69** after merging 102 commits.
+- Repo vs deployed: 1380 player-rows across four boards, **0 differences**.
+- Harness self-test: 23 checks, all pass.
+- Tamper predicates clean; exactly one published row; the only two audit
+  entries in the window are the deliberate swap above.
+- **§77a unchanged**: Collins and Wilson still the only inverted tie whose two
+  slot prices differ ($27 vs $28). Fourth day.
+- Overlay snapshot taken for 09-10; 09-07 through 09-10 now on disk.
