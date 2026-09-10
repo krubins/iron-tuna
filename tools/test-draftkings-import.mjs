@@ -54,6 +54,7 @@ console.log('\nthe draftables adapter');
 const converted = draftablesToCsv({ draftables });
 ok('duplicate roster slots collapse to one player', converted.rows.length === 45, String(converted.rows.length));
 ok('the CSV matches the existing DraftKings adapter', converted.csv.startsWith('Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\n'));
+ok('DraftKings FPPG is carried into the CSV', converted.fppgRows === 45 && converted.csv.includes(',10.5\n'));
 ok('skill positions retain FLEX eligibility', converted.csv.includes(',RB/FLEX,'));
 ok('defenses retain DST eligibility', converted.csv.includes(',DST,'));
 ok('a short response cannot overwrite good data', (() => { try { draftablesToCsv({ draftables: draftables.slice(0, 10) }); return false; } catch { return true; } })());

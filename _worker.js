@@ -9356,14 +9356,24 @@ const SCORING_SITE = {
   fd: { receptionPoints: 0.5, rbReceptionPoints: 0.5, passingYardsThreshold: 0, passingInt: -1, fumbleLost: -2 }
 };
 const DFS_DDL = [
-  'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, source TEXT, fetched_at INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS dfs_salaries (id INTEGER PRIMARY KEY AUTOINCREMENT, site TEXT NOT NULL, slate TEXT, season INTEGER, week INTEGER, name TEXT NOT NULL, position TEXT NOT NULL, team TEXT, opponent TEXT, salary INTEGER NOT NULL, site_id TEXT, operator_fppg REAL, source TEXT, fetched_at INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS ix_dfs_site_week ON dfs_salaries (site, season, week, fetched_at)'
 ];
 let _DFS_READY = false;
 async function dfsReady(env) {
   if (_DFS_READY) return true;
   if (!env || !env.LEADS_DB) return false;
-  try { for (const q of DFS_DDL) await env.LEADS_DB.prepare(q).run(); _DFS_READY = true; return true; } catch (e) { return false; }
+  try {
+    for (const q of DFS_DDL) await env.LEADS_DB.prepare(q).run();
+    // Existing production tables predate operator FPPG. Migrate once in place
+    // instead of dropping salary history or overloading another column.
+    const cols = await env.LEADS_DB.prepare('PRAGMA table_info(dfs_salaries)').all();
+    if (!(cols.results || []).some(c => c.name === 'operator_fppg')) {
+      await env.LEADS_DB.prepare('ALTER TABLE dfs_salaries ADD COLUMN operator_fppg REAL').run();
+    }
+    _DFS_READY = true;
+    return true;
+  } catch (e) { return false; }
 }
 // A DST row on either site names the club; the board names the club's
 // defense. Both resolve to the team key.
@@ -9400,7 +9410,7 @@ function parseDfsCsv(site, text) {
   const idx = k => head.findIndex(h => h.toLowerCase() === k.toLowerCase());
   const rows = [];
   if (site === 'dk') {
-    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info'), iRoster = idx('Roster Position');
+    const iPos = idx('Position'), iName = idx('Name'), iId = idx('ID'), iSal = idx('Salary'), iTeam = idx('TeamAbbrev'), iGame = idx('Game Info'), iRoster = idx('Roster Position'), iFppg = idx('AvgPointsPerGame');
     if (iPos < 0 || iName < 0 || iSal < 0) return { rows: [], error: 'not a DraftKings salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
@@ -9408,17 +9418,21 @@ function parseDfsCsv(site, text) {
       const game = String(f[iGame] || '');
       const m = /^([A-Z]{2,3})@([A-Z]{2,3})/.exec(game);
       const opp = m ? (teamKey(m[1]) === team ? teamKey(m[2]) : teamKey(m[1])) : null;
+      const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
       rows.push({ name: String(f[iName] || '').trim(), position: _dfsPos(f[iPos]), team, opponent: opp, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
-                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else if (site === 'fd') {
-    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position');
+    const iPos = idx('Position'), iFirst = idx('First Name'), iLast = idx('Last Name'), iNick = idx('Nickname'), iSal = idx('Salary'), iTeam = idx('Team'), iOpp = idx('Opponent'), iId = idx('Id'), iRoster = idx('Roster Position'), iFppg = idx('FPPG');
     if (iPos < 0 || iSal < 0 || (iNick < 0 && iFirst < 0)) return { rows: [], error: 'not a FanDuel salary CSV' };
     for (let i = 1; i < lines.length; i++) {
       const f = _csvSplit(lines[i]);
       const name = iNick >= 0 && f[iNick] ? f[iNick] : ((f[iFirst] || '') + ' ' + (f[iLast] || '')).trim();
+      const fppg = iFppg >= 0 ? parseFloat(f[iFppg]) : NaN;
       rows.push({ name: String(name).trim(), position: _dfsPos(f[iPos]), team: teamKey(f[iTeam]), opponent: teamKey(f[iOpp]) || null, salary: parseInt(f[iSal], 10), siteId: f[iId] || null,
-                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null });
+                  rosterPosition: iRoster >= 0 ? String(f[iRoster] || '').toUpperCase() : null,
+                  operatorFppg: Number.isFinite(fppg) ? fppg : null });
     }
   } else return { rows: [], error: 'unknown site' };
   const good = rows.filter(r => r.name && r.position && Number.isFinite(r.salary) && r.salary > 0);
@@ -9428,10 +9442,10 @@ async function dfsStore(env, site, rows, meta) {
   if (!(await dfsReady(env))) return { ok: false, error: 'no_db' };
   const m = meta || {};
   const ts = Date.now();
-  const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, operator_fppg, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   let n = 0;
   for (let i = 0; i < rows.length; i += 50) {
-    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, m.source || 'csv', ts));
+    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, r.operatorFppg != null && Number.isFinite(Number(r.operatorFppg)) ? Number(r.operatorFppg) : null, m.source || 'csv', ts));
     try { await env.LEADS_DB.batch(chunk); n += chunk.length; } catch (e) { for (const s of chunk) { try { await s.run(); n++; } catch (e2) {} } }
   }
   return { ok: true, stored: n, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
@@ -9441,7 +9455,7 @@ async function dfsSalariesRead(env, site, season, week) {
   try {
     const latest = await env.LEADS_DB.prepare('SELECT MAX(fetched_at) AS ts FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ?').bind(site, season, week).first();
     if (!latest || !latest.ts) return null;
-    const q = await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND fetched_at = ?').bind(site, season, week, latest.ts).all();
+    const q = await env.LEADS_DB.prepare('SELECT name, position, team, opponent, salary, site_id, operator_fppg, slate, source FROM dfs_salaries WHERE site = ? AND season IS ? AND week IS ? AND fetched_at = ?').bind(site, season, week, latest.ts).all();
     return { rows: q.results || [], fetchedAt: latest.ts };
   } catch (e) { return null; }
 }
@@ -9460,8 +9474,10 @@ function buildDfsSlate(site, salaries, week, opts) {
   const rows = [];
   for (const s of salaries || []) {
     const pos = s.position;
+    const fppgRaw = s.operatorFppg != null ? s.operatorFppg : s.operator_fppg;
+    const operatorFppg = fppgRaw != null && Number.isFinite(Number(fppgRaw)) ? _oddsRound(Number(fppgRaw)) : null;
     const p = pos === 'DST' ? defByTeam.get(teamKey(s.team)) : byKey.get(_oddsNorm(s.name) + '|' + pos);
-    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, onBoard: false }); continue; }
+    if (!p || !p.games) { rows.push({ name: s.name, position: pos, team: teamKey(s.team), opponent: s.opponent, salary: s.salary, operatorFppg, onBoard: false }); continue; }
     const pts = b => _oddsRound(scoreAny(p[b].stats, p.pos, rules, 1));
     const v = pts('vegas'), c = pts('consensus'), it = pts('ironTuna');
     const w0 = p.weeks.find(x => x.env) || null;
@@ -9469,6 +9485,8 @@ function buildDfsSlate(site, salaries, week, opts) {
     rows.push({
       name: p.name, position: pos, team: p.team, opponent: w0 ? w0.opponent : s.opponent, home: w0 ? w0.home : null, salary: s.salary, onBoard: true, key: p.key, siteName: s.name.trim(),
       vegasPoints: v, ironTunaPoints: it, consensusPoints: c,
+      operatorFppg, operatorFppgLabel: site === 'dk' ? 'DraftKings FPPG' : 'FanDuel FPPG',
+      projectionVsFppg: operatorFppg == null ? null : _oddsRound(it - operatorFppg),
       vegasPerK: _oddsRound(v / (s.salary / 1000) * 100) / 100, ironTunaPerK: _oddsRound(it / (s.salary / 1000) * 100) / 100,
       marketDelta: p.marketDelta, vegasBasis: p.vegas.basis, vegasConfidence: p.vegas.confidence,
       tdProbability: p.vegas.td ? p.vegas.td.probability : Math.round((1 - Math.exp(-lam)) * 1000) / 10, tdBasis: p.vegas.td ? 'anytime-td-market' : 'derived',

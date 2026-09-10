@@ -30,12 +30,14 @@ console.log('\nthe lobby CSVs');
   const dk = 'Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame\nQB,"Josh Allen (12345)",Josh Allen,12345,QB,8200,BUF@NYJ 09/14/2026 01:00PM ET,BUF,24.1\nRB,"Jahmyr Gibbs (222)",Jahmyr Gibbs,222,RB/FLEX,8900,DET@GB 09/14/2026 04:25PM ET,DET,21.3\nDST,"Bears  (333)",Bears ,333,DST,3000,CHI@MIN 09/14/2026 01:00PM ET,CHI,7.0\n';
   const a = H.parseDfsCsv('dk', dk);
   ok('a DraftKings CSV parses', !a.error && a.rows.length === 3, a.error);
+  ok('DraftKings FPPG comes across as historical operator data', a.rows[0].operatorFppg === 24.1 && a.rows[1].operatorFppg === 21.3);
   ok('the opponent comes out of Game Info', a.rows[0].opponent === 'NYJ' && a.rows[1].opponent === 'GB');
   ok('a defense is a DST with its club', a.rows[2].position === 'DST' && a.rows[2].team === 'CHI');
   const fd = 'Id,Position,First Name,Nickname,Last Name,FPPG,Played,Salary,Game,Team,Opponent,Injury Indicator,Injury Details,Tier,Roster Position\n1,QB,Josh,Josh Allen,Allen,24.1,1,9200,BUF@NYJ,BUF,NYJ,,,,QB\n2,D,,Chicago Bears,,7,1,4000,CHI@MIN,CHI,MIN,,,,D\n';
   const b = H.parseDfsCsv('fd', fd);
   ok('a FanDuel CSV parses', !b.error && b.rows.length === 2, b.error);
   ok('the nickname is the name and D is a DST', b.rows[0].name === 'Josh Allen' && b.rows[1].position === 'DST');
+  ok('FanDuel FPPG comes across through the same normalized field', b.rows[0].operatorFppg === 24.1);
   ok('a file from the wrong site is refused', !!H.parseDfsCsv('dk', fd).error && !!H.parseDfsCsv('fd', dk).error);
   ok('an empty file is refused', H.parseDfsCsv('dk', '').error === 'empty');
   ok('the roster position comes across', a.rows[1].rosterPosition === 'RB/FLEX' && b.rows[0].rosterPosition === 'QB');
@@ -111,7 +113,7 @@ const WEEK = { ok: true, players: [
 const SAL = [['Josh Allen', 'QB', 'BUF', 8200], ['Aaron Rodgers', 'QB', 'NYJ', 6000], ['Jahmyr Gibbs', 'RB', 'DET', 8900], ['Breece Hall', 'RB', 'NYJ', 7200], ['James Cook', 'RB', 'BUF', 6800],
   ['Amon-Ra St. Brown', 'WR', 'DET', 8600], ['Garrett Wilson', 'WR', 'NYJ', 7000], ['Khalil Shakir', 'WR', 'BUF', 5200], ['Jameson Williams', 'WR', 'DET', 6100], ['Jayden Reed', 'WR', 'GB', 5600],
   ['Sam LaPorta', 'TE', 'DET', 5500], ['Dalton Kincaid', 'TE', 'BUF', 4400], ['Tucker Kraft', 'TE', 'GB', 3800], ['Bears ', 'DST', 'CHI', 3000], ['Bills ', 'DST', 'BUF', 3600], ['Nobody Famous', 'WR', 'GB', 3000]]
-  .map(([name, position, team, salary]) => ({ name, position, team, opponent: null, salary }));
+  .map(([name, position, team, salary], i) => ({ name, position, team, opponent: null, salary, operatorFppg: 10 + i }));
 const STATE = { ok: true, games: [{ id: 'a', home: 'NYJ', away: 'BUF', total: 47, spread: -3, impliedHome: 22, impliedAway: 25, kickoff: 1 }, { id: 'b', home: 'GB', away: 'DET', total: 51, spread: 1, impliedHome: 26, impliedAway: 25, kickoff: 1 }] };
 
 console.log('\nthe slate');
@@ -121,6 +123,7 @@ const slate = H.buildDfsSlate('dk', SAL, WEEK, {});
   ok('a player the board does not know is kept but unmatched', slate.unmatched === 1 && slate.players.find(p => p.name === 'Nobody Famous').onBoard === false);
   const allen = slate.players.find(p => p.name === 'Josh Allen');
   ok('each player carries salary and all three projections', allen.salary === 8200 && allen.vegasPoints > 0 && allen.ironTunaPoints > 0 && allen.consensusPoints > 0);
+  ok('the slate keeps operator FPPG and exposes the Iron Tuna edge against it', allen.operatorFppg === 10 && near(allen.projectionVsFppg, allen.ironTunaPoints - 10, 0.11));
   ok('and Market Delta, TD probability and team total', allen.marketDelta && Number.isFinite(allen.tdProbability) && allen.teamTotal === 27);
   ok('the site scoring is applied (DK 300-yard bonus is not reached at 280)', near(allen.vegasPoints, _oddsRound(280 * 0.04 + 2.2 * 4 + 4 + 0.5 * 6), 0.15), String(allen.vegasPoints));
   ok('Vegas Value Score is market points per $1K against the slate median', allen.vegasValueScore > 0 && slate.players.some(p => p.vegasValueScore && p.vegasValueScore !== 100));
@@ -143,6 +146,9 @@ console.log('\nthe DFS page explanations');
   ok('the contest cards explain how the objectives change', page.includes('How they differ:') && page.includes('floor and safety toward ceiling, correlation and leverage'));
   ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
   ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
+  ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DK FPPG') && page.includes('IT Edge') && page.includes('historical fantasy-points-per-game average'));
+  ok('the DFS What If box autocompletes from typed player names', page.includes('id="dfWhatIfInput"') && page.includes('function renderWhatIfList') && page.includes("addEventListener('input', renderWhatIfList)") && page.includes('data-whatif-key'));
+  ok('the What If selection becomes an optimizer lock', page.includes("if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
   const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
   ok('every inline DFS script parses', (() => { try { scripts.forEach(code => new Function(code)); return true; } catch (err) { console.log(err.message); return false; } })());
 }
@@ -154,6 +160,7 @@ console.log('\nthe optimizer');
   const r = DFS.build(players, { ...base, mode: 'ironTuna', lineups: 1 });
   ok('a lineup is built', r.ok && r.lineups.length === 1);
   const L = r.lineups[0];
+  ok('lineup rows carry operator FPPG and the projection edge', L.players.every(p => typeof p.operatorFppg === 'number' && typeof p.projectionVsFppg === 'number'));
   ok('it fills every slot', L.players.length === 9 && L.players.every(p => p.id));
   ok('it respects the cap', L.salary <= 50000);
   ok('each slot holds an eligible position', L.players.every(p => p.slot === p.position || (p.slot === 'FLEX' && /RB|WR|TE/.test(p.position))));
