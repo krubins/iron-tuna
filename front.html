@@ -136,6 +136,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .nr-card{border:1px solid var(--line2,#d9e0e5);border-radius:10px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none;background:var(--card,#fff)}
 .nr-card:hover{border-color:var(--teal,#0e7c63)}
 .nr-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
+.nr-kicker.nfl-wide{display:flex;align-items:center;gap:6px}
+.nr-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
 .nr-card h3{margin:0;font-size:17px;line-height:1.3}.nr-card p{margin:0;color:var(--sec,#5a6b78);font-size:13.5px;line-height:1.45}
 .nr-by{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sec,#5a6b78);margin-top:auto}
 .nr-av{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--teal,#0e7c63);color:#fff;font-weight:800;font-size:10px}
@@ -239,6 +241,8 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .lead-kicker{display:flex;gap:8px;align-items:center}
 .badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:3px}
 .badge-pos{background:var(--brand);color:#fff}
+.badge-nfl{display:inline-flex;align-items:center;gap:6px}
+.badge-nfl-logo{display:block;width:18px;height:18px;object-fit:contain;flex:0 0 auto}
 .badge-deep{background:#12181f;color:#f5c542;border:1px solid #3a4550}
 .badge-under{background:var(--brand-tint);color:var(--brand);border:1px solid var(--brand-line)}
 .badge-over{background:#fbeaea;color:#b02020;border:1px solid #f0c8c8}
@@ -2507,6 +2511,14 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   // one exception it spells its own way.
   var LOGO_ID = { WAS: 'wsh' };
   function logoUrl(t) { return 'https://a.espncdn.com/i/teamlogos/nfl/500/' + (LOGO_ID[t] || t).toLowerCase() + '.png'; }
+  var NFL_LOGO_URL = 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png';
+  function isNflLeagueWide(v) { return /^NFL\s+League-Wide$/i.test(String(v || '').trim()); }
+  function badgeTopic(v) {
+    var label = String(v || '');
+    return '<span class="badge badge-pos' + (isNflLeagueWide(label) ? ' badge-nfl' : '') + '">' +
+      (isNflLeagueWide(label) ? '<img class="badge-nfl-logo" src="' + NFL_LOGO_URL + '" alt="" aria-hidden="true">' : '') +
+      esc(label) + '</span>';
+  }
 
   // ── which club, or clubs, the plate is for ────────────────────────────────
   // TEAM_ART's own names are the vocabulary, split into city and nickname so
@@ -2632,6 +2644,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var type = g.querySelectorAll('[data-x0]');
     for (var i = 0; i < type.length; i++) type[i].setAttribute('x', type[i].getAttribute('data-x0'));
   }
+  function nflSvg(type) {
+    return '<g class="club">' +
+      '<image href="' + NFL_LOGO_URL + '" x="28" y="21" width="94" height="94" preserveAspectRatio="xMidYMid meet"/>' +
+      type + '</g>';
+  }
   function renderArt(s) {
     var host = document.getElementById('leadArt');
     if (!host) return;
@@ -2640,6 +2657,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     if (s && s.ppl && s.ppl.length) { host.innerHTML = ''; return; }
     var title = (s && s.title) || '', dek = (s && s.dek) || '';
     var sub = (s && s.topic ? s.topic : 'Deep dive').toUpperCase();
+    var nflWide = isNflLeagueWide(s && (s.label || s.topic));
     // Whose story it is. An authored drop-page story arrives with `team` already
     // stamped on it by tools/build-front.mjs, from its HEADLINE only — the body
     // fallback that works for topics is too loose here, and a club cited in
@@ -2702,10 +2720,13 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
           '<path d="M420 0 L500 0 L340 150 L260 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           '<path d="M300 0 L340 0 L180 150 L140 150 Z" fill="' + ink + '" opacity="0.06"/>' +
           (function () {
+            var hasLeagueMark = !t && nflWide;
             var type =
-              '<text x="' + (t ? 144 : 34) + '" data-x0="34" y="84" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
-              '<text x="' + (t ? 146 : 34) + '" data-x0="34" y="108" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
-            // No club, no mark: the league-wide plate is the geometry alone.
+              '<text x="' + (t ? 144 : hasLeagueMark ? 146 : 34) + '" data-x0="34" y="84" fill="' + ink + '" style="font:800 62px Inter,Arial,sans-serif;letter-spacing:-.02em">' + esc(mark) + '</text>' +
+              '<text x="' + (t ? 146 : hasLeagueMark ? 148 : 34) + '" data-x0="34" y="108" fill="' + ink + '" opacity="0.72" style="font:700 14px Inter,Arial,sans-serif;letter-spacing:.14em">' + esc(name.toUpperCase()) + '</text>';
+            // "NFL League-Wide" is a branded league story, so it gets the NFL
+            // shield. Other neutral stories keep the geometry-only plate.
+            if (hasLeagueMark) return nflSvg(type);
             return t ? clubSvg(one, 28, 26, 92, type) : type;
           })() +
           strapSvg(686, 'end', chip, sub) +
@@ -2866,7 +2887,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     renderCast(s);
     document.getElementById('leadKicker').innerHTML =
       (isDeepLead ? '<span class="badge badge-deep">Deep Dive</span>' : '') +
-      '<span class="badge badge-pos">' + esc(s.topic || s.pos) + '</span>' +
+      badgeTopic(s.topic || s.pos) +
       (s.view ? '<span class="badge ' + viewCls(s) + '">' + esc(s.view) + '</span>' : '');
     document.getElementById('leadTitle').innerHTML = '<a href="' + s.url + '">' + esc(s.title) + '</a>';
     document.getElementById('leadPlay').innerHTML = s.play ? '<b>The play:</b> ' + esc(s.play) : '';
@@ -2975,8 +2996,7 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
     var lbl = s.label || 'Insight', rank = desk ? 'The Desk' : 'Insight';
     document.getElementById('leadKicker').innerHTML =
       '<span class="badge badge-deep">' + rank + '</span>' +
-      (lbl.toLowerCase() === rank.toLowerCase() ? ''
-        : '<span class="badge badge-pos">' + esc(lbl) + '</span>');
+      (lbl.toLowerCase() === rank.toLowerCase() ? '' : badgeTopic(lbl));
     // The desk writes at ONE league — 12 teams, $200, the site's own scoring —
     // and it quotes hard dollars in the headline: "bid $32, not the sheet's
     // $26". Both figures are wrong for a reader who plays $300, or ten teams,
@@ -4915,7 +4935,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
   var av = function (name) { return (name || '').split(' ').map(function (w) { return w[0]; }).join(''); };
   function card(p, lens) {
     var by = p.byline || {}; var who = lens === 'dfs' ? by.dfsName : by.name;
-    return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker">' + esc(lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title) + ' &middot; Week ' + esc(p.week) + (p.version > 1 ? ' &middot; update ' + esc(p.version) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
+    var kicker = lens === 'dfs' && p.dfsTitle ? p.dfsTitle : p.title;
+    var nflWide = /^NFL\s+League-Wide$/i.test(String(kicker || '').trim());
+    return '<a class="nr-card" href="' + esc(p.url) + '"><span class="nr-kicker' + (nflWide ? ' nfl-wide' : '') + '">' +
+      (nflWide ? '<img class="nr-nfl-logo" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" alt="" aria-hidden="true">' : '') +
+      esc(kicker) + ' &middot; Week ' + esc(p.week) + (p.version > 1 ? ' &middot; update ' + esc(p.version) : '') + '</span><h3>' + esc(p.headline || p.title) + '</h3>' + (p.dek ? '<p>' + esc(p.dek) + '</p>' : '') +
       '<span class="nr-by"><span class="nr-av">' + esc(av(who)) + '</span>' + esc(who || 'Iron Tuna') + (p.rivalry && lens !== 'dfs' ? '<span class="nr-riv">Vega vs. Brooks</span>' : '') + '</span></a>';
   }
   function band(lens, gridId, ids) {
