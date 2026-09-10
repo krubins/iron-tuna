@@ -7471,10 +7471,10 @@ function briefGamePlan(kind, games, ctx) {
 }
 
 // ── the writer ─────────────────────────────────────────────────────────────
-async function llmText(env, system, user, maxTokens, timeoutMs) {
+async function llmText(env, system, user, maxTokens, timeoutMs, modelOverride) {
   if (!env || !env.LLM_API_KEY) return { ok: false, error: 'no_key' };
   const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase();
-  const model = env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
+  const model = modelOverride || env.LLM_MODEL || (provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini');
   // The legacy desk's briefs finished inside a minute. A newsroom packet is a
   // 60 KB prompt asking for two lenses, and the first live tick showed it
   // needs more than that; the caller says how long it can wait.
@@ -7490,6 +7490,18 @@ async function llmText(env, system, user, maxTokens, timeoutMs) {
   } catch (e) { return { ok: false, error: (e && e.message) || 'failed' }; }
   finally { clearTimeout(to); }
 }
+// The newsroom model is intentionally separate from the site's interactive LLM.
+// Rankings, projections and DFS values are computed before this model is called.
+// Keeping a dedicated Sonnet default means changing LLM_MODEL to Opus for an
+// interactive feature cannot silently move automated editorial work to Opus.
+const NEWSROOM_DEFAULT_MODEL = 'claude-sonnet-4-6';
+function newsroomEditorialModel(env) {
+  const provider = ((env && env.LLM_PROVIDER) || 'anthropic').toLowerCase();
+  if (env && env.NEWSROOM_LLM_MODEL) return env.NEWSROOM_LLM_MODEL;
+  if (provider === 'anthropic') return NEWSROOM_DEFAULT_MODEL;
+  return (env && env.LLM_MODEL) || 'gpt-4o-mini';
+}
+
 const CONTENT_SECTIONS = {
   'team-recaps': ['teams'],
   'mnf-breakdown': ['alreadyKnew', 'learned', 'stillDontKnow', 'fantasyWinners', 'fantasyLosers', 'usageChanges', 'marketImplications', 'waiverImplications'],
@@ -7504,7 +7516,7 @@ const CONTENT_SECTIONS = {
   'weekend-game-plan': ['cards']
 };
 const WRITER_SYSTEM = `You write short, plain fantasy-football analysis for Iron Tuna, a site that prices players against the betting market.
-THE ONE RULE: you may state only facts that appear in the BRIEF you are given. Every player name, team, number, rank, share, line and injury status must come from the brief. If the brief does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. Do not describe the score or the game flow. Concentrate on usage, roles, target hierarchy, backfield split, red-zone work, injuries, depth-chart implications and what the market says.
+THE ONE RULE: you may state only facts that appear in the BRIEF you are given. Every player name, team, number, rank, share, line and injury status must come from the brief. If the brief does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. All projections, ranks, values, ownership estimates, floors, ceilings, leverage scores and DFS scores in the brief were already calculated by deterministic code. Do not calculate, re-rank, interpolate, normalize, replace or override them. Compare and explain the supplied values only. Do not describe the score or the game flow. Concentrate on usage, roles, target hierarchy, backfield split, red-zone work, injuries, depth-chart implications and what the market says.
 Write in short sentences. No hype, no hedging padding, no em dashes. Never invent a reason: if the brief has no cause for a change, say the cause is not known.
 OUTPUT: a single JSON object with exactly the section keys requested, each an array of strings (one paragraph or bullet per string; a "teams" or "cards" or "insights" section is an array of objects with the fields requested). No prose outside the JSON.`;
 function _sectionSpec(kind) {
@@ -7565,14 +7577,15 @@ function validateDraft(text, allowed) {
 async function writePiece(env, kind, brief) {
   const spec = _sectionSpec(kind);
   const user = 'KIND: ' + kind + '\nSECTIONS AND SHAPE: ' + spec + '\n\nBRIEF (the only source of facts):\n' + JSON.stringify(brief, null, 0).slice(0, 60000);
-  let attempt = await llmText(env, WRITER_SYSTEM, user, 4000);
+  const editorialModel = newsroomEditorialModel(env);
+  let attempt = await llmText(env, WRITER_SYSTEM, user, 4000, undefined, editorialModel);
   if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
   const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
   let body = parse(attempt.text);
   let v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] };
   if (!v.ok) {
     const fix = user + '\n\nYOUR PREVIOUS DRAFT NAMED THINGS THE BRIEF DOES NOT CONTAIN. Remove or replace them; do not add anything new. Names not in the brief: ' + v.names.join(', ') + '. Numbers not in the brief: ' + v.numbers.join(', ') + '.';
-    attempt = await llmText(env, WRITER_SYSTEM, fix, 4000);
+    attempt = await llmText(env, WRITER_SYSTEM, fix, 4000, undefined, editorialModel);
     if (attempt.ok) { body = parse(attempt.text); v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] }; }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.names.concat(v.numbers), model: attempt.model || null };
@@ -8787,7 +8800,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
 
 // ── the writer, in an analyst's voice, two lenses ──────────────────────────
 const NEWSROOM_SYSTEM = `You write for Iron Tuna, a fantasy football intelligence desk that prices players against the betting market and reads usage before it reads box scores.
-THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
+THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. All projections, ranks, values, ownership estimates, floors, ceilings, leverage scores and DFS scores in the packet were already calculated by deterministic code. Do not calculate, re-rank, interpolate, normalize, replace or override them. Compare and explain the supplied values only. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
 THE QUESTION is never "what happened". It is "what does what happened tell us about what is going to happen next", and for DFS "what does this mean at this salary and this expected ownership".
 TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manager what to do: rankings, start/sit, waivers, trades, rest-of-season value. The DFS lens tells a daily player where projection, price and ownership create opportunity: value, chalk, leverage, stacks, cash versus tournaments. A good fantasy player is not automatically a good DFS play. The facts do not change between the lenses; the recommendations may. If the packet's dfs block says no salaries are loaded, the DFS lens speaks to roles and pricing direction and says plainly that no salary number is available.
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
@@ -8881,7 +8894,8 @@ async function writeNewsroomPiece(env, kind, packet) {
   const user = 'KIND: ' + kind + ' (' + ((packet.meta && packet.meta.title) || K.title) + (K.subtitle ? ': ' + K.subtitle : '') + ')\n' + _voiceBlock(packet) +
     'SHAPE (exactly these keys; a "calls" entry for each firm position you take, at most eight; omit "dfs" only if the packet has no dfs lens):\n' + shape +
     '\n\nPACKET (the only source of facts):\n' + JSON.stringify(compactForWriter(packet), null, 0);
-  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS);
+  const editorialModel = newsroomEditorialModel(env);
+  let attempt = await llmText(env, NEWSROOM_SYSTEM, user, 6000, WRITER_TIMEOUT_MS, editorialModel);
   if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
   const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
   let body = parse(attempt.text);
@@ -8889,7 +8903,7 @@ async function writeNewsroomPiece(env, kind, packet) {
   let v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] };
   if (!v.ok) {
     const fix = user + '\n\nYOUR PREVIOUS DRAFT FAILED THE FACT CHECK. Fix exactly these and add nothing new: ' + v.problems.join('; ') + '. A "name:" problem is a name the packet does not contain; a "number:" problem is a number the packet does not contain; "analyst:" means you named a colleague the packet does not; "missing:" means a required section or key is absent; "phrasing:" is a banned phrase or an em dash.';
-    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, 6000, WRITER_TIMEOUT_MS);
+    attempt = await llmText(env, NEWSROOM_SYSTEM, fix, 6000, WRITER_TIMEOUT_MS, editorialModel);
     if (attempt.ok) { body = parse(attempt.text); v = body ? factCheck(body, packet) : { ok: false, problems: ['(unparseable JSON)'] }; }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.problems, model: attempt.model || null };
@@ -8920,6 +8934,9 @@ async function contentStore(env, rec) {
 }
 // Everything a packet reads, read once. Extends the desk's context with the
 // freshness stamps and the DFS slates under the metrics.
+// NUMERIC BOUNDARY: this function obtains the deterministic ranking boards and
+// computes DFS slate metrics before any writer is invoked. The writer receives
+// the finished numbers as facts; it is never a projection, ranking or DFS engine.
 async function contentContext(env, weekNumber, opts) {
   const sched = await scheduleCacheRead(env);
   const state = sched ? nflSeasonState(sched, Date.now()) : { ok: false };
