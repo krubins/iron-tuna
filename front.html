@@ -2051,7 +2051,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
     <div class="fp-chap" id="marketGames"><div class="fp-chap-top"><span class="fp-chap-n">01</span><h2>Game markets</h2></div>
       <p class="fp-chap-dek">The market number is the input. Iron Tuna&rsquo;s projection is our independent output. Tuna Edge is simply the difference between the two, not a guarantee or a bet recommendation.</p></div>
     <div class="fp-chapbody">
-      <p class="dfs-note" id="marketStamp"><b>21+ market information.</b> Iron Tuna does not accept wagers or place bets. Availability is jurisdiction-dependent. Market prices move, so verify any number at its source before relying on it.</p>
+      <p class="dfs-note" id="marketStamp"><b>21+ market information.</b> Iron Tuna does not accept wagers or place bets. Betting Market Intel is not available in Washington, where market-data requests are blocked at the edge. Market prices move, so verify any number at its source before relying on it.</p>
       <div class="dfs-scroll" id="marketGamesWrap" hidden>
         <table class="dfs-table" id="marketGamesTable">
           <thead><tr><th>Game</th><th>Spread</th><th class="num">O/U</th><th>Market implied</th><th>Iron Tuna Projection</th><th>Tuna Edge</th><th>Movement</th></tr></thead>
@@ -4676,6 +4676,11 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
       .then(function (r) { return r.json(); })
       .then(function (j) {
         marketLoading = false;
+        if (j && j.error === 'jurisdiction_unavailable') {
+          marketLoaded = true;
+          marketBlank('Betting Market Intel is not available in Washington. Season-long fantasy and DFS tools remain available.');
+          return;
+        }
         if (!j || !j.ok) { marketBlank('The market board did not answer. Nothing stale is shown in its place.'); return; }
         marketLoaded = true;
         renderMarket(j);
