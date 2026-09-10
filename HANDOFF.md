@@ -8842,7 +8842,53 @@ sixteen events at 13:00Z and the depth charts loaded all thirty-two clubs
 at 10:00Z the next morning, the first success since September 4.
 ---
 
-## 71. September 10: SportsGameOdds becomes the market feed
+## 71. September 10: the depth charts became a page
+
+The site knew every club's depth chart and showed it to nobody. Sleeper's
+order rides on `/api/live` and `depthChartsFromLive` folds it into the table
+the Value Coach is grounded on (§63), but a reader who wanted to know who was
+behind Bijan had to ask the coach. **`/depth-charts`** is that table as a
+page: 32 clubs, QB/RB/WR/TE in published order, each name carrying its current
+designation, refreshed every day because it reads the same six-hour feed on
+every load.
+
+**It reads `/api/live`, not the D1 row.** The stored table (`odds_overlay`
+row 6) is a job's output and can be a day stale or missing; the live feed is
+the one the app already fetches, is cached at the edge, and answers even when
+D1 does not. The page carries `LIVE = '/api/live?v=3'` and
+`tools/test-depth-page.mjs` fails if the worker's cache key, `index.html`'s
+`LIVE_FEED_VERSION` and the page's constant ever name three different
+versions — which is exactly how the depth charts "did not take" on launch day.
+
+**The fold is the same rule, one line deeper.** Receiver ranks run ACROSS
+LWR/RWR/SWR, so they are merged and sorted on the rank; sorting within a slot
+names the wrong man WR2 and no reader can catch it. The page keeps
+QB3/RB5/WR6/TE3 against the coach's QB2/RB4/WR5/TE2, and the test fails if the
+page is ever the shallower of the two: the whole point of the page is the name
+under the name.
+
+**The daily job stopped depending on ESPN alone.** It had returned
+`got: 0, failed: 32` every morning from September 4 until the reshaped fetch
+(§68n) brought all thirty-two clubs back at 10:00Z on September 10 — six
+mornings in which the site's stored depth charts were whatever the last good
+run left. `runDepthChartRefresh` now falls back to
+`fetchDepthChartsSleeper()` — the same player file the page reads, folded into
+`fetchDepthChartEspn`'s shape — for every club ESPN did not answer for, and
+no-ops entirely on a morning ESPN answers in full. The recap's "what we
+already knew", the news desk's depth events and the health board are fed by
+whichever source answered. The row records which: `source` is
+`espn-depth`, `espn+sleeper` or `sleeper-depth`, and `/api/admin/providers`
+stamps that instead of the hard-coded `espn-depth` it used to claim.
+
+**And the health board could never see the row.** `healthAssess` reads
+`u.depthCharts.updatedAt`; the stored payload has only ever carried `asOf`, so
+depth charts reported "never loaded" on the mornings the job worked. The
+payload now carries both and the health summary sends `updatedAt`, the source
+and a club count instead of shipping all 32 charts into the admin payload.
+
+---
+
+## 72. September 10: SportsGameOdds becomes the market feed
 
 Every market-implied number on the site — the spread and total under
 `/the-line` and `/previews`, the Betting Odds column on all sixteen rankings
