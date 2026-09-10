@@ -771,7 +771,7 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
     first eight characters landed on a near-black field, invisible.
   - **The furniture is neutral, never the house teal** (September 2026). The masthead's
     `#2dd4a3` was the "AT" disc and the strap chip on every plate, and between New
-    England's navy and Seattle's green it read as a third team's colour. `chipOn()` now
+    England's navy and Seattle's green it read as a third team's color. `chipOn()` now
     picks the chip's ground the way `inkOn()` picks its type — white on a dark field,
     near-black on a light one — and it is handed **both** halves of a fixture plate,
     because the connector and the strap each straddle the seam and a chip chosen against
@@ -779,10 +779,10 @@ Mirrors whatever `runXAutoPost` posts to X onto **Threads** (@irontunafantasy, o
     the strap was drawn in the same accent as the wedge it half-sits on and dissolved into
     it. White chips read as a set with the white badges under the club marks. The teal
     survives as the accent wedge on the neutral `NFL / LEAGUE-WIDE` plate, which has no
-    club colours to answer to.
+    club colors to answer to.
   - **The plate is 150 units tall, not 132** (September 2026). The mark sat five units off
     the top edge and the whole composition was jammed against it. The club row (badge,
-    abbreviation, club name, and the connector on a fixture) is now centred on the field
+    abbreviation, club name, and the connector on a fixture) is now centered on the field
     above the strap, and the strap sits on a consistent floor: chip `y=111`, height 28, on
     every layout. `.lead-art svg` is `width:100%;height:auto`, so the viewBox alone sets
     the aspect — nothing in the CSS needs to move with it, but anything that hard-codes
