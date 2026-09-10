@@ -92,19 +92,31 @@ const POST_DRAFT_PAGES = new Set(['/faab', '/trade-finder', '/weekly-intel', '/r
 // carry and 301s here — see the redirect at the top of fetch().
 const IN_SEASON_HUB = '/in-season';
 
-// ── the Washington fence on /the-line ────────────────────────────────────────
-// /the-line prices the week's games against the posted number and puts
-// hypothetical, unfunded stakes on the ones it disagrees with. Washington
-// regulates online gambling activity more strictly than any other state
-// (Wash. Rev. Code ch. 9.46), so the page is not served there at all rather
-// than relying on the disclaimers printed on it. It is a fence on the PAGE, not
-// on the data: /api/vegas-edge is the same market payload /previews reads and
-// is not gated, because a spread on a preview page is not a wagering surface.
+// ── Washington betting-market fence ───────────────────────────────────────────
+// Washington's Gambling Act expressly treats betting odds and changes in betting
+// odds as "gambling information." Iron Tuna therefore does not transmit its
+// current betting-market payloads to requests Cloudflare places in Washington.
+// This is an edge control, not a disclaimer. Fantasy pages still load, but any
+// component that depends on /api/vegas-edge, /api/signals or /api/tuna-market
+// receives a jurisdiction-unavailable response instead of current market data.
 //
-// Every form the assets layer would answer for the page has to be listed, or
-// the fence is one trailing slash wide. The gate below sees these same names.
+// /the-line is also blocked as a page because its entire purpose is to read the
+// slate against posted wagering numbers.
 const LINE_PATHS = new Set(['/the-line', '/the-line/', '/the-line.html', '/in-season/the-line', '/in-season/the-line/']);
 function LINE_GEOFENCED(pathname) { return LINE_PATHS.has(String(pathname || '')); }
+function IS_WASHINGTON(request) {
+  const cf = request && request.cf || {};
+  const country = String(cf.country || '').toUpperCase();
+  const region = String(cf.regionCode || '').toUpperCase();
+  const regionName = String(cf.region || '').trim().toLowerCase();
+  return country === 'US' && (region === 'WA' || regionName === 'washington');
+}
+function WA_MARKET_BLOCK() {
+  return Response.json(
+    { ok: false, error: 'jurisdiction_unavailable', jurisdiction: 'US-WA', message: 'Betting Market Intel is not available in Washington.' },
+    { status: 451, headers: { 'cache-control': 'no-store', 'vary': 'CF-IPCountry' } }
+  );
+}
 // Served with the fence's own 451. It links to /previews, which is the same
 // slate with the wagering read taken off it, so a Washington reader still gets
 // the football.
@@ -123,8 +135,8 @@ const LINE_BLOCKED_HTML = `<!doctype html>
 <p class="is-eyebrow">Iron Tuna &middot; The Line</p>
 <h1>The Line is not available in Washington</h1>
 <p class="is-lede">This page reads the week&rsquo;s games against the posted betting number and puts hypothetical stakes on them. Washington State regulates online gambling activity more strictly than any other state, so Iron Tuna does not serve the page to readers there.</p>
-<p>Nothing is being withheld from you that carries a football number. <a href="/previews">Previews</a> has every game on the slate with its spread, its total and the points each offence is implied to score; <a href="/weekly-rankings">this week&rsquo;s rankings</a> price the players inside those games; <a href="/hidden-value">Hidden Value</a> shows where the market and the fantasy consensus disagree. None of those is a wagering page and all of them are open.</p>
-<p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-GAMBLER (1-800-426-2537), free and confidential, 24 hours a day.</p>
+<p>The fantasy tools remain available. <a href="/weekly-rankings">This week&rsquo;s rankings</a>, <a href="/season-long-rankings">season-long rankings</a>, waiver tools and league-specific analysis continue to work without transmitting the current betting-market board.</p>
+<p class="is-note">If you believe you are seeing this in error, it is because the network you are on places you in Washington. Iron Tuna takes no wagers, holds no funds and is not a sportsbook. If gambling has stopped being entertainment, the National Problem Gambling Helpline is 1-800-MY-RESET, free and confidential.</p>
 <p><a href="/">Back to Iron Tuna</a></p>
 </main>
 </body>
@@ -1462,6 +1474,7 @@ function tmsSignals(rows, now, sharpBooks = []) {
 }
 async function tmsRoutes(request, env, url) {
   if (!url.pathname.startsWith('/api/tuna-market')) return null;
+  if (IS_WASHINGTON(request)) return WA_MARKET_BLOCK();
   const json = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
   try {
     if (url.pathname === '/api/tuna-market/refresh' || url.pathname === '/api/tuna-market/import') {
@@ -12631,6 +12644,7 @@ export default {
     }
     // Vegas Edge, the signals behind it, the Wednesday update, and one player.
     if (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals' || url.pathname === '/api/ros-update' || url.pathname === '/api/intel/player') {
+      if (IS_WASHINGTON(request) && (url.pathname === '/api/vegas-edge' || url.pathname === '/api/signals')) return WA_MARKET_BLOCK();
       const c = corsHeaders(request.headers.get('Origin'));
       if (request.method === 'OPTIONS') return new Response(null, { headers: c });
       const preset = String(url.searchParams.get('scoring') || '').toLowerCase();
@@ -14027,11 +14041,7 @@ export default {
     // The response is uncacheable and Vary-marked, so no shared cache can hand
     // one region's answer to another.
     if (LINE_GEOFENCED(url.pathname)) {
-      const __cf = request.cf || {};
-      const __ctry = String(__cf.country || '').toUpperCase();
-      const __reg = String(__cf.regionCode || '').toUpperCase();
-      const __regName = String(__cf.region || '').trim().toLowerCase();
-      if (__ctry === 'US' && (__reg === 'WA' || __regName === 'washington')) {
+      if (IS_WASHINGTON(request)) {
         return new Response(LINE_BLOCKED_HTML, {
           status: 451,
           headers: {
