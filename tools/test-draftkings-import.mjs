@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { draftablesToCsv, selectMainSlate } from './import-draftkings-salaries.mjs';
+import { draftablesToCsv, mergeDraftablePayloads, selectWeeklySlates, targetWeekWindow } from './import-draftkings-salaries.mjs';
 
 let pass = 0, fail = 0;
 const ok = (name, condition, extra = '') => {
@@ -8,15 +8,35 @@ const ok = (name, condition, extra = '') => {
 };
 
 const lobby = { DraftGroups: [
+  { DraftGroupId: 10, Sport: 'NFL', ContestTypeId: 21, StartDate: '2026-09-11T00:20:00Z', GameCount: 16, ContestStartTimeSuffix: ' (Thu-Mon)' },
   { DraftGroupId: 1, Sport: 'NFL', ContestTypeId: 21, StartDate: '2026-09-13T17:00:00Z', GameCount: 8, ContestStartTimeSuffix: ' (Early Only)' },
   { DraftGroupId: 2, Sport: 'NFL', ContestTypeId: 21, StartDate: '2026-09-13T17:00:00Z', GameCount: 14, ContestStartTimeSuffix: ' (Sun-Mon)' },
   { DraftGroupId: 3, Sport: 'NFL', ContestTypeId: 21, StartDate: '2026-09-13T17:00:00Z', GameCount: 12, ContestStartTimeSuffix: '' },
-  { DraftGroupId: 4, Sport: 'NFL', ContestTypeId: 96, StartDate: '2026-09-13T17:00:00Z', GameCount: 1, ContestStartTimeSuffix: ' (BUF @ NYJ)' }
+  { DraftGroupId: 4, Sport: 'NFL', ContestTypeId: 96, StartDate: '2026-09-13T17:00:00Z', GameCount: 1, ContestStartTimeSuffix: ' (BUF @ NYJ)' },
+  { DraftGroupId: 20, Sport: 'NFL', ContestTypeId: 21, StartDate: '2026-09-18T00:20:00Z', GameCount: 16, ContestStartTimeSuffix: ' (Thu-Mon)' }
 ] };
 
-console.log('\nthe main-slate selector');
-ok('the unsuffixed Sunday Classic slate wins', selectMainSlate(lobby, Date.parse('2026-09-08T12:00:00Z')).DraftGroupId === 3);
-ok('the selector refuses an expired lobby', (() => { try { selectMainSlate(lobby, Date.parse('2026-09-14T12:00:00Z')); return false; } catch { return true; } })());
+console.log('\nthe weekly slate selector');
+const selected = selectWeeklySlates(lobby, Date.parse('2026-09-10T13:00:00Z'));
+ok('all current-week Classic pools are selected', selected.map(x => x.DraftGroupId).join(',') === '10,2,3,1', selected.map(x => x.DraftGroupId).join(','));
+ok('the broadest weekly pool is first', selected[0].GameCount === 16, String(selected[0].GameCount));
+ok('Showdown is excluded', !selected.some(x => x.DraftGroupId === 4));
+ok('the following NFL week is excluded', !selected.some(x => x.DraftGroupId === 20));
+const tuesdayWindow = targetWeekWindow(Date.parse('2026-09-15T14:00:00Z'));
+ok('Tuesday prepares the coming Thursday-through-Monday week', tuesdayWindow.startDay === Date.UTC(2026, 8, 17));
+
+console.log('\nthe weekly pool merge');
+const row = (id, salary, name = `Player ${id}`) => ({
+  draftableId: 1000 + id, playerId: 2000 + id, playerDkId: 3000 + id, displayName: name,
+  position: 'QB', salary, teamAbbreviation: 'BUF', competition: { competitionId: 10, name: 'BUF @ NYJ' }
+});
+const merged = mergeDraftablePayloads([
+  { slate: selected[0], payload: { draftables: [row(1, 7000), row(2, 6500)] } },
+  { slate: selected[1], payload: { draftables: [row(1, 7100), row(3, 6000)] } }
+]);
+ok('players unique to narrower pools are added', merged.draftables.length === 3, String(merged.draftables.length));
+ok('the broadest-pool salary wins an overlap', merged.draftables.find(x => x.playerId === 2001).salary === 7000);
+ok('salary conflicts are counted', merged.salaryConflicts === 1, String(merged.salaryConflicts));
 
 const positions = ['QB', 'RB', 'WR', 'TE', 'DST'];
 const draftables = [];
