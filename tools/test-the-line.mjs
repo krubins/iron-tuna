@@ -58,7 +58,7 @@ ok('it says an AI should not be relied on for the decision',
   /AI model should not be relied on for a wagering decision/i.test(flat));
 ok('it says the page is for entertainment', /Read this for entertainment/i.test(flat));
 ok('it says it is not available in Washington', /Not available in Washington State/i.test(flat));
-ok('it carries the problem-gambling helpline', /1-800-GAMBLER/.test(flat));
+ok('it carries the current national problem-gambling helpline', /1-800-MY-RESET/.test(flat));
 ok('it says confidence is not a win probability', /not a probability of winning/i.test(flat));
 ok('it does not call itself a sportsbook or an affiliate of one',
   /is not a sportsbook and is not affiliated with one/i.test(flat));
@@ -117,20 +117,23 @@ ok('it fences the /in-season alias as well', fenced.includes('/in-season/the-lin
 const fence = worker.slice(worker.indexOf('if (LINE_GEOFENCED(url.pathname))'), worker.indexOf('let __assetReq = request;'));
 ok('the fence runs before the asset layer is asked for anything',
   worker.indexOf('if (LINE_GEOFENCED(url.pathname))') < worker.indexOf('let __assetReq = request;'));
+const waHelper = worker.slice(worker.indexOf('function IS_WASHINGTON(request)'), worker.indexOf('function WA_MARKET_BLOCK()'));
 ok('it reads the country as well as the region code, because WA is also Western Australia',
-  /__ctry === 'US'/.test(fence) && /__reg === 'WA'/.test(fence));
-ok('it also accepts the spelled-out region name', /__regName === 'washington'/.test(fence));
+  /country === 'US'/.test(waHelper) && /region === 'WA'/.test(waHelper));
+ok('it also accepts the spelled-out region name', /regionName === 'washington'/.test(waHelper));
 ok('it answers 451 rather than 404 or a redirect', /status: 451/.test(fence));
 ok('the fenced answer is never cached', /'cache-control': 'no-store'/.test(fence));
 ok('and it varies on the country, so no shared cache crosses regions', /'vary': 'CF-IPCountry'/.test(fence));
 ok('a reader the edge cannot place is not fenced',
-  !/__ctry !== 'US'/.test(fence) && /__ctry === 'US' &&/.test(fence));
+  !/country !== 'US'/.test(waHelper) && /country === 'US' &&/.test(waHelper));
 ok('the notice served in Washington says why', /not available in Washington/i.test(worker.match(/const LINE_BLOCKED_HTML = `([\s\S]*?)`;/)[1]));
 ok('and it is not indexable', /noindex,nofollow/.test(worker.match(/const LINE_BLOCKED_HTML = `([\s\S]*?)`;/)[1]));
-ok('it still sends the reader to the football pages',
-  /href="\/previews"/.test(worker.match(/const LINE_BLOCKED_HTML = `([\s\S]*?)`;/)[1]));
-ok('the market API itself is not fenced, because a preview is not a wager',
-  !/LINE_GEOFENCED\(url\.pathname\)[\s\S]{0,400}api\/vegas-edge/.test(worker));
+ok('it still sends the reader to fantasy football pages',
+  /href="\/weekly-rankings"/.test(worker.match(/const LINE_BLOCKED_HTML = `([\s\S]*?)`;/)[1]));
+ok('the current market APIs are also fenced in Washington',
+  /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/vegas-edge/.test(worker) &&
+  /IS_WASHINGTON\(request\)[\s\S]{0,180}api\/signals/.test(worker) &&
+  /api\/tuna-market[\s\S]{0,180}IS_WASHINGTON\(request\)/.test(worker));
 
 // ── the page's own arithmetic, run ──────────────────────────────────────────
 // The real source, lifted and evaluated. Nothing is paraphrased: a rule that
