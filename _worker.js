@@ -12594,7 +12594,8 @@ export default {
         if (!site) return json({ ok: false, error: 'site must be dk or fd' }, 400, c);
         const parsed = parseDfsCsv(site, String(b.csv || '').slice(0, 2000000));
         if (parsed.error) return json({ ok: false, error: parsed.error }, 400, c);
-        out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source: 'csv' });
+        const source = site === 'dk' && b.source === 'draftkings-automation' ? b.source : 'csv';
+        out.imported = await dfsStore(env, site, parsed.rows, { season: sched ? sched.season : null, week: b.week != null ? Number(b.week) : week, slate: b.slate || 'main', source });
       }
       for (const site of Object.keys(DFS_SITES)) {
         const sal = await dfsSalariesRead(env, site, sched ? sched.season : null, week);

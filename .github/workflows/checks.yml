@@ -354,6 +354,8 @@ jobs:
         run: node tools/test-content.mjs
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
         run: node tools/test-dfs.mjs
+      - name: DraftKings main-slate importer
+        run: node tools/test-draftkings-import.mjs
       - name: The health board, the job log and the editorial actions
         run: node tools/test-health.mjs
       - name: The job schedule in New York time

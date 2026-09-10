@@ -27,6 +27,7 @@ Verified against `_worker.js` on 2026-09-06. Public page (`/data`, `data.html`) 
 | `DFS_SALARY_API` (env) | Licensed DFS salary feed, if configured | `PROVIDER_DFS` → `licensed-salary-feed` | Green when the license exists. Unset today. |
 | DFS lobby CSV (desk import) | DraftKings / FanDuel salaries for the week's main slate | `parseDfsCsv`, `POST /api/admin/dfs` | **Green.** The entrant exports their own file. |
 | DFS lobby CSV (reader upload) | A reader's own salary file, for any classic slate | `parseDfsCsv`, `dfsSlateShape`, `POST /api/dfs/slate` | **Green.** Same file, obtained by the reader from a lobby they are already in. Parsed per request and stored nowhere; single-game files are refused rather than mispriced against the classic cap. |
+| DraftKings lobby + draftables (scheduled repository workflow) | DraftKings NFL Sunday Classic main-slate salaries | `tools/import-draftkings-salaries.mjs`, `.github/workflows/draftkings-salaries.yml` → `POST /api/admin/dfs` | **Red / owner-directed exception.** Undocumented, keyless operator endpoints; automated access may conflict with operator terms and can change without notice. Runs once weekly outside the deployed Worker, validates 40+ players and all five positions before importing. |
 
 ### Infrastructure — not content, no data-licensing question
 
@@ -48,10 +49,12 @@ reach them. They still belong in this table so the list is complete.
 | `api.draftkings.com` | 2026-09-06 | Operator's own data; terms prohibit systematic retrieval. Addendum 13.3 / 13.7. |
 | `api.fanduel.com` | 2026-09-06 | Same. |
 
-Both were behind unset env vars and had never run against the live services, so
-removing them changed no behavior. The `dfs-refresh` cron job went with them:
-with no site feeds left, the CSV import is the only path, and it is an admin
-action, not a scheduled one.
+Both Worker-side integrations were behind unset env vars and had never run
+against the live services, so removing them changed no behavior. The old
+`dfs-refresh` Worker cron went with them. DraftKings was later added as an
+owner-directed, once-weekly repository workflow that stays outside the deployed
+Worker and sends a validated CSV through the existing admin import. FanDuel
+remains absent.
 
 ---
 
