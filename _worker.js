@@ -9445,7 +9445,7 @@ async function dfsStore(env, site, rows, meta) {
   const stmt = env.LEADS_DB.prepare('INSERT INTO dfs_salaries (site, slate, season, week, name, position, team, opponent, salary, site_id, operator_fppg, source, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   let n = 0;
   for (let i = 0; i < rows.length; i += 50) {
-    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, Number.isFinite(Number(r.operatorFppg)) ? Number(r.operatorFppg) : null, m.source || 'csv', ts));
+    const chunk = rows.slice(i, i + 50).map(r => stmt.bind(site, m.slate || 'main', m.season || null, m.week || null, r.name, r.position, r.team || null, r.opponent || null, Math.round(r.salary), r.siteId || null, r.operatorFppg != null && Number.isFinite(Number(r.operatorFppg)) ? Number(r.operatorFppg) : null, m.source || 'csv', ts));
     try { await env.LEADS_DB.batch(chunk); n += chunk.length; } catch (e) { for (const s of chunk) { try { await s.run(); n++; } catch (e2) {} } }
   }
   return { ok: true, stored: n, site, slate: m.slate || 'main', season: m.season, week: m.week, fetchedAt: ts };
