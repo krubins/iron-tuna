@@ -8885,3 +8885,55 @@ nothing is passed through raw. Send the email.
 is gone: SGO carries an opener under a documented API. `_espnOdds` is still the
 live source while the key is unset, so take it out in the same commit that
 turns the key on — not before.
+
+### The printed line is now an average, not a winner
+
+Adding a third source made the old rule indefensible. A fixture can be priced
+by the spine's own column in `games.csv`, by the scoreboard's single named
+book, and by the paid feed's consensus, and the site used to resolve that by
+**precedence**: the spine won, ESPN filled blanks, and SGO replaced both on an
+upcoming game. Three estimates of the same number, two of them thrown away, and
+the printed line jumping whenever the winner changed.
+
+`lineConsensus` replaces it. Each layer records its own quote in `g.quotes` —
+`mergeSchedule` seeds `nflverse` and records `espn`, `mergeGameLines` records
+`sportsgameodds` — and the number the site prints is their **mean**. The pass
+runs on every schedule refresh whether or not the paid feed is configured,
+because the spine and the scoreboard are two sources on their own.
+
+**This changes displayed lines today, with no key set.** ESPN used to fill only
+what `games.csv` left blank; it now averages with it on every upcoming fixture.
+Expect the spread and total under `/the-line` and `/previews` to shift by a
+fraction of a point against what the same build printed yesterday.
+
+Four things to know about it:
+
+- **It fails softly.** A source that goes stale or starts quoting nonsense
+  moves the line by a fraction of its error instead of becoming the line. That
+  is the main reason to prefer a mean here over any winner.
+- **It is not a bettable number, and does not pretend to be.** 2.5 and 3
+  average to 2.8, the site's usual one decimal on a derived figure.
+  `lineSources` (and the `lineSrc` string beside it, now always populated)
+  rides on every game payload, so an average is never shown that a reader
+  cannot take apart. Sources are listed per FIXTURE, not per market.
+- **It freezes at kickoff.** A game that has started keeps the spine's own
+  number, which by then is the closing line and the historical record every
+  backtest reads. Averaging a live feed's last-seen value into a played game
+  would quietly rewrite history.
+- **The book pair is NOT averaged and cannot be.** `g.book` stays one book's
+  open and current, so `_gameLineMove` keeps a single source behind every
+  movement figure. The printed line beside it is the consensus. Those are two
+  different questions and `lineConsensus` is the one place that says so.
+
+**The equal weighting is a judgment call, not arithmetic.** `games.csv` is
+itself a consensus and ESPN's number is one book, so a 50/50 mean slightly
+double-counts that book. Weighting them is a defensible future change; nothing
+here assumes equal weight beyond the mean itself.
+
+**The props side already averaged and was left alone.** Books are the sources
+there, not feeds: `buildVegasOverlay` takes the mean across books for the
+season overlay and `vegasCountMarket` the median for the weekly one, and two
+configured providers simply contribute more books to the same pool. Where both
+feeds report the SAME book, `snapshotWrite` keeps the first (SGO) and drops the
+second rather than averaging — two reports of one book's line is not two
+sources, and blurring them would invent a number that book never posted.

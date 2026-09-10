@@ -17,7 +17,7 @@ Verified against `_worker.js` on 2026-09-10. Public page (`/data`, `data.html`) 
 
 | Host | Used for | Call sites | License status |
 |---|---|---|---|
-| `api.sportsgameodds.com` | NFL player props, and the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
+| `api.sportsgameodds.com` | NFL player props, and one of the three quotes averaged into the game spread and total behind `/the-line`, `/previews` and every weekly board | `SGO_API_BASE`, `fetchOddsSgo`, `fetchGameLinesSgo` | **Paid, terms unconfirmed.** See item R8. |
 | `api.the-odds-api.com` | NFL odds, totals, spreads | `ODDS_API_BASE`, `_worker.js:1575` | **Paid, terms unconfirmed.** See item R3. |
 | `site.api.espn.com` | Injuries, scoreboard, game summary, depth charts, **and the game lines the scoreboard carries** | `_worker.js:1353`, `:3061`, `:5656`, `:5657`, `_espnOdds` | **Red.** Undocumented endpoints, no commercial license. The odds block adds a bookmaker's spread, total and opening line to what is taken. No page names the book; the name reaches the JSON API only. See R1. |
 | `api.sleeper.app` | NFL player id/metadata map | `_worker.js:7732`, `:7763` | **Red for a paid product.** Non-commercial grant only. See R2. |
@@ -138,7 +138,9 @@ projections in a subscription product, and save the reply in `docs/`.
 Two things reduce the exposure while that is unanswered, and neither settles it:
 
 - **No page names a book.** The printed spread and total are SGO's consensus,
-  the same shape as the `games.csv` number beside them. The anchor book's name
+  the same shape as the `games.csv` number beside them, and `lineConsensus`
+  then averages that consensus with the spine's and the scoreboard's, so the
+  printed line is not any one source's number at all. The anchor book's name
   reaches `book.name` and `moveBook` on the API payloads and is rendered
   nowhere. Anything that starts printing it changes this answer.
 - **Nothing is passed through raw.** Every prop becomes an expected stat line

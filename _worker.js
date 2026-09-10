@@ -3622,8 +3622,16 @@ async function fetchScheduleEspn(season) {
 // exact kickoff instant. Matched on the two clubs within a two-day window rather
 // than on week number, because ESPN and nflverse number the postseason rounds
 // differently and a round mismatch would put a live score on the wrong game.
+// One source's own quote for one fixture, kept beside the others rather than
+// resolved against them. lineConsensus below is what turns them into the
+// number the site prints.
+function _lineQuote(g, src, spread, total) {
+  if (spread == null && total == null) return;
+  (g.quotes = g.quotes || {})[src] = { spread: spread == null ? null : spread, total: total == null ? null : total };
+}
 function mergeSchedule(spine, live) {
   const games = (spine || []).map(g => ({ ...g }));
+  for (const g of games) _lineQuote(g, 'nflverse', g.spread, g.total);
   const byPair = new Map();
   games.forEach((g, i) => {
     const k = g.away + '@' + g.home;
@@ -3647,12 +3655,14 @@ function mergeSchedule(spine, live) {
       if (g.status) t.status = g.status;
       if (g.homeScore != null) t.homeScore = g.homeScore;
       if (g.awayScore != null) t.awayScore = g.awayScore;
-      // The spine keeps the line where it has one: games.csv is a consensus
-      // number and the scoreboard quotes a single book. Where the spine is
-      // blank -- the preseason, and any fixture the CSV has not priced yet --
-      // one book beats no book, and `lineSrc` says which it was. The book's
+      // The scoreboard's number is RECORDED, not resolved: games.csv is a
+      // consensus and the scoreboard quotes a single book, and lineConsensus
+      // averages the two rather than either winning. The blank-fill below is
+      // what happens with no consensus pass -- the preseason, and any fixture
+      // the CSV has not priced yet, where one book beats no book. The book's
       // own open/current pair rides along either way, because the spine has no
       // concept of an opening line to be overwritten.
+      _lineQuote(t, 'espn', g.spread, g.total);
       if (t.spread == null && g.spread != null) { t.spread = g.spread; t.lineSrc = 'espn'; }
       if (t.total == null && g.total != null) { t.total = g.total; t.lineSrc = 'espn'; }
       if (g.book) t.book = g.book;
@@ -3663,7 +3673,9 @@ function mergeSchedule(spine, live) {
       // game with no match is left out rather than guessed into a round, since
       // the spine gains the bracket within a day of it being set.
       if (g.type !== 'PRE') continue;
-      games.push({ ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null });
+      const add = { ...g, espnId: /^espn-/.test(g.id) ? g.id.slice(5) : null };
+      _lineQuote(add, 'espn', g.spread, g.total);
+      games.push(add);
       added++;
     }
   }
@@ -3674,19 +3686,16 @@ function mergeSchedule(spine, live) {
 // The paid feed's game lines onto the schedule. Matched the way the live layer
 // is -- the two clubs within a two-day window rather than the week number,
 // because feeds number the postseason rounds differently and a round mismatch
-// would price the wrong game -- and applied under one rule:
+// would price the wrong game.
 //
-//   THE NUMBER OF RECORD IS THE ONE A READER COULD STILL BET INTO. For a
-//   fixture that has not kicked off, the paid feed replaces whatever the spine
-//   carried: /the-line and /previews price THIS WEEK against the number posted
-//   NOW, and games.csv's column is a consensus written before the week moved.
-//   For a game already played the spine keeps its own line, because that is the
-//   closing number and the historical record, and a live feed has nothing truer
-//   to say about a fixture that is over.
-//
-// The book pair rides along either way. It is the open/current pair movement is
-// computed from and it belongs to the book, not to the fixture, so replacing it
-// on a played game costs nothing and keeps one source behind every move.
+// Like the scoreboard's, this feed's number is RECORDED rather than resolved:
+// it is one more quote on the fixture, and lineConsensus averages it with the
+// others. What this function alone decides is the BOOK PAIR, which is not a
+// quote and cannot be averaged -- it is one book's open and current, the two
+// numbers every movement figure is computed from, and it goes over whole
+// (null included). Leaving the previous feed's pair on a fixture this one is
+// now pricing would measure the move against a book that is no longer behind
+// the number beside it.
 function mergeGameLines(games, lines, at) {
   const out = (games || []).map(g => ({ ...g }));
   const byPair = new Map();
@@ -3696,8 +3705,7 @@ function mergeGameLines(games, lines, at) {
     byPair.get(k).push(i);
   });
   const WINDOW = 2 * 86400000;
-  const now = at == null ? Date.now() : at;
-  let priced = 0, booked = 0;
+  let quoted = 0, booked = 0;
   for (const l of lines || []) {
     if (!l) continue;
     const cands = byPair.get(l.away + '@' + l.home) || [];
@@ -3708,18 +3716,67 @@ function mergeGameLines(games, lines, at) {
     }
     if (best < 0) continue;
     const t = out[best];
-    // The book block goes over WHOLE, null included. Leaving ESPN's pair on a
-    // fixture the paid feed has repriced would measure the move against a book
-    // that is no longer the source of the number beside it.
     t.book = l.book || null;
     if (l.book) booked++;
-    if (t.status === 'final' || t.status === 'in_progress' || now >= t.kickoff) continue;
-    let repriced = false;
-    if (l.spread != null) { t.spread = l.spread; repriced = true; }
-    if (l.total != null) { t.total = l.total; repriced = true; }
-    if (repriced) { t.lineSrc = 'sportsgameodds'; priced++; }
+    if (l.spread != null || l.total != null) { _lineQuote(t, 'sportsgameodds', l.spread, l.total); quoted++; }
   }
-  return { games: out, priced, booked };
+  return { games: out, quoted, booked };
+}
+
+// ── the consensus line ─────────────────────────────────────────────────────
+// A fixture can be priced by three sources at once: the spine's own column in
+// games.csv, the scoreboard's single named book, and the paid feed's consensus.
+// Each records its own quote in `g.quotes`; this is where they become the one
+// number the site prints, and that number is their MEAN.
+//
+// WHY A MEAN RATHER THAN A WINNER. Every one of these is an estimate of the
+// same thing. Picking one throws away the others' evidence for no reason a
+// reader could defend, and it makes the site's line jump whenever the winner
+// changes. The mean also fails softly: a source that goes stale or starts
+// quoting nonsense moves the line by a fraction of its error instead of
+// becoming the line.
+//
+// WHAT IT IS NOT. It is not a number any book posts, and it does not pretend
+// to be -- 2.5 and 3 average to 2.8, the site's usual one decimal on a derived
+// figure. `lineSources` rides on every payload beside it, so an average is
+// never shown that a reader cannot take apart. The sources are listed per
+// FIXTURE, not per market: a club priced on the spread by two sources and on
+// the total by one names both, because both are behind the fixture's line.
+//
+// FROZEN AT KICKOFF. A game that has started keeps whatever it already had,
+// which is the spine's own number: by then that is the closing line and the
+// historical record every backtest reads. A live feed's last-seen value has
+// nothing truer to say about a game that is over, and averaging one in would
+// quietly rewrite history.
+//
+// THE BOOK PAIR IS NOT AVERAGED and never can be. `g.book` stays one book's
+// open and current so _gameLineMove keeps one source behind every move; the
+// printed line beside it is this consensus. Those are two different questions
+// and this is the one place that says so.
+const LINE_MARKETS = ['spread', 'total'];
+function lineConsensus(games, at) {
+  const now = at == null ? Date.now() : at;
+  let averaged = 0, blended = 0;
+  for (const g of games || []) {
+    if (!g || !g.quotes) continue;
+    if (g.status === 'final' || g.status === 'in_progress' || now >= g.kickoff) continue;
+    const used = new Set();
+    for (const mkt of LINE_MARKETS) {
+      const vals = [];
+      for (const [src, q] of Object.entries(g.quotes)) {
+        const v = q ? q[mkt] : null;
+        if (Number.isFinite(v)) { vals.push(v); used.add(src); }
+      }
+      if (!vals.length) continue;
+      g[mkt] = _oddsRound(vals.reduce((a, c) => a + c, 0) / vals.length);
+    }
+    if (!used.size) continue;
+    g.lineSources = [...used].sort();
+    g.lineSrc = g.lineSources.join('+');
+    averaged++;
+    if (used.size > 1) blended++;
+  }
+  return { games: games || [], averaged, blended };
 }
 
 // ── the clock ──────────────────────────────────────────────────────────────
@@ -3786,7 +3843,7 @@ function _seasonDecorate(g, at) {
     // One named book's open and current, in the same convention as `spread`
     // above. Null on a fixture no book has posted, which is not the same fact
     // as a line of zero and must not print as one.
-    book: g.book || null, lineSrc: g.lineSrc || null,
+    book: g.book || null, lineSrc: g.lineSrc || null, lineSources: g.lineSources || null,
     status: s.status, statusSource: s.source
   };
 }
@@ -3939,15 +3996,19 @@ async function runScheduleRefresh(env) {
   // The paid line feed, when there is a key for it. Fail-safe like the live
   // layer above: a pull that throws leaves the schedule exactly as the spine
   // and the scoreboard built it rather than costing the refresh.
-  let lines = [], linesError = null, linesPriced = 0;
+  let lines = [], linesError = null;
   if (env.SGO_API_KEY) {
     try {
       lines = await fetchGameLinesSgo(env);
       const relined = mergeGameLines(merged.games, lines, Date.now());
       merged = { ...merged, games: relined.games };
-      linesPriced = relined.priced;
     } catch (e) { linesError = (e && e.message) || 'failed'; }
   }
+  // Every source that priced a fixture, averaged into the one number the site
+  // prints. Runs whether or not the paid feed is configured: the spine and the
+  // scoreboard are two sources on their own.
+  const consensus = lineConsensus(merged.games, Date.now());
+  merged = { ...merged, games: consensus.games };
   const provider = 'nflverse' + (live.length ? '+espn' : '') + (lines.length ? '+sportsgameodds' : '');
   const espn = _ESPN_LAST;
   await scheduleCacheWrite(env, spine.season, merged.games, provider);
@@ -3956,7 +4017,8 @@ async function runScheduleRefresh(env) {
     ok: true, season: spine.season, provider,
     spine: spine.games.length, live: live.length,
     statusUpdated: merged.updated, preseasonAdded: merged.added,
-    lines: lines.length, linesPriced, linesError,
+    lines: lines.length, linesError,
+    linesAveraged: consensus.averaged, linesBlended: consensus.blended,
     games: merged.games.length, liveError, espn
   };
 }

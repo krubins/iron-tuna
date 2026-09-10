@@ -41,6 +41,7 @@ const cut = (from, to) => {
   return src.slice(a, b);
 };
 const adapter = cut('// SportsGameOdds v2. WRITTEN TO', 'const NFLVERSE_GAMES_URL');
+const quote = cut("// One source's own quote for one fixture", 'function mergeSchedule(spine, live) {');
 const merge = cut('// The paid feed\'s game lines onto the schedule.', '// ── the clock');
 
 // The three symbols the lifted code closes over. PROJECTIONS is real in the
@@ -57,12 +58,14 @@ const PROJECTIONS = [
   { name: 'Los Angeles Rams', position: 'DEF', team: 'LAR' },
   { name: 'Josh Allen', position: 'QB', team: 'BUF' }
 ];
+const _oddsRound = v => Math.round(v * 10) / 10;
 let FETCH = async () => { throw new Error('no fetch stub installed'); };
-const M = new Function('teamKey', 'PROJECTIONS', 'fetch',
-  adapter + '\n' + merge + '\n' +
+const M = new Function('teamKey', 'PROJECTIONS', 'fetch', '_oddsRound',
+  adapter + '\n' + quote + '\n' + merge + '\n' +
   'return { sgoParts, sgoTeamKey, sgoPlayerName, sgoOpposite, parseSgoEventProps, parseSgoEventLine, ' +
-  'parseSgoEventGame, fetchOddsSgo, fetchGameLinesSgo, mergeGameLines, SGO_API_BASE, SGO_PROP_MARKETS };'
-)(teamKey, PROJECTIONS, (...a) => FETCH(...a));
+  'parseSgoEventGame, fetchOddsSgo, fetchGameLinesSgo, mergeGameLines, lineConsensus, ' +
+  'SGO_API_BASE, SGO_PROP_MARKETS };'
+)(teamKey, PROJECTIONS, (...a) => FETCH(...a), _oddsRound);
 
 const FIX = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'fixtures', 'sgo-nfl-week.json'), 'utf8'));
 const byId = id => FIX.data.find(e => e.eventID === id);
@@ -185,37 +188,65 @@ ok('an event with no kickoff is not a fixture',
 head('the lines onto the schedule');
 const KICK = Date.parse('2026-09-13T17:00:00.000Z');
 const schedule = [
-  { id: 'g1', away: 'KC', home: 'BUF', kickoff: KICK, spread: 1.5, total: 45.5, status: null },
-  { id: 'g2', away: 'NYJ', home: 'NE', kickoff: Date.parse('2026-09-06T17:00:00.000Z'), spread: 6.5, total: 43.5, status: 'final' },
-  { id: 'g3', away: 'MIA', home: 'MIN', kickoff: KICK, spread: -1, total: 41.5, status: null }
+  { id: 'g1', away: 'KC', home: 'BUF', kickoff: KICK, spread: 1.5, total: 45.5, status: null,
+    quotes: { nflverse: { spread: 1.5, total: 45.5 } } },
+  { id: 'g2', away: 'NYJ', home: 'NE', kickoff: Date.parse('2026-09-06T17:00:00.000Z'), spread: 6.5, total: 43.5,
+    status: 'final', quotes: { nflverse: { spread: 6.5, total: 43.5 } } },
+  { id: 'g3', away: 'MIA', home: 'MIN', kickoff: KICK, spread: -1, total: 41.5, status: null,
+    quotes: { nflverse: { spread: -1, total: 41.5 } } }
 ];
 const lines = [M.parseSgoEventGame(KC), M.parseSgoEventGame(NE)];
 const merged = M.mergeGameLines(schedule, lines, KICK - 86400000);
 const g1 = merged.games.find(g => g.id === 'g1'), g2 = merged.games.find(g => g.id === 'g2');
-ok('an upcoming fixture is repriced off the paid feed',
-   g1.spread === 2.5 && g1.total === 48.5 && g1.lineSrc === 'sportsgameodds',
-   JSON.stringify(g1));
-ok('and carries the book pair the movement is computed from',
+ok('the feed records a quote rather than overwriting the line',
+   g1.quotes.sportsgameodds.spread === 2.5 && g1.quotes.sportsgameodds.total === 48.5 && g1.spread === 1.5,
+   JSON.stringify(g1.quotes));
+ok('and the fixture carries the book pair the movement is computed from',
    g1.book && g1.book.spreadOpen === 1.5 && g1.book.totalOpen === 46.5);
-ok('a game already played keeps its own closing line',
-   g2.spread === 6.5 && g2.total === 43.5 && g2.lineSrc === undefined, JSON.stringify(g2));
-ok('but still takes the book pair, which belongs to the book',
-   !!g2.book && g2.book.spread === 6.5 && g2.book.spreadOpen === 4.5);
+ok('a played fixture is quoted too; the freeze belongs to the consensus, not here',
+   !!g2.quotes.sportsgameodds);
+ok('a fixture the feed did not price is untouched',
+   !merged.games.find(g => g.id === 'g3').quotes.sportsgameodds);
+ok('the counts say what happened', merged.quoted === 2 && merged.booked === 2,
+   merged.quoted + '/' + merged.booked);
+ok('the input schedule is not mutated', schedule[0].spread === 1.5);
 const stale = M.mergeGameLines(
   [{ id: 'g5', away: 'DAL', home: 'PHI', kickoff: Date.parse('2026-09-13T20:25:00.000Z'), spread: 1, total: 43,
      status: null, book: { name: 'espn', spread: 1, spreadOpen: 2, total: 43, totalOpen: 44 } }],
   [M.parseSgoEventGame(PHI)], KICK - 86400000);
-ok('a repriced fixture never keeps a stale pair from the feed it replaced',
-   stale.games[0].book === null && stale.games[0].total === 44.5, JSON.stringify(stale.games[0]));
-ok('a fixture the feed did not price is untouched',
-   merged.games.find(g => g.id === 'g3').spread === -1);
-ok('the counts say what happened', merged.priced === 1 && merged.booked === 2,
-   merged.priced + '/' + merged.booked);
-ok('the input schedule is not mutated', schedule[0].spread === 1.5);
+ok('a fixture this feed now prices never keeps the previous feed\'s pair',
+   stale.games[0].book === null, JSON.stringify(stale.games[0].book));
 const far = M.mergeGameLines(
   [{ id: 'g4', away: 'KC', home: 'BUF', kickoff: KICK + 5 * 86400000, spread: null, total: null, status: null }],
   [M.parseSgoEventGame(KC)], KICK);
-ok('the same clubs a week apart are two different games', far.priced === 0);
+ok('the same clubs a week apart are two different games', far.quoted === 0);
+
+head('the consensus of every source that priced the fixture');
+const con = M.lineConsensus(merged.games.map(g => ({ ...g })), KICK - 86400000);
+const c1 = con.games.find(g => g.id === 'g1'), c2 = con.games.find(g => g.id === 'g2');
+ok('an upcoming fixture prints the mean of its quotes',
+   c1.spread === 2 && c1.total === 47, `${c1.spread}/${c1.total}`);
+ok('the mean lands between the quotes it came from',
+   c1.spread > 1.5 && c1.spread < 2.5 && c1.total > 45.5 && c1.total < 48.5);
+ok('and the payload names what went into it',
+   c1.lineSrc === 'nflverse+sportsgameodds' && c1.lineSources.join() === 'nflverse,sportsgameodds',
+   String(c1.lineSrc));
+ok('a game already played keeps its own closing line, unaveraged',
+   c2.spread === 6.5 && c2.total === 43.5 && c2.lineSources === undefined, JSON.stringify(c2));
+ok('a lone source averages to itself',
+   con.games.find(g => g.id === 'g3').spread === -1);
+ok('the counts separate a blend from a lone quote',
+   con.averaged === 2 && con.blended === 1, `${con.averaged}/${con.blended}`);
+ok('the book pair survives the average untouched: one source still stands behind the move',
+   c1.book && c1.book.name === 'alpha' && c1.book.spread === 3 && c1.book.spreadOpen === 1.5);
+const odd = [{ id: 'g6', away: 'KC', home: 'BUF', kickoff: KICK, status: null, spread: null, total: null,
+               quotes: { nflverse: { spread: 2, total: null }, espn: { spread: 3, total: 44 },
+                         sportsgameodds: { spread: 4, total: 46 } } }];
+M.lineConsensus(odd, KICK - 86400000);
+ok('each market averages over the sources that priced IT',
+   odd[0].spread === 3 && odd[0].total === 45, `${odd[0].spread}/${odd[0].total}`);
+ok('and a fixture with no quote at all is left alone',
+   M.lineConsensus([{ id: 'g7', kickoff: KICK, status: null, spread: 7 }], KICK - 86400000).averaged === 0);
 
 // ── the fetch ───────────────────────────────────────────────────────────────
 head('the pull');
