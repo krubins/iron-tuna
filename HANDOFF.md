@@ -8793,3 +8793,45 @@ offence question rather than a roster one, so it sits with the offence analyst.
 - Hubs, archives, the `SoftwareApplication` landing pages and the in-season
   dashboards are **not** bylined, and the test asserts they are not. A byline on
   a table recomputed on every load is the one kind that lies.
+
+---
+
+## 71. September 10: the depth charts became a page
+
+The site knew every club's depth chart and showed it to nobody. Sleeper's
+order rides on `/api/live` and `depthChartsFromLive` folds it into the table
+the Value Coach is grounded on (§63), but a reader who wanted to know who was
+behind Bijan had to ask the coach. **`/depth-charts`** is that table as a
+page: 32 clubs, QB/RB/WR/TE in published order, each name carrying its current
+designation, refreshed every day because it reads the same six-hour feed on
+every load.
+
+**It reads `/api/live`, not the D1 row.** The stored table (`odds_overlay`
+row 6) is a job's output and can be a day stale or missing; the live feed is
+the one the app already fetches, is cached at the edge, and answers even when
+D1 does not. The page carries `LIVE = '/api/live?v=3'` and
+`tools/test-depth-page.mjs` fails if the worker's cache key, `index.html`'s
+`LIVE_FEED_VERSION` and the page's constant ever name three different
+versions — which is exactly how the depth charts "did not take" on launch day.
+
+**The fold is the same rule, one line deeper.** Receiver ranks run ACROSS
+LWR/RWR/SWR, so they are merged and sorted on the rank; sorting within a slot
+names the wrong man WR2 and no reader can catch it. The page keeps
+QB3/RB5/WR6/TE3 against the coach's QB2/RB4/WR5/TE2, and the test fails if the
+page is ever the shallower of the two: the whole point of the page is the name
+under the name.
+
+**The daily job stopped depending on ESPN.** `runDepthChartRefresh` has
+returned `got: 0, failed: 32` every morning since September 4 (§68n). It now
+falls back to `fetchDepthChartsSleeper()` — the same player file, folded into
+`fetchDepthChartEspn`'s shape — for every club ESPN did not answer for, so the
+recap's "what we already knew", the news desk's depth events and the health
+board are fed by whichever source answered. The row records which: `source` is
+`espn-depth`, `espn+sleeper` or `sleeper-depth`, and `/api/admin/providers`
+stamps that instead of the hard-coded `espn-depth` it used to claim.
+
+**And the health board could never see the row.** `healthAssess` reads
+`u.depthCharts.updatedAt`; the stored payload has only ever carried `asOf`, so
+depth charts reported "never loaded" on the mornings the job worked. The
+payload now carries both and the health summary sends `updatedAt`, the source
+and a club count instead of shipping all 32 charts into the admin payload.
