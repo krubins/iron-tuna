@@ -368,9 +368,9 @@ p{color:var(--sec);margin:0 0 16px}
   <p>The Vegas Value Score is market-implied points per $1,000 of salary, indexed to the slate’s median: 100 is an ordinary price, 130 is a bargain. Every row carries the salary, the three projections, Market Delta, the TD probability and the team total.</p>
   <p class="is-note" id="dfContestNote"></p>
   <div class="rk-seg" id="dfBoard" role="group"><button type="button" data-board="metrics">Value &amp; Leverage</button><button type="button" data-board="bestVegasValues">Best Vegas Values</button><button type="button" data-board="tdUpside">TD Upside</button><button type="button" data-board="volumeValues">Volume Values</button><button type="button" data-board="expensiveFades">Expensive Fades</button></div>
-  <div class="is-scroll"><table class="is-table" id="dfMetrics" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfMetricsFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Value</th><th class="num">Floor</th><th class="num">Ceiling</th><th class="num">Own% <small>(model)</small></th><th class="num">Leverage</th><th class="num">Cash</th><th class="num">Tourney</th><th>Chalk</th></tr></thead><tbody></tbody></table></div>
-  <p class="is-note" id="dfMetricsNote" hidden><b>DK FPPG is DraftKings&rsquo; historical fantasy-points-per-game average, not a projection.</b> IT Edge is Iron Tuna&rsquo;s forward projection minus that historical baseline. Ownership is a model, not a feed. Every metric&rsquo;s method is written down in <code>docs/dfs-metrics.md</code>.</p>
-  <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num" id="dfValuesFppgHead">DK FPPG</th><th class="num">IT Edge</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
+  <div class="is-scroll"><table class="is-table" id="dfMetrics" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna Projection</th><th class="num" id="dfMetricsFppgHead">DraftKings FPPG</th><th class="num">Iron Tuna Edge</th><th class="num">Value</th><th class="num">Floor</th><th class="num">Ceiling</th><th class="num">Own% <small>(model)</small></th><th class="num">Leverage</th><th class="num">Cash</th><th class="num">Tourney</th><th>Chalk</th></tr></thead><tbody></tbody></table></div>
+  <p class="is-note" id="dfMetricsNote" hidden><b>DraftKings FPPG is DraftKings&rsquo; historical fantasy-points-per-game average, not a projection.</b> Iron Tuna Edge is Iron Tuna&rsquo;s forward projection minus that historical baseline. Ownership is a model, not a feed. Every metric&rsquo;s method is written down in <code>docs/dfs-metrics.md</code>.</p>
+  <div class="is-scroll"><table class="is-table" id="dfValues" hidden><thead><tr><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna Projection</th><th class="num" id="dfValuesFppgHead">DraftKings FPPG</th><th class="num">Iron Tuna Edge</th><th class="num">Vegas</th><th class="num">Consensus</th><th>Market Delta</th><th class="num">TD %</th><th class="num">Team total</th><th class="num">VVS</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section id="sec-stacks" hidden>
@@ -628,9 +628,9 @@ p{color:var(--sec);margin:0 0 16px}
     $('dfPlayerTitle').textContent = p.name || 'Player calculation';
     $('dfPlayerSub').textContent = [p.position, p.team, p.opponent ? ('vs ' + p.opponent) : '', money(p.salary)].filter(Boolean).join(' · ');
     var boxes = [
-      metricBox(n1(p.ironTunaPoints), 'Iron Tuna proj'),
-      metricBox(operatorFppg != null && isFinite(operatorFppg) ? n1(operatorFppg) : '—', fppgLabel()),
-      metricBox(projectionEdge == null ? '—' : (projectionEdge > 0 ? '+' : '') + n1(projectionEdge), 'IT edge vs FPPG'),
+      metricBox(operatorFppg != null && isFinite(operatorFppg) ? n1(operatorFppg) : '—', 'DraftKings FPPG'),
+      metricBox(n1(p.ironTunaPoints), 'Iron Tuna Projection'),
+      metricBox(projectionEdge == null ? '—' : (projectionEdge > 0 ? '+' : '') + n1(projectionEdge), 'Iron Tuna Edge'),
       metricBox(n1(p.vegasPoints), 'Market proj'),
       metricBox(n1(p.consensusPoints), 'Consensus'),
       metricBox(money(p.salary), 'Salary'),
@@ -738,12 +738,897 @@ p{color:var(--sec);margin:0 0 16px}
     var qb = null; for (var k = 0; k < l.players.length; k++) if (l.players[k].slot === 'QB') qb = l.players[k];
     var full = l.salary + Math.max(0, l.remaining);
     var pct = Math.min(100, Math.round((l.salary / full) * 100));
-    var keys = sh.keys || ['projPoints', 'ceilingPoints'];
     var stat = function (v, label, key) { return '<div class="is-stat' + (key ? ' key' : '') + '"><b>' + v + '</b><span>' + label + '</span></div>'; };
-    var stats = stat(n1(l[keys[0]]), STAT_LABEL[keys[0]] || 'Points', true)
-      + stat(n1(l[keys[1]]), STAT_LABEL[keys[1]] || 'Points')
-      + stat(money(l.salary).replace('$', '$'), 'Salary used')
-      + (l.ownership != null ? stat(n1(l.ownership) + '%', 'Total own') : stat(money(l.remaining), 'Left over'));
+    var allHaveFppg = l.players.every(function (p) { return p.operatorFppg != null && isFinite(Number(p.operatorFppg)); });
+    var dkFppg = allHaveFppg ? l.players.reduce(function (sum, p) { return sum + Number(p.operatorFppg); }, 0) : null;
+    var lineupEdge = dkFppg == null ? null : Number(l.projPoints) - dkFppg;
+    var stats = stat(dkFppg == null ? '—' : n1(dkFppg), 'DraftKings FPPG')
+      + stat(n1(l.projPoints), 'Iron Tuna Projection', true)
+      + stat(lineupEdge == null ? '—' : (lineupEdge > 0 ? '+' : '') + n1(lineupEdge), 'Iron Tuna Edge')
+      + stat(money(l.salary).replace('
+    var rows = l.players.map(function (p) {
+      return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
+        + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
+        + '<td class="num">' + money(p.salary) + '</td>'
+        + '<td class="num">' + fppgText(p) + '</td>'
+        + '<td class="num">' + n1(p.proj) + '</td>'
+        + '<td class="num">' + edgeHtml(p) + '</td>'
+        + '<td class="num">' + (p.ownership == null ? '\u2014' : n1(p.ownership) + '%') + '</td></tr>';
+    }).join('');
+    var meter = '<div class="df-meterwrap"><div class="is-meter' + (l.remaining < 400 ? ' tight' : '') + '"><i style="width:' + pct + '%"></i></div>'
+      + '<div class="df-caplab"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div></div>';
+    var table = '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">DraftKings FPPG</th><th class="num">Iron Tuna Projection</th><th class="num">Iron Tuna Edge</th><th class="num">Own</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    var sub = e((slate.label || '') + (slate.week ? ' \u00b7 Week ' + slate.week : '') + ' \u00b7 ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
+    var foot = '<button class="btn alt" type="button" data-copy="' + i + '">Copy this lineup</button>'
+      + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' \u00b7 ')) + '</span>';
+    // The lead roster is the one dark board on the page.
+    if (lead) {
+      return '<div class="is-board">'
+        + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
+        + '<div class="is-stats">' + stats + '</div>' + meter + table
+        + '<div class="is-board-foot">' + foot + '</div></div>';
+    }
+    return '<div class="df-card">'
+      + '<div class="df-card-head"><h4>Alternate ' + i + '</h4><span class="df-why">' + n1(l[keys[0]]) + ' ' + e((STAT_LABEL[keys[0]] || 'pts').toLowerCase()) + '</span></div>'
+      + '<div class="is-stats">' + stats + '</div>' + meter + table
+      + '<div class="df-card-foot">' + foot + '</div></div>';
+  }
+
+  // ── the branches ──────────────────────────────────────────────────────────
+  // What else fits in each seat. In every shape but the big field the answer
+  // worth printing is the next best body -- the cost of moving off the solve,
+  // which is also where the roster is thin. In a large field the useful answer
+  // is the opposite one: the highest ceiling at the slot that FEWER entries
+  // will own than the incumbent, which is the swap that buys leverage rather
+  // than points.
+  function pivotRows(l, players) {
+    var inL = {}; l.players.forEach(function (p) { inL[p.id] = 1; });
+    var pts = (ITDfs.MODES[mode] || ITDfs.MODES.ironTuna).pts;
+    var flex = slate.flex || ['RB', 'WR', 'TE'];
+    var cap = parseInt($('dfCap').value, 10) || slate.cap;
+    var contra = contest === 'gpp';
+    var out = [];
+    l.players.forEach(function (cur) {
+      var room = cap - l.salary + cur.salary;
+      var cands = players.filter(function (q) {
+        if (inL[q.id] || q.salary > room) return false;
+        if (!(cur.slot === q.position || (cur.slot === 'FLEX' && flex.indexOf(q.position) >= 0))) return false;
+        if (!isFinite(pts(q)) || pts(q) <= 0) return false;
+        if (contra && cur.ownership != null && q.ownership != null && q.ownership >= cur.ownership) return false;
+        return true;
+      });
+      if (!cands.length) return;
+      cands.sort(function (a, b) { return contra ? (ITDfs.ceilingOf(b) - ITDfs.ceilingOf(a)) : (pts(b) - pts(a)); });
+      var alt = cands[0];
+      out.push({ slot: cur.slot, out: cur, into: alt,
+                 dProj: (alt.ironTunaPoints || 0) - (cur.proj || 0),
+                 dCeil: ITDfs.ceilingOf(alt) - (cur.ceiling || 0),
+                 dSal: alt.salary - cur.salary,
+                 own: alt.ownership });
+    });
+    // Worth reading first: in a big field the biggest ceiling gained, elsewhere
+    // the swap that costs the least.
+    out.sort(function (a, b) { return contra ? (b.dCeil - a.dCeil) : (b.dProj - a.dProj); });
+    return out;
+  }
+
+  function renderPivots(l, players) {
+    var host = $('dfPivots');
+    if (!l) { host.innerHTML = ''; return; }
+    var rows = pivotRows(l, players);
+    if (!rows.length) { host.innerHTML = ''; return; }
+    var contra = contest === 'gpp';
+    var sign = function (v, suffix) { return (v > 0 ? '+' : '') + (Math.round(v * 10) / 10) + (suffix || ''); };
+    var cls = function (v) { return v > 0 ? 'color:var(--teal)' : v < 0 ? 'color:var(--danger)' : ''; };
+    host.innerHTML = '<h3 class="df-h3">' + (contra ? 'The contrarian swap' : 'The next best body') + ' <em>every slot</em></h3>'
+      + '<p class="df-sub">' + (contra
+          ? 'The highest-ceiling player at each seat that fewer entries are modeled to own than the one in the roster. This is where a large-field lineup buys its leverage; take one or two, not nine.'
+          : 'What the seat is worth if the player in it is ruled out, or if you simply disagree. A swap that costs almost nothing is a slot the solve is indifferent about; one that costs three points is a slot the roster is built on.') + '</p>'
+      + '<div class="is-plate"><div class="is-scroll"><table class="is-table"><thead><tr><th>Slot</th><th>In the roster</th><th>Swap to</th><th class="num">\u0394 Proj</th><th class="num">\u0394 Ceiling</th><th class="num">\u0394 Salary</th><th class="num">Own</th></tr></thead><tbody>'
+      + rows.map(function (r) {
+          return '<tr><td>' + slotChip(r.slot) + '</td>'
+            + '<td>' + e(r.out.name) + ' <span class="is-status">' + money(r.out.salary) + '</span></td>'
+            + '<td><b>' + e(r.into.name) + '</b> <span class="is-status">' + e(r.into.position + ' \u00b7 ' + r.into.team) + '</span></td>'
+            + '<td class="num" style="' + cls(r.dProj) + '">' + sign(r.dProj) + '</td>'
+            + '<td class="num" style="' + cls(r.dCeil) + '">' + sign(r.dCeil) + '</td>'
+            + '<td class="num">' + (r.dSal > 0 ? '+' : '') + money(r.dSal).replace('$-', '-$') + '</td>'
+            + '<td class="num">' + (r.own == null ? '\u2014' : n1(r.own) + '%') + '</td></tr>';
+        }).join('')
+      + '</tbody></table></div></div>';
+  }
+
+  var built = null;
+  function whatIfPlayers() {
+    return (slate && slate.players || []).filter(function (p) { return p.onBoard && p.key; }).sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
+  }
+  function whatIfMatches(value) {
+    var q = String(value || '').trim().toLowerCase();
+    if (!q) return [];
+    return whatIfPlayers().filter(function (p) {
+      return String(p.name || '').toLowerCase().indexOf(q) >= 0 ||
+             String(p.team || '').toLowerCase().indexOf(q) >= 0 ||
+             String(p.position || '').toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 10);
+  }
+  function renderWhatIfList() {
+    var box = $('dfWhatIfList'), value = $('dfWhatIfInput').value;
+    var list = whatIfMatches(value);
+    if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
+    box.innerHTML = list.map(function (p) {
+      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small></span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
+    }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
+    box.hidden = false;
+  }
+  function setWhatIf(p) {
+    if (!p || !p.key) return;
+    whatIfKey = p.key; whatIfName = p.name || 'Selected player';
+    if (marks[whatIfKey] === 'excl') delete marks[whatIfKey];
+    $('dfWhatIfInput').value = p.name + ' (' + p.position + ' · ' + p.team + ')';
+    $('dfWhatIfList').hidden = true;
+    $('dfWhatIfClear').hidden = false;
+    $('dfWhatIf').classList.add('active');
+    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.';
+    build();
+  }
+  function chooseBestWhatIf() {
+    var value = $('dfWhatIfInput').value.trim();
+    var list = whatIfMatches(value);
+    if (!list.length) return;
+    var q = value.toLowerCase();
+    var exact = list.find(function (p) { return p.name.toLowerCase() === q; });
+    setWhatIf(exact || list[0]);
+  }
+  function clearWhatIf(rebuild) {
+    whatIfKey = null; whatIfName = '';
+    $('dfWhatIfInput').value = '';
+    $('dfWhatIfList').hidden = true; $('dfWhatIfList').innerHTML = '';
+    $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
+    $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
+    if (rebuild) build();
+  }
+  function build() {
+    if (!slate || !window.ITDfs) return;
+    var players = slate.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
+    var lock = [], excl = []; for (var k in marks) { if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
+    if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey);
+    var sh = SHAPES[contest] || SHAPES.single;
+    var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || slate.cap, slots: slate.slots, flex: slate.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
+    built = r.ok ? r : null;
+    if (!r.ok) {
+      if (whatIfKey) $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is selected, but no legal lineup fits the current cap and constraints.';
+      $('dfLineups').innerHTML = '<p class="is-empty">No lineup satisfies those constraints under that cap. Loosen one in the fine-tune panel below.</p>';
+      $('dfPivots').innerHTML = '';
+      return;
+    }
+    var lead = r.lineups[0];
+    var alts = r.lineups.slice(1);
+    $('dfLineups').innerHTML = lineupCard(lead, 0, sh, true)
+      + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
+            ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
+            : 'The next best rosters under the same rules, for a second and third entry.') + '</p>'
+          + '<div class="df-alts">' + alts.map(function (l, i) { return lineupCard(l, i + 1, sh, false); }).join('') + '</div>' : '')
+      + (r.note ? '<p class="is-note">' + e(r.note) + '</p>' : '');
+    renderPivots(lead, players);
+  }
+
+  function stacks(s) {
+    $('dfStacks').innerHTML = (s.stacks || []).map(function (g) {
+      var sideHtml = function (x, label) { return '<div><b>' + e(x.team) + '</b> <span class="is-status">' + label + '</span><br>QB: ' + (x.qb ? e(x.qb.name) + ' ' + money(x.qb.salary) + ' · ' + n1(x.qb.vegasPoints) : '—') + '<br>Catchers: ' + x.catchers.map(function (c) { return playerButton(c) + ' ' + money(c.salary) + ' · ' + n1(c.vegasPoints); }).join('; ') + '<br>Back: ' + (x.back ? e(x.back.name) + ' ' + money(x.back.salary) : '—') + '<br><b>QB + 2 stack:</b> ' + money(x.stackSalary) + ' for ' + n1(x.stackVegasPoints) + ' Vegas pts</div>'; };
+      return '<div class="df-stack"><h3>' + e(g.game) + ' · total ' + n1(g.total) + ' · implied ' + n1(g.impliedAway) + '–' + n1(g.impliedHome) + '</h3><div class="side">' + sideHtml(g.away, 'away') + sideHtml(g.home, 'home') + '</div><p class="is-note">Bring-back: ' + (g.bringBack.home ? e(g.bringBack.home.name) : '—') + ' for an away stack, ' + (g.bringBack.away ? e(g.bringBack.away.name) : '—') + ' for a home stack.</p></div>';
+    }).join('') || '<p class="is-empty">No game on this slate carries a posted total yet.</p>';
+  }
+  function tdBoard(s) {
+    var list = s.players.filter(function (p) { return p.onBoard && p.position !== 'DST'; }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
+    $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
+    $('dfTd').hidden = !list.length;
+  }
+  function render() {
+    if (!slate) return;
+    $('dfCap').value = slate.cap;
+    refreshFppgHeads();
+    applyShape();
+    dashboard(slate); envTable(slate); values(slate); pool(slate); stacks(slate); tdBoard(slate);
+    // The lineup solves on load. It is the reason the page exists, and a Build
+    // button a reader has to find first is a page that answers nothing until
+    // they guess right.
+    build();
+  }
+
+  // ── pick'em ──────────────────────────────────────────────────────────────
+  // Underdog, PrizePicks and Sleeper are higher/lower on a posted stat line, so
+  // there is no salary and no cap and none of the sections above apply. The
+  // board is the market's implied line for the one stat each position is really
+  // priced on, against the model's own, off the same /api/boards every other
+  // surface reads.
+  var PICKEM = { pk: 'Underdog / PrizePicks', sl: 'Sleeper picks' };
+  var PRIMARY = { QB: ['passYd', 'Pass yds'], RB: ['rushYd', 'Rush yds'], WR: ['recYd', 'Rec yds'], TE: ['recYd', 'Rec yds'] };
+  var LEAN_PCT = 0.05;
+  var pickemLoaded = false;
+  function isPickem() { return site === 'pk' || site === 'sl'; }
+  function pickem(board) {
+    var rows = [];
+    (board && board.players || []).forEach(function (p) {
+      var m = PRIMARY[p.position];
+      if (!m || !p.vegas || !p.ironTuna || !p.games) return;
+      var line = p.vegas.stats ? p.vegas.stats[m[0]] : null;
+      var model = p.ironTuna.stats ? p.ironTuna.stats[m[0]] : null;
+      // QUOTED ONLY. With no posted prop the "line" is the game line applied to
+      // the player, which is what the model is built from too — so comparing
+      // them produces rounding, and a pick'em board of rounding is the worst
+      // thing this site could ship.
+      if (!(p.vegas.basis && p.vegas.basis.indexOf('props') === 0)) return;
+      if (line == null || model == null || line < 20) return;
+      var per = p.games || 1, l = line / per, mo = model / per;
+      rows.push({ name: p.name, pos: p.position, team: p.team, label: m[1], line: l, model: mo, pct: (mo - l) / l });
+    });
+    rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
+    rows = rows.slice(0, 14);
+    if (!rows.length) {
+      $('pkState').textContent = 'No priced player prop has reached this board for the week, so there is no posted line to read the model against. Books have props up; this build is not carrying them. The board is blank rather than filled with the model compared to itself.';
+      return;
+    }
+    $('pkBody').innerHTML = rows.map(function (r) {
+      var lean = Math.abs(r.pct) < LEAN_PCT ? '<span class="is-tag is-flat">No lean</span>'
+        : '<span class="is-tag is-accent">' + (r.pct > 0 ? 'Over' : 'Under') + '</span>';
+      return '<tr><td class="is-who">' + e(r.name) + ' <small>' + e(r.pos + ' \u00b7 ' + r.team) + '</small></td>' +
+        '<td>' + e(r.label) + '</td><td class="num">' + n1(r.line) + '</td>' +
+        '<td class="num"><span class="is-val">' + n1(r.model) + '</span></td>' +
+        '<td class="num">' + (r.pct > 0 ? '+' : '') + (r.pct * 100).toFixed(0) + '%</td>' +
+        '<td>' + lean + '</td></tr>';
+    }).join('');
+    $('pkWrap').hidden = false;
+    $('pkState').hidden = true;
+  }
+  function loadPickem() {
+    $('pkVenue').textContent = PICKEM[site] || 'Pick’em';
+    if (pickemLoaded) return;
+    pickemLoaded = true;
+    fetch('/api/boards?horizon=week&pos=ALL&scoring=ppr', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
+      .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
+  }
+  // ── the reader's own salary file ─────────────────────────────────────────
+  // Held in this browser and nowhere else: kept in memory for the session and
+  // mirrored to localStorage so a reload does not lose it. Storage can throw
+  // (private windows, a file past the quota), so every touch is guarded and
+  // the in-memory copy is what the page actually reads.
+  var upMem = {};
+  function upKey(s) { return 'it.dfs.csv.' + s; }
+  function upGet(s) { if (upMem[s]) return upMem[s]; try { return localStorage.getItem(upKey(s)) || ''; } catch (err) { return ''; } }
+  function upSet(s, csv) { upMem[s] = csv || ''; try { if (csv) localStorage.setItem(upKey(s), csv); else localStorage.removeItem(upKey(s)); } catch (err) {} }
+  function upState(msg, bad) { var el = $('dfUpState'); el.textContent = msg; el.className = 'df-up-state' + (bad ? ' bad' : ''); }
+
+  function slateOk(j) {
+    slate = j;
+    if (whatIfKey && !(j.players || []).some(function (p) { return p.key === whatIfKey; })) clearWhatIf(false);
+    var stamp = j.source === 'upload'
+      ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
+      : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
+    $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
+    render();
+  }
+  function slateNone(msg, label) {
+    slate = null;
+    $('dfNote').textContent = msg;
+    $('dfEmpty').textContent = 'No ' + (label || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.';
+    $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
+    $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
+    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
+    $('dfPivots').innerHTML = ''; built = null;
+  }
+  // Price the reader's file. A file the parser refuses is theirs to fix, so the
+  // reason is printed and the page falls back to the site's own slate rather
+  // than sitting on a blank board — and a refused file is not kept.
+  function loadUpload(csv) {
+    upState('Reading your file\u2026', false);
+    fetch('/api/dfs/slate', { method: 'POST', headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ site: site, csv: csv, contest: contest }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) {
+          upSet(site, ''); $('dfUpClear').hidden = true;
+          upState((j && j.note) || 'That file could not be read.', true);
+          loadSite();
+          return;
+        }
+        upSet(site, csv);
+        $('dfUpClear').hidden = false;
+        upState('Your file: ' + j.players.length + ' priced rows'
+                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
+                + '. Stored in this browser only.', false);
+        slateOk(j);
+      })
+      .catch(function () { upState('The slate did not answer. Your file was not read.', true); });
+  }
+  function loadSite() {
+    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label); return; }
+      slateOk(j);
+    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
+  }
+  function load() {
+    press($('dfSite'), 'data-site', site);
+    if (isPickem()) {
+      $('dfSiteNote').textContent = 'Higher or lower on a posted stat line; the board shows where the model leans. No cap, no salaries.';
+      $('dfNav').hidden = true;
+      SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
+      $('sec-pickem').hidden = false;
+      $('dfUp').hidden = true;
+      $('dfShape').hidden = true; $('dfShapeNote').hidden = true;
+      $('dfNote').textContent = '';
+      loadPickem();
+      return;
+    }
+    $('sec-pickem').hidden = true;
+    $('dfNav').hidden = false;
+    $('dfUp').hidden = false;
+    $('dfShape').hidden = false; $('dfShapeNote').hidden = false;
+    applyShape();
+    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
+    show();
+    var mine = upGet(site);
+    $('dfUpClear').hidden = !mine;
+    if (!mine) upState('Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.', false);
+    if (mine) loadUpload(mine); else loadSite();
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    press($('dfMode'), 'data-mode', mode); applyShape(); show();
+    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; clearWhatIf(false); load(); });
+    $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
+    $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
+    $('dfWhatIfInput').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); chooseBestWhatIf(); }
+      if (ev.key === 'Escape') $('dfWhatIfList').hidden = true;
+    });
+    $('dfWhatIfList').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-whatif-key]'); if (!b) return;
+      var key = b.getAttribute('data-whatif-key');
+      var p = whatIfPlayers().find(function (x) { return x.key === key; });
+      setWhatIf(p);
+    });
+    $('dfWhatIfClear').addEventListener('click', function () { clearWhatIf(true); });
+    // The salary file. The server caps the body at a million characters, so a
+    // file past that is refused here rather than truncated into a CSV that
+    // parses and quietly leaves half the slate off the board.
+    $('dfUpFile').addEventListener('change', function (ev) {
+      var f = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (!f) return;
+      if (f.size > 1000000) { upState('That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.', true); return; }
+      var fr = new FileReader();
+      fr.onload = function () { marks = {}; loadUpload(String(fr.result || '')); };
+      fr.onerror = function () { upState('That file could not be read from your computer.', true); };
+      fr.readAsText(f);
+    });
+    $('dfUpPaste').addEventListener('click', function () {
+      var open = $('dfUpText').hidden;
+      $('dfUpText').hidden = !open; $('dfUpReadRow').hidden = !open;
+      if (open) $('dfUpText').focus();
+    });
+    $('dfUpRead').addEventListener('click', function () {
+      var csv = $('dfUpText').value;
+      if (!csv.trim()) { upState('Paste the salary CSV first.', true); return; }
+      marks = {}; loadUpload(csv);
+    });
+    $('dfUpClear').addEventListener('click', function () {
+      upSet(site, ''); marks = {};
+      $('dfUpClear').hidden = true; $('dfUpText').value = ''; $('dfUpText').hidden = true; $('dfUpReadRow').hidden = true;
+      upState('Back on the site\u2019s slate. Your file is gone from this browser.', false);
+      loadSite();
+    });
+    $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
+    $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
+    // The shape switch is the page's primary control: it re-solves the roster,
+    // re-sorts the values table (the server sorts that one, hence the reload)
+    // and re-labels the branches.
+    $('dfShape').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b) return;
+      contest = b.getAttribute('data-contest');
+      applyShape(); load();
+      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_contest', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, contest: contest, site: site } })], { type: 'application/json' })); } catch (x) {}
+    });
+    desk();
+    // Anything moved by hand in the fine-tune panel takes the build off the
+    // preset and rebuilds immediately, so the roster on screen always matches
+    // the controls under it.
+    $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); tuned = true; build(); });
+    $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
+    $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
+    $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
+    document.addEventListener('click', function (ev) {
+      var wi = ev.target.closest('[data-player-whatif]');
+      if (wi) {
+        var p0 = whatIfPlayers().find(function (p) { return p.key === wi.getAttribute('data-player-whatif'); });
+        closePlayerCalc(); setWhatIf(p0); return;
+      }
+      var player = ev.target.closest('.df-player-link');
+      if (player) {
+        ev.preventDefault(); ev.stopPropagation();
+        openPlayerCalc(findSlatePlayer(player));
+        return;
+      }
+      if (ev.target.closest('[data-player-close]')) closePlayerCalc();
+    });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !$('dfPlayerModal').hidden) closePlayerCalc(); });
+    // Copy takes the roster to the clipboard as names, which is what every
+    // lobby's paste box wants. It copies; it does not enter anything.
+    $('dfLineups').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-copy]'); if (!b || !built) return;
+      var l = built.lineups[parseInt(b.getAttribute('data-copy'), 10)]; if (!l) return;
+      var text = l.players.map(function (p) { return p.slot + '  ' + p.name + '  ' + money(p.salary); }).join('\n');
+      var done = function () { var was = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = was; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {});
+      else done();
+    });
+    load();
+  });
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>
+, '
+    var rows = l.players.map(function (p) {
+      return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
+        + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
+        + '<td class="num">' + money(p.salary) + '</td>'
+        + '<td class="num">' + n1(p.proj) + '</td>'
+        + '<td class="num">' + fppgText(p) + '</td>'
+        + '<td class="num">' + edgeHtml(p) + '</td>'
+        + '<td class="num">' + n1(p.ceiling) + '</td>'
+        + '<td class="num">' + (p.ownership == null ? '\u2014' : n1(p.ownership) + '%') + '</td></tr>';
+    }).join('');
+    var meter = '<div class="df-meterwrap"><div class="is-meter' + (l.remaining < 400 ? ' tight' : '') + '"><i style="width:' + pct + '%"></i></div>'
+      + '<div class="df-caplab"><span>' + money(l.salary) + ' of ' + money(full) + '</span><span>' + money(l.remaining) + ' left</span></div></div>';
+    var table = '<table><thead><tr><th>Slot</th><th>Player</th><th class="num">Salary</th><th class="num">Iron Tuna</th><th class="num">' + e(fppgLabel()) + '</th><th class="num">IT Edge</th><th class="num">Ceiling</th><th class="num">Own</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    var sub = e((slate.label || '') + (slate.week ? ' \u00b7 Week ' + slate.week : '') + ' \u00b7 ' + (ITDfs.MODES[mode] ? ITDfs.MODES[mode].label : mode));
+    var foot = '<button class="btn alt" type="button" data-copy="' + i + '">Copy this lineup</button>'
+      + '<span class="df-copy">' + e(l.players.map(function (p) { return p.name; }).join(' \u00b7 ')) + '</span>';
+    // The lead roster is the one dark board on the page.
+    if (lead) {
+      return '<div class="is-board">'
+        + '<div class="is-board-head"><h3>' + e(sh.head) + '</h3><span class="is-board-sub">' + sub + '</span></div>'
+        + '<div class="is-stats">' + stats + '</div>' + meter + table
+        + '<div class="is-board-foot">' + foot + '</div></div>';
+    }
+    return '<div class="df-card">'
+      + '<div class="df-card-head"><h4>Alternate ' + i + '</h4><span class="df-why">' + n1(l[keys[0]]) + ' ' + e((STAT_LABEL[keys[0]] || 'pts').toLowerCase()) + '</span></div>'
+      + '<div class="is-stats">' + stats + '</div>' + meter + table
+      + '<div class="df-card-foot">' + foot + '</div></div>';
+  }
+
+  // ── the branches ──────────────────────────────────────────────────────────
+  // What else fits in each seat. In every shape but the big field the answer
+  // worth printing is the next best body -- the cost of moving off the solve,
+  // which is also where the roster is thin. In a large field the useful answer
+  // is the opposite one: the highest ceiling at the slot that FEWER entries
+  // will own than the incumbent, which is the swap that buys leverage rather
+  // than points.
+  function pivotRows(l, players) {
+    var inL = {}; l.players.forEach(function (p) { inL[p.id] = 1; });
+    var pts = (ITDfs.MODES[mode] || ITDfs.MODES.ironTuna).pts;
+    var flex = slate.flex || ['RB', 'WR', 'TE'];
+    var cap = parseInt($('dfCap').value, 10) || slate.cap;
+    var contra = contest === 'gpp';
+    var out = [];
+    l.players.forEach(function (cur) {
+      var room = cap - l.salary + cur.salary;
+      var cands = players.filter(function (q) {
+        if (inL[q.id] || q.salary > room) return false;
+        if (!(cur.slot === q.position || (cur.slot === 'FLEX' && flex.indexOf(q.position) >= 0))) return false;
+        if (!isFinite(pts(q)) || pts(q) <= 0) return false;
+        if (contra && cur.ownership != null && q.ownership != null && q.ownership >= cur.ownership) return false;
+        return true;
+      });
+      if (!cands.length) return;
+      cands.sort(function (a, b) { return contra ? (ITDfs.ceilingOf(b) - ITDfs.ceilingOf(a)) : (pts(b) - pts(a)); });
+      var alt = cands[0];
+      out.push({ slot: cur.slot, out: cur, into: alt,
+                 dProj: (alt.ironTunaPoints || 0) - (cur.proj || 0),
+                 dCeil: ITDfs.ceilingOf(alt) - (cur.ceiling || 0),
+                 dSal: alt.salary - cur.salary,
+                 own: alt.ownership });
+    });
+    // Worth reading first: in a big field the biggest ceiling gained, elsewhere
+    // the swap that costs the least.
+    out.sort(function (a, b) { return contra ? (b.dCeil - a.dCeil) : (b.dProj - a.dProj); });
+    return out;
+  }
+
+  function renderPivots(l, players) {
+    var host = $('dfPivots');
+    if (!l) { host.innerHTML = ''; return; }
+    var rows = pivotRows(l, players);
+    if (!rows.length) { host.innerHTML = ''; return; }
+    var contra = contest === 'gpp';
+    var sign = function (v, suffix) { return (v > 0 ? '+' : '') + (Math.round(v * 10) / 10) + (suffix || ''); };
+    var cls = function (v) { return v > 0 ? 'color:var(--teal)' : v < 0 ? 'color:var(--danger)' : ''; };
+    host.innerHTML = '<h3 class="df-h3">' + (contra ? 'The contrarian swap' : 'The next best body') + ' <em>every slot</em></h3>'
+      + '<p class="df-sub">' + (contra
+          ? 'The highest-ceiling player at each seat that fewer entries are modeled to own than the one in the roster. This is where a large-field lineup buys its leverage; take one or two, not nine.'
+          : 'What the seat is worth if the player in it is ruled out, or if you simply disagree. A swap that costs almost nothing is a slot the solve is indifferent about; one that costs three points is a slot the roster is built on.') + '</p>'
+      + '<div class="is-plate"><div class="is-scroll"><table class="is-table"><thead><tr><th>Slot</th><th>In the roster</th><th>Swap to</th><th class="num">\u0394 Proj</th><th class="num">\u0394 Ceiling</th><th class="num">\u0394 Salary</th><th class="num">Own</th></tr></thead><tbody>'
+      + rows.map(function (r) {
+          return '<tr><td>' + slotChip(r.slot) + '</td>'
+            + '<td>' + e(r.out.name) + ' <span class="is-status">' + money(r.out.salary) + '</span></td>'
+            + '<td><b>' + e(r.into.name) + '</b> <span class="is-status">' + e(r.into.position + ' \u00b7 ' + r.into.team) + '</span></td>'
+            + '<td class="num" style="' + cls(r.dProj) + '">' + sign(r.dProj) + '</td>'
+            + '<td class="num" style="' + cls(r.dCeil) + '">' + sign(r.dCeil) + '</td>'
+            + '<td class="num">' + (r.dSal > 0 ? '+' : '') + money(r.dSal).replace('$-', '-$') + '</td>'
+            + '<td class="num">' + (r.own == null ? '\u2014' : n1(r.own) + '%') + '</td></tr>';
+        }).join('')
+      + '</tbody></table></div></div>';
+  }
+
+  var built = null;
+  function whatIfPlayers() {
+    return (slate && slate.players || []).filter(function (p) { return p.onBoard && p.key; }).sort(function (a, b) { return (b.ironTunaPoints || 0) - (a.ironTunaPoints || 0); });
+  }
+  function whatIfMatches(value) {
+    var q = String(value || '').trim().toLowerCase();
+    if (!q) return [];
+    return whatIfPlayers().filter(function (p) {
+      return String(p.name || '').toLowerCase().indexOf(q) >= 0 ||
+             String(p.team || '').toLowerCase().indexOf(q) >= 0 ||
+             String(p.position || '').toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 10);
+  }
+  function renderWhatIfList() {
+    var box = $('dfWhatIfList'), value = $('dfWhatIfInput').value;
+    var list = whatIfMatches(value);
+    if (!value.trim()) { box.hidden = true; box.innerHTML = ''; return; }
+    box.innerHTML = list.map(function (p) {
+      return '<button type="button" role="option" data-whatif-key="' + e(p.key) + '"><span><b>' + e(p.name) + '</b> <small>' + e(p.position + ' · ' + p.team) + '</small></span><small>' + money(p.salary) + ' · IT ' + n1(p.ironTunaPoints) + '</small></button>';
+    }).join('') || '<div class="is-note" style="padding:10px">No matching player on this slate.</div>';
+    box.hidden = false;
+  }
+  function setWhatIf(p) {
+    if (!p || !p.key) return;
+    whatIfKey = p.key; whatIfName = p.name || 'Selected player';
+    if (marks[whatIfKey] === 'excl') delete marks[whatIfKey];
+    $('dfWhatIfInput').value = p.name + ' (' + p.position + ' · ' + p.team + ')';
+    $('dfWhatIfList').hidden = true;
+    $('dfWhatIfClear').hidden = false;
+    $('dfWhatIf').classList.add('active');
+    $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is forced into the lineup. Every other slot is re-solved around that choice.';
+    build();
+  }
+  function chooseBestWhatIf() {
+    var value = $('dfWhatIfInput').value.trim();
+    var list = whatIfMatches(value);
+    if (!list.length) return;
+    var q = value.toLowerCase();
+    var exact = list.find(function (p) { return p.name.toLowerCase() === q; });
+    setWhatIf(exact || list[0]);
+  }
+  function clearWhatIf(rebuild) {
+    whatIfKey = null; whatIfName = '';
+    $('dfWhatIfInput').value = '';
+    $('dfWhatIfList').hidden = true; $('dfWhatIfList').innerHTML = '';
+    $('dfWhatIfClear').hidden = true; $('dfWhatIf').classList.remove('active');
+    $('dfWhatIfState').textContent = 'As you type, matching players will appear below just like the cheat-sheet What If box.';
+    if (rebuild) build();
+  }
+  function build() {
+    if (!slate || !window.ITDfs) return;
+    var players = slate.players.filter(function (p) { return p.onBoard; }).map(function (p) { var q = {}; for (var k in p) q[k] = p[k]; q.id = p.key; return q; });
+    var lock = [], excl = []; for (var k in marks) { if (marks[k] === 'lock') lock.push(k); else if (marks[k] === 'excl') excl.push(k); }
+    if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey);
+    var sh = SHAPES[contest] || SHAPES.single;
+    var r = ITDfs.build(players, { mode: mode, cap: parseInt($('dfCap').value, 10) || slate.cap, slots: slate.slots, flex: slate.flex, lock: lock, exclude: excl, stack: $('dfStack').checked, bringBack: $('dfBring').checked, maxPerTeam: parseInt($('dfMaxTeam').value, 10) || 0, lineups: parseInt($('dfN').value, 10) || 1, seed: 7 });
+    built = r.ok ? r : null;
+    if (!r.ok) {
+      if (whatIfKey) $('dfWhatIfState').innerHTML = '<b>' + e(whatIfName) + '</b> is selected, but no legal lineup fits the current cap and constraints.';
+      $('dfLineups').innerHTML = '<p class="is-empty">No lineup satisfies those constraints under that cap. Loosen one in the fine-tune panel below.</p>';
+      $('dfPivots').innerHTML = '';
+      return;
+    }
+    var lead = r.lineups[0];
+    var alts = r.lineups.slice(1);
+    $('dfLineups').innerHTML = lineupCard(lead, 0, sh, true)
+      + (alts.length ? '<h3 class="df-h3">Branch off it <em>' + alts.length + ' more</em></h3><p class="df-sub">' + (contest === 'gpp'
+            ? 'The same core, re-solved to sit on different players. Entering a large field with one lineup is entering it with one opinion.'
+            : 'The next best rosters under the same rules, for a second and third entry.') + '</p>'
+          + '<div class="df-alts">' + alts.map(function (l, i) { return lineupCard(l, i + 1, sh, false); }).join('') + '</div>' : '')
+      + (r.note ? '<p class="is-note">' + e(r.note) + '</p>' : '');
+    renderPivots(lead, players);
+  }
+
+  function stacks(s) {
+    $('dfStacks').innerHTML = (s.stacks || []).map(function (g) {
+      var sideHtml = function (x, label) { return '<div><b>' + e(x.team) + '</b> <span class="is-status">' + label + '</span><br>QB: ' + (x.qb ? e(x.qb.name) + ' ' + money(x.qb.salary) + ' · ' + n1(x.qb.vegasPoints) : '—') + '<br>Catchers: ' + x.catchers.map(function (c) { return playerButton(c) + ' ' + money(c.salary) + ' · ' + n1(c.vegasPoints); }).join('; ') + '<br>Back: ' + (x.back ? e(x.back.name) + ' ' + money(x.back.salary) : '—') + '<br><b>QB + 2 stack:</b> ' + money(x.stackSalary) + ' for ' + n1(x.stackVegasPoints) + ' Vegas pts</div>'; };
+      return '<div class="df-stack"><h3>' + e(g.game) + ' · total ' + n1(g.total) + ' · implied ' + n1(g.impliedAway) + '–' + n1(g.impliedHome) + '</h3><div class="side">' + sideHtml(g.away, 'away') + sideHtml(g.home, 'home') + '</div><p class="is-note">Bring-back: ' + (g.bringBack.home ? e(g.bringBack.home.name) : '—') + ' for an away stack, ' + (g.bringBack.away ? e(g.bringBack.away.name) : '—') + ' for a home stack.</p></div>';
+    }).join('') || '<p class="is-empty">No game on this slate carries a posted total yet.</p>';
+  }
+  function tdBoard(s) {
+    var list = s.players.filter(function (p) { return p.onBoard && p.position !== 'DST'; }).sort(function (a, b) { return b.tdProbability - a.tdProbability; }).slice(0, 40);
+    $('dfTd').querySelector('tbody').innerHTML = list.map(function (p, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + playerButton(p) + ' <span class="is-status">' + e(p.position + ' · ' + p.team) + '</span></td><td class="num">' + money(p.salary) + '</td><td class="num"><b>' + n1(p.tdProbability) + '%</b></td><td class="num">' + n1(p.tdProbability / (p.salary / 1000)) + '</td><td class="num">' + n1(p.teamTotal) + '</td><td><span class="is-status">' + e(p.tdBasis) + '</span></td></tr>'; }).join('');
+    $('dfTd').hidden = !list.length;
+  }
+  function render() {
+    if (!slate) return;
+    $('dfCap').value = slate.cap;
+    refreshFppgHeads();
+    applyShape();
+    dashboard(slate); envTable(slate); values(slate); pool(slate); stacks(slate); tdBoard(slate);
+    // The lineup solves on load. It is the reason the page exists, and a Build
+    // button a reader has to find first is a page that answers nothing until
+    // they guess right.
+    build();
+  }
+
+  // ── pick'em ──────────────────────────────────────────────────────────────
+  // Underdog, PrizePicks and Sleeper are higher/lower on a posted stat line, so
+  // there is no salary and no cap and none of the sections above apply. The
+  // board is the market's implied line for the one stat each position is really
+  // priced on, against the model's own, off the same /api/boards every other
+  // surface reads.
+  var PICKEM = { pk: 'Underdog / PrizePicks', sl: 'Sleeper picks' };
+  var PRIMARY = { QB: ['passYd', 'Pass yds'], RB: ['rushYd', 'Rush yds'], WR: ['recYd', 'Rec yds'], TE: ['recYd', 'Rec yds'] };
+  var LEAN_PCT = 0.05;
+  var pickemLoaded = false;
+  function isPickem() { return site === 'pk' || site === 'sl'; }
+  function pickem(board) {
+    var rows = [];
+    (board && board.players || []).forEach(function (p) {
+      var m = PRIMARY[p.position];
+      if (!m || !p.vegas || !p.ironTuna || !p.games) return;
+      var line = p.vegas.stats ? p.vegas.stats[m[0]] : null;
+      var model = p.ironTuna.stats ? p.ironTuna.stats[m[0]] : null;
+      // QUOTED ONLY. With no posted prop the "line" is the game line applied to
+      // the player, which is what the model is built from too — so comparing
+      // them produces rounding, and a pick'em board of rounding is the worst
+      // thing this site could ship.
+      if (!(p.vegas.basis && p.vegas.basis.indexOf('props') === 0)) return;
+      if (line == null || model == null || line < 20) return;
+      var per = p.games || 1, l = line / per, mo = model / per;
+      rows.push({ name: p.name, pos: p.position, team: p.team, label: m[1], line: l, model: mo, pct: (mo - l) / l });
+    });
+    rows.sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
+    rows = rows.slice(0, 14);
+    if (!rows.length) {
+      $('pkState').textContent = 'No priced player prop has reached this board for the week, so there is no posted line to read the model against. Books have props up; this build is not carrying them. The board is blank rather than filled with the model compared to itself.';
+      return;
+    }
+    $('pkBody').innerHTML = rows.map(function (r) {
+      var lean = Math.abs(r.pct) < LEAN_PCT ? '<span class="is-tag is-flat">No lean</span>'
+        : '<span class="is-tag is-accent">' + (r.pct > 0 ? 'Over' : 'Under') + '</span>';
+      return '<tr><td class="is-who">' + e(r.name) + ' <small>' + e(r.pos + ' \u00b7 ' + r.team) + '</small></td>' +
+        '<td>' + e(r.label) + '</td><td class="num">' + n1(r.line) + '</td>' +
+        '<td class="num"><span class="is-val">' + n1(r.model) + '</span></td>' +
+        '<td class="num">' + (r.pct > 0 ? '+' : '') + (r.pct * 100).toFixed(0) + '%</td>' +
+        '<td>' + lean + '</td></tr>';
+    }).join('');
+    $('pkWrap').hidden = false;
+    $('pkState').hidden = true;
+  }
+  function loadPickem() {
+    $('pkVenue').textContent = PICKEM[site] || 'Pick’em';
+    if (pickemLoaded) return;
+    pickemLoaded = true;
+    fetch('/api/boards?horizon=week&pos=ALL&scoring=ppr', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.ok) pickem(j); else $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; })
+      .catch(function () { $('pkState').textContent = 'The player markets did not answer. The board is blank rather than stale.'; });
+  }
+  // ── the reader's own salary file ─────────────────────────────────────────
+  // Held in this browser and nowhere else: kept in memory for the session and
+  // mirrored to localStorage so a reload does not lose it. Storage can throw
+  // (private windows, a file past the quota), so every touch is guarded and
+  // the in-memory copy is what the page actually reads.
+  var upMem = {};
+  function upKey(s) { return 'it.dfs.csv.' + s; }
+  function upGet(s) { if (upMem[s]) return upMem[s]; try { return localStorage.getItem(upKey(s)) || ''; } catch (err) { return ''; } }
+  function upSet(s, csv) { upMem[s] = csv || ''; try { if (csv) localStorage.setItem(upKey(s), csv); else localStorage.removeItem(upKey(s)); } catch (err) {} }
+  function upState(msg, bad) { var el = $('dfUpState'); el.textContent = msg; el.className = 'df-up-state' + (bad ? ' bad' : ''); }
+
+  function slateOk(j) {
+    slate = j;
+    if (whatIfKey && !(j.players || []).some(function (p) { return p.key === whatIfKey; })) clearWhatIf(false);
+    var stamp = j.source === 'upload'
+      ? 'Priced from your own ' + (j.label || 'salary') + ' file. It was read in this browser and stored nowhere on the site.'
+      : 'Salaries as of ' + new Date(j.salariesAsOf).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET.';
+    $('dfNote').innerHTML = (j.note ? e(j.note) + ' ' : '') + e(stamp);
+    render();
+  }
+  function slateNone(msg, label) {
+    slate = null;
+    $('dfNote').textContent = msg;
+    $('dfEmpty').textContent = 'No ' + (label || 'site') + ' salaries are loaded for this week. The scoring environment still reads from the game lines on Game Intel.';
+    $('dfCards').innerHTML = ''; $('dfValues').hidden = true; $('dfTd').hidden = true;
+    $('dfStacks').innerHTML = ''; $('dfPool').querySelector('tbody').innerHTML = '';
+    $('dfLineups').innerHTML = '<p class="is-empty">There is no lineup to solve until the salaries are posted. Upload your own contest\u2019s salary file above and the roster builds off that.</p>';
+    $('dfPivots').innerHTML = ''; built = null;
+  }
+  // Price the reader's file. A file the parser refuses is theirs to fix, so the
+  // reason is printed and the page falls back to the site's own slate rather
+  // than sitting on a blank board — and a refused file is not kept.
+  function loadUpload(csv) {
+    upState('Reading your file\u2026', false);
+    fetch('/api/dfs/slate', { method: 'POST', headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ site: site, csv: csv, contest: contest }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) {
+          upSet(site, ''); $('dfUpClear').hidden = true;
+          upState((j && j.note) || 'That file could not be read.', true);
+          loadSite();
+          return;
+        }
+        upSet(site, csv);
+        $('dfUpClear').hidden = false;
+        upState('Your file: ' + j.players.length + ' priced rows'
+                + (j.unmatched ? ' \u00b7 ' + j.unmatched + ' of them are not on this week\u2019s board' : '')
+                + '. Stored in this browser only.', false);
+        slateOk(j);
+      })
+      .catch(function () { upState('The slate did not answer. Your file was not read.', true); });
+  }
+  function loadSite() {
+    fetch('/api/dfs?site=' + site + '&contest=' + encodeURIComponent(contest)).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) { slateNone((j && j.note) || 'No salaries are loaded for this week.', j && j.label); return; }
+      slateOk(j);
+    }).catch(function () { $('dfNote').textContent = 'The slate did not answer.'; });
+  }
+  function load() {
+    press($('dfSite'), 'data-site', site);
+    if (isPickem()) {
+      $('dfSiteNote').textContent = 'Higher or lower on a posted stat line; the board shows where the model leans. No cap, no salaries.';
+      $('dfNav').hidden = true;
+      SEC_IDS.forEach(function (k) { $('sec-' + k).hidden = true; });
+      $('sec-pickem').hidden = false;
+      $('dfUp').hidden = true;
+      $('dfShape').hidden = true; $('dfShapeNote').hidden = true;
+      $('dfNote').textContent = '';
+      loadPickem();
+      return;
+    }
+    $('sec-pickem').hidden = true;
+    $('dfNav').hidden = false;
+    $('dfUp').hidden = false;
+    $('dfShape').hidden = false; $('dfShapeNote').hidden = false;
+    applyShape();
+    $('dfSiteNote').textContent = 'Classic salary cap \u00b7 ' + (site === 'fd' ? '$60,000' : '$50,000') + '. ' + fppgLabel() + ' is the operator’s historical average; Iron Tuna is the forward projection for this week.';
+    show();
+    var mine = upGet(site);
+    $('dfUpClear').hidden = !mine;
+    if (!mine) upState('Playing a different slate? Export the salary CSV from your contest lobby and price it here. It stays in this browser.', false);
+    if (mine) loadUpload(mine); else loadSite();
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    press($('dfMode'), 'data-mode', mode); applyShape(); show();
+    $('dfSite').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; site = b.getAttribute('data-site'); marks = {}; clearWhatIf(false); load(); });
+    $('dfWhatIfInput').addEventListener('input', renderWhatIfList);
+    $('dfWhatIfInput').addEventListener('focus', renderWhatIfList);
+    $('dfWhatIfInput').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); chooseBestWhatIf(); }
+      if (ev.key === 'Escape') $('dfWhatIfList').hidden = true;
+    });
+    $('dfWhatIfList').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-whatif-key]'); if (!b) return;
+      var key = b.getAttribute('data-whatif-key');
+      var p = whatIfPlayers().find(function (x) { return x.key === key; });
+      setWhatIf(p);
+    });
+    $('dfWhatIfClear').addEventListener('click', function () { clearWhatIf(true); });
+    // The salary file. The server caps the body at a million characters, so a
+    // file past that is refused here rather than truncated into a CSV that
+    // parses and quietly leaves half the slate off the board.
+    $('dfUpFile').addEventListener('change', function (ev) {
+      var f = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (!f) return;
+      if (f.size > 1000000) { upState('That file is larger than a salary export should be. Upload the CSV the contest lobby gives you.', true); return; }
+      var fr = new FileReader();
+      fr.onload = function () { marks = {}; loadUpload(String(fr.result || '')); };
+      fr.onerror = function () { upState('That file could not be read from your computer.', true); };
+      fr.readAsText(f);
+    });
+    $('dfUpPaste').addEventListener('click', function () {
+      var open = $('dfUpText').hidden;
+      $('dfUpText').hidden = !open; $('dfUpReadRow').hidden = !open;
+      if (open) $('dfUpText').focus();
+    });
+    $('dfUpRead').addEventListener('click', function () {
+      var csv = $('dfUpText').value;
+      if (!csv.trim()) { upState('Paste the salary CSV first.', true); return; }
+      marks = {}; loadUpload(csv);
+    });
+    $('dfUpClear').addEventListener('click', function () {
+      upSet(site, ''); marks = {};
+      $('dfUpClear').hidden = true; $('dfUpText').value = ''; $('dfUpText').hidden = true; $('dfUpReadRow').hidden = true;
+      upState('Back on the site\u2019s slate. Your file is gone from this browser.', false);
+      loadSite();
+    });
+    $('dfNav').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; sec = b.getAttribute('data-sec'); show(); });
+    $('dfBoard').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; board = b.getAttribute('data-board'); if (slate) values(slate); });
+    // The shape switch is the page's primary control: it re-solves the roster,
+    // re-sorts the values table (the server sorts that one, hence the reload)
+    // and re-labels the branches.
+    $('dfShape').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b) return;
+      contest = b.getAttribute('data-contest');
+      applyShape(); load();
+      try { navigator.sendBeacon && navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ event: 'dfs_contest', uid: localStorage.getItem('it.uid') || '', props: { path: location.pathname, contest: contest, site: site } })], { type: 'application/json' })); } catch (x) {}
+    });
+    desk();
+    // Anything moved by hand in the fine-tune panel takes the build off the
+    // preset and rebuilds immediately, so the roster on screen always matches
+    // the controls under it.
+    $('dfMode').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mode = b.getAttribute('data-mode'); press(this, 'data-mode', mode); tuned = true; build(); });
+    $('dfTune').addEventListener('change', function (ev) { if (ev.target.closest('#dfMode')) return; tuned = true; build(); });
+    $('dfBuild').addEventListener('click', function () { tuned = true; build(); });
+    $('dfPool').addEventListener('click', function (ev) { if (ev.target.closest('.df-player-link')) return; var td = ev.target.closest('td.p'); if (!td) return; var k = td.getAttribute('data-key'); marks[k] = marks[k] === 'lock' ? 'excl' : marks[k] === 'excl' ? '' : 'lock'; if (slate) pool(slate); tuned = true; build(); });
+    document.addEventListener('click', function (ev) {
+      var wi = ev.target.closest('[data-player-whatif]');
+      if (wi) {
+        var p0 = whatIfPlayers().find(function (p) { return p.key === wi.getAttribute('data-player-whatif'); });
+        closePlayerCalc(); setWhatIf(p0); return;
+      }
+      var player = ev.target.closest('.df-player-link');
+      if (player) {
+        ev.preventDefault(); ev.stopPropagation();
+        openPlayerCalc(findSlatePlayer(player));
+        return;
+      }
+      if (ev.target.closest('[data-player-close]')) closePlayerCalc();
+    });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !$('dfPlayerModal').hidden) closePlayerCalc(); });
+    // Copy takes the roster to the clipboard as names, which is what every
+    // lobby's paste box wants. It copies; it does not enter anything.
+    $('dfLineups').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-copy]'); if (!b || !built) return;
+      var l = built.lineups[parseInt(b.getAttribute('data-copy'), 10)]; if (!l) return;
+      var text = l.players.map(function (p) { return p.slot + '  ' + p.name + '  ' + money(p.salary); }).join('\n');
+      var done = function () { var was = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = was; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {});
+      else done();
+    });
+    load();
+  });
+})();
+</script>
+<!--chrome:navjs--><script>
+(function(){
+  var h=document.querySelector('header.site'), b=h&&h.querySelector('.nav-toggle');
+  if(!h||!b) return;
+  function set(open){
+    h.setAttribute('data-nav-open', open?'1':'0');
+    b.setAttribute('aria-expanded', open?'true':'false');
+  }
+  b.addEventListener('click',function(){ set(h.getAttribute('data-nav-open')!=='1') });
+  /* Escape closes it, and focus goes back to the button that opened it. */
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&h.getAttribute('data-nav-open')==='1'){ set(false); b.focus() }
+  });
+  /* A tap outside the open menu closes it. */
+  document.addEventListener('click',function(e){
+    if(h.getAttribute('data-nav-open')==='1'&&!h.contains(e.target)) set(false);
+  });
+})();
+</script><!--/chrome:navjs-->
+</body>
+</html>
+), 'Salary used');
     var rows = l.players.map(function (p) {
       return '<tr><td><span class="df-slot' + (p.slot === 'QB' ? ' qb' : '') + '">' + e(p.slot) + '</span></td>'
         + '<td>' + playerButton(p) + playerTag(p, qb) + '<br><span class="is-status">' + e(p.position + ' \u00b7 ' + p.team + (p.opponent ? (' vs ' + p.opponent) : '')) + '</span></td>'
