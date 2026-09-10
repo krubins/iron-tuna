@@ -146,7 +146,7 @@ console.log('\nthe DFS page explanations');
   ok('the contest cards explain how the objectives change', page.includes('How they differ:') && page.includes('floor and safety toward ceiling, correlation and leverage'));
   ok('player names expose a calculation drawer', page.includes('id="dfPlayerModal"') && page.includes('function openPlayerCalc') && page.includes('df-player-link'));
   ok('the player drawer labels modeled ownership as a model', page.includes('Modeled ownership') && page.includes('not an operator or third-party ownership feed'));
-  ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DK FPPG') && page.includes('IT Edge') && page.includes('historical fantasy-points-per-game average'));
+  ok('DraftKings FPPG is always paired with the Iron Tuna projection and edge', page.includes('DraftKings FPPG') && page.includes('Iron Tuna Projection') && page.includes('Iron Tuna Edge') && page.includes('historical fantasy-points-per-game average'));
   ok('the DFS What If box autocompletes from typed player names', page.includes('id="dfWhatIfInput"') && page.includes('function renderWhatIfList') && page.includes("addEventListener('input', renderWhatIfList)") && page.includes('data-whatif-key'));
   ok('the What If selection becomes an optimizer lock', page.includes("if (whatIfKey && lock.indexOf(whatIfKey) < 0) lock.push(whatIfKey)"));
   const scripts = [...page.matchAll(/<script(?![^>]*type=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).filter(Boolean);
