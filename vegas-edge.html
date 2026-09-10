@@ -90,6 +90,36 @@ p{color:var(--sec);margin:0 0 16px}
 <h1>The market and the rankings do not agree, and the gap is the edge</h1>
 <p class="is-lede">A sportsbook posts a number with its own money behind it, and sharp bettors move it within minutes of news. A top 200 costs nothing to publish and nothing to be wrong about. These are the players where the two are furthest apart.</p>
 <div class="its-strip" data-season-strip></div>
+<!-- The picture the front page sells this page with (front.html, .fp-viz — the
+     "Vegas Edge" card), redrawn here as its own panel so the thing a reader
+     clicked survives the click. The line and the two readings are illustrative
+     and the foot line says so; the live boards are directly below it, and this
+     panel deliberately fetches nothing. -->
+<figure class="it-viz" role="img" aria-label="An illustration of the page: a game total climbing from the number the book opened to the number it posts now, beside an implied total of 27.5 points and a line move of plus 2.5.">
+  <p class="it-viz-kicker">Vegas Edge</p>
+  <p class="it-viz-sub">Model vs. market on every game line</p>
+  <div class="it-viz-body">
+    <div>
+      <div class="it-viz-chart">
+        <svg viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <defs><linearGradient id="itvVegasFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f2a900" stop-opacity="0.36"/><stop offset="1" stop-color="#f2a900" stop-opacity="0"/>
+          </linearGradient></defs>
+          <g class="it-viz-grid"><path d="M0 25 H300"/><path d="M0 50 H300"/><path d="M0 75 H300"/></g>
+          <path d="M0 86 L50 67.7 L100.7 73.8 L150 46.4 L199.3 55.6 L250.7 28.2 L300 16 L300 100 L0 100 Z" fill="url(#itvVegasFill)"/>
+          <polyline class="it-viz-line gold" points="0,86 50,67.7 100.7,73.8 150,46.4 199.3,55.6 250.7,28.2 300,16"/>
+        </svg>
+        <span class="it-viz-dot" style="left:100%;top:16%"></span>
+      </div>
+      <div class="it-viz-axis"><span>Line opens</span><span>Now</span></div>
+    </div>
+    <div class="it-viz-tiles">
+      <div class="it-viz-tile"><span>Implied total</span><b>27.5</b></div>
+      <div class="it-viz-tile gold"><span>Line move</span><b>+2.5</b></div>
+    </div>
+  </div>
+  <p class="it-viz-foot">Open to current, off the median book <i>&middot; illustrative</i></p>
+</figure>
 
 <p class="is-note" id="veNote"></p>
 

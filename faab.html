@@ -161,6 +161,37 @@ table.fa .mine{color:var(--teal);font-weight:800}
 <p class="lede">A waiver claim in a FAAB league is a blind auction against the same people you drafted against. This prices the whole free-agent pool in your league&rsquo;s dollars, reads every rival&rsquo;s remaining budget, and tells you the number.</p>
 </div>
 
+<!-- The picture the front page sells this tool with (front.html, .fp-viz — the
+     "FAAB Advisor" card), redrawn here as its own panel so the thing a reader
+     clicked survives the click. One bar per manager, the gold one the reader's
+     own claim, the rest what each rival's remaining budget can justify. The
+     figures are illustrative and the foot line says so; the reader's real
+     numbers render below as soon as a league is connected, and this panel
+     deliberately fetches nothing. -->
+<figure class="it-viz" role="img" aria-label="An illustration of the tool: one bar per manager, each the most that rival&rsquo;s remaining budget can justify on the same claim &mdash; $19 the highest of them &mdash; against your own bid of $27.">
+  <p class="it-viz-kicker">FAAB Advisor</p>
+  <p class="it-viz-sub">Priced in your league&rsquo;s dollars</p>
+  <div class="it-viz-body">
+    <div>
+      <div class="it-viz-bars">
+        <div class="it-viz-bar you" style="--h:100%"><b>$27</b><i></i></div>
+        <div class="it-viz-bar" style="--h:70%"><b>$19</b><i></i></div>
+        <div class="it-viz-bar" style="--h:56%"><b>$15</b><i></i></div>
+        <div class="it-viz-bar" style="--h:67%"><b>$18</b><i></i></div>
+        <div class="it-viz-bar" style="--h:41%"><b>$11</b><i></i></div>
+        <div class="it-viz-bar" style="--h:59%"><b>$16</b><i></i></div>
+      </div>
+      <div class="it-viz-names"><span>You</span><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span></div>
+      <div class="it-viz-axis"><span>The most each rival&rsquo;s remaining budget can justify</span></div>
+    </div>
+    <div class="it-viz-tiles">
+      <div class="it-viz-tile"><span>Going rate</span><b>$19</b></div>
+      <div class="it-viz-tile gold"><span>What you should bid</span><b>$27</b></div>
+    </div>
+  </div>
+  <p class="it-viz-foot">Every free agent, in your league&rsquo;s dollars <i>&middot; illustrative</i></p>
+</figure>
+
 <div class="its-strip-sync" id="faSync" hidden></div>
 <div id="faCta" hidden></div>
 <!-- The synced room: the Pickup Advisor on players nobody in THIS league
