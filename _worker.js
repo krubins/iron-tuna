@@ -1520,9 +1520,20 @@ async function tmsRoutes(request, env, url) {
     const kind = url.searchParams.get('kind'), player = (url.searchParams.get('player') || '').toLowerCase().slice(0, 100);
     const items = tmsSignals(rows, now, tmsList(env.TMS_SHARP_BOOKS)).filter(r => (!kind || (kind === 'props' ? !!r.player : !r.player)) && (!player || r.player.toLowerCase().includes(player)));
     const state = await env.LEADS_DB.prepare("SELECT status,updated,next_poll FROM tuna_market_state WHERE id='poll'").first();
+    // Public output is a transformed market signal, not a substitute odds feed.
+    // Keep book identity, raw current price/line, source URL and observation
+    // history server-side. The user-facing product is the movement/consensus
+    // analysis Iron Tuna derives from those observations.
+    const publicItems = items.slice(0, 200).map(r => ({
+      event: r.event, sport: r.sport, market: r.market, player: r.player, matchup: r.matchup, side: r.side,
+      observed: r.observed, updated: r.updated, stale: r.stale, comparable: r.comparable, score: r.score,
+      lineDelta: r.lineDelta, probabilityDelta: r.probabilityDelta,
+      consensusProbability: r.consensusProbability, books: r.books, sharpGap: r.sharpGap,
+      publicSplit: r.publicSplit
+    }));
     return json({ status: items.length ? 'ok' : 'collecting', windowHours: 24, truncated: records.results?.length === 1000,
       health: state ? { ...JSON.parse(state.status || '{}'), updated: state.updated, nextPoll: state.next_poll } : null,
-      total: items.length, items: items.slice(0, 200) });
+      total: items.length, items: publicItems });
   } catch { return json({ error: 'market_temporarily_unavailable', items: [] }, 503); }
 }
 // TUNA MARKET SIGNAL END
