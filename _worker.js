@@ -9004,6 +9004,15 @@ async function runContentTick(env) {
 }
 const _bylineOf = (row) => { const a = ANALYSTS[row.analyst] || ANALYST_HOUSE; const K = CONTENT_KINDS[row.kind]; const d = K ? (ANALYSTS[K.dfsAnalyst] || ANALYST_HOUSE) : ANALYST_HOUSE; return { analyst: a.id, name: a.name, role: a.role, avatar: a.avatar, dfsAnalyst: d.id, dfsName: d.name }; };
 const _pieceUrl = (row) => '/in-season/desk/' + row.kind + '/' + row.week;
+// The title a published piece carries: the one it was STORED under, not the
+// calendar's. The calendar title is only a default; the week's games can move
+// it (a Wednesday opener is not Thursday night), and reading it back off
+// CONTENT_KINDS put the wrong day on the front page. Stored with the edition
+// trailer the desk adds (' · Week 2', ' · update 2'), which the
+// feeds add back themselves, so it comes off here. A legacy row with no title
+// falls back to the calendar, then to the kind.
+const _pieceTitle = (row) => String(row.title || '').split(' \u00b7 ')[0].trim()
+  || (CONTENT_KINDS[row.kind] ? CONTENT_KINDS[row.kind].title : row.kind);
 async function contentListPayload(env, season, week) {
   if (!(await contentReady(env))) return { ok: false, error: 'no_db' };
   await newsroomReady(env);
@@ -9031,7 +9040,7 @@ async function contentPiecePayload(env, kind, season, week) {
     // A held piece ships its PACKET and not its draft: the data is right by
     // construction, the prose was not.
     const pub = brief && brief.meta ? { meta: brief.meta, freshness: brief.freshness, rivalry: brief.rivalry, priorCalls: brief.priorCalls, dfs: brief.dfs, ...Object.fromEntries(Object.entries(brief).filter(([k]) => !['allowed', 'playerIndex', 'rivalryBudget', 'colleagues'].includes(k))) } : brief;
-    return { ok: true, contract: CONTENT_CONTRACT, kind, title: row.title, subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
+    return { ok: true, contract: CONTENT_CONTRACT, kind, title: _pieceTitle(row), subtitle: K ? K.subtitle || null : null, dfsTitle: K ? K.dfsTitle || null : null, status: row.status, week: row.week, season: row.season, version: row.version || 1,
              headline: row.headline || null, dek: row.dek || null, byline: _bylineOf(row), lens: row.lens || (K ? K.lens : 'weekly'), legacy: !K,
              createdAt: row.created_at, publishedAt: row.published_at, sections: { weekly: sectionsFor(kind, 'weekly'), dfs: sectionsFor(kind, 'dfs') }, objectSections: NEWSROOM_OBJECT_SECTIONS,
              body: row.status === 'published' ? parse(row.body) : null, brief: pub, rivalry: row.rivalry ? parse(row.rivalry) : null, violations: row.status === 'held' ? parse(row.violations) : null, disclosure: AI_DISCLOSURE };
@@ -9047,7 +9056,7 @@ async function newsroomFeedPayload(env, lens, limit) {
     const q = await env.LEADS_DB.prepare("SELECT kind, slug, title, status, week, season, created_at, published_at, analyst, lens, version, headline, dek, rivalry FROM content_pieces WHERE status = 'published' ORDER BY published_at DESC LIMIT ?").bind(Math.min(60, limit || 20)).all();
     let rows = (q.results || []);
     if (lens === 'dfs') rows = rows.filter(r => r.lens === 'both' || r.lens === 'dfs');
-    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].title : r.title, dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry })) };
+    return { ok: true, lens: lens || 'weekly', disclosure: AI_DISCLOSURE, pieces: rows.map(r => ({ kind: r.kind, title: _pieceTitle(r), dfsTitle: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].dfsTitle || null : null, week: r.week, headline: r.headline, dek: r.dek, version: r.version || 1, publishedAt: r.published_at, url: _pieceUrl(r) + (lens === 'dfs' ? '?lens=dfs' : ''), byline: _bylineOf(r), rivalry: !!r.rivalry })) };
   } catch (e) { return { ok: false, error: 'unavailable' }; }
 }
 // The front page's lead, in the regular season: the newest published piece,
@@ -9075,14 +9084,14 @@ function deskNextPayload(state, sched, now) {
     let d = null;
     try { d = contentDue(kind, now, state, sched); } catch (e) { continue; }
     if (!d || d.skip || !Number.isFinite(d.dueAt) || d.dueAt === Number.MAX_SAFE_INTEGER || d.dueAt <= now) continue;
-    if (!best || d.dueAt < best.at) best = { kind, K, at: d.dueAt, week: d.week };
+    if (!best || d.dueAt < best.at) best = { kind, K, d, at: d.dueAt, week: d.week };
   }
   if (!best) return null;
   const p = etParts(best.at);
   const day = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }[p.dow] || p.dow;
   const when = day + ' at ' + (p.hour % 12 || 12) + ':' + String(p.minute).padStart(2, '0') + ' ' + (p.hour < 12 ? 'AM' : 'PM') + ' ET';
   const a = ANALYSTS[best.K.analyst] || ANALYST_HOUSE;
-  const story = { slug: 'desk:next:' + best.kind, url: '/in-season/desk', title: 'Next from the desk: ' + best.K.title, dek: (best.K.summary || '') + ' Publishes ' + when + '.',
+  const story = { slug: 'desk:next:' + best.kind, url: '/in-season/desk', title: 'Next from the desk: ' + kindTitle(best.K, best.d), dek: (best.K.summary || '') + ' Publishes ' + when + '.',
                   label: 'The Desk', category: 'desk', placeholder: true, analyst: a.name, analystId: a.id, createdAt: best.at, players: [], names: [], cast: [] };
   return { ok: true, source: 'desk-next', story, recent: [] };
 }
@@ -9099,7 +9108,7 @@ async function analystPayload(env, id) {
   let pieces = [];
   if (await contentReady(env)) {
     await newsroomReady(env);
-    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, week, headline, dek, published_at, rivalry FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: CONTENT_KINDS[r.kind] ? CONTENT_KINDS[r.kind].title : r.kind, week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
+    try { pieces = ((await env.LEADS_DB.prepare("SELECT kind, title, week, headline, dek, published_at, rivalry FROM content_pieces WHERE status = 'published' AND analyst = ? ORDER BY published_at DESC LIMIT 12").bind(id).all()).results || []).map(r => ({ kind: r.kind, title: _pieceTitle(r), week: r.week, headline: r.headline, dek: r.dek, publishedAt: r.published_at, url: _pieceUrl(r), rivalry: !!r.rivalry })); } catch (e) {}
   }
   const calls = await analystCalls(env, id, 20);
   const record = calls.reduce((m, c) => { if (c.outcome) m[c.outcome] = (m[c.outcome] || 0) + 1; return m; }, {});
