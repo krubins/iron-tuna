@@ -14,7 +14,7 @@ const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i <
 
 // Real ET clock helpers from the worker; stubbed jobs that record their runs.
 const runs = [];
-const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'calls-grade', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
+const JOB_FNS = Object.fromEntries(['schedule-refresh', 'odds-refresh', 'availability-refresh', 'market-snapshot', 'usage-refresh', 'dfs-refresh', 'depth-charts', 'ros-snapshot', 'calls-grade', 'rivalry-column', 'news-scan', 'snapshot-prune', 'analytics-prune', 'job-prune', 'content-tick', 'league-sync'].map(j => [j, async () => ({ ok: true })]));
 const jobRun = async (env, name, trigger) => {
   const rec = { job: name, trigger, started: Date.now() }; runs.push(rec);
   if (name === 'schedule-refresh') await new Promise(r => setTimeout(r, 30));
@@ -42,6 +42,7 @@ console.log('\nthe table against the spec');
   ok('the news scan is quarter-hourly, phase 2', of('news-scan').length === 1 && of('news-scan')[0].minutes.length === 4 && of('news-scan')[0].phase === 2);
   ok('Sunday inactives are pulled every quarter hour from 10 AM', of('availability-refresh').some(e => e.days && e.days.join() === 'Sun' && e.minutes && e.minutes.length === 4 && e.hours.includes(11)));
   ok('the calls grader runs after the usage file lands', of('calls-grade').length === 1 && of('calls-grade')[0].days.join() === 'Tue,Wed' && of('calls-grade')[0].hours.join() === '6');
+  ok('the rivalry column is built Thursday morning, hours before the first kickoff, and retried after', of('rivalry-column').length === 1 && of('rivalry-column')[0].days.join() === 'Thu,Fri,Sat' && of('rivalry-column')[0].hours.join() === '8' && of('rivalry-column')[0].phase === 2);
   ok('the schedule refresh is hourly and first', of('schedule-refresh')[0].hours === 'hourly' && of('schedule-refresh')[0].phase === 1);
   ok('betting lines are sampled every three hours and hourly on Sunday', of('market-snapshot').some(e => !e.days && e.hours.length === 8) && of('market-snapshot').some(e => e.days && e.days.join() === 'Sun' && e.hours.length === 15));
   ok('the injury list refreshes more than once a day', of('availability-refresh')[0].hours.length >= 3);

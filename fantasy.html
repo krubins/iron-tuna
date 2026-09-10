@@ -66,7 +66,11 @@ section{margin:0 0 var(--space-6)}
 .fn-riv-head b{display:block;font-size:var(--fs-md);line-height:1.2}
 .fn-riv-head a{color:inherit}
 .fn-riv-head small{display:block;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.fn-riv-rec{margin-left:auto;text-align:right;font-size:var(--fs-3xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);line-height:1.35}
+.fn-riv-rec b{display:block;font-size:var(--fs-md);letter-spacing:0;color:var(--text)}
 .fn-riv-stand{margin:var(--space-3) 0 0;font-size:var(--fs-sm);line-height:1.55;font-style:italic;color:var(--muted)}
+.fn-riv-foot{grid-column:1/-1;border-top:1px solid var(--line);padding-top:var(--space-3);font-size:var(--fs-sm);line-height:1.55;color:var(--sec)}
+.fn-riv-foot p{margin:0 0 var(--space-2)}.fn-riv-foot p:last-child{margin:0}.fn-riv-foot b{color:var(--text)}
 .fn-riv-pick{padding:var(--space-3) 0;border-top:1px solid var(--line)}
 .fn-riv-pick h3{margin:0;font-size:var(--fs-md);line-height:1.3}
 .fn-riv-pick h3 small{font-weight:400;font-size:var(--fs-3xs);color:var(--muted);margin-left:6px}
@@ -613,16 +617,35 @@ section{margin:0 0 var(--space-6)}
     var cols = (j && j.ok && j.columns) || {};
     var wrote = ['vega', 'brooks'].filter(function (k) { return cols[k] && cols[k].picks && cols[k].picks.length; });
     if (!wrote.length) { $('fnDisEmpty').textContent = 'The two methods agree within six places on every startable player this week. Neither of them has a case to make.'; return; }
+    var r3 = function (rec) { return rec.hit + '\u2013' + rec.miss + (rec.push ? '\u2013' + rec.push : ''); };
+    // The scoreboard under the two columns: how the last settled week went, and
+    // whether what is above it is on the record yet.
+    var foot = function (j) {
+      var lw = j.lastWeek, told = '';
+      if (lw) {
+        var line = function (k, name) {
+          var w = lw[k]; if (!w || !w.of) return '';
+          var best = w.best ? ' ' + e(w.best.player) + ' finished ' + e(w.best.position + w.best.finish) + ' against ' + e(w.best.position + w.best.theirs) + '.' : '';
+          return '<b>' + e(name) + ' went ' + e(w.hit) + ' of ' + e(w.of) + '</b>' + (w.push ? ' (' + e(w.push) + ' pushed)' : '') + '.' + best;
+        };
+        var v = line('vega', 'Vega'), b = line('brooks', 'Brooks');
+        if (v || b) told = '<p>Week ' + e(lw.week) + ', settled on the real finishes: ' + [v, b].filter(Boolean).join(' ') + '</p>';
+      }
+      return '<div class="fn-riv-foot">' + told + '<p>' + (j.locked
+        ? 'These ten picks were locked before kickoff and go on each man&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.'
+        : 'This week&rsquo;s column is a live read of the two boards. It locks on Thursday morning, before the first kickoff, and only then does it go on the record.') + '</p></div>';
+    };
     $('fnDisWrap').innerHTML = wrote.map(function (k) {
       var c = cols[k];
-      return '<div class="fn-riv-col"><div class="fn-riv-head"><span class="fn-riv-av">' + e(c.avatar) + '</span><div><b><a href="' + e(c.url) + '">' + e(c.name) + '</a></b><small>' + e(c.label) + '</small></div></div>' +
+      var rec = c.record && c.record.graded ? '<span class="fn-riv-rec" title="Hit, miss and push on every column pick graded this season"><b>' + e(r3(c.record)) + '</b>on the record</span>' : '';
+      return '<div class="fn-riv-col"><div class="fn-riv-head"><span class="fn-riv-av">' + e(c.avatar) + '</span><div><b><a href="' + e(c.url) + '">' + e(c.name) + '</a></b><small>' + e(c.label) + '</small></div>' + rec + '</div>' +
         '<p class="fn-riv-stand">' + e(c.standfirst) + '</p>' +
         c.picks.map(function (p) {
           return '<article class="fn-riv-pick"><h3>' + e(p.name) + '<small>' + e(p.position + ' \u00b7 ' + p.team) + '</small></h3>' +
             '<p class="fn-riv-ranks"><b>' + e(c.avatar + ' ' + p.position + p.mineRank) + '</b><i>against</i>' + e(c.against.avatar + ' ' + p.position + p.theirsRank) + '</p>' +
             '<p>' + e(p.pitch) + '</p></article>';
         }).join('') + '</div>';
-    }).join('');
+    }).join('') + foot(j);
     $('fnDisWrap').hidden = false; $('fnDisEmpty').hidden = true;
   }).catch(function () { $('fnDisEmpty').textContent = 'The boards did not answer.'; });
 })();

@@ -151,7 +151,11 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dg-head b{display:block;font-size:16px;line-height:1.2}
 .dg-head a{color:inherit;text-decoration:none}.dg-head a:hover{text-decoration:underline}
 .dg-head small{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
+.dg-rec{margin-left:auto;text-align:right;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sec,#5a6b78);line-height:1.35}
+.dg-rec b{display:block;font-size:15px;letter-spacing:0;color:var(--ink,#0f1719)}
 .dg-stand{margin:10px 0 4px;font-size:14px;line-height:1.5;font-style:italic;color:var(--sec,#5a6b78)}
+.dg-settled{margin:0 0 8px;font-size:14px;line-height:1.5}
+.dg-settled b{font-weight:800}
 .dg-pick{padding:10px 0;border-top:1px solid var(--line,#e6ebef)}
 .dg-pick h4{margin:0;font-size:15px;line-height:1.25}
 .dg-pick h4 small{font-weight:400;font-size:11.5px;color:var(--sec,#5a6b78);margin-left:5px}
@@ -159,7 +163,7 @@ html[data-season="in"] #today [data-draft-only],html:not([data-season="in"]) #to
 .dg-ranks b{color:var(--ink,#0f1719)}.dg-ranks i{font-style:normal;font-weight:400;margin:0 5px}
 .dg-pick p{margin:0;font-size:14px;line-height:1.5}
 .dg-side h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal,#0e7c63)}
-.dg-side p{margin:0 0 8px;font-size:14px;line-height:1.45}.dg-line{font-style:italic;color:var(--sec,#5a6b78)}
+.dg-side p{margin:0 0 8px;font-size:14px;line-height:1.45}
 .dg-foot{grid-column:1/-1;border-top:1px solid var(--line,#e6ebef);padding-top:12px}
 @media(max-width:800px){.dg-wrap{grid-template-columns:1fr}}
 /* Auction or snake is a question about a draft. It has no answer on a slate. */
@@ -4688,12 +4692,29 @@ var COLUMN = [{"id":"call-2026-09-08-1","title":"Jeff Hafley has coached defense
           '<p class="dg-ranks"><b>' + esc(c.avatar + ' ' + p.position + p.mineRank) + '</b><i>against</i>' + esc(c.against.avatar + ' ' + p.position + p.theirsRank) + '</p>' +
           '<p>' + esc(p.pitch) + '</p></article>';
       }).join('');
-      return '<div class="dg-col"><div class="dg-head"><span class="dg-av">' + esc(c.avatar) + '</span><div><b><a href="' + esc(c.url) + '">' + esc(c.name) + '</a></b><small>' + esc(c.label) + '</small></div></div>' +
+      var r = c.record && c.record.graded ? '<span class="dg-rec" title="Hit, miss and push on every column pick graded this season"><b>' + esc(r3(c.record)) + '</b>on the record</span>' : '';
+      return '<div class="dg-col"><div class="dg-head"><span class="dg-av">' + esc(c.avatar) + '</span><div><b><a href="' + esc(c.url) + '">' + esc(c.name) + '</a></b><small>' + esc(c.label) + '</small></div>' + r + '</div>' +
         '<p class="dg-stand">' + esc(c.standfirst) + '</p>' + picks + '</div>';
     };
-    var lines = (j.recentLines || []).slice(0, 2).map(function (l) { return '<p class="dg-line">' + esc(l.line || (l.player + ': Brooks ' + l.position + l.brooks.rank + ', Vega ' + l.position + l.vega.rank)) + ' <a href="' + esc(l.url) + '">&rarr;</a></p>'; }).join('');
+    // "4-1" or "4-1-1": the push only appears when there was one.
+    function r3(rec) { return rec.hit + '\u2013' + rec.miss + (rec.push ? '\u2013' + rec.push : ''); }
+    // How the last settled week actually went, in a sentence per man, with the
+    // biggest win named. A rivalry with no scoreboard is banter.
+    function settled(lw) {
+      if (!lw) return '';
+      var line = function (k, name) {
+        var w = lw[k]; if (!w || !w.of) return '';
+        var best = w.best ? ' ' + esc(w.best.player) + ' finished ' + esc(w.best.position + w.best.finish) + ' against ' + esc(w.best.position + w.best.theirs) + '.' : '';
+        return '<b>' + esc(name) + ' went ' + esc(w.hit) + ' of ' + esc(w.of) + '</b>' + (w.push ? ' (' + esc(w.push) + ' pushed)' : '') + '.' + best;
+      };
+      var v = line('vega', 'Vega'), b = line('brooks', 'Brooks');
+      return v || b ? '<p class="dg-settled">Week ' + esc(lw.week) + ', settled on the real finishes: ' + [v, b].filter(Boolean).join(' ') + '</p>' : '';
+    }
+    // The footer used to carry the rivalry lines out of the week's pieces too.
+    // The settled ledger says the same thing better, and the newsroom band
+    // directly overhead already tags the pieces that carry the argument.
     el.innerHTML = wrote.map(function (k) { return column(cols[k]); }).join('') +
-      '<div class="dg-side dg-foot"><h4>The desk&rsquo;s one standing argument</h4><p><a href="/analysts/brooks"><b>Evan Brooks</b></a> ranks from talent, role, workload and schedule; the market is one input. <a href="/analysts/vega"><b>Nate Vega</b></a> ranks from what the sportsbooks price; the ranking is one opinion. Every pitch above is read off the same board, at both ends of the same slider. Neither is always right, and the desk says so when one of them was.</p>' + lines + '<p><a href="/rankings#blend=50">Move the slider between them on the rankings page &rarr;</a></p></div>';
+      '<div class="dg-side dg-foot"><h4>The desk&rsquo;s one standing argument</h4>' + settled(j.lastWeek) + '<p><a href="/analysts/brooks"><b>Evan Brooks</b></a> ranks from talent, role, workload and schedule; the market is one input. <a href="/analysts/vega"><b>Nate Vega</b></a> ranks from what the sportsbooks price; the ranking is one opinion. Every pitch above is read off the same board, at both ends of the same slider.</p><p>' + (j.locked ? 'This week&rsquo;s ten picks were locked before kickoff and go on each man&rsquo;s record: a pick is a hit only if the player finishes ahead of the rank the other one gave him.' : 'This week&rsquo;s column is a live read of the two boards. It locks on Thursday morning, before the first kickoff, and only then does it go on the record.') + '</p><p><a href="/rankings#blend=50">Move the slider between them on the rankings page &rarr;</a></p></div>';
     el.hidden = false;
   }).catch(function () { hide(['disagree', 'disagreeSub', 'disagreeBand']); });
 })();
