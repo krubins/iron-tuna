@@ -19,6 +19,9 @@ jobs:
 
       # A single bad escape silently white-screens the whole app, so parsing the
       # deployed files is the highest-value check in the repo.
+      - name: Tuna Market Signal
+        run: node tools/test-tuna-market.mjs
+
       - name: Parse _worker.js
         run: node --check _worker.js
 
@@ -365,6 +368,8 @@ jobs:
         run: node tools/test-content.mjs
       - name: DFS adapters, Vegas Value Score, stacks and optimizer
         run: node tools/test-dfs.mjs
+      - name: DraftKings main-slate importer
+        run: node tools/test-draftkings-import.mjs
       - name: The health board, the job log and the editorial actions
         run: node tools/test-health.mjs
       - name: The job schedule in New York time
@@ -607,7 +612,7 @@ jobs:
         run: node tools/test-worker-availability.mjs
 
       # Sync My League (docs/league-sync.md): the provider adapters against
-      # Sleeper- and Yahoo-shaped fixtures, the player-id crosswalk and its
+      # Sleeper-, Yahoo-, and CBS-shaped fixtures, the player-id crosswalk and its
       # miss log, the idempotent sync into an in-memory D1, OAuth sealing,
       # expiry and refresh, disconnect, and every personalized module (the
       # league board with TE premium, best lineup incl. superflex, the pickup
@@ -615,6 +620,9 @@ jobs:
       # playoffs) on 10-, 12- and 14-team rooms. No network: fetch is stubbed.
       - name: "Sync My League: providers, crosswalk, sync and the personalized modules"
         run: node tools/test-league-sync.mjs
+
+      - name: CBS connection form
+        run: node tools/test-cbs-ui.mjs
 
       # Every deployed script that the pages load. it-sync.js is loaded by
       # nine in-season pages; a syntax error there takes the league strip and
