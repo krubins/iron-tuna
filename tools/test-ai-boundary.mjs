@@ -56,8 +56,20 @@ const calls = [...writer.matchAll(/llmText\(([^\n]+)\)/g)].map(m => m[1]);
 ok(calls.length >= 1, 'newsroom has an LLM prose call');
 ok(calls.every(c => /editorialModel\s*$/.test(c)), 'every newsroom LLM call uses the dedicated editorial model');
 
+const legacyWriter = section(worker, 'async function writePiece(', '// -- the newsroom', 'legacy writePiece');
+ok(legacyWriter.includes('const editorialModel = newsroomEditorialModel(env);'), 'legacy writer selects the dedicated editorial model');
+const legacyCalls = [...legacyWriter.matchAll(/llmText\(([^\n]+)\)/g)].map(m => m[1]);
+ok(legacyCalls.length >= 1, 'legacy writer has an LLM prose call');
+ok(legacyCalls.every(c => /editorialModel\s*$/.test(c)), 'every legacy writer LLM call uses the dedicated editorial model');
+
+const legacyPromptAt = worker.indexOf('const WRITER_SYSTEM = `');
+const modernPromptAt = worker.indexOf('const NEWSROOM_SYSTEM = `');
+const legacyPrompt = legacyPromptAt >= 0 ? worker.slice(legacyPromptAt, legacyPromptAt + 5000) : '';
+const modernPrompt = modernPromptAt >= 0 ? worker.slice(modernPromptAt, modernPromptAt + 7000) : '';
+ok(legacyPromptAt >= 0 && legacyPrompt.includes('Do not calculate, re-rank, interpolate, normalize, replace or override them.'), 'legacy writer prompt forbids recomputing numeric outputs');
+ok(modernPromptAt >= 0 && modernPrompt.includes('Do not calculate, re-rank, interpolate, normalize, replace or override them.'), 'modern newsroom prompt forbids recomputing numeric outputs');
+
 ok(worker.includes("const NEWSROOM_DEFAULT_MODEL = 'claude-sonnet-4-6';"), 'newsroom defaults to Sonnet');
-ok(worker.includes('Do not calculate, re-rank, interpolate, normalize, replace or override them.'), 'writer prompt forbids recomputing numeric outputs');
 ok(/"NEWSROOM_LLM_MODEL"\s*:\s*"claude-sonnet-[^"]+"/i.test(wrangler), 'deployed newsroom model is explicitly Sonnet');
 ok(!/"NEWSROOM_LLM_MODEL"\s*:\s*"[^"]*opus/i.test(wrangler), 'deployed newsroom model is not Opus');
 

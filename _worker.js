@@ -7577,14 +7577,15 @@ function validateDraft(text, allowed) {
 async function writePiece(env, kind, brief) {
   const spec = _sectionSpec(kind);
   const user = 'KIND: ' + kind + '\nSECTIONS AND SHAPE: ' + spec + '\n\nBRIEF (the only source of facts):\n' + JSON.stringify(brief, null, 0).slice(0, 60000);
-  let attempt = await llmText(env, WRITER_SYSTEM, user, 4000);
+  const editorialModel = newsroomEditorialModel(env);
+  let attempt = await llmText(env, WRITER_SYSTEM, user, 4000, undefined, editorialModel);
   if (!attempt.ok) return { status: 'held', body: null, violations: [attempt.error], model: null };
   const parse = t => { try { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; } catch (e) { return null; } };
   let body = parse(attempt.text);
   let v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] };
   if (!v.ok) {
     const fix = user + '\n\nYOUR PREVIOUS DRAFT NAMED THINGS THE BRIEF DOES NOT CONTAIN. Remove or replace them; do not add anything new. Names not in the brief: ' + v.names.join(', ') + '. Numbers not in the brief: ' + v.numbers.join(', ') + '.';
-    attempt = await llmText(env, WRITER_SYSTEM, fix, 4000);
+    attempt = await llmText(env, WRITER_SYSTEM, fix, 4000, undefined, editorialModel);
     if (attempt.ok) { body = parse(attempt.text); v = body ? validateDraft(JSON.stringify(body), brief.allowed) : { ok: false, names: ['(unparseable JSON)'], numbers: [] }; }
   }
   return { status: v.ok ? 'published' : 'held', body, violations: v.ok ? [] : v.names.concat(v.numbers), model: attempt.model || null };
@@ -8799,7 +8800,7 @@ async function buildResearchPacket(env, kind, d, ctx, opts) {
 
 // ── the writer, in an analyst's voice, two lenses ──────────────────────────
 const NEWSROOM_SYSTEM = `You write for Iron Tuna, a fantasy football intelligence desk that prices players against the betting market and reads usage before it reads box scores.
-THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
+THE ONE RULE: you may state only facts that appear in the PACKET you are given. Every player name, team, number, rank, share, line, salary, ownership figure and injury status must come from the packet. If the packet does not contain something, say it is not available; never fill a gap from memory or from what a typical week looks like. All projections, ranks, values, ownership estimates, floors, ceilings, leverage scores and DFS scores in the packet were already calculated by deterministic code. Do not calculate, re-rank, interpolate, normalize, replace or override them. Compare and explain the supplied values only. Sources the packet lists under staleSources are NOT available. Never invent a cause: if the packet has no cause for a change, say the cause is not known.
 THE QUESTION is never "what happened". It is "what does what happened tell us about what is going to happen next", and for DFS "what does this mean at this salary and this expected ownership".
 TWO LENSES, ONE SET OF FACTS. The WEEKLY FANTASY lens tells a season-long manager what to do: rankings, start/sit, waivers, trades, rest-of-season value. The DFS lens tells a daily player where projection, price and ownership create opportunity: value, chalk, leverage, stacks, cash versus tournaments. A good fantasy player is not automatically a good DFS play. The facts do not change between the lenses; the recommendations may. If the packet's dfs block says no salaries are loaded, the DFS lens speaks to roles and pricing direction and says plainly that no salary number is available.
 COLLEAGUES. You may name another analyst ONLY if the packet names that analyst (priorCalls, rivalry, marketAnalyst, dfsAnalyst). Never attribute a view to a colleague the packet does not attribute. If the packet carries priorCalls, you may reference those exact prior positions by analyst and week, agree with them, or say plainly what changed if the evidence moved; never pretend an old position did not exist. If the packet carries no rivalry, do not mention Nate Vega or Evan Brooks unless one of them is the byline.
