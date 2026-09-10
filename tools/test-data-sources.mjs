@@ -31,6 +31,7 @@ const ok = (name, cond, extra = '') => {
 // "service" hosts are vendors Iron Tuna is a paying or authenticated customer
 // of, and "own" is us.
 const ALLOWED = {
+  'api.sportsgameodds.com':   { kind: 'content', why: 'paid odds feed: player props and the game lines behind /the-line; display terms pending (docs/data-sources.md R8)' },
   'api.the-odds-api.com':     { kind: 'content', why: 'paid odds feed; commercial display terms pending (docs/data-sources.md R3)' },
   'site.api.espn.com':        { kind: 'content', why: 'REMEDIATION PENDING: undocumented endpoints, no commercial license (R1)' },
   'api.sleeper.app':          { kind: 'content', why: 'REMEDIATION PENDING: non-commercial grant only (R2)' },
@@ -115,7 +116,7 @@ if (fs.existsSync(docPath)) {
 // Section 14.4. Naming a binding in a status label ("no LLM_API_KEY") is fine
 // and /admin does it; what must never appear client-side is a binding actually
 // read, or a secret written out as a literal.
-const KEYS = '(?:ODDS_API_KEY|CFBD_API_KEY|DFS_SALARY_API_KEY|LLM_API_KEY|STRIPE_SECRET_KEY|RESEND_API_KEY|AUTH_SECRET|TURNSTILE_SECRET|X_API_SECRET)';
+const KEYS = '(?:SGO_API_KEY|ODDS_API_KEY|CFBD_API_KEY|DFS_SALARY_API_KEY|LLM_API_KEY|STRIPE_SECRET_KEY|RESEND_API_KEY|AUTH_SECRET|TURNSTILE_SECRET|X_API_SECRET)';
 const KEY_READ = new RegExp(`env\\s*\\.\\s*${KEYS}|\\b${KEYS}\\s*[:=]\\s*['"\`][^'"\`]`, 'i');
 const SECRET_LITERAL = /\b(sk-[A-Za-z0-9]{16,}|sk_live_[A-Za-z0-9]{8,}|rk_live_[A-Za-z0-9]{8,}|re_[A-Za-z0-9]{16,})\b/;
 
