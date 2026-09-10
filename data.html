@@ -84,7 +84,7 @@ blockquote{margin:0 0 14px;padding:10px 14px;border-left:3px solid var(--line);c
 
 <main id="main" class="wrap">
   <h1>Data &amp; sources</h1>
-  <p class="lead">Last reviewed: September 9, 2026. Every external source Iron Tuna reads, what it feeds, the basis it is used on, and the attribution it carries.</p>
+  <p class="lead">Last reviewed: September 10, 2026. Every external source Iron Tuna reads, what it feeds, the basis it is used on, and the attribution it carries.</p>
   <div class="doc">
     <p>Iron Tuna publishes numbers, so where the numbers come from is part of the product. This page is the public record of that. It is kept in step with the engineering inventory in the repository, and a source cannot be added to the application without being added here.</p>
 
@@ -99,7 +99,7 @@ blockquote{margin:0 0 14px;padding:10px 14px;border-left:3px solid var(--line);c
         <tr><td>Sleeper API</td><td>Player identity metadata, and — where you connect one — your own Sleeper league&rsquo;s settings, rosters, matchups and transactions.</td><td>Read under Sleeper&rsquo;s public API with attribution. The league connector runs only when you connect a league yourself.</td></tr>
         <tr><td>Yahoo Fantasy API</td><td>Your own Yahoo league, if you connect one.</td><td>OAuth 2.0 under the Yahoo Developer Network terms, read-only scope, authorized by you on Yahoo&rsquo;s own site. We never see your Yahoo password; the tokens Yahoo issues are encrypted at rest.</td></tr>
         <tr><td>CBS Sportsline</td><td>Your own CBS football league, if the connector is enabled and you connect one.</td><td>Read-only league access using the token you provide. The token is encrypted separately for each league and deleted when that league is disconnected. The connector remains off until CBS access and commercial terms are verified.</td></tr>
-        <tr><td>DFS salary files</td><td>DraftKings and FanDuel salaries for the current slate.</td><td>Imported from the contest-entry export the operator gives its own entrants, or from a licensed salary feed where one is configured. Iron Tuna does not read either operator&rsquo;s API.</td></tr>
+        <tr><td>DFS salaries</td><td>DraftKings and FanDuel salaries used by the DFS tools.</td><td>DraftKings weekly Classic salaries are retrieved by an owner-directed scheduled repository workflow from undocumented, keyless DraftKings lobby and draftables endpoints, then validated and imported into Iron Tuna. FanDuel salaries come from an entrant-provided contest export or a licensed salary feed where configured. DraftKings automated access may conflict with operator terms and can change without notice.</td></tr>
         <tr><td>Team and player imagery</td><td>Headshots and team marks on story pages, player cards and the front page.</td><td>Referenced from the publishers&rsquo; own image CDNs rather than copied or stored by Iron Tuna. All rights in those images remain with their owners; Iron Tuna claims none and asserts no license, endorsement or affiliation. See the notice below.</td></tr>
       </tbody>
     </table></div>
